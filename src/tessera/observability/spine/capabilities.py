@@ -2,7 +2,7 @@
 
 Each signal declares which :class:`~tessera.observability.spine.scope.Dimension` s it can
 be sliced by, whether it is a deterministic fixture (``synthetic``), and its migration
-``source`` (``jsonl`` / ``spine`` / ``shadow``). The read layer intersects the request
+``source`` (``local`` / ``spine`` / ``shadow``). The read layer intersects the request
 ``Scope`` with these dimensions and *reports* what it honoured, so the UI badges
 "org-wide" / "synthetic" from data — never a hand-placed note.
 
@@ -21,6 +21,7 @@ from tessera.observability.spine.scope import Dimension
 
 __all__ = [
     "CAPABILITIES",
+    "SOURCE_LOCAL",
     "SOURCE_JSONL",
     "SOURCE_SHADOW",
     "SOURCE_SPINE",
@@ -34,9 +35,10 @@ TIME = Dimension.TIME
 LANGUAGE = Dimension.LANGUAGE
 MODEL = Dimension.MODEL
 
-# Migration source flag (ADR 0015 §Testing 3): a signal is flipped jsonl→spine per-signal,
-# and can shadow-run both before flipping. Phase A: everything reads ``jsonl``.
-SOURCE_JSONL = "jsonl"
+# Migration source flag (ADR 0015 §Testing 3): a signal is flipped local→spine per-signal,
+# and can shadow-run both before flipping. ``jsonl`` is kept only as a deprecated alias.
+SOURCE_LOCAL = "local"
+SOURCE_JSONL = SOURCE_LOCAL
 SOURCE_SPINE = "spine"
 SOURCE_SHADOW = "shadow"
 
@@ -56,7 +58,7 @@ class SignalCapability:
     # The spine fact this signal derives from ("scores" | "gating" | "bundles"), when it
     # has one. A fact-backed signal's reported ``source`` is resolved at read time from
     # the fact's ACTIVE source (the per-fact flip, G4) — a flipped signal is visibly
-    # flipped, never a stale hardcoded "jsonl". Fact-less signals keep the static field.
+    # flipped, never a stale hardcoded local alias. Fact-less signals keep the static field.
     fact: str | None = None
 
     @property
@@ -115,7 +117,7 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("governance", {AGENT, TIME}),
     # Business signals (ADR 0017 §5) derive from the ``business_events`` fact, so their
     # source badge resolves at read time from that fact's ACTIVE source — a flipped read
-    # (in-process → owned ClickHouse) is visibly flipped, never a stale hardcoded "jsonl".
+    # (in-process → owned ClickHouse) is visibly flipped, never a stale hardcoded local alias.
     _cap("business_events", {AGENT, TIME}, fact="business_events"),
     _cap("recouvrement_business_scores", {AGENT, TIME}, fact="business_events"),
     # The audit event *count* is per-agent ventilable; its chain *integrity* is not.

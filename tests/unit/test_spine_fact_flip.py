@@ -1,6 +1,6 @@
 """G4 — per-fact flip, dynamic source badges, owned-store erasure, backfill key (offline).
 
-Locks the flip machinery the amendments require: a fact graduates jsonl→spine
+Locks the flip machinery the amendments require: a fact graduates local→spine
 independently (``TESSERA_SPINE_SOURCE_<FACT>``), the signal's reported ``source`` is
 resolved from the fact's ACTIVE source at read time (a flipped signal is visibly
 flipped), GDPR erasure reaches the owned ClickHouse store (count-then-delete, bound
@@ -34,13 +34,13 @@ class TestFactSource:
         assert fact_source("gating") == "spine"
         monkeypatch.setenv("TESSERA_SPINE_SOURCE", "shadow")
         assert fact_source("scores") == "shadow"
-        monkeypatch.setenv("TESSERA_SPINE_SOURCE", "jsonl")  # the degraded fallback, explicit
-        assert fact_source("scores") == "jsonl"
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE", "local")  # the degraded fallback, explicit
+        assert fact_source("scores") == "local"
 
     def test_flippable_fact_honours_its_override(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
-        monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "jsonl")
-        assert fact_source("scores") == "jsonl"  # per-fact override wins over the default
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "local")
+        assert fact_source("scores") == "local"  # per-fact override wins over the default
         assert fact_source("gating") == "spine"  # untouched fact keeps the G5 default
 
     def test_invalid_override_falls_back_to_the_default_chain(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -52,33 +52,33 @@ class TestFactSource:
         # bundles is lossy-by-design in the spine; audit is the carve-out — no override.
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUNDLES", "spine")
-        assert fact_source("bundles") == "jsonl"
+        assert fact_source("bundles") == "local"
 
-    def test_business_events_is_flippable_but_defaults_to_jsonl(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-        # ADR 0017 §5: business_events is mid-migration — flippable, but its default stays
-        # jsonl (the in-process store) until shadow parity bakes, unlike G5's scores/gating.
+    def test_business_events_is_flippable_and_defaults_to_spine(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # Step 4 lot 2: business_events finished its bake and now follows the owned store
+        # by default; local remains the explicit degraded fallback.
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.delenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", raising=False)
-        assert fact_source("business_events") == "jsonl"
-        monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", "spine")
-        assert fact_source("business_events") == "spine"  # the flip is honoured
+        assert fact_source("business_events") == "spine"
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", "local")
+        assert fact_source("business_events") == "local"
 
 
 class TestFactRouter:
     def test_routes_each_fact_to_its_active_source(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "spine")
-        monkeypatch.setenv("TESSERA_SPINE_SOURCE_GATING", "jsonl")  # explicit legacy contrast
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_GATING", "local")  # explicit legacy contrast
         current = FakeSpineReader(
-            scores=[{"metric": "from-jsonl"}], gating=[{"run_id": "from-jsonl"}]
+            scores=[{"metric": "from-local"}], gating=[{"run_id": "from-local"}]
         )
         spine = FakeSpineReader(
             scores=[{"metric": "from-owned"}], gating=[{"run_id": "from-owned"}]
         )
         router = FactRouter(current, spine, shadow=FakeSpineReader())
         assert router.scores(Scope())[0]["metric"] == "from-owned"  # flipped fact
-        assert router.gating_scores(Scope())[0]["run_id"] == "from-jsonl"  # not flipped
-        assert router.bundles(Scope()) == []  # global jsonl → current
+        assert router.gating_scores(Scope())[0]["run_id"] == "from-local"  # not flipped
+        assert router.bundles(Scope()) == []  # global local → current
         assert router.audit_entries(Scope()) == []  # always local
 
     def test_factory_builds_a_router_when_a_fact_is_overridden(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -101,8 +101,8 @@ class TestFactRouter:
         finally:
             set_reader(None)
 
-    def test_explicit_global_jsonl_is_the_legacy_escape_hatch(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-        monkeypatch.setenv("TESSERA_SPINE_SOURCE", "jsonl")
+    def test_explicit_global_local_is_the_legacy_escape_hatch(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE", "local")
         monkeypatch.delenv("TESSERA_SPINE_SOURCE_SCORES", raising=False)
         monkeypatch.delenv("TESSERA_SPINE_SOURCE_GATING", raising=False)
         set_reader(None)
@@ -118,13 +118,13 @@ class TestDynamicSourceBadge:
 
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
         monkeypatch.setenv("TESSERA_SPINE_SOURCE_SCORES", "spine")
-        monkeypatch.setenv("TESSERA_SPINE_SOURCE_GATING", "jsonl")  # explicit legacy pin
+        monkeypatch.setenv("TESSERA_SPINE_SOURCE_GATING", "local")  # explicit legacy pin
         set_reader(FakeSpineReader(scores=[]))
         try:
             result = await get_registry().read("scores", Scope())
             assert result.report.source == "spine"  # the flip is visible, never stale
             gating = await get_registry().read("gating", Scope())
-            assert gating.report.source == "jsonl"  # the pinned-legacy fact says so honestly
+            assert gating.report.source == "local"  # the pinned-legacy fact says so honestly
         finally:
             set_reader(None)
 

@@ -1,9 +1,10 @@
 """Read adapters behind the spine seam (ADR 0015).
 
 ``get_reader()`` returns the process-wide :class:`SpineReader`, selected by the
-``TESSERA_SPINE_SOURCE`` env (the migration flag, §Migration C): ``jsonl`` (default — the
-current stores), ``spine`` (the owned stores — the flip), or ``shadow`` (serve jsonl,
-compare the spine, record divergence — the safety net before a flip). The flip is
+``TESSERA_SPINE_SOURCE`` env (the migration flag, §Migration C): ``local`` (degraded
+current stores), ``spine`` (the owned stores — the flip), or ``shadow`` (serve local,
+compare the spine, record divergence — the safety net before a flip). ``jsonl`` remains
+accepted as a deprecated alias for ``local``. The flip is
 **per-fact** (G4): ``TESSERA_SPINE_SOURCE_SCORES`` / ``TESSERA_SPINE_SOURCE_GATING``
 override the global for the two flippable facts, so scores can graduate to the owned
 ClickHouse table while bundles (lossy-by-design in the spine) and the audit ledger (the
@@ -39,7 +40,8 @@ __all__ = [
 
 _reader: SpineReader | None = None
 
-_SOURCES = {"jsonl", "spine", "shadow"}
+_SOURCE_ALIASES = {"jsonl": "local", "local": "local", "spine": "spine", "shadow": "shadow"}
+_SOURCES = set(_SOURCE_ALIASES.values())
 # The per-fact flip surface (G4). bundles never flips per-fact (the spine's trace-derived
 # bundles are lossy by design) and the audit ledger is the local carve-out — neither has
 # an override; they follow the global source only.
@@ -47,30 +49,33 @@ _FLIPPABLE_FACTS = ("scores", "gating", "business_events")
 # The default source per flippable fact when no env is set. ``scores``/``gating`` graduated
 # to the owned stores at G5; ``business_events`` is mid-migration (ADR 0017 Phase D) — its
 # owned ClickHouse table dual-writes, but reads still default to the in-process store until
-# shadow parity bakes the flip, so its default stays ``jsonl`` (the not-yet-flipped fact).
-_FACT_DEFAULTS = {"scores": "spine", "gating": "spine", "business_events": "jsonl"}
+# shadow parity baked on step 4 lot 2, so business_events now defaults to ``spine`` too.
+_FACT_DEFAULTS = {"scores": "spine", "gating": "spine", "business_events": "spine"}
+
+
+def _normalise_source(raw: str) -> str | None:
+    """Canonical source value; accepts ``jsonl`` as a deprecated alias for ``local``."""
+    return _SOURCE_ALIASES.get(raw.strip().lower())
 
 
 def spine_source() -> str:
-    """The configured global read source: ``jsonl`` (default) | ``spine`` | ``shadow``."""
-    source = os.environ.get("TESSERA_SPINE_SOURCE", "jsonl").strip().lower()
-    return source if source in _SOURCES else "jsonl"
+    """The configured global read source: ``local`` (default) | ``spine`` | ``shadow``."""
+    return _normalise_source(os.environ.get("TESSERA_SPINE_SOURCE", "local")) or "local"
 
 
 def fact_source(fact: str) -> str:
     """The active source for one fact: per-fact env > explicit global env > default.
 
-    Since G5 (the jsonl retirement, baked per the ADR's own gate) ``scores``/``gating``
-    **default to ``spine``** — the owned stores are the system of record; ``jsonl`` remains
-    the *explicit* degraded fallback (set the global or the per-fact env). ``business_events``
-    is still mid-migration (ADR 0017 Phase D), so it **defaults to ``jsonl``** until its
-    shadow parity bakes. Every other fact reports the global source. This resolved value is
-    what the per-signal ``source`` badge shows, so a flipped signal is visibly flipped.
+    Since G5 (the local-source retirement, baked per the ADR's own gate) ``scores``/``gating``
+    **default to ``spine``** — the owned stores are the system of record; ``local`` remains
+    the *explicit* degraded fallback (set the global or the per-fact env). Step 4 lot 2
+    flips ``business_events`` to the owned store as well. Every other fact reports the
+    global source. This resolved value is what the per-signal ``source`` badge shows.
     """
     if fact in _FLIPPABLE_FACTS:
-        raw = os.environ.get(f"TESSERA_SPINE_SOURCE_{fact.upper()}", "").strip().lower()
-        if raw in _SOURCES:
-            return raw
+        source = _normalise_source(os.environ.get(f"TESSERA_SPINE_SOURCE_{fact.upper()}", ""))
+        if source is not None:
+            return source
         if _explicit_global() is not None:
             return spine_source()
         return _FACT_DEFAULTS.get(fact, "spine")
@@ -79,8 +84,7 @@ def fact_source(fact: str) -> str:
 
 def _explicit_global() -> str | None:
     """The global source when the operator actually set it, else ``None``."""
-    raw = os.environ.get("TESSERA_SPINE_SOURCE", "").strip().lower()
-    return raw if raw in _SOURCES else None
+    return _normalise_source(os.environ.get("TESSERA_SPINE_SOURCE", ""))
 
 
 class FactRouter:
@@ -88,13 +92,13 @@ class FactRouter:
 
     ``scores`` / ``gating`` follow :func:`fact_source`; ``bundles`` follows the global
     source; ``audit_entries`` is always the local ledger (the carve-out). ``shadow``
-    for a fact serves jsonl and records that fact's divergence, exactly like the global
+    for a fact serves local and records that fact's divergence, exactly like the global
     shadow mode — the bake gate is identical, just per-fact.
     """
 
     def __init__(self, current: SpineReader, spine: SpineReader, shadow: SpineReader) -> None:
         self._by_source: dict[str, SpineReader] = {
-            "jsonl": current,
+            "local": current,
             "spine": spine,
             "shadow": shadow,
         }
@@ -116,12 +120,12 @@ class FactRouter:
 
     def audit_entries(self, scope: Scope) -> list[dict[str, object]]:
         """The tamper-evident ledger — always local and canonical, never routed elsewhere."""
-        return self._by_source["jsonl"].audit_entries(scope)
+        return self._by_source["local"].audit_entries(scope)
 
 
 def _has_fact_overrides() -> bool:
     return any(
-        os.environ.get(f"TESSERA_SPINE_SOURCE_{fact.upper()}", "").strip().lower() in _SOURCES
+        _normalise_source(os.environ.get(f"TESSERA_SPINE_SOURCE_{fact.upper()}", "")) is not None
         for fact in _FLIPPABLE_FACTS
     )
 
@@ -133,9 +137,9 @@ def _build_reader() -> SpineReader:
     # per-fact router serves each fact from its own active source.
     if _explicit_global() is not None and not _has_fact_overrides():
         source = spine_source()
-        if source == "jsonl":
+        if source == "local":
             return CurrentStoresReader()
-        # Import the spine-backed adapters lazily so the pinned-jsonl path never pulls
+        # Import the spine-backed adapters lazily so the pinned-local path never pulls
         # the owned-store clients (and stays offline/import-light in the fast test loop).
         from tessera.observability.spine.adapters.spine import SpineStoresReader
 
@@ -153,7 +157,7 @@ def _build_reader() -> SpineReader:
 
 
 def get_reader() -> SpineReader:
-    """The process-wide spine reader (built from ``TESSERA_SPINE_SOURCE``, default jsonl)."""
+    """The process-wide spine reader (built from ``TESSERA_SPINE_SOURCE``, default local)."""
     global _reader
     if _reader is None:
         _reader = _build_reader()

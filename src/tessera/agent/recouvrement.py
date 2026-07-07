@@ -344,7 +344,13 @@ def verify_surface_authorization(state: RecouvrementWorkflowState) -> dict[str, 
         event_name=BusinessEventName.ACTION_BLOCKED,
         decision="blocked",
         reason_codes=["UNAUTHORIZED_SURFACE"],
-        payload={"action_name": "run_recouvrement_workflow", "requested_surface": surface},
+        payload={
+            "action_name": "run_recouvrement_workflow",
+            "requested_surface": surface,
+            "case_id": state["case_id"],
+            "requires_validation": False,
+            "no_external_effect": True,
+        },
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
         capability_id=_capability_for_state(state),
@@ -757,7 +763,13 @@ def evaluate_contact_policy(state: RecouvrementWorkflowState) -> dict[str, objec
             event_name=BusinessEventName.ACTION_BLOCKED,
             decision="blocked",
             reason_codes=decision["reason_codes"],
-            payload={"action": "prepare_outbound_call", "requested_time": requested},
+            payload={
+                "action_name": "prepare_outbound_call",
+                "case_id": state["case_id"],
+                "requires_validation": False,
+                "requested_time": requested,
+                "no_external_effect": True,
+            },
             **_event_common(state, node_name="evaluate_contact_policy"),
         )
     return {"contact_policy": decision}
@@ -808,6 +820,9 @@ def evaluate_schedule_policy(state: RecouvrementWorkflowState) -> dict[str, obje
         payload={
             "policy_rule": "recouvrement.schedule_validation",
             "rule_id": "SCHEDULE_VALIDATION",
+            "requires_validation": decision["validation_required"],
+            "no_schedule_created": not decision["schedule_created"],
+            "no_external_effect": True,
         },
         **_event_common(state, node_name="evaluate_schedule_policy"),
     )
@@ -930,6 +945,9 @@ def review_client_message_policy(state: RecouvrementWorkflowState) -> dict[str, 
             "template_label": generation["template_label"],
             "policy_review_status": decision["policy_review_status"],
             "amount_consistent": amount_consistent,
+            "requires_validation": decision["validation_required"],
+            "no_schedule_created": decision["no_schedule_created"],
+            "no_external_effect": True,
         },
         **_event_common(state, node_name="review_client_message_policy"),
     )
@@ -1345,6 +1363,8 @@ def build_contact_rule_artifact(state: RecouvrementWorkflowState) -> dict[str, o
             "task": artifact["task"],
             "title": artifact["title"],
             "decision": policy["decision"],
+            "no_schedule_created": True,
+            "no_external_effect": True,
         },
         **_event_common(state, node_name="build_contact_rule_artifact"),
     )
@@ -1439,6 +1459,7 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
             "decision": policy["decision"],
             "client_message_generation": client_message_generation,
             "no_schedule_created": True,
+            "no_external_effect": True,
         },
         **_event_common(state, node_name="build_schedule_proposal_artifact"),
     )
@@ -1452,6 +1473,9 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
         payload={
             "validation_type": "internal_schedule_validation",
             "validation_reason": "Échéancier indicatif à valider avant proposition au client.",
+            "action_name": "prepare_schedule_proposal",
+            "requires_validation": True,
+            "no_external_effect": True,
         },
         **_event_common(state, node_name="build_schedule_proposal_artifact"),
     )
@@ -1602,6 +1626,7 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
             "policy_review_status": policy["policy_review_status"],
             "no_message_sent": policy["no_message_sent"],
             "no_schedule_created": policy["no_schedule_created"],
+            "no_external_effect": True,
         },
         **_event_common(state, node_name="build_reminder_draft_artifact"),
     )
@@ -1616,6 +1641,9 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
             payload={
                 "validation_type": "client_message_schedule_validation",
                 "validation_reason": "Message client mentionnant une solution d'échelonnement.",
+                "action_name": "prepare_client_message",
+                "requires_validation": True,
+                "no_external_effect": True,
             },
             **_event_common(state, node_name="build_reminder_draft_artifact"),
         )

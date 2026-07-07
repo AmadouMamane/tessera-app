@@ -1,10 +1,10 @@
-"""Shadow-run reader: serve jsonl, compare the spine, record divergence (ADR 0015 §Migration C).
+"""Shadow-run reader: serve local, compare the spine, record divergence (ADR 0015 §Migration C).
 
-Dark launch. A signal runs **both** sources, is **served from jsonl**, and the divergence is
-recorded (``tessera_spine_shadow_divergence_total``). A signal graduates jsonl→spine only after
+Dark launch. A signal runs **both** sources, is **served from local**, and the divergence is
+recorded (``tessera_spine_shadow_divergence_total``). A signal graduates local→spine only after
 it holds parity over a bake period — so an autonomous flip can never regress the UI. This is the
 migration safety net, not a smell: the transitional dual-run is what lets a live source migrate
-without a user-visible regression, and jsonl is retired (§Migration D) only once every signal
+without a user-visible regression, and local is retired (§Migration D) only once every signal
 has flipped and held parity.
 """
 
@@ -26,7 +26,7 @@ __all__ = ["ShadowReader"]
 
 
 class ShadowReader:
-    """Serves the ``primary`` (jsonl) reader; reads ``shadow`` (spine) to record divergence."""
+    """Serves the ``primary`` (local) reader; reads ``shadow`` (spine) to record divergence."""
 
     def __init__(self, primary: SpineReader, shadow: SpineReader) -> None:
         self._primary = primary
@@ -44,18 +44,18 @@ class ShadowReader:
         SPINE_SHADOW_DIVERGENCE.labels(fact=fact, result=result).inc()
         if result == "diverge":
             sys.stderr.write(
-                f"tessera.spine.shadow[{fact}]: jsonl={primary_count} spine={shadow_count} "
-                "(serving jsonl; not flipping until parity)\n"
+                f"tessera.spine.shadow[{fact}]: local={primary_count} spine={shadow_count} "
+                "(serving local; not flipping until parity)\n"
             )
 
     def scores(self, scope: Scope) -> list[dict[str, object]]:
-        """Serve jsonl scores; compare the spine's and record the divergence."""
+        """Serve local scores; compare the spine's and record the divergence."""
         primary = self._primary.scores(scope)
         self._compare("scores", len(primary), lambda: list(self._shadow.scores(scope)))
         return primary
 
     def bundles(self, scope: Scope) -> list[ReplayBundle]:
-        """Serve jsonl bundles; compare the spine's and record the divergence."""
+        """Serve local bundles; compare the spine's and record the divergence."""
         primary = self._primary.bundles(scope)
         self._compare("bundles", len(primary), lambda: list(self._shadow.bundles(scope)))
         return primary

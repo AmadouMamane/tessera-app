@@ -21,6 +21,8 @@ from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.agent_release import fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total
 from tessera.observability.agentspec_projection import observability_level
+from tessera.observability.business_capabilities import business_capability_aggregate
+from tessera.observability.operator_items import load_items
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
@@ -88,6 +90,35 @@ def _health(escalation_rate: float) -> str:
     return "crit"
 
 
+def _business_card_facts(aid: str, record: Agent | None) -> dict[str, object]:
+    """Manifest-derived business chip + pending operator items for one fleet card."""
+    if record is None or record.observability is None:
+        return {"north_star": None, "pending_business_items": 0}
+    try:
+        aggregate = business_capability_aggregate(agent_id=aid)
+    except Exception:
+        aggregate = {}
+    raw_signals = aggregate.get("business_signals")
+    signals = raw_signals if isinstance(raw_signals, list) else []
+    north_star = next(
+        (
+            signal
+            for signal in signals
+            if isinstance(signal, dict) and signal.get("north_star") is True
+        ),
+        None,
+    )
+    try:
+        pending = sum(
+            1
+            for item in load_items(aid)
+            if item.source_kind == "business_event" and item.status != "done"
+        )
+    except Exception:
+        pending = 0
+    return {"north_star": north_star, "pending_business_items": pending}
+
+
 async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     """Return the fleet payload: per-agent observable KPIs + deduplicated org totals.
 
@@ -139,6 +170,7 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
         # actually ran (ADR 0017 §4). The level is computed from this fact, never asserted.
         governed = rel is not None and rel.available and rel.socle_total > 0
         level = observability_level(record, governed=governed) if record is not None else None
+        business_facts = _business_card_facts(aid, record)
         agents.append(
             {
                 "id": aid,
@@ -157,6 +189,7 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 # ADR 0017 §4 — observability level (L0-L2 in Phase B; None when the agent
                 # has no AgentSpec manifest yet → honest-empty, not "L0").
                 "level": level,
+                **business_facts,
             }
         )
 

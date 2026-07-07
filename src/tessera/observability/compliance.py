@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from tessera.observability import (
     ai_act as ai_act_mod,
+    business_capabilities as business_capabilities_mod,
     citation_validity as citation_validity_mod,
     conformance as conformance_mod,
     disclosure as disclosure_mod,
@@ -44,6 +45,7 @@ __all__ = [
     "Control",
     "Framework",
     "ComplianceReport",
+    "BusinessLegalSignal",
     "NonConformity",
     "Obligation",
     "compute_compliance",
@@ -222,6 +224,20 @@ class NonConformity:
 
 
 @dataclass(frozen=True, slots=True)
+class BusinessLegalSignal:
+    """A manifest-declared business signal that carries a legal engagement."""
+
+    agent_id: str
+    agent_name: str
+    key: str
+    value_pct: float | None
+    status: str
+    reason: str
+    source: str
+    href: str
+
+
+@dataclass(frozen=True, slots=True)
 class ComplianceReport:
     """The full Conformité overview (image 07)."""
 
@@ -242,6 +258,7 @@ class ComplianceReport:
     controls: list[Control] = field(default_factory=list)
     obligations: list[Obligation] = field(default_factory=list)
     non_conformities: list[NonConformity] = field(default_factory=list)
+    business_legal_signals: list[BusinessLegalSignal] = field(default_factory=list)
     # Real posture trend over the trailing window (composite of the durable
     # quality-score series): the KPI-strip sparkline and its period-over-period
     # delta. Empty when the score log has no usable history.
@@ -388,6 +405,50 @@ def _posture_trend() -> tuple[list[float], float | None]:
     return series, delta
 
 
+def _legal_business_signals() -> list[BusinessLegalSignal]:
+    """Project only AgentSpec business signals declared as legally engaged."""
+    try:
+        from tessera.agent.registry import list_agents
+
+        agents = list_agents()
+    except (OSError, ValueError):
+        return []
+
+    rows: list[BusinessLegalSignal] = []
+    for agent in agents:
+        if agent.observability is None:
+            continue
+        try:
+            aggregate = business_capabilities_mod.business_capability_aggregate(agent_id=agent.id)
+        except Exception as exc:
+            sys.stderr.write(
+                "tessera.observability.compliance: "
+                f"business_legal_signals failed for {agent.id}: {exc}\n"
+            )
+            continue
+        source = str(aggregate.get("source") or "business_events")
+        raw_signals = aggregate.get("business_signals")
+        signals = raw_signals if isinstance(raw_signals, list) else []
+        for signal in signals:
+            if not isinstance(signal, dict) or signal.get("engagement") != "legal":
+                continue
+            value_pct = signal.get("value_pct")
+            rows.append(
+                BusinessLegalSignal(
+                    agent_id=agent.id,
+                    agent_name=agent.name,
+                    key=str(signal.get("key") or ""),
+                    value_pct=float(value_pct) if isinstance(value_pct, int | float) else None,
+                    status=str(signal.get("status") or "unknown"),
+                    reason=str(signal.get("reason") or ""),
+                    source=source,
+                    href=f"/agents/{agent.id}/metier",
+                )
+            )
+    rows.sort(key=lambda row: (row.agent_name, row.key))
+    return rows
+
+
 def compute_compliance(lang: str = "fr") -> ComplianceReport:
     """Assemble the compliance posture from the real runtime signals.
 
@@ -397,6 +458,7 @@ def compute_compliance(lang: str = "fr") -> ComplianceReport:
     """
     values = _signal_values()
     score_series, score_delta = _posture_trend()
+    business_legal_signals = _legal_business_signals()
     controls: list[Control] = []
     for cid, name, fw, signal, owner, ev in _CATALOGUE:
         if signal not in values:
@@ -504,6 +566,7 @@ def compute_compliance(lang: str = "fr") -> ComplianceReport:
         controls=controls,
         obligations=obligations,
         non_conformities=non_conformities,
+        business_legal_signals=business_legal_signals,
         score_series=score_series,
         score_delta=score_delta,
         tabs=build_tabs(lang),

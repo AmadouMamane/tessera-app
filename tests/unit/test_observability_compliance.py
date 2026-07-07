@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from tessera.observability import compliance as comp
 
 
@@ -71,6 +73,51 @@ def test_compute_compliance_all_conformant() -> None:
     assert report.score == 100
     assert report.evidence_completeness == 1.0
     assert report.obligations == []
+
+
+def test_legal_business_signals_project_only_manifest_legal_engagement(
+    monkeypatch,
+) -> None:
+    agents = [
+        SimpleNamespace(id="recouvrement", name="Recouvrement", observability=object()),
+        SimpleNamespace(id="support-client", name="Support Client", observability=None),
+    ]
+    monkeypatch.setattr("tessera.agent.registry.list_agents", lambda: agents)
+    monkeypatch.setattr(
+        comp.business_capabilities_mod,
+        "business_capability_aggregate",
+        lambda **_kwargs: {
+            "source": "local",
+            "business_signals": [
+                {
+                    "key": "contact_window_compliance",
+                    "engagement": "legal",
+                    "value_pct": 100.0,
+                    "status": "scored",
+                    "reason": "contact_window_policy_passed",
+                },
+                {
+                    "key": "action_governance",
+                    "engagement": "none",
+                    "value_pct": 100.0,
+                    "status": "scored",
+                    "reason": "artifact_actions_traceable",
+                },
+            ],
+        },
+    )
+
+    rows = comp._legal_business_signals()
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.agent_id == "recouvrement"
+    assert row.agent_name == "Recouvrement"
+    assert row.key == "contact_window_compliance"
+    assert row.value_pct == 100.0
+    assert row.status == "scored"
+    assert row.source == "local"
+    assert row.href == "/agents/recouvrement/metier"
 
 
 def test_posture_trend_buckets_real_scores(monkeypatch) -> None:

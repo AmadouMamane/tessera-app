@@ -3410,12 +3410,18 @@
         "what": "Non-conformités ouvertes : gravité et statut de traitement.",
         "how": "Une ligne par non-conformité enregistrée.",
         "source": "Rapport de conformité (non-conformités)."
+      },
+      "businessLegal": {
+        "what": "Les signaux métier dont le manifeste déclare un engagement légal.",
+        "how": "Projection sélective des business_signals AgentSpec avec engagement=legal ; la valeur vient des scores métier réels.",
+        "source": "AgentSpec + business_events."
       }
     },
     "panel": {
       "mapping": "Cartographie réglementaire",
       "obligations": "Obligations à risque ({n})",
       "evidence": "Dossier de preuves conformité",
+      "businessLegal": "Signaux métier légaux ({n})",
       "controls": "Contrôles critiques ({n})",
       "missing": "Preuves manquantes",
       "incidents": "Incidents & exceptions"
@@ -3439,6 +3445,19 @@
       "truth": "Source de vérité : YAML · Git",
       "env": "Environnement : Production",
       "realtime": "Temps réel"
+    },
+    "businessSignals": {
+      "agent": "Agent",
+      "signal": "Signal",
+      "value": "Valeur",
+      "status": "Statut",
+      "source": "Source",
+      "empty": "Aucun signal métier légal déclaré.",
+      "statusValue": {
+        "scored": "Mesuré",
+        "unknown": "Inconnu",
+        "not_applicable": "Non applicable"
+      }
     },
     "sev": {
       "high": "Élevé",
@@ -3474,7 +3493,8 @@
     "sec": {
       "actual": "A · Posture réglementaire",
       "mapping": "B · Cartographie & obligations",
-      "controls": "C · Contrôles & incidents"
+      "businessLegal": "C · Signaux métier légaux",
+      "controls": "D · Contrôles & incidents"
     },
     "footer": {
       "reference": "Référentiel : v2026.06",
@@ -6711,6 +6731,7 @@
     },
     "rowOpen": "Voir le détail",
     "close": "Fermer",
+    "openBusinessRun": "Ouvrir dans Métier",
     "page": {
       "prev": "Page précédente",
       "next": "Page suivante",
@@ -6888,7 +6909,8 @@
     "releaseNotRun": "Éval non exécutée",
     "candidate": "Candidate",
     "releaseNote": "Verdict eval-gate par agent (run de référence, grain cas × langue) — chaque agent est un package gouverné.",
-    "observabilityLevel": "Niveau d'observabilité {level}"
+    "observabilityLevel": "Niveau d'observabilité {level}",
+    "pendingBusinessItems": "{n} métier en attente"
   },
   "product": {
     "apercu": {

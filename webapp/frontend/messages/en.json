@@ -3410,12 +3410,18 @@
         "what": "Open non-conformities: severity and handling status.",
         "how": "One row per recorded non-conformity.",
         "source": "Compliance report (non-conformities)."
+      },
+      "businessLegal": {
+        "what": "Business signals whose manifest declares a legal engagement.",
+        "how": "Selective projection of AgentSpec business_signals with engagement=legal; the value comes from real business scores.",
+        "source": "AgentSpec + business_events."
       }
     },
     "panel": {
       "mapping": "Regulatory mapping",
       "obligations": "Obligations at risk ({n})",
       "evidence": "Compliance evidence pack",
+      "businessLegal": "Legal business signals ({n})",
       "controls": "Critical controls ({n})",
       "missing": "Missing evidence",
       "incidents": "Incidents & exceptions"
@@ -3439,6 +3445,19 @@
       "truth": "Source of truth: YAML · Git",
       "env": "Environment: Production",
       "realtime": "Real-time"
+    },
+    "businessSignals": {
+      "agent": "Agent",
+      "signal": "Signal",
+      "value": "Value",
+      "status": "Status",
+      "source": "Source",
+      "empty": "No legal business signal declared.",
+      "statusValue": {
+        "scored": "Measured",
+        "unknown": "Unknown",
+        "not_applicable": "Not applicable"
+      }
     },
     "sev": {
       "high": "High",
@@ -3474,7 +3493,8 @@
     "sec": {
       "actual": "A · Regulatory posture",
       "mapping": "B · Mapping & obligations",
-      "controls": "C · Controls & incidents"
+      "businessLegal": "C · Legal business signals",
+      "controls": "D · Controls & incidents"
     },
     "footer": {
       "reference": "Baseline: v2026.06",
@@ -6711,6 +6731,7 @@
     },
     "rowOpen": "View detail",
     "close": "Close",
+    "openBusinessRun": "Open in Business",
     "page": {
       "prev": "Previous page",
       "next": "Next page",
@@ -6888,7 +6909,8 @@
     "releaseNotRun": "Eval not run",
     "candidate": "Candidate",
     "releaseNote": "Per-agent eval-gate verdict (reference run, case × language grain) — each agent is a governed package.",
-    "observabilityLevel": "Observability level {level}"
+    "observabilityLevel": "Observability level {level}",
+    "pendingBusinessItems": "{n} business pending"
   },
   "product": {
     "apercu": {

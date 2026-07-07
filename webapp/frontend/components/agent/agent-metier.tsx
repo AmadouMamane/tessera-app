@@ -13,6 +13,7 @@ import {
   Target,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { type KeyboardEvent, useMemo, useState } from "react";
 
 import { MetricCard } from "@/components/cockpit/metric-card";
@@ -87,7 +88,10 @@ export function AgentMetier() {
   const t = useTranslations("agentMetier");
   const tCapability = useTranslations("capability");
   const agentId = useAgentId();
+  const searchParams = useSearchParams();
   const [selectedCapabilityId, setSelectedCapabilityId] = useState<string | null>(null);
+  const requestedCapabilityId = searchParams.get("capability_id");
+  const requestedTurnId = searchParams.get("turn_id");
 
   const aggregate = useQuery({
     queryKey: ["business-capabilities", agentId],
@@ -105,7 +109,12 @@ export function AgentMetier() {
       null
     );
   }, [data]);
-  const activeCapabilityId = selectedCapabilityId ?? firstCapabilityId;
+  const queryCapabilityId =
+    requestedCapabilityId &&
+    data?.capabilities.some((row) => row.capability_id === requestedCapabilityId)
+      ? requestedCapabilityId
+      : null;
+  const activeCapabilityId = selectedCapabilityId ?? queryCapabilityId ?? firstCapabilityId;
   const activeCapability =
     data?.capabilities.find((row) => row.capability_id === activeCapabilityId) ?? null;
   const activeCapabilityLabel = activeCapability
@@ -171,6 +180,7 @@ export function AgentMetier() {
           title={t("runs.title", { capability: activeCapabilityLabel })}
           emptyTitle={t("runs.emptyTitle")}
           emptyHint={t("runs.emptyHint")}
+          initialTurnId={requestedTurnId}
         />
       ) : null}
     </div>

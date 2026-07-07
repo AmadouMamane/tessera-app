@@ -3410,12 +3410,18 @@
         "what": "Offene Abweichungen: Schwere und Bearbeitungsstatus.",
         "how": "Eine Zeile je erfasster Abweichung.",
         "source": "Konformitätsbericht (Abweichungen)."
+      },
+      "businessLegal": {
+        "what": "Fachliche Signale, deren Manifest eine rechtliche Verpflichtung deklariert.",
+        "how": "Selektive Projektion der AgentSpec business_signals mit engagement=legal; der Wert kommt aus realen fachlichen Scores.",
+        "source": "AgentSpec + business_events."
       }
     },
     "panel": {
       "mapping": "Regulatorische Kartierung",
       "obligations": "Pflichten mit Risiko ({n})",
       "evidence": "Compliance-Evidence-Pack",
+      "businessLegal": "Rechtliche Fachsignale ({n})",
       "controls": "Kritische Kontrollen ({n})",
       "missing": "Fehlende Nachweise",
       "incidents": "Vorfälle & Ausnahmen"
@@ -3439,6 +3445,19 @@
       "truth": "Quelle der Wahrheit: YAML · Git",
       "env": "Umgebung: Produktion",
       "realtime": "Echtzeit"
+    },
+    "businessSignals": {
+      "agent": "Agent",
+      "signal": "Signal",
+      "value": "Wert",
+      "status": "Status",
+      "source": "Quelle",
+      "empty": "Kein rechtliches Fachsignal deklariert.",
+      "statusValue": {
+        "scored": "Gemessen",
+        "unknown": "Unbekannt",
+        "not_applicable": "Nicht anwendbar"
+      }
     },
     "sev": {
       "high": "Hoch",
@@ -3474,7 +3493,8 @@
     "sec": {
       "actual": "A · Regulatorische Lage",
       "mapping": "B · Mapping & Pflichten",
-      "controls": "C · Kontrollen & Vorfälle"
+      "businessLegal": "C · Rechtliche Fachsignale",
+      "controls": "D · Kontrollen & Vorfälle"
     },
     "footer": {
       "reference": "Referenz: v2026.06",
@@ -6711,6 +6731,7 @@
     },
     "rowOpen": "Details ansehen",
     "close": "Schließen",
+    "openBusinessRun": "In Fachlichkeit öffnen",
     "page": {
       "prev": "Vorherige Seite",
       "next": "Nächste Seite",
@@ -6888,7 +6909,8 @@
     "releaseNotRun": "Eval nicht ausgeführt",
     "candidate": "Kandidat",
     "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket.",
-    "observabilityLevel": "Beobachtbarkeitsstufe {level}"
+    "observabilityLevel": "Beobachtbarkeitsstufe {level}",
+    "pendingBusinessItems": "{n} fachlich offen"
   },
   "product": {
     "apercu": {

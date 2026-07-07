@@ -979,7 +979,7 @@ async def test_business_capability_aggregate_is_server_side_and_keeps_unknown_ho
     by_capability = {row["capability_id"]: row for row in payload["capabilities"]}
 
     assert payload["fact"] == "business_events"
-    assert payload["source"] == "jsonl"
+    assert payload["source"] == "local"
     assert payload["event_count"] > 0
     assert payload["observability_level"] == "L3"
     assert payload["required_level"] == "L3"

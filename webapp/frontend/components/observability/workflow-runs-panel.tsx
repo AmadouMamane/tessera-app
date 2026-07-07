@@ -11,7 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,6 +205,7 @@ export function WorkflowRunsPanel({
   loadingLabel = "Chargement des exécutions métier...",
   emptyTitle = "Aucune exécution métier observée",
   emptyHint = "Lancez un tour dans la surface produit de l'agent pour voir apparaître les faits métier, artefacts, scores et actions gouvernées.",
+  initialTurnId,
 }: {
   data: RecouvrementRunsResponse | undefined;
   loading: boolean;
@@ -212,9 +213,15 @@ export function WorkflowRunsPanel({
   loadingLabel?: string;
   emptyTitle?: string;
   emptyHint?: string;
+  initialTurnId?: string | null;
 }) {
   const runs = data?.runs ?? [];
   const [selectedTurnId, setSelectedTurnId] = useState<string | null>(null);
+  useEffect(() => {
+    if (initialTurnId && runs.some((run) => run.turn_id === initialTurnId)) {
+      setSelectedTurnId(initialTurnId);
+    }
+  }, [initialTurnId, runs]);
   const selected = runs.find((run) => run.turn_id === selectedTurnId) ?? runs[0] ?? null;
 
   if (loading && runs.length === 0) {
@@ -380,9 +387,9 @@ function TimelinePanel({ run }: { run: RecouvrementRun }) {
         {events.length === 0 ? (
           <p className="text-xs text-[var(--tessera-text-muted)]">Aucun événement clé.</p>
         ) : (
-          events.map((event) => (
+          events.map((event, index) => (
             <div
-              key={`${event.event_name}-${event.timestamp}-${event.node_name}`}
+              key={eventKey(event, index)}
               className={`rounded-lg border px-2.5 py-2 ${eventTone(event)}`}
             >
               <div className="grid gap-0.5">

@@ -8,7 +8,7 @@
 #   entite:     reponse | modele | juge | retrieval | corpus | memoire | guard
 #               | outils | graphe | session | utilisateur | produit | pipeline
 #               | infra | cockpit
-#   page:       qualite | securite | conformite | fiabilite | cout | agir
+#   page:       qualite | securite | conformite | fiabilite | cout | agir | metier
 #               | plateforme | produit | repo
 #               (fiabilite + cout render as one page "Fiabilité & coût";
 #                "produit" = assistant-facing surface; "repo" = portfolio/repo
@@ -91,7 +91,7 @@ signals:
   - {id: 62, key: graceful-degradation, label: "Graceful-degradation obs", axis: 18, kind: signal, entite: modele, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
   - {id: 63, key: intent-router-obs, label: "Intent / router observability", axis: 18, kind: signal, entite: graphe, page: qualite, section: etat, cycle: online, engagement: none, status: active}
   - {id: 64, key: embedding-version-skew, label: "Embedding-version skew", axis: 18, kind: signal, entite: retrieval, page: fiabilite, section: etat, cycle: online, engagement: gate, status: active}
-  - {id: 65, key: cost-per-resolution, label: "Cost-per-resolution", axis: 19, kind: signal, entite: session, page: cout, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 65, key: cost-per-resolution, label: "Cost-per-resolution", axis: 19, kind: signal, entite: session, page: metier, section: etat, cycle: online, engagement: none, status: planned}
   - {id: 66, key: funnel-per-language, label: "Conversation funnel per language", axis: 19, kind: signal, entite: session, page: qualite, section: etat, cycle: online, engagement: none, status: active}
   - {id: 67, key: time-to-first-useful, label: "Time-to-first-useful-answer", axis: 19, kind: signal, entite: session, page: qualite, section: etat, cycle: online, engagement: none, status: planned}
   - {id: 68, key: tool-downstream-health, label: "Tool downstream health + breaker", axis: 20, kind: signal, entite: outils, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
@@ -165,7 +165,7 @@ signals:
   - {id: 136, key: escalation-transparency, label: "Escalation transparency", axis: 35, kind: capability, entite: session, page: produit, section: na, cycle: online, engagement: none, status: planned}
   - {id: 137, key: customer-finops-dashboard, label: "Customer-facing FinOps", axis: 36, kind: capability, entite: cockpit, page: cout, section: na, cycle: online, engagement: none, status: planned}
   - {id: 138, key: quality-sla-contractual, label: "Contractual quality SLA", axis: 36, kind: practice, entite: reponse, page: qualite, section: na, cycle: online, engagement: sla, status: planned}
-  - {id: 139, key: roi-view-buyer, label: "ROI view for the buyer", axis: 36, kind: signal, entite: session, page: cout, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 139, key: roi-view-buyer, label: "ROI view for the buyer", axis: 36, kind: signal, entite: session, page: metier, section: etat, cycle: online, engagement: none, status: planned}
   - {id: 140, key: tiered-obs-offering, label: "Tiered obs offering via RBAC", axis: 36, kind: capability, entite: cockpit, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
   - {id: 141, key: carbon-report, label: "Carbon / CSRD report deliverable", axis: 36, kind: artifact, entite: infra, page: repo, section: na, cycle: design, engagement: none, status: planned}
   - {id: 142, key: harness-as-benchmark, label: "Harness as citable benchmark", axis: 37, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
@@ -216,7 +216,7 @@ signals:
   - {id: 187, key: jitter-p99, label: "Jitter / p99.9 variance", axis: 44, kind: signal, entite: infra, page: fiabilite, section: etat, cycle: online, engagement: slo, status: planned}
   - {id: 188, key: inter-agent-comm, label: "Inter-agent communication obs", axis: 45, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
   - {id: 189, key: handoff-tracing, label: "Handoff tracing", axis: 45, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: active}
-  - {id: 190, key: per-agent-attribution, label: "Per-agent cost/quality attribution", axis: 45, kind: signal, entite: graphe, page: cout, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 190, key: per-agent-attribution, label: "Per-agent cost/quality attribution", axis: 45, kind: signal, entite: graphe, page: metier, section: diagnostic, cycle: online, engagement: none, status: planned}
   - {id: 191, key: deadlock-livelock, label: "Deadlock / livelock detection", axis: 45, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
   - {id: 192, key: emergent-behaviour, label: "Emergent-behaviour detection", axis: 45, kind: signal, entite: graphe, page: securite, section: predictif, cycle: online, engagement: none, status: planned}
   - {id: 193, key: responsibility-trace, label: "Responsibility / accountability trace", axis: 45, kind: signal, entite: graphe, page: conformite, section: etat, cycle: online, engagement: legal, status: planned}

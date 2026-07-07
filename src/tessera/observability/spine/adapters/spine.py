@@ -10,7 +10,7 @@ shells, drill-down, erasure). Aggregate numbers (SLO/rate/quantile) stay on **Pr
 
 This reader is not the default: it is selected via ``TESSERA_SPINE_SOURCE=spine`` or run
 behind the :class:`~tessera.observability.spine.adapters.shadow.ShadowReader` (``=shadow``)
-which serves jsonl and logs divergence until a signal holds parity.
+which serves local and logs divergence until a signal holds parity.
 """
 
 from __future__ import annotations

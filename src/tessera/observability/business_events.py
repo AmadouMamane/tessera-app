@@ -600,8 +600,8 @@ def _clickhouse_store() -> ClickHouseBusinessEventStore:
 def _read_store() -> BusinessEventStore:
     """The store business-event READS resolve to, per the ``business_events`` fact flip (§5).
 
-    ``jsonl`` (default, mid-migration) → the in-process store; ``spine`` → the owned
-    ClickHouse table; ``shadow`` → serve in-process, compare owned, record divergence.
+    ``local`` → the in-process store; ``spine`` (default after the step-4 bake) → the
+    owned ClickHouse table; ``shadow`` → serve in-process, compare owned, record divergence.
     Writes always append to the in-process store; the owned table is fed by the dual-write.
     """
     from tessera.observability.spine.adapters import fact_source

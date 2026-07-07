@@ -77,6 +77,13 @@ def _mean_pct(values: list[float]) -> float | None:
     return round((sum(values) / len(values)) * 100, 1)
 
 
+def _rows_by_run(rows: list[dict[str, object]]) -> list[list[dict[str, object]]]:
+    grouped: dict[tuple[str, str], list[dict[str, object]]] = {}
+    for row in rows:
+        grouped.setdefault(_run_key(row), []).append(row)
+    return list(grouped.values())
+
+
 def _trend(rows: list[dict[str, object]]) -> dict[str, object]:
     """Return a tiny real trend over the first/last dated buckets, or honest-empty."""
     buckets: dict[str, set[tuple[str, str]]] = {}
@@ -127,21 +134,55 @@ def _manifest_capabilities(agent_id: str | None) -> list[dict[str, object]]:
 
 
 def _score_conformity(rows: list[dict[str, object]]) -> float | None:
-    scores = business_scoring.score_rows(rows)
     scored_values: list[float] = []
-    for score in scores:
-        raw_score = score.get("score")
-        if (
-            str(score.get("metric")) not in _CONFORMITY_EXCLUDED_METRICS
-            and score.get("status") == "scored"
-            and isinstance(raw_score, int | float)
-        ):
-            scored_values.append(float(raw_score))
+    for run_rows in _rows_by_run(rows):
+        for score in business_scoring.score_rows(run_rows):
+            raw_score = score.get("score")
+            if (
+                str(score.get("metric")) not in _CONFORMITY_EXCLUDED_METRICS
+                and score.get("status") == "scored"
+                and isinstance(raw_score, int | float)
+            ):
+                scored_values.append(float(raw_score))
     return _mean_pct(scored_values)
 
 
 def _score_by_metric(rows: list[dict[str, object]]) -> dict[str, dict[str, object]]:
     return {str(score.get("metric")): score for score in business_scoring.score_rows(rows)}
+
+
+def _aggregate_run_score(metric: str, rows: list[dict[str, object]]) -> dict[str, object] | None:
+    run_scores = [
+        score
+        for run_rows in _rows_by_run(rows)
+        if (score := _score_by_metric(run_rows).get(metric)) is not None
+    ]
+    scored_values: list[float] = []
+    for score in run_scores:
+        raw_score = score.get("score")
+        if score.get("status") == "scored" and isinstance(raw_score, int | float):
+            scored_values.append(float(raw_score))
+    if scored_values:
+        unique_values = set(scored_values)
+        scored_reasons = [
+            str(score.get("reason"))
+            for score in run_scores
+            if score.get("status") == "scored" and isinstance(score.get("score"), int | float)
+        ]
+        reason = (
+            scored_reasons[-1] if len(unique_values) == 1 and scored_reasons else "scored_runs_mean"
+        )
+        return {
+            "metric": metric,
+            "score": sum(scored_values) / len(scored_values),
+            "status": "scored",
+            "reason": reason,
+        }
+    for status in ("unknown", "not_applicable"):
+        match = next((score for score in run_scores if score.get("status") == status), None)
+        if match is not None:
+            return match
+    return None
 
 
 def _prevents_external_effect(
@@ -209,7 +250,7 @@ def _signal_trend(metric: str, rows: list[dict[str, object]]) -> dict[str, objec
 
     points: list[dict[str, object]] = []
     for bucket, bucket_rows in sorted(buckets.items()):
-        score = _score_by_metric(bucket_rows).get(metric)
+        score = _aggregate_run_score(metric, bucket_rows)
         raw_score = score.get("score") if score else None
         value_pct = round(float(raw_score) * 100, 1) if isinstance(raw_score, int | float) else None
         points.append(
@@ -246,11 +287,10 @@ def _business_signals(
     agent = _agent(agent_id)
     if agent is None:
         return []
-    scores = _score_by_metric(rows)
     signal_rows: list[dict[str, object]] = []
     for descriptor in business_signal_descriptors(agent):
         key = str(descriptor["key"])
-        score = scores.get(key)
+        score = _aggregate_run_score(key, rows)
         raw_score = score.get("score") if score else None
         value = float(raw_score) if isinstance(raw_score, int | float) else None
         value_pct = (

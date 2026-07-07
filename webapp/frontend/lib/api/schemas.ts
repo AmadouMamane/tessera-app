@@ -903,6 +903,18 @@ export const NonConformitySchema = z.object({
 });
 export type NonConformity = z.infer<typeof NonConformitySchema>;
 
+export const BusinessLegalSignalSchema = z.object({
+  agent_id: z.string(),
+  agent_name: z.string(),
+  key: z.string(),
+  value_pct: z.number().nullable(),
+  status: z.string(),
+  reason: z.string(),
+  source: z.string(),
+  href: z.string(),
+});
+export type BusinessLegalSignal = z.infer<typeof BusinessLegalSignalSchema>;
+
 // --- Conformite command-bar tabs (generic catalogue shape) ---------------
 
 // Plain-language "what does this number mean?" text rendered as the ⓘ popover
@@ -1018,6 +1030,7 @@ export const ComplianceReportSchema = z.object({
   controls: z.array(ComplianceControlSchema).optional(),
   obligations: z.array(ComplianceObligationSchema).optional(),
   non_conformities: z.array(NonConformitySchema).optional(),
+  business_legal_signals: z.array(BusinessLegalSignalSchema).optional(),
   score_series: z.array(z.number()).optional(),
   score_delta: z.number().nullable().optional(),
   tabs: z.record(z.string(), CatalogTabSchema).optional(),
@@ -3544,6 +3557,8 @@ export const InboxOverviewSchema = z.object({
       sla_tone: z.enum(["crit", "warn", "ok"]),
       due: z.string(),
       status: z.enum(["todo", "in_progress", "waiting", "resolved"]),
+      href: z.string().optional().default(""),
+      source_kind: z.string().optional().default("eval_failure"),
     }),
   ),
   total_items: z.number().int(),
@@ -5262,6 +5277,8 @@ export const FleetSchema = z.object({
         // ADR 0017 §4 — observability level (L0–L2 in Phase B); null when the agent has
         // no AgentSpec manifest yet (honest-empty badge, never rendered as "L0").
         level: z.string().nullable().optional(),
+        north_star: BusinessSignalValueSchema.nullable().optional(),
+        pending_business_items: z.number().int().optional().default(0),
       }),
     )
     .optional(),

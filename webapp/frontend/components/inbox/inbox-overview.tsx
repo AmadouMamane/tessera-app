@@ -24,6 +24,7 @@ import {
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { fetchInboxOverview, mutateInboxItem } from "@/lib/api/client";
 import type { InboxOverview as InboxData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -804,6 +805,14 @@ function InboxDrawer({
             >
               <RefreshCcw className="h-3.5 w-3.5" /> {t("cycleStatus")}
             </button>
+            {item.href ? (
+              <Link
+                href={item.href}
+                className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[#87bfff] hover:text-white"
+              >
+                {t("openBusinessRun")} <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            ) : null}
           </div>
         </aside>
       </dialog>

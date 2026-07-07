@@ -43,10 +43,10 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # ledger is covered by its own unit (pure chain walk) + contract tests.
     monkeypatch.setenv("TESSERA_LEDGER_DUAL_WRITE", "0")
     # Since G5 the flippable facts DEFAULT to the owned stores; the unit suite pins the
-    # legacy jsonl source explicitly (tests seed the local stores and must stay offline).
+    # degraded local source explicitly (tests seed the local stores and must stay offline).
     # The spine sources themselves are covered by the fact-flip unit tests (which drop
     # this pin) and by the live contract tests.
-    monkeypatch.setenv("TESSERA_SPINE_SOURCE", "jsonl")
+    monkeypatch.setenv("TESSERA_SPINE_SOURCE", "local")
     # H2 step 5 retired the flat audit.log: the ledger source now DEFAULTS to the promoted
     # Postgres table (the cut). The unit suite pins the legacy file source so audit reads +
     # emission stay offline/hermetic; the table read is covered by the ledger contract tests
