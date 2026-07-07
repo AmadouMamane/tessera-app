@@ -218,13 +218,23 @@ async def _read_audit_integrity(_scope: Scope) -> dict[str, object]:
     guarantee, so this intentionally bypasses the scope-filtered ctx entries. The scope is
     unused: integrity is a whole-fleet property (its capability declares no dims).
     """
-    from tessera.guard.ledger_store import ledger_source, verify_active_ledger
+    from tessera.guard.ledger_store import active_ledger_tree_status, ledger_source
 
-    status = verify_active_ledger()
+    tree = active_ledger_tree_status()
     return {
-        "chain_valid": status.verified,
-        "length": status.length,
-        "broken_at": status.broken_at,
+        # TESS-LEDGER-001 — content integrity (tamper-evidence) is distinct from total order.
+        # ``chain_valid`` now tracks content integrity so a historical fork does not read as
+        # tampering; ``linear``/``forks`` carry the total-order nuance for the badge + evidence.
+        "chain_valid": tree.content_integrity,
+        "content_integrity": tree.content_integrity,
+        "linear": tree.linear,
+        "fork_count": tree.fork_count,
+        "forks": [{"prev_hash": f.prev_hash, "children": list(f.children)} for f in tree.forks],
+        "orphan_count": tree.orphan_count,
+        "orphans": list(tree.orphans),
+        "attested": tree.attested,
+        "length": tree.length,
+        "broken_at": tree.broken_at,
         "medium": ledger_source(),
     }
 

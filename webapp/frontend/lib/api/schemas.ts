@@ -270,9 +270,15 @@ export const AuditPageSchema = z.object({
 export type AuditPage = z.infer<typeof AuditPageSchema>;
 
 export const AuditIntegritySchema = z.object({
-  verified: z.boolean(),
+  verified: z.boolean(), // back-compat alias of content_integrity (tamper-evidence)
   length: z.number().int(),
   broken_at: z.number().int().nullable().default(null),
+  // TESS-LEDGER-001 — tree-aware: content integrity (no tampering) is distinct from total order.
+  content_integrity: z.boolean().optional(),
+  linear: z.boolean().default(true),
+  fork_count: z.number().int().default(0),
+  orphan_count: z.number().int().default(0),
+  attested: z.boolean().default(false),
 });
 export type AuditIntegrity = z.infer<typeof AuditIntegritySchema>;
 

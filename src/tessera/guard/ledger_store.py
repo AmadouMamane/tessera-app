@@ -18,14 +18,17 @@ Guarantees, enforced not promised:
   order (``seq``) is a write audit, never the proof.
 * **Never import a broken chain**: the backfill verifies the file chain first and
   refuses to copy a file that does not verify.
-* **Dual-write is durable, not best-effort** (H2, step 2): each chained entry is fsynced to
-  a local spool before emit returns, then drained into the table in chain order by a
-  background writer; a Postgres outage leaves entries spooled and replays them on recovery
-  (including boot) — **zero loss, zero duplicate** (``ON CONFLICT (hash) DO NOTHING`` +
-  whole-batch transaction), **chain order preserved**. The spool is the mechanism that lets
-  the flat ``audit.log`` be retired at the cut. The FILE stays the canonical store until the
-  cut (``TESSERA_LEDGER_SOURCE=postgres``), gated on :func:`shadow_verify_ledger` holding —
-  never flip a ledger read before its chain verifies (§Amendment 3 migration note).
+* **Dual-write is durable AND serialized, not best-effort** (H2 step 2; TESS-LEDGER-001): each
+  entry is fsynced to a local spool before emit returns, then the drain assigns the chain
+  linkage and inserts it INSIDE one ``pg_advisory_xact_lock`` transaction — the head is read in
+  that transaction, so insert order IS chain order and two concurrent writers can never extend
+  the same head (**no fork**; a partial UNIQUE index on ``prev_hash`` is the belt-and-suspenders
+  guard). A Postgres outage leaves entries spooled and replays them on recovery (including boot)
+  — **zero loss, zero duplicate** (idempotent by the position-independent ``event_id`` +
+  whole-batch transaction), **chain order preserved**. The spool is the mechanism that lets the
+  flat ``audit.log`` be retired at the cut. The FILE stays the canonical store until the cut
+  (``TESSERA_LEDGER_SOURCE=postgres``), gated on :func:`shadow_verify_ledger` holding — never
+  flip a ledger read before its chain verifies (§Amendment 3 migration note).
 
 The unit suite disables the dual-write (``TESSERA_LEDGER_DUAL_WRITE=0``) so audit
 emission stays hermetic; the write/backfill legs are covered by contract tests.
@@ -41,15 +44,25 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
-from tessera.guard.audit import ChainStatus, _hash_core, verify_audit_chain
+from tessera.guard.audit import (
+    LEDGER_ATTESTATION_TYPE,
+    ChainStatus,
+    _event_identity,
+    _hash_core,
+    verify_audit_chain,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from pathlib import Path
 
 __all__ = [
+    "LEDGER_ATTESTATION_TYPE",
     "LEDGER_TABLE",
+    "LedgerForkPoint",
     "LedgerShadowStatus",
+    "LedgerTreeStatus",
+    "active_ledger_tree_status",
     "backfill_ledger_from_file",
     "drain_spool",
     "dual_write_enabled",
@@ -63,6 +76,7 @@ __all__ = [
     "shadow_verify_ledger",
     "verify_active_ledger",
     "verify_ledger_rows",
+    "verify_ledger_tree",
 ]
 
 LEDGER_TABLE: Final = "audit_ledger"
@@ -84,7 +98,20 @@ CREATE_LEDGER_INDEXES: Final = (
     f"CREATE INDEX IF NOT EXISTS audit_ledger_occurred ON {LEDGER_TABLE} (occurred_at)",
     # The hash is the entry's identity — the idempotence key for dual-write + backfill.
     f"CREATE UNIQUE INDEX IF NOT EXISTS audit_ledger_hash_uq ON {LEDGER_TABLE} (hash)",
+    # TESS-LEDGER-001 — the drain's idempotence key: the position-independent event_id makes a
+    # crash-replayed drain a no-op. Partial so the 13k+ legacy rows (no event_id → NULL) are
+    # excluded; new rows carry it and dedup on it.
+    f"CREATE UNIQUE INDEX IF NOT EXISTS audit_ledger_event_uq ON {LEDGER_TABLE} "
+    f"((payload->>'event_id')) WHERE payload->>'event_id' IS NOT NULL",
 )
+
+# TESS-LEDGER-001 — the fork guard (belt + suspenders to the advisory lock). A partial UNIQUE
+# index on prev_hash forbids a second child of any parent. It is anchored above the table's
+# high-water mark at install time so the 29 historical forks (all below the anchor) are
+# grandfathered — never rewritten (append-only is absolute) — while every NEW row is
+# constrained. Installed by :func:`ensure_audit_ledger_schema` (not a static ``IF NOT EXISTS``,
+# because the anchor is table-state dependent — it reads the high-water mark at install time).
+_FORK_GUARD_INDEX: Final = "audit_ledger_no_fork"
 
 # Strict append-only: enforced by the store, not by convention. DDL (DROP) stays possible
 # for the operator — the chain itself is what proves absence/tampering, per the ADR.
@@ -107,6 +134,22 @@ INSERT INTO {LEDGER_TABLE} (occurred_at, agent_id, payload, prev_hash, hash)
 VALUES (%s, %s, %s, %s, %s)
 ON CONFLICT (hash) DO NOTHING
 """  # noqa: S608 — fixed table identifier; every value is a bound parameter
+
+# The drain assigns the chain linkage itself (prev_hash/hash) under the advisory lock, so it
+# pre-filters duplicates by the position-independent event_id (see :func:`drain_spool`) and
+# uses a plain INSERT — a unique violation (the fork guard, tripped only by a non-cooperating
+# writer) rolls the whole batch back and the next drain retries against the fresh head.
+_INSERT_DRAIN: Final = f"""
+INSERT INTO {LEDGER_TABLE} (occurred_at, agent_id, payload, prev_hash, hash)
+VALUES (%s, %s, %s, %s, %s)
+"""  # noqa: S608 — fixed table identifier; every value is a bound parameter
+
+# TESS-LEDGER-001 — the append serialization key. All writers to THIS database's ledger take
+# ``pg_advisory_xact_lock(_LOCK_HI, _LOCK_LO)`` in the drain transaction, so the head read +
+# link + insert are globally serialized and two writers can never extend the same head. The
+# key is per-database (ci vs local live in separate databases → naturally isolated).
+_LOCK_HI: Final = 1_414_743_379  # 'TESS'
+_LOCK_LO: Final = 1_279_607_634  # 'LDGR'
 
 
 def ledger_source() -> str:
@@ -161,7 +204,7 @@ def _row_tuple(entry: Mapping[str, Any]) -> tuple[object, ...]:
 
 
 async def ensure_audit_ledger_schema() -> None:
-    """Create the promoted ledger table, its indexes and the append-only trigger."""
+    """Create the promoted ledger table, its indexes, the append-only trigger + fork guard."""
     from tessera.retrieval.store import get_pool
 
     pool = get_pool()
@@ -173,6 +216,18 @@ async def ensure_audit_ledger_schema() -> None:
             await cur.execute(statement)
         await cur.execute(CREATE_APPEND_ONLY_FUNCTION)
         await cur.execute(CREATE_APPEND_ONLY_TRIGGER)
+        # The fork guard is anchored at the current high-water mark so pre-existing forks are
+        # grandfathered (never rewritten) and only new rows are constrained. Idempotent: skip
+        # if already installed (re-computing the anchor would move the boundary).
+        await cur.execute("SELECT 1 FROM pg_indexes WHERE indexname = %s", (_FORK_GUARD_INDEX,))
+        if await cur.fetchone() is None:
+            await cur.execute(f"SELECT COALESCE(max(seq), 0) FROM {LEDGER_TABLE}")  # noqa: S608
+            row = await cur.fetchone()
+            anchor = int(row[0]) if row else 0
+            await cur.execute(
+                f"CREATE UNIQUE INDEX {_FORK_GUARD_INDEX} ON {LEDGER_TABLE} "
+                f"(prev_hash) WHERE seq > {anchor}"
+            )
         await conn.commit()
 
 
@@ -241,30 +296,88 @@ def _read_spool_locked() -> list[dict[str, Any]]:
     return entries
 
 
-def drain_spool() -> bool:
-    """Replay spooled entries into the table in chain order — never drops one.
+def _link_and_insert(entries: list[dict[str, Any]]) -> set[str]:
+    """Serialize the append: read the true head under the advisory lock, link + insert.
 
-    One transaction: the batch commits whole (spool cleared) or not at all (spool kept,
-    order intact), so there is never a partial replay; re-draining a committed batch is a
-    no-op (``ON CONFLICT (hash) DO NOTHING``). Returns True when the spool is empty
-    afterwards, False when Postgres was unreachable and the entries remain spooled.
+    TESS-LEDGER-001 core. One transaction holding ``pg_advisory_xact_lock`` so the head read,
+    the linking and the inserts are globally serialized — insert order IS chain order, and two
+    concurrent writers can never extend the same head (no fork). Each entry is (re)linked to
+    the running head here, NOT at emit, so the recorded ``prev_hash``/``hash`` reflect the true
+    immediate predecessor. Idempotent by the position-independent ``event_id``: entries already
+    durable are skipped (a crash-replayed drain never duplicates). Returns the event_ids that
+    are now durable (freshly inserted or already present) — the set the spool may drop.
+    """
+    prepared = [(str(e.get("event_id") or _event_identity(e)), e) for e in entries]
+    with _connect_sync() as conn:
+        conn.execute("SELECT pg_advisory_xact_lock(%s, %s)", (_LOCK_HI, _LOCK_LO))
+        durable: set[str] = {
+            row[0]
+            for row in conn.execute(
+                f"SELECT payload->>'event_id' FROM {LEDGER_TABLE} "  # noqa: S608
+                f"WHERE payload->>'event_id' = ANY(%s)",
+                ([eid for eid, _ in prepared],),
+            ).fetchall()
+        }
+        head_row = conn.execute(
+            f"SELECT hash FROM {LEDGER_TABLE} ORDER BY seq DESC LIMIT 1"  # noqa: S608
+        ).fetchone()
+        head = str(head_row[0]) if head_row and head_row[0] else _GENESIS
+        for eid, entry in prepared:
+            if eid in durable:
+                continue  # already in the table — idempotent skip, head untouched
+            linked = {k: v for k, v in entry.items() if k != "hash"}
+            linked["event_id"] = eid
+            linked["prev_hash"] = head
+            linked["hash"] = _hash_core(linked)
+            conn.execute(_INSERT_DRAIN, _row_tuple(linked))
+            head = str(linked["hash"])
+            durable.add(eid)
+        conn.commit()
+    return {eid for eid, _ in prepared}
+
+
+def _clear_spooled(processed: set[str]) -> None:
+    """Drop only the now-durable entries from the spool, preserving concurrent appends.
+
+    Rewrites the spool with the entries whose ``event_id`` is NOT in ``processed`` — strictly
+    safer than truncating the whole file (which could wipe an entry appended by another writer
+    between the drain's read and its clear). Matches the drain's identity rule (event_id, or a
+    recomputed one for a legacy entry that predates the field).
+    """
+    with _spool_lock:
+        remaining = [
+            e
+            for e in _read_spool_locked()
+            if str(e.get("event_id") or _event_identity(e)) not in processed
+        ]
+        text = (
+            "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in remaining)
+            if remaining
+            else ""
+        )
+        _spool_path().write_text(text, encoding="utf-8")
+
+
+def drain_spool() -> bool:
+    """Replay spooled entries into the table, serialized + fork-free — never drops one.
+
+    Reads the spool (FIFO), then links + inserts under the advisory lock in ONE transaction:
+    the batch commits whole or not at all, so there is never a partial replay; a re-drain is a
+    no-op (idempotent by ``event_id``). Returns True when the spool is drained, False when
+    Postgres was unreachable (or the fork guard tripped a concurrent non-cooperating writer) —
+    the entries remain spooled, order intact, and the next wake retries against the fresh head.
     """
     with _spool_lock:
         entries = _read_spool_locked()
-        if not entries:
-            return True
-        try:
-            with _connect_sync() as conn:
-                for entry in entries:
-                    conn.execute(_INSERT_ENTRY, _row_tuple(entry))
-                conn.commit()
-        except Exception as exc:  # Postgres unreachable — keep the spool, replay later
-            sys.stderr.write(
-                f"tessera.ledger: spool drain deferred ({len(entries)} pending): {exc}\n"
-            )
-            return False
-        _spool_path().write_text("", encoding="utf-8")
+    if not entries:
         return True
+    try:
+        processed = _link_and_insert(entries)
+    except Exception as exc:  # unreachable / fork-guard conflict — keep the spool, replay later
+        sys.stderr.write(f"tessera.ledger: spool drain deferred ({len(entries)} pending): {exc}\n")
+        return False
+    _clear_spooled(processed)
+    return True
 
 
 def _writer_loop() -> None:
@@ -368,6 +481,101 @@ def verify_ledger_rows(payloads: Sequence[Mapping[str, Any]]) -> ChainStatus:
         prev = str(stored)
         walked += 1
     return ChainStatus(verified=True, length=walked, broken_at=None)
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerForkPoint:
+    """A parent extended by more than one child — a break in the total order (not a forgery)."""
+
+    prev_hash: str
+    children: tuple[str, ...]  # the child hashes sharing this parent (≥2)
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerTreeStatus:
+    """Tree-aware ledger verdict (TESS-LEDGER-001): tamper-evidence ≠ total order.
+
+    The binary "chain broken" conflated three very different things. This separates them:
+
+    * ``content_integrity`` — the tamper-evidence guarantee: every PRESENT row's hash recomputes
+      from its canonical payload (no edited/forged row). It stays TRUE for a forked or gapped
+      chain, because a fork is a tree — not a forgery — and a lost write is not an edit.
+    * ``forks`` — parents extended by more than one child (concurrent writers). REPORTED, never
+      deleted: the orphan branches are real guard events.
+    * ``orphans`` — present rows whose ``prev_hash`` resolves to NO present row: the parent entry
+      was never persisted (a lost write, not a deletion — append-only forbids DELETE). A
+      completeness gap, distinct from tampering.
+    * ``linear`` — the strong property: content intact AND a single unbroken chain (no fork, no
+      orphan).
+    * ``attested`` — True once an appended attestation entry has ratified the historical state
+      (point 4).
+    """
+
+    content_integrity: bool
+    linear: bool
+    forks: tuple[LedgerForkPoint, ...]
+    orphans: tuple[str, ...]  # hashes of rows whose parent is missing (a lost write)
+    length: int
+    broken_at: int | None
+    attested: bool = False
+
+    @property
+    def fork_count(self) -> int:
+        """Number of fork points (parents with more than one child)."""
+        return len(self.forks)
+
+    @property
+    def orphan_count(self) -> int:
+        """Number of rows whose parent entry is missing (lost writes)."""
+        return len(self.orphans)
+
+
+def verify_ledger_tree(payloads: Sequence[Mapping[str, Any]]) -> LedgerTreeStatus:
+    """Tree-aware verification — tamper-evidence, forks and gaps judged separately.
+
+    Recomputes every row's hash (a mismatch is an EDIT → fails ``content_integrity``), collects
+    every fork point instead of dead-ending on the first one, and reports rows whose parent is
+    missing as ``orphans`` (a lost write — completeness, not tampering). A healthy-but-forked
+    ledger returns ``content_integrity=True, linear=False, forks=[…]`` — the honest verdict the
+    binary walk could not give (it reported such a chain as flatly "broken").
+    """
+    if not payloads:
+        return LedgerTreeStatus(True, True, (), (), 0, None)
+    by_hash: dict[str, Mapping[str, Any]] = {}
+    children: dict[str, list[str]] = {}
+    content_ok = True
+    broken_at: int | None = None
+    attested = False
+    for idx, payload in enumerate(payloads):
+        if payload.get("type") == LEDGER_ATTESTATION_TYPE:
+            attested = True
+        stored = payload.get("hash")
+        recomputed = _hash_core({k: v for k, v in payload.items() if k != "hash"})
+        if not isinstance(stored, str) or stored != recomputed:
+            content_ok = False  # an edited/forged row — the tamper signal
+            if broken_at is None:
+                broken_at = idx
+            continue
+        by_hash[stored] = payload
+        children.setdefault(str(payload.get("prev_hash", "")), []).append(stored)
+    orphans = tuple(
+        child
+        for parent, kids in children.items()
+        if parent != _GENESIS and parent not in by_hash
+        for child in kids  # the child(ren) whose declared parent was never persisted
+    )
+    forks = tuple(
+        LedgerForkPoint(parent, tuple(kids)) for parent, kids in children.items() if len(kids) > 1
+    )
+    return LedgerTreeStatus(
+        content_integrity=content_ok,
+        linear=content_ok and not forks and not orphans,
+        forks=forks,
+        orphans=orphans,
+        length=len(payloads),
+        broken_at=broken_at,
+        attested=attested,
+    )
 
 
 def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
@@ -500,13 +708,44 @@ def shadow_verify_ledger(path: Path) -> LedgerShadowStatus:
 
 
 def verify_active_ledger(path: Path | None = None) -> ChainStatus:
-    """Chain integrity of the ACTIVE ledger source (file today, Postgres after the cut).
+    """CONTENT integrity (tamper-evidence) of the ACTIVE ledger source.
 
-    In file mode ``path`` verifies that file when given (an explicit/test chain), else the
-    settings audit file; in postgres mode the promoted table is walked (``path`` ignored).
+    TESS-LEDGER-001 — ``verified`` is the CONTENT guarantee (every row hashes correctly and
+    every ``prev_hash`` resolves), NOT linearity: a historical fork is a tree, not a forgery,
+    and must not read as tampering across the cockpit. Total order + the fork list are surfaced
+    by :func:`active_ledger_tree_status` (the integrity badge). In file mode the flat journal is
+    single-writer, so content integrity and linearity coincide (``verify_audit_chain``).
+
+    In postgres mode ``path`` is ignored (the promoted table is the source); an unreachable
+    store raises into the caller's honest-empty handling.
     """
     from tessera.settings import get_settings
 
     if ledger_source() == "postgres":
-        return verify_ledger_rows(load_ledger_payloads_sync())
+        tree = verify_ledger_tree(load_ledger_payloads_sync())
+        return ChainStatus(
+            verified=tree.content_integrity, length=tree.length, broken_at=tree.broken_at
+        )
     return verify_audit_chain(path if path is not None else get_settings().guard.audit_file)
+
+
+def active_ledger_tree_status(path: Path | None = None) -> LedgerTreeStatus:
+    """Tree-aware status of the ACTIVE ledger — the integrity badge's source (TESS-LEDGER-001).
+
+    Postgres mode returns the full ``{content_integrity, linear, forks, attested}`` verdict over
+    the promoted table. File mode has no forks (a single-writer append-only journal), so it lifts
+    the binary :func:`verify_audit_chain` result into the same shape (``linear == content``).
+    """
+    from tessera.settings import get_settings
+
+    if ledger_source() == "postgres":
+        return verify_ledger_tree(load_ledger_payloads_sync())
+    status = verify_audit_chain(path if path is not None else get_settings().guard.audit_file)
+    return LedgerTreeStatus(
+        content_integrity=status.verified,
+        linear=status.verified,
+        forks=(),
+        orphans=(),
+        length=status.length,
+        broken_at=status.broken_at,
+    )

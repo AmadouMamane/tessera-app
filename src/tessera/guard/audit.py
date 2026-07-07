@@ -33,7 +33,9 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AGENT_LIFECYCLE_PHASES",
+    "LEDGER_ATTESTATION_TYPE",
     "ChainStatus",
+    "build_ledger_attestation_entry",
     "current_auth_state",
     "current_model",
     "emit_agent_lifecycle",
@@ -41,10 +43,17 @@ __all__ = [
     "emit_audit",
     "emit_business_event_audit",
     "emit_handoff",
+    "emit_ledger_attestation",
     "emit_routing",
     "guard_disabled",
     "verify_audit_chain",
 ]
+
+# TESS-LEDGER-001 — the attestation entry type (point 4): a signed, appended entry that ratifies
+# historical ledger anomalies (forks/orphans) WITHOUT rewriting them (append-only is absolute).
+# Defined here (the entry-builder layer) so :mod:`tessera.guard.ledger_store` can import it
+# without a cycle; the verifier keys "attested" on this type.
+LEDGER_ATTESTATION_TYPE = "tessera.ledger.attestation"
 
 _Outcome = Literal["allowed", "denied", "error"]
 _Sink = Literal["stdout", "file", "cloud_logging", "postgres"]
@@ -65,6 +74,21 @@ def _canonical(payload: Mapping[str, Any]) -> str:
 def _hash_core(core: Mapping[str, Any]) -> str:
     """SHA-256 of an entry's canonical form (the entry without its own hash)."""
     return hashlib.sha256(_canonical(core).encode("utf-8")).hexdigest()
+
+
+def _event_identity(entry: Mapping[str, Any]) -> str:
+    """A stable, position-independent identity for an audit entry (TESS-LEDGER-001).
+
+    SHA-256 of the entry's content EXCLUDING its chain position (``prev_hash``, ``hash``)
+    and its own ``event_id``. Because it does not depend on where the entry lands, it is the
+    idempotence key the Postgres drain uses: a re-drain after a crash recomputes the SAME
+    ``event_id`` and skips the already-durable row. The chain ``hash`` (which DOES include
+    ``prev_hash``) is assigned once, at the serialized insert, and so is never duplicated —
+    this is what lets the drain (re)link entries under the advisory lock without risking a
+    duplicate on replay.
+    """
+    core = {k: v for k, v in entry.items() if k not in {"prev_hash", "hash", "event_id"}}
+    return _hash_core(core)
 
 
 def _seed_last_hash(path: Path) -> str:
@@ -267,20 +291,40 @@ def _seed_chain_head(sink: _Sink, audit_file: Path) -> str:
 def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> None:
     """Link ``entry`` into the tamper-evident hash chain and emit it to ``sink``.
 
-    Shared by every S1 event type (guard audit, agent handoff, …) so they all
-    live in one append-only, hash-chained journal verifiable by
-    :func:`verify_audit_chain`. The file sink resumes the chain from disk so it
-    survives restarts; other sinks chain in-process from genesis.
+    Shared by every S1 event type (guard audit, agent handoff, …) so they all live in one
+    append-only, hash-chained journal verifiable by :func:`verify_audit_chain`.
+
+    Chain linkage is assigned at the single serialized write point, which differs by the
+    active ledger medium (TESS-LEDGER-001 fix — ADR 0015 §Amendment 3 Correction):
+
+    * ``postgres`` (the baked default since the H2 cut) — the promoted table is canonical.
+      The per-process head cache (``_last_hash``) is DELIBERATELY NOT used here: it is what
+      forked the chain under concurrent writers (each process extended its own in-memory
+      head, oblivious to interleaved writes). ``prev_hash``/``hash`` are assigned by the
+      durable drain INSIDE a ``pg_advisory_xact_lock`` transaction that reads the true table
+      head, so insert order IS chain order and two writers can never extend the same head.
+      Emit only stamps the position-independent ``event_id`` (the drain's idempotence key)
+      and spools.
+    * ``file`` (the operator escape until ``audit.log`` is removed) — the flat file is a
+      single writer by construction, so the in-process chain is correct: seed from the file
+      tail (survives restarts) and link at emit, exactly as before.
     """
     global _last_hash
-    if _last_hash is None:
-        _last_hash = _seed_chain_head(sink, audit_file)
-    entry["prev_hash"] = _last_hash
-    entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
-    _last_hash = entry["hash"]
     from tessera.guard.ledger_store import enqueue_ledger_entry, ledger_source
 
+    # Position-independent identity, stamped in BOTH modes — the drain's idempotence key
+    # (a crash-replayed drain must not recompute a different hash and duplicate the entry).
+    entry["event_id"] = _event_identity(entry)
     cut = ledger_source() == "postgres"
+
+    if not cut:
+        # File-escape mode: a single-writer flat file, so in-process chaining is correct.
+        if _last_hash is None:
+            _last_hash = _seed_chain_head(sink, audit_file)
+        entry["prev_hash"] = _last_hash
+        entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
+        _last_hash = entry["hash"]
+
     try:
         match sink:
             case "stdout":
@@ -298,9 +342,10 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
     except Exception as exc:
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
     if sink == "file":
-        # ADR 0015 §Amendment 3 — dual-write the chained entry to the promoted append-only
-        # Postgres ledger via the durable spool (zero-loss). Post-cut this is the ONLY durable
-        # sink; pre-cut it mirrors the canonical file. The boot reconcile replays the spool.
+        # ADR 0015 §Amendment 3 — dual-write to the promoted append-only Postgres ledger via
+        # the durable spool (zero-loss). Post-cut this is the ONLY durable sink and the drain
+        # assigns the chain linkage under the advisory lock (fork-free); pre-cut it mirrors
+        # the canonical file. The boot reconcile replays the spool.
         enqueue_ledger_entry(entry)
 
 
@@ -497,6 +542,84 @@ def emit_agent_lifecycle(
         **(dict(detail) if detail else {}),
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+def build_ledger_attestation_entry(
+    *,
+    incident: str,
+    cause: str,
+    decision: str,
+    evidence: Mapping[str, Any],
+    forks: Iterable[Mapping[str, Any]],
+    orphans: Iterable[str],
+    anchor_seq: int | None = None,
+    actor: str = "operator",
+) -> dict[str, Any]:
+    """Build (do not append) an attestation entry ratifying historical ledger anomalies.
+
+    TESS-LEDGER-001 point 4 — re-anchoring by attestation, NEVER by rewrite: it RECORDS the
+    forks + orphans (they stay in the chain — append-only is absolute), the cause, the decision,
+    and the point-0 evidence dump hash (chain of custody). Its own integrity is the hash chain it
+    is appended into; an external cryptographic seal (Hica) is the enrichment, never the store
+    (ADR 0015 §Amendment 3). Pure builder so it is unit-testable without a database.
+    """
+    fork_list = [dict(f) for f in forks]
+    orphan_list = list(orphans)
+    now = datetime.now(UTC).isoformat()
+    return {
+        "type": LEDGER_ATTESTATION_TYPE,
+        "version": 1,
+        "occurred_at": now,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "actor": actor,
+        "incident": incident,
+        "cause": cause,
+        "decision": decision,
+        "evidence": dict(evidence),
+        "anchor_seq": anchor_seq,
+        "forks": fork_list,
+        "fork_count": len(fork_list),
+        "orphans": orphan_list,
+        "orphan_count": len(orphan_list),
+    }
+
+
+def emit_ledger_attestation(
+    *,
+    incident: str,
+    cause: str,
+    decision: str,
+    evidence: Mapping[str, Any],
+    forks: Iterable[Mapping[str, Any]],
+    orphans: Iterable[str],
+    anchor_seq: int | None = None,
+    actor: str = "operator",
+    sink: _Sink | None = None,
+) -> dict[str, Any]:
+    """Append an attestation entry into the tamper-evident ledger (chained + durable).
+
+    Goes through the normal serialized append (:func:`_append_to_chain` → spool → the
+    advisory-locked drain), so the attestation links to the true head and is itself fork-proof
+    (it lands above the fork-guard anchor). Returns the entry (with its stamped ``event_id``).
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    entry = build_ledger_attestation_entry(
+        incident=incident,
+        cause=cause,
+        decision=decision,
+        evidence=evidence,
+        forks=forks,
+        orphans=orphans,
+        anchor_seq=anchor_seq,
+        actor=actor,
+    )
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+    return entry
 
 
 @dataclass(frozen=True, slots=True)

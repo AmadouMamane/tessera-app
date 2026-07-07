@@ -15,13 +15,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tessera.guard.audit import _hash_core
+from tessera.guard import ledger_store
+from tessera.guard.audit import _event_identity, _hash_core
 from tessera.guard.ledger_store import (
     LEDGER_TABLE,
     backfill_ledger_from_file,
     ensure_audit_ledger_schema,
     load_ledger_payloads_sync,
     shadow_verify_ledger,
+    verify_ledger_rows,
 )
 
 if TYPE_CHECKING:
@@ -122,3 +124,79 @@ class TestVerifiedBackfill:
         shadow = shadow_verify_ledger(chain_file)
         assert shadow.file_status.verified and shadow.table_status.verified
         assert not shadow.ok  # both intact but NOT covering the same entries → no cut
+
+
+class TestForkFreeConcurrentWriters:
+    """TESS-LEDGER-001 — the test the incident lacked: N parallel writers → zero forks.
+
+    The whole point of the fix. Many threads, each with its OWN sync connection, hammer the
+    real drain concurrently against LIVE Postgres; the ``pg_advisory_xact_lock`` serializes the
+    head-read + link + insert so insert order IS chain order — no two rows ever share a parent.
+    """
+
+    async def test_n_parallel_writers_produce_zero_forks(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import threading
+        from collections import Counter
+
+        from tessera.settings import get_settings
+
+        await _fresh_ledger()  # fresh table → fork guard anchored at seq 0 (constrains all rows)
+        monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "postgres")
+        monkeypatch.setenv("TESSERA_LEDGER_DUAL_WRITE", "1")
+        monkeypatch.setattr(get_settings().guard, "audit_file", tmp_path / "audit.log")
+        ledger_store._spool_path().write_text("", encoding="utf-8")
+
+        writers, per_writer = 8, 20
+
+        def writer(w: int) -> None:
+            for i in range(per_writer):
+                entry = {
+                    "type": "tessera.guard.audit",
+                    "occurred_at": f"2026-07-07T01:{w:02d}:{i:02d}+00:00",
+                    "agent_id": f"writer-{w}",
+                    "w": w,
+                    "i": i,
+                }
+                entry["event_id"] = _event_identity(entry)
+                ledger_store._spool_append(entry)
+                ledger_store.drain_spool()  # own connection → real advisory-lock contention
+
+        threads = [threading.Thread(target=writer, args=(w,)) for w in range(writers)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert ledger_store.drain_spool() is True  # final sweep of anything still spooled
+
+        payloads = load_ledger_payloads_sync()
+        assert len(payloads) == writers * per_writer  # zero loss
+        children = Counter(p["prev_hash"] for p in payloads)
+        assert max(children.values()) == 1  # ZERO forks — no parent has two children
+        assert verify_ledger_rows(payloads).verified is True  # one unbroken chain
+
+    async def test_fork_guard_rejects_a_second_child_of_a_parent(self, tmp_path: Path) -> None:
+        import psycopg
+        from psycopg.types.json import Jsonb
+
+        from tessera.retrieval.store import get_pool
+
+        await _fresh_ledger()  # fresh table → the partial unique index covers every row
+        pool = get_pool()
+        insert = (
+            f"INSERT INTO {LEDGER_TABLE} (occurred_at, agent_id, payload, prev_hash, hash) "  # noqa: S608
+            "VALUES (%s, %s, %s, %s, %s)"
+        )
+        async with pool.connection() as conn, conn.cursor() as cur:
+            await cur.execute(
+                insert,
+                ("2026-07-07T00:00:00+00:00", "probe", Jsonb({"n": 0}), _GENESIS, "hash-A"),
+            )
+            # A SECOND child of the SAME parent (genesis) — a fork — must be rejected by the DB.
+            with pytest.raises(psycopg.errors.UniqueViolation):
+                await cur.execute(
+                    insert,
+                    ("2026-07-07T00:00:01+00:00", "probe", Jsonb({"n": 1}), _GENESIS, "hash-B"),
+                )
+            await conn.rollback()

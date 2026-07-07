@@ -6,7 +6,10 @@
   — GATING socle → owned Postgres (bounded, opposable), ONLINE monitoring → **owned ClickHouse**
   (direct insert, its native workload — not via Langfuse; §Correction 2b), aggregates stay Prometheus; (§Amendment 3) the audit/proof ledger is homed —
   flat file → owned append-only hash-chained Postgres (as-of-T, never third-party; Hica seal =
-  enrichment; §Correction 3b: guard audit + S1 governance = ONE consolidated journal, ratified),
+  enrichment; §Correction 3b: guard audit + S1 governance = ONE consolidated journal, ratified;
+  §Correction 3c (2026-07-07, from incident TESS-LEDGER-001): concurrent writes MUST be serialized
+  — a per-process head cache forked the chain — verify is tree-aware (content integrity ≠ total
+  order), re-anchoring is an appended attestation, never a rewrite),
   under the governing rule *own what gates or proves; best-effort what you sample or observe*.**
   Supersedes the Phase-1 per-signal `?agent=` wiring shipped in this branch, which is absorbed as
   the transitional state.
@@ -310,6 +313,65 @@ append-only hash-chained table → dual-write + backfill the existing `audit.log
 chain on import) → shadow-verify (`verify_audit_chain` matches file **and** table) → cut reads to Postgres →
 retire the flat file. Same shadow-before-flip discipline; **never** flip a ledger read before its chain
 verifies against the file.
+
+### Correction 3c (2026-07-07) — writes MUST be serialized; verify is tree-aware; re-anchor by attestation (from incident TESS-LEDGER-001)
+
+**Status: accepted; closes an ADR gap exposed in production.** Amendment 3 specified append-only, a
+hash chain, and as-of-T indexing — but **not how concurrent writes serialize**. The flat-file era was
+implicitly **single-writer** (one process appending line by line). Promoting to a shared Postgres table
+opened **multi-writer** access (backend workers + eval CLIs + parallel agent sessions) without stating
+the serialization contract. The dual-write also assigned the chain link (`prev_hash`/`hash`) at **emit
+time** from a **per-process in-memory head cache**, then drained to the table asynchronously. Concurrent
+writers each extended their own cached head → **incident TESS-LEDGER-001: 29 forks** (one parent, two
+children) **+ 1 orphan** (a child whose parent write was lost), over the 2026-07-03 parallel-session
+window. Per-row inviolability held (every present row hashes correctly — a fork is a tree, not a forgery;
+UNIQUE(hash) held); what was lost was the **total order** at the fork points. **The medium changed in
+Amendment 3; the write model did not — that was the gap.**
+
+**The corrections (all shipped; see `0015-incident-TESS-LEDGER-001-status.md`):**
+
+1. **Writes are serialized at a single point — chain linkage belongs to the durable write, not the
+   emitter.** `prev_hash`/`hash` are (re)assigned inside ONE transaction that holds a database-wide
+   `pg_advisory_xact_lock` and reads the true table head **within** that transaction — so insert order IS
+   chain order and two writers can never extend the same head. The per-process head cache is **removed**
+   for the owned-store sink. Idempotence is by a **position-independent `event_id`** (a content hash
+   excluding chain position), so a crash-replayed durable write is a no-op, never a duplicate. **Belt +
+   suspenders:** a partial `UNIQUE` index on `prev_hash` makes a second child of any parent **impossible
+   at the DB level** (a non-cooperating writer is rejected; the writer retries against the fresh head).
+   The DDL adds this to Amendment 3's table: `UNIQUE(prev_hash) WHERE seq > <anchor>` +
+   `UNIQUE((payload->>'event_id'))`.
+
+2. **Verification is tree-aware — content integrity ≠ total order.** The binary "chain verified / broken"
+   conflated three distinct facts and **overstated tampering** (a healthy-but-forked chain read as
+   "broken"). The verifier now returns `{content_integrity, linear, forks[], orphans[], attested}`:
+   **content_integrity** is the tamper-evidence guarantee (every present row hashes correctly — an EDIT
+   fails it); **forks** and **orphans** (lost writes) are REPORTED, never deleted — they are real guard
+   events; **linear** is the strong single-chain property. The integrity badge is tri-state accordingly
+   (verified+linear · content-verified-but-forked/attested · content-edited). `verify_*` over the owned
+   rows walks the whole set (order-independent), it does not dead-end on the first fork.
+
+3. **Re-anchor by attestation — NEVER rewrite (append-only is absolute).** Historical anomalies are not
+   removed or edited (the trigger forbids `DELETE`/`UPDATE`; more importantly, deletion would itself be
+   tampering). Re-anchoring is an **appended, signed attestation entry** (`tessera.ledger.attestation`)
+   that records the fork/orphan list, the cause, the decision, and the **evidence dump hash** (chain of
+   custody from an evidence freeze taken before any code change). The partial fork-guard index is anchored
+   at the table's **high-water mark** at install time, so history is grandfathered and linearity is
+   enforced from the attestation forward; the attestation itself lands above the anchor (fork-proof). This
+   is the reusable **anchoring pattern** for any future append-only-store incident.
+
+4. **External seal (Hica): priority raised from optional enrichment to a recommended monitoring control.**
+   Amendment 3 point 3 keeps its place — **owned first, sealed second; the seal is never the store**. But
+   an external seal that periodically attests the chain **head** would have **bounded the divergence
+   window**: a fork changes the head lineage, so the next seal would have flagged it within the seal
+   interval instead of letting 29 forks accumulate across four days undetected. The seal is therefore
+   re-scoped as a **time-bound divergence detector** (it caps undetected-anomaly time), not merely an
+   opposability badge — while remaining best-effort and non-authoritative.
+
+**Supersedes / amends:** Amendment 3 point 1's DDL (adds the two `UNIQUE` guards + the serialized-write
+requirement); the implicit single-writer assumption inherited from the flat-file carve-out (now an
+explicit **serialized-multi-writer** contract); the binary `verify_audit_chain` verdict (now tree-aware,
+content-vs-order). Nothing about ownership, append-only, hash-chaining, or "never third-party" changes —
+those are reinforced.
 
 ## Context
 
