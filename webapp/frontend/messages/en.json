@@ -7335,7 +7335,7 @@
       "other": "Other"
     },
     "trend": {
-      "insufficient_data": "Trend unavailable",
+      "insufficient_data": "Insufficient history",
       "up": "+{delta} pts",
       "down": "-{delta} pts",
       "flat": "Stable"
