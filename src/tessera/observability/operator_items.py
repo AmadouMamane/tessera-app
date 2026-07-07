@@ -7,6 +7,9 @@ from artifacts that already exist:
   (:func:`tessera.observability.eval_data.load_eval_snapshot`) - every failing
   case is a real item to review, carrying its category, language, title and the
   time it ran;
+* **business grammar events** (``validation.requested`` and ``action.blocked``)
+  from the business-events read model - every pending validation or blocked action
+  becomes a real item with a deep-link back to the agent's Métier run;
 * per-item **status / assignee** is persisted to a durable JSON next to the
   guard audit log and mutated by the queue endpoints, so "Prendre en charge",
   "Marquer resolu" and assignment actually change state.
@@ -19,10 +22,13 @@ ASCII-only (accents allowed).
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
 
+from tessera.observability import business_events
 from tessera.observability.eval_data import CATEGORY_LABELS, load_eval_snapshot
 from tessera.settings import get_settings
 
@@ -94,6 +100,8 @@ class OperatorItem:
     needs_escalation: bool
     status: str  # todo/progress/done (durable)
     assignee: str  # durable; "" when unassigned
+    source_kind: str = "eval_failure"
+    detail_href: str = ""
 
     def age_seconds(self, now: datetime) -> float:
         """Seconds since the case ran (non-negative)."""
@@ -177,6 +185,113 @@ def _agent_targets(agent_id: str | None) -> list[str]:
     return [a.id for a in list_agents()]
 
 
+def _payload(row: dict[str, object]) -> dict[str, object]:
+    raw = row.get("payload")
+    return raw if isinstance(raw, dict) else {}
+
+
+def _business_event_title(row: dict[str, object]) -> tuple[str, str, str, bool]:
+    """Return (category, title, priority, needs_escalation) for one operator event."""
+    event_name = str(row.get("event_name") or "")
+    case_id = str(row.get("case_id") or "dossier")
+    if event_name == business_events.BusinessEventName.VALIDATION_REQUESTED.value:
+        artifact = str(row.get("artifact_type") or row.get("artifact_id") or "artefact")
+        return (
+            "validation_requested",
+            f"Validation requise - {case_id} ({artifact})",
+            "high",
+            False,
+        )
+    action_name = str(_payload(row).get("action_name") or "action")
+    return (
+        "action_blocked",
+        f"Action bloquée - {case_id} ({action_name})",
+        "crit",
+        True,
+    )
+
+
+def _business_event_href(row: dict[str, object]) -> str:
+    agent_id = str(row.get("agent_id") or "")
+    if not agent_id:
+        return ""
+    params = {
+        "conversation_id": str(row.get("conversation_id") or ""),
+        "turn_id": str(row.get("turn_id") or ""),
+    }
+    capability_id = row.get("capability_id")
+    if isinstance(capability_id, str) and capability_id:
+        params["capability_id"] = capability_id
+    query = urlencode({k: v for k, v in params.items() if v})
+    return f"/agents/{agent_id}/metier{f'?{query}' if query else ''}"
+
+
+def _business_event_items(
+    *, state: dict[str, dict[str, str]], agent_id: str | None = None
+) -> list[OperatorItem]:
+    """Derive real operator items from pending/blocked business grammar events."""
+    rows: list[dict[str, object]] = []
+    for event_name in (
+        business_events.BusinessEventName.VALIDATION_REQUESTED.value,
+        business_events.BusinessEventName.ACTION_BLOCKED.value,
+    ):
+        try:
+            rows.extend(
+                business_events.business_event_rows(agent_id=agent_id, event_name=event_name)
+            )
+        except Exception as exc:
+            sys.stderr.write(
+                "tessera.observability.operator_items: "
+                f"business_event_items failed for {event_name}: {exc}\n"
+            )
+            continue
+
+    items: list[OperatorItem] = []
+    for row in rows:
+        aid = str(row.get("agent_id") or "")
+        if not aid:
+            continue
+        event_name = str(row.get("event_name") or "")
+        conversation_id = str(row.get("conversation_id") or "")
+        turn_id = str(row.get("turn_id") or "")
+        artifact_key = str(row.get("artifact_id") or row.get("case_id") or "none")
+        item_id = f"{aid}.{event_name}.{conversation_id}.{turn_id}.{artifact_key}"
+        st = state.get(item_id, {})
+        category, title, priority, needs_escalation = _business_event_title(row)
+        items.append(
+            OperatorItem(
+                item_id=item_id,
+                agent_id=aid,
+                case_id=str(row.get("case_id") or turn_id or conversation_id),
+                category=category,
+                type_label=category,
+                title=title,
+                language=str(row.get("language") or ""),
+                source="Métier",
+                priority=priority,
+                created_at=_parse_dt(str(row.get("timestamp") or row.get("occurred_at") or "")),
+                needs_escalation=needs_escalation,
+                status=st.get("status", _DEFAULT_STATUS),
+                assignee=st.get("assignee", ""),
+                source_kind="business_event",
+                detail_href=_business_event_href(row),
+            )
+        )
+    return items
+
+
+def _dedupe_items(items: list[OperatorItem]) -> list[OperatorItem]:
+    """Collapse duplicate natural backlog ids emitted by overlapping read paths."""
+    seen: set[str] = set()
+    unique: list[OperatorItem] = []
+    for item in items:
+        if item.item_id in seen:
+            continue
+        seen.add(item.item_id)
+        unique.append(item)
+    return unique
+
+
 def load_items(agent_id: str | None = None) -> list[OperatorItem]:
     """Derive the real backlog from failed eval cases, **per-agent attributed**.
 
@@ -218,6 +333,8 @@ def load_items(agent_id: str | None = None) -> list[OperatorItem]:
                     assignee=st.get("assignee", ""),
                 )
             )
+    items.extend(_business_event_items(state=state, agent_id=agent_id))
+    items = _dedupe_items(items)
     # Most urgent first: crit < high < mod < low, then oldest first.
     order = {"crit": 0, "high": 1, "mod": 2, "low": 3}
     items.sort(key=lambda i: (order.get(i.priority, 9), i.created_at))

@@ -69,7 +69,6 @@ import {
   ThemeDistribution,
   buildSignalRows,
 } from "@/components/observability/signals-table";
-import { WorkflowRunsPanel } from "@/components/observability/workflow-runs-panel";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +78,6 @@ import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
   fetchAnomalies,
-  fetchBusinessRuns,
   fetchCalibration,
   fetchCitations,
   fetchConformance,
@@ -130,15 +128,7 @@ const POLL_MS = 5_000;
 const QUALITY_SIGNALS = 42;
 const QUALITY_CATALOGUE = 200;
 
-const TAB_DEFS = [
-  "overview",
-  "signals",
-  "runs",
-  "failed",
-  "models",
-  "judge",
-  "recouvrement",
-] as const;
+const TAB_DEFS = ["overview", "signals", "runs", "failed", "models", "judge"] as const;
 type TabKey = (typeof TAB_DEFS)[number];
 
 /** A translucent banded section grouping one cockpit zone, matching the
@@ -456,19 +446,6 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     refetchInterval: historyMode ? false : 15_000,
   });
 
-  const recouvrementRuns = useQuery({
-    queryKey: ["business-runs", "recouvrement_collections_v1", asOf],
-    queryFn: ({ signal }) =>
-      fetchBusinessRuns(signal, {
-        at: asOf ?? undefined,
-        agent: "recouvrement",
-        workflowId: "recouvrement_collections_v1",
-        limit: 30,
-      }),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : 5_000,
-  });
-
   // Newest first for display.
 
   // Unified signal catalogue derived from the live reports (reference image 01).
@@ -778,17 +755,6 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               loading={calibration.isLoading}
             />
           )}
-
-          {tab === "recouvrement" && (
-            <WorkflowRunsPanel
-              data={recouvrementRuns.data}
-              loading={recouvrementRuns.isLoading}
-              title="Runs Recouvrement"
-              loadingLabel="Chargement des runs Recouvrement..."
-              emptyTitle="Aucun run Recouvrement observé"
-              emptyHint="Lancez un tour dans /fr/recouvrement-new pour voir apparaître les business events, artefacts, scores et actions gouvernées issus des sinks ADR 15/16."
-            />
-          )}
         </div>
 
         {tab === "signals" ? (
@@ -896,7 +862,6 @@ const TAB_META: Record<TabKey, typeof Gauge> = {
   failed: Siren,
   models: GitCompareArrows,
   judge: Scale,
-  recouvrement: ShieldCheck,
 };
 
 function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {

@@ -53,6 +53,8 @@ import {
   AutomationsOverviewSchema,
   type BudgetSnapshot,
   BudgetSnapshotSchema,
+  type BusinessCapabilitiesResponse,
+  BusinessCapabilitiesResponseSchema,
   type Calibration,
   CalibrationSchema,
   type CatalogueConsumers,
@@ -452,12 +454,19 @@ export async function fetchEvalScores(
 /** Generic business runs for ANY agent — dimension filters only (ADR 0017 Phase A). */
 export async function fetchBusinessRuns(
   signal?: AbortSignal,
-  options: { at?: string; agent?: string; workflowId?: string; limit?: number } = {},
+  options: {
+    at?: string;
+    agent?: string;
+    workflowId?: string;
+    capabilityId?: string;
+    limit?: number;
+  } = {},
 ): Promise<RecouvrementRunsResponse> {
   const params = new URLSearchParams();
   if (options.at) params.set("at", options.at);
   if (options.agent) params.set("agent", options.agent);
   if (options.workflowId) params.set("workflow_id", options.workflowId);
+  if (options.capabilityId) params.set("capability_id", options.capabilityId);
   params.set("limit", String(options.limit ?? 20));
   return request(
     `/observability/business/runs?${params.toString()}`,
@@ -466,18 +475,30 @@ export async function fetchBusinessRuns(
   );
 }
 
-/** @deprecated ADR 0017 Phase A alias — use {@link fetchBusinessRuns}; dies with the tab (Phase C). */
-export async function fetchRecouvrementRuns(
+/** Per-capability business aggregate for one agent (ADR 0017 §A1.4). */
+export async function fetchBusinessCapabilities(
   signal?: AbortSignal,
-  at?: string,
-  limit = 20,
-): Promise<RecouvrementRunsResponse> {
-  return fetchBusinessRuns(signal, {
-    at,
-    limit,
-    agent: "recouvrement",
-    workflowId: "recouvrement_collections_v1",
-  });
+  options: {
+    at?: string;
+    agent?: string;
+    workflowId?: string;
+    conversationId?: string;
+    turnId?: string;
+    caseId?: string;
+  } = {},
+): Promise<BusinessCapabilitiesResponse> {
+  const params = new URLSearchParams();
+  if (options.at) params.set("at", options.at);
+  if (options.agent) params.set("agent", options.agent);
+  if (options.workflowId) params.set("workflow_id", options.workflowId);
+  if (options.conversationId) params.set("conversation_id", options.conversationId);
+  if (options.turnId) params.set("turn_id", options.turnId);
+  if (options.caseId) params.set("case_id", options.caseId);
+  return request(
+    `/observability/business/capabilities?${params.toString()}`,
+    { signal },
+    BusinessCapabilitiesResponseSchema,
+  );
 }
 
 /** Temporal lineage timeline — dated events for the cockpit time rail (#201). */

@@ -1,6 +1,6 @@
 """Phase A spine reader over the current stores (ADR 0015 §Migration A).
 
-This is the transitional ``jsonl`` source: it reads the existing ``scores.jsonl`` /
+This is the degraded ``local`` source: it reads the existing ``scores.jsonl`` /
 ``bundles.jsonl`` convenience stores and the tamper-evident guard ledger through the
 existing store functions *unchanged*, so a snapshot signal is byte-parity with its route.
 ADR 0015 §Migration D keeps a thin, clearly-labelled local reader like this for a

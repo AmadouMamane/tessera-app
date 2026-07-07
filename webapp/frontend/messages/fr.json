@@ -4,6 +4,19 @@
     "calcul": "Calcul",
     "source": "Source"
   },
+  "artifactStatus": {
+    "draft": "Brouillon",
+    "ready": "Prêt",
+    "indicatif": "Proposition indicative",
+    "insertion_prepared": "Insertion proposée",
+    "pending_validation": "Soumis à validation",
+    "reminder_prepared": "Rappel proposé",
+    "unavailable": "Vérification indisponible",
+    "blocked": "Action bloquée",
+    "inserted": "Inséré dans le dossier",
+    "executed": "Planifié (interne)",
+    "unknown": "Statut non attribué"
+  },
   "app": {
     "title": "Tessera",
     "subtitle": "AI Control Plane",
@@ -87,6 +100,7 @@
       "connaissances": "Connaissances",
       "agentGuardrails": "Garde-fous",
       "prompts": "Prompts",
+      "metier": "Métier",
       "evaluations": "Évaluations",
       "console": "Console",
       "historique": "Historique",
@@ -1597,8 +1611,7 @@
       "runs": "Runs & datasets",
       "failed": "Cas échoués",
       "models": "Comparaisons modèles",
-      "judge": "Calibration juge",
-      "recouvrement": "Recouvrement"
+      "judge": "Calibration juge"
     },
     "cta": {
       "evidence": "Générer dossier de preuves qualité",
@@ -3396,12 +3409,18 @@
         "what": "Non-conformités ouvertes : gravité et statut de traitement.",
         "how": "Une ligne par non-conformité enregistrée.",
         "source": "Rapport de conformité (non-conformités)."
+      },
+      "businessLegal": {
+        "what": "Les signaux métier dont le manifeste déclare un engagement légal.",
+        "how": "Projection sélective des business_signals AgentSpec avec engagement=legal ; la valeur vient des scores métier réels.",
+        "source": "AgentSpec + business_events."
       }
     },
     "panel": {
       "mapping": "Cartographie réglementaire",
       "obligations": "Obligations à risque ({n})",
       "evidence": "Dossier de preuves conformité",
+      "businessLegal": "Signaux métier légaux ({n})",
       "controls": "Contrôles critiques ({n})",
       "missing": "Preuves manquantes",
       "incidents": "Incidents & exceptions"
@@ -3425,6 +3444,19 @@
       "truth": "Source de vérité : YAML · Git",
       "env": "Environnement : Production",
       "realtime": "Temps réel"
+    },
+    "businessSignals": {
+      "agent": "Agent",
+      "signal": "Signal",
+      "value": "Valeur",
+      "status": "Statut",
+      "source": "Source",
+      "empty": "Aucun signal métier légal déclaré.",
+      "statusValue": {
+        "scored": "Mesuré",
+        "unknown": "Inconnu",
+        "not_applicable": "Non applicable"
+      }
     },
     "sev": {
       "high": "Élevé",
@@ -3460,7 +3492,8 @@
     "sec": {
       "actual": "A · Posture réglementaire",
       "mapping": "B · Cartographie & obligations",
-      "controls": "C · Contrôles & incidents"
+      "businessLegal": "C · Signaux métier légaux",
+      "controls": "D · Contrôles & incidents"
     },
     "footer": {
       "reference": "Référentiel : v2026.06",
@@ -6697,6 +6730,7 @@
     },
     "rowOpen": "Voir le détail",
     "close": "Fermer",
+    "openBusinessRun": "Ouvrir dans Métier",
     "page": {
       "prev": "Page précédente",
       "next": "Page suivante",
@@ -6874,7 +6908,8 @@
     "releaseNotRun": "Éval non exécutée",
     "candidate": "Candidate",
     "releaseNote": "Verdict eval-gate par agent (run de référence, grain cas × langue) — chaque agent est un package gouverné.",
-    "observabilityLevel": "Niveau d'observabilité {level}"
+    "observabilityLevel": "Niveau d'observabilité {level}",
+    "pendingBusinessItems": "{n} métier en attente"
   },
   "product": {
     "apercu": {
@@ -7291,6 +7326,65 @@
     "descriptionLabel": "Description",
     "copy": "Copier",
     "copied": "Copié"
+  },
+  "agentMetier": {
+    "title": "Métier",
+    "subtitle": "Capacités, signaux et exécutions métier réels de cet agent.",
+    "level": "Niveau {level}",
+    "events": "{count} événements",
+    "empty": {
+      "title": "Données métier indisponibles",
+      "detail": "Cet agent n'a pas encore atteint le niveau requis avec des faits métier réels."
+    },
+    "unavailable": {
+      "title": "Lecture métier indisponible",
+      "detail": "La source des faits métier ne répond pas pour cet agent."
+    },
+    "missing": {
+      "manifest": "déclaration de l'agent",
+      "observable_contract": "contrat d'observation",
+      "governance": "faits de gouvernance",
+      "business_events": "faits métier",
+      "capability_stamps": "attribution capacité"
+    },
+    "signals": {
+      "title": "Signaux métier",
+      "empty": "Aucun signal métier déclaré.",
+      "northStar": "Signal clé"
+    },
+    "signalLevel": {
+      "runtime": "Exécution",
+      "human_action": "Action humaine",
+      "other": "Autre"
+    },
+    "trend": {
+      "insufficient_data": "Historique insuffisant",
+      "up": "+{delta} pts",
+      "down": "-{delta} pts",
+      "flat": "Stable"
+    },
+    "capabilities": {
+      "title": "Capacités",
+      "columns": {
+        "capability": "Capacité",
+        "volume": "Volume",
+        "conformity": "% conforme",
+        "validation": "% validation",
+        "blocked": "% bloqué",
+        "prevented": "Effets empêchés",
+        "trend": "Tendance"
+      }
+    },
+    "runs": {
+      "title": "Exécutions · {capability}",
+      "allCapabilities": "Toutes capacités",
+      "emptyTitle": "Aucune exécution métier observée",
+      "emptyHint": "Aucune exécution réelle n'est encore disponible pour cette capacité."
+    },
+    "temporal": {
+      "live": "Live",
+      "asOf": "À une date · {instant}"
+    }
   },
   "agentEvaluations": {
     "title": "Évaluations",
@@ -8014,6 +8108,18 @@
     "explain_payment_options": "Explication des options de paiement",
     "draft_reminder": "Rédaction d'une relance",
     "propose_schedule": "Proposition d'échéancier"
+  },
+  "businessSignal": {
+    "contact_window_compliance": "Respect des fenêtres de contact",
+    "validation_required_compliance": "Validation requise respectée",
+    "action_blocking_correctness": "Blocage des actions sensibles",
+    "artifact_governance": "Traçabilité des artefacts",
+    "client_message_safety": "Sûreté des messages client",
+    "payment_option_safety": "Sûreté des options de paiement",
+    "action_governance": "Gouvernance des actions",
+    "no_uncontrolled_external_effect": "Effets externes contrôlés",
+    "recouvrement_trace_completeness": "Complétude de la trace recouvrement",
+    "amount_consistency": "Cohérence des montants"
   },
   "policy": {
     "contact_window": "Fenêtre de contact autorisée",

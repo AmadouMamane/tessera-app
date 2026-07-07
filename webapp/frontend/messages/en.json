@@ -4,6 +4,19 @@
     "calcul": "Calculation",
     "source": "Source"
   },
+  "artifactStatus": {
+    "draft": "Draft",
+    "ready": "Ready",
+    "indicatif": "Indicative proposal",
+    "insertion_prepared": "Insertion proposed",
+    "pending_validation": "Submitted for validation",
+    "reminder_prepared": "Reminder proposed",
+    "unavailable": "Check unavailable",
+    "blocked": "Action blocked",
+    "inserted": "Inserted in case",
+    "executed": "Planned (internal)",
+    "unknown": "Unassigned status"
+  },
   "app": {
     "title": "Tessera",
     "subtitle": "AI Control Plane",
@@ -87,6 +100,7 @@
       "connaissances": "Knowledge",
       "agentGuardrails": "Guardrails",
       "prompts": "Prompts",
+      "metier": "Business",
       "evaluations": "Evaluations",
       "console": "Console",
       "historique": "History",
@@ -1597,8 +1611,7 @@
       "runs": "Runs & datasets",
       "failed": "Failed cases",
       "models": "Model comparison",
-      "judge": "Judge calibration",
-      "recouvrement": "Collections"
+      "judge": "Judge calibration"
     },
     "cta": {
       "evidence": "Generate quality evidence pack",
@@ -3396,12 +3409,18 @@
         "what": "Open non-conformities: severity and handling status.",
         "how": "One row per recorded non-conformity.",
         "source": "Compliance report (non-conformities)."
+      },
+      "businessLegal": {
+        "what": "Business signals whose manifest declares a legal engagement.",
+        "how": "Selective projection of AgentSpec business_signals with engagement=legal; the value comes from real business scores.",
+        "source": "AgentSpec + business_events."
       }
     },
     "panel": {
       "mapping": "Regulatory mapping",
       "obligations": "Obligations at risk ({n})",
       "evidence": "Compliance evidence pack",
+      "businessLegal": "Legal business signals ({n})",
       "controls": "Critical controls ({n})",
       "missing": "Missing evidence",
       "incidents": "Incidents & exceptions"
@@ -3425,6 +3444,19 @@
       "truth": "Source of truth: YAML · Git",
       "env": "Environment: Production",
       "realtime": "Real-time"
+    },
+    "businessSignals": {
+      "agent": "Agent",
+      "signal": "Signal",
+      "value": "Value",
+      "status": "Status",
+      "source": "Source",
+      "empty": "No legal business signal declared.",
+      "statusValue": {
+        "scored": "Measured",
+        "unknown": "Unknown",
+        "not_applicable": "Not applicable"
+      }
     },
     "sev": {
       "high": "High",
@@ -3460,7 +3492,8 @@
     "sec": {
       "actual": "A · Regulatory posture",
       "mapping": "B · Mapping & obligations",
-      "controls": "C · Controls & incidents"
+      "businessLegal": "C · Legal business signals",
+      "controls": "D · Controls & incidents"
     },
     "footer": {
       "reference": "Baseline: v2026.06",
@@ -6697,6 +6730,7 @@
     },
     "rowOpen": "View detail",
     "close": "Close",
+    "openBusinessRun": "Open in Business",
     "page": {
       "prev": "Previous page",
       "next": "Next page",
@@ -6874,7 +6908,8 @@
     "releaseNotRun": "Eval not run",
     "candidate": "Candidate",
     "releaseNote": "Per-agent eval-gate verdict (reference run, case × language grain) — each agent is a governed package.",
-    "observabilityLevel": "Observability level {level}"
+    "observabilityLevel": "Observability level {level}",
+    "pendingBusinessItems": "{n} business pending"
   },
   "product": {
     "apercu": {
@@ -7289,6 +7324,65 @@
     "descriptionLabel": "Description",
     "copy": "Copy",
     "copied": "Copied"
+  },
+  "agentMetier": {
+    "title": "Business",
+    "subtitle": "Real business capabilities, signals and executions for this agent.",
+    "level": "Level {level}",
+    "events": "{count} events",
+    "empty": {
+      "title": "Business data unavailable",
+      "detail": "This agent has not yet reached the required level with real business facts."
+    },
+    "unavailable": {
+      "title": "Business read unavailable",
+      "detail": "The business facts source is not responding for this agent."
+    },
+    "missing": {
+      "manifest": "agent declaration",
+      "observable_contract": "observation contract",
+      "governance": "governance facts",
+      "business_events": "business facts",
+      "capability_stamps": "capability attribution"
+    },
+    "signals": {
+      "title": "Business signals",
+      "empty": "No business signal declared.",
+      "northStar": "Key signal"
+    },
+    "signalLevel": {
+      "runtime": "Execution",
+      "human_action": "Human action",
+      "other": "Other"
+    },
+    "trend": {
+      "insufficient_data": "Insufficient history",
+      "up": "+{delta} pts",
+      "down": "-{delta} pts",
+      "flat": "Stable"
+    },
+    "capabilities": {
+      "title": "Capabilities",
+      "columns": {
+        "capability": "Capability",
+        "volume": "Volume",
+        "conformity": "% conforming",
+        "validation": "% validation",
+        "blocked": "% blocked",
+        "prevented": "Effects prevented",
+        "trend": "Trend"
+      }
+    },
+    "runs": {
+      "title": "Executions · {capability}",
+      "allCapabilities": "All capabilities",
+      "emptyTitle": "No business execution observed",
+      "emptyHint": "No real execution is available for this capability yet."
+    },
+    "temporal": {
+      "live": "Live",
+      "asOf": "As of {instant}"
+    }
   },
   "agentEvaluations": {
     "title": "Evaluations",
@@ -8012,6 +8106,18 @@
     "explain_payment_options": "Explain payment options",
     "draft_reminder": "Draft reminder",
     "propose_schedule": "Propose schedule"
+  },
+  "businessSignal": {
+    "contact_window_compliance": "Contact-window compliance",
+    "validation_required_compliance": "Required validation compliance",
+    "action_blocking_correctness": "Sensitive-action blocking",
+    "artifact_governance": "Artifact traceability",
+    "client_message_safety": "Client-message safety",
+    "payment_option_safety": "Payment-option safety",
+    "action_governance": "Action governance",
+    "no_uncontrolled_external_effect": "Controlled external effects",
+    "recouvrement_trace_completeness": "Collections trace completeness",
+    "amount_consistency": "Amount consistency"
   },
   "policy": {
     "contact_window": "Authorized contact window",

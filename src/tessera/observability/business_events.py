@@ -141,6 +141,7 @@ class BusinessEventStore(Protocol):
         conversation_id: str | None = None,
         turn_id: str | None = None,
         case_id: str | None = None,
+        capability_id: str | None = None,
         event_name: str | None = None,
         artifact_type: str | None = None,
         decision: str | None = None,
@@ -219,7 +220,7 @@ class BusinessEvent:
     workflow_id: str | None = None
     # ADR 0017 §A1.2 — optional; additive/optional keeps the envelope ``business_event.v1``
     # (events emitted before the amendment read honestly as ``capability_id IS NULL``). It is
-    # step 4's per-capability join key; emitter stamping rides step 4.
+    # step 4's per-capability join key; domain emitters stamp it when the capability is known.
     capability_id: str | None = None
     surface: str | None = None
     language: str | None = None
@@ -431,6 +432,7 @@ class InMemoryBusinessEventStore:
         conversation_id: str | None = None,
         turn_id: str | None = None,
         case_id: str | None = None,
+        capability_id: str | None = None,
         event_name: str | None = None,
         artifact_type: str | None = None,
         decision: str | None = None,
@@ -444,6 +446,7 @@ class InMemoryBusinessEventStore:
             conversation_id=conversation_id,
             turn_id=turn_id,
             case_id=case_id,
+            capability_id=capability_id,
             event_name=event_name,
             artifact_type=artifact_type,
             decision=decision,
@@ -493,6 +496,7 @@ class ClickHouseBusinessEventStore:
         conversation_id: str | None = None,
         turn_id: str | None = None,
         case_id: str | None = None,
+        capability_id: str | None = None,
         event_name: str | None = None,
         artifact_type: str | None = None,
         decision: str | None = None,
@@ -509,6 +513,7 @@ class ClickHouseBusinessEventStore:
                 conversation_id=conversation_id,
                 turn_id=turn_id,
                 case_id=case_id,
+                capability_id=capability_id,
                 event_name=event_name,
                 artifact_type=artifact_type,
                 decision=decision,
@@ -547,6 +552,7 @@ class _ShadowBusinessEventStore:
         conversation_id: str | None = None,
         turn_id: str | None = None,
         case_id: str | None = None,
+        capability_id: str | None = None,
         event_name: str | None = None,
         artifact_type: str | None = None,
         decision: str | None = None,
@@ -559,6 +565,7 @@ class _ShadowBusinessEventStore:
             "conversation_id": conversation_id,
             "turn_id": turn_id,
             "case_id": case_id,
+            "capability_id": capability_id,
             "event_name": event_name,
             "artifact_type": artifact_type,
             "decision": decision,
@@ -593,8 +600,8 @@ def _clickhouse_store() -> ClickHouseBusinessEventStore:
 def _read_store() -> BusinessEventStore:
     """The store business-event READS resolve to, per the ``business_events`` fact flip (§5).
 
-    ``jsonl`` (default, mid-migration) → the in-process store; ``spine`` → the owned
-    ClickHouse table; ``shadow`` → serve in-process, compare owned, record divergence.
+    ``local`` → the in-process store; ``spine`` (default after the step-4 bake) → the
+    owned ClickHouse table; ``shadow`` → serve in-process, compare owned, record divergence.
     Writes always append to the in-process store; the owned table is fed by the dual-write.
     """
     from tessera.observability.spine.adapters import fact_source
@@ -818,6 +825,7 @@ def _matches_scope(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     case_id: str | None = None,
+    capability_id: str | None = None,
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
@@ -829,6 +837,7 @@ def _matches_scope(
         and (conversation_id is None or event.conversation_id == conversation_id)
         and (turn_id is None or event.turn_id == turn_id)
         and (case_id is None or event.case_id == case_id)
+        and (capability_id is None or event.capability_id == capability_id)
         and (event_name is None or event.event_name == event_name)
         and (artifact_type is None or event.artifact_type == artifact_type)
         and (decision is None or event.decision == decision)
@@ -844,6 +853,7 @@ def _filter_events(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     case_id: str | None = None,
+    capability_id: str | None = None,
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
@@ -859,6 +869,7 @@ def _filter_events(
             conversation_id=conversation_id,
             turn_id=turn_id,
             case_id=case_id,
+            capability_id=capability_id,
             event_name=event_name,
             artifact_type=artifact_type,
             decision=decision,
@@ -874,6 +885,7 @@ def persisted_business_events(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     case_id: str | None = None,
+    capability_id: str | None = None,
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
@@ -890,6 +902,7 @@ def persisted_business_events(
         conversation_id=conversation_id,
         turn_id=turn_id,
         case_id=case_id,
+        capability_id=capability_id,
         event_name=event_name,
         artifact_type=artifact_type,
         decision=decision,
@@ -904,6 +917,7 @@ def recent_business_events(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     case_id: str | None = None,
+    capability_id: str | None = None,
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
@@ -916,6 +930,7 @@ def recent_business_events(
         conversation_id=conversation_id,
         turn_id=turn_id,
         case_id=case_id,
+        capability_id=capability_id,
         event_name=event_name,
         artifact_type=artifact_type,
         decision=decision,
@@ -930,6 +945,7 @@ def business_event_rows(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     case_id: str | None = None,
+    capability_id: str | None = None,
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
@@ -944,6 +960,7 @@ def business_event_rows(
             conversation_id=conversation_id,
             turn_id=turn_id,
             case_id=case_id,
+            capability_id=capability_id,
             event_name=event_name,
             artifact_type=artifact_type,
             decision=decision,
@@ -971,6 +988,7 @@ def _emit_otel(event: BusinessEvent) -> None:
         }
         optional_attrs = {
             semconv.TESSERA_WORKFLOW_ID: event.workflow_id,
+            "tessera.business.capability_id": event.capability_id,
             "tessera.surface": event.surface,
             semconv.TESSERA_CASE_ID: event.case_id,
             "tessera.node_name": event.node_name,

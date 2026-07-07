@@ -578,7 +578,9 @@ function EmptyWithSuggestions({
               <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200/70 bg-slate-50 text-slate-500 transition-colors group-hover:border-[#D6B36A]/40 group-hover:bg-[#FBF7EA] group-hover:text-slate-800">
                 <Icon className="h-4 w-4" />
               </div>
-              <span className="relative z-10 leading-relaxed text-[0.82rem] text-slate-700">{text}</span>
+              <span className="relative z-10 leading-relaxed text-[0.82rem] text-slate-700">
+                {text}
+              </span>
             </button>
           ))}
         </div>

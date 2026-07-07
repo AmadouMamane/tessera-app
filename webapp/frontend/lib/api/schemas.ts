@@ -483,6 +483,7 @@ export const BusinessEventSchema = z.object({
   event_version: z.number().optional(),
   version: z.number().optional(),
   workflow_id: z.string().nullable().optional(),
+  capability_id: z.string().nullable().optional(),
   surface: z.string().nullable().optional(),
   language: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
@@ -551,6 +552,7 @@ export type RecouvrementSensitiveAction = z.infer<typeof RecouvrementSensitiveAc
 export const RecouvrementRunSchema = z.object({
   agent_id: z.string().nullable().optional(),
   workflow_id: z.string().nullable().optional(),
+  capability_id: z.string().nullable().optional(),
   surface: z.string().nullable().optional(),
   case_id: z.string().nullable().optional(),
   conversation_id: z.string(),
@@ -571,12 +573,85 @@ export const RecouvrementRunsResponseSchema = z.object({
   scores: z.array(BusinessScoreSchema),
   as_of: z.string().nullable().optional(),
   agent: z.string(),
-  workflow_id: z.string(),
+  workflow_id: z.string().nullable().optional(),
+  capability_id: z.string().nullable().optional(),
   conversation_id: z.string().nullable().optional(),
   turn_id: z.string().nullable().optional(),
   case_id: z.string().nullable().optional(),
 });
 export type RecouvrementRunsResponse = z.infer<typeof RecouvrementRunsResponseSchema>;
+
+export const BusinessTrendPointSchema = z
+  .object({
+    bucket: z.string(),
+    volume: z.number().optional(),
+    value_pct: z.number().nullable().optional(),
+    status: z.string().optional(),
+  })
+  .passthrough();
+export type BusinessTrendPoint = z.infer<typeof BusinessTrendPointSchema>;
+
+export const BusinessTrendSchema = z.object({
+  available: z.boolean(),
+  direction: z.string(),
+  delta_pct: z.number().nullable().optional(),
+  points: z.array(BusinessTrendPointSchema).default([]),
+});
+export type BusinessTrend = z.infer<typeof BusinessTrendSchema>;
+
+export const BusinessCapabilityRowSchema = z.object({
+  capability_id: z.string(),
+  label_key: z.string().nullable().optional(),
+  label: z.string().nullable().optional(),
+  external_effect_level: z.string().nullable().optional(),
+  volume: z.number().int(),
+  conformity_pct: z.number().nullable().optional(),
+  validation_required_pct: z.number().nullable().optional(),
+  blocked_pct: z.number().nullable().optional(),
+  external_effects_prevented: z.number().int(),
+  trend: BusinessTrendSchema,
+  event_count: z.number().int(),
+});
+export type BusinessCapabilityRow = z.infer<typeof BusinessCapabilityRowSchema>;
+
+export const BusinessSignalValueSchema = z.object({
+  agent_id: z.string(),
+  key: z.string(),
+  source: z.string(),
+  level: z.string(),
+  unit: z.string(),
+  aggregation: z.string(),
+  dimensions: z.array(z.string()).default([]),
+  engagement: z.string(),
+  north_star: z.boolean().default(false),
+  scorer: z.string().nullable().optional(),
+  value: z.number().nullable().optional(),
+  value_pct: z.number().nullable().optional(),
+  status: z.string(),
+  reason: z.string(),
+  trend: BusinessTrendSchema,
+});
+export type BusinessSignalValue = z.infer<typeof BusinessSignalValueSchema>;
+
+export const BusinessCapabilitiesResponseSchema = z.object({
+  capabilities: z.array(BusinessCapabilityRowSchema),
+  business_signals: z.array(BusinessSignalValueSchema).default([]),
+  event_count: z.number().int(),
+  as_of: z.string().nullable().optional(),
+  agent: z.string(),
+  workflow_id: z.string().nullable().optional(),
+  conversation_id: z.string().nullable().optional(),
+  turn_id: z.string().nullable().optional(),
+  case_id: z.string().nullable().optional(),
+  source: z.string(),
+  fact: z.string(),
+  observability_level: z.string().nullable().optional(),
+  required_level: z.string(),
+  missing_requirements: z.array(z.string()).default([]),
+  unknown_capability_id: z.string().optional(),
+  unknown_capability_label: z.string().optional(),
+});
+export type BusinessCapabilitiesResponse = z.infer<typeof BusinessCapabilitiesResponseSchema>;
 
 // Temporal control backbone (#201) — dated lineage events for the time rail.
 export const TimelineEventSchema = z.object({
@@ -828,6 +903,18 @@ export const NonConformitySchema = z.object({
 });
 export type NonConformity = z.infer<typeof NonConformitySchema>;
 
+export const BusinessLegalSignalSchema = z.object({
+  agent_id: z.string(),
+  agent_name: z.string(),
+  key: z.string(),
+  value_pct: z.number().nullable(),
+  status: z.string(),
+  reason: z.string(),
+  source: z.string(),
+  href: z.string(),
+});
+export type BusinessLegalSignal = z.infer<typeof BusinessLegalSignalSchema>;
+
 // --- Conformite command-bar tabs (generic catalogue shape) ---------------
 
 // Plain-language "what does this number mean?" text rendered as the ⓘ popover
@@ -943,6 +1030,7 @@ export const ComplianceReportSchema = z.object({
   controls: z.array(ComplianceControlSchema).optional(),
   obligations: z.array(ComplianceObligationSchema).optional(),
   non_conformities: z.array(NonConformitySchema).optional(),
+  business_legal_signals: z.array(BusinessLegalSignalSchema).optional(),
   score_series: z.array(z.number()).optional(),
   score_delta: z.number().nullable().optional(),
   tabs: z.record(z.string(), CatalogTabSchema).optional(),
@@ -3469,6 +3557,8 @@ export const InboxOverviewSchema = z.object({
       sla_tone: z.enum(["crit", "warn", "ok"]),
       due: z.string(),
       status: z.enum(["todo", "in_progress", "waiting", "resolved"]),
+      href: z.string().optional().default(""),
+      source_kind: z.string().optional().default("eval_failure"),
     }),
   ),
   total_items: z.number().int(),
@@ -5187,6 +5277,8 @@ export const FleetSchema = z.object({
         // ADR 0017 §4 — observability level (L0–L2 in Phase B); null when the agent has
         // no AgentSpec manifest yet (honest-empty badge, never rendered as "L0").
         level: z.string().nullable().optional(),
+        north_star: BusinessSignalValueSchema.nullable().optional(),
+        pending_business_items: z.number().int().optional().default(0),
       }),
     )
     .optional(),

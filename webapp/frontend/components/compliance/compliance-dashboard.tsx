@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowUpRight,
   BookText,
   CalendarClock,
   FileCheck2,
@@ -14,7 +15,6 @@ import {
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
-import { ArrowUpRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
@@ -26,8 +26,14 @@ import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "@/i18n/navigation";
 import { fetchCompliance } from "@/lib/api/client";
-import type { ComplianceFramework, ComplianceObligation, NonConformity } from "@/lib/api/schemas";
+import type {
+  BusinessLegalSignal,
+  ComplianceFramework,
+  ComplianceObligation,
+  NonConformity,
+} from "@/lib/api/schemas";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -42,6 +48,11 @@ const SEV_BADGE: Record<string, "danger" | "warning" | "neutral"> = {
   high: "danger",
   medium: "warning",
   low: "neutral",
+};
+const BUSINESS_STATUS_BADGE: Record<string, "success" | "warning" | "neutral"> = {
+  scored: "success",
+  unknown: "warning",
+  not_applicable: "neutral",
 };
 
 const TABS = [
@@ -489,6 +500,8 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                 </div>
               </Zone>
 
+              <BusinessLegalSignalsPanel rows={d.business_legal_signals ?? []} />
+
               {/* C. Contrôles · preuves manquantes · incidents */}
               <Zone label={tc("sec.controls")}>
                 <div className="grid gap-2 lg:grid-cols-3">
@@ -621,6 +634,69 @@ function EvRow({ color, label, value }: { color: string; label: string; value: n
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{value}</span>
     </li>
+  );
+}
+
+function BusinessLegalSignalsPanel({ rows }: { rows: BusinessLegalSignal[] }) {
+  const tc = useTranslations("compliance");
+  const tb = useTranslations("businessSignal");
+  return (
+    <Zone label={tc("sec.businessLegal")}>
+      <Panel title={tc("panel.businessLegal", { n: rows.length })} infoKey="businessLegal">
+        {rows.length === 0 ? (
+          <p className="py-6 text-center text-[0.72rem] text-[var(--muted-foreground)]">
+            {tc("businessSignals.empty")}
+          </p>
+        ) : (
+          <table className="w-full table-fixed text-[0.72rem]">
+            <thead>
+              <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                <th className="w-[22%] py-1 pr-2 font-medium">{tc("businessSignals.agent")}</th>
+                <th className="w-[34%] py-1 pr-2 font-medium">{tc("businessSignals.signal")}</th>
+                <th className="w-[14%] py-1 pr-2 font-medium">{tc("businessSignals.value")}</th>
+                <th className="w-[16%] py-1 pr-2 font-medium">{tc("businessSignals.status")}</th>
+                <th className="w-[14%] py-1 font-medium">{tc("businessSignals.source")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const label = tb.has(row.key) ? tb(row.key) : row.key;
+                const value =
+                  typeof row.value_pct === "number" ? `${Math.round(row.value_pct)}%` : "—";
+                return (
+                  <tr
+                    key={`${row.agent_id}.${row.key}`}
+                    className="border-b border-[var(--border)]/50"
+                  >
+                    <td className="py-1 pr-2">
+                      <Link href={row.href} className="truncate text-[var(--tessera-green)]">
+                        {row.agent_name}
+                      </Link>
+                    </td>
+                    <td className="py-1 pr-2">
+                      <span className="block truncate" title={label}>
+                        {label}
+                      </span>
+                    </td>
+                    <td className="py-1 pr-2 tabular-nums">{value}</td>
+                    <td className="py-1 pr-2">
+                      <Badge tone={BUSINESS_STATUS_BADGE[row.status] ?? "neutral"}>
+                        {tc(`businessSignals.statusValue.${row.status}`)}
+                      </Badge>
+                    </td>
+                    <td className="py-1 text-[var(--muted-foreground)]">
+                      <span className="block truncate" title={row.source}>
+                        {row.source}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </Panel>
+    </Zone>
   );
 }
 

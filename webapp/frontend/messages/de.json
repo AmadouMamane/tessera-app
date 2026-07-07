@@ -4,6 +4,19 @@
     "calcul": "Berechnung",
     "source": "Quelle"
   },
+  "artifactStatus": {
+    "draft": "Entwurf",
+    "ready": "Bereit",
+    "indicatif": "Indikativer Vorschlag",
+    "insertion_prepared": "Einfügung vorgeschlagen",
+    "pending_validation": "Zur Validierung eingereicht",
+    "reminder_prepared": "Erinnerung vorgeschlagen",
+    "unavailable": "Prüfung nicht verfügbar",
+    "blocked": "Aktion blockiert",
+    "inserted": "In den Fall eingefügt",
+    "executed": "Geplant (intern)",
+    "unknown": "Status nicht zugeordnet"
+  },
   "app": {
     "title": "Tessera",
     "subtitle": "AI Control Plane",
@@ -87,6 +100,7 @@
       "connaissances": "Wissen",
       "agentGuardrails": "Leitplanken",
       "prompts": "Prompts",
+      "metier": "Fachlichkeit",
       "evaluations": "Evaluierungen",
       "console": "Konsole",
       "historique": "Verlauf",
@@ -1597,8 +1611,7 @@
       "runs": "Runs & Datensätze",
       "failed": "Fehlgeschlagene Fälle",
       "models": "Modellvergleich",
-      "judge": "Judge-Kalibrierung",
-      "recouvrement": "Inkasso"
+      "judge": "Judge-Kalibrierung"
     },
     "cta": {
       "evidence": "Qualitäts-Evidence-Pack erzeugen",
@@ -3396,12 +3409,18 @@
         "what": "Offene Abweichungen: Schwere und Bearbeitungsstatus.",
         "how": "Eine Zeile je erfasster Abweichung.",
         "source": "Konformitätsbericht (Abweichungen)."
+      },
+      "businessLegal": {
+        "what": "Fachliche Signale, deren Manifest eine rechtliche Verpflichtung deklariert.",
+        "how": "Selektive Projektion der AgentSpec business_signals mit engagement=legal; der Wert kommt aus realen fachlichen Scores.",
+        "source": "AgentSpec + business_events."
       }
     },
     "panel": {
       "mapping": "Regulatorische Kartierung",
       "obligations": "Pflichten mit Risiko ({n})",
       "evidence": "Compliance-Evidence-Pack",
+      "businessLegal": "Rechtliche Fachsignale ({n})",
       "controls": "Kritische Kontrollen ({n})",
       "missing": "Fehlende Nachweise",
       "incidents": "Vorfälle & Ausnahmen"
@@ -3425,6 +3444,19 @@
       "truth": "Quelle der Wahrheit: YAML · Git",
       "env": "Umgebung: Produktion",
       "realtime": "Echtzeit"
+    },
+    "businessSignals": {
+      "agent": "Agent",
+      "signal": "Signal",
+      "value": "Wert",
+      "status": "Status",
+      "source": "Quelle",
+      "empty": "Kein rechtliches Fachsignal deklariert.",
+      "statusValue": {
+        "scored": "Gemessen",
+        "unknown": "Unbekannt",
+        "not_applicable": "Nicht anwendbar"
+      }
     },
     "sev": {
       "high": "Hoch",
@@ -3460,7 +3492,8 @@
     "sec": {
       "actual": "A · Regulatorische Lage",
       "mapping": "B · Mapping & Pflichten",
-      "controls": "C · Kontrollen & Vorfälle"
+      "businessLegal": "C · Rechtliche Fachsignale",
+      "controls": "D · Kontrollen & Vorfälle"
     },
     "footer": {
       "reference": "Referenz: v2026.06",
@@ -6697,6 +6730,7 @@
     },
     "rowOpen": "Details ansehen",
     "close": "Schließen",
+    "openBusinessRun": "In Fachlichkeit öffnen",
     "page": {
       "prev": "Vorherige Seite",
       "next": "Nächste Seite",
@@ -6874,7 +6908,8 @@
     "releaseNotRun": "Eval nicht ausgeführt",
     "candidate": "Kandidat",
     "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket.",
-    "observabilityLevel": "Beobachtbarkeitsstufe {level}"
+    "observabilityLevel": "Beobachtbarkeitsstufe {level}",
+    "pendingBusinessItems": "{n} fachlich offen"
   },
   "product": {
     "apercu": {
@@ -7289,6 +7324,65 @@
     "descriptionLabel": "Beschreibung",
     "copy": "Kopieren",
     "copied": "Kopiert"
+  },
+  "agentMetier": {
+    "title": "Fachlichkeit",
+    "subtitle": "Reale fachliche Fähigkeiten, Signale und Ausführungen dieses Agenten.",
+    "level": "Niveau {level}",
+    "events": "{count} Ereignisse",
+    "empty": {
+      "title": "Fachdaten nicht verfügbar",
+      "detail": "Dieser Agent hat das erforderliche Niveau mit realen Fachfakten noch nicht erreicht."
+    },
+    "unavailable": {
+      "title": "Fachliche Lesung nicht verfügbar",
+      "detail": "Die Quelle der fachlichen Fakten antwortet für diesen Agenten nicht."
+    },
+    "missing": {
+      "manifest": "Agentenbeschreibung",
+      "observable_contract": "Beobachtungsvertrag",
+      "governance": "Governance-Fakten",
+      "business_events": "fachliche Fakten",
+      "capability_stamps": "Fähigkeitszuordnung"
+    },
+    "signals": {
+      "title": "Fachsignale",
+      "empty": "Kein Fachsignal deklariert.",
+      "northStar": "Leitsignal"
+    },
+    "signalLevel": {
+      "runtime": "Ausführung",
+      "human_action": "Menschliche Aktion",
+      "other": "Andere"
+    },
+    "trend": {
+      "insufficient_data": "Zu wenig Verlauf",
+      "up": "+{delta} Pkt.",
+      "down": "-{delta} Pkt.",
+      "flat": "Stabil"
+    },
+    "capabilities": {
+      "title": "Fähigkeiten",
+      "columns": {
+        "capability": "Fähigkeit",
+        "volume": "Volumen",
+        "conformity": "% konform",
+        "validation": "% Validierung",
+        "blocked": "% blockiert",
+        "prevented": "Effekte verhindert",
+        "trend": "Trend"
+      }
+    },
+    "runs": {
+      "title": "Ausführungen · {capability}",
+      "allCapabilities": "Alle Fähigkeiten",
+      "emptyTitle": "Keine fachliche Ausführung beobachtet",
+      "emptyHint": "Für diese Fähigkeit ist noch keine reale Ausführung verfügbar."
+    },
+    "temporal": {
+      "live": "Live",
+      "asOf": "Stand {instant}"
+    }
   },
   "agentEvaluations": {
     "title": "Evaluierungen",
@@ -8012,6 +8106,18 @@
     "explain_payment_options": "Zahlungsoptionen erläutern",
     "draft_reminder": "Mahnung entwerfen",
     "propose_schedule": "Zahlungsplan vorschlagen"
+  },
+  "businessSignal": {
+    "contact_window_compliance": "Einhaltung des Kontaktfensters",
+    "validation_required_compliance": "Erforderliche Validierung eingehalten",
+    "action_blocking_correctness": "Blockierung sensibler Aktionen",
+    "artifact_governance": "Artefakt-Nachvollziehbarkeit",
+    "client_message_safety": "Sicherheit der Kundennachricht",
+    "payment_option_safety": "Sicherheit der Zahlungsoptionen",
+    "action_governance": "Aktions-Governance",
+    "no_uncontrolled_external_effect": "Kontrollierte externe Effekte",
+    "recouvrement_trace_completeness": "Vollständigkeit der Inkasso-Spur",
+    "amount_consistency": "Betragskonsistenz"
   },
   "policy": {
     "contact_window": "Zulässiges Kontaktfenster",

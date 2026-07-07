@@ -35,6 +35,7 @@ from tessera.observability import (
     anomalies as anomalies_mod,
     assistant as assistant_mod,
     automations as automations_mod,
+    business_capabilities as business_capabilities_mod,
     business_events as business_events_mod,
     business_scoring as business_scoring_mod,
     citation_resolver as citation_resolver_mod,
@@ -308,6 +309,7 @@ async def observability_business_events(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     case_id: str | None = None,
+    capability_id: str | None = None,
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
@@ -320,6 +322,7 @@ async def observability_business_events(
         conversation_id=conversation_id,
         turn_id=turn_id,
         case_id=case_id,
+        capability_id=capability_id,
         event_name=event_name,
         artifact_type=artifact_type,
         decision=decision,
@@ -333,10 +336,31 @@ async def observability_business_events(
         "conversation_id": conversation_id,
         "turn_id": turn_id,
         "case_id": case_id,
+        "capability_id": capability_id,
         "event_name": event_name,
         "artifact_type": artifact_type,
         "decision": decision,
     }
+
+
+@router.get("/observability/business/capabilities")
+async def observability_business_capabilities(
+    at: str | None = None,
+    agent: str = "all",
+    workflow_id: str | None = None,
+    conversation_id: str | None = None,
+    turn_id: str | None = None,
+    case_id: str | None = None,
+) -> dict[str, object]:
+    """Per-capability business aggregate, computed server-side from business events."""
+    return business_capabilities_mod.business_capability_aggregate(
+        at=at,
+        agent_id=_agent_or_none(agent),
+        workflow_id=workflow_id,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        case_id=case_id,
+    )
 
 
 # Canonical ordering of the ADR 0017 §2 workflow grammar (`workflow_grammar.v1`) —
@@ -505,10 +529,19 @@ def _workflow_runs_from_rows(rows: list[dict[str, object]]) -> list[dict[str, ob
         )
         scores = business_scoring_mod.score_rows(ordered_rows)
         first = ordered_rows[0]
+        capability_id = next(
+            (
+                row.get("capability_id")
+                for row in ordered_rows
+                if isinstance(row.get("capability_id"), str) and row.get("capability_id")
+            ),
+            None,
+        )
         runs.append(
             {
                 "agent_id": first.get("agent_id"),
                 "workflow_id": first.get("workflow_id"),
+                "capability_id": capability_id,
                 "surface": first.get("surface"),
                 "case_id": first.get("case_id"),
                 "conversation_id": conversation_id,
@@ -533,6 +566,7 @@ def _business_runs_response(
     conversation_id: str | None,
     turn_id: str | None,
     case_id: str | None,
+    capability_id: str | None,
     limit: int,
 ) -> dict[str, object]:
     """Shared implementation for the generic and per-agent business-runs reads."""
@@ -543,6 +577,7 @@ def _business_runs_response(
         conversation_id=conversation_id,
         turn_id=turn_id,
         case_id=case_id,
+        capability_id=capability_id,
     )
     runs = _workflow_runs_from_rows(rows)
     bounded_limit = max(1, min(limit, 100))
@@ -556,6 +591,7 @@ def _business_runs_response(
         "conversation_id": conversation_id,
         "turn_id": turn_id,
         "case_id": case_id,
+        "capability_id": capability_id,
     }
 
 
@@ -567,6 +603,7 @@ async def observability_business_runs(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     case_id: str | None = None,
+    capability_id: str | None = None,
     limit: int = 20,
 ) -> dict[str, object]:
     """Workflow business runs for ANY agent — dimension filters only, no domain knowledge.
@@ -583,30 +620,7 @@ async def observability_business_runs(
         conversation_id=conversation_id,
         turn_id=turn_id,
         case_id=case_id,
-        limit=limit,
-    )
-
-
-@router.get("/observability/recouvrement-runs")
-async def observability_recouvrement_runs(
-    at: str | None = None,
-    conversation_id: str | None = None,
-    turn_id: str | None = None,
-    case_id: str | None = None,
-    limit: int = 20,
-) -> dict[str, object]:
-    """Transitional alias of ``/observability/business/runs`` pinned to recouvrement.
-
-    Kept for render parity during ADR 0017 Phase A; dissolved with the hardcoded tab in
-    Phase C (step 4 of the execution plan).
-    """
-    return _business_runs_response(
-        at=at,
-        agent_id="recouvrement",
-        workflow_id="recouvrement_collections_v1",
-        conversation_id=conversation_id,
-        turn_id=turn_id,
-        case_id=case_id,
+        capability_id=capability_id,
         limit=limit,
     )
 

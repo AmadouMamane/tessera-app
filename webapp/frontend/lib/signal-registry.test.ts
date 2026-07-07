@@ -85,7 +85,7 @@ describe("signalSupports", () => {
 
 describe("capabilityFor", () => {
   it("returns the descriptor with a migration source", () => {
-    expect(capabilityFor("slo")?.source).toBe("jsonl");
+    expect(capabilityFor("slo")?.source).toBe("local");
     expect(capabilityFor("does-not-exist")).toBeUndefined();
   });
 });

@@ -42,8 +42,8 @@ const PASS = process.env.TESSERA_ADMIN_PASS || "tessera-admin";
   }
 
   const browser = await chromium.launch();
-  const W = Number(process.env.CAP_W || 1536),
-    H = Number(process.env.CAP_H || 1000);
+  const W = Number(process.env.CAP_W || 1536);
+  const H = Number(process.env.CAP_H || 1000);
   const ctx = await browser.newContext({ viewport: { width: W, height: H } });
   await ctx.addCookies([session]);
   const page = await ctx.newPage();

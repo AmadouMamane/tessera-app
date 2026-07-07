@@ -23,8 +23,8 @@ export interface SignalCapability {
   dimensions: Dimension[];
   /** A deterministic fixture, not real data — the UI labels it honestly. */
   synthetic: boolean;
-  /** Migration source: `jsonl` (current stores) | `spine` | `shadow`. */
-  source: "jsonl" | "spine" | "shadow";
+  /** Migration source: `local` (degraded current stores) | `spine` | `shadow`. */
+  source: "local" | "spine" | "shadow";
 }
 
 const AGENT_TIME: Dimension[] = ["agent", "time"];
@@ -40,7 +40,7 @@ function cap(
   return {
     dimensions,
     synthetic: opts.synthetic ?? false,
-    source: opts.source ?? "jsonl",
+    source: opts.source ?? "local",
   };
 }
 

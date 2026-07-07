@@ -97,7 +97,7 @@ class TestSnapshotShape:
         assert set(snap["signals"]) >= {"slo", "trend", "funnel", "scores", "toxicity", "cost"}
         slo = snap["signals"]["slo"]
         assert "data" in slo and "report" in slo
-        assert slo["report"]["source"] == "jsonl"
+        assert slo["report"]["source"] == "local"
 
     async def test_shares_reads_no_per_signal_fan_out(self) -> None:
         counting = _CountingReader(FakeSpineReader(scores=[_score("support")], bundles=[]))

@@ -27,9 +27,9 @@ _TR: dict[str, tuple[str, str, str]] = {
     "rail_sla": ("Temps réel", "Echtzeit", "Real time"),
     "rail_compare": ("Cas en échec", "Fehlgeschlagene Faelle", "Failed cases"),
     "footer_src": (
-        "Cas d'évaluation en échec - run réel",
-        "Fehlgeschlagene Bewertungsfaelle - realer Lauf",
-        "Failed evaluation cases - real run",
+        "Cas d'évaluation en échec + validations/actions métier réelles",
+        "Fehlgeschlagene Bewertungsfaelle + echte fachliche Freigaben/Aktionen",
+        "Failed evaluation cases + real business validations/actions",
     ),
     "v_todo": ("a signalé", "hat gemeldet", "reported"),
     "v_progress": ("traite", "bearbeitet", "handling"),
@@ -57,10 +57,12 @@ _TYPE_BUCKET: dict[str, str] = {
     "regulatory_misstatement": "incident",
     "pii_leak": "alert",
     "tool_misuse": "alert",
+    "action_blocked": "incident",
     "hallucination": "conversation",
     "citation_fabrication": "conversation",
     "language_mixing": "conversation",
     "escalation_failure": "approval",
+    "validation_requested": "approval",
     "overconfidence": "other",
 }
 
@@ -172,6 +174,8 @@ def compute_inbox_overview(
             "sla_tone": i.sla_tone(now),
             "due": _fmt_due(i),
             "status": _STATUS_KEY.get(i.status, "todo"),
+            "href": i.detail_href,
+            "source_kind": i.source_kind,
         }
         for i in items
     ]

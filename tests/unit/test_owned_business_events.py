@@ -2,7 +2,7 @@
 
 Locks the Phase-D mechanism without a live ClickHouse: the JSONEachRow line + dedup key are
 pure; the read store rebuilds ``BusinessEvent`` s and is honest-empty when unreachable; the
-per-fact flip routes reads (jsonl default → owned → shadow); GDPR erasure reaches the owned
+per-fact flip routes reads (owned default → local override → shadow); GDPR erasure reaches the owned
 business-event table (count-then-delete, bound params, deferred-never-faked); the dual-write
 is best-effort and gated; the backfill inserts exactly the difference.
 """
@@ -132,11 +132,16 @@ def test_read_store_is_honest_empty_when_unreachable(monkeypatch) -> None:  # ty
 # --- per-fact flip routing -------------------------------------------------------
 
 
-def test_reads_default_to_the_in_process_store(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_reads_default_to_the_owned_store(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
     monkeypatch.delenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", raising=False)
-    store = be._read_store()
-    assert type(store).__name__ == "InMemoryBusinessEventStore"
+    assert isinstance(be._read_store(), ClickHouseBusinessEventStore)
+
+
+def test_local_override_routes_reads_to_the_in_process_store(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
+    monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", "local")
+    assert type(be._read_store()).__name__ == "InMemoryBusinessEventStore"
 
 
 def test_flip_routes_reads_to_the_owned_store(monkeypatch) -> None:  # type: ignore[no-untyped-def]

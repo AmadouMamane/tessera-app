@@ -61,6 +61,7 @@ function readList(key: string): string[] {
 // behind the supervisor; there is no agent picker on the business plane (ADR 0013).
 export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
   const t = useTranslations("fleet");
+  const tBusiness = useTranslations("businessSignal");
   const locale = useLocale();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -222,6 +223,7 @@ export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
               onOpen={() => recordRecent(a.id)}
               locale={locale}
               t={t}
+              tBusiness={tBusiness}
             />
           ))}
         </div>
@@ -236,6 +238,7 @@ export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
               onToggleFavorite={() => toggleFavorite(a.id)}
               onOpen={() => recordRecent(a.id)}
               t={t}
+              tBusiness={tBusiness}
             />
           ))}
         </div>
@@ -245,6 +248,7 @@ export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
 }
 
 type T = ReturnType<typeof useTranslations<"fleet">>;
+type TBusiness = ReturnType<typeof useTranslations<"businessSignal">>;
 
 function AudienceBadge({ external, t }: { external: boolean; t: T }) {
   return (
@@ -309,6 +313,32 @@ function ReleaseChip({ agent, t }: { agent: FleetAgent; t: T }) {
   );
 }
 
+function BusinessSignalLabel({ agent, tBusiness }: { agent: FleetAgent; tBusiness: TBusiness }) {
+  const signal = agent.north_star;
+  if (!signal) return null;
+  const value = typeof signal.value_pct === "number" ? `${Math.round(signal.value_pct)}%` : "—";
+  const label = tBusiness.has(signal.key) ? tBusiness(signal.key) : signal.key;
+  return (
+    <span
+      className="inline-flex min-w-0 items-center gap-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-emerald-200"
+      title={`${label} · ${value}`}
+    >
+      <span className="truncate">{label}</span>
+      <span className="shrink-0 tabular-nums text-emerald-100">{value}</span>
+    </span>
+  );
+}
+
+function PendingBusinessChip({ agent, t }: { agent: FleetAgent; t: T }) {
+  const n = agent.pending_business_items ?? 0;
+  if (n <= 0) return null;
+  return (
+    <span className="inline-flex items-center rounded-md border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-amber-200">
+      {t("pendingBusinessItems", { n })}
+    </span>
+  );
+}
+
 function StaleChip({ t }: { t: T }) {
   return (
     <span className="inline-flex items-center rounded-md border border-amber-500/45 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.04em] text-amber-300">
@@ -338,6 +368,7 @@ function AgentCard({
   onOpen,
   locale,
   t,
+  tBusiness,
 }: {
   agent: FleetAgent;
   external: boolean;
@@ -346,6 +377,7 @@ function AgentCard({
   onOpen: () => void;
   locale: string;
   t: T;
+  tBusiness: TBusiness;
 }) {
   const r = agent.release;
   const pct = passPct(agent);
@@ -369,6 +401,8 @@ function AgentCard({
       <div className="flex flex-wrap items-center gap-1.5">
         <AudienceBadge external={external} t={t} />
         <LevelBadge level={agent.level} t={t} />
+        <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
+        <PendingBusinessChip agent={agent} t={t} />
         <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{agent.owner}</span>
       </div>
       {/* Eval-gate verdict — leads the card. */}
@@ -416,6 +450,7 @@ function AgentRow({
   onToggleFavorite,
   onOpen,
   t,
+  tBusiness,
 }: {
   agent: FleetAgent;
   external: boolean;
@@ -423,6 +458,7 @@ function AgentRow({
   onToggleFavorite: () => void;
   onOpen: () => void;
   t: T;
+  tBusiness: TBusiness;
 }) {
   const Icon = agentIcon(agent.id);
   return (
@@ -434,6 +470,8 @@ function AgentRow({
       <span className="w-[160px] shrink-0 truncate font-semibold">{agent.name}</span>
       <AudienceBadge external={external} t={t} />
       <LevelBadge level={agent.level} t={t} />
+      <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
+      <PendingBusinessChip agent={agent} t={t} />
       <span className="hidden truncate text-[0.66rem] text-[var(--tessera-text-muted)] md:inline">
         {agent.owner}
       </span>

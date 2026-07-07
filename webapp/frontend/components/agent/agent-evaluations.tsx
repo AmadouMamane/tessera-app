@@ -462,7 +462,7 @@ function LiensUtiles() {
   const agentId = useAgentId();
   const items: { href: Route; label: string }[] = [
     {
-      href: ("/agir/release-control?agent=" + agentId) as Route,
+      href: `/agir/release-control?agent=${agentId}` as Route,
       label: pick(
         locale,
         "Gouvernance · Release Control",
@@ -571,7 +571,7 @@ function VerdictBanner({ data }: { data: Data }) {
                 <span className="font-mono font-medium">{socleFails.join(", ")}</span>
                 {" — "}
                 <Link
-                  href={("/agir/release-control?agent=" + agentId) as Route}
+                  href={`/agir/release-control?agent=${agentId}` as Route}
                   className="underline underline-offset-2 hover:text-white"
                 >
                   {pick(

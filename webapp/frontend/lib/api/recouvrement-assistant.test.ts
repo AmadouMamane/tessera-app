@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchRecouvrementRuns } from "./client";
+import { fetchBusinessRuns } from "./client";
 import {
   RecouvrementAssistantApiError,
   sendRecouvrementAssistantAction,
@@ -133,12 +133,12 @@ describe("sendRecouvrementAssistantAction", () => {
   });
 });
 
-describe("fetchRecouvrementRuns", () => {
+describe("fetchBusinessRuns (recouvrement dimension filters)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("loads the cockpit Recouvrement run read model from observability", async () => {
+  it("loads the Recouvrement run read model via the generic business-runs read", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -221,9 +221,13 @@ describe("fetchRecouvrementRuns", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchRecouvrementRuns(undefined, undefined, 30);
+    const result = await fetchBusinessRuns(undefined, {
+      agent: "recouvrement",
+      workflowId: "recouvrement_collections_v1",
+      limit: 30,
+    });
 
-    // ADR 0017 Phase A: the deprecated alias now rides the generic dimension-filtered read.
+    // ADR 0017 Phase C: recouvrement runs ride the generic dimension-filtered read directly.
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/observability/business/runs?agent=recouvrement&workflow_id=recouvrement_collections_v1&limit=30",
       expect.objectContaining({ headers: expect.objectContaining({ Accept: "application/json" }) }),

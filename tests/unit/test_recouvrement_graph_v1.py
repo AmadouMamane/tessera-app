@@ -24,6 +24,7 @@ from tessera.api.routes.recouvrement_assistant import (
 )
 from tessera.guard import audit
 from tessera.observability import (
+    business_capabilities as business_capabilities_mod,
     business_events as business_events_mod,
     business_scoring as business_scoring_mod,
     metrics,
@@ -301,6 +302,36 @@ def test_recouvrement_graph_summarizes_case_without_external_effects(
     assert scores["contact_window_compliance"]["status"] == "not_applicable"
 
 
+def test_recouvrement_graph_stamps_manifest_capability_id(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Résumer ce dossier",
+        conversation_id="conv-rc-capability-summary",
+        turn_id="turn-summary-capability",
+        assistant_state={"activeTask": "summary"},
+    )
+
+    assert {row["capability_id"] for row in output["businessEvents"]} == {"summarize_case"}
+    stamped_rows = business_events_mod.business_event_rows(
+        agent_id=RECOUVREMENT_AGENT_ID,
+        conversation_id="conv-rc-capability-summary",
+        turn_id="turn-summary-capability",
+        capability_id="summarize_case",
+    )
+    assert stamped_rows == output["businessEvents"]
+    assert (
+        business_events_mod.business_event_rows(
+            agent_id=RECOUVREMENT_AGENT_ID,
+            conversation_id="conv-rc-capability-summary",
+            turn_id="turn-summary-capability",
+            capability_id="draft_reminder",
+        )
+        == []
+    )
+
+
 def test_recouvrement_graph_explains_payment_options_without_payment_effects(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -428,15 +459,16 @@ def test_recouvrement_graph_proposes_schedule_with_backend_observability(
         ]
         == "SCHEDULE_VALIDATION"
     )
-    assert (
-        next(row for row in rows if row["event_name"] == "action.prepared")["payload"][
-            "action_name"
-        ]
-        == "prepare_schedule_proposal"
-    )
+    action_event = next(row for row in rows if row["event_name"] == "action.prepared")
+    assert action_event["artifact_id"] == output["artifact"]["id"]
+    assert action_event["payload"]["action_name"] == "prepare_schedule_proposal"
+    assert action_event["payload"]["artifact_id"] == output["artifact"]["id"]
+    assert action_event["payload"]["no_external_effect"] is True
     scores = {row["metric"]: row for row in output["businessScores"]}
     assert scores["validation_required_compliance"]["score"] == 1.0
     assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["action_governance"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
     assert scores["recouvrement_trace_completeness"]["score"] > 0.8
     assert scores["amount_consistency"]["score"] == 1.0
     assert scores["contact_window_compliance"]["status"] == "not_applicable"
@@ -554,8 +586,17 @@ def test_recouvrement_graph_drafts_reminder_without_sending_message(
     scores = {row["metric"]: row for row in output["businessScores"]}
     assert scores["client_message_safety"]["score"] == 1.0
     assert scores["artifact_governance"]["score"] == 1.0
+    assert scores["action_governance"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
     assert scores["amount_consistency"]["score"] == 1.0
     assert scores["validation_required_compliance"]["status"] == "unknown"
+    action_event = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.prepared"
+    )
+    assert action_event["artifact_id"] == "RC-2048-reminder-v1"
+    assert action_event["payload"]["action_name"] == "prepare_client_message"
+    assert action_event["payload"]["artifact_id"] == "RC-2048-reminder-v1"
+    assert action_event["payload"]["no_external_effect"] is True
     message_event = next(
         row for row in output["businessEvents"] if row["event_name"] == "message.generated"
     )
@@ -571,6 +612,112 @@ def test_recouvrement_graph_drafts_reminder_without_sending_message(
         and row["payload"].get("policy_rule") == "recouvrement.client_message_safety"
     )
     assert policy_event["payload"]["amount_consistent"] is True
+
+
+# --- Lot 2 code-review carry-over: pin emitter completeness (live proof -> pinned proof) ---
+#
+# Lot 2 demonstrated live (ledger proof runs lot2-schedule-proof / lot2-reminder-proof /
+# lot2-action-blocked-proof) that every emitted ``action.*`` event now links a governed
+# ``artifact_id`` and carries the ``no_external_effect`` flag, so ``action_governance`` and
+# ``no_uncontrolled_external_effect`` score a clean 1.0 on the schedule and reminder flows.
+# These tests pin that invariant across *all* action events of a flow, so a new un-flagged
+# action emitter fails the gate instead of silently regressing the demonstrated proof.
+
+_ACTION_EVENT_NAMES = frozenset({"action.requested", "action.prepared", "action.blocked"})
+
+
+def _assert_action_emitter_completeness(output: dict[str, object]) -> None:
+    """Assert every ``action.*`` event carries the effect flag (and an ``artifact_id`` unless
+    it is a block), and that both action governance scores are a clean 1.0."""
+    events = output["businessEvents"]
+    assert isinstance(events, list)
+    action_rows = [row for row in events if row["event_name"] in _ACTION_EVENT_NAMES]
+    assert action_rows, "flow emitted no action.* event to pin"
+    for row in action_rows:
+        payload = row["payload"]
+        assert (
+            payload.get("no_external_effect") is True
+        ), f"{row['event_name']} is missing the no_external_effect flag"
+        if row["event_name"] != "action.blocked":
+            assert row.get("artifact_id") or payload.get(
+                "artifact_id"
+            ), f"{row['event_name']} is missing artifact_id linkage"
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["action_governance"]["score"] == 1.0
+    assert scores["action_governance"]["reason"] == "artifact_actions_traceable"
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["reason"] == "no_external_effect_preserved"
+
+
+def test_lot2_schedule_flow_pins_action_emitter_completeness(
+    observed_recouvrement_stores: Path,
+) -> None:
+    """Pin lot2-schedule-proof: the schedule flow links its prepared action to the artifact
+    and carries the no-external-effect flag end to end (was live proof, now gate-enforced)."""
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-lot2-schedule-proof",
+        turn_id="lot2-schedule-proof",
+        assistant_state={"activeTask": "check_rule"},
+    )
+
+    assert output["decisions"]["intent"] == "propose_schedule"
+    action_prepared = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.prepared"
+    )
+    assert action_prepared["payload"]["action_name"] == "prepare_schedule_proposal"
+    assert action_prepared["artifact_id"] == output["artifact"]["id"]
+    validation_requested = next(
+        row for row in output["businessEvents"] if row["event_name"] == "validation.requested"
+    )
+    assert validation_requested["payload"]["action_name"] == "prepare_schedule_proposal"
+    assert validation_requested["payload"]["no_external_effect"] is True
+    _assert_action_emitter_completeness(output)
+
+
+def test_lot2_reminder_flow_pins_action_emitter_completeness(
+    observed_recouvrement_stores: Path,
+) -> None:
+    """Pin lot2-reminder-proof: the reminder-draft flow links its prepared action to
+    RC-2048-reminder-v1 and carries the no-external-effect flag (live proof -> pinned)."""
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Rédiger une relance",
+        conversation_id="conv-lot2-reminder-proof",
+        turn_id="lot2-reminder-proof",
+        assistant_state={"activeTask": "draft_reminder"},
+    )
+
+    assert output["decisions"]["intent"] == "draft_reminder"
+    action_prepared = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.prepared"
+    )
+    assert action_prepared["payload"]["action_name"] == "prepare_client_message"
+    assert action_prepared["artifact_id"] == "RC-2048-reminder-v1"
+    _assert_action_emitter_completeness(output)
+
+
+def test_lot2_blocked_contact_flow_pins_action_emitter_completeness(
+    observed_recouvrement_stores: Path,
+) -> None:
+    """Pin lot2-action-blocked-proof: a blocked outbound-call action still carries the
+    no-external-effect flag; a block needs no artifact_id but must still score cleanly."""
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Je peux l'appeler à 21h ?",
+        conversation_id="conv-lot2-action-blocked-proof",
+        turn_id="lot2-action-blocked-proof",
+    )
+
+    action_blocked = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.blocked"
+    )
+    assert action_blocked["payload"]["action_name"] == "prepare_outbound_call"
+    assert action_blocked["payload"]["no_external_effect"] is True
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["action_blocking_correctness"]["score"] == 1.0
+    _assert_action_emitter_completeness(output)
 
 
 def test_recouvrement_graph_prepares_client_message_from_schedule_artifact(
@@ -720,6 +867,28 @@ def test_recouvrement_action_submits_schedule_for_validation_without_creation(
     assert scores["action_governance"]["score"] == 1.0
     assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
     assert scores["validation_required_compliance"]["score"] == 1.0
+
+
+def test_recouvrement_action_workflow_stamps_artifact_capability_id(
+    observed_recouvrement_stores: Path,
+) -> None:
+    schedule = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-action-capability",
+        turn_id="turn-schedule-capability",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+
+    output = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=schedule["artifact"],
+        action_name="submit_for_validation",
+        conversation_id="conv-rc-action-capability",
+        turn_id="turn-submit-capability",
+    )
+
+    assert {row["capability_id"] for row in output["businessEvents"]} == {"propose_schedule"}
 
 
 def test_recouvrement_action_prepares_insertion_without_new_draft(
@@ -879,6 +1048,60 @@ def test_recouvrement_business_scorer_is_called_through_registry_without_generic
         "amount_consistency",
     }
     assert all(row["score"] != 0 for row in scores if row["status"] != "scored")
+
+
+async def test_business_capability_aggregate_is_server_side_and_keeps_unknown_honest(
+    observed_recouvrement_stores: Path,
+) -> None:
+    run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Résumer ce dossier",
+        conversation_id="conv-rc-capability-aggregate",
+        turn_id="turn-summary-aggregate",
+        assistant_state={"activeTask": "summary"},
+    )
+    run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-capability-aggregate",
+        turn_id="turn-schedule-aggregate",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+    business_events_mod.record_business_event(
+        event_name=business_events_mod.BusinessEventName.INTENT_ROUTED,
+        agent_id=RECOUVREMENT_AGENT_ID,
+        workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        conversation_id="conv-rc-capability-aggregate",
+        turn_id="turn-legacy-no-capability",
+        case_id="RC-2048",
+        payload={"intent": "legacy", "confidence": 0.4, "active_task": ""},
+    )
+
+    payload = await obs.observability_business_capabilities(
+        agent=RECOUVREMENT_AGENT_ID,
+        workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        conversation_id="conv-rc-capability-aggregate",
+    )
+    by_capability = {row["capability_id"]: row for row in payload["capabilities"]}
+
+    assert payload["fact"] == "business_events"
+    assert payload["source"] == "local"
+    assert payload["event_count"] > 0
+    assert payload["observability_level"] == "L3"
+    assert payload["required_level"] == "L3"
+    assert payload["missing_requirements"] == []
+    by_signal = {row["key"]: row for row in payload["business_signals"]}
+    assert by_signal["validation_required_compliance"]["value_pct"] == 100.0
+    assert by_signal["validation_required_compliance"]["status"] == "scored"
+    assert by_capability["summarize_case"]["volume"] == 1
+    assert by_capability["summarize_case"]["label_key"] == "capability.summarize_case"
+    assert by_capability["propose_schedule"]["volume"] == 1
+    assert by_capability["propose_schedule"]["validation_required_pct"] == 100.0
+    assert by_capability["propose_schedule"]["external_effects_prevented"] > 0
+    unassigned_row = by_capability[business_capabilities_mod.UNKNOWN_CAPABILITY_ID]
+    assert unassigned_row["volume"] == 1
+    assert unassigned_row["label"] == "non attribué"
+    assert unassigned_row["label_key"] is None
 
 
 def test_business_event_payload_validation_and_versioning(
@@ -1125,7 +1348,7 @@ def test_recouvrement_payment_options_actions_are_prepared_without_external_effe
     assert "Aucune écriture définitive" in insertion["visibleReply"]
 
 
-async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_and_scores(
+async def test_observability_business_runs_groups_turns_artifacts_actions_and_scores(
     observed_recouvrement_stores: Path,
 ) -> None:
     summary = run_recouvrement_graph_v1(
@@ -1180,7 +1403,11 @@ async def test_observability_recouvrement_runs_groups_turns_artifacts_actions_an
         turn_id="turn-insertion-prepared",
     )
 
-    payload = await obs.observability_recouvrement_runs(conversation_id="conv-rc-cockpit")
+    payload = await obs.observability_business_runs(
+        agent="recouvrement",
+        workflow_id="recouvrement_collections_v1",
+        conversation_id="conv-rc-cockpit",
+    )
     runs = {run["turn_id"]: run for run in payload["runs"]}
 
     assert set(runs) == {

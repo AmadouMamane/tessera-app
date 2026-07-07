@@ -2,7 +2,7 @@
 
 Locks the pure/offline behaviour: PromQL selector building, Langfuse metadata/limit handling,
 the Langfuse->row / trace->bundle mapping in the spine reader, the source-flag factory, and the
-shadow reader (serve jsonl, record divergence). The *live* reads are covered by the
+shadow reader (serve local, record divergence). The *live* reads are covered by the
 integration-tagged contract tests; nothing here touches the network.
 """
 
@@ -176,7 +176,7 @@ class TestShadowReader:
         shadow = FakeSpineReader(scores=[])
         reader = ShadowReader(primary, shadow)
         served = reader.scores(Scope())
-        assert len(served) == 1  # jsonl is served, never the empty spine
+        assert len(served) == 1  # local is served, never the empty spine
         sample = metrics.registry.get_sample_value(
             "tessera_spine_shadow_divergence_total", {"fact": "scores", "result": "diverge"}
         )
@@ -197,7 +197,7 @@ class TestShadowReader:
 
         primary = FakeSpineReader(scores=[{"metric": "x", "score": 1.0, "scored_at": "t"}])
         reader = ShadowReader(primary, _Down())  # type: ignore[arg-type]
-        assert len(reader.scores(Scope())) == 1  # still served from jsonl
+        assert len(reader.scores(Scope())) == 1  # still served from local
         sample = metrics.registry.get_sample_value(
             "tessera_spine_shadow_divergence_total", {"fact": "scores", "result": "unavailable"}
         )
@@ -205,14 +205,15 @@ class TestShadowReader:
 
 
 class TestSourceFactory:
-    def test_default_is_jsonl(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_default_is_local(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
-        assert spine_source() == "jsonl"
+        assert spine_source() == "local"
 
     def test_source_selects_reader(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         from tessera.observability.spine.adapters import get_reader
 
         for value, expected in (
+            ("local", CurrentStoresReader),
             ("jsonl", CurrentStoresReader),
             ("spine", SpineStoresReader),
             ("shadow", ShadowReader),
@@ -222,6 +223,6 @@ class TestSourceFactory:
             assert isinstance(get_reader(), expected)
         set_reader(None)
 
-    def test_unknown_source_falls_back_to_jsonl(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_unknown_source_falls_back_to_local(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.setenv("TESSERA_SPINE_SOURCE", "bogus")
-        assert spine_source() == "jsonl"
+        assert spine_source() == "local"

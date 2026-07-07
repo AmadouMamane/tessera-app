@@ -1491,7 +1491,10 @@ function FloatingRail({ onOpenAppointment }: { onOpenAppointment: () => void }) 
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
-    const handleState = (e: any) => setIsChatOpen(e.detail.isOpen);
+    const handleState = (event: Event) => {
+      const detail = (event as CustomEvent<{ isOpen?: boolean }>).detail;
+      setIsChatOpen(detail?.isOpen === true);
+    };
     window.addEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
     return () => window.removeEventListener(CHAT_WIDGET_STATE_EVENT, handleState);
   }, []);

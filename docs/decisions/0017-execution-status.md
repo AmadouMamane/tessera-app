@@ -22,7 +22,7 @@ updates this file after every step. A resuming session reads this first, then co
 | 1 | Branch reconciliation: merge `feature/redesign` into the main-dir branch; 4 real conflicts; exit gate = twice-green + recouvrement drawer + wiring proofs + PAN gate | [supervised] | ✅ done | `f8923f8` | 3 of 4 auto-merged; the real one: redesign's "stabilize" was a from-scratch client-only drawer rewrite → **HEAD (codex, backend-wired) kept wholesale**, orphaned redesign test deleted (operator-approved). Gates twice-green (1285 pytest, wiring 137/137, PAN, tsc). Pre-existing debt found, untouched: biome 33 errors (outside ci gate), 1 vitest fail `lib/signal-registry.test.ts` (isSynthetic naming mismatch automations/replay_shadow/policies vs automation_workflow/shadow_traffic/policy_versioning) — **fix owed to step 2/3** (it is the registry the AgentSpec generation builds on) |
 | 2 | 0017-A + 0018-A (freeze): import-linter contract (cockpit ⊄ `tessera.agent.*`/`langgraph`); generalise `/observability/business/runs?workflow_id=…` + `<WorkflowRunsPanel>`; stamp `grammar_version`; extract TurnInput/TurnResult protocol; acceptance tests over the existing runtime | [auto] | ✅ done | `d6f3df4` | Boundary shipped as a **stdlib AST ratchet test** (`test_observability_boundary.py`, exact-set equality, 5 frozen exceptions → Phase E), no new dependency. Generic read `_business_runs_response` + `/observability/business/runs`; `recouvrement-runs` = thin alias (same fn name/signature — existing tests untouched). `GRAMMAR_VERSION` stamped on the envelope. `turn_contract.py` + 5 acceptance tests. FE: `WorkflowRunsPanel` (copy via props), shim + `fetchBusinessRuns`, dashboard rewired, URL expectation updated. Owed debt fixed: `signal-registry.test.ts` synthetic ids realigned post-demotions. Sandbox-verified: `tsc --noEmit` green, `py_compile` green, boundary test dry-run PASS. **Sandbox cannot run ruff/mypy/pytest (py3.12 host venv) nor biome/vitest (darwin-arm64 binaries) → twice-green gate runs on the host, then targeted commit.** |
 | 3 | 0017-B + A2.1 + A2.3: AgentSpec v1 (schema, CI validation, generation of SignalSpecs + FE mirror + level badge); typed envelope `actor`; declared policy metadata; recouvrement declares the first manifest | [auto] | ✅ done | `3011bac` | AgentSpec = pydantic `extra="forbid"` block in `tessera.agent.agentspec` (a manifest is an API: malformed→ValueError at load), re-exported through `tessera.agent.registry` (the boundary-allowed seam). Referential integrity + ≤1 north_star + **A2.2 outcome-undeclarable** enforced. Recouvrement's first manifest: 5 capabilities, 4 policies (metadata only — impls stay code), scorer `recouvrement.collections.v1`, 10 business_signals (north-star `contact_window_compliance`; `engagement: legal` on contact/validation compliance). A2.1 actor = closed vocab enforced at emit. Generation: `agentspec_projection` computes **level L0–L2 from facts** (None when un-manifested; L3=Phase C) + business-signal descriptors; fleet stamps `level`, card/row render honest-empty LevelBadge. FE mirror: business signal ids in `signal-registry.ts`, `FleetSchema.level`, capability/policy label_keys in fr/en/de. CI gates: `test_agentspec` (schema), `test_agentspec_conformance` (declared business_score keys ⊆ scorer-produced; manifest label_keys ∈ every locale — the i18n sweep is now a manifest-label gate), `test_business_event_actor`. Twice-green: ruff/format/pytest 1323/tsc/biome(changed)/vitest 69. **Deferred to step 4 (supervised):** north-star chip render, per-agent generated FE mirror, Métier tab (Phase C). **Inherited debt untouched:** mypy `observability/replay.py:92` (from antigravity merge `6c1a0db`; `replay.py` left alone per protocol) — blocks a clean `mypy src/tessera`, so **main merge withheld** until it is resolved by its owner. |
-| 4 | 0017-C + A2.2 + 0018-B: Métier tab (per-capability table primary, runs drill-down), fleet north-star chip, À traiter source, Conformité projection; canonical artifact lifecycle mapping; delete the hardcoded tab | [supervised] | ⬜ pending | — | gate: recouvrement fully re-homed |
+| 4 | 0017-C + A2.2 + 0018-B: Métier tab (per-capability table primary, runs drill-down), fleet north-star chip, À traiter source, Conformité projection; canonical artifact lifecycle mapping; delete the hardcoded tab | [supervised] | ⏸ lot 3 landed — HALT before main merge (Amadou visual + Claude feu vert) | this commit | Lot 0 committed after checkpoint-1 review fixes. Lot 1 (onglet Métier) implemented and twice-green with real recouvrement data; checkpoint 2 reached with captures. Lot 1.5 completed the substance fix plus the P0-bis/P0/P1/P2 punch list on real data. Lot 2 delivered Flotte north-star/pending count, À traiter business-event source, Conformité legal projection, `page: metier`, and emitter fixes for action artifact/effect flags. **Lot 2 code-review carry-overs** landed: (1) emitter-completeness pinning tests; (2) BR-01 §5 on the Métier tab (URL-derived capability/run deep-link, temporal-mode badge Live→As-of, global as-of propagated to business reads). **Lot 3 dissolution** implemented + committed (recouvrement dashboard tab / shim / `fetchRecouvrementRuns` / `/observability/recouvrement-runs` all removed; tests migrated to the generic business-runs read). Each item twice-green + targeted commit + ledger. **HALT before any merge to main:** checkpoint-3 captures re-produced for Amadou's visual validation; checkpoint-4 merge feu vert is Claude's. |
 | 5 | 0017-D: owned ClickHouse `business_events` table; dual-write → backfill → shadow parity → flip `BusinessEventStore`; erasure probe | [auto] | ✅ done | `f95b6cb` | Mirrors the §Correction 2b owned score store. Table `tessera.business_events` (§5 DDL: MergeTree + `toYYYYMM(occurred_at)` + 6-month TTL; `node_name` carried beyond the §5 columns for run-timeline read parity) via `ensure_business_events_schema`; scoped/as-of read (`ClickHouseAdapter.business_events`, rebuilt to `to_row` shape) + `delete_business_events` (count-then-DELETE, bound params). **Dual-write** = `clickhouse_business_events` (best-effort daemon-thread insert, JSONEachRow line + dedup key, gated `TESSERA_CLICKHOUSE_BUSINESS_EVENTS`) hooked into `record_business_event`. **Flip** = `business_events` is now a flippable fact (default `jsonl` — mid-migration, unlike G5's scores/gating); reads route via `_read_store()` in-process→`ClickHouseBusinessEventStore` (spine)→`_ShadowBusinessEventStore` (shadow parity: serve in-process, compare owned, log divergence); source badge resolves at read time (`fact="business_events"`). **Backfill** = `scripts/backfill_owned_business_events.py` from replay bundles + in-process seed (idempotent). **Erasure (G4)** = `purge_owned_business_events` folded into `purge_telemetry`; `ErasureFootprint` gains the business-events leg (deferred-never-faked). **Live-verified** on `tessera-claude-clickhouse:18123`: integration contract (4) + end-to-end emit→dual-write→flipped-read(full fidelity)→erasure all green. Unit suite hermetic (dual-write off in conftest). Twice-green: ruff/format/pytest 1338+4int/tsc/vitest 69. **A2.1 actor** already landed step 3. **Not done here (Phase C, step 4):** the actual prod read flip is a config action (`TESSERA_SPINE_SOURCE_BUSINESS_EVENTS=spine`) after shadow bake — the mechanism ships flipped-off. Same inherited `replay.py:92` mypy debt → **main merge still withheld**. |
 | 6 | 0017-E + A2.4 + 0018-C/D: SDK extraction (instrument/graph_topology), span-contract + grammar-conformance suites, canaries + coverage per agent, enum codegen from capabilities, testkit; L-level → release-gate condition | [auto] | ⬜ pending | — | gate: recouvrement passes L1–L3 |
 | 7 | 0017-F: out-of-process demo agent (pure OTLP, no LangGraph) reaches L1 with a **zero-line cockpit diff**; TTO measured and recorded here | [auto] | ⬜ pending | — | the architecture's acceptance test |
@@ -198,6 +198,221 @@ updates this file after every step. A resuming session reads this first, then co
   `cd …/agents/<name>` + branch creation; ad-hoc prompts route through this register.
   Note for 0018 Phase B: `artifact-status.ts` is the transitional FE label map that the
   AgentSpec label→canonical-state mapping will absorb — linked so they don't drift.
+
+- 2026-07-07 — **step 4 / lot 3 dissolution implemented (HALT before main merge).**
+  The transitional recouvrement-runs aliases are gone, generalised to the ADR 0017 business-runs
+  read. **Removed:** the hardcoded `recouvrement` tab of the Qualité IA dashboard (`TAB_DEFS` +
+  `recouvrementRuns` query + render branch + `TAB_META` icon + the now-unused `WorkflowRunsPanel`
+  / `fetchBusinessRuns` imports + `quality.tabs.recouvrement` in fr/en/de), the
+  `recouvrement-runs-panel.tsx` shim, the `fetchRecouvrementRuns` client alias, and the backend
+  `/observability/recouvrement-runs` route + `observability_recouvrement_runs` handler.
+  **Migrated:** the backend test now drives `observability_business_runs(agent="recouvrement",
+  workflow_id="recouvrement_collections_v1", …)` (renamed `test_observability_business_runs_…`);
+  the frontend `fetchRecouvrementRuns` client test → `fetchBusinessRuns({agent, workflowId, limit})`
+  (same `/observability/business/runs?…` URL asserted); `recouvrement-runs-panel.test.ts` rehomed to
+  `workflow-runs-panel.test.ts` (generic-panel assertions). Grep for `recouvrement-runs` /
+  `fetchRecouvrementRuns` / `RecouvrementRunsPanel` / `observability_recouvrement_runs` → **0 code
+  hits** (only a doc comment). **Dissolution proof:** Qualité IA tab strip is now 6 tabs, no
+  Recouvrement — `/tmp/tessera-ck3-qualite-dissolution.png`. Twice-green: backend
+  ruff/format/`mypy src/tessera`/`pytest -m "not integration"` (1362); frontend `tsc` / `vitest`
+  (78, panel test rehomed) / `biome check .` (27 warnings, 0 new); repeated identically green.
+  **Checkpoint-3 captures re-produced from this worktree** (`:3097`/`:8099`) for Amadou:
+  `/tmp/tessera-ck3-flotte.png` (recouvrement card north-star chip `Respect des fenêtres de contact
+  100%` + `10 métier en attente`), `/tmp/tessera-ck3-a-traiter.png` (Métier-sourced OperatorItems —
+  `Action bloquée · RC-2048`, Approbations 9/32 %, "Métier a signalé RC-2048"),
+  `/tmp/tessera-ck3-conformite.png` (posture réglementaire surface). **HALT before any merge to
+  main** — checkpoint-4 merge feu vert is Claude's, after Amadou's checkpoint-3 visual validation.
+
+- 2026-07-07 — **step 4 / lot 2 code-review carry-over 2: BR-01 §5 wired on the Métier tab.**
+  Conformité to the rails registry v1.3 (`Tessera_private/registre-rails-temporels.md` §5): the
+  Métier surface is now a §5-compliant consumer of the global temporal state, **not** a signal
+  scrubber (SR-01 keeps signal-time). (a) **Deep-link** — capability + drilled-down run selection
+  derive from the URL (`?capability_id=…&turn_id=…`), never local state: `agent-metier.tsx` drops
+  the `selectedCapabilityId` `useState`, reads both params from `useSearchParams`, and writes them
+  via `router.replace({pathname, query}, {scroll:false})` (i18n navigation); `WorkflowRunsPanel`
+  gains optional controlled props (`selectedTurnId`/`onSelectTurn`) so the run is URL-derived while
+  the quality dashboard keeps its uncontrolled selection. (b) **Mode indicator** — a `TemporalMode`
+  badge shows `Live` by default and `À une date · <instant>` when a global T is posed (new
+  `agentMetier.temporal.{live,asOf}` in fr/en/de). (c) **As-of propagation** — the global instant
+  (URL is source of truth via new pure `lib/metier-temporal.ts`; the cockpit temporal-context
+  singleton follows the user) is forwarded as `at` to both `/observability/business/capabilities`
+  and `/observability/business/runs`, is part of each query key, and freezes the 5 s polling when
+  set; `metier/page.tsx` SSR-prefetches under the as-of-aware key. **Live API proof** (codex
+  backend `:8099`): `…/business/capabilities?agent=recouvrement` → L3, 132 events, `as_of=null`;
+  `…&at=2027-01-01…` → L3, 132 events (echoed `as_of`); `…&at=2020-01-01…` → L2, **0 events**
+  (honest-empty at T); runs `…&at=2020-01-01…` → 0 runs — the as-of read is real, not cosmetic.
+  New tests: `lib/metier-temporal.test.ts` (5, pure resolver) + `components/agent/agent-metier.test.ts`
+  (4, §5 wiring guard). Frontend-only; Python gate unaffected (1362). Twice-green: `tsc` clean,
+  `vitest` 78 passed (+9), `biome check .` 27 warnings (0 new), repeated identically green; Python
+  `pytest -m "not integration"` 1362 confirmed green. **Visual proof** (codex worktree `:3097`,
+  authenticated admin): `/tmp/tessera-ck3-metier.png` (badge `• Live`, first capability),
+  `/tmp/tessera-ck3-metier-deeplink.png` (`?capability_id=propose_schedule` selects the capability
+  and drills into its 12 runs), `/tmp/tessera-ck3-metier-asof.png` (`?asof=2027-01-01…` flips the
+  badge to `À une date · 01/01/2027 01:00`, reads still honor the instant).
+
+- 2026-07-07 — **step 4 / lot 2 code-review carry-over 1: emitter completeness pinned.**
+  The lot-2 live proof (ledger runs `lot2-schedule-proof`, `lot2-reminder-proof`,
+  `lot2-action-blocked-proof`) becomes regression-gated proof. Three new tests in
+  `tests/unit/test_recouvrement_graph_v1.py`
+  (`test_lot2_{schedule,reminder,blocked_contact}_flow_pins_action_emitter_completeness`)
+  drive the real schedule and reminder flows and assert, across **every** `action.*` event of
+  the flow (not a single spot-check), that it carries the `no_external_effect` flag and —
+  unless it is a block — a linked `artifact_id`; and that `action_governance` = 1.0
+  (`artifact_actions_traceable`) and `no_uncontrolled_external_effect` = 1.0
+  (`no_external_effect_preserved`). A shared `_assert_action_emitter_completeness` helper
+  encodes the invariant so a new un-flagged action emitter fails the gate instead of silently
+  regressing the demo. Backend-only (tests); no src change, frontend gate unaffected.
+  Twice-green: `ruff check`, `ruff format --check`, `mypy src/tessera` (264 files),
+  `pytest -m "not integration"` (1362 passed, +3, 50 deselected), repeated identically green.
+
+- 2026-07-07 — **step 4 / lot 2 completed; checkpoint 3 reached (HALT for Amadou visual validation).**
+  Emitters first: Recouvrement now links generated action events to their artifact and carries
+  the external-effect flag through schedule proposals, reminder drafts, validations and blocked
+  actions. Real-run proof, not scorer indulgence: `lot2-schedule-proof` has
+  `validation.requested(action_name=prepare_schedule_proposal, requires_validation=true,
+  no_external_effect=true)` and `action.prepared(artifact_id=RC-2048-schedule-36-months-v2,
+  no_external_effect=true)`, with `action_governance=1.0` and
+  `no_uncontrolled_external_effect=1.0`; `lot2-reminder-proof` has
+  `action.prepared(artifact_id=RC-2048-reminder-v1, no_external_effect=true)` with the same
+  two scores at 1.0. A real blocked-contact run (`lot2-action-blocked-proof`) emits
+  `action.blocked(action_name=prepare_outbound_call, no_external_effect=true)` and scores
+  `action_blocking_correctness=1.0`, `no_uncontrolled_external_effect=1.0`.
+  The business-signal aggregate now averages scored runs instead of scoring the whole spine
+  bucket as one mega-run: old broken dev runs remain visible as failures, while fresh real
+  runs are no longer collapsed to 0% (`action_governance=33.3%`,
+  `no_uncontrolled_external_effect=38.5%`, reason `scored_runs_mean`, 132 events).
+  Flotte: recouvrement card renders the manifest north-star chip
+  `contact_window_compliance=100%` (`outside_contact_window_blocked`) and
+  `10 métier en attente`. À traiter: `validation.requested` + `action.blocked` become
+  `OperatorItems` with deep-links to `/agents/recouvrement/metier?...`; duplicate natural
+  business ids are deduped before rendering (API proof: 28 ids / 28 unique, 10 business
+  items). Conformité: only legal business signals are projected (`contact_window_compliance`
+  100%, `validation_required_compliance` 100%, source `spine`, href Métier). Signal catalog:
+  `page: metier` added to the vocabulary and candidate signals rehomed. Micro-nits absorbed:
+  `business_events` default read source is `spine`; the bounded in-memory source is labelled
+  `local` while `jsonl` remains an alias for compatibility. Captures:
+  `/tmp/tessera-lot2-flotte.png`, `/tmp/tessera-lot2-a-traiter.png`,
+  `/tmp/tessera-lot2-conformite.png`. Servers relaunched from the codex worktree
+  (`:8099`, `:3097`); health and proxy `/api/healthz` both 200. Twice-green full gate after
+  final code edits: `ruff format --check .`, `ruff check .`, `mypy src/tessera`,
+  `pytest tests/unit/ -q` (1359 passed), `pnpm exec biome check .` (exit 0, 27 known
+  warnings), `pnpm typecheck`, `pnpm test` (69 passed), repeated identically green. **HALT
+  after commit: checkpoint 3 visual review required before lot 3.**
+
+- 2026-07-07 — **step 4 / lot 1.5 completed (substance + punch list; checkpoint 2 still held).**
+  Substance first, before edits: the red `action_governance=0%` and
+  `no_uncontrolled_external_effect=0%` on historical recouvrement runs were not an UI-only
+  artefact. The scorer was correctly returning `action_artifact_missing` and
+  `action_missing_no_external_effect_flag` because `action.prepared` events carried only
+  `action_name`; they lacked the linked `artifact_id` and `no_external_effect=true`. The
+  `validation_required_compliance=unknown` cases were honest-empty (`no_validation_required_event`)
+  on flows where no validation-required event existed. Fix: schedule proposals and reminder
+  drafts now emit traceable `action.prepared` events with artifact linkage, validation intent
+  and explicit no-external-effect flags; fresh real runs now score `action_governance=100%`
+  and `Effets externes contrôlés=100%`.
+  P0 honesty: absent/not-applicable scores render `—` with neutral reasons in the drill-down,
+  the `Résumé du dossier` conformity no longer becomes `0%` from the diagnostic
+  `recouvrement_trace_completeness` metric, and the `non attribué` row remains visible for
+  unstamped events. P0-bis/P1/P2: the tab was restructured to the house pattern (signal
+  band -> full-width capabilities table -> vertical master-detail on selection), with the
+  north-star KPI promoted, secondary KPIs grouped, trend text collapsed to a discreet dash,
+  short IDs + copy buttons, deduped reason chips, full-width chronology, and four equal
+  bottom panels for artefacts/decisions/actions/scores with the safety flags visible.
+  Visual proof on the restarted codex worktree (`:3097`, authenticated admin demo session):
+  `/tmp/tessera-metier-p0-summary-dash-fixed.png`,
+  `/tmp/tessera-metier-p0bis-schedule-drilldown-fixed.png`,
+  `/tmp/tessera-metier-p0-four-panels-fixed.png`. DOM proof: no horizontal overflow, no
+  repeated "Tendance indisponible", `Échéancier créé=non`, `Effet externe=aucun`,
+  `Gouvernance des actions=100%`, `Effets externes contrôlés=100%`. Real API proof:
+  `/observability/business/capabilities?agent=recouvrement` is L3 with 108 events,
+  `summarize_case.conformity_pct=null`, `propose_schedule.volume=11`, and the unstamped
+  row volume is 2. Audit-chain check on the real backend: `verified=true`,
+  `content_integrity=true`, `linear=false`, `fork_count=29`, `orphan_count=1`,
+  `attested=true`; these are historical attested forks/orphan, not a content-integrity
+  incident. Twice-green full gate after the final edits: `ruff format --check .`,
+  `ruff check .`, `mypy src/tessera`, `pytest tests/unit/ -q` (1353 passed),
+  `pnpm typecheck`, targeted `pnpm exec biome check` on changed UI/i18n files, and
+  `pnpm test` (69 passed); repeated identically green. **HALT: Amadou visual validation
+  required before lot 2.**
+
+- 2026-07-07 — **step 4 / lot 1.5a house alignment (checkpoint 2 still held).**
+  Audited `agent-metier.tsx` against the shipped Cockpit/Agent patterns: the business
+  signal strip now uses the shared `MetricCard` KPI atom; the capabilities panel uses
+  `Card` + `Table` primitives with the same dense spacing as the catalogue/evaluations
+  tables; the honest-empty state uses `EmptyState`; the visible runs vocabulary is now
+  "exécutions" / "chronologie" / "tour" instead of internal "run" labels on this surface.
+  The tab still reads only real `/observability/business/capabilities` data and keeps
+  unstamped events visible as the `—` / `non attribué` row. Added the constraining unit
+  test `test_unknown_capability_row_is_rendered_as_non_attribue` for
+  `UNKNOWN_CAPABILITY_ID`; updated the generic run-panel copy test to the new label.
+  Visual proof on the live local worktree (`/fr/agents/recouvrement/metier`): 10 KPI
+  tiles, 6 capability rows, `non attribué` visible, no "Données métier indisponibles";
+  capture `/tmp/tessera-metier-lot-1-5a-after-load.png`. Twice-green executable gate:
+  `ruff format --check .`, `ruff check .`, `mypy src/tessera
+  tests/unit/test_business_capabilities.py` (clean; full `uv run mypy` still hits the
+  pre-existing tests-wide typing baseline), `pytest -m "not integration" -q`
+  (1345 passed, 48 deselected), `biome check` on changed frontend files, `pnpm
+  typecheck`, `pnpm test` (69 passed); repeated identically green. **Still halted at
+  checkpoint 2 for operator visual validation before lot 2.**
+
+- 2026-07-07 — **step 4 / lot 1 checkpoint 2 reached (onglet Métier, supervised halt).**
+  Added `/agents/<agentId>/metier` between Synthèse and Évaluations, visible through the
+  per-agent command bar only. The tab reads the generated manifest and renders an
+  honest-empty state unless the agent reaches L3; for recouvrement, L3 now requires manifest
+  + governed release facts + stamped business events. The main table is server-side
+  `/observability/business/capabilities` data only: manifest capabilities by i18n label,
+  volumes, conformity/validation/blocked rates, prevented external effects and honest-empty
+  trends; unstamped events keep the `non attribué` row. The signal banner renders
+  `business_signals` grouped by level with localized labels. Drill-down reuses
+  `WorkflowRunsPanel` filtered by `capability_id`; schema fixed to accept the generic API's
+  `workflow_id: null` when no workflow filter is requested. Real-data proof: a live
+  recouvrement turn (`case_id=RC-2048`, `conversation_id=ckpt2-metier-live`) produced 9
+  business events; `propose_schedule` shows volume 1, conformity 66.7%, validation 100%,
+  blocked 0%, external_effects_prevented 2, and drill-down shows `schedule_proposal_v2`,
+  `VALIDATION_REQUIRED`, `CLIENT_AGREEMENT_REQUIRED`, `SCHEDULE_NOT_CREATED`. Captures:
+  `/tmp/tessera-metier-checkpoint2-capabilities.png` and
+  `/tmp/tessera-metier-checkpoint2-drilldown.png`. Twice-green full gate: `ruff format
+  --check .`, `ruff check .`, `mypy src/tessera`, `pytest -m "not integration" -q`
+  (1344 passed, 48 deselected), `npx biome check .` (code 0; 27 warnings), `npm run
+  typecheck`, `npm test` (69 passed); repeated identically green. **HALT at checkpoint 2.**
+
+- 2026-07-07 — **step 4 / lot 0 review fixes + ui-polish absorbed; checkpoint 1 validated.**
+  Review finding 1 fixed: the generic `business_capabilities` aggregate no longer knows
+  recouvrement payload flags such as `no_schedule_created`; `external_effects_prevented`
+  is derived from the grammar (`action.blocked`, `validation.requested`, and
+  `action.prepared` for manifest capabilities with external-effect levels). Review finding
+  2 fixed: unstamped historical events stay under the technical id `—` but now expose the
+  human row label `non attribué`, with a regression test. Ui-polish landed from base:
+  artifact status `executed` now displays `Planifié (interne)`, and the Cockpit run panel
+  resolves artifact status labels via `artifactStatus.<status>` in `messages/{fr,en,de}`.
+  Gate hygiene needed for the requested full Biome gate: pre-existing blocking Biome errors
+  in front scripts/product helpers were fixed mechanically (warnings remain non-blocking).
+  Twice-green full gate after final edits: `ruff format --check .` (504 files),
+  `ruff check .`, `mypy src/tessera` (264 files), `pytest -m "not integration" -q`
+  (1344 passed, 48 deselected), `npx biome check .` (code 0; 27 warnings), `npm run
+  typecheck`, `npm test` (69 passed). Repeated identically green. **GO lot 1 per operator;
+  halt at checkpoint 2.**
+
+- 2026-07-07 — **step 4 / lot 0 checkpoint reached (backend prereq, supervised halt).**
+  Shipped the domain-owned Recouvrement capability mapping (`summary`→`summarize_case`,
+  `check_rule`→`check_contact_rule`, artifact/action mappings) in `tessera.recouvrement`;
+  the graph stamps `capability_id` on emitted business events when the capability is known,
+  including artifact-action workflows. Business-event reads now accept `capability_id`
+  through the in-memory store, ClickHouse store, shadow store, `/observability/business-events`,
+  and `/observability/business/runs`; OTel span events also carry
+  `tessera.business.capability_id`. Added `/observability/business/capabilities`, a
+  server-side aggregate over `fact=business_events` with manifest rows plus honest
+  `—` for historical unstamped events. Live proof (real recouvrement graph run, no synthetic
+  metrics): `validation.requested` row has `capability_id="propose_schedule"`; aggregate row
+  schema is `capability_id,label_key,external_effect_level,volume,conformity_pct,
+  validation_required_pct,blocked_pct,external_effects_prevented,trend,event_count`; live
+  `propose_schedule` row: volume 1, validation_required_pct 100.0, blocked_pct 0.0,
+  external_effects_prevented 2, trend honest-empty (`insufficient_data`). Twice-green after
+  final edits: `ruff format --check` + `ruff check` targeted (9 files), `mypy src/tessera`
+  (264 files, clean), `pytest tests/unit/test_business_event_envelope.py
+  tests/unit/test_recouvrement_graph_v1.py tests/unit/test_owned_business_events.py -q`
+  (52 passed), `npx biome check lib/api/client.ts lib/api/schemas.ts`, `npm run typecheck`;
+  repeated identically green. **HALT here per checkpoint 1: Claude review required before lot 1.**
 
 - 2026-07-07 — **steps 3+5 merged to `main` (`fa63bd9a`), pushed to origin.** The 3 review
   must-fixes executed in order: (1) `14bd3a4f` — replay.py orphan WIP committed as the mypy

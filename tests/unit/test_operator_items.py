@@ -89,6 +89,74 @@ def test_load_items_ventilates_by_agent(monkeypatch: pytest.MonkeyPatch) -> None
     assert only_reco[0].case_id == "07"
 
 
+def test_load_items_includes_business_event_operator_items(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _no_eval_run(_aid: str) -> None:
+        raise FileNotFoundError("no eval run")
+
+    validation = {
+        "event_name": oi.business_events.BusinessEventName.VALIDATION_REQUESTED.value,
+        "agent_id": "recouvrement",
+        "conversation_id": "conv-lot2",
+        "turn_id": "turn-validation",
+        "case_id": "RC-2048",
+        "capability_id": "propose_schedule",
+        "artifact_id": "artifact-schedule",
+        "artifact_type": "schedule_proposal_v2",
+        "timestamp": NOW.isoformat(),
+        "payload": {"action_name": "prepare_schedule_proposal"},
+    }
+    blocked = {
+        "event_name": oi.business_events.BusinessEventName.ACTION_BLOCKED.value,
+        "agent_id": "recouvrement",
+        "conversation_id": "conv-lot2",
+        "turn_id": "turn-blocked",
+        "case_id": "RC-2048",
+        "capability_id": "check_contact_rule",
+        "timestamp": (NOW - timedelta(minutes=10)).isoformat(),
+        "payload": {"action_name": "prepare_outbound_call"},
+    }
+    rows_by_event = {
+        validation["event_name"]: [validation, dict(validation)],
+        blocked["event_name"]: [blocked],
+    }
+
+    def _business_rows(
+        *, agent_id: str | None = None, event_name: str | None = None, **_kwargs: object
+    ) -> list[dict[str, object]]:
+        assert agent_id == "recouvrement"
+        return rows_by_event.get(event_name or "", [])
+
+    monkeypatch.setattr(oi, "load_eval_snapshot", _no_eval_run)
+    monkeypatch.setattr(oi.business_events, "business_event_rows", _business_rows)
+    monkeypatch.setattr(
+        oi,
+        "_load_state",
+        lambda: {
+            "recouvrement.action.blocked.conv-lot2.turn-blocked.RC-2048": {
+                "status": "progress",
+                "assignee": "Amadou",
+            }
+        },
+    )
+
+    items = oi.load_items("recouvrement")
+
+    assert len(items) == 2
+    assert {item.category for item in items} == {"validation_requested", "action_blocked"}
+    assert all(item.source == "Métier" for item in items)
+    assert all(item.source_kind == "business_event" for item in items)
+    assert items[0].category == "action_blocked"  # critical before high
+    assert items[0].status == "progress"
+    assert items[0].assignee == "Amadou"
+    validation_item = next(item for item in items if item.category == "validation_requested")
+    assert validation_item.priority == "high"
+    assert validation_item.detail_href.startswith("/agents/recouvrement/metier?")
+    assert "turn_id=turn-validation" in validation_item.detail_href
+    assert "capability_id=propose_schedule" in validation_item.detail_href
+
+
 def test_load_items_skips_agents_without_a_real_run(monkeypatch: pytest.MonkeyPatch) -> None:
     def _loader(aid: str) -> _Snap:
         if aid == "ghost":
