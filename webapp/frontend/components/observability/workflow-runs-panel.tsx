@@ -493,9 +493,9 @@ function DecisionPanel({ run }: { run: RecouvrementRun }) {
         {run.decisions.length === 0 ? (
           <p className="text-xs text-[var(--tessera-text-muted)]">Aucune décision.</p>
         ) : (
-          run.decisions.map((decision) => (
+          run.decisions.map((decision, index) => (
             <div
-              key={`${decision.event_name}-${decision.decision}-${decision.rule_id}`}
+              key={eventKey(decision, index)}
               className="rounded-lg border border-[var(--tessera-border)] p-2 text-[0.68rem]"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -532,8 +532,8 @@ function SensitiveActionsPanel({ run }: { run: RecouvrementRun }) {
         {run.sensitive_actions.length === 0 ? (
           <p className="text-xs text-[var(--tessera-text-muted)]">Aucune action sensible.</p>
         ) : (
-          run.sensitive_actions.map((action) => (
-            <SensitiveActionCard key={actionKey(action)} action={action} />
+          run.sensitive_actions.map((action, index) => (
+            <SensitiveActionCard key={eventKey(action, index)} action={action} />
           ))
         )}
       </CardContent>
@@ -610,8 +610,32 @@ function ScoresPanel({ scores }: { scores: BusinessScore[] }) {
   );
 }
 
-function actionKey(action: RecouvrementSensitiveAction): string {
-  return `${action.event_name}-${action.action_name}-${action.artifact_id}-${action.target_status}`;
+function eventKey(
+  event: {
+    event_name?: string | null;
+    timestamp?: string | null;
+    node_name?: string | null;
+    decision?: string | null;
+    rule_id?: string | null;
+    artifact_id?: string | null;
+    action_name?: string | null;
+    target_status?: string | null;
+  },
+  index: number,
+): string {
+  return [
+    event.event_name,
+    event.timestamp,
+    event.node_name,
+    event.decision,
+    event.rule_id,
+    event.artifact_id,
+    event.action_name,
+    event.target_status,
+    index,
+  ]
+    .map((part) => valueLabel(part))
+    .join("|");
 }
 
 function Fact({
