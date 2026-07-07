@@ -11,8 +11,8 @@ Workers call :func:`search` to obtain a ranked list of
 
 from __future__ import annotations
 
+from tessera.agent.sdk import instrument
 from tessera.agent.state import RetrievedDocument
-from tessera.observability import instrument
 from tessera.retrieval import citations, embeddings, reranking, store
 from tessera.settings import LanguageCode  # noqa: TCH001 — used in signature at runtime
 

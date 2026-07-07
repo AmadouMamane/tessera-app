@@ -48,6 +48,7 @@ from tessera.agent import (
     reviewer as reviewer_module,
     router as router_module,
 )
+from tessera.agent.sdk.instrument import instrument_node
 from tessera.agent.state import AgentState, NodeName, WorkerName
 from tessera.agent.workers import (
     account_lookup as account_lookup_worker,
@@ -56,7 +57,6 @@ from tessera.agent.workers import (
     regulation_lookup as regulation_lookup_worker,
     simulator as simulator_worker,
 )
-from tessera.observability.instrument import instrument_node
 
 if TYPE_CHECKING:
     from collections.abc import Callable

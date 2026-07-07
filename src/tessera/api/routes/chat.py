@@ -27,6 +27,7 @@ from starlette.responses import StreamingResponse
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
 from tessera.agent.identity import current_agent_id
+from tessera.agent.sdk import instrument
 from tessera.agent.state import (
     Citation,
     ConversationMessage,
@@ -58,7 +59,7 @@ from tessera.llm.budget import estimate_turn_cost
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
-from tessera.observability import instrument, replay, semconv
+from tessera.observability import replay, semconv
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL

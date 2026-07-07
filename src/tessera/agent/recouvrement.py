@@ -26,10 +26,10 @@ from zoneinfo import ZoneInfo
 from langgraph.graph import END, START, StateGraph
 
 from tessera.agent.registry import get_agent
+from tessera.agent.sdk.instrument import instrument_node
 from tessera.authz import Surface
 from tessera.observability import business_events as business_events_mod, business_scoring, replay
 from tessera.observability.business_events import BusinessEventName, record_business_event
-from tessera.observability.instrument import instrument_node
 from tessera.recouvrement import ensure_recouvrement_scorer_registered
 from tessera.recouvrement.capabilities import (
     capability_for_action,
