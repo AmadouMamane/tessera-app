@@ -262,6 +262,21 @@ function AudienceBadge({ external, t }: { external: boolean; t: T }) {
   );
 }
 
+// ADR 0017 §4 — the observability level badge (L0–L2 in Phase B). Computed from passing
+// facts server-side; `null`/absent when the agent has no AgentSpec manifest yet, so it
+// renders nothing (honest-empty) rather than a misleading "L0".
+function LevelBadge({ level, t }: { level: string | null | undefined; t: T }) {
+  if (!level) return null;
+  return (
+    <span
+      title={t("observabilityLevel", { level })}
+      className="inline-flex items-center rounded-full border border-[#7c5cf5]/40 bg-[#7c5cf5]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[#b9a6ff]"
+    >
+      {level}
+    </span>
+  );
+}
+
 function FavButton({ favorite, onToggle, t }: { favorite: boolean; onToggle: () => void; t: T }) {
   return (
     <button
@@ -353,6 +368,7 @@ function AgentCard({
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <AudienceBadge external={external} t={t} />
+        <LevelBadge level={agent.level} t={t} />
         <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{agent.owner}</span>
       </div>
       {/* Eval-gate verdict — leads the card. */}
@@ -417,6 +433,7 @@ function AgentRow({
       <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
       <span className="w-[160px] shrink-0 truncate font-semibold">{agent.name}</span>
       <AudienceBadge external={external} t={t} />
+      <LevelBadge level={agent.level} t={t} />
       <span className="hidden truncate text-[0.66rem] text-[var(--tessera-text-muted)] md:inline">
         {agent.owner}
       </span>

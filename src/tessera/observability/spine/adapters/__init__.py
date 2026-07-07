@@ -43,7 +43,12 @@ _SOURCES = {"jsonl", "spine", "shadow"}
 # The per-fact flip surface (G4). bundles never flips per-fact (the spine's trace-derived
 # bundles are lossy by design) and the audit ledger is the local carve-out — neither has
 # an override; they follow the global source only.
-_FLIPPABLE_FACTS = ("scores", "gating")
+_FLIPPABLE_FACTS = ("scores", "gating", "business_events")
+# The default source per flippable fact when no env is set. ``scores``/``gating`` graduated
+# to the owned stores at G5; ``business_events`` is mid-migration (ADR 0017 Phase D) — its
+# owned ClickHouse table dual-writes, but reads still default to the in-process store until
+# shadow parity bakes the flip, so its default stays ``jsonl`` (the not-yet-flipped fact).
+_FACT_DEFAULTS = {"scores": "spine", "gating": "spine", "business_events": "jsonl"}
 
 
 def spine_source() -> str:
@@ -55,10 +60,11 @@ def spine_source() -> str:
 def fact_source(fact: str) -> str:
     """The active source for one fact: per-fact env > explicit global env > default.
 
-    Since G5 (the jsonl retirement, baked per the ADR's own gate) the flippable facts
-    (``scores``, ``gating``) **default to ``spine``** — the owned stores are the system
-    of record; ``jsonl`` remains the *explicit* degraded fallback (set the global or the
-    per-fact env). Every other fact reports the global source. This resolved value is
+    Since G5 (the jsonl retirement, baked per the ADR's own gate) ``scores``/``gating``
+    **default to ``spine``** — the owned stores are the system of record; ``jsonl`` remains
+    the *explicit* degraded fallback (set the global or the per-fact env). ``business_events``
+    is still mid-migration (ADR 0017 Phase D), so it **defaults to ``jsonl``** until its
+    shadow parity bakes. Every other fact reports the global source. This resolved value is
     what the per-signal ``source`` badge shows, so a flipped signal is visibly flipped.
     """
     if fact in _FLIPPABLE_FACTS:
@@ -67,7 +73,7 @@ def fact_source(fact: str) -> str:
             return raw
         if _explicit_global() is not None:
             return spine_source()
-        return "spine"
+        return _FACT_DEFAULTS.get(fact, "spine")
     return spine_source()
 
 

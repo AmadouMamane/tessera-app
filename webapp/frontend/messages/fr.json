@@ -6873,7 +6873,8 @@
     "release": "État de release",
     "releaseNotRun": "Éval non exécutée",
     "candidate": "Candidate",
-    "releaseNote": "Verdict eval-gate par agent (run de référence, grain cas × langue) — chaque agent est un package gouverné."
+    "releaseNote": "Verdict eval-gate par agent (run de référence, grain cas × langue) — chaque agent est un package gouverné.",
+    "observabilityLevel": "Niveau d'observabilité {level}"
   },
   "product": {
     "apercu": {
@@ -8004,5 +8005,18 @@
   "synthetic": {
     "title": "Données de démonstration",
     "detail": "jeu de référence déterministe, non issu du trafic réel"
+  },
+  "capability": {
+    "summarize_case": "Résumé du dossier",
+    "check_contact_rule": "Vérification de la règle de contact",
+    "explain_payment_options": "Explication des options de paiement",
+    "draft_reminder": "Rédaction d'une relance",
+    "propose_schedule": "Proposition d'échéancier"
+  },
+  "policy": {
+    "contact_window": "Fenêtre de contact autorisée",
+    "client_message_safety": "Sûreté du message client",
+    "payment_options_safety": "Sûreté des options de paiement",
+    "amount_consistency": "Cohérence des montants"
   }
 }

@@ -38,11 +38,28 @@ from tessera.observability.spine.adapters.base import SpineUnavailableError
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
 
-__all__ = ["ONLINE_SCORES_TABLE", "ClickHouseAdapter", "ClickHouseConfig", "online_scores_ddl"]
+__all__ = [
+    "BUSINESS_EVENTS_TABLE",
+    "ONLINE_SCORES_TABLE",
+    "ClickHouseAdapter",
+    "ClickHouseConfig",
+    "business_events_ddl",
+    "online_scores_ddl",
+]
 
 # Mirrors the live ring buffer's bound (``eval.scores._RECENT`` maxlen) so the live read
 # has the same semantics as the jsonl reader it must hold parity with.
 _LIVE_LIMIT: Final = 200
+
+# The business-event live cut mirrors ``InMemoryBusinessEventStore``'s deque bound (maxlen
+# 500), so the flipped ClickHouse read holds parity with the in-process store it replaces.
+_BUSINESS_EVENTS_LIVE_LIMIT: Final = 500
+# A TOTAL order for reproducible as-of-T business-event reads (same (scope, T) ⇒ same rows,
+# same order — SR-01). The DESC twin keeps the live newest-cut deterministic at the boundary.
+_BE_TOTAL_ORDER: Final = "occurred_at, event_name, conversation_id, turn_id, artifact_id"
+_BE_TOTAL_ORDER_DESC: Final = (
+    "occurred_at DESC, event_name DESC, conversation_id DESC, turn_id DESC, artifact_id DESC"
+)
 
 # A TOTAL order, not just time: rows sharing a millisecond would otherwise come back in
 # whatever part-merge order ClickHouse happens to hold, and an as-of-T read must be
@@ -53,6 +70,10 @@ _TOTAL_ORDER: Final = "scored_at, metric, trace_id, conversation_id"
 _TOTAL_ORDER_DESC: Final = "scored_at DESC, metric DESC, trace_id DESC, conversation_id DESC"
 
 ONLINE_SCORES_TABLE: Final = "eval_online_scores"
+# The owned durable home of business events (ADR 0017 §5). Dimensional, traffic-driven
+# monitoring telemetry — direct insert, MergeTree + monthly partitions + 6-month TTL,
+# aligned with ``eval_online_scores``. The opposable facet stays in the Postgres ledger.
+BUSINESS_EVENTS_TABLE: Final = "business_events"
 
 # Database / identifier names are interpolated into DDL, so they must stay plain
 # identifiers even though they come from trusted env config — defence in depth.
@@ -114,6 +135,48 @@ TTL toDateTime(scored_at) + INTERVAL 6 MONTH
 """.strip()
 
 
+def business_events_ddl(database: str) -> str:
+    """The ADR 0017 §5 DDL — the owned business-event read model.
+
+    ``ORDER BY (agent_id, workflow_id, event_name, occurred_at)`` serves the per-agent /
+    per-workflow / as-of-T run reads; ``PARTITION BY toYYYYMM(occurred_at)`` + a 6-month
+    ``TTL`` (aligned with ``eval_online_scores``) are the native volume levers. ``payload``
+    is the strict-schema-validated JSON kept PII-free by construction (§2), so erasure by
+    ``conversation_id`` stays cheap and complete. ``node_name`` is carried (beyond the §5
+    column list) so the flipped read holds run-timeline parity with the in-process store.
+    """
+    return f"""
+CREATE TABLE IF NOT EXISTS {database}.{BUSINESS_EVENTS_TABLE} (
+    occurred_at      DateTime64(3),
+    agent_id         LowCardinality(String),
+    workflow_id      LowCardinality(String),
+    capability_id    LowCardinality(String),
+    event_name       LowCardinality(String),
+    node_name        LowCardinality(String),
+    conversation_id  String,
+    turn_id          String,
+    case_id          String,
+    artifact_id      String,
+    artifact_type    LowCardinality(String),
+    artifact_status  LowCardinality(String),
+    decision         LowCardinality(String),
+    reason_codes     Array(LowCardinality(String)),
+    actor            LowCardinality(String),
+    surface          LowCardinality(String),
+    language         LowCardinality(String),
+    model            LowCardinality(String),
+    environment      LowCardinality(String),
+    schema_version   LowCardinality(String),
+    event_version    UInt16,
+    grammar_version  LowCardinality(String),
+    payload          String
+) ENGINE = MergeTree
+ORDER BY (agent_id, workflow_id, event_name, occurred_at)
+PARTITION BY toYYYYMM(occurred_at)
+TTL toDateTime(occurred_at) + INTERVAL 6 MONTH
+""".strip()
+
+
 class ClickHouseAdapter:
     """Query/DDL client for the owned ClickHouse online-score store (§Correction 2b)."""
 
@@ -130,6 +193,11 @@ class ClickHouseAdapter:
     def table(self) -> str:
         """The fully-qualified owned online-scores table (``<database>.<table>``)."""
         return f"{self._config.database}.{ONLINE_SCORES_TABLE}"
+
+    @property
+    def business_events_table(self) -> str:
+        """The fully-qualified owned business-events table (ADR 0017 §5)."""
+        return f"{self._config.database}.{BUSINESS_EVENTS_TABLE}"
 
     def execute(
         self, query: str, *, data: bytes | None = None, params: dict[str, str] | None = None
@@ -182,6 +250,95 @@ class ClickHouseAdapter:
         """
         self.execute(f"CREATE DATABASE IF NOT EXISTS {self._config.database}")
         self.execute(online_scores_ddl(self._config.database))
+
+    def ensure_business_events_schema(self) -> None:
+        """Create the owned database + business-events table idempotently (ADR 0017 §5).
+
+        A sibling of :meth:`ensure_schema` (kept separate so the scores write path never
+        materialises the business-event table, and vice versa); both ``IF NOT EXISTS``, so
+        re-running is free and the DDL stays the single source of the table shape.
+        """
+        self.execute(f"CREATE DATABASE IF NOT EXISTS {self._config.database}")
+        self.execute(business_events_ddl(self._config.database))
+
+    def business_events(
+        self,
+        *,
+        at: str | None = None,
+        agent_id: str | None = None,
+        workflow_id: str | None = None,
+        conversation_id: str | None = None,
+        turn_id: str | None = None,
+        case_id: str | None = None,
+        event_name: str | None = None,
+        artifact_type: str | None = None,
+        decision: str | None = None,
+    ) -> list[dict[str, object]]:
+        """Business-event rows for the filters, shaped exactly like ``BusinessEvent.to_row``.
+
+        Mirrors :meth:`online_scores` semantics so the flipped read holds parity with the
+        in-process store: **as-of-T** (``at``) reads every row at/before T ascending;
+        **live** (no ``at``) returns the newest ``500`` (the deque bound) then ascending.
+        Dimension filters push into SQL as bound ``{name:String}`` params (injection-safe);
+        an unparsable ``at`` falls back to no time bound, exactly like the jsonl reader.
+        """
+        table = self.business_events_table
+        conditions: list[str] = []
+        params: dict[str, str] = {}
+        if at:
+            cutoff = _ch_datetime(at)
+            if cutoff is not None:
+                conditions.append("occurred_at <= {at:DateTime64(3)}")
+                params["at"] = cutoff
+        for column, value in (
+            ("agent_id", agent_id),
+            ("workflow_id", workflow_id),
+            ("conversation_id", conversation_id),
+            ("turn_id", turn_id),
+            ("case_id", case_id),
+            ("event_name", event_name),
+            ("artifact_type", artifact_type),
+            ("decision", decision),
+        ):
+            if value is not None:
+                conditions.append(f"{column} = {{{column}:String}}")
+                params[column] = value
+        where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+        if at:
+            raw = self.execute(
+                f"SELECT * FROM {table}{where} ORDER BY {_BE_TOTAL_ORDER} FORMAT JSONEachRow",  # noqa: S608 — identifiers validated, values bound server-side
+                params=params,
+            )
+            return [_business_row_from_ch(r) for r in _jsonl_lines(raw)]
+        raw = self.execute(
+            f"SELECT * FROM {table}{where} ORDER BY {_BE_TOTAL_ORDER_DESC} "  # noqa: S608 — identifiers validated, values bound server-side
+            f"LIMIT {_BUSINESS_EVENTS_LIVE_LIMIT} FORMAT JSONEachRow",
+            params=params,
+        )
+        return [_business_row_from_ch(r) for r in reversed(_jsonl_lines(raw))]
+
+    def delete_business_events(self, conversation_id: str) -> int:
+        """Erase a conversation's business-event rows (GDPR Art. 17 — the owned-store leg).
+
+        Count-then-``DELETE``, both value-bound — the same primitive as
+        :meth:`delete_conversation` for the score store. Returns the number of rows covered;
+        0 for an unknown conversation (no pointless mutation).
+        """
+        if not conversation_id:
+            return 0
+        table = self.business_events_table
+        params = {"conv": conversation_id}
+        count = self.execute(
+            f"SELECT count() FROM {table} WHERE conversation_id = {{conv:String}}",  # noqa: S608 — fixed identifiers, value bound server-side
+            params=params,
+        ).strip()
+        deleted = int(count) if count.isdigit() else 0
+        if deleted:
+            self.execute(
+                f"DELETE FROM {table} WHERE conversation_id = {{conv:String}}",  # noqa: S608 — fixed identifiers, value bound server-side
+                params=params,
+            )
+        return deleted
 
     def online_scores(self, scope: Scope) -> list[dict[str, object]]:
         """Online score rows for ``scope``, shaped exactly like the jsonl store's rows.
@@ -283,6 +440,56 @@ def _jsonl_lines(raw: str) -> list[dict[str, object]]:
 def _opt(value: object) -> str | None:
     """The table's ``""`` "unattributed" marker mapped back to ``None`` (never invented)."""
     return value if isinstance(value, str) and value else None
+
+
+def _business_row_from_ch(row: dict[str, object]) -> dict[str, object]:
+    """One ClickHouse business-event row → the ``BusinessEvent.to_row`` shape.
+
+    So ``business_events._row_to_event`` rebuilds it unchanged (classification is
+    re-derived there from event_name/decision/payload — it is not stored). ``occurred_at``
+    is reconstructed as ISO-8601 UTC (millisecond precision; sub-ms digits are gone —
+    truncated, never padded). The ``""`` unattributed markers map back to ``None``.
+    """
+    occurred = row.get("occurred_at")
+    reason_codes = row.get("reason_codes")
+    payload_raw = row.get("payload")
+    payload: dict[str, object] = {}
+    if isinstance(payload_raw, str) and payload_raw:
+        try:
+            loaded = json.loads(payload_raw)
+        except ValueError:
+            loaded = {}
+        if isinstance(loaded, dict):
+            payload = loaded
+    event_version = row.get("event_version")
+    actor = row.get("actor")
+    return {
+        "event_name": _opt(row.get("event_name")),
+        "timestamp": (f"{occurred.replace(' ', 'T')}+00:00" if isinstance(occurred, str) else None),
+        "agent_id": _opt(row.get("agent_id")),
+        "conversation_id": _opt(row.get("conversation_id")),
+        "turn_id": _opt(row.get("turn_id")),
+        "workflow_id": _opt(row.get("workflow_id")),
+        "capability_id": _opt(row.get("capability_id")),
+        "surface": _opt(row.get("surface")),
+        "language": _opt(row.get("language")),
+        "model": _opt(row.get("model")),
+        "environment": _opt(row.get("environment")),
+        "case_id": _opt(row.get("case_id")),
+        "node_name": _opt(row.get("node_name")),
+        "artifact_id": _opt(row.get("artifact_id")),
+        "artifact_type": _opt(row.get("artifact_type")),
+        "artifact_status": _opt(row.get("artifact_status")),
+        "decision": _opt(row.get("decision")),
+        "reason_codes": [str(code) for code in reason_codes]
+        if isinstance(reason_codes, list)
+        else [],
+        "payload": payload,
+        "actor": actor if isinstance(actor, str) and actor else "system",
+        "schema_version": _opt(row.get("schema_version")) or "business_event.v1",
+        "event_version": event_version if isinstance(event_version, int) else 1,
+        "grammar_version": _opt(row.get("grammar_version")),
+    }
 
 
 def _row_from_ch(row: dict[str, object]) -> dict[str, object]:

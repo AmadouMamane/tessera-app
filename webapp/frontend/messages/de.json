@@ -6873,7 +6873,8 @@
     "release": "Release-Status",
     "releaseNotRun": "Eval nicht ausgeführt",
     "candidate": "Kandidat",
-    "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket."
+    "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket.",
+    "observabilityLevel": "Beobachtbarkeitsstufe {level}"
   },
   "product": {
     "apercu": {
@@ -8002,5 +8003,18 @@
   "synthetic": {
     "title": "Demonstrationsdaten",
     "detail": "deterministischer Referenzdatensatz, nicht aus echtem Verkehr"
+  },
+  "capability": {
+    "summarize_case": "Fallzusammenfassung",
+    "check_contact_rule": "Kontaktregel prüfen",
+    "explain_payment_options": "Zahlungsoptionen erläutern",
+    "draft_reminder": "Mahnung entwerfen",
+    "propose_schedule": "Zahlungsplan vorschlagen"
+  },
+  "policy": {
+    "contact_window": "Zulässiges Kontaktfenster",
+    "client_message_safety": "Sicherheit der Kundennachricht",
+    "payment_options_safety": "Sicherheit der Zahlungsoptionen",
+    "amount_consistency": "Betragskonsistenz"
   }
 }

@@ -113,8 +113,11 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("conformance", {AGENT, TIME}),
     _cap("tool_validity", {AGENT, TIME}),
     _cap("governance", {AGENT, TIME}),
-    _cap("business_events", {AGENT, TIME}),
-    _cap("recouvrement_business_scores", {AGENT, TIME}),
+    # Business signals (ADR 0017 §5) derive from the ``business_events`` fact, so their
+    # source badge resolves at read time from that fact's ACTIVE source — a flipped read
+    # (in-process → owned ClickHouse) is visibly flipped, never a stale hardcoded "jsonl".
+    _cap("business_events", {AGENT, TIME}, fact="business_events"),
+    _cap("recouvrement_business_scores", {AGENT, TIME}, fact="business_events"),
     # The audit event *count* is per-agent ventilable; its chain *integrity* is not.
     _cap("audit_count", {AGENT, TIME}),
     # Org-wide by construction: the hash chain links entry N to N-1 across all agents; a

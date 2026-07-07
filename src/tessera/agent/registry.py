@@ -21,6 +21,19 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from tessera.agent.agentspec import (
+    AgentObservabilitySpec,
+    BusinessMetricLevel,
+    BusinessSignalSource,
+    BusinessSignalSpec,
+    Capability,
+    ExternalEffectLevel,
+    PolicyMetadata,
+    PolicySeverity,
+    SignalEngagement,
+    WorkflowBinding,
+    parse_observability,
+)
 from tessera.agent.identity import DEFAULT_AGENT_ID
 
 # Audience / surface / auth (ADR 0008) are the governed agent properties; the
@@ -32,13 +45,27 @@ from tessera.authz import Audience, Auth, AuthState, Surface, auth_satisfies
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+# AgentSpec observability types are re-exported here so the cockpit / spine can read the
+# manifest through the one boundary-allowed seam (``tessera.agent.registry`` /
+# ``tessera.agent.identity`` — ADR 0017 §1 import contract) without importing the agent
+# runtime. They are defined in ``tessera.agent.agentspec``.
 __all__ = [
     "Agent",
+    "AgentObservabilitySpec",
     "Audience",
     "Auth",
     "AuthState",
+    "BusinessMetricLevel",
+    "BusinessSignalSource",
+    "BusinessSignalSpec",
+    "Capability",
+    "ExternalEffectLevel",
     "HandoffContract",
+    "PolicyMetadata",
+    "PolicySeverity",
+    "SignalEngagement",
     "Surface",
+    "WorkflowBinding",
     "can_handoff",
     "get_agent",
     "list_agents",
@@ -77,6 +104,10 @@ class Agent:
     auth: Auth
     tags: tuple[str, ...] = ()
     handoff: HandoffContract = field(default_factory=HandoffContract)
+    # ADR 0017 §3 — the AgentSpec observability block. Optional: an agent without one is
+    # simply un-manifested (no observability level, no Métier surfaces) until it declares
+    # one. Recouvrement declares the first manifest (Phase B).
+    observability: AgentObservabilitySpec | None = None
 
 
 def registry_path() -> Path:
@@ -129,6 +160,17 @@ def _coerce_agent(raw: Mapping[str, object]) -> Agent:
     audience = _coerce_enum(Audience, raw["audience"], "audience", agent_id)
     surface = _coerce_surface(raw["surface"], agent_id)
     auth = _coerce_enum(Auth, raw["auth"], "auth", agent_id)
+    # The AgentSpec observability block is validated at load (a manifest is an API):
+    # any malformed field raises ValueError, prefixed with the agent id.
+    observability_raw = raw.get("observability")
+    observability: AgentObservabilitySpec | None = None
+    if observability_raw is not None:
+        if not isinstance(observability_raw, dict):
+            raise ValueError(f"agent {agent_id!r}: observability must be a mapping")
+        try:
+            observability = parse_observability(observability_raw)
+        except ValueError as exc:
+            raise ValueError(f"agent {agent_id!r}: {exc}") from exc
     return Agent(
         id=agent_id,
         name=str(raw.get("name", agent_id)),
@@ -146,6 +188,7 @@ def _coerce_agent(raw: Mapping[str, object]) -> Agent:
         auth=auth,
         tags=_as_str_tuple(raw.get("tags")),
         handoff=handoff,
+        observability=observability,
     )
 
 
