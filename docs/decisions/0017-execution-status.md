@@ -52,6 +52,33 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-07 — **step 4 / lot 2 code-review carry-over 2: BR-01 §5 wired on the Métier tab.**
+  Conformité to the rails registry v1.3 (`Tessera_private/registre-rails-temporels.md` §5): the
+  Métier surface is now a §5-compliant consumer of the global temporal state, **not** a signal
+  scrubber (SR-01 keeps signal-time). (a) **Deep-link** — capability + drilled-down run selection
+  derive from the URL (`?capability_id=…&turn_id=…`), never local state: `agent-metier.tsx` drops
+  the `selectedCapabilityId` `useState`, reads both params from `useSearchParams`, and writes them
+  via `router.replace({pathname, query}, {scroll:false})` (i18n navigation); `WorkflowRunsPanel`
+  gains optional controlled props (`selectedTurnId`/`onSelectTurn`) so the run is URL-derived while
+  the quality dashboard keeps its uncontrolled selection. (b) **Mode indicator** — a `TemporalMode`
+  badge shows `Live` by default and `À une date · <instant>` when a global T is posed (new
+  `agentMetier.temporal.{live,asOf}` in fr/en/de). (c) **As-of propagation** — the global instant
+  (URL is source of truth via new pure `lib/metier-temporal.ts`; the cockpit temporal-context
+  singleton follows the user) is forwarded as `at` to both `/observability/business/capabilities`
+  and `/observability/business/runs`, is part of each query key, and freezes the 5 s polling when
+  set; `metier/page.tsx` SSR-prefetches under the as-of-aware key. **Live API proof** (codex
+  backend `:8099`): `…/business/capabilities?agent=recouvrement` → L3, 132 events, `as_of=null`;
+  `…&at=2027-01-01…` → L3, 132 events (echoed `as_of`); `…&at=2020-01-01…` → L2, **0 events**
+  (honest-empty at T); runs `…&at=2020-01-01…` → 0 runs — the as-of read is real, not cosmetic.
+  New tests: `lib/metier-temporal.test.ts` (5, pure resolver) + `components/agent/agent-metier.test.ts`
+  (4, §5 wiring guard). Frontend-only; Python gate unaffected (1362). Twice-green: `tsc` clean,
+  `vitest` 78 passed (+9), `biome check .` 27 warnings (0 new), repeated identically green; Python
+  `pytest -m "not integration"` 1362 confirmed green. **Visual proof** (codex worktree `:3097`,
+  authenticated admin): `/tmp/tessera-ck3-metier.png` (badge `• Live`, first capability),
+  `/tmp/tessera-ck3-metier-deeplink.png` (`?capability_id=propose_schedule` selects the capability
+  and drills into its 12 runs), `/tmp/tessera-ck3-metier-asof.png` (`?asof=2027-01-01…` flips the
+  badge to `À une date · 01/01/2027 01:00`, reads still honor the instant).
+
 - 2026-07-07 — **step 4 / lot 2 code-review carry-over 1: emitter completeness pinned.**
   The lot-2 live proof (ledger runs `lot2-schedule-proof`, `lot2-reminder-proof`,
   `lot2-action-blocked-proof`) becomes regression-gated proof. Three new tests in

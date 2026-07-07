@@ -206,6 +206,8 @@ export function WorkflowRunsPanel({
   emptyTitle = "Aucune exécution métier observée",
   emptyHint = "Lancez un tour dans la surface produit de l'agent pour voir apparaître les faits métier, artefacts, scores et actions gouvernées.",
   initialTurnId,
+  selectedTurnId,
+  onSelectTurn,
 }: {
   data: RecouvrementRunsResponse | undefined;
   loading: boolean;
@@ -214,15 +216,23 @@ export function WorkflowRunsPanel({
   emptyTitle?: string;
   emptyHint?: string;
   initialTurnId?: string | null;
+  /** Controlled selection (BR-01 §5): when `onSelectTurn` is provided the drilled-down run
+   *  is URL-derived by the caller; otherwise the panel keeps its own local selection. */
+  selectedTurnId?: string | null;
+  onSelectTurn?: (turnId: string) => void;
 }) {
   const runs = data?.runs ?? [];
-  const [selectedTurnId, setSelectedTurnId] = useState<string | null>(null);
+  const controlled = onSelectTurn !== undefined;
+  const [internalTurnId, setInternalTurnId] = useState<string | null>(null);
   useEffect(() => {
+    if (controlled) return;
     if (initialTurnId && runs.some((run) => run.turn_id === initialTurnId)) {
-      setSelectedTurnId(initialTurnId);
+      setInternalTurnId(initialTurnId);
     }
-  }, [initialTurnId, runs]);
-  const selected = runs.find((run) => run.turn_id === selectedTurnId) ?? runs[0] ?? null;
+  }, [controlled, initialTurnId, runs]);
+  const activeTurnId = controlled ? (selectedTurnId ?? null) : internalTurnId;
+  const selectTurn = onSelectTurn ?? setInternalTurnId;
+  const selected = runs.find((run) => run.turn_id === activeTurnId) ?? runs[0] ?? null;
 
   if (loading && runs.length === 0) {
     return (
@@ -257,7 +267,7 @@ export function WorkflowRunsPanel({
       </div>
 
       <div className="grid min-w-0 gap-2.5 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <RunsList runs={runs} selected={selected} onSelect={setSelectedTurnId} />
+        <RunsList runs={runs} selected={selected} onSelect={selectTurn} />
 
         <div className="flex min-w-0 flex-col gap-2.5">
           <RunContext run={selected} />

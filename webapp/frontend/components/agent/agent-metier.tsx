@@ -9,12 +9,14 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   ChevronRight,
+  Clock,
+  Radio,
   ShieldCheck,
   Target,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { type KeyboardEvent, useMemo, useState } from "react";
+import { type KeyboardEvent, useCallback, useMemo } from "react";
 
 import { MetricCard } from "@/components/cockpit/metric-card";
 import { WorkflowRunsPanel } from "@/components/observability/workflow-runs-panel";
@@ -30,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { fetchBusinessCapabilities, fetchBusinessRuns } from "@/lib/api/client";
 import type {
   BusinessCapabilitiesResponse,
@@ -38,6 +41,8 @@ import type {
   BusinessTrend,
 } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { metierTemporalMode, resolveMetierAsOf } from "@/lib/metier-temporal";
+import { getTemporalContext } from "@/lib/temporal-context";
 import { useAgentId } from "@/lib/use-agent-id";
 
 const LEVEL_ORDER = ["runtime", "human_action"];
@@ -89,15 +94,35 @@ export function AgentMetier() {
   const tCapability = useTranslations("capability");
   const agentId = useAgentId();
   const searchParams = useSearchParams();
-  const [selectedCapabilityId, setSelectedCapabilityId] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
   const requestedCapabilityId = searchParams.get("capability_id");
   const requestedTurnId = searchParams.get("turn_id");
+  // BR-01 §5: the temporal read is the global as-of instant — URL is the source of truth
+  // (deep-link); the shared cockpit context follows the user across pages. Live by default.
+  const asOf =
+    resolveMetierAsOf({ asof: searchParams.get("asof"), at: searchParams.get("at") }) ??
+    getTemporalContext().asOf;
+
+  // BR-01 §5: capability + run selection derive from the URL (deep-link), never local state.
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null) params.delete(key);
+        else params.set(key, value);
+      }
+      router.replace({ pathname, query: Object.fromEntries(params.entries()) }, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const aggregate = useQuery({
-    queryKey: ["business-capabilities", agentId],
-    queryFn: ({ signal }) => fetchBusinessCapabilities(signal, { agent: agentId }),
+    queryKey: ["business-capabilities", agentId, asOf],
+    queryFn: ({ signal }) =>
+      fetchBusinessCapabilities(signal, { agent: agentId, at: asOf ?? undefined }),
     placeholderData: keepPreviousData,
-    refetchInterval: 5_000,
+    refetchInterval: asOf ? false : 5_000,
   });
 
   const data = aggregate.data;
@@ -114,7 +139,7 @@ export function AgentMetier() {
     data?.capabilities.some((row) => row.capability_id === requestedCapabilityId)
       ? requestedCapabilityId
       : null;
-  const activeCapabilityId = selectedCapabilityId ?? queryCapabilityId ?? firstCapabilityId;
+  const activeCapabilityId = queryCapabilityId ?? firstCapabilityId;
   const activeCapability =
     data?.capabilities.find((row) => row.capability_id === activeCapabilityId) ?? null;
   const activeCapabilityLabel = activeCapability
@@ -125,18 +150,19 @@ export function AgentMetier() {
     : null;
 
   const runs = useQuery({
-    queryKey: ["business-runs", agentId, activeCapabilityId],
+    queryKey: ["business-runs", agentId, activeCapabilityId, asOf],
     queryFn: ({ signal }) =>
       fetchBusinessRuns(signal, {
         agent: agentId,
         capabilityId: activeCapabilityId ?? undefined,
         limit: 30,
+        at: asOf ?? undefined,
       }),
     enabled:
       data?.observability_level === "L3" &&
       Boolean(activeCapabilityId && activeCapabilitySelectable),
     placeholderData: keepPreviousData,
-    refetchInterval: 5_000,
+    refetchInterval: asOf ? false : 5_000,
   });
 
   if (aggregate.isLoading && !data) return <MetierSkeleton />;
@@ -165,12 +191,12 @@ export function AgentMetier() {
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
-      <SignalKpiStrip data={data} signals={data.business_signals} />
+      <SignalKpiStrip data={data} signals={data.business_signals} asOf={asOf} />
 
       <CapabilitiesTable
         capabilities={data.capabilities}
         selectedCapabilityId={activeCapabilityId}
-        onSelect={setSelectedCapabilityId}
+        onSelect={(capabilityId) => updateParams({ capability_id: capabilityId, turn_id: null })}
       />
 
       {activeCapabilityId && activeCapabilitySelectable ? (
@@ -180,7 +206,8 @@ export function AgentMetier() {
           title={t("runs.title", { capability: activeCapabilityLabel })}
           emptyTitle={t("runs.emptyTitle")}
           emptyHint={t("runs.emptyHint")}
-          initialTurnId={requestedTurnId}
+          selectedTurnId={requestedTurnId}
+          onSelectTurn={(turnId) => updateParams({ turn_id: turnId })}
         />
       ) : null}
     </div>
@@ -224,12 +251,48 @@ function TrendHint({ trend }: { trend: BusinessTrend }) {
   );
 }
 
+function formatAsOf(iso: string): string {
+  const stamp = Date.parse(iso);
+  if (Number.isNaN(stamp)) return iso;
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(stamp));
+}
+
+function TemporalModeBadge({ asOf }: { asOf: string | null }) {
+  const t = useTranslations("agentMetier");
+  if (metierTemporalMode(asOf) === "live") {
+    return (
+      <Badge tone="success">
+        <span className="inline-flex items-center gap-1">
+          <Radio className="h-3 w-3" />
+          {t("temporal.live")}
+        </span>
+      </Badge>
+    );
+  }
+  return (
+    <Badge tone="gold">
+      <span className="inline-flex items-center gap-1">
+        <Clock className="h-3 w-3" />
+        {t("temporal.asOf", { instant: formatAsOf(asOf ?? "") })}
+      </span>
+    </Badge>
+  );
+}
+
 function SignalKpiStrip({
   data,
   signals,
+  asOf,
 }: {
   data: BusinessCapabilitiesResponse;
   signals: BusinessSignalValue[];
+  asOf: string | null;
 }) {
   const t = useTranslations("agentMetier");
   const tSignal = useTranslations("businessSignal");
@@ -245,6 +308,7 @@ function SignalKpiStrip({
           <h2 className="text-sm font-semibold">{t("signals.title")}</h2>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
+          <TemporalModeBadge asOf={asOf} />
           <Badge tone="info">{t("level", { level: data.observability_level ?? "—" })}</Badge>
           <Badge tone="neutral">{t("events", { count: data.event_count })}</Badge>
         </div>

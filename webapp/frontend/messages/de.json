@@ -7379,6 +7379,10 @@
       "allCapabilities": "Alle Fähigkeiten",
       "emptyTitle": "Keine fachliche Ausführung beobachtet",
       "emptyHint": "Für diese Fähigkeit ist noch keine reale Ausführung verfügbar."
+    },
+    "temporal": {
+      "live": "Live",
+      "asOf": "Stand {instant}"
     }
   },
   "agentEvaluations": {

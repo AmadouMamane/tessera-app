@@ -7379,6 +7379,10 @@
       "allCapabilities": "All capabilities",
       "emptyTitle": "No business execution observed",
       "emptyHint": "No real execution is available for this capability yet."
+    },
+    "temporal": {
+      "live": "Live",
+      "asOf": "As of {instant}"
     }
   },
   "agentEvaluations": {

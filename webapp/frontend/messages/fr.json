@@ -7381,6 +7381,10 @@
       "allCapabilities": "Toutes capacités",
       "emptyTitle": "Aucune exécution métier observée",
       "emptyHint": "Aucune exécution réelle n'est encore disponible pour cette capacité."
+    },
+    "temporal": {
+      "live": "Live",
+      "asOf": "À une date · {instant}"
     }
   },
   "agentEvaluations": {
