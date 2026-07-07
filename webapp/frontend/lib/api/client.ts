@@ -452,12 +452,19 @@ export async function fetchEvalScores(
 /** Generic business runs for ANY agent — dimension filters only (ADR 0017 Phase A). */
 export async function fetchBusinessRuns(
   signal?: AbortSignal,
-  options: { at?: string; agent?: string; workflowId?: string; limit?: number } = {},
+  options: {
+    at?: string;
+    agent?: string;
+    workflowId?: string;
+    capabilityId?: string;
+    limit?: number;
+  } = {},
 ): Promise<RecouvrementRunsResponse> {
   const params = new URLSearchParams();
   if (options.at) params.set("at", options.at);
   if (options.agent) params.set("agent", options.agent);
   if (options.workflowId) params.set("workflow_id", options.workflowId);
+  if (options.capabilityId) params.set("capability_id", options.capabilityId);
   params.set("limit", String(options.limit ?? 20));
   return request(
     `/observability/business/runs?${params.toString()}`,

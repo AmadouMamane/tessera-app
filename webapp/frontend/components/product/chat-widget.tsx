@@ -78,11 +78,11 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
           }
           return;
         }
-        const msgs: ChatMessage[] = res.messages.map((m: any) => ({
-          id: m.id ?? globalThis.crypto?.randomUUID() ?? `${Date.now()}-${Math.random()}`,
+        const msgs: ChatMessage[] = res.messages.map((m, index) => ({
+          id: `${cid}-${index}`,
           role: m.role === "assistant" || m.role === "system" ? m.role : "user",
           content: m.content,
-          createdAt: m.createdAt ?? m.created_at ?? Date.now(),
+          createdAt: Date.now(),
         }));
         useChatStore.getState().loadConversation(cid, msgs);
       } catch {

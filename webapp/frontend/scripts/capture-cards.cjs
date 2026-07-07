@@ -33,8 +33,8 @@ const PASS = process.env.TESSERA_ADMIN_PASS || "tessera-admin";
   }
 
   const browser = await chromium.launch();
-  const W = Number(process.env.CAP_W || 1536),
-    H = Number(process.env.CAP_H || 1000);
+  const W = Number(process.env.CAP_W || 1536);
+  const H = Number(process.env.CAP_H || 1000);
   const ctx = await browser.newContext({ viewport: { width: W, height: H } });
   await ctx.addCookies([session]);
   const page = await ctx.newPage();
@@ -45,10 +45,6 @@ const PASS = process.env.TESSERA_ADMIN_PASS || "tessera-admin";
   let i = 0;
   for (const title of titles) {
     i++;
-    // Find the CardTitle whose text starts with the given title, climb to its Card.
-    const card = page
-      .locator(`div.rounded-lg:has(> div:has-text(${JSON.stringify(title)}))`)
-      .first();
     const handle = page.getByText(title, { exact: false }).first();
     try {
       await handle.scrollIntoViewIfNeeded();

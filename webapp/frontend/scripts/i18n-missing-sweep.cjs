@@ -42,7 +42,8 @@ const ROUTES = (process.env.ROUTES || "").split(",").filter(Boolean);
       /Could not resolve `([^`]+)` in messages for locale `(\w+)`/i.exec(txt);
     if (m) {
       const k = m[1];
-      (found[k] = found[k] || new Set()).add(page.url().replace(BASE, ""));
+      found[k] = found[k] || new Set();
+      found[k].add(page.url().replace(BASE, ""));
     }
   };
   page.on("console", (msg) => {

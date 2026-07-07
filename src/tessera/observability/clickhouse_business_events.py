@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 __all__ = ["business_event_line", "business_event_row_key", "record_business_event_row"]
 
 # String columns of the §5 table, filled from the ``to_row`` dict; a missing/None value
-# becomes ``""`` (the "unattributed" marker, mapped back to None at read). ``capability_id``
-# is here for A1.2 forward-compat (events do not stamp it yet → ``""``, reads as NULL).
+# becomes ``""`` (the "unattributed" marker, mapped back to None at read). Pre-stamp
+# business events without ``capability_id`` keep that honest-empty marker.
 _STRING_COLUMNS = (
     "agent_id",
     "workflow_id",

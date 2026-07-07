@@ -156,11 +156,11 @@ for (const locale of ["fr", "de"]) {
   const before = flat(JSON.parse(JSON.stringify(head)));
   let n = 0;
   for (const ns of namespaces) if (head[ns]) n += walkApply(head[ns], locale);
-  fs.writeFileSync(`${SP}/${locale}.relabel.json`, JSON.stringify(head, null, 2) + "\n");
+  fs.writeFileSync(`${SP}/${locale}.relabel.json`, `${JSON.stringify(head, null, 2)}\n`);
   // working tree: apply ONLY keys my relabel changed, preserving unrelated WIP
   const after = flat(head);
   const wt = JSON.parse(fs.readFileSync(path, "utf8"));
   for (const k of Object.keys(after)) if (after[k] !== before[k]) setPath(wt, k, after[k]);
-  fs.writeFileSync(path, JSON.stringify(wt, null, 2) + "\n");
+  fs.writeFileSync(path, `${JSON.stringify(wt, null, 2)}\n`);
   console.log(`${locale}: ${n} valeur(s) relabellée(s) dans [${namespaces.join(", ")}]`);
 }

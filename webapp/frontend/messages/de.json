@@ -4,6 +4,19 @@
     "calcul": "Berechnung",
     "source": "Quelle"
   },
+  "artifactStatus": {
+    "draft": "Entwurf",
+    "ready": "Bereit",
+    "indicatif": "Indikativer Vorschlag",
+    "insertion_prepared": "Einfügung vorgeschlagen",
+    "pending_validation": "Zur Validierung eingereicht",
+    "reminder_prepared": "Erinnerung vorgeschlagen",
+    "unavailable": "Prüfung nicht verfügbar",
+    "blocked": "Aktion blockiert",
+    "inserted": "In den Fall eingefügt",
+    "executed": "Geplant (intern)",
+    "unknown": "Status nicht zugeordnet"
+  },
   "app": {
     "title": "Tessera",
     "subtitle": "AI Control Plane",

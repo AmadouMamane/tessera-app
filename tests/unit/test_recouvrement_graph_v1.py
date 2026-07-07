@@ -24,6 +24,7 @@ from tessera.api.routes.recouvrement_assistant import (
 )
 from tessera.guard import audit
 from tessera.observability import (
+    business_capabilities as business_capabilities_mod,
     business_events as business_events_mod,
     business_scoring as business_scoring_mod,
     metrics,
@@ -299,6 +300,36 @@ def test_recouvrement_graph_summarizes_case_without_external_effects(
     assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
     assert scores["client_message_safety"]["status"] == "not_applicable"
     assert scores["contact_window_compliance"]["status"] == "not_applicable"
+
+
+def test_recouvrement_graph_stamps_manifest_capability_id(
+    observed_recouvrement_stores: Path,
+) -> None:
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Résumer ce dossier",
+        conversation_id="conv-rc-capability-summary",
+        turn_id="turn-summary-capability",
+        assistant_state={"activeTask": "summary"},
+    )
+
+    assert {row["capability_id"] for row in output["businessEvents"]} == {"summarize_case"}
+    stamped_rows = business_events_mod.business_event_rows(
+        agent_id=RECOUVREMENT_AGENT_ID,
+        conversation_id="conv-rc-capability-summary",
+        turn_id="turn-summary-capability",
+        capability_id="summarize_case",
+    )
+    assert stamped_rows == output["businessEvents"]
+    assert (
+        business_events_mod.business_event_rows(
+            agent_id=RECOUVREMENT_AGENT_ID,
+            conversation_id="conv-rc-capability-summary",
+            turn_id="turn-summary-capability",
+            capability_id="draft_reminder",
+        )
+        == []
+    )
 
 
 def test_recouvrement_graph_explains_payment_options_without_payment_effects(
@@ -722,6 +753,28 @@ def test_recouvrement_action_submits_schedule_for_validation_without_creation(
     assert scores["validation_required_compliance"]["score"] == 1.0
 
 
+def test_recouvrement_action_workflow_stamps_artifact_capability_id(
+    observed_recouvrement_stores: Path,
+) -> None:
+    schedule = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-action-capability",
+        turn_id="turn-schedule-capability",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+
+    output = run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact=schedule["artifact"],
+        action_name="submit_for_validation",
+        conversation_id="conv-rc-action-capability",
+        turn_id="turn-submit-capability",
+    )
+
+    assert {row["capability_id"] for row in output["businessEvents"]} == {"propose_schedule"}
+
+
 def test_recouvrement_action_prepares_insertion_without_new_draft(
     observed_recouvrement_stores: Path,
 ) -> None:
@@ -879,6 +932,54 @@ def test_recouvrement_business_scorer_is_called_through_registry_without_generic
         "amount_consistency",
     }
     assert all(row["score"] != 0 for row in scores if row["status"] != "scored")
+
+
+async def test_business_capability_aggregate_is_server_side_and_keeps_unknown_honest(
+    observed_recouvrement_stores: Path,
+) -> None:
+    run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Résumer ce dossier",
+        conversation_id="conv-rc-capability-aggregate",
+        turn_id="turn-summary-aggregate",
+        assistant_state={"activeTask": "summary"},
+    )
+    run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-rc-capability-aggregate",
+        turn_id="turn-schedule-aggregate",
+        assistant_state={"activeTask": "propose_schedule"},
+    )
+    business_events_mod.record_business_event(
+        event_name=business_events_mod.BusinessEventName.INTENT_ROUTED,
+        agent_id=RECOUVREMENT_AGENT_ID,
+        workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        conversation_id="conv-rc-capability-aggregate",
+        turn_id="turn-legacy-no-capability",
+        case_id="RC-2048",
+        payload={"intent": "legacy", "confidence": 0.4, "active_task": ""},
+    )
+
+    payload = await obs.observability_business_capabilities(
+        agent=RECOUVREMENT_AGENT_ID,
+        workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        conversation_id="conv-rc-capability-aggregate",
+    )
+    by_capability = {row["capability_id"]: row for row in payload["capabilities"]}
+
+    assert payload["fact"] == "business_events"
+    assert payload["source"] == "jsonl"
+    assert payload["event_count"] > 0
+    assert by_capability["summarize_case"]["volume"] == 1
+    assert by_capability["summarize_case"]["label_key"] == "capability.summarize_case"
+    assert by_capability["propose_schedule"]["volume"] == 1
+    assert by_capability["propose_schedule"]["validation_required_pct"] == 100.0
+    assert by_capability["propose_schedule"]["external_effects_prevented"] > 0
+    unassigned_row = by_capability[business_capabilities_mod.UNKNOWN_CAPABILITY_ID]
+    assert unassigned_row["volume"] == 1
+    assert unassigned_row["label"] == "non attribué"
+    assert unassigned_row["label_key"] is None
 
 
 def test_business_event_payload_validation_and_versioning(

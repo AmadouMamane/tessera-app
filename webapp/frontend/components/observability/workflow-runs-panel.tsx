@@ -9,6 +9,7 @@ import {
   ListChecks,
   ShieldCheck,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -127,6 +128,7 @@ export function WorkflowRunsPanel({
   emptyHint?: string;
 }) {
   const runs = data?.runs ?? [];
+  const tArtifactStatus = useTranslations("artifactStatus");
   const [selectedTurnId, setSelectedTurnId] = useState<string | null>(null);
   const selected = runs.find((run) => run.turn_id === selectedTurnId) ?? runs[0] ?? null;
   const sensitiveActions = selected?.sensitive_actions ?? [];
@@ -301,6 +303,9 @@ export function WorkflowRunsPanel({
               ) : (
                 selected.artifacts.map((artifact) => {
                   const statusMeta = artifactStatusMeta(artifact.artifact_status);
+                  const statusLabel = tArtifactStatus.has(statusMeta.messageKey)
+                    ? tArtifactStatus(statusMeta.messageKey)
+                    : statusMeta.label;
                   return (
                     <div
                       key={artifact.artifact_id}
@@ -310,7 +315,7 @@ export function WorkflowRunsPanel({
                         <span className="truncate text-[0.74rem] font-semibold">
                           {artifact.title ?? artifact.artifact_type}
                         </span>
-                        <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                        <Badge tone={statusMeta.tone}>{statusLabel}</Badge>
                       </div>
                       <p className="mt-1 truncate font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
                         {artifact.artifact_id}

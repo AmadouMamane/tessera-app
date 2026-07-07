@@ -2,7 +2,7 @@
 
 Additive + optional → the envelope stays ``business_event.v1``: a pre-amendment event reads
 honestly as ``capability_id`` absent/None, and a stamped one carries it through ``to_row``
-and the rebuild. Emitter stamping itself rides step 4; this pins the envelope surface.
+and the rebuild. Domain emitters own the mapping; this pins the envelope surface.
 """
 
 from __future__ import annotations

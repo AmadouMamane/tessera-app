@@ -31,6 +31,11 @@ from tessera.observability import business_events as business_events_mod, busine
 from tessera.observability.business_events import BusinessEventName, record_business_event
 from tessera.observability.instrument import instrument_node
 from tessera.recouvrement import ensure_recouvrement_scorer_registered
+from tessera.recouvrement.capabilities import (
+    capability_for_action,
+    capability_for_artifact_type,
+    capability_for_task,
+)
 from tessera.recouvrement.message_templates import (
     RECOUVREMENT_REMINDER_EMPATHIC_V1,
     RECOUVREMENT_REMINDER_SHORT_V1,
@@ -224,6 +229,7 @@ class BusinessEventCommon(TypedDict):
 
     agent_id: str
     workflow_id: str
+    capability_id: str | None
     surface: str
     conversation_id: str
     turn_id: str
@@ -259,6 +265,7 @@ class RecouvrementWorkflowState(TypedDict):
     draft_policy: NotRequired[DraftPolicyDecision]
     summary_policy: NotRequired[SummaryPolicyDecision]
     payment_options_policy: NotRequired[PaymentOptionsPolicyDecision]
+    capability_id: NotRequired[str]
     artifact: NotRequired[RecouvrementArtifact]
     visible_reply: NotRequired[str]
     card_updates: NotRequired[dict[str, list[str]]]
@@ -278,12 +285,14 @@ def _event_common(
     *,
     node_name: str,
     case: RecouvrementCaseSnapshot | None = None,
+    capability_id: str | None = None,
 ) -> BusinessEventCommon:
     """Common dimensions for Recouvrement business events."""
     snapshot = case or state.get("case") or _case_for(state["case_id"])
     return {
         "agent_id": RECOUVREMENT_AGENT_ID,
         "workflow_id": RECOUVREMENT_WORKFLOW_ID,
+        "capability_id": capability_id or _capability_for_state(state),
         "surface": str(state.get("surface", DEFAULT_SURFACE)),
         "conversation_id": state["conversation_id"],
         "turn_id": state["turn_id"],
@@ -293,6 +302,22 @@ def _event_common(
         "model": str(state.get("model", RECOUVREMENT_WORKFLOW_ID)),
         "environment": str(state.get("environment", "dev")),
     }
+
+
+def _capability_for_state(state: RecouvrementWorkflowState) -> str | None:
+    """Resolve the best known domain capability for the current Recouvrement state."""
+    if state.get("capability_id"):
+        return state["capability_id"]
+    intent_capability = capability_for_task(state.get("intent"))
+    if intent_capability is not None:
+        return intent_capability
+    current_artifact = _current_artifact(state)
+    artifact_capability = (
+        capability_for_artifact_type(current_artifact["type"])
+        if current_artifact is not None
+        else None
+    )
+    return artifact_capability or capability_for_task(_active_task(state))
 
 
 def _surface_allowed(surface: str) -> bool:
@@ -322,6 +347,7 @@ def verify_surface_authorization(state: RecouvrementWorkflowState) -> dict[str, 
         payload={"action_name": "run_recouvrement_workflow", "requested_surface": surface},
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
+        capability_id=_capability_for_state(state),
         surface=surface,
         conversation_id=state["conversation_id"],
         turn_id=state["turn_id"],
@@ -582,12 +608,17 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
     else:
         intent = "check_contact_rule"
         confidence = 0.72
+    capability_id = capability_for_task(intent)
     record_business_event(
         event_name=BusinessEventName.INTENT_ROUTED,
         payload={"intent": intent, "confidence": confidence, "active_task": active_task},
-        **_event_common(state, node_name="route_recouvrement_intent"),
+        **_event_common(
+            state,
+            node_name="route_recouvrement_intent",
+            capability_id=capability_id,
+        ),
     )
-    return {"intent": intent, "intent_confidence": confidence}
+    return {"intent": intent, "intent_confidence": confidence, "capability_id": capability_id}
 
 
 def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, object]:
@@ -2200,6 +2231,9 @@ def run_recouvrement_action_workflow_v1(
 ) -> RecouvrementOutput:
     """Run a controlled backend cycle for sensitive actions on Recouvrement artifacts."""
     canonical_action = _canonical_artifact_action(action_name)
+    action_capability_id = capability_for_artifact_type(artifact["type"]) or capability_for_action(
+        canonical_action
+    )
     event_state: RecouvrementWorkflowState = {
         "conversation_id": conversation_id or uuid.uuid4().hex,
         "turn_id": turn_id or uuid.uuid4().hex,
@@ -2210,6 +2244,8 @@ def run_recouvrement_action_workflow_v1(
         "model": model,
         "environment": environment,
     }
+    if action_capability_id is not None:
+        event_state["capability_id"] = action_capability_id
     if not _surface_allowed(surface):
         record_business_event(
             event_name=BusinessEventName.ACTION_BLOCKED,
@@ -2232,6 +2268,7 @@ def run_recouvrement_action_workflow_v1(
             artifact_status=artifact["status"],
             agent_id=RECOUVREMENT_AGENT_ID,
             workflow_id=RECOUVREMENT_WORKFLOW_ID,
+            capability_id=action_capability_id,
             surface=surface,
             conversation_id=event_state["conversation_id"],
             turn_id=event_state["turn_id"],

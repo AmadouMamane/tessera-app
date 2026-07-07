@@ -477,6 +477,7 @@ export const BusinessEventSchema = z.object({
   event_version: z.number().optional(),
   version: z.number().optional(),
   workflow_id: z.string().nullable().optional(),
+  capability_id: z.string().nullable().optional(),
   surface: z.string().nullable().optional(),
   language: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
@@ -545,6 +546,7 @@ export type RecouvrementSensitiveAction = z.infer<typeof RecouvrementSensitiveAc
 export const RecouvrementRunSchema = z.object({
   agent_id: z.string().nullable().optional(),
   workflow_id: z.string().nullable().optional(),
+  capability_id: z.string().nullable().optional(),
   surface: z.string().nullable().optional(),
   case_id: z.string().nullable().optional(),
   conversation_id: z.string(),
@@ -566,6 +568,7 @@ export const RecouvrementRunsResponseSchema = z.object({
   as_of: z.string().nullable().optional(),
   agent: z.string(),
   workflow_id: z.string(),
+  capability_id: z.string().nullable().optional(),
   conversation_id: z.string().nullable().optional(),
   turn_id: z.string().nullable().optional(),
   case_id: z.string().nullable().optional(),
