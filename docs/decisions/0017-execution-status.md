@@ -52,6 +52,21 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-07 — **steps 3+5 merged to `main` (`fa63bd9a`), pushed to origin.** The 3 review
+  must-fixes executed in order: (1) `14bd3a4f` — replay.py orphan WIP committed as the mypy
+  fix (walrus hoist), clearing the sole `mypy src/tessera` error that had withheld the merge;
+  (2) `dcb0c38a` — packaging fix (`eval` added to the wheel `packages`; proven `from
+  eval.sets import load_eval_set` imports with no PYTHONPATH via the install); (3) `e76215eb`
+  — optional `capability_id` on the BusinessEvent envelope (A1.2) + to_row/round-trip test.
+  Merge conflicts were the ledger only (step table + Log union — resolved keeping every
+  entry; row 2 done from main, rows 3/5 done from the branch). **Twice-green on the merged
+  tree** (a healthy venv required `rm -rf .venv && uv sync` — the reorg's stale-`.pth`
+  artifact): ruff, ruff-format, `mypy` **Success (262 files, clean)**, pytest 1341 unit + 4
+  business_events integration (live ClickHouse), tsc, biome (changed FE), vitest 69. Push was
+  a clean fast-forward (`f008458a..fa63bd9a`). **Owed follow-ups** (from the clarification
+  below): after a short bake, flip the `business_events` read default to `spine`; rename the
+  switch value `jsonl` → `local`. Steps 4 (supervised) and 6 (post-review) remain.
+
 - 2026-07-07 — clarification (operator question): the `business_events` fact's legacy leg
   labelled `jsonl` in the per-fact source switch is the **bounded in-memory projection**,
   never a file (verified; a test asserts `business_events.jsonl` does not exist — 0016
