@@ -52,6 +52,21 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-07 — **step 4 / lot 2 code-review carry-over 1: emitter completeness pinned.**
+  The lot-2 live proof (ledger runs `lot2-schedule-proof`, `lot2-reminder-proof`,
+  `lot2-action-blocked-proof`) becomes regression-gated proof. Three new tests in
+  `tests/unit/test_recouvrement_graph_v1.py`
+  (`test_lot2_{schedule,reminder,blocked_contact}_flow_pins_action_emitter_completeness`)
+  drive the real schedule and reminder flows and assert, across **every** `action.*` event of
+  the flow (not a single spot-check), that it carries the `no_external_effect` flag and —
+  unless it is a block — a linked `artifact_id`; and that `action_governance` = 1.0
+  (`artifact_actions_traceable`) and `no_uncontrolled_external_effect` = 1.0
+  (`no_external_effect_preserved`). A shared `_assert_action_emitter_completeness` helper
+  encodes the invariant so a new un-flagged action emitter fails the gate instead of silently
+  regressing the demo. Backend-only (tests); no src change, frontend gate unaffected.
+  Twice-green: `ruff check`, `ruff format --check`, `mypy src/tessera` (264 files),
+  `pytest -m "not integration"` (1362 passed, +3, 50 deselected), repeated identically green.
+
 - 2026-07-07 — **step 4 / lot 2 completed; checkpoint 3 reached (HALT for Amadou visual validation).**
   Emitters first: Recouvrement now links generated action events to their artifact and carries
   the external-effect flag through schedule proposals, reminder drafts, validations and blocked

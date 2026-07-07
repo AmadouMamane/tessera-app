@@ -614,6 +614,112 @@ def test_recouvrement_graph_drafts_reminder_without_sending_message(
     assert policy_event["payload"]["amount_consistent"] is True
 
 
+# --- Lot 2 code-review carry-over: pin emitter completeness (live proof -> pinned proof) ---
+#
+# Lot 2 demonstrated live (ledger proof runs lot2-schedule-proof / lot2-reminder-proof /
+# lot2-action-blocked-proof) that every emitted ``action.*`` event now links a governed
+# ``artifact_id`` and carries the ``no_external_effect`` flag, so ``action_governance`` and
+# ``no_uncontrolled_external_effect`` score a clean 1.0 on the schedule and reminder flows.
+# These tests pin that invariant across *all* action events of a flow, so a new un-flagged
+# action emitter fails the gate instead of silently regressing the demonstrated proof.
+
+_ACTION_EVENT_NAMES = frozenset({"action.requested", "action.prepared", "action.blocked"})
+
+
+def _assert_action_emitter_completeness(output: dict[str, object]) -> None:
+    """Assert every ``action.*`` event carries the effect flag (and an ``artifact_id`` unless
+    it is a block), and that both action governance scores are a clean 1.0."""
+    events = output["businessEvents"]
+    assert isinstance(events, list)
+    action_rows = [row for row in events if row["event_name"] in _ACTION_EVENT_NAMES]
+    assert action_rows, "flow emitted no action.* event to pin"
+    for row in action_rows:
+        payload = row["payload"]
+        assert (
+            payload.get("no_external_effect") is True
+        ), f"{row['event_name']} is missing the no_external_effect flag"
+        if row["event_name"] != "action.blocked":
+            assert row.get("artifact_id") or payload.get(
+                "artifact_id"
+            ), f"{row['event_name']} is missing artifact_id linkage"
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["action_governance"]["score"] == 1.0
+    assert scores["action_governance"]["reason"] == "artifact_actions_traceable"
+    assert scores["no_uncontrolled_external_effect"]["score"] == 1.0
+    assert scores["no_uncontrolled_external_effect"]["reason"] == "no_external_effect_preserved"
+
+
+def test_lot2_schedule_flow_pins_action_emitter_completeness(
+    observed_recouvrement_stores: Path,
+) -> None:
+    """Pin lot2-schedule-proof: the schedule flow links its prepared action to the artifact
+    and carries the no-external-effect flag end to end (was live proof, now gate-enforced)."""
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="ok puis-je lui proposer un étalement sur 36 mois ?",
+        conversation_id="conv-lot2-schedule-proof",
+        turn_id="lot2-schedule-proof",
+        assistant_state={"activeTask": "check_rule"},
+    )
+
+    assert output["decisions"]["intent"] == "propose_schedule"
+    action_prepared = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.prepared"
+    )
+    assert action_prepared["payload"]["action_name"] == "prepare_schedule_proposal"
+    assert action_prepared["artifact_id"] == output["artifact"]["id"]
+    validation_requested = next(
+        row for row in output["businessEvents"] if row["event_name"] == "validation.requested"
+    )
+    assert validation_requested["payload"]["action_name"] == "prepare_schedule_proposal"
+    assert validation_requested["payload"]["no_external_effect"] is True
+    _assert_action_emitter_completeness(output)
+
+
+def test_lot2_reminder_flow_pins_action_emitter_completeness(
+    observed_recouvrement_stores: Path,
+) -> None:
+    """Pin lot2-reminder-proof: the reminder-draft flow links its prepared action to
+    RC-2048-reminder-v1 and carries the no-external-effect flag (live proof -> pinned)."""
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Rédiger une relance",
+        conversation_id="conv-lot2-reminder-proof",
+        turn_id="lot2-reminder-proof",
+        assistant_state={"activeTask": "draft_reminder"},
+    )
+
+    assert output["decisions"]["intent"] == "draft_reminder"
+    action_prepared = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.prepared"
+    )
+    assert action_prepared["payload"]["action_name"] == "prepare_client_message"
+    assert action_prepared["artifact_id"] == "RC-2048-reminder-v1"
+    _assert_action_emitter_completeness(output)
+
+
+def test_lot2_blocked_contact_flow_pins_action_emitter_completeness(
+    observed_recouvrement_stores: Path,
+) -> None:
+    """Pin lot2-action-blocked-proof: a blocked outbound-call action still carries the
+    no-external-effect flag; a block needs no artifact_id but must still score cleanly."""
+    output = run_recouvrement_graph_v1(
+        case_id="RC-2048",
+        message="Je peux l'appeler à 21h ?",
+        conversation_id="conv-lot2-action-blocked-proof",
+        turn_id="lot2-action-blocked-proof",
+    )
+
+    action_blocked = next(
+        row for row in output["businessEvents"] if row["event_name"] == "action.blocked"
+    )
+    assert action_blocked["payload"]["action_name"] == "prepare_outbound_call"
+    assert action_blocked["payload"]["no_external_effect"] is True
+    scores = {row["metric"]: row for row in output["businessScores"]}
+    assert scores["action_blocking_correctness"]["score"] == 1.0
+    _assert_action_emitter_completeness(output)
+
+
 def test_recouvrement_graph_prepares_client_message_from_schedule_artifact(
     observed_recouvrement_stores: Path,
 ) -> None:
