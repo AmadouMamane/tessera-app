@@ -18,14 +18,17 @@ Guarantees, enforced not promised:
   order (``seq``) is a write audit, never the proof.
 * **Never import a broken chain**: the backfill verifies the file chain first and
   refuses to copy a file that does not verify.
-* **Dual-write is durable, not best-effort** (H2, step 2): each chained entry is fsynced to
-  a local spool before emit returns, then drained into the table in chain order by a
-  background writer; a Postgres outage leaves entries spooled and replays them on recovery
-  (including boot) — **zero loss, zero duplicate** (``ON CONFLICT (hash) DO NOTHING`` +
-  whole-batch transaction), **chain order preserved**. The spool is the mechanism that lets
-  the flat ``audit.log`` be retired at the cut. The FILE stays the canonical store until the
-  cut (``TESSERA_LEDGER_SOURCE=postgres``), gated on :func:`shadow_verify_ledger` holding —
-  never flip a ledger read before its chain verifies (§Amendment 3 migration note).
+* **Dual-write is durable AND serialized, not best-effort** (H2 step 2; TESS-LEDGER-001): each
+  entry is fsynced to a local spool before emit returns, then the drain assigns the chain
+  linkage and inserts it INSIDE one ``pg_advisory_xact_lock`` transaction — the head is read in
+  that transaction, so insert order IS chain order and two concurrent writers can never extend
+  the same head (**no fork**; a partial UNIQUE index on ``prev_hash`` is the belt-and-suspenders
+  guard). A Postgres outage leaves entries spooled and replays them on recovery (including boot)
+  — **zero loss, zero duplicate** (idempotent by the position-independent ``event_id`` +
+  whole-batch transaction), **chain order preserved**. The spool is the mechanism that lets the
+  flat ``audit.log`` be retired at the cut. The FILE stays the canonical store until the cut
+  (``TESSERA_LEDGER_SOURCE=postgres``), gated on :func:`shadow_verify_ledger` holding — never
+  flip a ledger read before its chain verifies (§Amendment 3 migration note).
 
 The unit suite disables the dual-write (``TESSERA_LEDGER_DUAL_WRITE=0``) so audit
 emission stays hermetic; the write/backfill legs are covered by contract tests.
@@ -41,7 +44,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
-from tessera.guard.audit import ChainStatus, _hash_core, verify_audit_chain
+from tessera.guard.audit import ChainStatus, _event_identity, _hash_core, verify_audit_chain
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -84,7 +87,20 @@ CREATE_LEDGER_INDEXES: Final = (
     f"CREATE INDEX IF NOT EXISTS audit_ledger_occurred ON {LEDGER_TABLE} (occurred_at)",
     # The hash is the entry's identity — the idempotence key for dual-write + backfill.
     f"CREATE UNIQUE INDEX IF NOT EXISTS audit_ledger_hash_uq ON {LEDGER_TABLE} (hash)",
+    # TESS-LEDGER-001 — the drain's idempotence key: the position-independent event_id makes a
+    # crash-replayed drain a no-op. Partial so the 13k+ legacy rows (no event_id → NULL) are
+    # excluded; new rows carry it and dedup on it.
+    f"CREATE UNIQUE INDEX IF NOT EXISTS audit_ledger_event_uq ON {LEDGER_TABLE} "
+    f"((payload->>'event_id')) WHERE payload->>'event_id' IS NOT NULL",
 )
+
+# TESS-LEDGER-001 — the fork guard (belt + suspenders to the advisory lock). A partial UNIQUE
+# index on prev_hash forbids a second child of any parent. It is anchored above the table's
+# high-water mark at install time so the 29 historical forks (all below the anchor) are
+# grandfathered — never rewritten (append-only is absolute) — while every NEW row is
+# constrained. Installed by :func:`ensure_audit_ledger_schema` (not a static ``IF NOT EXISTS``,
+# because the anchor is table-state dependent — it reads the high-water mark at install time).
+_FORK_GUARD_INDEX: Final = "audit_ledger_no_fork"
 
 # Strict append-only: enforced by the store, not by convention. DDL (DROP) stays possible
 # for the operator — the chain itself is what proves absence/tampering, per the ADR.
@@ -107,6 +123,22 @@ INSERT INTO {LEDGER_TABLE} (occurred_at, agent_id, payload, prev_hash, hash)
 VALUES (%s, %s, %s, %s, %s)
 ON CONFLICT (hash) DO NOTHING
 """  # noqa: S608 — fixed table identifier; every value is a bound parameter
+
+# The drain assigns the chain linkage itself (prev_hash/hash) under the advisory lock, so it
+# pre-filters duplicates by the position-independent event_id (see :func:`drain_spool`) and
+# uses a plain INSERT — a unique violation (the fork guard, tripped only by a non-cooperating
+# writer) rolls the whole batch back and the next drain retries against the fresh head.
+_INSERT_DRAIN: Final = f"""
+INSERT INTO {LEDGER_TABLE} (occurred_at, agent_id, payload, prev_hash, hash)
+VALUES (%s, %s, %s, %s, %s)
+"""  # noqa: S608 — fixed table identifier; every value is a bound parameter
+
+# TESS-LEDGER-001 — the append serialization key. All writers to THIS database's ledger take
+# ``pg_advisory_xact_lock(_LOCK_HI, _LOCK_LO)`` in the drain transaction, so the head read +
+# link + insert are globally serialized and two writers can never extend the same head. The
+# key is per-database (ci vs local live in separate databases → naturally isolated).
+_LOCK_HI: Final = 1_414_743_379  # 'TESS'
+_LOCK_LO: Final = 1_279_607_634  # 'LDGR'
 
 
 def ledger_source() -> str:
@@ -161,7 +193,7 @@ def _row_tuple(entry: Mapping[str, Any]) -> tuple[object, ...]:
 
 
 async def ensure_audit_ledger_schema() -> None:
-    """Create the promoted ledger table, its indexes and the append-only trigger."""
+    """Create the promoted ledger table, its indexes, the append-only trigger + fork guard."""
     from tessera.retrieval.store import get_pool
 
     pool = get_pool()
@@ -173,6 +205,18 @@ async def ensure_audit_ledger_schema() -> None:
             await cur.execute(statement)
         await cur.execute(CREATE_APPEND_ONLY_FUNCTION)
         await cur.execute(CREATE_APPEND_ONLY_TRIGGER)
+        # The fork guard is anchored at the current high-water mark so pre-existing forks are
+        # grandfathered (never rewritten) and only new rows are constrained. Idempotent: skip
+        # if already installed (re-computing the anchor would move the boundary).
+        await cur.execute("SELECT 1 FROM pg_indexes WHERE indexname = %s", (_FORK_GUARD_INDEX,))
+        if await cur.fetchone() is None:
+            await cur.execute(f"SELECT COALESCE(max(seq), 0) FROM {LEDGER_TABLE}")  # noqa: S608
+            row = await cur.fetchone()
+            anchor = int(row[0]) if row else 0
+            await cur.execute(
+                f"CREATE UNIQUE INDEX {_FORK_GUARD_INDEX} ON {LEDGER_TABLE} "
+                f"(prev_hash) WHERE seq > {anchor}"
+            )
         await conn.commit()
 
 
@@ -241,30 +285,88 @@ def _read_spool_locked() -> list[dict[str, Any]]:
     return entries
 
 
-def drain_spool() -> bool:
-    """Replay spooled entries into the table in chain order — never drops one.
+def _link_and_insert(entries: list[dict[str, Any]]) -> set[str]:
+    """Serialize the append: read the true head under the advisory lock, link + insert.
 
-    One transaction: the batch commits whole (spool cleared) or not at all (spool kept,
-    order intact), so there is never a partial replay; re-draining a committed batch is a
-    no-op (``ON CONFLICT (hash) DO NOTHING``). Returns True when the spool is empty
-    afterwards, False when Postgres was unreachable and the entries remain spooled.
+    TESS-LEDGER-001 core. One transaction holding ``pg_advisory_xact_lock`` so the head read,
+    the linking and the inserts are globally serialized — insert order IS chain order, and two
+    concurrent writers can never extend the same head (no fork). Each entry is (re)linked to
+    the running head here, NOT at emit, so the recorded ``prev_hash``/``hash`` reflect the true
+    immediate predecessor. Idempotent by the position-independent ``event_id``: entries already
+    durable are skipped (a crash-replayed drain never duplicates). Returns the event_ids that
+    are now durable (freshly inserted or already present) — the set the spool may drop.
+    """
+    prepared = [(str(e.get("event_id") or _event_identity(e)), e) for e in entries]
+    with _connect_sync() as conn:
+        conn.execute("SELECT pg_advisory_xact_lock(%s, %s)", (_LOCK_HI, _LOCK_LO))
+        durable: set[str] = {
+            row[0]
+            for row in conn.execute(
+                f"SELECT payload->>'event_id' FROM {LEDGER_TABLE} "  # noqa: S608
+                f"WHERE payload->>'event_id' = ANY(%s)",
+                ([eid for eid, _ in prepared],),
+            ).fetchall()
+        }
+        head_row = conn.execute(
+            f"SELECT hash FROM {LEDGER_TABLE} ORDER BY seq DESC LIMIT 1"  # noqa: S608
+        ).fetchone()
+        head = str(head_row[0]) if head_row and head_row[0] else _GENESIS
+        for eid, entry in prepared:
+            if eid in durable:
+                continue  # already in the table — idempotent skip, head untouched
+            linked = {k: v for k, v in entry.items() if k != "hash"}
+            linked["event_id"] = eid
+            linked["prev_hash"] = head
+            linked["hash"] = _hash_core(linked)
+            conn.execute(_INSERT_DRAIN, _row_tuple(linked))
+            head = str(linked["hash"])
+            durable.add(eid)
+        conn.commit()
+    return {eid for eid, _ in prepared}
+
+
+def _clear_spooled(processed: set[str]) -> None:
+    """Drop only the now-durable entries from the spool, preserving concurrent appends.
+
+    Rewrites the spool with the entries whose ``event_id`` is NOT in ``processed`` — strictly
+    safer than truncating the whole file (which could wipe an entry appended by another writer
+    between the drain's read and its clear). Matches the drain's identity rule (event_id, or a
+    recomputed one for a legacy entry that predates the field).
+    """
+    with _spool_lock:
+        remaining = [
+            e
+            for e in _read_spool_locked()
+            if str(e.get("event_id") or _event_identity(e)) not in processed
+        ]
+        text = (
+            "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in remaining)
+            if remaining
+            else ""
+        )
+        _spool_path().write_text(text, encoding="utf-8")
+
+
+def drain_spool() -> bool:
+    """Replay spooled entries into the table, serialized + fork-free — never drops one.
+
+    Reads the spool (FIFO), then links + inserts under the advisory lock in ONE transaction:
+    the batch commits whole or not at all, so there is never a partial replay; a re-drain is a
+    no-op (idempotent by ``event_id``). Returns True when the spool is drained, False when
+    Postgres was unreachable (or the fork guard tripped a concurrent non-cooperating writer) —
+    the entries remain spooled, order intact, and the next wake retries against the fresh head.
     """
     with _spool_lock:
         entries = _read_spool_locked()
-        if not entries:
-            return True
-        try:
-            with _connect_sync() as conn:
-                for entry in entries:
-                    conn.execute(_INSERT_ENTRY, _row_tuple(entry))
-                conn.commit()
-        except Exception as exc:  # Postgres unreachable — keep the spool, replay later
-            sys.stderr.write(
-                f"tessera.ledger: spool drain deferred ({len(entries)} pending): {exc}\n"
-            )
-            return False
-        _spool_path().write_text("", encoding="utf-8")
+    if not entries:
         return True
+    try:
+        processed = _link_and_insert(entries)
+    except Exception as exc:  # unreachable / fork-guard conflict — keep the spool, replay later
+        sys.stderr.write(f"tessera.ledger: spool drain deferred ({len(entries)} pending): {exc}\n")
+        return False
+    _clear_spooled(processed)
+    return True
 
 
 def _writer_loop() -> None:

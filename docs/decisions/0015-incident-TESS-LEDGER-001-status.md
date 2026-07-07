@@ -24,8 +24,8 @@ incident retrofits with write-serialization).
 | Point | Scope (short) | Status | Commit | Notes |
 |---|---|---|---|---|
 | 0 | Evidence freeze: `pg_dump` of `audit_ledger` + SHA-256 recorded (chain of custody) — before any code change | ✅ done | `fbffbd04` | Dump `Tessera_private/evidence/TESS-LEDGER-001/audit_ledger-20260707T105358Z.sql`; SHA-256 `7affe196…c5a7465`; freeze state `rows=13382, max_seq=17135, fork_groups=29`. +8 rows vs brief (linear, 29 forks unchanged); append-only already trigger-enforced. Custody block appended to the private brief. |
-| 1 | Short investigation (documented): temporal distribution of the 29 forks; event families; genesis-seed (`audit.py:264`) ↔ store head (`ledger_store.py:438`) interaction; why `broken_at=2551` vs first fork ~6280 (verify walk order). HALT if it contradicts the root cause. | ✅ done | `<point-1>` | **Root cause CONFIRMED + refined — no contradiction, no halt.** Real `verify_ledger_rows` reproduced `broken_at=2551` (a WALK position, not a seq: the low-seq-first walk dies on the dead child 6281). True first fork = **parent seq 5984** (not 6280); 0 orphan-parent forks; genesis has one child. Dominant driver = **per-process `_last_hash` cache** (audit.py:57) — proven on fork parent 10663 (child 12643 chained 1 h later from the same process's own last write). 20/29 forks in the 07-03 17–22Z parallel-session burst; tail to 07-07 06:06 (bug still live). Fix crux: (re)link at the serialized drain under `pg_advisory_xact_lock`, not at emit. |
-| 2 | Writer fix (illegal state unrepresentable): `pg_advisory_xact_lock` + head-read-in-txn + insert; partial unique index `ON audit_ledger(prev_hash) WHERE seq > <anchor>`; drop the `_last_hash` cache for the postgres sink; fix the genesis seed; **N-writer concurrency test → zero forks**. | ⬜ pending | — | — |
+| 1 | Short investigation (documented): temporal distribution of the 29 forks; event families; genesis-seed (`audit.py:264`) ↔ store head (`ledger_store.py:438`) interaction; why `broken_at=2551` vs first fork ~6280 (verify walk order). HALT if it contradicts the root cause. | ✅ done | `5e527c16` | **Root cause CONFIRMED + refined — no contradiction, no halt.** Real `verify_ledger_rows` reproduced `broken_at=2551` (a WALK position, not a seq: the low-seq-first walk dies on the dead child 6281). True first fork = **parent seq 5984** (not 6280); 0 orphan-parent forks; genesis has one child. Dominant driver = **per-process `_last_hash` cache** (audit.py:57) — proven on fork parent 10663 (child 12643 chained 1 h later from the same process's own last write). 20/29 forks in the 07-03 17–22Z parallel-session burst; tail to 07-07 06:06 (bug still live). Fix crux: (re)link at the serialized drain under `pg_advisory_xact_lock`, not at emit. |
+| 2 | Writer fix (illegal state unrepresentable): `pg_advisory_xact_lock` + head-read-in-txn + insert; partial unique index `ON audit_ledger(prev_hash) WHERE seq > <anchor>`; drop the `_last_hash` cache for the postgres sink; fix the genesis seed; **N-writer concurrency test → zero forks**. | ✅ done | `<point-2>` | **Illegal state now unrepresentable.** The drain (`_link_and_insert`) reads the true head + links + inserts inside ONE `pg_advisory_xact_lock(TESS,LDGR)` txn → insert order IS chain order; emit stops linking in postgres mode (`_last_hash` dropped) and only stamps a position-independent `event_id` (the drain's idempotence key — a crash-replayed drain never duplicates). Two DB guards: partial UNIQUE `audit_ledger_no_fork` on `prev_hash WHERE seq > <hwm>` (grandfathers the 29; forbids new forks) + UNIQUE `audit_ledger_event_uq` on `event_id`. Genesis-seed landmine gone (unreachable → defer, never genesis-restart). **Live-installed on `tessera_local`** (anchor `seq>17135`, 29 forks preserved). Tests: rewrote spool/cutover units to the drain-linking contract + new `_ledger_fake`; **integration `test_n_parallel_writers_produce_zero_forks`** (8 threads × 20, real advisory-lock contention → 0 forks, chain verifies) + fork-guard rejection. Twice-green: ruff/format/mypy 262/pytest 1341 + 6 live integration. |
 | 3 | Tree-aware verifier + badge: output `{content_integrity, linear, forks[]}`; badge "Content integrity: verified · Total order: broken (29 historical forks, attested)". Orphans REPORTED, never deleted. | ⬜ pending | — | — |
 | 4 | Re-anchor by attestation (append-only): append a signed attestation entry (fork list, cause, decision, point-0 dump hash); the partial index anchors linearity from there. | ⬜ pending | — | — |
 | 5 | ADR 0015 §Amendment 3 **Correction**: write-serialization requirement, tree-aware verify semantics, anchoring pattern; priority bump for the external seal (Hica). | ⬜ pending | — | — |
@@ -34,6 +34,27 @@ incident retrofits with write-serialization).
 Status legend: ⬜ pending · 🟡 in progress · ✅ done (twice-green) · ⛔ blocked (see notes).
 
 ## Log (newest first)
+
+- 2026-07-07 — **Point 2 done — writer fix (illegal state unrepresentable).** The chain linkage
+  moves off the per-process `_last_hash` cache (the fork cause) to the single serialized write
+  point. `audit._append_to_chain` in postgres mode stamps only a position-independent
+  `event_id` and spools; `ledger_store._link_and_insert` reads the true head + links + inserts
+  inside ONE `pg_advisory_xact_lock(TESS,LDGR)` transaction, so insert order IS chain order and
+  two writers can never extend the same head. Belt-and-suspenders at the DB: partial UNIQUE
+  `audit_ledger_no_fork (prev_hash) WHERE seq > <hwm>` (grandfathers the 29 historical forks —
+  append-only is absolute — and forbids every new one) + UNIQUE `audit_ledger_event_uq` on
+  `event_id` (crash-replayed drain = no-op; the drain pre-filters by it, plain INSERT, retry on
+  the guard's conflict). Genesis-seed landmine removed: an unreachable table defers (spool kept),
+  never restarts the chain from genesis. File-escape mode is untouched (single writer → emit
+  linking is correct). **Live-installed on `tessera_local` via the real `ensure_audit_ledger_schema`**
+  (anchor `seq > 17135`; the 29 forks are all below it, untouched). Tests: rewrote the spool +
+  cutover units to the drain-linking contract (+ hermetic `tests/unit/_ledger_fake.py`), added
+  the integration test the incident lacked — `test_n_parallel_writers_produce_zero_forks` (8
+  threads × 20 writes, own connections, real advisory-lock contention → **0 forks**, one chain
+  verifies) + `test_fork_guard_rejects_a_second_child_of_a_parent`. Twice-green: ruff / format /
+  mypy (262) / pytest **1341** ×2 + **6 live ledger integration** (tessera_ci schema, isolated
+  from the incident data). No frontend surface. Docstrings realigned off the old `ON CONFLICT
+  (hash)` idempotence to the `event_id` + advisory-lock model.
 
 - 2026-07-07 — **Point 1 done — investigation. Root cause CONFIRMED + refined; NO halt.**
   Rejoue le verify réel (`verify_ledger_rows`) en lecture seule + analyse topologie/temporalité

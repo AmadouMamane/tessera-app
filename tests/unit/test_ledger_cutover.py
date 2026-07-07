@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, Any
 
 from tessera.guard import audit, ledger_store
 from tessera.guard.audit import _GENESIS_HASH, _hash_core, _seed_chain_head
-from tessera.guard.ledger_store import verify_ledger_rows
+from tessera.guard.ledger_store import drain_spool, verify_ledger_rows
+from tests.unit._ledger_fake import FakeLedgerConn
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -80,22 +81,37 @@ def test_seed_postgres_mode_empty_or_unreachable_falls_back(
 def test_chain_is_continuous_through_the_cut(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Two entries are "already in the table" (pre-cut).
+    # Two entries are "already in the table" (pre-cut), linked genesis → e0 → e1.
     e0 = _linked({"occurred_at": "2026-07-02T10:00:00+00:00", "n": 0}, _GENESIS_HASH)
     e1 = _linked({"occurred_at": "2026-07-02T10:00:01+00:00", "n": 1}, str(e0["hash"]))
 
-    # The cut: source=postgres, the table tail is e1; a FRESH process (_last_hash reset).
-    monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "postgres")
-    monkeypatch.setattr(ledger_store, "ledger_head_hash", lambda: str(e1["hash"]))
-    monkeypatch.setattr(audit, "_last_hash", None)
+    # The cut: source=postgres. TESS-LEDGER-001 — the chain is linked at the serialized DRAIN
+    # (head read in-transaction), NOT at emit; the per-process cache is not consulted at all.
+    from tessera.settings import get_settings
 
-    # First post-cut audit — chained via the real emitter path (stdout sink, no file/PG).
+    monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "postgres")
+    monkeypatch.setenv("TESSERA_LEDGER_DUAL_WRITE", "1")
+    monkeypatch.setattr(audit, "_last_hash", None)
+    monkeypatch.setattr(ledger_store, "_writer_started", True)  # no background drain thread
+    monkeypatch.setattr(get_settings().guard, "audit_file", tmp_path / "audit.log")
+    conn = FakeLedgerConn(
+        [
+            {"seq": 1, "payload": dict(e0), "prev_hash": e0["prev_hash"], "hash": e0["hash"]},
+            {"seq": 2, "payload": dict(e1), "prev_hash": e1["prev_hash"], "hash": e1["hash"]},
+        ]
+    )
+    monkeypatch.setattr(ledger_store, "_connect_sync", lambda: conn)
+
+    # First post-cut audit — emitted via the real path (file sink → spool), then drained.
     new: dict[str, Any] = {
         "type": "tessera.guard.audit",
         "occurred_at": "2026-07-02T10:00:02+00:00",
     }
-    audit._append_to_chain(new, "stdout", tmp_path / "audit.log")
+    audit._append_to_chain(new, "file", tmp_path / "audit.log")
+    assert "prev_hash" not in new  # emit does NOT link in postgres mode (the fork cause, removed)
+    assert drain_spool() is True
 
-    assert new["prev_hash"] == e1["hash"]  # linked to the table tail, NOT genesis
-    status = verify_ledger_rows([e0, e1, new])  # verify walks THROUGH the cut boundary
+    landed = conn.payloads()
+    assert landed[-1]["prev_hash"] == e1["hash"]  # linked to the table tail AT THE DRAIN
+    status = verify_ledger_rows(landed)  # verify walks THROUGH the cut boundary
     assert status.verified is True and status.length == 3

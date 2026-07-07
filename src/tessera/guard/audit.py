@@ -67,6 +67,21 @@ def _hash_core(core: Mapping[str, Any]) -> str:
     return hashlib.sha256(_canonical(core).encode("utf-8")).hexdigest()
 
 
+def _event_identity(entry: Mapping[str, Any]) -> str:
+    """A stable, position-independent identity for an audit entry (TESS-LEDGER-001).
+
+    SHA-256 of the entry's content EXCLUDING its chain position (``prev_hash``, ``hash``)
+    and its own ``event_id``. Because it does not depend on where the entry lands, it is the
+    idempotence key the Postgres drain uses: a re-drain after a crash recomputes the SAME
+    ``event_id`` and skips the already-durable row. The chain ``hash`` (which DOES include
+    ``prev_hash``) is assigned once, at the serialized insert, and so is never duplicated —
+    this is what lets the drain (re)link entries under the advisory lock without risking a
+    duplicate on replay.
+    """
+    core = {k: v for k, v in entry.items() if k not in {"prev_hash", "hash", "event_id"}}
+    return _hash_core(core)
+
+
 def _seed_last_hash(path: Path) -> str:
     """Resume the chain from the last hash already on disk (or genesis)."""
     if not path.exists():
@@ -267,20 +282,40 @@ def _seed_chain_head(sink: _Sink, audit_file: Path) -> str:
 def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> None:
     """Link ``entry`` into the tamper-evident hash chain and emit it to ``sink``.
 
-    Shared by every S1 event type (guard audit, agent handoff, …) so they all
-    live in one append-only, hash-chained journal verifiable by
-    :func:`verify_audit_chain`. The file sink resumes the chain from disk so it
-    survives restarts; other sinks chain in-process from genesis.
+    Shared by every S1 event type (guard audit, agent handoff, …) so they all live in one
+    append-only, hash-chained journal verifiable by :func:`verify_audit_chain`.
+
+    Chain linkage is assigned at the single serialized write point, which differs by the
+    active ledger medium (TESS-LEDGER-001 fix — ADR 0015 §Amendment 3 Correction):
+
+    * ``postgres`` (the baked default since the H2 cut) — the promoted table is canonical.
+      The per-process head cache (``_last_hash``) is DELIBERATELY NOT used here: it is what
+      forked the chain under concurrent writers (each process extended its own in-memory
+      head, oblivious to interleaved writes). ``prev_hash``/``hash`` are assigned by the
+      durable drain INSIDE a ``pg_advisory_xact_lock`` transaction that reads the true table
+      head, so insert order IS chain order and two writers can never extend the same head.
+      Emit only stamps the position-independent ``event_id`` (the drain's idempotence key)
+      and spools.
+    * ``file`` (the operator escape until ``audit.log`` is removed) — the flat file is a
+      single writer by construction, so the in-process chain is correct: seed from the file
+      tail (survives restarts) and link at emit, exactly as before.
     """
     global _last_hash
-    if _last_hash is None:
-        _last_hash = _seed_chain_head(sink, audit_file)
-    entry["prev_hash"] = _last_hash
-    entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
-    _last_hash = entry["hash"]
     from tessera.guard.ledger_store import enqueue_ledger_entry, ledger_source
 
+    # Position-independent identity, stamped in BOTH modes — the drain's idempotence key
+    # (a crash-replayed drain must not recompute a different hash and duplicate the entry).
+    entry["event_id"] = _event_identity(entry)
     cut = ledger_source() == "postgres"
+
+    if not cut:
+        # File-escape mode: a single-writer flat file, so in-process chaining is correct.
+        if _last_hash is None:
+            _last_hash = _seed_chain_head(sink, audit_file)
+        entry["prev_hash"] = _last_hash
+        entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
+        _last_hash = entry["hash"]
+
     try:
         match sink:
             case "stdout":
@@ -298,9 +333,10 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
     except Exception as exc:
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
     if sink == "file":
-        # ADR 0015 §Amendment 3 — dual-write the chained entry to the promoted append-only
-        # Postgres ledger via the durable spool (zero-loss). Post-cut this is the ONLY durable
-        # sink; pre-cut it mirrors the canonical file. The boot reconcile replays the spool.
+        # ADR 0015 §Amendment 3 — dual-write to the promoted append-only Postgres ledger via
+        # the durable spool (zero-loss). Post-cut this is the ONLY durable sink and the drain
+        # assigns the chain linkage under the advisory lock (fork-free); pre-cut it mirrors
+        # the canonical file. The boot reconcile replays the spool.
         enqueue_ledger_entry(entry)
 
 
