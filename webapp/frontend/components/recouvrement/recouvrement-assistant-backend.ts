@@ -369,7 +369,7 @@ export function buildCaseSummaryDraft(): ScheduleProposalDraft {
 
 export function buildContactRuleBackendUnavailableFallback(): RecouvrementAssistantResponse {
   const suggestedActions = [
-    "Planifier un rappel demain",
+    "Préparer un rappel pour demain",
     "Rédiger un email de confirmation",
     "Reporter le contact",
     "Insérer la note dans le dossier",
@@ -727,7 +727,7 @@ export function footerActionsForRecouvrementArtifact(
   if (artifact?.type === "contact_rule_v1") {
     const decision = artifact.content.decision;
     return [
-      decision === "blocked" ? "Planifier un rappel demain" : "Préparer un script d'appel",
+      decision === "blocked" ? "Préparer un rappel pour demain" : "Préparer un script d'appel",
       "Rédiger un email de confirmation",
       "Reporter le contact",
       "Insérer la note dans le dossier",

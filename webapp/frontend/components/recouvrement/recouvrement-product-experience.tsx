@@ -60,6 +60,7 @@ import {
 } from "@/lib/api/recouvrement-assistant";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
+import { type ArtifactStatusTone, artifactStatusMeta } from "@/lib/recouvrement/artifact-status";
 
 const navigation = [
   { label: "Ma journée", Icon: Home, active: true },
@@ -366,6 +367,36 @@ function CountBadge({ count, className }: { count: number; className?: string })
       )}
     >
       {count}
+    </span>
+  );
+}
+
+const ARTIFACT_STATUS_TONE_CLASS: Record<ArtifactStatusTone, string> = {
+  neutral: "border-[#dfe2ec] bg-[#f4f5f9] text-[#071044]/75",
+  info: "border-[#c8bbff] bg-[#f0edff] text-[#5237d6]",
+  warning: "border-[#ffdca3] bg-[#fff3e0] text-[#a3620a]",
+  success: "border-[#bfe6c6] bg-[#e9f7e9] text-[#145b2b]",
+  danger: "border-[#ffd2c9] bg-[#fff1ef] text-[#a23b2a]",
+};
+
+function ArtifactStatusBadge({
+  status,
+  className,
+}: {
+  status?: string | null;
+  className?: string;
+}) {
+  if (!status) return null;
+  const meta = artifactStatusMeta(status);
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 font-bold text-[0.64rem] whitespace-nowrap",
+        ARTIFACT_STATUS_TONE_CLASS[meta.tone],
+        className,
+      )}
+    >
+      {meta.label}
     </span>
   );
 }
@@ -969,7 +1000,6 @@ function AssistantVerificationPanel({
               <li key={item} className="flex items-center gap-3">
                 <Check className="h-4 w-4 shrink-0 text-[#16843a]" />
                 <span>{item}</span>
-                <Info className="ml-auto h-3.5 w-3.5 shrink-0 text-[#071044]/55" />
               </li>
             ))}
       </ul>
@@ -1293,7 +1323,14 @@ function AssistantDrawer({
           <div className="space-y-4">
             {status === "loading" ? (
               <AssistantThinkingIndicator compact label={thinkingLabel} />
-            ) : null}
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="min-w-0 flex-1 truncate font-bold text-[#071044] text-xs">
+                  {resultTitle}
+                </p>
+                <ArtifactStatusBadge status={content.artifact?.status} />
+              </div>
+            )}
             <AssistantContextPanel compact />
             {hasContactRuleArtifact ? (
               <AssistantContactRulePanel compact content={content} status={status} />
@@ -1398,6 +1435,9 @@ function AssistantDrawer({
                 className={cn("h-5 w-5 text-[#6048ff]", status === "loading" && "animate-pulse")}
               />
               <p className="font-bold">{status === "loading" ? thinkingLabel : resultTitle}</p>
+              {status !== "loading" && content.artifact ? (
+                <ArtifactStatusBadge status={content.artifact.status} />
+              ) : null}
               <button
                 type="button"
                 onClick={onRegenerate}
@@ -1515,6 +1555,9 @@ function AssistantDrawer({
                 <Maximize2 className="h-4 w-4" />
               </button>
             </div>
+            <p className="mt-3 text-[#071044]/55 text-[0.64rem]">
+              L'assistant peut se tromper. Vérifiez toujours les informations avant action.
+            </p>
           </>
         ) : (
           <>

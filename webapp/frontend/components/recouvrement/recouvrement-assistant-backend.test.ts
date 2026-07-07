@@ -304,7 +304,7 @@ describe("contactRuleCards", () => {
         validationItems: ["Un appel à 23:00 n'est pas autorisé."],
         nextActions: ["Reporter le contact"],
       },
-      suggestedActions: ["Planifier un rappel demain"],
+      suggestedActions: ["Préparer un rappel pour demain"],
       businessEvents: [{ event_name: "ACTION_BLOCKED" }],
       businessScores: [{ score_name: "contact_rule_compliance", value: 1 }],
       decisions: { intent: "check_contact_rule" },
@@ -316,7 +316,7 @@ describe("contactRuleCards", () => {
         "Un contact téléphonique reste autorisé uniquement sur la plage 08:00–20:00. Aucun appel à 23:00 ne doit être préparé.",
       ],
       validationItems: ["Un appel à 23:00 n'est pas autorisé."],
-      nextActions: ["Planifier un rappel demain"],
+      nextActions: ["Préparer un rappel pour demain"],
     });
   });
 
@@ -350,7 +350,7 @@ describe("footerActionsForRecouvrementArtifact", () => {
         content: { decision: "blocked" },
       }),
     ).toEqual([
-      "Planifier un rappel demain",
+      "Préparer un rappel pour demain",
       "Rédiger un email de confirmation",
       "Reporter le contact",
       "Insérer la note dans le dossier",
@@ -361,7 +361,7 @@ describe("footerActionsForRecouvrementArtifact", () => {
     expect(
       footerActionsForRecouvrementArtifact(buildContactRuleBackendUnavailableFallback().artifact),
     ).toEqual([
-      "Planifier un rappel demain",
+      "Préparer un rappel pour demain",
       "Rédiger un email de confirmation",
       "Reporter le contact",
       "Insérer la note dans le dossier",

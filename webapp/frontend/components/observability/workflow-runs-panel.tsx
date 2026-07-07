@@ -19,6 +19,7 @@ import type {
   RecouvrementRun,
   RecouvrementRunsResponse,
 } from "@/lib/api/schemas";
+import { artifactStatusMeta } from "@/lib/recouvrement/artifact-status";
 
 const SCORE_ORDER = [
   "contact_window_compliance",
@@ -128,9 +129,13 @@ export function WorkflowRunsPanel({
   const runs = data?.runs ?? [];
   const [selectedTurnId, setSelectedTurnId] = useState<string | null>(null);
   const selected = runs.find((run) => run.turn_id === selectedTurnId) ?? runs[0] ?? null;
-  const externalEffectSafe = selected?.sensitive_actions.some(
-    (action) => action.no_external_effect === true,
+  const sensitiveActions = selected?.sensitive_actions ?? [];
+  const hasUnsafeExternalEffect = sensitiveActions.some(
+    (action) => action.no_external_effect === false,
   );
+  const allSensitiveActionsSafe =
+    sensitiveActions.length > 0 &&
+    sensitiveActions.every((action) => action.no_external_effect === true);
 
   if (loading && runs.length === 0) {
     return (
@@ -204,8 +209,20 @@ export function WorkflowRunsPanel({
           <CardHeader>
             <CardTitle className="flex items-center justify-between gap-2 text-sm">
               <span>Contexte du run</span>
-              <Badge tone={externalEffectSafe ? "success" : "neutral"}>
-                {externalEffectSafe ? "Aucun effet externe" : "Observation"}
+              <Badge
+                tone={
+                  hasUnsafeExternalEffect
+                    ? "danger"
+                    : allSensitiveActionsSafe
+                      ? "success"
+                      : "neutral"
+                }
+              >
+                {hasUnsafeExternalEffect
+                  ? "Effet externe détecté"
+                  : allSensitiveActionsSafe
+                    ? "Aucun effet externe"
+                    : "Observation"}
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -282,52 +299,63 @@ export function WorkflowRunsPanel({
               {selected.artifacts.length === 0 ? (
                 <p className="text-xs text-[var(--tessera-text-muted)]">Aucun artefact typé.</p>
               ) : (
-                selected.artifacts.map((artifact) => (
-                  <div
-                    key={artifact.artifact_id}
-                    className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/45 p-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[0.74rem] font-semibold">
-                        {artifact.title ?? artifact.artifact_type}
-                      </span>
-                      <Badge tone="neutral">{artifact.artifact_status ?? "—"}</Badge>
+                selected.artifacts.map((artifact) => {
+                  const statusMeta = artifactStatusMeta(artifact.artifact_status);
+                  return (
+                    <div
+                      key={artifact.artifact_id}
+                      className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/45 p-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-[0.74rem] font-semibold">
+                          {artifact.title ?? artifact.artifact_type}
+                        </span>
+                        <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                      </div>
+                      <p className="mt-1 truncate font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
+                        {artifact.artifact_id}
+                      </p>
+                      <div className="mt-2 grid gap-1 text-[0.66rem]">
+                        <Fact label="Type" value={artifact.artifact_type} />
+                        <Fact label="Generation" value={artifact.generation_mode} />
+                        <Fact label="Template" value={artifact.template_id} />
+                        <Fact label="Version" value={artifact.template_version} />
+                        <Fact
+                          {...noExternalEffectFact("Message envoyé", artifact.no_message_sent)}
+                        />
+                        <Fact
+                          {...noExternalEffectFact(
+                            "Paiement initié",
+                            artifact.no_payment_initiated,
+                          )}
+                        />
+                        <Fact
+                          {...noExternalEffectFact(
+                            "Lien paiement créé",
+                            artifact.no_payment_link_created,
+                          )}
+                        />
+                        <Fact
+                          {...noExternalEffectFact(
+                            "Lien paiement envoyé",
+                            artifact.no_payment_link_sent,
+                          )}
+                        />
+                        <Fact
+                          {...noExternalEffectFact("Échéancier créé", artifact.no_schedule_created)}
+                        />
+                        <Fact
+                          {...noExternalEffectFact(
+                            "Effet externe",
+                            artifact.no_external_effect,
+                            "aucun",
+                            "réel",
+                          )}
+                        />
+                      </div>
                     </div>
-                    <p className="mt-1 truncate font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
-                      {artifact.artifact_id}
-                    </p>
-                    <div className="mt-2 grid gap-1 text-[0.66rem]">
-                      <Fact label="Type" value={artifact.artifact_type} />
-                      <Fact label="Generation" value={artifact.generation_mode} />
-                      <Fact label="Template" value={artifact.template_id} />
-                      <Fact label="Version" value={artifact.template_version} />
-                      <Fact
-                        label="Message envoyé"
-                        value={artifact.no_message_sent === true ? "non" : "—"}
-                      />
-                      <Fact
-                        label="Paiement initié"
-                        value={artifact.no_payment_initiated === true ? "non" : "—"}
-                      />
-                      <Fact
-                        label="Lien paiement créé"
-                        value={artifact.no_payment_link_created === true ? "non" : "—"}
-                      />
-                      <Fact
-                        label="Lien paiement envoyé"
-                        value={artifact.no_payment_link_sent === true ? "non" : "—"}
-                      />
-                      <Fact
-                        label="Échéancier créé"
-                        value={artifact.no_schedule_created === true ? "non" : "—"}
-                      />
-                      <Fact
-                        label="Effet externe"
-                        value={artifact.no_external_effect === true ? "aucun" : "—"}
-                      />
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </CardContent>
           </Card>
@@ -343,13 +371,42 @@ export function WorkflowRunsPanel({
   );
 }
 
-function Fact({ label, value }: { label: string; value: unknown }) {
+function Fact({
+  label,
+  value,
+  danger = false,
+}: {
+  label: string;
+  value: unknown;
+  danger?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-[var(--tessera-text-muted)]">{label}</span>
-      <span className="truncate text-right font-mono">{valueLabel(value)}</span>
+      <span
+        className={`truncate text-right font-mono${danger ? " font-semibold text-red-300" : ""}`}
+      >
+        {valueLabel(value)}
+      </span>
     </div>
   );
+}
+
+/**
+ * A `no_*` safety flag is `boolean | null | undefined` (see RecouvrementRunArtifactSchema):
+ * `true` = confirmed safe, `false` = the guarded effect actually happened, `null`/`undefined` =
+ * not applicable to this artifact. Collapsing `false` and "not applicable" into the same "—"
+ * would hide a real external effect behind an absence-of-data glyph — keep all three distinct.
+ */
+function noExternalEffectFact(
+  label: string,
+  flag: boolean | null | undefined,
+  trueLabel = "non",
+  falseLabel = "oui",
+): { label: string; value: string; danger?: boolean } {
+  if (flag === true) return { label, value: trueLabel };
+  if (flag === false) return { label, value: falseLabel, danger: true };
+  return { label, value: "—" };
 }
 
 function DecisionPanel({ run }: { run: RecouvrementRun }) {
@@ -369,8 +426,10 @@ function DecisionPanel({ run }: { run: RecouvrementRun }) {
           >
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold">{decision.decision ?? decision.event_name}</span>
-              {decision.no_external_effect ? (
-                <Badge tone="success">no_external_effect</Badge>
+              {decision.no_external_effect === true ? (
+                <Badge tone="success">Aucun effet externe</Badge>
+              ) : decision.no_external_effect === false ? (
+                <Badge tone="danger">Effet externe détecté</Badge>
               ) : null}
             </div>
             <div className="mt-1 flex flex-wrap gap-1">
@@ -411,7 +470,11 @@ function SensitiveActionsPanel({ run }: { run: RecouvrementRun }) {
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold">{actionLabel(action.action_name)}</span>
-                {action.no_external_effect ? <Badge tone="success">aucun effet réel</Badge> : null}
+                {action.no_external_effect === true ? (
+                  <Badge tone="success">Aucun effet réel</Badge>
+                ) : action.no_external_effect === false ? (
+                  <Badge tone="danger">Effet réel détecté</Badge>
+                ) : null}
               </div>
               <div className="mt-1 grid gap-1">
                 <Fact label="Statut cible" value={action.target_status} />
