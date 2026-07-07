@@ -37,6 +37,13 @@ updates this file after every step. A resuming session reads this first, then co
   reconciliation; and `produit/page.tsx` is ALSO an unstaged WIP in the main dir — do not
   blend (0015 §Precondition).
 - Steps 2+ in the main dir must **never stage** `replay.py` / `produit/page.tsx` WIP hunks.
+- **Dev-server convention (2026-07-08, after the park-under-live-server break):** the
+  reference servers (:3097/:8099) run from the **main checkout** (`tessera/`) — the
+  operator's browser reflects `main`. Viewing UNMERGED work at a checkpoint = a
+  **temporary server on another port** (e.g. :3098) from the agent's worktree, killed
+  after validation. Corollary: **any worktree mutation (checkout/park/remove) is
+  preceded by a live-process check** (`lsof +D <worktree>` — same pre-flight as the
+  reorg runbook); never rotate a worktree out from under a running watcher.
 - **Sandbox sessions use read-only git only** in the shared repo (`git --no-optional-locks
   status`, plumbing reads): a sandboxed `git status` refreshed the index, could not unlink
   its lock (`Operation not permitted`) and left the stale `.git/index.lock` the step-2
@@ -51,6 +58,20 @@ updates this file after every step. A resuming session reads this first, then co
   `Tessera_private/patch-orphelin-signal-registry-test-2026-07-06.diff`.
 
 ## Log (newest first)
+
+- 2026-07-08 — **Reference-server migration after the park-under-live-server break.** The
+  step-4 closure parked `agents/codex` while its dev servers (front `:3097`, back `:8099`)
+  were **live** → the worktree reverted under the running Next watcher and
+  `recouvrement-product-experience.tsx` lost `@/lib/recouvrement/artifact-status` (Module
+  not found). Fix: restored the worktree (branch already merged — zero loss), then
+  **migrated the reference servers to the `main` checkout** (`tessera/`, stale `.next`
+  cleared): backend `:8099` (uvicorn, cwd `tessera/`), frontend `:3097`
+  (`PORT=3097 pnpm dev`) — the operator's browser now reflects `main`. `agents/codex`
+  re-parked on `codex/parking`. Convention engraved in Preconditions above (3rd of the
+  "process-state vs git-state" family — sandbox `index.lock`, mv-broken `.pth`, now this):
+  **every worktree mutation (checkout/park/remove) is preceded by a live-process check
+  (`lsof`)**; reviewing unmerged work = a temporary server on another port from the agent's
+  worktree, killed after validation.
 
 - 2026-07-08 — **step 4 CLOSED → merged to `main` (`844fa775`), pushed to origin.**
   Executes the checkpoint-4 feu vert (next entry), on Amadou's checkpoint-3 visual
