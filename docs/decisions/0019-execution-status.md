@@ -18,7 +18,7 @@ on the codex worktree (avoid a conflict on a surface being edited live).
 | I1 | `invocation` block in the AgentSpec (schema + validation, `none` default); native agents declare `in_process_chat` | ✅ done | `80a83753` | `InvocationBinding` {none·in_process_chat·http} + `InvocationSpec` (`extra="forbid"`, http-only fields unrepresentable on other bindings, http must name operator-assertion auth). `Agent.invocation` always present (default `none`). support-client/onboarding/recouvrement → `in_process_chat` (pure codification of `/chat`, no behaviour change); hello-agent → `none`. Gate twice-green (ruff/format/mypy/1460 unit); frontend untouched. |
 | I2 | Console generation for `in_process_chat` (parity, rendered from declarations); honest-empty for `none` | ⛔ deferred | — | **Out of scope this mission.** Conflicts with the agent-console / headers work in flight (codex). |
 | I3 | `http` binding: the invoker (assertion forwarding, timeout, audit) + first invocable external agent; SDK conformance test | ⛔ deferred | — | Out of scope this mission. The http *schema* is modelled by I1; the *invoker* is not built. |
-| I4 | Canary scheduler on the `in_process_chat` binding (cadence from the manifest, synthetic stamping, S1 per invocation, freshness feeding the existing canary descriptor) | ✅ done | `9c02e35f` | Off-chrono scheduler mirroring the seal (lifespan + boot posture line; idle by default). `agent/canary.py`: `InProcessChatInvoker` drives `compile_graph().ainvoke` in a `synthetic_turn()` context; `run_canary_cycle` emits one `tessera.agent.canary` S1 per invocation (green/red, never a fake green). Synthetic isolation excluded twice: the emit-time Prometheus guard + the read seam every business surface flows through (default `include_synthetic=False`). Descriptor gains `synthetic_run` (from the S1 entry) + `cadence_s`. recouvrement declares hourly; switch `TESSERA_OBS_CANARY_SCHEDULER_ENABLED` (default off). Gate twice-green (ruff/format/mypy/1479 unit); boundary ratchet green. |
+| I4 | Canary scheduler on the `in_process_chat` binding (cadence from the manifest, synthetic stamping, S1 per invocation, freshness feeding the existing canary descriptor) | ✅ done | `9c02e35f` | Off-chrono scheduler mirroring the seal (lifespan + boot posture line; idle by default). `agent/canary.py`: `InProcessChatInvoker` drives `compile_graph().ainvoke` in a `synthetic_turn()` context; `run_canary_cycle` emits one `tessera.agent.canary` S1 per invocation (green/red, never a fake green). Synthetic isolation excluded twice: the emit-time Prometheus guard + the read seam every business surface flows through (default `include_synthetic=False`). Descriptor gains `synthetic_run` (from the S1 entry) + `cadence_s`. recouvrement declares hourly; switch `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED` (default off). Gate twice-green (ruff/format/mypy/1479 unit); boundary ratchet green. |
 
 ## Owed follow-ups (explicit, never silent)
 
@@ -27,7 +27,7 @@ on the codex worktree (avoid a conflict on a surface being edited live).
   seam filters the in-process store (the default read medium). The owned ClickHouse table (§5, read
   flip NOT yet baked) does not carry a `synthetic` column, so when that read flips the column is
   owed for the filter to hold on that medium. Documented in `business_events.persisted_business_events`.
-- **Operator go-and-observe moment.** Flip `TESSERA_OBS_CANARY_SCHEDULER_ENABLED=1` and watch the
+- **Operator go-and-observe moment.** Flip `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED=1` and watch the
   boot posture line report the scheduled canary, then an hourly synthetic recouvrement turn fire
   (green when the LLM answers, red when it doesn't — honest either way), its S1 entry land, and the
   descriptor's `synthetic_run` light up — all while the Métier tab's business metrics stay clean.
@@ -44,7 +44,10 @@ on the codex worktree (avoid a conflict on a surface being edited live).
   with the in-flight I2/agent-console work). The **Console** consumer (I2, still deferred) will
   enter by the real `/chat` route — the same declared binding, a different entry depth. The CH
   synthetic-column follow-up (§Owed follow-ups) remains tracked. Operator go-and-observe moment is
-  live once `TESSERA_OBS_CANARY_SCHEDULER_ENABLED=1` + a server restart in the main checkout.
+  live once `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED=1` + a server restart in the main checkout.
+  (Env-file form: the nested `TESSERA_OBSERVABILITY__` delimiter is what pydantic binds for the
+  nested `observability` block from `.env.local` — the single-prefix `TESSERA_OBS_` form only
+  binds when exported as a live env var, a trap the boot posture line catches honestly.)
 
 - 2026-07-08 — **I4 landed (`9c02e35f`). ADR 0019 I1+I4 mission complete.** The off-chrono canary
   scheduler mirrors the Hica-seal runner exactly: `canary_posture` is the single source of the

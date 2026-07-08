@@ -151,7 +151,7 @@ whichever is wanted first.
 - **I4 — ✅ done (`9c02e35f`).** Canary scheduler on the binding (cadence from the manifest via
   `invocation.canary_cadence_s`, synthetic stamping excluded from business metrics, one S1 event
   per invocation, freshness feeding the existing canary descriptor's `synthetic_run` facet).
-  Off-chrono runner mirroring the Hica seal; idle until `TESSERA_OBS_CANARY_SCHEDULER_ENABLED`.
+  Off-chrono runner mirroring the Hica seal; idle until `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED`.
 
 ## Open questions
 

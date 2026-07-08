@@ -119,7 +119,7 @@ agents:
     # `canary_cadence_s` (ADR 0019 §I4) declares an hourly scheduled synthetic probe: recouvrement
     # is the meaningful canary target — it emits business events + scores, so its synthetic turns
     # are the ones the metric-exclusion invariant actually has to hold for. IDLE until the operator
-    # flips `TESSERA_OBS_CANARY_SCHEDULER_ENABLED`; no behaviour change by default.
+    # flips `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED`; no behaviour change by default.
     invocation:
       binding: in_process_chat
       canary_cadence_s: 3600
