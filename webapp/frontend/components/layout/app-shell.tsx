@@ -43,13 +43,13 @@ export function AppShell({
             <AppHeader
               plan="cockpit"
               title={title}
+              description={description}
               contextItems={topbarContext}
               filters={topbarFilters}
               actions={topbarActions}
             />
           }
           footer={<AppFooter />}
-          pageSubtitle={description}
         >
           {children}
         </ShellFrame>

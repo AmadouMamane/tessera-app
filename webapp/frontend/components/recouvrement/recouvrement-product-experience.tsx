@@ -32,6 +32,7 @@ import { useLocale } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreditAuroreLogo } from "@/components/brand/credit-aurore-logo";
+import { DemoLauncherLink } from "@/components/layout/demo-launcher-link";
 import {
   type RecouvrementDrawerStateModel,
   type RecouvrementDrawerTask,
@@ -2254,27 +2255,30 @@ export function RecouvrementProductExperience() {
     <div className="min-h-screen bg-[#c9ccd1] font-sans text-[#050816]">
       <div className="mx-auto min-h-screen max-w-[1718px] bg-white">
         <div className="flex min-h-screen flex-col">
-          <header className="flex min-h-[90px] shrink-0 flex-wrap items-center gap-5 border-[#d0d0d0] border-b bg-white px-4 py-3 sm:px-6 lg:flex-nowrap lg:px-[23px]">
+          <header className="flex min-h-[69px] shrink-0 flex-wrap items-center gap-5 border-[#d0d0d0] border-b bg-white px-4 py-2 sm:px-6 lg:flex-nowrap lg:px-[23px]">
             <CreditAuroreLogo className="min-w-[250px] gap-[9px]" gradientIdPrefix="caRecLogo" />
             <label className="relative order-last block w-full max-w-[430px] md:order-none lg:ml-auto">
               <Search className="-translate-y-1/2 absolute top-1/2 left-4 h-5 w-5 text-[#050816]" />
               <input
-                aria-label="Rechercher"
-                placeholder="Rechercher un dossier, un client, ..."
-                className="h-11 w-full rounded-[4px] border border-[#d7d9e1] bg-white pr-4 pl-12 text-[#050816] text-sm outline-none transition placeholder:text-[#5d6275] focus:border-[#b99245] focus:ring-2 focus:ring-[#b99245]/20"
+                aria-label="Rechercher un dossier ou un client"
+                placeholder="Rechercher un dossier, un client…"
+                readOnly
+                className="h-11 w-full cursor-default rounded-[4px] border border-[#d7d9e1] bg-white pr-4 pl-12 text-[#050816] text-sm outline-none transition placeholder:text-[#5d6275] focus:border-[#b99245] focus:ring-2 focus:ring-[#b99245]/20"
               />
             </label>
             <div className="flex items-center gap-4 sm:gap-6">
               <button
                 type="button"
-                className="hidden flex-col items-center gap-1 text-[10.5px] sm:flex"
+                aria-label="Aide"
+                className="hidden flex-col items-center gap-1 rounded-[4px] text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35 sm:flex"
               >
                 <CircleHelp className="h-[22px] w-[22px]" />
                 Aide
               </button>
               <button
                 type="button"
-                className="relative flex flex-col items-center gap-1 text-[10.5px]"
+                aria-label="Notifications, 3 nouvelles"
+                className="relative flex flex-col items-center gap-1 rounded-[4px] text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <Bell className="h-[22px] w-[22px]" />
                 <span className="-top-1 absolute right-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#b99245] px-1 text-[#050816] text-[9px]">
@@ -2282,7 +2286,11 @@ export function RecouvrementProductExperience() {
                 </span>
                 Notifications
               </button>
-              <button type="button" className="flex items-center gap-3">
+              <button
+                type="button"
+                aria-label="Compte Julie Dubois, chargée de recouvrement"
+                className="flex items-center gap-3 rounded-[4px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
+              >
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-[#fbf0dd] font-bold text-[#050816]">
                   JD
                 </span>
@@ -2687,6 +2695,7 @@ export function RecouvrementProductExperience() {
           onTogglePinned={togglePinnedAssistant}
         />
       ) : null}
+      <DemoLauncherLink floating />
     </div>
   );
 }

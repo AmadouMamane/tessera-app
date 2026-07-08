@@ -10,6 +10,7 @@ const appFooter = read("components/layout/app-footer.tsx");
 const authControl = read("components/auth/auth-control.tsx");
 const appHeader = read("components/layout/app-header.tsx");
 const appShell = read("components/layout/app-shell.tsx");
+const creditAuroreHost = read("components/product/credit-aurore-mes-comptes-host.tsx");
 const espacesPage = read("app/[locale]/espaces/page.tsx");
 const cockpitAuthGate = read("components/layout/cockpit-auth-gate.tsx");
 const commandSearch = read("components/layout/command-search.tsx");
@@ -17,6 +18,9 @@ const demoBadge = read("components/layout/demo-badge.tsx");
 const demoLauncherLink = read("components/layout/demo-launcher-link.tsx");
 const landingLauncher = read("components/landing/landing-launcher.tsx");
 const ledgerIntegrity = read("components/layout/ledger-integrity.tsx");
+const recouvrementProductExperience = read(
+  "components/recouvrement/recouvrement-product-experience.tsx",
+);
 const systemStatus = read("components/layout/system-status-pill.tsx");
 const userMenu = read("components/layout/user-menu.tsx");
 
@@ -75,15 +79,24 @@ describe("H2 cockpit header contract", () => {
 
   it("keeps cockpit preferences and identity anchored in the sidebar, not the header", () => {
     expect(appShell).toContain("<CockpitAuthGate>");
-    expect(appShell).toContain("pageSubtitle={description}");
-    expect(appShell).not.toContain("description={description}");
+    expect(appShell).toContain("description={description}");
+    expect(appShell).not.toContain("pageSubtitle={description}");
     expect(cockpitAuthGate).toContain('router.replace("/login")');
     expect(cockpitAuthGate).toContain('role === "admin"');
     expect(cockpitAuthGate).toContain('role === "auditor"');
     expect(cockpitAuthGate).toContain('role === "superadmin"');
-    expect(appHeader).not.toContain("BusinessMenu");
+    expect(appHeader).toContain("OperatorProductMenu");
+    expect(appHeader).toContain('href="/espaces"');
+    expect(appHeader).toContain('href="/produit"');
     expect(appHeader).not.toContain("ModelBadge");
     expect(appHeader).not.toContain("StatusBadge");
+  });
+
+  it("makes the system status popover visibly clickable and keeps the page subtitle in header", () => {
+    expect(appHeader).toContain("description={description}");
+    expect(appHeader).toContain("{description}");
+    expect(systemStatus).toContain("cursor-pointer");
+    expect(systemStatus).toContain("ChevronDown");
   });
 });
 
@@ -105,10 +118,35 @@ describe("H3 launcher and spaces inheritance", () => {
   });
 });
 
+describe("H4 product-surface header contract", () => {
+  it("keeps the customer product stacked bars while the floating demo link uses the long wording", () => {
+    expect(creditAuroreHost).toContain("DemoStrip");
+    expect(creditAuroreHost).toContain("demo-strip");
+    expect(creditAuroreHost).toContain("UtilityBar");
+    expect(creditAuroreHost).toContain("Espace clients professionnels");
+    expect(creditAuroreHost).toContain("Démo Tessera");
+    expect(demoLauncherLink).toContain('t("demoExplore")');
+  });
+
+  it("keeps collections search read-only and uses the long floating demo link", () => {
+    expect(recouvrementProductExperience).toContain("DemoLauncherLink floating");
+    expect(recouvrementProductExperience).toContain("readOnly");
+    expect(recouvrementProductExperience).not.toContain("dossierSearchRef");
+    expect(recouvrementProductExperience).not.toContain('aria-keyshortcuts="Meta+K Control+K"');
+    expect(recouvrementProductExperience).not.toContain("⌘K");
+    expect(recouvrementProductExperience).toContain('aria-label="Notifications, 3 nouvelles"');
+    expect(recouvrementProductExperience).toContain("min-h-[69px]");
+  });
+});
+
 describe("H1 header i18n", () => {
   const requiredPaths = [
     "auth.changeAccount",
     "auth.menuLabel",
+    "auth.sessionActive",
+    "app.clientSpace",
+    "app.businessMenu",
+    "app.demoExplore",
     "systemStatus.triggerLabel",
     "systemStatus.title",
     "systemStatus.environment",

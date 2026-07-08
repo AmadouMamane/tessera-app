@@ -24,7 +24,9 @@
     "tagline": "Pare-feu actif · Ancrage réglementaire UE",
     "operational": "Opérationnel",
     "viewProduct": "Voir le produit",
-    "demoExplore": "Démonstration · explorer les espaces",
+    "clientSpace": "Espace client",
+    "businessMenu": "Espaces métier et client",
+    "demoExplore": "Poursuivre la démonstration · explorer les espaces",
     "disclaimer": "Crédit Aurore — démo non destinée à la production. Données fictives.",
     "environment": "Environnement",
     "locality": "Sur site · UE",
@@ -998,6 +1000,7 @@
     "signedInAs": "Connecté · {role}",
     "changeAccount": "Changer de compte",
     "menuLabel": "Menu utilisateur · {role}",
+    "sessionActive": "Session active {time}",
     "roles": {
       "admin": "Administrateur",
       "auditor": "Auditeur",
@@ -7717,7 +7720,7 @@
     }
   },
   "commandSearch": {
-    "placeholder": "Rechercher…",
+    "placeholder": "Rechercher / Commandes",
     "shortcut": "⌘K",
     "scope": {
       "cockpit": "Rechercher agents, dossiers et signaux",

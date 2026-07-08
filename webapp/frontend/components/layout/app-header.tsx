@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Download,
   Globe2,
+  Grid2X2,
   PackageCheck,
   RotateCcw,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -117,6 +119,7 @@ export function AppHeader({
   plan,
   auth,
   title,
+  description,
   lead,
   brandHref = "/select-space",
   contextItems = [],
@@ -136,7 +139,7 @@ export function AppHeader({
   // launcher and business surfaces show the brand at left — unless a business
   // surface passes its own `lead` (it already has a side rail with the brand).
   const left = cockpit ? (
-    <TitleBlock title={title} />
+    <TitleBlock title={title} description={description} />
   ) : lead ? (
     <div className="flex min-w-0 items-center gap-3">{lead}</div>
   ) : (
@@ -237,12 +240,17 @@ export function AppHeader({
   );
 }
 
-function TitleBlock({ title }: { title?: string }) {
+function TitleBlock({ title, description }: { title?: string; description?: string }) {
   const t = useTranslations("app");
   return (
-    <h1 className="truncate font-sans text-base font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
-      {title ?? t("tagline")}
-    </h1>
+    <div className="min-w-0">
+      <h1 className="truncate font-sans text-base font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
+        {title ?? t("tagline")}
+      </h1>
+      {description ? (
+        <p className="mt-0.5 truncate text-xs text-[var(--tessera-text-muted)]">{description}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -268,6 +276,7 @@ function BrandLead({ title, href }: { title?: string; href: string }) {
 function CockpitTools() {
   return (
     <>
+      <OperatorProductMenu />
       <SystemStatusPill className="hidden lg:inline-flex" />
       <HeaderIconButton
         icon={Bell}
@@ -277,6 +286,32 @@ function CockpitTools() {
       />
       <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
     </>
+  );
+}
+
+function OperatorProductMenu() {
+  const t = useTranslations("app");
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("businessMenu")}
+          title={t("businessMenu")}
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:inline-flex"
+        >
+          <Grid2X2 className="h-4 w-4" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[13rem]">
+        <DropdownMenuItem asChild>
+          <Link href="/espaces">{t("business")}</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/produit">{t("clientSpace")}</Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

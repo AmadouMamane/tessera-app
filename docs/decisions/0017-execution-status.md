@@ -59,6 +59,43 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Headers H4 revision after Amadou feedback ready for visual validation**
+  on `codex/headers-refonte` — this supersedes the previous H4 checkpoint note below where
+  the Crédit Aurore stacked bars were removed and `⌘K` was added to the collections search.
+  Latest operator direction applied: Crédit Aurore keeps the demo strip + utility bar, while
+  the shared floating launcher now reads `Poursuivre la démonstration · explorer les espaces`;
+  `recouvrement-new` uses the same long floating launcher, its dossier/client search is
+  read-only and no longer advertises or handles `⌘K`; the cockpit header keeps the page
+  subtitle in the 56px header, exposes `Rechercher / Commandes ⌘K`, gives the
+  `Opérationnel` popover an explicit chevron/cursor affordance, adds the operator product
+  grid menu (`Espaces métier` / `Espace client`), and the sidebar identity block shows
+  `Session active <t>`. Visual proof on :3098:
+  `/tmp/tessera-revision-produit.png`, `/tmp/tessera-revision-recouvrement.png`,
+  `/tmp/tessera-revision-cockpit.png`, `/tmp/tessera-revision-cockpit-menu.png`; interaction
+  proof: typing into the recouvrement search leaves the value empty (`readOnly`). **Twice-green
+  on revised H4:** backend `ruff` / `ruff format --check` / `mypy src/tessera` /
+  `pytest -q -m "not integration"` (`1410 passed, 50 deselected`) ×2; frontend
+  `tsc --noEmit` / `biome check .` (27-warning existing baseline, no new findings) /
+  `vitest run` (`93 passed`) ×2. **HALT:** revised H4 waits for Amadou visual validation
+  before final commit/push/Claude merge gate.
+
+- 2026-07-08 — **Headers H4 product surfaces checkpoint ready for Amadou visual validation**
+  on `codex/headers-refonte`. Pre-flight: antigravity product branch is parked/absorbed
+  (`codex/fix-produit-chat-widget` diff vs `main` empty), and the H4 header strips were still
+  present, so this work was not covered elsewhere. Scope shell/header only: Crédit Aurore
+  customer space no longer renders the stacked demo strip + utility bar above the bank header;
+  the floating shared demo pill carries demo context. The collections console header now shows
+  the dossier/client search with `⌘K`, focuses that search on `Ctrl/Cmd+K`, adds icon-button
+  aria/focus treatment, aligns to the 69px Crédit Aurore header rhythm, and uses the shared
+  floating `DemoBadge`. Visual proof on :3098:
+  before `/tmp/tessera-h4-before-produit.png`, `/tmp/tessera-h4-before-recouvrement.png`; after
+  `/tmp/tessera-h4-after-produit.png`, `/tmp/tessera-h4-after-recouvrement.png`. Shortcut proof:
+  `Ctrl+K` → `Rechercher un dossier ou un client`. **Twice-green on H4:** backend `ruff` /
+  `ruff format --check` / `mypy src/tessera` / `pytest -q -m "not integration"` (`1410 passed,
+  50 deselected`) ×2; frontend `tsc --noEmit` / `biome check .` (27-warning existing baseline,
+  no new findings) / `vitest run` (`92 passed`) ×2. **HALT:** H4 waits for Amadou visual
+  validation before final commit/push/Claude merge gate.
+
 - 2026-07-08 — **Headers H3 visual validation: APPROUVÉ — GO H4.** Amadou donne le
   feu vert après quick look launcher + `/espaces` (:3098). Next: commit H3, then H4 product
   surfaces (client space + collections console) if not already covered by antigravity.

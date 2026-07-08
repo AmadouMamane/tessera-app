@@ -33,7 +33,7 @@ import { CHAT_WIDGET_STATE_EVENT, PRODUCT_CHAT_EVENT } from "@/components/produc
 const APPOINTMENT_PROMPT =
   "Je souhaite prendre rendez-vous avec un conseiller Crédit Aurore pour faire le point sur mes comptes.";
 const DEMO_ACTION_PROMPTS = {
-  rib: "Je souhaite obtenir mon RIB dans cette démo Crédit Aurore. Que peut réellement faire Tessera ici ?",
+  rib: "Je souhaite obtenir mon RIB dans cette démo Crédit Aurore. Que peut réellement faire l'assistant ici ?",
   statements: "Je souhaite comprendre mes relevés bancaires dans cette démo Crédit Aurore.",
   customize: "Je souhaite personnaliser mes comptes dans cette démo Crédit Aurore.",
   security: "J'ai une question de sécurité bancaire et de fraude dans cette démo Crédit Aurore.",

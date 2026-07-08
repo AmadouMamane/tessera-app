@@ -24,7 +24,9 @@
     "tagline": "Aktive Firewall · EU-Regulierungsbasis",
     "operational": "Betriebsbereit",
     "viewProduct": "Produkt ansehen",
-    "demoExplore": "Demo · Bereiche erkunden",
+    "clientSpace": "Kundenbereich",
+    "businessMenu": "Fach- und Kundenbereiche",
+    "demoExplore": "Demo fortsetzen · Bereiche erkunden",
     "disclaimer": "Crédit Aurore — Demo, nicht für den Produktiveinsatz. Fiktive Daten.",
     "environment": "Umgebung",
     "locality": "Vor Ort · EU",
@@ -998,6 +1000,7 @@
     "signedInAs": "Angemeldet · {role}",
     "changeAccount": "Konto wechseln",
     "menuLabel": "Benutzermenü · {role}",
+    "sessionActive": "Aktive Sitzung {time}",
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
@@ -7715,7 +7718,7 @@
     }
   },
   "commandSearch": {
-    "placeholder": "Suchen…",
+    "placeholder": "Suchen / Befehle",
     "shortcut": "⌘K",
     "scope": {
       "cockpit": "Agenten, Fälle und Signale suchen",

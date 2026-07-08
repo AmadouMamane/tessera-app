@@ -2,7 +2,7 @@
 
 import * as Popover from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
-import { Cpu, ServerCog, ShieldCheck } from "lucide-react";
+import { ChevronDown, Cpu, ServerCog, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
@@ -88,13 +88,14 @@ export function SystemStatusPill({ className }: SystemStatusPillProps) {
           type="button"
           aria-label={t("triggerLabel")}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.65rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+            "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.65rem] font-medium outline-none transition-colors hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
             style.pill,
             className,
           )}
         >
           <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
           {th(status)}
+          <ChevronDown className="h-3 w-3 opacity-70" aria-hidden />
         </button>
       </Popover.Trigger>
       <Popover.Portal>

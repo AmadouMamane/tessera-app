@@ -4,7 +4,7 @@ import { ChevronDown, Languages, LogOut, Palette, Repeat2 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { ThemeSwatch } from "@/components/layout/theme-swatch";
 import {
@@ -53,7 +53,12 @@ export function UserMenu({ role, className }: UserMenuProps) {
   const pathname = usePathname();
   const { setTheme } = useTheme();
   const [, startTransition] = useTransition();
+  const [sessionStartedAt] = useState(() => new Date());
   const roleLabel = t(`roles.${role}`);
+  const sessionTime = new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(sessionStartedAt);
 
   function selectLocale(next: string) {
     if (next === locale) return;
@@ -81,9 +86,12 @@ export function UserMenu({ role, className }: UserMenuProps) {
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green-soft)] text-[0.7rem] font-semibold text-[var(--tessera-green)]">
             {initials(roleLabel)}
           </span>
-          <span className="hidden min-w-0 sm:flex">
+          <span className="hidden min-w-0 flex-col sm:flex">
             <span className="truncate text-xs font-medium text-[var(--tessera-text)]">
               {roleLabel}
+            </span>
+            <span className="truncate text-[0.62rem] leading-tight text-[var(--tessera-text-muted)]">
+              {t("sessionActive", { time: sessionTime })}
             </span>
           </span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
