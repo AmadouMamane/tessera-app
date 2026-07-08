@@ -59,6 +59,24 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **step 7 Lot 0 done (OFF-CHRONO): support-client + onboarding declare
+  telemetry-only manifests.** The two Q&A agents get an AgentSpec `observability` block —
+  `telemetry_capabilities: [graph_topology, tools]` (what they really emit) + a scorer-less
+  conversation workflow bound to `workflow_grammar.v1`, and NO business capabilities /
+  policies / business_signals (they run no scored business workflow — "sans workflow" here =
+  *sans workflow scoré*, the reading that makes the instruction self-consistent since the
+  resolver requires a workflow binding for L1). The level is **COMPUTED, never tuned**: both
+  fall out as **L2** because they are genuinely governed (their eval-gating socles ran) —
+  `resolve_observability_level` → support-client L2, onboarding L2, recouvrement L3.
+  Off-chrono by design: the existing agents' specs are not part of hello-agent's onboarding
+  cost (counting them would falsify the TTO). Tests: the un-manifested-level assertions
+  rehomed to a synthetic `observability=None` agent (every registry agent now has a
+  manifest); a new test pins the telemetry-only outcome (manifest → L1 ungoverned / L2
+  governed, no business_signals). Twice-green backend (1403); **no webapp / no
+  `src/tessera/observability/` change**. Branch `claude/step-7-tto` off merged main
+  `b3273e20`. Next: the OFF-CHRONO platform completion (per the ruling below), then the
+  chrono'd hello-agent onboarding.
+
 - 2026-07-08 — **Step-7 design-gate ruling (pre-authorized by the review, so the run need
   not halt again).** The pivotal unknown (what cockpit-readable fact L1 reads, and whether
   an OTLP-only agent can produce it) will likely surface a REAL platform gap: the §7

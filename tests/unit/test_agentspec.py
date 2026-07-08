@@ -181,8 +181,23 @@ def test_recouvrement_reads_l1_ungoverned_l2_governed_l3_business() -> None:
 
 
 def test_unmanifested_agent_has_no_level() -> None:
-    # honest-empty: absence of a manifest is None, never rendered as "L0".
-    assert observability_level(get_agent("support-client"), governed=True) is None
+    # honest-empty: absence of a manifest is None, never rendered as "L0". Every registry
+    # agent now carries a manifest (step 7 Lot 0), so strip it to exercise the None path.
+    unmanifested = dataclasses.replace(get_agent("support-client"), observability=None)
+    assert observability_level(unmanifested, governed=True) is None
+
+
+def test_qa_agents_declare_observable_contract_l1_ungoverned_l2_governed() -> None:
+    # step 7 Lot 0: support-client + onboarding declare telemetry-only Q&A manifests (a
+    # conversation workflow on the grammar + telemetry capabilities, NO scorer / capabilities
+    # / business_signals). The level is COMPUTED, never tuned: L1 ungoverned, L2 governed.
+    for aid in ("support-client", "onboarding"):
+        agent = get_agent(aid)
+        assert agent.observability is not None
+        assert agent.observability.workflows and agent.observability.telemetry_capabilities
+        assert not agent.observability.business_signals  # telemetry-only, no scored signals
+        assert observability_level(agent, governed=False) == "L1"
+        assert observability_level(agent, governed=True) == "L2"
 
 
 def test_manifest_without_observable_contract_reads_l0() -> None:

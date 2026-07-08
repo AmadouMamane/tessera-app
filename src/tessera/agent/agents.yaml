@@ -35,6 +35,17 @@ agents:
     handoff:
       to: [onboarding]
       from: [onboarding]
+    # AgentSpec observability block (ADR 0017 §3 · step 7 Lot 0). Telemetry-only Q&A agent:
+    # it emits turn spans (graph_topology) + tool spans and runs a conversation workflow
+    # mapped onto the grammar, but declares NO scored business workflow — no scorer,
+    # capabilities or business_signals (those belong to workflow agents like recouvrement).
+    # The level is COMPUTED, never tuned: L1 ungoverned, L2 once its eval-gating socle ran.
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [graph_topology, tools]
+      workflows:
+        - workflow_id: support_conversation_v1
+          grammar: workflow_grammar.v1
 
   - id: onboarding
     name: "Onboarding"
@@ -54,6 +65,15 @@ agents:
     handoff:
       to: [support-client]
       from: [support-client]
+    # AgentSpec observability block (ADR 0017 §3 · step 7 Lot 0) — same telemetry-only shape
+    # as support-client: turn + tool spans, a conversation workflow on the grammar, no scored
+    # business workflow. Level computed, never tuned.
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [graph_topology, tools]
+      workflows:
+        - workflow_id: onboarding_conversation_v1
+          grammar: workflow_grammar.v1
 
   - id: recouvrement
     name: "Recouvrement"

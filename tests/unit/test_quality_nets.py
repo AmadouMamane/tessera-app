@@ -39,8 +39,11 @@ def _bundles(monkeypatch: pytest.MonkeyPatch, captured: list[str]) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_coverage_none_for_unmanifested_agent() -> None:
-    assert quality_nets.coverage_descriptor("support-client") is None
+def test_coverage_none_for_unmanifested_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Every registry agent now carries a manifest (step 7 Lot 0); exercise the None path
+    # against a genuinely un-manifested agent.
+    monkeypatch.setattr(quality_nets, "get_agent", lambda _a: SimpleNamespace(observability=None))
+    assert quality_nets.coverage_descriptor("unmanifested") is None
 
 
 def test_coverage_honest_empty_without_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -99,8 +102,9 @@ def test_coverage_measures_the_latest_event(monkeypatch: pytest.MonkeyPatch) -> 
 _NOW = datetime(2026, 1, 2, 0, 0, 0, tzinfo=UTC)
 
 
-def test_canary_none_for_unmanifested_agent() -> None:
-    assert quality_nets.canary_descriptor("support-client") is None
+def test_canary_none_for_unmanifested_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(quality_nets, "get_agent", lambda _a: SimpleNamespace(observability=None))
+    assert quality_nets.canary_descriptor("unmanifested") is None
 
 
 def test_canary_targets_from_manifest_never_seen(monkeypatch: pytest.MonkeyPatch) -> None:
