@@ -34,8 +34,10 @@ if TYPE_CHECKING:
 __all__ = [
     "AGENT_LIFECYCLE_PHASES",
     "LEDGER_ATTESTATION_TYPE",
+    "LEDGER_SEAL_TYPE",
     "ChainStatus",
     "build_ledger_attestation_entry",
+    "build_ledger_seal_entry",
     "current_auth_state",
     "current_model",
     "emit_agent_lifecycle",
@@ -44,6 +46,7 @@ __all__ = [
     "emit_business_event_audit",
     "emit_handoff",
     "emit_ledger_attestation",
+    "emit_ledger_seal",
     "emit_routing",
     "guard_disabled",
     "verify_audit_chain",
@@ -54,6 +57,13 @@ __all__ = [
 # Defined here (the entry-builder layer) so :mod:`tessera.guard.ledger_store` can import it
 # without a cycle; the verifier keys "attested" on this type.
 LEDGER_ATTESTATION_TYPE = "tessera.ledger.attestation"
+
+# ADR 0015 §Amendment 3 pt3 / §Correction 3c pt4 — the Hica seal entry type: an appended entry
+# carrying a third-party attestation (an RFC 3161 timestamp token) of the chain HEAD at seal time.
+# The seal ENRICHES opposability; it never stores ledger content. Living inside the one chain keeps
+# the "one consolidated journal" property (§Corr.3b) and reuses the serialized, fork-proof writer —
+# each seal transitively covers every prior row. Design note: 0015-hica-seal-design-note.md.
+LEDGER_SEAL_TYPE = "tessera.ledger.seal"
 
 _Outcome = Literal["allowed", "denied", "error"]
 _Sink = Literal["stdout", "file", "cloud_logging", "postgres"]
@@ -616,6 +626,84 @@ def emit_ledger_attestation(
         forks=forks,
         orphans=orphans,
         anchor_seq=anchor_seq,
+        actor=actor,
+    )
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+    return entry
+
+
+def build_ledger_seal_entry(
+    *,
+    sealed_head: str,
+    prev_sealed_head: str | None,
+    provider: str,
+    tsa: str | None,
+    token_b64: str,
+    sealed_at: str,
+    qualified: bool,
+    divergence: bool = False,
+    actor: str = "seal-cycle",
+) -> dict[str, Any]:
+    """Build (do not append) a Hica seal entry attesting the chain head at seal time.
+
+    ADR 0015 §Amendment 3 pt3 — the seal ENRICHES opposability, it never stores. ``token_b64`` is
+    the externally-verifiable artifact (an RFC 3161 timestamp token): a third party re-validates it
+    against the TSA cert with no Tessera code, so the TSA — not Tessera — is the attester; we merely
+    keep the receipt inside our own chain. ``divergence`` marks a cycle where head continuity broke
+    since the previous seal (a fork/rewrite between seals — the §Correction 3c pt4 detection). Pure
+    builder so it is unit-testable without a database.
+    """
+    now = datetime.now(UTC).isoformat()
+    return {
+        "type": LEDGER_SEAL_TYPE,
+        "version": 1,
+        "occurred_at": now,
+        "recorded_at": now,
+        "actor": actor,
+        "provider": provider,
+        "tsa": tsa,
+        "qualified": qualified,
+        "sealed_head": sealed_head,
+        "prev_sealed_head": prev_sealed_head,
+        "sealed_at": sealed_at,
+        "token_b64": token_b64,
+        "divergence": divergence,
+    }
+
+
+def emit_ledger_seal(
+    *,
+    sealed_head: str,
+    prev_sealed_head: str | None,
+    provider: str,
+    tsa: str | None,
+    token_b64: str,
+    sealed_at: str,
+    qualified: bool,
+    divergence: bool = False,
+    actor: str = "seal-cycle",
+    sink: _Sink | None = None,
+) -> dict[str, Any]:
+    """Append a Hica seal entry into the tamper-evident ledger (chained + durable).
+
+    Goes through the normal serialized append (:func:`_append_to_chain` → spool → the
+    advisory-locked drain), so the seal entry links to the true head and is itself fork-proof (it
+    lands above the fork-guard anchor). Appending moves the head to this entry's hash — the next
+    cycle seals that head. Returns the entry (with its stamped ``event_id``/``hash``).
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    entry = build_ledger_seal_entry(
+        sealed_head=sealed_head,
+        prev_sealed_head=prev_sealed_head,
+        provider=provider,
+        tsa=tsa,
+        token_b64=token_b64,
+        sealed_at=sealed_at,
+        qualified=qualified,
+        divergence=divergence,
         actor=actor,
     )
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)

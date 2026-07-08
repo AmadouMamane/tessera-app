@@ -13,6 +13,7 @@ import {
   Download,
   FileText,
   Filter,
+  GitBranch,
   History,
   Info,
   Lock,
@@ -21,6 +22,7 @@ import {
   RotateCcw,
   Search,
   ShieldCheck,
+  ShieldX,
   Terminal,
   X,
 } from "lucide-react";
@@ -119,7 +121,7 @@ function buildReportHtml(data: Data): string {
   const m = data.meta;
   const integ = data.integrity;
   const orig = data.original;
-  const recon = data.reconstructed;
+  const opp = data.opposability;
   const rows = data.table?.rows ?? [];
   const metaRows = [
     ["Reference", m?.ref_code],
@@ -151,7 +153,22 @@ function buildReportHtml(data: Data): string {
         `<td>${esc(r.accessible_until)}</td><td>${esc(r.status_label)}</td></tr>`,
     )
     .join("");
-  const sealed = recon?.verified ? '<span class="seal">SCELLE - Etat opposable</span>' : "";
+  // The report's seal is honest: only a verified QUALIFIED seal earns "Etat opposable" (register §9).
+  const sealText =
+    opp?.badge === "scelle_opposable"
+      ? "SCELLE - Etat opposable"
+      : opp?.badge === "scelle_non_qualifie"
+        ? "SCELLE (non qualifie)"
+        : opp?.badge === "non_scelle"
+          ? "NON SCELLE"
+          : opp?.badge === "integrite_partielle"
+            ? "Integrite partielle"
+            : "";
+  const sealCls =
+    opp?.badge === "scelle_opposable" || opp?.badge === "scelle_non_qualifie"
+      ? "seal"
+      : "seal partial";
+  const sealed = sealText ? `<span class="${sealCls}">${esc(sealText)}</span>` : "";
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <title>Rapport d'etat opposable - ${esc(m?.ref_code ?? "")}</title>
 <style>
@@ -159,6 +176,7 @@ function buildReportHtml(data: Data): string {
   h1{font-size:20px;margin:0 0 2px;} h2{font-size:14px;margin:24px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px;}
   .sub{color:#555;margin:0 0 12px;}
   .seal{display:inline-block;margin-left:10px;padding:2px 8px;border:1px solid #1a7f4b;color:#1a7f4b;border-radius:999px;font-size:11px;font-weight:600;vertical-align:middle;}
+  .seal.partial{border-color:#b45309;color:#b45309;}
   table{border-collapse:collapse;width:100%;margin:6px 0;} th,td{border:1px solid #e2e2e2;padding:6px 8px;text-align:left;vertical-align:top;}
   th{background:#f6f6f6;white-space:nowrap;width:200px;} .src th{width:auto;}
   .qa{border:1px solid #e2e2e2;border-radius:6px;padding:10px;background:#fafafa;}
@@ -167,6 +185,7 @@ function buildReportHtml(data: Data): string {
 </style></head><body>
 <h1>Rapport d'etat opposable ${sealed}</h1>
 <p class="sub">Reconstitution de l'etat accessible et applicable par l'agent a la date et heure donnees.</p>
+<p class="sub" style="font-size:11px;">Statut attribue uniquement apres verification reussie.${opp?.provider_label ? ` ${esc(opp.provider_label)}.` : ""}</p>
 <h2>Contexte de la reconstitution</h2>
 <table>${metaRows}</table>
 ${integRows ? `<h2>Integrite & preuve</h2><table>${integRows}</table>` : ""}
@@ -263,11 +282,7 @@ export function EtatADate() {
           <div className="flex-1" />
         )}
         <div className="flex shrink-0 items-center gap-2">
-          {data?.reconstructed?.verified ? (
-            <span className="flex h-9 items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 text-[0.72rem] font-medium text-emerald-300">
-              <Lock className="h-3.5 w-3.5" /> {t("sealed")}
-            </span>
-          ) : null}
+          <OpposabilityBadge opp={data?.opposability} t={t} />
           <button
             type="button"
             onClick={() => saveSnapshot.mutate()}
@@ -743,6 +758,54 @@ function SectionInfo({ title, explainKey }: { title: string; explainKey: string 
       how={te(`${explainKey}.how`)}
       source={te.has(`${explainKey}.source`) ? te(`${explainKey}.source`) : undefined}
     />
+  );
+}
+
+/**
+ * Register §9 opposability badge (TE-01) — computed live from the backend's tree + Hica-seal
+ * verdict, never cosmetic (TESS-0015). "Scellé · opposable" is reserved for a verified QUALIFIED
+ * (eIDAS) seal; a verified non-qualified seal is "Scellé (non qualifié)"; absent / stale /
+ * unverifiable ⇒ "Intégrité partielle"; broken content ⇒ "Non scellé". The mandatory mention
+ * renders beneath the badge; provider + qualification are in the tooltip. This replaces the
+ * pre-existing over-claim that showed "Scellé" on chain integrity alone (Q6).
+ */
+function OpposabilityBadge({
+  opp,
+  t,
+}: {
+  opp: Data["opposability"];
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const badge = opp?.badge ?? "verification_en_cours";
+  const tone =
+    badge === "scelle_opposable"
+      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+      : badge === "scelle_non_qualifie"
+        ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200/80"
+        : badge === "non_scelle"
+          ? "border-red-500/40 bg-red-500/10 text-red-300"
+          : badge === "integrite_partielle"
+            ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+            : "border-[var(--tessera-border)] text-[var(--tessera-text-muted)]";
+  const Icon =
+    badge === "non_scelle" ? ShieldX : badge === "integrite_partielle" ? GitBranch : Lock;
+  const label = opp?.badge_label ?? t("sealVerifying");
+  const mention = opp?.mention ?? "";
+  const provider = opp?.provider_label ?? "";
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      <span
+        title={provider ? `${provider} — ${mention}` : mention}
+        className={`flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-[0.72rem] font-medium ${tone}`}
+      >
+        <Icon className="h-3.5 w-3.5" /> {label}
+      </span>
+      {mention ? (
+        <span className="max-w-[15rem] text-right text-[0.56rem] leading-tight text-[var(--tessera-text-muted)]">
+          {mention}
+        </span>
+      ) : null}
+    </div>
   );
 }
 

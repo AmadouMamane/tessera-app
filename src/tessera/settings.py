@@ -172,6 +172,18 @@ class GuardSettings(BaseSettings):
     fail_closed: bool = True
     escalation_confidence_threshold: float = 0.6
 
+    # Hica external opposability seal (ADR 0015 §Amendment 3 pt3 + §Correction 3c pt4;
+    # docs/decisions/0015-hica-seal-design-note.md). Enrichment, never the store. The default
+    # ``none`` is the honesty invariant: with no provider configured the badge can NEVER read
+    # "Scellé" (the NoOp provider cannot mint a token). A verified but non-eIDAS-qualified TSA
+    # renders "Scellé (non qualifié)"; only a qualified one earns "Scellé · opposable".
+    seal_provider: Literal["none", "rfc3161"] = "none"
+    seal_tsa_url: str | None = None  # required iff seal_provider="rfc3161"
+    seal_tsa_cert: Path | None = None  # pinned CA/verify cert — the offline trust root
+    seal_tsa_qualified: bool = False  # eIDAS-qualified TSA? → "opposable" vs "non qualifié"
+    seal_interval_s: int = 3600  # τ — the guaranteed upper bound on undetected-anomaly time
+    seal_staleness_budget_s: int = 7200  # 2τ — beyond this a seal is "stale" → Intégrité partielle
+
     @field_validator("escalation_confidence_threshold")
     @classmethod
     def _threshold_is_a_probability(cls, value: float) -> float:

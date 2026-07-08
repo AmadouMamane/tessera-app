@@ -7569,6 +7569,7 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "sealed": "Sealed",
+    "sealVerifying": "Verifying…",
     "scopeLabel": "Filtered by source:",
     "scopeClear": "All sources"
   },
@@ -7694,6 +7695,7 @@
     "integrityForkedAttested": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} other {, # orphaned}} (attested)",
     "integrityForkedPending": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} other {, # orphaned}} (attestation pending)",
     "env": "on-prem · EU residency · SOC 2",
+    "sealSuffix": "sealed {t}",
     "note": "Status assigned only after successful verification."
   },
   "signalHero": {

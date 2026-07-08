@@ -92,8 +92,18 @@ test("saving a snapshot persists it durably", async ({ page }) => {
   await expect(page.getByText(/^RES-/).first()).toBeVisible();
 });
 
-test("the sealed (opposable) badge marks the verified reconstruction", async ({ page }) => {
-  await expect(page.getByText("Scellé", { exact: true })).toBeVisible();
+test("the opposability badge is honest — partial integrity without a configured seal (TESS-0015)", async ({
+  page,
+}) => {
+  // No external seal provider is configured in the demo, so register §9 forbids the cosmetic
+  // "Scellé": the badge must honestly read "Intégrité partielle" (chain valid internally, no
+  // verified third-party seal), never "opposable". This is the Q6 correction of the prior over-claim.
+  await expect(page.getByText("Intégrité partielle").first()).toBeVisible();
+  await expect(page.getByText("Scellé · opposable")).toHaveCount(0);
+  // The mandatory mention renders (beneath the badge, and in the footer).
+  await expect(
+    page.getByText("Statut attribué uniquement après vérification réussie.").first(),
+  ).toBeVisible();
 });
 
 test("downloading the report opens a printable opposable evidence document", async ({ page }) => {
