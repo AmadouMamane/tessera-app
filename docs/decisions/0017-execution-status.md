@@ -59,6 +59,23 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Step-7 final review: APPROVED — MERGE FEU VERT. ADR 0017 reaches
+  implementation-complete with TTO = 20m18s (~12× under the ≤½-day target).** All four
+  acceptance criteria verified (computed L1 from a live Prometheus fact; testkit + drift
+  guard; zero agent-specific cockpit diff; chrono honest — platform completion off-clock
+  and labelled). Convergence note: the executor independently built the Prometheus
+  evidence path before the corrected ruling arrived — two roads, same 0015 logic.
+  Caveat responses: (1) computation-level proof of acceptance (a) accepted — the fleet
+  payload IS the fact and the UI renders declarations generically (proven all of step 4);
+  the fleet screenshot happens post-merge on the reference servers as the operator's
+  final look, not a merge gate. (2) The two worktree slips (recovered cleanly) are noted
+  — third occurrence of the pattern; the register rule stands, executors must start every
+  phase by confirming cwd. **Refinement logged (post-merge, non-blocking): the
+  evidence-strict level can read L0 for a dormant-but-conformant agent — the badge should
+  distinguish "no recent evidence" from "not conformant"** (e.g. « L1 déclaré · aucune
+  preuve récente ») — a display-honesty nuance in the same family as the tree-aware
+  integrity badge.
+
 - 2026-07-08 — **Lot 6c review: APPROVED — step-6 MERGE FEU VERT.** Verified: `blocked_by`
   machine-readable driving truthful labels (+ the sibling lie found and fixed:
   Release-Control tallied level-blocked agents under "Prêts à promouvoir"),
