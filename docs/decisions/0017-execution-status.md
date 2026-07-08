@@ -59,6 +59,24 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Step-7 design-gate ruling (pre-authorized by the review, so the run need
+  not halt again).** The pivotal unknown (what cockpit-readable fact L1 reads, and whether
+  an OTLP-only agent can produce it) will likely surface a REAL platform gap: the §7
+  remote-profile ingestion (span-events → stores the resolver reads) was named by the ADR
+  but never built by any step. Ruling: (1) **generic platform completions are ALLOWED and
+  OFF-CHRONO** — they are the platform finishing its own remote profile, a one-time
+  capital cost, recorded as clearly-labelled "platform completion" commits (preferred
+  path: the level resolver gains a turn-evidence read through the EXISTING
+  `spine/adapters/langfuse.py` seam — traces are already the canonical turn-detail home
+  per 0015; metrics via collector prometheus-exporter config). (2) **What stays forbidden
+  and breaks acceptance: any agent-SPECIFIC control-plane code** (no `if agent_id ==
+  "hello-agent"` anywhere). (3) The acceptance criterion is refined accordingly — **zero
+  AGENT-SPECIFIC cockpit diff**; the TTO chrono measures hello-agent's MARGINAL onboarding
+  on the completed platform. (4) This refinement is recorded in ADR 0017 at step-7 closure
+  (a §Phase-F precision), with the platform-completion commits listed — the honest
+  accounting: the FIRST external agent flushes out one-time gaps; the SECOND one is the
+  true zero-diff proof, noted as the standing acceptance property.
+
 - 2026-07-08 — **Lot 6c review: APPROVED — step-6 MERGE FEU VERT.** Verified: `blocked_by`
   machine-readable driving truthful labels (+ the sibling lie found and fixed:
   Release-Control tallied level-blocked agents under "Prêts à promouvoir"),
