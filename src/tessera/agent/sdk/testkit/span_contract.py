@@ -12,23 +12,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tessera.observability import semconv
+# The required-attribute contract is defined once in semconv (the authoritative home,
+# next to stamp_turn_dimensions) so the boundary-scanned control plane can reuse it for
+# the coverage descriptor (signal 92) without importing the agent SDK. Re-exported here.
+from tessera.observability.semconv import (
+    CONDITIONAL_TURN_SPAN_ATTRIBUTES,
+    REQUIRED_TURN_SPAN_ATTRIBUTES,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-#: Always-required turn-span attributes — the Scope dimensions ``stamp_turn_dimensions``
-#: stamps unconditionally (agent, language, conversation, turn, environment).
-REQUIRED_TURN_SPAN_ATTRIBUTES: tuple[str, ...] = (
-    semconv.TESSERA_AGENT_ID,
-    semconv.TESSERA_LANGUAGE,
-    semconv.GEN_AI_CONVERSATION_ID,
-    semconv.TESSERA_TURN_ID,
-    semconv.DEPLOYMENT_ENVIRONMENT,
-)
-
-#: Stamped only when a serving model is resolved for the turn (honest-absent otherwise).
-CONDITIONAL_TURN_SPAN_ATTRIBUTES: tuple[str, ...] = (semconv.GEN_AI_REQUEST_MODEL,)
+__all__ = [
+    "CONDITIONAL_TURN_SPAN_ATTRIBUTES",
+    "REQUIRED_TURN_SPAN_ATTRIBUTES",
+    "assert_turn_span",
+    "verify_turn_span",
+]
 
 
 def verify_turn_span(attributes: Mapping[str, object]) -> list[str]:

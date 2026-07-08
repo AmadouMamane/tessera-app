@@ -90,6 +90,7 @@ from tessera.observability import (
     policies as policies_mod,
     proofs as proofs_mod,
     provenance as provenance_mod,
+    quality_nets as quality_nets_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
     reliability as reliability_mod,
@@ -1305,6 +1306,26 @@ async def observability_guardrail_catalogue(
         return {"available": True, **gc_mod.build_guardrail_catalogue(lang, agent_scope=agent)}
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.guardrail_catalogue: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/quality-nets")
+async def observability_quality_nets(agent: str) -> dict[str, object]:
+    """Manifest-generated quality nets for one agent (ADR 0017 §4).
+
+    Instrumentation coverage (signal 92, measured from the agent's most recent telemetry)
+    + canary freshness (signal 94, target workflows + last-seen turn). Both ``null`` for an
+    un-manifested agent (honest-empty). Degrades to ``available: false`` on any failure.
+    """
+    try:
+        return {
+            "available": True,
+            "agent_id": agent,
+            "coverage": quality_nets_mod.coverage_descriptor(agent),
+            "canary": quality_nets_mod.canary_descriptor(agent),
+        }
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.quality_nets: failed: {exc}\n")
         return {"available": False}
 
 
