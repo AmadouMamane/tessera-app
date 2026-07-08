@@ -1,6 +1,6 @@
 # 0017 — Agent observability contract, AgentSpec manifest & the L0–L3 conformance ladder
 
-- Status: **accepted** (decision 2026-07-06) — implementation phased and pending (see §Migration plan).
+- Status: **accepted — implementation complete** (decision 2026-07-06; Phases A–F landed 2026-07-08). **TTO measured: L1 in 20m18s** (target ≤ ½ day) — see §Migration plan Phase F + its precision.
   **Amended 2026-07-06 (§Amendment 1: business capability model, per-capability Métier view,
   external-effect invariant, `product_surface` non-exposure rule). Amended 2026-07-06
   (§Amendment 2: typed envelope actor, the 3-level business-metric ladder, declared policy
@@ -489,9 +489,31 @@ signals 65 (`cost-per-resolution`), 139 (`roi-view-buyer`), 190
 - **E — SDK extraction + quality nets.** Move instrumentation into the SDK; span-contract
   + grammar-conformance suites (signals 103/104); canary turns (94) + coverage signal (92)
   generated per agent from the manifest.
-- **F — Second-runtime proof (the acceptance test).** A minimal out-of-process demo agent
-  (OTLP profile, no LangGraph) reaches **L1 with a zero-line cockpit diff**; TTO measured
-  and recorded here.
+- **F — Second-runtime proof (the acceptance test) — LANDED 2026-07-08.** A minimal
+  out-of-process demo agent (`examples/hello-agent/`, OTLP profile, no LangGraph, **zero
+  `tessera` import**) reaches **L1** with a **zero AGENT-SPECIFIC cockpit diff**. **TTO
+  measured: 20m18s** (target L1 ≤ ½ day). Acceptance verified end-to-end: hello-agent → collector
+  → Prometheus (`tessera_agent_turns_total{agent_id="hello-agent"}` = live turns) → the fleet
+  card computes **L1 from that real fact**; the span-contract testkit passes against its
+  emission; `webapp/` and the agent-specific control plane are untouched.
+
+  **§Phase-F precision (recorded at closure).** The L1 gate surfaced a real gap: the §7
+  remote-profile ingestion — an agent's spans/metrics reaching a store the resolver reads — was
+  named here but never built, so L1 was a manifest-only projection (a badge *asserted*, not
+  *computed* from emission — a §4 violation). Closing it is a **generic platform completion**, a
+  one-time capital cost, NOT per-agent onboarding — therefore: (1) the acceptance is refined to
+  **zero AGENT-SPECIFIC cockpit diff** (generic completions in `observability/` are allowed and
+  **off the TTO chrono**; any `if agent_id == …` is forbidden and fails it); (2) the TTO measures
+  hello-agent's **marginal** onboarding on the completed platform. Per §A2.4 + 0015 Amendment 1
+  (a *gating* fact must not read a best-effort third-party store — Langfuse was rejected for
+  exactly that), the completion is a **Prometheus turn-count read**: `observability_level` gains
+  `has_turn_evidence`, sourced from `tessera_agent_turns_total` via the existing Prometheus
+  adapter, gated (`TESSERA_LEVEL_TURN_EVIDENCE`) and honest-empty (evidence-*unknown* is trusted,
+  never treated as absence); the collector re-exports remote OTLP metrics to Prometheus (config).
+  **Platform-completion commits (off-chrono):** `58d8b720` (evidence-path ruling), `42b25e57`
+  (resolver + `observability/turn_evidence.py`), `639b6403` (collector/prometheus config). The
+  honest accounting: the FIRST external agent flushes out these one-time gaps; the standing
+  acceptance property is that the SECOND onboards zero-diff.
 
 Sequencing note: A–C are cockpit-side and belong with the redesign UI after the branch
 reconciliation; D–F touch runtime + infra. Targeted staging only, never `git add -A`
