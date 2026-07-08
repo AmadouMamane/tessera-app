@@ -207,9 +207,10 @@ Yet three couplings remain, and one of them is *growing*:
 - **Process coupling.** The observability API lives in the same FastAPI process as the
   agents. `InMemoryBusinessEventStore` and the remaining ring buffers are readable only
   in-process: an agent running anywhere else is invisible to the cockpit *by construction*.
-- **Undeclared instrumentation boundary.** `instrument.py` and `graph_topology.py` import
-  `langgraph` directly. The code is correct; the boundary is implicit — nothing marks it as
-  "the LangGraph adapter of a contract", so nothing stops the next module from deepening
+- **Undeclared instrumentation boundary.** `instrument.py` and `graph_topology.py` are
+  LangGraph-specific (`graph_topology` names `langgraph` in a type hint; `instrument`
+  wraps LangGraph nodes). The code is correct; the boundary is implicit — nothing marks it
+  as "the LangGraph adapter of a contract", so nothing stops the next module from deepening
   the dependency.
 - **Per-agent wiring (the growing one).** Commit `e6bd8ca` ("expose recouvrement runs in
   cockpit") added `/observability/recouvrement-runs` with `agent_id` / `workflow_id`
