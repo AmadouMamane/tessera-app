@@ -129,7 +129,101 @@ updates this file after every step. A resuming session reads this first, then co
   94's deferred piece) — one declaration, three consumers (console, canaries, evals
   already manifest-declared). Priority: rises with the first http-invocable external
   agent or the canary scheduler, whichever comes first.
+- 2026-07-08 — **Headers H4 revision after Amadou feedback ready for visual validation**
+  on `codex/headers-refonte` — this supersedes the previous H4 checkpoint note below where
+  the Crédit Aurore stacked bars were removed and `⌘K` was added to the collections search.
+  Latest operator direction applied: Crédit Aurore keeps the demo strip + utility bar, while
+  the shared floating launcher now reads `Poursuivre la démonstration · explorer les espaces`;
+  `recouvrement-new` uses the same long floating launcher, its dossier/client search is
+  read-only and no longer advertises or handles `⌘K`; the cockpit header keeps the page
+  subtitle in the 56px header, exposes `Rechercher / Commandes ⌘K`, gives the
+  `Opérationnel` popover an explicit chevron/cursor affordance, adds the operator product
+  grid menu (`Espaces métier` / `Espace client`), and the sidebar identity block shows
+  `Session active <t>`. Visual proof on :3098:
+  `/tmp/tessera-revision-produit.png`, `/tmp/tessera-revision-recouvrement.png`,
+  `/tmp/tessera-revision-cockpit.png`, `/tmp/tessera-revision-cockpit-menu.png`; interaction
+  proof: typing into the recouvrement search leaves the value empty (`readOnly`). **Twice-green
+  on revised H4:** backend `ruff` / `ruff format --check` / `mypy src/tessera` /
+  `pytest -q -m "not integration"` (`1410 passed, 50 deselected`) ×2; frontend
+  `tsc --noEmit` / `biome check .` (27-warning existing baseline, no new findings) /
+  `vitest run` (`93 passed`) ×2. **HALT:** revised H4 waits for Amadou visual validation
+  before final commit/push/Claude merge gate.
 
+- 2026-07-08 — **Headers H4 product surfaces checkpoint ready for Amadou visual validation**
+  on `codex/headers-refonte`. Pre-flight: antigravity product branch is parked/absorbed
+  (`codex/fix-produit-chat-widget` diff vs `main` empty), and the H4 header strips were still
+  present, so this work was not covered elsewhere. Scope shell/header only: Crédit Aurore
+  customer space no longer renders the stacked demo strip + utility bar above the bank header;
+  the floating shared demo pill carries demo context. The collections console header now shows
+  the dossier/client search with `⌘K`, focuses that search on `Ctrl/Cmd+K`, adds icon-button
+  aria/focus treatment, aligns to the 69px Crédit Aurore header rhythm, and uses the shared
+  floating `DemoBadge`. Visual proof on :3098:
+  before `/tmp/tessera-h4-before-produit.png`, `/tmp/tessera-h4-before-recouvrement.png`; after
+  `/tmp/tessera-h4-after-produit.png`, `/tmp/tessera-h4-after-recouvrement.png`. Shortcut proof:
+  `Ctrl+K` → `Rechercher un dossier ou un client`. **Twice-green on H4:** backend `ruff` /
+  `ruff format --check` / `mypy src/tessera` / `pytest -q -m "not integration"` (`1410 passed,
+  50 deselected`) ×2; frontend `tsc --noEmit` / `biome check .` (27-warning existing baseline,
+  no new findings) / `vitest run` (`92 passed`) ×2. **HALT:** H4 waits for Amadou visual
+  validation before final commit/push/Claude merge gate.
+
+- 2026-07-08 — **Headers H3 visual validation: APPROUVÉ — GO H4.** Amadou donne le
+  feu vert après quick look launcher + `/espaces` (:3098). Next: commit H3, then H4 product
+  surfaces (client space + collections console) if not already covered by antigravity.
+
+- 2026-07-08 — **Headers H3 launcher + `/espaces` checkpoint ready for Amadou quick look**
+  on `codex/headers-refonte`. Scope shell/header only: launcher and `/espaces` inherit the
+  shared `UserMenu` path (language + theme inside the avatar menu; no loose language/theme
+  header icons) and the shared `DemoBadge` component (no local demo-pill markup; anonymous
+  launcher verified with exactly one "Démonstration" badge). Visual proof on the :3098 worktree
+  preview: `/tmp/tessera-h3-launcher.png`, `/tmp/tessera-h3-espaces.png`,
+  `/tmp/tessera-h3-launcher-anonymous.png`, `/tmp/tessera-h3-launcher-menu.png`.
+  **Twice-green on H3:** backend `ruff` / `ruff format --check` / `mypy src/tessera` /
+  `pytest -q -m "not integration"` (`1410 passed, 50 deselected`) ×2; frontend
+  `tsc --noEmit` / `biome check .` (27-warning existing baseline, no new findings) /
+  `vitest run` (`90 passed`) ×2. **HALT:** H3 waits for Amadou quick visual validation
+  before H4.
+
+- 2026-07-08 — **Headers H2 visual validation: APPROUVÉ — GO H3.** Amadou donne le
+  feu vert après checkpoint visuel cockpit (:3098). Next: commit H2, then H3 launcher +
+  `/espaces` inheritance check (UserMenu, DemoBadge, zero specific chrome).
+
+- 2026-07-08 — **Headers H2 cockpit checkpoint ready for Amadou visual validation** on
+  `codex/headers-refonte`. Scope shell/header only: cockpit header normalized to three zones
+  (logo/context title · `CommandSearch` · `SystemStatusPill` + notifications + help), legacy
+  posture chips collapsed into the shared status pill, page descriptions moved into the page
+  subtitle, sidebar identity kept as the single `UserMenu` anchor (no header avatar), sidebar
+  brand/header rhythm aligned to 56px, and anonymous cockpit sessions redirected to `/login`
+  before rendering the shell. Visual proof refreshed on the :3098 worktree preview:
+  before `/tmp/tessera-h2-before-metier.png`,
+  `/tmp/tessera-h2-before-flotte.png`, `/tmp/tessera-h2-before-surveiller.png`; after
+  `/tmp/tessera-h2-after-metier.png`, `/tmp/tessera-h2-after-flotte.png`,
+  `/tmp/tessera-h2-after-surveiller.png`; mobile sanity
+  `/tmp/tessera-h2-after-flotte-mobile.png` (document width 390px). Anonymous redirect proof:
+  `/fr/agents` → `/fr/login`. **Twice-green on H2:** backend `ruff` /
+  `ruff format --check` / `mypy src/tessera` / `pytest -q -m "not integration"` (`1410 passed,
+  50 deselected`) ×2; frontend `tsc --noEmit` / `biome check .` (27-warning existing baseline,
+  no new findings) / `vitest run` (`88 passed`) ×2. **HALT:** H2 waits for Amadou visual
+  validation before H3.
+
+- 2026-07-08 — **Headers H1 review: APPROUVÉ — GO H2.** Claude review accepts the H1
+  foundation diff: shared `SystemStatusPill`, `CommandSearch`, `UserMenu`, `DemoBadge`,
+  tree-aware ledger wording shared with the footer, fr/en/de labels and contract tests.
+  Non-blocking note recorded: `residenceValue` remains message-backed for now; it becomes
+  config-driven when multi-deployment is real. Next: commit H1, then H2 cockpit refonte with
+  visual checkpoint before continuing.
+
+- 2026-07-08 — **Header premium H1 checkpoint ready for Claude review** on
+  `codex/headers-refonte` (base `main` = `5ece2ae0`). Scope deliberately limited to shared
+  shell/header foundations, no business logic/store/API route: `SystemStatusPill`
+  (health + model + residence + ledger popover), `CommandSearch` (plan-scoped button-input +
+  shortcut seam), `UserMenu` (avatar/role + account switch via `/login`, sign-out, language,
+  theme; no client-side role toggle), `DemoBadge` (single floating demo pattern), plus fr/en/de
+  i18n and component contract tests. The footer keeps the incident-era static posture and now
+  shares the same tree-aware ledger wording helper as the status popover. **Twice-green on H1:**
+  backend `ruff` / `ruff format --check` / `mypy src/tessera` / `pytest -m "not integration"`
+  (`1410 passed, 50 deselected`) ×2; frontend `tsc --noEmit` / `biome check .` (27-warning
+  existing baseline, no new findings) / `vitest run` (`86 passed`) ×2. **HALT:** H1 diff awaits
+  Claude review before any H2 visual cockpit work.
 - 2026-07-08 — **step 7 CLOSED → merged to `main` (`88b00fb9`), pushed. ADR 0017 COMPLETE.**
   `claude/step-7-tto` merged `--no-ff` on the operator's final feu vert; the only conflict was
   this ledger, resolved by **union** (final-review approval + all executor step-7 entries kept).

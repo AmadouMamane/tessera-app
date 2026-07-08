@@ -1,10 +1,8 @@
 "use client";
 
-import { FlaskConical } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { Link } from "@/i18n/navigation";
-import { cn } from "@/lib/cn";
+import { DemoBadge } from "@/components/layout/demo-badge";
 
 /**
  * Discreet, labelled shortcut to the demo launcher (/select-space).
@@ -25,20 +23,5 @@ export function DemoLauncherLink({
   floating?: boolean;
 }) {
   const t = useTranslations("app");
-  const link = (
-    <Link
-      href="/select-space"
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--card)]/70 px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)] backdrop-blur transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]",
-        className,
-      )}
-    >
-      <FlaskConical className="h-3.5 w-3.5" />
-      {t("demoExplore")}
-    </Link>
-  );
-  if (floating) {
-    return <div className="fixed bottom-3 left-3 z-40">{link}</div>;
-  }
-  return link;
+  return <DemoBadge className={className} floating={floating} label={t("demoExplore")} />;
 }

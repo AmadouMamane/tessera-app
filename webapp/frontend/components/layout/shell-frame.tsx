@@ -16,11 +16,13 @@ export function ShellFrame({
   sidebar,
   topbar,
   footer,
+  pageSubtitle,
   children,
 }: {
   sidebar: ReactNode;
   topbar: ReactNode;
   footer: ReactNode;
+  pageSubtitle?: string;
   children: ReactNode;
 }) {
   const { focus } = useShellChrome();
@@ -37,6 +39,11 @@ export function ShellFrame({
               focus ? "max-w-[1760px]" : "max-w-[1600px]",
             )}
           >
+            {pageSubtitle ? (
+              <p className="mb-4 max-w-4xl text-sm text-[var(--tessera-text-muted)]">
+                {pageSubtitle}
+              </p>
+            ) : null}
             {children}
           </div>
         </main>

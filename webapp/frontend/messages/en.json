@@ -24,7 +24,9 @@
     "tagline": "Active firewall · EU regulatory grounding",
     "operational": "Operational",
     "viewProduct": "View product",
-    "demoExplore": "Demo · explore the spaces",
+    "clientSpace": "Client space",
+    "businessMenu": "Business and client spaces",
+    "demoExplore": "Continue the demo · explore the spaces",
     "disclaimer": "Crédit Aurore — demo, not for production use. Fictitious data.",
     "environment": "Environment",
     "locality": "On-prem · EU",
@@ -996,6 +998,9 @@
     "signOut": "Sign out",
     "auditorMode": "Auditor mode",
     "signedInAs": "Signed in · {role}",
+    "changeAccount": "Switch account",
+    "menuLabel": "User menu · {role}",
+    "sessionActive": "Active session {time}",
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
@@ -7697,6 +7702,34 @@
     "env": "on-prem · EU residency · SOC 2",
     "sealSuffix": "sealed {t}",
     "note": "Status assigned only after successful verification."
+  },
+  "systemStatus": {
+    "triggerLabel": "System status",
+    "title": "System posture",
+    "environment": "Environment",
+    "model": "Model",
+    "residence": "Residency",
+    "ledger": "Ledger integrity",
+    "unknown": "Unavailable",
+    "residenceValue": "On-prem · EU",
+    "environmentValue": {
+      "production": "Prod",
+      "staging": "Staging",
+      "ci": "CI",
+      "local": "Local"
+    }
+  },
+  "commandSearch": {
+    "placeholder": "Search / Commands",
+    "shortcut": "⌘K",
+    "scope": {
+      "cockpit": "Search agents, cases and signals",
+      "business": "Search cases and clients"
+    }
+  },
+  "demoBadge": {
+    "label": "Demo",
+    "ariaLabel": "Open the demo launcher"
   },
   "signalHero": {
     "title": "Breached signal (SLO)",
