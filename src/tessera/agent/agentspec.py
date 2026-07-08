@@ -30,10 +30,14 @@ __all__ = [
     "BusinessSignalSpec",
     "Capability",
     "ExternalEffectLevel",
+    "InvocationAuth",
+    "InvocationBinding",
+    "InvocationSpec",
     "PolicyMetadata",
     "PolicySeverity",
     "SignalEngagement",
     "WorkflowBinding",
+    "parse_invocation",
     "parse_observability",
 ]
 
@@ -86,6 +90,27 @@ class SignalEngagement(StrEnum):
     LEGAL = "legal"
     SLA = "sla"
     NONE = "none"
+
+
+class InvocationBinding(StrEnum):
+    """How a declared consumer sends a turn to the agent (ADR 0019 §1).
+
+    ``none`` is the honest default for publish-only agents — the Console renders honest-empty
+    and no canary can drive it. ``in_process_chat`` *declares* the existing ``/chat`` seam
+    (the three native agents adopt it verbatim — no behaviour change). ``http`` declares a
+    turn endpoint the agent exposes speaking the 0018 turn contract; the invoker that forwards
+    the operator assertion is I3, out of scope here — only the declaration is modelled.
+    """
+
+    NONE = "none"
+    IN_PROCESS_CHAT = "in_process_chat"
+    HTTP = "http"
+
+
+class InvocationAuth(StrEnum):
+    """Auth posture for an invocation (ADR 0019 §1/§4) — no anonymous invocation, ever."""
+
+    OPERATOR_ASSERTION = "operator-assertion"
 
 
 class _Spec(BaseModel):
@@ -241,4 +266,60 @@ def parse_observability(raw: Mapping[str, object]) -> AgentObservabilitySpec:
         return AgentObservabilitySpec.model_validate(dict(raw))
     except ValidationError as exc:
         msg = f"invalid observability block: {exc}"
+        raise ValueError(msg) from exc
+
+
+class InvocationSpec(_Spec):
+    """The AgentSpec ``invocation`` block — the declared cockpit→agent seam (ADR 0019 §1).
+
+    The binding is *data*, never an import (the 0017 boundary ratchet stands): a declared
+    consumer forwards a turn over the named transport, it does not reach into the runtime's
+    module graph. The http-only fields are unrepresentable on the other bindings — a
+    mis-declaration (an endpoint on a ``none`` agent, an ``http`` agent with no endpoint) is a
+    load error, not a silently-ignored field, the same "make the illegal state
+    unrepresentable" rule as the rest of the manifest.
+    """
+
+    binding: InvocationBinding = InvocationBinding.NONE
+    endpoint: str | None = None  # http only — the agent EXPOSES; the cockpit consumes it
+    timeout_ms: int | None = None  # http only
+    auth: InvocationAuth | None = None  # http only; operator-assertion, no anonymous invocation
+
+    @model_validator(mode="after")
+    def _binding_shape(self) -> InvocationSpec:
+        http_only = {"endpoint": self.endpoint, "timeout_ms": self.timeout_ms, "auth": self.auth}
+        if self.binding is InvocationBinding.HTTP:
+            if not self.endpoint:
+                msg = "invocation binding 'http' requires an endpoint (the turn contract URL)"
+                raise ValueError(msg)
+            if self.auth is None:
+                # No anonymous invocation, ever (ADR 0019 §4): an http binding must name the
+                # operator-assertion posture explicitly, never inherit a default.
+                msg = "invocation binding 'http' requires auth (operator-assertion)"
+                raise ValueError(msg)
+            if self.timeout_ms is not None and self.timeout_ms <= 0:
+                msg = f"invocation timeout_ms must be positive, got {self.timeout_ms}"
+                raise ValueError(msg)
+        else:
+            present = sorted(key for key, value in http_only.items() if value is not None)
+            if present:
+                msg = (
+                    f"invocation binding {self.binding.value!r} must not set http-only "
+                    f"fields {present}"
+                )
+                raise ValueError(msg)
+        return self
+
+
+def parse_invocation(raw: Mapping[str, object]) -> InvocationSpec:
+    """Validate and build the invocation block, raising ``ValueError`` on any issue.
+
+    Same uniform-failure discipline as :func:`parse_observability`: pydantic's
+    :class:`ValidationError` is wrapped so the registry loader has one failure type and a
+    malformed block fails the load fast (a manifest is an API, not config).
+    """
+    try:
+        return InvocationSpec.model_validate(dict(raw))
+    except ValidationError as exc:
+        msg = f"invalid invocation block: {exc}"
         raise ValueError(msg) from exc

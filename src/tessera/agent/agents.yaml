@@ -35,6 +35,11 @@ agents:
     handoff:
       to: [onboarding]
       from: [onboarding]
+    # AgentSpec invocation block (ADR 0019 §1): the declared cockpit→agent seam. The customer
+    # widget streams through the in-process `/chat` route — now DECLARED, not assumed. Pure
+    # codification of current behaviour (no-op): the binding is data, never an import.
+    invocation:
+      binding: in_process_chat
     # AgentSpec observability block (ADR 0017 §3 · step 7 Lot 0). Telemetry-only Q&A agent:
     # it emits turn spans (graph_topology) + tool spans and runs a conversation workflow
     # mapped onto the grammar, but declares NO scored business workflow — no scorer,
@@ -65,6 +70,10 @@ agents:
     handoff:
       to: [support-client]
       from: [support-client]
+    # AgentSpec invocation block (ADR 0019 §1) — same in-process `/chat` seam as support-client,
+    # now declared. No behaviour change.
+    invocation:
+      binding: in_process_chat
     # AgentSpec observability block (ADR 0017 §3 · step 7 Lot 0) — same telemetry-only shape
     # as support-client: turn + tool spans, a conversation workflow on the grammar, no scored
     # business workflow. Level computed, never tuned.
@@ -104,6 +113,11 @@ agents:
     handoff:
       to: []
       from: []
+    # AgentSpec invocation block (ADR 0019 §1): the operator's Console reaches recouvrement over
+    # the in-process `/chat` seam, now declared. The declared consumer forwards a turn over this
+    # transport under the operator assertion (0010 Phase B) — never an import of the runtime.
+    invocation:
+      binding: in_process_chat
     # AgentSpec observability block (ADR 0017 §3 + A1 + A2.3) — recouvrement declares the
     # first manifest (Phase B). Everything the cockpit renders for this agent's business
     # surfaces is generated from here; nothing hand-placed per agent. Policy IMPLEMENTATIONS
@@ -254,6 +268,11 @@ agents:
     handoff:
       to: []
       from: []
+    # AgentSpec invocation block (ADR 0019 §1): the honest default. hello-agent is publish-only
+    # (out-of-process, pure OTLP, zero tessera import) — it exposes NO test invocation, so its
+    # Console renders honest-empty ("observe it through its runs and evals"), never a broken chat.
+    invocation:
+      binding: none
     observability:
       spec_version: agentspec.v1
       telemetry_capabilities: [turns]

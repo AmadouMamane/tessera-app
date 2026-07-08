@@ -28,10 +28,14 @@ from tessera.agent.agentspec import (
     BusinessSignalSpec,
     Capability,
     ExternalEffectLevel,
+    InvocationAuth,
+    InvocationBinding,
+    InvocationSpec,
     PolicyMetadata,
     PolicySeverity,
     SignalEngagement,
     WorkflowBinding,
+    parse_invocation,
     parse_observability,
 )
 from tessera.agent.identity import DEFAULT_AGENT_ID
@@ -61,6 +65,9 @@ __all__ = [
     "Capability",
     "ExternalEffectLevel",
     "HandoffContract",
+    "InvocationAuth",
+    "InvocationBinding",
+    "InvocationSpec",
     "PolicyMetadata",
     "PolicySeverity",
     "SignalEngagement",
@@ -108,6 +115,10 @@ class Agent:
     # simply un-manifested (no observability level, no Métier surfaces) until it declares
     # one. Recouvrement declares the first manifest (Phase B).
     observability: AgentObservabilitySpec | None = None
+    # ADR 0019 §1 — the invocation binding (the declared cockpit→agent seam). Always present:
+    # an agent that declares nothing is honestly ``binding: none`` (publish-only), never a
+    # broken chat. The three native agents declare ``in_process_chat``; hello-agent ``none``.
+    invocation: InvocationSpec = field(default_factory=InvocationSpec)
 
 
 def registry_path() -> Path:
@@ -171,6 +182,17 @@ def _coerce_agent(raw: Mapping[str, object]) -> Agent:
             observability = parse_observability(observability_raw)
         except ValueError as exc:
             raise ValueError(f"agent {agent_id!r}: {exc}") from exc
+    # The AgentSpec invocation block (ADR 0019 §1) — same fail-fast discipline. Absent ⇒ the
+    # honest ``binding: none`` default (publish-only); a malformed block fails the load.
+    invocation_raw = raw.get("invocation")
+    invocation = InvocationSpec()
+    if invocation_raw is not None:
+        if not isinstance(invocation_raw, dict):
+            raise ValueError(f"agent {agent_id!r}: invocation must be a mapping")
+        try:
+            invocation = parse_invocation(invocation_raw)
+        except ValueError as exc:
+            raise ValueError(f"agent {agent_id!r}: {exc}") from exc
     return Agent(
         id=agent_id,
         name=str(raw.get("name", agent_id)),
@@ -189,6 +211,7 @@ def _coerce_agent(raw: Mapping[str, object]) -> Agent:
         tags=_as_str_tuple(raw.get("tags")),
         handoff=handoff,
         observability=observability,
+        invocation=invocation,
     )
 
 
