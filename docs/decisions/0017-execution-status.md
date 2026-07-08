@@ -59,6 +59,20 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Step-7 evidence-path ruling CORRECTED: Prometheus turn-count read
+  (option 2), superseding the review's earlier Langfuse preference.** Reason: since A2.4
+  the L level is a **release-gating input**, and the governing rule (0015 Amendment 1)
+  forbids gating facts from reading best-effort third-party stores — a Langfuse-backed
+  level would recreate the exact coupling the score demotion eradicated. Prometheus is
+  the canonical home for counts, the `spine/adapters/prometheus.py` seam exists,
+  `AGENT_TURNS_TOTAL{agent_id,…}` already flows for in-process agents → **the same read
+  makes EVERY agent's L1 evidence-backed uniformly** (incl. this morning's minimal
+  specs), honest-empty when Prometheus is unreachable. Platform completion = resolver
+  reads turn evidence via the Prometheus adapter + collector prometheus-exporter config
+  for OTLP metrics (off-chrono, labelled commits). Option 3 rejected: a manifest-only L1
+  badge is asserted, not computed (§4 violation). Credit: the executor's fork-surfacing
+  caught the reviewer's inconsistency — the design gate worked in both directions.
+
 - 2026-07-08 — **step 7 Lot 0 done (OFF-CHRONO): support-client + onboarding declare
   telemetry-only manifests.** The two Q&A agents get an AgentSpec `observability` block —
   `telemetry_capabilities: [graph_topology, tools]` (what they really emit) + a scorer-less
