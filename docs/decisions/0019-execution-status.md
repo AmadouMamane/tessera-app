@@ -6,17 +6,21 @@ Single source of truth for **where the ADR 0019 implementation is**. Same protoc
 verification → commit (**targeted staging, never `git add -A`**) → update this file → advance.
 
 **Trigger fired 2026-07-08:** the operator activated the **canary scheduler** path (ADR 0019
-§Implementation trigger — "the canary scheduler, whichever comes first"). This mission delivers
-**I1 + I4 only**. I2 (Console generation) and I3 (http invoker + first external agent) stay
-**deferred** — I2 in particular is off-limits while the agent-console / headers work is in flight
-on the codex worktree (avoid a conflict on a surface being edited live).
+§Implementation trigger — "the canary scheduler, whichever comes first"). The first mission delivered
+**I1 + I4 only**. I2 (Console generation) and I3 (http invoker + first external agent) were
+**deferred** — I2 in particular was off-limits while the agent-console / headers work was in flight
+on the codex worktree.
+
+**Follow-up mission 2026-07-08 (I2 + I3):** the codex headers refonte landed on `main`
+(`59dfa828` / `043f480f`), clearing the I2 blocker. This mission delivers **I2** (`4340bdad`) and
+**I3** on a fresh `claude/adr19-i2-i3` branch cut from `main`.
 
 ## Phase ledger
 
 | Phase | Scope (short) | Status | Commit | Notes |
 |---|---|---|---|---|
 | I1 | `invocation` block in the AgentSpec (schema + validation, `none` default); native agents declare `in_process_chat` | ✅ done | `80a83753` | `InvocationBinding` {none·in_process_chat·http} + `InvocationSpec` (`extra="forbid"`, http-only fields unrepresentable on other bindings, http must name operator-assertion auth). `Agent.invocation` always present (default `none`). support-client/onboarding/recouvrement → `in_process_chat` (pure codification of `/chat`, no behaviour change); hello-agent → `none`. Gate twice-green (ruff/format/mypy/1460 unit); frontend untouched. |
-| I2 | Console generation for `in_process_chat` (parity, rendered from declarations); honest-empty for `none` | ⛔ deferred | — | **Out of scope this mission.** Conflicts with the agent-console / headers work in flight (codex). |
+| I2 | Console generation for `in_process_chat` (parity, rendered from declarations); honest-empty for `none` | ✅ done | `4340bdad` | The Console is generated from the declared `invocation.binding`, not a chattable-by-default assumption. `compute_agent_console` is agent-scoped (`?agent=`); binding read through the boundary-allowed registry seam (ratchet green). `in_process_chat` → full interactive payload (parity); `none` (hello-agent) → slim honest-empty ("no test invocation — observe via runs/evals"), NO fabricated tools/guardrails. Frontend gates on `invocation.invocable`; SSR-scoped key. Per the ADR open question, free-text parity only — capability-form generation stays deferred. Gate twice-green (ruff/format/mypy/tsc/biome/1485 unit); verified through the real route (fr/de/en). |
 | I3 | `http` binding: the invoker (assertion forwarding, timeout, audit) + first invocable external agent; SDK conformance test | ⛔ deferred | — | Out of scope this mission. The http *schema* is modelled by I1; the *invoker* is not built. |
 | I4 | Canary scheduler on the `in_process_chat` binding (cadence from the manifest, synthetic stamping, S1 per invocation, freshness feeding the existing canary descriptor) | ✅ done | `9c02e35f` | Off-chrono scheduler mirroring the seal (lifespan + boot posture line; idle by default). `agent/canary.py`: `InProcessChatInvoker` drives `compile_graph().ainvoke` in a `synthetic_turn()` context; `run_canary_cycle` emits one `tessera.agent.canary` S1 per invocation (green/red, never a fake green). Synthetic isolation excluded twice: the emit-time Prometheus guard + the read seam every business surface flows through (default `include_synthetic=False`). Descriptor gains `synthetic_run` (from the S1 entry) + `cadence_s`. recouvrement declares hourly; switch `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED` (default off). Gate twice-green (ruff/format/mypy/1479 unit); boundary ratchet green. |
 
@@ -35,6 +39,24 @@ on the codex worktree (avoid a conflict on a surface being edited live).
   (same posture as the seal's Rfc3161Provider).
 
 ## Log (newest first)
+
+- 2026-07-08 — **I2 landed (`4340bdad`). The Console is now a generated surface.** The last
+  hand-wired cockpit surface stops assuming every agent is chattable: its shape is derived from the
+  agent's declared `invocation.binding` (ADR 0019 §I2 / §2). `compute_agent_console` gains an
+  `agent_id` (route `?agent=`, the client-facing convention) and reads the binding through the
+  boundary-allowed registry seam (`tessera.agent.registry`) — never the runtime graph, so the 0017
+  §1 ratchet stands (`test_observability_boundary` green). `in_process_chat` → the full interactive
+  payload verbatim (parity, no behaviour change); `none` (hello-agent, publish-only) → a slim
+  honest-empty payload carrying the binding + a localized `empty` descriptor and NONE of the
+  tools/guardrails/eval panels (the honesty invariant: never fabricate config for an agent that runs
+  no tessera guard). The frontend gates on `invocation.invocable`, SSR-scoped to the routed agent so
+  there is no chattable-by-default flash; an absent block keeps the interactive console (no
+  false-empty on a stale payload). Scope was held to free-text parity + honest-empty — the ADR's own
+  open question (capability *parameters* as generated forms) stays deferred. Verified end-to-end
+  through the real HTTP route (support-client interactive, hello-agent honest-empty, unknown →
+  `available:false`, fr/de/en localized). Gate twice-green (ruff/format/mypy/tsc/biome + 1485 unit,
+  new `test_observability_agent_console`). Next: I3 (http invoker + first external agent). **I2/I3
+  do not touch the canary path (I4) — no regression there.**
 
 - 2026-07-08 — **ADR 0019 I1+I4 review: APPROVED — merge feu vert.** Merged to `main` by clean
   fast-forward (`c6aa3823` → `7fd01f8f` + this entry). **Ratified deviation** — graph-seam vs

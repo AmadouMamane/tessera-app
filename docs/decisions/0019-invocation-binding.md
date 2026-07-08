@@ -142,8 +142,10 @@ whichever is wanted first.
 
 - **I1 — ✅ done (`80a83753`).** `invocation` block in the AgentSpec (schema + validation;
   `none` default); native agents declare `in_process_chat`. No behaviour change.
-- **I2 — deferred.** Console generation for `in_process_chat` (parity with today's console,
-  rendered from declarations); honest-empty for `none`.
+- **I2 — ✅ done (`4340bdad`).** Console generation from the declared binding: `in_process_chat`
+  renders today's console (parity), `none` renders honest-empty. The payload is agent-scoped and the
+  binding is read via the registry seam (the 0017 §1 ratchet stands). Free-text parity only —
+  capability-form generation (see Open questions) stays deferred.
 - **I3 — deferred.** `http` binding: the invoker (assertion forwarding, timeout, audit event)
   + the first invocable external agent; conformance test in the SDK testkit (an agent
   declaring `http` must speak the turn contract). I1 models the `http` *schema*; the invoker
