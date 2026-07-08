@@ -36,6 +36,16 @@ on the codex worktree (avoid a conflict on a surface being edited live).
 
 ## Log (newest first)
 
+- 2026-07-08 — **ADR 0019 I1+I4 review: APPROVED — merge feu vert.** Merged to `main` by clean
+  fast-forward (`c6aa3823` → `7fd01f8f` + this entry). **Ratified deviation** — graph-seam vs
+  `/chat`, recorded as a *conscious refinement* so I2 inherits no confusion: one declared binding
+  (`in_process_chat`), **two entry depths per consumer**. The **canary** consumer (I4) enters by
+  the eval seam (`compile_graph().ainvoke` — eval family, zero transcript pollution, zero overlap
+  with the in-flight I2/agent-console work). The **Console** consumer (I2, still deferred) will
+  enter by the real `/chat` route — the same declared binding, a different entry depth. The CH
+  synthetic-column follow-up (§Owed follow-ups) remains tracked. Operator go-and-observe moment is
+  live once `TESSERA_OBS_CANARY_SCHEDULER_ENABLED=1` + a server restart in the main checkout.
+
 - 2026-07-08 — **I4 landed (`9c02e35f`). ADR 0019 I1+I4 mission complete.** The off-chrono canary
   scheduler mirrors the Hica-seal runner exactly: `canary_posture` is the single source of the
   scheduling decision (one honest boot line, idle by default), one background loop per scheduled
