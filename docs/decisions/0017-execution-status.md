@@ -59,6 +59,22 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **step 7 CLOSED → merged to `main` (`88b00fb9`), pushed. ADR 0017 COMPLETE.**
+  `claude/step-7-tto` merged `--no-ff` on the operator's final feu vert; the only conflict was
+  this ledger, resolved by **union** (final-review approval + all executor step-7 entries kept).
+  **Twice-green on the merged tree**, identical both runs: `ruff` / `ruff format` (498 files) /
+  `mypy src/tessera` (275) / **pytest 1410** (50 integration deselected); FE `tsc` clean / `biome`
+  27-warning baseline / **vitest 78**. Push clean fast-forward (`b3273e20..88b00fb9`). **All seven
+  0017 steps are landed on `main`; the ADR Status reads accepted — implementation complete, TTO
+  L1 = 20m18s (~12× under the ≤½-day target).** The demo agent's OTLP profile is proven end to
+  end. **One open follow-up (non-blocking, display-honesty):** the evidence-strict level shows L0
+  for a *dormant-but-conformant* agent — the fleet badge should distinguish « aucune preuve
+  récente » from « non conforme » (e.g. « L1 déclaré · aucune preuve récente »), same family as
+  the tree-aware audit-integrity badge; owed to a UI slice. **Process note (3rd occurrence):** the
+  worktree-slip pattern recurred twice this session (step-7 work started in the main checkout,
+  recovered by patch-move each time) — the register/landing-pad rule holds; every executor prompt
+  now starts by confirming its `cwd`.
+
 - 2026-07-08 — **Step-7 final review: APPROVED — MERGE FEU VERT. ADR 0017 reaches
   implementation-complete with TTO = 20m18s (~12× under the ≤½-day target).** All four
   acceptance criteria verified (computed L1 from a live Prometheus fact; testkit + drift
