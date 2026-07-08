@@ -379,3 +379,30 @@ def test_sealed_then_extended_reseals_next_cycle(monkeypatch: pytest.MonkeyPatch
     assert second.head == new_head
     assert chain[-1]["sealed_head"] == new_head  # seal 2 pins the extended head
     assert chain[-1]["prev_sealed_head"] == head1  # …and references seal 1's head
+
+
+# ── seal posture (the boot log line + the scheduler's start decision) ───────────
+
+
+def test_seal_posture_none_is_not_sealing() -> None:
+    posture = S.seal_posture()  # default settings ⇒ provider none
+    assert posture["provider"] == "none"
+    assert posture["sealing"] is False
+    assert posture["cadence_s"] is None
+
+
+def test_seal_posture_rfc3161_reports_cadence() -> None:
+    settings = SimpleNamespace(
+        guard=SimpleNamespace(
+            seal_provider="rfc3161",
+            seal_tsa_url="https://tsa.example",
+            seal_tsa_cert=None,
+            seal_tsa_qualified=True,
+            seal_interval_s=1800,
+        )
+    )
+    posture = S.seal_posture(settings)  # type: ignore[arg-type]
+    assert posture["provider"] == "rfc3161"
+    assert posture["sealing"] is True
+    assert posture["qualified"] is True
+    assert posture["cadence_s"] == 1800

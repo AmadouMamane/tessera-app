@@ -347,16 +347,23 @@ absent, and the badge would honestly say so.
 | 2 | Implementation: `seal.py` (`SealProvider`+`rfc3161`+`NoOp`), off-chrono seal cycle w/ continuity+divergence check, `evaluate_seal` composed into tree status + `/audit/integrity`, §6 badge on TE-01 (corrects the over-claim) + footer suffix (Q5), config incl. `seal_tsa_qualified`, mandatory mention | ✅ done (this commit) | — | Backend: `guard/seal.py`, seal-entry builder in `audit.py`, `GuardSettings` seal fields, `AuditIntegrity` seal facet + badge, `etat_a_date` real `opposability` block (drives the honest badge; `verified` no longer a constant). Frontend: `OpposabilityBadge` on TE-01 + printable-report + footer suffix + i18n (en/fr/de) + honest e2e. 27 unit tests (`test_seal.py`). Twice-green: py **1437** ×2 · FE tsc/biome/vitest **78** ×2. |
 | 3 | Tests: seal-unavailable → «Intégrité partielle» proven; sealed-then-extended → re-seal next cycle; fork-between-seals → divergence within τ; rewrite → red; honesty invariants H1–H5 | ✅ done (this commit) | — | 4 acceptance scenarios added to `test_seal.py` — end-to-end degradation through `active_ledger_opposability` (NoOp ⇒ `integrite_partielle`; qualified seal ⇒ `scelle_opposable`; non-qualified ⇒ `scelle_non_qualifie`) + the sealed-then-extended re-seal (continuity holds, seal 2 pins the new head, references seal 1). 31 tests total. Twice-green: py **1441** ×2. |
 
+| 4 | Off-chrono scheduler wired into the app lifespan (`_start_seal_scheduler`) + one boot posture log line; no-op under `none`; cancelled on shutdown | ✅ done (this commit) | — | `seal_posture` helper (single source of the sealing decision) + 2 unit tests; live-verified the boot line emits `sealing=false` and starts no loop under the default provider. Twice-green: py **1443** ×2. |
+
 Status legend: ⬜ pending · 🟡 in progress / awaiting review · ✅ done (twice-green) · ⛔ blocked.
 
-## 12. Remaining operational wiring (honest boundary — not hidden)
+## 12. Off-chrono scheduler + boot posture (shipped — Lot 4)
 
-The seal **cycle** (`run_seal_cycle`) is implemented, composed, and tested; the **periodic
-scheduler** that fires it every `seal_interval_s` is **not** wired. This is deliberate and honest:
-under the default `seal_provider="none"` the cycle is a no-op (the NoOp provider mints nothing), so
-there is nothing to schedule until a real TSA is provisioned. When one is (config `rfc3161` +
-`seal_tsa_url` + pinned `seal_tsa_cert`), the remaining step is a thin off-chrono runner — a FastAPI
-lifespan background task or a systemd/cron timer calling `run_seal_cycle()` every τ, exactly as the
-collector's Prometheus exporter runs off-chrono. Verified end-to-end on the live forked
-`tessera_local` (17 670 rows, 29 forks, attested): with no provider configured the TE-01 badge
-computes to **`integrite_partielle`** (`seal_state=absent`), never `scelle_*` — the honest state.
+The seal is driven by a thin off-chrono runner wired into the FastAPI lifespan
+(`_start_seal_scheduler`, `api/main.py`): at boot it logs **ONE** honest posture line
+(`event=seal.posture` — provider, qualification, cadence, `sealing`), then — **only** when a real
+provider is configured — schedules a background task that calls `run_seal_cycle()` every
+`seal_interval_s`, cancelled cleanly on shutdown. Under the default `provider="none"` it logs
+`sealing=false` and starts **no** loop (no-op, no wasted wakeups; the badge stays «Intégrité
+partielle»). `seal_posture` is the single source of the decision, so the log line and the scheduler
+can never disagree. A cycle failure warns and the loop survives; the seal never touches a request
+path. **Live-verified:** default boot emits
+`{"provider":"none","sealing":false,…,"event":"seal.posture"}` and schedules nothing; and the TE-01
+badge over the live forked `tessera_local` (17 670 rows, 29 forks, attested, no provider) computes
+to **`integrite_partielle`** (`seal_state=absent`), never `scelle_*`. When a TSA is provisioned
+(`rfc3161` + `seal_tsa_url` + pinned `seal_tsa_cert`) the same runner seals the head every τ with no
+further wiring.

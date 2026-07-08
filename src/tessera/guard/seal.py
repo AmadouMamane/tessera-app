@@ -60,6 +60,7 @@ __all__ = [
     "get_seal_provider",
     "run_seal_cycle",
     "seal_badge",
+    "seal_posture",
 ]
 
 _GENESIS = "0" * 64
@@ -269,6 +270,27 @@ def get_seal_provider(settings: Settings | None = None) -> SealProvider:
             url=guard.seal_tsa_url, cert=guard.seal_tsa_cert, qualified=guard.seal_tsa_qualified
         )
     return NoOpProvider()
+
+
+def seal_posture(settings: Settings | None = None) -> dict[str, object]:
+    """The seal's boot posture — one honest log line + the scheduler's start decision.
+
+    Under ``provider='none'`` (the default) ``sealing`` is False: nothing is scheduled and the badge
+    honestly stays «Intégrité partielle». A real provider reports its name, qualification, and the
+    cadence τ. This is the only place that decides "are we sealing?" so the log line and the
+    scheduler can never disagree.
+    """
+    from tessera.settings import get_settings
+
+    guard = (settings or get_settings()).guard
+    provider = get_seal_provider(settings)
+    sealing = not isinstance(provider, NoOpProvider)
+    return {
+        "provider": provider.name,
+        "qualified": bool(getattr(provider, "qualified", False)),
+        "sealing": sealing,
+        "cadence_s": guard.seal_interval_s if sealing else None,
+    }
 
 
 # ── Evaluation (display side — pure, cached, live) ──────────────────────────────
