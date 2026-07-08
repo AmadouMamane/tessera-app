@@ -59,6 +59,77 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Hica seal final review: APPROVED — ruling (b): wire the minimal
+  off-chrono scheduler, THEN merge.** Verified on pieces: `NoOpProvider` structurally
+  cannot mint (honesty invariant in the type, not a convention); the etat_a_date
+  hardcoded `verified=True` is gone (badge derives from seal_state + qualification);
+  the seal is an appended `tessera.ledger.seal` entry **through the serialized writer**
+  (inherits the advisory lock + partial unique index — the seal cannot fork the chain
+  it attests); 31-test matrix incl. live degradation on the real forked table.
+  Rationale for (b): a deferred scheduler creates a latent trap — a provisioned TSA
+  with nothing firing is config that looks live but isn't (the quiet-dishonesty class);
+  the thin runner idles under `none` and makes TSA provisioning flip-and-go. Plus a
+  boot log line stating the seal posture. **Post-merge operator moment: provision
+  FreeTSA and watch « Scellé (non qualifié) » light up for real — on a chain that
+  carries an attested fork, which is exactly what makes it credible.**
+
+- 2026-07-08 — **Headers H1 review: APPROVED — GO H2.** Verified on the staged diff:
+  SystemStatusPill reads the SAME `LedgerIntegrityText` seam as the footer (single
+  source — Hica's seal facet will land once, for both); UserMenu = display-only role
+  prop + next-auth signOut + locale/theme (no client-side role toggle); DemoBadge on
+  i18n key, fr value « Démonstration » (lexicon-clean); CommandSearch ⌘K wired
+  (metaKey/ctrlKey + per-plan aria scope); honest-empty vocabulary in the popover
+  (« Non disponible »). Minor note (non-blocking): `residenceValue` is a hardcoded
+  message constant — acceptable now, config-driven when multi-deployment becomes real.
+  Codex: commit H1 (targeted), then H2 (cockpit 3-zones + the anonymous→/login identity
+  fix); checkpoint H2 = before/after captures for the operator.
+
+- 2026-07-08 — **Hica seal design review: APPROVED — GO Lot 2, all questions ruled.**
+  RFC 3161 TSA behind a `SealProvider` protocol ratified (attests without storing;
+  offline-verifiable outside Tessera; eIDAS = the EU opposability instrument). S3
+  Object-Lock rejected (a store, not an assertion) and self-signing forbidden (the
+  fake-seal trap) — both correctly. Rulings: **Q1** `seal_provider="none"` default;
+  FreeTSA for the first cut (real third-party tokens prove the mechanism); eIDAS-
+  qualified TSA = the named production path. Qualification nuance added to §9: « Scellé
+  · opposable » is RESERVED for qualified TSAs; non-qualified renders « Scellé (non
+  qualifié) » — provider identity + qualification always visible in the popover.
+  **Q2** appended `tessera.ledger.seal` chain entry (one journal, Corr.3b families
+  pattern; each seal transitively covers prior seals; append-only trigger + advisory
+  lock protect it for free). **Q3** yes — a fresh unattested fork downgrades even with
+  a valid seal (defense-in-depth display; the partial unique index makes it near-
+  impossible anyway). **Q4** τ=1h / staleness 2τ as CONFIG defaults; stale → « Intégrité
+  partielle (sceau périmé) ». **Q5** full seal facet on TE-01/Prouver (where legal
+  reconstruction lives); the footer gains only a compact « · scellé <t> » suffix when a
+  valid seal exists — nothing added when none configured. **Q6 — YES: fix the
+  etat-a-date over-claim; the green→amber downgrade is a CORRECTION, not a regression**
+  (the incident-badge precedent: the amber that tells the truth beats the green that
+  lies; the upgrade path when a TSA lands is the better demo). **Q7** keep the companion
+  design note + add a decision-only §Correction 3d to ADR 0015 pointing at it. Commit
+  the note now (targeted staging), then Lot 2.
+
+- 2026-07-08 — **ADR 0019 written** (`0019-invocation-binding.md`): the declared
+  cockpit→agent seam — `invocation: in_process_chat | http | none` in the AgentSpec,
+  console generated from binding + capabilities + TurnResult + XT-01, closed consumer
+  list (console, canary scheduler; evals stay harness-side), operator assertion + S1
+  audit on every invocation, synthetic stamping so test turns never pollute business
+  metrics. Status accepted, **implementation deferred** with pre-sequenced phases I1-I4;
+  trigger = first http-invocable agent or the canary scheduler. Uncommitted — rides the
+  next docs commit. Parallel dispatch: codex on headers (H1-H4), opus proposed on the
+  Hica seal (zero overlap).
+
+- 2026-07-08 — **Post-0017 architecture item identified (operator question): the Console
+  is the last non-generated, runtime-coupled cockpit surface** — it streams through the
+  in-process `/chat` seam and cannot test a foreign-runtime agent. Decision needed (ADR
+  0019 candidate: "Invocation binding — the declared cockpit→agent seam"): the
+  observability contract stays publish-only; testing is a CONTROL action requiring a
+  second, declared contract — an `invocation:` block in the AgentSpec (`in_process_chat |
+  http | none`), from which the console GENERATES (binding + capabilities' typed actions
+  + TurnResult rendering + XT-01 trace link; `none` → honest-empty). Convergence: the
+  same binding is the missing runtime primitive for canary scheduled execution (signal
+  94's deferred piece) — one declaration, three consumers (console, canaries, evals
+  already manifest-declared). Priority: rises with the first http-invocable external
+  agent or the canary scheduler, whichever comes first.
+
 - 2026-07-08 — **step 7 CLOSED → merged to `main` (`88b00fb9`), pushed. ADR 0017 COMPLETE.**
   `claude/step-7-tto` merged `--no-ff` on the operator's final feu vert; the only conflict was
   this ledger, resolved by **union** (final-review approval + all executor step-7 entries kept).
