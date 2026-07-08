@@ -6,7 +6,7 @@ derives, per agent (reading the registry seam for the manifest, ADR 0017 §1):
 
 * the **instrumentation-coverage** descriptor (signal 92) — the fraction of the required
   turn-span Scope dimensions (the §4 L1 contract) the agent actually stamps, *measured*
-  from its most recent business event; honest-empty when the agent has no telemetry yet;
+  from its most recent **business event**; honest-empty when the agent has no telemetry yet;
 * the **canary** descriptor (signal 94) — the workflow(s) a scheduled canary would drive
   (from the manifest) plus the freshness of the agent's last observed turn, so a broken
   pipeline is seen before an operator misses data.
@@ -14,6 +14,14 @@ derives, per agent (reading the registry seam for the manifest, ADR 0017 §1):
 Honesty (0016 / ADR 0017 §Amendment 1): the coverage number is measured, never invented;
 the canary reports the freshness of *real* telemetry — scheduled synthetic execution with
 a green/red verdict is the runtime piece (no in-tree scheduler yet), declared here, not faked.
+
+Coverage source (§A2.4, operator ruling 2026-07-08): the measurement reads the **Scope
+dimensions carried on business events**, NOT a span store — spans and events carry the same
+Scope dims by design (:data:`_ATTR_TO_ROW_FIELD`), so business-event field presence is the
+honestly-available proxy for span coverage. The descriptor therefore names its source
+(``evidence_source="business_events"``, ``measures="scope_dimensions"``) and the UI label
+must read "couverture Scope — événements métier": never a claim of span coverage. Widening
+the proxy to a real span store is a noted future option, not a present claim.
 """
 
 from __future__ import annotations
@@ -84,6 +92,10 @@ def coverage_descriptor(agent_id: str | None) -> dict[str, object] | None:
         return {
             "agent_id": agent.id,
             "signal": "instrumentation-coverage",
+            # The source of the measurement, named so no label may imply span coverage:
+            # it is the Scope dims carried on business events (a proxy), not a span store.
+            "evidence_source": "business_events",
+            "measures": "scope_dimensions",
             "required_attributes": required,
             "covered_pct": None,
             "missing_attributes": required,
@@ -100,6 +112,8 @@ def coverage_descriptor(agent_id: str | None) -> dict[str, object] | None:
     return {
         "agent_id": agent.id,
         "signal": "instrumentation-coverage",
+        "evidence_source": "business_events",
+        "measures": "scope_dimensions",
         "required_attributes": required,
         "covered_pct": round(100.0 * covered / len(required), 1),
         "missing_attributes": missing,

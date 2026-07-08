@@ -61,6 +61,21 @@ def test_coverage_full_is_100(monkeypatch: pytest.MonkeyPatch) -> None:
     assert desc["status"] == "measured"
 
 
+def test_coverage_names_its_source_not_spans(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The descriptor must name business events as its source, never claim span coverage.
+
+    Operator ruling 2026-07-08 (Point 1): the Scope-dim proxy is accepted as the honestly
+    available evidence *provided the label says its source* — so the payload carries the
+    source explicitly and no consumer can present it as span coverage.
+    """
+    for rows in ([], [dict(_FULL_ROW)]):  # honest-empty AND measured branches
+        _rows(monkeypatch, rows)
+        desc = quality_nets.coverage_descriptor("recouvrement")
+        assert desc is not None
+        assert desc["evidence_source"] == "business_events"
+        assert desc["measures"] == "scope_dimensions"
+
+
 def test_coverage_flags_missing_dimension(monkeypatch: pytest.MonkeyPatch) -> None:
     _rows(monkeypatch, [{**_FULL_ROW, "environment": ""}])  # environment unstamped
     desc = quality_nets.coverage_descriptor("recouvrement")
