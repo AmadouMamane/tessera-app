@@ -348,3 +348,15 @@ absent, and the badge would honestly say so.
 | 3 | Tests: seal-unavailable → «Intégrité partielle» proven; sealed-then-extended → re-seal next cycle; fork-between-seals → divergence within τ; rewrite → red; honesty invariants H1–H5 | ✅ done (this commit) | — | 4 acceptance scenarios added to `test_seal.py` — end-to-end degradation through `active_ledger_opposability` (NoOp ⇒ `integrite_partielle`; qualified seal ⇒ `scelle_opposable`; non-qualified ⇒ `scelle_non_qualifie`) + the sealed-then-extended re-seal (continuity holds, seal 2 pins the new head, references seal 1). 31 tests total. Twice-green: py **1441** ×2. |
 
 Status legend: ⬜ pending · 🟡 in progress / awaiting review · ✅ done (twice-green) · ⛔ blocked.
+
+## 12. Remaining operational wiring (honest boundary — not hidden)
+
+The seal **cycle** (`run_seal_cycle`) is implemented, composed, and tested; the **periodic
+scheduler** that fires it every `seal_interval_s` is **not** wired. This is deliberate and honest:
+under the default `seal_provider="none"` the cycle is a no-op (the NoOp provider mints nothing), so
+there is nothing to schedule until a real TSA is provisioned. When one is (config `rfc3161` +
+`seal_tsa_url` + pinned `seal_tsa_cert`), the remaining step is a thin off-chrono runner — a FastAPI
+lifespan background task or a systemd/cron timer calling `run_seal_cycle()` every τ, exactly as the
+collector's Prometheus exporter runs off-chrono. Verified end-to-end on the live forked
+`tessera_local` (17 670 rows, 29 forks, attested): with no provider configured the TE-01 badge
+computes to **`integrite_partielle`** (`seal_state=absent`), never `scelle_*` — the honest state.
