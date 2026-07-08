@@ -231,3 +231,32 @@ agents:
           unit: ratio
           aggregation: mean
           dimensions: [agent, time]
+
+  # ── ADR 0017 §F — the second-runtime acceptance agent ────────────────────────
+  # An out-of-process OTLP agent (examples/hello-agent/) with ZERO tessera import. Its
+  # AgentSpec is the only onboarding artifact besides the process + generic config; the
+  # cockpit awards L1 from real facts — the declared observable contract (below) AND the
+  # Prometheus turn counter it emits (ADR 0017 §F turn-evidence). No scorer / capabilities /
+  # business_signals: it runs no scored business workflow. No eval set → ungoverned → the L1
+  # rung. The level is COMPUTED, never tuned.
+  - id: hello-agent
+    name: "Hello Agent"
+    description: "Second-runtime proof (ADR 0017 §F): out-of-process, pure OTLP, zero tessera import."
+    owner: "Platform"
+    default_language: en
+    audience: operator
+    # Supervised from the operator console (cockpit-embedded). NOT on dedicated-ui: it is a
+    # telemetry-only demo, not a routable collections chat core — keeping it off dedicated-ui
+    # preserves recouvrement as the sole business-console agent.
+    surface: [cockpit-embedded]
+    auth: operator-rbac
+    tags: [demo, second-runtime]
+    handoff:
+      to: []
+      from: []
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [turns]
+      workflows:
+        - workflow_id: hello_v1
+          grammar: workflow_grammar.v1
