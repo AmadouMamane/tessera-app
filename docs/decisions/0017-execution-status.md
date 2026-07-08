@@ -59,6 +59,47 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Lot 6c review: APPROVED — step-6 MERGE FEU VERT.** Verified: `blocked_by`
+  machine-readable driving truthful labels (+ the sibling lie found and fixed:
+  Release-Control tallied level-blocked agents under "Prêts à promouvoir"),
+  `require_bearer` 1→7 on the routes file (all business reads at snapshot posture,
+  /security-review clean), `evidence_source="business_events"` at the descriptor.
+  **Notable discovery, logged as the LAST big perf debt: the FE has NO snapshot client
+  at all** — the 0015 batched endpoint is unconsumed; the backend fold makes the fan-out
+  foldable, the FE client slice (collapse the historic 24-37 queries → 1) is owed as its
+  own slice. Merge protocol: twice-green on merged tree, ledger union, push. Then
+  **step 7** — `examples/hello-agent` (decides the open question), pure OTLP, zero
+  tessera imports, AgentSpec entry + config-only wiring (counted in TTO), acceptance =
+  fleet card with computed L1 + **zero-line cockpit diff** + TTO chrono vs the ≤½-day
+  target, recorded here and in ADR 0017.
+
+- 2026-07-08 — **Lot 6b review: APPROVED — GO 6c, 2 requirements ride along.** Verified:
+  `resolve_observability_level` single-source (business_capabilities → lifecycle/release),
+  `REQUIRED_TURN_SPAN_ATTRIBUTES` homed in semconv (control plane reuses the L1 contract
+  without importing the SDK — testkit re-exports). Review answers to the 3 flagged
+  points: (1) coverage-from-business-event-Scope accepted as the honest available proxy,
+  **REQUIRED: the user-facing label/description must state the evidence source**
+  (« couverture Scope — événements métier »), never imply span coverage; future widening
+  to span stores (Phoenix/Langfuse reads) logged as optional; (2) canary
+  declared-not-faked accepted — the scheduled synthetic execution is a named runtime
+  piece for later; (3) **REQUIRED: the blocked-state label must not say "eval-gate" when
+  an L-level condition blocks** — specialize or genericize (« Bloqué » + reason), same
+  honest-label rule as everywhere. 6c = auth + snapshot fold, with a /security-review
+  pass on the auth diff.
+
+- 2026-07-08 — **Lot 6a review: APPROVED — GO 6b.** Verified on pieces:
+  `_FROZEN_EXCEPTIONS = frozenset()` (ratchet 5→0, bidirectional guard intact),
+  `spine/runtime.py` = pure Protocol port (zero runtime imports; agent adapter installs
+  at `build_app`, honest-empty on cockpit-only deploy), SDK at `agent/sdk/` with testkit
+  (span-contract 103 + grammar-conformance 104) and generate-and-diff enum codegen
+  (0018-C). Decisions: **push the branch** (backup, not merge); no separate code-review
+  pass for 6a (targeted review + twice-green suffice — /security-review reserved for 6c,
+  which touches auth); **ADR 0017 erratum** (the §7-area claim that `instrument.py`
+  imports langgraph is inaccurate — only `graph_topology` did) = one-line doc fix riding
+  6b; **owed slice logged**: FE drawer-task/artifact-family enums stay hand-owned until
+  the manifest declares the domain aliasing (then codegen absorbs them). Base 40dadade
+  acknowledged (strict superset of ac18d8bc — the dev-tooling commits).
+
 - 2026-07-08 — **Reference-server migration after the park-under-live-server break.** The
   step-4 closure parked `agents/codex` while its dev servers (front `:3097`, back `:8099`)
   were **live** → the worktree reverted under the running Next watcher and
