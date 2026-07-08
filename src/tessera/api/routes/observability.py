@@ -302,7 +302,7 @@ async def observability_scores(at: str | None = None, agent: str = "all") -> dic
     return {"scores": _scores_for(at, _agent_or_none(agent)), "as_of": at, "agent": agent}
 
 
-@router.get("/observability/business-events")
+@router.get("/observability/business-events", dependencies=[Depends(require_bearer)])
 async def observability_business_events(
     at: str | None = None,
     agent: str = "all",
@@ -344,7 +344,7 @@ async def observability_business_events(
     }
 
 
-@router.get("/observability/business/capabilities")
+@router.get("/observability/business/capabilities", dependencies=[Depends(require_bearer)])
 async def observability_business_capabilities(
     at: str | None = None,
     agent: str = "all",
@@ -596,7 +596,7 @@ def _business_runs_response(
     }
 
 
-@router.get("/observability/business/runs")
+@router.get("/observability/business/runs", dependencies=[Depends(require_bearer)])
 async def observability_business_runs(
     at: str | None = None,
     agent: str = "all",
@@ -1309,7 +1309,7 @@ async def observability_guardrail_catalogue(
         return {"available": False}
 
 
-@router.get("/observability/quality-nets")
+@router.get("/observability/quality-nets", dependencies=[Depends(require_bearer)])
 async def observability_quality_nets(agent: str) -> dict[str, object]:
     """Manifest-generated quality nets for one agent (ADR 0017 §4).
 
