@@ -59,6 +59,21 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **ADR 0019 I1+I4 review: APPROVED — MERGE FEU VERT.** Verified:
+  `synthetic_turn()` ContextVar entered around `graph.ainvoke` (structural,
+  medium-independent stamping); `canary_cadence_s ⇒ in_process_chat` enforced at
+  manifest load; boundary ratchet still `frozenset()` (the invoker is agent-side — the
+  runtime executing its own turn — never a control-plane import). **Ratified
+  consumer-depth refinement, recorded so I2 inherits no confusion: the CANARY consumer
+  drives the graph seam (`compile_graph().ainvoke`, the eval-harness entry — canaries
+  are eval-family; avoids transcript pollution and any I2 overlap), while the CONSOLE
+  consumer (I2, still deferred) will use the real `/chat` seam for interactive parity —
+  one declared binding, two entry depths per consumer.** Owed follow-up tracked (opus's
+  own flag): a synthetic column on the CH business-events read when its bake completes.
+  Post-merge operator moment: flip `TESSERA_OBS_CANARY_SCHEDULER_ENABLED`, watch the
+  hourly synthetic recouvrement turn fire, its S1 land, and the Métier tab stay clean.
+  Hica closed same day (main c6aa3823, boot posture confirmed live by the operator).
+
 - 2026-07-08 — **Hica seal final review: APPROVED — ruling (b): wire the minimal
   off-chrono scheduler, THEN merge.** Verified on pieces: `NoOpProvider` structurally
   cannot mint (honesty invariant in the type, not a convention); the etat_a_date
