@@ -38,6 +38,10 @@ export function useShellChrome(): ShellChromeValue {
   return ctx;
 }
 
+export function useOptionalShellChrome(): ShellChromeValue | null {
+  return useContext(ShellChromeContext);
+}
+
 export function ShellChrome({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [focus, setFocus] = useState(false);

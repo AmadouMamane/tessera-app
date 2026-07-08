@@ -996,6 +996,8 @@
     "signOut": "Sign out",
     "auditorMode": "Auditor mode",
     "signedInAs": "Signed in · {role}",
+    "changeAccount": "Switch account",
+    "menuLabel": "User menu · {role}",
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
@@ -7695,6 +7697,34 @@
     "integrityForkedPending": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} other {, # orphaned}} (attestation pending)",
     "env": "on-prem · EU residency · SOC 2",
     "note": "Status assigned only after successful verification."
+  },
+  "systemStatus": {
+    "triggerLabel": "System status",
+    "title": "System posture",
+    "environment": "Environment",
+    "model": "Model",
+    "residence": "Residency",
+    "ledger": "Ledger integrity",
+    "unknown": "Unavailable",
+    "residenceValue": "On-prem · EU",
+    "environmentValue": {
+      "production": "Prod",
+      "staging": "Staging",
+      "ci": "CI",
+      "local": "Local"
+    }
+  },
+  "commandSearch": {
+    "placeholder": "Search…",
+    "shortcut": "⌘K",
+    "scope": {
+      "cockpit": "Search agents, cases and signals",
+      "business": "Search cases and clients"
+    }
+  },
+  "demoBadge": {
+    "label": "Demo",
+    "ariaLabel": "Open the demo launcher"
   },
   "signalHero": {
     "title": "Breached signal (SLO)",

@@ -59,6 +59,26 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Headers H1 review: APPROUVÉ — GO H2.** Claude review accepts the H1
+  foundation diff: shared `SystemStatusPill`, `CommandSearch`, `UserMenu`, `DemoBadge`,
+  tree-aware ledger wording shared with the footer, fr/en/de labels and contract tests.
+  Non-blocking note recorded: `residenceValue` remains message-backed for now; it becomes
+  config-driven when multi-deployment is real. Next: commit H1, then H2 cockpit refonte with
+  visual checkpoint before continuing.
+
+- 2026-07-08 — **Header premium H1 checkpoint ready for Claude review** on
+  `codex/headers-refonte` (base `main` = `5ece2ae0`). Scope deliberately limited to shared
+  shell/header foundations, no business logic/store/API route: `SystemStatusPill`
+  (health + model + residence + ledger popover), `CommandSearch` (plan-scoped button-input +
+  shortcut seam), `UserMenu` (avatar/role + account switch via `/login`, sign-out, language,
+  theme; no client-side role toggle), `DemoBadge` (single floating demo pattern), plus fr/en/de
+  i18n and component contract tests. The footer keeps the incident-era static posture and now
+  shares the same tree-aware ledger wording helper as the status popover. **Twice-green on H1:**
+  backend `ruff` / `ruff format --check` / `mypy src/tessera` / `pytest -m "not integration"`
+  (`1410 passed, 50 deselected`) ×2; frontend `tsc --noEmit` / `biome check .` (27-warning
+  existing baseline, no new findings) / `vitest run` (`86 passed`) ×2. **HALT:** H1 diff awaits
+  Claude review before any H2 visual cockpit work.
+
 - 2026-07-08 — **step 7 CLOSED → merged to `main` (`88b00fb9`), pushed. ADR 0017 COMPLETE.**
   `claude/step-7-tto` merged `--no-ff` on the operator's final feu vert; the only conflict was
   this ledger, resolved by **union** (final-review approval + all executor step-7 entries kept).

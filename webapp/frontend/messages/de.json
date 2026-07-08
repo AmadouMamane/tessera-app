@@ -996,6 +996,8 @@
     "signOut": "Abmelden",
     "auditorMode": "Auditor-Modus",
     "signedInAs": "Angemeldet · {role}",
+    "changeAccount": "Konto wechseln",
+    "menuLabel": "Benutzermenü · {role}",
     "roles": {
       "admin": "Administrator",
       "auditor": "Auditor",
@@ -7695,6 +7697,34 @@
     "integrityForkedPending": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} other {, # verwaist}} (Attestierung ausstehend)",
     "env": "Vor Ort · EU-Residenz · SOC 2",
     "note": "Status erst nach erfolgreicher Prüfung vergeben."
+  },
+  "systemStatus": {
+    "triggerLabel": "Systemstatus",
+    "title": "Systemhaltung",
+    "environment": "Umgebung",
+    "model": "Modell",
+    "residence": "Residenz",
+    "ledger": "Ledger-Integrität",
+    "unknown": "Nicht verfügbar",
+    "residenceValue": "Vor Ort · EU",
+    "environmentValue": {
+      "production": "Prod",
+      "staging": "Staging",
+      "ci": "CI",
+      "local": "Lokal"
+    }
+  },
+  "commandSearch": {
+    "placeholder": "Suchen…",
+    "shortcut": "⌘K",
+    "scope": {
+      "cockpit": "Agenten, Fälle und Signale suchen",
+      "business": "Fälle und Kunden suchen"
+    }
+  },
+  "demoBadge": {
+    "label": "Demo",
+    "ariaLabel": "Demo-Launcher öffnen"
   },
   "signalHero": {
     "title": "Verletztes Signal (SLO)",
