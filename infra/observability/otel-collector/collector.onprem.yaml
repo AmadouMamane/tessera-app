@@ -44,6 +44,16 @@ exporters:
     endpoint: http://langfuse-web:3000/api/public/otel
     headers:
       Authorization: "Basic ${env:LANGFUSE_OTEL_BASIC_AUTH}"
+  # Remote-profile metrics fan-out (ADR 0017 §7 / §F — the platform completion). Any agent
+  # in another process or language emits OTLP metrics here; this exposes them on a scrape
+  # endpoint Prometheus reads, so `tessera_agent_turns_total{agent_id=…}` — the L1
+  # turn-evidence fact the cockpit resolves — reaches the spine with no cockpit import.
+  # resource→label conversion so an agent_id carried as a resource attribute still lands
+  # as a Prometheus label.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
 
 service:
   telemetry:
@@ -54,3 +64,9 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, redaction, batch]
       exporters: [debug, otlphttp/phoenix, otlphttp/langfuse]
+    # Metrics ride the same OTLP wire. No redaction: metrics are low-cardinality Scope-dim
+    # labels, PII-free by construction (metrics.py: never a per-case/conversation label).
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug, prometheus]

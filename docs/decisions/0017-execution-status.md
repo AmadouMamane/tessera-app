@@ -25,7 +25,7 @@ updates this file after every step. A resuming session reads this first, then co
 | 4 | 0017-C + A2.2 + 0018-B: Métier tab (per-capability table primary, runs drill-down), fleet north-star chip, À traiter source, Conformité projection; canonical artifact lifecycle mapping; delete the hardcoded tab | [supervised] | ✅ done | ebe15a90…d0699d97 · pnpm c165be72 · merge 844fa775 | Lot 0 committed after checkpoint-1 review fixes. Lot 1 (onglet Métier) implemented and twice-green with real recouvrement data; checkpoint 2 reached with captures. Lot 1.5 completed the substance fix plus the P0-bis/P0/P1/P2 punch list on real data. Lot 2 delivered Flotte north-star/pending count, À traiter business-event source, Conformité legal projection, `page: metier`, and emitter fixes for action artifact/effect flags. **Lot 2 code-review carry-overs** landed: (1) emitter-completeness pinning tests; (2) BR-01 §5 on the Métier tab (URL-derived capability/run deep-link, temporal-mode badge Live→As-of, global as-of propagated to business reads). **Lot 3 dissolution** implemented + committed (recouvrement dashboard tab / shim / `fetchRecouvrementRuns` / `/observability/recouvrement-runs` all removed; tests migrated to the generic business-runs read). Each item twice-green + targeted commit + ledger. Checkpoint-3 captures validated by Amadou; checkpoint-4 merge feu vert given → **merged to main (`844fa775`) after full gate twice-green on the merged tree.** See the step-4 closure Log entry. |
 | 5 | 0017-D: owned ClickHouse `business_events` table; dual-write → backfill → shadow parity → flip `BusinessEventStore`; erasure probe | [auto] | ✅ done | `f95b6cb` | Mirrors the §Correction 2b owned score store. Table `tessera.business_events` (§5 DDL: MergeTree + `toYYYYMM(occurred_at)` + 6-month TTL; `node_name` carried beyond the §5 columns for run-timeline read parity) via `ensure_business_events_schema`; scoped/as-of read (`ClickHouseAdapter.business_events`, rebuilt to `to_row` shape) + `delete_business_events` (count-then-DELETE, bound params). **Dual-write** = `clickhouse_business_events` (best-effort daemon-thread insert, JSONEachRow line + dedup key, gated `TESSERA_CLICKHOUSE_BUSINESS_EVENTS`) hooked into `record_business_event`. **Flip** = `business_events` is now a flippable fact (default `jsonl` — mid-migration, unlike G5's scores/gating); reads route via `_read_store()` in-process→`ClickHouseBusinessEventStore` (spine)→`_ShadowBusinessEventStore` (shadow parity: serve in-process, compare owned, log divergence); source badge resolves at read time (`fact="business_events"`). **Backfill** = `scripts/backfill_owned_business_events.py` from replay bundles + in-process seed (idempotent). **Erasure (G4)** = `purge_owned_business_events` folded into `purge_telemetry`; `ErasureFootprint` gains the business-events leg (deferred-never-faked). **Live-verified** on `tessera-claude-clickhouse:18123`: integration contract (4) + end-to-end emit→dual-write→flipped-read(full fidelity)→erasure all green. Unit suite hermetic (dual-write off in conftest). Twice-green: ruff/format/pytest 1338+4int/tsc/vitest 69. **A2.1 actor** already landed step 3. **Not done here (Phase C, step 4):** the actual prod read flip is a config action (`TESSERA_SPINE_SOURCE_BUSINESS_EVENTS=spine`) after shadow bake — the mechanism ships flipped-off. Same inherited `replay.py:92` mypy debt → **main merge still withheld**. |
 | 6 | 0017-E + A2.4 + 0018-C/D: SDK extraction (instrument/graph_topology), span-contract + grammar-conformance suites, canaries + coverage per agent, enum codegen from capabilities, testkit; L-level → release-gate condition | [auto] | ✅ done | 6a `baff0231`→`9126c3de` · 6b `301eee8a`→`a6633cf4` · 6c `7f80682d`→`a3d19604` | **6a+6b+6c shipped** (step 6 closed): ratchet 5→0 (SDK), testkit 103/104, enum codegen 0018-C; A2.4 L-level release gate (prod⇒L2, external⇒L3), canaries 94 + coverage 92 from the manifest. **6c**: `require_bearer` on the 4 business read routes (snapshot posture; `/security-review` clean — strict tightening); business_capabilities folded into the batched snapshot as a p95-safe probe (one-source parity); Point 1 (coverage names its source — no FE lie, no consumer) + Point 3 (honest block label: eval-gate vs observability level, level-aware summary) — see Log. Branch off main `40dadade`; pushed to origin (backup). **Not merged to main** — merge is a separate operator-gated action (twice-green-on-merged-tree + feu vert, per step 4). gate: recouvrement passes L1–L3 |
-| 7 | 0017-F: out-of-process demo agent (pure OTLP, no LangGraph) reaches L1 with a **zero-line cockpit diff**; TTO measured and recorded here | [auto] | ⬜ pending | — | the architecture's acceptance test |
+| 7 | 0017-F: out-of-process demo agent (pure OTLP, no LangGraph) reaches L1 with a **zero-line cockpit diff**; TTO measured and recorded here | [auto] | ✅ done | Lot0 `1e71f9c6` · platform `58d8b720`→`639b6403` · hello-agent (this branch) | **ADR 0017 COMPLETE.** Branch `claude/step-7-tto` off merged main `b3273e20`. Off-chrono: Lot 0 (support-client/onboarding telemetry-only manifests → computed L2/L2) + platform completion (L1 evidence-backed via Prometheus turn-count read + collector prometheus-exporter). Chrono'd: `examples/hello-agent/` (pure OTLP, zero tessera import) → fleet card **L1 computed from real `tessera_agent_turns_total`**, span-contract testkit green, **zero AGENT-SPECIFIC cockpit diff** (webapp empty; observability generic). **TTO = 20m18s** (≪ ½-day target). ADR Status → accepted — implementation complete. **HALT: final Claude review before merge to main.** |
 
 ## Coordination register (parallel workstreams — sole-writer rule)
 
@@ -75,6 +75,77 @@ updates this file after every step. A resuming session reads this first, then co
   distinguish "no recent evidence" from "not conformant"** (e.g. « L1 déclaré · aucune
   preuve récente ») — a display-honesty nuance in the same family as the tree-aware
   integrity badge.
+
+- 2026-07-08 — **step 7 DONE → ADR 0017 COMPLETE (TTO measured).** The architecture's
+  acceptance test passed. **hello-agent** (`examples/hello-agent/`) is an out-of-process,
+  **zero-`tessera`-import** agent: pure OTLP turn spans (the full L1 Scope-dim contract) + a
+  turn counter, to the collector. Onboarding it (on the completed platform) = a manifest entry
+  in `agents.yaml` + the process + the test-list update — nothing in `observability/` or
+  `webapp/`. **End-to-end verified LIVE:** hello-agent → collector (new metrics pipeline) →
+  Prometheus (`sum by (agent_id)(tessera_agent_turns_total)` = hello-agent:15) → the cockpit
+  resolver (flag on) reads that real fact → **fleet card L1** (`compute_fleet` → hello-agent
+  `level=L1`; the other agents honestly L0 — evidence-strict, they haven't emitted through this
+  Prometheus). **Acceptance (a) fleet L1 from real facts ✓ (b) span-contract testkit green
+  (`test_hello_agent.py`, +drift guard) ✓ (c) zero AGENT-SPECIFIC diff — `webapp/` ZERO,
+  `observability/` generic, 0 hardcoded `hello-agent` ✓ (d) TTO chrono.** ⏱ **TTO = 20m18s**
+  (start 08:38:12Z scaffold → stop 08:58:30Z L1 green) vs the §Governing-rule target **L1 ≤ ½
+  day** — **~12× under**. Onboarding friction that (honestly) counted toward the TTO: a 4th agent
+  tripped 4 existing L2-era assumptions (guardrails catalogue count; every-agent-binds-an-eval-set
+  ×2; the dedicated-ui routable pool) — fixed truthfully (eval-less L1 agents exempted; hello-agent
+  moved off dedicated-ui to cockpit-embedded so it is not a routable chat core; catalogue count
+  updated). **Twice-green backend (1410)** + FE tsc clean (no webapp delta). ADR 0017 §Phase-F
+  precision + Status → **accepted — implementation complete (TTO 20m18s)**. **HALT: final Claude
+  review before merge to main** (per operator instruction).
+
+- 2026-07-08 — **Step-7 evidence-path ruling CORRECTED: Prometheus turn-count read
+  (option 2), superseding the review's earlier Langfuse preference.** Reason: since A2.4
+  the L level is a **release-gating input**, and the governing rule (0015 Amendment 1)
+  forbids gating facts from reading best-effort third-party stores — a Langfuse-backed
+  level would recreate the exact coupling the score demotion eradicated. Prometheus is
+  the canonical home for counts, the `spine/adapters/prometheus.py` seam exists,
+  `AGENT_TURNS_TOTAL{agent_id,…}` already flows for in-process agents → **the same read
+  makes EVERY agent's L1 evidence-backed uniformly** (incl. this morning's minimal
+  specs), honest-empty when Prometheus is unreachable. Platform completion = resolver
+  reads turn evidence via the Prometheus adapter + collector prometheus-exporter config
+  for OTLP metrics (off-chrono, labelled commits). Option 3 rejected: a manifest-only L1
+  badge is asserted, not computed (§4 violation). Credit: the executor's fork-surfacing
+  caught the reviewer's inconsistency — the design gate worked in both directions.
+
+- 2026-07-08 — **step 7 Lot 0 done (OFF-CHRONO): support-client + onboarding declare
+  telemetry-only manifests.** The two Q&A agents get an AgentSpec `observability` block —
+  `telemetry_capabilities: [graph_topology, tools]` (what they really emit) + a scorer-less
+  conversation workflow bound to `workflow_grammar.v1`, and NO business capabilities /
+  policies / business_signals (they run no scored business workflow — "sans workflow" here =
+  *sans workflow scoré*, the reading that makes the instruction self-consistent since the
+  resolver requires a workflow binding for L1). The level is **COMPUTED, never tuned**: both
+  fall out as **L2** because they are genuinely governed (their eval-gating socles ran) —
+  `resolve_observability_level` → support-client L2, onboarding L2, recouvrement L3.
+  Off-chrono by design: the existing agents' specs are not part of hello-agent's onboarding
+  cost (counting them would falsify the TTO). Tests: the un-manifested-level assertions
+  rehomed to a synthetic `observability=None` agent (every registry agent now has a
+  manifest); a new test pins the telemetry-only outcome (manifest → L1 ungoverned / L2
+  governed, no business_signals). Twice-green backend (1403); **no webapp / no
+  `src/tessera/observability/` change**. Branch `claude/step-7-tto` off merged main
+  `b3273e20`. Next: the OFF-CHRONO platform completion (per the ruling below), then the
+  chrono'd hello-agent onboarding.
+
+- 2026-07-08 — **Step-7 design-gate ruling (pre-authorized by the review, so the run need
+  not halt again).** The pivotal unknown (what cockpit-readable fact L1 reads, and whether
+  an OTLP-only agent can produce it) will likely surface a REAL platform gap: the §7
+  remote-profile ingestion (span-events → stores the resolver reads) was named by the ADR
+  but never built by any step. Ruling: (1) **generic platform completions are ALLOWED and
+  OFF-CHRONO** — they are the platform finishing its own remote profile, a one-time
+  capital cost, recorded as clearly-labelled "platform completion" commits (preferred
+  path: the level resolver gains a turn-evidence read through the EXISTING
+  `spine/adapters/langfuse.py` seam — traces are already the canonical turn-detail home
+  per 0015; metrics via collector prometheus-exporter config). (2) **What stays forbidden
+  and breaks acceptance: any agent-SPECIFIC control-plane code** (no `if agent_id ==
+  "hello-agent"` anywhere). (3) The acceptance criterion is refined accordingly — **zero
+  AGENT-SPECIFIC cockpit diff**; the TTO chrono measures hello-agent's MARGINAL onboarding
+  on the completed platform. (4) This refinement is recorded in ADR 0017 at step-7 closure
+  (a §Phase-F precision), with the platform-completion commits listed — the honest
+  accounting: the FIRST external agent flushes out one-time gaps; the SECOND one is the
+  true zero-diff proof, noted as the standing acceptance property.
 
 - 2026-07-08 — **Lot 6c review: APPROVED — step-6 MERGE FEU VERT.** Verified: `blocked_by`
   machine-readable driving truthful labels (+ the sibling lie found and fixed:

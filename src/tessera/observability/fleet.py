@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 from psycopg.rows import dict_row
 
 from tessera.guard.ledger_store import read_ledger_entries
+from tessera.observability import turn_evidence
 from tessera.observability.agent_release import fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total
 from tessera.observability.agentspec_projection import observability_level
@@ -154,6 +155,10 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     incoming, outgoing = _handoff_counts(get_settings().guard.audit_file)
     releases = fleet_release_states(lang)
     records = _agent_records()
+    # One Prometheus read for the whole fleet: which agents the cockpit has OBSERVED
+    # emitting turns (ADR 0017 §F). ``None`` = evidence disabled/unreachable → the level
+    # trusts each agent's declared contract (never demotes on an absent metrics store).
+    observed_turns = turn_evidence.agents_with_turn_evidence()
 
     # Registry first (every agent appears), enriched with its real slice.
     agents: list[dict[str, Any]] = []
@@ -169,7 +174,15 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
         # L2 (Governed) requires the eval/guard facts to be VISIBLE — a real gating socle
         # actually ran (ADR 0017 §4). The level is computed from this fact, never asserted.
         governed = rel is not None and rel.available and rel.socle_total > 0
-        level = observability_level(record, governed=governed) if record is not None else None
+        level = (
+            observability_level(
+                record,
+                governed=governed,
+                has_turn_evidence=turn_evidence.has_turn_evidence(aid, observed_turns),
+            )
+            if record is not None
+            else None
+        )
         business_facts = _business_card_facts(aid, record)
         agents.append(
             {

@@ -28,6 +28,15 @@ scrape_configs:
         labels:
           service: otel-collector
 
+  # Remote-profile agent metrics re-exposed by the collector's prometheus exporter (:8889,
+  # ADR 0017 §F). Distinct from :8888 (collector-internal telemetry): this carries the
+  # agents' own tessera_* metrics — the turn-evidence the cockpit reads to award L1.
+  - job_name: remote-agent-metrics
+    static_configs:
+      - targets: ["tessera-claude-collector:8889"]
+        labels:
+          service: remote-agent-metrics
+
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]

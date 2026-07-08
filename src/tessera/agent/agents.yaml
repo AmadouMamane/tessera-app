@@ -35,6 +35,17 @@ agents:
     handoff:
       to: [onboarding]
       from: [onboarding]
+    # AgentSpec observability block (ADR 0017 §3 · step 7 Lot 0). Telemetry-only Q&A agent:
+    # it emits turn spans (graph_topology) + tool spans and runs a conversation workflow
+    # mapped onto the grammar, but declares NO scored business workflow — no scorer,
+    # capabilities or business_signals (those belong to workflow agents like recouvrement).
+    # The level is COMPUTED, never tuned: L1 ungoverned, L2 once its eval-gating socle ran.
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [graph_topology, tools]
+      workflows:
+        - workflow_id: support_conversation_v1
+          grammar: workflow_grammar.v1
 
   - id: onboarding
     name: "Onboarding"
@@ -54,6 +65,15 @@ agents:
     handoff:
       to: [support-client]
       from: [support-client]
+    # AgentSpec observability block (ADR 0017 §3 · step 7 Lot 0) — same telemetry-only shape
+    # as support-client: turn + tool spans, a conversation workflow on the grammar, no scored
+    # business workflow. Level computed, never tuned.
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [graph_topology, tools]
+      workflows:
+        - workflow_id: onboarding_conversation_v1
+          grammar: workflow_grammar.v1
 
   - id: recouvrement
     name: "Recouvrement"
@@ -211,3 +231,32 @@ agents:
           unit: ratio
           aggregation: mean
           dimensions: [agent, time]
+
+  # ── ADR 0017 §F — the second-runtime acceptance agent ────────────────────────
+  # An out-of-process OTLP agent (examples/hello-agent/) with ZERO tessera import. Its
+  # AgentSpec is the only onboarding artifact besides the process + generic config; the
+  # cockpit awards L1 from real facts — the declared observable contract (below) AND the
+  # Prometheus turn counter it emits (ADR 0017 §F turn-evidence). No scorer / capabilities /
+  # business_signals: it runs no scored business workflow. No eval set → ungoverned → the L1
+  # rung. The level is COMPUTED, never tuned.
+  - id: hello-agent
+    name: "Hello Agent"
+    description: "Second-runtime proof (ADR 0017 §F): out-of-process, pure OTLP, zero tessera import."
+    owner: "Platform"
+    default_language: en
+    audience: operator
+    # Supervised from the operator console (cockpit-embedded). NOT on dedicated-ui: it is a
+    # telemetry-only demo, not a routable collections chat core — keeping it off dedicated-ui
+    # preserves recouvrement as the sole business-console agent.
+    surface: [cockpit-embedded]
+    auth: operator-rbac
+    tags: [demo, second-runtime]
+    handoff:
+      to: []
+      from: []
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [turns]
+      workflows:
+        - workflow_id: hello_v1
+          grammar: workflow_grammar.v1

@@ -59,6 +59,8 @@ def test_gate_is_a_valid_release_bar() -> None:
 
 def test_every_agent_binds_a_loadable_set() -> None:
     for agent in list_agents():
+        if not agent.eval_set:
+            continue  # an ungoverned L1 agent (hello-agent, ADR 0017 §F) binds no eval set
         eval_set = load_eval_set(agent.eval_set)
         # The manifest's agent_id, when set, agrees with the binding agent.
         if eval_set.agent_id:
@@ -88,6 +90,8 @@ def test_critical_cases_exist_and_are_marked() -> None:
 def test_floor_is_injected_into_every_agent_set() -> None:
     floor = set(load_security_floor().case_ids)
     for agent in list_agents():
+        if not agent.eval_set:
+            continue  # no eval set → no floor injection (eval-gating is L2, not L1)
         effective = set(resolve_case_ids(agent.eval_set))
         assert floor <= effective, f"{agent.eval_set} is missing floor cases"
 
