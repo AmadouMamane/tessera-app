@@ -1,8 +1,8 @@
 # 0019 — Invocation binding: the declared cockpit→agent seam
 
-- Status: **accepted** (decision 2026-07-08) — **implementation deferred**; the priority
-  trigger is the first http-invocable external agent OR the canary scheduler, whichever
-  comes first (see §Implementation trigger)
+- Status: **accepted** (decision 2026-07-08) — **I1 + I4 implemented** (2026-07-08, the
+  canary-scheduler trigger fired: `80a83753`, `9c02e35f`); **I2 + I3 deferred**. Progress:
+  `docs/decisions/0019-execution-status.md`
 - Date: 2026-07-08
 - Deciders: Tessera maintainers
 - Related: 0008 (audience/surface/auth), 0010 (operator assertion — Phase B mechanism),
@@ -140,15 +140,18 @@ by the closed consumer list, mandatory operator assertion, and audit-on-every-ca
 Priority rises with the first http-invocable external agent OR the canary scheduler —
 whichever is wanted first.
 
-- **I1** — `invocation` block in the AgentSpec (schema + validation; `none` default);
-  native agents declare `in_process_chat`. No behaviour change.
-- **I2** — Console generation for `in_process_chat` (parity with today's console,
+- **I1 — ✅ done (`80a83753`).** `invocation` block in the AgentSpec (schema + validation;
+  `none` default); native agents declare `in_process_chat`. No behaviour change.
+- **I2 — deferred.** Console generation for `in_process_chat` (parity with today's console,
   rendered from declarations); honest-empty for `none`.
-- **I3** — `http` binding: the invoker (assertion forwarding, timeout, audit event) +
-  the first invocable external agent; conformance test in the SDK testkit (an agent
-  declaring `http` must speak the turn contract).
-- **I4** — Canary scheduler on the binding (cadence from the manifest, synthetic
-  stamping, freshness feeding the existing canary descriptor).
+- **I3 — deferred.** `http` binding: the invoker (assertion forwarding, timeout, audit event)
+  + the first invocable external agent; conformance test in the SDK testkit (an agent
+  declaring `http` must speak the turn contract). I1 models the `http` *schema*; the invoker
+  is not built.
+- **I4 — ✅ done (`9c02e35f`).** Canary scheduler on the binding (cadence from the manifest via
+  `invocation.canary_cadence_s`, synthetic stamping excluded from business metrics, one S1 event
+  per invocation, freshness feeding the existing canary descriptor's `synthetic_run` facet).
+  Off-chrono runner mirroring the Hica seal; idle until `TESSERA_OBS_CANARY_SCHEDULER_ENABLED`.
 
 ## Open questions
 
