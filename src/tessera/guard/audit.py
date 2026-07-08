@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from tessera.agent.state import GuardDecisionRecord
 
 __all__ = [
+    "AGENT_INVOCATION_TYPE",
     "AGENT_LIFECYCLE_PHASES",
     "CANARY_INVOCATION_TYPE",
     "LEDGER_ATTESTATION_TYPE",
@@ -41,6 +42,7 @@ __all__ = [
     "build_ledger_seal_entry",
     "current_auth_state",
     "current_model",
+    "emit_agent_invocation",
     "emit_agent_lifecycle",
     "emit_agent_proposed",
     "emit_audit",
@@ -72,6 +74,12 @@ LEDGER_SEAL_TYPE = "tessera.ledger.seal"
 # A test is an action on a governed system, and the ledger is where actions live; the same entry
 # is the durable freshness record the canary descriptor reads (no second store).
 CANARY_INVOCATION_TYPE = "tessera.agent.canary"
+
+# ADR 0019 §I3/§4 — the operator-driven counterpart of the canary event: one S1 entry per Console
+# (or other declared-consumer) invocation over the http binding, recording WHO tested (the operator
+# principal from the verified assertion, never "system"), which agent, the binding, and the verdict.
+# Stamped ``synthetic`` like the canary — a test turn can never pollute business metrics (§4).
+AGENT_INVOCATION_TYPE = "tessera.agent.invocation"
 
 _Outcome = Literal["allowed", "denied", "error"]
 _Sink = Literal["stdout", "file", "cloud_logging", "postgres"]
@@ -603,6 +611,54 @@ def emit_canary_invocation(
         "conversation_id": conversation_id,
         "turn_id": turn_id,
         "duration_ms": duration_ms,
+        "error": error,
+    }
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+def emit_agent_invocation(
+    *,
+    agent_id: str,
+    binding: str,
+    verdict: str,
+    actor: str,
+    conversation_id: str,
+    turn_id: str,
+    duration_ms: float | None = None,
+    status_code: int | None = None,
+    error: str | None = None,
+    sink: _Sink | None = None,
+) -> None:
+    """Emit one operator-driven cockpit→agent invocation into the S1 journal (ADR 0019 §I3/§4).
+
+    Every invocation over the http binding is a governed act: one entry per test turn records
+    WHO tested (``actor`` = the operator principal from the verified assertion — required, never
+    a system default), which agent, the binding, the verdict (``green`` / ``red``), the HTTP
+    status and the turn ids — hash-chained like every other S1 event and reconstructable in
+    État à date. ``synthetic: True`` is stamped so a reader can never mistake a test turn for a
+    real one, and the business surfaces exclude it by declaration (§4).
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    now = datetime.now(UTC).isoformat()
+    entry: dict[str, Any] = {
+        "type": AGENT_INVOCATION_TYPE,
+        "version": 1,
+        "occurred_at": now,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "agent_id": agent_id,
+        "actor": actor,
+        "binding": binding,
+        "verdict": verdict,
+        "synthetic": True,
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "duration_ms": duration_ms,
+        "status_code": status_code,
         "error": error,
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)

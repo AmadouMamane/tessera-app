@@ -284,3 +284,39 @@ agents:
       workflows:
         - workflow_id: hello_v1
           grammar: workflow_grammar.v1
+
+  # ── ADR 0019 §I3 — the first invocable external agent ─────────────────────────
+  # The counterpart to hello-agent: hello-agent proves the PUBLISH-ONLY contract
+  # (binding: none, pure OTLP, honest-empty console); turn-agent proves the INVOCABLE
+  # contract — it EXPOSES an HTTP /turn endpoint speaking the ADR 0018 turn contract, so
+  # the cockpit's HttpTurnInvoker can send it a turn under the declared `binding: http`.
+  # Out-of-process, zero tessera import (examples/turn-agent/). Reached only over the
+  # declared transport under a forwarded operator assertion — never a module import (the
+  # 0017 §1 boundary ratchet stands). Operator surface, cockpit-embedded, like hello-agent.
+  - id: turn-agent
+    name: "Turn Agent"
+    description: "Invocable second-runtime proof (ADR 0019 §I3): out-of-process HTTP turn endpoint, zero tessera import."
+    owner: "Platform"
+    default_language: en
+    audience: operator
+    surface: [cockpit-embedded]
+    auth: operator-rbac
+    tags: [demo, second-runtime, invocable]
+    handoff:
+      to: []
+      from: []
+    # AgentSpec invocation block (ADR 0019 §1 + §I3): the http binding. The agent EXPOSES the
+    # endpoint; the cockpit CONSUMES this declaration and forwards the signed operator assertion
+    # (0010 Phase B) to it — no anonymous invocation, ever. Endpoint is the dev target the example
+    # serves on; in a real deployment it is the agent's own reachable turn URL.
+    invocation:
+      binding: http
+      endpoint: http://127.0.0.1:8500/turn
+      timeout_ms: 8000
+      auth: operator-assertion
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [turns]
+      workflows:
+        - workflow_id: turn_v1
+          grammar: workflow_grammar.v1

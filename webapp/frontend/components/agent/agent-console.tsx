@@ -35,9 +35,11 @@ import {
   fetchAgentConsole,
   fetchConsoleFeedback,
   fetchSandboxConfig,
+  invokeAgentTurn,
   saveConsoleFeedback,
 } from "@/lib/api/client";
 import type {
+  AgentInvokeOutcome,
   ChatCitation,
   ChatDebug,
   ChatEndEvent,
@@ -359,6 +361,13 @@ export function AgentConsole() {
     return <ConsoleHonestEmpty empty={data.empty} title={data.title} subtitle={data.subtitle} />;
   }
 
+  // ADR 0019 §I3 — an http-binding agent is a foreign runtime invoked over its declared
+  // endpoint: a request/response test bench, not the in-process SSE console. Generated from
+  // the declaration, no per-agent code.
+  if (data.invocation?.binding === "http") {
+    return <HttpConsole data={data} agentId={agentId} />;
+  }
+
   const liveSession = conversationId
     ? `sess_${conversationId.slice(0, 8)}`
     : data.context?.session_id;
@@ -462,6 +471,146 @@ function ConsoleHonestEmpty({
           </p>
         </div>
       </div>
+      <AgentCrossLinks page="console" />
+    </div>
+  );
+}
+
+// ── http console (ADR 0019 §I3) ─────────────────────────────────────────────
+
+/** Request/response test bench for an http-binding agent: send a turn to the endpoint the
+ *  agent declares (through the audited, operator-authed invoke seam) and observe the
+ *  TurnResult. No streaming, no sandbox/debug tabs — a foreign runtime owns its own guard
+ *  and telemetry; this surface only proves the turn contract over the declared transport. */
+function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
+  const [message, setMessage] = useState("");
+  const [outcome, setOutcome] = useState<AgentInvokeOutcome | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const http = data.http_console;
+  const endpoint = data.invocation?.endpoint ?? null;
+  const invoke = useMutation({
+    mutationFn: (msg: string) => invokeAgentTurn(agentId, msg),
+    onSuccess: (o) => {
+      setOutcome(o);
+      setError(null);
+    },
+    onError: (e) => {
+      setError(e instanceof Error ? e.message : "invocation failed");
+      setOutcome(null);
+    },
+  });
+  const send = () => {
+    const msg = message.trim();
+    if (msg && !invoke.isPending) invoke.mutate(msg);
+  };
+  const reply =
+    outcome?.result && typeof outcome.result.visibleReply === "string"
+      ? (outcome.result.visibleReply as string)
+      : null;
+  const green = outcome?.verdict === "green";
+
+  return (
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <header className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-base font-semibold">{data.title}</h1>
+          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <Cpu className="h-3 w-3" aria-hidden /> HTTP
+          </span>
+          {endpoint ? (
+            <code className="rounded bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+              {endpoint}
+            </code>
+          ) : null}
+        </div>
+        <p className="max-w-2xl text-[0.8rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          {data.subtitle}
+        </p>
+      </header>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
+          }}
+          placeholder={http?.placeholder}
+          rows={3}
+          className="w-full resize-y rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-sm text-[var(--tessera-text)] outline-none focus:border-[var(--tessera-border-strong)]"
+        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={send}
+            disabled={invoke.isPending || !message.trim()}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          >
+            <SendHorizontal className="h-4 w-4" aria-hidden />
+            {http?.send_label}
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[0.8rem] text-red-300">
+          {error}
+        </p>
+      ) : null}
+
+      {outcome ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+          <div className="flex items-center gap-2 text-[0.8rem]">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.7rem] font-medium",
+                green ? BADGE_TONE.good : BADGE_TONE.crit,
+              )}
+            >
+              <span
+                className={cn("h-1.5 w-1.5 rounded-full", green ? "bg-emerald-400" : "bg-red-400")}
+              />
+              {green ? http?.verdict_ok : http?.verdict_failed}
+            </span>
+            {outcome.status_code != null ? (
+              <span className="text-[var(--tessera-text-muted)]">HTTP {outcome.status_code}</span>
+            ) : null}
+            <span className="text-[var(--tessera-text-muted)]">
+              {Math.round(outcome.duration_ms)} ms
+            </span>
+          </div>
+
+          {reply ? (
+            <div>
+              <p className="mb-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {http?.reply_label}
+              </p>
+              <p className="whitespace-pre-wrap text-sm">{reply}</p>
+            </div>
+          ) : null}
+
+          {outcome.error ? <p className="text-[0.8rem] text-red-300">{outcome.error}</p> : null}
+          {outcome.conformance.length > 0 ? (
+            <ul className="list-inside list-disc text-[0.75rem] text-amber-300">
+              {outcome.conformance.map((v) => (
+                <li key={v}>{v}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          {outcome.result ? (
+            <details className="text-[0.75rem]">
+              <summary className="cursor-pointer text-[var(--tessera-text-muted)]">
+                {http?.result_label}
+              </summary>
+              <pre className="mt-1 max-h-72 overflow-auto rounded-md bg-[var(--tessera-bg)] p-2 text-[0.7rem]">
+                {JSON.stringify(outcome.result, null, 2)}
+              </pre>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
+
       <AgentCrossLinks page="console" />
     </div>
   );

@@ -32,6 +32,7 @@ from tessera.api.routes import (
     audit,
     chat,
     health,
+    invoke as invoke_routes,
     memory,
     observability as observability_routes,
     recouvrement_assistant,
@@ -299,6 +300,9 @@ def build_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(chat.router)
     app.include_router(recouvrement_assistant.router)
+    # ADR 0019 §I3 — the declared cockpit→agent invocation seam. Like /chat it resolves the
+    # operator assertion internally (no bearer gate); the route itself refuses a non-operator.
+    app.include_router(invoke_routes.router)
     # Customer-facing session (demo login/logout) — public like /chat, no bearer
     # gate. It is the server-side source of auth_state the supervisor reads.
     app.include_router(session_routes.router)

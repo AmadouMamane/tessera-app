@@ -12,13 +12,15 @@ def test_guardrails_inverts_registry_bindings() -> None:
     items = payload["items"]
     assert isinstance(items, list)
     by_item = {i["item"]: i for i in items}
-    # Real registry: standard is shared (support-client + onboarding + hello-agent, whose
-    # external OTLP profile takes the default binding), strict is recouvrement.
-    assert by_item["standard"]["consumer_count"] == 3
+    # Real registry: standard is shared (support-client + onboarding + the two external
+    # second-runtime agents hello-agent / turn-agent, whose profiles take the default
+    # binding), strict is recouvrement.
+    assert by_item["standard"]["consumer_count"] == 4
     assert {c["agent_id"] for c in by_item["standard"]["consumers"]} == {
         "support-client",
         "onboarding",
         "hello-agent",
+        "turn-agent",
     }
     assert by_item["strict"]["consumer_count"] == 1
 

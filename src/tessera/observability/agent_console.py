@@ -118,6 +118,33 @@ _TR: dict[str, tuple[str, str, str]] = {
         "seine Ausführungen und Bewertungen.",
         "This agent exposes no test invocation — observe it through its runs and evaluations.",
     ),
+    # ADR 0019 §I3 — the http console: a request/response test bench over the endpoint the
+    # agent declares. Distinct from the in-process SSE console (no sandbox / debug tabs —
+    # those are in-process concepts); the foreign runtime owns its own guard and telemetry.
+    "http_title": (
+        "Invocation de test (HTTP)",
+        "Testinvokation (HTTP)",
+        "Test invocation (HTTP)",
+    ),
+    "http_subtitle": (
+        "Envoyez un tour à l'endpoint déclaré par l'agent et observez le TurnResult. "
+        "Requête/réponse, sous assertion opérateur ; chaque invocation est auditée.",
+        "Senden Sie einen Turn an den vom Agenten deklarierten Endpoint und beobachten Sie "
+        "das TurnResult. Request/Response, unter Operator-Assertion; jede Invokation "
+        "wird auditiert.",
+        "Send a turn to the endpoint the agent declares and observe the TurnResult. "
+        "Request/response, under an operator assertion; every invocation is audited.",
+    ),
+    "http_placeholder": (
+        "Message de test à envoyer à l'agent...",
+        "Testnachricht an den Agenten...",
+        "Test message to send to the agent...",
+    ),
+    "http_send": ("Envoyer le tour", "Turn senden", "Send turn"),
+    "http_reply": ("Réponse", "Antwort", "Reply"),
+    "http_result": ("TurnResult (brut)", "TurnResult (roh)", "TurnResult (raw)"),
+    "http_ok": ("Conforme", "Konform", "Conformant"),
+    "http_failed": ("Échec", "Fehlgeschlagen", "Failed"),
 }
 
 
@@ -245,20 +272,53 @@ def _honest_empty_payload(lang: str, binding: InvocationBinding) -> dict[str, ob
     }
 
 
+def _http_console_payload(lang: str, endpoint: str | None) -> dict[str, object]:
+    """The request/response test bench for an ``http``-binding agent (ADR 0019 §I3).
+
+    A foreign runtime invoked over the declared endpoint — so the payload carries the http
+    console descriptor and the endpoint, but NONE of the in-process panels (sandbox / debug /
+    guardrails): those are in-process concepts, and the remote agent owns its own guard and
+    telemetry. The frontend renders a send-a-turn / show-the-TurnResult panel driven by the
+    ``POST /agents/{id}/invoke`` seam (each turn audited, under an operator assertion).
+    """
+    return {
+        "invocation": {
+            "binding": InvocationBinding.HTTP.value,
+            "invocable": True,
+            "mode": "request_response",
+            "endpoint": endpoint,
+        },
+        "title": _t("http_title", lang),
+        "subtitle": _t("http_subtitle", lang),
+        "http_console": {
+            "placeholder": _t("http_placeholder", lang),
+            "send_label": _t("http_send", lang),
+            "reply_label": _t("http_reply", lang),
+            "result_label": _t("http_result", lang),
+            "verdict_ok": _t("http_ok", lang),
+            "verdict_failed": _t("http_failed", lang),
+        },
+    }
+
+
 def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
     """Return the Console (Debug) payload for ``agent_id`` from live settings and files.
 
-    ADR 0019 §I2 — the payload is *generated* from the agent's declared
-    ``invocation.binding``: an ``in_process_chat`` agent gets the full interactive payload
-    (parity, no behaviour change); any other binding (a publish-only ``none`` agent) gets a
-    slim honest-empty descriptor with NO fabricated config panels. Raises ``KeyError`` for
-    an unknown ``agent_id`` (the route degrades to ``available: false``).
+    ADR 0019 §I2/§I3 — the payload is *generated* from the agent's declared
+    ``invocation.binding``: ``in_process_chat`` gets the full interactive payload (parity, no
+    behaviour change); ``http`` gets a request/response test bench (ADR 0019 §I3); a
+    publish-only ``none`` agent gets a slim honest-empty descriptor with NO fabricated config
+    panels. Raises ``KeyError`` for an unknown ``agent_id`` (the route degrades to
+    ``available: false``).
     """
     lang = _norm_lang(lang)
-    binding = get_agent(agent_id).invocation.binding
+    agent = get_agent(agent_id)
+    binding = agent.invocation.binding
+    if binding is InvocationBinding.HTTP:
+        return _http_console_payload(lang, agent.invocation.endpoint)
     if binding is not InvocationBinding.IN_PROCESS_CHAT:
-        # ``none`` today (and ``http`` until the I3 invoker wires it): nothing the console
-        # can drive, so render honest-empty rather than a chat over config it does not own.
+        # ``none``: nothing the console can drive, so render honest-empty rather than a chat
+        # over config it does not own.
         return _honest_empty_payload(lang, binding)
     settings = get_settings()
     model, provider = _active_model()

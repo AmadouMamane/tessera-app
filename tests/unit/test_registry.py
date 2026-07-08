@@ -20,8 +20,9 @@ _WIDGET = Surface.SHARED_CUSTOMER_WIDGET
 
 def test_registry_has_the_seeded_agents() -> None:
     ids = [a.id for a in list_agents()]
-    # hello-agent (ADR 0017 §F) is the out-of-process second-runtime acceptance agent.
-    assert ids == ["support-client", "onboarding", "recouvrement", "hello-agent"]
+    # hello-agent (ADR 0017 §F) is the publish-only second-runtime acceptance agent;
+    # turn-agent (ADR 0019 §I3) is the invocable one — out-of-process, http turn binding.
+    assert ids == ["support-client", "onboarding", "recouvrement", "hello-agent", "turn-agent"]
 
 
 def test_default_agent_is_present_and_matches_identity() -> None:

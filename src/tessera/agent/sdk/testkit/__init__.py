@@ -7,6 +7,8 @@ these reusable suites in CI over its own emissions.
   dimension set under the GenAI + Tessera semantic conventions.
 * :mod:`grammar_conformance` — signal 104, the L3 gate: business events conform to
   the versioned workflow grammar (names, versions, strict PII-free payloads).
+* :mod:`turn_contract_conformance` — the ADR 0019 §I3 http-binding gate: an agent
+  declaring ``http`` returns the ADR 0018 TurnResult serialisation.
 
 Each suite exposes ``verify_*`` functions returning a list of violation strings
 (empty ⇒ conforming) plus ``assert_*`` wrappers for direct use under any test
@@ -28,14 +30,22 @@ from tessera.agent.sdk.testkit.span_contract import (
     assert_turn_span,
     verify_turn_span,
 )
+from tessera.agent.sdk.testkit.turn_contract_conformance import (
+    TURN_RESULT_KEYS,
+    assert_turn_result,
+    verify_turn_result,
+)
 
 __all__ = [
     "CONDITIONAL_TURN_SPAN_ATTRIBUTES",
     "GRAMMAR_EVENT_NAMES",
     "REQUIRED_TURN_SPAN_ATTRIBUTES",
+    "TURN_RESULT_KEYS",
     "assert_business_event",
+    "assert_turn_result",
     "assert_turn_span",
     "verify_business_event",
     "verify_event_stream",
+    "verify_turn_result",
     "verify_turn_span",
 ]

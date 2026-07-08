@@ -33,6 +33,23 @@ def test_in_process_chat_agent_gets_the_interactive_payload(agent_id: str) -> No
     assert "empty" not in payload
 
 
+def test_http_agent_gets_a_request_response_test_bench() -> None:
+    # ADR 0019 §I3 — turn-agent declares binding: http, so the console is invocable via the
+    # request/response invoker, NOT honest-empty and NOT the in-process SSE console.
+    payload = compute_agent_console("fr", "turn-agent")
+    invocation = payload["invocation"]
+    assert isinstance(invocation, dict)
+    assert invocation["binding"] == "http"
+    assert invocation["invocable"] is True
+    assert invocation["mode"] == "request_response"
+    assert invocation["endpoint"]  # the declared endpoint the cockpit consumes
+    assert isinstance(payload["http_console"], dict)
+    # A foreign runtime owns its own guard/telemetry — no in-process panels are fabricated.
+    for panel in ("tools", "guardrails", "evaluation", "context"):
+        assert panel not in payload
+    assert "empty" not in payload  # it IS invocable, so it is not the honest-empty state
+
+
 def test_publish_only_agent_gets_honest_empty_not_a_broken_chat() -> None:
     payload = compute_agent_console("fr", "hello-agent")
     invocation = payload["invocation"]

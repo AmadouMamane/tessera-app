@@ -4326,12 +4326,27 @@ export const AgentConsoleSchema = z.object({
     .object({
       binding: z.enum(["none", "in_process_chat", "http"]),
       invocable: z.boolean(),
+      // http only (ADR 0019 §I3): the request/response mode + the endpoint the cockpit consumes.
+      mode: z.enum(["request_response"]).optional(),
+      endpoint: z.string().nullable().optional(),
     })
     .optional(),
   // Honest-empty descriptor for a non-invocable agent (binding: none) — "this agent
   // exposes no test invocation — observe it through its runs and evals". Present in place
   // of the config panels, never alongside them.
   empty: z.object({ title: z.string(), detail: z.string() }).optional(),
+  // http console descriptor (ADR 0019 §I3): the request/response test bench chrome. Present
+  // only for an http-binding agent, in place of the in-process sandbox/debug panels.
+  http_console: z
+    .object({
+      placeholder: z.string(),
+      send_label: z.string(),
+      reply_label: z.string(),
+      result_label: z.string(),
+      verdict_ok: z.string(),
+      verdict_failed: z.string(),
+    })
+    .optional(),
   // Context strip atop the central "Résumé de la réponse" column (relocated from
   // the old full-width status bar). Real: env Sandbox + model + version stamps.
   context: z
@@ -4397,6 +4412,22 @@ export const ConsoleFeedbackSchema = z.object({
   ratings: z.record(z.string(), z.string()),
 });
 export type ConsoleFeedback = z.infer<typeof ConsoleFeedbackSchema>;
+
+// ADR 0019 §I3 — the outcome of one http invocation (POST /agents/{id}/invoke). A red
+// verdict is a successful invocation with a failure result (returned as data, HTTP 200);
+// only auth/plane/binding refusals are HTTP errors.
+export const AgentInvokeOutcomeSchema = z.object({
+  ok: z.boolean(),
+  verdict: z.enum(["green", "red"]),
+  status_code: z.number().nullable(),
+  duration_ms: z.number(),
+  error: z.string().nullable(),
+  conformance: z.array(z.string()),
+  result: z.record(z.string(), z.unknown()).nullable(),
+  conversation_id: z.string(),
+  turn_id: z.string(),
+});
+export type AgentInvokeOutcome = z.infer<typeof AgentInvokeOutcomeSchema>;
 
 export const AgentConnaissancesSchema = z.object({
   available: z.boolean(),

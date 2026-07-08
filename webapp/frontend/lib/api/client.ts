@@ -32,6 +32,8 @@ import {
   AgentGardeFousSchema,
   type AgentHistorique,
   AgentHistoriqueSchema,
+  type AgentInvokeOutcome,
+  AgentInvokeOutcomeSchema,
   type AgentPrompts,
   AgentPromptsSchema,
   type AgentSynthese,
@@ -1490,6 +1492,29 @@ export async function fetchAgentConsole(
   if (agentId) params.set("agent", agentId);
   const q = params.toString();
   return request(`/observability/agent-console${q ? `?${q}` : ""}`, { signal }, AgentConsoleSchema);
+}
+
+/**
+ * ADR 0019 §I3 — send one operator test turn to an http-binding agent. Hits the Next BFF
+ * proxy (which mints the operator assertion); the backend enforces operator + plane +
+ * binding and audits the call. Returns the invocation outcome (a red verdict is data, not
+ * a throw); auth/plane refusals throw ApiError.
+ */
+export async function invokeAgentTurn(
+  agentId: string,
+  message: string,
+  signal?: AbortSignal,
+): Promise<AgentInvokeOutcome> {
+  return request(
+    `/agents/${encodeURIComponent(agentId)}/invoke`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+      signal,
+    },
+    AgentInvokeOutcomeSchema,
+  );
 }
 
 /** Sandbox console defaults: the live system prompt + toggleable guard categories. */
