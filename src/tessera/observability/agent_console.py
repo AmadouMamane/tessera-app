@@ -6,6 +6,15 @@ runtime settings, guard policy, prompt/corpus files, and durable eval/replay
 telemetry. The chat itself streams through the same `/chat` route as the client
 product console; debug details for each turn are attached to the SSE final
 envelope by `tessera.api.routes.chat`.
+
+ADR 0019 §I2 — the Console is a *generated* surface: its shape is derived from the
+agent's declared ``invocation.binding``, never a per-agent assumption. An agent whose
+binding is ``in_process_chat`` gets today's interactive console (parity, no behaviour
+change); a publish-only agent (``binding: none``) gets an honest-empty descriptor —
+*"this agent exposes no test invocation — observe it through its runs and evals"* —
+never a broken chat over fabricated config panels. The binding is read through the
+boundary-allowed registry seam (ADR 0017 §1: ``tessera.agent.registry`` is a permitted
+manifest import, the runtime graph is not).
 """
 
 from __future__ import annotations
@@ -15,6 +24,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.agent.registry import InvocationBinding, get_agent
 from tessera.guard.decisions import load_policy
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.spine.adapters import read_scores
@@ -91,6 +102,21 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Tools und Guardrails im Detail.",
         "Interact with the assistant and observe traces, sources, tools and "
         "guardrails in detail.",
+    ),
+    # ADR 0019 §I2 — the honest-empty state for a publish-only agent (binding: none):
+    # there is nothing to test-invoke, so the console points to the observe-only surfaces
+    # (runs / evals) instead of rendering a broken chat over config it does not have.
+    "empty_title": (
+        "Aucune invocation de test",
+        "Keine Testinvokation",
+        "No test invocation",
+    ),
+    "empty_detail": (
+        "Cet agent n'expose aucune invocation de test — observez-le via ses "
+        "exécutions et ses évaluations.",
+        "Dieser Agent stellt keine Testinvokation bereit — beobachten Sie ihn über "
+        "seine Ausführungen und Bewertungen.",
+        "This agent exposes no test invocation — observe it through its runs and evaluations.",
     ),
 }
 
@@ -203,9 +229,37 @@ def _guardrails_panel(lang: str) -> dict[str, object]:
     return {"title": _t("gd_title", lang).format(n=len(rows)), "rows": rows}
 
 
-def compute_agent_console(lang: str = "fr") -> dict[str, object]:
-    """Return the Console (Debug) payload from live settings and source files."""
+def _honest_empty_payload(lang: str, binding: InvocationBinding) -> dict[str, object]:
+    """The slim honest-empty console for a non-invocable agent (ADR 0019 §I2).
+
+    A publish-only agent (``binding: none``) exposes no test invocation, so the payload
+    carries only the honest-empty descriptor and the binding — never fabricated tools /
+    guardrails / eval panels, which belong to an agent that actually runs the tessera
+    guard. The frontend renders it as an observe-only state pointing at runs / evals.
+    """
+    return {
+        "invocation": {"binding": binding.value, "invocable": False},
+        "title": _t("title", lang),
+        "subtitle": _t("subtitle", lang),
+        "empty": {"title": _t("empty_title", lang), "detail": _t("empty_detail", lang)},
+    }
+
+
+def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
+    """Return the Console (Debug) payload for ``agent_id`` from live settings and files.
+
+    ADR 0019 §I2 — the payload is *generated* from the agent's declared
+    ``invocation.binding``: an ``in_process_chat`` agent gets the full interactive payload
+    (parity, no behaviour change); any other binding (a publish-only ``none`` agent) gets a
+    slim honest-empty descriptor with NO fabricated config panels. Raises ``KeyError`` for
+    an unknown ``agent_id`` (the route degrades to ``available: false``).
+    """
     lang = _norm_lang(lang)
+    binding = get_agent(agent_id).invocation.binding
+    if binding is not InvocationBinding.IN_PROCESS_CHAT:
+        # ``none`` today (and ``http`` until the I3 invoker wires it): nothing the console
+        # can drive, so render honest-empty rather than a chat over config it does not own.
+        return _honest_empty_payload(lang, binding)
     settings = get_settings()
     model, provider = _active_model()
     prompt_path = _PROMPTS_DIR / f"{settings.default_language.value}.yaml"
@@ -222,6 +276,10 @@ def compute_agent_console(lang: str = "fr") -> dict[str, object]:
     now = datetime.now(_PARIS)
 
     return {
+        # ADR 0019 §I2 — the declared cockpit→agent binding this console drives. Present on
+        # every payload so the frontend generates its shape from the declaration, never an
+        # assumption; ``in_process_chat`` is the only invocable binding until the I3 invoker.
+        "invocation": {"binding": binding.value, "invocable": True},
         # Provenance strip atop the central "Résumé de la réponse" column
         # (normative 05): the lineage versions the answer was produced with —
         # prompt bundle, corpus snapshot, guard policy. The environment ("Sandbox")

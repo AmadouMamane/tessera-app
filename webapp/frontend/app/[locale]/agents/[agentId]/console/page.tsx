@@ -6,7 +6,7 @@ import { AgentConsoleSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 interface PageProps {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: string; agentId: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -15,14 +15,21 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: t("title") };
 }
 
-async function prefetch(queryClient: QueryClient) {
+// ADR 0019 §I2 — the console is agent-scoped: prefetch the binding-gated payload for
+// THIS agent so SSR and the client query share a key and the honest-empty vs interactive
+// shape is decided server-side (no chattable-by-default flash).
+async function prefetch(queryClient: QueryClient, locale: string, agentId: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["agent-console"],
+    queryKey: ["agent-console", locale, agentId],
     queryFn: async () => {
-      const response = await fetch(`${backendUrl()}/observability/agent-console`, {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      });
+      const params = new URLSearchParams({ lang: locale, agent: agentId });
+      const response = await fetch(
+        `${backendUrl()}/observability/agent-console?${params.toString()}`,
+        {
+          cache: "no-store",
+          headers: backendHeaders({ Accept: "application/json" }),
+        },
+      );
       if (!response.ok) throw new Error(`Backend agent-console returned ${response.status}`);
       return AgentConsoleSchema.parse(await response.json());
     },
@@ -30,11 +37,11 @@ async function prefetch(queryClient: QueryClient) {
 }
 
 export default async function AgentConsolePage({ params }: PageProps) {
-  const { locale } = await params;
+  const { locale, agentId } = await params;
   setRequestLocale(locale);
   const queryClient = new QueryClient();
   try {
-    await prefetch(queryClient);
+    await prefetch(queryClient, locale, agentId);
   } catch {
     // Keep the page resilient: the client query will surface backend failures.
   }

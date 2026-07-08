@@ -4318,6 +4318,20 @@ export const AgentConsoleSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
   subtitle: z.string().optional(),
+  // ADR 0019 §I2 — the declared cockpit→agent binding this console drives. The console
+  // generates its shape from this: `invocable` gates the interactive surface vs the
+  // honest-empty state. `in_process_chat` is the only invocable binding until the I3
+  // http invoker; a publish-only agent declares `none`.
+  invocation: z
+    .object({
+      binding: z.enum(["none", "in_process_chat", "http"]),
+      invocable: z.boolean(),
+    })
+    .optional(),
+  // Honest-empty descriptor for a non-invocable agent (binding: none) — "this agent
+  // exposes no test invocation — observe it through its runs and evals". Present in place
+  // of the config panels, never alongside them.
+  empty: z.object({ title: z.string(), detail: z.string() }).optional(),
   // Context strip atop the central "Résumé de la réponse" column (relocated from
   // the old full-width status bar). Real: env Sandbox + model + version stamps.
   context: z

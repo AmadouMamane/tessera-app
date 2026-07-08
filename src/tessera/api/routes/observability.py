@@ -1630,16 +1630,21 @@ async def observability_agent_configurations_save(
 
 
 @router.get("/observability/agent-console")
-async def observability_agent_console(lang: str = "fr") -> dict[str, object]:
+async def observability_agent_console(
+    lang: str = "fr", agent: str = DEFAULT_AGENT_ID
+) -> dict[str, object]:
     """Agent Console (Debug) surface (reference image agent-console-normative).
 
-    Status sub-bar, live transcript, service-level KPIs and a tabbed inspector
-    (Contexte / Sources / Outils / Garde-fous / Trace) with the quality
-    scorecard, sources used, tools called, triggered guardrails and real-time
-    trace. Deterministic fixture; degrades to ``available: false``.
+    ADR 0019 §I2 — agent-scoped and *generated* from the agent's declared
+    ``invocation.binding``. An ``in_process_chat`` agent returns the full interactive
+    payload (context strip, tools / guardrails / eval panels, the tabbed inspector); a
+    publish-only agent (``binding: none``) returns a slim honest-empty descriptor
+    (``invocation.invocable: false`` + an ``empty`` copy) so the console never renders a
+    chat it cannot drive. Real config (guard policy, eval scores), never a fixture;
+    degrades to ``available: false`` (e.g. an unknown ``agent``).
     """
     try:
-        return {"available": True, **agent_console_mod.compute_agent_console(lang)}
+        return {"available": True, **agent_console_mod.compute_agent_console(lang, agent)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_console: failed: {exc}\n")
         return {"available": False}

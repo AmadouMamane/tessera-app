@@ -1478,9 +1478,18 @@ export async function fetchAgentSynthese(
   return request(`/observability/agent-synthese?${query}`, { signal }, AgentSyntheseSchema);
 }
 
-export async function fetchAgentConsole(lang: string, signal?: AbortSignal): Promise<AgentConsole> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/agent-console${q}`, { signal }, AgentConsoleSchema);
+export async function fetchAgentConsole(
+  lang: string,
+  agentId: string,
+  signal?: AbortSignal,
+): Promise<AgentConsole> {
+  // ADR 0019 §I2 — the console is agent-scoped: the binding (and thus the payload shape)
+  // is read from the agent named here, not the fleet default.
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  if (agentId) params.set("agent", agentId);
+  const q = params.toString();
+  return request(`/observability/agent-console${q ? `?${q}` : ""}`, { signal }, AgentConsoleSchema);
 }
 
 /** Sandbox console defaults: the live system prompt + toggleable guard categories. */

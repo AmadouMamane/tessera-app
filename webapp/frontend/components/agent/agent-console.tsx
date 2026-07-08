@@ -10,6 +10,7 @@ import {
   Database,
   Download,
   MessageSquare,
+  MessageSquareOff,
   Paperclip,
   Pencil,
   Plus,
@@ -158,9 +159,12 @@ export function AgentConsole() {
     }
   }, [model, role]);
   const qc = useQueryClient();
+  // ADR 0019 §I2 — the console is scoped to the agent in the route: the payload's shape
+  // (interactive vs honest-empty) is decided by THIS agent's declared invocation binding.
+  const agentId = useAgentId();
   const { data } = useQuery({
-    queryKey: ["agent-console", locale],
-    queryFn: ({ signal }) => fetchAgentConsole(locale, signal),
+    queryKey: ["agent-console", locale, agentId],
+    queryFn: ({ signal }) => fetchAgentConsole(locale, agentId, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -346,6 +350,15 @@ export function AgentConsole() {
     );
   }
 
+  // ADR 0019 §I2 — honest-empty gate. A publish-only agent (declared binding: none)
+  // exposes no test invocation: render the observe-only state pointing at its runs and
+  // evals, never a broken chat over config it does not own. Only trip when we positively
+  // know it is non-invocable (an absent block means an old payload → keep the interactive
+  // console, the pre-ADR behaviour).
+  if (data.invocation && !data.invocation.invocable) {
+    return <ConsoleHonestEmpty empty={data.empty} title={data.title} subtitle={data.subtitle} />;
+  }
+
   const liveSession = conversationId
     ? `sess_${conversationId.slice(0, 8)}`
     : data.context?.session_id;
@@ -416,6 +429,39 @@ export function AgentConsole() {
 
       {/* "Liens utiles" — see-also navigation, placed at the foot of the
           interactive console so the sandbox bar + conversation lead. */}
+      <AgentCrossLinks page="console" />
+    </div>
+  );
+}
+
+// ── honest-empty console (ADR 0019 §I2) ─────────────────────────────────────
+
+/** The observe-only state for a publish-only agent (declared binding: none): it exposes
+ *  no test invocation, so instead of a broken chat we show the honest-empty copy from the
+ *  backend and route the operator to the surfaces that DO observe it (runs / evals via the
+ *  cross-links). No per-agent code — the shape is decided entirely by the declaration. */
+function ConsoleHonestEmpty({
+  empty,
+  title,
+  subtitle,
+}: {
+  empty?: { title: string; detail: string };
+  title?: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+      <div className="flex min-h-[54vh] items-center justify-center">
+        <div className="w-full max-w-2xl rounded-lg border border-dashed border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-6 py-12 text-center">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)]">
+            <MessageSquareOff className="h-5 w-5 text-[var(--tessera-text-muted)]" aria-hidden />
+          </div>
+          <p className="text-sm font-semibold">{empty?.title ?? title}</p>
+          <p className="mx-auto mt-1.5 max-w-md text-[0.8rem] leading-relaxed text-[var(--tessera-text-muted)]">
+            {empty?.detail ?? subtitle}
+          </p>
+        </div>
+      </div>
       <AgentCrossLinks page="console" />
     </div>
   );
