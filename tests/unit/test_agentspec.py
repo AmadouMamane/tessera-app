@@ -207,6 +207,16 @@ def test_manifest_without_observable_contract_reads_l0() -> None:
     assert observability_level(l0_agent, governed=True) == "L0"
 
 
+def test_declared_but_unobserved_reads_l0() -> None:
+    # ADR 0017 §F: "Observable" means the cockpit SEES turns, not that the manifest promises
+    # them. A declared observable contract with no observed turns stays L0 (Registered).
+    agent = get_agent("recouvrement")
+    assert observability_level(agent, governed=True, has_turn_evidence=False) == "L0"
+    # With evidence it climbs the ladder exactly as before (has_turn_evidence defaults True).
+    assert observability_level(agent, governed=False, has_turn_evidence=True) == "L1"
+    assert observability_level(agent, governed=True, business_events=True) == "L3"
+
+
 # --- projection: generated business-signal descriptors ---------------------------
 
 

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from tessera.agent.registry import get_agent
-from tessera.observability import business_events, business_scoring
+from tessera.observability import business_events, business_scoring, turn_evidence
 from tessera.observability.agent_release import agent_release_state
 from tessera.observability.agentspec_projection import (
     business_signal_descriptors,
@@ -339,7 +339,10 @@ def resolve_observability_level(agent_id: str | None) -> str | None:
         return None
     rows = business_events.business_event_rows(agent_id=agent_id) if agent_id else []
     return observability_level(
-        agent, governed=_governed(agent_id), business_events=_has_capability_stamped_events(rows)
+        agent,
+        governed=_governed(agent_id),
+        business_events=_has_capability_stamped_events(rows),
+        has_turn_evidence=turn_evidence.has_turn_evidence(agent_id),
     )
 
 

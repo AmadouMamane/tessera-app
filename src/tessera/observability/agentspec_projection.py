@@ -33,14 +33,22 @@ LEVELS = ("L0", "L1", "L2", "L3")
 
 
 def observability_level(
-    agent: Agent, *, governed: bool, business_events: bool = False
+    agent: Agent,
+    *,
+    governed: bool,
+    business_events: bool = False,
+    has_turn_evidence: bool = True,
 ) -> str | None:
     """Compute the observability level from passing facts (ADR 0017 §4) — never asserted.
 
     - **L0 Registered** — a valid AgentSpec is present.
-    - **L1 Observable** — L0 and the agent declares an observable contract (≥1 workflow
-      mapped onto the grammar, plus telemetry capabilities): its spans/metrics have a
-      declared shape the cockpit can read.
+    - **L1 Observable** — L0, the agent declares an observable contract (≥1 workflow mapped
+      onto the grammar + telemetry capabilities), AND the cockpit has **observed** it emitting
+      turns (``has_turn_evidence`` — the Prometheus turn counter, ADR 0017 §F). A
+      declared-but-unobserved agent stays L0: "Observable" means the spine sees emission, not
+      that the manifest promises it. ``has_turn_evidence`` defaults ``True`` so the *pure*
+      projection reflects the declared tier; :func:`resolve_observability_level` supplies the
+      real fact (evidence-unknown is trusted, so an absent metrics store never demotes).
     - **L2 Governed** — L1 and the agent's guard/eval/release facts are visible to the
       cockpit (``governed`` — a real gating socle ran).
     - **L3 Business** — L2 and typed workflow-grammar business events are visible.
@@ -53,6 +61,8 @@ def observability_level(
         return None
     if not (spec.workflows and spec.telemetry_capabilities):
         return "L0"
+    if not has_turn_evidence:
+        return "L0"  # declares the contract but the cockpit has observed no turns yet
     if not governed:
         return "L1"
     if business_events:
