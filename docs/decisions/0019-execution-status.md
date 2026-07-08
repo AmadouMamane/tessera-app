@@ -61,9 +61,17 @@ I1–I4 complete** — pending the review-before-merge checkpoint (same protocol
   (streaming stays an optional future capability flag). Verified end-to-end: the real invoker drives
   a LIVE turn-agent over HTTP → green + a conformant TurnResult (zero violations); route gating
   pinned via TestClient. Fleet composition updated for the 5th agent. Gate twice-green
-  (ruff/format/mypy/tsc/biome + 1503 unit, +18 new). Browser render of the http console + the BFF
-  mint is the operator's dev-preview checkpoint item (the established review-of-unmerged-work path).
-  **HALT: final Claude review before merge to main.**
+  (ruff/format/mypy/tsc/biome + 1503 unit, +18 new). **Live render verified via a throwaway
+  dev-preview** (ports 3096/8096, torn down; reference + codex previews untouched): all three
+  binding types render server-side from the declaration — turn-agent → the HttpConsole panel
+  (title, "Envoyer le tour", the `127.0.0.1:8500/turn` endpoint chip), hello-agent → honest-empty
+  ("Aucune invocation de test…"), support-client → the interactive console (parity). The invoke
+  proxy enforces **401 without an operator session** end-to-end (no anonymous invocation). The one
+  remaining unexercised path is the *authenticated* click-through (operator next-auth login →
+  BFF mints the assertion → green TurnResult in the browser) — it needs a logged-in operator + the
+  signing key, so it stays the operator's supervised dev-preview item; every layer beneath it is
+  verified (invoker→live turn-agent green + conformant; route gating; proxy 401). **HALT: final
+  Claude review before merge to main.**
 
 - 2026-07-08 — **I2 landed (`4340bdad`). The Console is now a generated surface.** The last
   hand-wired cockpit surface stops assuming every agent is chattable: its shape is derived from the
