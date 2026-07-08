@@ -13,7 +13,8 @@ on the codex worktree.
 
 **Follow-up mission 2026-07-08 (I2 + I3):** the codex headers refonte landed on `main`
 (`59dfa828` / `043f480f`), clearing the I2 blocker. This mission delivers **I2** (`4340bdad`) and
-**I3** on a fresh `claude/adr19-i2-i3` branch cut from `main`.
+**I3** (`3597e124`) on a fresh `claude/adr19-i2-i3` branch cut from `main`. **ADR 0019 is now
+I1–I4 complete** — pending the review-before-merge checkpoint (same protocol as the I1+I4 landing).
 
 ## Phase ledger
 
@@ -21,7 +22,7 @@ on the codex worktree.
 |---|---|---|---|---|
 | I1 | `invocation` block in the AgentSpec (schema + validation, `none` default); native agents declare `in_process_chat` | ✅ done | `80a83753` | `InvocationBinding` {none·in_process_chat·http} + `InvocationSpec` (`extra="forbid"`, http-only fields unrepresentable on other bindings, http must name operator-assertion auth). `Agent.invocation` always present (default `none`). support-client/onboarding/recouvrement → `in_process_chat` (pure codification of `/chat`, no behaviour change); hello-agent → `none`. Gate twice-green (ruff/format/mypy/1460 unit); frontend untouched. |
 | I2 | Console generation for `in_process_chat` (parity, rendered from declarations); honest-empty for `none` | ✅ done | `4340bdad` | The Console is generated from the declared `invocation.binding`, not a chattable-by-default assumption. `compute_agent_console` is agent-scoped (`?agent=`); binding read through the boundary-allowed registry seam (ratchet green). `in_process_chat` → full interactive payload (parity); `none` (hello-agent) → slim honest-empty ("no test invocation — observe via runs/evals"), NO fabricated tools/guardrails. Frontend gates on `invocation.invocable`; SSR-scoped key. Per the ADR open question, free-text parity only — capability-form generation stays deferred. Gate twice-green (ruff/format/mypy/tsc/biome/1485 unit); verified through the real route (fr/de/en). |
-| I3 | `http` binding: the invoker (assertion forwarding, timeout, audit) + first invocable external agent; SDK conformance test | ⛔ deferred | — | Out of scope this mission. The http *schema* is modelled by I1; the *invoker* is not built. |
+| I3 | `http` binding: the invoker (assertion forwarding, timeout, audit) + first invocable external agent; SDK conformance test | ✅ done | `3597e124` | `HttpTurnInvoker` (`tessera.api.agent_invoker`): POSTs a TurnInput, forwards the verified operator assertion (refuses an empty one before the network — no anonymous invocation §4), honours `timeout_ms`, validates the turn contract, emits one S1 per call; never raises (honest RED, never a fabricated green). Pure HTTP, no runtime-graph import → 0017 §1 ratchet stands (invoker lives in `tessera.api`, off the scanned control plane). SDK conformance `verify_turn_result` ("an agent declaring http must speak the turn contract"). First invocable external agent `examples/turn-agent/` (zero tessera import, stdlib http POST /turn), declared `binding: http`; hello-agent stays `none`. Governed seam `POST /agents/{id}/invoke` (operator-only, plane-scoped, http-only, audited); console generation extends to http (request/response test bench + `HttpConsole` frontend + Next BFF proxy). Streaming open question resolved: request/response for I3. Verified end-to-end: real invoker → LIVE turn-agent over HTTP → green + conformant TurnResult. Gate twice-green (ruff/format/mypy/tsc/biome/1503 unit); boundary ratchet green. |
 | I4 | Canary scheduler on the `in_process_chat` binding (cadence from the manifest, synthetic stamping, S1 per invocation, freshness feeding the existing canary descriptor) | ✅ done | `9c02e35f` | Off-chrono scheduler mirroring the seal (lifespan + boot posture line; idle by default). `agent/canary.py`: `InProcessChatInvoker` drives `compile_graph().ainvoke` in a `synthetic_turn()` context; `run_canary_cycle` emits one `tessera.agent.canary` S1 per invocation (green/red, never a fake green). Synthetic isolation excluded twice: the emit-time Prometheus guard + the read seam every business surface flows through (default `include_synthetic=False`). Descriptor gains `synthetic_run` (from the S1 entry) + `cadence_s`. recouvrement declares hourly; switch `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED` (default off). Gate twice-green (ruff/format/mypy/1479 unit); boundary ratchet green. |
 
 ## Owed follow-ups (explicit, never silent)
@@ -39,6 +40,30 @@ on the codex worktree.
   (same posture as the seal's Rfc3161Provider).
 
 ## Log (newest first)
+
+- 2026-07-08 — **I3 landed (`3597e124`). ADR 0019 is I1–I4 complete.** The http binding gains its
+  runtime. The invoker (`HttpTurnInvoker`, `tessera.api.agent_invoker`) POSTs a TurnInput to the
+  declared endpoint, forwards the *verified* operator assertion (0010 Phase B — refuses an empty one
+  before the network, no anonymous invocation §4), honours `timeout_ms`, validates the response
+  against the turn contract, and emits one S1 event per call. It never raises: a timeout / refused
+  connection / non-2xx / non-conformant body is an honest RED, never a fabricated green (the seal's
+  H3 invariant, applied to http invocation). It is pure HTTP with no runtime-graph import and lives
+  in `tessera.api` (off the boundary-scanned control plane), so the 0017 §1 ratchet stands. The SDK
+  testkit gains `verify_turn_result` — the reusable "an agent declaring http must speak the turn
+  contract" gate. The first invocable external agent (`examples/turn-agent/`) is out-of-process with
+  a zero tessera import (stdlib http `POST /turn`); it declares `binding: http` while hello-agent
+  stays the publish-only `none` proof. The Console consumer's server seam (`POST /agents/{id}/invoke`)
+  enforces every §4 property before the invoker runs — operator-only, plane-scoped (`routable`,
+  0013), http-binding-only, audited. Console generation extends to http: a request/response test
+  bench (invocable + endpoint + localized chrome), rendered by the `HttpConsole` frontend through a
+  Next BFF proxy that mints the assertion — so a foreign-runtime agent gets a console the day it
+  declares a binding, zero cockpit code. Streaming open question resolved: request/response for I3
+  (streaming stays an optional future capability flag). Verified end-to-end: the real invoker drives
+  a LIVE turn-agent over HTTP → green + a conformant TurnResult (zero violations); route gating
+  pinned via TestClient. Fleet composition updated for the 5th agent. Gate twice-green
+  (ruff/format/mypy/tsc/biome + 1503 unit, +18 new). Browser render of the http console + the BFF
+  mint is the operator's dev-preview checkpoint item (the established review-of-unmerged-work path).
+  **HALT: final Claude review before merge to main.**
 
 - 2026-07-08 — **I2 landed (`4340bdad`). The Console is now a generated surface.** The last
   hand-wired cockpit surface stops assuming every agent is chattable: its shape is derived from the

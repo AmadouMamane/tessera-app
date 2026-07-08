@@ -1,7 +1,8 @@
 # 0019 — Invocation binding: the declared cockpit→agent seam
 
-- Status: **accepted** (decision 2026-07-08) — **I1 + I4 implemented** (2026-07-08, the
-  canary-scheduler trigger fired: `80a83753`, `9c02e35f`); **I2 + I3 deferred**. Progress:
+- Status: **accepted** (decision 2026-07-08) — **I1–I4 implemented** (2026-07-08: I1/I4 via the
+  canary-scheduler trigger `80a83753`/`9c02e35f`; I2 console generation `4340bdad`; I3 http invoker
+  + first invocable external agent + conformance `3597e124`). Progress:
   `docs/decisions/0019-execution-status.md`
 - Date: 2026-07-08
 - Deciders: Tessera maintainers
@@ -146,10 +147,13 @@ whichever is wanted first.
   renders today's console (parity), `none` renders honest-empty. The payload is agent-scoped and the
   binding is read via the registry seam (the 0017 §1 ratchet stands). Free-text parity only —
   capability-form generation (see Open questions) stays deferred.
-- **I3 — deferred.** `http` binding: the invoker (assertion forwarding, timeout, audit event)
-  + the first invocable external agent; conformance test in the SDK testkit (an agent
-  declaring `http` must speak the turn contract). I1 models the `http` *schema*; the invoker
-  is not built.
+- **I3 — ✅ done (`3597e124`).** `http` binding runtime: the invoker (`HttpTurnInvoker` — assertion
+  forwarding, timeout, turn-contract validation, one S1 audit event per call, honest RED never a
+  fabricated green; pure HTTP, no runtime-graph import, ratchet stands) + the first invocable
+  external agent (`examples/turn-agent/`, zero tessera import, declared `binding: http`) + the SDK
+  conformance test (`verify_turn_result`). The governed seam `POST /agents/{id}/invoke` (operator +
+  plane + binding + audit) makes it reachable; console generation extends to a request/response test
+  bench. Verified end-to-end against a live turn-agent.
 - **I4 — ✅ done (`9c02e35f`).** Canary scheduler on the binding (cadence from the manifest via
   `invocation.canary_cadence_s`, synthetic stamping excluded from business metrics, one S1 event
   per invocation, freshness feeding the existing canary descriptor's `synthetic_run` facet).
@@ -157,9 +161,11 @@ whichever is wanted first.
 
 ## Open questions
 
-- **Streaming over the http binding**: the in-process console streams SSE; does the http
-  binding require streaming for parity, or is request/response acceptable for test
-  turns? (Leaning: request/response for I3; streaming as an optional capability flag.)
+- **Streaming over the http binding**: ~~the in-process console streams SSE; does the http
+  binding require streaming for parity, or is request/response acceptable for test turns?~~
+  **Resolved (I3):** request/response. The http console is a request/response test bench
+  (`POST /agents/{id}/invoke` → one TurnResult); streaming stays an optional future capability
+  flag, not required for the test-turn use case.
 - Rate limits / concurrency caps per binding (an operator hammering a production agent's
   test endpoint is a governance question, not just an infra one).
 - Whether the Console exposes capability *parameters* (from `input_schema`) as generated
