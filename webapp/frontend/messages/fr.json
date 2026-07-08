@@ -24,7 +24,9 @@
     "tagline": "Pare-feu actif · Ancrage réglementaire UE",
     "operational": "Opérationnel",
     "viewProduct": "Voir le produit",
-    "demoExplore": "Démonstration · explorer les espaces",
+    "clientSpace": "Espace client",
+    "businessMenu": "Espaces métier et client",
+    "demoExplore": "Poursuivre la démonstration · explorer les espaces",
     "disclaimer": "Crédit Aurore — démo non destinée à la production. Données fictives.",
     "environment": "Environnement",
     "locality": "Sur site · UE",
@@ -996,6 +998,9 @@
     "signOut": "Déconnexion",
     "auditorMode": "Mode auditeur",
     "signedInAs": "Connecté · {role}",
+    "changeAccount": "Changer de compte",
+    "menuLabel": "Menu utilisateur · {role}",
+    "sessionActive": "Session active {time}",
     "roles": {
       "admin": "Administrateur",
       "auditor": "Auditeur",
@@ -7699,6 +7704,34 @@
     "env": "Sur site · résidence UE · SOC 2",
     "sealSuffix": "scellé {t}",
     "note": "Statut attribué uniquement après vérification réussie."
+  },
+  "systemStatus": {
+    "triggerLabel": "État système",
+    "title": "Posture système",
+    "environment": "Environnement",
+    "model": "Modèle",
+    "residence": "Résidence",
+    "ledger": "Intégrité ledger",
+    "unknown": "Non disponible",
+    "residenceValue": "Sur site · UE",
+    "environmentValue": {
+      "production": "Prod",
+      "staging": "Staging",
+      "ci": "CI",
+      "local": "Local"
+    }
+  },
+  "commandSearch": {
+    "placeholder": "Rechercher / Commandes",
+    "shortcut": "⌘K",
+    "scope": {
+      "cockpit": "Rechercher agents, dossiers et signaux",
+      "business": "Rechercher dossiers et clients"
+    }
+  },
+  "demoBadge": {
+    "label": "Démonstration",
+    "ariaLabel": "Ouvrir le lanceur de démonstration"
   },
   "signalHero": {
     "title": "Signal franchi (SLO)",

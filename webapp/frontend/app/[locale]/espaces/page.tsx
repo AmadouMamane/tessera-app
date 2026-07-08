@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { SPACE_SELECTOR_TOKENS } from "@/components/landing/landing-launcher";
 import { AppHeader } from "@/components/layout/app-header";
+import { DemoBadge } from "@/components/layout/demo-badge";
 import {
   SpacesDirectory,
   type SurfaceDemo,
@@ -132,10 +133,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
 
         <main className="flex flex-1 flex-col items-center px-6 pb-24 pt-12">
           <section className="mb-10 flex w-full max-w-[1040px] flex-col items-start gap-[10px]">
-            <span className="inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
-              <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold-strong)]" />
-              {t("demoBadge")}
-            </span>
+            <DemoBadge />
             <h1 className="font-sans text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[var(--text-primary)]">
               {t("title")}
             </h1>

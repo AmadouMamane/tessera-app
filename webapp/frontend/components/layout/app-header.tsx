@@ -1,19 +1,15 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
-  Boxes,
   CalendarDays,
   ChevronDown,
   CircleHelp,
   Download,
   Globe2,
+  Grid2X2,
   PackageCheck,
   RotateCcw,
-  Search,
-  ServerCog,
-  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -22,11 +18,8 @@ import { useEffect, useState, useTransition } from "react";
 
 import { type AuthContext, AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
-import { ModelBadge } from "@/components/layout/model-badge";
-import { useShellChrome } from "@/components/layout/shell-chrome";
-import { StatusBadge } from "@/components/layout/status-badge";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { CommandSearch } from "@/components/layout/command-search";
+import { SystemStatusPill } from "@/components/layout/system-status-pill";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,7 +31,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { LOCALE_LABELS, type Locale, routing } from "@/i18n/routing";
-import { fetchHealth } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
 import { exportSnapshot } from "@/lib/evidence-export";
 import {
@@ -154,13 +146,47 @@ export function AppHeader({
     <BrandLead title={title} href={brandHref} />
   );
 
-  // Cockpit: the structural rule lives on ROW 1 (the title/chrome row, 5.5rem tall
-  // like the sidebar's logo block) — so it runs CONTINUOUS with the line under the
-  // logo, and the page actions (row 2) sit BELOW it. No border on the header itself
-  // (that put the line under the actions).
   const chrome =
     chromeClassName ??
     (cockpit ? "bg-[var(--tessera-bg)]" : "border-b border-[var(--border-subtle)]");
+
+  if (cockpit) {
+    return (
+      <header className={cn("relative border-b border-[var(--tessera-border)]", chrome)}>
+        <div className="grid h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)] md:gap-4 md:px-5">
+          <div className="min-w-0">{left}</div>
+          <div className="hidden min-w-0 justify-center md:flex">
+            <CommandSearch plan="cockpit" className="w-full max-w-md" />
+          </div>
+          <div className="flex min-w-0 items-center justify-end gap-2">
+            <CockpitTools />
+          </div>
+        </div>
+        {hasRow2 ? (
+          <div
+            className={cn(
+              "flex flex-wrap items-center justify-between gap-3 px-5",
+              hasFilterRow ? "min-h-[3.25rem] py-2.5" : "justify-end pt-2 pb-1",
+            )}
+          >
+            {hasFilterRow ? (
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
+                {contextItems.map((item) => (
+                  <ContextControl key={item.label} item={item} />
+                ))}
+                {filters}
+              </div>
+            ) : null}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {actions.map((action) => (
+                <ActionButton key={action.label} action={action} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </header>
+    );
+  }
 
   return (
     <header className={cn("relative", chrome)}>
@@ -175,19 +201,9 @@ export function AppHeader({
       >
         <div className="min-w-0">{left}</div>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
-          {cockpit ? <CockpitTools /> : null}
-          {/* Global utilities — langue · thème. On the cockpit the account/identity
-              lives ONCE, in the sidebar (Linear/Notion pattern), so it is NOT
-              repeated here; the launcher/business surfaces keep it in the header. */}
-          <LanguageSwitcher />
-          <ThemeToggle
-            className={
-              cockpit
-                ? "h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]"
-                : undefined
-            }
-          />
-          {cockpit ? null : <AuthControl context={authContext} />}
+          {/* Non-cockpit surfaces keep identity/preferences in the shared user
+              menu; language and theme are no longer loose header icons. */}
+          <AuthControl context={authContext} />
         </div>
       </div>
 
@@ -227,14 +243,14 @@ export function AppHeader({
 function TitleBlock({ title, description }: { title?: string; description?: string }) {
   const t = useTranslations("app");
   return (
-    <>
-      <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
-        {title}
+    <div className="min-w-0">
+      <h1 className="truncate font-sans text-base font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
+        {title ?? t("tagline")}
       </h1>
-      <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">
-        {description ?? t("tagline")}
-      </p>
-    </>
+      {description ? (
+        <p className="mt-0.5 truncate text-xs text-[var(--tessera-text-muted)]">{description}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -254,35 +270,14 @@ function BrandLead({ title, href }: { title?: string; href: string }) {
 }
 
 /**
- * The cockpit-only contextual cluster, grouped BY NATURE:
- *   1. Deployment context — read-only badges (env · model · status · locality).
- *      Mono-env by construction, so the env is a badge, never a dropdown.
- *   2. Cross-plane — ONE point (operator → business), not two buttons.
- *   3. Global utilities — search · notifs · help (langue · thème follow in the
- *      header's global cluster).
- * Isolated so the `useShellChrome` hook only runs when the cockpit renders it.
+ * Cockpit right zone: one composite system posture, then the two visible icon
+ * tools allowed by the header spec. Account/preferences live in the sidebar.
  */
 function CockpitTools() {
-  const { setPaletteOpen } = useShellChrome();
   return (
     <>
-      {/* 1 — deployment context (read-only, one cluster): env · model · locality
-          · status. Mono-env → env is a badge, never a re-scoping dropdown. */}
-      <div className="hidden items-center gap-2 lg:flex">
-        <EnvBadge />
-        <ModelBadge />
-        <LocalityBadge />
-        <StatusBadge />
-      </div>
-      {/* 2 — cross-plane: one point to the business surfaces. */}
-      <BusinessMenu />
-      {/* 3 — global utilities. */}
-      <HeaderIconButton
-        icon={Search}
-        label="Rechercher (⌘K)"
-        className="hidden lg:inline-flex"
-        onClick={() => setPaletteOpen(true)}
-      />
+      <OperatorProductMenu />
+      <SystemStatusPill className="hidden lg:inline-flex" />
       <HeaderIconButton
         icon={Bell}
         label="Notifications"
@@ -294,77 +289,26 @@ function CockpitTools() {
   );
 }
 
-const CONTEXT_PILL =
-  "inline-flex items-center gap-1.5 rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] px-2.5 py-1 text-[0.65rem] font-medium text-[var(--tessera-text)]";
-
-const ENV_LABEL: Record<string, string> = {
-  production: "Prod",
-  staging: "Staging",
-  ci: "CI",
-  local: "Local",
-};
-
-/**
- * Deployment environment — read-only (mono-env, fixed by the process; never a
- * re-scoping dropdown — that would be an isolation breach). Reads the REAL env
- * the backend reports; with no env data it renders nothing (honest-empty).
- */
-function EnvBadge() {
-  const t = useTranslations("app");
-  const { data } = useQuery({
-    queryKey: ["health-badge"],
-    queryFn: ({ signal }) => fetchHealth(signal),
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-  });
-  const env = data?.environment;
-  if (!env) return null;
-  const label = ENV_LABEL[env] ?? env.charAt(0).toUpperCase() + env.slice(1);
-  return (
-    <span className={CONTEXT_PILL} title={`${t("environment")} · ${label}`}>
-      <ServerCog className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" aria-hidden />
-      {label}
-    </span>
-  );
-}
-
-/** Deployment locality — read-only (on-prem, EU residency). */
-function LocalityBadge() {
-  const t = useTranslations("app");
-  return (
-    <span className={CONTEXT_PILL}>
-      <ShieldCheck className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" aria-hidden />
-      {t("locality")}
-    </span>
-  );
-}
-
-/**
- * Cross-plane access — ONE point (operator → business). "Voir le produit" and
- * "Explorer les espaces" are the same intent, so they live behind a single menu
- * (ADR 0013: the cockpit is operator-only, so this is inherently operator-only).
- */
-function BusinessMenu() {
+function OperatorProductMenu() {
   const t = useTranslations("app");
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={t("business")}
-          title={t("business")}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--tessera-border-strong)] bg-transparent px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
+          aria-label={t("businessMenu")}
+          title={t("businessMenu")}
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:inline-flex"
         >
-          <Boxes className="h-4 w-4" />
-          <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
+          <Grid2X2 className="h-4 w-4" aria-hidden />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[12rem]">
+      <DropdownMenuContent align="end" className="min-w-[13rem]">
         <DropdownMenuItem asChild>
-          <Link href="/produit">{t("viewProduct")}</Link>
+          <Link href="/espaces">{t("business")}</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/espaces">{t("exploreSpaces")}</Link>
+          <Link href="/produit">{t("clientSpace")}</Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -627,11 +571,11 @@ function HeaderIconButton({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "relative h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]",
+        "relative h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
         className ?? "inline-flex",
       )}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="h-4 w-4" aria-hidden />
       {badge ? (
         <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[0.6rem] font-semibold leading-none text-white">
           {badge}
