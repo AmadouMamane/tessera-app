@@ -7648,7 +7648,7 @@
     "subtitle": "Pipeline de release par agent — verdict eval-gate, package gouverné versionné.",
     "total": "Agents",
     "passing": "Prêts à promouvoir",
-    "blocked": "Bloqués (eval-gate)",
+    "blocked": "Bloqués",
     "notRun": "Sans run",
     "evalNotRun": "Évaluation non exécutée",
     "evalSet": "Jeu d'éval",

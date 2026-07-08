@@ -48,6 +48,7 @@ def test_release_allowed_when_gate_passes(monkeypatch: pytest.MonkeyPatch) -> No
     decision = lifecycle.release_decision("support-client")
     assert decision.allowed
     assert decision.gate_passed is True
+    assert decision.blocked_by is None  # allowed → nothing blocks
 
 
 def test_release_blocked_without_a_run(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -117,6 +118,8 @@ def test_prod_blocks_below_l2(monkeypatch: pytest.MonkeyPatch) -> None:
     assert decision.observability_level == "L1"
     assert decision.required_level == "L2"
     assert "L2" in decision.reason
+    # The gate PASSED — the block is the level, not the eval-gate (§A2.4 honesty).
+    assert decision.blocked_by == lifecycle.BLOCKED_BY_OBSERVABILITY_LEVEL
 
 
 def test_prod_allows_at_l2(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -161,6 +164,7 @@ def test_eval_block_takes_precedence_over_level(monkeypatch: pytest.MonkeyPatch)
     decision = lifecycle.release_decision("recouvrement")
     assert not decision.allowed
     assert "socle critique" in decision.reason  # eval reason, not the level reason
+    assert decision.blocked_by == lifecycle.BLOCKED_BY_EVAL_GATE  # gate failed → eval-gate
 
 
 def test_as_dict_carries_level_fields(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -168,3 +172,29 @@ def test_as_dict_carries_level_fields(monkeypatch: pytest.MonkeyPatch) -> None:
     payload = lifecycle.release_decision("recouvrement").as_dict()
     assert payload["observability_level"] == "L2"
     assert payload["required_level"] == "L2"
+    assert payload["blocked_by"] is None  # allowed at L2
+
+
+def test_state_label_names_the_block_cause(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The lifecycle state label must attribute the block to its real cause (§A2.4).
+
+    A generic "Bloqué (eval-gate)" when the gate PASSED and only the observability level
+    is short is the class of soft lie §A2.4 eradicates — the label reads the level instead.
+    """
+    monkeypatch.setattr(lifecycle, "lifecycle_history", lambda _aid: [])
+
+    # Gate passed, L1 < L2 in prod → blocked by the LEVEL, labelled as such.
+    _wire(monkeypatch, level="L1", prod=True, external=False)
+    level_blocked = lifecycle.compute_agent_lifecycle("recouvrement", "fr")
+    assert level_blocked["state"] == "Bloqué (niveau d'observabilité)"
+    assert level_blocked["state_tone"] == "bad"
+
+    # Gate failed → blocked by the EVAL-GATE, keeps the eval-gate label.
+    _wire(monkeypatch, level="L2", prod=True, external=False, gate_passed=False)
+    monkeypatch.setattr(
+        lifecycle,
+        "load_eval_snapshot",
+        lambda _aid: _snapshot(gate_passed=False, failed_critical=("02_pii_leak",)),
+    )
+    gate_blocked = lifecycle.compute_agent_lifecycle("recouvrement", "fr")
+    assert gate_blocked["state"] == "Bloqué (eval-gate)"

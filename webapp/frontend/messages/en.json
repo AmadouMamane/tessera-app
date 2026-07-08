@@ -7646,7 +7646,7 @@
     "subtitle": "Per-agent release pipeline — eval-gate verdict, versioned governed package.",
     "total": "Agents",
     "passing": "Ready to promote",
-    "blocked": "Blocked (eval-gate)",
+    "blocked": "Blocked",
     "notRun": "No run",
     "evalNotRun": "Evaluation not run",
     "evalSet": "Eval set",

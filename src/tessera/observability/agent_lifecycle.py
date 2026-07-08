@@ -79,9 +79,23 @@ _TR: dict[str, tuple[str, str, str]] = {
     "lvl_none": ("aucun", "keiner", "none"),
     "s_live": ("Live", "Live", "Live"),
     "s_ready": ("Prêt à promouvoir", "Bereit zur Promotion", "Ready to promote"),
+    # The eval-gate label may ONLY be shown when the eval-gate is what blocks. When the
+    # gate passed but the observability level is below the release requirement, the block
+    # is the level, and the label must say so — a generic "Bloqué (eval-gate)" there would
+    # be a soft lie (ADR 0017 §A2.4 honesty).
     "s_blocked": ("Bloqué (eval-gate)", "Blockiert (Eval-Gate)", "Blocked (eval-gate)"),
+    "s_blocked_level": (
+        "Bloqué (niveau d'observabilité)",
+        "Blockiert (Observability-Stufe)",
+        "Blocked (observability level)",
+    ),
     "s_awaiting": ("En attente d'évaluation", "Bewertung ausstehend", "Awaiting evaluation"),
 }
+
+#: The specific condition that blocks a release, surfaced so the state label never claims
+#: "eval-gate" when the gate passed and the observability level is what actually blocks.
+BLOCKED_BY_EVAL_GATE = "eval_gate"
+BLOCKED_BY_OBSERVABILITY_LEVEL = "observability_level"
 
 
 def _t(key: str, lang: str) -> str:
@@ -97,6 +111,17 @@ def _level_at_least(level: str | None, required: str | None) -> bool:
     if required is None:
         return True
     return _LEVEL_ORDER.get(level, -1) >= _LEVEL_ORDER.get(required, 99)
+
+
+def _blocked_by(*, eval_passed: bool, level_ok: bool) -> str | None:
+    """Which condition blocks the release (``None`` when nothing does).
+
+    The eval-gate only when the gate failed; the observability level when the gate passed
+    but the L-level is short — so the state label never attributes a level block to the gate.
+    """
+    if eval_passed and level_ok:
+        return None
+    return BLOCKED_BY_EVAL_GATE if not eval_passed else BLOCKED_BY_OBSERVABILITY_LEVEL
 
 
 # Latest governance phase, derived from the S1 chain (most recent wins).
@@ -124,6 +149,11 @@ class ReleaseDecision:
     # lifecycle: the agent's current L-level and the minimum this release requires.
     observability_level: str | None = None
     required_level: str | None = None
+    # Which condition blocks the release, when one does (``None`` when allowed):
+    # ``"eval_gate"`` (the two-level gate failed) or ``"observability_level"`` (the gate
+    # passed but the L-level is below the requirement). Lets the UI label the block
+    # truthfully instead of always attributing it to the eval-gate.
+    blocked_by: str | None = None
 
     def as_dict(self) -> dict[str, object]:
         """JSON-friendly view for the API + the S1 event detail."""
@@ -137,6 +167,7 @@ class ReleaseDecision:
             "run_at": self.run_at,
             "observability_level": self.observability_level,
             "required_level": self.required_level,
+            "blocked_by": self.blocked_by,
         }
 
 
@@ -204,6 +235,8 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
         run_at=snap.run_at,
         observability_level=level,
         required_level=required_level,
+        # Attribute the block to its real cause so the UI label never lies (§A2.4).
+        blocked_by=_blocked_by(eval_passed=eval_passed, level_ok=level_ok),
     )
 
 
@@ -256,7 +289,14 @@ def compute_agent_lifecycle(agent_id: str, lang: str = "fr") -> dict[str, object
     elif decision.allowed:
         state, tone = _t("s_ready", lang), "good"
     elif decision.has_run:
-        state, tone = _t("s_blocked", lang), "bad"
+        # Label the block by its real cause — the eval-gate one is reserved for a real
+        # gate failure; a level-only block reads "niveau d'observabilité" (§A2.4 honesty).
+        blocked_key = (
+            "s_blocked_level"
+            if decision.blocked_by == BLOCKED_BY_OBSERVABILITY_LEVEL
+            else "s_blocked"
+        )
+        state, tone = _t(blocked_key, lang), "bad"
     else:
         state, tone = _t("s_awaiting", lang), "warn"
     return {
