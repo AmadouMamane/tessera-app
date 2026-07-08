@@ -66,6 +66,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // filter affordances derive from the same descriptor as every other signal.
   business_events: cap(AGENT_TIME),
   recouvrement_business_scores: cap(AGENT_TIME),
+  // The per-capability business aggregate, folded into the batched snapshot (step 6c) as a
+  // probe read — same source as /observability/business/capabilities, one descriptor.
+  business_capabilities: cap(AGENT_TIME),
   traces: cap(CUBE),
   // Control-case inbox: each item is a case an agent's own eval run failed → ventilable.
   inbox: cap(AGENT_TIME),

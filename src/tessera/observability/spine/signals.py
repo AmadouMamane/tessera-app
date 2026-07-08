@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 from tessera.observability import (
     anomalies as anomalies_mod,
+    business_capabilities as business_capabilities_mod,
     business_events as business_events_mod,
     business_scoring as business_scoring_mod,
     conformance as conformance_mod,
@@ -205,6 +206,15 @@ async def _read_recouvrement_business_scores(scope: Scope) -> dict[str, object]:
     }
 
 
+async def _read_business_capabilities(scope: Scope) -> dict[str, object]:
+    # One source with GET /observability/business/capabilities: the same aggregate over the
+    # same fact, narrowed to the snapshot's agent+time dims (the finer route filters default
+    # to None, matching a page-load read). Parity is asserted in test_spine_signals_parity.
+    return business_capabilities_mod.business_capability_aggregate(
+        at=scope.at, agent_id=scope.agent_id
+    )
+
+
 async def _read_audit_count(scope: Scope) -> dict[str, object]:
     entries = ledger.events_for_scope(current_context().audit_entries(scope), scope)
     return {"entry_count": len(entries), "as_of": scope.at, "agent": scope.agent_param}
@@ -255,6 +265,7 @@ _READS = {
     "governance": _read_governance,
     "business_events": _read_business_events,
     "recouvrement_business_scores": _read_recouvrement_business_scores,
+    "business_capabilities": _read_business_capabilities,
     "audit_count": _read_audit_count,
     "audit_integrity": _read_audit_integrity,
 }
