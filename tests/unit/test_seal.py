@@ -280,3 +280,102 @@ def test_run_seal_cycle_flags_divergence(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_attestation_type_is_not_a_seal() -> None:
     # Guard against a copy-paste: the two appended-entry families are distinct.
     assert LEDGER_SEAL_TYPE != LEDGER_ATTESTATION_TYPE
+
+
+# ── Lot 3 — acceptance scenarios (the mission's named degradation + re-seal proofs) ──
+
+
+def _extend(chain: list[dict[str, Any]], raw: dict[str, Any]) -> dict[str, Any]:
+    """Chain one raw entry onto an existing content-intact chain (prev_hash = current head)."""
+    prev = chain[-1]["hash"] if chain else _GENESIS
+    entry = {**raw, "prev_hash": prev}
+    entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
+    chain.append(entry)
+    return entry
+
+
+def _fake_emit(chain: list[dict[str, Any]]) -> Any:
+    """A durable-append double: appends a chained seal entry so the head advances."""
+
+    def emit(**kw: Any) -> None:
+        _extend(
+            chain,
+            {
+                "type": LEDGER_SEAL_TYPE,
+                "sealed_head": kw["sealed_head"],
+                "prev_sealed_head": kw["prev_sealed_head"],
+                "sealed_at": kw["sealed_at"],
+                "provider": kw["provider"],
+                "qualified": kw["qualified"],
+                "tsa": kw["tsa"],
+                "divergence": kw["divergence"],
+            },
+        )
+
+    return emit
+
+
+def test_seal_unavailable_degrades_to_partial_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mission Lot 3 (a): seal unavailable ⇒ «Intégrité partielle», proven through the badge path.
+
+    A content-intact, linear chain + the default NoOp provider ⇒ the register §9 badge is
+    ``integrite_partielle`` (chain valid, no third-party seal), never a cosmetic green.
+    """
+    payloads = _chain({"n": 1}, {"n": 2})
+    monkeypatch.setattr(S, "_read_active_payloads", lambda *_a, **_k: payloads)
+    monkeypatch.setattr(S, "get_seal_provider", lambda *_a, **_k: S.NoOpProvider())
+    opp = S.active_ledger_opposability()
+    assert opp["content_integrity"] is True
+    assert opp["seal_state"] == "absent"
+    assert opp["badge"] == "integrite_partielle"  # never scellé without a real, verified seal
+
+
+def test_configured_qualified_seal_is_opposable_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The positive: a verified QUALIFIED seal over a linear chain ⇒ «Scellé · opposable»."""
+    payloads = _chain({"n": 1}, {"n": 2})
+    head = payloads[-1]["hash"]
+    _extend(payloads, _seal_entry(head, datetime.now(UTC).isoformat()))  # a fresh seal for the head
+    monkeypatch.setattr(S, "_read_active_payloads", lambda *_a, **_k: payloads)
+    monkeypatch.setattr(S, "get_seal_provider", lambda *_a, **_k: FakeProvider(qualified=True))
+    opp = S.active_ledger_opposability()
+    assert opp["seal_state"] == "verified"
+    assert opp["badge"] == "scelle_opposable"
+
+
+def test_configured_non_qualified_seal_is_sealed_not_opposable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payloads = _chain({"n": 1}, {"n": 2})
+    _extend(payloads, _seal_entry(payloads[-1]["hash"], datetime.now(UTC).isoformat()))
+    monkeypatch.setattr(S, "_read_active_payloads", lambda *_a, **_k: payloads)
+    monkeypatch.setattr(S, "get_seal_provider", lambda *_a, **_k: FakeProvider(qualified=False))
+    opp = S.active_ledger_opposability()
+    assert opp["badge"] == "scelle_non_qualifie"  # sealed, but not claiming legal opposability
+
+
+def test_sealed_then_extended_reseals_next_cycle(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mission Lot 3 (b): seal the head, extend the chain, and the next cycle re-seals the new head.
+
+    Continuity holds across the extension (no fork), so cycle 2 seals the new head and records the
+    previous sealed head — the chain of seals each transitively covers its predecessor.
+    """
+    chain = _chain({"n": 1}, {"n": 2})
+    monkeypatch.setattr(S, "_read_active_payloads", lambda *_a, **_k: chain)
+    monkeypatch.setattr(S, "emit_ledger_seal", _fake_emit(chain))
+
+    first = S.run_seal_cycle(provider=FakeProvider())
+    assert first.sealed is True
+    assert first.continuity == "genesis"
+    head1 = first.head
+    assert chain[-1]["sealed_head"] == head1  # seal 1 pinned the first head
+    assert chain[-1]["prev_sealed_head"] is None
+
+    _extend(chain, {"n": 3})  # the chain grows past the sealed head (new writes land)
+    new_head = chain[-1]["hash"]
+
+    second = S.run_seal_cycle(provider=FakeProvider())
+    assert second.sealed is True
+    assert second.continuity == "continuous"  # no fork between the two seals
+    assert second.head == new_head
+    assert chain[-1]["sealed_head"] == new_head  # seal 2 pins the extended head
+    assert chain[-1]["prev_sealed_head"] == head1  # …and references seal 1's head

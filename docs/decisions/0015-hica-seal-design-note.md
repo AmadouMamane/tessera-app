@@ -1,6 +1,6 @@
 # 0015 — Hica external opposability seal: design note (Lot 1)
 
-> **Status: APPROVED 2026-07-08** (review *"Hica seal design review"*). **Lot 2 in progress.**
+> **Status: APPROVED 2026-07-08** (review *"Hica seal design review"*). **Lots 1–3 complete.**
 > Companion to ADR `0015-runtime-telemetry-spine-and-scope.md` (§Amendment 3 pt 3, §Correction 3c
 > pt 4) and to the incident record `0015-incident-TESS-LEDGER-001-status.md`. This note does **not**
 > re-decide the seal (ADR 0015 already accepted it) — it decides the **mechanism** and the **wiring**.
@@ -345,6 +345,6 @@ absent, and the badge would honestly say so.
 |---|---|---|---|---|
 | 1 | Design note: mechanism evaluation + wiring + honesty contract; HALT for review | ✅ done | `eab3ad58` | RFC 3161 TSA chosen; C (Object-Lock) & E (self-sign) rejected; badge truth-table + honesty invariants specified. **Reviewed & APPROVED 2026-07-08** — rulings in §9bis (Q1 qualified/non-qualified split; Q5 footer suffix). Docs-only. |
 | 2 | Implementation: `seal.py` (`SealProvider`+`rfc3161`+`NoOp`), off-chrono seal cycle w/ continuity+divergence check, `evaluate_seal` composed into tree status + `/audit/integrity`, §6 badge on TE-01 (corrects the over-claim) + footer suffix (Q5), config incl. `seal_tsa_qualified`, mandatory mention | ✅ done (this commit) | — | Backend: `guard/seal.py`, seal-entry builder in `audit.py`, `GuardSettings` seal fields, `AuditIntegrity` seal facet + badge, `etat_a_date` real `opposability` block (drives the honest badge; `verified` no longer a constant). Frontend: `OpposabilityBadge` on TE-01 + printable-report + footer suffix + i18n (en/fr/de) + honest e2e. 27 unit tests (`test_seal.py`). Twice-green: py **1437** ×2 · FE tsc/biome/vitest **78** ×2. |
-| 3 | Tests: seal-unavailable → «Intégrité partielle» proven; sealed-then-extended → re-seal next cycle; fork-between-seals → divergence within τ; rewrite → red; honesty invariants H1–H5 | 🟡 in progress | — | Partly covered by Lot 2's `test_seal.py`; Lot 3 adds the end-to-end degradation + re-seal proofs. |
+| 3 | Tests: seal-unavailable → «Intégrité partielle» proven; sealed-then-extended → re-seal next cycle; fork-between-seals → divergence within τ; rewrite → red; honesty invariants H1–H5 | ✅ done (this commit) | — | 4 acceptance scenarios added to `test_seal.py` — end-to-end degradation through `active_ledger_opposability` (NoOp ⇒ `integrite_partielle`; qualified seal ⇒ `scelle_opposable`; non-qualified ⇒ `scelle_non_qualifie`) + the sealed-then-extended re-seal (continuity holds, seal 2 pins the new head, references seal 1). 31 tests total. Twice-green: py **1441** ×2. |
 
 Status legend: ⬜ pending · 🟡 in progress / awaiting review · ✅ done (twice-green) · ⛔ blocked.
