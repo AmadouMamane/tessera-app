@@ -59,6 +59,23 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Headers H3 visual validation: APPROUVÉ — GO H4.** Amadou donne le
+  feu vert après quick look launcher + `/espaces` (:3098). Next: commit H3, then H4 product
+  surfaces (client space + collections console) if not already covered by antigravity.
+
+- 2026-07-08 — **Headers H3 launcher + `/espaces` checkpoint ready for Amadou quick look**
+  on `codex/headers-refonte`. Scope shell/header only: launcher and `/espaces` inherit the
+  shared `UserMenu` path (language + theme inside the avatar menu; no loose language/theme
+  header icons) and the shared `DemoBadge` component (no local demo-pill markup; anonymous
+  launcher verified with exactly one "Démonstration" badge). Visual proof on the :3098 worktree
+  preview: `/tmp/tessera-h3-launcher.png`, `/tmp/tessera-h3-espaces.png`,
+  `/tmp/tessera-h3-launcher-anonymous.png`, `/tmp/tessera-h3-launcher-menu.png`.
+  **Twice-green on H3:** backend `ruff` / `ruff format --check` / `mypy src/tessera` /
+  `pytest -q -m "not integration"` (`1410 passed, 50 deselected`) ×2; frontend
+  `tsc --noEmit` / `biome check .` (27-warning existing baseline, no new findings) /
+  `vitest run` (`90 passed`) ×2. **HALT:** H3 waits for Amadou quick visual validation
+  before H4.
+
 - 2026-07-08 — **Headers H2 visual validation: APPROUVÉ — GO H3.** Amadou donne le
   feu vert après checkpoint visuel cockpit (:3098). Next: commit H2, then H3 launcher +
   `/espaces` inheritance check (UserMenu, DemoBadge, zero specific chrome).

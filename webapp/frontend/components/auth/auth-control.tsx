@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, FlaskConical, LogIn } from "lucide-react";
+import { ChevronDown, LogIn } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 
@@ -15,7 +15,8 @@ import { Link } from "@/i18n/navigation";
  *   customer). Anonymous shows "Se connecter".
  * - `gated` — cockpit / collections console: the route is already RBAC-gated, an
  *   anonymous visitor never reaches it, so NEVER show "Se connecter".
- * - `demo` — launcher: a labelled demonstration session, not a real login.
+ * - `demo` — launcher: page-level demo badge already carries the context; no
+ *   extra header auth affordance for anonymous visitors.
  *
  * Signed-in behaviour is identical in every context: the user menu (who + sign
  * out). The context only changes the anonymous fallback.
@@ -55,15 +56,10 @@ export function AuthControl({ context = "optional" }: { context?: AuthContext })
     // role — an anonymous render here means the session is mid-resolve or the
     // RBAC layout is about to bounce. Never invite a sign-in: stay silent.
     if (context === "gated") return null;
-    // Launcher: a labelled DEMO session, not a real login (ADR 0013). No
-    // "Se connecter" CTA — the launcher is a demonstration, not a front door.
+    // Launcher: no "Se connecter" CTA — the launcher is a demonstration, not a
+    // front door. The page-level DemoBadge is the single demo affordance.
     if (context === "demo") {
-      return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
-          <FlaskConical className="h-3.5 w-3.5" />
-          {t("demoSession")}
-        </span>
-      );
+      return null;
     }
     // Optional auth (product/espaces): sign-in unlocks the customer experience.
     return (

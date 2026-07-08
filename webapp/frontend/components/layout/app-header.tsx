@@ -18,9 +18,7 @@ import { useEffect, useState, useTransition } from "react";
 import { type AuthContext, AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { CommandSearch } from "@/components/layout/command-search";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SystemStatusPill } from "@/components/layout/system-status-pill";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -200,19 +198,9 @@ export function AppHeader({
       >
         <div className="min-w-0">{left}</div>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
-          {cockpit ? <CockpitTools /> : null}
-          {/* Global utilities — langue · thème. On the cockpit the account/identity
-              lives ONCE, in the sidebar (Linear/Notion pattern), so it is NOT
-              repeated here; the launcher/business surfaces keep it in the header. */}
-          <LanguageSwitcher />
-          <ThemeToggle
-            className={
-              cockpit
-                ? "h-9 w-9 rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] hover:bg-[var(--tessera-muted)]"
-                : undefined
-            }
-          />
-          {cockpit ? null : <AuthControl context={authContext} />}
+          {/* Non-cockpit surfaces keep identity/preferences in the shared user
+              menu; language and theme are no longer loose header icons. */}
+          <AuthControl context={authContext} />
         </div>
       </div>
 

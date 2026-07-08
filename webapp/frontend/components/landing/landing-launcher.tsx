@@ -16,6 +16,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
 
 import { AppHeader } from "@/components/layout/app-header";
+import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
@@ -179,10 +180,7 @@ export function LandingLauncher({
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}
-            <span className="mb-[36px] inline-flex items-center gap-[7px] rounded-full border border-[var(--border-gold)] bg-[color-mix(in_srgb,var(--gold)_12%,transparent)] px-[12px] py-[5px] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--gold-strong)]">
-              <span className="h-[6px] w-[6px] rounded-full bg-[var(--gold-strong)]" />
-              {t("demoBadge")}
-            </span>
+            <DemoBadge className="mb-[36px]" />
             <h1 className="font-sans text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[var(--text-primary)]">
               {t("demoTitle")}
             </h1>

@@ -10,10 +10,12 @@ const appFooter = read("components/layout/app-footer.tsx");
 const authControl = read("components/auth/auth-control.tsx");
 const appHeader = read("components/layout/app-header.tsx");
 const appShell = read("components/layout/app-shell.tsx");
+const espacesPage = read("app/[locale]/espaces/page.tsx");
 const cockpitAuthGate = read("components/layout/cockpit-auth-gate.tsx");
 const commandSearch = read("components/layout/command-search.tsx");
 const demoBadge = read("components/layout/demo-badge.tsx");
 const demoLauncherLink = read("components/layout/demo-launcher-link.tsx");
+const landingLauncher = read("components/landing/landing-launcher.tsx");
 const ledgerIntegrity = read("components/layout/ledger-integrity.tsx");
 const systemStatus = read("components/layout/system-status-pill.tsx");
 const userMenu = read("components/layout/user-menu.tsx");
@@ -82,6 +84,24 @@ describe("H2 cockpit header contract", () => {
     expect(appHeader).not.toContain("BusinessMenu");
     expect(appHeader).not.toContain("ModelBadge");
     expect(appHeader).not.toContain("StatusBadge");
+  });
+});
+
+describe("H3 launcher and spaces inheritance", () => {
+  it("uses the shared demo badge instead of local demo pills", () => {
+    expect(authControl).not.toContain("FlaskConical");
+    expect(landingLauncher).toContain("<DemoBadge");
+    expect(landingLauncher).not.toContain('t("demoBadge")');
+    expect(espacesPage).toContain("<DemoBadge");
+    expect(espacesPage).not.toContain('t("demoBadge")');
+  });
+
+  it("keeps language and theme preferences inside the shared user menu", () => {
+    expect(appHeader).not.toContain("LanguageSwitcher");
+    expect(appHeader).not.toContain("ThemeToggle");
+    expect(appHeader).toContain("<AuthControl context={authContext} />");
+    expect(userMenu).toContain("setTheme");
+    expect(userMenu).toContain("DropdownMenuRadioGroup");
   });
 });
 
