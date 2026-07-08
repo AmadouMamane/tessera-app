@@ -17,8 +17,13 @@ from dataclasses import dataclass
 
 from tessera.guard.audit import emit_agent_lifecycle
 from tessera.guard.ledger_store import read_ledger_entries
+from tessera.observability.business_capabilities import (
+    declares_external_effects,
+    resolve_observability_level,
+)
 from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
+from tessera.settings import get_settings
 
 __all__ = [
     "ReleaseDecision",
@@ -55,15 +60,68 @@ _TR: dict[str, tuple[str, str, str]] = {
         "kein Gate-Verdikt fuer diesen Lauf (erneut mit --agent ausfuehren).",
         "no gate verdict on this run (re-run via --agent).",
     ),
+    "r_below_l2_prod": (
+        "non promouvable en production : niveau d'observabilité {lvl} < L2 "
+        "(garde-fous / eval / audit invisibles au cockpit).",
+        "in Produktion nicht freigebbar: Observability-Stufe {lvl} < L2 "
+        "(Guardrails / Eval / Audit fuer das Cockpit unsichtbar).",
+        "not releasable in production: observability level {lvl} < L2 "
+        "(guardrails / eval / audit invisible to the cockpit).",
+    ),
+    "r_below_l3_external": (
+        "L3 requis : l'agent déclare des effets externes mais son niveau est {lvl} "
+        "(ses événements métier doivent être vérifiables).",
+        "L3 erforderlich: Der Agent deklariert externe Effekte, aber seine Stufe ist {lvl} "
+        "(seine Geschaeftsereignisse muessen ueberpruefbar sein).",
+        "L3 required: the agent declares external effects but its level is {lvl} "
+        "(its business events must be verifiable).",
+    ),
+    "lvl_none": ("aucun", "keiner", "none"),
     "s_live": ("Live", "Live", "Live"),
     "s_ready": ("Prêt à promouvoir", "Bereit zur Promotion", "Ready to promote"),
+    # The eval-gate label may ONLY be shown when the eval-gate is what blocks. When the
+    # gate passed but the observability level is below the release requirement, the block
+    # is the level, and the label must say so — a generic "Bloqué (eval-gate)" there would
+    # be a soft lie (ADR 0017 §A2.4 honesty).
     "s_blocked": ("Bloqué (eval-gate)", "Blockiert (Eval-Gate)", "Blocked (eval-gate)"),
+    "s_blocked_level": (
+        "Bloqué (niveau d'observabilité)",
+        "Blockiert (Observability-Stufe)",
+        "Blocked (observability level)",
+    ),
     "s_awaiting": ("En attente d'évaluation", "Bewertung ausstehend", "Awaiting evaluation"),
 }
+
+#: The specific condition that blocks a release, surfaced so the state label never claims
+#: "eval-gate" when the gate passed and the observability level is what actually blocks.
+BLOCKED_BY_EVAL_GATE = "eval_gate"
+BLOCKED_BY_OBSERVABILITY_LEVEL = "observability_level"
 
 
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
+
+
+# ADR 0017 §4 ladder order, for the §A2.4 "at least L2 / L3" release conditions.
+_LEVEL_ORDER: dict[str | None, int] = {None: -1, "L0": 0, "L1": 1, "L2": 2, "L3": 3}
+
+
+def _level_at_least(level: str | None, required: str | None) -> bool:
+    """Whether ``level`` meets a required minimum on the L0-L3 ladder (None required = always)."""
+    if required is None:
+        return True
+    return _LEVEL_ORDER.get(level, -1) >= _LEVEL_ORDER.get(required, 99)
+
+
+def _blocked_by(*, eval_passed: bool, level_ok: bool) -> str | None:
+    """Which condition blocks the release (``None`` when nothing does).
+
+    The eval-gate only when the gate failed; the observability level when the gate passed
+    but the L-level is short — so the state label never attributes a level block to the gate.
+    """
+    if eval_passed and level_ok:
+        return None
+    return BLOCKED_BY_EVAL_GATE if not eval_passed else BLOCKED_BY_OBSERVABILITY_LEVEL
 
 
 # Latest governance phase, derived from the S1 chain (most recent wins).
@@ -87,6 +145,15 @@ class ReleaseDecision:
     gate_passed: bool | None
     failed_critical: tuple[str, ...]
     run_at: str
+    # ADR 0017 §A2.4 — the observability level is a release condition, not a parallel
+    # lifecycle: the agent's current L-level and the minimum this release requires.
+    observability_level: str | None = None
+    required_level: str | None = None
+    # Which condition blocks the release, when one does (``None`` when allowed):
+    # ``"eval_gate"`` (the two-level gate failed) or ``"observability_level"`` (the gate
+    # passed but the L-level is below the requirement). Lets the UI label the block
+    # truthfully instead of always attributing it to the eval-gate.
+    blocked_by: str | None = None
 
     def as_dict(self) -> dict[str, object]:
         """JSON-friendly view for the API + the S1 event detail."""
@@ -98,16 +165,34 @@ class ReleaseDecision:
             "gate_passed": self.gate_passed,
             "failed_critical": list(self.failed_critical),
             "run_at": self.run_at,
+            "observability_level": self.observability_level,
+            "required_level": self.required_level,
+            "blocked_by": self.blocked_by,
         }
 
 
 def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
-    """Decide whether ``agent_id`` may go live, from its own eval-gate verdict.
+    """Decide whether ``agent_id`` may go live (ADR 0017 §A2.4).
 
-    Live requires a run of the agent's OWN set that cleared the two-level gate.
-    No run, or a blocked gate, means the agent cannot be promoted.
+    From its own eval-gate verdict AND its observability level — three conditions,
+    all required:
+    1. a run of the agent's OWN set that cleared the two-level eval-gate;
+    2. **no production below L2** — an agent whose guard/eval/audit facts the cockpit
+       cannot see is not releasable, whatever its scores;
+    3. **L3 when it declares external effects** — a capability reaching outside the
+       system (``requires_validation`` / ``external_action``) must have verifiable
+       business events. The L-level is a *condition*, not a parallel lifecycle.
     """
     lang = _norm_lang(lang)
+    level = resolve_observability_level(agent_id)
+    if declares_external_effects(agent_id):
+        required_level: str | None = "L3"
+    elif get_settings().is_production():
+        required_level = "L2"
+    else:
+        required_level = None
+    level_ok = _level_at_least(level, required_level)
+
     try:
         snap = load_eval_snapshot(agent_id)
     except FileNotFoundError:
@@ -119,23 +204,39 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
             gate_passed=None,
             failed_critical=(),
             run_at="",
+            observability_level=level,
+            required_level=required_level,
         )
-    if snap.gate_passed is True:
-        reason = _t("r_validated", lang)
-    elif snap.gate_failed_critical:
-        reason = _t("r_blocked_critical", lang).format(cats=", ".join(snap.gate_failed_critical))
-    elif snap.gate_passed is False:
-        reason = _t("r_blocked_domain", lang)
+
+    eval_passed = snap.gate_passed is True
+    if not eval_passed:
+        if snap.gate_failed_critical:
+            reason = _t("r_blocked_critical", lang).format(
+                cats=", ".join(snap.gate_failed_critical)
+            )
+        elif snap.gate_passed is False:
+            reason = _t("r_blocked_domain", lang)
+        else:
+            reason = _t("r_no_verdict", lang)
+    elif not level_ok:
+        lvl = level or _t("lvl_none", lang)
+        key = "r_below_l3_external" if required_level == "L3" else "r_below_l2_prod"
+        reason = _t(key, lang).format(lvl=lvl)
     else:
-        reason = _t("r_no_verdict", lang)
+        reason = _t("r_validated", lang)
+
     return ReleaseDecision(
         agent_id=agent_id,
-        allowed=snap.gate_passed is True,
+        allowed=eval_passed and level_ok,
         reason=reason,
         has_run=True,
         gate_passed=snap.gate_passed,
         failed_critical=snap.gate_failed_critical,
         run_at=snap.run_at,
+        observability_level=level,
+        required_level=required_level,
+        # Attribute the block to its real cause so the UI label never lies (§A2.4).
+        blocked_by=_blocked_by(eval_passed=eval_passed, level_ok=level_ok),
     )
 
 
@@ -188,7 +289,14 @@ def compute_agent_lifecycle(agent_id: str, lang: str = "fr") -> dict[str, object
     elif decision.allowed:
         state, tone = _t("s_ready", lang), "good"
     elif decision.has_run:
-        state, tone = _t("s_blocked", lang), "bad"
+        # Label the block by its real cause — the eval-gate one is reserved for a real
+        # gate failure; a level-only block reads "niveau d'observabilité" (§A2.4 honesty).
+        blocked_key = (
+            "s_blocked_level"
+            if decision.blocked_by == BLOCKED_BY_OBSERVABILITY_LEVEL
+            else "s_blocked"
+        )
+        state, tone = _t(blocked_key, lang), "bad"
     else:
         state, tone = _t("s_awaiting", lang), "warn"
     return {

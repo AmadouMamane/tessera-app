@@ -7646,7 +7646,7 @@
     "subtitle": "Release-Pipeline pro Agent — Eval-Gate-Verdikt, versioniertes verwaltetes Paket.",
     "total": "Agenten",
     "passing": "Promotionsbereit",
-    "blocked": "Blockiert (Eval-Gate)",
+    "blocked": "Blockiert",
     "notRun": "Kein Lauf",
     "evalNotRun": "Evaluierung nicht ausgeführt",
     "evalSet": "Eval-Set",

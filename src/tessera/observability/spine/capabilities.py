@@ -120,6 +120,13 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # (in-process → owned ClickHouse) is visibly flipped, never a stale hardcoded local alias.
     _cap("business_events", {AGENT, TIME}, fact="business_events"),
     _cap("recouvrement_business_scores", {AGENT, TIME}, fact="business_events"),
+    # The per-capability business aggregate (ADR 0017 §5, step 6c) folded into the one
+    # batched read model: identical source to GET /observability/business/capabilities
+    # (never two sources — parity-gated), reachable through the single snapshot pass so the
+    # Métier fan-out need not return. It scans + scores the events, so it stays OFF the
+    # default hot path (``in_snapshot=False``) — a probe read via
+    # ``?signals=business_capabilities`` that never inflates the snapshot's p95 budget.
+    _cap("business_capabilities", {AGENT, TIME}, fact="business_events"),
     # The audit event *count* is per-agent ventilable; its chain *integrity* is not.
     _cap("audit_count", {AGENT, TIME}),
     # Org-wide by construction: the hash chain links entry N to N-1 across all agents; a

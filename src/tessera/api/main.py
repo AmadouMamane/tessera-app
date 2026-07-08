@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from tessera import __version__
+from tessera.agent.telemetry import install_runtime_provider
 from tessera.api.limits import RequestSizeLimitMiddleware
 from tessera.api.middleware import AuthMiddleware, RequestIdMiddleware
 from tessera.api.operator import validate_operator_assertion_key
@@ -162,6 +163,11 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
 def build_app() -> FastAPI:
     """Construct the FastAPI application."""
     settings = get_settings()
+    # Wire the agent runtime into the spine's telemetry ports (ADR 0017 §1): the
+    # cockpit routes read runtime facts via get_runtime_provider() and never
+    # import the runtime themselves. Absent in a cockpit-only deployment, where
+    # the spine serves honest-empty defaults.
+    install_runtime_provider()
     # Fail-closed config validation (ADR 0008/0009/0010): refuse to boot in
     # production without the real signing keys instead of silently degrading. The
     # customer-session key (ADR 0008/0009) and the operator-assertion key (ADR 0010

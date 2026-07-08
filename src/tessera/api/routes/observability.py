@@ -67,7 +67,6 @@ from tessera.observability import (
     fleet as fleet_mod,
     funnel as funnel_mod,
     governance_feed as governance_feed_mod,
-    graph_topology as graph_topology_mod,
     guard_explain as guard_explain_mod,
     guard_retraction as guard_retraction_mod,
     handoffs as handoffs_mod,
@@ -91,6 +90,7 @@ from tessera.observability import (
     policies as policies_mod,
     proofs as proofs_mod,
     provenance as provenance_mod,
+    quality_nets as quality_nets_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
     reliability as reliability_mod,
@@ -131,6 +131,7 @@ from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.sycophancy import detect_sycophancy
 from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
+from tessera.observability.spine.runtime import get_runtime_provider
 from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot
 
@@ -301,7 +302,7 @@ async def observability_scores(at: str | None = None, agent: str = "all") -> dic
     return {"scores": _scores_for(at, _agent_or_none(agent)), "as_of": at, "agent": agent}
 
 
-@router.get("/observability/business-events")
+@router.get("/observability/business-events", dependencies=[Depends(require_bearer)])
 async def observability_business_events(
     at: str | None = None,
     agent: str = "all",
@@ -343,7 +344,7 @@ async def observability_business_events(
     }
 
 
-@router.get("/observability/business/capabilities")
+@router.get("/observability/business/capabilities", dependencies=[Depends(require_bearer)])
 async def observability_business_capabilities(
     at: str | None = None,
     agent: str = "all",
@@ -595,7 +596,7 @@ def _business_runs_response(
     }
 
 
-@router.get("/observability/business/runs")
+@router.get("/observability/business/runs", dependencies=[Depends(require_bearer)])
 async def observability_business_runs(
     at: str | None = None,
     agent: str = "all",
@@ -1308,6 +1309,26 @@ async def observability_guardrail_catalogue(
         return {"available": False}
 
 
+@router.get("/observability/quality-nets", dependencies=[Depends(require_bearer)])
+async def observability_quality_nets(agent: str) -> dict[str, object]:
+    """Manifest-generated quality nets for one agent (ADR 0017 §4).
+
+    Instrumentation coverage (signal 92, measured from the agent's most recent telemetry)
+    + canary freshness (signal 94, target workflows + last-seen turn). Both ``null`` for an
+    un-manifested agent (honest-empty). Degrades to ``available: false`` on any failure.
+    """
+    try:
+        return {
+            "available": True,
+            "agent_id": agent,
+            "coverage": quality_nets_mod.coverage_descriptor(agent),
+            "canary": quality_nets_mod.canary_descriptor(agent),
+        }
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.quality_nets: failed: {exc}\n")
+        return {"available": False}
+
+
 @router.get("/observability/release-control")
 async def observability_release_control(agent: str = "all", lang: str = "fr") -> dict[str, object]:
     """Release Control (AGIR): per-agent release pipeline + eval-gate verdict.
@@ -1423,20 +1444,20 @@ async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
     guard switches from these — never from fabricated values. Read-only;
     overrides are applied per-turn at chat time, never persisted here.
     """
-    from tessera.agent.reporter import load_prompts
-    from tessera.agent.router import _POLICY_RULES
     from tessera.guard.decisions import load_policy
     from tessera.settings import LanguageCode, get_settings
 
     langs = {"fr": LanguageCode.FR, "de": LanguageCode.DE, "en": LanguageCode.EN}
     try:
         language = langs.get(lang, LanguageCode.FR)
-        prompts = load_prompts(language)
+        # ADR 0017 §1: the live system prompt + policy-rule count are agent-runtime
+        # facts, read through the spine port — never by importing the runtime here.
+        defaults = get_runtime_provider().sandbox_defaults(language)
         policy = load_policy(get_settings().guard.policy_path)
         return {
             "available": True,
             "language": language.value,
-            "system_prompt": prompts.get("system", ""),
+            "system_prompt": defaults.system_prompt,
             "guard_categories": [
                 {
                     "key": "prompt_injection",
@@ -1453,7 +1474,7 @@ async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
                 {
                     "key": "policy",
                     "label": "Refus policy",
-                    "count": len(_POLICY_RULES.get(language, [])),
+                    "count": defaults.policy_rule_count,
                     "detail": (
                         "Court-circuits déterministes : conseil hors-scope, procédures "
                         "confidentielles, évasion anti-fraude, promesses interdites."
@@ -2842,14 +2863,12 @@ async def observability_cost(at: str | None = None, agent: str = "all") -> dict[
 
 @router.get("/observability/graph-topology")
 async def observability_graph_topology() -> dict[str, object]:
-    """Topology fingerprint of the live agent graph vs the golden pin (#87)."""
-    from tessera.agent.graph import build_graph
+    """Topology fingerprint of the live agent graph vs the golden pin (#87).
 
-    snapshot = graph_topology_mod.topology_snapshot(build_graph())
-    drift = graph_topology_mod.compare_topology(
-        snapshot, golden=graph_topology_mod.GOLDEN_FINGERPRINT
-    )
-    return {**asdict(snapshot), "drift": asdict(drift)}
+    ADR 0017 §1: the fingerprint is computed by the agent runtime (which imports
+    langgraph) and read through the spine port — the cockpit never builds the graph.
+    """
+    return get_runtime_provider().graph_topology()
 
 
 @router.get("/observability/guard-retraction")

@@ -5,11 +5,15 @@ the agent runtime (``tessera.agent.*``) or ``langgraph``. Two seams are legitima
 allowed — the governed registry (the AgentSpec manifest seam, ADR 0012/0017 §3) and
 the agent-id vocabulary (``tessera.agent.identity``).
 
-Every *existing* violation is frozen below as a named exception (slated for ADR 0017
-Phase E — the SDK extraction). The assertion is **exact set equality**, so the test
-fails both when a NEW forbidden import appears (the boundary would silently erode)
-and when an exception disappears (the freeze list must shrink with the fix — ratchet
-in both directions). Do not extend ``_FROZEN_EXCEPTIONS`` without amending ADR 0017.
+The freeze list is **now empty**: ADR 0017 Phase E (step 6a) retired all five
+original exceptions — ``instrument.py`` + ``graph_topology.py`` moved into
+``tessera.agent.sdk`` (off the scanned tree) and the three route imports
+(reporter/router/graph) moved behind the ``observability.spine.runtime`` port.
+The assertion is **exact set equality**, so the test fails both when a NEW
+forbidden import appears (the boundary would silently erode) and when a frozen
+exception no longer exists (the freeze list must shrink with the fix — ratchet in
+both directions). Do not add to ``_FROZEN_EXCEPTIONS`` without amending ADR 0017:
+the control plane must never import the agent runtime again.
 """
 
 from __future__ import annotations
@@ -25,17 +29,10 @@ _FORBIDDEN_ROOTS = ("langgraph", "tessera.agent")
 #: Legitimate seams: the governed manifest registry and the agent-id vocabulary.
 _ALLOWED_ROOTS = ("tessera.agent.registry", "tessera.agent.identity")
 
-#: Existing violations, frozen (path relative to ``src/tessera`` → imported modules).
-#: Owed to ADR 0017 Phase E (instrumentation moves into the agent SDK).
-_FROZEN_EXCEPTIONS: frozenset[tuple[str, str]] = frozenset(
-    {
-        ("observability/graph_topology.py", "langgraph.graph"),
-        ("observability/graph_topology.py", "tessera.agent.state"),
-        ("api/routes/observability.py", "tessera.agent.reporter"),
-        ("api/routes/observability.py", "tessera.agent.router"),
-        ("api/routes/observability.py", "tessera.agent.graph"),
-    }
-)
+#: Frozen violations (path relative to ``src/tessera`` → imported modules).
+#: **Empty** since ADR 0017 Phase E (step 6a): the control plane imports no part
+#: of the agent runtime. A non-empty set here again means the boundary regressed.
+_FROZEN_EXCEPTIONS: frozenset[tuple[str, str]] = frozenset()
 
 
 def _matches(name: str, roots: tuple[str, ...]) -> bool:

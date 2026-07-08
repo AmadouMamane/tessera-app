@@ -2,6 +2,9 @@ import type {
   RecouvrementAssistantArtifact,
   RecouvrementAssistantResponse,
 } from "@/lib/api/recouvrement-assistant";
+// ADR 0018 §C: the backend intent vocabulary is generated from the AgentSpec
+// capabilities, not hand-listed here (regenerate: scripts/generate_agent_enums.py).
+import type { RecouvrementIntent } from "./recouvrement-enums.generated";
 
 export type RecouvrementDrawerTask =
   | "summary"
@@ -10,12 +13,7 @@ export type RecouvrementDrawerTask =
   | "check_contact_rule"
   | "explain_payment_options";
 
-export type RecouvrementBackendIntent =
-  | "check_contact_rule"
-  | "propose_schedule"
-  | "draft_reminder"
-  | "summarize_case"
-  | "explain_payment_options";
+export type RecouvrementBackendIntent = RecouvrementIntent;
 
 export type RecouvrementArtifactFamily =
   | "summary"

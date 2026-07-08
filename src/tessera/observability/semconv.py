@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from opentelemetry.trace import Span
 
 __all__ = [
+    "CONDITIONAL_TURN_SPAN_ATTRIBUTES",
     "DEPLOYMENT_ENVIRONMENT",
     "GEN_AI_AGENT_NAME",
     "GEN_AI_CONVERSATION_ID",
@@ -41,6 +42,7 @@ __all__ = [
     "GEN_AI_USAGE_INPUT_TOKENS",
     "GEN_AI_USAGE_OUTPUT_TOKENS",
     "OPENINFERENCE_SPAN_KIND",
+    "REQUIRED_TURN_SPAN_ATTRIBUTES",
     "TESSERA_AGENT_ID",
     "TESSERA_ARTIFACT_ID",
     "TESSERA_ARTIFACT_STATUS",
@@ -199,6 +201,22 @@ def stamp_turn_dimensions(
     span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
     if model:
         span.set_attribute(GEN_AI_REQUEST_MODEL, model)
+
+
+#: The Scope dimensions a turn root span must ALWAYS carry (ADR 0015 §B / ADR 0017 §4
+#: L1 span contract) — the single source of truth for the span-contract testkit
+#: (signal 103) and the instrumentation-coverage descriptor (signal 92). It mirrors
+#: exactly what ``stamp_turn_dimensions`` stamps unconditionally.
+REQUIRED_TURN_SPAN_ATTRIBUTES: tuple[str, ...] = (
+    TESSERA_AGENT_ID,
+    TESSERA_LANGUAGE,
+    GEN_AI_CONVERSATION_ID,
+    TESSERA_TURN_ID,
+    DEPLOYMENT_ENVIRONMENT,
+)
+
+#: Stamped only when a serving model is resolved for the turn (honest-absent otherwise).
+CONDITIONAL_TURN_SPAN_ATTRIBUTES: tuple[str, ...] = (GEN_AI_REQUEST_MODEL,)
 
 
 def set_gen_ai_request(

@@ -73,11 +73,16 @@ def compute_release_control(agent_id: str | None = None, lang: str = "fr") -> di
 
     rows = [_agent_release_row(aid, lang) for aid in ids]
 
-    # Org summary over the (filtered) population — counts of distinct agents by
-    # release readiness. These are agent counts, not deduped conversation totals.
-    passing = sum(1 for r in rows if _release(r).get("available") and _release(r).get("passed"))
-    blocked = sum(1 for r in rows if _release(r).get("available") and not _release(r).get("passed"))
-    not_run = sum(1 for r in rows if not _release(r).get("available"))
+    # Org summary over the (filtered) population — counts of distinct agents by release
+    # readiness, following the level-aware lifecycle decision (§A2.4). A "blocked" agent is
+    # one the release gate stops for ANY reason — a failed eval-gate OR an observability
+    # level below the requirement — so the KPI and the per-agent state labels never disagree
+    # (a level-blocked agent is never miscounted as "ready to promote"). Counting from the
+    # lifecycle tone keeps the summary and the rows a single truth.
+    tones = [str(r.get("state_tone", "")) for r in rows]
+    passing = sum(1 for tone in tones if tone == "good")
+    blocked = sum(1 for tone in tones if tone == "bad")
+    not_run = sum(1 for tone in tones if tone == "warn")
     return {
         "agents": rows,
         "summary": {
@@ -87,8 +92,3 @@ def compute_release_control(agent_id: str | None = None, lang: str = "fr") -> di
             "not_run": not_run,
         },
     }
-
-
-def _release(row: dict[str, object]) -> dict[str, object]:
-    rel = row.get("release")
-    return rel if isinstance(rel, dict) else {}

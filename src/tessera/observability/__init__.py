@@ -12,6 +12,6 @@ duplicate handlers.
 
 from __future__ import annotations
 
-from tessera.observability import instrument, logging, metrics, semconv, traces
+from tessera.observability import logging, metrics, semconv, traces
 
-__all__ = ["instrument", "logging", "metrics", "semconv", "traces"]
+__all__ = ["logging", "metrics", "semconv", "traces"]

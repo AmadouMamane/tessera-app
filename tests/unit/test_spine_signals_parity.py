@@ -123,3 +123,15 @@ async def test_funnel_route_takes_no_agent_kw_but_matches_org() -> None:
     assert snap["signals"]["funnel"]["data"] == await obs.observability_funnel(
         at=_ASOF, agent="all"
     )
+
+
+@pytest.mark.parametrize("agent", ["all", "support-client", "recouvrement"])
+async def test_business_capabilities_snapshot_matches_route(agent: str) -> None:
+    # step 6c fold — the business aggregate folded into the batched snapshot must be a
+    # single source: the ``?signals=business_capabilities`` read == the standalone route,
+    # so the Métier fan-out can retire without ever diverging from what it rendered.
+    scope = Scope.from_query({"at": _ASOF, "agent": agent})
+    reset_snapshot_cache()
+    snap = await compute_snapshot(scope, ["business_capabilities"])
+    expected = await obs.observability_business_capabilities(at=_ASOF, agent=agent)
+    assert snap["signals"]["business_capabilities"]["data"] == expected

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tessera.agent.graph import build_graph
-from tessera.observability import graph_topology
+from tessera.agent.sdk import graph_topology
 
 
 def test_snapshot_is_stable_and_matches_golden() -> None:

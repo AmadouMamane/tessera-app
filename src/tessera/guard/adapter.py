@@ -23,6 +23,7 @@ import inspect
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from tessera.agent.sdk.instrument import tool_span
 from tessera.authz import auth_satisfies
 from tessera.guard.audit import current_auth_state, emit_audit, guard_disabled
 from tessera.guard.decisions import (
@@ -33,7 +34,6 @@ from tessera.guard.decisions import (
     load_policy,
 )
 from tessera.observability import semconv
-from tessera.observability.instrument import tool_span
 from tessera.observability.metrics import GUARD_DECISIONS_TOTAL
 from tessera.settings import LanguageCode, get_settings
 
