@@ -1,6 +1,9 @@
 # 0015 — Hica external opposability seal: design note (Lot 1)
 
-> **Status: APPROVED 2026-07-08** (review *"Hica seal design review"*). **Lots 1–3 complete.**
+> **Status: APPROVED & LANDED 2026-07-08** (review *"Hica seal design review"*). **Lots 1–4 complete;
+> fast-forwarded onto `main` (`5ece2ae0..50a6a40d`), branch `claude/hica-seal` pushed.** The reference
+> main worktree (dirty + serving) was left untouched — a `git pull --ff-only` + backend restart there
+> picks up the seal scheduler; until then the seal is live on `origin/main` only.
 > Companion to ADR `0015-runtime-telemetry-spine-and-scope.md` (§Amendment 3 pt 3, §Correction 3c
 > pt 4) and to the incident record `0015-incident-TESS-LEDGER-001-status.md`. This note does **not**
 > re-decide the seal (ADR 0015 already accepted it) — it decides the **mechanism** and the **wiring**.
