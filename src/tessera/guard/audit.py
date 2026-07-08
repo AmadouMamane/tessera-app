@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AGENT_LIFECYCLE_PHASES",
+    "CANARY_INVOCATION_TYPE",
     "LEDGER_ATTESTATION_TYPE",
     "LEDGER_SEAL_TYPE",
     "ChainStatus",
@@ -44,6 +45,7 @@ __all__ = [
     "emit_agent_proposed",
     "emit_audit",
     "emit_business_event_audit",
+    "emit_canary_invocation",
     "emit_handoff",
     "emit_ledger_attestation",
     "emit_ledger_seal",
@@ -64,6 +66,12 @@ LEDGER_ATTESTATION_TYPE = "tessera.ledger.attestation"
 # the "one consolidated journal" property (§Corr.3b) and reuses the serialized, fork-proof writer —
 # each seal transitively covers every prior row. Design note: 0015-hica-seal-design-note.md.
 LEDGER_SEAL_TYPE = "tessera.ledger.seal"
+
+# ADR 0019 §4 — every cockpit→agent invocation is a governed act, so a scheduled canary turn
+# emits ONE S1 event recording who tested which agent, when, over which binding, and the verdict.
+# A test is an action on a governed system, and the ledger is where actions live; the same entry
+# is the durable freshness record the canary descriptor reads (no second store).
+CANARY_INVOCATION_TYPE = "tessera.agent.canary"
 
 _Outcome = Literal["allowed", "denied", "error"]
 _Sink = Literal["stdout", "file", "cloud_logging", "postgres"]
@@ -550,6 +558,52 @@ def emit_agent_lifecycle(
         "agent_id": agent_id,
         "actor": actor,
         **(dict(detail) if detail else {}),
+    }
+    _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
+
+
+def emit_canary_invocation(
+    *,
+    agent_id: str,
+    binding: str,
+    verdict: str,
+    conversation_id: str,
+    turn_id: str,
+    duration_ms: float | None = None,
+    error: str | None = None,
+    actor: str = "canary-scheduler",
+    sink: _Sink | None = None,
+) -> None:
+    """Emit one scheduled-canary invocation into the S1 journal (ADR 0019 §4).
+
+    Every cockpit→agent invocation is a governed act: one entry per synthetic canary turn records
+    who ran it (``actor`` = the scheduler), which agent, the binding used, the verdict
+    (``green`` / ``red``), and the turn ids — hash-chained like every other S1 event and
+    reconstructable in État à date. It is also the durable freshness record the canary descriptor
+    reads for the synthetic-run facet (no second store). ``synthetic: True`` is stamped so a reader
+    can never mistake a canary probe for a real turn.
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
+    now = datetime.now(UTC).isoformat()
+    entry: dict[str, Any] = {
+        "type": CANARY_INVOCATION_TYPE,
+        "version": 1,
+        "occurred_at": now,
+        "valid_from": now,
+        "valid_to": None,
+        "recorded_at": now,
+        "agent_id": agent_id,
+        "actor": actor,
+        "binding": binding,
+        "verdict": verdict,
+        "synthetic": True,
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "duration_ms": duration_ms,
+        "error": error,
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 

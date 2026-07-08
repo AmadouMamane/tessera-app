@@ -231,6 +231,12 @@ class ObservabilitySettings(BaseSettings):
     # Fraction of un-flagged turns scored online; flagged turns are always scored
     # (tiered, cost-aware online eval — idea #6).
     online_eval_sample_rate: float = 0.1
+    # ADR 0019 §I4 — the scheduled-canary master switch (the operator's activation). OFF by
+    # default: even with a manifest cadence declared, no synthetic turn fires until the operator
+    # opts in (synthetic traffic hits the real agent + LLM — a deliberate act, never implicit).
+    # The scheduler is always WIRED (it idles under this flag), so flipping it is go-and-observe,
+    # never a latent provisioned-but-silent trap (the Hica-seal off-chrono lesson).
+    canary_scheduler_enabled: bool = False
 
     @field_validator("online_eval_sample_rate")
     @classmethod

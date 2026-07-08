@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 from collections import deque
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -32,7 +34,7 @@ from tessera.observability.metrics import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
 __all__ = [
     "ACTORS",
@@ -58,15 +60,43 @@ __all__ = [
     "classify_event",
     "emit_business_event",
     "get_business_event_store",
+    "is_synthetic_turn",
     "persisted_business_events",
     "record_business_event",
     "recent_business_events",
     "reset_business_event_store",
     "set_business_event_store",
+    "synthetic_turn",
     "validate_business_event",
 ]
 
 _AuditSink = Literal["stdout", "file", "cloud_logging", "postgres"]
+
+# ADR 0019 §4 — the synthetic dimension. A canary/test turn is stamped synthetic so its events
+# can NEVER pollute business metrics: the exclusion is by *declaration* (this flag), read once at
+# emit and at the read seam, not by every caller remembering to filter. Scope is the current turn
+# (the canary invoker enters :func:`synthetic_turn` around one ``graph.ainvoke``), so any business
+# event emitted deep inside that turn inherits the mark without threading a parameter through.
+_synthetic_turn: ContextVar[bool] = ContextVar("tessera_synthetic_turn", default=False)
+
+
+@contextmanager
+def synthetic_turn() -> Iterator[None]:
+    """Mark every business event emitted in this scope synthetic (ADR 0019 §4 · I4 canary).
+
+    The scheduled-canary invoker wraps one turn in this context so the turn's events are excluded
+    from business metrics by declaration. Restores the prior value on exit (reentrant-safe).
+    """
+    token = _synthetic_turn.set(True)
+    try:
+        yield
+    finally:
+        _synthetic_turn.reset(token)
+
+
+def is_synthetic_turn() -> bool:
+    """Whether the current turn is a synthetic (canary/test) turn (ADR 0019 §4)."""
+    return _synthetic_turn.get()
 
 
 class BusinessEventName(StrEnum):
@@ -231,6 +261,10 @@ class BusinessEvent:
     language: str | None = None
     model: str | None = None
     environment: str | None = None
+    # ADR 0019 §4 — a synthetic (canary/test) turn's event. Excluded from every business-metric
+    # surface by declaration (the emit-time counter guard + the read seam); still observable in
+    # the trace, so the canary's own telemetry stays inspectable.
+    synthetic: bool = False
     case_id: str | None = None
     node_name: str | None = None
     artifact_id: str | None = None
@@ -926,13 +960,27 @@ def persisted_business_events(
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
+    include_synthetic: bool = False,
 ) -> list[BusinessEvent]:
     """Return projected business events filtered by common dimensions.
 
     Reads resolve through the ``business_events`` fact flip (§5): the in-process store by
     default, the owned ClickHouse table once flipped, or a shadow comparison of both.
+
+    Synthetic (canary/test) events are excluded **by default** (ADR 0019 §4): this is the one
+    read seam every business surface (Métier tables, scores, signals, coverage, À traiter,
+    replay) flows through, so excluding them here excludes them everywhere — by declaration, not
+    by each caller filtering. The canary descriptor's own freshness read never comes here; it
+    reads the durable S1 canary entry, so it is unaffected.
+
+    Medium note: the filter reads ``event.synthetic``, which the in-process store (the default
+    read medium) round-trips faithfully; combined with the emit-time Prometheus guard the
+    exclusion is airtight for the default deployment. The owned ClickHouse read model (§5, read
+    flip not yet baked) does not yet carry a ``synthetic`` column, so when that read flips the
+    column is owed for the filter to hold on that medium — tracked in ADR 0019's ledger, never a
+    silent gap.
     """
-    return _read_store().list(
+    events = _read_store().list(
         at=at,
         agent_id=agent_id,
         workflow_id=workflow_id,
@@ -944,6 +992,9 @@ def persisted_business_events(
         artifact_type=artifact_type,
         decision=decision,
     )
+    if include_synthetic:
+        return events
+    return [event for event in events if not event.synthetic]
 
 
 def recent_business_events(
@@ -958,8 +1009,13 @@ def recent_business_events(
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
+    include_synthetic: bool = False,
 ) -> list[BusinessEvent]:
-    """Return live or as-of-T business events filtered by common dimensions."""
+    """Return live or as-of-T business events filtered by common dimensions.
+
+    Synthetic (canary) events are excluded by default (ADR 0019 §4) — see
+    :func:`persisted_business_events`.
+    """
     return persisted_business_events(
         at=at,
         agent_id=agent_id,
@@ -971,6 +1027,7 @@ def recent_business_events(
         event_name=event_name,
         artifact_type=artifact_type,
         decision=decision,
+        include_synthetic=include_synthetic,
     )
 
 
@@ -986,8 +1043,13 @@ def business_event_rows(
     event_name: str | None = None,
     artifact_type: str | None = None,
     decision: str | None = None,
+    include_synthetic: bool = False,
 ) -> list[dict[str, object]]:
-    """Return serialised business-event rows for replay / Cockpit projection."""
+    """Return serialised business-event rows for replay / Cockpit projection.
+
+    Synthetic (canary) events are excluded by default (ADR 0019 §4) — see
+    :func:`persisted_business_events`.
+    """
     return [
         event.to_row()
         for event in recent_business_events(
@@ -1001,6 +1063,7 @@ def business_event_rows(
             event_name=event_name,
             artifact_type=artifact_type,
             decision=decision,
+            include_synthetic=include_synthetic,
         )
     ]
 
@@ -1044,6 +1107,10 @@ def _emit_otel(event: BusinessEvent) -> None:
 
 def _emit_metrics(event: BusinessEvent) -> None:
     """Increment low-cardinality business counters."""
+    if event.synthetic:
+        # ADR 0019 §4 — a synthetic canary turn must NEVER move a business counter. The guard is
+        # at emit (the counter fires here, not through a read), the twin of the read-seam filter.
+        return
     if not event.classification.metric_input:
         return
     agent = _label(event.agent_id)
@@ -1142,6 +1209,7 @@ def record_business_event(
     language: str | None = None,
     model: str | None = None,
     environment: str | None = None,
+    synthetic: bool | None = None,
     case_id: str | None = None,
     node_name: str | None = None,
     artifact_id: str | None = None,
@@ -1154,7 +1222,11 @@ def record_business_event(
     classification: BusinessEventClassification | None = None,
     audit_sink: _AuditSink | None = None,
 ) -> BusinessEvent:
-    """Normalise and fan out one business event to the existing sinks."""
+    """Normalise and fan out one business event to the existing sinks.
+
+    ``synthetic`` defaults to the current turn's synthetic mark (ADR 0019 §4): a business event
+    emitted inside a canary turn inherits it without the emitter having to pass it explicitly.
+    """
     raw_payload = _json_safe_payload(payload)
     name = _event_name_value(event_name)
     if actor not in ACTORS:
@@ -1189,6 +1261,7 @@ def record_business_event(
         language=language,
         model=model,
         environment=environment,
+        synthetic=_synthetic_turn.get() if synthetic is None else synthetic,
         case_id=case_id,
         node_name=node_name,
         artifact_id=artifact_id,

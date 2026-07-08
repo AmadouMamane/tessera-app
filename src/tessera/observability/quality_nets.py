@@ -12,8 +12,11 @@ derives, per agent (reading the registry seam for the manifest, ADR 0017 §1):
   pipeline is seen before an operator misses data.
 
 Honesty (0016 / ADR 0017 §Amendment 1): the coverage number is measured, never invented;
-the canary reports the freshness of *real* telemetry — scheduled synthetic execution with
-a green/red verdict is the runtime piece (no in-tree scheduler yet), declared here, not faked.
+the canary reports the freshness of *real* telemetry in ``status``. The scheduled synthetic
+execution with a green/red verdict — deferred in step 6b for lack of an invocation primitive —
+now exists (ADR 0019 §I4): its last run is reported as a *separate* ``synthetic_run`` facet,
+read from the durable ``tessera.agent.canary`` S1 entry, so real-telemetry freshness and the
+canary's own run stay honestly distinct — one is organic, the other is the probe.
 
 Coverage source (§A2.4, operator ruling 2026-07-08): the measurement reads the **Scope
 dimensions carried on business events**, NOT a span store — spans and events carry the same
@@ -41,6 +44,8 @@ from tessera.observability.semconv import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from tessera.agent.registry import Agent
 
 __all__ = ["canary_descriptor", "coverage_descriptor"]
@@ -74,6 +79,57 @@ def _parse_iso(value: str) -> datetime | None:
         return datetime.fromisoformat(value)
     except ValueError:
         return None
+
+
+def _latest_canary_run(agent_id: str) -> Mapping[str, object] | None:
+    """The most recent ``tessera.agent.canary`` S1 entry for the agent, or None.
+
+    Reads the active ledger medium-aware (postgres table since the H2 cut, else the flat file),
+    the same pattern the seal facet uses. Best-effort: an unreachable ledger yields None (the
+    descriptor then reports the synthetic run as ``never``), never a crash and never a fabricated
+    run — reading the S1 entry couples nothing new (the control plane already reads the ledger for
+    État à date / session detail; ``tessera.guard`` is not the agent runtime).
+    """
+    from tessera.guard.audit import CANARY_INVOCATION_TYPE
+    from tessera.guard.ledger_store import (
+        ledger_source,
+        load_ledger_payloads_sync,
+        read_ledger_entries,
+    )
+
+    try:
+        payloads: list[dict[str, object]] = (
+            load_ledger_payloads_sync() if ledger_source() == "postgres" else read_ledger_entries()
+        )
+    except Exception:  # an unreachable ledger must never break a cockpit read
+        return None
+    found: Mapping[str, object] | None = None
+    for payload in payloads:  # oldest→newest, so the last match is the most recent run
+        if payload.get("type") == CANARY_INVOCATION_TYPE and payload.get("agent_id") == agent_id:
+            found = payload
+    return found
+
+
+def _synthetic_run_facet(agent_id: str, *, reference: datetime) -> dict[str, object]:
+    """The last scheduled-canary run for the agent (ADR 0019 §I4), read from the S1 ledger.
+
+    ``status`` is the run verdict (``green`` / ``red``) or ``never`` when no canary has run — this
+    is the *synthetic* freshness, kept distinct from the descriptor's real-telemetry ``status``.
+    """
+    run = _latest_canary_run(agent_id)
+    if run is None:
+        return {"status": "never", "ran_at": None, "age_seconds": None, "error": None}
+    ran_at = str(run.get("occurred_at", "")) or None
+    parsed = _parse_iso(ran_at) if ran_at else None
+    age_seconds = int((reference - parsed).total_seconds()) if parsed is not None else None
+    verdict = str(run.get("verdict") or "unknown")
+    error = run.get("error")
+    return {
+        "status": verdict,
+        "ran_at": ran_at,
+        "age_seconds": age_seconds,
+        "error": error if isinstance(error, str) else None,
+    }
 
 
 def coverage_descriptor(agent_id: str | None) -> dict[str, object] | None:
@@ -127,11 +183,12 @@ def canary_descriptor(
 ) -> dict[str, object] | None:
     """Canary descriptor (signal 94): the manifest's canary target workflows + freshness.
 
-    Generated from the manifest (which workflows a scheduled canary would drive) with the
-    freshness of the agent's last observed turn as the pipeline-health proxy. ``None`` for
-    an un-manifested agent or one declaring no workflow. Scheduled synthetic execution with
-    a green/red verdict is the runtime piece (declared, not faked): ``status`` reports the
-    freshness of *real* telemetry (``fresh`` / ``stale`` / ``never``), not a synthetic run.
+    Generated from the manifest (which workflows a scheduled canary would drive, and — since ADR
+    0019 §I4 — the declared ``cadence_s`` at which it drives them) with the freshness of the
+    agent's last observed turn as the pipeline-health proxy. ``None`` for an un-manifested agent or
+    one declaring no workflow. ``status`` reports the freshness of *real* telemetry
+    (``fresh`` / ``stale`` / ``never``); the ``synthetic_run`` facet reports the last scheduled
+    synthetic execution and its green/red verdict — the two are kept honestly distinct.
     """
     agent = _agent(agent_id)
     if agent is None or agent.observability is None or not agent.observability.workflows:
@@ -151,7 +208,11 @@ def canary_descriptor(
         "agent_id": agent.id,
         "signal": "canary-tagging",
         "targets": targets,
+        # The declared scheduler cadence (ADR 0019 §I4); ``None`` ⇒ no scheduled canary declared.
+        "cadence_s": agent.invocation.canary_cadence_s,
         "last_seen_at": last_seen,
         "age_seconds": age_seconds,
         "status": status,
+        # The last scheduled synthetic execution — fed by the I4 scheduler via its S1 entry.
+        "synthetic_run": _synthetic_run_facet(agent.id, reference=reference),
     }

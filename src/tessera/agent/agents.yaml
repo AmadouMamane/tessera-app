@@ -116,8 +116,13 @@ agents:
     # AgentSpec invocation block (ADR 0019 §1): the operator's Console reaches recouvrement over
     # the in-process `/chat` seam, now declared. The declared consumer forwards a turn over this
     # transport under the operator assertion (0010 Phase B) — never an import of the runtime.
+    # `canary_cadence_s` (ADR 0019 §I4) declares an hourly scheduled synthetic probe: recouvrement
+    # is the meaningful canary target — it emits business events + scores, so its synthetic turns
+    # are the ones the metric-exclusion invariant actually has to hold for. IDLE until the operator
+    # flips `TESSERA_OBS_CANARY_SCHEDULER_ENABLED`; no behaviour change by default.
     invocation:
       binding: in_process_chat
+      canary_cadence_s: 3600
     # AgentSpec observability block (ADR 0017 §3 + A1 + A2.3) — recouvrement declares the
     # first manifest (Phase B). Everything the cockpit renders for this agent's business
     # surfaces is generated from here; nothing hand-placed per agent. Policy IMPLEMENTATIONS

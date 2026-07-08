@@ -284,6 +284,11 @@ class InvocationSpec(_Spec):
     endpoint: str | None = None  # http only — the agent EXPOSES; the cockpit consumes it
     timeout_ms: int | None = None  # http only
     auth: InvocationAuth | None = None  # http only; operator-assertion, no anonymous invocation
+    # ADR 0019 §I4 — the scheduled-canary cadence. When set, a background canary drives one
+    # synthetic turn through this binding every ``canary_cadence_s`` seconds (idle unless the
+    # scheduler is enabled). A canary can only run through a real seam, so a cadence is
+    # unrepresentable without an ``in_process_chat`` binding (the http canary is I3, not here).
+    canary_cadence_s: int | None = None
 
     @model_validator(mode="after")
     def _binding_shape(self) -> InvocationSpec:
@@ -307,6 +312,19 @@ class InvocationSpec(_Spec):
                     f"invocation binding {self.binding.value!r} must not set http-only "
                     f"fields {present}"
                 )
+                raise ValueError(msg)
+        if self.canary_cadence_s is not None:
+            if self.binding is not InvocationBinding.IN_PROCESS_CHAT:
+                # The canary scheduler drives the in_process_chat seam only (I4). A cadence on
+                # ``none`` (nothing to drive) or ``http`` (the I3 invoker does not exist) is a
+                # declaration the runtime cannot honour — reject it at load, never silently.
+                msg = (
+                    "invocation canary_cadence_s requires binding 'in_process_chat', "
+                    f"got {self.binding.value!r}"
+                )
+                raise ValueError(msg)
+            if self.canary_cadence_s <= 0:
+                msg = f"invocation canary_cadence_s must be positive, got {self.canary_cadence_s}"
                 raise ValueError(msg)
         return self
 

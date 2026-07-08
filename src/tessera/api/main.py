@@ -172,6 +172,47 @@ async def _start_seal_scheduler() -> asyncio.Task[None] | None:
     return asyncio.create_task(_loop())
 
 
+async def _start_canary_scheduler() -> list[asyncio.Task[None]]:
+    """Start the off-chrono canary loops (ADR 0019 §I4). No-op unless enabled + a cadence declared.
+
+    Logs ONE honest posture line at boot — enabled + which agents/cadences, or "not scheduling" —
+    then, only when scheduling, starts one background loop per scheduled agent that drives a
+    synthetic turn through its in_process_chat binding every cadence. The turns are stamped
+    synthetic (so they never enter business metrics) and each emits one S1 event. Best-effort and
+    off every request path; a cycle failure warns and the loop survives — the same family and
+    hygiene as the seal scheduler. ``canary_posture`` is the single source of the decision, so the
+    log line and the loops can never disagree.
+    """
+    from tessera.agent.canary import canary_posture, run_canary_cycle, scheduled_canaries
+
+    log = obs_logging.get_logger("tessera.canary")
+    posture = canary_posture()
+    log.info("canary.posture", **posture)
+    if not posture["scheduling"]:
+        return []
+
+    def _make_loop(agent_id: str, interval: int) -> asyncio.Task[None]:
+        async def _loop() -> None:
+            while True:
+                await asyncio.sleep(interval)
+                try:
+                    result = await run_canary_cycle(agent_id)
+                    log.info(
+                        "canary.cycle",
+                        agent_id=result.agent_id,
+                        verdict=result.verdict,
+                        duration_ms=round(result.duration_ms, 1),
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:  # a cycle failure must never kill the loop
+                    log.warning("canary.cycle_failed", agent_id=agent_id, error=str(exc))
+
+        return asyncio.create_task(_loop())
+
+    return [_make_loop(canary.agent_id, canary.cadence_s) for canary in scheduled_canaries()]
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -180,6 +221,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     metrics.configure()
     pool = get_pool()
     seal_task: asyncio.Task[None] | None = None
+    canary_tasks: list[asyncio.Task[None]] = []
     try:
         await pool.open()
         # Materialise every durable table in the active env schema at boot so a
@@ -196,12 +238,14 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
         await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
         seal_task = await _start_seal_scheduler()  # ADR 0015 §Corr.3c — off-chrono; no-op if 'none'
+        canary_tasks = await _start_canary_scheduler()  # ADR 0019 §I4 — off-chrono; idle by default
         yield
     finally:
-        if seal_task is not None:
-            seal_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await seal_task
+        for task in (seal_task, *canary_tasks):
+            if task is not None:
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
         await pool.close()
 
 

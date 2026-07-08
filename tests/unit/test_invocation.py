@@ -112,6 +112,51 @@ def test_http_only_fields_forbidden_on_other_bindings(raw: dict[str, object]) ->
         parse_invocation(raw)
 
 
+# --- canary cadence (ADR 0019 §I4) -----------------------------------------------
+
+
+def test_in_process_chat_with_cadence_parses() -> None:
+    spec = parse_invocation({"binding": "in_process_chat", "canary_cadence_s": 3600})
+    assert spec.binding is InvocationBinding.IN_PROCESS_CHAT
+    assert spec.canary_cadence_s == 3600
+
+
+def test_cadence_without_a_binding_is_rejected() -> None:
+    # A canary can only run through a real seam — a cadence on `none` has nothing to drive.
+    with pytest.raises(ValueError, match="canary_cadence_s requires binding 'in_process_chat'"):
+        parse_invocation({"binding": "none", "canary_cadence_s": 3600})
+
+
+def test_cadence_on_http_is_rejected() -> None:
+    # The http canary is I3 (the invoker does not exist yet) — reject the declaration at load.
+    with pytest.raises(ValueError, match="canary_cadence_s requires binding 'in_process_chat'"):
+        parse_invocation(
+            {
+                "binding": "http",
+                "endpoint": "https://x/turn",
+                "auth": "operator-assertion",
+                "canary_cadence_s": 3600,
+            }
+        )
+
+
+def test_non_positive_cadence_is_rejected() -> None:
+    with pytest.raises(ValueError, match="canary_cadence_s must be positive"):
+        parse_invocation({"binding": "in_process_chat", "canary_cadence_s": 0})
+
+
+def test_recouvrement_declares_a_canary_cadence() -> None:
+    # The meaningful canary target (it emits business events + scores), declared hourly.
+    invocation = get_agent("recouvrement").invocation
+    assert invocation.binding is InvocationBinding.IN_PROCESS_CHAT
+    assert invocation.canary_cadence_s == 3600
+
+
+def test_qa_agents_declare_no_cadence() -> None:
+    for aid in ("support-client", "onboarding"):
+        assert get_agent(aid).invocation.canary_cadence_s is None
+
+
 # --- the native declarations (no behaviour change) -------------------------------
 
 
