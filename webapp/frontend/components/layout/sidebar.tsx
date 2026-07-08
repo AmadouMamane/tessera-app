@@ -641,11 +641,11 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div
       className={cn(
-        "flex min-h-[5.5rem] items-center gap-3 border-b border-[var(--tessera-border)]",
+        "flex min-h-14 items-center gap-3 border-b border-[var(--tessera-border)]",
         collapsed ? "justify-center px-2" : "justify-center px-3 md:justify-start md:px-5",
       )}
     >
-      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-11" />}
+      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-8" />}
     </div>
   );
 }

@@ -8,6 +8,9 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 const appFooter = read("components/layout/app-footer.tsx");
 const authControl = read("components/auth/auth-control.tsx");
+const appHeader = read("components/layout/app-header.tsx");
+const appShell = read("components/layout/app-shell.tsx");
+const cockpitAuthGate = read("components/layout/cockpit-auth-gate.tsx");
 const commandSearch = read("components/layout/command-search.tsx");
 const demoBadge = read("components/layout/demo-badge.tsx");
 const demoLauncherLink = read("components/layout/demo-launcher-link.tsx");
@@ -52,6 +55,33 @@ describe("H1 shared header components", () => {
     expect(demoBadge).toContain("demoBadge");
     expect(demoBadge).not.toContain("Tessera");
     expect(demoLauncherLink).toContain("DemoBadge");
+  });
+});
+
+describe("H2 cockpit header contract", () => {
+  it("renders the cockpit header as a 56px three-zone shell", () => {
+    expect(appHeader).toContain("grid h-14");
+    expect(appHeader).toContain("grid-cols-[minmax(0,1fr)_auto]");
+    expect(appHeader).toContain(
+      "md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)]",
+    );
+    expect(appHeader).toContain('<CommandSearch plan="cockpit"');
+    expect(appHeader).toContain("<SystemStatusPill");
+    expect(appHeader).toContain('label="Notifications"');
+    expect(appHeader).toContain('label="Aide"');
+  });
+
+  it("keeps cockpit preferences and identity anchored in the sidebar, not the header", () => {
+    expect(appShell).toContain("<CockpitAuthGate>");
+    expect(appShell).toContain("pageSubtitle={description}");
+    expect(appShell).not.toContain("description={description}");
+    expect(cockpitAuthGate).toContain('router.replace("/login")');
+    expect(cockpitAuthGate).toContain('role === "admin"');
+    expect(cockpitAuthGate).toContain('role === "auditor"');
+    expect(cockpitAuthGate).toContain('role === "superadmin"');
+    expect(appHeader).not.toContain("BusinessMenu");
+    expect(appHeader).not.toContain("ModelBadge");
+    expect(appHeader).not.toContain("StatusBadge");
   });
 });
 

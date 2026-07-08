@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { AppFooter } from "./app-footer";
 import { AppHeader, type HeaderAction, type HeaderContextItem } from "./app-header";
+import { CockpitAuthGate } from "./cockpit-auth-gate";
 import { ShellChrome } from "./shell-chrome";
 import { ShellFrame } from "./shell-frame";
 import { Sidebar } from "./sidebar";
@@ -34,23 +35,25 @@ export function AppShell({
   sidebar,
 }: AppShellProps) {
   return (
-    <ShellChrome>
-      <ShellFrame
-        sidebar={sidebar ?? <Sidebar />}
-        topbar={
-          <AppHeader
-            plan="cockpit"
-            title={title}
-            description={description}
-            contextItems={topbarContext}
-            filters={topbarFilters}
-            actions={topbarActions}
-          />
-        }
-        footer={<AppFooter />}
-      >
-        {children}
-      </ShellFrame>
-    </ShellChrome>
+    <CockpitAuthGate>
+      <ShellChrome>
+        <ShellFrame
+          sidebar={sidebar ?? <Sidebar />}
+          topbar={
+            <AppHeader
+              plan="cockpit"
+              title={title}
+              contextItems={topbarContext}
+              filters={topbarFilters}
+              actions={topbarActions}
+            />
+          }
+          footer={<AppFooter />}
+          pageSubtitle={description}
+        >
+          {children}
+        </ShellFrame>
+      </ShellChrome>
+    </CockpitAuthGate>
   );
 }

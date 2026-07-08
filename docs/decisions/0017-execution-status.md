@@ -59,6 +59,28 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-08 — **Headers H2 visual validation: APPROUVÉ — GO H3.** Amadou donne le
+  feu vert après checkpoint visuel cockpit (:3098). Next: commit H2, then H3 launcher +
+  `/espaces` inheritance check (UserMenu, DemoBadge, zero specific chrome).
+
+- 2026-07-08 — **Headers H2 cockpit checkpoint ready for Amadou visual validation** on
+  `codex/headers-refonte`. Scope shell/header only: cockpit header normalized to three zones
+  (logo/context title · `CommandSearch` · `SystemStatusPill` + notifications + help), legacy
+  posture chips collapsed into the shared status pill, page descriptions moved into the page
+  subtitle, sidebar identity kept as the single `UserMenu` anchor (no header avatar), sidebar
+  brand/header rhythm aligned to 56px, and anonymous cockpit sessions redirected to `/login`
+  before rendering the shell. Visual proof refreshed on the :3098 worktree preview:
+  before `/tmp/tessera-h2-before-metier.png`,
+  `/tmp/tessera-h2-before-flotte.png`, `/tmp/tessera-h2-before-surveiller.png`; after
+  `/tmp/tessera-h2-after-metier.png`, `/tmp/tessera-h2-after-flotte.png`,
+  `/tmp/tessera-h2-after-surveiller.png`; mobile sanity
+  `/tmp/tessera-h2-after-flotte-mobile.png` (document width 390px). Anonymous redirect proof:
+  `/fr/agents` → `/fr/login`. **Twice-green on H2:** backend `ruff` /
+  `ruff format --check` / `mypy src/tessera` / `pytest -q -m "not integration"` (`1410 passed,
+  50 deselected`) ×2; frontend `tsc --noEmit` / `biome check .` (27-warning existing baseline,
+  no new findings) / `vitest run` (`88 passed`) ×2. **HALT:** H2 waits for Amadou visual
+  validation before H3.
+
 - 2026-07-08 — **Headers H1 review: APPROUVÉ — GO H2.** Claude review accepts the H1
   foundation diff: shared `SystemStatusPill`, `CommandSearch`, `UserMenu`, `DemoBadge`,
   tree-aware ledger wording shared with the footer, fr/en/de labels and contract tests.
