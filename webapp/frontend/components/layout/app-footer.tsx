@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { GitBranch, ShieldCheck, ShieldX } from "lucide-react";
+import { GitBranch, Lock, ShieldCheck, ShieldX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -32,6 +32,10 @@ export function AppFooter() {
   const forks = data?.fork_count ?? 0;
   const orphans = data?.orphan_count ?? 0;
   const attested = data?.attested ?? false;
+  // Q5 — the footer gains ONLY a compact "· scellé <t>" suffix when a real seal verifies; nothing
+  // otherwise (no partial text). The full opposability facet lives on TE-01 / Prouver.
+  const sealVerified = data?.seal_state === "verified";
+  const sealedAt = data?.sealed_at ?? null;
 
   let integrity: ReactNode;
   if (contentIntact === null) {
@@ -69,6 +73,12 @@ export function AppFooter() {
       </span>
       <span className="text-[var(--tessera-border-strong)]">·</span>
       {integrity}
+      {sealVerified && sealedAt ? (
+        <span className="inline-flex items-center gap-1 text-emerald-400/90">
+          <Lock className="h-3 w-3" />
+          {t("sealSuffix", { t: sealedAt.slice(0, 16).replace("T", " ") })}
+        </span>
+      ) : null}
       <span className="text-[var(--tessera-border-strong)]">·</span>
       <span>{t("env")}</span>
       <span className="ml-auto">{t("note")}</span>

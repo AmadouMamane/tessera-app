@@ -279,6 +279,18 @@ export const AuditIntegritySchema = z.object({
   fork_count: z.number().int().default(0),
   orphan_count: z.number().int().default(0),
   attested: z.boolean().default(false),
+  // Hica external seal facet (ADR 0015 §Amendment 3 / §Correction 3c). `badge` is the register §9
+  // opposability verdict, computed live from tree + seal — never stored, never cosmetic.
+  seal_state: z
+    .enum(["absent", "verified", "stale", "unverifiable", "divergent"])
+    .default("absent"),
+  seal_provider: z.string().nullable().default(null),
+  seal_qualified: z.boolean().default(false),
+  sealed_at: z.string().nullable().default(null),
+  sealed_head: z.string().nullable().default(null),
+  badge: z
+    .enum(["non_scelle", "scelle_opposable", "scelle_non_qualifie", "integrite_partielle"])
+    .default("integrite_partielle"),
 });
 export type AuditIntegrity = z.infer<typeof AuditIntegritySchema>;
 
@@ -3882,6 +3894,28 @@ export const EtatADateSchema = z.object({
       verified: z.boolean(),
       verified_label: z.string(),
       built_label: z.string(),
+    })
+    .optional(),
+  // Register §9 opposability badge (TE-01) — the Hica seal facet, computed live from tree + seal.
+  opposability: z
+    .object({
+      badge: z.enum([
+        "non_scelle",
+        "scelle_opposable",
+        "scelle_non_qualifie",
+        "integrite_partielle",
+        "verification_en_cours",
+      ]),
+      badge_label: z.string(),
+      seal_state: z.string(),
+      seal_provider: z.string().nullable(),
+      seal_qualified: z.boolean(),
+      sealed_at: z.string().nullable(),
+      content_integrity: z.boolean(),
+      linear: z.boolean(),
+      attested: z.boolean(),
+      provider_label: z.string(),
+      mention: z.string(),
     })
     .optional(),
   original: z

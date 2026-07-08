@@ -7569,6 +7569,7 @@
     "prevMonth": "Voriger Monat",
     "nextMonth": "Nächster Monat",
     "sealed": "Versiegelt",
+    "sealVerifying": "Prüfung läuft…",
     "scopeLabel": "Nach Quelle gefiltert:",
     "scopeClear": "Alle Quellen"
   },
@@ -7694,6 +7695,7 @@
     "integrityForkedAttested": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} other {, # verwaist}} (attestiert)",
     "integrityForkedPending": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} other {, # verwaist}} (Attestierung ausstehend)",
     "env": "Vor Ort · EU-Residenz · SOC 2",
+    "sealSuffix": "versiegelt {t}",
     "note": "Status erst nach erfolgreicher Prüfung vergeben."
   },
   "signalHero": {

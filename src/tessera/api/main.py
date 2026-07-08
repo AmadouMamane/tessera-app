@@ -14,7 +14,8 @@ The :func:`cli` entry point is exposed as the ``tessera`` console script in
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, FastAPI
@@ -133,6 +134,44 @@ async def _reconcile_audit_ledger() -> None:
         log.info("ledger.promoted", rows_inserted=inserted, chain_length=status.length)
 
 
+async def _start_seal_scheduler() -> asyncio.Task[None] | None:
+    """Start the off-chrono Hica seal loop (ADR 0015 §Correction 3c). No-op under provider='none'.
+
+    Logs ONE honest posture line at boot — provider + cadence when sealing, or "not sealing" —
+    then, only when a real provider is configured, schedules a background task that seals the chain
+    head every τ. The seal is best-effort and off every request path; a cycle failure warns and the
+    loop survives. Design note §12. ``seal_posture`` is the single source of the sealing decision,
+    so the log line and the scheduler can never disagree.
+    """
+    from tessera.guard.seal import run_seal_cycle, seal_posture
+
+    log = obs_logging.get_logger("tessera.seal")
+    posture = seal_posture()
+    log.info("seal.posture", **posture)
+    if not posture["sealing"]:
+        return None
+    cadence = posture["cadence_s"]
+    interval = cadence if isinstance(cadence, int) else 3600
+
+    async def _loop() -> None:
+        while True:
+            await asyncio.sleep(interval)
+            try:
+                result = await asyncio.to_thread(run_seal_cycle)
+                log.info(
+                    "seal.cycle",
+                    sealed=result.sealed,
+                    state=result.state,
+                    continuity=result.continuity,
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # a cycle failure must never kill the loop
+                log.warning("seal.cycle_failed", error=str(exc))
+
+    return asyncio.create_task(_loop())
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -140,6 +179,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     traces.configure()
     metrics.configure()
     pool = get_pool()
+    seal_task: asyncio.Task[None] | None = None
     try:
         await pool.open()
         # Materialise every durable table in the active env schema at boot so a
@@ -155,8 +195,13 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await _ensure_online_score_store()  # ADR 0015 §Correction 2b — best-effort
         await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
         await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
+        seal_task = await _start_seal_scheduler()  # ADR 0015 §Corr.3c — off-chrono; no-op if 'none'
         yield
     finally:
+        if seal_task is not None:
+            seal_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await seal_task
         await pool.close()
 
 

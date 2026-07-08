@@ -663,6 +663,70 @@ def _original_card(original: dict[str, Any] | None, at: datetime | None) -> dict
     }
 
 
+_BADGE_LABELS: dict[str, tuple[str, str, str]] = {
+    "non_scelle": ("Non scellé", "Nicht versiegelt", "Not sealed"),
+    "scelle_opposable": (
+        "Scellé · opposable",
+        "Versiegelt · rechtsverbindlich",
+        "Sealed · opposable",
+    ),
+    "scelle_non_qualifie": (
+        "Scellé (non qualifié)",
+        "Versiegelt (nicht qualifiziert)",
+        "Sealed (non-qualified)",
+    ),
+    "integrite_partielle": ("Intégrité partielle", "Teilweise Integritaet", "Partial integrity"),
+    "verification_en_cours": ("Vérification en cours", "Pruefung laeuft", "Verifying…"),
+}
+
+
+def _opposability_block(opp: dict[str, object] | None, lang: str) -> dict[str, object]:
+    """Register §9 opposability badge for TE-01 — computed live from tree + seal, never stored.
+
+    ``opp`` is the raw verdict from :func:`tessera.guard.seal.active_ledger_opposability` (or None
+    when the ledger could not be read → the honest "Vérification en cours"). Adds localized labels,
+    the provider/qualification line, and the mandatory mention. No cosmetic fallback: absent a real
+    verified seal the badge is «Intégrité partielle» or «Vérification en cours», never «Scellé».
+    """
+    badge = str(opp.get("badge", "verification_en_cours")) if opp else "verification_en_cours"
+    fr, de, en = _BADGE_LABELS.get(badge, _BADGE_LABELS["verification_en_cours"])
+    seal_state = str(opp.get("seal_state", "absent")) if opp else "absent"
+    qualified = bool(opp.get("seal_qualified", False)) if opp else False
+    if seal_state == "verified" and qualified:
+        provider_label = _loc(
+            lang, "TSA qualifiée eIDAS", "Qualifizierte eIDAS-TSA", "eIDAS-qualified TSA"
+        )
+    elif seal_state == "verified":
+        provider_label = _loc(
+            lang, "TSA (non qualifiée)", "TSA (nicht qualifiziert)", "TSA (non-qualified)"
+        )
+    else:
+        provider_label = _loc(
+            lang,
+            "Aucun sceau tiers vérifié",
+            "Kein verifiziertes Drittsiegel",
+            "No verified third-party seal",
+        )
+    return {
+        "badge": badge,
+        "badge_label": _loc(lang, fr, de, en),
+        "seal_state": seal_state,
+        "seal_provider": (opp or {}).get("seal_provider"),
+        "seal_qualified": qualified,
+        "sealed_at": (opp or {}).get("sealed_at"),
+        "content_integrity": bool(opp.get("content_integrity", True)) if opp else True,
+        "linear": bool(opp.get("linear", True)) if opp else True,
+        "attested": bool(opp.get("attested", False)) if opp else False,
+        "provider_label": provider_label,
+        "mention": _loc(
+            lang,
+            "Statut attribué uniquement après vérification réussie.",
+            "Status nur nach erfolgreicher Pruefung vergeben.",
+            "Status assigned only after successful verification.",
+        ),
+    }
+
+
 def _assemble(
     rows: Sequence[dict[str, Any]],
     audit: _AuditAsOf,
@@ -675,6 +739,7 @@ def _assemble(
     handoffs: list[dict[str, Any]] | None = None,
     scope: set[str] | None = None,
     lang: str = "fr",
+    opposability: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Assemble the reconstruction payload. Pure and I/O-free for unit testing.
 
@@ -696,6 +761,12 @@ def _assemble(
     )
     coverage = round(_PCT * chunks_at_t / chunks_total) if chunks_total else 0
     active = sum(1 for s in states.values() if s.chunks_at_t > 0)
+
+    opp_block = _opposability_block(opposability, lang)
+    # TESS-0015 Q6 — the "Intégrité vérifiée" chip stops being a cosmetic constant: it now reflects
+    # the real chain content-integrity when the ledger was read (opposability present), and the
+    # register §9 opposability badge lives in ``opposability`` (never gated on this bool).
+    content_ok = bool(opposability.get("content_integrity", True)) if opposability else True
 
     live = _loc(lang, "live", "live", "live")
     verified_label = _loc(lang, "Intégrité vérifiée", "Integritaet geprueft", "Integrity verified")
@@ -734,7 +805,7 @@ def _assemble(
                 "State reconstructed at T",
             ),
             "snapshot_id": _snapshot_id(at),
-            "verified": True,
+            "verified": content_ok,
             "verified_label": verified_label,
             "built_label": _loc(
                 lang,
@@ -743,6 +814,7 @@ def _assemble(
                 f"Reconstructed on {_fmt(now)} by Tessera Ops",
             ),
         },
+        "opposability": opp_block,
         "original": {
             "title": _loc(lang, "Réponse d'origine", "Urspruengliche Antwort", "Original answer"),
             "cta": _loc(lang, "Ouvrir la trace", "Trace oeffnen", "Open the trace"),
@@ -797,7 +869,7 @@ def _assemble(
                 f"{active}/{len(states)} sources",
             ),
             "last_sync": _fmt(last_sync),
-            "verified": True,
+            "verified": content_ok,
             "verified_label": verified_label,
             "chain_label": _loc(
                 lang,
@@ -947,6 +1019,7 @@ async def build_etat_a_date(
     handoffs = _scan_handoffs(get_settings().guard.audit_file, at)
     policy = load_policy()
     ctx = _build_context()
+    opposability = _read_opposability(at)
     return _assemble(
         rows,
         audit,
@@ -958,7 +1031,22 @@ async def build_etat_a_date(
         handoffs=handoffs,
         scope=scope,
         lang=lang,
+        opposability=opposability,
     )
+
+
+def _read_opposability(at: datetime | None) -> dict[str, object] | None:
+    """Real TE-01 opposability verdict as of ``at`` (tree + Hica seal), or None if unreadable.
+
+    None degrades to the honest "Vérification en cours" (never a fabricated «Scellé») — the ledger
+    being unreachable must not paint a green badge (register §9, "jamais cosmétique").
+    """
+    from tessera.guard.seal import active_ledger_opposability
+
+    try:
+        return active_ledger_opposability(at=at)
+    except Exception:  # unreadable ledger → honest "verifying", never a fake seal
+        return None
 
 
 def _snapshot_record(

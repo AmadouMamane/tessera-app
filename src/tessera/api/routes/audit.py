@@ -96,6 +96,16 @@ class AuditIntegrity(BaseModel):
     fork_count: int = 0
     orphan_count: int = 0
     attested: bool = False
+    # Hica external seal facet (ADR 0015 §Amendment 3 pt3 / §Correction 3c pt4). ``badge`` is the
+    # register §9 opposability verdict, computed live from tree + seal — never stored (design note).
+    seal_state: Literal["absent", "verified", "stale", "unverifiable", "divergent"] = "absent"
+    seal_provider: str | None = None
+    seal_qualified: bool = False
+    sealed_at: str | None = None
+    sealed_head: str | None = None
+    badge: Literal[
+        "non_scelle", "scelle_opposable", "scelle_non_qualifie", "integrite_partielle"
+    ] = "integrite_partielle"
 
 
 class AuditCount(BaseModel):
@@ -373,11 +383,30 @@ def _read_entries(path: Path) -> list[AuditEntry]:
         return entries
 
 
-def _integrity_from_tree(status: object) -> AuditIntegrity:
-    """Lift a :class:`LedgerTreeStatus` into the API model (``verified`` = content integrity)."""
+def _safe_seal_status(path: Path) -> object:
+    """The active seal facet, or an honest ``absent`` if the ledger read fails (never green)."""
+    from tessera.guard.seal import SealStatus, active_ledger_seal_status
+
+    try:
+        return active_ledger_seal_status(path)
+    except Exception:  # a read failure degrades to absent — it never fabricates a seal
+        return SealStatus("absent", None, False, None, None, "seal status unavailable")
+
+
+def _integrity_from_tree(status: object, seal: object | None = None) -> AuditIntegrity:
+    """Lift the tree verdict + seal facet into the API model.
+
+    ``verified`` = content integrity (tamper-evidence). ``badge`` is the register §9 opposability
+    verdict, composed live from ``{content_integrity, linear, attested}`` and the seal — the single
+    source of the badge (design note §6), never a stored string.
+    """
     from tessera.guard.ledger_store import LedgerTreeStatus
+    from tessera.guard.seal import SealStatus, seal_badge
 
     assert isinstance(status, LedgerTreeStatus)
+    seal_status = (
+        seal if isinstance(seal, SealStatus) else SealStatus("absent", None, False, None, None)
+    )
     return AuditIntegrity(
         verified=status.content_integrity,
         length=status.length,
@@ -387,6 +416,12 @@ def _integrity_from_tree(status: object) -> AuditIntegrity:
         fork_count=status.fork_count,
         orphan_count=status.orphan_count,
         attested=status.attested,
+        seal_state=seal_status.state,
+        seal_provider=seal_status.provider,
+        seal_qualified=seal_status.qualified,
+        sealed_at=seal_status.sealed_at,
+        sealed_head=seal_status.sealed_head,
+        badge=seal_badge(status, seal_status),
     )
 
 
@@ -394,12 +429,12 @@ def _audit_integrity(path: Path) -> AuditIntegrity:
     global _INTEGRITY_CACHE
 
     if ledger_source() == "postgres":
-        return _integrity_from_tree(active_ledger_tree_status(path))
+        return _integrity_from_tree(active_ledger_tree_status(path), _safe_seal_status(path))
     state = _audit_file_state(path)
     with _INTEGRITY_CACHE_LOCK:
         if _INTEGRITY_CACHE is not None and _INTEGRITY_CACHE.state == state:
             return _INTEGRITY_CACHE.integrity
-        integrity = _integrity_from_tree(active_ledger_tree_status(path))
+        integrity = _integrity_from_tree(active_ledger_tree_status(path), _safe_seal_status(path))
         _INTEGRITY_CACHE = _IntegrityCache(state=state, integrity=integrity)
         return integrity
 
