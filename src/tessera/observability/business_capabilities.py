@@ -23,6 +23,8 @@ __all__ = [
     "UNKNOWN_CAPABILITY_ID",
     "UNKNOWN_CAPABILITY_LABEL",
     "business_capability_aggregate",
+    "declares_external_effects",
+    "resolve_observability_level",
 ]
 
 UNKNOWN_CAPABILITY_ID = "—"
@@ -321,10 +323,41 @@ def _governed(agent_id: str | None) -> bool:
     return release.available and release.socle_total > 0
 
 
+def _has_capability_stamped_events(rows: list[dict[str, object]]) -> bool:
+    """≥1 business event stamped with a real ``capability_id`` — the L3 evidence."""
+    return any(_capability(row) != UNKNOWN_CAPABILITY_ID for row in rows)
+
+
+def resolve_observability_level(agent_id: str | None) -> str | None:
+    """The agent's current L-level (ADR 0017 §4), resolved from live facts.
+
+    The single place ``governed`` + business-event facts become a level, reused by
+    the §A2.4 release gate. Returns ``None`` for an un-manifested agent (no store read).
+    """
+    agent = _agent(agent_id)
+    if agent is None:
+        return None
+    rows = business_events.business_event_rows(agent_id=agent_id) if agent_id else []
+    return observability_level(
+        agent, governed=_governed(agent_id), business_events=_has_capability_stamped_events(rows)
+    )
+
+
+def declares_external_effects(agent_id: str | None) -> bool:
+    """True iff the agent declares a capability reaching outside the system (§A2.4 → L3)."""
+    agent = _agent(agent_id)
+    if agent is None or agent.observability is None:
+        return False
+    return any(
+        capability.external_effect_level.value in _EXTERNAL_EFFECT_LEVELS
+        for capability in agent.observability.capabilities
+    )
+
+
 def _level_payload(agent_id: str | None, rows: list[dict[str, object]]) -> dict[str, object]:
     agent = _agent(agent_id)
     governed = _governed(agent_id)
-    has_business_events = any(_capability(row) != UNKNOWN_CAPABILITY_ID for row in rows)
+    has_business_events = _has_capability_stamped_events(rows)
     level = (
         observability_level(agent, governed=governed, business_events=has_business_events)
         if agent is not None

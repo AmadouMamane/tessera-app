@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from tessera.observability import agent_lifecycle as lifecycle
@@ -84,3 +85,86 @@ def test_request_release_emits_released_when_allowed(monkeypatch: pytest.MonkeyP
     decision = lifecycle.request_release("support-client")
     assert decision.allowed
     assert emitted["phase"] == "released"
+
+
+# --------------------------------------------------------------------------- #
+# ADR 0017 §A2.4 — the observability level is a release condition.
+# --------------------------------------------------------------------------- #
+
+
+def _wire(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    level: str | None,
+    prod: bool,
+    external: bool,
+    gate_passed: bool | None = True,
+) -> None:
+    monkeypatch.setattr(
+        lifecycle, "load_eval_snapshot", lambda _aid: _snapshot(gate_passed=gate_passed)
+    )
+    monkeypatch.setattr(lifecycle, "resolve_observability_level", lambda _aid: level)
+    monkeypatch.setattr(lifecycle, "declares_external_effects", lambda _aid: external)
+    monkeypatch.setattr(
+        lifecycle, "get_settings", lambda: SimpleNamespace(is_production=lambda: prod)
+    )
+
+
+def test_prod_blocks_below_l2(monkeypatch: pytest.MonkeyPatch) -> None:
+    _wire(monkeypatch, level="L1", prod=True, external=False)
+    decision = lifecycle.release_decision("recouvrement")
+    assert not decision.allowed  # eval passed, but L1 < L2 in prod
+    assert decision.observability_level == "L1"
+    assert decision.required_level == "L2"
+    assert "L2" in decision.reason
+
+
+def test_prod_allows_at_l2(monkeypatch: pytest.MonkeyPatch) -> None:
+    _wire(monkeypatch, level="L2", prod=True, external=False)
+    decision = lifecycle.release_decision("recouvrement")
+    assert decision.allowed
+    assert decision.required_level == "L2"
+
+
+def test_nonprod_allows_below_l2(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Outside production the L-level is not gated (matches the dev doctrine).
+    _wire(monkeypatch, level="L1", prod=False, external=False)
+    decision = lifecycle.release_decision("recouvrement")
+    assert decision.allowed
+    assert decision.required_level is None
+
+
+def test_external_effects_require_l3(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Declared external effects require L3 regardless of environment.
+    _wire(monkeypatch, level="L2", prod=False, external=True)
+    decision = lifecycle.release_decision("recouvrement")
+    assert not decision.allowed
+    assert decision.required_level == "L3"
+    assert "L3" in decision.reason
+
+
+def test_external_effects_allowed_at_l3(monkeypatch: pytest.MonkeyPatch) -> None:
+    _wire(monkeypatch, level="L3", prod=True, external=True)
+    decision = lifecycle.release_decision("recouvrement")
+    assert decision.allowed
+    assert decision.required_level == "L3"
+
+
+def test_eval_block_takes_precedence_over_level(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A failing eval-gate is reported even when the level would also block.
+    _wire(monkeypatch, level="L1", prod=True, external=False, gate_passed=False)
+    monkeypatch.setattr(
+        lifecycle,
+        "load_eval_snapshot",
+        lambda _aid: _snapshot(gate_passed=False, failed_critical=("02_pii_leak",)),
+    )
+    decision = lifecycle.release_decision("recouvrement")
+    assert not decision.allowed
+    assert "socle critique" in decision.reason  # eval reason, not the level reason
+
+
+def test_as_dict_carries_level_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+    _wire(monkeypatch, level="L2", prod=True, external=False)
+    payload = lifecycle.release_decision("recouvrement").as_dict()
+    assert payload["observability_level"] == "L2"
+    assert payload["required_level"] == "L2"
