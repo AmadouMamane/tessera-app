@@ -32,7 +32,7 @@ the final consolidated version.)*
 | 1 | Brancher la preuve (Prometheus) | ✅ **mergé** `06bbd54a` (poussé) |
 | 2 | I5 — `synthetic` traverse le fil | ✅ **mergé** `10183972` (poussé) |
 | 3 | I6 — duplex-agent | ✅ **mergé** `84c79dfc` (poussé) |
-| 4 | FE snapshot client | ⏳ |
+| 4 | FE snapshot client | ✅ **mergé** `48e8e435` (poussé) |
 | 5 | e2e smoke Playwright | ⏳ |
 | 6 | Reliquat headers — menu grille d'apps | ⏳ |
 | 7 | Craft pass P3 | ⏳ |
@@ -569,3 +569,108 @@ FRONTEND (fusionné, ×2) : tsc ok · biome exit 0 · vitest 13 files / 119 test
 
 **MERGÉ et poussé.** `84eaff43` + `eadf5f8f` + docs → merge `84c79dfc`.
 **ADR 0019 Amendment 1 est implémenté (I5 + I6).**
+
+---
+
+## LOT 4 — FE snapshot client
+
+Branche `claude/fe-snapshot-client`, commit `c8ef9b31`, merge `48e8e435`.
+
+### La prémisse était fausse, et c'est la mesure qui l'a dit
+
+La consigne parlait des « 24-37 requêtes en rafale **des pages** ». Mesure réelle, navigateur
+headless authentifié contre la stack de référence, **avant** toute modification :
+
+| Page | requêtes `/api/*` | endpoints distincts |
+| --- | --- | --- |
+| Flotte (`/fr/agents`) | 4 | 2 |
+| Fiche agent (`/fr/agents/support-client/synthese`) | 6 | 3 |
+| **Vue d'ensemble** (`/fr/surveiller/vue-ensemble`) | **58** | **26** |
+
+Flotte et la fiche agent **ne rafalent pas** : elles sont rendues côté serveur. La rafale est
+entièrement sur Vue d'ensemble. J'ai mesuré avant de coder, et c'est ce qui a évité de « corriger »
+deux pages qui n'avaient rien.
+
+### Le backend l'avait déjà construit ; personne ne l'appelait
+
+`GET /observability/snapshot` existe depuis la migration spine (ADR 0015 §Performance). Son
+docstring dit mot pour mot : *« collapsing 24-37 per-page requests into one round-trip »*. Il est
+batché, mis en cache (TTL = cadence de poll), avec *single-flight*. Et
+`tests/unit/test_spine_signals_parity.py` **épingle déjà** chaque tranche comme *byte-identical* à
+la route individuelle qu'elle remplace.
+
+Vérifié en direct avant de m'appuyer dessus — 9 signaux, 9 routes :
+
+```
+signal        data == payload de la route ?
+  slo         ✓ identical      cost         ✓ identical
+  trend       ✓ identical      anomalies    ✓ identical
+  funnel      ✓ identical      what_changed ✓ identical
+  toxicity    ✓ identical      scores       ✓ identical
+  pii_leak    ✓ identical
+meta: {"upstream_reads": 3, "n_signals": 10}
+```
+
+Le lot n'était donc pas « construire un snapshot » : c'était **adopter celui qui existe**.
+
+### Deux requêtes, pas une — et c'est délibéré
+
+`anomalies` et `what_changed` rafraîchissent toutes les **20 s** ; les sept autres toutes les 15 s
+(`POLL_MS`). Les plier dans une seule clé de requête aurait **silencieusement re-cadencé** deux
+cartes. Invisible à l'écran, et exactement le genre de « aucun changement de comportement » qui n'en
+est pas un. Donc : `?signals=` en deux sous-ensembles, un par cadence.
+
+### Aucune vérité nouvelle
+
+Chaque carte `select` sa tranche et la **valide avec le schéma zod de sa propre route**. Honest-empty
+préservé champ par champ : un signal que le backend n'a pas su calculer reste `undefined` — jamais
+`{}`, jamais un zéro fabriqué. Une seule source indisponible dégrade **une** carte, comme
+aujourd'hui, et ne vide jamais la page. Les routes par signal sont **conservées** (d'autres pages les
+appellent, et elles restent le contrat contre lequel le snapshot est vérifié). Sept tests vitest
+neufs, dont « une charge qui a dérivé du contrat retombe en honest-empty » et « le jeu de signaux du
+backend est épinglé ».
+
+### Mesure APRÈS (preview depuis le worktree, `:3096`/`:8096`, jamais les ports de référence)
+
+| Page | avant | après |
+| --- | --- | --- |
+| Flotte | 4 req / 2 endpoints | 4 / 2 (inchangé) |
+| Fiche agent | 6 / 3 | 6 / 3 (inchangé) |
+| **Vue d'ensemble** | **58 / 26** | **44 / 19** |
+
+Et côté backend : les 7 signaux « rapides » coûtent **2 lectures amont** au lieu de 7 appels de route
+(`upstream_reads: 2`), les 2 « lents » en coûtent 1. La page a été assertée non-vide (son contenu
+réel s'affiche), pas seulement « 200 OK ».
+
+### Trois choses que ces chiffres ne prouvent PAS — dites plutôt que tues
+
+1. **Le ×2 est du React StrictMode** en dev (double invocation des effets), pas un comportement de
+   production. 58 → 44 en dev correspond à ~29 → ~22 en prod.
+2. **`/observability/slo` survit dans la liste après** : une autre composante (le *breach hero*) le
+   fetch pour son compte. Le replier est sa propre tranche, pas celle-ci.
+3. Les endpoints hors du jeu snapshot (`conformance`, `tool-validity`, `firewall-efficacy`,
+   `refusal`, `playbooks`, `roadmap`, `ai-act`, `timeline`, `control-signals`, `governance`,
+   `inbox`, `traces-obs`, `data-range`) **restent un appel chacun**. Le jeu de signaux du backend en
+   contient 10 ; les élargir est une décision plateforme, pas un recâblage client.
+
+### Gates — sortie réelle
+
+```
+BACKEND (fusionné, ×2)  : ruff ok · format 546 ok · mypy 281 ok · 1564 passed
+FRONTEND (fusionné, ×2) : tsc ok · biome exit 0 · vitest 14 files / 126 tests
+```
+
+(119 → 126 vitest : +7.)
+
+### Auto-revue
+
+- Le preview a été monté depuis le **worktree** (`:3096`/`:8096`, port métriques `9096` pour ne pas
+  disputer `:9090` au backend de référence), puis **démonté**. Les serveurs de référence
+  (`:3097`/`:8099`) n'ont pas bougé de la nuit hors du redémarrage sanctionné du lot 1.
+- Un `webapp/frontend/.env.local` a dû être copié dans le worktree pour que NextAuth signe la session
+  du navigateur de mesure (sans lui : 0 requête, la page ne montait pas). Il est **gitignoré** et a
+  été **supprimé** après la mesure. Aucun secret n'a été affiché ni commité.
+
+### Verdict
+
+**MERGÉ et poussé.** `c8ef9b31` → merge `48e8e435`.
