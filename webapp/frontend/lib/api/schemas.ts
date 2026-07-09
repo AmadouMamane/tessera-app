@@ -5683,3 +5683,20 @@ export const UsersOverviewSchema = z.object({
   footer: z.object({ total: z.number().int().optional(), source: z.string() }).optional(),
 });
 export type UsersOverview = z.infer<typeof UsersOverviewSchema>;
+
+/**
+ * The batched snapshot envelope (ADR 0015 §Performance).
+ *
+ * Deliberately permissive: each signal's payload is validated later by the SAME schema its
+ * own route used (`selectSignal` in `lib/overview-snapshot.ts`), so this schema must not be
+ * the place a slice is silently coerced. `data` absent ⇒ the backend had nothing to say, and
+ * that must survive to the card as honest-empty.
+ */
+export const OverviewSnapshotSchema = z.object({
+  scope: z.unknown().optional(),
+  signals: z
+    .record(z.string(), z.object({ data: z.unknown().optional(), report: z.unknown().optional() }))
+    .optional(),
+  meta: z.unknown().optional(),
+});
+export type OverviewSnapshotEnvelope = z.infer<typeof OverviewSnapshotSchema>;
