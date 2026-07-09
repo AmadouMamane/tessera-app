@@ -1,6 +1,11 @@
 "use client";
 
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import {
+  type UseQueryResult,
+  keepPreviousData,
+  useMutation,
+  useQuery,
+} from "@tanstack/react-query";
 import {
   Activity,
   ArrowRightLeft,
@@ -25,6 +30,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { type ReactNode, useMemo, useState } from "react";
+import type { z } from "zod";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -38,31 +44,35 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, isScopedToAgent, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
-  fetchAnomalies,
   fetchAuditIntegrity,
   fetchConformance,
   fetchControlSignals,
-  fetchCost,
-  fetchEvalScores,
   fetchFirewallEfficacy,
-  fetchFunnel,
   fetchGovernance,
   fetchHealth,
   fetchOverviewCases,
-  fetchPiiLeak,
+  fetchOverviewSnapshot,
   fetchPlaybooks,
   fetchReadiness,
   fetchRefusal,
   fetchRoadmap,
-  fetchSLO,
   fetchTimeline,
   fetchToolValidity,
-  fetchToxicity,
   fetchTracesObs,
-  fetchTrend,
-  fetchWhatChanged,
   runRedteam,
 } from "@/lib/api/client";
+import type { OverviewSnapshotEnvelope } from "@/lib/api/schemas";
+import {
+  AnomalyReportSchema,
+  CostReportSchema,
+  EvalScoresResponseSchema,
+  FunnelReportSchema,
+  PIILeakSummarySchema,
+  SLOReportSchema,
+  ToxicityReportSchema,
+  TrendReportSchema,
+  WhatChangedSchema,
+} from "@/lib/api/schemas";
 import type {
   AnomalyReport,
   ConformanceReport,
@@ -93,7 +103,47 @@ import {
   toneBg,
   toneText,
 } from "@/lib/overview";
+import { type SnapshotSignalId, selectSignal } from "@/lib/overview-snapshot";
 import { isOrgWide, signalSupports } from "@/lib/signal-registry";
+
+/**
+ * The two snapshot subsets, split by POLL CADENCE rather than by topic.
+ *
+ * `anomalies` and `what_changed` refresh every 20s; the other seven every POLL_MS. Folding all
+ * nine into one query would have silently retimed two of them. Two round-trips instead of nine
+ * is the win; changing how often a card refreshes was never part of it.
+ */
+const SNAPSHOT_FAST = ["slo", "trend", "toxicity", "pii_leak", "cost", "funnel", "scores"] as const;
+const SNAPSHOT_SLOW = ["anomalies", "what_changed"] as const;
+
+/**
+ * Give one card the shape it already expects — `{ data, isLoading, … }` — over a shared query.
+ *
+ * The card keeps its own empty/loading/error rendering; only the transport changed. `data` is
+ * `undefined` whenever the backend had nothing to say for this signal, which is precisely the
+ * honest-empty each card already handles.
+ */
+function signalOf<TSchema extends z.ZodTypeAny>(
+  query: UseQueryResult<OverviewSnapshotEnvelope>,
+  id: SnapshotSignalId,
+  schema: TSchema,
+): {
+  data: z.infer<TSchema> | undefined;
+  isLoading: boolean;
+  isPending: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  error: unknown;
+} {
+  return {
+    data: selectSignal(query.data, id, schema),
+    isLoading: query.isLoading,
+    isPending: query.isPending,
+    isError: query.isError,
+    isFetching: query.isFetching,
+    error: query.error,
+  };
+}
 
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;
@@ -148,40 +198,44 @@ export function OverviewDashboard({
   // As-of-T queries re-key on `asOf`, so scrubbing the rail would normally blank
   // them to "—" on every step (a fresh key has no cache). keepPreviousData holds
   // the last value while the new T resolves, so the cockpit reads smoothly.
-  const slo = useQuery({
-    queryKey: ["ov-slo", asOf, scope],
-    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined, scope),
+  // --- The batched snapshot (ADR 0015 §Performance) ------------------------
+  // Nine cards used to fire nine requests per poll. The backend has always been able to
+  // answer them in ONE pass over shared reads (`GET /observability/snapshot`, cached +
+  // single-flight); the cockpit simply never asked. Each card now `select`s its slice and
+  // validates it with the same schema its own route used, so this buys round-trips, not trust.
+  //
+  // TWO queries, not one, because two of the nine poll at a different cadence. Folding them
+  // into a single key would silently change how often `anomalies` and `what_changed` refresh —
+  // invisible on screen, and exactly the kind of "no behaviour change" that is not one.
+  const snapshotFast = useQuery({
+    queryKey: ["ov-snapshot-fast", asOf, scope],
+    queryFn: ({ signal }) => fetchOverviewSnapshot(signal, asOf ?? undefined, scope, SNAPSHOT_FAST),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
-  const trend = useQuery({
-    queryKey: ["ov-trend", asOf, scope],
-    queryFn: ({ signal }) => fetchTrend(signal, asOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
-  const whatChanged = useQuery({
-    queryKey: ["ov-what-changed", asOf, scope],
-    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined, scope),
+  const snapshotSlow = useQuery({
+    queryKey: ["ov-snapshot-slow", asOf, scope],
+    queryFn: ({ signal }) => fetchOverviewSnapshot(signal, asOf ?? undefined, scope, SNAPSHOT_SLOW),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
 
+  // Each card keeps its own loading/error/empty behaviour: it reads the query it depends on
+  // and selects its own slice. A signal the backend could not compute stays `undefined` —
+  // honest-empty, never a fabricated zero (`selectSignal`).
+  const slo = signalOf(snapshotFast, "slo", SLOReportSchema);
+  const trend = signalOf(snapshotFast, "trend", TrendReportSchema);
+  const toxicity = signalOf(snapshotFast, "toxicity", ToxicityReportSchema);
+  const piiLeak = signalOf(snapshotFast, "pii_leak", PIILeakSummarySchema);
+  const cost = signalOf(snapshotFast, "cost", CostReportSchema);
+  const funnel = signalOf(snapshotFast, "funnel", FunnelReportSchema);
+  const scores = signalOf(snapshotFast, "scores", EvalScoresResponseSchema);
+  const anomalies = signalOf(snapshotSlow, "anomalies", AnomalyReportSchema);
+  const whatChanged = signalOf(snapshotSlow, "what_changed", WhatChangedSchema);
+
   // --- Safety / guard signals ---------------------------------------------
   // refusal + firewall measure a FIXED corpus through the guard "now" — a
   // property of the current policy, identical at any T — so they stay live.
-  const toxicity = useQuery({
-    queryKey: ["ov-toxicity", asOf, scope],
-    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
-  const piiLeak = useQuery({
-    queryKey: ["ov-pii", asOf, scope],
-    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
   const refusal = useQuery({
     queryKey: ["ov-refusal"],
     queryFn: ({ signal }) => fetchRefusal(signal),
@@ -206,12 +260,6 @@ export function OverviewDashboard({
   });
 
   // --- Incidents / risk ----------------------------------------------------
-  const anomalies = useQuery({
-    queryKey: ["ov-anomalies", asOf, scope],
-    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : 20_000,
-    placeholderData: keepPreviousData,
-  });
   const playbooks = useQuery({
     queryKey: ["ov-playbooks", asOf, scope],
     queryFn: ({ signal }) => fetchPlaybooks(signal, asOf ?? undefined, scope),
@@ -229,12 +277,6 @@ export function OverviewDashboard({
   // The audit COUNT honours T (append-only log → entries up to the instant); the
   // chain VERIFICATION stays a structural "now" check (server-side), so the card
   // reads "à T" like every other point-in-time signal instead of a lone "live".
-  const cost = useQuery({
-    queryKey: ["ov-cost", asOf, scope],
-    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
   const aiAct = useQuery({
     queryKey: ["ov-ai-act", asOf],
     queryFn: ({ signal }) => fetchAIAct(signal, asOf ?? undefined),
@@ -244,18 +286,6 @@ export function OverviewDashboard({
   const audit = useQuery({
     queryKey: ["ov-audit", asOf],
     queryFn: ({ signal }) => fetchAuditIntegrity(signal, asOf ?? undefined),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
-  const funnel = useQuery({
-    queryKey: ["ov-funnel", asOf, scope],
-    queryFn: ({ signal }) => fetchFunnel(signal, asOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
-  const scores = useQuery({
-    queryKey: ["ov-scores", asOf, scope],
-    queryFn: ({ signal }) => fetchEvalScores(signal, asOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });

@@ -177,6 +177,8 @@ import {
   ObsCostReportSchema,
   type OverflowReport,
   OverflowReportSchema,
+  type OverviewSnapshotEnvelope,
+  OverviewSnapshotSchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
   type ParametersOverview,
@@ -524,6 +526,31 @@ export async function fetchSLO(
   agent?: string,
 ): Promise<SLOReport> {
   return request(withScope("/observability/slo", at, agent), { signal }, SLOReportSchema);
+}
+
+/**
+ * Every hot-path signal for one scope, in a single round-trip (ADR 0015 §Performance).
+ *
+ * The backend computes them over shared upstream reads, behind a read-through cache with
+ * single-flight; `tests/unit/test_spine_signals_parity.py` pins each slice byte-identical to
+ * the individual route it replaces. Cards select their slice with `selectSignal`, validating
+ * it against the very schema their own route used — the collapse buys round-trips, not trust.
+ *
+ * The per-signal routes below are RETAINED: other pages still call them, and they remain the
+ * contract this snapshot is checked against.
+ */
+export async function fetchOverviewSnapshot(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+  signals?: readonly string[],
+): Promise<OverviewSnapshotEnvelope> {
+  const path = withScope("/observability/snapshot", at, agent);
+  const scoped =
+    signals && signals.length > 0
+      ? `${path}${path.includes("?") ? "&" : "?"}signals=${signals.join(",")}`
+      : path;
+  return request(scoped, { signal }, OverviewSnapshotSchema);
 }
 
 /** Mirror recent captured turns to a candidate model and compare (shadow, #16). */
