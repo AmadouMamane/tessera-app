@@ -59,6 +59,34 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-09 — **Fleet-legibility + level-honesty review (lot A `b3d70b36`, lot B `b7ef1003`,
+  branch `claude/fleet-agent-legibility`): APPROVED — MERGE FEU VERT.** Lot A ratified incl.
+  the tooltip head-noun fix («Agent témoin de la plateforme…» — keeping «démonstration»
+  would have recreated the rule-5 collision one level down). Lot B ratified: trusted-true
+  killed at the parameter-default level (`has_turn_evidence` becomes a REQUIRED kwarg — a
+  default is where an assumption hides); `resolve_level_state()` carries computed + declared
+  + evidence, `resolve_observability_level()` returns computed only and that is what the
+  release gate reads (driven end-to-end through `release_decision`, unstubbed); badge
+  decision extracted to a pure module, zero agent-specific conditions, guarded by test.
+  **Architect error owned:** the review prompt asserted a freshness window "already used by
+  turn evidence" — none exists (`sum by (agent_id)(tessera_agent_turns_total)`, instant
+  vector). The executor rightly refused «aucune preuve récente» as an over-claim IN THE
+  LABEL and shipped «L{n} déclaré · aucune preuve» + two guards (PromQL range-selector
+  ratchet; `recent|récent|kürzlich` forbidden in level strings). Second instance of the
+  step-2 lesson (assertion-string guess): domain facts are read from source, never
+  inferred — and the rule binds the reviewer first. **Scope ruling (the fleet goes muted):**
+  with the turn-evidence read unwired locally (`TESSERA_LEVEL_TURN_EVIDENCE` set nowhere in
+  the repo), all five agents resolve `unverifiable` → every card shows the muted declared
+  badge and the release gate blocks below proven evidence. Ruled: this is the DESIRED
+  honest reading of a cockpit whose evidence path is not connected — merge as-is, no
+  softening (softening `unverifiable` into a normal badge would resurrect trusted-true in
+  the UI). Ordered complement, overnight lot 1.5 BEFORE I6(a): wire the existing step-7
+  evidence read in the dev stack (collector + Prometheus up via `make dev-up`, evidence
+  flag set from its real configuration read in code — not inferred from its name); exit
+  criterion = computed rungs return from live Prometheus facts, turn-agent honestly stays
+  «L1 déclaré · aucune preuve» until duplex (I6) closes the loop. Freshness semantics
+  (what "recent" means, `increase[24h]`) = its own backlog slice, not tonight.
+
 - 2026-07-08 — **ADR 0019 I1+I4 review: APPROVED — MERGE FEU VERT.** Verified:
   `synthetic_turn()` ContextVar entered around `graph.ainvoke` (structural,
   medium-independent stamping); `canary_cadence_s ⇒ in_process_chat` enforced at
