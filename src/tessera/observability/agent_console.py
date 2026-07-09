@@ -25,13 +25,13 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
-from tessera.agent.registry import InvocationBinding, get_agent
+from tessera.agent.registry import Agent, InvocationBinding, get_agent, load_input_schema
 from tessera.guard.decisions import load_policy
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.spine.adapters import read_scores
 from tessera.settings import LLMProfile, get_settings
 
-__all__ = ["compute_agent_console"]
+__all__ = ["capability_forms", "compute_agent_console"]
 
 # Localized free-text (fr, de, en). Proper nouns (Tessera, Prompt/Sources labels
 # that double as tab keys are localized below) handled explicitly.
@@ -145,6 +145,21 @@ _TR: dict[str, tuple[str, str, str]] = {
     "http_result": ("TurnResult (brut)", "TurnResult (roh)", "TurnResult (raw)"),
     "http_ok": ("Conforme", "Konform", "Conformant"),
     "http_failed": ("Échec", "Fehlgeschlagen", "Failed"),
+    # ADR 0019 §A1.2 (c) — the generated capability form. Generic by construction: these labels
+    # frame ANY declared input_schema, and no agent is named in any of them.
+    "cap_free_text": ("Message libre", "Freier Text", "Free message"),
+    "cap_section": (
+        "Capacités déclarées",
+        "Deklarierte Fähigkeiten",
+        "Declared capabilities",
+    ),
+    "cap_hint": (
+        "Formulaire généré depuis le schéma que l'agent déclare — aucun champ écrit à la main.",
+        "Formular aus dem deklarierten Schema erzeugt — kein Feld ist handgeschrieben.",
+        "Form generated from the schema the agent declares — no field is hand-written.",
+    ),
+    "cap_submit": ("Envoyer la capacité", "Fähigkeit senden", "Send capability"),
+    "cap_required": ("Requis", "Erforderlich", "Required"),
 }
 
 
@@ -272,7 +287,32 @@ def _honest_empty_payload(lang: str, binding: InvocationBinding) -> dict[str, ob
     }
 
 
-def _http_console_payload(lang: str, endpoint: str | None) -> dict[str, object]:
+def capability_forms(agent: Agent) -> list[dict[str, object]]:
+    """The generated-form descriptors for the agent's capabilities (ADR 0019 §A1.2 c).
+
+    One entry per capability that declares an ``input_schema``; a capability without one has no
+    parameters, so there is nothing to render and it is honestly absent rather than shown as an
+    empty form. The ``label_key`` travels unresolved: the frontend owns the locale catalogue, and
+    passing the key (not a string) is what keeps this projection agent-agnostic.
+
+    A declared schema that cannot be loaded is a manifest error, not a degraded console — it
+    raises, and the route surfaces it, rather than rendering a form the agent never promised.
+    """
+    spec = agent.observability
+    if spec is None:
+        return []
+    return [
+        {
+            "id": capability.id,
+            "label_key": capability.label_key,
+            "schema": load_input_schema(capability.input_schema),
+        }
+        for capability in spec.capabilities
+        if capability.input_schema
+    ]
+
+
+def _http_console_payload(lang: str, agent: Agent) -> dict[str, object]:
     """The request/response test bench for an ``http``-binding agent (ADR 0019 §I3).
 
     A foreign runtime invoked over the declared endpoint — so the payload carries the http
@@ -280,14 +320,18 @@ def _http_console_payload(lang: str, endpoint: str | None) -> dict[str, object]:
     guardrails): those are in-process concepts, and the remote agent owns its own guard and
     telemetry. The frontend renders a send-a-turn / show-the-TurnResult panel driven by the
     ``POST /agents/{id}/invoke`` seam (each turn audited, under an operator assertion).
+
+    Since §A1.2 the bench also carries the agent's declared capability forms. Free text remains:
+    a capability is a typed entry point, not a replacement for probing the agent in its own words.
     """
     return {
         "invocation": {
             "binding": InvocationBinding.HTTP.value,
             "invocable": True,
             "mode": "request_response",
-            "endpoint": endpoint,
+            "endpoint": agent.invocation.endpoint,
         },
+        "capabilities": capability_forms(agent),
         "title": _t("http_title", lang),
         "subtitle": _t("http_subtitle", lang),
         "http_console": {
@@ -297,6 +341,15 @@ def _http_console_payload(lang: str, endpoint: str | None) -> dict[str, object]:
             "result_label": _t("http_result", lang),
             "verdict_ok": _t("http_ok", lang),
             "verdict_failed": _t("http_failed", lang),
+        },
+        # Generic chrome for the generated capability forms (ADR 0019 §A1.2 c). Agent-agnostic
+        # by construction: these labels frame ANY declared input_schema, no agent is named.
+        "capability_console": {
+            "free_text_label": _t("cap_free_text", lang),
+            "section_label": _t("cap_section", lang),
+            "hint": _t("cap_hint", lang),
+            "submit_label": _t("cap_submit", lang),
+            "required_label": _t("cap_required", lang),
         },
     }
 
@@ -315,7 +368,7 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
     agent = get_agent(agent_id)
     binding = agent.invocation.binding
     if binding is InvocationBinding.HTTP:
-        return _http_console_payload(lang, agent.invocation.endpoint)
+        return _http_console_payload(lang, agent)
     if binding is not InvocationBinding.IN_PROCESS_CHAT:
         # ``none``: nothing the console can drive, so render honest-empty rather than a chat
         # over config it does not own.

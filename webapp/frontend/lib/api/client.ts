@@ -1500,9 +1500,13 @@ export async function fetchAgentConsole(
  * binding and audits the call. Returns the invocation outcome (a red verdict is data, not
  * a throw); auth/plane refusals throw ApiError.
  */
+export type AgentInvokeBody =
+  | { message: string }
+  | { action: { capability_id: string; params: Record<string, unknown> } };
+
 export async function invokeAgentTurn(
   agentId: string,
-  message: string,
+  body: AgentInvokeBody,
   signal?: AbortSignal,
 ): Promise<AgentInvokeOutcome> {
   return request(
@@ -1510,7 +1514,7 @@ export async function invokeAgentTurn(
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(body),
       signal,
     },
     AgentInvokeOutcomeSchema,

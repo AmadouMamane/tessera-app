@@ -24,27 +24,77 @@ import uuid
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Body, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from tessera.agent.registry import InvocationBinding, get_agent, routable
+from tessera.agent.capability_schema import load_input_schema, validate_params
+from tessera.agent.registry import Agent, InvocationBinding, get_agent, routable
 from tessera.api.agent_invoker import HttpTurnInvoker
 from tessera.api.operator import OPERATOR_ASSERTION_HEADER, resolve_request_context
 from tessera.authz import AuthState
 
 if TYPE_CHECKING:
-    from tessera.agent.turn_contract import TurnInput
+    from tessera.agent.turn_contract import TurnAction, TurnInput
 
 router = APIRouter(tags=["invoke"])
 
 
-class InvokeRequest(BaseModel):
-    """A single test turn for an http-binding agent (the Console's invocation body)."""
+class InvokeAction(BaseModel):
+    """A typed capability invocation — the generated form's submission (ADR 0018 §2)."""
 
     model_config = ConfigDict(extra="forbid")
 
-    message: str = Field(min_length=1, max_length=4_000)
+    capability_id: str = Field(min_length=1, max_length=120)
+    params: dict[str, object] = Field(default_factory=dict)
+
+
+class InvokeRequest(BaseModel):
+    """A single test turn for an http-binding agent (the Console's invocation body).
+
+    Exactly one of ``message`` / ``action`` (ADR 0018 §2 + §7): buttons and generated forms
+    dispatch typed actions, free messages go through the agent's own intent router. Sending both
+    would leave the agent to guess which one the operator meant, and it must never have to.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    message: str | None = Field(default=None, min_length=1, max_length=4_000)
+    action: InvokeAction | None = None
     case_id: str | None = Field(default=None, max_length=120)
     language: str | None = Field(default=None, max_length=12)
+
+    @model_validator(mode="after")
+    def _exactly_one_input(self) -> InvokeRequest:
+        if (self.message is None) == (self.action is None):
+            msg = "exactly one of 'message' or 'action' is required"
+            raise ValueError(msg)
+        return self
+
+
+def _checked_action(agent: Agent, action: InvokeAction) -> TurnAction:
+    """Turn a form submission into a `TurnAction`, refusing anything the agent did not declare.
+
+    The platform declared the capability's shape, so it is the platform that refuses a turn which
+    does not match it — before the request leaves the process. Forwarding unvalidated params would
+    make the agent's contract advisory, and make a 500 from a foreign runtime look like the
+    operator's fault.
+    """
+    spec = agent.observability
+    capabilities = {c.id: c for c in spec.capabilities} if spec is not None else {}
+    capability = capabilities.get(action.capability_id)
+    if capability is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"agent {agent.id!r} declares no capability {action.capability_id!r}",
+        )
+    if not capability.input_schema:
+        raise HTTPException(
+            status_code=400,
+            detail=f"capability {action.capability_id!r} declares no input_schema",
+        )
+    violations = validate_params(load_input_schema(capability.input_schema), action.params)
+    if violations:
+        raise HTTPException(status_code=422, detail={"params": violations})
+    return {"type": action.capability_id, "params": action.params}
 
 
 @router.post("/agents/{agent_id}/invoke")
@@ -84,12 +134,16 @@ async def invoke_agent(
     conversation_id = str(uuid.uuid4())
     turn_id = str(uuid.uuid4())
     turn_input: TurnInput = {
-        "user_message": payload.message,
         "conversation_id": conversation_id,
         "turn_id": turn_id,
         "surface": "console",
         "language": payload.language or agent.default_language,
     }
+    if payload.action is not None:
+        turn_input["action"] = _checked_action(agent, payload.action)
+    else:
+        # The validator guarantees exactly one of the two is set.
+        turn_input["user_message"] = payload.message or ""
     if payload.case_id:
         turn_input["case_id"] = payload.case_id
 

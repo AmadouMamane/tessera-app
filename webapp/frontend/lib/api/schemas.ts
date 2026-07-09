@@ -4347,6 +4347,29 @@ export const AgentConsoleSchema = z.object({
       verdict_failed: z.string(),
     })
     .optional(),
+  // ADR 0019 §A1.2 (c) — the agent's declared capability forms, each a JSON Schema the console
+  // renders generically. `label_key` travels unresolved so the frontend owns the locale
+  // catalogue (keeps the projection agent-agnostic). Absent ⇒ undefined; `[]` is meaningful —
+  // an http agent that declares no capability with an input_schema — never a fabricated fill.
+  capabilities: z
+    .array(
+      z.object({
+        id: z.string(),
+        label_key: z.string(),
+        schema: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .optional(),
+  // Generic chrome for those forms (never agent-specific).
+  capability_console: z
+    .object({
+      free_text_label: z.string(),
+      section_label: z.string(),
+      hint: z.string(),
+      submit_label: z.string(),
+      required_label: z.string(),
+    })
+    .optional(),
   // Context strip atop the central "Résumé de la réponse" column (relocated from
   // the old full-width status bar). Real: env Sandbox + model + version stamps.
   context: z
