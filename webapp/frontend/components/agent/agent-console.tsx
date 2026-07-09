@@ -32,6 +32,7 @@ import type { ReactNode } from "react";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import {
+  type AgentInvokeBody,
   fetchAgentConsole,
   fetchConsoleFeedback,
   fetchSandboxConfig,
@@ -50,9 +51,11 @@ import type { SandboxConfig } from "@/lib/api/schemas";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
 import { CHAT_MODELS, getStoredModel, isModelAllowedForRole } from "@/lib/models";
+import { fieldsFromSchema } from "@/lib/schema-form";
 import { useAgentId } from "@/lib/use-agent-id";
 
 import { AgentCrossLinks } from "./agent-cross-links";
+import { SchemaForm } from "./schema-form";
 
 type Rating = "up" | "down";
 
@@ -483,13 +486,16 @@ function ConsoleHonestEmpty({
  *  TurnResult. No streaming, no sandbox/debug tabs — a foreign runtime owns its own guard
  *  and telemetry; this surface only proves the turn contract over the declared transport. */
 function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
+  const t = useTranslations();
   const [message, setMessage] = useState("");
   const [outcome, setOutcome] = useState<AgentInvokeOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const http = data.http_console;
+  const cap = data.capability_console;
+  const capabilities = data.capabilities ?? [];
   const endpoint = data.invocation?.endpoint ?? null;
   const invoke = useMutation({
-    mutationFn: (msg: string) => invokeAgentTurn(agentId, msg),
+    mutationFn: (body: AgentInvokeBody) => invokeAgentTurn(agentId, body),
     onSuccess: (o) => {
       setOutcome(o);
       setError(null);
@@ -501,7 +507,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
   });
   const send = () => {
     const msg = message.trim();
-    if (msg && !invoke.isPending) invoke.mutate(msg);
+    if (msg && !invoke.isPending) invoke.mutate({ message: msg });
   };
   const reply =
     outcome?.result && typeof outcome.result.visibleReply === "string"
@@ -529,6 +535,11 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
       </header>
 
       <div className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+        {cap?.free_text_label ? (
+          <p className="text-[0.65rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {cap.free_text_label}
+          </p>
+        ) : null}
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -551,6 +562,32 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
           </button>
         </div>
       </div>
+
+      {capabilities.length > 0 && cap ? (
+        <section className="flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-[0.8rem] font-semibold">{cap.section_label}</h2>
+            <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{cap.hint}</p>
+          </div>
+          {capabilities.map((capability) => (
+            <div
+              key={capability.id}
+              className="flex flex-col gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
+            >
+              <h3 className="text-[0.78rem] font-medium">{t(capability.label_key)}</h3>
+              <SchemaForm
+                fields={fieldsFromSchema(capability.schema)}
+                submitLabel={cap.submit_label}
+                requiredLabel={cap.required_label}
+                pending={invoke.isPending}
+                onSubmit={(params) =>
+                  invoke.mutate({ action: { capability_id: capability.id, params } })
+                }
+              />
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {error ? (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[0.8rem] text-red-300">

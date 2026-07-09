@@ -10,7 +10,7 @@ from __future__ import annotations
 from tessera.agent.registry import list_agents
 from tessera.observability.fleet import _registry_agents
 
-_WITNESSES = frozenset({"hello-agent", "turn-agent"})
+_WITNESSES = frozenset({"hello-agent", "turn-agent", "duplex-agent"})
 
 
 def test_projection_carries_description_and_tags() -> None:

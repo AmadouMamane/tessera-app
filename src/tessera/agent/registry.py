@@ -38,6 +38,17 @@ from tessera.agent.agentspec import (
     parse_invocation,
     parse_observability,
 )
+
+# A capability's ``input_schema`` is part of what the manifest DECLARES, and the schema files sit
+# next to the manifest. Reading a declaration is exactly what this seam exists for, so the loader
+# is re-exported here: the ADR 0017 §1 boundary lets the control plane import
+# ``tessera.agent.registry`` and nothing else of the agent package, and the generated console form
+# must not be the reason that ratchet grows an exception.
+from tessera.agent.capability_schema import (
+    CapabilitySchemaError,
+    load_input_schema,
+    validate_params,
+)
 from tessera.agent.identity import DEFAULT_AGENT_ID
 
 # Audience / surface / auth (ADR 0008) are the governed agent properties; the
@@ -63,6 +74,7 @@ __all__ = [
     "BusinessSignalSource",
     "BusinessSignalSpec",
     "Capability",
+    "CapabilitySchemaError",
     "ExternalEffectLevel",
     "HandoffContract",
     "InvocationAuth",
@@ -76,8 +88,10 @@ __all__ = [
     "can_handoff",
     "get_agent",
     "list_agents",
+    "load_input_schema",
     "registry_path",
     "routable",
+    "validate_params",
 ]
 
 _REGISTRY_FILE = Path(__file__).resolve().parent / "agents.yaml"
