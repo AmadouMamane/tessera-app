@@ -21,7 +21,10 @@ from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability import turn_evidence
 from tessera.observability.agent_release import fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total
-from tessera.observability.agentspec_projection import observability_level
+from tessera.observability.agentspec_projection import (
+    declared_observability_level,
+    observability_level,
+)
 from tessera.observability.business_capabilities import business_capability_aggregate
 from tessera.observability.operator_items import load_items
 from tessera.retrieval.store import _connection
@@ -169,8 +172,8 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     releases = fleet_release_states(lang)
     records = _agent_records()
     # One Prometheus read for the whole fleet: which agents the cockpit has OBSERVED
-    # emitting turns (ADR 0017 §F). ``None`` = evidence disabled/unreachable → the level
-    # trusts each agent's declared contract (never demotes on an absent metrics store).
+    # emitting turns (ADR 0017 §F). ``None`` = evidence disabled/unreachable, which proves
+    # nothing — the computed level falls back and the badge says the rung is only declared.
     observed_turns = turn_evidence.agents_with_turn_evidence()
 
     # Registry first (every agent appears), enriched with its real slice.
@@ -187,14 +190,17 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
         # L2 (Governed) requires the eval/guard facts to be VISIBLE — a real gating socle
         # actually ran (ADR 0017 §4). The level is computed from this fact, never asserted.
         governed = rel is not None and rel.available and rel.socle_total > 0
+        # Two rungs, never one: `level` rests on observed turns alone, `level_declared` on the
+        # manifest. When they differ the badge says so — a declared rung must never be dressed
+        # up as a computed one (the over-claim `turn-agent` made visible).
+        evidence = turn_evidence.turn_evidence_state(aid, observed_turns)
         level = (
-            observability_level(
-                record,
-                governed=governed,
-                has_turn_evidence=turn_evidence.has_turn_evidence(aid, observed_turns),
-            )
+            observability_level(record, governed=governed, has_turn_evidence=evidence == "observed")
             if record is not None
             else None
+        )
+        level_declared = (
+            declared_observability_level(record, governed=governed) if record is not None else None
         )
         business_facts = _business_card_facts(aid, record)
         agents.append(
@@ -217,6 +223,8 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 # ADR 0017 §4 — observability level (L0-L2 in Phase B; None when the agent
                 # has no AgentSpec manifest yet → honest-empty, not "L0").
                 "level": level,
+                "level_declared": level_declared,
+                "level_evidence": evidence,
                 **business_facts,
             }
         )
