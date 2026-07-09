@@ -10,7 +10,7 @@ import pytest
 
 from tessera.agent.state import AgentState, new_state
 from tessera.memory import get_memory_backend
-from tessera.settings import LanguageCode, get_settings
+from tessera.settings import LanguageCode, Settings, get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -19,6 +19,14 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Force every test to run against a deterministic, isolated settings."""
+    # `Settings` reads a gitignored `.env.local` for local dev; CI has none. A suite that
+    # inherits it does not assert the SHIPPED defaults, it asserts the operator's machine —
+    # so an operator flipping the ADR 0019 §I4 canary switch ON (the go-and-observe move
+    # the flag exists for) turns a green suite red, and a stale `.env.local` can turn a red
+    # one green. Cut the file out of the suite: local now resolves settings exactly as CI
+    # does, and every non-default below is pinned here, in the open. Tests covering an
+    # enabled path pass `Settings` explicitly.
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
     monkeypatch.delenv("TESSERA_VERTEX__PROJECT_ID", raising=False)
     monkeypatch.setenv("TESSERA_ENVIRONMENT", "ci")
     monkeypatch.setenv("TESSERA_LLM_PROFILE", "on_prem")
