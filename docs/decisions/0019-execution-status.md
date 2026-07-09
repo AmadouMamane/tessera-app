@@ -61,11 +61,21 @@ I1–I4 complete** — pending the review-before-merge checkpoint (same protocol
   because the external agent emits its own counter — that is I6 acceptance (a)) and it touches both
   §4's semantics and the eval seam. **Architect's call, surfaced 2026-07-09, not taken.**
 
-- **ClickHouse owned business-events read (§5) needs a `synthetic` column.** The synthetic
-  exclusion is airtight today: the emit-time Prometheus guard is medium-independent, and the read
-  seam filters the in-process store (the default read medium). The owned ClickHouse table (§5, read
-  flip NOT yet baked) does not carry a `synthetic` column, so when that read flips the column is
-  owed for the filter to hold on that medium. Documented in `business_events.persisted_business_events`.
+- ~~**ClickHouse owned business-events read (§5) needs a `synthetic` column.**~~ **CLOSED
+  2026-07-10 — and the premise of this entry was wrong in a way that mattered.** It said the flip
+  was "NOT yet baked" and that the in-process store was "the default read medium". Both were false:
+  `_FACT_DEFAULTS["business_events"] = "spine"` since step 4 lot 2, so **ClickHouse was already the
+  default read medium**. The exclusion was therefore *not* airtight — it was silently broken on the
+  only medium that mattered. `business_event_line` dropped `synthetic` on write and `_row_to_event`
+  never rebuilt it, so a canary row round-tripped through the owned table as a **real** business
+  event and passed the `not event.synthetic` filter. Proven, not argued, against a live ClickHouse
+  in a throwaway database: `emitted .synthetic: True` → `INSERT line has 'synthetic': False` →
+  `clickhouse .synthetic: [False]` → `READ SEAM (excludes synth): 1` (must be 0). Fixed: `synthetic
+  UInt8 DEFAULT 0` in the DDL, an idempotent `ALTER … ADD COLUMN IF NOT EXISTS` so a table
+  materialised before the column gains it (`CREATE TABLE IF NOT EXISTS` cannot), write + read legs,
+  and four tests — each verified to fail when its own leg is reverted. **No contamination was ever
+  observed** (the in-process canary's chat turn emits no business events, and the dev table holds
+  141 real `recouvrement` rows), so this was a live hole, not a live incident.
 - **Operator go-and-observe moment.** Flip `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED=1` and watch the
   boot posture line report the scheduled canary, then an hourly synthetic recouvrement turn fire
   (green when the LLM answers, red when it doesn't — honest either way), its S1 entry land, and the
@@ -74,6 +84,21 @@ I1–I4 complete** — pending the review-before-merge checkpoint (same protocol
   (same posture as the seal's Rfc3161Provider).
 
 ## Log (newest first)
+
+- 2026-07-10 — **§4's synthetic exclusion was broken on the default read medium. Closed.** The
+  owed follow-up above claimed the ClickHouse read flip was "not yet baked" and that the in-process
+  store was the default read medium. Reading `_FACT_DEFAULTS` settles it: `business_events` →
+  `spine`. So every business surface (Métier, scores, signals, coverage, À traiter, replay) has been
+  reading the owned ClickHouse table, whose rows carried no `synthetic` mark — dropped by
+  `business_event_line` on write, never rebuilt by `_row_to_event` on read. A canary turn's events
+  would have been served as genuine. The emit-time Prometheus guard held throughout (it is
+  medium-independent), which is exactly why nothing looked wrong. Fixed on both legs plus the
+  migration for the already-materialised table, with the mechanism locked offline (CI has no
+  ClickHouse) and each test verified to fail when its leg is reverted. The dev table gains the
+  column the next time a backend boots and inserts — `ensure_business_events_schema` is on the
+  first-insert path. **Lot ordering note:** this was taken *before* the day's §4 end-to-end e2e
+  lock, on purpose — a browser assertion that "a test turn moves no business number" would have
+  passed for the wrong reason while the read seam it exercises was broken underneath it.
 
 - 2026-07-08 — **I3 landed (`3597e124`). ADR 0019 is I1–I4 complete.** The http binding gains its
   runtime. The invoker (`HttpTurnInvoker`, `tessera.api.agent_invoker`) POSTs a TurnInput to the

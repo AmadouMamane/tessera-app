@@ -144,6 +144,12 @@ def business_events_ddl(database: str) -> str:
     is the strict-schema-validated JSON kept PII-free by construction (§2), so erasure by
     ``conversation_id`` stays cheap and complete. ``node_name`` is carried (beyond the §5
     column list) so the flipped read holds run-timeline parity with the in-process store.
+
+    ``synthetic`` (ADR 0019 §4) carries the canary/test mark across the medium. Without it a
+    synthetic row read back from this table rebuilds as a *real* business event and the read
+    seam's exclusion silently fails — the flip to ``spine`` made that the DEFAULT read path,
+    so the column is load-bearing, not decorative. ``DEFAULT 0`` is the honest reading of the
+    rows written before it existed: they predate the canary, so none of them are synthetic.
     """
     return f"""
 CREATE TABLE IF NOT EXISTS {database}.{BUSINESS_EVENTS_TABLE} (
@@ -169,6 +175,7 @@ CREATE TABLE IF NOT EXISTS {database}.{BUSINESS_EVENTS_TABLE} (
     schema_version   LowCardinality(String),
     event_version    UInt16,
     grammar_version  LowCardinality(String),
+    synthetic        UInt8 DEFAULT 0,
     payload          String
 ) ENGINE = MergeTree
 ORDER BY (agent_id, workflow_id, event_name, occurred_at)
@@ -257,9 +264,19 @@ class ClickHouseAdapter:
         A sibling of :meth:`ensure_schema` (kept separate so the scores write path never
         materialises the business-event table, and vice versa); both ``IF NOT EXISTS``, so
         re-running is free and the DDL stays the single source of the table shape.
+
+        The trailing ``ALTER`` is the migration leg: ``CREATE TABLE IF NOT EXISTS`` is a no-op
+        against a table that already exists, so a store materialised before the ``synthetic``
+        column (ADR 0019 §4) would never gain it and would keep serving canary rows as real.
+        ``ADD COLUMN IF NOT EXISTS`` is idempotent — this stays a free re-run, the same
+        bootstrap discipline as the DDL itself (no Alembic).
         """
         self.execute(f"CREATE DATABASE IF NOT EXISTS {self._config.database}")
         self.execute(business_events_ddl(self._config.database))
+        self.execute(
+            f"ALTER TABLE {self.business_events_table} "
+            "ADD COLUMN IF NOT EXISTS synthetic UInt8 DEFAULT 0"
+        )
 
     def business_events(
         self,
@@ -491,6 +508,8 @@ def _business_row_from_ch(row: dict[str, object]) -> dict[str, object]:
         "schema_version": _opt(row.get("schema_version")) or "business_event.v1",
         "event_version": event_version if isinstance(event_version, int) else 1,
         "grammar_version": _opt(row.get("grammar_version")),
+        # ADR 0019 §4 — `UInt8` over the wire; a row from before the column defaults to 0.
+        "synthetic": bool(row.get("synthetic")),
     }
 
 

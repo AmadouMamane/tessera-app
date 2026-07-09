@@ -93,8 +93,8 @@ def business_event_line(row: Mapping[str, object]) -> bytes | None:
 
     Dimension ``None``s become ``""``; ``reason_codes`` becomes a JSON array; ``payload``
     becomes a JSON string (the ``String`` column — strict-schema, PII-free by construction,
-    §2). Returns ``None`` for a row with no parsable ``timestamp`` or ``event_name`` —
-    skipped, never fabricated.
+    §2); ``synthetic`` becomes ``UInt8`` (ADR 0019 §4). Returns ``None`` for a row with no
+    parsable ``timestamp`` or ``event_name`` — skipped, never fabricated.
     """
     occurred_at = _clickhouse_datetime(row.get("timestamp"))
     event_name = row.get("event_name")
@@ -111,6 +111,9 @@ def business_event_line(row: Mapping[str, object]) -> bytes | None:
         else [],
         "payload": json.dumps(payload, ensure_ascii=False) if isinstance(payload, dict) else "",
         "event_version": int(raw_version) if isinstance(raw_version, int) else 1,
+        # ADR 0019 §4 — the canary/test mark must cross the medium. Dropping it here is what
+        # made a synthetic row read back as a real one once `business_events` flipped to spine.
+        "synthetic": 1 if row.get("synthetic") else 0,
     }
     for column in _STRING_COLUMNS:
         value = row.get(column)

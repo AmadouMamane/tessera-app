@@ -281,3 +281,68 @@ def test_backfill_inserts_exactly_the_difference(monkeypatch) -> None:  # type: 
     total, inserted, skipped = bf.backfill_business_events(_BackfillAdapter())  # type: ignore[arg-type]
     assert (total, inserted, skipped) == (2, 1, 0)
     assert b"artifact.created" in inserts[0] and b"business_rule.checked" not in inserts[0]
+
+
+# --- ADR 0019 §4 · the synthetic mark must cross the owned medium ----------------
+#
+# `business_events` defaults to `spine` (see `_FACT_DEFAULTS`), so ClickHouse — not the
+# in-process store — is the DEFAULT read medium. Between that flip and the `synthetic`
+# column, the write dropped the mark and the read rebuilt every row as real: a canary
+# turn's events were served to every business surface as genuine. These tests are the
+# regression lock on both legs plus the migration that repairs an existing table.
+
+
+def test_line_carries_the_synthetic_mark_as_uint8() -> None:
+    import json
+
+    base = {"timestamp": "2026-07-02T16:01:25+00:00", "event_name": "intent.routed"}
+    real = business_event_line(base)
+    canary = business_event_line({**base, "synthetic": True})
+    assert real is not None and canary is not None
+    assert json.loads(real)["synthetic"] == 0
+    assert json.loads(canary)["synthetic"] == 1
+
+
+def test_ch_row_mapper_rebuilds_the_synthetic_mark() -> None:
+    ch_row = {
+        "occurred_at": "2026-07-02 16:01:25.317",
+        "event_name": "business_rule.checked",
+        "agent_id": "recouvrement",
+        "conversation_id": "conv-1",
+        "turn_id": "t1",
+    }
+    assert ch_mod._business_row_from_ch(ch_row)["synthetic"] is False  # absent → real
+    assert ch_mod._business_row_from_ch({**ch_row, "synthetic": 0})["synthetic"] is False
+    assert ch_mod._business_row_from_ch({**ch_row, "synthetic": 1})["synthetic"] is True
+
+
+def test_read_seam_excludes_a_synthetic_row_served_by_the_owned_store(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """The whole point: a canary row in the owned table must not reach a business surface."""
+    monkeypatch.delenv("TESSERA_SPINE_SOURCE", raising=False)
+    monkeypatch.delenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", raising=False)  # default = spine
+    with be.synthetic_turn():
+        canary = _to_row()
+    assert canary["synthetic"] is True  # the emit path stamped it
+    monkeypatch.setattr(ch_mod, "ClickHouseAdapter", lambda *_a, **_k: _StubAdapter(rows=[canary]))
+
+    rebuilt = ClickHouseBusinessEventStore().list(agent_id="recouvrement")
+    assert [event.synthetic for event in rebuilt] == [True]  # survives the round trip
+    assert be.persisted_business_events(agent_id="recouvrement") == []  # and is excluded
+    assert len(be.persisted_business_events(agent_id="recouvrement", include_synthetic=True)) == 1
+
+
+def test_ddl_declares_the_synthetic_column() -> None:
+    assert "synthetic        UInt8 DEFAULT 0" in ch_mod.business_events_ddl("tessera")
+
+
+def test_ensure_business_events_schema_migrates_an_existing_table() -> None:
+    """`CREATE TABLE IF NOT EXISTS` cannot add a column — a pre-column table needs the ALTER."""
+    adapter = _offline_adapter()
+    queries: list[str] = []
+    adapter.execute = lambda query, *_a, **_k: queries.append(query) or ""  # type: ignore[method-assign,return-value]
+    adapter.ensure_business_events_schema()
+    assert queries[0].startswith("CREATE DATABASE IF NOT EXISTS")
+    assert queries[1].startswith("CREATE TABLE IF NOT EXISTS")
+    assert queries[2] == (
+        "ALTER TABLE tessera.business_events ADD COLUMN IF NOT EXISTS synthetic UInt8 DEFAULT 0"
+    )

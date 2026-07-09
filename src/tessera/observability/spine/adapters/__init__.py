@@ -46,10 +46,12 @@ _SOURCES = set(_SOURCE_ALIASES.values())
 # bundles are lossy by design) and the audit ledger is the local carve-out — neither has
 # an override; they follow the global source only.
 _FLIPPABLE_FACTS = ("scores", "gating", "business_events")
-# The default source per flippable fact when no env is set. ``scores``/``gating`` graduated
-# to the owned stores at G5; ``business_events`` is mid-migration (ADR 0017 Phase D) — its
-# owned ClickHouse table dual-writes, but reads still default to the in-process store until
-# shadow parity baked on step 4 lot 2, so business_events now defaults to ``spine`` too.
+# The default source per flippable fact when no env is set. ``scores``/``gating`` graduated to
+# the owned stores at G5; ``business_events`` graduated at step 4 lot 2, once shadow parity
+# baked. All three therefore READ from ClickHouse by default — the in-process store is no
+# longer the default read medium for business events, only their write substrate. (The
+# sentence that used to stand here said the opposite and outlived its own last clause; a
+# synthetic-exclusion bug hid behind it until 2026-07-10. See ADR 0019 §4.)
 _FACT_DEFAULTS = {"scores": "spine", "gating": "spine", "business_events": "spine"}
 
 

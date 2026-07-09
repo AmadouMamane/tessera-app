@@ -899,6 +899,9 @@ def _row_to_event(row: dict[str, object]) -> BusinessEvent | None:
             classification=classification,
             schema_version=str(row.get("schema_version", EVENT_SCHEMA_VERSION)),
             event_version=event_version,
+            # ADR 0019 §4 — carried through every medium that stores it. A row without the
+            # key (a bundle or a pre-column ClickHouse row) is real, never assumed synthetic.
+            synthetic=bool(row.get("synthetic", False)),
         )
     except (KeyError, TypeError, ValueError):
         return None
@@ -990,12 +993,13 @@ def persisted_business_events(
     by each caller filtering. The canary descriptor's own freshness read never comes here; it
     reads the durable S1 canary entry, so it is unaffected.
 
-    Medium note: the filter reads ``event.synthetic``, which the in-process store (the default
-    read medium) round-trips faithfully; combined with the emit-time Prometheus guard the
-    exclusion is airtight for the default deployment. The owned ClickHouse read model (§5, read
-    flip not yet baked) does not yet carry a ``synthetic`` column, so when that read flips the
-    column is owed for the filter to hold on that medium — tracked in ADR 0019's ledger, never a
-    silent gap.
+    Medium note: the filter reads ``event.synthetic``, and **every** read medium now round-trips
+    it — the in-process store natively, and the owned ClickHouse table through its ``synthetic``
+    ``UInt8`` column (added 2026-07-10). This matters because ``business_events`` defaults to
+    ``spine``: ClickHouse *is* the default read medium, not the in-process store. Between the
+    flip and that column, a canary row was written without the mark and rebuilt as a real event,
+    so the exclusion silently failed on the very path it guards. Combined with the emit-time
+    Prometheus guard, it is airtight on both media.
     """
     events = _read_store().list(
         at=at,
