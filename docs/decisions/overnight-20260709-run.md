@@ -31,7 +31,7 @@ the final consolidated version.)*
 | 0 | Pré-vol + merges feu vert | ✅ **mergé** `e4eedcde` (poussé) |
 | 1 | Brancher la preuve (Prometheus) | ✅ **mergé** `06bbd54a` (poussé) |
 | 2 | I5 — `synthetic` traverse le fil | ✅ **mergé** `10183972` (poussé) |
-| 3 | I6 — duplex-agent | ⏳ |
+| 3 | I6 — duplex-agent | ✅ **mergé** `84c79dfc` (poussé) |
 | 4 | FE snapshot client | ⏳ |
 | 5 | e2e smoke Playwright | ⏳ |
 | 6 | Reliquat headers — menu grille d'apps | ⏳ |
@@ -431,3 +431,141 @@ FRONTEND (fusionné, ×2)      : tsc ok · biome exit 0 · vitest 12 files / 103
 
 **MERGÉ et poussé.** `01c6bfe1` → merge `10183972`. I5 coché au §Sequencing de l'ADR 0019 ; ligne
 ajoutée au ledger `0019-execution-status.md`.
+
+---
+
+## LOT 3 — I6 : duplex-agent (ADR 0019 §A1.2, les 4 critères font foi)
+
+Branche `claude/adr19-i6-duplex`. Deux commits, **volontairement séparés pour que le critère (c)
+soit mesurable et non affirmé** : `84eaff43` (capital plateforme) puis `eadf5f8f` (le témoin).
+Merge `84c79dfc`.
+
+### Un blocage potentiel, levé par la lecture du code et non par un arbitrage
+
+Avant d'écrire une ligne : `Capability.label_key` doit exister dans
+`webapp/frontend/messages/{fr,de,en}.json` (gate `test_manifest_label_keys_exist_in_every_locale`).
+Or le critère (c) exige **zéro ligne** de `webapp/frontend/` à l'arrivée du témoin. Contradiction
+apparente — j'étais prêt à parker.
+
+Vérification : les catalogues portent **déjà** cinq clés `capability.*` dans les trois langues, et
+`recouvrement` déclare déjà des capacités. Le témoin peut donc déclarer
+`label_key: capability.propose_schedule` — **aucune clé nouvelle**. Vérification n°2 : la codegen
+d'enums (`scripts/generate_agent_enums.py`) est câblée sur `_AGENTS = ("recouvrement",)`, donc
+ajouter une capacité à duplex n'émet aucun enum frontend. Le critère est atteignable **sans plier
+quoi que ce soit**. Pas de park.
+
+### Un trou plateforme, corrigé en capital, jamais simulé
+
+`agent_console.py` importait `tessera.agent.capability_schema` → **le cliquet de frontière de
+l'ADR 0017 §1 est tombé** (`test_control_plane_never_imports_the_agent_runtime`). Le chemin facile
+était `_FROZEN_EXCEPTIONS`. Il est explicitement interdit (« ratchet in both directions », liste
+gelée vide). Le schéma d'une capacité **fait partie de ce que le manifeste déclare** : le chargeur
+est donc ré-exporté par `tessera.agent.registry`, le seul seam que le cliquet autorise — exactement
+comme `InvocationBinding` l'est déjà. Cliquet vert, sans exception.
+
+### Les quatre critères
+
+**(a) La boucle de preuve se referme.** Mesuré sur la stack vivante, pas déduit.
+
+```
+AVANT   duplex-agent  computed=L0  declared=L1  evidence=dormant
+        prometheus observed set: ['onboarding', 'support-client']
+        tessera_agent_turns_total{agent_id="duplex-agent"} → 0 série
+
+INVOCATION — vrai HttpTurnInvoker, vrai HTTP, assertion opérateur SIGNÉE et vérifiée par l'agent
+  turn 1 (formulaire de capacité) : verdict=green status=200  45ms conformance=[]
+  turn 2 (message libre)          : verdict=green status=200  15ms conformance=[]
+  event.synthetic=True  ← le devoir de propagation, revenu à travers le fil
+
+APRÈS   tessera_agent_turns_total{agent_id="duplex-agent", job="remote-agent-metrics",
+                                   synthetic="true", outcome="answered"} = 2
+        prometheus observed set: ['duplex-agent', 'onboarding', 'support-client']
+        duplex-agent  computed=L1  declared=L1  evidence=observed        ⬆
+```
+
+Le rung **monte parce que l'invocation a produit la preuve**. C'est la boucle qu'aucun exemple ne
+fermait.
+
+**(b) Le tour synthétique n'apparaît nulle part dans les métriques métier — et voici ce que ce
+chiffre ne prouve PAS.**
+
+```
+business_event_rows(agent_id='duplex-agent')            → 0 rows
+business_event_rows() ∩ duplex-agent                    → 0 rows
+business_event_rows(..., include_synthetic=True)        → 0 rows   ← la ligne qui compte
+tessera_business_events_total{agent_id="duplex-agent"}  → 0 série
+```
+
+La troisième ligne est l'aveu. Avec `include_synthetic=True` le seam renvoie **aussi** zéro : les
+événements métier que duplex renvoie dans son `TurnResult` **ne sont ingérés nulle part**.
+`HttpTurnInvoker._interpret` valide le contrat et rend le résultat ; personne n'écrit ses
+`businessEvents` dans le store. Donc (b) est vrai — mais il est vrai **parce qu'aucun chemin
+d'ingestion n'existe**, pas parce que le filtre §4 a exclu quoi que ce soit.
+
+Le filtre, la garde à l'émission et l'estampille de l'agent sont tous correctement **pré-positionnés**
+et testés (l'événement rendu par duplex porte bien `synthetic: true`, vérifié par le testkit), mais
+ils ne font pas encore le travail pour un agent hors-processus. **Consigné en « Owed follow-ups » de
+`0019-execution-status.md`, jamais revendiqué comme prouvé.**
+
+**(c) Coût marginal — mesuré sur le diff du commit du témoin.**
+
+```
+$ git show --stat eadf5f8f -- webapp/frontend
+(vide)
+```
+
+Zéro ligne. Le renderer générique (`lib/schema-form.ts`, `components/agent/schema-form.tsx`,
+16 tests vitest) est du **capital plateforme** livré dans `84eaff43`, agnostique de l'agent : aucune
+occurrence de `duplex`, aucun `agentId === …`. Le libellé de la capacité voyage en **clé**
+(`label_key`), résolue côté frontend contre le catalogue existant — c'est précisément ce qui rend (c)
+atteignable.
+
+**(d) Les témoins existants restent minimaux.**
+
+```
+b033bf712e9271a73ad52088c9fa3a944f8992806768423ce7081d08e642184b  hello_agent.py   (inchangé)
+0476172f4247f306cc77c656654b005d14393e3af6fd8a587d5173328f32544e  turn_agent.py    (inchangé)
+$ git status --porcelain examples/hello-agent examples/turn-agent   → vide
+```
+
+`examples/README.md` gagne sa ligne, et la section « Known gap » — qui décrivait précisément le trou
+que duplex referme — est réécrite plutôt que laissée mentir. Un test neuf
+(`test_the_existing_witnesses_stay_minimal`) **assure** leur minimalité au lieu de lui faire confiance.
+
+### Le témoin
+
+`examples/duplex-agent/duplex_agent.py` : sert `POST /turn` (contrat 0018) **et** émet OTLP (span L1
++ compteur de tours). Déclare **une** capacité avec `input_schema` — la première du dépôt. **Zéro
+import tessera** : clés du fil, attributs de span, dimension `synthetic`, enveloppe d'événement,
+format de l'assertion opérateur — tout est **redéclaré à la main**, comme le ferait un agent écrit
+dans un autre langage. *La duplication est la preuve.* Description au registre métier (le test
+anti-jargon, qui bannit `runtime`/`binding`/`endpoint`/`code`/`import`/`OTLP`, passe dessus).
+
+### Gates — sortie réelle
+
+```
+BACKEND (branche, ×2)   : ruff ok · format 546 ok · mypy 281 ok · 1564 passed
+BACKEND (fusionné, ×2)  : ruff ok · format 546 ok · mypy 281 ok · 1564 passed
+FRONTEND (fusionné, ×2) : tsc ok · biome exit 0 · vitest 13 files / 119 tests
+```
+
+(1540 → 1564 unitaires : +24. 103 → 119 vitest : +16.)
+
+### Auto-revue
+
+- Le renderer frontend a été construit en parallèle par un sous-agent, sur un périmètre disjoint,
+  avec la contrainte « une ligne spécifique-agent = échec ». Il a rendu le gate vert et confirmé zéro
+  ligne agent-spécifique, zéro clé i18n nouvelle.
+- `duplex-agent` a été **démonté** en fin de lot (`:8501` libre, aucun processus résiduel).
+  Conséquence honnête : sans lui, sa preuve de tour se périme (~5 min d'horizon de péremption
+  Prometheus) et sa carte retombe sur « L1 déclaré · aucune preuve ». C'est la lecture correcte d'un
+  agent qui n'émet plus. Pour le revoir calculé :
+  `uv run python examples/duplex-agent/duplex_agent.py`.
+- Non fait : la vérification **visuelle** du formulaire généré dans la Console. Elle est du ressort
+  du lot 5 (Playwright) et de la validation d'Amadou. Le payload est testé côté backend, la
+  projection côté vitest ; le rendu de bout en bout ne l'est pas encore.
+
+### Verdict
+
+**MERGÉ et poussé.** `84eaff43` + `eadf5f8f` + docs → merge `84c79dfc`.
+**ADR 0019 Amendment 1 est implémenté (I5 + I6).**
