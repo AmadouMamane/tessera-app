@@ -245,9 +245,11 @@ never implementation notes).
 - **(b) §4 holds across the wire.** A synthetic turn against it appears **nowhere** in
   business metrics — the end-to-end proof of A1.1.
 - **(c) Generated forms get their forcing function.** Its `input_schema` renders as a
-  generated console form with **zero lines touched in `webapp/frontend/`**. The criterion
-  is the usual one: if a single hand-written frontend line is needed, the generative
-  thesis is refuted, not bent.
+  generated console form. The generic schema→form renderer is **platform capital** —
+  built once, agent-agnostic, in labelled platform-completion commits; the acceptance
+  criterion is *marginal*, same accounting as the TTO run: the witness's arrival touches
+  **zero lines in `webapp/frontend/`**. If a single agent-specific frontend line is
+  needed, the generative thesis is refuted, not bent.
 - **(d) The existing witnesses stay minimal.** `hello_agent.py` and `turn_agent.py` are
   unchanged (their minimality is part of the platform's test surface);
   `examples/README.md` gains one table row.
