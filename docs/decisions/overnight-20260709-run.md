@@ -30,7 +30,7 @@ the final consolidated version.)*
 | --- | --- | --- |
 | 0 | Pré-vol + merges feu vert | ✅ **mergé** `e4eedcde` (poussé) |
 | 1 | Brancher la preuve (Prometheus) | ✅ **mergé** `06bbd54a` (poussé) |
-| 2 | I5 — `synthetic` traverse le fil | ⏳ |
+| 2 | I5 — `synthetic` traverse le fil | ✅ **mergé** `10183972` (poussé) |
 | 3 | I6 — duplex-agent | ⏳ |
 | 4 | FE snapshot client | ⏳ |
 | 5 | e2e smoke Playwright | ⏳ |
@@ -315,3 +315,119 @@ FRONTEND (arbre fusionné, ×2)  : tsc ok · biome exit 0 · vitest 12 files / 1
 
 Aucun code applicatif touché : le lot est bien `config` + docs, comme prescrit. La bascule vit dans
 `.env.local` (machine), la **documentation** de la bascule vit dans le dépôt.
+
+---
+
+## LOT 2 — I5 : `synthetic` traverse le fil (ADR 0019 §A1.1)
+
+Branche `claude/adr19-i5-synthetic-wire`, coupée d'`origin/main`. Commit `01c6bfe1`, merge `10183972`.
+
+### L'audit demandé a trouvé un trou plus grand que l'amendement
+
+L'ADR §A1.1 nomme **un** trou : un ContextVar ne franchit pas une frontière de processus, donc un
+agent `http` qui émet sa propre télémétrie casse §4 en silence. La consigne ajoutait : « audite le
+chemin console in_process ». Résultat de l'audit, vérifié dans le code, pas supposé :
+
+> `grep -rn "synthetic_turn\b" src/` → **3 sites réels, tous dans `agent/canary.py`**.
+> `src/tessera/api/routes/chat.py` → **zéro** occurrence de `synthetic`.
+
+La Console du cockpit, pour un agent `in_process_chat`, atteint l'agent par le **même
+`POST /chat`** qu'un client. Un opérateur qui **teste** un agent déplaçait donc exactement les mêmes
+compteurs métier qu'un vrai client. §4 était violé **des deux côtés du fil**, pas seulement au-delà.
+
+### Le piège qu'il ne fallait pas tomber dedans
+
+Le discriminant naïf — « toute session opérateur est un test » — aurait été catastrophique.
+`resolve_request_context` rend `(OPERATOR, <surface portée par l'assertion>)`, et il y a **deux**
+surfaces opérateur :
+
+| Surface | Qui | Ses événements métier |
+| --- | --- | --- |
+| `cockpit-embedded` | la Console du cockpit — **banc de test** | ne doivent **jamais** compter |
+| `dedicated-ui` | la console **métier** de recouvrement | sont du **vrai travail**, ils comptent |
+
+Estampiller toute surface opérateur aurait **effacé silencieusement l'intégralité du dossier métier
+de recouvrement**. C'est l'erreur inverse, et la pire. Le discriminant retenu est donc
+`surface is Surface.COCKPIT_EMBEDDED`, dérivé côté serveur de l'assertion **signée** (jamais affirmé
+par le client — `operatorSurfaceForHint` réserve `cockpit-embedded` aux rôles plateforme, et le rôle
+`collections` n'obtient que `dedicated-ui` même s'il forge le *hint* « console »).
+
+### Ce qui a été livré
+
+- **Contrat** : `TurnInput.synthetic` (clé wire `synthetic`, **absent ⇒ false** — un agent antérieur
+  au champ reste conforme).
+- **Fil** : `HttpTurnInvoker.invoke()` prend `synthetic` en **kwarg obligatoire** et l'écrit sur le
+  corps, au seul endroit où la plateforme parle à un agent hors-processus. La posture de l'appelant
+  **écrase** ce que portait le `TurnInput` : l'autorité est la plateforme, pas son entrée.
+- **Consommateurs déclarés** : `POST /agents/{id}/invoke` déclare `synthetic=True` (c'est *le* banc
+  de test : opérateur seul, toute session produit refusée en amont). Le scheduler canary ne peut
+  structurellement pas piloter `http` (`scheduled_canaries()` ne sélectionne que `in_process_chat`,
+  contrainte aussi au niveau du manifeste) ; il estampille déjà en ContextVar. Le trafic produit ne
+  pose jamais le drapeau.
+- **Span** : `semconv.TESSERA_SYNTHETIC`, estampillé **seulement** si synthétique — même règle
+  « absent ⇒ false » que le fil, une seule règle pour les deux. `stamp_turn_dimensions` prend
+  `synthetic` en kwarg obligatoire (leçon du lot B : *un défaut est l'endroit où se cache une
+  hypothèse*). Il n'entre **pas** dans `REQUIRED_TURN_SPAN_ATTRIBUTES` : cela aurait cassé la
+  conformité de `hello-agent`.
+- **Devoir de propagation, gaté et non consultatif** : `verify_turn_span` et
+  `verify_business_event` / `verify_event_stream` prennent la posture déclarée du tour et signalent
+  **les deux sens** — un tour synthétique non estampillé (trafic de test qui gonfle les métriques
+  métier) **et** un tour produit estampillé (faits réels silencieusement supprimés).
+
+### Preuve que les tests ont des dents — mutation testing
+
+`tests/unit/test_synthetic_propagation.py` pilote la **vraie route ASGI** (`build_app()`, assertion
+opérateur réelle, dérivation de surface réelle) avec un graphe-sonde qui lit la marque **là où le
+graphe la lirait**. Deux mutants introduits exprès :
+
+```
+── mutant 1: is_test_turn() → False (le comportement pré-I5) ──
+FAILED test_cockpit_console_test_turn_is_synthetic
+FAILED test_only_the_cockpit_surface_is_a_test_bench
+2 failed, 7 passed
+
+── mutant 2: toute surface opérateur estampillée (le sens DANGEREUX) ──
+FAILED test_recouvrement_business_console_turn_is_not_synthetic
+FAILED test_only_the_cockpit_surface_is_a_test_bench
+2 failed, 7 passed
+```
+
+Les deux sens sont attrapés. Fichier restauré après chaque mutant (`chat.py` inchangé au byte).
+
+### Une erreur commise, et ce qu'elle a appris
+
+Mon propre test a d'abord **empoisonné la session** : `mark_synthetic_turn()` n'a **aucune portée à
+quitter** — sa portée *est* le contexte. Appelé dans un test (contexte partagé), le drapeau ne
+redescend jamais, et trois tests de `test_turn_contract_acceptance.py` sont tombés parce que leurs
+événements métier étaient devenus synthétiques.
+
+Ce n'est pas un défaut du code de production : chaque requête ASGI tourne dans son **propre contexte
+copié** (c'est déjà l'hypothèse de `current_model.set`, `current_agent_id.set`, `guard_disabled.set`
+dans le même fichier). Mais c'est un piège pour le prochain appelant. Le test **prouve désormais la
+garantie** (`copy_context().run(...)` puis vérifie que la marque est retombée) et l'avertissement est
+dans la docstring de la fonction.
+
+### Constat remonté, non tranché
+
+**Un canary `in_process_chat` ne produit aucune preuve de tour.** `AGENT_TURNS_TOTAL` n'est
+incrémenté que dans `chat.py` (chemin **servi**) ; `InProcessChatInvoker` appelle
+`compile_graph().ainvoke()` directement. Donc un canary activé ne peut jamais faire monter le niveau
+**calculé** de son agent. Non corrigé à vue : déplacer le compteur dans le graphe ferait compter les
+runs du **harnais d'eval** (même seam) comme preuve — sur-affirmation pire que le trou. Asymétrie
+réelle entre bindings (un canary `http` **produira** de la preuve : c'est le critère (a) de I6).
+Consigné dans « Owed follow-ups » de `0019-execution-status.md`. **Appel de l'architecte.**
+
+### Gates — sortie réelle
+
+```
+BACKEND (branche, ×2)        : ruff ok · format 543 ok · mypy 280 ok · 1540 passed
+BACKEND (fusionné, ×2)       : ruff ok · format 543 ok · mypy 280 ok · 1540 passed
+FRONTEND (fusionné, ×2)      : tsc ok · biome exit 0 · vitest 12 files / 103 tests
+```
+
+(1523 → 1540 tests : +17, dont 9 d'acceptation I5 et 8 de conformité testkit.)
+
+### Verdict
+
+**MERGÉ et poussé.** `01c6bfe1` → merge `10183972`. I5 coché au §Sequencing de l'ADR 0019 ; ligne
+ajoutée au ledger `0019-execution-status.md`.
