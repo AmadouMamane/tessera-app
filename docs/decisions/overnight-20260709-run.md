@@ -33,10 +33,10 @@ the final consolidated version.)*
 | 2 | I5 — `synthetic` traverse le fil | ✅ **mergé** `10183972` (poussé) |
 | 3 | I6 — duplex-agent | ✅ **mergé** `84c79dfc` (poussé) |
 | 4 | FE snapshot client | ✅ **mergé** `48e8e435` (poussé) |
-| 5 | e2e smoke Playwright | ⏳ |
-| 6 | Reliquat headers — menu grille d'apps | ⏳ |
-| 7 | Craft pass P3 | ⏳ |
-| 8 | Stretch (enums FE, colonne synthétique CH) | ⏳ |
+| 5 | e2e smoke Playwright | ⚠️ **mergé partiel** `69860a66` |
+| 6 | Reliquat headers — menu grille d'apps | 🅿️ **parké** (runway) |
+| 7 | Craft pass P3 | 🅿️ **parké** (source introuvable) |
+| 8 | Stretch (enums FE, colonne synthétique CH) | ⏭️ **sauté** (conditionnel) |
 
 ---
 
@@ -674,3 +674,120 @@ FRONTEND (fusionné, ×2) : tsc ok · biome exit 0 · vitest 14 files / 126 test
 ### Verdict
 
 **MERGÉ et poussé.** `c8ef9b31` → merge `48e8e435`.
+
+---
+
+## LOT 5 — e2e smoke Playwright  (⚠️ MERGÉ, mais PARTIEL — périmètre réduit assumé)
+
+Branche `claude/e2e-smoke-0019`, merge `69860a66`. Fichier neuf :
+`webapp/frontend/e2e/smoke-0019.spec.ts`, **7 tests, 7 verts** contre la stack de référence réelle.
+
+### Ce qui est couvert
+
+**Badges de niveau (variante déclaré vs calculé).** La stack du lot 1 rend les deux visibles
+simultanément — c'est ce que le smoke exige :
+
+```
+support-client  badge=computed  computed=L2  declared=L2  evidence=observed
+onboarding      badge=computed  computed=L2  declared=L2  evidence=observed
+recouvrement    badge=declared  computed=L0  declared=L2  evidence=dormant
+hello-agent     badge=declared  computed=L0  declared=L1  evidence=dormant
+turn-agent      badge=declared  computed=L0  declared=L1  evidence=dormant
+duplex-agent    badge=declared  computed=L0  declared=L1  evidence=dormant
+```
+
+**Consoles 0019.** `none` (hello-agent) → honest-empty **et** absence prouvée du banc de test ;
+`http` (turn-agent) → banc requête/réponse avec l'endpoint déclaré affiché ; `http` + `input_schema`
+(duplex-agent) → **formulaire généré**, dont les libellés sont les `title` du schéma, l'`enum` est
+devenu un `select` et le booléen une case à cocher. **Le critère (c) de l'ADR 0019 §A1.2 est ainsi
+vérifié dans un navigateur**, plus seulement argumenté.
+
+Sélecteurs par **rôle, label et texte visible**, jamais par classe CSS : les passes de craft
+retouchent les classes, et un smoke qui casse sur un changement de couleur ne protège rien.
+
+### Une précondition rendue explicite plutôt que cachée
+
+Le badge *calculé* n'existe que si un agent a **réellement servi un tour** sur cette stack
+(`TESSERA_LEVEL_TURN_EVIDENCE=1` + Prometheus + au moins un `POST /chat`). Zéro fixture fabriquée,
+donc l'assertion porte un message : un zéro ici est **un constat sur le chemin de preuve**, jamais
+une raison de stubber une donnée.
+
+### Ce qui n'est PAS couvert (dit, pas sous-entendu)
+
+Le lot demandait cinq familles de specs. J'en ai livré deux (badges, consoles). **Non écrits** :
+onglet **Métier** (table par capacité, drill-down runs), **recouvrement-new**, **headers**
+(pill posture + popover, ⌘K, identité). Raison : budget de nuit ; j'ai priorisé les surfaces que
+les merges de cette nuit ont *changées*, donc celles qui pouvaient régresser sans que rien ne le voie.
+
+### Constat annexe — la suite e2e existante est ROUGE sur `main`
+
+`e2e/console.spec.ts` : **2 échecs sur 3** contre `main` (le sélecteur `Fenetre temporelle` et le
+lien `Timeline incidents` ne résolvent plus). **Préexistant**, sans rapport avec les merges de la
+nuit. Je ne l'ai pas corrigé : ces pages relèvent d'une validation visuelle. **Conséquence pratique :
+le smoke ne peut entrer dans le gate que *fichier par fichier* (`playwright test e2e/smoke-0019.spec.ts`),
+pas via `pnpm test:e2e` qui reste rouge.** À trancher par Amadou.
+
+### Gates
+
+```
+FRONTEND (fusionné, ×2) : tsc ok · biome exit 0 · vitest 14 files / 126 tests
+BACKEND  (fusionné, ×2) : ruff ok · mypy 281 ok · 1564 passed
+SMOKE                   : 7 passed (20,7 s) — rejoué vert après merge
+```
+
+---
+
+## LOT 6 — Reliquat headers : menu grille d'apps  🅿️ **PARKÉ**
+
+**Constat (fait, pas supposé)** : le menu **n'existe pas** sur `main` (grep sur
+`app-grid|AppGrid|apps-menu|AppsMenu` dans `components/`, `app/`, `lib/` : aucune occurrence de
+composant). Et il **est bien spécifié**, dans `Tessera_private/spec-headers-premium-2026-07-07.md`,
+§Addendum, emprunt (b) :
+
+> « **menu grille d'apps Espaces métier / Espace client** = le toggle operator→product que 0013
+> autorise explicitement — à ajouter, gaté rôle opérateur »
+
+**Pourquoi parké** : ce n'est ni une contradiction ni un rouge — c'est du **budget de nuit**. Il
+reste à faire : composant + popover, gate rôle opérateur (0013, seule direction cross-plane
+autorisée), invisibilité pour un rôle produit, i18n ×3, lexique (jamais « Tessera » côté produit),
+tests. Le finir à la hâte au moment où il faut aussi refermer la nuit proprement (suite complète,
+relance des serveurs, démontage vérifié) aurait produit une fonctionnalité non mergeable. **Une
+tranche non finie vaut moins qu'un park propre.**
+
+**Rien n'a été commencé** : aucune branche, aucun fichier touché. Point de départ pour la reprise :
+`webapp/frontend/components/layout/` (le header cockpit) et `lib/auth/roles.ts`
+(`hasCockpitAccess`, `spaceRedirectForRole`), plus `codex/headers-refonte` déjà ancêtre de `main`.
+
+---
+
+## LOT 7 — Craft pass P3 (punch list items 18-23)  🅿️ **PARKÉ — source introuvable**
+
+La consigne vise « **punch list items 18-23, lot 2.5** ». Recherche exhaustive :
+
+- dépôt : `grep -rl "punch" docs/` → uniquement `docs/decisions/0017-execution-status.md` (mentions,
+  pas de liste) ;
+- docs de pilotage : `ls Tessera_private/ | grep -i punch` → **un seul fichier**,
+  `punchlist-metier-lot1.5-2026-07-07.md`, dont la numérotation commence à 1 et ne va pas jusqu'à 18.
+
+**Il n'existe aucune punch list « lot 2.5 » ni aucun item 18-23 accessible.** Exécuter « des
+retouches ciblées » sans la liste des retouches reviendrait à **inventer le périmètre** sur des pages
+validées — exactement ce que la règle du registre des rails interdit (« jamais de régénération d'une
+page validée »). **Parké, consigné, non deviné.** Amadou : fournir le fichier, ou pointer les items.
+
+---
+
+## LOT 8 — Stretch  ⏭️ **SAUTÉ**
+
+Conditionné à « seulement si tout le reste est fini » — 6 et 7 ne le sont pas.
+
+Néanmoins, la vérification demandée a été faite, et son résultat est utile :
+
+**Colonne synthétique ClickHouse.** La consigne dit : « vérifie d'abord si le bake business-events
+est terminé ; sinon consigne l'état et n'y touche pas. » ClickHouse est **joignable** (`:18123`,
+conteneur `tessera-claude-clickhouse` healthy) mais **refuse l'authentification par défaut**
+(`Code: 516 … AUTHENTICATION_FAILED`). L'état du bake **n'a donc pas pu être établi**, et je n'y ai
+**pas touché**. La dette elle-même reste correctement documentée dans
+`business_events.persisted_business_events` et dans « Owed follow-ups » de
+`0019-execution-status.md`.
+
+**Aliasing des enums FE** (drawer-task / artifact-family via manifeste) : non commencé.
