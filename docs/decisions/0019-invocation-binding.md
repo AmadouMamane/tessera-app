@@ -2,8 +2,9 @@
 
 - Status: **accepted** (decision 2026-07-08) — **I1–I4 implemented** (2026-07-08: I1/I4 via the
   canary-scheduler trigger `80a83753`/`9c02e35f`; I2 console generation `4340bdad`; I3 http invoker
-  + first invocable external agent + conformance `3597e124`). Progress:
-  `docs/decisions/0019-execution-status.md`
+  + first invocable external agent + conformance `3597e124`). **Amendment 1** (2026-07-09):
+  `synthetic` crosses the wire + the integration witness — accepted, implementation deferred
+  (I5/I6). Progress: `docs/decisions/0019-execution-status.md`
 - Date: 2026-07-08
 - Deciders: Tessera maintainers
 - Related: 0008 (audience/surface/auth), 0010 (operator assertion — Phase B mechanism),
@@ -168,5 +169,94 @@ whichever is wanted first.
   flag, not required for the test-turn use case.
 - Rate limits / concurrency caps per binding (an operator hammering a production agent's
   test endpoint is a governance question, not just an infra one).
-- Whether the Console exposes capability *parameters* (from `input_schema`) as generated
-  forms in I2 or only free-text + typed action buttons initially.
+- ~~Whether the Console exposes capability *parameters* (from `input_schema`) as generated
+  forms in I2 or only free-text + typed action buttons initially.~~
+  **Resolved (Amendment 1):** yes, generated forms — deferred until a declaration exists to
+  generate from. §A1.2(c) makes the integration witness the forcing function, with the
+  acceptance criterion that settles it: zero hand-written frontend lines.
+
+## Amendment 1 — `synthetic` crosses the wire; the integration witness (2026-07-09)
+
+Status: **accepted** (2026-07-09) — **implementation deferred**, pre-sequenced as I5/I6.
+Nothing in this amendment modifies the two existing witnesses.
+
+### A1.1 The synthetic stamp becomes part of the turn contract
+
+**The gap.** §4 promises that test and canary turns *never pollute business metrics*. Every
+mechanism behind that promise is in-process: `synthetic_turn()` is a ContextVar, and the
+emit-time Prometheus guard and the business read seam key off platform-side stamping. An
+`http`-bound agent emits its own telemetry from another process — nothing carries the stamp
+across the boundary. The gap is unobservable today only by luck: the sole http agent
+(`turn-agent`) emits nothing, so there is nothing to mis-stamp. The first http agent that
+*both* serves turns and publishes telemetry breaks §4 silently.
+
+**Decision.**
+
+- `TurnInput` gains **`synthetic: boolean`** (wire key `synthetic`; absent ⇒ `false`). Set
+  exclusively by the platform's declared consumers (Console test turns, canary turns);
+  product traffic never sets it. A 0018 wire-schema addition, backward compatible;
+  0018 §1 carries a pointer here.
+- **Propagation duty:** an agent serving a turn with `synthetic: true` MUST stamp the
+  synthetic dimension (signal 94's existing vocabulary) on every span, metric and business
+  event it emits for that turn. For `http` bindings this duty is a **conformance
+  requirement checked by the SDK testkit** (the span-contract and grammar-conformance
+  suites gain the case) — mandatory, not advisory, because unpropagated synthetic traffic
+  inflates business metrics until caught.
+- **Trust posture — belt and braces, both directions.** The platform does not *rely* on
+  the agent: every synthetic invocation already leaves its own S1 record (§4), the
+  in-process guard stays, and platform-side read seams keep excluding by the platform's
+  own record where they can. But out-of-process emissions reach the spine bearing only
+  what the agent stamped — hence the duty, and hence the testkit gate.
+
+**Rejected.**
+
+- *Trusting the ContextVar across processes* — impossible by construction; a ContextVar is
+  process-local.
+- *A parallel test-traffic event taxonomy* — 0017 §A1 already buried parallel taxonomies;
+  the existing synthetic dimension is the entire vocabulary.
+- *Distinguishing console-vs-canary on the wire* — the agent must not care who is testing
+  it: one flag, one duty.
+
+### A1.2 The integration witness: `examples/duplex-agent/`
+
+**The rule that keeps `examples/` from becoming a zoo:** each example is the minimal
+witness of exactly one claim. `hello-agent`: *observable without being invocable*
+(0017 §F). `turn-agent`: *invocable without being observable* (§I3). Their emptiness is
+the assertion — the import-absence test guards it — and they are never merged or enriched.
+
+**The unclaimed claim: the two planes compose across a process boundary.** Three couplings
+no current witness exercises: the proof loop never closes (turn-agent cannot emit
+evidence; hello-agent cannot be invoked); §4 is untested across the wire (A1.1's subject);
+console form generation has no declaration to generate from.
+
+**Decision.** One new witness, `duplex-agent` — named for what it does: it speaks both
+directions. It serves `POST /turn` (0018 wire contract) AND emits OTLP for the turns it
+serves, honouring the A1.1 propagation duty; it declares one capability with an
+`input_schema`; **zero tessera imports** (the import-absence test extends to it); its
+manifest `description` follows the fleet-card register rule (business language, intent —
+never implementation notes).
+
+**Acceptance** — each criterion closes a hole no current witness covers:
+
+- **(a) The proof loop closes.** Invoking it (Console or canary) produces turn evidence
+  through the existing OTLP-metrics pipeline; the level resolver reads it; the computed
+  level rises *because of the invocation*. Any platform gap found on the way is a capital
+  cost — labelled, fixed off-clock, the same accounting rule as the TTO run.
+- **(b) §4 holds across the wire.** A synthetic turn against it appears **nowhere** in
+  business metrics — the end-to-end proof of A1.1.
+- **(c) Generated forms get their forcing function.** Its `input_schema` renders as a
+  generated console form with **zero lines touched in `webapp/frontend/`**. The criterion
+  is the usual one: if a single hand-written frontend line is needed, the generative
+  thesis is refuted, not bent.
+- **(d) The existing witnesses stay minimal.** `hello_agent.py` and `turn_agent.py` are
+  unchanged (their minimality is part of the platform's test surface);
+  `examples/README.md` gains one table row.
+
+### Sequencing
+
+- **I5 — A1.1** (contract field + invoker sets the flag + testkit case). Lands first:
+  small, and every future http agent needs it.
+- **I6 — A1.2** (`duplex-agent` + acceptance a–d). Depends on I5.
+
+Both deferred pending an explicit go — this amendment records the decision, not the
+schedule.

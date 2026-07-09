@@ -68,6 +68,11 @@ TurnResult = { intent, visible_reply,
                checks[], business_events[] (0016 envelope) }
 ```
 
+*(0019 §Amendment 1, 2026-07-09: `TurnInput` gains an optional wire field
+`synthetic: boolean` — set only by the platform's declared invocation consumers; an agent
+serving a synthetic turn must propagate the stamp onto everything it emits. Backward
+compatible; the decision and its conformance duty live in 0019 §A1.1.)*
+
 **The state machine IS the agent's LangGraph graph** — `build_recouvrement_graph_v1`
 is the reference implementation. There is no separate `AssistantService` layer: adding
 one would duplicate state the graph already owns. Runtime events ride the 0016
