@@ -42,12 +42,25 @@ _GOOD_ESCALATION = 20.0  # % escalated turns under which an agent reads "healthy
 _WARN_ESCALATION = 35.0
 
 
-def _registry_agents() -> list[dict[str, str]]:
+def _registry_agents() -> list[dict[str, Any]]:
+    """Registry fields the fleet card needs.
+
+    ``description`` and ``tags`` are declared in the manifest and projected verbatim: a
+    visitor must be able to tell a banking agent from a platform witness (``hello-agent``,
+    ``turn-agent``) from the card alone, or the fleet count overstates the demo.
+    """
     try:
         from tessera.agent.registry import list_agents
 
         return [
-            {"id": a.id, "name": a.name, "owner": a.owner, "audience": a.audience.value}
+            {
+                "id": a.id,
+                "name": a.name,
+                "owner": a.owner,
+                "audience": a.audience.value,
+                "description": a.description,
+                "tags": list(a.tags),
+            }
             for a in list_agents()
         ]
     except (OSError, ValueError):
@@ -190,6 +203,8 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 "name": reg["name"],
                 "owner": reg["owner"],
                 "audience": reg.get("audience", "operator"),
+                "description": reg.get("description", ""),
+                "tags": reg.get("tags", []),
                 "conversations": int(row.get("convs") or 0),
                 "turns": int(row.get("turns") or 0),
                 "messages": int(row.get("msgs") or 0),

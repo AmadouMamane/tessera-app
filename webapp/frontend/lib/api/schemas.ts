@@ -5320,6 +5320,10 @@ export const FleetSchema = z.object({
         name: z.string(),
         owner: z.string(),
         audience: z.string().optional(),
+        // Manifest-declared, projected verbatim: the card must say what an agent is FOR, and a
+        // `demo` tag must mark the platform witnesses — else "5 agents" reads as 5 banking agents.
+        description: z.string().optional(),
+        tags: z.array(z.string()).optional(),
         conversations: z.number(),
         turns: z.number(),
         messages: z.number(),

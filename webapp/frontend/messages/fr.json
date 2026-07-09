@@ -6914,7 +6914,9 @@
     "candidate": "Candidate",
     "releaseNote": "Verdict eval-gate par agent (run de référence, grain cas × langue) — chaque agent est un package gouverné.",
     "observabilityLevel": "Niveau d'observabilité {level}",
-    "pendingBusinessItems": "{n} métier en attente"
+    "pendingBusinessItems": "{n} métier en attente",
+    "witnessBadge": "Témoin plateforme",
+    "witnessBadgeHint": "Agent témoin de la plateforme — il n'a aucun client et ne traite aucune conversation réelle."
   },
   "product": {
     "apercu": {

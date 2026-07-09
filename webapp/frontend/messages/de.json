@@ -6914,7 +6914,9 @@
     "candidate": "Kandidat",
     "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket.",
     "observabilityLevel": "Beobachtbarkeitsstufe {level}",
-    "pendingBusinessItems": "{n} fachlich offen"
+    "pendingBusinessItems": "{n} fachlich offen",
+    "witnessBadge": "Plattform-Nachweis",
+    "witnessBadgeHint": "Nachweisagent der Plattform — er hat keine Kunden und bearbeitet keine echten Konversationen."
   },
   "product": {
     "apercu": {
