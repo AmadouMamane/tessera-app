@@ -69,6 +69,17 @@ async function main() {
     }
   }
 
+  // An empty keep set means `eval/reports/` holds no `latest*.json` — the runs live
+  // under `eval/reports/local/`, which is the shape of both the main checkout and the
+  // agent worktrees today. That is "nothing to sync from", NOT "the bundle is stale":
+  // falling through would `rm` all seven committed fallback files and leave the
+  // deployed cockpit with no scorecard at all. Same contract as the two guards above.
+  if (keep.size === 0) {
+    // biome-ignore lint/suspicious/noConsole: build-script status output
+    console.log("[sync-eval-bundle] no latest*.json in eval/reports — keeping committed bundle.");
+    return;
+  }
+
   await mkdir(dest, { recursive: true });
   // Drop stale bundle files no longer in the keep set.
   for (const existing of await readdir(dest)) {
