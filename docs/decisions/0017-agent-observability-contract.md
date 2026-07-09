@@ -508,8 +508,17 @@ signals 65 (`cost-per-resolution`), 139 (`roi-view-buyer`), 190
   (a *gating* fact must not read a best-effort third-party store — Langfuse was rejected for
   exactly that), the completion is a **Prometheus turn-count read**: `observability_level` gains
   `has_turn_evidence`, sourced from `tessera_agent_turns_total` via the existing Prometheus
-  adapter, gated (`TESSERA_LEVEL_TURN_EVIDENCE`) and honest-empty (evidence-*unknown* is trusted,
-  never treated as absence); the collector re-exports remote OTLP metrics to Prometheus (config).
+  adapter, gated (`TESSERA_LEVEL_TURN_EVIDENCE`) and honest-empty; the collector re-exports
+  remote OTLP metrics to Prometheus (config).
+
+  > **Correction (2026-07-09, ratified in `0017-execution-status.md`).** This paragraph first read
+  > "evidence-*unknown* is trusted, never treated as absence". That was the over-claim class this
+  > project forbids: a silent store made a *declared* rung render as a *computed* one. Evidence-
+  > unknown is now **no proof** — a computed rung never rests on an assumption. Nothing is hidden
+  > by refusing to guess: the caller also reads what the manifest declares, and the badge renders
+  > the attenuated "L{n} declared · no evidence" variant, distinguishing `unverifiable` (store off
+  > or unreachable) from `dormant` (store read, agent has emitted nothing). See
+  > `observability/turn_evidence.py` and `webapp/frontend/lib/level-badge.ts`.
   **Platform-completion commits (off-chrono):** `58d8b720` (evidence-path ruling), `42b25e57`
   (resolver + `observability/turn_evidence.py`), `639b6403` (collector/prometheus config). The
   honest accounting: the FIRST external agent flushes out these one-time gaps; the standing
