@@ -327,3 +327,42 @@ agents:
       workflows:
         - workflow_id: turn_v1
           grammar: workflow_grammar.v1
+
+  - id: duplex-agent
+    name: "Duplex Agent"
+    # Third in the same register as hello-agent and turn-agent (see there). The two sentences are
+    # deliberately the union of theirs: this agent can be tested AND it reports on its own. The
+    # contrast falls on *et* — the two planes composing, both unnamed.
+    description: "Agent construit par une autre équipe, sur une autre technologie. Un opérateur peut le tester depuis le cockpit, et son activité y remonte d'elle-même."
+    owner: "Platform"
+    default_language: fr
+    audience: operator
+    surface: [cockpit-embedded]
+    auth: operator-rbac
+    tags: [demo, second-runtime, invocable, observable]
+    handoff:
+      to: []
+      from: []
+    # ADR 0019 §Amendment 1 A1.2 — the integration witness. Same http binding as turn-agent (the
+    # cockpit forwards the signed operator assertion to the declared turn URL), but this one also
+    # publishes its own telemetry, so invoking it PRODUCES the turn evidence that raises its own
+    # computed level. Its port is one above turn-agent's so both examples can run side by side.
+    invocation:
+      binding: http
+      endpoint: http://127.0.0.1:8501/turn
+      timeout_ms: 8000
+      auth: operator-assertion
+    observability:
+      spec_version: agentspec.v1
+      telemetry_capabilities: [turns]
+      # The first capability anywhere to declare an `input_schema`: the Console renders it as a
+      # generated form (§A1.2 c). `label_key` resolves in the existing locale catalogues — an
+      # agent's arrival adds no frontend line, which is the criterion.
+      capabilities:
+        - id: propose_schedule
+          label_key: capability.propose_schedule
+          input_schema: schemas/propose_schedule.json
+          external_effect_level: none
+      workflows:
+        - workflow_id: duplex_turn_v1
+          grammar: workflow_grammar.v1

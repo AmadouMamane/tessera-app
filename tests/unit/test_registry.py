@@ -20,9 +20,17 @@ _WIDGET = Surface.SHARED_CUSTOMER_WIDGET
 
 def test_registry_has_the_seeded_agents() -> None:
     ids = [a.id for a in list_agents()]
-    # hello-agent (ADR 0017 §F) is the publish-only second-runtime acceptance agent;
-    # turn-agent (ADR 0019 §I3) is the invocable one — out-of-process, http turn binding.
-    assert ids == ["support-client", "onboarding", "recouvrement", "hello-agent", "turn-agent"]
+    # The three platform witnesses, each minimal proof of exactly one claim: hello-agent
+    # (ADR 0017 §F) is observable but not invocable; turn-agent (ADR 0019 §I3) is invocable
+    # but not observable; duplex-agent (ADR 0019 §A1.2) is both, and closes the proof loop.
+    assert ids == [
+        "support-client",
+        "onboarding",
+        "recouvrement",
+        "hello-agent",
+        "turn-agent",
+        "duplex-agent",
+    ]
 
 
 def test_default_agent_is_present_and_matches_identity() -> None:

@@ -1,12 +1,14 @@
 """The examples' *absence* of imports is their assertion — so the gate checks it.
 
-``examples/hello-agent`` and ``examples/turn-agent`` are the platform witnesses (see
-``examples/README.md``). Each proves exactly one claim, and each proof rests on what the file
-does **not** import:
+``examples/hello-agent``, ``examples/turn-agent`` and ``examples/duplex-agent`` are the platform
+witnesses (see ``examples/README.md``). Each proves exactly one claim, and each proof rests on what
+the file does — or pointedly does not — import:
 
-- neither imports ``tessera`` — they demonstrate properties of agents the platform did not build;
+- none imports ``tessera`` — they demonstrate properties of agents the platform did not build;
 - ``hello_agent`` speaks OTLP and opens no socket (publish-only, ADR 0017 §F);
-- ``turn_agent`` serves HTTP and emits no telemetry (invocable, ADR 0019 §I3).
+- ``turn_agent`` serves HTTP and emits no telemetry (invocable, ADR 0019 §I3);
+- ``duplex_agent`` does **both**, and only that composition makes the proof loop close
+  (ADR 0019 §Amendment 1 A1.2).
 
 Add ``import opentelemetry`` to ``turn_agent`` "just to debug" and the second-runtime proof
 evaporates with no test turning red. This module is that test: it reads the source, never
@@ -24,6 +26,7 @@ _EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 
 HELLO = _EXAMPLES / "hello-agent" / "hello_agent.py"
 TURN = _EXAMPLES / "turn-agent" / "turn_agent.py"
+DUPLEX = _EXAMPLES / "duplex-agent" / "duplex_agent.py"
 
 # Modules that would betray each witness's claim if imported.
 _SOCKET_MODULES = frozenset({"socket", "socketserver", "http", "http.server", "fastapi", "flask"})
@@ -45,7 +48,9 @@ def _imported_roots(path: Path) -> set[str]:
     return names | {name.split(".", 1)[0] for name in names}
 
 
-@pytest.mark.parametrize("path", [HELLO, TURN], ids=["hello-agent", "turn-agent"])
+@pytest.mark.parametrize(
+    "path", [HELLO, TURN, DUPLEX], ids=["hello-agent", "turn-agent", "duplex-agent"]
+)
 def test_example_agent_never_imports_tessera(path: Path) -> None:
     """The second-runtime claim: an agent Tessera did not build, using none of its code."""
     offenders = {name for name in _imported_roots(path) if name.split(".", 1)[0] == "tessera"}
@@ -72,6 +77,28 @@ def test_turn_agent_emits_no_telemetry() -> None:
         "turn_agent.py must emit no telemetry — the invocation plane carries no observability "
         f"dependency; found {sorted(offenders)}"
     )
+
+
+def test_duplex_agent_both_serves_and_publishes() -> None:
+    """duplex-agent is the integration witness: it is the ONLY example that does both.
+
+    Its whole claim is the composition. Losing either half would make it a duplicate of one of
+    the other two, and the proof loop — invoke it, watch its own telemetry raise its computed
+    level — would silently stop being demonstrated by anything.
+    """
+    roots = _imported_roots(DUPLEX)
+    assert roots & _SOCKET_MODULES, "duplex-agent must serve HTTP (it is invocable)"
+    assert roots & _TELEMETRY_MODULES, "duplex-agent must emit telemetry (it is observable)"
+
+
+def test_the_existing_witnesses_stay_minimal() -> None:
+    """ADR 0019 §A1.2 (d): duplex-agent's arrival must not enrich hello- or turn-agent.
+
+    Their emptiness is part of the platform's test surface. If the new witness could only be
+    built by lending the old ones a capability, the examples directory has started becoming a zoo.
+    """
+    assert not _imported_roots(HELLO) & _SOCKET_MODULES
+    assert not _imported_roots(TURN) & _TELEMETRY_MODULES
 
 
 def test_the_negative_space_check_has_teeth() -> None:

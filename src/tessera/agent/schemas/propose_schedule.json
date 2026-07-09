@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Proposition d'échéancier",
+  "description": "Les paramètres d'une proposition d'échéancier de paiement.",
+  "type": "object",
+  "properties": {
+    "outstanding_amount_eur": {
+      "type": "number",
+      "title": "Montant restant dû (€)",
+      "description": "Le solde à étaler, en euros.",
+      "minimum": 1
+    },
+    "installments": {
+      "type": "integer",
+      "title": "Nombre d'échéances",
+      "description": "Entre 2 et 24 mensualités.",
+      "minimum": 2,
+      "maximum": 24
+    },
+    "first_due_date": {
+      "type": "string",
+      "title": "Première échéance",
+      "description": "Date de la première mensualité (AAAA-MM-JJ)."
+    },
+    "channel": {
+      "type": "string",
+      "title": "Canal de notification",
+      "description": "Par quel canal la proposition est adressée.",
+      "enum": ["email", "courrier", "aucun"],
+      "default": "aucun"
+    },
+    "notify_customer": {
+      "type": "boolean",
+      "title": "Notifier le client",
+      "description": "Envoyer la proposition immédiatement.",
+      "default": false
+    }
+  },
+  "required": ["outstanding_amount_eur", "installments", "first_due_date"]
+}
