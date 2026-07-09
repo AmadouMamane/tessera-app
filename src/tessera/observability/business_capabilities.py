@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,7 @@ from tessera.observability import business_events, business_scoring, turn_eviden
 from tessera.observability.agent_release import agent_release_state
 from tessera.observability.agentspec_projection import (
     business_signal_descriptors,
+    declared_observability_level,
     observability_level,
 )
 from tessera.observability.spine.adapters import fact_source
@@ -18,12 +20,15 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from tessera.agent.registry import Agent
+    from tessera.observability.turn_evidence import TurnEvidence
 
 __all__ = [
     "UNKNOWN_CAPABILITY_ID",
     "UNKNOWN_CAPABILITY_LABEL",
+    "LevelResolution",
     "business_capability_aggregate",
     "declares_external_effects",
+    "resolve_level_state",
     "resolve_observability_level",
 ]
 
@@ -328,22 +333,55 @@ def _has_capability_stamped_events(rows: list[dict[str, object]]) -> bool:
     return any(_capability(row) != UNKNOWN_CAPABILITY_ID for row in rows)
 
 
-def resolve_observability_level(agent_id: str | None) -> str | None:
-    """The agent's current L-level (ADR 0017 §4), resolved from live facts.
+@dataclass(frozen=True, slots=True)
+class LevelResolution:
+    """What the cockpit knows about an agent's rung, and how firmly.
 
-    The single place ``governed`` + business-event facts become a level, reused by
-    the §A2.4 release gate. Returns ``None`` for an un-manifested agent (no store read).
+    ``computed`` rests on observed facts alone. ``declared`` is what the manifest's
+    declarations would reach if the turn evidence existed. They are equal exactly when the
+    evidence is ``observed``; otherwise ``declared`` is the ambition and ``computed`` the
+    truth, and the badge must render the gap rather than hide it.
     """
+
+    computed: str | None
+    declared: str | None
+    evidence: TurnEvidence
+
+    @property
+    def proven(self) -> bool:
+        """Whether the computed rung is backed by observed turns — the only releasable state."""
+        return self.evidence == "observed"
+
+
+def resolve_level_state(agent_id: str | None) -> LevelResolution:
+    """Resolve both rungs and the reason the evidence is (or is not) there."""
     agent = _agent(agent_id)
+    evidence = turn_evidence.turn_evidence_state(agent_id)
     if agent is None:
-        return None
+        return LevelResolution(computed=None, declared=None, evidence=evidence)
     rows = business_events.business_event_rows(agent_id=agent_id) if agent_id else []
-    return observability_level(
-        agent,
-        governed=_governed(agent_id),
-        business_events=_has_capability_stamped_events(rows),
-        has_turn_evidence=turn_evidence.has_turn_evidence(agent_id),
+    governed = _governed(agent_id)
+    stamped = _has_capability_stamped_events(rows)
+    return LevelResolution(
+        computed=observability_level(
+            agent,
+            governed=governed,
+            business_events=stamped,
+            has_turn_evidence=evidence == "observed",
+        ),
+        declared=declared_observability_level(agent, governed=governed, business_events=stamped),
+        evidence=evidence,
     )
+
+
+def resolve_observability_level(agent_id: str | None) -> str | None:
+    """The agent's **computed** L-level (ADR 0017 §4), resolved from observed facts.
+
+    The single place ``governed`` + business-event facts become a level, reused by the §A2.4
+    release gate — which must see the computed rung and nothing else, so that an unproven
+    level can never satisfy a gate. Returns ``None`` for an un-manifested agent.
+    """
+    return resolve_level_state(agent_id).computed
 
 
 def declares_external_effects(agent_id: str | None) -> bool:
@@ -361,8 +399,11 @@ def _level_payload(agent_id: str | None, rows: list[dict[str, object]]) -> dict[
     agent = _agent(agent_id)
     governed = _governed(agent_id)
     has_business_events = _has_capability_stamped_events(rows)
+    # The Métier readiness payload answers "what do this agent's DECLARATIONS still lack to
+    # reach L3?" — a contract question, not an emission one. It asks for the declared rung
+    # explicitly rather than inheriting it from a defaulted flag.
     level = (
-        observability_level(agent, governed=governed, business_events=has_business_events)
+        declared_observability_level(agent, governed=governed, business_events=has_business_events)
         if agent is not None
         else None
     )

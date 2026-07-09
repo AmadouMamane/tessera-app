@@ -19,6 +19,7 @@ from tessera.agent.agentspec import (
 from tessera.agent.registry import get_agent
 from tessera.observability.agentspec_projection import (
     business_signal_descriptors,
+    declared_observability_level,
     north_star_descriptor,
     observability_level,
 )
@@ -174,17 +175,19 @@ def test_duplicate_capability_id_is_rejected() -> None:
 
 
 def test_recouvrement_reads_l1_ungoverned_l2_governed_l3_business() -> None:
+    # The DECLARED ladder — what the manifest reaches once its turns are observed.
     agent = get_agent("recouvrement")
-    assert observability_level(agent, governed=False) == "L1"
-    assert observability_level(agent, governed=True) == "L2"
-    assert observability_level(agent, governed=True, business_events=True) == "L3"
+    assert declared_observability_level(agent, governed=False) == "L1"
+    assert declared_observability_level(agent, governed=True) == "L2"
+    assert declared_observability_level(agent, governed=True, business_events=True) == "L3"
 
 
 def test_unmanifested_agent_has_no_level() -> None:
     # honest-empty: absence of a manifest is None, never rendered as "L0". Every registry
     # agent now carries a manifest (step 7 Lot 0), so strip it to exercise the None path.
     unmanifested = dataclasses.replace(get_agent("support-client"), observability=None)
-    assert observability_level(unmanifested, governed=True) is None
+    assert declared_observability_level(unmanifested, governed=True) is None
+    assert observability_level(unmanifested, governed=True, has_turn_evidence=True) is None
 
 
 def test_qa_agents_declare_observable_contract_l1_ungoverned_l2_governed() -> None:
@@ -196,15 +199,15 @@ def test_qa_agents_declare_observable_contract_l1_ungoverned_l2_governed() -> No
         assert agent.observability is not None
         assert agent.observability.workflows and agent.observability.telemetry_capabilities
         assert not agent.observability.business_signals  # telemetry-only, no scored signals
-        assert observability_level(agent, governed=False) == "L1"
-        assert observability_level(agent, governed=True) == "L2"
+        assert declared_observability_level(agent, governed=False) == "L1"
+        assert declared_observability_level(agent, governed=True) == "L2"
 
 
 def test_manifest_without_observable_contract_reads_l0() -> None:
     agent = get_agent("recouvrement")
     bare = parse_observability({"spec_version": AGENTSPEC_VERSION})
     l0_agent = dataclasses.replace(agent, observability=bare)
-    assert observability_level(l0_agent, governed=True) == "L0"
+    assert declared_observability_level(l0_agent, governed=True) == "L0"
 
 
 def test_declared_but_unobserved_reads_l0() -> None:
@@ -212,9 +215,24 @@ def test_declared_but_unobserved_reads_l0() -> None:
     # them. A declared observable contract with no observed turns stays L0 (Registered).
     agent = get_agent("recouvrement")
     assert observability_level(agent, governed=True, has_turn_evidence=False) == "L0"
-    # With evidence it climbs the ladder exactly as before (has_turn_evidence defaults True).
     assert observability_level(agent, governed=False, has_turn_evidence=True) == "L1"
-    assert observability_level(agent, governed=True, business_events=True) == "L3"
+    assert (
+        observability_level(agent, governed=True, business_events=True, has_turn_evidence=True)
+        == "L3"
+    )
+
+
+def test_the_declared_ladder_is_never_reachable_by_omission() -> None:
+    """`has_turn_evidence` is required: a caller cannot obtain a computed rung by default.
+
+    This is the guard for the over-claim the badge exposed — a defaulted `True` handed out
+    computed-looking rungs that rested on nothing.
+    """
+    agent = get_agent("recouvrement")
+    with pytest.raises(TypeError):
+        observability_level(agent, governed=True)  # type: ignore[call-arg]
+    # The declared rung stays reachable, but only by asking for it BY NAME.
+    assert declared_observability_level(agent, governed=True) == "L2"
 
 
 # --- projection: generated business-signal descriptors ---------------------------

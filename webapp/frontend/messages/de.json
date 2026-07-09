@@ -6914,7 +6914,12 @@
     "candidate": "Kandidat",
     "releaseNote": "Eval-Gate-Verdikt pro Agent (Referenzlauf, Fall × Sprache) — jeder Agent ist ein verwaltetes Paket.",
     "observabilityLevel": "Beobachtbarkeitsstufe {level}",
-    "pendingBusinessItems": "{n} fachlich offen"
+    "pendingBusinessItems": "{n} fachlich offen",
+    "witnessBadge": "Plattform-Nachweis",
+    "witnessBadgeHint": "Nachweisagent der Plattform — er hat keine Kunden und bearbeitet keine echten Konversationen.",
+    "levelDeclaredNoEvidence": "{level} deklariert · kein Nachweis",
+    "levelDormantHint": "Das Manifest deklariert {level}, doch das Cockpit hat für diesen Agenten keinen Turn beobachtet. Die Stufe bleibt deklariert, nie berechnet.",
+    "levelUnverifiableHint": "Das Manifest deklariert {level}, doch der Metrik-Speicher ist deaktiviert oder nicht erreichbar: die Stufe lässt sich nicht überprüfen."
   },
   "product": {
     "apercu": {

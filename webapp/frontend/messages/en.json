@@ -6914,7 +6914,12 @@
     "candidate": "Candidate",
     "releaseNote": "Per-agent eval-gate verdict (reference run, case × language grain) — each agent is a governed package.",
     "observabilityLevel": "Observability level {level}",
-    "pendingBusinessItems": "{n} business pending"
+    "pendingBusinessItems": "{n} business pending",
+    "witnessBadge": "Platform witness",
+    "witnessBadgeHint": "Platform witness agent — it has no customers and handles no real conversations.",
+    "levelDeclaredNoEvidence": "{level} declared · no evidence",
+    "levelDormantHint": "The manifest declares {level}, but the cockpit has observed no turn from this agent. The level stays declared, never computed.",
+    "levelUnverifiableHint": "The manifest declares {level}, but the metrics store is disabled or unreachable: the level cannot be verified."
   },
   "product": {
     "apercu": {

@@ -260,7 +260,12 @@ agents:
   # rung. The level is COMPUTED, never tuned.
   - id: hello-agent
     name: "Hello Agent"
-    description: "Second-runtime proof (ADR 0017 §F): out-of-process, pure OTLP, zero tessera import."
+    # `description` is read by a business audience on the fleet card, not by a reviewer. It states
+    # the INTENT — a real fleet is heterogeneous (other teams, other vendors, acquisitions), so a
+    # platform that only governs the agents it built governs nothing. Never state what the agent
+    # does not import: the implementation truth (out-of-process, pure OTLP, zero tessera import,
+    # ADR 0017 §F) lives in the module docstring and in the blocks below.
+    description: "Agent construit par une autre équipe, sur une autre technologie. Tessera sait le surveiller quand même."
     owner: "Platform"
     default_language: en
     audience: operator
@@ -295,7 +300,9 @@ agents:
   # 0017 §1 boundary ratchet stands). Operator surface, cockpit-embedded, like hello-agent.
   - id: turn-agent
     name: "Turn Agent"
-    description: "Invocable second-runtime proof (ADR 0019 §I3): out-of-process HTTP turn endpoint, zero tessera import."
+    # Same register and same intent as hello-agent (see there); the sentences are parallel on
+    # purpose, so the contrast falls on *surveiller* vs *tester* — the two planes, unnamed.
+    description: "Agent construit par une autre équipe, sur une autre technologie. Un opérateur peut quand même le tester depuis le cockpit."
     owner: "Platform"
     default_language: en
     audience: operator

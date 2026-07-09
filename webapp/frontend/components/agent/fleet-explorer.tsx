@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowRight, Calendar, LayoutGrid, List, Lock, Search, Star, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Calendar,
+  FlaskConical,
+  LayoutGrid,
+  List,
+  Lock,
+  Search,
+  Star,
+  Users,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
@@ -9,6 +19,7 @@ import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import type { Fleet } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { levelBadgeView } from "@/lib/level-badge";
 
 type FleetAgent = NonNullable<Fleet["agents"]>[number];
 type Filter = "all" | "external" | "internal" | "favorites" | "recent";
@@ -43,6 +54,11 @@ function fmtRunDate(runAt: string | null | undefined, locale: string): string | 
 }
 
 const isExternal = (a: FleetAgent) => a.audience === "customer";
+
+// A platform witness (hello-agent, turn-agent) is not a banking agent. The manifest already
+// says so with a `demo` tag — unchanged, it is the declaration; the card must say it too, or
+// the fleet count silently inflates the demo, which the honest-positioning rule forbids.
+const isPlatformWitness = (a: FleetAgent) => (a.tags ?? []).includes("demo");
 
 function readList(key: string): string[] {
   try {
@@ -266,17 +282,55 @@ function AudienceBadge({ external, t }: { external: boolean; t: T }) {
   );
 }
 
+// "Témoin plateforme", never "Démonstration": that word is reserved for the surface pill
+// (headers spec §5), and a second use with a different meaning would collide.
+function WitnessChip({ t }: { t: T }) {
+  return (
+    <span
+      title={t("witnessBadgeHint")}
+      className="inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]"
+    >
+      <FlaskConical className="h-2.5 w-2.5" />
+      {t("witnessBadge")}
+    </span>
+  );
+}
+
 // ADR 0017 §4 — the observability level badge (L0–L2 in Phase B). Computed from passing
 // facts server-side; `null`/absent when the agent has no AgentSpec manifest yet, so it
 // renders nothing (honest-empty) rather than a misleading "L0".
-function LevelBadge({ level, t }: { level: string | null | undefined; t: T }) {
-  if (!level) return null;
+//
+// When the manifest declares a higher rung than the facts prove, the badge shows the
+// DECLARED rung in a muted variant and names it as declared. The tooltip distinguishes the
+// two silences: `unverifiable` (the metrics store is off or unreachable — nobody can check)
+// from `dormant` (the store was read and this agent has emitted nothing). Never says
+// "recent": the evidence query is an unwindowed cumulative counter (see turn_evidence.py).
+// No agent-specific condition lives here — the gap is data, computed server-side.
+function LevelBadge({ agent, t }: { agent: FleetAgent; t: T }) {
+  const view = levelBadgeView(agent);
+  if (view.kind === "none") return null;
+
+  if (view.kind === "declared") {
+    const hint =
+      view.evidence === "dormant"
+        ? t("levelDormantHint", { level: view.level })
+        : t("levelUnverifiableHint", { level: view.level });
+    return (
+      <span
+        title={hint}
+        className="inline-flex items-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]"
+      >
+        {t("levelDeclaredNoEvidence", { level: view.level })}
+      </span>
+    );
+  }
+
   return (
     <span
-      title={t("observabilityLevel", { level })}
+      title={t("observabilityLevel", { level: view.level })}
       className="inline-flex items-center rounded-full border border-[#7c5cf5]/40 bg-[#7c5cf5]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[#b9a6ff]"
     >
-      {level}
+      {view.level}
     </span>
   );
 }
@@ -398,9 +452,15 @@ function AgentCard({
           <FavButton favorite={favorite} onToggle={onToggleFavorite} t={t} />
         </span>
       </div>
+      {agent.description ? (
+        <p className="-mt-1.5 line-clamp-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+          {agent.description}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-1.5">
         <AudienceBadge external={external} t={t} />
-        <LevelBadge level={agent.level} t={t} />
+        {isPlatformWitness(agent) ? <WitnessChip t={t} /> : null}
+        <LevelBadge agent={agent} t={t} />
         <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
         <PendingBusinessChip agent={agent} t={t} />
         <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{agent.owner}</span>
@@ -467,9 +527,12 @@ function AgentRow({
         className={cn("h-2 w-2 shrink-0 rounded-full", HEALTH_DOT[agent.health] ?? "bg-amber-400")}
       />
       <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
-      <span className="w-[160px] shrink-0 truncate font-semibold">{agent.name}</span>
+      <span className="w-[160px] shrink-0 truncate font-semibold" title={agent.description}>
+        {agent.name}
+      </span>
       <AudienceBadge external={external} t={t} />
-      <LevelBadge level={agent.level} t={t} />
+      {isPlatformWitness(agent) ? <WitnessChip t={t} /> : null}
+      <LevelBadge agent={agent} t={t} />
       <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
       <PendingBusinessChip agent={agent} t={t} />
       <span className="hidden truncate text-[0.66rem] text-[var(--tessera-text-muted)] md:inline">

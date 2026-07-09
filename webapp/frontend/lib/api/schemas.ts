@@ -5320,6 +5320,10 @@ export const FleetSchema = z.object({
         name: z.string(),
         owner: z.string(),
         audience: z.string().optional(),
+        // Manifest-declared, projected verbatim: the card must say what an agent is FOR, and a
+        // `demo` tag must mark the platform witnesses — else "5 agents" reads as 5 banking agents.
+        description: z.string().optional(),
+        tags: z.array(z.string()).optional(),
         conversations: z.number(),
         turns: z.number(),
         messages: z.number(),
@@ -5355,7 +5359,12 @@ export const FleetSchema = z.object({
           .optional(),
         // ADR 0017 §4 — observability level (L0–L2 in Phase B); null when the agent has
         // no AgentSpec manifest yet (honest-empty badge, never rendered as "L0").
+        // `level` is COMPUTED from observed turns; `level_declared` is what the manifest
+        // would reach if that evidence existed. They differ exactly when `level_evidence`
+        // is not "observed", and the badge must render the gap rather than hide it.
         level: z.string().nullable().optional(),
+        level_declared: z.string().nullable().optional(),
+        level_evidence: z.enum(["observed", "dormant", "unverifiable"]).optional(),
         north_star: BusinessSignalValueSchema.nullable().optional(),
         pending_business_items: z.number().int().optional().default(0),
       }),

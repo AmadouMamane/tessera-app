@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 __all__ = [
     "LEVELS",
     "business_signal_descriptors",
+    "declared_observability_level",
     "north_star_descriptor",
     "observability_level",
 ]
@@ -36,8 +37,8 @@ def observability_level(
     agent: Agent,
     *,
     governed: bool,
+    has_turn_evidence: bool,
     business_events: bool = False,
-    has_turn_evidence: bool = True,
 ) -> str | None:
     """Compute the observability level from passing facts (ADR 0017 §4) — never asserted.
 
@@ -46,12 +47,14 @@ def observability_level(
       onto the grammar + telemetry capabilities), AND the cockpit has **observed** it emitting
       turns (``has_turn_evidence`` — the Prometheus turn counter, ADR 0017 §F). A
       declared-but-unobserved agent stays L0: "Observable" means the spine sees emission, not
-      that the manifest promises it. ``has_turn_evidence`` defaults ``True`` so the *pure*
-      projection reflects the declared tier; :func:`resolve_observability_level` supplies the
-      real fact (evidence-unknown is trusted, so an absent metrics store never demotes).
+      that the manifest promises it.
     - **L2 Governed** — L1 and the agent's guard/eval/release facts are visible to the
       cockpit (``governed`` — a real gating socle ran).
     - **L3 Business** — L2 and typed workflow-grammar business events are visible.
+
+    ``has_turn_evidence`` is **required**: it once defaulted to ``True``, which let a caller
+    obtain a computed-looking rung from an assumption. To ask what the manifest *promises*,
+    call :func:`declared_observability_level` — and say so at the call site.
 
     Returns ``None`` for an un-manifested agent, so the absence of a manifest renders as an
     honest-empty badge, never as "L0".
@@ -68,6 +71,23 @@ def observability_level(
     if business_events:
         return "L3"
     return "L2"
+
+
+def declared_observability_level(
+    agent: Agent,
+    *,
+    governed: bool,
+    business_events: bool = False,
+) -> str | None:
+    """The rung the agent's declarations would reach **if the turn evidence existed**.
+
+    Never a substitute for :func:`observability_level`: it is what the badge shows in the
+    attenuated "declared · no evidence" variant, and what a UI names as the agent's ambition.
+    A release gate must never read it (ADR 0017 §A2.4 — an unproven rung gates nothing).
+    """
+    return observability_level(
+        agent, governed=governed, business_events=business_events, has_turn_evidence=True
+    )
 
 
 def business_signal_descriptors(agent: Agent) -> list[dict[str, object]]:
