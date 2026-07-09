@@ -256,9 +256,11 @@ never implementation notes).
 
 ### Sequencing
 
-- **I5 — A1.1** (contract field + invoker sets the flag + testkit case). Lands first:
-  small, and every future http agent needs it.
+- **[x] I5 — A1.1** (contract field + invoker sets the flag + testkit case). Landed
+  2026-07-09. The audit it forced was larger than the amendment anticipated: the Console's
+  *in-process* test turn was never stamped either, so §4 was breached on the near side of the
+  wire as well as across it. Both are closed. See `0019-execution-status.md`.
 - **I6 — A1.2** (`duplex-agent` + acceptance a–d). Depends on I5.
 
-Both deferred pending an explicit go — this amendment records the decision, not the
+I6 remains deferred pending an explicit go — this amendment records the decision, not the
 schedule.

@@ -54,6 +54,7 @@ async def _invoke(invoker: HttpTurnInvoker, *, assertion: str = _ASSERTION) -> I
         actor="op-principal",
         conversation_id="conv-1",
         turn_id="turn-1",
+        synthetic=True,
     )
 
 
@@ -155,6 +156,7 @@ async def test_non_http_agent_is_refused(monkeypatch) -> None:
         actor="op",
         conversation_id="c",
         turn_id="t",
+        synthetic=True,
     )
     assert outcome.verdict == "red"
     assert outcome.error is not None and "http" in outcome.error

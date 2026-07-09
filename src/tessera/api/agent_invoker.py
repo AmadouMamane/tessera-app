@@ -92,16 +92,28 @@ class HttpTurnInvoker:
         actor: str,
         conversation_id: str,
         turn_id: str,
+        synthetic: bool,
     ) -> InvocationOutcome:
         """Drive one http turn; a failure becomes a red outcome, never a raise.
 
         ``operator_assertion`` is the verified token the route resolved (0010 Phase B); the
         invoker forwards it verbatim and refuses an empty one (no anonymous invocation, §4).
         One S1 event is emitted whichever way the turn goes — the invocation happened either way.
+
+        ``synthetic`` (ADR 0019 §Amendment 1 A1.1) is the turn's posture, written onto the wire
+        here — the one place the platform speaks to an out-of-process agent, so the one place it
+        can be forgotten. It has **no default**: today every declared consumer of this binding is
+        a test bench (the Console) or a canary, and both pass ``True``; a future consumer that
+        drives product traffic through the binding must say so deliberately rather than inherit
+        a stamp that would quietly delete its events from every business surface.
         """
         started = datetime.now(UTC)
         outcome = await self._drive(
-            agent_id, turn_input, operator_assertion=operator_assertion, started=started
+            agent_id,
+            turn_input,
+            operator_assertion=operator_assertion,
+            started=started,
+            synthetic=synthetic,
         )
         self._audit(
             agent_id=agent_id,
@@ -119,6 +131,7 @@ class HttpTurnInvoker:
         *,
         operator_assertion: str,
         started: datetime,
+        synthetic: bool,
     ) -> InvocationOutcome:
         invocation = get_agent(agent_id).invocation
         if invocation.binding is not InvocationBinding.HTTP or not invocation.endpoint:
@@ -133,11 +146,12 @@ class HttpTurnInvoker:
             OPERATOR_ASSERTION_HEADER: operator_assertion,
             "content-type": "application/json",
         }
+        # The caller's declared posture wins over anything the TurnInput happened to carry: the
+        # platform, not its input, is the authority on whether it is testing the agent (§A1.1).
+        body: dict[str, object] = {**turn_input, "synthetic": synthetic}
         try:
             async with self._client_factory(timeout_s) as client:
-                response = await client.post(
-                    invocation.endpoint, json=dict(turn_input), headers=headers
-                )
+                response = await client.post(invocation.endpoint, json=body, headers=headers)
         except httpx.TimeoutException:
             return self._red(
                 started, error=f"timeout after {invocation.timeout_ms or DEFAULT_HTTP_TIMEOUT_MS}ms"

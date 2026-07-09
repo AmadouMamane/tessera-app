@@ -65,9 +65,10 @@ class TestSpanContract:
             conversation_id="conv-1",
             turn_id="turn-1",
             environment="local",
+            synthetic=False,
         )
-        assert verify_turn_span(span.attrs) == []
-        assert_turn_span(span.attrs)
+        assert verify_turn_span(span.attrs, synthetic=False) == []
+        assert_turn_span(span.attrs, synthetic=False)
 
     def test_required_list_matches_the_authoritative_stamper(self) -> None:
         """Drift guard: every required attribute is actually stamped (no model)."""
@@ -80,9 +81,10 @@ class TestSpanContract:
             conversation_id="c",
             turn_id="t",
             environment="ci",
+            synthetic=False,
         )
         # Model omitted → still conforming (it is conditional, not required).
-        assert verify_turn_span(span.attrs) == []
+        assert verify_turn_span(span.attrs, synthetic=False) == []
         for key in REQUIRED_TURN_SPAN_ATTRIBUTES:
             assert key in span.attrs, f"stamper no longer stamps required key {key!r}"
 
@@ -96,9 +98,10 @@ class TestSpanContract:
             conversation_id="c",
             turn_id="t",
             environment="local",
+            synthetic=False,
         )
         del span.attrs[semconv.TESSERA_TURN_ID]
-        violations = verify_turn_span(span.attrs)
+        violations = verify_turn_span(span.attrs, synthetic=False)
         assert any(semconv.TESSERA_TURN_ID in v for v in violations)
 
     def test_empty_required_attribute_is_flagged(self) -> None:
@@ -109,7 +112,7 @@ class TestSpanContract:
             semconv.TESSERA_TURN_ID: "t",
             semconv.DEPLOYMENT_ENVIRONMENT: "local",
         }
-        violations = verify_turn_span(attrs)
+        violations = verify_turn_span(attrs, synthetic=False)
         assert any(semconv.TESSERA_AGENT_ID in v and "empty" in v for v in violations)
 
     def test_present_but_empty_model_is_flagged(self) -> None:
@@ -121,7 +124,7 @@ class TestSpanContract:
             semconv.DEPLOYMENT_ENVIRONMENT: "local",
             semconv.GEN_AI_REQUEST_MODEL: "",  # present but empty
         }
-        violations = verify_turn_span(attrs)
+        violations = verify_turn_span(attrs, synthetic=False)
         assert any(semconv.GEN_AI_REQUEST_MODEL in v for v in violations)
 
 
@@ -137,7 +140,7 @@ class TestGrammarConformance:
 
     def test_valid_non_critical_event_conforms(self) -> None:
         # intent.routed has no payload model and no required envelope fields.
-        assert verify_business_event(_event(BusinessEventName.INTENT_ROUTED)) == []
+        assert verify_business_event(_event(BusinessEventName.INTENT_ROUTED), synthetic=False) == []
 
     def test_valid_critical_event_conforms(self) -> None:
         event = _event(
@@ -145,8 +148,8 @@ class TestGrammarConformance:
             decision="allowed",
             payload={"policy_rule": "contact_window_policy"},
         )
-        assert verify_business_event(event) == []
-        assert_business_event(event)
+        assert verify_business_event(event, synthetic=False) == []
+        assert_business_event(event, synthetic=False)
 
     def test_event_name_outside_grammar_is_flagged(self) -> None:
         rogue = BusinessEvent(
@@ -156,7 +159,7 @@ class TestGrammarConformance:
             conversation_id="c",
             turn_id="t",
         )
-        violations = verify_business_event(rogue)
+        violations = verify_business_event(rogue, synthetic=False)
         assert any("workflow grammar" in v for v in violations)
 
     def test_unexpected_payload_key_is_rejected(self) -> None:
@@ -167,7 +170,7 @@ class TestGrammarConformance:
             decision="allowed",
             payload={"policy_rule": "x", "customer_email": "jean@example.com"},
         )
-        violations = verify_business_event(event)
+        violations = verify_business_event(event, synthetic=False)
         assert any("invalid payload" in v for v in violations)
 
     def test_missing_required_envelope_field_is_flagged(self) -> None:
@@ -176,7 +179,7 @@ class TestGrammarConformance:
             BusinessEventName.ARTIFACT_CREATED,
             payload={"title": "Brouillon"},
         )
-        violations = verify_business_event(event)
+        violations = verify_business_event(event, synthetic=False)
         assert any("missing" in v for v in violations)
 
     def test_wrong_grammar_version_is_flagged(self) -> None:
@@ -184,7 +187,7 @@ class TestGrammarConformance:
             BusinessEventName.INTENT_ROUTED,
             grammar_version="workflow_grammar.v2",
         )
-        violations = verify_business_event(event)
+        violations = verify_business_event(event, synthetic=False)
         assert any("grammar_version" in v for v in violations)
 
     def test_event_stream_labels_violations_by_index(self) -> None:
@@ -192,6 +195,6 @@ class TestGrammarConformance:
             _event(BusinessEventName.INTENT_ROUTED),  # ok
             _event(BusinessEventName.ARTIFACT_CREATED),  # missing envelope fields
         ]
-        violations = verify_event_stream(stream)
+        violations = verify_event_stream(stream, synthetic=False)
         assert violations
         assert all("[event 1 artifact.created]" in v for v in violations)

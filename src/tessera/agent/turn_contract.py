@@ -55,6 +55,22 @@ class TurnInput(TypedDict, total=False):
     turn_id: str
     surface: str
     language: str
+    #: Whether this turn is a *test* turn — a Console invocation or a scheduled canary —
+    #: rather than product traffic (ADR 0019 §4, §Amendment 1 A1.1). Absent ⇒ ``False``,
+    #: so every agent written before this field keeps conforming.
+    #:
+    #: Set **exclusively** by the platform's declared consumers of the invocation binding;
+    #: product traffic never sets it. In-process, the equivalent mark is the
+    #: ``synthetic_turn()`` ContextVar — a ContextVar cannot cross a process boundary,
+    #: which is the whole reason this key exists.
+    #:
+    #: **Propagation duty (conformance, not advice).** An agent serving a turn with
+    #: ``synthetic: true`` MUST stamp the synthetic dimension on every span, metric and
+    #: business event it emits for that turn. Unpropagated synthetic traffic inflates
+    #: business metrics until someone notices, so the SDK testkit gates it: see
+    #: ``sdk.testkit.span_contract.verify_turn_span`` and
+    #: ``sdk.testkit.grammar_conformance.verify_business_event``.
+    synthetic: bool
 
 
 class TurnResult(TypedDict, total=False):

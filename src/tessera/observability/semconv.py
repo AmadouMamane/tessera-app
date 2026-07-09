@@ -57,6 +57,7 @@ __all__ = [
     "TESSERA_RETRIEVAL_CORPUS",
     "TESSERA_RETRIEVAL_HIT_COUNT",
     "TESSERA_RETRIEVAL_TOP_SCORE",
+    "TESSERA_SYNTHETIC",
     "TESSERA_TURN_ID",
     "TESSERA_WORKFLOW_ID",
     "GenAIOperation",
@@ -90,6 +91,11 @@ TESSERA_CASE_ID: Final = "tessera.case_id"
 TESSERA_ARTIFACT_ID: Final = "tessera.artifact_id"
 TESSERA_ARTIFACT_TYPE: Final = "tessera.artifact_type"
 TESSERA_ARTIFACT_STATUS: Final = "tessera.artifact_status"
+#: The synthetic dimension on a span (ADR 0019 §4 · Amendment 1 A1.1). Stamped only on a
+#: turn the platform declared synthetic — a Console test turn or a scheduled canary — so a
+#: trace can be excluded from business reasoning without re-deriving who called whom. The
+#: same single vocabulary as ``BusinessEvent.synthetic``; there is no parallel taxonomy.
+TESSERA_SYNTHETIC: Final = "tessera.synthetic"
 DEPLOYMENT_ENVIRONMENT: Final = "deployment.environment"
 TESSERA_PROFILE: Final = "tessera.profile"
 TESSERA_DATA_RESIDENCY: Final = "tessera.data_residency"
@@ -176,6 +182,7 @@ def stamp_turn_dimensions(
     conversation_id: str,
     turn_id: str,
     environment: str,
+    synthetic: bool,
 ) -> None:
     """Stamp the full dimension set on a turn's root span (ADR 0015 §Migration B).
 
@@ -185,6 +192,10 @@ def stamp_turn_dimensions(
     filter, per-dimension aggregates) and the cockpit slices by. Child spans nest under
     this one, so the trace as a whole is attributed.
 
+    ``synthetic`` has no default on purpose (ADR 0019 §4): a caller that forgets to say
+    whether the turn is a test turn would silently publish a test trace as product traffic,
+    which is precisely the pollution §4 forbids. Stating it is the point.
+
     Args:
         span: The turn's root/active span.
         agent_id: The responding agent for the turn.
@@ -193,12 +204,18 @@ def stamp_turn_dimensions(
         conversation_id: The conversation id (stable across turns).
         turn_id: The per-turn id.
         environment: The deployment environment (ADR 0014).
+        synthetic: Whether this is a test turn (Console invocation or scheduled canary)
+            rather than product traffic.
     """
     span.set_attribute(TESSERA_AGENT_ID, agent_id)
     span.set_attribute(TESSERA_LANGUAGE, language)
     span.set_attribute(GEN_AI_CONVERSATION_ID, conversation_id)
     span.set_attribute(TESSERA_TURN_ID, turn_id)
     span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
+    # Absent ⇒ false, exactly as on the wire (TurnInput.synthetic): one rule for both, so an
+    # agent that predates the field keeps conforming and a product trace is never stamped.
+    if synthetic:
+        span.set_attribute(TESSERA_SYNTHETIC, True)
     if model:
         span.set_attribute(GEN_AI_REQUEST_MODEL, model)
 

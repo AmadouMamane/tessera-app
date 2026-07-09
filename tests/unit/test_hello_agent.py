@@ -41,14 +41,14 @@ def _emitted_turn_attributes(mod: object) -> dict[str, str]:
 
 def test_hello_agent_turn_span_meets_the_l1_contract() -> None:
     attributes = _emitted_turn_attributes(_hello_agent())
-    assert verify_turn_span(attributes) == []
-    assert_turn_span(attributes)  # raises on any violation
+    assert verify_turn_span(attributes, synthetic=False) == []
+    assert_turn_span(attributes, synthetic=False)  # raises on any violation
 
 
 def test_hello_agent_missing_a_dimension_is_caught() -> None:
     # Drift guard: drop one required dimension → the testkit flags it (the gate has teeth).
     attributes = _emitted_turn_attributes(_hello_agent())
     del attributes["tessera.turn_id"]
-    assert verify_turn_span(attributes)  # non-empty violations
+    assert verify_turn_span(attributes, synthetic=False)  # non-empty violations
     with pytest.raises(AssertionError):
-        assert_turn_span(attributes)
+        assert_turn_span(attributes, synthetic=False)
