@@ -21,22 +21,118 @@ Rules in force (from the mission brief):
 
 ## RÉSUMÉ MATIN
 
-*(Kept up to date at the head of this file. Filled in as lots land — see the end-of-night entry for
-the final consolidated version.)*
+**Ouverture :** `origin/main` = `main` = `29fdefbc`.
+**Clôture :** `origin/main` = `main` = `27f7cd3f`, 0 ahead / 0 behind. Tout est poussé.
+**Serveurs de référence relancés sur le main final** : front `:3097`, back `:8099`, tous deux `ok`.
+Aucun rouge n'a été mergé. Aucun gate n'a été affaibli.
 
-**État à l'ouverture du run :** `origin/main` = `main` = `29fdefbc`, 0 ahead / 0 behind.
+### Verdicts
 
 | Lot | Sujet | Verdict |
 | --- | --- | --- |
-| 0 | Pré-vol + merges feu vert | ✅ **mergé** `e4eedcde` (poussé) |
-| 1 | Brancher la preuve (Prometheus) | ✅ **mergé** `06bbd54a` (poussé) |
-| 2 | I5 — `synthetic` traverse le fil | ✅ **mergé** `10183972` (poussé) |
-| 3 | I6 — duplex-agent | ✅ **mergé** `84c79dfc` (poussé) |
-| 4 | FE snapshot client | ✅ **mergé** `48e8e435` (poussé) |
-| 5 | e2e smoke Playwright | ⚠️ **mergé partiel** `69860a66` |
-| 6 | Reliquat headers — menu grille d'apps | 🅿️ **parké** (runway) |
-| 7 | Craft pass P3 | 🅿️ **parké** (source introuvable) |
-| 8 | Stretch (enums FE, colonne synthétique CH) | ⏭️ **sauté** (conditionnel) |
+| 0 | Pré-vol + merges feu vert | ✅ **mergé** `e4eedcde` |
+| 1 | Brancher la preuve (Prometheus) | ✅ **mergé** `06bbd54a` |
+| 2 | I5 — `synthetic` traverse le fil | ✅ **mergé** `10183972` |
+| 3 | I6 — duplex-agent | ✅ **mergé** `84c79dfc` |
+| 4 | FE snapshot client | ✅ **mergé** `48e8e435` |
+| 5 | e2e smoke Playwright | ⚠️ **mergé, PARTIEL** `69860a66` |
+| 6 | Reliquat headers — menu grille d'apps | 🅿️ **parké** — rien commencé |
+| 7 | Craft pass P3 | 🅿️ **parké** — la punch list 18-23 n'existe nulle part |
+| 8 | Stretch | ⏭️ **sauté** — conditionné à 6 et 7 |
+
+### Les trois choses qui comptent
+
+1. **ADR 0019 Amendment 1 est implémenté (I5 + I6).** L'audit exigé par I5 a trouvé un trou plus
+   grand que l'amendement : la Console *in-process* du cockpit atteint l'agent par le **même
+   `POST /chat`** qu'un client et **n'était pas estampillée du tout**. Un opérateur qui *testait* un
+   agent déplaçait les mêmes compteurs métier qu'un vrai client. Corrigé, avec le discriminant qui
+   évite l'erreur inverse (`dedicated-ui` = la console **métier** de recouvrement, dont les
+   événements sont du vrai travail et doivent compter). Les deux mutants sont vérifiés rouges.
+
+2. **La preuve est branchée, et elle est honnête.** Les rungs calculés reviennent de faits Prometheus
+   **vivants**. Deux badges coexistent sur la flotte ce matin — c'est voulu, et c'est assertable :
+
+   | agent | badge | calculé | déclaré | preuve |
+   | --- | --- | --- | --- | --- |
+   | support-client | **calculé** | L2 | L2 | `observed` |
+   | onboarding | **calculé** | L2 | L2 | `observed` |
+   | recouvrement | déclaré | L0 | L2 | `dormant` |
+   | hello-agent | déclaré | L0 | L1 | `dormant` |
+   | turn-agent | déclaré | L0 | L1 | `dormant` |
+   | duplex-agent | déclaré | L0 | L1 | `dormant` |
+
+3. **Deux défauts réels trouvés en chemin, corrigés à la racine, pas contournés.**
+   - La suite unitaire héritait de ton `.env.local` (ton `CANARY_SCHEDULER_ENABLED=1` faisait tomber
+     un test qui affirmait « le défaut livré est OFF »). Sept autres variables étaient héritables.
+     La suite résout désormais les réglages **exactement comme la CI**, avec un cliquet.
+   - `agent_console.py` a cassé le cliquet de frontière ADR 0017 §1. Réparé **par le seam registre**,
+     jamais en ajoutant une exception gelée.
+
+### Chiffres
+
+- **Tests** : backend 1523 → **1564** (+41). vitest 103 → **126** (+23). Playwright : **7 nouveaux, 7 verts**.
+- **Requêtes par page** (mesurées, navigateur authentifié, stack réelle) :
+  Flotte 4→4 · fiche agent 6→6 (aucune des deux ne rafalait : rendu serveur) ·
+  **Vue d'ensemble 58 req / 26 endpoints → 44 / 19**. Côté backend, 7 signaux = **2 lectures amont**
+  au lieu de 7 appels de route. *(Le ×2 est du React StrictMode en dev, pas de la prod.)*
+- **Critères ADR 0019 §A1.2** : (a) `computed L0 → L1` **causé par l'invocation** ✓ ·
+  (b) 0 ligne / 0 série dans les métriques métier ✓ **mais** voir la nuance ci-dessous ·
+  (c) `git show --stat <witness> -- webapp/frontend` → **vide** ✓ ·
+  (d) `hello_agent.py` / `turn_agent.py` **sha256 inchangés** ✓
+
+### Ce que je NE revendique pas
+
+- **Critère (b) est vrai pour une raison plus faible qu'il n'y paraît.** `include_synthetic=True`
+  renvoie **aussi** zéro : rien n'ingère les `businessEvents` qu'un agent `http` renvoie. Donc c'est
+  **l'absence de chemin d'ingestion** qui protège les métriques, pas le filtre §4. Le filtre, la
+  garde à l'émission et l'estampille de l'agent sont corrects et testés, mais ne font pas encore le
+  travail. → *Owed follow-up* dans `0019-execution-status.md`.
+- **Un canary `in_process_chat` ne produit aucune preuve de tour** (le compteur vit sur le chemin
+  *servi* ; l'invoker appelle le graphe directement). Non corrigé : déplacer le compteur ferait
+  compter les runs du harnais d'eval comme preuve — pire mensonge. **Appel de l'architecte.**
+- **Le docstring de `turn_evidence.py` sous-estime la récence** : un vecteur instantané a un horizon
+  de péremption Prometheus (~5 min). « Dormant » veut donc dire « pas de tour observé depuis ~5 min »,
+  pas « depuis la rétention ». La garde du lot B (interdire « récent » dans le libellé) avait raison ;
+  le docstring, lui, est à corriger dans le lot fraîcheur.
+- **La suite e2e existante est ROUGE sur `main`** (`console.spec.ts` : 2/3), **préexistant**. Donc le
+  smoke n'entre dans le gate que **fichier par fichier**, pas via `pnpm test:e2e`.
+
+### Attend Amadou
+
+**Validations visuelles**
+- La chip « **Témoin plateforme** » sur les trois cartes témoins.
+- Le badge **déclaré vs calculé** (les deux sont à l'écran : `/fr/agents`).
+- Le **formulaire généré** de duplex : `/fr/agents/duplex-agent/console` — libellés, `select` pour
+  l'`enum`, case à cocher pour le booléen. Aucune ligne de `webapp/frontend/` ne les nomme.
+- P3 : **non fait** (voir lot 7).
+
+**Moments opérateur**
+- **Canary scheduler** : `TESSERA_OBSERVABILITY__CANARY_SCHEDULER_ENABLED=1` est actif dans ton
+  `.env.local` et pilote le serveur — il ne pilote **plus** la suite de tests. Sache qu'il ne fera
+  **pas** monter le niveau calculé de recouvrement (voir ci-dessus).
+- **TSA rfc3161** : toujours `NoOp` par défaut, inchangé cette nuit.
+- **Protection de branche GitHub** : **toujours pas confirmée**. `origin/main` accepte un push direct
+  — c'est ainsi que la nuit a pu lander.
+- **Pour revoir duplex en `computed`** : `uv run python examples/duplex-agent/duplex_agent.py`, puis
+  invoque-le depuis sa Console. Je l'ai démonté en fin de nuit (protocole), donc sa preuve s'est périmée.
+
+### Décisions que je n'ai PAS prises
+
+Rien n'a été tranché à ta place. Deux contradictions potentielles ont été **résolues par la lecture
+du code**, pas par arbitrage : le `label_key` du témoin réutilise une clé i18n existante (donc (c)
+tient sans plier), et la codegen d'enums est câblée sur `recouvrement` seul (donc aucune sortie
+frontend). Une seule vraie asymétrie de design est **remontée, non tranchée** : canary in-process vs
+http face à la preuve de tour.
+
+### État des arbres
+
+- `main` = `origin/main` = `27f7cd3f`, propre (hors captures `docs/ui-reference/` non suivies,
+  déposées par toi, laissées telles quelles).
+- Worktree `agents/claude` : **propre**, sur `claude/e2e-smoke-0019` (mergée). À resynchroniser sur
+  `main` avant la prochaine tranche.
+- Aucun preview, aucun agent d'exemple, aucun `next dev` résiduel (`lsof` vérifié : `:3096`, `:8096`,
+  `:3390`, `:8500`, `:8501`, `:9096` tous libres).
+- Stack d'observabilité Docker : **debout** (collector, Prometheus `:19090`, Grafana, Phoenix…).
 
 ---
 
