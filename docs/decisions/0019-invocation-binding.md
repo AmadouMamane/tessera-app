@@ -260,7 +260,10 @@ never implementation notes).
   2026-07-09. The audit it forced was larger than the amendment anticipated: the Console's
   *in-process* test turn was never stamped either, so §4 was breached on the near side of the
   wire as well as across it. Both are closed. See `0019-execution-status.md`.
-- **I6 — A1.2** (`duplex-agent` + acceptance a–d). Depends on I5.
+- **[x] I6 — A1.2** (`duplex-agent` + acceptance a–d). Landed 2026-07-09. All four criteria met;
+  (a) and (c) were *measured* on the live stack and on the witness commit's own diff rather than
+  argued. One nuance recorded rather than glossed: (b) holds today because nothing ingests an http
+  agent's returned `businessEvents`, not because the §4 filter excluded them — see
+  `0019-execution-status.md`.
 
-I6 remains deferred pending an explicit go — this amendment records the decision, not the
-schedule.
+ADR 0019 Amendment 1 is **implemented** (I5 + I6).
