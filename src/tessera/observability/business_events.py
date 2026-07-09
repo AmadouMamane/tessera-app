@@ -61,6 +61,7 @@ __all__ = [
     "emit_business_event",
     "get_business_event_store",
     "is_synthetic_turn",
+    "mark_synthetic_turn",
     "persisted_business_events",
     "record_business_event",
     "recent_business_events",
@@ -92,6 +93,22 @@ def synthetic_turn() -> Iterator[None]:
         yield
     finally:
         _synthetic_turn.reset(token)
+
+
+def mark_synthetic_turn() -> None:
+    """Mark the *current context* synthetic, with no scope to exit (ADR 0019 §4).
+
+    The request-scoped twin of :func:`synthetic_turn`. The SSE turn handler is an async generator
+    with no single ``await`` to wrap — its per-turn ContextVars (agent, model, guard overrides) are
+    all set this way, and each ASGI request runs in its own copied context, so a mark set here
+    reaches the graph beneath it and dies with the request.
+
+    The scope IS the context. Call this only where a request (or a ``copy_context().run(...)``)
+    owns the context; called in a *shared* one it never comes back off, and every business event
+    emitted afterwards — anywhere — is silently stamped synthetic and excluded from every business
+    surface. Prefer :func:`synthetic_turn` wherever a scope exists; it restores the prior value.
+    """
+    _synthetic_turn.set(True)
 
 
 def is_synthetic_turn() -> bool:

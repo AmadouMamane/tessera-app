@@ -84,6 +84,7 @@ class TestTurnSpanStamping:
             conversation_id="conv-1",
             turn_id="turn-1",
             environment="local",
+            synthetic=False,
         )
         assert span.attrs[semconv.TESSERA_AGENT_ID] == "recouvrement"
         assert span.attrs[semconv.TESSERA_LANGUAGE] == "fr"
@@ -102,6 +103,7 @@ class TestTurnSpanStamping:
             conversation_id="c",
             turn_id="t",
             environment="ci",
+            synthetic=False,
         )
         assert semconv.GEN_AI_REQUEST_MODEL not in span.attrs
 

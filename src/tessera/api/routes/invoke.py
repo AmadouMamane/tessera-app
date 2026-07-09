@@ -102,6 +102,10 @@ async def invoke_agent(
         actor=session.subject_id or "operator",
         conversation_id=conversation_id,
         turn_id=turn_id,
+        # This route IS the Console test bench: operator-only, never on a product path
+        # (an anonymous or customer session is refused above). Every turn it drives is a
+        # test turn, so it declares the posture the agent must propagate (ADR 0019 §A1.1).
+        synthetic=True,
     )
     return {
         "ok": outcome.ok,

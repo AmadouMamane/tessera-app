@@ -27,6 +27,10 @@ from starlette.responses import StreamingResponse
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
 from tessera.agent.identity import current_agent_id
+
+# Runtime (not TYPE_CHECKING): the §4 synthetic decision compares against
+# `Surface.COCKPIT_EMBEDDED`, so the enum member must exist at run time, not only for mypy.
+from tessera.agent.registry import Surface
 from tessera.agent.sdk import instrument
 from tessera.agent.state import (
     Citation,
@@ -60,6 +64,7 @@ from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
 from tessera.observability import replay, semconv
+from tessera.observability.business_events import mark_synthetic_turn
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
@@ -68,7 +73,6 @@ from tessera.settings import LanguageCode, get_settings
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Coroutine, Mapping
 
-    from tessera.agent.registry import Surface
     from tessera.api.session import SessionContext
     from tessera.observability.lineage import Lineage
 
@@ -177,6 +181,25 @@ def _streaming_graph() -> object:
         checkpointer=_checkpointer,
         interrupt_before=[NodeName.REPORTER.value],
     )
+
+
+def is_test_turn(surface: Surface) -> bool:
+    """Whether a turn entering on ``surface`` is an operator TESTING an agent (ADR 0019 §4).
+
+    The cockpit Console is a test bench, not a customer: it reaches agents through this very
+    route, so without this its turns would move business numbers exactly as customer traffic
+    does. A scheduled canary is already excluded; a Console test turn was not.
+
+    ``dedicated-ui`` is deliberately **not** a test bench, though it is equally an operator
+    surface: it is recouvrement's business console, where an operator does REAL work whose
+    events must count. Stamping every operator turn would silently delete that agent's entire
+    business record — the opposite mistake, and the worse one.
+
+    ``surface`` is derived server-side from the signed operator assertion
+    (:func:`tessera.api.operator.resolve_request_context`) and is never asserted by the
+    client, so neither error can be spoofed into existence.
+    """
+    return surface is Surface.COCKPIT_EMBEDDED
 
 
 class HistoryMessage(BaseModel):
@@ -722,6 +745,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     decision = route_turn(prev_agent, request.message, surface=surface, auth_state=auth_state)
     agent_id = decision.agent_id
     current_agent_id.set(agent_id)
+    synthetic = is_test_turn(surface)
+    if synthetic:
+        mark_synthetic_turn()
     # Stamp the full dimension set on the turn's root span so the trace is queryable per
     # {agent, language, model, conversation, turn, environment} — the substrate the spine
     # reads (Langfuse metadata filter, per-dimension aggregates) — ADR 0015 §Migration B.
@@ -733,6 +759,7 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         conversation_id=str(conversation_id),
         turn_id=str(turn_id),
         environment=get_settings().environment.value,
+        synthetic=synthetic,
     )
     # Audit EVERY routing decision (stay or switch) with its reason, so routing is
     # opposable end to end — you can prove why a turn went to a given agent from
