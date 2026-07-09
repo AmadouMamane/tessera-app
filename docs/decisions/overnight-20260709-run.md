@@ -887,3 +887,50 @@ conteneur `tessera-claude-clickhouse` healthy) mais **refuse l'authentification 
 `0019-execution-status.md`.
 
 **Aliasing des enums FE** (drawer-task / artifact-family via manifeste) : non commencé.
+
+---
+---
+
+# Day run 2026-07-10
+
+Same protocol as the night: one lot = one branch = one merge; twice-green per lot; red twice ⇒
+parked, recorded, move on. `0017-execution-status.md` is never written here.
+
+## RÉSUMÉ (tenu à jour en tête de section)
+
+**Ouverture :** `main` = `origin/main` = `e1a73c5c`. Serveurs de référence `:3097`/`:8099` dessus,
+Amadou regarde dessus aujourd'hui → **previews depuis le worktree uniquement**.
+
+| Lot | Sujet | Verdict |
+| --- | --- | --- |
+| 0 | Mirroir des 2 décisions dans le ledger 0019 | 🔄 |
+| 1 | Réparer le rouge e2e préexistant | ⏳ |
+| 2 | Compléter le smoke e2e + verrou §4 | ⏳ |
+| 3 | Menu grille d'apps | ⏳ |
+| 4 | Craft pass P3 (items 18-23) | ⏳ |
+| 5 | Colonne synthétique ClickHouse | ⏳ |
+| 6 | Aliasing enums FE | ⏳ |
+
+---
+
+## LOT 0 — Mirroir des décisions Claude
+
+Deux décisions d'architecte reçues ce matin, écrites dans `docs/decisions/0019-execution-status.md`
+(§Owed follow-ups). Elles **ferment** les deux dettes que j'avais remontées cette nuit sans les
+trancher.
+
+1. **Preuve de tour du canary.** Verbatim reçu et consigné tel quel : le compteur **reste** sur le
+   chemin servi ; `tessera_agent_turns_total` signifie « tours servis à de vrais consommateurs par le
+   seam déclaré » ; la vivacité canary a **déjà son fait propre** (facette S1 `synthetic_run`). Les
+   combiner en un badge « dormant mais réactif » est une **tranche fraîcheur au backlog** — *jamais
+   fusionner les sources.* Donc : ce n'est pas un défaut, c'est une séparation voulue. Rien à coder.
+
+2. **Critère (b) owed.** Le seam d'ingestion des `businessEvents` d'un agent `http` est une
+   **décision de DESIGN**, prise avant tout code. **Ne rien implémenter dessus.**
+
+   **Note de transmission, dite plutôt que masquée :** la ligne est arrivée **tronquée** (« le seams
+   d'agents http est une décision de DESIGN (Claude tranche avant tout code). N'implémente rien
+   dessus. »). J'ai consigné sa **substance non ambiguë** — l'interdiction d'implémenter, et la
+   nature « design » de la décision — plutôt que de reconstruire un « verbatim » que je n'ai pas reçu.
+   Si le libellé exact importe, il est à re-fournir ; l'effet opérationnel, lui, est sans ambiguïté et
+   respecté : **aucun code sur ce seam aujourd'hui.**

@@ -29,7 +29,13 @@ I1–I4 complete** — pending the review-before-merge checkpoint (same protocol
 
 ## Owed follow-ups (explicit, never silent)
 
-- **An http agent's returned `businessEvents` are never ingested.** `HttpTurnInvoker._interpret`
+- **RULING (Claude, 2026-07-10) — criterion (b) owed.** The ingestion seam for an `http` agent's
+  returned `businessEvents` is a **DESIGN decision, taken before any code**. **Implement nothing on
+  it.** *(Transmission note: the operator's line arrived truncated — « le seams d'agents http est une
+  décision de DESIGN (Claude tranche avant tout code). N'implémente rien dessus. » Recorded as its
+  unambiguous substance rather than reconstructed as a verbatim I did not receive.)*
+
+- *(context for the ruling above)* **An http agent's returned `businessEvents` are never ingested.** `HttpTurnInvoker._interpret`
   validates the `TurnResult` and returns it; nothing writes its `businessEvents` into the business
   store. So ADR 0019 §A1.2 acceptance (b) — "a synthetic turn appears nowhere in business metrics" —
   is satisfied today by the **absence of an ingestion path**, not by the §4 read-seam filter. The
@@ -39,7 +45,14 @@ I1–I4 complete** — pending the review-before-merge checkpoint (same protocol
   platform should stamp from **its own record** of the invocation (§A1.1 belt-and-braces) and use the
   agent's stamp only as corroboration. Recorded 2026-07-09 rather than claimed as proven.
 
-- **A canary on the `in_process_chat` binding produces no turn evidence.** `AGENT_TURNS_TOTAL` is
+- **RULING (Claude, 2026-07-10) — canary turn-evidence.** *Verbatim:* « le compteur reste sur le
+  chemin servi. `tessera_agent_turns_total` = « tours servis à de vrais consommateurs par le seam
+  déclaré » ; la vivacité canary a déjà son fait propre (facette S1 `synthetic_run`). Les combiner en
+  badge « dormant mais réactif » = tranche fraîcheur au backlog — jamais fusionner les sources. »
+  The follow-up below is therefore **closed as a defect and reopened as a backlog slice**: the two
+  facts stay separate, and nothing in this repo may derive liveness by merging them.
+
+- *(context for the ruling above)* **A canary on the `in_process_chat` binding produces no turn evidence.** `AGENT_TURNS_TOTAL` is
   incremented in `api/routes/chat.py` (the *served* path) only, while `InProcessChatInvoker` drives
   `compile_graph().ainvoke()` directly. So an enabled canary can never raise its agent's *computed*
   L-level, and `recouvrement` stays `dormant` however often it fires. Not fixed on sight: moving the
