@@ -59,6 +59,38 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-10 — **Lot C — contract chips on the fleet cards (branch `claude/fleet-contract-chips`,
+  `1b8a5241` + `68e391f2`). Gate green in ONE pass** (new protocol, 2026-07-10: twice-green local
+  suspended, CI replays `make gate` asynchronously as the second pass; no local e2e outside the
+  named windows — this lot touches neither auth, routing/planes, the §4 seam, ledger integrity nor
+  the shared headers). Continues lot A/B below.
+  - **Manifest fix first (`1b8a5241`).** `turn-agent` declared `telemetry_capabilities: [turns]`
+    while `test_turn_agent_emits_no_telemetry` already forbade its source a telemetry import — a
+    promise no line of code could keep. The fleet therefore read an *observable contract* off the
+    manifest alone, and the only thing between that and an observable-looking agent was the absence
+    of turn evidence: **a fact about the metrics store, not about the agent.** Set to `[]`; the
+    AgentSpec accepts it (`telemetry_capabilities` defaults to `()`), so **no schema bug**. New
+    guard `test_manifest_declares_only_the_telemetry_the_source_emits` pins the invariant in **both**
+    directions and was mutation-verified (restoring `[turns]` fails exactly the turn-agent case).
+    **Deliberate consequence:** `observability_level` returns L0 as soon as `workflows` *or*
+    `telemetry_capabilities` is empty, so turn-agent's declared rung drops L1 → **L0** and its
+    coverage now lists `observable_contract` as missing. That is the honest reading of an agent
+    that publishes nothing.
+  - **The chips (`68e391f2`).** « Observable » ← `telemetry_capabilities` non-empty (§3);
+    « Testable » ← `invocation.binding` ≠ `none` (0019 §1). Derived server-side in the manifest
+    projection (`declares_telemetry` / `is_invocable`), read through the registry seam the §1
+    ratchet allows — **never keyed on an agent id**, so a foreign agent arrives with its chips.
+    Absent when not declared (honest-empty, not a greyed chip). Grid + list, i18n ×3, WitnessChip's
+    visual family via a now-shared class. **Measured on the live `compute_fleet` payload, not
+    asserted:** hello `[Observable]`, turn `[Testable]`, duplex `[Observable · Testable]`, the three
+    business agents both. Cross-check test: the chip and the Console must agree about invocability,
+    else a card advertises a test bench that will not open.
+  - **OWED, surfaced not silent.** `turn-agent` keeps `workflows: [{turn_v1, workflow_grammar.v1}]`
+    — a grammar binding for spans it never emits, the **same over-claim one rung down**. Emptying it
+    changes no badge (the level formula already reads L0 from either field) and no chip, so it is
+    pure honesty with zero visible delta. **Not done: the lot authorised the `telemetry_capabilities`
+    fix only.** Architect's call.
+
 - 2026-07-09 — **Fleet-legibility + level-honesty review (lot A `b3d70b36`, lot B `b7ef1003`,
   branch `claude/fleet-agent-legibility`): APPROVED — MERGE FEU VERT.** Lot A ratified incl.
   the tooltip head-noun fix («Agent témoin de la plateforme…» — keeping «démonstration»
