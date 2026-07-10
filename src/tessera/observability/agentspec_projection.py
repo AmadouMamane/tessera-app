@@ -6,6 +6,8 @@ the one boundary-allowed seam (``tessera.agent.registry``, ADR 0017 §1 import c
 never the agent runtime — and derives:
 
 - the observability **level** (L0-L3, computed from facts, never asserted);
+- the two **structural contracts** a fleet card states — does the agent publish its activity,
+  can an operator send it a turn — each read from a declaration, never from an agent id;
 - serialisable **business-signal descriptors** (the SignalSpec-equivalent metadata the
   fleet chip, Métier KPI strip and Conformité projection render).
 
@@ -16,7 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tessera.agent.registry import BusinessSignalSource
+from tessera.agent.registry import BusinessSignalSource, InvocationBinding
 
 if TYPE_CHECKING:
     from tessera.agent.registry import Agent
@@ -25,12 +27,38 @@ __all__ = [
     "LEVELS",
     "business_signal_descriptors",
     "declared_observability_level",
+    "declares_telemetry",
+    "is_invocable",
     "north_star_descriptor",
     "observability_level",
 ]
 
 #: The ladder labels the cockpit displays (ADR 0017 §4). L3 is unlocked in Phase C.
 LEVELS = ("L0", "L1", "L2", "L3")
+
+
+def declares_telemetry(agent: Agent) -> bool:
+    """Whether the agent promises to publish its activity to the cockpit (ADR 0017 §3).
+
+    The *contract*, never the evidence: an agent can declare telemetry and have emitted
+    nothing yet (that gap is what the level badge renders). What it may not do is declare a
+    capability its source cannot honour — pinned by ``test_manifest_declares_only_the_
+    telemetry_the_source_emits`` for the example agents.
+
+    ``False`` for an un-manifested agent: an absent declaration promises nothing.
+    """
+    spec = agent.observability
+    return spec is not None and bool(spec.telemetry_capabilities)
+
+
+def is_invocable(agent: Agent) -> bool:
+    """Whether an operator can send the agent a trial turn over a declared binding (ADR 0019 §1).
+
+    Reads ``invocation.binding``, the same declaration the Console generates from and the
+    ``/agents/{id}/invoke`` seam gates on — so a card can never advertise a test bench the
+    cockpit would then refuse to open.
+    """
+    return agent.invocation.binding is not InvocationBinding.NONE
 
 
 def observability_level(

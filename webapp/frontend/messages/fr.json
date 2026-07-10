@@ -6917,6 +6917,10 @@
     "pendingBusinessItems": "{n} métier en attente",
     "witnessBadge": "Témoin plateforme",
     "witnessBadgeHint": "Agent témoin de la plateforme — il n'a aucun client et ne traite aucune conversation réelle.",
+    "observableChip": "Observable",
+    "observableChipHint": "Publie son activité au cockpit.",
+    "testableChip": "Testable",
+    "testableChipHint": "Un opérateur peut lui envoyer un tour d'essai.",
     "levelDeclaredNoEvidence": "{level} déclaré · aucune preuve",
     "levelDormantHint": "Le manifeste déclare {level}, mais le cockpit n'a observé aucun tour de cet agent. Le niveau reste déclaré, jamais calculé.",
     "levelUnverifiableHint": "Le manifeste déclare {level}, mais le magasin de métriques est désactivé ou injoignable : le niveau ne peut pas être vérifié."

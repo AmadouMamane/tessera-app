@@ -5396,6 +5396,11 @@ export const FleetSchema = z.object({
         level: z.string().nullable().optional(),
         level_declared: z.string().nullable().optional(),
         level_evidence: z.enum(["observed", "dormant", "unverifiable"]).optional(),
+        // The two structural contracts, derived server-side from the manifest: `observable` =
+        // it declares telemetry capabilities, `testable` = it declares an invocation binding.
+        // Default false — an agent with no manifest promises neither, so no chip renders.
+        observable: z.boolean().optional().default(false),
+        testable: z.boolean().optional().default(false),
         north_star: BusinessSignalValueSchema.nullable().optional(),
         pending_business_items: z.number().int().optional().default(0),
       }),

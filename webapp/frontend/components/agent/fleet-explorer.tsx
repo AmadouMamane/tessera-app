@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   ArrowRight,
   Calendar,
   FlaskConical,
@@ -8,6 +9,7 @@ import {
   List,
   Lock,
   Search,
+  Send,
   Star,
   Users,
 } from "lucide-react";
@@ -282,17 +284,45 @@ function AudienceBadge({ external, t }: { external: boolean; t: T }) {
   );
 }
 
+// The neutral chip: states a fact about the agent without ranking it. Shared so the contract
+// chips read as the same family as the witness chip, and stay that way.
+const NEUTRAL_CHIP =
+  "inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]";
+
 // "Témoin plateforme", never "Démonstration": that word is reserved for the surface pill
 // (headers spec §5), and a second use with a different meaning would collide.
 function WitnessChip({ t }: { t: T }) {
   return (
-    <span
-      title={t("witnessBadgeHint")}
-      className="inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]"
-    >
+    <span title={t("witnessBadgeHint")} className={NEUTRAL_CHIP}>
       <FlaskConical className="h-2.5 w-2.5" />
       {t("witnessBadge")}
     </span>
+  );
+}
+
+// The agent's two structural contracts, both computed server-side from its manifest:
+// `observable` = it declares telemetry capabilities (ADR 0017 §3), `testable` = it declares an
+// invocation binding other than `none` (ADR 0019 §1). Never keyed on an agent id — a chip that
+// switched on one would be a hardcoded fleet, and a foreign agent would arrive without it.
+//
+// Absence is the honest state: an agent promising neither shows neither chip, rather than two
+// greyed ones implying it fell short of something it never claimed.
+function ContractChips({ agent, t }: { agent: FleetAgent; t: T }) {
+  return (
+    <>
+      {agent.observable ? (
+        <span title={t("observableChipHint")} className={NEUTRAL_CHIP}>
+          <Activity className="h-2.5 w-2.5" />
+          {t("observableChip")}
+        </span>
+      ) : null}
+      {agent.testable ? (
+        <span title={t("testableChipHint")} className={NEUTRAL_CHIP}>
+          <Send className="h-2.5 w-2.5" />
+          {t("testableChip")}
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -460,6 +490,7 @@ function AgentCard({
       <div className="flex flex-wrap items-center gap-1.5">
         <AudienceBadge external={external} t={t} />
         {isPlatformWitness(agent) ? <WitnessChip t={t} /> : null}
+        <ContractChips agent={agent} t={t} />
         <LevelBadge agent={agent} t={t} />
         <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
         <PendingBusinessChip agent={agent} t={t} />
@@ -532,6 +563,7 @@ function AgentRow({
       </span>
       <AudienceBadge external={external} t={t} />
       {isPlatformWitness(agent) ? <WitnessChip t={t} /> : null}
+      <ContractChips agent={agent} t={t} />
       <LevelBadge agent={agent} t={t} />
       <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
       <PendingBusinessChip agent={agent} t={t} />

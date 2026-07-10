@@ -3,11 +3,17 @@
 Without ``description`` and ``tags`` on the card, a visitor reads "5 agents" as five banking
 agents — the fleet silently inflates the demo, which the project's honest-positioning rule
 forbids. These tests pin the projection and the register the descriptions are written in.
+
+The card also states the agent's two **structural contracts** — it publishes its activity, an
+operator can send it a turn. Both are read from declarations (``telemetry_capabilities``,
+``invocation.binding``); a chip that switched on an agent id would be a hardcoded fleet.
 """
 
 from __future__ import annotations
 
 from tessera.agent.registry import list_agents
+from tessera.observability.agent_console import compute_agent_console
+from tessera.observability.agentspec_projection import declares_telemetry, is_invocable
 from tessera.observability.fleet import _registry_agents
 
 _WITNESSES = frozenset({"hello-agent", "turn-agent", "duplex-agent"})
@@ -55,3 +61,40 @@ def test_witness_descriptions_are_business_legible() -> None:
         lowered = agent.description.lower()
         found = [term for term in jargon if term.lower() in lowered]
         assert not found, f"{agent.id}: description leaks implementation vocabulary {found}"
+
+
+def test_the_witnesses_span_the_contract_square() -> None:
+    """Each witness proves one contract, and together they cover every combination.
+
+    hello-agent publishes and cannot be tested; turn-agent can be tested and publishes nothing;
+    duplex-agent does both — which is the only reason the proof loop closes on it. Should this
+    matrix ever collapse, two of the three examples have become the same example.
+    """
+    matrix = {a.id: (declares_telemetry(a), is_invocable(a)) for a in list_agents()}
+    assert matrix["hello-agent"] == (True, False)
+    assert matrix["turn-agent"] == (False, True)
+    assert matrix["duplex-agent"] == (True, True)
+
+
+def test_business_agents_are_observable_and_testable() -> None:
+    """A banking agent the cockpit can neither watch nor exercise would be a card with no back."""
+    for agent in list_agents():
+        if agent.id in _WITNESSES:
+            continue
+        assert declares_telemetry(agent), f"{agent.id}: a business agent must publish its activity"
+        assert is_invocable(agent), f"{agent.id}: a business agent must be reachable for a turn"
+
+
+def test_the_testable_chip_and_the_console_agree() -> None:
+    """One declaration, two readers — a card must never advertise a bench that will not open.
+
+    The chip reads ``invocation.binding`` through the projection; the Console reads it again to
+    decide between a test bench and the honest-empty state. Drift between them is invisible on
+    both sides and only shows up as an operator clicking through to nothing.
+    """
+    for agent in list_agents():
+        invocation = compute_agent_console("fr", agent.id)["invocation"]
+        assert isinstance(invocation, dict)
+        assert invocation["invocable"] is is_invocable(
+            agent
+        ), f"{agent.id}: the card and the Console disagree about invocability"

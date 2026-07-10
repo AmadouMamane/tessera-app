@@ -23,6 +23,8 @@ from tessera.observability.agent_release import fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total
 from tessera.observability.agentspec_projection import (
     declared_observability_level,
+    declares_telemetry,
+    is_invocable,
     observability_level,
 )
 from tessera.observability.business_capabilities import business_capability_aggregate
@@ -225,6 +227,11 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 "level": level,
                 "level_declared": level_declared,
                 "level_evidence": evidence,
+                # The two structural contracts the card states, both derived from the manifest
+                # (ADR 0017 §3 / ADR 0019 §1) and never from an agent id. `False` for an
+                # un-manifested agent — the chip is then absent, not falsely negative.
+                "observable": record is not None and declares_telemetry(record),
+                "testable": record is not None and is_invocable(record),
                 **business_facts,
             }
         )
