@@ -1285,15 +1285,17 @@ zéro nouveau rouge, stop-the-line sur un CI rouge.
 
 ## RÉSUMÉ
 
-**Ouverture :** `main` = `d8e4fd4f`. **Clôture :** `main` = _(cf. dernier commit de la section)_.
+**Ouverture :** `main` = `d8e4fd4f`. **Clôture :** `main` = `601bca9a`, 0 ahead / 0 behind.
+Aucun rouge n'a été mergé. Aucun gate n'a été affaibli. Aucun job n'a été rendu gatant sans preuve.
 
 | Lot | Sujet | Verdict |
 | --- | --- | --- |
 | A | Job `gate` hermétique + job `e2e` + orphelins du payload console | ✅ **mergé** `225cecc7` (+ correctif `9c104c8d`) |
-| B | Réparation de la dette e2e | ✅ **mergé** — suite **entière verte, deux fois** |
+| B | Réparation de la dette e2e | ✅ **mergé** `601bca9a` — suite **entière verte ×2 en local**, flip **refusé** (voir plus bas) |
 
 **La preuve exigée :** job `gate` **vert sur `main`**, run GitHub Actions **`29079545836`**
-(commit `225cecc7`). Le job `pytest (integration)` y est vert aussi, en non-bloquant.
+(commit `225cecc7`), puis de nouveau **`29087507544`** sur le `main` de clôture (`601bca9a`).
+Le job `pytest (integration)` y est vert aussi, en non-bloquant.
 
 ### Les quatre choses qui comptent
 
