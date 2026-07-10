@@ -13,6 +13,11 @@ the file does — or pointedly does not — import:
 Add ``import opentelemetry`` to ``turn_agent`` "just to debug" and the second-runtime proof
 evaporates with no test turning red. This module is that test: it reads the source, never
 imports it, and asserts the negative space.
+
+The negative space has a second half. A manifest is a *promise* about the source, and nothing
+made the two meet: ``turn-agent`` declared ``telemetry_capabilities: [turns]`` while importing
+no telemetry module at all. ``test_manifest_declares_only_the_telemetry_the_source_emits``
+closes that seam.
 """
 
 from __future__ import annotations
@@ -27,6 +32,9 @@ _EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 HELLO = _EXAMPLES / "hello-agent" / "hello_agent.py"
 TURN = _EXAMPLES / "turn-agent" / "turn_agent.py"
 DUPLEX = _EXAMPLES / "duplex-agent" / "duplex_agent.py"
+
+#: The manifest entry each source file is the implementation of.
+_DECLARED_AS = {HELLO: "hello-agent", TURN: "turn-agent", DUPLEX: "duplex-agent"}
 
 # Modules that would betray each witness's claim if imported.
 _SOCKET_MODULES = frozenset({"socket", "socketserver", "http", "http.server", "fastapi", "flask"})
@@ -99,6 +107,31 @@ def test_the_existing_witnesses_stay_minimal() -> None:
     """
     assert not _imported_roots(HELLO) & _SOCKET_MODULES
     assert not _imported_roots(TURN) & _TELEMETRY_MODULES
+
+
+@pytest.mark.parametrize(
+    "path", [HELLO, TURN, DUPLEX], ids=["hello-agent", "turn-agent", "duplex-agent"]
+)
+def test_manifest_declares_only_the_telemetry_the_source_emits(path: Path) -> None:
+    """An agent never declares a telemetry capability it has no code to honour.
+
+    ``telemetry_capabilities`` is what the fleet reads to decide an agent is *observable* — the
+    contract, not the evidence. ``turn-agent`` declared ``[turns]`` and imported no telemetry
+    module: the only thing then standing between that manifest and an observable-looking agent
+    was the absence of turn evidence, which is a fact about the metrics store, not about the
+    agent. The two must agree in **both** directions — a binding-only agent promising activity
+    it cannot publish, and an emitting agent whose manifest hides it, are the same defect.
+    """
+    from tessera.agent.registry import get_agent
+
+    spec = get_agent(_DECLARED_AS[path]).observability
+    declared = bool(spec and spec.telemetry_capabilities)
+    emits = bool(_imported_roots(path) & _TELEMETRY_MODULES)
+    assert declared == emits, (
+        f"{_DECLARED_AS[path]}: the manifest {'declares' if declared else 'declares no'} "
+        f"telemetry capabilities while the source {'imports' if emits else 'imports no'} "
+        "telemetry module — an agent declares the telemetry it emits, nothing more"
+    )
 
 
 def test_the_negative_space_check_has_teeth() -> None:
