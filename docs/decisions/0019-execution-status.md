@@ -85,6 +85,28 @@ I1–I4 complete** — pending the review-before-merge checkpoint (same protocol
 
 ## Log (newest first)
 
+- 2026-07-10 — **Four architect rulings (mid-day run), one line each.**
+  1. **ClickHouse §4 fix: RATIFIED in full** — both legs + the idempotent `ALTER` + a test per
+     reverted leg is the right shape, and reordering it ahead of the e2e lock was the right reflex.
+  2. **"Suite en bloc" criterion: deferral ACCEPTED** — the 31 reds / 11 files become their own
+     slice, *e2e debt repair* (next window): repair each spec toward the **real** contract
+     (multi-agent routes, pagination); deletion only where the tested surface no longer exists,
+     justified file by file.
+  3. **The `prebuild` guard: RATIFIED** — rule: *a build hook never mutates a tracked file.*
+  4. **Lot 4: proceed as announced** — sparkline shipped **unwired** (no fabricated history); the
+     hero card (18) carries **only real accumulated facts**; honest-empty is untouchable (the
+     dash + reason stays for zero-data); one capture per item in the journal.
+
+  **Doctrine, recorded verbatim and binding:** « un verrou d'honnêteté doit injecter du trafic qui
+  exerce la jambe qu'il revendique — un vert vide ne prouve rien. » The two empty halves (the e2e
+  negative, and the historical ClickHouse leg) get real traffic the day the **http `businessEvents`
+  ingestion seam** lands — Claude designs it first; implementing it remains forbidden.
+
+  *Transmission note, said rather than masked:* ruling 2's closing clause arrived corrupted
+  (« D'ici là : gate = souuveau rouge »). Its unambiguous substance — the suite does **not** enter
+  the gate en bloc until that slice lands — is what is recorded here. The rest of that clause is
+  **not** reconstructed, because I did not receive it.
+
 - 2026-07-10 — **§4's synthetic exclusion was broken on the default read medium. Closed.** The
   owed follow-up above claimed the ClickHouse read flip was "not yet baked" and that the in-process
   store was the default read medium. Reading `_FACT_DEFAULTS` settles it: `business_events` →
