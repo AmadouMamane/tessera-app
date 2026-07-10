@@ -92,6 +92,154 @@ updates this file after every step. A resuming session reads this first, then co
     Ruled by Amadou: empty it in this lot. `workflows: []`; the manifest/source guard now checks
     **both** declarations, and **each leg was mutation-verified independently** — restoring either
     field fails exactly the turn-agent case. Honesty with zero visible delta is still honesty.
+- 2026-07-10 — **PROTOCOL CHANGE (operator decision): fast-iteration mode.** Local
+  twice-green is suspended → **one** full `make gate` pass per lot before merge (never
+  zero). Local e2e is skipped during feature windows; Playwright runs (a) at the
+  «feature batch delivered» milestone, (b) when indispensable = any change touching
+  auth/login, routing/planes, the §4 seam, ledger/integrity surfaces, or shared
+  headers — and (c) obviously in lots whose subject IS e2e (CI seeding/flip).
+  Compensation making this safe: **CI is now the second pass** — it re-runs the same
+  `make gate` on every push, asynchronously, nobody waits for it; stop-the-line
+  unchanged (red CI on main ⇒ fix-forward before any new lot). Everything else stands
+  (targeted staging, one lot = one branch = one merge, honest-empty, no history
+  rewrite).
+
+- 2026-07-10 — **CI + e2e-debt window review: ACCEPTED (`d8e4fd4f → b197c483`, gate CI
+  green on main, run 29088115658).** `make gate` is now the single definition of green
+  (CI calls the same targets — no second list to drift); pnpm-pin subtlety caught
+  (corepack reads `packageManager` upward from cwd; setup-node probed from root and
+  pulled a Node-22-requiring pnpm — fell on the branch, not main). e2e suite 34/142/9 →
+  **182/0/0 ×2 locally**; the true baseline was 170 red without AUTH_SECRET (NextAuth
+  fails soft: authenticated pages 200 with a logged-out shell — why agent worktrees
+  never saw the real number). Two REAL product bugs found behind specs and fixed at the
+  component: the inbox-overview React Query cache written under a key the reader never
+  reads (`["inbox-overview"]` vs `["inbox-overview", locale]`), and the app-header
+  border violating its own surviving comment since `2735f9ad`. **The e2e flip did NOT
+  happen and the refusal is ratified as exemplary:** PR #5 was opened precisely to run
+  the job on a runner before making it blocking — 160/19/2, the 19 = an EMPTY database
+  (fresh CI Postgres never received the pgvector corpus), not spec debt. Declining to
+  gate a data-independent subset under the gate's name («a weaker gate wearing the
+  gate's name») is the honesty rule applied to CI itself. **RULING (the named piece):
+  seed by committed fixture, not by model.** The premise «seeding needs embeddings ⇒ a
+  model ⇒ a secret» has a third path: compute embeddings ONCE locally (the stack is
+  on-prem anyway), commit the seed as a versioned fixture (SQL/dump incl. vectors; LFS
+  if heavy), CI seeds Postgres from it — deterministic, hermetic, zero secret. Add a
+  staleness guard (fixture ↔ corpus-source hash) + `make seed-fixture` to regenerate.
+  Flip e2e to gating once runner-green ×2. **RULING (4 remaining console-payload
+  orphans):** the distinction raised is right — «never read» ≠ «reader removed» — but
+  the console payload is an internal cockpit surface, not a public contract: a field no
+  consumer ever read is speculative surface. Remove them UNLESS a field is mandated by
+  a declared contract shape (0018/0019) — contract-mandated ≠ orphan; verify consumers
+  by structure repo-wide first, list the inventory in the commit message. **Durable
+  store residue:** operator's call — the store belongs to Amadou; hand him the list of
+  current keys/values to eyeball (test-vs-preference is a human judgment; specs are now
+  idempotent so it cannot recur). Branch protection: still the operator's $0 banner.
+  Visual checkpoint for Amadou: `/fr/surveiller/vue-ensemble?expanded=1` (header rule
+  above «Exporter rapport» — the window's only visual change).
+
+- 2026-07-10 — **Day-run close review: ACCEPTED (9 merges `e94aad5a … d8e4fd4f`, zero red
+  merged, no lot parked; craft P3 6/6 awaiting Amadou's visual validation).** Playwright
+  on main: 185 / 145 green / 31 pre-existing dead contracts / 9 not executed — none of
+  the 26 new specs red. Three debts confirmed for the e2e-debt slice: en-bloc gating;
+  §4 negative half (vacuous until the ingestion seam — design still owed by Claude);
+  smoke-0019 traffic dependence (non-hermetic: red-by-construction on a fresh stack —
+  a spec must inject the traffic it asserts). **Two executor blunders, self-caught and
+  honestly reported — both engraved as rules:** (a) an ad-hoc probe wrote 2 fabricated
+  business events into the LIVE dev ClickHouse (removed via the governed primitive; 321
+  rows re-verified, all `synthetic=0`) — rule: **ad-hoc probes never write to live
+  stores; proofs use throwaway databases only** (the lot-5 proof was itself the model);
+  (b) `pnpm build` run in a checkout a dev server was serving corrupted `.next`,
+  disguising an outage as a red suite for three runs — rule: **never build in a checkout
+  currently serving** (extends the lsof pre-flight). **Gap flagged: the mid-course
+  fix-pack is NOT in this run** — no CI workflow exists yet, and the orphan
+  `actions.timeline_incidents` payload field still ships. With the operator's
+  $0/no-protection decision, CI is the only independent verification available: it is
+  the FIRST lot of the next window (with the orphan removal), then the e2e-debt slice
+  (the three debts + zero skipped tolerated at close).
+
+- 2026-07-10 — **Branch-protection decision (operator): staying on GitHub Free for now —
+  no structural enforcement on the private repo.** Recorded verbatim, per the honesty
+  rule: *Branch protection unavailable on current GitHub plan. CI checks are operational
+  but not structurally enforced before merge. Residual risk accepted temporarily.* Nobody
+  writes that `main` is protected or that twice-green is structural while this banner
+  stands. **Compensating protocol (in force now):** (a) the CI workflow is the
+  independent re-execution of the gate — every push to `main` must be followed by
+  checking its run went green; (b) **stop-the-line:** a red CI on `main` freezes all
+  lots — the only permitted work is the fix-forward, nothing merges over a red main;
+  (c) force-push and history rewrite remain absolutely forbidden (unenforced, therefore
+  restated). **Revisit triggers:** the repo going public (protection becomes free on
+  Free), a first external contributor, or a paid-plan decision — whichever comes first.
+  The org creation (`tessera-ai`) is deferred until one of those days: at $0 it buys a
+  URL, not enforcement.
+
+- 2026-07-10 — **Day-run mid-course review (lots 1/5/2/3 merged: `e94aad5a`, `2eaee2a0`,
+  `a350c073`, `996e9666`) — all four RATIFIED; three rulings.**
+  **(1) The ClickHouse §4 hole — the day's real event.** The corpus premise ("business-
+  events bake pending, synthetic column owed later") was inverted by evidence:
+  `_FACT_DEFAULTS["business_events"] = "spine"` — ClickHouse was already the default read
+  medium, and the synthetic mark was dropped at write, never rebuilt at read. A canary
+  turn's events would have round-tripped the owned table as genuine business facts. Fix
+  ratified in full (both legs + idempotent ALTER + four tests each failing when its own
+  leg reverts; proven on live CH in throwaway databases; correctly resequenced BEFORE the
+  §4 e2e lock so the lock would not pass for the wrong reason). **Reviewer's own
+  correction:** the I4 review entry accepted "§4 proven at the emit-time guard AND the one
+  business read seam" — the read-seam half was VACUOUSLY green (no synthetic business
+  event existed to exercise it; in-process canaries emit none). Doctrine engraved: **an
+  honesty lock's acceptance must inject traffic that exercises the leg it claims — a
+  vacuous green proves nothing.** Same doctrine tags the §4 e2e negative half (flagged
+  vacuous by its own author, header says so): both legs get real traffic the day the
+  http-agent businessEvents ingestion seam lands (design ruling still owed by Claude).
+  **(2) Playwright en-bloc criterion: deferral ACCEPTED.** 127 pass / 31 fail, the 31 =
+  pre-existing dead contracts across 11 files (pre-multi-agent routes, pagination
+  assumptions). Repairing them faithfully = its own slice («e2e debt repair»), scoped
+  next window; meanwhile the gate = green subset en bloc + zero new red.
+  **(3) Grep-by-string is now a three-time offender.** The night parked the apps-grid
+  menu as absent; it exists (`OperatorProductMenu`, app-header.tsx:292) — built by codex
+  in the headers merge. The night's grep AND the reviewer's own closure grep both
+  searched display strings, which live in i18n catalogs, not in components. Rule:
+  **verify presence by structure (component/route/symbol), never by rendered strings.**
+  Also ratified: the prebuild-hook guard (pnpm build was silently deleting 7 tracked
+  `data/eval/*.json` files — build hooks must never mutate tracked files). Lot 4 (craft
+  P3) proceeding: retouch-only on validated pages, screenshots per item, sparkline stays
+  unwired (no fabricated history), hero card uses only accumulated real facts.
+  **(4) Fix-pack ordered (post-lot-4, from the flagged-not-buried list):** (a) remove the
+  orphan `actions.timeline_incidents` console-payload field (dead since `71b15b18`);
+  (b) **CI is absent entirely** — no workflow runs Playwright, vitest or biome; ordered: a
+  gating workflow for the hermetic gate (ruff/format/mypy/pytest + tsc/biome/vitest) on
+  PR + push, and an e2e job against a PRODUCTION build (the contention finding: `next
+  dev` + 10-conn pool starves at 4 workers) — e2e job non-gating until (c) lands, then
+  flipped; (c) e2e debt slice AUTHORIZED: repair the ~31 dead contracts across 11 files
+  toward the real product (pagination-aware, multi-agent routes), diagnose the two
+  unexplained a-faire failures, document the supported worker count. CI enforcement is
+  the structural half of the protection main still lacks; branch protection (operator,
+  GitHub settings) remains the other half — reminded again.
+
+- 2026-07-10 — **Overnight-run review: ACCEPTED (7 merges, `29fdefbc → e1a73c5c`, zero red
+  merged; journal `overnight-20260709-run.md`).** Spot-checked the riskiest change: the §4
+  Console fix's discriminant is `is_test_turn(surface)` with `surface` derived
+  **server-side from the signed operator assertion** — `console` stamps synthetic,
+  `dedicated-ui` deliberately does NOT (an operator doing real recouvrement work must
+  count; stamping every operator turn would erase that agent's business record — the
+  asymmetric, worse error). Sound; mutation-tested per the journal. Also verified honest:
+  env-leaking unit tests (suite read `.env.local`; red proven pre-existing before any fix)
+  and the 0017 §1 ratchet repair via the registry seam, never a frozen exception.
+  **RULING (canary turn-evidence — the executor's open question):** the turn counter
+  STAYS on the served path. `tessera_agent_turns_total` means "turns served to real
+  consumers through the declared seam" — that is the fact 'observable in operation' rests
+  on. Canary liveness already has its own fact (the S1 `synthetic_run` freshness facet).
+  Relocating the counter to the graph seam would count eval-harness runs as production
+  evidence — fabrication by architecture. A future "dormant but responsive" badge may
+  COMBINE the two facts (freshness backlog slice); it must never merge their sources.
+  **Lot-7 park corrected:** the scope exists — `Tessera_private/punchlist-metier-
+  lot1.5-2026-07-07.md`, §"P3 — craft pass", items 18–23 — inside the very file the park
+  note cited. The park was procedurally right (never invent scope on validated pages) and
+  factually wrong (absence declared without reading the named file through). Both sides
+  own a piece: the brief said "lot 2.5" (a label that exists nowhere), the executor
+  searched for the label instead of the content. **Owed follow-up confirmed as DESIGN
+  first:** criterion (b) holds today only because no ingestion path exists for http-agent
+  `businessEvents` — the ingestion seam is a Claude ruling before any code. Day mission
+  issued: e2e red repair → e2e completion (incl. an end-to-end §4 spec) → apps-grid menu
+  → P3 real scope → ClickHouse bake (auth read from compose, never inferred).
 
 - 2026-07-09 — **Fleet-legibility + level-honesty review (lot A `b3d70b36`, lot B `b7ef1003`,
   branch `claude/fleet-agent-legibility`): APPROVED — MERGE FEU VERT.** Lot A ratified incl.
