@@ -49,19 +49,30 @@ jobs:
             pyproject.toml
             uv.lock
 
-      # corepack must be enabled *before* setup-node resolves the pnpm cache, so
-      # that the `pnpm` shim on PATH is the version pinned by `packageManager`
-      # in webapp/frontend/package.json (pnpm@9.15.0). Two setup-node calls is
-      # the documented way round that ordering constraint.
+      # The pnpm pin (`packageManager: pnpm@9.15.0`) lives in
+      # webapp/frontend/package.json. Corepack only honours it when pnpm is
+      # invoked from a directory under that package — from the repo root it
+      # finds no pin and silently fetches the newest pnpm, which is how this job
+      # first failed: pnpm 11.11.0 on Node 20 (`No such built-in module:
+      # node:sqlite`). So: never invoke pnpm at the root. That rules out
+      # setup-node's `cache: pnpm`, whose store probe runs there; the store is
+      # cached explicitly instead, resolved from the directory that holds the pin.
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: corepack enable
-      - uses: actions/setup-node@v4
+
+      - name: Resolve pnpm store
+        id: pnpm-store
+        working-directory: webapp/frontend
+        run: |
+          corepack pnpm --version
+          echo "path=$(corepack pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: webapp/frontend/pnpm-lock.yaml
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('webapp/frontend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
 
       - name: Python — ruff, mypy, pytest (not integration)
         run: make gate-py
@@ -127,11 +138,18 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: corepack enable
-      - uses: actions/setup-node@v4
+
+      # See the `gate` job: pnpm is never invoked from the repo root, where the
+      # `packageManager` pin is invisible.
+      - name: Resolve pnpm store
+        id: pnpm-store
+        working-directory: webapp/frontend
+        run: echo "path=$(corepack pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: webapp/frontend/pnpm-lock.yaml
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('webapp/frontend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
 
       - name: Sync Python deps
         run: uv sync
