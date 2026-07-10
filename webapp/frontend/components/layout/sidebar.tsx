@@ -637,15 +637,20 @@ function Badge({
   );
 }
 
+// The brand block is the left half of the cockpit's top rule: its height and its bottom
+// border must match row 1 of `AppHeader` exactly, or the line breaks at the rail's edge.
+// 5.5rem = 88px, and `h-11` is the logo size the launcher (`BrandLead`) uses — the two
+// surfaces show the same mark at the same size. `2735f9ad` cut this block to 56px and the
+// logo to `h-8` when it shrank the header; both are restored here.
 function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div
       className={cn(
-        "flex min-h-14 items-center gap-3 border-b border-[var(--tessera-border)]",
+        "flex min-h-[5.5rem] items-center gap-3 border-b border-[var(--tessera-border)]",
         collapsed ? "justify-center px-2" : "justify-center px-3 md:justify-start md:px-5",
       )}
     >
-      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-8" />}
+      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-11" />}
     </div>
   );
 }

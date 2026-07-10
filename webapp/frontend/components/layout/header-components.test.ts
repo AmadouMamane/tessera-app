@@ -65,8 +65,10 @@ describe("H1 shared header components", () => {
 });
 
 describe("H2 cockpit header contract", () => {
-  it("renders the cockpit header as a 56px three-zone shell", () => {
-    expect(appHeader).toContain("grid h-14");
+  // 88px, not 56: the same rule height as the launcher's row and the sidebar's brand block,
+  // so the top rule is one continuous line across the rail's edge.
+  it("renders the cockpit header as an 88px three-zone shell", () => {
+    expect(appHeader).toContain("grid min-h-[5.5rem]");
     expect(appHeader).toContain("grid-cols-[minmax(0,1fr)_auto]");
     expect(appHeader).toContain(
       "md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)]",

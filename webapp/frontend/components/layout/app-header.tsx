@@ -158,7 +158,10 @@ export function AppHeader({
   if (cockpit) {
     return (
       <header className={cn("relative", chrome)}>
-        <div className="grid h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--tessera-border)] px-4 md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)] md:gap-4 md:px-5">
+        {/* 5.5rem = 88px, the same rule height as the launcher's `h-[88px]` row and as the
+            sidebar's brand block, so the under-logo divider and the header rule are one
+            continuous line. `2735f9ad` cut all three to 56px and the alignment went with them. */}
+        <div className="grid min-h-[5.5rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--tessera-border)] px-4 md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)] md:gap-4 md:px-5">
           <div className="min-w-0">{left}</div>
           <div className="hidden min-w-0 justify-center md:flex">
             <CommandSearch plan="cockpit" className="w-full max-w-md" />
@@ -198,12 +201,9 @@ export function AppHeader({
       {/* Row 1 — the single global header. The global cluster (langue · thème ·
           compte) sits at the far right in the SAME order on every plan; the
           contextual cluster (cockpit only) sits just before it. */}
-      <div
-        className={cn(
-          "flex items-center justify-between gap-4 px-6",
-          cockpit ? "min-h-[5.5rem] border-b border-[var(--tessera-border)] py-3" : "h-[88px]",
-        )}
-      >
+      {/* `cockpit` returned above, so this row is always the launcher/business one: 88px,
+          the height the cockpit's row 1 now matches. */}
+      <div className="flex h-[88px] items-center justify-between gap-4 px-6">
         <div className="min-w-0">{left}</div>
         <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2">
           {/* Non-cockpit surfaces keep identity/preferences in the shared user
