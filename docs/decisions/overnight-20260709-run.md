@@ -1494,12 +1494,33 @@ de le dire. Le seam d'ingestion est un design Claude ; il n'a pas été impléme
 - `a-traiter` : même correctif, et c'est en le posant que le bug de clé de cache est apparu — la
   réponse arrivait, l'UI ne bougeait pas.
 
+### Le flip n'a PAS eu lieu — et c'est le runner qui l'a dit
+
+Le critère de sortie du brief (« suite entière verte en bloc ×2 → flip du job e2e en gatant »)
+est tenu **en local**. Il ne suffit pas. J'ai ouvert la PR #5 exprès pour faire tourner le job
+`e2e` sur un runner avant de rendre bloquant quoi que ce soit — on ne rend jamais gatant un job
+qu'on n'a pas vu vert.
+
+**Run `29086077194` (PR #5) — `gate` vert, `e2e` : 160 verts / 19 rouges / 2 non exécutés (16 min 24).**
+
+La cause n'est pas les specs, et ce n'est pas non plus l'absence d'Ollama comme je le craignais :
+c'est une **base vide**. `sources.spec.ts` attend 17 sources et en compte **2** — les deux tables
+mémoire. Les quinze catégories de corpus viennent du corpus ingéré dans pgvector, que le Postgres
+neuf du runner n'a pas. De là tombent en cascade `sources` (10), `surveiller-temporal` (2, la
+timeline n'a aucun événement — la spec le **dit** au lieu de partir en timeout), `synthese`
+(conversations récentes), `connaissances`, `etat-a-date`, `incidents`, `metier`, et la sonde
+`/readyz` de `configurations`.
+
+**Le job reste donc `continue-on-error: true`.** Le flip est bloqué non par la dette e2e — elle est
+payée — mais par une pièce nommée qui n'existe pas : **un jeu de données semé sur le runner**
+(ingestion du corpus + une transcription). L'ingestion demande des embeddings, donc un modèle,
+donc un secret : c'est frontalement contraire à la contrainte « aucun secret » du gate. Cette
+tranche mérite sa propre décision, pas un contournement glissé ici.
+
 ### Ce que je ne revendique pas
 
-- **La suite est verte sur *ma* stack.** Elle n'a jamais tourné en CI : le job `e2e` y est
-  non-gatant et son premier run a été annulé. Le passage au gatant demande un run vert observé
-  sur un runner, avec le `AUTH_SECRET` éphémère et sans Ollama. Les specs ne dépendent plus d'un
-  tour servi, mais je ne l'ai pas **prouvé** sur un runner.
+- **« Suite verte » veut dire : sur une stack semée.** 182/0/0 deux fois sur la mienne ; 160/19/2
+  sur un runner nu. Les deux chiffres sont vrais, et le second est celui qui compte pour le gate.
 - **Le magasin durable garde une trace de mes runs.** `agent_config.json` conserve le ton laissé
   par la dernière restauration, et l'historique des modifications de `support-client` contient
   désormais des lignes « Console ». Les specs sont maintenant idempotentes ; l'état antérieur, lui,
@@ -1513,6 +1534,10 @@ de le dire. Le seam d'ingestion est un design Claude ; il n'a pas été impléme
 - **Validation visuelle** : la règle du header sur une page cockpit avec actions (p. ex.
   `/fr/surveiller/vue-ensemble?expanded=1`) — la ligne doit passer **au-dessus** du bouton
   « Exporter rapport », continue avec le trait sous le logo.
-- **Flip du job e2e en gatant** : à décider après un premier run vert observé sur un runner.
+- **Flip du job e2e en gatant** : bloqué par une base semée sur le runner (run `29086077194` :
+  160/19/2, 17 sources attendues, 2 trouvées). Décision à prendre : semer le corpus en CI — ce qui
+  demande des embeddings, donc un modèle, donc un secret — ou restreindre le job gatant au
+  sous-ensemble qui ne dépend d'aucune donnée. La seconde option est un gate plus faible présenté
+  comme le gate ; je ne l'ai pas prise seul.
 - **Protection de branche GitHub** : toujours absente. `origin/main` accepte un push direct.
 - **Les quatre orphelins restants du payload console** attendent leur propre changement revu.

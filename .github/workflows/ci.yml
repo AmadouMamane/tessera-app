@@ -87,14 +87,20 @@ jobs:
     # ─────────────────────────────────────────────────────────────────────────
     # NON-BLOCKING, on purpose, and this is the only honest setting today.
     #
-    # As of 2026-07-10 the full suite on `main` is 145 passed / 31 failed /
-    # 9 not run. The 31 are dead contracts left by deliberate refontes, not
-    # regressions (see docs/decisions/overnight-20260709-run.md, LOT 1). A
-    # blocking job would therefore block every commit, and the usual reflex —
-    # weakening it until it passes — is exactly what we refuse to do.
+    # The suite itself is repaired: 182 passed / 0 failed / 0 skipped, twice in
+    # a row, against a seeded local stack. On a bare runner it is 160/19/2 (run
+    # 29086077194), and the 19 are not spec debt — they are an empty database.
+    # `sources.spec.ts` expects 17 catalogue rows and finds 2: the fifteen
+    # corpus categories live in pgvector, which this job's fresh Postgres has
+    # never been fed. `surveiller-temporal` then finds no timeline events, and
+    # so on.
     #
-    # The flip to blocking (delete `continue-on-error` below) happens when, and
-    # only when, the whole suite runs green twice in a row on `main`.
+    # The flip to blocking (delete `continue-on-error` below) needs a seeded
+    # dataset here — corpus ingest plus a transcript. Ingest needs embeddings,
+    # which needs a model, which needs a secret, which this workflow does not
+    # have and the `gate` job must never have. That is a decision to take, not
+    # a corner to cut: narrowing this job to the data-independent subset would
+    # be a weaker gate wearing the name of the gate.
     # ─────────────────────────────────────────────────────────────────────────
     continue-on-error: true
     # A suite that fails wholesale must not also run away with the runner: every
