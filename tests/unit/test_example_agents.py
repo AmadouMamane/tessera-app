@@ -121,17 +121,25 @@ def test_manifest_declares_only_the_telemetry_the_source_emits(path: Path) -> No
     was the absence of turn evidence, which is a fact about the metrics store, not about the
     agent. The two must agree in **both** directions — a binding-only agent promising activity
     it cannot publish, and an emitting agent whose manifest hides it, are the same defect.
+
+    Both declarations are checked, because both are promises about spans. A ``workflows`` entry
+    binds the *grammar* the agent's spans follow; declaring one while emitting nothing is the
+    same over-claim one rung down, and it is invisible in the level badge (which already reads
+    L0 from either field being empty).
     """
     from tessera.agent.registry import get_agent
 
     spec = get_agent(_DECLARED_AS[path]).observability
-    declared = bool(spec and spec.telemetry_capabilities)
     emits = bool(_imported_roots(path) & _TELEMETRY_MODULES)
-    assert declared == emits, (
-        f"{_DECLARED_AS[path]}: the manifest {'declares' if declared else 'declares no'} "
-        f"telemetry capabilities while the source {'imports' if emits else 'imports no'} "
-        "telemetry module — an agent declares the telemetry it emits, nothing more"
-    )
+    for field, declared in (
+        ("telemetry_capabilities", bool(spec and spec.telemetry_capabilities)),
+        ("workflows", bool(spec and spec.workflows)),
+    ):
+        assert declared == emits, (
+            f"{_DECLARED_AS[path]}: the manifest {'declares' if declared else 'declares no'} "
+            f"{field} while the source {'imports' if emits else 'imports no'} telemetry module "
+            "— an agent declares the telemetry it emits, nothing more"
+        )
 
 
 def test_the_negative_space_check_has_teeth() -> None:

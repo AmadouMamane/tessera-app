@@ -327,15 +327,14 @@ agents:
       auth: operator-assertion
     observability:
       spec_version: agentspec.v1
-      # Empty on purpose, and it is the agent's whole thesis: turn-agent serves a turn and
-      # publishes NOTHING (`test_turn_agent_emits_no_telemetry` forbids it a telemetry import).
-      # It once declared `[turns]` — a promise no line of its source could keep, which made the
-      # fleet read an observable contract off a manifest alone. An agent declares the telemetry
-      # it emits; the gap between the two planes is what duplex-agent exists to close.
+      # BOTH empty on purpose, and that emptiness is the agent's whole thesis: turn-agent serves
+      # a turn and publishes NOTHING (`test_turn_agent_emits_no_telemetry` forbids it a telemetry
+      # import). It once declared `[turns]` and a `turn_v1` grammar — promises no line of its
+      # source could keep, which made the fleet read an observable contract off a manifest alone.
+      # A workflow binding declares the grammar of the spans an agent emits, so an agent that
+      # emits none declares none. The gap between the two planes is what duplex-agent closes.
       telemetry_capabilities: []
-      workflows:
-        - workflow_id: turn_v1
-          grammar: workflow_grammar.v1
+      workflows: []
 
   - id: duplex-agent
     name: "Duplex Agent"
