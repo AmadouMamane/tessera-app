@@ -24,7 +24,14 @@ on:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseding a branch push is thrift; superseding a `main` push is a hole. Since
+  # 2026-07-10 CI *is* the second pass of the gate — the local run is no longer
+  # doubled — and stop-the-line reads main's CI to decide whether work may continue.
+  # With `cancel-in-progress` unconditional, a burst of merges cancelled every run but
+  # the last, and the commits in between were never verified by anything. Observed, not
+  # supposed: runs 29100291971 (`46dacd36`) and 29101191063 (`db4893f8`, the one meant
+  # to prove the e2e seed) were both cancelled by the next merge, minutes apart.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
