@@ -4,7 +4,11 @@ import type {
 } from "@/lib/api/recouvrement-assistant";
 // ADR 0018 §C: the backend intent vocabulary is generated from the AgentSpec
 // capabilities, not hand-listed here (regenerate: scripts/generate_agent_enums.py).
-import type { RecouvrementIntent } from "./recouvrement-enums.generated";
+import {
+  RECOUVREMENT_ARTIFACT_CAPABILITY,
+  type RecouvrementArtifactType,
+  type RecouvrementIntent,
+} from "./recouvrement-enums.generated";
 
 export type RecouvrementDrawerTask =
   | "summary"
@@ -116,26 +120,35 @@ function hasSummaryIntent(normalized: string): boolean {
   );
 }
 
+/**
+ * The ONE hand-written thing left, and it is genuinely a UI concern: what a capability's
+ * artifacts are *called* in the drawer. Keyed by the generated intent union, so adding a
+ * capability to `agents.yaml` fails typecheck here until its family is named — the manifest
+ * drives exhaustiveness instead of the frontend re-listing a vocabulary it does not own.
+ */
+const FAMILY_BY_CAPABILITY = {
+  summarize_case: "summary",
+  draft_reminder: "message",
+  propose_schedule: "schedule",
+  check_contact_rule: "contact_rule",
+  explain_payment_options: "payment_options",
+} as const satisfies Record<RecouvrementIntent, RecouvrementArtifactFamily>;
+
 export function artifactFamilyForArtifact(
   artifact: RecouvrementAssistantArtifact | null,
 ): RecouvrementArtifactFamily | null {
   if (!artifact) return null;
-  if (artifact.type === "contact_rule_v1") return "contact_rule";
-  if (artifact.type === "schedule_proposal_v2") return "schedule";
-  if (artifact.type === "reminder_draft_v1" || artifact.type === "client_message_artifact") {
-    return "message";
-  }
-  if (artifact.type === "case_summary_v1") return "summary";
-  if (artifact.type === "payment_options_v1") return "payment_options";
-  return null;
+  // Which capability declares this artifact type is a manifest fact (`output_artifacts`),
+  // not a frontend if-chain. An artifact type nobody declares is `null` — honest, not guessed.
+  const capability =
+    RECOUVREMENT_ARTIFACT_CAPABILITY[artifact.type as RecouvrementArtifactType] ?? null;
+  return capability ? FAMILY_BY_CAPABILITY[capability] : null;
 }
 
 export function artifactFamilyForTask(task: RecouvrementDrawerTask): RecouvrementArtifactFamily {
-  if (task === "check_contact_rule") return "contact_rule";
-  if (task === "propose_schedule") return "schedule";
-  if (task === "draft_reminder") return "message";
-  if (task === "explain_payment_options") return "payment_options";
-  return "summary";
+  // The drawer's `summary` task is `summarize_case` under its UI name; every other task IS
+  // the capability id.
+  return FAMILY_BY_CAPABILITY[task === "summary" ? "summarize_case" : task];
 }
 
 export function isEditableMessageArtifact(artifact: RecouvrementAssistantArtifact | null): boolean {
@@ -145,11 +158,9 @@ export function isEditableMessageArtifact(artifact: RecouvrementAssistantArtifac
 export function backendIntentForTask(
   task: RecouvrementDrawerTask,
 ): RecouvrementBackendIntent | undefined {
-  if (task === "check_contact_rule") return "check_contact_rule";
-  if (task === "propose_schedule") return "propose_schedule";
-  if (task === "draft_reminder") return "draft_reminder";
-  if (task === "explain_payment_options") return "explain_payment_options";
-  return "summarize_case";
+  // A drawer task IS a declared capability; only `summary` wears a UI name. The four-branch
+  // if-chain was a hand-written copy of the manifest's own vocabulary.
+  return task === "summary" ? "summarize_case" : task;
 }
 
 export function routeRecouvrementTaskClick(task: RecouvrementDrawerTask): RecouvrementDrawerRoute {

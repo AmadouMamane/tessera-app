@@ -148,8 +148,12 @@ agents:
           policies: [payment_options_safety]
           external_effect_level: draft
         - id: draft_reminder
+          # `reminder_draft_v1` is what `_reminder_artifact` emits when the draft does not
+          # come from a schedule (recouvrement.py); it was missing here, so the manifest
+          # under-declared the agent's own output. The frontend knew the type and the
+          # declaration did not — the exact gap that makes an enum hand-written.
+          output_artifacts: [client_message_artifact, reminder_draft_v1]
           label_key: capability.draft_reminder
-          output_artifacts: [client_message_artifact]
           policies: [contact_window_policy, client_message_safety]
           external_effect_level: requires_validation
         - id: propose_schedule

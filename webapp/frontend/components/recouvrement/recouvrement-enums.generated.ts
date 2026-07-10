@@ -9,3 +9,15 @@ export const RECOUVREMENT_INTENTS = [
 ] as const;
 
 export type RecouvrementIntent = (typeof RECOUVREMENT_INTENTS)[number];
+
+/** Which capability declares each artifact type (manifest `output_artifacts`). */
+export const RECOUVREMENT_ARTIFACT_CAPABILITY = {
+  case_summary_v1: "summarize_case",
+  client_message_artifact: "draft_reminder",
+  contact_rule_v1: "check_contact_rule",
+  payment_options_v1: "explain_payment_options",
+  reminder_draft_v1: "draft_reminder",
+  schedule_proposal_v2: "propose_schedule",
+} as const satisfies Record<string, RecouvrementIntent>;
+
+export type RecouvrementArtifactType = keyof typeof RECOUVREMENT_ARTIFACT_CAPABILITY;
