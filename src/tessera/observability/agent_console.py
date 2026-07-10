@@ -81,8 +81,6 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Stellen Sie Ihre Frage an den Assistenten...",
         "Ask the assistant your question...",
     ),
-    "fb_useful": ("Utile", "Nuetzlich", "Useful"),
-    "fb_notuseful": ("Pas utile", "Nicht nuetzlich", "Not useful"),
     "fa_replay": ("Rejouer cette session", "Diese Sitzung wiederholen", "Replay this session"),
     "fa_compare": (
         "Comparer à la version actuelle",
@@ -188,12 +186,19 @@ def _version(path: Path, *, prefix: str = "v") -> str:
     return f"{prefix}{stamp.month}.{stamp.day}.{int(digest[:2], 16) % 10}"
 
 
-def _active_model() -> tuple[str, str]:
+def _active_model() -> str:
+    """The chat model of the resolved profile — one half of a pair that once had two.
+
+    It also returned the provider name ("Ollama" / "Vertex AI") for a top-level
+    ``provider`` payload field no consumer ever read. The field is gone, and so is the
+    half of this function that fed it: an unread return value is the same speculative
+    surface as an unread field, one level down.
+    """
     settings = get_settings()
     profile = settings.resolved_llm_profile()
     if profile is LLMProfile.ON_PREM:
-        return settings.ollama.chat_model, "Ollama"
-    return settings.vertex.chat_model, "Vertex AI"
+        return settings.ollama.chat_model
+    return settings.vertex.chat_model
 
 
 def _score_rows(metric: str) -> list[float]:
@@ -235,7 +240,6 @@ def _evaluation_panel(lang: str) -> dict[str, object]:
         "title": _t("ep_title", lang),
         "note": _t("ep_note", lang),
         "cta": _t("ep_cta", lang),
-        "available": any(row["value"] is not None for row in rows),
         "rows": rows,
     }
 
@@ -372,7 +376,7 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
         # over config it does not own.
         return _honest_empty_payload(lang, binding)
     settings = get_settings()
-    model, provider = _active_model()
+    model = _active_model()
     prompt_path = _PROMPTS_DIR / f"{settings.default_language.value}.yaml"
     policy_path = settings.guard.policy_path
     newest_corpus = max(
@@ -386,14 +390,6 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
     session_id = f"sess_{hashlib.sha256(session_seed.encode()).hexdigest()[:8]}"
     now = datetime.now(_PARIS)
 
-    # Four keys below are emitted but read by nothing in webapp/frontend, verified
-    # 2026-07-10 against components/agent/agent-console.tsx (the sole consumer; it
-    # spreads nothing and reads only named fields): ``footer.live``,
-    # ``actions.feedback``, ``evaluation.available`` and top-level ``provider``.
-    # They are kept because, unlike the three fields 71b15b18 orphaned and this
-    # commit removed, no commit ever read them — "never used" is not the same
-    # evidence as "a refonte dropped the reader", and pruning them is a payload
-    # contract change that belongs in its own reviewed change.
     return {
         # ADR 0019 §I2 — the declared cockpit→agent binding this console drives. Present on
         # every payload so the frontend generates its shape from the declaration, never an
@@ -425,13 +421,11 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
         "evaluation": _evaluation_panel(lang),
         "footer": {
             "started": _t("footer_started", lang).format(t=_fmt_time(now)),
-            "live": True,
             "context": "Plateforme Tessera",
             "language": _t("lang_name", lang),
         },
         "actions": {
             "input_placeholder": _t("placeholder", lang),
-            "feedback": [_t("fb_useful", lang), _t("fb_notuseful", lang)],
             "footer_actions": [
                 {"key": "replay", "label": _t("fa_replay", lang)},
                 {"key": "compare", "label": _t("fa_compare", lang)},
@@ -442,5 +436,4 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
         },
         "title": _t("title", lang),
         "subtitle": _t("subtitle", lang),
-        "provider": provider,
     }

@@ -4416,22 +4416,22 @@ export const AgentConsoleSchema = z.object({
       title: z.string(),
       note: z.string(),
       cta: z.string(),
-      available: z.boolean(),
       rows: z.array(z.object({ label: z.string(), value: z.string().nullable() })),
     })
     .optional(),
   footer: z
     .object({
       started: z.string(),
-      live: z.boolean(),
       context: z.string(),
       language: z.string(),
     })
     .optional(),
+  // Operator feedback is NOT here: the thumbs come from `/console/feedback`
+  // (ConsoleFeedbackSchema), a durable per-turn read. `actions.feedback` used to
+  // ship two labels alongside it that nothing rendered.
   actions: z
     .object({
       input_placeholder: z.string(),
-      feedback: z.array(z.string()),
       footer_actions: z.array(z.object({ key: z.string(), label: z.string() })),
       new_session: z.string(),
     })
