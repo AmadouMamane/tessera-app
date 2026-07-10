@@ -7378,9 +7378,9 @@
       "columns": {
         "capability": "Capacité",
         "volume": "Volume",
-        "conformity": "% conforme",
-        "validation": "% validation",
-        "blocked": "% bloqué",
+        "conformity": "Conformité",
+        "validation": "Validation",
+        "blocked": "Bloqué",
         "prevented": "Effets empêchés",
         "trend": "Tendance"
       }
@@ -7394,6 +7394,13 @@
     "temporal": {
       "live": "Live",
       "asOf": "À une date · {instant}"
+    },
+    "hero": {
+      "checks": "{count, plural, one {# vérification} other {# vérifications}}",
+      "observedRuns": "{count, plural, one {# exécution observée} other {# exécutions observées}}",
+      "lastCheck": "dernier contrôle {ago}",
+      "neverChecked": "aucun contrôle applicable pour l'instant",
+      "accumulating": "En accumulation"
     }
   },
   "agentEvaluations": {
@@ -7704,8 +7711,8 @@
     "checking": "Intégrité : vérification…",
     "integrityOk": "Intégrité hash-chaînée vérifiée ({n} événements)",
     "integrityBroken": "Intégrité : contenu altéré — à investiguer",
-    "integrityForkedAttested": "Intégrité contenu vérifiée · ordre total : {forks, plural, one {# fourche historique} other {# fourches historiques}}{orphans, plural, =0 {} other {, # orpheline(s)}} (attestées)",
-    "integrityForkedPending": "Intégrité contenu vérifiée · ordre total : {forks, plural, one {# fourche historique} other {# fourches historiques}}{orphans, plural, =0 {} other {, # orpheline(s)}} (attestation en attente)",
+    "integrityForkedAttested": "Intégrité contenu vérifiée · ordre total : {forks, plural, one {# fourche historique} other {# fourches historiques}}{orphans, plural, =0 {} one {, # orpheline} other {, # orphelines}} (attestées)",
+    "integrityForkedPending": "Intégrité contenu vérifiée · ordre total : {forks, plural, one {# fourche historique} other {# fourches historiques}}{orphans, plural, =0 {} one {, # orpheline} other {, # orphelines}} (attestation en attente)",
     "env": "Sur site · résidence UE · SOC 2",
     "sealSuffix": "scellé {t}",
     "note": "Statut attribué uniquement après vérification réussie."

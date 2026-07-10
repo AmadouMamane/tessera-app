@@ -14,7 +14,7 @@ import {
   ShieldCheck,
   Target,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { type KeyboardEvent, useCallback, useMemo } from "react";
 
@@ -345,9 +345,46 @@ function signalLevelLabel(signal: BusinessSignalValue, t: ReturnType<typeof useT
   return t.has(key) ? t(key) : t("signalLevel.other");
 }
 
+/** `il y a 3 h` from a real ISO stamp; `null` when there is nothing to date. */
+function agoLabel(iso: string | null | undefined, locale: string): string | null {
+  if (!iso) return null;
+  const stamp = Date.parse(iso);
+  if (Number.isNaN(stamp)) return null;
+  const minutes = Math.round((Date.now() - stamp) / 60_000);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (minutes < 60) return rtf.format(-Math.max(minutes, 0), "minute");
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return rtf.format(-hours, "hour");
+  return rtf.format(-Math.round(hours / 24), "day");
+}
+
+/**
+ * The hero card, P3 item 18. Three readings, and the dash belongs to exactly one of them:
+ *
+ *  - **decisive** — a scored value. Show it big, and say what it rests on: `1 vérification ·
+ *    dernier contrôle il y a 3 h`. A 100% backed by one check out of 24 runs is a fact the
+ *    operator deserves next to the number, not two clicks away.
+ *  - **accumulating** — runs were observed but none was scorable yet. Show what we know
+ *    (`24 exécutions observées · aucun contrôle applicable`), never a fabricated percentage.
+ *  - **zero data** — nothing observed at all. The dash + reason, untouched, as it must be.
+ */
 function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label: string }) {
   const t = useTranslations("agentMetier");
+  const locale = useLocale();
   const hasValue = typeof signal.value_pct === "number";
+  const evidence = signal.evidence;
+  const observedRuns = evidence?.observed_runs ?? 0;
+  const checks = evidence?.checks ?? 0;
+  const ago = agoLabel(evidence?.last_checked_at, locale);
+
+  const provenance: string[] = [];
+  if (hasValue && checks > 0) provenance.push(t("hero.checks", { count: checks }));
+  else if (observedRuns > 0) {
+    provenance.push(t("hero.observedRuns", { count: observedRuns }));
+    if (checks === 0) provenance.push(t("hero.neverChecked"));
+  }
+  if (ago && (hasValue || observedRuns > 0)) provenance.push(t("hero.lastCheck", { ago }));
+
   return (
     <Card className="min-w-0 border-[#7c5cf5]/45 bg-[#211d45]/45">
       <CardContent className="flex h-full min-h-[108px] flex-col justify-between p-3">
@@ -362,11 +399,23 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
           <Badge tone="gold">{signalLevelLabel(signal, t)}</Badge>
         </div>
         <div className="flex items-end justify-between gap-2">
-          <p className="text-[1.75rem] font-semibold leading-none text-white">
-            {hasValue ? pct(signal.value_pct) : "—"}
-          </p>
+          {hasValue ? (
+            <p className="text-[1.75rem] font-semibold leading-none text-white">
+              {pct(signal.value_pct)}
+            </p>
+          ) : observedRuns > 0 ? (
+            // Not decisive, but not empty either: name the state instead of drawing a dash.
+            <p className="text-[1.05rem] font-semibold leading-none text-[#c4b5fd]">
+              {t("hero.accumulating")}
+            </p>
+          ) : (
+            <p className="text-[1.75rem] font-semibold leading-none text-white">—</p>
+          )}
           <TrendHint trend={signal.trend} />
         </div>
+        {provenance.length > 0 ? (
+          <p className="text-[0.64rem] leading-snug text-[#cfc6ff]">{provenance.join(" · ")}</p>
+        ) : null}
         <p className="text-[0.64rem] leading-snug text-[var(--tessera-text-muted)]">
           {signal.reason.replaceAll("_", " ")}
         </p>
@@ -535,15 +584,17 @@ function CapabilitiesTable({
                   <TableCell className="px-3 py-2 text-right font-mono align-middle">
                     {count(row.volume)}
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-right font-mono align-middle">
-                    {pct(row.conformity_pct)}
-                  </TableCell>
-                  <TableCell className="hidden px-3 py-2 text-right font-mono align-middle md:table-cell">
-                    {pct(row.validation_required_pct)}
-                  </TableCell>
-                  <TableCell className="hidden px-3 py-2 text-right font-mono align-middle lg:table-cell">
-                    {pct(row.blocked_pct)}
-                  </TableCell>
+                  <PercentCell value={row.conformity_pct} tone="conformity" />
+                  <PercentCell
+                    value={row.validation_required_pct}
+                    tone="neutral"
+                    className="hidden md:table-cell"
+                  />
+                  <PercentCell
+                    value={row.blocked_pct}
+                    tone="blocked"
+                    className="hidden lg:table-cell"
+                  />
                   <TableCell className="hidden px-3 py-2 text-right font-mono align-middle md:table-cell">
                     {count(row.external_effects_prevented)}
                   </TableCell>
@@ -557,6 +608,58 @@ function CapabilitiesTable({
         </Table>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * A percentage cell with a discreet micro-bar behind it (P3 item 19).
+ *
+ * The bar IS the value — width is the percentage, so it can never disagree with the number
+ * beside it. A null percentage draws no bar at all: an empty track would read as 0%, which is
+ * a different claim from "not measured". The tint is on the text, never a badge: `conformity`
+ * greens only at 100 and reds below 90; `blocked` is inverted (blocking is the safe outcome);
+ * `neutral` never tints. Both tints sit above AA on the surface they render on (item 22).
+ */
+function PercentCell({
+  value,
+  tone,
+  className,
+}: {
+  value: number | null | undefined;
+  tone: "conformity" | "blocked" | "neutral";
+  className?: string;
+}) {
+  const known = typeof value === "number";
+  const text =
+    !known || tone === "neutral"
+      ? "text-[var(--tessera-text)]"
+      : tone === "conformity"
+        ? value >= 100
+          ? "text-[#7ee2a8]"
+          : value < 90
+            ? "text-[#ff9d9d]"
+            : "text-[var(--tessera-text)]"
+        : value > 0
+          ? "text-[#7ee2a8]"
+          : "text-[var(--tessera-text)]";
+  const bar =
+    tone === "blocked"
+      ? "bg-[#7ee2a8]/18"
+      : tone === "conformity"
+        ? "bg-[#7c5cf5]/28"
+        : "bg-[var(--tessera-border)]/60";
+
+  return (
+    <TableCell className={cn("relative px-3 py-2 text-right font-mono align-middle", className)}>
+      {known ? (
+        <span
+          aria-hidden
+          className={cn("pointer-events-none absolute inset-y-1 right-1 rounded-sm", bar)}
+          style={{ width: `calc(${Math.max(0, Math.min(100, value))}% - 0.5rem)` }}
+        />
+      ) : null}
+      <span className={cn("relative", text)}>{pct(value)}</span>
+    </TableCell>
   );
 }
 

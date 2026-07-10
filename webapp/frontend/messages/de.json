@@ -7376,9 +7376,9 @@
       "columns": {
         "capability": "Fähigkeit",
         "volume": "Volumen",
-        "conformity": "% konform",
-        "validation": "% Validierung",
-        "blocked": "% blockiert",
+        "conformity": "Konformität",
+        "validation": "Validierung",
+        "blocked": "Blockiert",
         "prevented": "Effekte verhindert",
         "trend": "Trend"
       }
@@ -7392,6 +7392,13 @@
     "temporal": {
       "live": "Live",
       "asOf": "Stand {instant}"
+    },
+    "hero": {
+      "checks": "{count, plural, one {# Prüfung} other {# Prüfungen}}",
+      "observedRuns": "{count, plural, one {# beobachtete Ausführung} other {# beobachtete Ausführungen}}",
+      "lastCheck": "letzte Prüfung {ago}",
+      "neverChecked": "derzeit keine anwendbare Prüfung",
+      "accumulating": "Sammelt Daten"
     }
   },
   "agentEvaluations": {
@@ -7702,8 +7709,8 @@
     "checking": "Integrität: wird geprüft…",
     "integrityOk": "Hash-Kette verifiziert ({n} Ereignisse)",
     "integrityBroken": "Integrität: Inhalt manipuliert — zu untersuchen",
-    "integrityForkedAttested": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} other {, # verwaist}} (attestiert)",
-    "integrityForkedPending": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} other {, # verwaist}} (Attestierung ausstehend)",
+    "integrityForkedAttested": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} one {, # verwaiste} other {, # verwaiste}} (attestiert)",
+    "integrityForkedPending": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} one {, # verwaiste} other {, # verwaiste}} (Attestierung ausstehend)",
     "env": "Vor Ort · EU-Residenz · SOC 2",
     "sealSuffix": "versiegelt {t}",
     "note": "Status erst nach erfolgreicher Prüfung vergeben."

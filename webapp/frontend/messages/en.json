@@ -7376,9 +7376,9 @@
       "columns": {
         "capability": "Capability",
         "volume": "Volume",
-        "conformity": "% conforming",
-        "validation": "% validation",
-        "blocked": "% blocked",
+        "conformity": "Conformity",
+        "validation": "Validation",
+        "blocked": "Blocked",
         "prevented": "Effects prevented",
         "trend": "Trend"
       }
@@ -7392,6 +7392,13 @@
     "temporal": {
       "live": "Live",
       "asOf": "As of {instant}"
+    },
+    "hero": {
+      "checks": "{count, plural, one {# check} other {# checks}}",
+      "observedRuns": "{count, plural, one {# observed run} other {# observed runs}}",
+      "lastCheck": "last check {ago}",
+      "neverChecked": "no applicable check yet",
+      "accumulating": "Accumulating"
     }
   },
   "agentEvaluations": {
@@ -7702,8 +7709,8 @@
     "checking": "Integrity: verifying…",
     "integrityOk": "Hash-chain verified ({n} events)",
     "integrityBroken": "Integrity: content tampered — investigate",
-    "integrityForkedAttested": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} other {, # orphaned}} (attested)",
-    "integrityForkedPending": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} other {, # orphaned}} (attestation pending)",
+    "integrityForkedAttested": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} one {, # orphaned} other {, # orphaned}} (attested)",
+    "integrityForkedPending": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} one {, # orphaned} other {, # orphaned}} (attestation pending)",
     "env": "on-prem · EU residency · SOC 2",
     "sealSuffix": "sealed {t}",
     "note": "Status assigned only after successful verification."

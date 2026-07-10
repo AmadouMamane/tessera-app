@@ -192,6 +192,37 @@ def _aggregate_run_score(metric: str, rows: list[dict[str, object]]) -> dict[str
     return None
 
 
+def _signal_evidence(metric: str, rows: list[dict[str, object]]) -> dict[str, object]:
+    """What we actually know about ``metric``, independent of whether it scored.
+
+    Punch-list P3 item 18: a signal that is not *decisive* still has a record — how many runs
+    the scorer examined, how many of those it could actually score, and when it last looked.
+    Rendering that beats rendering a dash, and none of it is inferred: ``observed_runs`` and
+    ``checks`` are counted from the same runs :func:`_aggregate_run_score` aggregates, and
+    ``last_checked_at`` is the newest real event timestamp among them. A metric no run ever
+    produced yields zeros and ``None`` — the genuine zero-data case, which keeps its dash.
+    """
+    observed_runs = 0
+    checks = 0
+    last_seen: datetime | None = None
+    for run_rows in _rows_by_run(rows):
+        score = _score_by_metric(run_rows).get(metric)
+        if score is None:
+            continue
+        observed_runs += 1
+        if score.get("status") == "scored" and isinstance(score.get("score"), int | float):
+            checks += 1
+        for row in run_rows:
+            stamp = _timestamp(row)
+            if stamp is not None and (last_seen is None or stamp > last_seen):
+                last_seen = stamp
+    return {
+        "observed_runs": observed_runs,
+        "checks": checks,
+        "last_checked_at": last_seen.isoformat() if last_seen is not None else None,
+    }
+
+
 def _prevents_external_effect(
     row: Mapping[str, object],
     *,
@@ -313,6 +344,8 @@ def _business_signals(
                 "status": str(score.get("status")) if score else "unknown",
                 "reason": str(score.get("reason")) if score else "no_business_score",
                 "trend": _signal_trend(key, rows),
+                # P3 item 18 — what is known when the signal is not decisive.
+                "evidence": _signal_evidence(key, rows),
             }
         )
     return signal_rows

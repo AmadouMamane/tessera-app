@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type {
   BusinessEvent,
   BusinessScore,
@@ -23,6 +24,7 @@ import type {
   RecouvrementRunsResponse,
   RecouvrementSensitiveAction,
 } from "@/lib/api/schemas";
+import { cn } from "@/lib/cn";
 import { artifactStatusMeta } from "@/lib/recouvrement/artifact-status";
 
 type BadgeTone = "neutral" | "gold" | "success" | "warning" | "danger" | "info" | "navy";
@@ -235,10 +237,23 @@ export function WorkflowRunsPanel({
   const selected = runs.find((run) => run.turn_id === activeTurnId) ?? runs[0] ?? null;
 
   if (loading && runs.length === 0) {
+    // P3 item 23 — a skeleton in the shape of what is coming, not a sentence in the middle of
+    // an empty box. The label stays for screen readers, which cannot see a shimmer.
     return (
       <Card>
-        <CardContent className="flex min-h-[220px] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
-          {loadingLabel}
+        <CardContent className="min-h-[220px] p-3">
+          <span className="sr-only">{loadingLabel}</span>
+          <div className="grid gap-2.5 lg:grid-cols-[260px_minmax(0,1fr)]">
+            <div className="flex flex-col gap-1.5" aria-hidden>
+              {[0, 1, 2, 3].map((row) => (
+                <Skeleton key={row} className="h-11 w-full rounded-lg" />
+              ))}
+            </div>
+            <div className="flex flex-col gap-2.5" aria-hidden>
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -263,7 +278,12 @@ export function WorkflowRunsPanel({
           <GitBranch className="h-4 w-4 shrink-0 text-[var(--tessera-green)]" />
           <h2 className="text-sm font-semibold">{title}</h2>
         </div>
-        <Badge tone="neutral">{runs.length} runs</Badge>
+        {/* P3 item 23 — "1 runs" was wrong twice over: an English word on a French surface,
+            and a plural for a single item. The panel's copy is French by construction (see
+            "Chronologie métier" below); its count now agrees with itself. */}
+        <Badge tone="neutral">
+          {runs.length} {runs.length === 1 ? "exécution" : "exécutions"}
+        </Badge>
       </div>
 
       <div className="grid min-w-0 gap-2.5 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -275,7 +295,10 @@ export function WorkflowRunsPanel({
         </div>
       </div>
 
-      <div className="grid min-w-0 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+      {/* P3 item 21 — four equal columns gave Artefacts and Scores (dense) the same width as
+          Actions sensibles (usually one card or none). Weight them instead of merging, so the
+          reading order and the validated structure both survive. */}
+      <div className="grid min-w-0 gap-2.5 md:grid-cols-2 xl:grid-cols-[1.15fr_0.9fr_0.8fr_1.15fr]">
         <ArtifactsPanel artifacts={selected.artifacts} />
         <DecisionPanel run={selected} />
         <SensitiveActionsPanel run={selected} />
@@ -383,6 +406,13 @@ function RunContext({ run }: { run: RecouvrementRun }) {
   );
 }
 
+/**
+ * Plumbing, not milestones (P3 item 20). Routing an intent and extracting slots are how the
+ * run got where it went; they are not *what happened to the customer*. They stay on the rail,
+ * one compact line each, so the trace is complete without competing with the decisions.
+ */
+const PLUMBING_EVENTS = new Set(["intent.routed", "slots.extracted"]);
+
 function TimelinePanel({ run }: { run: RecouvrementRun }) {
   const events = run.timeline.filter((event) => IMPORTANT_EVENTS.has(event.event_name));
   return (
@@ -393,36 +423,69 @@ function TimelinePanel({ run }: { run: RecouvrementRun }) {
           Chronologie métier
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-1.5">
+      <CardContent>
         {events.length === 0 ? (
           <p className="text-xs text-[var(--tessera-text-muted)]">Aucun événement clé.</p>
         ) : (
-          events.map((event, index) => (
-            <div
-              key={eventKey(event, index)}
-              className={`rounded-lg border px-2.5 py-2 ${eventTone(event)}`}
-            >
-              <div className="grid gap-0.5">
-                <span className="font-mono text-[0.68rem] font-semibold leading-snug">
-                  {event.event_name}
-                </span>
-                <span className="font-mono text-[0.58rem] opacity-70">
-                  {event.node_name ?? "node"}
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {event.decision ? <Badge tone="neutral">{event.decision}</Badge> : null}
-                {uniqueCodes(event.reason_codes)
-                  .slice(0, 4)
-                  .map((reason) => (
-                    <CodeBadge key={reason} code={reason} />
-                  ))}
-                {event.artifact_status ? (
-                  <Badge tone="neutral">{event.artifact_status}</Badge>
-                ) : null}
-              </div>
-            </div>
-          ))
+          // A real rail: one continuous vertical line, a dot per event, and the hierarchy
+          // carried by the card — not by colour alone.
+          <ol className="relative flex flex-col gap-1.5 pl-5">
+            <span
+              aria-hidden
+              className="absolute left-[5px] top-2 bottom-2 w-px bg-[var(--tessera-border)]"
+            />
+            {events.map((event, index) => {
+              const plumbing = PLUMBING_EVENTS.has(event.event_name);
+              const when = relativeTime(event.timestamp);
+              return (
+                <li key={eventKey(event, index)} className="relative">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute -left-5 top-2 h-[9px] w-[9px] rounded-full border",
+                      plumbing
+                        ? "border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)]"
+                        : "border-sky-300/70 bg-sky-300/70",
+                    )}
+                  />
+                  {plumbing ? (
+                    <div className="flex items-baseline justify-between gap-2 py-0.5 text-[var(--tessera-text-muted)]">
+                      <span className="truncate font-mono text-[0.6rem]">
+                        {event.event_name}
+                        <span className="ml-1.5 opacity-60">{event.node_name ?? "node"}</span>
+                      </span>
+                      <time className="shrink-0 text-[0.58rem] tabular-nums">{when}</time>
+                    </div>
+                  ) : (
+                    <div className={cn("rounded-lg border px-2.5 py-2", eventTone(event))}>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate font-mono text-[0.68rem] font-semibold leading-snug">
+                          {event.event_name}
+                        </span>
+                        <time className="shrink-0 text-[0.58rem] tabular-nums opacity-80">
+                          {when}
+                        </time>
+                      </div>
+                      <span className="block font-mono text-[0.58rem] opacity-70">
+                        {event.node_name ?? "node"}
+                      </span>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {event.decision ? <Badge tone="neutral">{event.decision}</Badge> : null}
+                        {uniqueCodes(event.reason_codes)
+                          .slice(0, 4)
+                          .map((reason) => (
+                            <CodeBadge key={reason} code={reason} />
+                          ))}
+                        {event.artifact_status ? (
+                          <Badge tone="neutral">{event.artifact_status}</Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         )}
       </CardContent>
     </Card>
@@ -710,16 +773,20 @@ function IdChip({
       title={value}
     >
       {shortId(value)}
+      {/* P3 item 22 — a copy control must be reachable and announced, not just clickable:
+          an accessible name (the icon carries none), a visible focus ring, and a hover state
+          that is not the only affordance. */}
       <button
         type="button"
+        aria-label={`Copier l'identifiant complet ${value}`}
         title="Copier l'identifiant complet"
-        className="rounded p-0.5 hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
+        className="rounded p-0.5 outline-none transition-colors hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--tessera-bg)]"
         onClick={(event) => {
           event.stopPropagation();
           copyValue(value);
         }}
       >
-        <Copy className="h-3 w-3" />
+        <Copy className="h-3 w-3" aria-hidden />
       </button>
     </span>
   );

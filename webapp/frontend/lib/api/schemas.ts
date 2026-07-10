@@ -626,6 +626,14 @@ export const BusinessCapabilityRowSchema = z.object({
 });
 export type BusinessCapabilityRow = z.infer<typeof BusinessCapabilityRowSchema>;
 
+/** What the scorer actually saw for a signal (P3 item 18) — never inferred, may be all zeros. */
+export const BusinessSignalEvidenceSchema = z.object({
+  observed_runs: z.number().int().default(0),
+  checks: z.number().int().default(0),
+  last_checked_at: z.string().nullable().default(null),
+});
+export type BusinessSignalEvidence = z.infer<typeof BusinessSignalEvidenceSchema>;
+
 export const BusinessSignalValueSchema = z.object({
   agent_id: z.string(),
   key: z.string(),
@@ -642,6 +650,9 @@ export const BusinessSignalValueSchema = z.object({
   status: z.string(),
   reason: z.string(),
   trend: BusinessTrendSchema,
+  // Absent on a payload from a backend that predates item 18: the card then falls back to
+  // the dash + reason, which is the honest reading of "we do not know".
+  evidence: BusinessSignalEvidenceSchema.optional(),
 });
 export type BusinessSignalValue = z.infer<typeof BusinessSignalValueSchema>;
 
