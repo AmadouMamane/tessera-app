@@ -38,6 +38,7 @@ from tessera.observability import (
     business_capabilities as business_capabilities_mod,
     business_events as business_events_mod,
     business_scoring as business_scoring_mod,
+    chrome as chrome_mod,
     citation_resolver as citation_resolver_mod,
     citation_validity as citation_validity_mod,
     client_space as client_space_mod,
@@ -1744,6 +1745,21 @@ async def observability_etat_a_date_snapshot(body: _EtatSnapshotBody) -> dict[st
     ``body.sources`` scope and localized by ``body.lang``.
     """
     return await etat_a_date_mod.save_etat_snapshot(body.as_of, body.sources, body.lang)
+
+
+@router.get("/observability/chrome")
+async def observability_chrome(lang: str = "fr") -> dict[str, object]:
+    """Sidebar badges and bell notifications — every number a count, every count a page.
+
+    Composes the reads the destination pages already perform; it opens no store of its own.
+    A source that cannot be read contributes nothing rather than a zero, so the chrome
+    under-reports before it ever misreports. Degrades to ``available: false``.
+    """
+    try:
+        return {"available": True, **chrome_mod.compute_chrome(lang)}
+    except Exception as exc:  # the chrome must never break the page it decorates
+        sys.stderr.write(f"tessera.observability.chrome: failed: {exc}\n")
+        return {"available": False}
 
 
 @router.get("/observability/incidents")

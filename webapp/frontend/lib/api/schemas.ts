@@ -5341,6 +5341,39 @@ export const SessionDetailSchema = z.object({
 });
 export type SessionDetail = z.infer<typeof SessionDetailSchema>;
 
+// Cockpit chrome — the sidebar badges and the bell, every number a real count.
+//
+// `badges` is a sparse map: a key is present only when its page has something to count.
+// An absent key means "no badge", never a zero — a decorative `0` reads as "checked,
+// nothing there" when the truth is "never looked". Tones arrive decided (the queue's own
+// SLA rule, the incident core's own severity); the frontend colours, it does not judge.
+export const ChromeBadgeSchema = z.object({
+  count: z.number().int(),
+  tone: z.enum(["danger", "warning", "neutral"]),
+});
+export const ChromeSchema = z.object({
+  available: z.boolean(),
+  badges: z.record(z.string(), ChromeBadgeSchema).optional().default({}),
+  notifications: z
+    .object({
+      count: z.number().int(),
+      // Each notification deep-links to the page where the act is performed. A bell that
+      // announces a fact you cannot navigate to is a decoration with a number on it.
+      items: z.array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          href: z.string(),
+          tone: z.enum(["danger", "warning", "neutral"]),
+        }),
+      ),
+    })
+    .optional()
+    .default({ count: 0, items: [] }),
+});
+export type Chrome = z.infer<typeof ChromeSchema>;
+export type ChromeBadgeId = string;
+
 // Fleet rollup — per-agent observable KPIs + deduplicated org totals.
 export const FleetSchema = z.object({
   available: z.boolean(),

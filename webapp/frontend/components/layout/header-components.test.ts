@@ -75,7 +75,10 @@ describe("H2 cockpit header contract", () => {
     );
     expect(appHeader).toContain('<CommandSearch plan="cockpit"');
     expect(appHeader).toContain("<SystemStatusPill");
-    expect(appHeader).toContain('label="Notifications"');
+    // The bell is a component now, not an icon with a frozen label: its accessible name
+    // carries the real notification count (see chrome-honesty.test.ts). Asserting
+    // `label="Notifications"` here would pin the static label the chrome lot removed.
+    expect(appHeader).toContain("<NotificationsBell />");
     expect(appHeader).toContain('label="Aide"');
   });
 

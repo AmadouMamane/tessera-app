@@ -18,7 +18,8 @@ from typing import TYPE_CHECKING, Any
 from psycopg.rows import dict_row
 
 from tessera.guard.ledger_store import read_ledger_entries
-from tessera.observability import turn_evidence
+from tessera.observability import quality_nets, turn_evidence
+from tessera.observability.agent_health import health_state
 from tessera.observability.agent_release import fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total
 from tessera.observability.agentspec_projection import (
@@ -43,8 +44,8 @@ _ESCALATION_ILIKE = (
     "content ILIKE '%%escalad%%' OR content ILIKE '%%conseiller%%' "
     "OR content ILIKE '%%ticket%%' OR content ILIKE '%%transf%%'"
 )
-_GOOD_ESCALATION = 20.0  # % escalated turns under which an agent reads "healthy"
-_WARN_ESCALATION = 35.0
+# The escalation thresholds moved to `agent_health`, where the whole health rule now lives
+# beside them: escalation alone never decided the dot, it only used to.
 
 
 def _registry_agents() -> list[dict[str, Any]]:
@@ -101,12 +102,29 @@ def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int]]:
     return incoming, outgoing
 
 
-def _health(escalation_rate: float) -> str:
-    if escalation_rate <= _GOOD_ESCALATION:
-        return "good"
-    if escalation_rate <= _WARN_ESCALATION:
-        return "warn"
-    return "crit"
+def _integrity_broken() -> bool:
+    """Whether the audit ledger's content integrity fails to verify — fleet-wide.
+
+    Unreadable ⇒ ``False``: an unreachable ledger is not a proven break, and painting every
+    dot red because the cockpit could not look would be the same over-claim in reverse.
+    """
+    try:
+        from tessera.guard.seal import active_ledger_opposability
+
+        opposability = active_ledger_opposability()
+    except Exception:
+        return False
+    if not opposability:
+        return False
+    return not bool(opposability.get("content_integrity", True))
+
+
+def _canary_red(agent_id: str) -> bool:
+    """Whether this agent's last canary invocation failed. Never ran ⇒ not red."""
+    try:
+        return quality_nets.latest_canary_verdict(agent_id) == "red"
+    except Exception:
+        return False
 
 
 def _business_card_facts(aid: str, record: Agent | None) -> dict[str, object]:
@@ -177,6 +195,9 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     # emitting turns (ADR 0017 §F). ``None`` = evidence disabled/unreachable, which proves
     # nothing — the computed level falls back and the badge says the rung is only declared.
     observed_turns = turn_evidence.agents_with_turn_evidence()
+    # One ledger read for the whole fleet: a broken chain indicts every agent it records,
+    # so this is a fleet-wide fact, not a per-card one.
+    integrity_broken = _integrity_broken()
 
     # Registry first (every agent appears), enriched with its real slice.
     agents: list[dict[str, Any]] = []
@@ -220,7 +241,14 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 "latency_ms": round(float(lat), 1) if lat is not None else None,
                 "handoffs_in": int(incoming.get(aid, 0)),
                 "handoffs_out": int(outgoing.get(aid, 0)),
-                "health": _health(escalation_rate),
+                # Three facts, one rule, stated in `agent_health`. Green is a claim about
+                # observed evidence, never merely the absence of bad news.
+                "health": health_state(
+                    escalation_rate=escalation_rate,
+                    canary_red=_canary_red(aid),
+                    integrity_broken=integrity_broken,
+                    turn_evidence=evidence,
+                ),
                 "release": rel.as_dict() if rel else None,
                 # ADR 0017 §4 — observability level (L0-L2 in Phase B; None when the agent
                 # has no AgentSpec manifest yet → honest-empty, not "L0").

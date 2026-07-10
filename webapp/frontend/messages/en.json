@@ -31,7 +31,9 @@
     "environment": "Environment",
     "locality": "On-prem · EU",
     "business": "Business spaces",
-    "exploreSpaces": "Explore the spaces"
+    "exploreSpaces": "Explore the spaces",
+    "notificationsWithCount": "Notifications: {count} fact(s) to act on",
+    "notificationsEmpty": "Notifications: nothing to act on"
   },
   "nav": {
     "groups": {

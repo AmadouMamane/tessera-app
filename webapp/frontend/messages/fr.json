@@ -31,7 +31,9 @@
     "environment": "Environnement",
     "locality": "Sur site · UE",
     "business": "Espaces métier",
-    "exploreSpaces": "Explorer les espaces"
+    "exploreSpaces": "Explorer les espaces",
+    "notificationsWithCount": "Notifications : {count} fait(s) à traiter",
+    "notificationsEmpty": "Notifications : rien à traiter"
   },
   "nav": {
     "groups": {

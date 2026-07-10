@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { LOCALE_LABELS, type Locale, routing } from "@/i18n/routing";
+import { useChromeNotifications } from "@/lib/chrome";
 import { cn } from "@/lib/cn";
 import { exportSnapshot } from "@/lib/evidence-export";
 import {
@@ -286,14 +287,71 @@ function CockpitTools() {
     <>
       <OperatorProductMenu />
       <SystemStatusPill className="hidden lg:inline-flex" />
-      <HeaderIconButton
-        icon={Bell}
-        label="Notifications"
-        badge="7"
-        className="hidden lg:inline-flex"
-      />
+      <NotificationsBell />
       <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
     </>
+  );
+}
+
+/**
+ * The bell counts facts, and each one is a place to go.
+ *
+ * It used to read a hardcoded `7`. There is no notification store and this adds none: the
+ * facts already exist — operator items awaiting validation, a canary that came back red, an
+ * audit ledger whose integrity does not verify, a degraded opposability seal — and the
+ * backend composes them (`tessera.observability.chrome`). Every row deep-links to the page
+ * where the act is actually performed; a bell that announces something you cannot navigate
+ * to is a decoration with a number on it.
+ *
+ * Zero notifications means no dot. Not a grey zero: nothing.
+ */
+function NotificationsBell() {
+  const t = useTranslations("app");
+  const items = useChromeNotifications();
+  const label = items.length
+    ? t("notificationsWithCount", { count: items.length })
+    : t("notificationsEmpty");
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          title={label}
+          className="relative hidden h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:inline-flex"
+        >
+          <Bell className="h-4 w-4" aria-hidden />
+          {items.length ? (
+            <span className="-right-1 -top-1 absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 font-semibold text-[0.6rem] text-white leading-none">
+              {items.length}
+            </span>
+          ) : null}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[19rem]">
+        {items.length ? (
+          items.map((item) => (
+            <DropdownMenuItem key={item.id} asChild>
+              <Link href={item.href} className="flex items-start gap-2">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                    item.tone === "danger" ? "bg-red-500" : "bg-amber-500",
+                  )}
+                />
+                <span className="min-w-0 flex-1">{item.label}</span>
+              </Link>
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <p className="px-2 py-3 text-[0.75rem] text-[var(--tessera-text-muted)]">
+            {t("notificationsEmpty")}
+          </p>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

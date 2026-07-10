@@ -203,6 +203,19 @@ class _RealIncidents:
         return "—"
 
 
+def open_incidents(now: datetime | None = None) -> tuple[int, int]:
+    """``(open, critical)`` from the same core the page renders — never a second count.
+
+    The sidebar badge and this page must agree by construction, so the badge asks the
+    incident core rather than re-deriving "open" from the ledger on its own. Both numbers
+    are the exact expressions ``compute_incidents_overview`` puts in its KPI strip.
+    """
+    core = _RealIncidents(now or datetime.now(UTC))
+    n_open = len(core.clusters) + (1 if core.low_score else 0)
+    n_critical = sum(1 for cluster in core.clusters if cluster.severity == "critique")
+    return n_open, n_critical
+
+
 def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
     """Return the full Incidents & playbooks overview payload.
 
@@ -231,8 +244,9 @@ def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
     # REAL posture: clusters from the ledger + the low-faithfulness cluster; the
     # lifecycle metrics (MTTA/MTTR/auto-resolution/SLA/evidence packs) have no
     # store in this build -> honest dashes, never invented numbers.
-    n_open = len(core.clusters) + (1 if core.low_score else 0)
-    n_critical = sum(1 for c in core.clusters if c.severity == "critique")
+    # The sidebar badge reads these through `open_incidents()`. Compute them there once,
+    # so a change to what "open" means cannot land on one surface and not the other.
+    n_open, n_critical = open_incidents(now)
     deny_series = list(core.day_denies.values())
     kpis = [
         _kpi("open", str(n_open), "0", False, deny_series or [0] * 7),

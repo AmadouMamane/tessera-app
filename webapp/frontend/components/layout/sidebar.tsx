@@ -40,6 +40,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo, TesseraMark } from "@/components/brand/tessera-logo";
 import { Link, usePathname } from "@/i18n/navigation";
+import { type ChromeBadgeKey, type ChromeTone, useChromeBadge } from "@/lib/chrome";
 import { cn } from "@/lib/cn";
 import { useShellChrome } from "./shell-chrome";
 
@@ -82,8 +83,13 @@ interface Leaf {
   href: RouteHref;
   icon: LucideIcon;
   labelKey: string;
-  badge?: string;
-  badgeTone?: "default" | "danger" | "warning";
+  /**
+   * Which chrome fact this leaf badges, if any. NOT a number: the count and its tone come
+   * from `/observability/chrome`, computed by the same read the destination page performs.
+   * There is no way to type a literal here, which is the point — see
+   * `sidebar.test.ts::no numeric literal may reach a badge`.
+   */
+  badgeKey?: ChromeBadgeKey;
   pulse?: boolean;
   /** Render a thin divider above this leaf (purely visual grouping). */
   separatorBefore?: boolean;
@@ -129,11 +135,10 @@ const AGENTS_SECTION: Branch = {
       href: "/a-traiter",
       icon: Inbox,
       labelKey: "item.aTraiter",
-      badge: "24",
-      badgeTone: "danger",
+      badgeKey: "a_traiter",
       separatorBefore: true,
     },
-    { href: "/a-faire", icon: ListTodo, labelKey: "item.aFaire", badge: "8" },
+    { href: "/a-faire", icon: ListTodo, labelKey: "item.aFaire", badgeKey: "a_faire" },
   ],
 };
 
@@ -155,8 +160,9 @@ const TREE: ReadonlyArray<NavNode> = [
           {
             href: "/surveiller/qualite-ia",
             icon: ShieldHalf,
+            // No badge: the Qualité IA page counts no outstanding things. The 52 that used
+            // to sit here was not stale or rounded — it was a decoration.
             labelKey: "item.qualiteIa",
-            badge: "52",
           },
           {
             href: "/surveiller/securite-privacy",
@@ -189,16 +195,14 @@ const TREE: ReadonlyArray<NavNode> = [
             href: "/agir/incidents-playbooks",
             icon: Wrench,
             labelKey: "item.incidentsPlaybooks",
-            badge: "11",
-            badgeTone: "danger",
+            badgeKey: "incidents",
           },
           { href: "/agir/replay-shadow", icon: PlayCircle, labelKey: "item.replayShadow" },
           {
             href: "/agir/curation-eval-set",
             icon: DatabaseZap,
             labelKey: "item.curationEvalSet",
-            badge: "6",
-            badgeTone: "warning",
+            badgeKey: "curation",
           },
           { href: "/agir/release-control", icon: GitBranch, labelKey: "item.releaseControl" },
           { href: "/agir/automations", icon: Workflow, labelKey: "item.automations" },
@@ -232,7 +236,7 @@ const TREE: ReadonlyArray<NavNode> = [
             href: "/configurer/signal-catalog",
             icon: Boxes,
             labelKey: "item.signalCatalog",
-            badge: "200",
+            badgeKey: "signal_catalog",
           },
           {
             href: "/configurer/garde-fous",
@@ -436,6 +440,8 @@ function RailNode({
   pathname: string;
   t: T;
 }) {
+  // Hooks precede the branch early-return: a leaf and a branch must run the same ones.
+  const badge = useChromeBadge(isBranch(node) ? undefined : node.badgeKey);
   if (isBranch(node)) {
     return (
       <>
@@ -477,9 +483,9 @@ function RailNode({
         {node.pulse ? (
           <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
         ) : null}
-        {node.badge ? (
+        {badge ? (
           <span className="absolute top-1 right-1 inline-flex min-w-3.5 items-center justify-center rounded-full bg-[var(--tessera-danger,#b4453a)] px-1 text-[0.55rem] font-semibold text-white">
-            {node.badge}
+            {badge.count}
           </span>
         ) : null}
       </Link>
@@ -505,6 +511,7 @@ function NavTreeNode({
   t: T;
 }) {
   const pad = { paddingLeft: `${0.5 + depth * 0.75}rem` };
+  const badge = useChromeBadge(isBranch(node) ? undefined : node.badgeKey);
 
   if (!isBranch(node)) {
     const active = leafActive(node.href, pathname);
@@ -538,7 +545,7 @@ function NavTreeNode({
             />
             <span className="hidden min-w-0 flex-1 truncate md:block">{t(node.labelKey)}</span>
             {node.pulse ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
-            {node.badge ? <Badge tone={node.badgeTone} active={active} value={node.badge} /> : null}
+            {badge ? <Badge tone={badge.tone} active={active} value={badge.count} /> : null}
           </Link>
         </li>
       </>
@@ -614,11 +621,7 @@ function NavTreeNode({
   );
 }
 
-function Badge({
-  tone,
-  active,
-  value,
-}: { tone?: "default" | "danger" | "warning"; active: boolean; value: string }) {
+function Badge({ tone, active, value }: { tone: ChromeTone; active: boolean; value: number }) {
   return (
     <span
       className={cn(

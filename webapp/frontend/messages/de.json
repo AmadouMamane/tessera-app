@@ -31,7 +31,9 @@
     "environment": "Umgebung",
     "locality": "Vor Ort · EU",
     "business": "Fachbereiche",
-    "exploreSpaces": "Bereiche erkunden"
+    "exploreSpaces": "Bereiche erkunden",
+    "notificationsWithCount": "Benachrichtigungen: {count} Fakt(en) zu bearbeiten",
+    "notificationsEmpty": "Benachrichtigungen: nichts zu bearbeiten"
   },
   "nav": {
     "groups": {

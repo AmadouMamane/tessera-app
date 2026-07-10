@@ -61,6 +61,8 @@ import {
   CalibrationSchema,
   type CatalogueConsumers,
   CatalogueConsumersSchema,
+  type Chrome,
+  ChromeSchema,
   type CitationResolution,
   CitationResolutionSchema,
   type CitationSummary,
@@ -1034,6 +1036,12 @@ export async function fetchParametersOverview(
 ): Promise<ParametersOverview> {
   const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
   return request(`/observability/parameters${q}`, { signal }, ParametersOverviewSchema);
+}
+
+/** The cockpit chrome's badges and bell. Cheap, composed of reads the pages already do. */
+export async function fetchChrome(lang: string, signal?: AbortSignal): Promise<Chrome> {
+  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  return request(`/observability/chrome${q}`, { signal }, ChromeSchema);
 }
 
 export async function fetchInboxOverview(

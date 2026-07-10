@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 
     from tessera.agent.registry import Agent
 
-__all__ = ["canary_descriptor", "coverage_descriptor"]
+__all__ = ["canary_descriptor", "coverage_descriptor", "latest_canary_verdict"]
 
 # Each required turn-span attribute (semconv key) → the business-event row field carrying
 # the same Scope dimension (the measurable coverage evidence). Span attrs and envelope
@@ -108,6 +108,20 @@ def _latest_canary_run(agent_id: str) -> Mapping[str, object] | None:
         if payload.get("type") == CANARY_INVOCATION_TYPE and payload.get("agent_id") == agent_id:
             found = payload
     return found
+
+
+def latest_canary_verdict(agent_id: str) -> str | None:
+    """The verdict of the agent's most recent canary invocation, or ``None`` if it never ran.
+
+    The one public reader of that S1 fact. The fleet's health dot and the cockpit bell both
+    ask this question, and a canary that never fired must answer ``None`` — "no bad news" and
+    "no news" are different facts, and only the caller knows which one it may treat as green.
+    """
+    run = _latest_canary_run(agent_id)
+    if run is None:
+        return None
+    verdict = run.get("verdict")
+    return str(verdict).lower() if verdict is not None else None
 
 
 def _synthetic_run_facet(agent_id: str, *, reference: datetime) -> dict[str, object]:

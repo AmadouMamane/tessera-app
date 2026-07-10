@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from tessera.guard.decisions import Policy
     from tessera.observability.eval_data import EvalSnapshot
 
-__all__ = ["compute_signal_catalogue"]
+__all__ = ["compute_signal_catalogue", "total_signals"]
 
 # Eval category -> (taxonomy, severity, source, name slug, owner).
 # Severity reflects business impact (not the current score); source marks whether
@@ -383,3 +383,14 @@ def compute_signal_catalogue(lang: str = "fr") -> dict[str, object]:
     snapshot = load_eval_snapshot(None)
     policy = load_policy()
     return _assemble(snapshot, policy, datetime.now(UTC), lang)
+
+
+def total_signals() -> int:
+    """How many signals the catalogue actually monitors — one per present eval category.
+
+    The sidebar badge asks this rather than assembling the whole page, and asks *this*
+    rather than counting on its own: the two must agree by construction. The badge used to
+    read ``200`` while the catalogue held ten.
+    """
+    snapshot = load_eval_snapshot(None)
+    return sum(1 for category in _TAXO if snapshot.category(category) is not None)
