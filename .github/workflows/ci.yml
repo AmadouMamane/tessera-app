@@ -97,6 +97,9 @@ jobs:
     # only when, the whole suite runs green twice in a row on `main`.
     # ─────────────────────────────────────────────────────────────────────────
     continue-on-error: true
+    # A suite that fails wholesale must not also run away with the runner: every
+    # red spec costs its timeout, and `retries: 1` in CI pays it twice.
+    timeout-minutes: 45
     if: >
       github.event_name == 'pull_request' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -178,6 +181,18 @@ jobs:
         working-directory: webapp/frontend
         run: corepack pnpm build
 
+      # NextAuth refuses to mint a session without a secret, and it fails *soft*:
+      # every authenticated page still returns 200, rendered as its logged-out
+      # shell. The specs then log in, land on a page with no table, and report
+      # ~170 content failures that name the missing table, never the missing
+      # secret. Measured on 2026-07-10, in a worktree with no `.env.local`.
+      #
+      # This is not a repository secret. It is 32 random bytes minted for this
+      # run, alive only inside this ephemeral runner, and it grants nothing
+      # anywhere else. The gate remains secret-free.
+      - name: Mint an ephemeral session secret
+        run: echo "AUTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Start frontend (:3390)
         working-directory: webapp/frontend
         run: |
@@ -191,6 +206,10 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3390/fr/agents)
           echo "GET /fr/agents → $code"
           test "$code" != "500"
+          # That request exercised the auth path. If the secret were missing it
+          # would have logged it here and still answered 200 — fail loudly now
+          # rather than as 170 mislabelled content assertions half an hour later.
+          ! grep -q "MissingSecret" /tmp/tessera-front.log
 
       - name: Playwright
         working-directory: webapp/frontend

@@ -27,6 +27,13 @@ import { defineConfig, devices } from "@playwright/test";
  * So: one worker, and never `next dev` for a full-suite run — build first
  * (`pnpm build && pnpm start -p 3390`). A parallel run reports failures that
  * are timeouts, not defects, and buries the 31 that are real.
+ *
+ * The server that serves this suite NEEDS `AUTH_SECRET`. Without it NextAuth
+ * mints no session and fails soft: every authenticated page still answers 200,
+ * rendered as its logged-out shell, so the specs log in, find no table, and
+ * report ~170 content failures that never mention the secret. The main checkout
+ * has it in `webapp/frontend/.env.local`; an agent worktree does not. Measured
+ * 2026-07-10: 170 failures with no secret, 31 with one, same commit.
  */
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3390";
 
