@@ -901,15 +901,72 @@ parked, recorded, move on. `0017-execution-status.md` is never written here.
 **Ouverture :** `main` = `origin/main` = `e1a73c5c`. Serveurs de référence `:3097`/`:8099` dessus,
 Amadou regarde dessus aujourd'hui → **previews depuis le worktree uniquement**.
 
-| Lot | Sujet | Verdict |
-| --- | --- | --- |
-| 0 | Mirroir des 2 décisions dans le ledger 0019 | 🔄 |
-| 1 | Réparer le rouge e2e préexistant | ⏳ |
-| 2 | Compléter le smoke e2e + verrou §4 | ⏳ |
-| 3 | Menu grille d'apps | ⏳ |
-| 4 | Craft pass P3 (items 18-23) | ⏳ |
-| 5 | Colonne synthétique ClickHouse | ⏳ |
-| 6 | Aliasing enums FE | ⏳ |
+**Clôture :** `main` = `origin/main` = **`68967b05`**. **Sept merges**, tous en fast-forward, gate
+twice-green avant chacun. Aucun lot parké. Le seul critère non tenu est nommé ci-dessous.
+
+| Lot | Sujet | Verdict | Merge |
+| --- | --- | --- | --- |
+| 0 | Mirroir des 2 décisions dans le ledger 0019 | ✅ | `9d49df53` (session précédente) |
+| 1 | Réparer le rouge e2e préexistant | ⚠️ **mergé, critère de sortie NON tenu** | `e94aad5a` |
+| 5 | Colonne synthétique ClickHouse | ✅ **et c'était un trou vivant** | `2eaee2a0` |
+| 2 | Compléter le smoke e2e + verrou §4 | ✅ (verrou honnête, moitié négative vide — dit) | `a350c073` |
+| 3 | Menu grille d'apps | ✅ **il existait déjà** | `996e9666` |
+| — | Rulings mi-course + doctrine du verrou | ✅ | `1f91abfc` |
+| 4 | Craft pass P3 (items 18-23) | ✅ **6/6** | `154b051f` |
+| 6 | Aliasing enums FE via manifeste | ✅ | `68967b05` |
+
+**Ordre exécuté ≠ ordre demandé, et c'est délibéré :** le lot 5 a été pris **avant** le lot 2.
+Le verrou §4 du lot 2 aurait asserté « un tour de test ne déplace aucun chiffre » contre un seam de
+lecture cassé en dessous — il serait passé pour la mauvaise raison. Ratifié à mi-course (ruling 1).
+
+### Les trois choses à retenir
+
+1. **Le §4 était cassé sur le médium de lecture par défaut** (lot 5). Le ledger disait « flip pas
+   encore baké, colonne dûe plus tard ». Faux : `_FACT_DEFAULTS["business_events"] = "spine"`.
+   ClickHouse **était** le médium par défaut, et le drapeau `synthetic` était perdu à l'écriture,
+   jamais reconstruit à la lecture. Un tour canary serait ressorti de la table **comme un vrai fait
+   métier**. Prouvé sur une vraie ClickHouse (base jetable), corrigé sur les deux jambes + ALTER
+   idempotent, chaque test vérifié rouge quand sa jambe est révertée.
+2. **Deux « parkés faute de source » d'hier étaient des erreurs de lecture, pas des absences.** Le
+   menu grille existe (`OperatorProductMenu`, `app-header.tsx:292`) ; la punch list P3 existe (même
+   fichier, ligne 79). Corrigés avec preuve, pas ré-argumentés.
+3. **La suite e2e n'entre pas au gate en bloc.** Mesure finale sur `main` : **145 verts / 31 rouges /
+   9 non exécutés** (185 tests, 1 worker, front buildé). Les 31 sont **préexistants**, sans rapport
+   avec les merges de la nuit ni du jour, et **aucune des 26 specs écrites aujourd'hui n'est rouge**.
+   Report **accepté** (ruling 2) → tranche `e2e debt repair`.
+
+### Checkpoints visuels pour Amadou
+
+- **Métier après P3** (`/fr/agents/recouvrement/metier`) : la carte héro dit désormais
+  « **1 vérification · dernier contrôle il y a X** » sous son 100 %. Ce 100 % repose sur **une**
+  vérification pour **24 exécutions observées**. C'est le fait le plus intéressant de la page, et il
+  était invisible.
+- **Drill-down** (cliquer « Proposition d'échéancier ») : rail vertical, jalons en cartes, plomberie
+  (`intent.routed`, `slots.extracted`) en lignes compactes, horodatage relatif par événement,
+  colonnes du bas pondérées.
+- **Badges déclaré-vs-calculé sur la flotte** (`/fr/agents`) : inchangés, toujours les deux variantes.
+- **Formulaire duplex** (`/fr/agents/duplex-agent/console`) : inchangé.
+- **Menu apps** (`/fr/agents`, icône grille en haut à droite) : existait déjà ; désormais **asserté**
+  des deux côtés de la frontière 0013.
+- **Honest-empty intouchable** (`/fr/agents/support-client/metier`) : identique au pixel.
+
+### Chiffres
+
+```
+Gate final (×2, sur main)  : ruff ok · format 546 ok · mypy 281 ok · pytest 1573 passed
+                             tsc ok · biome exit 0 · vitest 132 passed
+Tests ajoutés aujourd'hui  : backend 1564 → 1573 (+9) · vitest 126 → 132 (+6)
+e2e ajoutés                : 26 tests neufs (metier 4 · recouvrement-new 4 · headers 4 ·
+                             business-counting 2 · app-grid 4) + console.spec réécrit (4)
+SUITE E2E COMPLÈTE (main)  : 185 tests · 145 passed · 31 failed · 9 did not run · 19,3 min
+                             1 worker, frontend buildé, backend scrapé par Prometheus (:9090),
+                             un vrai tour /chat servi au préalable.
+                             → AUCUNE des 26 specs du jour n'est rouge.
+                             → Les 31 rouges sont les contrats morts préexistants :
+                                sources 10 · synthese 5 · surveiller-temporal 4 · a-faire 3 ·
+                                roles-acces 2 · integrations 2 · a-traiter 2 · etat-a-date 1 ·
+                                connaissances 1 · configurations 1
+```
 
 ---
 
@@ -934,3 +991,287 @@ trancher.
    nature « design » de la décision — plutôt que de reconstruire un « verbatim » que je n'ai pas reçu.
    Si le libellé exact importe, il est à re-fournir ; l'effet opérationnel, lui, est sans ambiguïté et
    respecté : **aucun code sur ce seam aujourd'hui.**
+
+---
+
+## LOT 1 — Le rouge e2e  ⚠️ **MERGÉ (`e94aad5a`), critère de sortie NON tenu**
+
+### Le verdict, avec sa preuve
+
+**Contrat mort, pas régression.** `71b15b18` (2026-06-19) a supprimé **délibérément** les deux
+contrôles que la spec épinglait. Le corps du commit le dit lui-même :
+
+> « removed the full-width "Session active" StatusBar and the TemporalRail from the chat column.
+> The Console's temporal rail IS XT-01 — no as-of scrubber here. […] Removed the KpiRow (SLA/MTTR
+> are ops signals — they belong in SURVEILLER, not a debug console). »
+
+La spec n'a jamais suivi (dernier commit dessus : `0e418d5a`, qui ne changeait que la route). Pire :
+son propre `beforeEach` gardait sur `getByText("Session active")` — chaîne qui vit dans le
+**user-menu du header** (`auth.sessionActive`), rendu sur **toute** page authentifiée. La
+précondition prouvait que le header avait monté, jamais la console.
+
+Deux constats annexes, remontés et non corrigés : le backend émet toujours
+`actions.timeline_incidents` (champ orphelin que plus rien ne rend), et **aucun workflow CI ne lance
+Playwright** — ni vitest, ni biome. La suite pouvait pourrir sans témoin.
+
+### Réparé du bon côté
+
+`console.spec.ts` teste désormais le contrat **réel** (ADR 0019 §I2) : la console est **générée** à
+partir du binding déclaré. `support-client` déclare `in_process_chat` → banc interactif, **et rien
+d'autre** (ni banc HTTP, ni honest-empty qui fuiterait). Les trois autres formes restent à
+`smoke-0019.spec.ts`. L'assertion morte est devenue son invariant : **le chrome ops reste absent**
+(pas de scrubber as-of dans une console de debug — registre des rails : Console = XT-01 + Live).
+
+### Le runner mentait — trois mesures sur le même arbre
+
+```
+4 workers · next dev    → 102 failed   (93 exactement à 30,0 s / 35,0 s ; le backend loggait
+                                        « couldn't get a connection after 30.00 sec »)
+4 workers · next start  →  72 failed   (le pool ne famine plus ; le backend dev sature quand même)
+1 worker  · next start  →  31 failed, 127 passed   ← le vrai chiffre
+```
+
+Ces specs pilotent **un seul backend partagé** et plusieurs **mutent du durable** (`a-faire` prend un
+item en charge, `etat-a-date` sauve un snapshot). La concurrence ne les ralentit pas : elle
+**fabrique des échecs** et **enterre les vrais**. `playwright.config.ts` est donc sérialisé, avec les
+trois mesures écrites dans son en-tête.
+
+### Le critère de sortie n'est PAS tenu — dit, pas contourné
+
+Les 31 rouges sont **préexistants**, aucun causé par les merges de la nuit, et ce sont des **contrats
+morts** de refontes délibérées : `sources.spec.ts` navigue encore vers `/agent/connaissances` (route
+pré-multi-agents) ; `a-faire` asserte `> 10` lignes sur une table qui pagine à `useState(10)`. Les
+réparer fidèlement est une tranche à part. **Report accepté (ruling 2).**
+
+### Un mine trouvée en chemin (et désamorcée)
+
+`pnpm build` **supprimait sept fichiers trackés**. Le hook `prebuild` (`sync-eval-bundle.mjs`) vide le
+bundle committé quand `eval/reports/` existe mais ne contient aucun `latest*.json` — la forme du
+checkout principal **comme** de chaque worktree. Gardé : un `keep` vide veut dire « rien à
+synchroniser », jamais « vide le bundle ». **Règle ratifiée (ruling 3) : un hook de build ne mute
+jamais un fichier tracké.**
+
+---
+
+## LOT 5 — Colonne synthétique ClickHouse  ✅ **MERGÉ (`2eaee2a0`) — et la prémisse était inversée**
+
+### L'auth d'abord (comme demandé)
+
+Le « Code 516 » d'hier était une **mauvaise auth**, pas un état du bake. Les identifiants réels sont
+les **valeurs par défaut du code lui-même** (`clickhouse.py` : `clickhouse`/`clickhouse`, `:18123`,
+base `tessera`), miroir de `docker-compose.obs.claude.yml`.
+
+### L'état du bake, établi par le code
+
+`_FACT_DEFAULTS = {"scores": "spine", "gating": "spine", "business_events": "spine"}`.
+**Le bake est fait.** ClickHouse **est** le médium de lecture par défaut. Le commentaire au-dessus de
+cette ligne disait l'inverse et survivait à sa propre dernière clause — c'est derrière lui que le bug
+se cachait.
+
+### Le trou, prouvé et non argumenté
+
+`business_event_line` n'écrivait pas `synthetic` (absent de `_STRING_COLUMNS`, la valeur de `to_row()`
+simplement jetée) ; `_row_to_event` ne le relisait pas. Un événement canary faisait donc l'aller-retour
+par la table **et ressortait réel**. Sur une vraie ClickHouse, base jetable, supprimée après :
+
+```
+emitted .synthetic          : True
+INSERT line has 'synthetic' : False
+clickhouse .synthetic       : [False]
+READ SEAM (excludes synth)  : 1     ← doit être 0
+```
+
+Le garde Prometheus à l'émission, lui, tenait — il est indépendant du médium. **C'est exactement
+pour ça que rien n'avait l'air cassé.**
+
+### Corrigé, migré, verrouillé
+
+`synthetic UInt8 DEFAULT 0` au DDL (le `DEFAULT 0` est la lecture honnête des lignes écrites avant le
+canary). `ensure_business_events_schema` gagne un `ALTER … ADD COLUMN IF NOT EXISTS` idempotent :
+`CREATE TABLE IF NOT EXISTS` est un no-op contre une table existante, donc sans lui un store déployé
+n'aurait **jamais** eu la colonne. Vérifié contre une table recréée à l'ancienne forme : colonne
+ajoutée, la ligne préexistante lit `0`, deux re-runs gratuits. Quatre tests, **chacun vérifié rouge
+quand sa propre jambe est révertée**.
+
+**Aucune contamination observée** : le canary in-process n'émet aucun fait métier, et la table dev
+portait 141 lignes `recouvrement` réelles. C'était un trou **vivant**, pas un incident vivant.
+
+**La table dev a bien migré**, pendant le lot 2 : le premier `INSERT` a déclenché
+`ensure_business_events_schema`. `SELECT synthetic, count() FROM tessera.business_events` → `0 213`.
+
+---
+
+## LOT 2 — Smoke e2e complété + verrou §4  ✅ **MERGÉ (`a350c073`)**
+
+14 tests neufs, tous verts contre la vraie stack. `metier.spec.ts` (onglet, niveau calculé, compte
+d'événements **non nul** lu depuis ClickHouse, table par capacité labellisée via le `label_key` du
+manifeste, drill-down + deep-link, **et** l'honest-empty de `support-client`), `recouvrement-new.spec.ts`
+(files de travail réelles, drawer assistant, **le mot « Tessera » n'apparaît nulle part**),
+`headers.spec.ts` (pill posture = **popover** et non strip, ⌘K au clic et à l'accord, identité dans le
+rail et **pas** dans le header).
+
+### Le verrou §4 — et ce qu'il ne prouve pas
+
+`business-counting.spec.ts` :
+- **positif, réel** : un tour `dedicated-ui` piloté dans la vraie UI **fait monter** le compte
+  d'événements Métier de recouvrement (mesuré : 150 → 168 sur les passes) ;
+- **négatif** : la Console cockpit ne déplace rien.
+
+**La moitié négative est vide aujourd'hui, et l'en-tête du fichier le dit.** Tous les
+`record_business_event` du dépôt vivent dans `src/tessera/agent/recouvrement.py`, atteint uniquement
+par `POST /recouvrement-assistant/message` (**dedicated-ui**). La Console entre par `POST /chat`, dont
+le graphe **n'émet aucun fait métier**. Elle ne déplace rien **parce qu'elle n'émet rien** — même
+forme que le critère (b) de §A1.2. Le stamp et le filtre du seam de lecture sont tous deux
+**pré-positionnés** et **verrouillés en unitaire** ; aucun des deux n'est porteur dans un navigateur.
+C'est la **moitié positive** qui empêche ce fichier d'être un test toujours vert.
+
+Conforme à la doctrine ratifiée : *un verrou d'honnêteté doit injecter du trafic qui exerce la jambe
+qu'il revendique — un vert vide ne prouve rien.*
+
+### Deux trouvailles, remontées et non corrigées
+
+- Les boutons d'action rapide de `recouvrement-new` (« Résumer ce dossier », « Proposer un
+  échéancier », …) n'ont **aucun `onClick`** : de la décoration.
+- `POST /recouvrement-assistant/message` prend `surface` **dans le corps de la requête**
+  (client-asserted), contrairement à `/chat` où elle est dérivée de l'assertion opérateur signée.
+  Cette route **n'appelle jamais `is_test_turn`** et émet ses faits métier inconditionnellement.
+
+---
+
+## LOT 3 — Menu grille d'apps  ✅ **MERGÉ (`996e9666`) — il existait déjà**
+
+Le park d'hier (« le menu n'existe pas sur `main` ») venait d'un grep sur
+`app-grid|AppGrid|apps-menu|AppsMenu`. Il s'appelle **`OperatorProductMenu`**
+(`components/layout/app-header.tsx:292`), n'est rendu que par `CockpitTools` (branche
+`plan === "cockpit"`), et le cockpit est derrière `CockpitAuthGate`. Ses trois libellés sont traduits
+**fr/de/en** et nomment des destinations, jamais la plateforme.
+
+Le gating était donc **structurel** — rien dans le composant ne dit « opérateur seulement » : il l'est
+par **où il est rendu**. C'est précisément ce qu'une refonte enlève sans bruit. Quatre tests
+l'assertent des deux côtés : l'opérateur le voit et navigue vers `/espaces` ; le même opérateur, debout
+sur le plan produit, n'a **aucun** retour vers le haut ; `collections` ne le voit pas **et** est
+rejeté du cockpit qui le porte (l'autorité, pas seulement le routage) ; le menu ne dit jamais
+« Tessera » au plan qu'il ouvre.
+
+---
+
+## LOT 4 — Craft pass P3  ✅ **MERGÉ (`154b051f`) — 6 items sur 6**
+
+La source existe : `Tessera_private/punchlist-metier-lot1.5-2026-07-07.md`, **ligne 79**, section
+« ## P3 — craft pass ». Le fichier qu'hier avait ouvert.
+
+**18 · Carte héro vivante.** Nouveau fait backend `_signal_evidence` : par signal, le nombre
+d'exécutions que le scorer a **examinées**, celles qu'il a **pu scorer** (un 0.0 EST une vérification ;
+un `not_applicable` ne l'est pas), et l'horodatage réel le plus récent. Trois lectures, et le tiret
+n'en garde qu'une : décisif → le % **plus ce sur quoi il repose** ; en accumulation
+(`observed > 0, checks == 0`) → « n exécutions observées · aucun contrôle applicable » ; zéro-donnée
+réel → **tiret + raison, intouchés**.
+
+> Le résultat vaut le détour : le signal clé de recouvrement affiche **100 %**, adossé à **une seule
+> vérification sur 24 exécutions observées**. C'était vrai hier aussi. Ce n'était simplement écrit
+> nulle part.
+
+**19 · Micro-viz.** Micro-barres discrètes derrière les % : la **largeur EST la valeur**, donc elle ne
+peut pas contredire le nombre à côté ; une valeur nulle ne dessine **aucune** barre (une piste vide se
+lit « 0 % », ce qui est une autre affirmation que « non mesuré »). Teinte sémantique sur le **texte**,
+jamais des badges. `Sparkline` est livré **prêt et branché par personne**, sur consigne : il refuse de
+tracer sous deux points réels et **coupe** la ligne sur un trou au lieu de l'enjamber. Son test asserte
+que **personne ne le monte**, pour que « prêt mais non branché » ne devienne pas « branché en douce ».
+*À savoir quand la décision sera prise :* `trend.points` est **déjà réel** (`_signal_trend` bucketise
+de vraies lignes et score chaque jour) — le brancher ne fabriquerait rien.
+
+**20 · Vraie timeline.** Rail vertical, points reliés, horodatage relatif par événement. Les jalons
+(policy / validation / artifact / message) gardent leurs cartes ; la plomberie (`intent.routed`,
+`slots.extracted`) descend à une ligne compacte chacune — **présente**, parce qu'une trace trouée n'est
+pas une trace, mais elle ne concurrence plus les décisions.
+
+**21 · Colonnes du bas pondérées** (`1.15fr 0.9fr 0.8fr 1.15fr`) plutôt que fusionnées : Artefacts et
+Scores sont denses, Actions sensibles tient souvent en une carte. La structure validée et son ordre de
+lecture survivent.
+
+**22 · Affordances.** Les boutons copier gagnent un **nom accessible** (l'icône n'en portait aucun), un
+anneau de focus visible, et un hover qui n'est plus leur seule affordance.
+
+**23 · Finitions.** Les en-têtes de colonnes lâchent le « % » que les valeurs portent déjà. Un vrai
+**skeleton** remplace la phrase au milieu d'une boîte vide pendant le chargement des runs (le libellé
+reste pour les lecteurs d'écran). Deux bugs de pluriel : `1 orpheline(s)` devient un vrai pluriel ICU
+dans les trois locales, et le badge des runs disait **« 1 runs »** — faux deux fois, un mot anglais sur
+une surface française et un pluriel pour un seul élément.
+
+### Un incident de ma part, réparé et consigné
+
+Un **probe ad-hoc** (`uv run python`, pour lire `_signal_evidence`) a écrit **2 événements métier
+fabriqués** (`conv-evidence`) dans la ClickHouse dev partagée : `record_business_event` appelle
+`_dual_write_owned` **inconditionnellement**, et mon script n'avait pas posé
+`TESSERA_CLICKHOUSE_BUSINESS_EVENTS=0`. `pytest`, lui, est isolé (`tests/conftest.py:47`). Les deux
+lignes ont été retirées par la primitive gouvernée (`delete_business_events("conv-evidence")` → 2), et
+la table revérifiée : **213 lignes, toutes `synthetic = 0`, aucun `probe-agent`**. Dit plutôt que tu.
+
+---
+
+## LOT 6 — Aliasing des enums FE via manifeste  ✅ **MERGÉ (`68967b05`)**
+
+Le lot commence par **pourquoi** le frontend devait écrire ces enums à la main : **le manifeste
+sous-déclarait son propre agent.** `draft_reminder.output_artifacts` ne listait que
+`client_message_artifact`, alors que `recouvrement.py` émet **aussi** `reminder_draft_v1` (la branche
+`else` d'un ternaire). Le frontend connaissait un type d'artefact que la déclaration ignorait — donc on
+ne pouvait pas le générer depuis elle, et une chaîne de `if` a poussé à la place. **Déclaration
+corrigée d'abord, codegen ensuite.**
+
+`artifact_type_capabilities` dérive `(artifact_type → capability_id)` de `output_artifacts` ;
+`RECOUVREMENT_ARTIFACT_CAPABILITY` est généré. `artifactFamilyForArtifact` lit la carte au lieu de cinq
+`if` ; un type que personne ne déclare vaut `null` — **honnête, pas deviné**. `backendIntentForTask`
+était une copie manuscrite du vocabulaire du manifeste : une ligne.
+
+Ce qui reste écrit à la main est **une seule chose, et elle le mérite** : `FAMILY_BY_CAPABILITY`, les
+**noms** que le drawer donne aux artefacts d'une capacité. C'est un vocabulaire d'UI, et il est clé par
+l'union générée (`satisfies Record<RecouvrementIntent, …>`) : ajouter une capacité à `agents.yaml` fait
+désormais **échouer le typecheck** tant que sa famille n'est pas nommée.
+
+Le test scanne l'**émetteur** et exige que le manifeste déclare ce qu'il émet. Il a été **vérifié rouge
+contre l'`agents.yaml` d'avant le correctif**, et il asserte qu'il trouve **sept** types — sinon il
+passerait en ne trouvant rien. `authorization_denial_v1` est **exempté et le dit** : un refus n'est pas
+la *sortie* d'une capacité, et l'y rattacher mentirait sur ce que cette capacité produit.
+
+---
+
+## FIN DE JOUR — suite complète, relance, démontage
+
+### La suite complète sur `main` : trois faux rouges avant le vrai chiffre
+
+Le premier passage a donné **142 verts / 34 rouges / 9 non exécutés** (185 tests). Trois de ces 34
+n'étaient **pas** préexistants, et aucun n'était une régression du code :
+
+1. **`headers.spec.ts` — mon bug.** La spec appuyait sur `Escape` sur le `body` ; `command-palette.tsx`
+   lie `Escape` à son **input** (`onKeyDown`), jamais à la fenêtre. Elle passait fichier-par-fichier
+   parce que l'autofocus avait eu le temps d'arriver, elle perdait la course dans une suite de 185
+   tests séquentiels. Corrigé (`82257de6`) : on attend le focus, puis `input.press("Escape")` —
+   le contrat que le composant a vraiment, plus celui qu'il avait par chance.
+
+2. **Les deux badges de `smoke-0019` — ma stack, pas le code.** J'avais déporté les métriques du
+   backend de test sur `:9390` pour ne pas disputer le port au serveur de référence. Or Prometheus
+   scrape `host.docker.internal:9090` (`infra/observability/prometheus/prometheus.yml`). Le rang
+   *calculé* n'avait donc **aucune série à lire**. Backend redémarré sur le port scrapé, **un vrai
+   tour `/chat` servi** (6,5 s ; `tessera_agent_turns_total{agent_id="support-client"} 1.0` ; vu par
+   Prometheus) — la précondition que la spec **déclare elle-même**, satisfaite par du trafic réel.
+
+   **Constat qui en découle, et qui vaut dette :** `smoke-0019` dépend d'un trafic qu'elle n'injecte
+   pas. Sur toute stack fraîchement redémarrée, ses deux assertions de badge sont **rouges par
+   construction** tant que personne n'a servi un tour. C'est le symétrique exact de la doctrine
+   ratifiée (« un vert vide ne prouve rien ») : ici, un **rouge vide**. → tranche `e2e debt repair`.
+
+3. **Puis deux passages entièrement rouges (0 vert), qui n'étaient pas la suite.** Le build `.next`
+   du checkout principal était **corrompu** : toutes les pages authentifiées renvoyaient **500**
+   (`TypeError: e[o] is not a function`, `webpack-runtime.js`) alors que `/fr/login` répondait 200 —
+   d'où des timeouts de login à 15,3 s partout, symptôme qui **ressemble** à 185 specs cassées. Le
+   login lui-même était sain (302 + session, vérifié en `curl`). **Cause : moi.** J'ai lancé
+   `pnpm build` dans le dossier où le serveur de référence tournait en `next dev` ; les deux
+   partagent `.next`. `rm -rf .next && pnpm build` a tout réglé.
+
+**Deux règles à graver, dites plutôt que tues :**
+- **Ne jamais builder dans un checkout où `next dev` tourne.** Le `.next` partagé se corrompt en
+  silence, et la panne se déguise en suite rouge.
+- **Avant de lancer la suite, `curl` une page AUTHENTIFIÉE** (`/fr/agents`), pas seulement
+  `/api/healthz` : un `/api/healthz` vert ne dit rien du rendu RSC.
+- (`next.config.mjs` fixe `output: "standalone"` — requis par `Dockerfile.frontend`. `next start`
+  avertit qu'il « ne fonctionne pas » ainsi ; en pratique il sert. Ce n'est **pas** la cause du rouge.)
