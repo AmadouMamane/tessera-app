@@ -118,6 +118,39 @@ ingest-regulations: install
 seed: install
 	uv run python scripts/seed_demo.py
 
+# ── e2e seed fixture ────────────────────────────────────────────────────────
+# Rebuild `fixtures/e2e/pgvector-seed.sql.gz` — the corpus CI restores instead of
+# ingesting. Embeddings are computed HERE, by the local on-prem model, exactly
+# once; CI replays the resulting rows. That is what keeps the workflow free of a
+# model, of a key, and of any secret at all.
+#
+# Built in a THROWAWAY database, never in the dev one: a fixture derived from a
+# developer's live state is a fixture nobody can reproduce. Requires Ollama up
+# (the seed scripts embed) and the pgvector container reachable by name.
+#
+# Regenerate whenever the corpus sources change — `tests/unit/test_seed_fixture.py`
+# fails until you do.
+FIXTURE_PG_CONTAINER ?= tessera-postgres
+FIXTURE_DB           ?= tessera_fixture
+FIXTURE_DSN           = postgresql://tessera:tessera@localhost:5432/$(FIXTURE_DB)
+FIXTURE_DUMP          = fixtures/e2e/pgvector-seed.sql.gz
+
+.PHONY: seed-fixture
+seed-fixture: install
+	@echo "▶ throwaway database $(FIXTURE_DB) (dropped and recreated)"
+	@docker exec $(FIXTURE_PG_CONTAINER) psql -U tessera -d postgres -q \
+	  -c 'DROP DATABASE IF EXISTS $(FIXTURE_DB)' -c 'CREATE DATABASE $(FIXTURE_DB)'
+	@echo "▶ ingesting with the local embedding model"
+	@TESSERA_POSTGRES__DSN=$(FIXTURE_DSN) uv run python scripts/ingest_regulations.py >/dev/null
+	@TESSERA_POSTGRES__DSN=$(FIXTURE_DSN) uv run python scripts/seed_demo.py >/dev/null
+	@mkdir -p $(dir $(FIXTURE_DUMP))
+	@docker exec $(FIXTURE_PG_CONTAINER) pg_dump -U tessera -d $(FIXTURE_DB) \
+	  --no-owner --no-privileges | gzip -9 > $(FIXTURE_DUMP)
+	@docker exec $(FIXTURE_PG_CONTAINER) psql -U tessera -d postgres -q \
+	  -c 'DROP DATABASE IF EXISTS $(FIXTURE_DB)'
+	@uv run python scripts/seed_fixture.py
+	@ls -lh $(FIXTURE_DUMP) | awk '{print "✓ " $$9 " (" $$5 ")"}'
+
 # Full local setup: boot Postgres, ingest all corpora, populate eval demo data
 bootstrap: install
 	docker compose up -d postgres

@@ -85,22 +85,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: [gate]
     # ─────────────────────────────────────────────────────────────────────────
-    # NON-BLOCKING, on purpose, and this is the only honest setting today.
+    # NON-BLOCKING for one more window, and the reason is now a measurement not
+    # yet taken rather than a problem that cannot be solved.
     #
     # The suite itself is repaired: 182 passed / 0 failed / 0 skipped, twice in
-    # a row, against a seeded local stack. On a bare runner it is 160/19/2 (run
-    # 29086077194), and the 19 are not spec debt — they are an empty database.
-    # `sources.spec.ts` expects 17 catalogue rows and finds 2: the fifteen
-    # corpus categories live in pgvector, which this job's fresh Postgres has
-    # never been fed. `surveiller-temporal` then finds no timeline events, and
-    # so on.
+    # a row, against a seeded local stack. On a bare runner it was 160/19/2 (run
+    # 29086077194), and the 19 were never spec debt — they were an empty
+    # database. `sources.spec.ts` expects 17 catalogue rows (15 corpus
+    # categories + long-term memory + transcript) and found 2.
     #
-    # The flip to blocking (delete `continue-on-error` below) needs a seeded
-    # dataset here — corpus ingest plus a transcript. Ingest needs embeddings,
-    # which needs a model, which needs a secret, which this workflow does not
-    # have and the `gate` job must never have. That is a decision to take, not
-    # a corner to cut: narrowing this job to the data-independent subset would
-    # be a weaker gate wearing the name of the gate.
+    # The premise "seeding needs embeddings, which needs a model, which needs a
+    # secret" had a third path, and this job now takes it: the corpus is
+    # embedded ONCE on the on-prem stack and committed as a fixture (`make
+    # seed-fixture`); CI restores it with `psql`. Deterministic, hermetic, zero
+    # secret, no model on the runner. `tests/unit/test_seed_fixture.py` is the
+    # staleness guard, so the fixture cannot quietly fall behind the corpus.
+    #
+    # THE FLIP (delete `continue-on-error` below) is owed the moment this job
+    # runs green on a runner twice in a row — and not one commit earlier. A gate
+    # promoted on the strength of the seed *landing*, rather than on two green
+    # runs, would be the same "weaker gate wearing the gate's name" this comment
+    # refused last window. The runs are the criterion. Nothing else is.
     # ─────────────────────────────────────────────────────────────────────────
     continue-on-error: true
     # A suite that fails wholesale must not also run away with the runner: every
@@ -170,6 +175,19 @@ jobs:
       - name: Install Playwright browser
         working-directory: webapp/frontend
         run: corepack pnpm exec playwright install --with-deps chromium
+
+      # The corpus, embedded once on the on-prem stack and committed. No model,
+      # no key, no network: `psql` replays 241 chunks and their HNSW index into
+      # this runner's Postgres. `ON_ERROR_STOP` because a half-restored corpus
+      # would surface as a dozen mislabelled content assertions, never as "the
+      # seed failed" — the same class of lie the missing AUTH_SECRET told.
+      - name: Seed Postgres from the committed fixture
+        run: |
+          gunzip -c fixtures/e2e/pgvector-seed.sql.gz \
+            | psql "$TESSERA_POSTGRES__DSN" -v ON_ERROR_STOP=1 -q
+          psql "$TESSERA_POSTGRES__DSN" -tAc \
+            'select count(*) from tessera_local.documents' | tee /tmp/seed-rows
+          test "$(cat /tmp/seed-rows)" -gt 200
 
       - name: Start backend (:8290)
         run: |
