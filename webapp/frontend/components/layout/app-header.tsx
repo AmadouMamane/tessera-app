@@ -245,15 +245,18 @@ export function AppHeader({
   );
 }
 
+// 1.45rem / text-sm are the sizes this block has always used. `2735f9ad` cut them to
+// text-base / text-xs when it cut the header's height, and the page title stopped reading as a
+// page title. Restored with the row's 88px.
 function TitleBlock({ title, description }: { title?: string; description?: string }) {
   const t = useTranslations("app");
   return (
     <div className="min-w-0">
-      <h1 className="truncate font-sans text-base font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
+      <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
         {title ?? t("tagline")}
       </h1>
       {description ? (
-        <p className="mt-0.5 truncate text-xs text-[var(--tessera-text-muted)]">{description}</p>
+        <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">{description}</p>
       ) : null}
     </div>
   );
