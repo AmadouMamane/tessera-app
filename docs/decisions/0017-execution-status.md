@@ -85,11 +85,13 @@ updates this file after every step. A resuming session reads this first, then co
     asserted:** hello `[Observable]`, turn `[Testable]`, duplex `[Observable · Testable]`, the three
     business agents both. Cross-check test: the chip and the Console must agree about invocability,
     else a card advertises a test bench that will not open.
-  - **OWED, surfaced not silent.** `turn-agent` keeps `workflows: [{turn_v1, workflow_grammar.v1}]`
-    — a grammar binding for spans it never emits, the **same over-claim one rung down**. Emptying it
-    changes no badge (the level formula already reads L0 from either field) and no chip, so it is
-    pure honesty with zero visible delta. **Not done: the lot authorised the `telemetry_capabilities`
-    fix only.** Architect's call.
+  - **The second declaration, surfaced then paid (`fc620878`).** `turn-agent` also declared
+    `workflows: [{turn_v1, workflow_grammar.v1}]` — a grammar binding for spans it never emits, the
+    **same over-claim one rung down**, and **invisible in the badge** (the level formula already
+    reads L0 from either field being empty), which is precisely why it needed a test and not an eye.
+    Ruled by Amadou: empty it in this lot. `workflows: []`; the manifest/source guard now checks
+    **both** declarations, and **each leg was mutation-verified independently** — restoring either
+    field fails exactly the turn-agent case. Honesty with zero visible delta is still honesty.
 
 - 2026-07-09 — **Fleet-legibility + level-honesty review (lot A `b3d70b36`, lot B `b7ef1003`,
   branch `claude/fleet-agent-legibility`): APPROVED — MERGE FEU VERT.** Lot A ratified incl.
