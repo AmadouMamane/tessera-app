@@ -91,9 +91,7 @@ _TR: dict[str, tuple[str, str, str]] = {
     ),
     "fa_export": ("Exporter la session", "Sitzung exportieren", "Export session"),
     "fa_close": ("Clôturer la session", "Sitzung schliessen", "Close session"),
-    "timeline_incidents": ("Timeline incidents", "Vorfall-Timeline", "Incident timeline"),
     "new_session": ("Nouvelle session", "Neue Sitzung", "New session"),
-    "replay": ("Relire à T", "Bei T abspielen", "Replay at T"),
     "title": ("Conversation de test", "Testkonversation", "Test conversation"),
     "subtitle": (
         "Interagissez avec l'assistant et observez en détail les traces, "
@@ -388,6 +386,14 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
     session_id = f"sess_{hashlib.sha256(session_seed.encode()).hexdigest()[:8]}"
     now = datetime.now(_PARIS)
 
+    # Four keys below are emitted but read by nothing in webapp/frontend, verified
+    # 2026-07-10 against components/agent/agent-console.tsx (the sole consumer; it
+    # spreads nothing and reads only named fields): ``footer.live``,
+    # ``actions.feedback``, ``evaluation.available`` and top-level ``provider``.
+    # They are kept because, unlike the three fields 71b15b18 orphaned and this
+    # commit removed, no commit ever read them — "never used" is not the same
+    # evidence as "a refonte dropped the reader", and pruning them is a payload
+    # contract change that belongs in its own reviewed change.
     return {
         # ADR 0019 §I2 — the declared cockpit→agent binding this console drives. Present on
         # every payload so the frontend generates its shape from the declaration, never an
@@ -422,7 +428,6 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
             "live": True,
             "context": "Plateforme Tessera",
             "language": _t("lang_name", lang),
-            "session_id": session_id,
         },
         "actions": {
             "input_placeholder": _t("placeholder", lang),
@@ -433,9 +438,7 @@ def compute_agent_console(lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID) ->
                 {"key": "export", "label": _t("fa_export", lang)},
                 {"key": "close", "label": _t("fa_close", lang)},
             ],
-            "timeline_incidents": _t("timeline_incidents", lang),
             "new_session": _t("new_session", lang),
-            "replay": _t("replay", lang),
         },
         "title": _t("title", lang),
         "subtitle": _t("subtitle", lang),

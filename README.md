@@ -54,13 +54,25 @@ Academic citations in [`docs/differentiation.md`](./docs/differentiation.md) are
 
 This section reports the real test status, not a marketing surface. Failures are documented, not hidden.
 
-### Green in CI
+### Green in CI — the gate
 
-- **Unit suite — 1,158 tests pass.** Agent graph, router/policy deterministic short-circuits (including the policy/scope refusal guard, the third-party-PII guard, the auth redirect and the DORA corrections with their false-positive contracts), retrieval, guard, corpus generation, the LLM router, the memory tiers (window / summary / persistent / entity ledger / governance), and reasoning-trace stripping. Run: `uv run pytest tests/unit/`.
-- **Quality gate.** `ruff`, `ruff format`, `mypy --strict`, `bandit`, `pip-audit`, plus the frontend `biome` and `tsc`. The supply-chain workflow builds, signs (cosign), and attaches SLSA provenance + an SBOM to the agent image.
+One job decides whether a commit is green, and it is the same command you run on your machine:
+
+```bash
+make gate      # run it twice; a check that passes once and fails once is a red check
+```
+
+`make gate` is the definition, `.github/workflows/ci.yml` job `gate` is a caller — there is no second, drifting copy of the command list. It is hermetic: no secrets, no services, no browser.
+
+- **Python — 1,573 tests pass** (`pytest -m "not integration"`). Agent graph, router/policy deterministic short-circuits (including the policy/scope refusal guard, the third-party-PII guard, the auth redirect and the DORA corrections with their false-positive contracts), retrieval, guard, corpus generation, the LLM router, the memory tiers (window / summary / persistent / entity ledger / governance), and reasoning-trace stripping. Plus `ruff check`, `ruff format --check`, `mypy --strict`.
+- **Frontend — 132 tests pass** (`vitest run`), plus `tsc --noEmit` and `biome check`, with `pnpm` pinned by `packageManager` (9.15.0).
+- **Security workflow.** `bandit`, `pip-audit`, Trivy. The supply-chain workflow builds, signs (cosign), and attaches SLSA provenance + an SBOM to the agent image.
+
+Until 2026-07-10 this section claimed the frontend `biome` and `tsc` ran in CI. They did not — no workflow invoked `pnpm`, `biome`, `tsc`, `vitest` or Playwright, so the entire frontend could rot without a witness. The `gate` job is what makes the claim true.
 
 ### Not gating CI (needs live services)
 
+- **End-to-end suite** (`webapp/frontend/e2e/`, Playwright). The `e2e` job runs it against a **production build** (`next build` + `next start`), one worker, with PostgreSQL from a service container. It is **non-blocking** and says so in its own header: on `main` today the suite is 145 passed / 31 failed / 9 not run, and the 31 are dead contracts left by deliberate frontend refontes, not regressions. Making the job blocking before repairing them would block every commit; weakening it until it passes is not something we do. The job flips to blocking when the full suite runs green twice in a row.
 - **Integration suite** (`tests/integration/`, `pytest.mark.integration`) exercises the full graph and the persistent memory backend. A subset needs a seeded PostgreSQL and a live LLM (Ollama / Vertex AI) that the hosted runner does not provide, so the job runs for visibility but is **non-blocking**. Locally, with services up: `uv run pytest tests/integration/ -m integration` (currently 16 pass / 3 require seeded Postgres + a running model).
 
 ### Regression harness — fleet release gates (llama3.2:3b, 2026-07-04)

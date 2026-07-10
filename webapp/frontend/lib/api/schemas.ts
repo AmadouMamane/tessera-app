@@ -4426,7 +4426,6 @@ export const AgentConsoleSchema = z.object({
       live: z.boolean(),
       context: z.string(),
       language: z.string(),
-      session_id: z.string(),
     })
     .optional(),
   actions: z
@@ -4434,9 +4433,7 @@ export const AgentConsoleSchema = z.object({
       input_placeholder: z.string(),
       feedback: z.array(z.string()),
       footer_actions: z.array(z.object({ key: z.string(), label: z.string() })),
-      timeline_incidents: z.string(),
       new_session: z.string(),
-      replay: z.string(),
     })
     .optional(),
 });

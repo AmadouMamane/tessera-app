@@ -45,9 +45,15 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npx next dev -p 3390",
+    // CI serves a PRODUCTION build: `pnpm build` runs as its own step, then
+    // `next start`. That is where the measurements in this header were taken,
+    // and a `next dev` run reports compile timeouts as test failures. Locally
+    // the dev server stays the default. `reuseExistingServer` is true in both
+    // places, so CI reuses the server it started itself and can never silently
+    // fall back to `next dev` underneath a full-suite run.
+    command: process.env.CI ? "npx next start -p 3390" : "npx next dev -p 3390",
     url: `${baseURL}/fr/login`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120_000,
     env: { TESSERA_BACKEND_URL: process.env.TESSERA_BACKEND_URL ?? "http://localhost:8290" },
   },

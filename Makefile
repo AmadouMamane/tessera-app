@@ -1,6 +1,7 @@
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
-        obs-up obs-down obs-logs dev-secrets
+        obs-up obs-down obs-logs dev-secrets \
+        gate gate-py gate-web
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -32,6 +33,34 @@ precommit: install
 
 # All quality checks in sequence (used locally before pushing)
 check: format-check lint typecheck
+
+# ── The gate ────────────────────────────────────────────────────────────────
+#
+# `gate` is the single definition of what "green" means in this repository.
+# The CI job of the same name (.github/workflows/ci.yml) invokes these very
+# targets, so there is no second, drifting copy of the command list: a green
+# gate on your machine and a green gate on a runner check the same things.
+#
+# Hermetic by construction — no secrets, no services, no network beyond the
+# dependency install. Anything that needs Postgres, ClickHouse, an LLM or a
+# browser lives in `test-integration` or in the `e2e` job, never here.
+#
+# The discipline is *twice*-green: run `make gate` two complete times before
+# merging. A check that passes once and fails once is a red check.
+
+gate: gate-py gate-web
+
+gate-py: install
+	uv run ruff check .
+	uv run ruff format --check .
+	uv run mypy src/tessera
+	uv run pytest -m "not integration"
+
+gate-web:
+	cd webapp/frontend && corepack pnpm install --frozen-lockfile
+	cd webapp/frontend && corepack pnpm run typecheck
+	cd webapp/frontend && corepack pnpm run lint
+	cd webapp/frontend && corepack pnpm run test
 
 # ── Tests ───────────────────────────────────────────────────────────────────
 
