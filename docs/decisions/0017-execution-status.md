@@ -59,6 +59,35 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-10 — **Durable-store inventory (ruling: "the store belongs to the operator — hand him the
+  list, decide nothing"). NOTHING WAS WRITTEN, NOTHING WAS DELETED.** Read-only, `SELECT` only.
+
+  The durable store is `app_settings` (`src/tessera/api/settings_store.py`): `key text PRIMARY KEY,
+  value boolean NOT NULL, updated_at timestamptz DEFAULT now()`. The code knows **exactly one key** —
+  `_SYNTHESIS_ADMIN_KEY = "synthesis_visible_to_admin"` — written only through the `POST` in
+  `api/routes/settings.py`. There is no second key, so the entire store is one row wide.
+
+  | schema | key | value | updated_at | age |
+  |---|---|---|---|---|
+  | `public` | `synthesis_visible_to_admin` | `false` | 2026-06-05 10:46:12 UTC | 35 days |
+  | `tessera_local` | — | — | — | *(table exists, zero rows)* |
+
+  **Three facts decide what this row is, and they point the same way.** (1) `public` is the
+  **production** schema; every non-production process reads `tessera_<env>` (ADR 0014, accepted
+  **2026-06-26**). The row predates environment isolation by three weeks — before it, everything
+  wrote to `public`. (2) The dev and e2e processes therefore read `tessera_local.app_settings`, which
+  is **empty**: this row cannot be residue from the recent e2e windows. (3) `_get_flag` defaults to
+  `False`, so the stored value is **identical to the default** — keeping it and deleting it are
+  observationally indistinguishable today, and diverge only if a future default flips.
+
+  **Idempotence, checked rather than restated:** no spec under `webapp/frontend/e2e/` references the
+  synthesis flag or the settings route, so nothing in the suite writes this store. The recurrence the
+  ruling guarded against has no path.
+
+  **Operator's call, not the executor's:** is that 2026-06-05 `false` a *preference you set* (an
+  admin who must not see the failure synthesis) or a *residue* of a test click from before schema
+  isolation? Either way it is inert today. I did not guess, and I did not rewind.
+
 - 2026-07-10 — **Lot C — contract chips on the fleet cards (branch `claude/fleet-contract-chips`,
   `1b8a5241` + `68e391f2`). Gate green in ONE pass** (new protocol, 2026-07-10: twice-green local
   suspended, CI replays `make gate` asynchronously as the second pass; no local e2e outside the
