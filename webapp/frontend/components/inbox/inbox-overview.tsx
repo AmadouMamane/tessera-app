@@ -102,7 +102,10 @@ export function InboxOverview() {
   const [selected, setSelected] = useState<string | null>(null);
   const mutate = useMutation({
     mutationFn: mutateInboxItem,
-    onSuccess: (fresh) => qc.setQueryData(["inbox-overview"], fresh),
+    // The key must match the query's — `["inbox-overview", locale]`. Writing the
+    // locale-less key put the fresh payload in a cache entry nothing reads, so a cycled
+    // status only appeared after the 30 s refetch or a reload.
+    onSuccess: (fresh) => qc.setQueryData(["inbox-overview", locale], fresh),
   });
 
   const items = data?.items ?? [];

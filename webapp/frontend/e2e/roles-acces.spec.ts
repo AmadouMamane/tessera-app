@@ -51,21 +51,25 @@ test("the Type select filters privileged vs read-only", async ({ page }) => {
   await expect(rows).toHaveCount(2);
 });
 
-test("row click opens the detail panel and the capabilities tab", async ({ page }) => {
-  const detail = page.getByTestId("role-detail");
-  await expect(detail.getByText("Sélectionnez un rôle")).toBeVisible();
+// `8f3447d9` replaced the always-mounted detail panel — which showed a
+// "Sélectionnez un rôle" placeholder — with a drawer that mounts only while a row is
+// selected (`access-overview.tsx:188`, `onClose` sets the selection to null). The absence of
+// the drawer IS the empty state now; the placeholder string is dead in `messages/fr.json`.
+test("row click opens the detail drawer and the capabilities tab", async ({ page }) => {
+  await expect(page.getByTestId("role-detail")).toHaveCount(0);
   await page.getByTestId("roles-table").getByRole("button", { name: "Administrateur" }).click();
+  const detail = page.getByTestId("role-detail");
   await expect(detail.getByText("Administrateur")).toBeVisible();
   await detail.getByRole("button", { name: "Permissions" }).click();
   await expect(detail.getByText("Cockpit", { exact: true })).toBeVisible();
 });
 
 test("the close button clears the selection", async ({ page }) => {
-  const detail = page.getByTestId("role-detail");
   await page.getByTestId("roles-table").getByRole("button", { name: "Administrateur" }).click();
-  await expect(detail.getByText("Sélectionnez un rôle")).toHaveCount(0);
+  const detail = page.getByTestId("role-detail");
+  await expect(detail).toBeVisible();
   await detail.getByRole("button", { name: "Fermer" }).click();
-  await expect(detail.getByText("Sélectionnez un rôle")).toBeVisible();
+  await expect(page.getByTestId("role-detail")).toHaveCount(0);
 });
 
 test("sortable header reorders the table", async ({ page }) => {

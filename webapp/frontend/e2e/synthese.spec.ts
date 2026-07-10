@@ -23,44 +23,58 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByText("Conversations", { exact: true }).first()).toBeVisible();
 });
 
+// Repaired 2026-07-10 against the payload `90ebb257` ("refactor(agent-synthese): align
+// Synthèse on the multi-agent normative (operational, events-only)") actually ships. That
+// commit rewrote `agent_synthese.py`, deleting every string these five tests asserted:
+// "cas réussis", "fragments indexés", "Répartition par langue", the "Configuration rapide"
+// card, the "Relire à T" button and the "Configurer l'assistant" CTA. The page is fully
+// alive — none of the *behaviours* went away, only the labels — so each test is retargeted
+// at the surviving surface rather than deleted.
+
 test("renders the real KPI strip from the live sources", async ({ page }) => {
   // Resolution KPI is computed from the eval run (a percentage with a comma).
   await expect(page.getByText("Taux de résolution").first()).toBeVisible();
-  await expect(page.getByText(/cas réussis/).first()).toBeVisible();
-  // Knowledge sources KPI mentions the real indexed-fragment count.
-  await expect(page.getByText(/fragments indexés/).first()).toBeVisible();
-  // Language mix panel replaces the old fabricated "channels".
-  await expect(page.getByText(/Répartition par langue/).first()).toBeVisible();
+  await expect(page.getByText(/\d+,\d+%/).first()).toBeVisible();
+  // Operational counters, not eval trivia: the strip is events-only since 90ebb257.
+  await expect(page.getByText("Tours traités (24h)").first()).toBeVisible();
+  // The indexed-fragment count moved into the profile card ("15 sources / 241 fragments").
+  await expect(page.getByText(/\d+ sources \/ \d+ fragments/).first()).toBeVisible();
+  // The routing-motive breakdown replaced the old language mix.
+  await expect(page.getByText(/Répartition des conversations/).first()).toBeVisible();
 });
 
 test("recent conversations come from the transcript", async ({ page }) => {
-  const card = page.locator("section", { hasText: "Conversations recentes" });
+  const card = page.locator("section", { hasText: "Conversations récentes" });
   await expect(card).toBeVisible();
   // Each row shows a real turn-count label ("N echange(s)").
   await expect(card.getByText(/\d+ échange/).first()).toBeVisible();
 });
 
-test("quick-config links navigate to the real agent pages", async ({ page }) => {
-  const card = page.locator("section", { hasText: "Configuration rapide" });
-  await card.getByRole("link", { name: "Garde-fous", exact: true }).click();
-  await page.waitForURL(/\/agent\/garde-fous/, { timeout: 15_000 });
+test("the operational-alerts CTA navigates to the agent's guardrails", async ({ page }) => {
+  // The "Configuration rapide" card is gone; the guardrails link survives on the
+  // operational-alerts card, and it is per-agent (`opAlerts.ctaHref`).
+  await page.getByRole("link", { name: "Voir les garde-fous" }).first().click();
+  await page.waitForURL(/\/agents\/support-client\/garde-fous/, { timeout: 15_000 });
   expect(page.url()).toContain("/agents/support-client/garde-fous");
 });
 
 test("the period control re-queries the transcript window", async ({ page }) => {
-  // Default window is 7 days, so the all-time message total is not shown yet.
-  await expect(page.getByText("2 108")).toHaveCount(0);
-  // The period <select> lives in the rail's replay mode; open it, then widen to
-  // 30 days -> the dashboard refetches and the larger transcript totals appear.
-  await page.getByRole("button", { name: "Relire à T" }).click();
+  // The period <select> sits directly in the rail now — there is no "Relire à T" button to
+  // reveal it. The contract worth asserting is that changing it re-queries the backend for
+  // that window; the totals it returns are data, and pinning one ("2 108") is what rotted.
   const periodSelect = page.locator('select:has(option[value="d30"])');
-  await expect(periodSelect).toBeVisible({ timeout: 15_000 });
+  await expect(periodSelect).toBeVisible();
+
+  const refetch = page.waitForResponse(
+    (r) => r.url().includes("agent-synthese") && r.url().includes("period=d30") && r.ok(),
+  );
   await periodSelect.selectOption("d30");
-  await expect(page.getByText("2 108").first()).toBeVisible({ timeout: 15_000 });
+  await refetch;
+  await expect(periodSelect).toHaveValue("d30");
 });
 
-test("the Configurer CTA navigates to the configuration page", async ({ page }) => {
-  await page.getByRole("link", { name: /Configurer l'assistant/ }).click();
-  await page.waitForURL(/\/agent\/configurations/, { timeout: 15_000 });
+test("the profile CTA navigates to the configuration page", async ({ page }) => {
+  await page.getByRole("link", { name: "Voir la configuration active" }).first().click();
+  await page.waitForURL(/\/agents\/support-client\/configurations/, { timeout: 15_000 });
   expect(page.url()).toContain("/agents/support-client/configurations");
 });

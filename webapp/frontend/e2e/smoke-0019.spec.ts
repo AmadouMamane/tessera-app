@@ -1,28 +1,67 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
 
 /**
  * Smoke for the ADR 0019 surfaces and the level badges (2026-07-09 overnight run).
  *
  * These assert the two things the night's merges made true and that no unit test can see:
  *
- * 1. **The fleet shows BOTH badge variants at once.** A computed rung, backed by observed
- *    turns, and an attenuated "L{n} déclaré · aucune preuve" for an agent the cockpit has not
- *    seen emit. Before the evidence read was wired, every card showed the second one; if the
- *    read ever silently reverts to trusting an unknown, this test is what notices.
+ * 1. **The badge each card shows agrees with the server's own facts.** An agent whose
+ *    manifest declares more than the cockpit has observed gets the attenuated
+ *    "L{n} déclaré · aucune preuve"; an agent whose rung rests on observed turns gets a bare
+ *    computed rung. If the evidence read ever silently reverts to trusting an unknown, the
+ *    cross-check below is what notices.
  * 2. **The Console is generated from the declared binding.** `http` gets a test bench,
  *    `none` gets honest-empty — never a broken chat over config the agent does not have.
  *    An agent that declares an `input_schema` additionally gets a generated form, with no
  *    per-agent frontend code anywhere.
  *
- * Zero fabricated fixtures: this runs against the real dev stack. Consequently the *computed*
- * badge only exists once an agent has actually served a turn, which is exactly the property
- * being asserted — an agent that emits nothing must not display a computed rung.
+ * STATE-AGNOSTIC BY CONSTRUCTION (rewritten 2026-07-10). The previous version asserted that
+ * both badge variants were on screen *at once*, which is a property of the stack's traffic,
+ * not of the code: a computed rung exists only after an agent has really served a turn, and
+ * `TESSERA_LEVEL_TURN_EVIDENCE` is off in the shipped default, so a freshly booted stack made
+ * two of these tests red by construction — the exact mirror of the doctrine that an empty
+ * green proves nothing. Here it was an empty red.
+ *
+ * So the spec no longer asserts a count it does not create. It reads the fleet's facts from
+ * `/observability/fleet` — the same facts the page renders from — and asserts the DOM agrees
+ * with them, agent by agent. On a dormant stack that reduces to "every card is attenuated,
+ * and none is dressed up as computed", which is precisely the regression worth guarding.
+ * Serve a turn and the same assertions demand a computed badge instead. Nothing is stubbed.
  *
  * Selectors are roles and visible text, never CSS classes: the craft passes retouch classes,
  * and a smoke that breaks on a colour change protects nothing.
  */
 
 const CREDENTIALS = { user: "admin", password: "tessera-admin" };
+
+/** Same default as playwright.config.ts — the backend this frontend is pointed at. */
+const BACKEND = process.env.TESSERA_BACKEND_URL ?? "http://localhost:8290";
+
+type LevelEvidence = "observed" | "dormant" | "unverifiable";
+type FleetFact = {
+  id: string;
+  level?: string | null;
+  level_declared?: string | null;
+  level_evidence?: LevelEvidence | null;
+};
+
+/**
+ * The facts the fleet page renders from, read from their source. Mirrors `levelBadgeView`
+ * in lib/level-badge.ts: a declared rung that outruns the computed one is shown attenuated;
+ * otherwise a computed rung is shown bare; an agent with neither shows no badge at all.
+ */
+async function fleetFacts(request: APIRequestContext) {
+  const response = await request.get(`${BACKEND}/observability/fleet`);
+  expect(response.ok(), `GET ${BACKEND}/observability/fleet`).toBeTruthy();
+  const agents: FleetFact[] = (await response.json()).agents;
+  expect(agents.length, "the fleet is empty — this smoke would assert nothing").toBeGreaterThan(0);
+
+  const attenuated = agents.filter((a) => a.level_declared && a.level_declared !== a.level);
+  const computed = agents.filter(
+    (a) => a.level && !(a.level_declared && a.level_declared !== a.level),
+  );
+  return { agents, attenuated, computed };
+}
 
 async function login(page: Page) {
   await page.goto("/fr/login");
@@ -40,46 +79,64 @@ test.describe("fleet — the level badge tells declared from computed", () => {
     await page.goto("/fr/agents");
   });
 
-  test("an agent with no observed turns reads « déclaré · aucune preuve », never a bare level", async ({
+  test("the fleet renders exactly the badges its facts imply — nothing is dressed up", async ({
     page,
+    request,
   }) => {
-    // hello-agent publishes only when its process runs; with nothing emitting, the honest
-    // reading is the attenuated badge. The number is the agent's ambition, not the cockpit's
-    // observation, and the badge must say so.
-    const declared = page.getByText(/L\d déclaré · aucune preuve/).first();
-    await expect(declared).toBeVisible();
-    // The tooltip must distinguish whose silence it is — the store's or the agent's.
-    await expect(declared).toHaveAttribute("title", /n'a observé aucun tour|joindre/i);
+    const { attenuated, computed } = await fleetFacts(request);
+
+    // A declared rung that outruns the observed one must never render as computed. Counting
+    // both variants against the server's facts catches the regression in either direction:
+    // an agent wrongly promoted to computed shifts both numbers at once.
+    await expect(page.getByText(/L\d déclaré · aucune preuve/)).toHaveCount(attenuated.length);
+    await expect(page.getByTitle(/^Niveau d'observabilité/)).toHaveCount(computed.length);
   });
 
-  test("an agent the cockpit has observed serving turns shows a computed rung", async ({
+  test("the attenuated badge names whose silence it is, and never says « recent »", async ({
     page,
+    request,
   }) => {
-    // support-client has served real turns against this stack, so its rung rests on a fact.
-    const computed = page.getByTitle(/Niveau d'observabilité|observabilité/i).first();
-    await expect(computed).toBeVisible();
-    await expect(computed).not.toHaveText(/déclaré/);
+    const { attenuated } = await fleetFacts(request);
+    const badges = page.getByText(/L\d déclaré · aucune preuve/);
+    await expect(badges).toHaveCount(attenuated.length);
+
+    for (let i = 0; i < attenuated.length; i++) {
+      const badge = badges.nth(i);
+      // Two silences, two tooltips: the agent emitted nothing (`dormant`), or the metrics
+      // store could not be read at all (`unverifiable`). Saying the wrong one blames the
+      // wrong party.
+      await expect(badge).toHaveAttribute("title", /n'a observé aucun tour|injoignable/i);
+      // The evidence query is an unwindowed cumulative counter (turn_evidence.py). A tooltip
+      // that promises recency would be lying about what was measured.
+      await expect(badge).not.toHaveAttribute("title", /récent|recent/i);
+    }
+
+    // And the two tooltips are not interchangeable: each evidence value the server reports
+    // must be legible somewhere on the page.
+    const titles = await badges.evaluateAll((els) => els.map((e) => e.getAttribute("title") ?? ""));
+    if (attenuated.some((a) => a.level_evidence === "dormant")) {
+      expect(titles.some((t) => /n'a observé aucun tour/i.test(t))).toBe(true);
+    }
+    if (attenuated.some((a) => a.level_evidence === "unverifiable")) {
+      expect(titles.some((t) => /injoignable/i.test(t))).toBe(true);
+    }
   });
 
-  test("both variants are on screen together — the gap is rendered, never hidden", async ({
+  test("a computed badge shows a bare rung — the word « déclaré » never appears on one", async ({
     page,
+    request,
   }) => {
-    // The whole point of lot B: a fleet where some agents are proven and some are not must
-    // look like exactly that. If either count is zero this smoke is measuring nothing.
-    const declaredCount = await page.getByText(/L\d déclaré · aucune preuve/).count();
-    const computedCount = await page.getByTitle(/observabilité/i).count();
-    expect(
-      declaredCount,
-      "no attenuated badge — has evidence been wrongly assumed?",
-    ).toBeGreaterThan(0);
-    // PRECONDITION, deliberately not stubbed: a computed rung exists only once an agent has
-    // really served a turn on this stack (`TESSERA_LEVEL_TURN_EVIDENCE=1` + Prometheus up +
-    // at least one POST /chat). A zero here means the evidence path is not wired, which is a
-    // finding — not a reason to fabricate a fixture.
-    expect(
-      computedCount,
-      "no computed badge: wire the evidence read and serve one turn (see overnight-20260709-run.md, lot 1)",
-    ).toBeGreaterThan(0);
+    const { computed } = await fleetFacts(request);
+    const badges = page.getByTitle(/^Niveau d'observabilité/);
+    await expect(badges).toHaveCount(computed.length);
+
+    // On a stack where nothing has served a turn this loop runs zero times, and that is the
+    // honest reading: there is no computed badge to inspect. Serve one turn with
+    // `TESSERA_LEVEL_TURN_EVIDENCE=1` and the same assertions bite.
+    for (let i = 0; i < computed.length; i++) {
+      await expect(badges.nth(i)).not.toHaveText(/déclaré/);
+      await expect(badges.nth(i)).toHaveText(/^L\d$/);
+    }
   });
 
   test("the platform witnesses are legible as witnesses", async ({ page }) => {

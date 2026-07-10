@@ -150,10 +150,15 @@ export function AppHeader({
     chromeClassName ??
     (cockpit ? "bg-[var(--tessera-bg)]" : "border-b border-[var(--border-subtle)]");
 
+  // No border on the header itself: with a row 2 carrying only page actions, a full-width
+  // line under the whole header glues those actions to the page content below — the
+  // anti-pattern the comment above forbids. The single rule belongs on row 1, continuous
+  // with the under-logo divider, with the actions BELOW it. Restored 2026-07-10; 2735f9ad
+  // had moved it onto <header> and deleted the comment that said why it must not live there.
   if (cockpit) {
     return (
-      <header className={cn("relative border-b border-[var(--tessera-border)]", chrome)}>
-        <div className="grid h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)] md:gap-4 md:px-5">
+      <header className={cn("relative", chrome)}>
+        <div className="grid h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--tessera-border)] px-4 md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)] md:gap-4 md:px-5">
           <div className="min-w-0">{left}</div>
           <div className="hidden min-w-0 justify-center md:flex">
             <CommandSearch plan="cockpit" className="w-full max-w-md" />

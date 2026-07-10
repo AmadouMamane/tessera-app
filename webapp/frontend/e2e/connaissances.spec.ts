@@ -31,13 +31,22 @@ test("lists sources with a Volume column", async ({ page }) => {
 });
 
 test("filters by type via the stable tone key and syncs the URL", async ({ page }) => {
+  // Widen the freshness window first. The default period is "30 derniers jours" and only one
+  // source is fresher than that, so the table is already down to a single row before any type
+  // filter runs — `after < before` could never hold, whatever the type filter did. The type
+  // filter was never the broken thing here.
+  await page.getByRole("button", { name: /^Période/ }).click();
+  await page.getByRole("menuitem", { name: "Tout", exact: true }).click();
   const before = await page.locator("table tbody tr").count();
+  expect(before, "the freshness window still hides the catalogue").toBeGreaterThan(1);
+
   await page.getByRole("button", { name: "Statut Tous" }).waitFor();
   await page.getByRole("button", { name: "Type Tous" }).click();
   await page.getByRole("menuitem", { name: "Réglementation" }).click();
   await expect(page).toHaveURL(/type=reg/);
   const after = await page.locator("table tbody tr").count();
   expect(after).toBeLessThan(before);
+  expect(after).toBeGreaterThan(0);
 });
 
 test("sorts by Volume ascending via the column header", async ({ page }) => {

@@ -84,7 +84,8 @@ test("the Reference field reconstructs at the encoded instant", async ({ page })
 });
 
 test("saving a snapshot persists it durably", async ({ page }) => {
-  await page.getByRole("button", { name: "Enregistrer ce snapshot" }).click();
+  // Renamed "snapshot" → "instantané" (b6d9a450, then the elision fix 07313069).
+  await page.getByRole("button", { name: "Enregistrer cet instantané" }).click();
   await expect(page.getByText("Snapshots enregistrés")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/^RES-/).first()).toBeVisible();
   await page.reload();

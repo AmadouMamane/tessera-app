@@ -2,7 +2,15 @@ import { type Page, expect, test } from "@playwright/test";
 
 // Covers the "A traiter" inbox backed by the real operator backlog (failed eval
 // cases): the table lists real items, search + the priority filter narrow it,
-// and clicking a status badge cycles + persists the durable status.
+// and cycling an item's status from its drawer persists durably.
+//
+// Repaired 2026-07-10 against the contract `8f3447d9` ("per-agent scope
+// end-to-end + ADR 0015 telemetry spine") actually shipped: that commit
+// paginated the table at ten rows and moved the status control out of the row —
+// the in-table badge is a non-interactive `<span>` now, and the only
+// "Changer le statut" button lives inside the row's `<dialog>` drawer. The specs
+// still asserted the pre-refonte UI: more than ten rows, and a
+// `button[title="Changer le statut"]` that no longer exists.
 
 const PAGE = "/fr/a-traiter";
 
@@ -22,8 +30,16 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("table tbody tr").first()).toBeVisible();
 });
 
-test("lists real backlog items", async ({ page }) => {
-  expect(await page.locator("table tbody tr").count()).toBeGreaterThan(10);
+test("lists real backlog items, one page at a time", async ({ page }) => {
+  // The page size is ten (`inbox-overview.tsx`, `useState(10)`), so the row count is a
+  // property of the paginator, not of the backlog. The backlog's real size is what the
+  // summary reports — asserted as "more than one page", never as a seeded constant.
+  expect(await page.locator("table tbody tr").count()).toBe(10);
+
+  const summary = page.getByText(/Afficher 1 - 10 sur \d+/);
+  await expect(summary).toBeVisible();
+  const total = Number(((await summary.textContent()) ?? "").match(/sur (\d+)/)?.[1]);
+  expect(total).toBeGreaterThan(10);
 });
 
 test("search filters the queue client-side", async ({ page }) => {
@@ -41,16 +57,32 @@ test("the priority filter narrows the queue", async ({ page }) => {
   expect(after).toBeGreaterThan(0);
 });
 
-test("clicking a status badge cycles and persists the status", async ({ page }) => {
-  const badge = page.locator('button[title="Changer le statut"]').first();
-  const before = (await badge.textContent())?.trim();
-  await badge.click();
-  // The status label changes (todo -> en cours, etc.).
-  await expect.poll(async () => (await badge.textContent())?.trim()).not.toBe(before);
-  const afterClick = (await badge.textContent())?.trim();
+const STATUS = /^(À faire|En cours|En attente|Résolu)$/;
 
-  // Reload: the durable mutation survives.
+const rowStatusCell = (page: Page) =>
+  page.locator("table tbody tr").first().locator("td").filter({ hasText: STATUS }).first();
+
+test("cycling the status from the row drawer persists it", async ({ page }) => {
+  await page.locator("table tbody tr").first().click();
+  const drawer = page.getByRole("dialog");
+  const drawerStatus = drawer.getByText(STATUS).first();
+  const before = (await drawerStatus.textContent())?.trim();
+
+  // Wait for the durable write, not just for the label to flip: reloading on the optimistic
+  // render races the POST, and the row would read back its old status.
+  const written = page.waitForResponse(
+    (r) => r.url().includes("/inbox/item-state") && r.request().method() === "POST" && r.ok(),
+  );
+  await drawer.getByRole("button", { name: "Changer le statut" }).click();
+  await written;
+
+  await expect.poll(async () => (await drawerStatus.textContent())?.trim()).not.toBe(before);
+  const after = (await drawerStatus.textContent())?.trim();
+  expect(after).toMatch(STATUS);
+
+  // The table behind the drawer is server-rendered and does not re-fetch on the mutation;
+  // a reload is what proves the store, and that is the claim this test makes.
   await page.reload();
-  const reloaded = page.locator('button[title="Changer le statut"]').first();
-  await expect(reloaded).toHaveText(afterClick ?? "");
+  await expect(page.locator("table tbody tr").first()).toBeVisible();
+  await expect(rowStatusCell(page)).toHaveText(after ?? "");
 });

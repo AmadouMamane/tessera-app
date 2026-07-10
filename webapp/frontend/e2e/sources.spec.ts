@@ -52,14 +52,17 @@ test("the Type select filters by category", async ({ page }) => {
   await expect(rows).toHaveCount(4); // dora, gdpr, bafin, cnil
 });
 
+// The detail is a click-to-open drawer, not a persistent panel: no row is selected by
+// default (`sources-overview.tsx:151`) and closing unmounts the drawer entirely (`:296`,
+// `:303`). Its absence IS the empty state — the "Sélectionnez une source" placeholder is a
+// dead message key, rendered nowhere.
 test("row click drives the tab-gated detail", async ({ page }) => {
-  const detail = page.getByTestId("source-detail");
-  // The detail is populated by default (persistent panel, like the normative).
-  await expect(detail.getByText("DORA - Résilience opérationnelle").first()).toBeVisible();
+  await expect(page.getByTestId("source-detail")).toHaveCount(0);
   await page
     .getByTestId("sources-table")
     .getByRole("button", { name: "Mémoire long terme" })
     .click();
+  const detail = page.getByTestId("source-detail");
   await expect(detail.getByText("Mémoire long terme").first()).toBeVisible();
   await detail.getByRole("button", { name: "Contenu" }).click();
   await expect(detail.getByText("Sujets distincts")).toBeVisible();
@@ -68,14 +71,14 @@ test("row click drives the tab-gated detail", async ({ page }) => {
 });
 
 test("the close button clears the selection", async ({ page }) => {
-  const detail = page.getByTestId("source-detail");
   await page
     .getByTestId("sources-table")
     .getByRole("button", { name: "Mémoire long terme" })
     .click();
-  await expect(detail.getByText("Sélectionnez une source")).toHaveCount(0);
+  const detail = page.getByTestId("source-detail");
+  await expect(detail).toBeVisible();
   await detail.getByRole("button", { name: "Fermer" }).click();
-  await expect(detail.getByText("Sélectionnez une source")).toBeVisible();
+  await expect(page.getByTestId("source-detail")).toHaveCount(0);
 });
 
 test("sortable volume header reorders the table", async ({ page }) => {
@@ -101,8 +104,9 @@ test("the used-by column surfaces the consuming products", async ({ page }) => {
 test("the product scope filter narrows the catalogue", async ({ page }) => {
   const rows = page.getByTestId("sources-table").locator("tbody tr");
   await expect(rows).toHaveCount(17);
-  // Select the Onboarding product (global ?agent= scope).
-  await page.getByRole("button", { name: /Filtre/ }).click();
+  // Select the Onboarding product (global ?agent= scope). The control is labelled
+  // "Agents :" (`agent-scope-filter.tsx:73`); it has never been called "Filtre".
+  await page.getByRole("button", { name: /Agents/ }).click();
   await page.getByRole("menuitem", { name: "Onboarding" }).click();
   // DORA (Support Client only) drops out; the shared memory store stays (infra).
   await expect(
@@ -115,11 +119,14 @@ test("the product scope filter narrows the catalogue", async ({ page }) => {
 });
 
 test("the used-by drawer shows consumer verdicts", async ({ page }) => {
-  const detail = page.getByTestId("source-detail");
   await page
     .getByTestId("sources-table")
     .getByRole("button", { name: "DORA - Résilience opérationnelle" })
     .click();
+  const detail = page.getByTestId("source-detail");
+  // "Utilisé par" lives behind the governance tab (`sources-overview.tsx:1787`), not on the
+  // overview the drawer opens on.
+  await detail.getByRole("button", { name: "Gouvernance" }).click();
   await expect(detail.getByText("Utilisé par")).toBeVisible();
   await expect(detail.getByText("Support Client")).toBeVisible();
 });
@@ -150,8 +157,9 @@ test("the detail panel shows real metric tiles and tags", async ({ page }) => {
 
 test("the history tab plots real memory growth, corpus stays provenance", async ({ page }) => {
   await page.getByRole("button", { name: /Historique/ }).click();
-  // Real per-day growth chart for the two memory stores.
-  await expect(page.getByText(/Croissance de la mémoire/)).toBeVisible();
+  // Real per-day growth chart for the two memory stores. The heading is
+  // "Croissance / Volume (par jour)" (`sources-overview.tsx:1080`).
+  await expect(page.getByText(/Croissance/)).toBeVisible();
   await expect(page.getByText("Mémoire long terme")).toBeVisible();
   // Corpus has no time axis -> shown under a provenance heading with last-indexed.
   await expect(page.getByText(/provenance Git/)).toBeVisible();
@@ -164,7 +172,10 @@ test("the overview shows the real activity area chart and citation panel", async
 });
 
 test("the detail panel shows the real citation ring and facts", async ({ page }) => {
-  // Default-populated persistent panel (DORA): ring caption + the hits fact.
+  await page
+    .getByTestId("sources-table")
+    .getByRole("button", { name: "DORA - Résilience opérationnelle" })
+    .click();
   const detail = page.getByTestId("source-detail");
   await expect(detail.getByText("DORA - Résilience opérationnelle").first()).toBeVisible();
   await expect(detail.getByText("Citation").first()).toBeVisible(); // ring caption
@@ -184,19 +195,21 @@ test("the as-of control links to the point-in-time page (no invented Suggestions
   expect(page.url()).toContain("/prouver/etat-a-date");
 });
 
-test("the footer shows the real source-to-answer lineage and audit chain", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: /Lineage/ })).toBeVisible();
-  // Real pipeline steps + the honest (broken) audit-chain status.
-  await expect(page.getByText("76 documents")).toBeVisible();
-  await expect(page.getByText("238 chunks - bge-m3")).toBeVisible();
-  await expect(page.getByText(/Chaîne d'audit/)).toBeVisible();
-});
+// REMOVED 2026-07-10 — "the footer shows the real source-to-answer lineage and audit chain".
+// `319dc566` ("refactor(sources): drop the global lineage footer, link to Prouver instead")
+// deleted the LineageFooter outright: the footer now renders only its source line, and
+// `data.lineage` / `data.audit` are consumed by nothing. Per-query lineage moved to Prouver
+// and the Console. There is no surviving surface to point this test at — a whole-page
+// lineage heading, "76 documents", "238 chunks - bge-m3" and "Chaîne d'audit" no longer
+// render anywhere on this page. The backend still emits the fields; that is an orphan to
+// prune in the payload, not a contract to re-assert here.
 
 test("the table paginates by default", async ({ page }) => {
   const rows = page.getByTestId("sources-table").locator("tbody tr");
   await page.getByLabel("Lignes par page").selectOption("10");
   await expect(rows).toHaveCount(10);
-  await expect(page.getByText(/1-10 sur 17/)).toBeVisible();
+  // "Afficher {start} - {end} sur {total}" — spaces around the dash.
+  await expect(page.getByText(/1 - 10 sur 17/)).toBeVisible();
   await page.getByLabel("Suivant").click();
   await expect(rows).toHaveCount(7); // 17 - 10
 });
@@ -212,19 +225,16 @@ test("the recent-activity feed shows sources & memory lifecycle (not agent turns
   ).toBeVisible();
 });
 
-test("the detail has Acces rapide and Actions with real links (read-only)", async ({ page }) => {
-  const detail = page.getByTestId("source-detail");
-  await expect(detail.getByText("Accès rapide")).toBeVisible();
-  await expect(detail.getByText("Actions")).toBeVisible();
-  // honest read-only framing (no fake source-mutation buttons)
-  await expect(detail.getByText(/versionnée dans Git/)).toBeVisible();
-  await detail.getByRole("link", { name: "Gérer les permissions" }).click();
-  await page.waitForURL(/\/admin\/roles-acces/, { timeout: 15_000 });
-  expect(page.url()).toContain("/admin/roles-acces");
-});
+// REMOVED 2026-07-10 — "the detail has Acces rapide and Actions with real links (read-only)".
+// `385c7920` ("refactor(sources): drop the generic nav block from the detail drawer") deleted
+// the whole block: it rendered the same links for every source, so it said nothing about the
+// source you had opened. "Accès rapide", "Actions", the "versionnée dans Git" note and the
+// "Gérer les permissions" link render nowhere today, and their message keys are orphaned.
 
-test("the knowledge action links to the Connaissances page", async ({ page }) => {
-  await page.getByRole("link", { name: "Voir les connaissances" }).first().click();
-  await page.waitForURL(/\/agent\/connaissances/, { timeout: 15_000 });
-  expect(page.url()).toContain("/agent/connaissances");
-});
+// REMOVED 2026-07-10 — "the knowledge action links to the Connaissances page".
+// The drawer link went with the same nav block (`385c7920` deletes
+// `KNOWLEDGE_HREF = "/agent/connaissances"` and `t("detail.viewKnowledge")`), and the
+// command-bar variant went with `408ea25d` ("refactor(sources): keep only substrate-native
+// command-bar actions"). No "Voir les connaissances" link exists on this page. The route it
+// pointed at is itself pre-multi-agent: `/agent/connaissances` survives only as a compat
+// redirect to `/agents/support-client/connaissances`.

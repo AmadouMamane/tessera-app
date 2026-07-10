@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
 
 // SR-01 · the SURVEILLER temporal command bar (Vue d'ensemble). Covers the four
 // human readings (Maintenant / À un instant sans & avec date / Historique), the
@@ -8,9 +8,42 @@ import { type Page, expect, test } from "@playwright/test";
 // is set via the URL and drives only UI state (badges/banner), independent of data.
 
 const PAGE = "/fr/surveiller/vue-ensemble";
-const ASOF = "2026-06-26T12:00:00Z";
+/** Same default as playwright.config.ts — the backend this frontend is pointed at. */
+const BACKEND = process.env.TESSERA_BACKEND_URL ?? "http://localhost:8290";
+
+/**
+ * An as-of instant that lands ON a real event, read from the timeline the page renders.
+ *
+ * It used to be `const ASOF = "2026-06-26T12:00:00Z"`, and it rotted: the live window is a
+ * rolling one (`/observability/data-range`), so that instant drifted outside it. The rail
+ * only renders "Événement sélectionné" and its clickable markers for events inside the
+ * window, so two tests asserted a detail panel that no data could produce — and the one that
+ * clicks a marker waited its full 30 s for a button that was never going to exist. Deriving
+ * the instant from an event that exists cannot rot.
+ */
+async function asOfOnRealEvent(request: APIRequestContext): Promise<string> {
+  const response = await request.get(`${BACKEND}/observability/timeline`);
+  expect(response.ok(), `GET ${BACKEND}/observability/timeline`).toBeTruthy();
+  const events: { at: string }[] = (await response.json()).events;
+  expect(events.length, "no events in the window — this spec would assert nothing").toBeGreaterThan(
+    0,
+  );
+  // The middle of the series: far enough from either edge that "nearest event" is
+  // unambiguous, and never the window end (which the marker test explicitly excludes).
+  const middle = events[Math.floor(events.length / 2)];
+  if (!middle) throw new Error("no middle event in the timeline window");
+  return middle.at;
+}
 
 test.use({ viewport: { width: 1536, height: 1100 } });
+
+/** Resolved once per worker, from the live timeline. See `asOfOnRealEvent`. */
+let ASOF = "";
+test.beforeAll(async ({ playwright }) => {
+  const api = await playwright.request.newContext();
+  ASOF = await asOfOnRealEvent(api);
+  await api.dispose();
+});
 
 async function login(page: Page) {
   await page.goto("/fr/login");
@@ -310,8 +343,13 @@ test("the replay cassette stays on XT-01 (AGIR/Replay), not on SURVEILLER", asyn
 
   // AGIR / Replay (XT-01): the legitimate cassette is present.
   await page.goto("/fr/agir/replay-shadow");
+  // `count()` reads the DOM once, before the data-gated rail mounts (`replay-overview.tsx:91`
+  // returns early until its query resolves). It was therefore always 0, the click was always
+  // skipped, and the page stayed LIVE — so the cassette this test exists to find never
+  // appeared. Wait for the control instead of polling for it once.
   const voir = page.getByRole("button", { name: /Voir l.historique/ }).first();
-  if (await voir.count()) await voir.click();
+  await expect(voir).toBeVisible({ timeout: 15_000 });
+  await voir.click();
   await expect(page.locator('[aria-label="Début"]').first()).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('[aria-label="Suivant"]').first()).toBeVisible();
   // …and the signal event-nav is NOT used there.

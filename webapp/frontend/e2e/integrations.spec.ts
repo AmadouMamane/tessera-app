@@ -45,13 +45,16 @@ test("the Type select filters by category", async ({ page }) => {
   await expect(rows).toHaveCount(2);
 });
 
+// Same drawer conversion as roles-acces, same commit `8f3447d9`
+// (`integrations-overview.tsx:180`): no selection means no detail element at all, so the
+// "Sélectionnez un outil" placeholder no longer exists to be asserted.
 test("row click opens the tab-gated guardrail contract", async ({ page }) => {
-  const detail = page.getByTestId("integration-detail");
-  await expect(detail.getByText("Sélectionnez un outil")).toBeVisible();
+  await expect(page.getByTestId("integration-detail")).toHaveCount(0);
   await page
     .getByTestId("integrations-table")
     .getByRole("button", { name: "Solde de compte" })
     .click();
+  const detail = page.getByTestId("integration-detail");
   await expect(detail.getByText("Solde de compte")).toBeVisible();
   await detail.getByRole("button", { name: "Garde-fou" }).click();
   await expect(detail.getByText("Système cible")).toBeVisible();
@@ -59,14 +62,14 @@ test("row click opens the tab-gated guardrail contract", async ({ page }) => {
 });
 
 test("the close button clears the selection", async ({ page }) => {
-  const detail = page.getByTestId("integration-detail");
   await page
     .getByTestId("integrations-table")
     .getByRole("button", { name: "Solde de compte" })
     .click();
-  await expect(detail.getByText("Sélectionnez un outil")).toHaveCount(0);
+  const detail = page.getByTestId("integration-detail");
+  await expect(detail).toBeVisible();
   await detail.getByRole("button", { name: "Fermer" }).click();
-  await expect(detail.getByText("Sélectionnez un outil")).toBeVisible();
+  await expect(page.getByTestId("integration-detail")).toHaveCount(0);
 });
 
 test("sortable calls header reorders the table", async ({ page }) => {

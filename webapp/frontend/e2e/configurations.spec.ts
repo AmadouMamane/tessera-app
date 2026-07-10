@@ -21,34 +21,73 @@ async function login(page: Page) {
 
 const save = (page: Page) => page.getByRole("button", { name: "Enregistrer les modifications" });
 
+/**
+ * Click Save and wait for the durable write to land.
+ *
+ * The button is disabled both while the request is in flight and once the form is clean
+ * again, so `toBeDisabled()` alone is satisfied the instant the click fires. Reloading on
+ * that signal races the POST: the fresh server render can read the store before the write
+ * commits, and the test then reports the *old* value as a persistence failure while the
+ * write lands a moment later. Wait for the response instead.
+ */
+async function saveAndSettle(page: Page) {
+  await Promise.all([
+    page.waitForResponse(
+      (r) =>
+        r.url().includes("/agent-configurations/config") &&
+        r.request().method() === "POST" &&
+        r.ok(),
+    ),
+    save(page).click(),
+  ]);
+  await expect(save(page)).toBeDisabled(); // clean again after success
+}
+
 test.beforeEach(async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
   await expect(page.getByLabel("Ton")).toBeVisible();
 });
 
+// The tone options the backend declares (`agent_configurations.py`). The form marks itself
+// dirty by *difference* — `setField` drops the key again when the chosen value equals the
+// server's (`agent-configurations.tsx:80`) — so an edit is only an edit when it changes
+// something. Selecting a hardcoded "Amical" was therefore a no-op whenever the durable
+// store already held "Amical", which is where a previous run had left it: the restore step
+// lives in the second test, and serial mode had skipped it ever since the first went red.
+// Nine tests in this file were never running. Read the current value, pick another.
+const TONES = ["Professionnel", "Amical", "Direct", "Pédagogique"];
+
+async function otherTone(page: Page): Promise<string> {
+  const current = await page.getByLabel("Ton").inputValue();
+  const other = TONES.find((t) => t !== current);
+  expect(other, `no tone differs from ${current}`).toBeTruthy();
+  return other as string;
+}
+
 test("save is disabled until an edit makes the form dirty", async ({ page }) => {
   await expect(save(page)).toBeDisabled();
-  await page.getByLabel("Ton").selectOption("Amical");
+  await page.getByLabel("Ton").selectOption(await otherTone(page));
   await expect(save(page)).toBeEnabled();
 });
 
 test("a behaviour edit persists across a reload, then restores", async ({ page }) => {
-  // Change the tone and persist it.
-  await page.getByLabel("Ton").selectOption("Amical");
-  await save(page).click();
-  await expect(save(page)).toBeDisabled(); // back to clean after success
+  // Change the tone away from whatever the store currently holds, and persist it.
+  const original = await page.getByLabel("Ton").inputValue();
+  const next = await otherTone(page);
+  await page.getByLabel("Ton").selectOption(next);
+  await saveAndSettle(page);
 
   // Reload: the durable override is reflected by the backend.
   await page.reload();
-  await expect(page.getByLabel("Ton")).toHaveValue("Amical");
+  await expect(page.getByLabel("Ton")).toHaveValue(next);
 
-  // Restore the default so the test leaves the profile clean.
-  await page.getByLabel("Ton").selectOption("Professionnel");
-  await save(page).click();
-  await expect(save(page)).toBeDisabled();
+  // Restore what was there before — not a guessed default. The store is shared with every
+  // other run against this stack, and this test is the only thing that puts it back.
+  await page.getByLabel("Ton").selectOption(original);
+  await saveAndSettle(page);
   await page.reload();
-  await expect(page.getByLabel("Ton")).toHaveValue("Professionnel");
+  await expect(page.getByLabel("Ton")).toHaveValue(original);
 });
 
 test("the identity selects (language, owner) are operable and dirty the form", async ({ page }) => {
@@ -82,8 +121,13 @@ test("the change history is real (file mtimes / console saves, no invented autho
 }) => {
   const panel = page.locator("section", { hasText: "Historique des modifications" });
   await expect(panel).toBeVisible();
-  // Real source events, not the old fabricated "Tessera Ops" author.
-  await expect(panel.getByText(/mis à jour/).first()).toBeVisible();
+  // Two real event shapes, and only two: a repo file's mtime ("… mis à jour") or a console
+  // save ("N champ(s) modifié(s) : …"). Which of the two you see is a property of the stack —
+  // the panel keeps the six most recent events (`agent_configurations.py`, `events[:6]`), so
+  // a handful of console saves legitimately evicts every file row. Asserting "mis à jour" is
+  // present was asserting nobody had used the form recently. Assert the shape instead.
+  await expect(panel.getByText(/mis à jour|champs? modifiés?/).first()).toBeVisible();
+  // Never the old fabricated author.
   await expect(panel.getByText("Tessera Ops")).toHaveCount(0);
 });
 
@@ -133,7 +177,10 @@ test("the 'Outils autorisés' control opens the real allowed-tools list", async 
   await expect(menu.getByText("Blocage de carte")).toBeVisible();
   await expect(menu.getByText("Consultation de solde")).toBeVisible();
   await menu.getByRole("link", { name: /Gérer dans les garde-fous/ }).click();
-  await page.waitForURL(/\/agent\/garde-fous/, { timeout: 15_000 });
+  // The link is per-agent since the multi-agent routes landed: `/agents/<id>/garde-fous`.
+  // The old `/agent/garde-fous` shape never matched, so this waited out its full 15 s on a
+  // navigation that had already happened.
+  await page.waitForURL(/\/agents\/support-client\/garde-fous/, { timeout: 15_000 });
 });
 
 test("the Modèle section links to the model registry (define = CONFIGURER)", async ({ page }) => {

@@ -1275,3 +1275,244 @@ n'étaient **pas** préexistants, et aucun n'était une régression du code :
   `/api/healthz` : un `/api/healthz` vert ne dit rien du rendu RSC.
 - (`next.config.mjs` fixe `output: "standalone"` — requis par `Dockerfile.frontend`. `next start`
   avertit qu'il « ne fonctionne pas » ainsi ; en pratique il sert. Ce n'est **pas** la cause du rouge.)
+
+---
+
+# FENÊTRE CI + DETTE E2E — 2026-07-10 (après-midi)
+
+Deux lots, protocole inchangé : un lot = une branche = un merge, twice-green avant chaque merge,
+zéro nouveau rouge, stop-the-line sur un CI rouge.
+
+## RÉSUMÉ
+
+**Ouverture :** `main` = `d8e4fd4f`. **Clôture :** `main` = _(cf. dernier commit de la section)_.
+
+| Lot | Sujet | Verdict |
+| --- | --- | --- |
+| A | Job `gate` hermétique + job `e2e` + orphelins du payload console | ✅ **mergé** `225cecc7` (+ correctif `9c104c8d`) |
+| B | Réparation de la dette e2e | ✅ **mergé** — suite **entière verte, deux fois** |
+
+**La preuve exigée :** job `gate` **vert sur `main`**, run GitHub Actions **`29079545836`**
+(commit `225cecc7`). Le job `pytest (integration)` y est vert aussi, en non-bloquant.
+
+### Les quatre choses qui comptent
+
+1. **Le CI ne vérifiait pas ce que le README affirmait.** Aucun workflow ne lançait `pnpm`,
+   `biome`, `tsc`, `vitest` ni Playwright. Le README, lui, listait « Green in CI … plus the
+   frontend `biome` and `tsc` ». Tout le frontend pouvait pourrir sans témoin. Corrigé, et le
+   README dit désormais que la phrase était fausse jusqu'à ce jour.
+
+2. **Le vrai nombre n'était pas 31, et il ne l'a jamais été depuis un worktree.** Sans
+   `AUTH_SECRET`, NextAuth **échoue en douceur** : les pages authentifiées répondent 200 et
+   rendent leur coquille déconnectée. La spec se connecte, `waitForURL` réussit, puis asserte
+   sur un tableau jamais rendu. Même commit, un seul worker, build de production :
+
+   ```
+   sans AUTH_SECRET → 170 échecs /   6 verts / 9 non exécutés
+   avec AUTH_SECRET →  34 échecs / 142 verts / 9 non exécutés   ← le vrai chiffre
+   ```
+
+   Aucun des 170 messages ne nomme le secret ; tous nomment un tableau absent. Le worktree
+   d'agent n'a pas de `webapp/frontend/.env.local` ; le checkout principal, si. C'est pourquoi
+   ce chiffre n'avait jamais été vu d'ici.
+
+3. **Les « 9 non exécutés » n'étaient pas neuf sauts, mais un seul rouge.**
+   `configurations.spec.ts` est en `describe.configure({ mode: "serial" })` : son premier test
+   tombait, et les neuf suivants étaient sautés — dont **celui qui restaure le magasin durable**.
+   Le premier test choisissait le ton « Amical » et attendait que « Enregistrer » s'active ; le
+   magasin *contenait déjà* « Amical », laissé là par un run précédent dont la restauration
+   n'avait jamais tourné. Une boucle qui s'auto-entretenait. Ces neuf tests n'avaient pas tourné
+   depuis des semaines ; deux d'entre eux étaient rouges.
+
+4. **Deux vrais bugs produit, trouvés par les specs réparées, corrigés à la racine.**
+   - `inbox-overview.tsx` écrivait le cache React Query sous `["inbox-overview"]` alors que la
+     requête lit `["inbox-overview", locale]`. `setQueryData` n'échoue pas : il crée une entrée
+     que personne ne lit. Un statut cyclé restait invisible **30 secondes** (jusqu'au
+     `refetchInterval`) ou jusqu'à un rechargement. Le fichier frère `agent-a-faire.tsx` avait la
+     bonne clé — c'est par là que le copier-coller a dérivé.
+   - `app-header.tsx` portait son `border-b` sur `<header>` depuis `2735f9ad`, qui avait au
+     passage **supprimé le commentaire expliquant pourquoi il ne devait pas y être**. Le
+     commentaire survivant du même fichier l'interdit toujours : une rangée 2 ne portant que des
+     actions ne doit pas être collée au contenu par une ligne pleine largeur. Le test disait vrai ;
+     c'est le composant qui a été réparé.
+
+### Chiffres
+
+- **Suite e2e** : `34 rouges / 142 verts / 9 non exécutés` → **182 verts / 0 rouge / 0 saut**,
+  deux passages complets consécutifs. (185 → 182 tests : trois supprimés, surfaces disparues.)
+- **Gate** : Python 1 573 tests, vitest 132, `tsc` + `biome` propres. Deux passages avant chaque merge.
+- **CI** : job `gate` ~4 min ; job `e2e` non-gatant, plafonné à 45 min.
+
+---
+
+## LOT A — Le CI, et les orphelins du payload console  ✅ **MERGÉ**
+
+### Le gate est une définition, pas une copie
+
+`make gate` (nouveau) est **la** définition de « vert » : `ruff check`, `ruff format --check`,
+`mypy`, `pytest -m "not integration"`, puis `corepack pnpm install --frozen-lockfile`,
+`tsc --noEmit`, `biome check`, `vitest run`. Le job `gate` de `ci.yml` appelle **ces cibles**.
+Il n'y a donc pas de seconde liste de commandes qui puisse diverger. Hermétique : aucun secret,
+aucun service, aucun navigateur.
+
+`lint`, `typecheck` et `test-unit` sont supprimés : `gate` les subsume strictement
+(`-m "not integration"` sélectionne exactement les 1 573 tests de `tests/unit/`). L'artefact de
+couverture part avec eux — rien ne le consommait.
+
+Le job tourne aussi sur les branches d'agent : elles landent sur `main` **sans PR** (pas de
+protection de branche), donc le gate doit les voir *avant* le merge, pas après.
+
+### Le pin pnpm n'en était pas un
+
+Premier run du job : mort avant toute vérification, sur
+`ERR_UNKNOWN_BUILTIN_MODULE: No such built-in module: node:sqlite`, depuis
+`corepack/v1/pnpm/11.11.0`. Le pin (`packageManager: pnpm@9.15.0`) existe — mais dans
+`webapp/frontend/package.json`, et **corepack ne le lit qu'en remontant depuis le cwd**. Un
+`pnpm` lancé à la racine ne trouve aucun pin et télécharge le plus récent, qui exige Node ≥ 22.
+`actions/setup-node` avec `cache: pnpm` sonde le store **depuis la racine** : c'est le seul appel
+qui échappait au pin.
+
+Règle gravée : **on n'invoque jamais pnpm à la racine du dépôt.** Le store est mis en cache
+explicitement, son chemin résolu par `corepack pnpm store path` exécuté depuis `webapp/frontend`.
+
+*(C'est aussi la raison d'avoir poussé la branche avant de merger : le rouge est tombé sur
+`claude/ci-gate`, pas sur `main`.)*
+
+### Le job `e2e` : build de production, non-gatant, et il le dit
+
+Playwright contre `next build` + `next start`, **un worker**, Postgres en service container,
+`TESSERA_SPINE_SOURCE=local` (pas de ClickHouse). `playwright.config.ts` servait `next dev` sous
+CI — la configuration que son propre en-tête documente comme rapportant 102 timeouts au lieu des
+31 vrais. Corrigé.
+
+`continue-on-error: true`, et l'en-tête du job explique pourquoi : rendre bloquant un job dont la
+suite est rouge bloquerait chaque commit, et le réflexe habituel — l'affaiblir jusqu'à ce qu'il
+passe — est précisément ce qu'on refuse. Il bascule quand la suite passe verte deux fois.
+`timeout-minutes: 45` : une suite entièrement rouge coûte un timeout par spec, et `retries: 1`
+sous CI le paie deux fois. Le premier run du job sur `main` a été **annulé** pour cette raison,
+après que le gate y eut enregistré son vert.
+
+### Les orphelins du payload console
+
+Audités contre le **seul** consommateur (`components/agent/agent-console.tsx`, qui ne *spread*
+rien et ne lit que des champs nommés).
+
+**Supprimés — trois champs, un seul commit responsable.** Lus à `71b15b18^`, lus par rien après
+que `71b15b18` eut retiré leurs lecteurs : `actions.timeline_incidents` (ligne 793),
+`actions.replay` (402), `footer.session_id` (813). Retirés de l'émetteur et du schéma zod ; aucun
+test ne les référençait.
+
+**Conservés — quatre champs, et la raison est une différence de preuve.** `footer.live`,
+`actions.feedback`, `evaluation.available`, `provider` (racine) ne sont lus par rien non plus.
+Mais **aucun commit ne les a jamais lus** : « jamais utilisé » n'est pas la même preuve que « une
+refonte a supprimé le lecteur », et élaguer un contrat de payload sur une preuve plus faible
+mérite son propre changement revu. Un commentaire les nomme dans `agent_console.py`.
+`invocation.mode` n'est pas lu par le frontend non plus, mais c'est un champ de contrat déclaré
+(ADR 0019 §I3) avec un test unitaire : il reste.
+
+---
+
+## LOT B — La dette e2e, réparée vers le contrat réel  ✅ **MERGÉ**
+
+### La méthode : mesurer avant de toucher
+
+Le brief l'exigeait pour les deux échecs `a-faire` « inexpliqués ». Appliqué partout : aucune
+spec n'a été modifiée avant que la cause ne soit établie, avec le commit qui l'a produite.
+
+Les 34 rouges viennent de **quatre refontes délibérées**, pas de régressions :
+
+| commit | ce qu'il a changé | specs touchées |
+| --- | --- | --- |
+| `8f3447d9` | tables paginées à 10 lignes ; panneaux de détail → tiroirs `<dialog aria-modal>` | `a-faire`, `a-traiter`, `roles-acces`, `integrations` |
+| `90ebb257` | payload `agent-synthese` réécrit (opérationnel, events-only) | `synthese` (5) |
+| `319dc566` / `385c7920` / `408ea25d` | pied de page lineage, bloc de navigation du tiroir, actions de barre de commande | `sources` (3) |
+| `b6d9a450` + `07313069` | « snapshot » → « instantané » | `etat-a-date` |
+
+### Réparé, pas supprimé — sauf trois, avec leur commit
+
+**Trois suppressions**, chacune parce que la surface n'existe plus, chacune justifiée en place
+avec le commit qui l'a retirée :
+
+- `sources.spec.ts` « the footer shows the real source-to-answer lineage and audit chain » —
+  `319dc566` a supprimé le `LineageFooter` ; `data.lineage` / `data.audit` ne sont consommés par
+  rien. Le lineage par requête vit désormais dans Prouver et la Console.
+- `sources.spec.ts` « the detail has Acces rapide and Actions with real links » — `385c7920` a
+  supprimé le bloc : il affichait les mêmes liens pour toutes les sources, donc ne disait rien de
+  la source ouverte.
+- `sources.spec.ts` « the knowledge action links to the Connaissances page » — le lien du tiroir
+  part avec `385c7920`, la variante barre de commande avec `408ea25d`. La route visée
+  (`/agent/connaissances`) est elle-même pré-multi-agents.
+
+**Tout le reste est réparé vers le contrat réel**, jamais affaibli. Quelques exemples :
+
+- `> 10 lignes` sur une table qui pagine à 10 → `= 10 lignes` **plus** la lecture du total réel
+  dans le résumé (`Afficher 1 - 10 sur N`, `N > 10`). Le nombre de lignes est une propriété du
+  paginateur ; la taille du backlog est ce que le résumé annonce.
+- `section` filtrée sur « Detail selectionne » → `getByRole("dialog")`. Deux des trois échecs
+  `a-faire` étaient des **timeouts de 30 s** : le localisateur ne résolvait jamais, donc le clic
+  attendait un bouton qui existait, dans un conteneur qui n'existait plus.
+- Le placeholder « Sélectionnez un rôle / un outil / une source » n'existe plus : le tiroir ne se
+  monte qu'à la sélection. **Son absence EST l'état vide** → `toHaveCount(0)`.
+- `ASOF = "2026-06-26T12:00:00Z"` en dur, tombé hors de la fenêtre glissante des données → l'instant
+  est désormais **dérivé d'un événement réel** lu sur `/observability/timeline`. Une date en dur
+  pourrit ; un fait, non.
+- `if (await voir.count()) await voir.click()` lisait le DOM une fois, avant que le rail gardé par
+  ses données ne se monte : le clic était **toujours** sauté, et la cassette que le test existe
+  pour trouver n'apparaissait jamais. Remplacé par une attente.
+- `waitForURL(/\/agent\/garde-fous/)` sur une navigation qui avait déjà eu lieu vers
+  `/agents/support-client/garde-fous` : 15 s d'attente sur une regex pré-multi-agents.
+
+### smoke-0019 : hermétique, et il dit ce qu'il n'asserte plus
+
+Deux de ses tests étaient **rouges par construction** sur toute stack fraîche : ils exigeaient
+qu'un badge *calculé* soit à l'écran, or un rang calculé n'existe qu'après qu'un agent a servi un
+tour, et `TESSERA_LEVEL_TURN_EVIDENCE` est **off** dans le défaut livré. C'était le symétrique
+exact de la doctrine ratifiée (« un vert vide ne prouve rien ») : ici, un **rouge vide**.
+
+Un troisième échec était un **bug de spec**, indépendant de l'état : le tooltip de l'agent dont le
+magasin est injoignable dit « injoignable », et la regex cherchait la sous-chaîne `joindre`.
+
+La spec lit désormais les faits de la flotte sur `/observability/fleet` — **les mêmes faits que la
+page rend** — et asserte que le DOM leur est fidèle, agent par agent : autant de badges atténués
+que d'agents dont le manifeste dépasse l'observation, autant de badges calculés que d'agents dont
+le rang repose sur des tours observés. Sur une stack dormante cela se réduit à « toutes les cartes
+sont atténuées, et aucune n'est déguisée en calculée » — précisément la régression à garder.
+Servez un tour, et les mêmes assertions exigent un badge calculé. Rien n'est stubé.
+
+**Ce qui n'est plus asserté (dit, pas sous-entendu) :** que les deux variantes soient à l'écran
+*en même temps*. C'est une propriété du trafic de la stack, pas du code.
+
+**La moitié négative du verrou §4 reste vide**, et l'en-tête de `business-counting.spec.ts` continue
+de le dire. Le seam d'ingestion est un design Claude ; il n'a pas été implémenté ici.
+
+### Deux courses fermées, pas masquées
+
+- `configurations` : `toBeDisabled()` après le clic sur « Enregistrer » est satisfait **pendant**
+  la requête (le bouton est aussi désactivé en vol). Recharger sur ce signal court-circuite le
+  POST : le rendu serveur relit le magasin avant l'écriture, et le test accuse la persistance
+  alors que l'écriture arrive une fraction de seconde plus tard. On attend la réponse.
+- `a-traiter` : même correctif, et c'est en le posant que le bug de clé de cache est apparu — la
+  réponse arrivait, l'UI ne bougeait pas.
+
+### Ce que je ne revendique pas
+
+- **La suite est verte sur *ma* stack.** Elle n'a jamais tourné en CI : le job `e2e` y est
+  non-gatant et son premier run a été annulé. Le passage au gatant demande un run vert observé
+  sur un runner, avec le `AUTH_SECRET` éphémère et sans Ollama. Les specs ne dépendent plus d'un
+  tour servi, mais je ne l'ai pas **prouvé** sur un runner.
+- **Le magasin durable garde une trace de mes runs.** `agent_config.json` conserve le ton laissé
+  par la dernière restauration, et l'historique des modifications de `support-client` contient
+  désormais des lignes « Console ». Les specs sont maintenant idempotentes ; l'état antérieur, lui,
+  n'a pas été rembobiné (je ne peux pas distinguer un réglage d'opérateur d'un résidu de test).
+- **Le déplacement de la règle du header est un changement visuel.** Sur les pages sans rangée 2
+  il est invisible ; sur celles qui portent des actions, la ligne remonte au-dessus d'elles. C'est
+  ce que le commentaire du composant exige, mais cela mérite un coup d'œil.
+
+### Attend Amadou
+
+- **Validation visuelle** : la règle du header sur une page cockpit avec actions (p. ex.
+  `/fr/surveiller/vue-ensemble?expanded=1`) — la ligne doit passer **au-dessus** du bouton
+  « Exporter rapport », continue avec le trait sous le logo.
+- **Flip du job e2e en gatant** : à décider après un premier run vert observé sur un runner.
+- **Protection de branche GitHub** : toujours absente. `origin/main` accepte un push direct.
+- **Les quatre orphelins restants du payload console** attendent leur propre changement revu.
