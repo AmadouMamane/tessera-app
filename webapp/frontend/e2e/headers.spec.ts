@@ -52,8 +52,14 @@ test("the search affordance advertises ⌘K and opens the command palette", asyn
 
   await search.click();
   await expect(page.getByRole("dialog", { name: "Palette de commandes" })).toBeVisible();
-  await expect(page.getByPlaceholder("Rechercher agents, pages, actions…")).toBeVisible();
-  await page.keyboard.press("Escape");
+
+  // Escape is bound to the palette's INPUT (`command-palette.tsx` `onKeyDown`), not to the
+  // window — so it only closes once focus has landed there. Pressing it on the body, as this
+  // spec first did, is a race that passes on a warm machine and fails inside a full suite run.
+  // Waiting for focus asserts the real contract instead of the lucky one.
+  const input = page.getByPlaceholder("Rechercher agents, pages, actions…");
+  await expect(input).toBeFocused();
+  await input.press("Escape");
   await expect(page.getByRole("dialog", { name: "Palette de commandes" })).toHaveCount(0);
 });
 
