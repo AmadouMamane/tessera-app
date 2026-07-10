@@ -288,7 +288,7 @@ function CockpitTools() {
       <OperatorProductMenu />
       <SystemStatusPill className="hidden lg:inline-flex" />
       <NotificationsBell />
-      <HeaderIconButton icon={CircleHelp} label="Aide" className="hidden lg:inline-flex" />
+      <HelpMenu />
     </>
   );
 }
@@ -350,6 +350,36 @@ function NotificationsBell() {
             {t("notificationsEmpty")}
           </p>
         )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * The first of the three doors to `/comprendre`.
+ *
+ * A "?" that opened nothing was chrome pretending to be help. It is a menu now, whose first
+ * item is the page that explains the whole product to someone who has never seen it. Further
+ * items (keyboard shortcuts, corpus) can follow; the first one is the one that matters.
+ */
+function HelpMenu() {
+  const t = useTranslations("comprendre");
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("helpMenu")}
+          title={t("helpMenu")}
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:inline-flex"
+        >
+          <CircleHelp className="h-4 w-4" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[13rem]">
+        <DropdownMenuItem asChild>
+          <Link href="/comprendre">{t("helpUnderstand")}</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -615,39 +645,6 @@ function SelectControl({ item }: { item: HeaderContextItem }) {
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-function HeaderIconButton({
-  icon: Icon,
-  label,
-  badge,
-  className,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  badge?: string;
-  className?: string;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className={cn(
-        "relative h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
-        className ?? "inline-flex",
-      )}
-    >
-      <Icon className="h-4 w-4" aria-hidden />
-      {badge ? (
-        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[0.6rem] font-semibold leading-none text-white">
-          {badge}
-        </span>
-      ) : null}
-    </button>
   );
 }
 

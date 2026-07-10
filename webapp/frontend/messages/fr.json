@@ -7749,7 +7749,9 @@
   },
   "demoBadge": {
     "label": "Démonstration",
-    "ariaLabel": "Ouvrir le lanceur de démonstration"
+    "ariaLabel": "Ouvrir le lanceur de démonstration",
+    "sheetBody": "Vous visitez une banque fictive. Les conseillers, les clients et les dossiers sont simulés ; les mécanismes, eux, sont réels.",
+    "sheetCta": "Découvrir comment cette démonstration est pilotée"
   },
   "signalHero": {
     "title": "Signal franchi (SLO)",
@@ -8179,5 +8181,105 @@
     "client_message_safety": "Sûreté du message client",
     "payment_options_safety": "Sûreté des options de paiement",
     "amount_consistency": "Cohérence des montants"
+  },
+  "comprendre": {
+    "pageTitle": "Comprendre Tessera",
+    "pageLead": "Trois minutes pour comprendre ce que vous regardez.",
+    "diagram": {
+      "caption": "Les deux mondes, les agents, et les deux mémoires.",
+      "bank": "La banque",
+      "cockpit": "Le cockpit",
+      "door": "Une seule porte, à sens unique",
+      "agents": "Les agents",
+      "publishes": "L'agent publie son activité",
+      "testMessage": "Le cockpit envoie un message d'essai",
+      "measures": "Les mesures",
+      "ledger": "Le registre d'audit"
+    },
+    "proofLabel": "Voir la preuve",
+    "sections": [
+      {
+        "heading": "Qu'est-ce que Tessera ?",
+        "body": [
+          "Tessera est un poste de pilotage pour les agents d'intelligence artificielle d'une banque. Imaginez une banque qui emploie plusieurs assistants IA : l'un répond aux questions des clients, un autre accompagne les ouvertures de compte, un troisième s'occupe des impayés. Ils ont été construits par des équipes différentes, parfois avec des technologies différentes. Et pourtant, quelqu'un doit pouvoir répondre à trois questions simples : que font ces agents ? Le font-ils bien ? Et peut-on le prouver, preuves à l'appui, à un auditeur ?",
+          "Tessera est l'endroit où ces trois questions trouvent leur réponse.",
+          "La banque que vous visitez, Crédit Aurore, est fictive — c'est une démonstration. Mais tout le reste fonctionne pour de vrai : les agents répondent vraiment, les chiffres sont vraiment mesurés, le registre de preuves est vraiment infalsifiable. Et quand quelque chose est simulé, l'écran vous le dit. C'est une règle de la maison, vous la verrez partout."
+        ]
+      },
+      {
+        "heading": "Les deux mondes",
+        "body": [
+          "Dès la première page, Tessera vous fait choisir entre deux mondes. Cette séparation n'est pas un détail d'interface : c'est le cœur du système.",
+          "Les espaces métier, c'est la banque telle que ses clients et ses conseillers la vivent : le site de Crédit Aurore avec son assistant, la console du conseiller qui gère les impayés. Rien n'y trahit la machinerie, et c'est voulu — un client ne doit jamais voir les coulisses.",
+          "Le cockpit, c'est la salle des machines : la flotte d'agents, leurs signaux, leurs niveaux de confiance, leurs preuves. C'est là que travaille l'opérateur — la personne responsable de la flotte.",
+          "Les deux mondes ne communiquent que par une seule porte, et dans un seul sens : l'opérateur peut aller voir ce que vivent les clients ; l'inverse est impossible."
+        ]
+      },
+      {
+        "heading": "Comment Tessera observe les agents",
+        "body": [
+          "Chaque agent publie en continu le récit de son activité : combien de conversations, quelles décisions, quels résultats. Tessera ne va jamais fouiller à l'intérieur d'un agent — c'est l'agent qui publie, et le cockpit qui lit. Un peu comme un holter cardiaque : le capteur enregistre le cœur qui bat sa vie, sans jamais le toucher.",
+          "Ce qui rend cette idée puissante, c'est qu'elle ne dépend pas de qui a construit l'agent. N'importe quel agent peut être observé, même s'il vient d'une autre équipe, d'un autre éditeur, d'une autre technologie — du moment qu'il publie dans le langage attendu. Vous en avez une preuve vivante dans la flotte : Hello Agent a été écrit sans une seule ligne du projet, et son badge de niveau est pourtant calculé à partir de mesures réelles. Nous avons chronométré son intégration complète : vingt minutes et dix-huit secondes."
+        ],
+        "proof": {
+          "text": "la flotte, carte Hello Agent.",
+          "href": "/agents"
+        }
+      },
+      {
+        "heading": "Comment Tessera teste les agents",
+        "body": [
+          "Observer ne suffit pas toujours. Un agent silencieux depuis deux heures est-il en bonne santé, ou en panne ? Tant que personne ne lui parle, impossible de le savoir. Il faut pouvoir le solliciter.",
+          "C'est le deuxième contrat : un agent peut déclarer une porte de test. L'opérateur l'utilise pour envoyer un message d'essai depuis le cockpit — avant de confier l'agent à de vrais clients, ou pour reproduire un problème qu'un client a signalé. Et un mécanisme automatique, le canary, envoie un message d'essai à intervalle régulier, pour que le silence ne signifie jamais « on ne sait pas ».",
+          "Si l'observation est le holter, le test est l'épreuve d'effort : on fait travailler le cœur dans des conditions contrôlées, précisément parce qu'attendre ne suffit pas.",
+          "Trois garde-fous accompagnent chaque essai, sans exception. Il est authentifié : on sait qui l'a envoyé. Il est consigné : il laisse une trace dans le registre d'audit. Et il est marqué comme synthétique : un message de test ne sera jamais compté comme un vrai client dans les chiffres de la banque.",
+          "En production, Tessera regarde tout, ne touche presque rien, et n'oublie rien."
+        ],
+        "proof": {
+          "text": "la console de Duplex Agent — le formulaire que vous y voyez a été généré à partir de ce que l'agent déclare, sans une ligne d'interface écrite pour lui.",
+          "href": "/agents/duplex-agent/console"
+        }
+      },
+      {
+        "heading": "Pourquoi certains agents ne servent aucun client",
+        "body": [
+          "Dans la flotte, trois agents peuvent vous intriguer : ils portent une étiquette « Témoin plateforme » et ne servent personne. Hello Agent, Turn Agent et Duplex Agent sont des témoins : chacun prouve une capacité de la plateforme, et une seule.",
+          "Hello Agent prouve qu'on peut observer un agent étranger : il publie son activité, mais ne peut pas être testé. Turn Agent prouve l'inverse : on peut le tester depuis le cockpit, mais il ne publie rien. Duplex Agent prouve que les deux se combinent : on le sollicite, il agit, son activité remonte, et son niveau de confiance monte parce qu'on l'a testé. La boucle complète.",
+          "Pourquoi les garder si dépouillés ? Parce que leur simplicité est la preuve. Si le témoin observable avait besoin d'être aussi testable pour fonctionner, la démonstration ne prouverait plus rien. Chacun montre qu'une capacité tient debout toute seule — et Duplex montre qu'elles s'assemblent."
+        ]
+      },
+      {
+        "heading": "Ce qui est vrai, et ce qui est seulement déclaré",
+        "body": [
+          "Tessera suit une règle simple : un chiffre affiché est un chiffre mesuré. Quand une donnée n'existe pas encore, l'écran montre un tiret et vous dit pourquoi — jamais un faux zéro, jamais un score inventé.",
+          "Vous le verrez sur les badges de la flotte. « L1 calculé » signifie : ce niveau repose sur des mesures réelles. « L2 déclaré · aucune preuve » signifie : l'agent annonce des capacités que la plateforme n'a pas encore pu vérifier. La différence est affichée, pas cachée.",
+          "La plupart des tableaux de bord montrent leur meilleur profil. Celui-ci vous dit d'où vient chaque chiffre — c'est plus rare, et c'est toute la différence quand un auditeur pose la question."
+        ]
+      },
+      {
+        "heading": "Les deux mémoires",
+        "body": [
+          "Tessera garde deux mémoires, et les distinguer éclaire tout le reste.",
+          "La première enregistre ce que les agents font : les conversations, les mesures, les événements métier. C'est la matière des tableaux de bord.",
+          "La seconde enregistre ce qu'on décide à leur sujet : cette réponse a été validée par un conseiller, ce message a été bloqué par une règle, cet agent a été testé par l'opérateur mardi à 14h07. C'est le registre d'audit. Chaque entrée y est enchaînée à la précédente, comme les maillons d'une chaîne : impossible d'en modifier ou d'en supprimer une sans que cela se voie. C'est ce que l'on présente à un auditeur.",
+          "Une phrase suffit à les distinguer : la première mémoire raconte ce que les agents font ; la seconde, ce que les humains décident d'eux."
+        ],
+        "proof": {
+          "text": "la page Prouver, et le badge d'intégrité en bas de chaque écran.",
+          "href": "/prouver/etat-a-date"
+        }
+      },
+      {
+        "heading": "Pour aller plus loin",
+        "body": [
+          "Chaque décision d'architecture de Tessera est écrite, datée et argumentée dans un registre de décisions — y compris les erreurs et leurs corrections, parce qu'un système qui ne documente que ses réussites ne documente rien. Deux récits racontent les moments les plus instructifs : le jour où le registre d'audit a fourché, et les vingt minutes qu'il a fallu pour intégrer un agent étranger. Si vous êtes du métier, commencez par là."
+        ]
+      }
+    ],
+    "launcherOrientation": "Tessera pilote les agents IA d'une banque de démonstration. Choisissez un monde : la banque telle que ses clients la voient, ou le cockpit qui gouverne ses agents.",
+    "launcherLink": "Comprendre Tessera en 3 minutes",
+    "loginWelcome": "Ceci est une démonstration : entrez en un clic avec un rôle d'essai.",
+    "helpMenu": "Aide",
+    "helpUnderstand": "Comprendre Tessera"
   }
 }

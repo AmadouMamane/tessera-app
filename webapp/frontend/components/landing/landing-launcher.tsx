@@ -134,6 +134,23 @@ const ACCENT: Record<Accent, AccentStyle> = {
 
 type T = ReturnType<typeof useTranslations<"landing">>;
 
+function Orientation() {
+  const t = useTranslations("comprendre");
+  return (
+    <>
+      <p className="mt-[14px] max-w-[38rem] text-[13px] leading-[1.6] text-[var(--text-secondary)]">
+        {t("launcherOrientation")}
+      </p>
+      <Link
+        href="/comprendre"
+        className="mt-[10px] rounded-sm text-[12px] text-[var(--text-secondary)] underline decoration-dotted underline-offset-4 outline-none transition-colors hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+      >
+        {t("launcherLink")}
+      </Link>
+    </>
+  );
+}
+
 export function LandingLauncher({
   signal,
   demoLogin,
@@ -184,6 +201,10 @@ export function LandingLauncher({
             <h1 className="font-sans text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[var(--text-primary)]">
               {t("demoTitle")}
             </h1>
+            {/* The second door to /comprendre. One sentence, one link, nothing else: this
+                page's job is to make you choose a world, not to explain the product on the
+                spot. Anyone who wants the explanation first can take the link. */}
+            <Orientation />
             <SignalBand t={t} signal={signal} />
           </section>
 

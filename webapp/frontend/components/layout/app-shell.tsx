@@ -23,6 +23,17 @@ interface AppShellProps {
   topbarActions?: HeaderAction[];
   /** Override the left rail (defaults to the cockpit sidebar). */
   sidebar?: ReactNode;
+  /**
+   * Skip the cockpit role gate. **Exactly one page sets this: `/comprendre`.**
+   *
+   * That page holds no data — eight paragraphs and a drawing, straight from the locale
+   * catalogue, reading no store and no backend. It exists to explain the product to someone
+   * who has never seen it, and the launcher offers it to a visitor who has not logged in.
+   * Requiring a session to read it would lock the very door it was built to open.
+   *
+   * Not a general escape hatch: any page that renders a fact must stay behind the gate.
+   */
+  publicAccess?: boolean;
 }
 
 export function AppShell({
@@ -33,27 +44,28 @@ export function AppShell({
   topbarFilters,
   topbarActions,
   sidebar,
+  publicAccess = false,
 }: AppShellProps) {
-  return (
-    <CockpitAuthGate>
-      <ShellChrome>
-        <ShellFrame
-          sidebar={sidebar ?? <Sidebar />}
-          topbar={
-            <AppHeader
-              plan="cockpit"
-              title={title}
-              description={description}
-              contextItems={topbarContext}
-              filters={topbarFilters}
-              actions={topbarActions}
-            />
-          }
-          footer={<AppFooter />}
-        >
-          {children}
-        </ShellFrame>
-      </ShellChrome>
-    </CockpitAuthGate>
+  const shell = (
+    <ShellChrome>
+      <ShellFrame
+        sidebar={sidebar ?? <Sidebar />}
+        topbar={
+          <AppHeader
+            plan="cockpit"
+            title={title}
+            description={description}
+            contextItems={topbarContext}
+            filters={topbarFilters}
+            actions={topbarActions}
+          />
+        }
+        footer={<AppFooter />}
+      >
+        {children}
+      </ShellFrame>
+    </ShellChrome>
   );
+
+  return publicAccess ? shell : <CockpitAuthGate>{shell}</CockpitAuthGate>;
 }

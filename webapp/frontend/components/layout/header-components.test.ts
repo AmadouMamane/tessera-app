@@ -79,7 +79,10 @@ describe("H2 cockpit header contract", () => {
     // carries the real notification count (see chrome-honesty.test.ts). Asserting
     // `label="Notifications"` here would pin the static label the chrome lot removed.
     expect(appHeader).toContain("<NotificationsBell />");
-    expect(appHeader).toContain('label="Aide"');
+    // The "?" is a menu now, and its label is localized: `label="Aide"` was French hardcoded
+    // into the header. Its first item is the door to /comprendre.
+    expect(appHeader).toContain("<HelpMenu />");
+    expect(appHeader).toContain('<Link href="/comprendre">');
   });
 
   it("keeps cockpit preferences and identity anchored in the sidebar, not the header", () => {

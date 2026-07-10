@@ -21,6 +21,76 @@ Deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.
 
 ---
 
+## Understand it in 3 minutes
+
+The same explanation the running cockpit gives a visitor, at `/comprendre` — in French,
+German and English. Condensed here for whoever arrives by the repository instead.
+
+```mermaid
+flowchart TB
+    subgraph worlds [ ]
+        direction LR
+        bank["The bank"]
+        cockpit["The cockpit"]
+        cockpit -- "a single door, one way only" --> bank
+    end
+    agents(["The agents"])
+    agents -- "the agent publishes its activity" --> cockpit
+    cockpit -- "the cockpit sends a trial message" --> agents
+    agents --> measures["The measurements"]
+    cockpit --> ledger["The audit ledger"]
+```
+
+**What is Tessera?** A control tower for a bank's AI agents. Picture a bank employing several
+AI assistants — one answers customer questions, one guides account openings, one handles
+overdue payments — built by different teams, sometimes on different technologies. Someone
+must still be able to answer three questions: what are these agents doing, are they doing it
+well, and can you prove it to an auditor? The bank you see, Crédit Aurore, is fictional.
+Everything else works for real, and whenever something is simulated the screen says so.
+
+**The two worlds.** The business spaces are the bank as its customers and advisors live it.
+The cockpit is the engine room: the fleet, its signals, its evidence. They communicate
+through a single door, in a single direction — the operator may go see what customers
+experience; the reverse is impossible.
+
+**How Tessera observes agents.** Every agent publishes the story of its activity; the cockpit
+never reaches inside one. Much like a Holter monitor, the sensor records the heart without
+touching it. It does not matter who built the agent: `examples/hello-agent/` was written
+without a single line of this project, and its level badge is computed from real
+measurements anyway. Full onboarding, timed: **twenty minutes and eighteen seconds**.
+
+**How Tessera tests agents.** Observing is not always enough — an agent silent for two hours
+may be healthy or down. So an agent may declare a test door, and the operator sends it a
+trial message; a canary does the same on a schedule, so silence never means "we don't know".
+Every trial is authenticated, recorded in the audit ledger, and marked synthetic, so a test
+is never counted as a real customer. In production, Tessera watches everything, touches
+almost nothing, and forgets nothing.
+
+**Why some agents serve no clients.** `hello-agent`, `turn-agent` and `duplex-agent` are
+platform witnesses. Hello proves a foreign agent can be *observed*; Turn proves one can be
+*tested*; Duplex proves the two *combine* — you prompt it, it acts, its activity shows up,
+and its trust level rises because it was tested. Their bareness is the proof: if the
+observable witness needed to be testable in order to work, the demonstration would prove
+nothing.
+
+**What is real, and what is merely declared.** A number on screen is a number that was
+measured. Missing data renders as a dash with a reason — never a fake zero, never an invented
+score. On the fleet's badges, "L1 computed" rests on real measurements; "L2 declared · no
+evidence" means the agent announces capabilities the platform has not yet verified. The gap
+is displayed, not hidden.
+
+**The two memories.** The first records *what the agents do* — conversations, measurements,
+business events — and feeds the dashboards. The second records *what we decide about them*:
+this reply validated, this message blocked, this agent tested on Tuesday at 2:07 pm. That is
+the audit ledger, each entry chained to the previous one so none can be altered without it
+showing. It is what you hand an auditor.
+
+**Going further.** Every architecture decision is written down, dated and argued in
+[`docs/decisions/`](docs/decisions/) — including the mistakes and their corrections, because
+a system that documents only its successes documents nothing.
+
+---
+
 ## Positioning
 
 Tessera is a **complete, opinionated, deployed assembly** of four quality layers — runtime guard, offline regression harness, structured audit trail, and human-in-the-loop escalation — wired end to end for one specific, demanding use case: **European retail banking customer support in three languages (FR / DE / EN) with explicit regulatory grounding** (DORA, CNIL, BaFin, GDPR).

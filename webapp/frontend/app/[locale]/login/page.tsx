@@ -21,6 +21,7 @@ export default async function LoginPage({ params }: LoginPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "auth" });
+  const tc = await getTranslations({ locale, namespace: "comprendre" });
 
   return (
     <div className="bg-canvas-glow flex h-screen items-center justify-center overflow-y-auto bg-[var(--background)] px-6 py-10">
@@ -32,6 +33,13 @@ export default async function LoginPage({ params }: LoginPageProps) {
           <h1 className="font-serif text-2xl font-semibold">{t("login.title")}</h1>
           <p className="text-sm text-[var(--muted-foreground)]">{t("login.subtitle")}</p>
         </div>
+
+        {/* One welcome line above the form, and only one: a visitor who lands here has already
+            chosen a world. Saying that this is a demonstration, once, before they type a
+            password they do not have, is the whole job. */}
+        <p className="mb-4 text-center text-[0.8rem] text-[var(--muted-foreground)]">
+          {tc("loginWelcome")}
+        </p>
 
         <Card>
           <CardContent className="flex flex-col gap-5 p-6">
