@@ -19,7 +19,7 @@ import re
 import unicodedata
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, NotRequired, TypedDict, cast
 from zoneinfo import ZoneInfo
 
@@ -42,6 +42,8 @@ from tessera.recouvrement.message_templates import (
     RECOUVREMENT_SCHEDULE_CARD_MESSAGE_V1,
     RECOUVREMENT_SCHEDULE_MESSAGE_V1,
     RecouvrementMessageTemplate,
+    format_promise_date,
+    render_missed_promise_clause,
     render_schedule_sentence,
 )
 
@@ -74,16 +76,28 @@ class RecouvrementCaseSnapshot:
     amount_due_label: str
     amount_due: float
     days_late: int
-    missed_promise: str
     contact_window_start: str
     contact_window_end: str
     recommended_channel: str
     alternative_channel: str
+    missed_promise_date: date | None = None
 
     @property
     def contact_window_label(self) -> str:
         """Human-readable contact window label."""
         return f"{self.contact_window_start}-{self.contact_window_end}"
+
+    @property
+    def missed_promise_label(self) -> str | None:
+        """Human-readable broken-promise label, or ``None`` when the file records none.
+
+        Derived from ``missed_promise_date`` so that no surface can assert a broken
+        promise the case file does not carry.
+        """
+        if self.missed_promise_date is None:
+            return None
+        promise_date = format_promise_date(self.missed_promise_date)
+        return f"promesse de paiement non tenue le {promise_date}"
 
 
 _RC_2048 = RecouvrementCaseSnapshot(
@@ -92,7 +106,7 @@ _RC_2048 = RecouvrementCaseSnapshot(
     amount_due_label="840,00 €",
     amount_due=840.0,
     days_late=32,
-    missed_promise="promesse de paiement non tenue le 12 juin",
+    missed_promise_date=date(2026, 6, 12),
     contact_window_start="08:00",
     contact_window_end="20:00",
     recommended_channel="appel sortant",
@@ -549,12 +563,13 @@ def _format_euro(value: float) -> str:
 
 
 def _context_items(case: RecouvrementCaseSnapshot) -> list[str]:
+    promise_label = case.missed_promise_label
     return [
         f"Dossier : {case.case_id}",
         f"Client : {case.client}",
         f"Montant dû : {case.amount_due_label}",
         f"Retard : {case.days_late} jours",
-        case.missed_promise,
+        *([promise_label] if promise_label is not None else []),
         f"Contact autorisé aujourd'hui : {case.contact_window_label}",
     ]
 
@@ -672,7 +687,7 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
             "amount_due": case.amount_due,
             "amount_due_label": case.amount_due_label,
             "days_late": case.days_late,
-            "missed_promise": case.missed_promise,
+            "missed_promise": case.missed_promise_label,
             "contact_window": case.contact_window_label,
             "recommended_channel": case.recommended_channel,
             "alternative_channel": case.alternative_channel,
@@ -684,7 +699,7 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
             "amount_due": case.amount_due,
             "amount_due_label": case.amount_due_label,
             "days_late": case.days_late,
-            "missed_promise": case.missed_promise,
+            "missed_promise": case.missed_promise_label,
             "contact_window": case.contact_window_label,
             "schedule_option_mentioned": True,
             "validation_required": True,
@@ -867,6 +882,7 @@ def draft_client_message(state: RecouvrementWorkflowState) -> dict[str, object]:
             "case_id": case.case_id,
             "amount_due_label": case.amount_due_label,
             "days_late": case.days_late,
+            "missed_promise_clause": render_missed_promise_clause(case.missed_promise_date),
             "schedule_sentence": render_schedule_sentence(requested_months, monthly_amount_label),
         }
     )
@@ -1060,9 +1076,10 @@ def build_case_summary_artifact(state: RecouvrementWorkflowState) -> dict[str, o
     """Build the drawer-compatible case-summary artifact."""
     case = state["case"]
     policy = state["summary_policy"]
+    promise_label = case.missed_promise_label
     priority_reasons = [
         f"Retard de {case.days_late} jours",
-        case.missed_promise,
+        *([promise_label] if promise_label is not None else []),
         "Dossier déjà dans la file prioritaire Recouvrement",
     ]
     business_factors = [
@@ -1089,9 +1106,14 @@ def build_case_summary_artifact(state: RecouvrementWorkflowState) -> dict[str, o
     ]
     recommended_next_action = "Vérifier le canal de contact puis préparer une relance amiable."
     summary = (
-        f"{case.case_id} concerne {case.client}, avec {case.amount_due_label} dus, "
-        f"{case.days_late} jours de retard et une {case.missed_promise}."
+        f"{case.case_id} concerne {case.client}, avec {case.amount_due_label} dus "
+        f"et {case.days_late} jours de retard."
     )
+    if promise_label is not None:
+        summary = (
+            f"{case.case_id} concerne {case.client}, avec {case.amount_due_label} dus, "
+            f"{case.days_late} jours de retard et une {promise_label}."
+        )
     artifact: RecouvrementArtifact = {
         "id": f"{case.case_id}-summary-v1",
         "type": "case_summary_v1",
@@ -1104,7 +1126,7 @@ def build_case_summary_artifact(state: RecouvrementWorkflowState) -> dict[str, o
             "amount_due": case.amount_due_label,
             "amount_due_numeric": case.amount_due,
             "days_late": case.days_late,
-            "missed_promise": case.missed_promise,
+            "missed_promise": case.missed_promise_label,
             "contact_window": case.contact_window_label,
             "recommended_channel": case.recommended_channel,
             "alternative_channel": case.alternative_channel,
