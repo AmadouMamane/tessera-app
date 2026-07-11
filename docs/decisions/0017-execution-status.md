@@ -59,6 +59,81 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-11 — **Audit-remediation overnight run review: ACCEPTED (`ece4f1bf →
+  d194c0b4`, origin; 65 files, +1682/−177).** Verified on pieces: recouvrement trio
+  collapsed to one canonical route (the un-gated surface closed), invoke rate-limit +
+  429, **ledger backup WITH a passing restore drill (23122 rows)** — the P1.2 gap
+  closed the right way (a backup proven by restoration, not declared), config inventory
+  generated, prod-posture doc, weekly deps job. **Codegen REJECT ratified** (executor
+  exceeded «prototype+park» but landed right): only **10 `response_model` across 174
+  routes** — OpenAPI→zod would generate `unknown` for the untyped 96% and regress the
+  hand-maintained schemas.ts. His sequencing is sharper than my prompt: type the
+  backend first (Pydantic response_models), then codegen becomes free — and that typing
+  IS part of the security seam (B2/B3 need typed mutation responses). Window-3 splits
+  parked with concrete plans (observability.py → package; tabs extraction byte-identical)
+  — endorsed, they run after the security seam. **#1 MORNING ISSUE — CI is billing-
+  blocked, nothing ran in Actions all night.** This VOIDS the «CI is the second pass»
+  compensation of fast-iteration mode: the entire night rests on a single local gate
+  pass, no independent verification. Combined with absent branch protection, main is
+  currently BOTH unprotected AND unverified — the fast-iteration safety model is not
+  actually in force until billing is restored. Ratchet must not relax further until it
+  is. **Coordination slip owned (mine):** I appended ledger entries to 0017 on the
+  reference checkout (uncommitted) while opus merged via worktree — a divergence I
+  created; it happens not to conflict (opus touched neither 0017 nor 0008 this run), but
+  the reference checkout now carries my uncommitted 0008 amendment + 0017 entries and
+  sits behind origin. Reconcile before restart (steps handed to operator). Executor
+  hygiene: a too-broad `pkill -f run_local.py` killed the reference backend (restored) —
+  lesson recorded: target by port. **The security two-track prompt (opus audit) is
+  unaffected by this run and still stands as issued.**
+
+- 2026-07-11 — **SECOND AUDIT (opus, 7 parallel reading agents, artifact
+  `Tessera_private/artifacts/tessera-audit-2026-07-10.html`) SUPERSEDES the structural
+  audit on security — and Claude's audit is corrected in the record.** Claude's audit
+  measured structure/debt and named ledger-backup the worst gap; that was wrong. The
+  worst gaps are HTTP-authorization holes, and Claude missed them by auditing
+  architecture without reading the HTTP seam line by line. Two most-severe P0s
+  re-verified by Claude directly against `ece4f1bf`: (1) `guard_overrides` /
+  `system_prompt_override` flow from the `/chat` body into state and the guard layer at
+  chat.py:725-726/735 with **no gate on surface or auth_state** — an anonymous caller
+  disables PII redaction / tool DENY / grounding, or swaps the system prompt; (2)
+  `ALWAYS_PUBLIC` in the BFF literally contains `"observability"` (route.ts:25) → 26
+  operator mutation endpoints reachable anonymously. Six P0 total (add: Cloud Run
+  `allUsers` default, auth bearer fail-open at boot, fabricated payment-promise date in
+  3 approved recouvrement templates, compliance dashboard rendering fixtures as real
+  with no SyntheticNotice). Calibration (opus, endorsed): blast radius is bounded TODAY
+  only because Crédit Aurore data is fictional and nothing is publicly deployed — the
+  posture is open, so this gates any public exposure, not tonight's safety. **Night plan
+  REVISED to two tracks** (below): safe/verified fixes merge autonomously; the security
+  seam is designed now + implemented on a branch but HELD for Claude review + operator
+  go — merging an unreviewed auth boundary is the one place the overnight-to-main model
+  must not reach (green tests don't prove a boundary closed — the vacuous-green lesson,
+  now load-bearing on security). Also real from the audit: reliability KPI overstates
+  error ~3× (wrong formula, shown number), sync recouvrement graph blocks the event
+  loop, GDPR purge never scheduled, ADR-number collisions (two each of 0008/0010/0017/
+  0019), branch protection still absent (now a SECURITY finding, not just hygiene).
+
+- 2026-07-10 — **Five-lot window review: ACCEPTED (`7d341f41 → ece4f1bf`, 8 merges —
+  fixture seed, orphans, durable-store inventory, honest chrome, Comprendre page).**
+  Executor rulings ratified: turn-agent `workflows` emptied (a grammar for spans never
+  emitted is the same lie one level down); the second e2e-flip refusal (7 remaining
+  reds are traffic-dependent — a corpus fixture cannot carry them; traffic fixture =
+  its own slice); **`publicAccess` for `/comprendre` RATIFIED** — an auth-boundary call
+  that is normally Claude's to make: correct on the merits (a page explaining the
+  product to a signed-out visitor cannot live behind the cockpit guard), guarded
+  against sprawl; a one-line 0008 amendment is owed to record it. **Kicker ruling:**
+  the «Démo Tessera» kicker on credit-aurore violates the binding lexicon annex and
+  predates it — remove kicker AND the deliberate test pinning it (audit P0.5).
+  Hygiene: executor sessions keep leaving shells running (4 this time) — close
+  non-reference processes at every window end. **Full-code audit produced on operator
+  request:** `Tessera_private/audit-code-2026-07-10.md` — measured state (71k py /
+  31k tests / 90k ts); P0: 9 integration-test files executed NOWHERE (gate and CI both
+  `-m "not integration"`), 49 silent excepts, 7 f-string SQL, recouvrement route trio,
+  coverage configured but never run; P1: no ledger backup (the most embarrassing gap
+  vs the product's own discourse), no rate-limit on the invoke seam, 51-var config
+  sprawl, schemas.ts 5748-line monolith (OpenAPI→zod codegen study); plan = four
+  sequenced windows, refactors behaviour-preserving, windows 1-2 before any new
+  feature.
+
 - 2026-07-10 — **e2e seed fixture landed; the flip did NOT happen, and here is exactly why
   (factual record, per lot A's own instruction).** The exit criterion was "green on a runner
   twice in a row, then flip"; it was not met, so the job stays a witness (`continue-on-error`

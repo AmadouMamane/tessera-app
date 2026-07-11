@@ -210,3 +210,14 @@ is intentionally not built here.
 unreachable from the anonymous widget, become reachable **once a session is
 established** — closing the ADR's interim "gated until real auth exists" gap with a
 real (if demo-fidelity) auth mechanism, without re-opening the anonymous leak.
+
+## Amendment (2026-07-10) — one public cockpit page: `/comprendre`
+
+The cockpit gains exactly one unauthenticated page: `/comprendre`, the visitor-facing
+explanation of the platform. Rationale: a page whose purpose is to explain the product
+to a signed-out visitor cannot live behind the cockpit guard. Guarded against sprawl:
+`publicAccess` is a per-page allowance with a test asserting the public set stays
+`{/comprendre}` (plus the launcher/login, which were already public routing surfaces);
+any extension amends this ADR. Everything else in the cockpit remains authenticated,
+and the product-surface lexicon is unaffected. Decided by the maintainers during the
+Comprendre slice (`a8a7353d`); recorded here so the auth boundary stays declarative.
