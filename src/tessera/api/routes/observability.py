@@ -132,6 +132,7 @@ from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.eval.sycophancy import detect_sycophancy
 from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
+from tessera.observability.spine.capabilities import capability_for
 from tessera.observability.spine.runtime import get_runtime_provider
 from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot
@@ -1103,6 +1104,12 @@ async def observability_agent_historique(
             "available": True,
             **agent_historique_mod.compute_agent_historique(agent_id, lang),
         }
+        # The eval-session half of this payload — KPI strip, trend, sessions-by-agent,
+        # score distribution, success gauge, watchlist — is a deterministic fixture. It is
+        # shaped like telemetry, so without this stamp the operator UI presents it as live.
+        # Read from the capability registry rather than written as a literal, so the stamp
+        # cannot drift from the declaration (the snapshot's ScopeReport does the same).
+        payload["synthetic"] = capability_for("agent_historique").synthetic
         # Real live conversations from the transcript, surfaced ALONGSIDE the eval
         # sessions (additive — the eval KPIs/charts stay untouched). These are the
         # operator's actual turns, not scored runs, so they get their own honest

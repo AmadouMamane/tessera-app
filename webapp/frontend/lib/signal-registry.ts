@@ -107,6 +107,19 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // retention, journal) is a SIEM subsystem this build does not implement; its artifact
   // counts and audit-chain integrity are real. The export zones carry the demo notice.
   evidence_export: cap(ORG, { synthetic: true }),
+  // Conformité — the overview posture is REAL: compliance.py derives every control status from
+  // runtime signals (AI-Act obligations, conformance, citation validity, PII screening, refusal
+  // calibration, GDPR erasure, firewall efficacy) against thresholds…
+  compliance: cap(ORG),
+  // …while build_tabs() attaches seven governance *catalogues* to the same payload (Art. 30
+  // register, DORA/CNIL/BaFin mapping, obligations, evaluations, incidents, purge & retention,
+  // evidence & attestations) that compliance_tabs.py itself calls "fixed, deterministic fixture
+  // data". Those tabs carry the notice; the derived posture must not be smeared as fake.
+  compliance_catalog: cap(ORG, { synthetic: true }),
+  // Agent Session History — the eval-session blocks (KPI strip, trend, score distribution,
+  // success gauge, watchlist) are a deterministic fixture shaped like telemetry. Only
+  // `live_conversations` is real, and it carries its own block.
+  agent_historique: cap(ORG, { synthetic: true }),
   // Assistant page renders a canned, localized sample conversation (no per-conversation
   // grounded-session store in this build); flagged so it reads as a demonstration, not live.
   assistant: cap(ORG, { synthetic: true }),

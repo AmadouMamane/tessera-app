@@ -189,6 +189,23 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # subsystem this build does not implement. Flagged synthetic so those zones carry the
     # demonstration notice; the page's artifact counts and audit-chain integrity are REAL.
     _cap("evidence_export", frozenset(), synthetic=True),
+    # Conformité, split in two exactly like policies / policy_versioning above.
+    # `compliance.py` derives the overview posture from REAL runtime signals (AI-Act
+    # obligations, schema conformance, citation validity, PII screening, refusal calibration,
+    # GDPR erasure coverage, firewall efficacy) against thresholds — it is measurement, and
+    # flagging it synthetic would be a lie in the other direction.
+    _cap("compliance", frozenset()),
+    # …but `compliance_tabs.build_tabs()` attaches seven *governance catalogues* to the same
+    # payload (Art. 30 register, DORA/CNIL/BaFin mapping, obligations & controls, evaluations,
+    # incidents & exceptions, purge & retention, evidence & attestations) which the module
+    # itself calls "fixed, deterministic fixture data". Flagged so the most regulatorily
+    # sensitive surface in the product cannot read as measured fact.
+    _cap("compliance_catalog", frozenset(), synthetic=True),
+    # Agent Session History: the eval-session blocks (KPI strip, trend, sessions-by-agent,
+    # score distribution, success gauge, watchlist) are a deterministic fixture shaped like
+    # telemetry. Only `live_conversations` — the operator's real transcript turns — is live,
+    # and it carries its own honest block. Flagged so the fixture half cannot read as live.
+    _cap("agent_historique", frozenset(), synthetic=True),
     # The Assistant page renders a canned, localized *sample* conversation (grounded Q&A with
     # sources/guardrails/quality) — a legitimate UX illustration, but not real traffic. This
     # build ships without a per-conversation grounded-session store, so it is flagged synthetic

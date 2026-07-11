@@ -57,6 +57,28 @@ describe("isSynthetic", () => {
       expect(isSynthetic(id)).toBe(false);
     }
   });
+
+  // Audit 2026-07-10, P0 `fixture-as-real`: compliance_tabs.py calls itself "fixed,
+  // deterministic fixture data" for seven governance catalogues, but `compliance` was not
+  // declared here at all and compliance-dashboard.tsx never imported SyntheticNotice —
+  // on the most regulatorily sensitive surface in the product.
+  it("flags the Conformité governance catalogues", () => {
+    expect(isSynthetic("compliance_catalog")).toBe(true);
+  });
+
+  // …and does NOT smear the derived posture. compliance.py maps each control status from a
+  // real runtime signal against a threshold. The audit's shorthand fix (`compliance:
+  // cap(ORG, {synthetic: true})`) would have labelled measurement as fixture — the same
+  // class of dishonesty, pointed the other way.
+  it("does not flag the derived Conformité posture", () => {
+    expect(isSynthetic("compliance")).toBe(false);
+  });
+
+  // The eval-session half of the Agent Session History page is fixed data shaped like
+  // telemetry (observability.py:1087); only `live_conversations` is real.
+  it("flags the Agent Session History eval blocks", () => {
+    expect(isSynthetic("agent_historique")).toBe(true);
+  });
 });
 
 describe("signalSupports", () => {

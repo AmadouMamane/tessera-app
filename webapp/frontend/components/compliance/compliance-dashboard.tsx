@@ -20,6 +20,7 @@ import { type ReactNode, useState } from "react";
 
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -346,7 +347,13 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
       {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
 
       {activeTab !== "overview" && d.tabs?.[activeTab] ? (
-        <CatalogTabView tab={d.tabs[activeTab]} footer={<TabFooter tc={tc} />} />
+        <>
+          {/* The seven catalogue tabs are governance fixtures (compliance_tabs.py calls itself
+              "fixed, deterministic fixture data"). The overview below is derived from real
+              runtime signals and carries no notice — the registry drives which is which. */}
+          <SyntheticNotice signalId="compliance_catalog" />
+          <CatalogTabView tab={d.tabs[activeTab]} footer={<TabFooter tc={tc} />} />
+        </>
       ) : (
         <>
           <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
