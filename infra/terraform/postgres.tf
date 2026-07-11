@@ -43,6 +43,11 @@ resource "google_sql_database_instance" "tessera" {
     ip_configuration {
       ipv4_enabled    = false
       private_network = "projects/${var.project_id}/global/networks/default"
+      # Audit 2026-07-10, P2 `infra-hardening` (postgres.tf:43): no ssl_mode was set, so the
+      # instance accepted unencrypted connections. The database holds customer transcripts
+      # and the long-term memory — the GDPR-relevant data. Private IP limits WHO can reach
+      # it; it does not encrypt what crosses the wire once they do.
+      ssl_mode = "ENCRYPTED_ONLY"
     }
 
     insights_config {

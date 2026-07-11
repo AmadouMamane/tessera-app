@@ -1,14 +1,19 @@
 # Cloud Run service hosting the FastAPI app.
 #
-# Ingress is set to ALL_TRAFFIC because Tessera is a public demo that is
-# accessed directly from the browser without a load-balancer front-end.
-# For a private deployment, flip ingress to INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER
-# and restrict allowed_invokers accordingly.
+# Audit 2026-07-10, P0 `terraform-exposure` (cloud_run.tf:11). Ingress was hardcoded to
+# INGRESS_TRAFFIC_ALL, so the banking agent answered the open internet on its run.app URL.
+# Two consequences, not one:
+#   1. the frontend is the ONLY intended caller, and it was trivially bypassable;
+#   2. Cloud Armor sits in front of the load balancer, so hitting run.app directly walked
+#      straight around the WAF — the rules were there, and simply not in the path.
+#
+# Default is now internal + load-balancer. A public demo remains one variable away, but it
+# is a decision someone makes, not a default someone forgets.
 
 resource "google_cloud_run_v2_service" "agent" {
   name     = local.agent_service
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  ingress  = var.ingress
 
   labels = local.common_labels
 

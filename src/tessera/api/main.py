@@ -39,7 +39,11 @@ from tessera.api.routes import (
     session as session_routes,
     settings as settings_routes,
 )
-from tessera.api.security import SecurityHeadersMiddleware, require_bearer
+from tessera.api.security import (
+    SecurityHeadersMiddleware,
+    require_bearer,
+    validate_bearer_token,
+)
 from tessera.api.session import validate_session_signing_key
 from tessera.api.settings_store import ensure_settings_schema
 from tessera.memory.governance import ensure_consent_schema
@@ -306,6 +310,9 @@ def build_app() -> FastAPI:
     # Phase B) are both required in prod; no-op in dev/CI.
     validate_session_signing_key()
     validate_operator_assertion_key()
+    # The third member of the family, missing until the 2026-07-10 audit: an unset bearer
+    # made require_bearer and AuthMiddleware no-ops, publishing audit/memory/settings.
+    validate_bearer_token()
     # Docs/OpenAPI are on for local dev, off in production, and can be closed
     # explicitly (expose_docs=False) on an internet-reachable non-prod agent.
     docs_on = settings.api.expose_docs and not settings.is_production()

@@ -43,6 +43,7 @@ from tessera.agent.state import (
 )
 from tessera.agent.supervisor import RoutingDecision, route_turn
 from tessera.api.operator import resolve_request_context
+from tessera.authz import AuthState
 from tessera.guard.audit import (
     current_auth_state,
     current_model,
@@ -695,6 +696,23 @@ def _sse(event: str, payload: object) -> bytes:
     return f"event: {event}\ndata: {body}\n\n".encode()
 
 
+def sandbox_overrides_allowed(surface: Surface, auth_state: AuthState) -> bool:
+    """Whether this turn may relax the guard at all (audit P0 `guard-bypass`).
+
+    ``system_prompt_override`` and ``guard_overrides`` are the console playground's sandbox
+    controls: they replace the system prompt (a jailbreak primitive) and switch off guard
+    categories — tool DENY rules, PII redaction, grounding. Until this existed, "Sandbox-only"
+    was a *docstring* and nothing else: the fields were read straight off the request body of
+    ``POST /chat`` with no check on who was asking or where from, so ANY anonymous caller
+    could disable the entire safety stack for their turn and stream an unredacted PAN back.
+
+    Both inputs here are server-derived — ``surface`` from the signed operator assertion,
+    ``auth_state`` from the verified session — never from the body. A caller cannot lie its
+    way into the sandbox.
+    """
+    return surface is Surface.COCKPIT_EMBEDDED and auth_state is AuthState.OPERATOR
+
+
 def _turn_deadline_s() -> float:
     """Wall-clock budget for one turn's graph phase.
 
@@ -730,6 +748,14 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # never raise auth (auth_state comes from the signed session, not the body).
     effective_subject = session.subject_id or request.subject_id
 
+    # The guard is only relaxable from the operator's own cockpit sandbox. Off that surface
+    # the two override fields are DROPPED — not rejected. A 4xx would tell an attacker the
+    # fields are real and worth probing; silently applying the full policy tells them nothing
+    # and costs a legitimate operator nothing (audit P0 `guard-bypass`, chat.py:725-726 -> :735).
+    sandbox = sandbox_overrides_allowed(surface, auth_state)
+    system_prompt_override = request.system_prompt_override if sandbox else None
+    guard_overrides = request.guard_overrides if sandbox else None
+
     prior_messages = await _prior_messages(conversation_id, request)
     initial = new_state(
         conversation_id=conversation_id,
@@ -740,14 +766,14 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         prior_messages=prior_messages,
         subject_id=effective_subject,
         model=request.model,
-        system_prompt_override=request.system_prompt_override,
-        guard_overrides=request.guard_overrides,
+        system_prompt_override=system_prompt_override,
+        guard_overrides=guard_overrides,
     )
     # Record the effective model on audit entries emitted during this turn
     # (memory governance, guard) — not just the server default.
     current_model.set(request.model)
     # Propagate sandbox guard toggles to the guard layer for this turn only.
-    guard_disabled.set(frozenset(request.guard_overrides or ()))
+    guard_disabled.set(frozenset(guard_overrides or ()))
     # Publish the server-derived auth-state so the guard's tool allowlist gates
     # account/PII tools on the real session (anonymous → denied, customer → ok).
     current_auth_state.set(auth_state)
@@ -854,7 +880,12 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # path, so its redaction runs here instead — on the token stream itself, not
     # just on the stored final_response (a masked transcript is worthless if the
     # raw PAN already crossed the wire). The sandbox "pii" override disables it.
-    pii_guard_off = bool(request.guard_overrides and "pii" in request.guard_overrides)
+    #
+    # Reads the GATED value, not request.guard_overrides. This line used to read the raw
+    # request body, so it survived the surface/auth check above: an anonymous caller sending
+    # guard_overrides=["pii"] still switched the streaming redactor off and got an unredacted
+    # PAN on the wire. It was the last unguarded path into the safety stack.
+    pii_guard_off = bool(guard_overrides and "pii" in guard_overrides)
     output_guard_record: GuardDecisionRecord | None = None
     # The reporter's generation (LLM synthesis) runs here in Phase 2, outside the
     # Phase-1 node-timing context — measure it so the trace waterfall can show it.
