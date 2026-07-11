@@ -88,6 +88,16 @@ def _format_euro(value: float) -> str:
     return f"{value:.2f}".replace(".", ",") + " €"
 
 
+def _cents(value: float | int) -> int:
+    """Money as integer cents — the only safe unit to compare a regulated amount in.
+
+    Euro amounts arrive over JSON as IEEE-754 doubles, where 0.1 + 0.2 != 0.3. Comparing
+    them with ``!=`` let binary representation decide whether a payment schedule was
+    scored conformant. Cents are exact; the comparison becomes about the money.
+    """
+    return round(float(value) * 100)
+
+
 def _contact_window_compliance(rows: list[dict[str, object]]) -> BusinessScore:
     checks = [
         row
@@ -357,11 +367,14 @@ def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:  # noqa
                 or not isinstance(monthly_raw, int | float)
             ):
                 return _unknown("amount_consistency", "schedule_amount_payload_unusable")
-            amount_due = float(amount_raw)
-            requested_months = months_raw
-            monthly_amount = float(monthly_raw)
-            expected = round(amount_due / requested_months, 2)
-            if monthly_amount != expected:
+            if months_raw <= 0:
+                return _unknown("amount_consistency", "schedule_amount_payload_unusable")
+            # Compared in integer cents. `!=` on floats made a *regulated amount check*
+            # depend on binary rounding: two values that are equal to the cent could
+            # compare unequal (and score the artifact non-conformant) purely because of
+            # representation (audit `float-money`, scoring.py:364).
+            expected_cents = round(_cents(amount_raw) / months_raw)
+            if _cents(monthly_raw) != expected_cents:
                 return _scored("amount_consistency", 0.0, "monthly_amount_mismatch")
         return _scored("amount_consistency", 1.0, "monthly_amount_matches_requested_duration")
 
@@ -387,10 +400,14 @@ def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:  # noqa
     ]
     if not schedule_events:
         return _unknown("amount_consistency", "not_enough_schedule_amount_data")
+    # In cents, not stringified floats: str(840) is "840" while str(840.0) is "840.0", so
+    # the SAME amount arriving once as an int and once as a float produced two distinct
+    # entries and scored the artifact `amount_fields_conflict`. The set must be about the
+    # money, not about how JSON happened to spell it.
     amounts = {
-        str(_payload(row).get("amount_due"))
+        _cents(amount)
         for row in schedule_events
-        if _payload(row).get("amount_due") is not None
+        if isinstance(amount := _payload(row).get("amount_due"), int | float)
     }
     if len(amounts) <= 1:
         return _scored("amount_consistency", 1.0, "amount_fields_consistent")

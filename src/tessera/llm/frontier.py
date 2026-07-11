@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Literal
 
 from tessera.llm.budget import get_budget_tracker
@@ -74,14 +75,28 @@ class VertexAIBackend:
         """Yield tokens from Vertex AI as they arrive."""
         gemini = self._ensure_model()
         max_tokens = max_output_tokens or self._max_output_tokens
-        stream = await gemini.generate_content_async(
-            self._convert(messages),
-            generation_config={"temperature": temperature, "max_output_tokens": max_tokens},
-            stream=True,
-        )
+        # `timeout_seconds` was read into self._timeout at init and then never used: the
+        # deadline the settings advertised did not exist, and a frozen Vertex call held the
+        # SSE stream open indefinitely (audit `robustness-timeout`). The Ollama backend has
+        # always passed its timeout to the client; this brings the frontier path level.
+        async with asyncio.timeout(self._timeout):
+            stream = await gemini.generate_content_async(
+                self._convert(messages),
+                generation_config={"temperature": temperature, "max_output_tokens": max_tokens},
+                stream=True,
+            )
         input_tokens = 0
         output_tokens = 0
-        async for chunk in stream:
+        chunks = stream.__aiter__()
+        while True:
+            # Bound the GAP BETWEEN CHUNKS, not the total answer: a long legitimate
+            # response streams freely, while a backend that stalls mid-stream raises
+            # instead of holding the turn — and the SSE connection — open forever.
+            try:
+                async with asyncio.timeout(self._timeout):
+                    chunk = await chunks.__anext__()
+            except StopAsyncIteration:
+                break
             text = chunk.text if (chunk.candidates and chunk.text) else ""
             if text:
                 yield text
@@ -104,13 +119,14 @@ class VertexAIBackend:
         """Stream-less chat completion."""
         gemini = self._ensure_model()
         max_tokens = max_output_tokens or self._max_output_tokens
-        response = await gemini.generate_content_async(
-            self._convert(messages),
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": max_tokens,
-            },
-        )
+        async with asyncio.timeout(self._timeout):
+            response = await gemini.generate_content_async(
+                self._convert(messages),
+                generation_config={
+                    "temperature": temperature,
+                    "max_output_tokens": max_tokens,
+                },
+            )
         text = response.text if response.candidates else ""
         usage = getattr(response, "usage_metadata", None)
         input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)

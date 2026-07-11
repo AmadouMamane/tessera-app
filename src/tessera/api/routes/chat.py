@@ -695,6 +695,24 @@ def _sse(event: str, payload: object) -> bytes:
     return f"event: {event}\ndata: {body}\n\n".encode()
 
 
+def _turn_deadline_s() -> float:
+    """Wall-clock budget for one turn's graph phase.
+
+    Reuses ``api.request_timeout_seconds``, which until now was declared in settings and
+    never applied to a request — the deadline it names did not exist.
+    """
+    return get_settings().api.request_timeout_seconds
+
+
+# What a failing turn is allowed to tell the caller. The reason is a fixed, enumerated
+# token — never the exception text, which would hand an unauthenticated caller whatever
+# the failure carried. The turn id is the operator's join key into the logs and the audit
+# ledger: the client can report it, and only someone with log access can resolve it.
+def _client_error(turn_id: object, reason: Literal["timeout", "internal"]) -> dict[str, object]:
+    """Build the client-safe ``turn.error`` payload for a failed turn."""
+    return {"error": reason, "turn_id": str(turn_id)}
+
+
 async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherently statement- and branch-heavy (graph run + guarded stream + persist + eval)
     request: ChatRequest,
     *,
@@ -794,12 +812,31 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     node_starts: dict[str, float] = {}
     with instrument.collect_node_timings() as node_timings:
         try:
-            await graph.ainvoke(initial, config=config)  # type: ignore[attr-defined]
+            # One deadline for the whole graph phase — router, planner, workers and the
+            # retrieval they call. Nothing below this had a deadline of its own: a hung
+            # pgvector query or a frozen Vertex call held the SSE stream open forever
+            # (audit `robustness-timeout`). Bounded here rather than at each leaf so a
+            # turn can never outlive its budget whatever path it takes.
+            async with asyncio.timeout(_turn_deadline_s()):
+                await graph.ainvoke(initial, config=config)  # type: ignore[attr-defined]
+        except TimeoutError:
+            AGENT_TURNS_TOTAL.labels(
+                agent_id=agent_id, language=language.value, outcome="error"
+            ).inc()
+            sys.stderr.write(
+                f"tessera.chat: turn {turn_id} exceeded the {_turn_deadline_s()}s deadline\n"
+            )
+            yield _sse("turn.error", _client_error(turn_id, "timeout"))
+            return
         except Exception as exc:
             AGENT_TURNS_TOTAL.labels(
                 agent_id=agent_id, language=language.value, outcome="error"
             ).inc()
-            yield _sse("turn.error", {"error": str(exc)})
+            # The cause goes to the operator's logs, never onto the wire. str(exc) hands an
+            # unauthenticated caller whatever the failure happened to carry — SQL fragments,
+            # internal hostnames, prompt content (audit `robustness-cluster`, chat.py:802).
+            sys.stderr.write(f"tessera.chat: turn {turn_id} failed: {exc!r}\n")
+            yield _sse("turn.error", _client_error(turn_id, "internal"))
             return
         # Read the real per-node start offsets while still inside the context
         # (the ContextVar is reset on exit). Feeds the trace waterfall.
