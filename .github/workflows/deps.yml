@@ -1,0 +1,89 @@
+name: Dependency freshness
+
+# Weekly INFORMATIONAL report (audit P1.6) — freshness + CVEs, NON-GATING, with NO version
+# bumps. It complements two things that already exist: Dependabot (which opens the actual
+# bump PRs, .github/dependabot.yml) and security.yml's pip-audit (which GATES). This job
+# only *reports* — every step is `|| true`, and the findings are written to the job summary
+# so a maintainer sees the whole picture at a glance without a red X or a forced upgrade.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Monday 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.5.4"
+  NODE_VERSION: "20"
+
+jobs:
+  python:
+    name: python — outdated + CVEs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Sync
+        run: uv sync
+
+      - name: Outdated (informational)
+        run: |
+          {
+            echo "## Python — outdated"
+            echo '```'
+            uv pip list --outdated 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: pip-audit (informational, non-gating)
+        run: |
+          uv pip install pip-audit
+          {
+            echo "## Python — pip-audit (informational; the gating copy is security.yml)"
+            echo '```'
+            uv run pip-audit --skip-editable --progress-spinner=off 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  frontend:
+    name: frontend — outdated + CVEs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: corepack enable
+
+      # pnpm is only ever invoked from webapp/frontend, where the packageManager pin lives
+      # (see ci.yml — invoking it at the repo root silently fetches the newest pnpm).
+      - name: Install (frozen)
+        working-directory: webapp/frontend
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Outdated (informational)
+        working-directory: webapp/frontend
+        run: |
+          {
+            echo "## Frontend — outdated"
+            echo '```'
+            corepack pnpm outdated 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: pnpm audit (informational, non-gating)
+        working-directory: webapp/frontend
+        run: |
+          {
+            echo "## Frontend — pnpm audit"
+            echo '```'
+            corepack pnpm audit 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

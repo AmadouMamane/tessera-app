@@ -38,7 +38,7 @@ cette nuit (voir « État de base » ci-dessous).
 | 3 | 3.1 | Scission `observability.py` | ⏳ | — |
 | 3 | 3.2 | Extraction tabs communs | ⏳ | — |
 | 4 | 4.1 | Doc posture prod | ✅ | ff→main |
-| 4 | 4.2 | Job CI deps/CVE informatif | ⏳ | — |
+| 4 | 4.2 | Job CI deps/CVE informatif | ✅ | ff→main |
 | 4 | 4.3 | Échantillon biome-ignore | ✅ (0 paresseux) | ff→main |
 | 4 | 4.4 | Fixture-trafic → flip e2e | ⏳ | — |
 
@@ -364,3 +364,13 @@ valide**. Deux familles :
 
 **< ⅓ paresseux (0/63) → pas de purge.** C'est un modèle d'hygiène biome-ignore ;
 l'échantillon est consigné ici.
+
+### Lot 4.2 — Job CI freshness deps/CVE informatif (P1.6)
+Branche `claude/lot-4-2-deps-job`. **Workflow-only** (YAML validé, pas de code → gate sauté).
+
+`.github/workflows/deps.yml` : hebdo (lundi 06:00 UTC) + manuel, **non-gatant** (chaque step
+`|| true`), rapport écrit dans le job summary. Deux jobs : Python (`uv pip list --outdated` +
+`pip-audit`, invocation mirrorée sur `security.yml`) et frontend (`pnpm outdated` + `pnpm
+audit`, pnpm invoqué depuis `webapp/frontend` — le pin `packageManager`). **Aucune montée de
+version** (mandat). Complète l'existant : Dependabot ouvre les PRs de bump, `security.yml`
+GATE les CVEs ; ce job ne fait que **rapporter** la fraîcheur au fil de l'eau.
