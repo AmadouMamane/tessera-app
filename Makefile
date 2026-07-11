@@ -151,6 +151,38 @@ seed-fixture: install
 	@uv run python scripts/seed_fixture.py
 	@ls -lh $(FIXTURE_DUMP) | awk '{print "✓ " $$9 " (" $$5 ")"}'
 
+# ── Ledger backup + restore drill (audit P1.2) ──────────────────────────────
+# The audit ledger is the opposable memory, and nothing scheduled backed it up (only the
+# incident freeze existed). `ledger-backup` writes a timestamped, SHA-256-logged, DATA-ONLY
+# pg_dump; `ledger-restore-drill` PROVES it serves by restoring into a THROWAWAY database and
+# verifying the chain tree-aware — never against the live store. Data-only by design: the
+# table + append-only trigger + fork guard are code (ensure_audit_ledger_schema recreates
+# them); the chain DATA is the irreplaceable thing. Retention + scheduling: docs/runbook.md.
+LEDGER_PG_CONTAINER ?= tessera-postgres
+LEDGER_DB           ?= tessera
+LEDGER_SCHEMA       ?= tessera_local
+LEDGER_BACKUP_DIR   ?= backups/ledger
+
+.PHONY: ledger-backup ledger-restore-drill
+
+ledger-backup:
+	@mkdir -p $(LEDGER_BACKUP_DIR)
+	@ts=$$(date -u +%Y%m%dT%H%M%SZ); \
+	 out=$(LEDGER_BACKUP_DIR)/audit_ledger-$(LEDGER_SCHEMA)-$$ts.sql.gz; \
+	 docker exec $(LEDGER_PG_CONTAINER) pg_dump -U tessera -d $(LEDGER_DB) \
+	   --data-only --no-owner --no-privileges -t $(LEDGER_SCHEMA).audit_ledger | gzip -9 > $$out; \
+	 sha=$$(shasum -a 256 $$out | cut -d' ' -f1); \
+	 printf '%s  %s\n' "$$sha" "$$(basename $$out)" > $$out.sha256; \
+	 rows=$$(docker exec $(LEDGER_PG_CONTAINER) psql -U tessera -d $(LEDGER_DB) -tAc \
+	   "SELECT count(*) FROM $(LEDGER_SCHEMA).audit_ledger"); \
+	 echo "✓ $$out ($$(du -h $$out | cut -f1), $$rows rows) sha256=$$sha"
+
+# Prove the newest backup restores to a verifying chain (throwaway db, tree-aware verify).
+ledger-restore-drill: install
+	@LEDGER_PG_CONTAINER=$(LEDGER_PG_CONTAINER) LEDGER_DB=$(LEDGER_DB) \
+	 LEDGER_SCHEMA=$(LEDGER_SCHEMA) LEDGER_BACKUP_DIR=$(LEDGER_BACKUP_DIR) \
+	 uv run python scripts/ledger_restore_drill.py
+
 # Full local setup: boot Postgres, ingest all corpora, populate eval demo data
 bootstrap: install
 	docker compose up -d postgres

@@ -220,6 +220,39 @@ failure-catalogue prompts) when no live traffic exists.
   the audit GCS bucket has a 365-day delete lifecycle rule and
   `force_destroy = false` so it cannot be wiped accidentally.
 
+### Backup + restore drill — the promoted Postgres ledger (audit P1.2)
+
+The append-only Postgres ledger (`audit_ledger`, ADR 0015 §Amendment 3) is the opposable
+memory. Back it up, and **prove the backup serves** — a backup you have never restored is a
+hope, not a backup.
+
+- `make ledger-backup` — a timestamped, SHA-256-logged **data-only** `pg_dump` of
+  `<schema>.audit_ledger` into `backups/ledger/` (gitignored). Data-only by design: the
+  table + append-only trigger + fork guard are *code*, recreated deterministically by
+  `ensure_audit_ledger_schema()`; the chain DATA is the irreplaceable part.
+- `make ledger-restore-drill` — restores the newest backup into a **throwaway** database,
+  recreates just the table there, replays the dump, and verifies the chain **tree-aware**
+  (`verify_ledger_tree`: content integrity + forks + orphans), then drops the throwaway.
+  Exit 0 = the backup restores to a verifying chain. (It deliberately skips the fork guard,
+  whose `UNIQUE(prev_hash)` would reject the ledger's grandfathered historical forks — the
+  drill *verifies* forks, it does not forbid them.)
+- Per-environment override: `LEDGER_SCHEMA=tessera_ci make ledger-backup`; point at a managed
+  instance via `LEDGER_PG_CONTAINER` or a direct `pg_dump "<dsn>"`. In production Cloud SQL
+  provides automated backups + PITR — this drill *complements* them by proving the **logical
+  chain** restores, not just the bytes.
+
+**Scheduling** (an operator gesture, not committed): run the backup nightly and the drill
+weekly. On macOS a launchd agent; on Linux/Cloud, cron or a Cloud Scheduler → Cloud Run job:
+
+```cron
+15 2 * * *  cd /path/to/tessera && make ledger-backup         # nightly backup
+30 3 * * 0  cd /path/to/tessera && make ledger-restore-drill  # weekly restore drill
+```
+
+**Retention**: prune `backups/ledger/` to policy (e.g. 14 daily + 8 weekly). In production
+the durable copies are Cloud SQL managed backups + the audit GCS bucket above; `backups/` is
+the local / on-prem logical dump.
+
 ## On-call procedures
 
 ### High error rate (5xx alert firing)

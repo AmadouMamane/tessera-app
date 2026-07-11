@@ -27,6 +27,9 @@ htmlcov/
 .env.staging
 .env.production
 
+# Ledger backups (audit P1.2) — the audit-chain DATA; never committed.
+/backups/
+
 # Node
 node_modules/
 .next/

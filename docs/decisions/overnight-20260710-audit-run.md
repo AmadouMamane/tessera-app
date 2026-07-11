@@ -32,7 +32,7 @@ cette nuit (voir « État de base » ci-dessous).
 | 1 | 1.3 | 7 SQL f-string + coverage informatif | ✅ | ff→main |
 | 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ✅ | ff→main |
 | 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ✅ | ff→main |
-| 2 | 2.2 | Sauvegarde ledger + drill restauration | ⏳ | — |
+| 2 | 2.2 | Sauvegarde ledger + drill restauration | ✅ | ff→main |
 | 2 | 2.3 | Inventaire config généré | ⏳ | — |
 | 3 | 3.0 | Prototype codegen OpenAPI→zod (fleet) | ⏳ | — |
 | 3 | 3.1 | Scission `observability.py` | ⏳ | — |
@@ -266,3 +266,30 @@ Note : « par rôle » = la **surface operator** (`cockpit-embedded` / `dedicate
 granularité de palier de rôle que le handler a sous la main (le rôle exact vit dans
 l'assertion). In-process par défaut (le compteur de concurrence n'est pas partagé cross-
 instance — un limiteur distribué exigerait Redis, hors périmètre, documenté à la source).
+
+### Lot 2.2 — Sauvegarde du ledger + drill de restauration (P1.2)
+Branche `claude/lot-2-2-ledger-backup`. **L'item le plus embarrassant de l'audit** : le
+registre opposable n'avait AUCUNE sauvegarde planifiée (seul le gel d'incident existait).
+
+**Fait — et prouvé sur les vraies données (23 122 lignes)** :
+- `make ledger-backup` : `pg_dump` **data-only** horodaté + **SHA-256 loggé** (sidecar
+  `.sha256`) de `<schema>.audit_ledger` → `backups/ledger/` (gitignoré). Data-only assumé :
+  la table + le trigger append-only + le fork guard sont du **code** (recréés par
+  `ensure_audit_ledger_schema`) ; la DATA de la chaîne est l'irremplaçable.
+- `make ledger-restore-drill` (`scripts/ledger_restore_drill.py`) : restaure le dernier
+  backup dans une base **JETABLE**, recrée **la seule table** (pas le fork guard — voir
+  ci-dessous), rejoue le dump, vérifie **tree-aware** (`verify_ledger_tree`), puis DROP la
+  jetable (`WITH (FORCE)`, même en échec). Le drill **PROUVE que la sauvegarde sert** —
+  résultat mesuré : `restored 23122 rows · content_integrity=True · forks=29 · orphans=1 ·
+  length=23122 → ✓ DRILL PASSED`. Sonde SHA-256 at-rest OK.
+- Doc rétention + planification (cron/launchd = geste opérateur) : `docs/runbook.md §Audit
+  log`. Rien ne touche le ledger vivant (backup = lecture ; drill = base jetable).
+
+**Deux pièges résolus (consignés pour la mémoire)** :
+1. **Import circulaire** guard↔agent quand `ledger_store` est le premier import tessera d'un
+   script standalone → pré-chargement `import tessera.agent.state` (comme le conftest).
+2. **Le fork guard rejetait la restauration** : `ensure_audit_ledger_schema` installe un
+   `UNIQUE(prev_hash)` ancré à 0 sur la table vide, qui **rejette les 29 forks historiques**
+   grandfathered (le store les tolère car ancrés sous le high-water mark). Le drill recrée
+   donc **seulement la table** — `verify_ledger_tree` *rapporte* les forks sans les interdire,
+   ce qui est le contrat correct de vérification.
