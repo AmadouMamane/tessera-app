@@ -20,6 +20,38 @@ def test_latency_estimate_scales_with_tokens() -> None:
     assert rel._latency_ms(2 * rel._THROUGHPUT_TOK_S) == 2000.0
 
 
+# Audit 2026-07-10, P1 `wrong-metric-shown-real` — reliability.py:509, :630.
+#
+# Availability read `(allowed - errored) / total`. The three buckets are mutually
+# exclusive (tool_validity._compute is an if/elif chain, total = allowed+denied+errored),
+# so this subtracted the errored bucket from a bucket that never contained it — inflating
+# the *displayed* error rate by roughly 3x, and going negative when errored > allowed.
+#
+# The old test only asserted `error_rate == 1 - availability`, which is true by
+# construction: error_rate is DEFINED as 1 - availability. It could not have caught this.
+# These assert concrete values instead.
+
+
+def test_availability_counts_only_the_errored_bucket_against_us() -> None:
+    """The audit's own example: 90 allowed / 5 denied / 5 errored is 5 % errors, not 15 %."""
+    assert rel._availability(allowed=90, denied=5, errored=5) == 0.95
+
+
+def test_a_policy_denial_is_not_an_outage() -> None:
+    """A guard DENY is the firewall working as designed — availability stays whole."""
+    assert rel._availability(allowed=90, denied=10, errored=0) == 1.0
+
+
+def test_availability_can_never_go_negative() -> None:
+    """Pre-fix, allowed=1 / errored=9 yielded -0.8 availability and a 180 % error rate."""
+    assert rel._availability(allowed=1, denied=0, errored=9) == 0.1
+
+
+def test_availability_is_whole_when_everything_errors_or_nothing_ran() -> None:
+    assert rel._availability(allowed=0, denied=0, errored=10) == 0.0
+    assert rel._availability(allowed=0, denied=0, errored=0) == 1.0
+
+
 def test_compute_reliability_is_internally_consistent() -> None:
     report = rel.compute_reliability()
     assert 0.0 <= report.availability <= 1.0

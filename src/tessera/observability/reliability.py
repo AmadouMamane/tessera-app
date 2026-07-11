@@ -492,6 +492,34 @@ def _trends(
     return volume_series, volume_delta, quality_series, quality_delta
 
 
+def _availability(allowed: int, denied: int, errored: int) -> float:
+    """Share of tool invocations that did not error, over ``[0, 1]``.
+
+    ``allowed`` / ``denied`` / ``errored`` are *mutually exclusive* buckets summing to
+    the total (``tool_validity._compute``: an if/elif chain). Availability therefore
+    excludes only the errored bucket — a policy DENY is the guard working as designed,
+    not an outage, so it counts as available.
+
+    This used to read ``(allowed - errored) / total``, which subtracted the errored
+    bucket from a bucket that never contained it: with allowed=90, denied=5, errored=5
+    it reported 85 % availability and a 15 % error rate instead of 95 % / 5 %, and it
+    could go negative whenever errored exceeded allowed. Extracted here because the
+    wrong formula was written out at two sites and drifted as one.
+
+    Args:
+        allowed: Invocations the guard allowed.
+        denied: Invocations the guard denied by policy.
+        errored: Invocations that errored.
+
+    Returns:
+        ``(total - errored) / total``, or ``1.0`` when there were no invocations.
+    """
+    total = allowed + denied + errored
+    if total == 0:
+        return 1.0
+    return (total - errored) / total
+
+
 @dataclass(frozen=True, slots=True)
 class _Headline:
     """Headline rate/latency/cost metrics over one window, for vs-previous deltas."""
@@ -507,7 +535,7 @@ def _headline(start: datetime, end: datetime) -> _Headline:
     """Compute the KPI headline metrics over ``[start, end]`` (``None`` where no data)."""
     tool = tool_validity_mod.compute_tool_validity(at=end.isoformat())
     if tool.total > 0:
-        avail: float | None = (tool.allowed - tool.errored) / tool.total
+        avail: float | None = _availability(tool.allowed, tool.denied, tool.errored)
         tool_success: float | None = tool.validity_rate
         error: float | None = 1.0 - avail  # type: ignore[operator]
     else:
@@ -626,9 +654,8 @@ def compute_reliability(
     cost_per_token = total_cost_eur / total_tokens if total_tokens else 0.0
     cost_per_request = total_cost_eur / n_requests if n_requests else 0.0
 
-    tool_total = tool.total or 1
     tool_success = tool.validity_rate
-    availability = (tool.allowed - tool.errored) / tool_total
+    availability = _availability(tool.allowed, tool.denied, tool.errored)
     error_rate = 1.0 - availability
 
     p50 = _latency_ms(cost.mean_tokens)
