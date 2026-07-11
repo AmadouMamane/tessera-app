@@ -37,7 +37,7 @@ cette nuit (voir « État de base » ci-dessous).
 | 3 | 3.0 | Prototype codegen OpenAPI→zod (fleet) | ⏳ | — |
 | 3 | 3.1 | Scission `observability.py` | ⏳ | — |
 | 3 | 3.2 | Extraction tabs communs | ⏳ | — |
-| 4 | 4.1 | Doc posture prod | ⏳ | — |
+| 4 | 4.1 | Doc posture prod | ✅ | ff→main |
 | 4 | 4.2 | Job CI deps/CVE informatif | ⏳ | — |
 | 4 | 4.3 | Échantillon biome-ignore | ⏳ | — |
 | 4 | 4.4 | Fixture-trafic → flip e2e | ⏳ | — |
@@ -322,3 +322,28 @@ workers=1 — vs CI/prod dimensionné au budget Cloud SQL).
 **Variables mortes** : le générateur EST l'outil pour les traquer (nom → grep). Balayage
 complet non fait cette nuit (retirer un champ pydantic exige un cross-ref par champ) —
 consigné comme suivi ; les 2 mortes concrètes (conftest) sont corrigées.
+
+## Fenêtre 4 — craft et flip (démarrée en // de la recherche Fenêtre 3)
+
+Fenêtres 1-2 closes. La Fenêtre 3 (3.0 étude codegen, 3.1 scission observability) est en
+**recherche déléguée** (lecture seule) ; pendant ce temps j'avance les lots doc/craft de la
+Fenêtre 4, indépendants.
+
+### Lot 4.1 — Document de posture production (P1.5)
+Branche `claude/lot-4-1-prod-posture`. **Doc-only** → gate complet sauté (un markdown ne peut
+pas affecter ruff/mypy/pytest/frontend), consigné.
+
+`docs/production-posture.md` : le document unique « ce qui change en production », réunissant
+les faits qui étaient dispersés dans 4 ADRs + le Terraform + les settings, chacun cité :
+- exposition réseau (Cloud Run public pour la démo → ingress internal LB + invokers scopés ;
+  TLS/HSTS via `tls_terminated`),
+- secrets (backend `SecretsSettings` ; clés de signature session + assertion operator
+  fail-closed ; **identifiants ClickHouse `clickhouse/clickhouse` à surcharger**),
+- **TSA / seal** (`SEAL_PROVIDER=none` = invariant d'honnêteté ; TSA qualifiée pour
+  « opposable »),
+- ledger (source postgres + backup/drill du lot 2.2),
+- rate-limit (Redis pour le cross-instance ; lots 2.1),
+- rétentions (logs, bucket audit 365j, backups ledger),
+- **CI état réel mesuré cette nuit** : billing bloqué, protection de branche absente,
+  Security/Supply-chain rouges (SLSA repo privé, SARIF sans Advanced Security), CVEs
+  `starlette`/`vcrpy` non patchées (mandat), isolation par env (ADR 0014).
