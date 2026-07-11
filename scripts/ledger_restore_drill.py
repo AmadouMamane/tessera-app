@@ -105,7 +105,8 @@ def main() -> int:
         # Recreate ONLY the table in the dump's schema — structure is code. NOT the fork guard:
         # its partial UNIQUE(prev_hash) would reject the ledger's grandfathered historical forks
         # (verify_ledger_tree REPORTS forks; the store's guard only constrains rows above an
-        # install-time anchor). The append-only trigger is irrelevant to a restore (blocks U/D only).
+        # install-time anchor). The append-only trigger is irrelevant to a restore: it
+        # blocks UPDATE/DELETE only.
         ddl = (
             f"CREATE SCHEMA IF NOT EXISTS {_SCHEMA}; "
             f"SET search_path TO {_SCHEMA}, public; "
