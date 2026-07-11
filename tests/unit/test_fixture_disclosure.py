@@ -57,12 +57,15 @@ async def test_the_history_route_stamps_its_fixture_half(monkeypatch: pytest.Mon
     carried KPI/trend/distribution blocks with no marker at all, so the operator UI
     presented fixed numbers in the shape of telemetry.
     """
+    # The handler lives in the `fleet` surface module since the god-router split; patch it
+    # where it lives, and call it through the package root re-export, as callers do.
     from tessera.api.routes import observability
+    from tessera.api.routes.observability import fleet
 
     async def _no_conversations(agent_id: str, limit: int = 50) -> list[object]:
         return []
 
-    monkeypatch.setattr(observability.transcript, "list_conversations", _no_conversations)
+    monkeypatch.setattr(fleet.transcript, "list_conversations", _no_conversations)
 
     payload = await observability.observability_agent_historique(agent_id="tessera-support")
 

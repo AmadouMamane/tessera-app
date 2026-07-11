@@ -1,0 +1,391 @@
+"""Observability routes — signals surface."""
+
+from __future__ import annotations
+
+import sys
+from dataclasses import asdict
+
+from fastapi import APIRouter, Depends
+
+from tessera.api.routes.observability._common import (
+    _agent_or_none,
+    _data_availability_start,
+    _read_audit_entries,
+    _scores_for,
+)
+from tessera.api.security import require_bearer
+from tessera.observability import (
+    anomalies as anomalies_mod,
+    conformance as conformance_mod,
+    control_signals as control_signals_mod,
+    cost_anomaly as cost_anomaly_mod,
+    language_routing as language_routing_mod,
+    obs_cost as obs_cost_mod,
+    quality_nets as quality_nets_mod,
+    reliability as reliability_mod,
+    replay as replay_mod,
+    routing_intent as routing_intent_mod,
+    signal_catalogue as signal_catalogue_mod,
+    slo as slo_mod,
+    trends as trends_mod,
+    whatchanged as whatchanged_mod,
+)
+from tessera.observability.spine.adapters import read_scores
+from tessera.observability.spine.availability import dimension_availability
+from tessera.observability.spine.scope import Scope
+from tessera.observability.spine.snapshot import compute_snapshot
+
+router = APIRouter()
+
+_obs_cost_cache: dict[str, object] | None = None
+
+
+@router.get("/observability/scores")
+async def observability_scores(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Online-eval scores — live (newest last), or as of instant ``at`` (ISO).
+
+    ``agent`` scopes the scores to one agent's turns (``all`` = org view).
+    """
+    return {"scores": _scores_for(at, _agent_or_none(agent)), "as_of": at, "agent": agent}
+
+
+@router.get("/observability/snapshot", dependencies=[Depends(require_bearer)])
+async def observability_snapshot(
+    at: str | None = None,
+    agent: str = "all",
+    language: str | None = None,
+    model: str | None = None,
+    signals: str | None = None,
+) -> dict[str, object]:
+    """Batched, cached snapshot of every scope-varying signal in one pass (ADR 0015).
+
+    Collapses the ~24-37 per-page fetches into a single round-trip: all hot-path signals
+    for one :class:`Scope`, computed over shared store reads and served through a
+    read-through cache with single-flight. Each signal carries a ``report`` of which
+    dimensions it honoured / ignored, so the UI badges org-wide / synthetic / unavailable
+    from data — the filter-shown-but-ignored state is unrepresentable. ``?signals=`` selects
+    a comma-separated subset. Scope is a *filter*, never a privilege escalation: RBAC is the
+    same ``require_bearer`` posture as the other read surfaces (no-op without a token).
+    """
+    scope = Scope.from_query({"at": at, "agent": agent, "language": language, "model": model})
+    ids = tuple(part.strip() for part in signals.split(",") if part.strip()) if signals else None
+    return await compute_snapshot(scope, ids)
+
+
+@router.get("/observability/data-range")
+async def observability_data_range() -> dict[str, object]:
+    """Earliest → latest instant for which the cockpit holds real as-of-T data.
+
+    This bounds the time-rail "Aller à une date" calendar honestly: picking a
+    window end before ``start`` would land on an empty window — no persisted signal
+    exists that far back. The range is derived from the *same durable sources* the
+    as-of-T reads recompute from — the full eval score log (the reader seam,
+    not the bounded live ring) and the tamper-evident guard audit log — so it never
+    promises data the cockpit cannot actually show. ``start`` is null when no data
+    exists yet. Timestamps are ISO 8601; ``start`` is the lexicographic minimum,
+    matching the timeline's ordering convention.
+    """
+    from datetime import UTC, datetime
+
+    scores = read_scores(full=True)
+    audit_entries = _read_audit_entries()
+    start = _data_availability_start(scores, audit_entries)
+    return {
+        "start": start,
+        "end": datetime.now(UTC).isoformat(),
+        "n": len(scores) + len(audit_entries),
+    }
+
+
+@router.get("/observability/availability")
+async def observability_availability() -> dict[str, object]:
+    """Per-dimension "data available since" boundaries (ADR 0015 §Testing 2).
+
+    Generalises ``/observability/data-range`` to every :class:`Scope` dimension. Because
+    stamping is forward-only, a dimension exists in the durable stores only from the instant
+    the code started stamping it; each boundary is the earliest row that actually carries
+    the dimension (``None`` when it has no data yet). An as-of-T read before a dimension's
+    boundary is honestly org-wide — the cockpit never pretends a dimension existed earlier.
+    """
+    from datetime import UTC, datetime
+
+    return {
+        "since": dimension_availability(),
+        "now": datetime.now(UTC).isoformat(),
+    }
+
+
+@router.get("/observability/slo")
+async def observability_slo(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Quality SLO + error-budget burn-rate over the faithfulness scores.
+
+    Live by default; with ``?at=`` the SLO is recomputed over the durable score
+    log as of instant T (as-of-T read, ADR 0011). ``agent`` scopes the SLO to one
+    agent's own scored turns (``all`` = org view); an agent with no scored turns
+    yet reads honestly empty (``n=0``).
+    """
+    faithfulness = [
+        float(s["score"])  # type: ignore[arg-type]
+        for s in _scores_for(at, _agent_or_none(agent))
+        if s.get("metric") == "faithfulness"
+    ]
+    return {**asdict(slo_mod.compute_slo(faithfulness)), "as_of": at, "agent": agent}
+
+
+@router.get("/observability/trend")
+async def observability_trend(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Long-horizon faithfulness trend over the score series (#150).
+
+    Live by default; with ``?at=`` the trend is recomputed over the durable
+    score log as of instant T (as-of-T read, ADR 0011). ``agent`` scopes the
+    trend to one agent's scored turns (``all`` = org view).
+    """
+    points: list[tuple[str, float]] = []
+    for s in _scores_for(at, _agent_or_none(agent)):
+        if s.get("metric") != "faithfulness":
+            continue
+        scored_at = s.get("scored_at")
+        points.append(
+            (
+                scored_at if isinstance(scored_at, str) else "",
+                float(s["score"]),  # type: ignore[arg-type]
+            )
+        )
+    return {**asdict(trends_mod.analyze_trend(points)), "as_of": at, "agent": agent}
+
+
+@router.get("/observability/score-series")
+async def observability_score_series(
+    at: str | None = None,
+    metric: str = "faithfulness",
+    days: int = 7,
+    buckets: int = 7,
+    agent: str = "all",
+) -> dict[str, object]:
+    """Calendar-time score series + period-over-period delta for the evolution chart.
+
+    Buckets the durable score log into equal time slices over the last ``days``,
+    ending now or — with ``?at=`` — at instant T (as-of-T read, ADR 0011). Empty
+    buckets carry ``mean=null`` so the chart shows a gap, never a fabricated zero.
+    ``agent`` scopes the series to one agent's scored turns (``all`` = org view).
+    """
+    import contextlib
+    from datetime import UTC, datetime
+
+    from tessera.observability.eval.series import compute_score_series
+
+    end = datetime.now(UTC)
+    if at:
+        with contextlib.suppress(ValueError):
+            end = datetime.fromisoformat(at)
+    series = compute_score_series(
+        read_scores(at, _agent_or_none(agent), full=True),
+        metric=metric,
+        end=end,
+        days=days,
+        n_buckets=buckets,
+    )
+    return {**asdict(series), "as_of": at, "agent": agent}
+
+
+@router.get("/observability/signal-status-trend")
+async def observability_signal_status_trend(
+    at: str | None = None,
+    metric: str = "faithfulness",
+    days: int = 7,
+) -> dict[str, object]:
+    """Per-severity-band score counts bucketed by day (Signaux KPI strip, image 01).
+
+    Classifies each judged score of ``metric`` into crit / warn / ok against the
+    SLO thresholds and counts them per day, so every KPI tile gets a real
+    sparkline + a real vs-previous-day delta from the durable score log. Honours
+    as-of-T. Empty days are real zeros, never fabricated.
+    """
+    import contextlib
+    from datetime import UTC, datetime
+
+    from tessera.observability.eval.series import compute_status_counts_trend
+
+    end = datetime.now(UTC)
+    if at:
+        with contextlib.suppress(ValueError):
+            end = datetime.fromisoformat(at)
+    trend = compute_status_counts_trend(
+        read_scores(at, full=True), metric=metric, end=end, days=days
+    )
+    return {**asdict(trend), "as_of": at}
+
+
+@router.get("/observability/metric-pairs")
+async def observability_metric_pairs(
+    x: str = "faithfulness",
+    y: str = "grounding",
+    at: str | None = None,
+) -> dict[str, object]:
+    """Per-turn pairs of two metrics for a scatter (e.g. faithfulness vs grounding).
+
+    Pairs are keyed by ``conversation_id`` — a turn that the online evaluator
+    scored on both metrics. Honours as-of-T via the durable score log.
+    """
+    from tessera.observability.eval.series import compute_metric_pairs
+
+    pairs = compute_metric_pairs(read_scores(at, full=True), x_metric=x, y_metric=y)
+    return {**asdict(pairs), "as_of": at}
+
+
+@router.get("/observability/obs-cost")
+async def observability_obs_cost() -> dict[str, object]:
+    """Measured instrumentation overhead vs the turn budget (#84), cached."""
+    global _obs_cost_cache
+    if _obs_cost_cache is None:
+        _obs_cost_cache = asdict(obs_cost_mod.measure_overhead())
+    return _obs_cost_cache
+
+
+@router.get("/observability/quality-nets", dependencies=[Depends(require_bearer)])
+async def observability_quality_nets(agent: str) -> dict[str, object]:
+    """Manifest-generated quality nets for one agent (ADR 0017 §4).
+
+    Instrumentation coverage (signal 92, measured from the agent's most recent telemetry)
+    + canary freshness (signal 94, target workflows + last-seen turn). Both ``null`` for an
+    un-manifested agent (honest-empty). Degrades to ``available: false`` on any failure.
+    """
+    try:
+        return {
+            "available": True,
+            "agent_id": agent,
+            "coverage": quality_nets_mod.coverage_descriptor(agent),
+            "canary": quality_nets_mod.canary_descriptor(agent),
+        }
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.quality_nets: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/control-signals")
+async def observability_control_signals(lang: str = "fr") -> dict[str, object]:
+    """Resolve the overview controls to their real catalogue signal + drill-down.
+
+    Grounds each "Contrôles critiques" row in the LIVE signal catalogue (signal id /
+    technical name / category) and a real SURVEILLER investigation route — the
+    normative "Action recommandée / Case" intent. The two live policy probes
+    (toxicity, refusal) are honestly reported as non-catalogued. Static reference
+    metadata (no as-of-T): the mapping does not vary with the temporal instant.
+    Degrades to ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **control_signals_mod.compute_control_signals(lang)}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.control_signals: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/signal-catalogue")
+async def observability_signal_catalogue(lang: str = "fr") -> dict[str, object]:
+    """Signal catalogue overview (page #16).
+
+    Composes the catalogue posture and the filterable signal table from the real
+    eval run + guard policy; each row carries its own detail (client-side
+    selection). Free-text is localized fr/de/en. Degrades to ``available: false``
+    on failure.
+    """
+    try:
+        return {"available": True, **signal_catalogue_mod.compute_signal_catalogue(lang)}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.signal_catalogue: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/reliability")
+async def observability_reliability(
+    days: int = 14, anchor: str | None = None, lang: str = "fr"
+) -> dict[str, object]:
+    """Operational reliability & cost posture from the real signals (#08).
+
+    Token cost, tool success, span overhead, per-language quality and per-model
+    run stats are measured; latency is estimated from the token distribution at a
+    documented local throughput. The period rail narrows the window via ``days``
+    (length) and ``anchor`` (upper-bound day/instant). ``lang`` localizes the
+    recommended-actions and incident free-text. Degrades to ``available: false``
+    on failure.
+    """
+    try:
+        report = reliability_mod.compute_reliability(days=days, anchor=anchor, lang=lang)
+        return {"available": True, "days": days, "anchor": anchor, **asdict(report)}
+    except Exception as exc:  # never break the dashboard
+        sys.stderr.write(f"tessera.observability.reliability: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/conformance")
+async def observability_conformance(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Schema/format conformance of tool-call arguments from the audit trail, live or as of T.
+
+    ``agent`` scopes to one agent's tool calls (``all`` = org view).
+    """
+    return asdict(conformance_mod.compute_conformance(at=at, agent_id=_agent_or_none(agent)))
+
+
+@router.get("/observability/cost")
+async def observability_cost(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Token-cost distribution and token-burn anomalies over captured turns, live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
+    turns = [
+        (b.question, f"{b.question}\n{b.context}\n{b.original_answer}")
+        for b in replay_mod.recent_bundles(at, _agent_or_none(agent))
+    ]
+    return asdict(cost_anomaly_mod.analyze_costs(turns))
+
+
+@router.get("/observability/routing")
+async def observability_routing() -> dict[str, object]:
+    """Language-routing health: served vs detected language, code-switching."""
+    turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
+    return asdict(language_routing_mod.aggregate_routing(turns))
+
+
+@router.get("/observability/intent")
+async def observability_intent() -> dict[str, object]:
+    """Business-intent mix and routing confidence over captured questions."""
+    questions = [b.question for b in replay_mod.recent_bundles()]
+    return asdict(routing_intent_mod.aggregate_intents(questions))
+
+
+@router.get("/observability/anomalies")
+async def observability_anomalies(at: str | None = None, agent: str = "all") -> dict[str, object]:
+    """Detect long/looping/repetitive sessions among captured turns, live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
+    by_conversation: dict[str, list[str]] = {}
+    for bundle in replay_mod.recent_bundles(at, _agent_or_none(agent)):
+        key = bundle.conversation_id or "<none>"
+        by_conversation.setdefault(key, []).append(bundle.question)
+    return asdict(anomalies_mod.detect_anomalies(by_conversation))
+
+
+@router.get("/observability/what-changed")
+async def observability_what_changed(
+    at: str | None = None, agent: str = "all"
+) -> dict[str, object]:
+    """Attribute a score change to the lineage diff of the last two turns, live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    """
+    with_lineage = [
+        b for b in replay_mod.recent_bundles(at, _agent_or_none(agent)) if b.lineage is not None
+    ]
+    if len(with_lineage) < 2:  # noqa: PLR2004 — need two turns to diff
+        return {"available": False}
+    prev, curr = with_lineage[-2], with_lineage[-1]
+    assert prev.lineage is not None  # narrowed by the filter above
+    assert curr.lineage is not None
+    report = whatchanged_mod.what_changed(
+        prev_lineage=prev.lineage,
+        prev_score=prev.original_score,
+        curr_lineage=curr.lineage,
+        curr_score=curr.original_score,
+    )
+    return {"available": True, **asdict(report)}

@@ -52,7 +52,11 @@ def _imported_modules(path: Path) -> list[str]:
 
 def _control_plane_files() -> list[Path]:
     files = sorted((_SRC / "observability").rglob("*.py"))
-    files.append(_SRC / "api" / "routes" / "observability.py")
+    # The route layer was a single observability.py until the god-router split (audit
+    # 2026-07-10). Globbed, not named: the ratchet must cover EVERY module of the package,
+    # or a forbidden import could re-enter the control plane through a new surface file and
+    # the boundary would still read green.
+    files.extend(sorted((_SRC / "api" / "routes" / "observability").rglob("*.py")))
     return files
 
 
