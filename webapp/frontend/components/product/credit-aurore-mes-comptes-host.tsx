@@ -303,21 +303,6 @@ const styles = `
     white-space: nowrap;
   }
 
-  .ca-apercu3 .demo-kicker {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 22px;
-    border-radius: 4px;
-    background: var(--ca-gold);
-    color: var(--ca-ink);
-    font-size: 11px;
-    font-weight: 900;
-    padding: 0 8px;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
   .ca-apercu3 .demo-copy {
     display: inline-flex;
     min-height: 22px;
@@ -1212,11 +1197,10 @@ function UtilityBar() {
 function DemoStrip() {
   return (
     <div className="demo-strip" role="note" aria-label="Statut de la démonstration">
-      <strong className="demo-kicker">Démo Tessera</strong>
       <button
         className="demo-live"
         type="button"
-        aria-label="Ouvrir l'assistant Tessera"
+        aria-label="Ouvrir l'assistant"
         onClick={() => openProductChat()}
       >
         <span className="demo-dot" aria-hidden="true" />

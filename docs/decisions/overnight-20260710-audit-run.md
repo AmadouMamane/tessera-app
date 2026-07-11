@@ -30,7 +30,7 @@ cette nuit (voir « État de base » ci-dessous).
 | 1 | 1.1 | Tests d'intégration (job CI + tri) | ✅ | ff→main |
 | 1 | 1.2 | 49 `except … pass/continue` | ✅ | ff→main |
 | 1 | 1.3 | 7 SQL f-string + coverage informatif | ✅ | ff→main |
-| 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ⏳ | — |
+| 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ✅ | ff→main |
 | 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ⏳ | — |
 | 2 | 2.2 | Sauvegarde ledger + drill restauration | ⏳ | — |
 | 2 | 2.3 | Inventaire config généré | ⏳ | — |
@@ -200,3 +200,43 @@ Le vrai défaut n'était donc pas les instances mais **deux mensonges/latences d
 `make gate-py`) **affiche** la couverture, **aucun seuil bloquant** (`fail_under=0` surcharge
 le 55 de `pyproject`). Testé : exit 0, table affichée, pas de heurt `filterwarnings=error`.
 Le chiffre réel de la nuit est dans le log du gate du lot (à reporter au résumé matin).
+Couverture mesurée : **77.8 %** (unit + non-integration).
+
+### Lot 1.4 — Trio recouvrement dissous + kicker « Démo Tessera » retiré (P0.4 + P0.5)
+Branche `claude/lot-1-4-recouvrement`. Frontend-only.
+
+**P0.4 — le trio, et l'inversion qu'il cachait.** L'URL propre `/recouvrement` (celle que
+visent TOUS les liens + le role-router `spaceRedirectForRole` + la gate `collections`)
+**redirigeait vers le vieux console `-legacy`** (244 LOC), tandis que le vrai produit
+(`RecouvrementProductExperience`, 2701 LOC) était bloqué sur `-new` **sans la gate**
+(trou de surface). Dissolution :
+- `recouvrement/page.tsx` **réécrit** : rend `RecouvrementProductExperience` (le contenu de
+  `-new`), derrière sa gate `collections` (layout.tsx déjà là) → **ferme le trou non-gaté**.
+- `recouvrement-new/page.tsx` et `recouvrement-legacy/{page,layout}.tsx` **supprimés**.
+- Specs repointées : `recouvrement-new.spec.ts` → **renommée** `recouvrement.spec.ts`
+  (`PAGE = /fr/recouvrement` + docstring) ; `business-counting.spec.ts` (`DEDICATED`).
+- **Sécurité du repoint vérifiée** : les 2 specs se loggent en `admin` ; `admin` → rôle
+  `admin` → `isOperator` → `hasCollectionsAccess = true` (roles.ts:53) → passe la gate. Le
+  produit rendu est le MÊME composant que `-new` (déjà couvert vert). Aucun lien à changer.
+- **Consigné pour suivi (pas cette nuit)** : `RecouvrementConsole` (+ son backend assistant)
+  devient un **îlot mort** (son unique montage était `-legacy`). Ce n'est PAS une surface de
+  navigation (rien n'y route → pas un mensonge de nav), donc pas de cascade de suppression
+  risquée dans un lot à e2e ; à retirer dans un lot dédié dead-code.
+
+**P0.5 — le kicker (et un jumeau non nommé).** `credit-aurore-mes-comptes-host.tsx` :
+- `<strong className="demo-kicker">Démo Tessera</strong>` **retiré** (+ son CSS `.demo-kicker`
+  mort). La démo reste divulguée par « Page client fictive, chat réel » + l'aria-label du
+  strip « Statut de la démonstration ».
+- **Jumeau trouvé et corrigé** : l'aria-label `« Ouvrir l'assistant Tessera »` était la MÊME
+  violation lexique (Tessera côté produit, `ui-contract.md §Annexe`) → `« Ouvrir l'assistant »`.
+- Test `header-components.test.ts:135` : l'assertion-pin `toContain("Démo Tessera")` (qui
+  **épinglait** la violation) **remplacée** par le garde-fou `not.toContain("Tessera")` — le
+  fichier n'a plus aucun « Tessera » (vérifié au gate vitest). Annexe citée au commit.
+
+**e2e (specs de routes touchées)** : **8/8 vert**. Build de production 1.4 servi sur `:3390`
+(→ backend de référence `:8099`, inchangé par ce lot frontend-only), playwright 1 worker :
+`app-grid.spec.ts` 4/4 + `recouvrement.spec.ts` 4/4 — dont « the operator's day is the
+landing view » (le produit rend bien sur `/fr/recouvrement`, admin passe la gate) et « the
+product plane never says Tessera ». `business-counting.spec.ts` (qui **mute** le store
+partagé + exige ClickHouse) **non lancé ici** — son changement est un repoint de constante
+d'une ligne, couvert par la suite de fin de nuit sur main. (CI e2e billing-bloqué, cf. note.)

@@ -30,7 +30,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 const METIER = "/fr/agents/recouvrement/metier";
 const CONSOLE = "/fr/agents/recouvrement/console";
-const DEDICATED = "/fr/recouvrement-new";
+const DEDICATED = "/fr/recouvrement";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
 

@@ -1,7 +1,7 @@
 import { type Page, expect, test } from "@playwright/test";
 
 /**
- * `recouvrement-new` — the product surface of the collections agent (ADR 0010 Phase C).
+ * `recouvrement` — the product surface of the collections agent (ADR 0010 Phase C).
  *
  * This is a PRODUCT plane, not the cockpit, and the lexicon rule is load-bearing: the word
  * "Tessera" never appears to a business user. The assistant here is not a test bench — turns
@@ -11,7 +11,7 @@ import { type Page, expect, test } from "@playwright/test";
  * Selectors are roles and visible text, never CSS classes.
  */
 
-const PAGE = "/fr/recouvrement-new";
+const PAGE = "/fr/recouvrement";
 
 test.use({ viewport: { width: 1672, height: 1000 } });
 

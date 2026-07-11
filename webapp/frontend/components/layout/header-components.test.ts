@@ -132,7 +132,10 @@ describe("H4 product-surface header contract", () => {
     expect(creditAuroreHost).toContain("demo-strip");
     expect(creditAuroreHost).toContain("UtilityBar");
     expect(creditAuroreHost).toContain("Espace clients professionnels");
-    expect(creditAuroreHost).toContain("Démo Tessera");
+    // Lexicon (docs/design/ui-contract.md §Annexe): "Tessera" is cockpit-reserved, never on a
+    // product surface. The old assertion PINNED the forbidden "Démo Tessera" kicker — a
+    // pre-lexicon leftover (audit P0.5). Replaced by the guard that keeps this host clean.
+    expect(creditAuroreHost).not.toContain("Tessera");
     expect(demoLauncherLink).toContain('t("demoExplore")');
   });
 
