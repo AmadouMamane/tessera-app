@@ -7,8 +7,12 @@ name: CI
 #   e2e              Playwright against a PRODUCTION build. Non-blocking today
 #                    (see the job's header for what has to be true before the
 #                    flip). It runs so the suite cannot rot unwitnessed.
-#   test-integration needs Postgres + a live LLM. Non-blocking, for visibility.
 #   precommit        the hook set (whitespace, yaml, the local ruff/mypy shims).
+#
+# The integration-tagged contracts run in their own NON-GATING workflow —
+# .github/workflows/integration.yml (nightly + on demand, with live Postgres +
+# ClickHouse services). They used to ride this workflow on every main push; they
+# were dark coverage before that (the marker is excluded from the gate everywhere).
 #
 # No secrets are referenced anywhere in this workflow. A fork PR must be able to
 # run the gate.
@@ -256,48 +260,6 @@ jobs:
           name: playwright-report
           path: webapp/frontend/playwright-report/
           retention-days: 7
-
-  test-integration:
-    name: pytest (integration)
-    runs-on: ubuntu-latest
-    needs: [gate]
-    # Non-blocking: a subset of integration tests needs a seeded Postgres and a
-    # live LLM (Ollama/Vertex) that the hosted runner does not provide. They run
-    # for visibility but do not gate the workflow; run them locally with services.
-    continue-on-error: true
-    if: >
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      contains(github.event.pull_request.labels.*.name, 'integration')
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: tessera
-          POSTGRES_PASSWORD: tessera
-          POSTGRES_DB: tessera_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U tessera -d tessera_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    env:
-      TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@localhost:5432/tessera_test
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: ${{ env.UV_VERSION }}
-          python-version: "3.12"
-          enable-cache: true
-
-      - name: Sync
-        run: uv sync
-
-      - name: pytest (integration)
-        run: uv run pytest tests/integration/ -m integration -ra
 
   precommit:
     name: pre-commit

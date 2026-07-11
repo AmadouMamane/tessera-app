@@ -1,0 +1,123 @@
+name: Integration
+
+# Dedicated, NON-GATING integration run — the P0.1 remediation of the 2026-07-10 audit
+# (docs/decisions/overnight-20260710-audit-run.md). The blocking gate lives in ci.yml and
+# stays hermetic (`pytest -m "not integration"`); the nine integration-tagged files need
+# live owned stores, so they run HERE — on a schedule and on demand — never on the merge
+# path. Before this workflow the integration marker was excluded everywhere: the contracts
+# were dark coverage. This is a separate workflow, so its result never blocks a merge.
+#
+# File-by-file triage (all nine surfaces verified present — zero dead tests, zero deletions):
+#
+#   RUN in CI — the owned durable stores, stood up as services below:
+#     Postgres   → test_ledger_contract, test_memory_{transcript,summary,persistent},
+#                  test_owned_stores_contract (Postgres half), test_firewall_adapter (offline)
+#     ClickHouse → test_owned_business_events_contract, test_owned_stores_contract (CH half)
+#                  — the adapter CREATE DATABASE/TABLE IF NOT EXISTS on first use, so the
+#                    service needs no init step.
+#
+#   SKIP in CI — external backends and the local model, by design; each test probes its
+#   dependency and calls pytest.skip, and `-ra` prints the reason so the skip is not silent:
+#     Prometheus/Langfuse → test_spine_adapters_contract (read-adapter contracts; run
+#                           locally with `make obs-up`)
+#     Ollama on-prem LLM  → test_agent_e2e (LOCAL-ONLY — its own skip guard; needs
+#                           `make run-on-prem`, never a hosted runner)
+#
+# No secret is referenced anywhere. A model or an external SaaS is never provisioned on a
+# runner — the same rule ci.yml holds.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # nightly, 03:00 UTC
+  workflow_dispatch: {}
+  pull_request:
+    # Opt-in per PR by adding the `integration` label (checked in the job `if:`).
+    types: [labeled, opened, synchronize, reopened]
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.5.4"
+
+jobs:
+  integration:
+    name: pytest (integration)
+    runs-on: ubuntu-latest
+    # Always on the nightly schedule and on manual dispatch; on a PR only when the author
+    # explicitly labels it `integration` (this repo merges trunk-based, so the label path
+    # is the rare case).
+    if: >
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'integration')
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: tessera
+          POSTGRES_PASSWORD: tessera
+          POSTGRES_DB: tessera_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tessera -d tessera_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_USER: clickhouse
+          CLICKHOUSE_PASSWORD: clickhouse
+          CLICKHOUSE_DB: tessera
+          # The created user needs CREATE DATABASE (the adapter provisions its own schema).
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 8123:8123
+        # No service-level health check: the CH image's health tooling is unreliable across
+        # tags. Readiness is proven on the runner instead (the "Wait for ClickHouse" step),
+        # where curl is guaranteed present.
+    env:
+      TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@localhost:5432/tessera_test
+      # The owned business-event / online-score stores resolve their client from these
+      # (defaults live in src/tessera/observability/spine/adapters/clickhouse.py).
+      TESSERA_CLICKHOUSE_URL: http://localhost:8123
+      TESSERA_CLICKHOUSE_USER: clickhouse
+      TESSERA_CLICKHOUSE_PASSWORD: clickhouse
+      TESSERA_CLICKHOUSE_DATABASE: tessera
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Sync
+        run: uv sync
+
+      - name: Wait for ClickHouse
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8123/ping >/dev/null; then
+              echo "clickhouse ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "clickhouse did not become ready in time" >&2
+          # Non-fatal: the CH contract tests probe and skip on their own if it is down.
+          exit 0
+
+      - name: pytest (integration)
+        # -ra surfaces the skip reasons (Ollama / Prometheus / Langfuse absent) so the
+        # triage stays visible in the log rather than reading as a silent green.
+        run: uv run pytest tests/integration/ -m integration -ra

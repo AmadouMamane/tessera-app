@@ -15,8 +15,8 @@ cette nuit (voir « État de base » ci-dessous).
 
 | Fenêtre | Lot | Sujet | Verdict | Hash |
 |---|---|---|---|---|
-| — | 0 | Journal + état de base | 🟢 en cours | — |
-| 1 | 1.1 | Tests d'intégration (job CI + tri) | ⏳ | — |
+| — | 0 | Journal + état de base | ✅ | 5ddd5215 |
+| 1 | 1.1 | Tests d'intégration (job CI + tri) | ✅ | ff→main |
 | 1 | 1.2 | 49 `except … pass/continue` | ⏳ | — |
 | 1 | 1.3 | 7 SQL f-string + coverage informatif | ⏳ | — |
 | 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ⏳ | — |
@@ -81,3 +81,47 @@ protection **absente** (confirmé 403 GitHub Pro), ff-push direct autorisé.
 
 ### Lot 0 — Journal + état de base
 Ce fichier. Ouverture du run, état de base mesuré et consigné ci-dessus.
+
+### Lot 1.1 — Tests d'intégration : workflow dédié + tri (P0.1)
+Branche `claude/lot-1-1-integration`.
+
+**Correction d'audit #1 (mesurée) : ZÉRO test mort.** La reconnaissance a ouvert les
+9 fichiers `integration` et vérifié chaque symbole importé contre `src/tessera` actuel —
+tous présents, signatures compatibles. Aucune suppression justifiée. Le « modèle
+71b15b18 » invoqué par l'audit **n'est pas** un commit de suppression de test (c'est une
+refonte front du Console) ; `git log --diff-filter=D -- 'tests/**/*.py'` est **vide** —
+aucun test Python n'a jamais été supprimé dans ce repo. La consigne « supprimer avec le
+commit qui a retiré la surface » n'avait donc **aucune cible** ici. Consigné, pas forcé.
+
+**Fait.**
+- **Workflow dédié** `.github/workflows/integration.yml` — non-gatant (workflow séparé,
+  ne bloque jamais un merge), **nightly** (`cron 0 3 * * *`) + **manuel**
+  (`workflow_dispatch`) + label `integration` sur PR. Services **Postgres + ClickHouse**
+  (les deux stores durables *owned* ; l'adapter ClickHouse fait `CREATE DATABASE/TABLE IF
+  NOT EXISTS` → aucun step d'init). Étape « Wait for ClickHouse » côté runner (curl /ping)
+  car la santé de l'image CH est peu fiable ; non-fatale (les tests CH sondent et skippent
+  seuls). Le job `test-integration` a été **retiré de `ci.yml`** (il tournait sur chaque
+  push-main, bruyant) ; en-tête de `ci.yml` mis à jour.
+- **`test_agent_e2e.py`** : docstring **mensonger corrigé** (« mocked I/O » était faux —
+  seule la *retrieval* est stubbée ; le LLM on-prem est appelé pour de vrai, le conftest
+  force `TESSERA_LLM_PROFILE=on_prem`). Ajout d'une **sonde Ollama** (`_require_local_llm`,
+  socket sur `TESSERA_OLLAMA_HOST`/`:11434`) → **skip propre** hors machine locale, au lieu
+  d'erreurs. Marqué et documenté **local-only**.
+- **`tests/integration/README.md`** : grille de tri (qui tourne en CI, qui skip et
+  pourquoi).
+
+**Grille fichier → verdict** (9 fichiers, 8 REPAIR / 1 LOCAL-ONLY / 0 DELETE) :
+
+| fichier | besoin | CI nightly |
+|---|---|---|
+| `test_firewall_adapter.py` | rien d'externe | ✅ |
+| `test_ledger_contract.py` | Postgres | ✅ |
+| `test_memory_transcript/summary/persistent.py` | Postgres (+pgvector) | ✅ |
+| `test_owned_stores_contract.py` | Postgres + ClickHouse | ✅ |
+| `test_owned_business_events_contract.py` | ClickHouse | ✅ |
+| `test_spine_adapters_contract.py` | Prometheus + Langfuse | ⏭️ skip (obs-up local) |
+| `test_agent_e2e.py` | LLM on-prem Ollama | ⏭️ skip (local-only) |
+
+Aucun secret en CI. « Réparer vers le contrat réel » = **les faire tourner** (les contrats
+étaient déjà justes, surfaces présentes) ; seul `test_agent_e2e` demandait une retouche
+code (sonde de skip + docstring).
