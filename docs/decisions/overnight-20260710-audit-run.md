@@ -39,7 +39,7 @@ cette nuit (voir « État de base » ci-dessous).
 | 3 | 3.2 | Extraction tabs communs | ⏳ | — |
 | 4 | 4.1 | Doc posture prod | ✅ | ff→main |
 | 4 | 4.2 | Job CI deps/CVE informatif | ⏳ | — |
-| 4 | 4.3 | Échantillon biome-ignore | ⏳ | — |
+| 4 | 4.3 | Échantillon biome-ignore | ✅ (0 paresseux) | ff→main |
 | 4 | 4.4 | Fixture-trafic → flip e2e | ⏳ | — |
 
 **Chiffres avant → après** (remplis en fin de nuit) : except classés · SQL fermés ·
@@ -347,3 +347,20 @@ les faits qui étaient dispersés dans 4 ADRs + le Terraform + les settings, cha
 - **CI état réel mesuré cette nuit** : billing bloqué, protection de branche absente,
   Security/Supply-chain rouges (SLSA repo privé, SARIF sans Advanced Security), CVEs
   `starlette`/`vcrpy` non patchées (mandat), isolation par env (ADR 0014).
+
+### Lot 4.3 — Échantillon biome-ignore (P2.2)
+Branche `claude/lot-4-3-biome-ignore`. **Doc-only** (verdict : rien à purger).
+
+Les **63** `biome-ignore` ont été revus (au-delà de l'échantillon de 15 demandé — j'ai
+inventorié les 63 raisons). **ZÉRO paresseux** : chacun porte une raison **spécifique et
+valide**. Deux familles :
+- `correctness/useExhaustiveDependencies` (la majorité) : rationale de re-run explicite à
+  chaque fois — « reset to page 1 on filter/sort/size change », « must re-run on every
+  messages change to follow streaming output », « router/pathname are stable »,
+  « mount-only hydrate ». Suppression intentionnelle et documentée du lint exhaustive-deps.
+- `suspicious/noArrayIndexKey` : rationale statique/positionnel — « markdown re-parses each
+  render; list items never reorder », « fixed weekday header », « fixed decorative bars ».
+  L'index-key est sûr quand la liste ne se réordonne jamais, ce que chaque raison explique.
+
+**< ⅓ paresseux (0/63) → pas de purge.** C'est un modèle d'hygiène biome-ignore ;
+l'échantillon est consigné ici.
