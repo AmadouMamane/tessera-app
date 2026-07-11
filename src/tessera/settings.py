@@ -155,6 +155,14 @@ class PostgresSettings(BaseSettings):
     dsn: PostgresDsn = Field(
         default=PostgresDsn("postgresql://tessera:tessera@localhost:5432/tessera"),
     )
+    # Connection-pool bounds (retrieval.store.get_pool). Conservative for a single local
+    # process. Per-environment guidance (audit P1.3):
+    #   dev / on-prem single instance : 1 / 10 — one process, few concurrent turns.
+    #   e2e (Playwright, prod build)  : many pages hit one backend; max 10 STARVES under load
+    #     (the proven e2e famine). Keep the suite at low worker count (playwright.config
+    #     workers=1 already does) OR raise pool_max_size (~20) for parallel runs.
+    #   CI / staging / production     : size to the Cloud SQL max_connections budget —
+    #     pool_max_size * instance_count must stay under it; 10-20/instance is a sane start.
     pool_min_size: int = 1
     pool_max_size: int = 10
     statement_timeout_ms: int = 5_000
@@ -405,6 +413,16 @@ class Settings(BaseSettings):
         memory: Agent memory settings (ADR 0007).
     """
 
+    # ── Env-var naming, and its trap (audit P1.3) ───────────────────────────────
+    # Nested blocks resolve TWO ways, easy to confuse:
+    #   1. CANONICAL — the `__` delimiter below, keyed on the FIELD NAME:
+    #        TESSERA_POSTGRES__DSN, TESSERA_OBSERVABILITY__LOG_FORMAT, TESSERA_API__PORT.
+    #   2. LEGACY — each nested block also carries its own single-`_` env_prefix:
+    #        TESSERA_POSTGRES_DSN, TESSERA_OBS_LOG_FORMAT  (note: OBS, not OBSERVABILITY).
+    # The trap is the abbreviated block prefix: `observability` is TESSERA_OBSERVABILITY__X
+    # (form 1) or TESSERA_OBS_X (form 2) — but TESSERA_OBS__X (abbreviation + double
+    # underscore) matches NEITHER and is SILENTLY IGNORED. Prefer form 1 everywhere. Full
+    # generated inventory: docs/configuration.md (scripts/config_inventory.py).
     model_config = SettingsConfigDict(
         env_prefix="TESSERA_",
         env_nested_delimiter="__",

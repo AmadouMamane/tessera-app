@@ -33,7 +33,7 @@ cette nuit (voir « État de base » ci-dessous).
 | 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ✅ | ff→main |
 | 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ✅ | ff→main |
 | 2 | 2.2 | Sauvegarde ledger + drill restauration | ✅ | ff→main |
-| 2 | 2.3 | Inventaire config généré | ⏳ | — |
+| 2 | 2.3 | Inventaire config généré | ✅ | ff→main |
 | 3 | 3.0 | Prototype codegen OpenAPI→zod (fleet) | ⏳ | — |
 | 3 | 3.1 | Scission `observability.py` | ⏳ | — |
 | 3 | 3.2 | Extraction tabs communs | ⏳ | — |
@@ -293,3 +293,32 @@ registre opposable n'avait AUCUNE sauvegarde planifiée (seul le gel d'incident 
    grandfathered (le store les tolère car ancrés sous le high-water mark). Le drill recrée
    donc **seulement la table** — `verify_ledger_tree` *rapporte* les forks sans les interdire,
    ce qui est le contrat correct de vérification.
+
+### Lot 2.3 — Inventaire config généré + le piège préfixe (P1.3)
+Branche `claude/lot-2-3-config-inventory`.
+
+**Généré, pas maintenu à la main** : `scripts/config_inventory.py` introspecte le modèle
+`Settings` + extrait l'« effet » des commentaires source (AST) → `docs/configuration.md`
+(**83 variables** : nom canonique, défaut, effet, surface). **Secrets jamais rendus**
+(`SecretStr` → `(secret)`) ; chemins repo relativisés (`<repo>/...`, pas de churn machine).
+
+**Le piège préfixe — prouvé empiriquement, documenté à la source.** Chaque bloc imbriqué a
+DEUX formes d'env : la canonique `TESSERA_<CHAMP>__<FIELD>` (délimiteur composite) ET le
+préfixe propre du bloc (`TESSERA_OBS_`, single `_`). Test mesuré :
+`TESSERA_OBSERVABILITY__LOG_FORMAT` ✓ · `TESSERA_OBS_LOG_FORMAT` ✓ · **`TESSERA_OBS__LOG_FORMAT`
+✗ (aucun effet)** — préfixe abrégé + `__` ne matche NI l'un NI l'autre, silencieusement
+ignoré. Documenté au `model_config` composite de `settings.py`.
+
+**Bug réel trouvé (le piège mordait déjà)** : le `conftest.py` posait
+`TESSERA_OBS__LOG_FORMAT` et `TESSERA_OBS__METRICS_ENABLED` — **morts** (aucun effet). Les
+tests tournaient donc avec `metrics_enabled=True` (défaut) contrairement à l'intention.
+**Corrigé** en forme canonique `TESSERA_OBSERVABILITY__…` (métriques réellement désactivées
+en test ; le gate valide que ça ne casse rien).
+
+**Pool Postgres** : `pool_min_size=1 / pool_max_size=10` — guidance par environnement ajoutée
+à la source (dev vs **e2e** — la famine prouvée : max 10 starve sous charge, garder
+workers=1 — vs CI/prod dimensionné au budget Cloud SQL).
+
+**Variables mortes** : le générateur EST l'outil pour les traquer (nom → grep). Balayage
+complet non fait cette nuit (retirer un champ pydantic exige un cross-ref par champ) —
+consigné comme suivi ; les 2 mortes concrètes (conftest) sont corrigées.
