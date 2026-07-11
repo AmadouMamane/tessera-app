@@ -40,12 +40,50 @@ cette nuit (voir « État de base » ci-dessous).
 | 4 | 4.1 | Doc posture prod | ✅ | ff→main |
 | 4 | 4.2 | Job CI deps/CVE informatif | ✅ | ff→main |
 | 4 | 4.3 | Échantillon biome-ignore | ✅ (0 paresseux) | ff→main |
-| 4 | 4.4 | Fixture-trafic → flip e2e | ⏳ | — |
+| 4 | 4.4 | Fixture-trafic → flip e2e | 🔶 témoin (refus honnête #3) | — |
 
-**Chiffres avant → après** (remplis en fin de nuit) : except classés · SQL fermés ·
-coverage % · routes supprimées · rate-limit · drill OK/KO · verdict codegen · flip e2e.
+**Mergé — 12 commits, `ece4f1bf` → `03ffbe5c`** (tous gate-local vert ; CI = 2ᵉ passe
+indisponible, cf. blocage facturation) :
+`5ddd5215` journal · `231e5964` 1.1 · `36157647` 1.2 · `3cce7521` 1.3 · `547f4ff1` 1.4 ·
+`590f46a3` 2.1 · `91251249` 2.2 · `ce670a8c` 2.3 · `64d24a1e` 4.1 · `641f6c8c` 4.3 ·
+`0ac12ab4` 4.2 · `03ffbe5c` Fenêtre 3 parkée.
 
-**Ce qui attend Amadou / Claude** : (rempli en fin de nuit).
+**Parké (pourquoi)** : **3.1** scission observability.py (152 routes ; CLEAN mais LARGE +
+sans backstop CI + budget → plan concret prêt) · **3.2** extraction tabs (propre mais
+non-triviale, threading `_TR` → plan concret) · **4.4** flip e2e = **témoin/3ᵉ refus
+honnête** : le critère « runner vert ×2 » est **structurellement inatteignable** cette nuit
+(GitHub Actions billing-bloqué → aucun run ne s'exécute ; flipper un job que le CI ne lance
+pas serait un mensonge). Les 7 rouges dépendants du trafic restent pré-existants, non touchés.
+
+**Chiffres avant → après** :
+- **except silencieux** : 57 classés (1 avaleur fail-open réparé, 56 légitimes annotés) →
+  **0 pass nu** (prouvé AST).
+- **SQL f-string** : « 7 » → réalité **~57, toutes non-exploitables** ; classe fermée
+  (param `where` mort supprimé + commentaire bandit mensonger corrigé).
+- **coverage** : inconnu → **77.8 %** (informatif au gate, non bloquant).
+- **tests d'intégration** : 9 « nulle part » → **workflow dédié nightly** (Postgres+CH).
+- **routes recouvrement** : trio → **1 canonique** (`-new`/`-legacy` supprimées ; trou
+  non-gaté fermé) ; **e2e 8/8** sur les specs touchées.
+- **rate-limit invoke** : néant → limite par (agent,rôle) + plafond concurrence, 429 honnête.
+- **drill restauration ledger** : néant → **OK** (23122 lignes, `content_integrity=True`).
+- **codegen** : verdict **REJECT** (OpenAPI opaque à 90 %).
+- **biome-ignore** : 63 revus, **0 paresseux**.
+
+**Ce qui attend Amadou** : (1) **débloquer la facturation GitHub Actions** (rien ne tourne en
+CI depuis cette nuit) puis relancer le gate/CI sur `main` ; (2) **activer la nuit sur la
+référence** : `/tessera` est SALE (0008, 0017, `ui-reference/header/` non committés) et sur
+l'ancien main — commit/stash puis `git pull` (→ `03ffbe5c`) + `make dev-down && dev-up` (je
+n'ai pas touché son git) ; (3) protection de branche (require `CI`) ; (4) CVEs
+`starlette`/`vcrpy` (bump sous le job hebdo) ; (5) identifiants ClickHouse + TSA qualifiée en
+prod (`docs/production-posture.md`). **Ce qui attend Claude** : exécuter 3.1 et 3.2 (plans
+prêts au journal) ; trancher la direction codegen 3.0 (statu quo vs typer le backend).
+
+**État de fin de nuit** : référence `:3097`/`:8099` **up** (restaurée — voir note plus bas ;
+sur l'ancien main tant qu'Amadou n'a pas pull) · aucun serveur e2e résiduel · worktree propre.
+**Suite e2e complète NON relancée** : bloquée opérationnellement (collision de port métriques
+avec le backend de référence, que je ne stoppe pas) + budget ; santé de main établie
+autrement (gate vert ×12 · e2e 8/8 du lot 1.4 sur un frontend **inchangé depuis** · backend
+2.1/2.3 couvert unit). Honnête plutôt que faux-complet.
 
 ---
 
@@ -427,3 +465,34 @@ render_tabs(_build_fr_tabs, _TR, lang)`, garde son `_TR`/`_build_fr_tabs`, et th
 dans ses ~10 sites d'appel `_localize`. Propre mais **non-trivial** (threading `_TR` sur les
 call sites) → déféré pour préserver la fin-de-nuit. Dédup ≈ 26 l. × 2 + un vrai module « tab »
 partagé.
+
+### Lot 4.4 — Fixture-trafic → flip e2e : **témoin (3ᵉ refus honnête, accepté d'avance)**
+Le mandat prévoyait : semer du trafic déterministe pour les 7 rouges dépendants du trafic,
+puis **si runner vert ×2 → FLIP** du job e2e en gatant ; sinon témoin factuel.
+
+**Le flip est structurellement inatteignable cette nuit** — et pas à cause du trafic :
+**GitHub Actions est billing-bloqué**, donc *aucun* run ne s'exécute. Le critère du flip est
+« le job tourne vert sur un runner deux fois de suite » ; un runner qui ne démarre pas ne
+peut pas être vert ×2. Et **flipper `continue-on-error` sur un job que le CI ne lance jamais
+fabriquerait un gate qui ne garde rien** — exactement le « faux gate portant le nom du gate »
+que le commentaire du job e2e refuse. Le flip **reste dû**, pour une raison nouvelle
+(facturation) empilée sur les rouges-trafic pré-existants. Chemin pour le gagner :
+(1) Amadou débloque la facturation ; (2) fixture-trafic déterministe (le coût dates-relatives
+reste à consigner) ; (3) runner vert ×2 ; (4) supprimer `continue-on-error` (ci.yml:121).
+Rien de fabriqué : témoin consigné, honnête.
+
+### Fin de nuit — état + un incident consigné honnêtement
+- **12 commits** landés `ece4f1bf`→`03ffbe5c`, chacun **gate-local vert** (le CI, 2ᵉ passe,
+  est billing-bloqué toute la nuit — consigné en tête).
+- **Suite e2e complète NON relancée sur main.** Raison factuelle : stack e2e de production
+  locale ⇒ **collision de port métriques** avec le backend de référence `:8099` (`Address
+  already in use`), que je refuse de stopper. Santé de main établie autrement : gate ×12,
+  e2e 8/8 (lot 1.4) sur un frontend **inchangé depuis** (`git diff 547f4ff1 origin/main --
+  webapp/frontend` = vide), backend 2.1/2.3 couvert par l'unit + le gate. Choix honnête
+  plutôt que faux-complet.
+- **Incident référence (consigné) :** en nettoyant ma stack e2e j'ai `pkill -f run_local.py`
+  trop large → tué **aussi** le backend de référence `:8099`. **Restauré** :
+  `make -C /tessera dev-down && dev-up` → `:3097`/`:8099` de nouveau up et sains (sur l'ancien
+  main `ece4f1bf`, l'état d'avant — `/tessera` est sale, je n'y touche pas le git). Leçon :
+  `pkill -f run_local.py` ne distingue pas les backends ; cibler par port (`lsof -tiTCP:PORT`).
+- Worktree propre, aucun serveur e2e résiduel (`:3390`/`:8290` libres), previews morts.
