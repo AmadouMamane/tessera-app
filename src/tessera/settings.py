@@ -304,6 +304,15 @@ class APISettings(BaseSettings):
     # only behind a trusted proxy (Next, nginx, cloudflared) that sets them.
     trust_forwarded_headers: bool = False
 
+    # POST /agents/{id}/invoke — the declared invocation seam (ADR 0019). Bounded PER
+    # AGENT (binding) and PER ROLE (the operator surface), so an operator cannot hammer
+    # an agent's test endpoint. A purpose-built limit, tighter than the generic read one.
+    rate_limit_invoke: str = "12/minute"
+    # Max concurrent in-flight invocations of one agent per role — protects a foreign
+    # runtime from a thundering herd of operator test turns. In-process (per instance;
+    # a shared rate_limit_storage_uri only backs the rate window, not this counter).
+    invoke_max_concurrent: int = 4
+
     # Global request-body ceiling, in addition to per-field Pydantic caps.
     max_request_bytes: int = 256_000
 

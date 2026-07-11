@@ -167,8 +167,16 @@ whichever is wanted first.
   **Resolved (I3):** request/response. The http console is a request/response test bench
   (`POST /agents/{id}/invoke` → one TurnResult); streaming stays an optional future capability
   flag, not required for the test-turn use case.
-- Rate limits / concurrency caps per binding (an operator hammering a production agent's
-  test endpoint is a governance question, not just an infra one).
+- ~~Rate limits / concurrency caps per binding (an operator hammering a production agent's
+  test endpoint is a governance question, not just an infra one).~~
+  **Resolved (2026-07-11, audit P1.1):** `POST /agents/{id}/invoke` is bounded per agent
+  (binding) and per role (the operator surface) by `InvokeLimiter` (`api/ratelimit.py`) — a
+  moving-window rate limit (reusing the middleware's `limits` engine + storage) plus an
+  in-process concurrency cap. An over-budget turn gets an honest 429 + `Retry-After`, never a
+  silent drop (the governance posture: a test is an action on a governed system). In-process
+  by default; a shared `rate_limit_storage_uri` backs the rate window cross-instance, not the
+  concurrency counter. Tunable via `TESSERA_API__RATE_LIMIT_INVOKE` /
+  `TESSERA_API__INVOKE_MAX_CONCURRENT`.
 - ~~Whether the Console exposes capability *parameters* (from `input_schema`) as generated
   forms in I2 or only free-text + typed action buttons initially.~~
   **Resolved (Amendment 1):** yes, generated forms — deferred until a declaration exists to

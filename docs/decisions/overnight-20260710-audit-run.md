@@ -31,7 +31,7 @@ cette nuit (voir « État de base » ci-dessous).
 | 1 | 1.2 | 49 `except … pass/continue` | ✅ | ff→main |
 | 1 | 1.3 | 7 SQL f-string + coverage informatif | ✅ | ff→main |
 | 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ✅ | ff→main |
-| 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ⏳ | — |
+| 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ✅ | ff→main |
 | 2 | 2.2 | Sauvegarde ledger + drill restauration | ⏳ | — |
 | 2 | 2.3 | Inventaire config généré | ⏳ | — |
 | 3 | 3.0 | Prototype codegen OpenAPI→zod (fleet) | ⏳ | — |
@@ -240,3 +240,29 @@ landing view » (le produit rend bien sur `/fr/recouvrement`, admin passe la gat
 product plane never says Tessera ». `business-counting.spec.ts` (qui **mute** le store
 partagé + exige ClickHouse) **non lancé ici** — son changement est un repoint de constante
 d'une ligne, couvert par la suite de fin de nuit sur main. (CI e2e billing-bloqué, cf. note.)
+
+## Fenêtre 2 — sécurité et survie
+
+### Lot 2.1 — Rate-limit + concurrence sur `/agents/{id}/invoke` (P1.1)
+Branche `claude/lot-2-1-invoke-ratelimit`.
+
+**Réutiliser, pas réinventer.** Une infra de rate-limit existait déjà (`api/ratelimit.py`,
+lib `limits`, `RateLimitMiddleware` : `/chat` strict + global, read générique). L'invoke ne
+recevait que le **read générique** (120/min) — pas de limite dédiée ni de plafond de
+concurrence (le trou P1.1 / question ouverte 0019). J'ai **étendu** l'existant, pas construit
+un limiteur parallèle :
+- `InvokeLimiter` (`api/ratelimit.py`) : fenêtre glissante par **(agent, rôle=surface,
+  subject)** via le moteur `limits` (donc un `rate_limit_storage_uri` Redis le rend
+  cross-instance) + **plafond de concurrence** in-process par (agent, rôle). 429 honnête +
+  `Retry-After`, jamais un drop silencieux.
+- Câblé dans `invoke_agent` après les gates auth/plane/binding, avant l'invoke.
+- Réglages : `rate_limit_invoke = "12/minute"`, `invoke_max_concurrent = 4` (APISettings).
+- Tests : 4 (route 429 bout-en-bout avec Retry-After ; unit débit-par-subject ; unit plafond
+  de concurrence ; unit désactivé=no-op) + fixture de reset du singleton. **9 passed** au total.
+- **Question ouverte 0019 résolue** (rature + note, style des précédentes) : `docs/decisions/
+  0019-invocation-binding.md §Open questions`.
+
+Note : « par rôle » = la **surface operator** (`cockpit-embedded` / `dedicated-ui`), la
+granularité de palier de rôle que le handler a sous la main (le rôle exact vit dans
+l'assertion). In-process par défaut (le compteur de concurrence n'est pas partagé cross-
+instance — un limiteur distribué exigerait Redis, hors périmètre, documenté à la source).

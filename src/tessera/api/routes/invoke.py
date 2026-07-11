@@ -30,6 +30,7 @@ from tessera.agent.capability_schema import load_input_schema, validate_params
 from tessera.agent.registry import Agent, InvocationBinding, get_agent, routable
 from tessera.api.agent_invoker import HttpTurnInvoker
 from tessera.api.operator import OPERATOR_ASSERTION_HEADER, resolve_request_context
+from tessera.api.ratelimit import InvokeThrottledError, get_invoke_limiter
 from tessera.authz import AuthState
 
 if TYPE_CHECKING:
@@ -147,20 +148,34 @@ async def invoke_agent(
     if payload.case_id:
         turn_input["case_id"] = payload.case_id
 
-    outcome = await HttpTurnInvoker().invoke(
-        agent_id,
-        turn_input,
-        # Forward the verified assertion the caller carried (0010 Phase B) — the invoker
-        # refuses an empty one, so a dev with the key unset gets an honest red, not a leak.
-        operator_assertion=request.headers.get(OPERATOR_ASSERTION_HEADER) or "",
-        actor=session.subject_id or "operator",
-        conversation_id=conversation_id,
-        turn_id=turn_id,
-        # This route IS the Console test bench: operator-only, never on a product path
-        # (an anonymous or customer session is refused above). Every turn it drives is a
-        # test turn, so it declares the posture the agent must propagate (ADR 0019 §A1.1).
-        synthetic=True,
-    )
+    # Governed rate + concurrency (ADR 0019 §Open questions): keyed per agent (binding) and
+    # per role (the operator surface). An operator hammering an agent's test endpoint is
+    # refused with an honest 429 + Retry-After, never silently dropped.
+    limiter = get_invoke_limiter()
+    role = surface.value
+    try:
+        with limiter.concurrency_slot(agent_id=agent_id, role=role):
+            limiter.check_rate(
+                agent_id=agent_id, role=role, subject=session.subject_id or "operator"
+            )
+            outcome = await HttpTurnInvoker().invoke(
+                agent_id,
+                turn_input,
+                # Forward the verified assertion the caller carried (0010 Phase B) — the invoker
+                # refuses an empty one, so a dev with the key unset gets an honest red, not a leak.
+                operator_assertion=request.headers.get(OPERATOR_ASSERTION_HEADER) or "",
+                actor=session.subject_id or "operator",
+                conversation_id=conversation_id,
+                turn_id=turn_id,
+                # This route IS the Console test bench: operator-only, never on a product path
+                # (an anonymous or customer session is refused above). Every turn it drives is a
+                # test turn, so it declares the posture the agent must propagate (ADR 0019 §A1.1).
+                synthetic=True,
+            )
+    except InvokeThrottledError as exc:
+        raise HTTPException(
+            status_code=429, detail=exc.reason, headers={"Retry-After": str(exc.retry_after)}
+        ) from exc
     return {
         "ok": outcome.ok,
         "verdict": outcome.verdict,
