@@ -102,6 +102,7 @@ def compute_score_series(
         try:
             score = float(row["score"])  # type: ignore[arg-type]
         except (KeyError, TypeError, ValueError):
+            # best-effort: skip a score row that won't coerce to float — non-gating (0015)
             continue
         if prev_start <= ts < start:
             prev.append(score)
@@ -185,6 +186,7 @@ def compute_metric_pairs(
         try:
             score = float(row["score"])  # type: ignore[arg-type]
         except (KeyError, TypeError, ValueError):
+            # best-effort: skip a score row that won't coerce to float — non-gating (0015)
             continue
         bucket.setdefault(conv, {}).setdefault(str(metric), []).append(score)
         lang = row.get("language")
@@ -411,6 +413,7 @@ def compute_status_counts_trend(
         try:
             score = float(row["score"])  # type: ignore[arg-type]
         except (KeyError, TypeError, ValueError):
+            # best-effort: skip a score row that won't coerce to float — non-gating (0015)
             continue
         frac = (ts - start).total_seconds() / span
         idx = min(n_buckets - 1, max(0, int(frac * n_buckets)))

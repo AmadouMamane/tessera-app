@@ -48,6 +48,7 @@ def _resolve_exporter() -> SpanExporter:
 
             return CloudTraceSpanExporter(project_id=settings.cloud_logging_project)  # type: ignore[no-untyped-call]
         except ImportError:
+            # best-effort: Cloud Trace exporter absent — fall through to OTLP (0015)
             pass
     endpoint = settings.otel_collector_endpoint or settings.otel_endpoint
     if endpoint:

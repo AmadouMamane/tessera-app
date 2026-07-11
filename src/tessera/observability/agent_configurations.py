@@ -425,6 +425,7 @@ def _build_history(policy_path: Path, lang: str = "fr") -> list[dict[str, str]]:
         try:
             when = datetime.fromisoformat(str(entry.get("at")))
         except (TypeError, ValueError):
+            # best-effort: skip a change-log row with a bad timestamp — non-gating read (0015)
             continue
         keys = [str(k) for k in entry.get("keys", [])]
         labels = ", ".join(_key_label(k, lang) for k in keys) or _loc(

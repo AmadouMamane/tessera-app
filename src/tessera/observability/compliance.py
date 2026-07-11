@@ -425,6 +425,7 @@ def _legal_business_signals() -> list[BusinessLegalSignal]:
                 "tessera.observability.compliance: "
                 f"business_legal_signals failed for {agent.id}: {exc}\n"
             )
+            # best-effort: skip one agent's failed capability aggregate — non-gating (0015)
             continue
         source = str(aggregate.get("source") or "business_events")
         raw_signals = aggregate.get("business_signals")

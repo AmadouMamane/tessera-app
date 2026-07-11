@@ -244,6 +244,7 @@ def _business_event_items(
                 "tessera.observability.operator_items: "
                 f"business_event_items failed for {event_name}: {exc}\n"
             )
+            # best-effort: skip one failed business-event source — non-gating (0015)
             continue
 
     items: list[OperatorItem] = []

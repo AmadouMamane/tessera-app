@@ -103,6 +103,7 @@ def _gating_archive_rows() -> list[dict[str, object]]:
         try:
             stat_ns = path.stat().st_mtime_ns
         except OSError:
+            # skip a report file that vanished/permission-flipped mid-scan — non-gating read (0015)
             continue
         key = str(path)
         cached = _GATING_CACHE.get(key)
@@ -110,6 +111,8 @@ def _gating_archive_rows() -> list[dict[str, object]]:
             try:
                 report = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
+                # Cache a corrupt gating report as empty (avoids re-reading it every scan) —
+                # non-gating current-view read; the gate reads reports elsewhere (0015).
                 _GATING_CACHE[key] = (stat_ns, [])
                 continue
             parsed = (
@@ -168,6 +171,7 @@ def _read_audit_ledger() -> list[dict[str, object]]:
             try:
                 obj = json.loads(stripped)
             except json.JSONDecodeError:
+                # skip a corrupt JSONL line while reading audit entries — non-gating read (0015)
                 continue
             if isinstance(obj, dict) and obj.get("type") == "tessera.guard.audit":
                 entries.append(obj)

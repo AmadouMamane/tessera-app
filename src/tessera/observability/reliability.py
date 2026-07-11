@@ -291,6 +291,7 @@ def _daily(
         try:
             score = float(r["score"])  # type: ignore[arg-type]
         except (KeyError, TypeError, ValueError):
+            # best-effort: skip a score row that won't coerce to float — non-gating (0015)
             continue
         by_day.setdefault(ts.date().isoformat(), []).append(score)
 

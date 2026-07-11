@@ -106,6 +106,7 @@ def _persist(bundle: ReplayBundle) -> None:
         with path.open("a", encoding="utf-8") as fp:
             fp.write(json.dumps(_bundle_to_row(bundle)) + "\n")
     except OSError:
+        # best-effort: read-only fs skips the durable replay-bundle append (0015)
         pass
 
 
@@ -124,6 +125,7 @@ def _read_persisted() -> list[ReplayBundle]:
                 try:
                     obj = json.loads(stripped)
                 except ValueError:
+                    # best-effort: skip a malformed replay JSONL line — non-gating (0015)
                     continue
                 if isinstance(obj, dict):
                     bundle = _row_to_bundle(obj)
@@ -312,6 +314,7 @@ def purge_conversation(conversation_id: str) -> int:
                 for bundle in surviving:
                     fp.write(json.dumps(_bundle_to_row(bundle)) + "\n")
     except OSError:
+        # best-effort: read-only fs skips the durable erasure rewrite (in-mem cleared) (0015)
         pass
     return removed
 

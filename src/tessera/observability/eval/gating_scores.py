@@ -277,6 +277,7 @@ async def ingest_gating_reports() -> tuple[int, int]:
         try:
             report = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
+            # best-effort: skip an unreadable/corrupt gating report — non-gating read (0015)
             continue
         if not isinstance(report, dict):
             continue

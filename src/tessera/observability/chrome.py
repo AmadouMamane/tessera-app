@@ -185,6 +185,7 @@ def _canary_notifications(lang: str) -> list[dict[str, object]]:
             verdict = latest_canary_verdict(agent.id)
         except Exception:  # one unreadable agent must not silence the others
             LOG.warning("chrome.canary_unreadable", extra={"agent_id": agent.id})
+            # best-effort: one agent's unreadable canary won't gate the chrome bell (0015)
             continue
         if verdict == "red":
             notifications.append(

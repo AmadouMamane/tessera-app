@@ -154,6 +154,7 @@ def load_waiver_events() -> list[WaiverEvent]:
         try:
             obj = json.loads(stripped)
         except json.JSONDecodeError:
+            # best-effort: skip a malformed waiver JSONL line — non-gating chain read (0015)
             continue
         if isinstance(obj, dict):
             event = _coerce_event(obj)

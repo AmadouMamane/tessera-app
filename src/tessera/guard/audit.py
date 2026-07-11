@@ -130,6 +130,8 @@ def _seed_last_hash(path: Path) -> str:
             try:
                 obj = json.loads(stripped)
             except json.JSONDecodeError:
+                # skip a corrupt journal line while seeding the head hash — best-effort; the
+                # chain verifier (verify_audit_chain) does NOT skip, so a real break surfaces there
                 continue
             candidate = obj.get("hash")
             if isinstance(candidate, str):
@@ -366,6 +368,10 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
             case "postgres":
                 _emit_postgres(entry)
     except Exception as exc:
+        # Best-effort at the sink: a failed emit is surfaced to stderr, never swallowed
+        # silently. Durability for the canonical path is the spool dual-write below (file
+        # sink); a postgres/cloud_logging sink failure leaves only this stderr record — a
+        # known limitation, not a hidden one (P0.2 grid).
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
     if sink == "file":
         # ADR 0015 §Amendment 3 — dual-write to the promoted append-only Postgres ledger via

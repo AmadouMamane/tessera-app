@@ -329,6 +329,7 @@ def _prompt_inventory() -> tuple[list[dict[str, Any]], datetime | None]:
         try:
             loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except (OSError, yaml.YAMLError):
+            # best-effort: skip a prompt YAML that will not load — non-gating coverage view (0015)
             continue
         if isinstance(loaded, dict):
             for key in loaded:
@@ -789,5 +790,9 @@ async def compute_agent_synthese(
         chain = verify_active_ledger()
         chain_ok = chain.verified
     except (OSError, ValueError):
-        chain_ok = True
+        # Fail CLOSED, never open: an unverifiable chain (Postgres unreachable, a decode
+        # error) must read as NOT-verified — reporting a green on a chain we could not verify
+        # is exactly the "fabricated green" the project forbids. The twin in system_profile.py
+        # already fails to False; this was the one that did not (P0.2 swallower fix).
+        chain_ok = False
     return _assemble(agent, cfg, tx, journal, chain_ok, period_days=period_days)

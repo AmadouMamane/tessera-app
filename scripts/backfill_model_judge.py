@@ -51,6 +51,7 @@ def _select_runs() -> dict[str, dict[str, object]]:
         try:
             obj = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
+            # best-effort: skip an unreadable/corrupt eval-report JSON — non-gating (0015)
             continue
         if not isinstance(obj, dict):
             continue

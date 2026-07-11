@@ -135,6 +135,7 @@ def load_ingestion_runs() -> list[IngestionRun]:
         try:
             obj = json.loads(stripped)
         except json.JSONDecodeError:
+            # best-effort: skip a malformed ingestion-run JSONL line — non-gating read (0015)
             continue
         if isinstance(obj, dict):
             run = _coerce_run(obj)

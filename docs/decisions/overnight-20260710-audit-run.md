@@ -17,7 +17,7 @@ cette nuit (voir « État de base » ci-dessous).
 |---|---|---|---|---|
 | — | 0 | Journal + état de base | ✅ | 5ddd5215 |
 | 1 | 1.1 | Tests d'intégration (job CI + tri) | ✅ | ff→main |
-| 1 | 1.2 | 49 `except … pass/continue` | ⏳ | — |
+| 1 | 1.2 | 49 `except … pass/continue` | ✅ | ff→main |
 | 1 | 1.3 | 7 SQL f-string + coverage informatif | ⏳ | — |
 | 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ⏳ | — |
 | 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ⏳ | — |
@@ -125,3 +125,39 @@ commit qui a retiré la surface » n'avait donc **aucune cible** ici. Consigné,
 Aucun secret en CI. « Réparer vers le contrat réel » = **les faire tourner** (les contrats
 étaient déjà justes, surfaces présentes) ; seul `test_agent_e2e` demandait une retouche
 code (sonde de skip + docstring).
+
+### Lot 1.2 — Les 49 except silencieux : classés, 1 avaleur réparé (P0.2)
+Branche `claude/lot-1-2-excepts`. 36 fichiers, comment-only sauf 1 fix + 2 logs de visibilité.
+
+**Correction d'audit #2 (mesurée) : le danger n'était PAS dans les pass/continue.** Scan
+AST de 371 handlers. Le jeu strict silencieux (`pass`/`continue`/`break`) = **57** (49
+purs `src`, +4 log+continue `src`, +4 `scripts`, 0 `eval`) — l'« 49 » de l'audit = le
+sous-ensemble pur `src`. Quasi tous **LEGIT** (sauts best-effort par enregistrement sur des
+lectures non-gatantes : parse JSONL, coerce datetime, lecture JSON dashboard). Le vrai
+danger vit dans les **return-fallback** (217 handlers), et l'audit un-par-un y a trouvé
+**un seul vrai avaleur** — pas dans les pass/continue.
+
+**L'avaleur (réparé) — `agent_synthese.py:791`** : `except (OSError, ValueError): chain_ok
+= True` = **fail-OPEN sur l'intégrité du ledger** — la page Synthèse affichait la chaîne
+« vérifiée » quand la vérification avait *erré*. Un faux vert, exactement ce que le projet
+interdit. Le jumeau `system_profile.py:142` faisait déjà correctement `chain_ok = False`.
+**Corrigé** en fail-CLOSED.
+
+**Les 7 UNSURE, tranchés** (lecture des sites + traçage des appelants) :
+- `ledger_store.py:593` (as-of malformé → retourne tout) : **dead-defensive** — le seul
+  appelant non-None est `seal.py` qui passe `datetime.isoformat()`, toujours bien formé.
+  Annoté, pas de changement de comportement.
+- `audit.py:368` (dispatch sink) : **déjà** loggé en stderr (pas silencieux) ; durabilité
+  canonique = spool du sink `file` ; limite postgres/cloud nommée. Annoté.
+- `ledger_store.py:292/424` + `audit.py:132` (sauts de ligne corrompue) : LEGIT — le
+  vérificateur de chaîne ne saute PAS, une vraie casse resurgit. `:292/:424` reçoivent en
+  plus un **`sys.stderr.write`** de visibilité (le « log » demandé).
+- `ledger_store.py:648`, `current.py:112`, `audit.py:365` : LEGIT non-gatant, annotés.
+
+**« Zéro pass nu restant » — prouvé** : check AST → **0** handler `pass`/`continue`/`break`
+silencieux sans commentaire (au-dessus ou inline) sur `src`+`scripts`+`eval`.
+
+**Calibrage assumé** : le « log debug » du mandat est appliqué aux sites **ledger/audit**
+(où une ligne perdue compte → `sys.stderr.write`), **pas** aux ~40 boucles de lecture
+dashboard/eval (un log par fichier sauté à chaque page = spam) — là le commentaire porte
+l'intention. Grille des 57 verdicts : voir le message de commit du lot.

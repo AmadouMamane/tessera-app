@@ -117,12 +117,14 @@ def persisted_scores(at: str | None = None, agent_id: str | None = None) -> list
                 try:
                     obj = json.loads(stripped)
                 except ValueError:
+                    # best-effort: skip a malformed JSONL score line — non-gating read (0015)
                     continue
                 if cutoff is not None:
                     try:
                         if datetime.fromisoformat(str(obj.get("scored_at", ""))) > cutoff:
                             continue
                     except ValueError:
+                        # best-effort: a bad scored_at bypasses the cutoff filter (0015)
                         pass
                 rows.append(obj)
     except OSError:
@@ -151,6 +153,7 @@ def purge_conversation(conversation_id: str) -> int:
                 for row in surviving:
                     fp.write(json.dumps(row) + "\n")
     except OSError:
+        # best-effort: read-only fs skips the durable score-log rewrite (in-mem done) (0015)
         pass
     return removed
 

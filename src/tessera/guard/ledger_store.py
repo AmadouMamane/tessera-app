@@ -182,6 +182,8 @@ def _entry_occurred_at(entry: Mapping[str, Any]) -> datetime:
             try:
                 stamp = datetime.fromisoformat(value)
             except ValueError:
+                # skip a non-ISO stamp and try the next key; falls back to now() below —
+                # best-effort as-of INDEX only, the payload keeps the canonical truth (0015)
                 continue
             return stamp if stamp.tzinfo is not None else stamp.replace(tzinfo=UTC)
     # Chained entries always carry occurred_at; this fallback only indexes an anomalous
@@ -290,6 +292,10 @@ def _read_spool_locked() -> list[dict[str, Any]]:
             try:
                 obj = json.loads(stripped)
             except json.JSONDecodeError:
+                # Drop a corrupt line (a partial write on crash) but make it VISIBLE — a
+                # silently skipped ledger line is a lost record; the chain verifier still
+                # catches any real break later. Best-effort read, non-gating (0015).
+                sys.stderr.write(f"tessera.ledger: skipped an unparseable line in {path}\n")
                 continue
             if isinstance(obj, dict):
                 entries.append(obj)
@@ -422,6 +428,10 @@ def _file_entries(path: Path) -> list[dict[str, Any]]:
             try:
                 obj = json.loads(stripped)
             except json.JSONDecodeError:
+                # Drop a corrupt line (a partial write on crash) but make it VISIBLE — a
+                # silently skipped ledger line is a lost record; the chain verifier still
+                # catches any real break later. Best-effort read, non-gating (0015).
+                sys.stderr.write(f"tessera.ledger: skipped an unparseable line in {path}\n")
                 continue
             if isinstance(obj, dict):
                 entries.append(obj)
@@ -591,6 +601,10 @@ def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
         try:
             cutoff = datetime.fromisoformat(at)
         except ValueError:
+            # Defensive only: the sole caller (guard/seal.py) passes datetime.isoformat(),
+            # which always parses. A malformed `at` would fall through to the unfiltered
+            # query — safe today; re-check if a raw request string ever reaches here (it
+            # would over-return, never under-return).
             cutoff = None
         if cutoff is not None:
             if cutoff.tzinfo is None:
@@ -646,6 +660,8 @@ def ledger_head_hash() -> str | None:
                 f"SELECT hash FROM {LEDGER_TABLE} ORDER BY seq DESC LIMIT 1"  # noqa: S608
             ).fetchone()
     except Exception:
+        # A transient DB error → None; the caller reseeds from genesis (documented). Broad
+        # by design (any connect/query failure means "head unknown"), not a swallowed bug.
         return None
     return row[0] if row and isinstance(row[0], str) else None
 

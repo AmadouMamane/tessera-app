@@ -205,6 +205,7 @@ def load_agent_run_history(agent_id: str, limit: int = 24) -> tuple[RunHistoryEn
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
+            # best-effort: skip an unreadable/corrupt eval-report JSON — non-gating (0015)
             continue
         if not isinstance(payload, dict) or payload.get("agent_id") != agent_id:
             continue
@@ -242,6 +243,7 @@ def load_agent_or_global_snapshot(agent_id: str | None) -> EvalSnapshot:
         try:
             return load_eval_snapshot(agent_id)
         except FileNotFoundError:
+            # best-effort: no per-agent run — fall back to the global snapshot (0015)
             pass
     return load_eval_snapshot(None)
 
@@ -273,6 +275,7 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
+            # best-effort: skip an unreadable/corrupt eval-report JSON — non-gating (0015)
             continue
         if not isinstance(payload, dict):
             continue

@@ -95,6 +95,7 @@ def _mean_latency_ms(results: object) -> float | None:
             a = datetime.fromisoformat(start)
             b = datetime.fromisoformat(end)
         except ValueError:
+            # best-effort: skip a result row with a bad start/end time — non-gating (0015)
             continue
         spans.append((b - a).total_seconds() * 1000.0)
     return sum(spans) / len(spans) if spans else None
@@ -148,6 +149,7 @@ def load_runs(directory: Path | None = None) -> RunRegistry:
             try:
                 obj = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
+                # best-effort: skip an unreadable/corrupt eval-report JSON — non-gating (0015)
                 continue
             if not isinstance(obj, dict):
                 continue

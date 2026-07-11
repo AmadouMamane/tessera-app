@@ -450,6 +450,7 @@ def _jsonl_lines(raw: str) -> list[dict[str, object]]:
         try:
             obj = json.loads(stripped)
         except ValueError:
+            # best-effort: skip a malformed JSONL payload line — non-gating spine read (0015)
             continue
         if isinstance(obj, dict):
             rows.append(obj)

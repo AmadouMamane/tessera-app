@@ -113,6 +113,7 @@ def _check_deny_spike() -> tuple[bool, str]:
             try:
                 when = datetime.fromisoformat(str(raw))
             except (ValueError, TypeError):
+                # best-effort: skip a deny row with a bad timestamp — non-gating read (0015)
                 continue
             when = when if when.tzinfo else when.replace(tzinfo=UTC)
             if when >= cutoff:

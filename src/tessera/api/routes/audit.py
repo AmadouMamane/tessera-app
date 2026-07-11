@@ -363,6 +363,9 @@ def _read_entries_uncached(path: Path) -> list[AuditEntry]:
         try:
             out.append(_entry_from_payload(payload))
         except (ValidationError, TypeError):
+            # skip a payload that will not shape into an AuditEntry from the rendered VIEW;
+            # tamper-detection is computed separately (the chain walk), so this cannot hide a
+            # forged entry — best-effort display (0015)
             continue
     return out
 

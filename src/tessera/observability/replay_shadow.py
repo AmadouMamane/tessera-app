@@ -187,6 +187,7 @@ def _load_run_diffs() -> list[_RunDiff]:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
+            # best-effort: skip an unreadable/corrupt eval-report JSON — non-gating (0015)
             continue
         if not isinstance(payload, dict) or payload.get("model") != SMALLEST_MODEL:
             continue
@@ -220,6 +221,7 @@ def _posture(
         try:
             captured = datetime.fromisoformat(b.captured_at)
         except (ValueError, TypeError):
+            # best-effort: skip a bundle with a bad captured_at — non-gating posture (0015)
             continue
         key = captured.date().isoformat()
         if key in day_captured:

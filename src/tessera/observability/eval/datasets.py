@@ -149,6 +149,7 @@ def _load_catalogue(failures_dir: Path) -> dict[str, _Theme]:
             try:
                 obj = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
+                # best-effort: skip an unreadable/corrupt failure JSON — non-gating (0015)
                 continue
             if not isinstance(obj, dict):
                 continue
@@ -199,6 +200,7 @@ def _load_run_cats(reports_dir: Path | None) -> list[_RunCats]:
         try:
             obj = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
+            # best-effort: skip an unreadable/corrupt eval-report JSON — non-gating (0015)
             continue
         if not isinstance(obj, dict):
             continue

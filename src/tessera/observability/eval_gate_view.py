@@ -138,6 +138,7 @@ def _expected_universe(snap: EvalSnapshot) -> set[tuple[str, str]]:
         try:
             case = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            # best-effort: skip an unreadable/corrupt case JSON — non-gating read (0015)
             continue
         prompts = case.get("prompts") if isinstance(case, dict) else None
         if isinstance(prompts, dict):

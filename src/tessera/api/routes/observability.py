@@ -241,6 +241,7 @@ def _load_failure_items() -> list[failure_clustering_mod.FailureItem]:
         try:
             obj = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
+            # best-effort: skip an unreadable/corrupt failure JSON — non-gating read (0015)
             continue
         prompts = obj.get("prompts", {})
         text = ""
@@ -2664,6 +2665,7 @@ def _corpus_sources() -> set[str]:
         try:
             docs = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
+            # best-effort: skip an unreadable/corrupt regulations JSON — non-gating (0015)
             continue
         if isinstance(docs, list):
             for doc in docs:

@@ -116,6 +116,7 @@ def load_failed_cases(
             try:
                 obj = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
+                # best-effort: skip an unreadable/corrupt failure JSON — non-gating (0015)
                 continue
             category = str(obj.get("category", "unknown"))
             severity = _SEVERITY.get(category, "medium")

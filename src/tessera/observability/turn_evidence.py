@@ -91,6 +91,7 @@ def agents_with_turn_evidence() -> set[str] | None:
         try:
             count = float(value[1])
         except (TypeError, ValueError):
+            # best-effort: skip a Prometheus sample value that won't parse — non-gating (0015)
             continue
         if isinstance(agent_id, str) and agent_id and count > 0:
             observed.add(agent_id)

@@ -58,6 +58,7 @@ def _iter_data_files(corpus_filter: str | None) -> Iterable[tuple[Path, str, Lan
             try:
                 language = LanguageCode(lang_code)
             except ValueError:
+                # best-effort: skip a file with an unknown language suffix — non-gating (0015)
                 continue
         yield Path(str(entry)), corpus, language
 

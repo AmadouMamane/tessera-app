@@ -112,6 +112,7 @@ async def evaluate_turn(
             )
         except Exception as exc:  # a judge hiccup must not drop the turn's telemetry
             _log.warning("online.extra_metric_failed", metric=metric, error=str(exc))
+            # best-effort: a judge hiccup drops one extra metric, not the turn (0015)
             continue
         scores.emit_score(
             extra,

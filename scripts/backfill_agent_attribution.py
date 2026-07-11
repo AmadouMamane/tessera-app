@@ -67,6 +67,7 @@ async def _backfill_file(path: Path, cache: dict[str, str | None]) -> tuple[int,
         try:
             rows.append(json.loads(stripped))
         except ValueError:
+            # best-effort: skip a malformed JSONL row — non-gating backfill parse (0015)
             continue
 
     total = len(rows)
@@ -113,6 +114,7 @@ async def main() -> None:
             try:
                 row = json.loads(stripped)
             except ValueError:
+                # best-effort: skip a malformed JSONL row in the tally — non-gating (0015)
                 continue
             key = row.get("agent_id")
             counts[key] = counts.get(key, 0) + 1

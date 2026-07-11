@@ -341,6 +341,7 @@ def _load_all() -> tuple[dict[str, dict[str, str]], datetime]:
             mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
             newest = max(newest, mtime)
         except OSError:
+            # best-effort: skip a prompt file whose mtime can't be stat'd — non-gating (0015)
             continue
     return per_lang, newest
 

@@ -121,6 +121,7 @@ def load_corpus_freshness(
         try:
             docs = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
+            # best-effort: skip an unreadable/corrupt regulations JSON — non-gating (0015)
             continue
         n_docs = len(docs) if isinstance(docs, list) else 1
         mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)

@@ -52,6 +52,7 @@ def load_model_category_rates(reports_dir: Path | None = None) -> dict[str, Mode
             try:
                 obj = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
+                # best-effort: skip an unreadable/corrupt eval-report JSON — non-gating (0015)
                 continue
             if not isinstance(obj, dict):
                 continue
