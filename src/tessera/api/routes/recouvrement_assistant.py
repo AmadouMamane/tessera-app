@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.recouvrement import (
@@ -62,9 +63,16 @@ def _artifact_from_request(raw: dict[str, Any]) -> RecouvrementArtifact:
 async def recouvrement_assistant_message(
     payload: RecouvrementAssistantRequest,
 ) -> dict[str, object]:
-    """Run the first specialised Recouvrement graph and return drawer-ready cards."""
+    """Run the first specialised Recouvrement graph and return drawer-ready cards.
+
+    The graph is a *synchronous* LangGraph ``.invoke()`` that performs store I/O and
+    emits ~30 business events per turn. Called directly from this async route it would
+    block the event loop for the whole turn — starving every other in-flight request,
+    including the SSE streams. Offloaded to the threadpool instead.
+    """
     return dict(
-        run_recouvrement_graph_v1(
+        await run_in_threadpool(
+            run_recouvrement_graph_v1,
             case_id=payload.case_id,
             message=payload.message,
             assistant_state=payload.assistant_state,
@@ -80,9 +88,14 @@ async def recouvrement_assistant_message(
 async def recouvrement_assistant_action(
     payload: RecouvrementAssistantActionRequest,
 ) -> dict[str, object]:
-    """Run a governed action cycle for a Recouvrement artifact."""
+    """Run a governed action cycle for a Recouvrement artifact.
+
+    Synchronous and store-backed like the message workflow above — same reason, same
+    offload. The audit named only the message path; this one blocks identically.
+    """
     return dict(
-        run_recouvrement_action_workflow_v1(
+        await run_in_threadpool(
+            run_recouvrement_action_workflow_v1,
             case_id=payload.case_id,
             artifact=_artifact_from_request(payload.artifact),
             action_name=payload.action_name,
