@@ -401,7 +401,9 @@ directory = "build/coverage-html"
 #   service (Cloud Run / Docker) to accept traffic; also flagged inline.
 # - B108: budget/audit default to /tmp paths — ephemeral local caches; the
 #   container mounts a dedicated volume there. Also flagged inline.
-# - B608: the only value interpolated into SQL in retrieval/store.py is the table
-#   name, a trusted internal config constant; every user-supplied value is bound
-#   as a %s query parameter, so there is no injection vector.
+# - B608: ~57 f-string SQL sites (guard/, retrieval/, observability/) interpolate
+#   ONLY identifiers — table/schema/column names from module constants, boot-time
+#   settings, or the _ident() allow-list (observability/agent_scope.py); every
+#   user/request value is bound as a %s / server-side parameter. Identifiers cannot
+#   be bound params, so the skip is repo-wide; no f-string interpolates request data.
 skips = ["B104", "B108", "B608"]

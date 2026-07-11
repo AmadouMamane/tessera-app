@@ -13,12 +13,23 @@ un merge. Une passe `make gate` par lot avant merge ; le CI est la deuxième pas
 *Security* + *Supply chain* **rouges** — pré-existants, hors périmètre de correction
 cette nuit (voir « État de base » ci-dessous).
 
+> ⚠️ **CI INDISPONIBLE (découvert au lot 1.3, ~06:30) — action Amadou requise.**
+> Depuis cette nuit, **tous** les runs GitHub Actions échouent en ~3 s :
+> *« The job was not started because recent account payments have failed or your
+> spending limit needs to be increased »* (Billing & plans). Ce n'est pas mon code —
+> le commit journal (docs-only) échoue pareil, et `ece4f1bf` passait hier en 30 min.
+> **Conséquence** : la « 2ᵉ passe CI » est indisponible toute la nuit ; chaque merge
+> repose sur le **gate local** (identique à la commande `make gate` du CI, hermétique,
+> exécuté une fois par lot). STOP-THE-LINE dégradé en *local-gate-only*, assumé.
+> À faire par Amadou : régler la facturation GitHub, puis relancer `make gate` /
+> le CI sur `main` pour confirmer les merges de la nuit.
+
 | Fenêtre | Lot | Sujet | Verdict | Hash |
 |---|---|---|---|---|
 | — | 0 | Journal + état de base | ✅ | 5ddd5215 |
 | 1 | 1.1 | Tests d'intégration (job CI + tri) | ✅ | ff→main |
 | 1 | 1.2 | 49 `except … pass/continue` | ✅ | ff→main |
-| 1 | 1.3 | 7 SQL f-string + coverage informatif | ⏳ | — |
+| 1 | 1.3 | 7 SQL f-string + coverage informatif | ✅ | ff→main |
 | 1 | 1.4 | Trio recouvrement + kicker credit-aurore | ⏳ | — |
 | 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ⏳ | — |
 | 2 | 2.2 | Sauvegarde ledger + drill restauration | ⏳ | — |
@@ -161,3 +172,31 @@ silencieux sans commentaire (au-dessus ou inline) sur `src`+`scripts`+`eval`.
 (où une ligne perdue compte → `sys.stderr.write`), **pas** aux ~40 boucles de lecture
 dashboard/eval (un log par fichier sauté à chaque page = spam) — là le commentaire porte
 l'intention. Grille des 57 verdicts : voir le message de commit du lot.
+
+### Lot 1.3 — SQL f-string + coverage informatif (P0.3 + P0.6)
+Branche `claude/lot-1-3-sql-coverage`.
+
+**Correction d'audit #3 (mesurée) : « 7 » SQL f-string → en réalité ~57, TOUTES
+non-exploitables.** Sondage : ~57 sites f-string SQL dans `src/` (37 avec `# noqa: S608`),
+répartis sur `guard/`, `retrieval/`, `observability/`. **Chaque** interpolation est un
+**identifiant** (table/schéma/colonne) venant d'un constant module, d'un réglage boot-time,
+ou de l'allow-list `_ident()` ; **chaque valeur** est liée en `%s`/param serveur. **Zéro
+site exploitable par une entrée requête.** Aucun `text(f"...")` SQLAlchemy.
+
+Le vrai défaut n'était donc pas les instances mais **deux mensonges/latences de classe** —
+« fermer la classe, pas les instances » :
+1. **Commentaire bandit B608 mensonger** (`pyproject.toml`) : justifiait le skip repo-wide
+   par « la seule valeur interpolée est le nom de table dans `retrieval/store.py` » — **faux
+   aujourd'hui** (57 sites, 3 packages). Réécrit pour dire le vrai (identifiants only,
+   valeurs liées, identifiants non-paramétrables → skip repo-wide).
+2. **Site latent `agent_scope.py::dedup_org_total(where=...)`** : le prédicat `where` était
+   interpolé **brut** (seuls les identifiants passaient `_ident()`). Traçage : **un seul
+   appelant** (`fleet.py:187`), **personne ne passe `where`**. → **paramètre supprimé**
+   (mort + injection-prone) : la seule surface d'injection *forward* des 57 sites est close,
+   structurellement (behavior-neutral, prouvé par le gate + `test_agent_scope.py` inchangé).
+
+**Coverage (P0.6)** : ajout de `--cov=src/tessera --cov-report=term-missing
+--cov-fail-under=0` au `pytest` de `gate-py` (Makefile) → le gate (et le CI, qui appelle
+`make gate-py`) **affiche** la couverture, **aucun seuil bloquant** (`fail_under=0` surcharge
+le 55 de `pyproject`). Testé : exit 0, table affichée, pas de heurt `filterwarnings=error`.
+Le chiffre réel de la nuit est dans le log du gate du lot (à reporter au résumé matin).

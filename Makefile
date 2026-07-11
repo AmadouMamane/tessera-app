@@ -54,7 +54,7 @@ gate-py: install
 	uv run ruff check .
 	uv run ruff format --check .
 	uv run mypy src/tessera
-	uv run pytest -m "not integration"
+	uv run pytest -m "not integration" --cov=src/tessera --cov-report=term-missing --cov-fail-under=0
 
 gate-web:
 	cd webapp/frontend && corepack pnpm install --frozen-lockfile

@@ -67,7 +67,6 @@ async def dedup_org_total(
     table: str,
     entity_col: str,
     agent_col: str = "agent_id",
-    where: str = "",
 ) -> OrgRollup:
     """Compute the deduplicated org rollup for an ``(entity, agent)`` table.
 
@@ -82,8 +81,6 @@ async def dedup_org_total(
         table: the entity table (validated identifier).
         entity_col: the distinct entity column, e.g. ``conversation_id`` (validated).
         agent_col: the agent column, default ``agent_id`` (validated).
-        where: optional raw SQL predicate (no leading ``WHERE``); the caller owns
-            its safety — pass constants only, never user input.
 
     Returns:
         An :class:`OrgRollup`.
@@ -91,17 +88,18 @@ async def dedup_org_total(
     table_id = _ident(table)
     entity_id = _ident(entity_col)
     agent_id = _ident(agent_col)
-    clause = f" WHERE {where}" if where else ""
 
-    # Identifiers are validated above; the predicate is caller-owned constant SQL.
+    # Every interpolation is an identifier validated by _ident() above. The unused, injection-
+    # prone `where` predicate parameter was removed (P0.3 class closure): no raw SQL text is
+    # accepted here, so these f-strings are safe by construction, not by caller convention.
     per_agent_sql = (
         f"SELECT {agent_id} AS agent, count(DISTINCT {entity_id}) AS n "  # noqa: S608
-        f"FROM {table_id}{clause} GROUP BY {agent_id}"
+        f"FROM {table_id} GROUP BY {agent_id}"
     )
-    org_sql = f"SELECT count(DISTINCT {entity_id}) AS n FROM {table_id}{clause}"  # noqa: S608
+    org_sql = f"SELECT count(DISTINCT {entity_id}) AS n FROM {table_id}"  # noqa: S608
     shared_sql = (
         f"SELECT count(*) AS n FROM ("  # noqa: S608
-        f"  SELECT {entity_id} FROM {table_id}{clause} "
+        f"  SELECT {entity_id} FROM {table_id} "
         f"  GROUP BY {entity_id} HAVING count(DISTINCT {agent_id}) > 1"
         f") s"
     )
