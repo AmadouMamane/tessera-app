@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from tessera.api.operator import resolve_request_context
+from tessera.authz import AuthState
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -69,12 +71,46 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+#: Raised at boot when production has no bearer configured. Named so the message is one
+#: string, testable, and identical wherever it surfaces.
+_MISSING_BEARER_IN_PROD = (
+    "TESSERA_API__BEARER_TOKEN is unset in a production deployment. The bearer is not "
+    "optional there: require_bearer and AuthMiddleware both no-op when it is None, which "
+    "would silently publish the audit ledger, the memory (GDPR) surface and the runtime "
+    "settings. Refusing to start rather than booting wide open."
+)
+
+
+def validate_bearer_token() -> None:
+    """Fail-closed startup check: production must configure the service bearer.
+
+    Audit 2026-07-10, **P0 `auth-fail-open`** — security.py:80 · middleware.py:68 · main.py:265.
+
+    The session signing key and the operator assertion key each already refuse to boot when
+    absent in production. The bearer did not: left unset, ``require_bearer`` returned early
+    (security.py:80) and ``AuthMiddleware`` became a no-op — so the audit ledger, the memory
+    surface (GDPR data) and the runtime settings endpoints served themselves to anyone. The
+    failure mode was *silent* and pointed the wrong way: a missing secret opened the doors
+    instead of closing them.
+
+    Dev/CI stay reachable without secret material — that is the documented posture, and the
+    tests and local loop depend on it. Only production refuses.
+    """
+    settings = get_settings()
+    if settings.api.bearer_token is None and settings.is_production():
+        raise RuntimeError(_MISSING_BEARER_IN_PROD)
+
+
 def require_bearer(request: Request) -> None:
     """FastAPI dependency: enforce the bearer token at the route level.
 
     Defence in depth for the read surfaces. A no-op when no token is configured
     (the documented CI posture), so health and local development stay reachable
     without secret material — mirroring :class:`AuthMiddleware`.
+
+    In production this can no longer be reached with no token: :func:`validate_bearer_token`
+    refuses to boot. The early return below is therefore a dev/CI affordance, not a
+    production hole.
     """
     token = get_settings().api.bearer_token
     if token is None:
@@ -93,4 +129,32 @@ def require_bearer(request: Request) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid bearer token",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def require_operator(request: Request) -> None:
+    """FastAPI dependency: this route mutates state, so a real operator must be behind it.
+
+    Audit 2026-07-10, **P0 `broken-access-control`** — 26 operator mutation endpoints were
+    reachable anonymously: promote an agent to production, rewrite runtime configuration,
+    switch a guardrail off, mutate the governance stores.
+
+    ``require_bearer`` alone CANNOT close that hole, and it is important to say why. The
+    bearer authenticates the *frontend service*, and the BFF attaches it on the caller's
+    behalf — so an anonymous visitor's request arrives at the agent carrying a perfectly
+    valid bearer. The bearer answers "did this come from our frontend?", never "who is
+    asking?". Only the signed operator assertion answers the second question: the BFF mints
+    it from a verified NextAuth session, HMAC-signed with a key the browser never holds, and
+    the agent verifies it here.
+
+    Fails CLOSED: no assertion, an expired one, or a forged one → 401. ``resolve_request_context``
+    deliberately *falls through* to the customer path for an unverified assertion (never an
+    escalation, correct for a chat turn); a mutation must not accept that fallthrough, so the
+    auth state is checked explicitly rather than inferred.
+    """
+    session, _surface = resolve_request_context(request)
+    if session.auth_state is not AuthState.OPERATOR:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="operator authentication required",
         )

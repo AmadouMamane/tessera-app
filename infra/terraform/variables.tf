@@ -141,8 +141,40 @@ variable "log_retention_days" {
   default     = 30
 }
 
+variable "audit_retention_days" {
+  description = "Retention for the audit-log bucket. Enforced by a LOCKED retention policy: objects cannot be deleted before this age, by anyone."
+  type        = number
+  default     = 365
+}
+
+variable "ingress" {
+  # Audit 2026-07-10, P0 `terraform-exposure` (cloud_run.tf:11). Was hardcoded to
+  # INGRESS_TRAFFIC_ALL. Internal + load balancer by default: the run.app URL stops being a
+  # way around Cloud Armor, which only fronts the load balancer.
+  description = "Cloud Run ingress. INGRESS_TRAFFIC_ALL publishes the run.app URL to the internet and bypasses Cloud Armor — only for a deliberate public demo."
+  type        = string
+  default     = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+
+  validation {
+    condition = contains([
+      "INGRESS_TRAFFIC_ALL",
+      "INGRESS_TRAFFIC_INTERNAL_ONLY",
+      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    ], var.ingress)
+    error_message = "ingress must be one of INGRESS_TRAFFIC_ALL, INGRESS_TRAFFIC_INTERNAL_ONLY, INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER."
+  }
+}
+
 variable "allowed_invokers" {
-  description = "IAM principals allowed to invoke the Cloud Run service. Set to [\"allUsers\"] for a public demo."
+  # Audit 2026-07-10, P0 `terraform-exposure` (variables.tf:147 · cloud_run.tf:11/162).
+  # This defaulted to ["allUsers"]: the banking agent was invocable by the entire internet
+  # unless someone remembered to override it. Callers could hit the run.app URL directly,
+  # bypassing the frontend — which is the only intended caller — and with it Cloud Armor,
+  # which only sits in front of the load balancer.
+  #
+  # Now empty by default: no principal may invoke the service until one is named. A public
+  # demo is still possible, but it has to be ASKED for. Secure by default, exposed by choice.
+  description = "IAM principals allowed to invoke the Cloud Run service. Normally the frontend service account ONLY. Set to [\"allUsers\"] to deliberately publish a public demo."
   type        = list(string)
-  default     = ["allUsers"]
+  default     = []
 }

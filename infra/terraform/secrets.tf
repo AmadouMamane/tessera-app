@@ -30,12 +30,35 @@ resource "google_secret_manager_secret" "managed" {
   depends_on = [google_project_service.apis]
 }
 
-# Placeholder versions for secrets whose values must be provided out-of-band.
-# Using ignore_changes means Terraform won't overwrite a value set manually.
+# Initial versions for secrets whose values are otherwise provided out-of-band.
+# `ignore_changes` means Terraform will not overwrite a value an operator sets later.
+#
+# Audit 2026-07-10, P1 `secret-default` (secrets.tf:38, :47). These two were seeded with the
+# literal string "REPLACE_ME". Combined with `ignore_changes`, a forgotten rotation shipped a
+# PUBLICLY KNOWN constant as:
+#   * the service bearer — the credential guarding /audit, /memory and /settings; and
+#   * `audit_signing_key` — the HMAC key over the compliance ledger, which means anyone who
+#     had read this repository could FORGE audit entries. The ledger is the product's
+#     opposable memory; a guessable signing key makes it decorative.
+#
+# The failure mode was silent and pointed the wrong way: forgetting a step left the system
+# open. Generated instead, so the deployed value is a real secret even when nobody rotates
+# it — the un-rotated state is now safe rather than catastrophic. An operator who wants to
+# set their own value still can; ignore_changes keeps it.
+
+resource "random_password" "bearer_token" {
+  length  = 48
+  special = false # a bearer travels in an HTTP header
+}
+
+resource "random_password" "audit_signing_key" {
+  length  = 64
+  special = false
+}
 
 resource "google_secret_manager_secret_version" "bearer_token_placeholder" {
   secret      = google_secret_manager_secret.managed["bearer_token"].id
-  secret_data = "REPLACE_ME"
+  secret_data = random_password.bearer_token.result
 
   lifecycle {
     ignore_changes = [secret_data]
@@ -44,7 +67,7 @@ resource "google_secret_manager_secret_version" "bearer_token_placeholder" {
 
 resource "google_secret_manager_secret_version" "audit_signing_key_placeholder" {
   secret      = google_secret_manager_secret.managed["audit_signing_key"].id
-  secret_data = "REPLACE_ME"
+  secret_data = random_password.audit_signing_key.result
 
   lifecycle {
     ignore_changes = [secret_data]

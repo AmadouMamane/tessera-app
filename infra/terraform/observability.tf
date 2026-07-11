@@ -39,9 +39,24 @@ resource "google_storage_bucket" "audit_logs" {
 
   labels = local.common_labels
 
+  # Audit 2026-07-10, P2 `infra-hardening` (observability.tf:281): the bucket deleted at 365
+  # days with NO retention policy, so an object could also be deleted at any time BEFORE
+  # then — by anyone with the role, including an attacker covering their tracks. An audit
+  # trail you can quietly shorten is not tamper-evident, which is the one property this
+  # product sells. The lock makes early deletion impossible even for a project owner.
+  #
+  # NOTE: `is_locked = true` is IRREVERSIBLE once applied — the retention period can be
+  # raised but never lowered, and the bucket cannot be deleted until every object ages out.
+  # That is the intent (it is what makes the trail opposable), and it is why this stays on
+  # the branch for an explicit human decision rather than being merged autonomously.
+  retention_policy {
+    retention_period = var.audit_retention_days * 24 * 60 * 60
+    is_locked        = true
+  }
+
   lifecycle_rule {
     action { type = "Delete" }
-    condition { age = 365 }
+    condition { age = var.audit_retention_days }
   }
 }
 

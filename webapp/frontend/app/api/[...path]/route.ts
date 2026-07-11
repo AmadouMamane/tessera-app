@@ -17,7 +17,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { isOperator } from "@/lib/auth/roles";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
+import { OPERATOR_ASSERTION_HEADER, mintOperatorAssertion } from "@/lib/server/operator-assertion";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -70,8 +72,19 @@ export async function GET(
 }
 
 /**
- * POST is only proxied for the public `observability` surface (replay). Every
- * other path is 404 — POST /api/chat has its own dedicated route.
+ * POST is the MUTATION plane: the 26 observability POSTs promote an agent to production,
+ * rewrite runtime configuration, switch a guardrail off and mutate the governance stores.
+ *
+ * Audit 2026-07-10, P0 `broken-access-control` (route.ts:25/81): this handler used to proxy
+ * them with NO session check whatsoever — `observability` sat in ALWAYS_PUBLIC and the POST
+ * branch only checked the path segment. Because the proxy attaches the service bearer on the
+ * caller's behalf, an anonymous visitor's mutation arrived at the agent perfectly
+ * authenticated. The bearer says "this came from our frontend"; it never says "who asked".
+ *
+ * Reads (GET) stay public — that is the cockpit's declared posture and is unchanged. Only
+ * the mutation plane is gated, and it is gated on BOTH sides: here, so an anonymous POST is
+ * refused at the edge; and in the agent, where the `mutations` router requires a verified
+ * operator assertion. The frontend gate is the friendly one; the agent gate is the real one.
  */
 export async function POST(
   request: NextRequest,
@@ -81,6 +94,31 @@ export async function POST(
   if ((path[0] ?? "") !== "observability") {
     return NextResponse.json({ detail: "not found" }, { status: 404 });
   }
+  const session = await auth();
+  const role = session?.user?.role ?? null;
+  // `role === null` first so TypeScript narrows it: isOperator is a predicate, not a guard.
+  if (role === null || !isOperator(role)) {
+    return NextResponse.json({ detail: "operator authentication required" }, { status: 401 });
+  }
+
+  // Mint the signed assertion the agent verifies. Without it the agent's `mutations` router
+  // refuses the request — which is the point: the service bearer this proxy attaches proves
+  // only that the call came from the frontend, never that a human operator authorized it.
+  const principal = session?.user?.name ?? role;
+  const operatorAssertion = mintOperatorAssertion(principal, role, "cockpit-embedded");
+  if (!operatorAssertion) {
+    // The signing key is unset, so no assertion can be minted and the agent will refuse.
+    // Fail here with a diagnosable message rather than letting it surface as an opaque 401.
+    console.error(
+      "[api] operator mutation blocked — TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY is unset " +
+        "in the front env. Set the SAME secret on the agent and the front.",
+    );
+    return NextResponse.json(
+      { detail: "operator assertion unavailable (signing key unset)" },
+      { status: 503 },
+    );
+  }
+
   const target = `${backendUrl()}/${path.join("/")}${request.nextUrl.search}`;
   const body = await request.text();
 
@@ -91,6 +129,7 @@ export async function POST(
       headers: backendHeaders({
         "content-type": request.headers.get("content-type") ?? "application/json",
         Accept: "application/json",
+        [OPERATOR_ASSERTION_HEADER]: operatorAssertion,
       }),
       body,
     });

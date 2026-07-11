@@ -1,14 +1,27 @@
-"""Observability routes — mutations surface."""
+"""Observability routes — the 26 operator mutations, behind one guard.
+
+Audit 2026-07-10, **P0 `broken-access-control`**: these 26 endpoints were reachable
+ANONYMOUSLY (route.ts:25/81 · observability.py 26x · main.py:310). They promote an agent to
+production, rewrite runtime configuration, switch a guardrail off and mutate the governance
+stores — and the public BFF proxied POSTs to them with no session check at all, attaching the
+service bearer on the caller's behalf.
+
+The guard is declared HERE, on the router, rather than at the mount site: a mutation added to
+this module inherits it by construction, and there is no way to add one that forgets it. That
+is the whole point of splitting the god-router — the flat 152-route module had nowhere to
+attach a single ``dependencies=``, which is what let the drift happen in the first place.
+"""
 
 from __future__ import annotations
 
 import sys
 from dataclasses import asdict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.api.security import require_operator
 from tessera.observability import (
     ablation as ablation_mod,
     agent_a_faire as agent_a_faire_mod,
@@ -34,7 +47,9 @@ from tessera.observability import (
 from tessera.observability.eval.ensemble import evaluate_ensemble
 from tessera.observability.eval.sycophancy import detect_sycophancy
 
-router = APIRouter()
+#: Every route in this module mutates state, so every route requires a verified operator.
+#: Declared on the router, not per-route: a new mutation cannot be added without the guard.
+router = APIRouter(dependencies=[Depends(require_operator)])
 
 
 class ReplayRequest(BaseModel):
