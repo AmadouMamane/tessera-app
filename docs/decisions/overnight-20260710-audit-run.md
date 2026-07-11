@@ -34,9 +34,9 @@ cette nuit (voir « État de base » ci-dessous).
 | 2 | 2.1 | Rate-limit `/agents/{id}/invoke` | ✅ | ff→main |
 | 2 | 2.2 | Sauvegarde ledger + drill restauration | ✅ | ff→main |
 | 2 | 2.3 | Inventaire config généré | ✅ | ff→main |
-| 3 | 3.0 | Prototype codegen OpenAPI→zod (fleet) | ⏳ | — |
-| 3 | 3.1 | Scission `observability.py` | ⏳ | — |
-| 3 | 3.2 | Extraction tabs communs | ⏳ | — |
+| 3 | 3.0 | Prototype codegen OpenAPI→zod (fleet) | ✅ étude → **REJECT** | ff→main |
+| 3 | 3.1 | Scission `observability.py` | ⏸️ parké (plan clean) | ff→main |
+| 3 | 3.2 | Extraction tabs communs | ⏸️ parké (plan clean) | ff→main |
 | 4 | 4.1 | Doc posture prod | ✅ | ff→main |
 | 4 | 4.2 | Job CI deps/CVE informatif | ✅ | ff→main |
 | 4 | 4.3 | Échantillon biome-ignore | ✅ (0 paresseux) | ff→main |
@@ -374,3 +374,56 @@ Branche `claude/lot-4-2-deps-job`. **Workflow-only** (YAML validé, pas de code 
 audit`, pnpm invoqué depuis `webapp/frontend` — le pin `packageManager`). **Aucune montée de
 version** (mandat). Complète l'existant : Dependabot ouvre les PRs de bump, `security.yml`
 GATE les CVEs ; ce job ne fait que **rapporter** la fraîcheur au fil de l'eau.
+
+## Fenêtre 3 — les monolithes (recherchée + planifiée + **parkée**)
+
+Décision assumée : les trois lots Fenêtre 3 sont **parkés avec des analyses concrètes et
+vérifiées** (pas des parks flous). Raison : le budget de la nuit, la fin-de-nuit obligatoire
+(suite + relance référence + résumé), la taille de 3.1 (152 routes), et **l'absence de
+backstop CI** (facturation bloquée) — lander un gros refactor sans 2ᵉ passe est le mauvais
+pari. Les plans ci-dessous rendent l'exécution future quasi-mécanique. Chacun a été **prouvé
+sur pièces** par un agent de recherche dédié.
+
+### Lot 3.0 — Étude codegen OpenAPI→zod (fleet) → **REJECT** (décision rendue)
+Branche `claude/lot-3-window3-parked`. **Verdict : REJECT le codegen depuis l'OpenAPI
+actuel.** Preuve mesurée (tool `openapi-zod-client`, artefacts scratch) : la route
+`/observability/fleet` renvoie `dict[str, object]` **sans `response_model`** → l'OpenAPI
+dérive un objet **opaque** `{additionalProperties: true}`. **156/173 routes (90 %)** sont
+ainsi. Le codegen produit `z.object({}).partial().passthrough()` (1 ligne, accepte tout) —
+une **régression** vs le `FleetSchema` hand-written (70 l., ~30 champs, **garde runtime**
+`.parse()` qui throw sur dérive). Le précédent 0018-C **ne transfère pas** (codegen d'enums
+depuis le *manifest* AgentSpec = source de vérité ; ici l'OpenAPI n'est PAS la source, le
+`dict[str,object]` l'est). **Le vrai levier = typer le backend d'abord** (`response_model`
+Pydantic sur fleet.py ≈ 30 champs), *puis* codegen + generate-and-diff. Décision opérateur :
+statu quo (hand-maintain, exact aujourd'hui) OU programme de typage backend (NEEDS-WORK).
+
+### Lot 3.1 — Scission `observability.py` (3221 l., 152 routes) → **parké, plan CLEAN**
+Recherche : **CLEAN mechanical split, risque BAS**, exécutable, validé par gate vert (les 6
+tests importeurs + le boundary test attrapent toute omission). Les handlers sont des
+**wrappers minces** sur des submodules `tessera.observability.<surface>` déjà séparés (c'est
+un *router shell*). Plan concret prêt à exécuter :
+- Convertir en package `api/routes/observability/` : `__init__.py` (aggrège `router` +
+  ré-exporte 12 handlers via `import *` + 3 helpers privés `_agent_or_none`,
+  `_data_availability_start`, `_load_failure_items`), `_common.py` (4 helpers purs partagés :
+  `_agent_or_none`, `_scores_for`, `_read_audit_entries`, `_data_availability_start`), et 11
+  modules de surface (business, signals, fleet, console, evals, safety, compliance, memory,
+  forensics, client) — chacun son `router = APIRouter()`, décorateurs `@router.get(...)`
+  **verbatim**, `include_router` **sans prefix** → 152 chemins byte-identiques.
+- **2 edits obligatoires** (sinon ça casse bruyamment) : (a) le ratchet
+  `tests/unit/test_observability_boundary.py:54-55` est keyé sur le **chemin exact** du
+  fichier → le passer en `rglob` du nouveau package ; (b) les ~15 ré-exports load-bearing
+  (tests appellent `obs.observability_slo(...)` en attribut). `api/main.py` inchangé (`.router`).
+- Critère de succès : `pytest -m "not integration"` vert (les tests importeurs + boundary) +
+  152 routes préservées. Risque = **omission**, pas logique.
+
+### Lot 3.2 — Extraction du pattern « tab module » commun → **parké, plan CLEAN**
+Vérifié : `compliance_tabs.py` (3171 l.) et `incidents_tabs.py` (1878 l.) partagent un
+squelette **identique** : `_localize(value, idx)` + `build_tabs(lang)` + `_LANG_IDX = {"fr":0,
+"de":1,"en":2}` sont **byte-identiques** (diff = 2 lignes de docstring seulement). Seul `_TR`
+(dict de traductions) est file-specific. Extraction propre : dans `catalog_tabs.py` (le module
+partagé qui porte déjà les dataclasses `CatalogTab`), ajouter `localize(value, idx, tr)` +
+`render_tabs(build_fr, tr, lang)` + `_LANG_IDX` ; chaque fichier délègue `build_tabs(lang) ->
+render_tabs(_build_fr_tabs, _TR, lang)`, garde son `_TR`/`_build_fr_tabs`, et threade `_TR`
+dans ses ~10 sites d'appel `_localize`. Propre mais **non-trivial** (threading `_TR` sur les
+call sites) → déféré pour préserver la fin-de-nuit. Dédup ≈ 26 l. × 2 + un vrai module « tab »
+partagé.
