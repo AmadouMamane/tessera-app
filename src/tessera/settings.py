@@ -378,8 +378,13 @@ class MemorySettings(BaseSettings):
     consent_default: bool = False
     # Number of long-term items retrieved and injected per turn (Tier 2).
     long_term_top_k: int = 5
+    # Cadence of the retention purge that physically deletes memories past their
+    # TTL (``ttl_for``). Before this existed, `purge_expired` had no caller at all:
+    # the TTL filtered at *read* time while the rows lived on in Postgres forever —
+    # retention on paper only. 0 disables the purge (and says so at boot).
+    purge_interval_s: int = 3_600
 
-    @field_validator("history_window", "long_term_top_k", "token_budget")
+    @field_validator("history_window", "long_term_top_k", "token_budget", "purge_interval_s")
     @classmethod
     def _non_negative(cls, value: int) -> int:
         if value < 0:

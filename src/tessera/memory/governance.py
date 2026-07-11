@@ -45,6 +45,7 @@ __all__ = [
     "delete_consent",
     "ensure_consent_schema",
     "erase_subject",
+    "purge_posture",
     "screen_memory",
     "set_consent",
     "ttl_for",
@@ -68,6 +69,30 @@ _IBAN_RE: Final = re.compile(r"\b([A-Z]{2}\d{2})(?:[ ]?[A-Z0-9]{2,4}){2,}([A-Z0-
 def ttl_for(kind: str) -> timedelta:
     """Return the retention period for a memory ``kind``."""
     return _TTL.get(kind, timedelta(days=90))
+
+
+def purge_posture() -> dict[str, object]:
+    """Whether expired memories are physically purged, and how often.
+
+    The single source of the purge decision, so the boot log line and the scheduler can
+    never disagree — the same discipline as ``seal_posture`` and ``canary_posture``.
+
+    Until this shipped, :func:`tessera.memory.persistent.purge_expired` had *no caller*:
+    ``ttl_for`` bounded retention at read time while the rows themselves lived on in
+    Postgres indefinitely. Retention was enforced in the view, not in the store — which is
+    not retention at all under GDPR Art. 5(1)(e).
+
+    Returns:
+        ``purging`` (bool), ``interval_s`` (int) and the active memory ``backend``.
+    """
+    from tessera.settings import get_settings
+
+    memory = get_settings().memory
+    return {
+        "purging": memory.purge_interval_s > 0,
+        "interval_s": memory.purge_interval_s,
+        "backend": memory.backend,
+    }
 
 
 @dataclass(frozen=True, slots=True)

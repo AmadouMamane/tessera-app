@@ -214,6 +214,46 @@ async def _start_canary_scheduler() -> list[asyncio.Task[None]]:
     return [_make_loop(canary.agent_id, canary.cadence_s) for canary in scheduled_canaries()]
 
 
+async def _start_memory_purge_scheduler() -> asyncio.Task[None] | None:
+    """Start the off-chrono GDPR retention purge (ADR 0007 §Retention). No-op when disabled.
+
+    Audit 2026-07-10, P1 `gdpr-retention`: ``purge_expired`` had **no caller**. ``ttl_for``
+    bounded retention at *read* time while the rows lived on in Postgres indefinitely —
+    retention enforced in the view, not in the store, which is not retention at all under
+    GDPR Art. 5(1)(e). Personal data past its TTL was kept forever.
+
+    Logs ONE honest posture line at boot — purging + cadence, or "not purging" — then, only
+    when a cadence is configured, schedules a background task. Purges FIRST and sleeps after,
+    so data that expired while the service was down is removed promptly rather than lingering
+    a further τ. Best-effort and off every request path; a cycle failure warns and the loop
+    survives. ``purge_posture`` is the single source of the decision, so the log line and the
+    scheduler can never disagree — the same family and hygiene as the seal scheduler.
+    """
+    from tessera.memory.governance import purge_posture
+    from tessera.memory.persistent import purge_expired
+
+    log = obs_logging.get_logger("tessera.memory")
+    posture = purge_posture()
+    log.info("memory.purge_posture", **posture)
+    if not posture["purging"]:
+        return None
+    cadence = posture["interval_s"]
+    interval = cadence if isinstance(cadence, int) else 3600
+
+    async def _loop() -> None:
+        while True:
+            try:
+                deleted = await purge_expired()
+                log.info("memory.purge_cycle", deleted=deleted)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # a cycle failure must never kill the loop
+                log.warning("memory.purge_failed", error=str(exc))
+            await asyncio.sleep(interval)
+
+    return asyncio.create_task(_loop())
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -222,6 +262,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     metrics.configure()
     pool = get_pool()
     seal_task: asyncio.Task[None] | None = None
+    purge_task: asyncio.Task[None] | None = None
     canary_tasks: list[asyncio.Task[None]] = []
     try:
         await pool.open()
@@ -240,9 +281,10 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
         seal_task = await _start_seal_scheduler()  # ADR 0015 §Corr.3c — off-chrono; no-op if 'none'
         canary_tasks = await _start_canary_scheduler()  # ADR 0019 §I4 — off-chrono; idle by default
+        purge_task = await _start_memory_purge_scheduler()  # ADR 0007 §Retention — off-chrono
         yield
     finally:
-        for task in (seal_task, *canary_tasks):
+        for task in (seal_task, purge_task, *canary_tasks):
             if task is not None:
                 task.cancel()
                 with suppress(asyncio.CancelledError):
