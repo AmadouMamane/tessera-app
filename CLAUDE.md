@@ -266,7 +266,7 @@ long-running feature branches. At every slice boundary, resync the worktree's br
 `main` before starting the next unit of work (once the previous branch has landed, cut the next
 one with `git checkout -b <agent>/<next-sujet> main`).
 
-Progress across slices/steps is tracked in `docs/decisions/0017-execution-status.md` — read it
+Progress across slices/steps is tracked in `docs/status/0017-execution-status.md` — read it
 first when resuming work, it is the single source of truth for what's done, in flight, and next.
 
 ## Serveurs dev
@@ -289,7 +289,7 @@ supervised checkpoint uses `dev-preview` from that agent's worktree — never a
 long-lived server on an agent worktree. Every worktree mutation (checkout / park /
 `git worktree remove`) is preceded by a live-process check (`lsof`); `dev-up`
 refuses to start if the port is already in use. Full rationale:
-`docs/decisions/0017-execution-status.md` (Preconditions).
+`docs/status/0017-execution-status.md` (Preconditions).
 
 ## Decision records
 

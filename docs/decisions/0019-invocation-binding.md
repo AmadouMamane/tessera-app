@@ -4,7 +4,7 @@
   canary-scheduler trigger `80a83753`/`9c02e35f`; I2 console generation `4340bdad`; I3 http invoker
   + first invocable external agent + conformance `3597e124`). **Amendment 1** (2026-07-09):
   `synthetic` crosses the wire + the integration witness — accepted, implementation deferred
-  (I5/I6). Progress: `docs/decisions/0019-execution-status.md`
+  (I5/I6). Progress: `docs/status/0019-execution-status.md`
 - Date: 2026-07-08
 - Deciders: Tessera maintainers
 - Related: 0008 (audience/surface/auth), 0010 (operator assertion — Phase B mechanism),

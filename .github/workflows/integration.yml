@@ -1,7 +1,7 @@
 name: Integration
 
 # Dedicated, NON-GATING integration run — the P0.1 remediation of the 2026-07-10 audit
-# (docs/decisions/overnight-20260710-audit-run.md). The blocking gate lives in ci.yml and
+# (docs/status/overnight-20260710-audit-run.md). The blocking gate lives in ci.yml and
 # stays hermetic (`pytest -m "not integration"`); the nine integration-tagged files need
 # live owned stores, so they run HERE — on a schedule and on demand — never on the merge
 # path. Before this workflow the integration marker was excluded everywhere: the contracts

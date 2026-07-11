@@ -882,7 +882,7 @@ Otherwise it runs **A → B → C → D → E → F to completion**.
 ### Resumability (survives context compaction and a fresh session)
 
 A→F spans context windows. The protocol is **resumable**: the current phase + last green commit
-are tracked in **`docs/decisions/0015-execution-status.md`** (seeded now, updated each phase). A
+are tracked in **`docs/status/0015-execution-status.md`** (seeded now, updated each phase). A
 resuming session reads that file + this ADR and continues the **next** phase — no re-work, no lost
 progress. That file is the single source of truth for "where are we".
 

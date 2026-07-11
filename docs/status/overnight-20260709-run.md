@@ -176,7 +176,7 @@ Deux fichiers modifiés non commités dans `tessera/`, aucun code :
    message de commit prescrit par la mission aurait dupliqué `29fdefbc` ; j'ai écrit un message qui
    décrit le diff réel.
    → `0d340fde docs(adr): 0019 Amendment 1 — criterion (c) is marginal, the renderer is platform capital`
-2. `docs/decisions/0017-execution-status.md` — entrée ledger de la revue fleet-legibility. Commitée
+2. `docs/status/0017-execution-status.md` — entrée ledger de la revue fleet-legibility. Commitée
    **verbatim**, contenu non modifié (writer unique).
    → `b769859e docs(adr): 0017 ledger — fleet-legibility + level-honesty review APPROVED (merge feu vert)`
 
@@ -860,7 +860,7 @@ tranche non finie vaut moins qu'un park propre.**
 
 La consigne vise « **punch list items 18-23, lot 2.5** ». Recherche exhaustive :
 
-- dépôt : `grep -rl "punch" docs/` → uniquement `docs/decisions/0017-execution-status.md` (mentions,
+- dépôt : `grep -rl "punch" docs/` → uniquement `docs/status/0017-execution-status.md` (mentions,
   pas de liste) ;
 - docs de pilotage : `ls Tessera_private/ | grep -i punch` → **un seul fichier**,
   `punchlist-metier-lot1.5-2026-07-07.md`, dont la numérotation commence à 1 et ne va pas jusqu'à 18.
@@ -972,7 +972,7 @@ SUITE E2E COMPLÈTE (main)  : 185 tests · 145 passed · 31 failed · 9 did not 
 
 ## LOT 0 — Mirroir des décisions Claude
 
-Deux décisions d'architecte reçues ce matin, écrites dans `docs/decisions/0019-execution-status.md`
+Deux décisions d'architecte reçues ce matin, écrites dans `docs/status/0019-execution-status.md`
 (§Owed follow-ups). Elles **ferment** les deux dettes que j'avais remontées cette nuit sans les
 trancher.
 
