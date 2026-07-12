@@ -348,6 +348,11 @@ def build_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(chat.router)
+    # Business-plane writes (ledger events, governed artifact transitions). The guard —
+    # require_collections_operator — is declared on the router itself, like the cockpit
+    # mutations router: a route added there cannot forget it. Audit 2026-07-12, P0 F-1:
+    # this line used to mount the two POSTs with no dependency at all, while the BFF
+    # attached the service bearer on the anonymous caller's behalf.
     app.include_router(recouvrement_assistant.router)
     # ADR 0019 §I3 — the declared cockpit→agent invocation seam. Like /chat it resolves the
     # operator assertion internally (no bearer gate); the route itself refuses a non-operator.

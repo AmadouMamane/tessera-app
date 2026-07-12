@@ -31,7 +31,9 @@ export interface SendRecouvrementAssistantActionRequest {
   caseId?: string;
   artifact: RecouvrementAssistantArtifact;
   actionName: string;
-  requestedBy?: string;
+  // NOTE no `requestedBy` (audit 2026-07-12, P0 F-1): the ledger attribution derives
+  // from the verified operator assertion the BFF mints — the backend contract rejects
+  // a body that still tries to assert an identity (422).
   conversationId?: string;
   turnId?: string;
   surface?: "dedicated-ui" | "cockpit-embedded";
@@ -91,7 +93,6 @@ export async function sendRecouvrementAssistantAction({
   caseId = "RC-2048",
   artifact,
   actionName,
-  requestedBy = "Julie Dubois",
   conversationId,
   turnId,
   surface = "dedicated-ui",
@@ -107,7 +108,6 @@ export async function sendRecouvrementAssistantAction({
       case_id: caseId,
       artifact,
       action_name: actionName,
-      requested_by: requestedBy,
       conversation_id: conversationId,
       turn_id: turnId,
       surface,

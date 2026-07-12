@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 _LOG = get_logger("tessera.api.operator")
 
 __all__ = [
+    "COLLECTIONS_MUTATION_ROLES",
     "MUTATION_ROLES",
     "OPERATOR_ASSERTION_HEADER",
     "OPERATOR_ROLES",
@@ -82,6 +83,23 @@ OPERATOR_ROLES: frozenset[str] = frozenset({"admin", "auditor", "superadmin", "c
 #: Mirrors ``canMutateCockpit`` in ``webapp/frontend/lib/auth/roles.ts``. The front's copy is
 #: the friendly refusal; THIS one is the authority (the browser never holds the signing key).
 MUTATION_ROLES: frozenset[str] = frozenset({"admin", "superadmin"})
+
+#: The roles that may act on the recouvrement BUSINESS plane — run the assistant workflow,
+#: execute governed artifact transitions, emit business events into the ledger (audit
+#: 2026-07-12, **P0 F-1**). This is the business-plane counterpart of
+#: :data:`MUTATION_ROLES`, and differs from it by exactly one role, deliberately:
+#:
+#: * ``collections`` is admitted — it is recouvrement's own role (ADR 0010 Phase C), and
+#:   these routes are its console's whole purpose. It remains refused on the cockpit
+#:   control plane (:data:`MUTATION_ROLES`), so admitting it here grants nothing there.
+#: * ``auditor`` stays out, same doctrine as the cockpit: the assistant's action route
+#:   executes governed transitions and writes to the ledger, and an audit role that can
+#:   write what it audits is not an audit role. The auditor may still *enter* the console
+#:   (the front's ``hasCollectionsAccess``) — seeing and acting are different rights.
+#:
+#: Mirrors ``canActOnCollections`` in ``webapp/frontend/lib/auth/roles.ts``. As with the
+#: cockpit pair, the front's copy is the friendly refusal; THIS one is the authority.
+COLLECTIONS_MUTATION_ROLES: frozenset[str] = frozenset({"collections", "admin", "superadmin"})
 
 #: Assertion lifetime. Short — it is minted per turn from a live session, not stored.
 OPERATOR_ASSERTION_MAX_AGE_SECONDS = 5 * 60

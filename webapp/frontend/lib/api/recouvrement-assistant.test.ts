@@ -120,11 +120,13 @@ describe("sendRecouvrementAssistantAction", () => {
       expect.objectContaining({ method: "POST" }),
     );
     const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    // No `requested_by` in the wire contract (audit 2026-07-12, P0 F-1): attribution
+    // derives from the verified operator assertion, and the backend 422s a body that
+    // still tries to assert an identity. `toEqual` is exact — a reintroduced field fails.
     expect(JSON.parse(String(requestInit.body))).toEqual({
       case_id: "RC-2048",
       artifact,
       action_name: "insert_artifact_in_case",
-      requested_by: "Julie Dubois",
       conversation_id: "conversation-action",
       turn_id: "turn-action",
       surface: "dedicated-ui",

@@ -18,7 +18,11 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from tessera.api.operator import MUTATION_ROLES, resolve_request_context
+from tessera.api.operator import (
+    COLLECTIONS_MUTATION_ROLES,
+    MUTATION_ROLES,
+    resolve_request_context,
+)
 from tessera.authz import AuthState
 from tessera.settings import Environment, get_settings
 
@@ -27,9 +31,12 @@ if TYPE_CHECKING:
 
     from starlette.responses import Response
 
+    from tessera.api.session import SessionContext
+
 __all__ = [
     "SecurityHeadersMiddleware",
     "require_bearer",
+    "require_collections_operator",
     "require_operator",
     "validate_bearer_token",
 ]
@@ -196,3 +203,42 @@ def require_operator(request: Request) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="this role is read-only on the cockpit control plane",
         )
+
+
+def require_collections_operator(request: Request) -> SessionContext:
+    """FastAPI dependency: recouvrement's business-plane writes need a verified operator.
+
+    Audit 2026-07-12, **P0 F-1** — ``POST /recouvrement-assistant/{message,action}`` were
+    mounted with no dependency at all (`main.py:351`), while their BFF proxied anonymous
+    visitors through with the service bearer attached. Same class as the 26 cockpit
+    mutations closed on 2026-07-11; these two POSTs sat outside the hardened router. The
+    bearer answers "did this come from our frontend?", never "who is asking?" — only the
+    signed operator assertion answers the second question (see :func:`require_operator`,
+    which documents the full argument; it applies here unchanged).
+
+    Differs from :func:`require_operator` in exactly one way: the role set is the business
+    plane's (:data:`~tessera.api.operator.COLLECTIONS_MUTATION_ROLES`), so ``collections`` —
+    the role these routes exist FOR — is admitted, and the ``auditor`` is still refused
+    (reads and does not write, on every plane). Same two refusals, same meanings:
+
+    * **401** — no verified assertion. We do not know who is asking. *Authenticate.*
+    * **403** — a verified operator whose role has no write authority here. *Nothing to retry.*
+
+    Returns the verified :class:`~tessera.api.session.SessionContext`, so a route that
+    needs the identity — the action route stamps ``requested_by`` into the ledger — can
+    depend on this same callable and read the *verified* principal (FastAPI caches the
+    call per-request; the guard runs once). Attribution derives from the assertion the
+    browser cannot forge, never from a body field.
+    """
+    session, _surface = resolve_request_context(request)
+    if session.auth_state is not AuthState.OPERATOR:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="operator authentication required",
+        )
+    if session.role not in COLLECTIONS_MUTATION_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="this role is read-only on the recouvrement business plane",
+        )
+    return session

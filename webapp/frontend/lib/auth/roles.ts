@@ -77,6 +77,25 @@ export function hasCollectionsAccess(role: Role | null): boolean {
   return role === "collections" || isOperator(role);
 }
 
+/**
+ * Who may ACT on the recouvrement business plane — run the assistant workflow, execute
+ * governed artifact transitions, emit business events into the ledger (the two
+ * `/recouvrement-assistant` POSTs). The business-plane counterpart of `canMutateCockpit`,
+ * and it differs from `hasCollectionsAccess` by exactly one role, deliberately:
+ *
+ * - `collections` acts — these routes are its console's whole purpose;
+ * - the `auditor` may still *enter* the console (`hasCollectionsAccess`) and still may
+ *   not write from it. Seeing a surface and changing it are different rights, on every
+ *   plane (ADR 0009; audit 2026-07-12, P0 F-1).
+ *
+ * This is the EDGE's copy of the rule; the authority is the agent's
+ * `COLLECTIONS_MUTATION_ROLES` (`src/tessera/api/operator.py`), which re-checks it on the
+ * signed assertion. A predicate in the browser's own BFF is only the friendly refusal.
+ */
+export function canActOnCollections(role: Role | null): boolean {
+  return role === "collections" || isAdmin(role);
+}
+
 /** The operator surfaces an assertion may carry (mirrors tessera.api.operator). */
 export type OperatorSurface = "cockpit-embedded" | "dedicated-ui";
 
