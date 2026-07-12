@@ -33,7 +33,10 @@ reader looks. That fix would have passed any test that inspected the call. The e
 
 from __future__ import annotations
 
+import ast
+import sys
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -339,3 +342,113 @@ def test_the_audit_entry_version_says_whether_an_actor_was_recordable() -> None:
     assert entry["actor"] == PRINCIPAL
     assert entry["actor_role"] == ROLE
     assert entry["model"] == "llama3.2:3b", "the model is recorded, and it is not the author"
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# THE CLASS, on EVERY plane. The behavioural half above drives the GDPR routes; a route on
+# another plane could still take its author from the body and never be asked about it.
+#
+# One did. `POST /observability/curation/decision` sat on the mutations router — hardened with
+# `require_operator` since the 26 anonymous mutations were closed — and wrote
+# `decided_by=body.decided_by` straight into the register. A verified operator could therefore
+# sign a curation decision in ANYONE's name. The door was locked and the register was left open
+# beside it.
+#
+# AUTHENTICATION IS NOT ATTRIBUTION. The guard answers *may you come in*; only a server-derived
+# `Actor` answers *who signed*. These two tests close that as a class, structurally, across
+# every router — because the behavioural sweep can only ever cover the routes someone thought
+# to drive, and the point of a class ratchet is to catch the one nobody thought of.
+# ─────────────────────────────────────────────────────────────────────────────────────────
+
+#: Field names that answer "WHO did this". A request model may not declare one, and a handler
+#: may not read one off a body: whoever can choose the name in the register can sign for someone
+#: else. `assignee` is deliberately NOT here — it names who a task is given TO, not who acted.
+ACTOR_FIELD_NAMES = (
+    "actor",
+    "decided_by",
+    "requested_by",
+    "performed_by",
+    "approved_by",
+    "created_by",
+    "author",
+    "principal",
+    "operator",
+)
+
+_API_SRC = Path(__file__).resolve().parents[2] / "src" / "tessera" / "api"
+
+
+#: The names a route binds a request body to. An attribute read off one of these, whose name
+#: answers "who did this", is the finding — whatever the handler then does with it.
+_BODY_PARAMS = frozenset({"body", "payload", "request", "req"})
+
+
+def test_no_handler_takes_its_actor_from_a_request_body() -> None:
+    """`decided_by=body.decided_by` — F-1's exact shape, alive inside a router we had hardened.
+
+    Walked with `ast`, not a grep, and the difference is the whole reliability of the check. A
+    regex over these files flags `principal = payload.get("principal")` in `operator.py` — which
+    is the *verifier* reading a signed assertion, the one place a name legitimately arrives from
+    the wire — and it flags the prose in this very file that quotes the bug. Both are false, both
+    would have been silenced with a noqa, and a ratchet that trains you to silence it polices
+    nothing. The AST sees attribute access on a body and nothing else.
+    """
+    guilty: list[str] = []
+    for path in _API_SRC.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id in _BODY_PARAMS
+                and node.attr in ACTOR_FIELD_NAMES
+            ):
+                where = f"{path.relative_to(_API_SRC)}:{node.lineno}"
+                guilty.append(f"{where} — {node.value.id}.{node.attr}")
+
+    assert not guilty, (
+        f"{guilty} attributes a governed act to a name taken from the REQUEST BODY. The caller "
+        "chooses it, so the register records whoever they pleased — an attribution a caller can "
+        "pick is a forgery with a timestamp. Derive it from the verified session: "
+        "`actor_of(session)`, or `Actor.system(<task>)` when no human ordered the act."
+    )
+
+
+def test_no_request_model_declares_a_field_that_names_the_author() -> None:
+    """The upstream half: if the wire cannot carry an author, no handler can be tempted by one.
+
+    Asserted on the Pydantic models rather than the handlers, because the two failures are
+    different and both are real: a handler that *reads* the field (above), and a model that
+    *accepts* it while the handler ignores it — which is worse than it sounds, since a silently
+    dropped identity field and an honoured one are indistinguishable to the caller. Removing the
+    field with `extra="forbid"` turns that silence into a 422.
+    """
+    from pydantic import BaseModel
+
+    import tessera.api.main as api_main  # noqa: F401  imports every route module
+
+    offenders: list[str] = []
+    for module in list(sys.modules.values()):
+        name = getattr(module, "__name__", "")
+        if not name.startswith("tessera.api"):
+            continue
+        for attr in vars(module).values():
+            if not isinstance(attr, type) or not issubclass(attr, BaseModel):
+                continue
+            if attr is BaseModel:
+                continue
+            if attr.__module__ != name:  # only models DECLARED here
+                continue
+            named = set(attr.model_fields) & set(ACTOR_FIELD_NAMES)
+            # A RESPONSE model must name the author — that is the whole point of the ledger view.
+            # Only what arrives on the WIRE from a caller is banned, and a request model is what
+            # a route binds to a body: those, and only those, are what this test walks.
+            if named and any(k.endswith(("Body", "Request")) for k in (attr.__name__,)):
+                offenders.append(f"{name}.{attr.__name__} declares {sorted(named)}")
+
+    assert not offenders, (
+        f"{offenders} — a REQUEST model declares a field that names the author. Whatever the "
+        "handler does with it, the wire now accepts an identity the caller chose. Delete the "
+        "field and set `extra='forbid'`, so a caller who still sends one gets a loud 422 "
+        "instead of a silently ignored forgery."
+    )

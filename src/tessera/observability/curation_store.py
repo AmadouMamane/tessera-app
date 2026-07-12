@@ -30,6 +30,8 @@ from tessera.settings import get_settings
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tessera.authz import Actor
+
 __all__ = [
     "CurationCandidate",
     "DECISIONS",
@@ -127,13 +129,26 @@ def _save_state(state: dict[str, dict[str, str]]) -> None:
     )
 
 
-def set_decision(candidate_id: str, *, decision: str, decided_by: str = "") -> None:
+def set_decision(candidate_id: str, *, decision: str, decided_by: Actor) -> None:
     """Persist a curation decision for one candidate (idempotent per candidate).
+
+    ``decided_by`` is an :class:`~tessera.authz.Actor` — **required, and with no default**.
+    That is the whole point, and it is not ceremony: this function used to take
+    ``decided_by: str = ""`` and the route handed it ``body.decided_by``. A caller could
+    therefore attribute a curation decision to **anybody they liked**, on a router that had
+    been hardened with ``require_operator`` — the door was locked and the register was left
+    open next to it. **Authentication is not attribution**: the guard says *someone verified
+    came in*; only a server-derived actor says *who signed the decision*.
+
+    An ``Actor`` cannot be built from a request body (:func:`tessera.api.security.actor_of`
+    takes a verified session, and :meth:`~tessera.authz.Actor.system` names a task), and it
+    rejects an empty principal at construction — so the two ways this record used to lie,
+    "the caller chose the name" and "the name is blank", are both unrepresentable now.
 
     Args:
         candidate_id: The candidate whose decision to set.
         decision: One of :data:`DECISIONS` (invalid values are ignored).
-        decided_by: The actor recording the decision (durable; "" to leave as-is).
+        decided_by: WHO decided — derived from a server-verified session, never from a body.
     """
     if decision not in DECISIONS:
         return
@@ -141,8 +156,7 @@ def set_decision(candidate_id: str, *, decision: str, decided_by: str = "") -> N
     entry = state.get(candidate_id, {"decision": _DEFAULT_DECISION, "decided_by": ""})
     entry["decision"] = decision
     entry["decided_at"] = "" if decision == _DEFAULT_DECISION else datetime.now(UTC).isoformat()
-    if decided_by:
-        entry["decided_by"] = decided_by
+    entry["decided_by"] = decided_by.principal
     state[candidate_id] = entry
     _save_state(state)
 

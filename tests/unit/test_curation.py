@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
     import pytest
 
+from tessera.authz import Actor
+
 NOW = datetime(2026, 6, 16, 12, 0, tzinfo=UTC)
 
 
@@ -91,20 +93,36 @@ def test_decision_counts_reflect_the_store(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_set_decision_persists(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The decision is durable, and it is signed by a VERIFIED actor — never a caller-chosen name.
+
+    `decided_by` is an `Actor` with no default: the store cannot be handed a blank author, and
+    it cannot be handed one the caller invented (an `Actor` is built from a verified session or
+    names a system task — there is no third constructor). This test used to pass the string
+    "claire", which is exactly what the route was doing with `body.decided_by`.
+    """
     state_file = tmp_path / "curation_decisions.json"
     monkeypatch.setattr(cstore, "_state_path", lambda: state_file)
-    cstore.set_decision("support-client.01.fr", decision="reject", decided_by="claire")
+    cstore.set_decision(
+        "support-client.01.fr",
+        decision="reject",
+        decided_by=Actor(principal="claire", role="admin"),
+    )
     assert state_file.exists()
     reloaded = cstore._load_state()
     assert reloaded["support-client.01.fr"]["decision"] == "reject"
     assert reloaded["support-client.01.fr"]["decided_by"] == "claire"
     # A real decision is timestamped; resetting to pending clears the timestamp.
     assert reloaded["support-client.01.fr"]["decided_at"]
-    cstore.set_decision("support-client.01.fr", decision="pending")
+
+    # Every subsequent decision names its author too. There is no "just resetting it" path that
+    # writes an anonymous entry: `decided_by` has no default, so a caller cannot forget it, and
+    # `Actor` rejects an empty principal, so they cannot pass a blank one either.
+    bob = Actor(principal="bob", role="admin")
+    cstore.set_decision("support-client.01.fr", decision="pending", decided_by=bob)
     assert cstore._load_state()["support-client.01.fr"]["decided_at"] == ""
-    cstore.set_decision("support-client.01.fr", decision="reject")
+    cstore.set_decision("support-client.01.fr", decision="reject", decided_by=bob)
     # An invalid decision is ignored, not persisted as-is.
-    cstore.set_decision("support-client.01.fr", decision="bogus")
+    cstore.set_decision("support-client.01.fr", decision="bogus", decided_by=bob)
     assert cstore._load_state()["support-client.01.fr"]["decision"] == "reject"
 
 

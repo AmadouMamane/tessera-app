@@ -16,12 +16,16 @@ from __future__ import annotations
 
 import sys
 from dataclasses import asdict
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
-from tessera.api.security import require_operator
+from tessera.api.security import actor_of, require_operator
+from tessera.api.session import (  # noqa: TCH001  — FastAPI resolves Depends annotations at runtime
+    SessionContext,
+)
 from tessera.observability import (
     ablation as ablation_mod,
     agent_a_faire as agent_a_faire_mod,
@@ -188,11 +192,20 @@ class _AutomationRuleStateBody(BaseModel):
 
 
 class _CurationDecisionBody(BaseModel):
-    """A durable curation decision (promote/review/reject) for one candidate."""
+    """A durable curation decision (promote/review/reject) for one candidate.
+
+    ``decided_by`` is **gone**, and ``extra="forbid"`` is what makes its removal load-bearing:
+    a caller who still sends one now gets a **422**, loudly, instead of having their chosen
+    name silently dropped — and F-1's lesson is that a silently dropped identity field and an
+    honoured one are indistinguishable from the outside. The name in the register comes from
+    the session the server verified (:func:`~tessera.api.security.actor_of`); a caller who can
+    choose it can sign someone else's decision.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     candidate_id: str
     decision: str
-    decided_by: str = ""
     lang: str = "fr"
 
 
@@ -370,8 +383,20 @@ async def observability_automations_rule_state(
 
 
 @router.post("/observability/curation/decision")
-async def observability_curation_decision(body: _CurationDecisionBody) -> dict[str, object]:
-    """Persist a curation decision for one real candidate; return the fresh payload."""
+async def observability_curation_decision(
+    body: _CurationDecisionBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Persist a curation decision for one real candidate; return the fresh payload.
+
+    **Authentication is not attribution**, and this route is where that distinction was costing
+    us. It has carried ``require_operator`` on its router since the 26 anonymous mutations were
+    closed — the door was locked — and it then wrote ``decided_by=body.decided_by`` into the
+    register: a verified operator could sign a curation decision **in anyone's name**. That is
+    F-1's body-chosen attribution, alive inside a router we had hardened, which is precisely why
+    a guard alone never closes this class. The guard answers *may you come in*; only a
+    server-derived :class:`~tessera.authz.Actor` answers *who signed*.
+    """
     from tessera.observability import curation_store
 
     if body.candidate_id not in curation_store.available_candidate_ids():
@@ -379,7 +404,7 @@ async def observability_curation_decision(body: _CurationDecisionBody) -> dict[s
     if body.decision not in curation_store.DECISIONS:
         raise HTTPException(status_code=422, detail="invalid decision")
     curation_store.set_decision(
-        body.candidate_id, decision=body.decision, decided_by=body.decided_by
+        body.candidate_id, decision=body.decision, decided_by=actor_of(session)
     )
     return {"available": True, **curation_mod.compute_curation_overview(body.lang)}
 
