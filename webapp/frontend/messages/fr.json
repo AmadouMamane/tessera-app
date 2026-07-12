@@ -6153,7 +6153,9 @@
       "inactive": "Aucun compte inactif.",
       "members": "Aucun utilisateur affecté.",
       "groups": "Aucun groupe — pas de notion de groupe en Phase 1."
-    }
+    },
+    "unavailableTitle": "Rôles indisponibles",
+    "unavailable": "Référentiel des rôles injoignable. La page reste ouverte : aucune donnée n’est inventée."
   },
   "integrations": {
     "explain": {

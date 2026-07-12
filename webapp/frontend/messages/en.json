@@ -6153,7 +6153,9 @@
       "inactive": "No inactive accounts.",
       "members": "No users assigned.",
       "groups": "No groups — no group concept in Phase 1."
-    }
+    },
+    "unavailableTitle": "Roles unavailable",
+    "unavailable": "The roles store is unreachable. The page stays open: no data is invented."
   },
   "integrations": {
     "explain": {

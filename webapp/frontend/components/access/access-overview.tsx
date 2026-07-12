@@ -29,7 +29,7 @@ import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { fetchAccessOverview } from "@/lib/api/client";
-import type { AccessOverview as AccessData } from "@/lib/api/schemas";
+import type { AccessOverviewPayload as AccessData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 const TYPE_BADGE: Record<string, string> = {
@@ -67,11 +67,23 @@ export function AccessOverview() {
   const t = useTranslations("roles");
   const tt = useTranslations("table");
   const locale = useLocale();
-  const { data } = useQuery({
+  const { data: response } = useQuery({
     queryKey: ["access-overview", locale],
     queryFn: ({ signal }) => fetchAccessOverview(locale, signal),
     staleTime: 60_000,
   });
+
+  // Honest-empty, narrowed ONCE (audit P1.4). The backend answers `{available: false}` — and
+  // nothing else — when the roles store is unreachable, so the page degrades instead of breaking.
+  // Until now the schema REQUIRED the payload, so zod rejected that answer and `request()` threw:
+  // the page broke on the exact response that exists to keep it standing, and it broke precisely
+  // when the backend was already failing. Narrowing here means every reader below sees either the
+  // whole payload or nothing — the union is handled, not ignored.
+  const data: AccessData | undefined = response?.available ? response : undefined;
+  // `=== false`, not `!response?.available`: while the query is still in flight `response` is
+  // undefined, and treating that as "unavailable" would render the outage card over a page that
+  // is merely loading. Degraded and loading are different states and must render differently.
+  const unavailable = response?.available === false;
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "systeme" | "metier">("all");
@@ -102,6 +114,19 @@ export function AccessOverview() {
     }
     return out;
   }, [data, search, typeFilter, sortKey, sortDir]);
+
+  // The degraded state is a RENDER, not a crash — and it is distinct from "still loading". An
+  // empty spinner would claim the page is on its way; it is not, and saying so is the point.
+  if (unavailable) {
+    return (
+      <div data-testid="access-unavailable" className="flex h-full items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <p className="text-sm font-medium text-[var(--tessera-text)]">{t("unavailableTitle")}</p>
+          <p className="mt-2 text-sm text-[var(--tessera-text-muted)]">{t("unavailable")}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (

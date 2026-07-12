@@ -3260,8 +3260,24 @@ const RaSliceSchema = z.object({
   color: z.string(),
 });
 
-export const AccessOverviewSchema = z.object({
-  available: z.boolean(),
+// Honest-empty, made explicit (audit P1.4 / the `access` degrade bug).
+//
+// The backend answers `{available: false}` — and NOTHING else — when the roles store is
+// unreachable: the page must degrade, not break. This schema used to be a flat `z.object` with
+// `available: z.boolean()` and every payload field REQUIRED, so `safeParse` REJECTED that
+// response and `request()` threw. The page therefore broke on the exact response that exists so
+// it would not break, and it broke precisely when the backend was already failing.
+//
+// A discriminated union says what is true: `available: true` GUARANTEES the payload; `available:
+// false` carries nothing and is a valid, expected answer. This mirrors the generated
+// `AccessResponseSchema` (lib/api/generated/fleet.ts), which the domain will migrate to wholesale
+// — this is the same fix, landed now, because the bug is live.
+export const AccessOverviewUnavailableSchema = z.object({
+  available: z.literal(false),
+});
+
+const AccessOverviewPayloadSchema = z.object({
+  available: z.literal(true),
   generated_at: z.string(),
   total_roles: z.number().int(),
   page_size: z.number().int(),
@@ -3327,6 +3343,12 @@ export const AccessOverviewSchema = z.object({
   ),
   footer: z.object({ total: z.number().int(), source: z.string() }),
 });
+
+export const AccessOverviewSchema = z.discriminatedUnion("available", [
+  AccessOverviewPayloadSchema,
+  AccessOverviewUnavailableSchema,
+]);
+export type AccessOverviewPayload = z.infer<typeof AccessOverviewPayloadSchema>;
 export type AccessOverview = z.infer<typeof AccessOverviewSchema>;
 
 // ---------------------------------------------------------------------------

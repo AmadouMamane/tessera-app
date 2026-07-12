@@ -6153,7 +6153,9 @@
       "inactive": "Keine inaktiven Konten.",
       "members": "Keine Benutzer zugewiesen.",
       "groups": "Keine Gruppen — kein Gruppenkonzept in Phase 1."
-    }
+    },
+    "unavailableTitle": "Rollen nicht verfügbar",
+    "unavailable": "Rollenverzeichnis nicht erreichbar. Die Seite bleibt offen: es werden keine Daten erfunden."
   },
   "integrations": {
     "explain": {
