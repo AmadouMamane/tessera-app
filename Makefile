@@ -2,7 +2,7 @@
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
         obs-up obs-down obs-logs dev-secrets \
         gate gate-twice gate-checks gate-py gate-web \
-        claim release whoowns
+        claim release whoowns landed
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -51,6 +51,27 @@ release:
 
 whoowns:
 	@uv run python scripts/worktree_owner.py check
+
+# ── Landing (did this work actually land?) ──────────────────────────────────
+#
+# RATIFIED DOCTRINE: sha ancestry is NOT landing.
+#
+# `git merge-base --is-ancestor` answers "is this SHA in main's history?". Nobody
+# asks that. The question is "is this WORK on main?", and the two diverge the moment
+# a lane rebases or re-implements another's commits — routine in this repo.
+#
+# It cost a live P1: six of a branch's seven commits had landed under DIFFERENT shas,
+# the seventh (the GDPR erasure's author) had not, and `--is-ancestor` said "not
+# merged" about ALL SEVEN — an answer that looked like an answer while hiding exactly
+# which one was missing. The erasure stayed anonymous on main for a day.
+#
+#   make landed BRANCH=claude/some-branch [BASE=origin/main]
+#
+# Compares BLOBS, file by file. Never delete a branch on ancestry alone.
+
+landed:
+	@test -n "$(BRANCH)" || (echo "BRANCH= is required (e.g. make landed BRANCH=claude/x)" && exit 2)
+	@uv run python scripts/landed.py --branch $(BRANCH) $(if $(BASE),--base $(BASE),)
 
 # ── The gate ────────────────────────────────────────────────────────────────
 #
