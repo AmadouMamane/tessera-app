@@ -34,6 +34,7 @@ wearing an ADR's number. They now live in `docs/status/` and `docs/incidents/`.
 | 0021 | [The eval gate grades measured contribution; the absolute domain bars are removed](0021-eval-gate-on-measured-contribution.md) |
 | 0022 | [Hica external opposability seal — design note](0022-hica-seal-design-note.md) — *annex to 0015; was a second 0015* |
 | 0023 | [The audit chain is independent of the audit sink](0023-audit-chain-independent-of-sink.md) — *audit F-6; annex to 0015* |
+| 0024 | [Every governed act names its author; every configuration that cannot hold a guarantee refuses to boot](0024-every-governed-act-names-its-author.md) — *audit F-1/F-5/F-6/F-B, one doctrine; generalises 0023* |
 
 *(0021 is reserved for `recouvrement-internal-operator-agent` — see below.)*
 
