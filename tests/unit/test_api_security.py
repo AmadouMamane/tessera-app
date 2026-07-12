@@ -1,4 +1,4 @@
-"""Unit tests for the ADR 0008 security hardening layer.
+"""Unit tests for the ADR 0020 security hardening layer.
 
 Covered: security headers (presence + HSTS gating on TLS termination),
 route-level authz on the read surfaces, request-size ceiling (413), the

@@ -1,7 +1,7 @@
 name: Supply chain
 
 # SBOM, image signing (cosign keyless) and SLSA provenance for the agent image
-# (ADR 0008). These run only in GitHub Actions and cannot be validated on a dev
+# (ADR 0020). These run only in GitHub Actions and cannot be validated on a dev
 # laptop — they are reviewed, then exercised here.
 
 on:

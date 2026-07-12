@@ -7,7 +7,7 @@
 - Date: 2026-06-25
 - Deciders: Tessera maintainers
 - Branch: `feature/redesign`
-- Related: 0008 (security hardening), 0009 (dashboard auth/RBAC), 0010 (frontier
+- Related: 0020 (security hardening), 0009 (dashboard auth/RBAC), 0010 (frontier
   observability), 0011 (as-of T — env is the *spatial* sibling of T's temporal
   dimension), `src/tessera/settings.py` (the single source of `environment`).
 - Coordination: a parallel workstream owns the **header chrome** that *displays*

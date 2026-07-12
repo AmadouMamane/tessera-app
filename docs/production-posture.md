@@ -18,7 +18,7 @@ Terraform, and the settings.
   (`infra/terraform/cloud_run.tf:5`, `armor.tf`). Cloud Armor is available behind the flag.
 - **TLS / HSTS.** `api.tls_terminated=True` (Cloud Run terminates TLS) drives HSTS
   (`settings.py hsts_enabled`). On-prem behind a proxy that does **not** terminate TLS, set
-  `TESSERA_API__TLS_TERMINATED=false` so HSTS is not asserted over plain HTTP (ADR 0008).
+  `TESSERA_API__TLS_TERMINATED=false` so HSTS is not asserted over plain HTTP (ADR 0020).
 
 ## 2. Secrets (never the demo defaults)
 
@@ -55,7 +55,7 @@ Terraform, and the settings.
   `docs/runbook.md §Audit log`. In production the durable copies are Cloud SQL managed backups
   + the audit GCS bucket; the make targets are the on-prem / logical-chain path.
 
-## 5. Rate limiting (ADR 0008 + ADR 0019)
+## 5. Rate limiting (ADR 0020 + ADR 0019)
 
 - On-prem there is no upstream load balancer, so `rate_limit_required` is forced on
   (`settings.py`). For multi-instance Cloud Run, set `TESSERA_API__RATE_LIMIT_STORAGE_URI` to

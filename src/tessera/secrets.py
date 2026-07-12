@@ -1,4 +1,4 @@
-"""Deployment-aware secret resolution (ADR 0008).
+"""Deployment-aware secret resolution (ADR 0020).
 
 Tessera resolves secrets very differently depending on where it runs, and this
 module is the single seam that hides the difference from the rest of the code.

@@ -16,7 +16,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   run comparison) and recorded in the eval scorecard.
 - **Web deployment path.** Containerised agent + Next.js standalone front, a
   versioned local compose overlay, and a public-demo posture (service-to-service
-  bearer token, per-session + global rate limit, request-size cap) — ADR 0008.
+  bearer token, per-session + global rate limit, request-size cap) — ADR 0020.
 - **Supply-chain workflow.** SBOM (CycloneDX) + image signing (cosign keyless)
   + SLSA provenance for the agent image.
 - Brand favicon set (`app/{favicon.ico,icon.svg,icon.png,apple-icon.png}`) and

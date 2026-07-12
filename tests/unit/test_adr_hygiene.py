@@ -8,14 +8,28 @@ Half of that was not an ADR problem at all: the logs are not decisions and had n
 carrying an ADR number. They now live in ``docs/status/`` and ``docs/incidents/``, which
 dissolves the 0015/0017/0019 collisions without renumbering anything.
 
-What remains is three genuine collisions, and they are FROZEN rather than fixed. "ADR 0010" is
-referenced 138 times across code and docs — meaning *frontier-observability* in some and
-*recouvrement* in others — and "ADR 0008" 55 times, equally ambiguously. Renumbering means
-reassigning every reference by judgment; one wrong call and the decision record asserts
-something false. A duplicate number is an annoyance. A decision record that lies is a defect.
+Three genuine collisions remained, frozen rather than fixed. **Two are now dissolved**
+(2026-07-12):
+
+* ``0015`` — the Hica seal design note moved to **0022**. It was referenced *only by filename*:
+  zero bare ``ADR 0015`` references meant it, because the seal was **decided** in the spine ADR
+  (§Amendment 3 / §Correction 3c) and only **designed** in the annex. A rename and five links.
+* ``0008`` — security hardening moved to **0020**. Settled by the creation dates:
+  ``0008-security-hardening`` is 2026-05-31, ``0008-agent-audience-and-surface`` is 2026-06-22,
+  so every reference written before that cutoff could *only* have meant the former — proof, not
+  heuristic. 25 bare references rewritten, each with its evidence recorded in
+  ``docs/status/adr-renumber-evidence.md``.
+
+``0010`` is **still frozen, deliberately**. It carries **245+** references — 183 meaning
+*frontier-observability* (which therefore keeps the number) and 52 meaning *recouvrement* (which
+will become 0021). Some of them **wrap across lines** (``ADR`` ending one line, ``0010 Phase C``
+beginning the next), so *no grep-based verification of that rename can be complete*. Rewriting
+the project's memory semantically, at that scale, with **no CI to act as an independent
+witness**, is exactly what a bounded tolerance of an absent CI has to forbid. It waits for CI.
 
 So the ratchet: the known set can SHRINK, never grow. The same discipline as the boundary
-ratchet — exact equality, zero tolerance for a new one.
+ratchet — exact equality, zero tolerance for a new one, and a resolved collision must be
+*removed* from the set or the exception list goes stale.
 """
 
 from __future__ import annotations
@@ -28,8 +42,10 @@ _DOCS = Path(__file__).resolve().parents[2] / "docs"
 _DECISIONS = _DOCS / "decisions"
 
 #: The collisions that exist today. This set may only ever get SMALLER.
-#: Renumbering plan: docs/decisions/README.md.
-_FROZEN_COLLISIONS: frozenset[str] = frozenset({"0008", "0010", "0015"})
+#: 0008 → 0020 and 0015 → 0022 landed 2026-07-12. **0010 is the last one**, and it is held for
+#: CI: 245+ references, some wrapped across lines, and one wrong call makes the decision record
+#: assert something false. Plan + per-reference evidence: docs/status/adr-renumber-evidence.md.
+_FROZEN_COLLISIONS: frozenset[str] = frozenset({"0010"})
 
 #: Filename patterns that are NOT decisions and must never live in docs/decisions/.
 _NOT_A_DECISION = re.compile(r"execution-status|incident|overnight", re.IGNORECASE)

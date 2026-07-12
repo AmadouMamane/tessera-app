@@ -1,4 +1,4 @@
-# 0008 — Production security hardening (deployment-aware)
+# 0020 — Production security hardening (deployment-aware)
 
 - Status: accepted
 - Date: 2026-05-31

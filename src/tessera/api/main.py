@@ -343,7 +343,7 @@ def build_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(AuthMiddleware)
     # Added last → outermost, so security headers cover every response,
-    # including the 401s / 429s produced by inner middleware (ADR 0008).
+    # including the 401s / 429s produced by inner middleware (ADR 0020).
     app.add_middleware(SecurityHeadersMiddleware)
 
     app.include_router(health.router)
@@ -358,7 +358,7 @@ def build_app() -> FastAPI:
     # Aggregate eval scores are a public surface (ADR 0009) — no bearer gate.
     app.include_router(observability_routes.router)
     # Defence in depth: the read surfaces require the bearer token at the route
-    # level too, not only via the global middleware (ADR 0008).
+    # level too, not only via the global middleware (ADR 0020).
     app.include_router(audit.router, dependencies=[Depends(require_bearer)])
     app.include_router(memory.router, dependencies=[Depends(require_bearer)])
     app.include_router(settings_routes.router, dependencies=[Depends(require_bearer)])

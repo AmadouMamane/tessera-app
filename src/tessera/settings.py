@@ -88,7 +88,7 @@ class LanguageCode(StrEnum):
 
 
 class DeploymentMode(StrEnum):
-    """Where Tessera is deployed (ADR 0008).
+    """Where Tessera is deployed (ADR 0020).
 
     Load-bearing for security: ``on_prem`` has no managed load balancer, secret
     manager, or platform rate limiter underneath, so app-level controls that are
@@ -199,7 +199,7 @@ class GuardSettings(BaseSettings):
     escalation_confidence_threshold: float = 0.6
 
     # Hica external opposability seal (ADR 0015 §Amendment 3 pt3 + §Correction 3c pt4;
-    # docs/decisions/0015-hica-seal-design-note.md). Enrichment, never the store. The default
+    # docs/decisions/0022-hica-seal-design-note.md). Enrichment, never the store. The default
     # ``none`` is the honesty invariant: with no provider configured the badge can NEVER read
     # "Scellé" (the NoOp provider cannot mint a token). A verified but non-eIDAS-qualified TSA
     # renders "Scellé (non qualifié)"; only a qualified one earns "Scellé · opposable".
@@ -300,7 +300,7 @@ class APISettings(BaseSettings):
     # dev/CI the operator path is simply inert (no assertion ever verifies).
     operator_assertion_signing_key: SecretStr | None = None
 
-    # -- Security hardening (ADR 0008) ---------------------------------------
+    # -- Security hardening (ADR 0020) ---------------------------------------
     # TLS is terminated by Cloud Run; an on-prem reverse proxy may not, in which
     # case HSTS must stay off. Drives the security-headers middleware.
     tls_terminated: bool = True
@@ -344,7 +344,7 @@ class APISettings(BaseSettings):
 
 
 class SecretsSettings(BaseSettings):
-    """Deployment-aware secret resolution (ADR 0008).
+    """Deployment-aware secret resolution (ADR 0020).
 
     ``provider`` selects where secrets come from. ``env`` (default) covers the
     Cloud Run managed path, where GCP Secret Manager — the premium cloud choice —
@@ -539,7 +539,7 @@ class Settings(BaseSettings):
         """Rate limiting is mandatory on-prem; recommended (default-on) on cloud.
 
         On-prem has no upstream load balancer to absorb abuse, so the control
-        cannot be silently disabled there (ADR 0008, control x mode matrix).
+        cannot be silently disabled there (ADR 0020, control x mode matrix).
         """
         return self.api.rate_limit_enabled or self.is_on_prem()
 

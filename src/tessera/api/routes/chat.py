@@ -1074,7 +1074,7 @@ async def chat(
 ) -> StreamingResponse:
     """POST /chat — Server-Sent-Events stream of the agent's turn.
 
-    Rate limiting is applied by RateLimitMiddleware (ADR 0008), not a decorator.
+    Rate limiting is applied by RateLimitMiddleware (ADR 0020), not a decorator.
 
     The entry surface and the session's auth-state are resolved here, server-side,
     from trusted signals — never read from the request body (ADR 0008). The customer

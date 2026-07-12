@@ -1,4 +1,4 @@
-"""Rate limiting middleware (ADR 0008).
+"""Rate limiting middleware (ADR 0020).
 
 The windowing and storage are delegated to the ``limits`` library (the same
 engine that backs slowapi) — we do not reinvent the algorithm. Tessera adds only

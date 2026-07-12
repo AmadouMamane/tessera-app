@@ -204,3 +204,74 @@ independent witness for a semantic rewrite of the project's memory.
 
 The ratchet in `tests/unit/test_adr_hygiene.py` is unchanged and still freezes the three
 collisions. It has not gone stale: nothing was renumbered.
+
+---
+
+## Lot 2 bis — the renumbering, reduced scope (2026-07-12)
+
+The HALT above was right, and it made the retry cheap: the adjudication was already written, and
+the one reference that stopped the first attempt turned out **not to be ambiguous at all**.
+
+| | Move | Refs rewritten | What settled it |
+|---|---|---|---|
+| **0015** | `hica-seal-design-note` → **0022** | **0** bare + 6 filename links | The annex is referenced **only by filename** — the seal was *decided* in the spine (§Amendment 3 / §Correction 3c) and only *designed* in the annex |
+| **0008** | `security-hardening` → **0020** | **25** | The **creation dates**: 2026-05-31 vs 2026-06-22 — a reference written before the cutoff can only mean the older ADR. Proof, not heuristic |
+| **0010** | `recouvrement` → 0021 | — | **HELD FOR CI.** 245+ refs, some wrapped across lines. First live item waiting on CI's return |
+
+### `spine/runtime.py` was a LIE, not an ambiguity — and that is a better outcome
+
+The reference that halted the first attempt:
+
+```python
+class SandboxDefaults:
+    """Live defaults for the Console sandbox playground (ADR 0010 Phase C)."""
+```
+
+`Phase C` exists only in the recouvrement ADR, where it names the **business** console
+(`dedicated-ui`) — and **ADR 0013 forbids exactly this payload** (a system prompt, a guard-rule
+count) on a business surface. The docstring cited the one decision record that rules its own
+behaviour **out**. Not a stale number: a **false reference**.
+
+Corrected to cite what actually governs the cockpit Console — **ADR 0019 §2 (increment I2)**, the
+Console as a generated surface — plus the security seam's `sandbox_overrides_allowed` (overrides
+honoured only for `COCKPIT_EMBEDDED` + `OPERATOR`). **Its own commit** (`11f4d3d8`): a lie being
+corrected must not read as collateral of a rename, or the next reader cannot tell the two apart.
+
+**The lesson generalises.** When a reference resists every discriminator, consider that it may be
+*wrong* rather than *ambiguous*. A renumbering sweep is an unusually good detector of false
+citations — it forces someone to read what each one actually claims.
+
+### A fourth reference form, found here
+
+ADR front-matter cites by **bare number with a gloss**, and never with the `ADR` prefix:
+
+```
+- Related: 0006 (locale-prefixed routing), 0008 (security hardening),
+```
+
+An `ADR\s*0008` sweep misses it entirely. The gloss makes each one self-disambiguating —
+`0008 (security hardening)` moves, `0008 (audience/surface/auth)` stays — but only if you look for
+the form at all. Three such references moved; three stayed.
+
+### Verification
+
+**Bidirectional**, because one direction proves nothing. Asserted, over the whole tree:
+
+* no `ADR 0008` remains in a security-hardening context (**0 leaks**), and
+* no `ADR 0020` appeared in an audience/surface context (**0 false moves**).
+
+Plus: zero dangling filename links; the ratchet **mutation-tested both ways** — a new duplicate
+fails it, and a stale entry left in the frozen set fails it too.
+
+### The ratchet, re-frozen
+
+`_FROZEN_COLLISIONS = {"0010"}`. Two of three dissolved. `0010` is documented **as debt waiting on
+CI** — in the ratchet's own docstring, in `docs/decisions/README.md`, and in
+`adr-renumber-evidence.md`. It is the **first live trigger** of the "CI is absent, therefore this
+is forbidden" rule: rewriting the project's memory semantically, at 245+ references, with no
+independent witness, is precisely what a bounded tolerance of a missing CI must refuse.
+
+### Gate
+
+Twice-green: two consecutive `make gate` at `EXIT=0` — 1741 backend tests, mypy 295 files, ruff,
+biome, tsc, 185 frontend tests.

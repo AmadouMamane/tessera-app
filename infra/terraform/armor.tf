@@ -1,4 +1,4 @@
-# Cloud Armor edge rate limiting for the agent (ADR 0008, premium cloud tier).
+# Cloud Armor edge rate limiting for the agent (ADR 0020, premium cloud tier).
 #
 # Cloud counterpart of infra/edge/nginx.conf: a managed WAF + rate limiter at
 # the edge, in front of the app-level limiter. Cloud Run cannot have Cloud Armor

@@ -1,4 +1,4 @@
-# 0015 — Hica external opposability seal: design note (Lot 1)
+# 0022 — Hica external opposability seal: design note (Lot 1)
 
 > **Status: APPROVED & LANDED 2026-07-08** (review *"Hica seal design review"*). **Lots 1–4 complete;
 > fast-forwarded onto `main` (`5ece2ae0..50a6a40d`), branch `claude/hica-seal` pushed.** The reference

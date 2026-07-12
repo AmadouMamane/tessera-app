@@ -5,7 +5,7 @@
 - Deciders: Tessera maintainers
 - Branch: `feature/observability_claude_powered` (branched from
   `kebab/dashboard-auth-rbac`, **not** from `feature/observability_refinement`)
-- Related: 0005 (tools vs workers), 0007 (agent memory), 0008 (security
+- Related: 0005 (tools vs workers), 0007 (agent memory), 0020 (security
   hardening), 0009 (dashboard auth/RBAC), `docs/eval.md`, `docs/on_prem.md`,
   `docs/threat-model.md`
 - Idea radar: `docs/observability-ideas.md` (200 ideas, 46 sub-axes; canonical
@@ -133,7 +133,7 @@ bet is on the standard, not on a single vendor's convention.
 | Dashboards | Grafana | Cloud Monitoring + Looker Studio |
 
 A single validated setting selects the profile, mirroring the
-`deployment_mode` pattern from ADR 0008 (`cloud_run` / `on_prem`).
+`deployment_mode` pattern from ADR 0020 (`cloud_run` / `on_prem`).
 
 ### The two sovereignty/EU differentiators (always on)
 

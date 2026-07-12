@@ -1,9 +1,15 @@
 # ADR renumbering — the reference map, and why the rename is not the hard part
 
-Produced 2026-07-12 while attempting the A8 renumbering lot. **The renumbering was HALTED**
-(see `day-cleanup-run.md`). This file is the part that survives: *which bare `ADR NNNN`
-reference means which ADR, and by what proof.* Redoing the rename is an afternoon; redoing
-this adjudication is the whole risk.
+> **Status (2026-07-12).** `0008 → 0020` and `0015 → 0022` are **DONE and merged**. `0010 → 0021`
+> is the **only collision left, and it is held for CI** — it is the first live item waiting on
+> CI's return. Everything below is the adjudication that made the first two safe and that the
+> third will need. The rename is an afternoon; this map is the whole risk.
+>
+> Also done, and deliberately kept separate: `spine/runtime.py`'s `SandboxDefaults` cited
+> *"ADR 0010 Phase C"* — a **false** reference (Phase C names recouvrement's *business* console,
+> where ADR 0013 forbids exactly that payload). Corrected to cite what actually governs the
+> cockpit Console — ADR 0019 §2 (I2) plus the security seam's `sandbox_overrides_allowed`. That
+> was a lie being fixed, not a number being moved, so it landed in its own commit.
 
 ## The mapping (operator's call, 2026-07-12)
 
@@ -88,17 +94,28 @@ annoyance.
 bare references mean it. Renumbering 0015 → 0022 is a file rename plus 5 filename links, and
 **nothing else must be touched**.
 
-**2. `spine/runtime.py:27` is irreducibly ambiguous.**
+**2. `spine/runtime.py:27` was not ambiguous — it was FALSE. (Resolved.)**
 
 ```python
 class SandboxDefaults:
     """Live defaults for the Console sandbox playground (ADR 0010 Phase C)."""
 ```
 
-The *Console* is the cockpit (frontier's surface). *Phase C* is recouvrement's phase letter.
-Two plausible readings, no proof either way — not from the file, not from the commit, not from
-the dates. **This is the HALT.** One ambiguous reference in the decision registry is one too
-many, and guessing it is precisely what the brief forbade.
+It read as ambiguous — the *Console* is the cockpit (frontier), *Phase C* is recouvrement's phase
+letter — and it halted the first attempt. The resolution is better than a coin-flip: **`Phase C`
+names recouvrement's BUSINESS console (`dedicated-ui`), and ADR 0013 forbids exactly this payload
+(a system prompt, a guard-rule count) on a business surface.** The citation pointed at the one
+decision record that rules its own behaviour *out*. It was not a stale number; it was a **false
+reference**.
+
+Corrected to cite what actually governs the cockpit Console — **ADR 0019 §2 (increment I2**, the
+Console as a generated surface) — plus the security seam's `sandbox_overrides_allowed`
+(overrides honoured only for `COCKPIT_EMBEDDED` + `OPERATOR`). Landed in **its own commit**: a lie
+being fixed must not look like collateral of a rename.
+
+**The lesson generalises.** When a reference resists every discriminator, consider that it may be
+*wrong* rather than *ambiguous*. A renumbering sweep is an unusually good detector of false
+citations, because it forces someone to read what each one actually claims.
 
 **3. References wrap across lines, so every count is an undercount.** Three references are split
 by a line break — `api/operator.py:77` and `lib/auth/roles.ts:70` both end a line with `ADR` and
@@ -112,16 +129,32 @@ shape it cannot see.)
 text. A rename pass that skips `docs/decisions/` — the natural instinct, since those files are
 "the thing being renamed" — leaves the decision record contradicting itself.
 
-## The safe plan
+## What was done, and what is left
 
-1. **Do 0015 → 0022 on its own.** File rename + 5 filename links. Zero bare references. Provably
-   safe, and it shrinks the frozen set from three to two.
-2. **Do 0008 → 0020 next.** 75 refs, and the date test (2026-05-31 vs 2026-06-22) resolves nearly
-   all of them mechanically. Adjudicate the ~10 leftovers by commit.
-3. **Do 0010 → 0021 last, and only with CI green.** 245+ refs, wrapped references, and at least
-   one irreducibly ambiguous site that needs a human ruling on what `SandboxDefaults`'
-   "Phase C" meant. Resolve `spine/runtime.py:27` *first* — ask whoever wrote it — then run the
-   sweep.
-4. **Verify semantically, not textually.** "Zero occurrences of the old filename" proves nothing.
-   The property to assert is: *no reference to the moved sense still carries the old number* —
-   which requires reading the sense, and cannot be done with a grep.
+**DONE — `0015 → 0022`.** File rename + filename links. **Zero** bare references meant the annex,
+for the reason in trap 1. Nothing in `guard/seal.py`, `guard/audit.py` or `settings.py` was
+touched, and that is correct.
+
+**DONE — `0008 → 0020`.** 25 bare references rewritten. The date test carried 23 of them
+(everything written before 2026-06-22 could only mean security-hardening); the remaining two —
+`production-posture.md`'s HSTS/TLS line and its "Rate limiting" heading — were adjudicated by
+subject. The ~46 references meaning audience/surface were left untouched, and a **bidirectional**
+check confirmed it: no `ADR 0008` remains in a security context, and no `ADR 0020` appeared in an
+audience context.
+
+A fourth reference *form* surfaced here and is worth knowing: ADR front-matter uses a **bare
+number with a gloss** — `- Related: 0006 (locale-prefixed routing), 0008 (security hardening)`.
+No `ADR` prefix, so a `ADR\s*0008` sweep misses it entirely. The gloss makes each one
+self-disambiguating (`0008 (security hardening)` moves; `0008 (audience/surface/auth)` stays), but
+only if you look for the form at all.
+
+**LEFT — `0010 → 0021`, held for CI.** 245+ references; 183 mean frontier (which keeps 0010), 52
+mean recouvrement. The discriminator above is strong, but **some references wrap across lines**
+(trap 3), so no grep-based verification of this rename can be complete — it will report "0
+remaining" while the record still lies. And a first automated attempt produced exactly the class
+of error being guarded against.
+
+**Verify semantically, not textually.** "Zero occurrences of the old filename" proves nothing. The
+property to assert is *bidirectional*: **no reference to the moved sense still carries the old
+number, AND no reference to the kept sense acquired the new one.** Both directions need the sense
+read. A grep cannot do it.

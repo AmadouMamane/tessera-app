@@ -17,44 +17,67 @@ wearing an ADR's number. They now live in `docs/status/` and `docs/incidents/`.
 | 0005 | [Tools vs workers separation](0005-tools-vs-workers-separation.md) |
 | 0006 | [Locale-prefixed routing](0006-locale-prefixed-routing.md) |
 | 0007 | [Agent memory architecture](0007-agent-memory-architecture.md) |
-| 0008 ⚠️ | [Security hardening](0008-security-hardening.md) — *senior, 2026-05-31* |
-| 0008 ⚠️ | [Agent audience and surface](0008-agent-audience-and-surface.md) — *junior, 2026-06-22* |
+| 0008 | [Agent audience and surface](0008-agent-audience-and-surface.md) |
 | 0009 | [Dashboard auth & RBAC](0009-dashboard-auth-rbac.md) |
-| 0010 ⚠️ | [Frontier observability](0010-frontier-observability.md) — *senior, 2026-06-08* |
-| 0010 ⚠️ | [Recouvrement internal operator agent](0010-recouvrement-internal-operator-agent.md) — *junior, 2026-06-22* |
+| 0010 ⚠️ | [Frontier observability](0010-frontier-observability.md) — *keeps the number: 183 references* |
+| 0010 ⚠️ | [Recouvrement internal operator agent](0010-recouvrement-internal-operator-agent.md) — *will become 0021; held for CI, see below* |
 | 0011 | [Temporal as-of-T dimension](0011-temporal-as-of-t-dimension.md) |
 | 0012 | [Agent registry and seed](0012-agent-registry-and-seed.md) |
 | 0013 | [Entry routing by audience](0013-entry-routing-by-audience.md) |
 | 0014 | [Environment isolation](0014-environment-isolation.md) |
 | 0015 | [Runtime telemetry spine and scope](0015-runtime-telemetry-spine-and-scope.md) |
-| 0015 ⚠️ | [Hica seal design note](0015-hica-seal-design-note.md) — *an annex to 0015, not a separate decision* |
 | 0016 | [Business-events fan-out contract](0016-business-events-fanout-contract.md) |
 | 0017 | [Agent observability contract](0017-agent-observability-contract.md) |
 | 0018 | [Assistant runtime turn contract](0018-assistant-runtime-turn-contract.md) |
 | 0019 | [Invocation binding](0019-invocation-binding.md) |
+| 0020 | [Production security hardening](0020-security-hardening.md) — *was a second 0008* |
+| 0022 | [Hica external opposability seal — design note](0022-hica-seal-design-note.md) — *annex to 0015; was a second 0015* |
 
-## The three remaining number collisions (⚠️) — known, frozen, not yet renumbered
+*(0021 is reserved for `recouvrement-internal-operator-agent` — see below.)*
 
-Two pairs of *genuine* ADRs share a number (0008, 0010), and the Hica seal design note is an
-annex filed under 0015.
+## Renumbering — two collisions dissolved, one held for CI (2026-07-12)
 
-They are **deliberately not renumbered yet**, and the reason is worth writing down. "ADR 0010"
-is referenced **138 times** across code comments, docs and ADRs — and it means
-*frontier-observability* in some of them and *recouvrement* in others (`operator.py` says "ADR
-0010 Phase B/C", meaning recouvrement). "ADR 0008" is referenced 55 times, ambiguously in the
-same way. Renumbering means correctly reassigning every one of those references by judgment.
-Get a single one wrong and the decision record — the project's memory — states something false.
-A duplicate number is an annoyance; a decision record that lies is a defect.
+The rule, decided after counting rather than assumed: **the sense that is referenced most keeps
+its number.** Every rewritten reference is a chance to make the decision record assert something
+false, so the *smaller* side moves. A duplicate number is an annoyance; a decision record that
+lies is a defect.
 
-So the renumbering is a lot of its own, done deliberately, in daylight, with the reference
-sweep as its actual subject. What is done here instead:
+### Done
 
-* the logs that were squatting ADR numbers are gone from this directory;
-* the collisions are **named** rather than silently tolerated;
-* a ratchet (`tests/unit/test_adr_hygiene.py`) freezes them at exactly these three and fails on
-  any NEW duplicate prefix — the set can shrink, never grow.
+**`0008-security-hardening` → `0020`.** Settled by dates, which is proof rather than heuristic:
+security-hardening was created **2026-05-31**, `agent-audience-and-surface` **2026-06-22**, so
+every reference written before that cutoff *could only ever have meant* security-hardening. 25
+bare references rewritten; the ~46 that mean audience/surface were left untouched. The handful of
+post-cutoff references were adjudicated by reading the **origin commit** — `session.py`'s
+`(ADR 0008/0009)`, for instance, was written by the commit that *created* the audience ADR, so it
+stays at 0008.
 
-Plan when it is done: juniors move to 0020+ (`0008-agent-audience-and-surface` → 0020,
-`0010-recouvrement-internal-operator-agent` → 0021), the seal note becomes
-`0015-annex-hica-seal.md`, every reference is disambiguated by reading it, and the ratchet's
-frozen set drops to empty.
+**`0015-hica-seal-design-note` → `0022`.** Free: the annex was referenced **only by filename**.
+Zero bare `ADR 0015` references meant it — because the seal was **decided** in the spine ADR
+(§Amendment 3 / §Correction 3c) and only **designed** in the annex. `guard/seal.py`,
+`guard/audit.py` and `settings.py` all say "ADR 0015 §…" and are correct *exactly as they are*;
+they were not touched. Reading them as annex references is the trap, not the fix.
+
+### Held — `0010`, and this is not laziness
+
+`recouvrement-internal-operator-agent` → `0021` **waits for CI.**
+
+* **245+ references.** 183 mean *frontier-observability* (which therefore keeps 0010); 52 mean
+  *recouvrement*. The discriminator is strong — frontier numbers its rollout `Phase 1..6` and its
+  features by canonical idea IDs (`docs/observability-ideas.md`), recouvrement uses `Phase A/B/C`
+  and has no ideas — but *strong* is not *verified*.
+* **Some references wrap across lines** — `ADR` ends one line, `0010 Phase C` begins the next. No
+  grep sees them, so **no grep-based verification of this rename can be complete**: it will report
+  "0 remaining" while the record still lies.
+* A first automated attempt **produced exactly that lie**, re-pointing *"## 4. The audit ledger
+  (ADR 0015)"* at the seal annex on nothing but word proximity.
+
+Rewriting the project's memory *semantically*, at that scale, with **no independent witness**, is
+precisely what a bounded tolerance of an absent CI must forbid. This is the **first live item
+waiting on CI's return**.
+
+Per-reference evidence, the discriminators, and the order of operations:
+**[`docs/status/adr-renumber-evidence.md`](../status/adr-renumber-evidence.md)**.
+
+The ratchet (`tests/unit/test_adr_hygiene.py`) now freezes exactly one collision — `0010` — and
+fails both on a NEW duplicate and on a stale entry left in the frozen set.

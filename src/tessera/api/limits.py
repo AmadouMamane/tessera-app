@@ -1,4 +1,4 @@
-"""Request-body size ceiling middleware (ADR 0008).
+"""Request-body size ceiling middleware (ADR 0020).
 
 Per-field Pydantic caps bound individual fields, but nothing bounds the
 *aggregate* request body — 40 history messages x 8 000 chars is ~320 kB before

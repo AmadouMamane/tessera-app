@@ -2,7 +2,7 @@
 
 These complement, rather than replace, the existing :class:`AuthMiddleware`.
 The header set is hand-rolled (≈ one dict) instead of pulling a dependency so
-it stays auditable and deployment-aware (ADR 0008): HSTS is emitted only when
+it stays auditable and deployment-aware (ADR 0020): HSTS is emitted only when
 TLS is actually terminated for this deployment.
 
 The route-level authorization dependency is defence in depth for the read
@@ -52,7 +52,7 @@ _HSTS_VALUE = "max-age=63072000; includeSubDomains; preload"
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Attach security headers to every response (ADR 0008).
+    """Attach security headers to every response (ADR 0020).
 
     HSTS is conditional on ``settings.hsts_enabled`` so an on-prem deployment
     that terminates TLS at a separate proxy (or runs plain HTTP internally) does

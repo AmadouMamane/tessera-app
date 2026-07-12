@@ -66,7 +66,7 @@ LEDGER_ATTESTATION_TYPE = "tessera.ledger.attestation"
 # carrying a third-party attestation (an RFC 3161 timestamp token) of the chain HEAD at seal time.
 # The seal ENRICHES opposability; it never stores ledger content. Living inside the one chain keeps
 # the "one consolidated journal" property (§Corr.3b) and reuses the serialized, fork-proof writer —
-# each seal transitively covers every prior row. Design note: 0015-hica-seal-design-note.md.
+# each seal transitively covers every prior row. Design note: 0022-hica-seal-design-note.md.
 LEDGER_SEAL_TYPE = "tessera.ledger.seal"
 
 # ADR 0019 §4 — every cockpit→agent invocation is a governed act, so a scheduled canary turn

@@ -106,4 +106,4 @@ Architecture-shaping decisions are recorded as ADRs under `docs/decisions/`:
 - `0005-tools-vs-workers-separation.md` — LangGraph nodes versus LLM-callable tools
 - `0006-locale-prefixed-routing.md` — dashboard pages under `app/[locale]/`
 - `0007-agent-memory-architecture.md` — agent memory architecture and the `memory/` package
-- `0008-security-hardening.md` — security hardening for deployment
+- `0020-security-hardening.md` — security hardening for deployment

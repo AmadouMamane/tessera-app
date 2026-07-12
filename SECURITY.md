@@ -5,7 +5,7 @@ handles banking-shaped data and models a real threat surface, so we treat
 security reports seriously and document our posture honestly. The full threat
 model lives in [`docs/threat-model.md`](docs/threat-model.md) and the operational
 safety reference in [`docs/safety.md`](docs/safety.md). The hardening rationale is
-[`docs/decisions/0008-security-hardening.md`](docs/decisions/0008-security-hardening.md).
+[`docs/decisions/0020-security-hardening.md`](docs/decisions/0020-security-hardening.md).
 
 ## Supported versions
 
@@ -72,8 +72,8 @@ tracked:
 
 - Runtime guard (`mcp-firewall`) on every tool call; PII redaction at the guard.
 - Bearer-token auth (`secrets.compare_digest`); route-level authz on the read
-  surfaces; deployment-aware security headers (ADR 0008).
-- Rate limiting and a request-size ceiling on the API (ADR 0008).
+  surfaces; deployment-aware security headers (ADR 0020).
+- Rate limiting and a request-size ceiling on the API (ADR 0020).
 - Deployment-aware secret resolution: GCP Secret Manager (cloud), SOPS+age
   (on-prem standard), or Vault/OpenBao (on-prem premium) — never secrets in git.
 - CI security gate: CodeQL, `pip-audit`, Bandit, gitleaks + detect-secrets,

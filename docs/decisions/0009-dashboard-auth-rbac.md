@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-06-03
 - Deciders: Tessera maintainers
-- Related: 0006 (locale-prefixed routing), 0008 (security hardening),
+- Related: 0006 (locale-prefixed routing), 0020 (security hardening),
   `docs/threat-model.md`
 
 ## Context
@@ -18,7 +18,7 @@ The dashboard mixes two very different surfaces:
   are effectively a map of the live deployment's weaknesses; the audit trail
   carries operational detail and subject identifiers.
 
-ADR 0008 closed the public audit leak with a binary proxy allowlist gated by
+ADR 0020 closed the public audit leak with a binary proxy allowlist gated by
 `TESSERA_DASHBOARD_PUBLIC`. That hides the operator surfaces from *everyone* on
 the public deployment — including legitimate operators — and has no notion of
 identity or role. We want to keep the showcase open, restrict the operator

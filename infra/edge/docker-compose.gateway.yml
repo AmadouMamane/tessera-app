@@ -1,4 +1,4 @@
-# On-prem premium edge (ADR 0008): nginx gateway in front of the agent.
+# On-prem premium edge (ADR 0020): nginx gateway in front of the agent.
 #
 # Compose this ALONGSIDE the base stack so the only exposed port is the
 # gateway's 443/80 — the agent itself is never published directly.

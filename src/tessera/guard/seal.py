@@ -1,7 +1,7 @@
 """Hica external opposability seal — periodic third-party attestation of the ledger HEAD.
 
 ADR 0015 §Amendment 3 pt3 + §Correction 3c pt4 + rails register §9.
-Design note: ``docs/decisions/0015-hica-seal-design-note.md``.
+Design note: ``docs/decisions/0022-hica-seal-design-note.md``.
 
 The seal is an **opposability enrichment, never the store**: it attests the chain head, it never
 holds ledger content. *Owned first, sealed second.* Its two jobs:
