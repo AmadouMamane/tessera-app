@@ -39,7 +39,7 @@ export interface ChatTurnRequest {
 }
 
 export interface ChatTurnCallbacks {
-  onStart?: (event: { conversation_id: string; turn_id: string }) => void;
+  onStart?: (event: { conversation_id: string; turn_id: string; resume_token?: string }) => void;
   onToken?: (token: string) => void;
   onEnd?: (envelope: ChatEndEvent) => void;
   onError?: (message: string) => void;

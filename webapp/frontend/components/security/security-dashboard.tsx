@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
+import { isAccessDenied } from "@/lib/api/access";
 import {
   fetchAnomalies,
   fetchConformance,
@@ -539,7 +540,18 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     queryKey: ["memory-inventory"],
     queryFn: ({ signal }) => fetchMemoryInventory(signal),
     refetchInterval: POLL,
+    // A refusal is not a transient failure — retrying it just hammers the gate.
+    retry: (_count, error) => !isAccessDenied(error),
   });
+  // The memory inventory is subject-scoped (GDPR): it carries the stored memories' text and
+  // their subject ids, so the agent now requires a verified operator (audit 2026-07-12, F-4).
+  // An anonymous visitor of the public demo is refused here — and MUST be told so. Rendering
+  // `?? 0` for a refused caller would print a confident "0 sensitive memories expiring", which
+  // is not an honest empty: it is a fact about the world asserted from a fact about the caller.
+  const inventoryDenied = isAccessDenied(inventory.error);
+  const inventoryExpiring = inventoryDenied
+    ? ts("accessDenied")
+    : `${inventory.data?.n_expiring_soon ?? 0}`;
   const anomalies = useQuery({
     queryKey: ["anomalies", asOf, scope],
     queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope),
@@ -940,8 +952,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldAlert}
               label={ts("kpi.sensitiveMemory")}
               infoKey="sensitiveMemory"
-              value={`${inventory.data?.n_expiring_soon ?? 0}`}
-              tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+              value={inventoryExpiring}
+              tone={
+                inventoryDenied ? WARN : (inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD
+              }
               href="/configurer/sources-memoire"
               drillLabel={ts("kpi.sensitiveMemory")}
             />
@@ -1153,8 +1167,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldAlert}
               label={ts("kpi.sensitiveMemory")}
               infoKey="sensitiveMemory"
-              value={`${inventory.data?.n_expiring_soon ?? 0}`}
-              tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+              value={inventoryExpiring}
+              tone={
+                inventoryDenied ? WARN : (inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD
+              }
               href="/configurer/sources-memoire"
               drillLabel={ts("kpi.sensitiveMemory")}
             />
@@ -1447,8 +1463,14 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   icon={ShieldAlert}
                   label={ts("kpi.sensitiveMemory")}
                   infoKey="sensitiveMemory"
-                  value={`${inventory.data?.n_expiring_soon ?? 0}`}
-                  tone={(inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD}
+                  value={inventoryExpiring}
+                  tone={
+                    inventoryDenied
+                      ? WARN
+                      : (inventory.data?.n_expiring_soon ?? 0) > 0
+                        ? WARN
+                        : GOOD
+                  }
                   hint={ts("kpi.sensitiveMemoryHint")}
                   href="/configurer/sources-memoire"
                   drillLabel={ts("kpi.sensitiveMemory")}

@@ -3326,7 +3326,8 @@
       "linkSystem": "System profile",
       "domainCases": "Failed cases in this domain (harness)",
       "noCases": "No failed cases in this domain."
-    }
+    },
+    "accessDenied": "Access denied"
   },
   "compliance": {
     "title": "Compliance",
@@ -6863,7 +6864,9 @@
       "spansAgents": "Shared conversation (handoff)",
       "handoff": "Agent-to-agent handoff",
       "turn": "Turn",
-      "routedBy": "Routing"
+      "routedBy": "Routing",
+      "denied": "Access denied",
+      "deniedBody": "This data identifies a person (GDPR): sign in as an operator to view it."
     }
   },
   "fleet": {

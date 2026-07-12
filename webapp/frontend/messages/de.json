@@ -3326,7 +3326,8 @@
       "linkSystem": "Systemprofil",
       "domainCases": "Fehlgeschlagene Faelle der Domaene (Harness)",
       "noCases": "Keine fehlgeschlagenen Faelle in dieser Domaene."
-    }
+    },
+    "accessDenied": "Zugriff verweigert"
   },
   "compliance": {
     "title": "Compliance",
@@ -6863,7 +6864,9 @@
       "spansAgents": "Geteilte Konversation (Übergabe)",
       "handoff": "Agent-zu-Agent-Übergabe",
       "turn": "Runde",
-      "routedBy": "Routing"
+      "routedBy": "Routing",
+      "denied": "Zugriff verweigert",
+      "deniedBody": "Diese Daten sind personenbezogen (DSGVO): Melden Sie sich als Operator an, um sie einzusehen."
     }
   },
   "fleet": {

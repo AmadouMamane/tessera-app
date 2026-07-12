@@ -181,6 +181,8 @@ import {
   OverflowReportSchema,
   type OverviewSnapshotEnvelope,
   OverviewSnapshotSchema,
+  type OwnTranscript,
+  OwnTranscriptSchema,
   type PIILeakSummary,
   PIILeakSummarySchema,
   type ParametersOverview,
@@ -1741,7 +1743,14 @@ export async function fetchConversations(
   return request(`/observability/conversations${q}`, { signal }, ConversationListSchema);
 }
 
-/** The persisted messages of one conversation (to RESUME it in the console). */
+/**
+ * The persisted messages of one conversation (to RESUME it in the OPERATOR console).
+ *
+ * Subject-scoped: this is the operator's transcript read, and the agent requires a verified
+ * operator assertion for it (audit 2026-07-12, F-4). A customer resuming their OWN chat must
+ * use `fetchOwnTranscript` instead — it proves the grant with the signed capability the agent
+ * minted for that browser, rather than merely knowing an id.
+ */
 export async function fetchConversationMessages(
   conversationId: string,
   signal?: AbortSignal,
@@ -1751,6 +1760,27 @@ export async function fetchConversationMessages(
     `/observability/conversation-messages${q}`,
     { signal },
     ConversationMessagesSchema,
+  );
+}
+
+/**
+ * The caller's OWN conversation, replayed against the signed resume capability (F-4).
+ *
+ * The widget holds `{conversationId, resumeToken}`; the agent verifies that the token is the
+ * one it minted for that conversation and refuses (403) otherwise — so a leaked id, on its
+ * own, no longer reads a transcript. No operator assertion is involved: this is the customer
+ * plane, which has no per-person identity to assert.
+ */
+export async function fetchOwnTranscript(
+  conversationId: string,
+  resumeToken: string,
+  signal?: AbortSignal,
+): Promise<OwnTranscript> {
+  const q = `?conversation_id=${encodeURIComponent(conversationId)}`;
+  return request(
+    `/session/transcript${q}`,
+    { signal, headers: { "X-Tessera-Resume-Token": resumeToken } },
+    OwnTranscriptSchema,
   );
 }
 

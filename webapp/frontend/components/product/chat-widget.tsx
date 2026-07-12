@@ -6,19 +6,29 @@ import { useEffect, useRef, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
 import type { ExternalChatPrompt } from "@/components/chat/chat-room";
-import { fetchConversationMessages } from "@/lib/api/client";
+import { fetchOwnTranscript } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
 import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
 
 export const PRODUCT_CHAT_EVENT = "tessera:open-product-chat";
 export const CHAT_WIDGET_STATE_EVENT = "tessera:chat-widget-state";
 
-// Per-browser key holding the customer's own conversation id, so the produit
-// widget RESUMES it after a reload / return visit instead of dropping it (the
-// chat store is in-memory). It is a capability the customer's browser already
-// holds — resuming only ever loads the conversation whose id is stored here, so
-// there is no cross-customer exposure (the transcript is not subject-scoped).
+// Per-browser key holding the customer's own conversation id, so the produit widget RESUMES
+// it after a reload / return visit instead of dropping it (the chat store is in-memory).
+//
+// This comment used to end: "It is a capability the customer's browser already holds — so
+// there is no cross-customer exposure (the transcript is not subject-scoped)." Both halves
+// were wrong, and they are the whole of audit 2026-07-12 P1 F-4. The id was not a capability:
+// `GET /observability/conversations` published it, in public, next to the `title` — which the
+// backend defines as the conversation's opening user message. And the transcript very much IS
+// subject-scoped; the sentence was describing the *server*, which checked nothing, by
+// describing what the *client* happened to ask for.
+//
+// It is a capability NOW. The agent mints a signed resume token at `turn.start` and demands
+// it back (`GET /session/transcript`); a leaked id, alone, reads nothing. The token lives
+// beside the id below — losing it costs a resume, never a leak.
 export const PRODUIT_CID_KEY = "tessera.produit.conversationId";
+export const PRODUIT_RESUME_KEY = "tessera.produit.resumeToken";
 
 interface ProductChatEventDetail {
   prompt?: string;
@@ -46,36 +56,55 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [externalPrompt, setExternalPrompt] = useState<ExternalChatPrompt | null>(null);
   const conversationId = useChatStore((s) => s.conversationId);
+  const resumeToken = useChatStore((s) => s.resumeToken);
   const restoredRef = useRef(false);
 
-  // Resume the customer's last conversation on load — so turns made from
-  // /produit "remontent" after a refresh / return visit instead of vanishing
-  // (the store is ephemeral). Runs once; only when nothing is already active, so
-  // it never clobbers an in-flight conversation. A stale/unknown id (e.g. a wiped
-  // DB) loads empty → we clear it and start fresh rather than pin a dead id.
+  // Resume the customer's last conversation on load — so turns made from /produit "remontent"
+  // after a refresh / return visit instead of vanishing (the store is ephemeral). Runs once;
+  // only when nothing is already active, so it never clobbers an in-flight conversation.
+  //
+  // The resume now PROVES the grant instead of assuming it (F-4): we present the signed
+  // capability the agent minted for this browser. Three ways to end up with nothing — no id,
+  // no token (a conversation started before this shipped), or a token the agent refuses
+  // (expired / not for this id) — and all three do the same safe thing: clear the pair and
+  // start fresh. A stale/unknown id (e.g. a wiped DB) still loads empty and is cleared too.
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
     const state = useChatStore.getState();
     if (state.conversationId || state.messages.length > 0) return;
     let cid: string | null = null;
+    let token: string | null = null;
     try {
       cid = localStorage.getItem(PRODUIT_CID_KEY);
+      token = localStorage.getItem(PRODUIT_RESUME_KEY);
     } catch {
       cid = null;
+      token = null;
     }
+    const forget = () => {
+      try {
+        localStorage.removeItem(PRODUIT_CID_KEY);
+        localStorage.removeItem(PRODUIT_RESUME_KEY);
+      } catch {
+        // ignore disabled storage
+      }
+    };
     if (!cid) return;
+    if (!token) {
+      // An id with no capability is exactly what an attacker would hold. It is also what a
+      // returning customer holds if their last visit predates this change — so we do not try
+      // to read it, we drop it and let the next turn mint a fresh pair.
+      forget();
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetchConversationMessages(cid);
+        const res = await fetchOwnTranscript(cid, token);
         if (cancelled) return;
         if (res.messages.length === 0) {
-          try {
-            localStorage.removeItem(PRODUIT_CID_KEY);
-          } catch {
-            // ignore disabled storage
-          }
+          forget();
           return;
         }
         const msgs: ChatMessage[] = res.messages.map((m, index) => ({
@@ -86,7 +115,9 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
         }));
         useChatStore.getState().loadConversation(cid, msgs);
       } catch {
-        // offline or stale id — leave the widget fresh, never block the UI
+        // Refused (403 — expired or not ours), offline, or a stale id. Never block the UI;
+        // never pin a dead conversation. Start fresh.
+        if (!cancelled) forget();
       }
     })();
     return () => {
@@ -94,20 +125,23 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
     };
   }, []);
 
-  // Remember the active conversation id (while on /produit) so the effect above
-  // can resume it next time. Cleared id (Nouveau chat / branch) is left as-is —
-  // the next turn mints and persists a fresh id.
+  // Remember the active conversation AND the capability that reopens it (while on /produit),
+  // so the effect above can resume next time. A cleared id (Nouveau chat / branch) drops both:
+  // the token is worthless without its id, and keeping it would only widen what a stolen
+  // localStorage yields. The next turn mints and persists a fresh pair.
   useEffect(() => {
     try {
       if (conversationId) {
         localStorage.setItem(PRODUIT_CID_KEY, conversationId);
+        if (resumeToken) localStorage.setItem(PRODUIT_RESUME_KEY, resumeToken);
       } else {
         localStorage.removeItem(PRODUIT_CID_KEY);
+        localStorage.removeItem(PRODUIT_RESUME_KEY);
       }
     } catch {
       // ignore disabled storage
     }
-  }, [conversationId]);
+  }, [conversationId, resumeToken]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent(CHAT_WIDGET_STATE_EVENT, { detail: { isOpen: open } }));

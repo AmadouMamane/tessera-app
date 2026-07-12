@@ -124,6 +124,37 @@ export function operatorSurfaceForHint(
 }
 
 /**
+ * The operator surface a role may mint on when there is no client hint to consult — the case
+ * of a plain GET through the BFF proxy (audit 2026-07-12, F-4: the subject-scoped reads now
+ * require a verified assertion, so the proxy has to mint one for the human it just
+ * authenticated).
+ *
+ * Derived from the role's own authority, exactly like `operatorSurfaceForHint`, and with the
+ * same consequence: a `collections` session can only ever mint `dedicated-ui`. A role with no
+ * operator authority mints nothing (`null`) — which is the safe direction, since the agent
+ * grants OPERATOR only on a verified assertion.
+ */
+export function operatorSurfaceForRole(role: Role | null): OperatorSurface | null {
+  if (isOperator(role)) return "cockpit-embedded";
+  if (role === "collections") return "dedicated-ui";
+  return null;
+}
+
+/**
+ * Who may READ subject-scoped data — a transcript, a session detail, the memory inventory
+ * (audit 2026-07-12, F-4). Every operator role, and that breadth is deliberate: the `auditor`
+ * because reading is its trade (ADR 0009 — it reads and does not write), and `collections`
+ * because the recouvrement console's own Récents list and conversation resume ARE two of
+ * these endpoints.
+ *
+ * The read plane does not narrow; only the write plane does (`canMutateCockpit`). The
+ * authority is the agent's `SUBJECT_READ_ROLES`.
+ */
+export function canReadSubjectData(role: Role | null): boolean {
+  return role !== null && (isOperator(role) || role === "collections");
+}
+
+/**
  * The landing surface for a resolved role (ADR 0013). Identity is the door: an
  * authenticated operator lands on the **situational-awareness overview**
  * (`/surveiller/vue-ensemble`) — the cockpit is the *control plane*, and the

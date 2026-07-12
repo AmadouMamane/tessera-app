@@ -1,9 +1,12 @@
 import { ArrowRight, Bot, User } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { auth } from "@/auth";
 import { MessageContent } from "@/components/chat/message-content";
 import { SessionDetailSchema } from "@/lib/api/schemas";
+import { canReadSubjectData, operatorSurfaceForRole } from "@/lib/auth/roles";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
+import { OPERATOR_ASSERTION_HEADER, mintOperatorAssertion } from "@/lib/server/operator-assertion";
 
 interface PageProps {
   params: Promise<{ locale: string; agentId: string; sessionId: string }>;
@@ -24,17 +27,50 @@ const AGENT_ACCENT: Record<string, string> = {
 const accent = (id: string) =>
   AGENT_ACCENT[id] ?? "border-slate-500/40 bg-slate-500/15 text-slate-300";
 
-async function loadDetail(conversationId: string) {
+/**
+ * Load one conversation's turn-by-turn detail — as a VERIFIED operator.
+ *
+ * Audit 2026-07-12, **P1 F-4**. This is a server component, so it calls the agent directly
+ * and used to send only the service bearer — which says the call came from our frontend and
+ * never says who asked. The route is subject-scoped (every turn carries the customer's
+ * question and the agent's answer), so the agent now demands the signed operator assertion,
+ * and this page must mint it from the session it already has.
+ *
+ * Returns a discriminated result, not `null`, because the old `null` collapsed two very
+ * different truths into one screen: "there is no such conversation" and "you may not read
+ * it". Gating the endpoint without fixing this caller would have traded a security hole for
+ * a lie — an anonymous visitor would have been told the conversation was empty.
+ */
+type DetailResult =
+  | { kind: "ok"; data: ReturnType<typeof SessionDetailSchema.parse> }
+  | { kind: "denied" }
+  | { kind: "empty" };
+
+async function loadDetail(conversationId: string): Promise<DetailResult> {
+  const session = await auth();
+  const role = session?.user?.role ?? null;
+  if (!canReadSubjectData(role)) return { kind: "denied" };
+
+  const surface = operatorSurfaceForRole(role);
+  const assertion = surface
+    ? mintOperatorAssertion(session?.user?.name ?? String(role), String(role), surface)
+    : null;
+  if (!assertion) return { kind: "denied" };
+
   try {
     const q = `?conversation_id=${encodeURIComponent(conversationId)}`;
     const res = await fetch(`${backendUrl()}/observability/session-detail${q}`, {
       cache: "no-store",
-      headers: backendHeaders({ Accept: "application/json" }),
+      headers: backendHeaders({
+        Accept: "application/json",
+        [OPERATOR_ASSERTION_HEADER]: assertion,
+      }),
     });
-    if (!res.ok) return null;
-    return SessionDetailSchema.parse(await res.json());
+    if (res.status === 401 || res.status === 403) return { kind: "denied" };
+    if (!res.ok) return { kind: "empty" };
+    return { kind: "ok", data: SessionDetailSchema.parse(await res.json()) };
   } catch {
-    return null;
+    return { kind: "empty" };
   }
 }
 
@@ -42,7 +78,23 @@ export default async function SessionDetailPage({ params }: PageProps) {
   const { locale, sessionId } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "assistant" });
-  const data = await loadDetail(sessionId);
+  const result = await loadDetail(sessionId);
+
+  // "You may not see this" is never rendered as "there is nothing to see" (audit F-4).
+  if (result.kind === "denied") {
+    return (
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
+        <p className="text-sm font-medium text-[var(--tessera-text)]">
+          {t("sessionDetail.denied")}
+        </p>
+        <p className="max-w-md text-sm text-[var(--tessera-text-muted)]">
+          {t("sessionDetail.deniedBody")}
+        </p>
+      </div>
+    );
+  }
+
+  const data = result.kind === "ok" ? result.data : null;
 
   if (!data?.available || !data.turns?.length) {
     return (

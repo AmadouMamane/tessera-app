@@ -253,7 +253,8 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
           {
             signal: controller.signal,
             surface,
-            onStart: ({ conversation_id, turn_id }) => start(conversation_id, turn_id),
+            onStart: ({ conversation_id, turn_id, resume_token }) =>
+              start(conversation_id, turn_id, resume_token),
             onToken: (token) => {
               if (assistantId === null) assistantId = crypto.randomUUID();
               tokenBuffer += token;

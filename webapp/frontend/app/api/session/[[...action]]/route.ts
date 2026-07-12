@@ -56,7 +56,53 @@ async function proxy(
   return new Response(upstream.body, { status: upstream.status, headers });
 }
 
-export async function GET(request: NextRequest): Promise<Response> {
+/** Header the agent reads the conversation-resume capability from (mirrors api/session.py). */
+const RESUME_TOKEN_HEADER = "X-Tessera-Resume-Token";
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ action?: string[] }> },
+): Promise<Response> {
+  const { action } = await context.params;
+
+  // The customer's own transcript (audit 2026-07-12, F-4). The widget used to resume through
+  // `/observability/conversation-messages`, an operator endpoint that answered anyone for any
+  // conversation id. That id was never a secret — `/observability/conversations` published it
+  // next to the opening user message — so the read now demands the signed capability the agent
+  // minted for THIS browser at `turn.start`. We forward it; the agent verifies it.
+  if (action?.[0] === "transcript") {
+    const conversationId = request.nextUrl.searchParams.get("conversation_id") ?? "";
+    const token = request.headers.get(RESUME_TOKEN_HEADER);
+    if (!token) {
+      return NextResponse.json(
+        { detail: "a valid resume capability is required for this conversation" },
+        { status: 403 },
+      );
+    }
+    let upstream: Response;
+    try {
+      upstream = await fetch(
+        `${backendUrl()}/session/transcript?conversation_id=${encodeURIComponent(conversationId)}`,
+        {
+          method: "GET",
+          headers: backendHeaders({
+            Accept: "application/json",
+            [RESUME_TOKEN_HEADER]: token,
+          }),
+        },
+      );
+    } catch (err) {
+      return NextResponse.json(
+        { detail: err instanceof Error ? err.message : "backend unreachable" },
+        { status: 502 },
+      );
+    }
+    const headers = new Headers();
+    const contentType = upstream.headers.get("content-type");
+    if (contentType) headers.set("content-type", contentType);
+    return new Response(upstream.body, { status: upstream.status, headers });
+  }
+
   return proxy(request, "GET", "/session");
 }
 

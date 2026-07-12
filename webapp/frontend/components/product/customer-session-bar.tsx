@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SUBJECT_ID_KEY } from "@/components/chat/chat-room";
 import { type SessionState, fetchSessionState, loginDemo, logoutSession } from "@/lib/api/session";
 import { useChatStore } from "@/lib/stores/chat-store";
-import { PRODUIT_CID_KEY } from "./chat-widget";
+import { PRODUIT_CID_KEY, PRODUIT_RESUME_KEY } from "./chat-widget";
 
 /**
  * Customer-session strip for the chat widget (ADR 0008/0009).
@@ -41,6 +41,7 @@ export function CustomerSessionBar() {
       setSession(newState);
       try {
         localStorage.removeItem(PRODUIT_CID_KEY);
+        localStorage.removeItem(PRODUIT_RESUME_KEY);
         // Wipe long-term agent memory identity when auth changes (ADR 0007).
         localStorage.removeItem(SUBJECT_ID_KEY);
       } catch {}

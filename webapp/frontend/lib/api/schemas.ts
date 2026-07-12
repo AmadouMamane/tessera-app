@@ -178,7 +178,20 @@ export type ChatTrace = NonNullable<ChatDebug["trace"]>;
 export const ChatStartEventSchema = z.object({
   conversation_id: z.string().uuid(),
   turn_id: z.string().uuid(),
+  /**
+   * Signed capability letting THIS browser re-read THIS conversation (audit 2026-07-12,
+   * F-4). Optional so an older agent still streams; without it the widget simply cannot
+   * resume and starts a fresh conversation, which is the safe direction.
+   */
+  resume_token: z.string().optional(),
 });
+
+/** The caller's OWN transcript, replayed against the resume capability (GET /session/transcript). */
+export const OwnTranscriptSchema = z.object({
+  conversation_id: z.string(),
+  messages: z.array(z.object({ role: z.string(), content: z.string() })),
+});
+export type OwnTranscript = z.infer<typeof OwnTranscriptSchema>;
 
 export const ChatEndEventSchema = z.object({
   conversation_id: z.string().uuid(),

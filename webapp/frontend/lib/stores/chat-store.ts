@@ -30,11 +30,18 @@ export interface ChatMessage {
 
 interface ChatState {
   conversationId: string | null;
+  /**
+   * Signed capability letting THIS browser re-read THIS conversation (audit 2026-07-12, F-4).
+   * Minted by the agent at `turn.start`. The transcript read is no longer granted by knowing
+   * a conversation id — the id was never secret — so the widget must keep the capability to
+   * resume after a reload.
+   */
+  resumeToken: string | null;
   turnId: string | null;
   messages: ChatMessage[];
   isStreaming: boolean;
   lastError: string | null;
-  start: (conversationId: string, turnId: string) => void;
+  start: (conversationId: string, turnId: string, resumeToken?: string) => void;
   loadConversation: (conversationId: string, messages: ChatMessage[]) => void;
   appendUser: (content: string) => ChatMessage;
   startAssistant: (turnId: string) => void;
@@ -55,13 +62,22 @@ export const useChatStore = create<ChatState>()(
   devtools(
     (set) => ({
       conversationId: null,
+      resumeToken: null,
       turnId: null,
       messages: [],
       isStreaming: false,
       lastError: null,
 
-      start: (conversationId, turnId) =>
-        set({ conversationId, turnId, isStreaming: true, lastError: null }),
+      start: (conversationId, turnId, resumeToken) =>
+        set((state) => ({
+          conversationId,
+          turnId,
+          isStreaming: true,
+          lastError: null,
+          // Keep the one we already hold if this turn did not carry a fresh one, so a
+          // mid-conversation turn never drops the capability that resumes it.
+          resumeToken: resumeToken ?? state.resumeToken,
+        })),
 
       // Resume a "Récents" conversation: load its persisted transcript and keep
       // its id so the next turn continues the SAME conversation server-side.
@@ -131,7 +147,13 @@ export const useChatStore = create<ChatState>()(
         set((state) => {
           const idx = state.messages.findIndex((m) => m.id === messageId);
           if (idx === -1) return {};
-          return { messages: state.messages.slice(0, idx), conversationId: null };
+          // The capability goes with the id it authorized: a clean branch is a new
+          // conversation, and holding a token for the abandoned one grants nothing.
+          return {
+            messages: state.messages.slice(0, idx),
+            conversationId: null,
+            resumeToken: null,
+          };
         }),
 
       // Removes the last [user, assistant] pair so sendMessage can re-send cleanly.
@@ -149,6 +171,7 @@ export const useChatStore = create<ChatState>()(
       reset: () =>
         set({
           conversationId: null,
+          resumeToken: null,
           turnId: null,
           messages: [],
           isStreaming: false,

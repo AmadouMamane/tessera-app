@@ -3326,7 +3326,8 @@
       "linkSystem": "Profil système",
       "domainCases": "Cas échoués du domaine (harnais)",
       "noCases": "Aucun cas échoué dans ce domaine."
-    }
+    },
+    "accessDenied": "Accès refusé"
   },
   "compliance": {
     "title": "Conformité",
@@ -6863,7 +6864,9 @@
       "spansAgents": "Conversation partagée (handoff)",
       "handoff": "Transfert agent → agent",
       "turn": "Tour",
-      "routedBy": "Routage"
+      "routedBy": "Routage",
+      "denied": "Accès refusé",
+      "deniedBody": "Ces données sont nominatives (RGPD) : connectez-vous en tant qu'opérateur pour les consulter."
     }
   },
   "fleet": {

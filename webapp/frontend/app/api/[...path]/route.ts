@@ -10,14 +10,24 @@
  * a wildcard — that would make every authenticated agent GET endpoint anonymously
  * reachable through the public front. We allowlist by first path segment:
  *   - healthz/readyz  → always public (liveness/readiness)
+ *   - observability   → public AGGREGATES only (ADR 0009). The subject-scoped reads under
+ *                       the same prefix — transcripts, session detail, memory inventory —
+ *                       require a verified operator (see below).
  *   - audit           → admin or auditor (ADR 0009; replaces TESSERA_DASHBOARD_PUBLIC)
  *   - budget          → admin only (cost counters)
+ *   - memory          → subject-scoped, so a verified operator (GDPR Art. 15 read)
  *   - anything else   → never proxied (404)
+ *
+ * Audit 2026-07-12, **P1 F-4**: `observability` sat in ALWAYS_PUBLIC as a whole, so
+ * `GET /api/observability/conversation-messages?conversation_id=…` handed any conversation's
+ * full transcript to an anonymous visitor — with the service bearer attached on their behalf.
+ * The prefix is still public; the fourteen subject-scoped paths under it are not.
  */
 import { type NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { canMutateCockpit } from "@/lib/auth/roles";
+import { canMutateCockpit, canReadSubjectData, operatorSurfaceForRole } from "@/lib/auth/roles";
+import { isSubjectScopedPath } from "@/lib/auth/subject-paths";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 import { OPERATOR_ASSERTION_HEADER, mintOperatorAssertion } from "@/lib/server/operator-assertion";
 
@@ -33,7 +43,45 @@ export async function GET(
   const { path } = await context.params;
   const head = path[0] ?? "";
 
-  if (!ALWAYS_PUBLIC.has(head)) {
+  // Subject-scoped reads (F-4). Checked BEFORE the ALWAYS_PUBLIC allowlist, because most of
+  // them live under the `observability` prefix that allowlist opens. The agent re-checks the
+  // assertion — this is the friendly refusal, that one is the authority.
+  const subjectScoped = isSubjectScopedPath(path);
+  const extraHeaders: Record<string, string> = {};
+
+  if (subjectScoped) {
+    const session = await auth();
+    const role = session?.user?.role ?? null;
+    if (role === null) {
+      return NextResponse.json({ detail: "operator authentication required" }, { status: 401 });
+    }
+    if (!canReadSubjectData(role)) {
+      return NextResponse.json(
+        { detail: "this role may not read subject-scoped data" },
+        {
+          status: 403,
+        },
+      );
+    }
+    // Mint the assertion the agent verifies. The bearer this proxy attaches says only that
+    // the call came from our frontend; it never says which human asked, and a transcript is
+    // personal data. Without the assertion the agent refuses — which is the point.
+    const surface = operatorSurfaceForRole(role);
+    const assertion = surface
+      ? mintOperatorAssertion(session?.user?.name ?? role, role, surface)
+      : null;
+    if (!assertion) {
+      console.error(
+        "[api] subject-scoped read blocked — TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY is " +
+          "unset in the front env. Set the SAME secret on the agent and the front.",
+      );
+      return NextResponse.json(
+        { detail: "operator assertion unavailable (signing key unset)" },
+        { status: 503 },
+      );
+    }
+    extraHeaders[OPERATOR_ASSERTION_HEADER] = assertion;
+  } else if (!ALWAYS_PUBLIC.has(head)) {
     const role = (await auth())?.user?.role;
     // superadmin is the highest role — it passes every operator gate.
     const allowed =
@@ -56,6 +104,7 @@ export async function GET(
       method: "GET",
       headers: backendHeaders({
         Accept: request.headers.get("accept") ?? "application/json",
+        ...extraHeaders,
       }),
     });
   } catch (err) {
