@@ -17,13 +17,14 @@ The patterns are drawn from AgentAssay and Promptfoo: declarative case files,
 substring and behavioural assertions, per-language expansion, and a
 machine-readable scorecard. On top of those patterns, Tessera contributes a
 curated, regulatory-grounded catalogue for one use case (EU retail banking
-support in FR/DE/EN) and the
-wiring that replays it against the real LangGraph agent on every push.
+support in FR/DE/EN) and the wiring that replays it against the real LangGraph
+agent — the deterministic half on every push, the model half on demand on a
+machine that has a model (see "CI integration").
 
 ## Failure taxonomy
 
-The catalogue holds **61 cases** across ten categories (the original 40 plus a
-first web-sourced batch of 21, ids 41–61 — see `docs/eval-sourcing.md` for the
+The catalogue holds **63 cases** across ten categories (the original 40 plus a
+web-sourced batch of 23, ids 41–63 — see `docs/eval-sourcing.md` for the
 procedure and the per-case reference links). It is growing toward 100, then 200.
 The category set is fixed by the `category` enum in `eval/failures/_schema.json`:
 
@@ -33,16 +34,21 @@ The category set is fixed by the `category` enum in `eval/failures/_schema.json`
 | `pii_leak` | 9 | The agent must mask IBANs, card numbers, and other PII in both responses and the audit trail. |
 | `hallucination` | 9 | Factual claims must trace to retrieved documents or tool results; ungrounded answers must not be emitted. |
 | `overconfidence` | 7 | The agent must not assert high confidence on thin or absent evidence. |
+| `regulatory_misstatement` | 6 | Statements about DORA/CNIL/BaFin/GDPR obligations must be accurate and sourced. |
 | `citation_fabrication` | 5 | Cited regulatory sources (DORA articles, BaFin circulars) must be real and retrieved, never invented. |
 | `tool_misuse` | 5 | Side-effecting tools (`card_block`, transfers) must not be invoked without justification. |
 | `policy_violation` | 5 | Requests that violate guard policy must be denied. |
-| `regulatory_misstatement` | 5 | Statements about DORA/CNIL/BaFin/GDPR obligations must be accurate and sourced. |
-| `language_mixing` | 3 | The answer must stay in the user's detected language; no FR/DE/EN code-switching. |
+| `language_mixing` | 4 | The answer must stay in the user's detected language; no FR/DE/EN code-switching. |
 | `escalation_failure` | 2 | Cases that must reach a human must set `needs_escalation`. |
 
 Each case is one JSON file under `eval/failures/NN_short_name.json`, where `NN`
 is a two- or three-digit ordinal (the catalogue now exceeds 99). The numbering
 matches the `id` field and the filename.
+
+The cases are **not all trilingual**: a case declares the languages it applies
+in, and the catalogue expands to **174 (case, language) runs** — 60 FR, 58 DE,
+56 EN — not 63 × 3 = 189. Every count in this document is a count of *runs*,
+because that is the unit the scorecard, the gate and the ratchet all operate on.
 
 ## Case schema
 
@@ -151,6 +157,97 @@ reasons, a pass-rate breakdown by language, and an overall pass count. The
 per-language breakdown matters: a case can pass in EN and fail in DE, and that
 must be visible, not averaged away.
 
+## What the harness actually measures — the null control
+
+A pass rate from this harness is **not a model score**, and reading it as one is
+the single biggest way to be wrong about Tessera's quality. The agent under
+replay is the whole production graph, and most of that graph is deterministic:
+the router short-circuits, the guard refuses, the planner sets escalation
+intents. Those layers close cases without ever calling an LLM.
+
+To measure how much, we run the catalogue with **every LLM backend pointed at a
+closed port** — the *null control*:
+
+```bash
+make eval-null      # ~5 seconds, no model, no Postgres, no secrets
+```
+
+Measured 2026-07-12, catalogue version `63-…`:
+
+| Run | Score | Notes |
+| --- | --- | --- |
+| **Null control** (no LLM at all) | **122/174 (70%)** | 0 tokens generated, 0 crashes, ~5s |
+| llama3.2:3b | 156/174 (90%) | the model fixes 37 runs, and *breaks* 3 |
+
+Read that carefully. **An agent with no language model whatsoever passes 70% of
+this catalogue.** The deterministic layer is doing that work, and it is real work
+— but it means a headline "90%" is a 70-point floor plus 20 points of model. Four
+consequences, all of which the tooling now encodes rather than leaves to be
+rediscovered:
+
+1. **A dead backend does not look like a failure.** With Ollama unreachable the
+   runner does not crash. Every case completes, the report still records
+   `"model": "llama3.2:3b"` (the *configured* model — never evidence of a call),
+   and the scorecard reads a clean 70%. The `model` field is therefore worthless
+   as proof that a model ran. The only honest witness is **generated tokens**, and
+   `eval/ratchet.py::model_spoke` is what checks it. Nothing may be filed as a
+   model verdict without passing `scripts/assert_model_spoke.py`.
+
+2. **Four of the six `critical` cases pass with no model.** The eval-gate's
+   zero-tolerance critical floor is cleared 12/18 by the null control; only
+   `02_pii_leak` and `45_pii_leak_card_pan_echo` actually fail, and it is those
+   two — not the design — that make the gate BLOCK on a modelless run. The
+   critical floor largely measures the *guard*, which is a legitimate thing to
+   measure, but it is not what "the agent is safe" sounds like.
+
+3. **The domain bars sit below the null floor.** The three agents' `min_pass_rate`
+   are 55%, 65% and 55%; the null control scores their domain sets at 72%, 89% and
+   61%. Every domain bar is cleared **by an agent with no LLM**. As written, the
+   domain bar cannot fail anything the deterministic layer already passes — it is
+   a floor under a floor. Raising the bars is a governed change to
+   `eval/sets/*.json` and is deliberately *not* done here; the ratchet is what
+   holds the line in the meantime.
+
+4. **Two categories have no discriminating power at all.** `policy_violation`
+   (15/15) and `escalation_failure` (6/6) pass 100% under the null control: as
+   currently written, no model can fail them. They assert that the deterministic
+   layer is wired, not that the model behaves. `hallucination` (52%) and
+   `citation_fabrication` (0%) are the most model-sensitive.
+
+The null control is not a diagnostic we run occasionally — it is a **committed
+baseline** (`eval/baselines/null-control.json`, 174 per-case verdicts) and a CI
+gate. See "The ratchet" below.
+
+## The ratchet
+
+`eval/ratchet.py` compares a run against a committed baseline. It has two modes,
+and the difference between them is the point.
+
+**The null control — exact match.** The modelless run is hermetic (no model, no
+database, no secrets, ~5s), which makes it the one part of the harness a
+GitHub-hosted runner can honestly execute. It is pinned by *exact* match: any
+movement fails, in either direction. A regression means the guard, the router or
+a pass criterion broke. An **improvement fails too**, on purpose — the
+deterministic layer getting better is a real change, and it lands as a deliberate
+baseline refresh (`make eval-null-write`) whose diff is the evidence. This turns
+70% of the catalogue into a true, free, per-push regression gate.
+
+**A model run — monotone, plus liveness.** A case that passed in the baseline may
+not fail; the pass count may not drop; and the run must prove a model answered.
+Improvements are welcome and do not fail the check, but they do not silently
+update the baseline either.
+
+```bash
+make eval-null                                       # replay + ratchet the control
+uv run python scripts/check_ratchet.py \
+    --report eval/reports/local/latest.json \
+    --baseline eval/baselines/null-control.json      # ratchet any report
+```
+
+The ratchet's own tests (`tests/unit/test_eval_ratchet.py`) are half **mutation
+tests** — each takes a passing run, breaks exactly one thing, and asserts the
+ratchet blocks. A ratchet that cannot fail polices nothing while reading green.
+
 ## Grounding score semantics
 
 The reviewer (`src/tessera/agent/reviewer.py`) produces the grounding signal the
@@ -193,11 +290,36 @@ heavier scoring in `eval/`.
 
 ## CI integration
 
-`.github/workflows/eval.yml` runs the harness on every push. The runner's exit
-code is the gate: a non-zero exit (any failing case) fails the workflow and
-blocks merge. This makes the catalogue a true regression gate — a change that
-reintroduces a previously-fixed failure cannot land. The JSON scorecard at
-`eval/reports/latest.json` is the machine-readable artefact; the Markdown table
-is surfaced in the job log. Per the project's honest-positioning rule, any case
-that is known to fail must be documented in the README with its root cause
-rather than removed or quietly skipped.
+Until 2026-07-12 this section claimed that `.github/workflows/eval.yml` "runs the
+harness on every push" and that its exit code "blocks merge". Neither was true,
+and the second could not have been: **a GitHub-hosted runner has no model.**
+`ubuntu-latest` has no Ollama and no Vertex credentials, so a replay launched
+there is a null run. Because the runner does not crash without a backend, such a
+job would not have produced a weak result — it would have produced a *fake* one,
+a modelless 70% wearing a model's name. The workflow also only fired on a nightly
+cron and on PRs carrying an `eval` label, so in practice it gated nothing at all.
+
+The workflow now splits along the line the null control revealed:
+
+**`null-control`** — runs on **every push and PR**, on `ubuntu-latest`, with no
+services and no secrets. It replays the whole catalogue with every backend
+pointed at a closed port and ratchets the result against
+`eval/baselines/null-control.json` by exact match. It takes ~5 seconds and it is
+a genuine gate: 70% of the catalogue — the entire deterministic guard/router
+layer — cannot regress without failing the build. This is the eval gate CI can
+honestly hold, and it is the one that now holds.
+
+**`model-replay`** — `workflow_dispatch` only, on a runner label the operator
+supplies (`self-hosted`, i.e. a machine that actually has a model). It replays
+the catalogue against a named model, then runs `scripts/assert_model_spoke.py`,
+which fails the job unless the report shows generated tokens. It is *not* on a
+schedule: a nightly job pointed at a hosted runner would file a modelless run as
+a nightly result, which is precisely the failure this design exists to prevent.
+The per-agent eval-gates (critical floor + domain bar) run inside this job, where
+a model exists to be judged.
+
+The JSON scorecard is the machine-readable artefact; the Markdown table is
+surfaced in the job log and, for a dispatched replay, uploaded as an artifact.
+Per the project's honest-positioning rule, any case that is known to fail must be
+documented in the README with its root cause rather than removed or quietly
+skipped.

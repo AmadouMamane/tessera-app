@@ -1,21 +1,46 @@
 name: Eval
 
+# The harness has two halves, and only one of them can run on a GitHub-hosted runner.
+#
+#   * The DETERMINISTIC half — guard, router, policy short-circuits and the pass
+#     criteria — needs no model, no database and no secrets. Measured 2026-07-12,
+#     it closes 122 of the catalogue's 174 (case, language) runs on its own, in
+#     ~5 seconds. That half is gated here, on every push, by exact match against a
+#     committed baseline (`eval/baselines/null-control.json`).
+#
+#   * The MODEL half needs an LLM. `ubuntu-latest` has no Ollama and no Vertex
+#     credentials, so a replay launched there is a *modelless* run — and the runner
+#     does not crash without a backend: it completes every case, still writes
+#     `model: "llama3.2:3b"` into the report, and scores the deterministic layer
+#     alone. Running the replay on a hosted runner would therefore not produce a
+#     weak model verdict, it would produce a FAKE one. It is operator-triggered on
+#     a machine that actually has a model, and `check_ratchet` refuses any report
+#     that generated zero output tokens.
+#
+# This split is the point: CI gates what it can honestly gate, and refuses to
+# pretend about the rest.
+
 on:
+  push:
+    branches: [main]
+  pull_request:
   schedule:
-    # Nightly at 03:00 UTC.
+    # Nightly at 03:00 UTC — the deterministic control only.
     - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
-      case:
-        description: "Run only the case with this id (e.g. 03_hallucination_fact). Empty = run all."
+      model:
+        description: "Model to replay the catalogue against (e.g. llama3.3:70b). Requires a model-capable runner."
         required: false
         default: ""
+      runner:
+        description: "Runner label for the model replay (must have Ollama or Vertex credentials)."
+        required: false
+        default: "self-hosted"
       language:
-        description: "Restrict to one language (fr, de, en). Empty = all."
+        description: "Restrict the replay to one language (fr, de, en). Empty = all."
         required: false
         default: ""
-  pull_request:
-    types: [labeled]
 
 permissions:
   contents: read
@@ -29,32 +54,10 @@ env:
   UV_VERSION: "0.5.4"
 
 jobs:
-  run-eval:
-    name: Non-regression failure catalogue
+  # ── The gate CI can actually hold ─────────────────────────────────────────
+  null-control:
+    name: Deterministic control (no model, no services)
     runs-on: ubuntu-latest
-    # PR-label gate: only run on labelled PRs to avoid burning quota on every push.
-    if: >
-      github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.label.name == 'eval')
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: tessera
-          POSTGRES_PASSWORD: tessera
-          POSTGRES_DB: tessera
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U tessera -d tessera"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    env:
-      TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@localhost:5432/tessera
-      TESSERA_LLM_PROFILE: on_prem
-      TESSERA_OBSERVABILITY__METRICS_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
 
@@ -67,24 +70,61 @@ jobs:
             pyproject.toml
             uv.lock
 
-      - name: Sync with eval group
+      # `make eval-null` points every LLM backend at a closed port, so nothing can
+      # quietly answer, then ratchets the result. A control run in which a model
+      # DID speak is rejected as loudly as one that regressed.
+      - name: Replay the catalogue with no model, and ratchet it
+        run: make eval-null
+
+      - name: Upload the control report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-null-control-${{ github.run_id }}
+          path: .eval-control/null-control.json
+          retention-days: 30
+
+  # ── The half that needs a model: operator-triggered, never faked ──────────
+  model-replay:
+    name: Model replay (${{ inputs.model || 'default' }})
+    # Dispatch only. A schedule pointed at a hosted runner would file a modelless
+    # run as a nightly "result" — the exact failure this workflow exists to
+    # prevent. The ratchet's liveness check is the backstop; this `if` is the fence.
+    if: github.event_name == 'workflow_dispatch' && inputs.model != ''
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Sync with the eval group
         run: uv sync --group eval
 
-      - name: Run the failure catalogue
-        id: eval
+      - name: Replay the catalogue
         run: |
           set -o pipefail
-          ARGS=""
-          if [[ -n "${{ inputs.case }}" ]]; then ARGS="$ARGS --case ${{ inputs.case }}"; fi
+          ARGS="--model ${{ inputs.model }}"
           if [[ -n "${{ inputs.language }}" ]]; then ARGS="$ARGS --lang ${{ inputs.language }}"; fi
-          uv run python scripts/run_eval.py $ARGS | tee eval/reports/scorecard.md
+          uv run python scripts/run_eval.py $ARGS --report eval/reports/replay.json \
+            | tee eval/reports/scorecard.md
 
-      # The eval-gate, per agent: each agent runs its bound set (curated subset +
-      # the shared security floor) under the two-level gate (critical zero-tolerance
-      # AND domain >= min_pass_rate). The job fails if ANY agent's gate fails — this
-      # is the CI manifestation of "an agent that fails its set is blocked".
+      # A report with zero generated tokens never reached a model, whatever its
+      # `model` field claims. Fail rather than file it.
+      - name: Assert a model actually answered
+        run: uv run python scripts/assert_model_spoke.py eval/reports/replay.json
+
+      # The per-agent eval-gate: each agent is replayed against its bound set
+      # (curated subset + the shared security floor) under the two-level gate
+      # (critical zero-tolerance AND domain >= min_pass_rate). Any agent failing
+      # its gate fails the job.
       - name: Per-agent eval-gates
-        if: ${{ inputs.case == '' }}
         run: |
           set -o pipefail
           AGENTS=$(uv run python -c "from tessera.agent.registry import list_agents; print(' '.join(a.id for a in list_agents()))")
@@ -93,7 +133,7 @@ jobs:
           rc=0
           for a in $AGENTS; do
             echo "::group::eval-gate $a"
-            uv run python scripts/run_eval.py --agent "$a" $LANG_ARG || rc=1
+            uv run python scripts/run_eval.py --agent "$a" --model "${{ inputs.model }}" $LANG_ARG || rc=1
             echo "::endgroup::"
           done
           exit $rc
@@ -104,13 +144,6 @@ jobs:
         with:
           name: eval-scorecard-${{ github.run_id }}
           path: |
-            eval/reports/latest.json
+            eval/reports/replay.json
             eval/reports/scorecard.md
           retention-days: 30
-
-      - name: Comment scorecard on PR
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: tessera-eval
-          path: eval/reports/scorecard.md

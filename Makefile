@@ -86,9 +86,41 @@ coverage: install
 
 # ── Eval harness ────────────────────────────────────────────────────────────
 
-# Run the full 40-case regression harness against the live agent
+# Run the full 63-case regression harness against the live agent (needs a model)
 eval: install
 	uv run python scripts/run_eval.py
+
+# The modelless control — the deterministic guard/router layer scored on its own,
+# with every LLM backend pointed at a closed port. No model, no services, ~5s.
+# This is the half of the harness CI can actually run, and it is a real gate:
+# `check_ratchet` demands an EXACT match against the committed baseline, so any
+# movement in the guard, the router or the pass criteria fails the build.
+# The control's report is written OUTSIDE eval/reports/. That tree is the
+# dashboard's and the wiring probes' read surface (ADR 0014: writes go to
+# eval/reports/<env>/ exclusively), and the runner always drops a sibling
+# `latest.json` next to --report. Pointing the control at eval/reports/ therefore
+# publishes a modelless 70% as the project's latest eval result — it silently
+# flipped `test_eval_pass_rate_reactive_and_invariant` to DEAD when this target
+# was first written. The control is a control, not a result: it stays out.
+NULL_HOST := http://127.0.0.1:59999
+NULL_REPORT := .eval-control/null-control.json
+NULL_BASELINE := eval/baselines/null-control.json
+
+# The runner exits 1 here by design — 52 of the 174 runs need a model and fail
+# without one. That exit code is NOT the verdict for the control; the ratchet is.
+eval-null: install
+	-TESSERA_LLM_PROFILE=on_prem TESSERA_OLLAMA_HOST=$(NULL_HOST) \
+		uv run python scripts/run_eval.py --report $(NULL_REPORT)
+	uv run python scripts/check_ratchet.py \
+		--report $(NULL_REPORT) --baseline $(NULL_BASELINE)
+
+# Refresh the control's baseline after a DELIBERATE change to the deterministic
+# layer. Commit the diff — it is the evidence of what moved and why.
+eval-null-write: install
+	-TESSERA_LLM_PROFILE=on_prem TESSERA_OLLAMA_HOST=$(NULL_HOST) \
+		uv run python scripts/run_eval.py --report $(NULL_REPORT)
+	uv run python scripts/check_ratchet.py \
+		--report $(NULL_REPORT) --baseline $(NULL_BASELINE) --write
 
 # Run one case: make eval-case CASE=07_prompt_injection_roleplay
 eval-case: install

@@ -145,6 +145,43 @@ Until 2026-07-10 this section claimed the frontend `biome` and `tsc` ran in CI. 
 - **End-to-end suite** (`webapp/frontend/e2e/`, Playwright). The `e2e` job runs it against a **production build** (`next build` + `next start`), one worker, with PostgreSQL from a service container. Against a seeded local stack the suite is **182 passed / 0 failed / 0 skipped**, twice in a row. On the bare runner it is **160 / 19 / 2**, and those 19 are an empty database, not spec debt: the catalogue expects 17 sources and finds the 2 memory tables, because the fifteen corpus categories live in a pgvector index the runner has never been fed. So the job stays **non-blocking**. It flips when CI gets a seeded dataset — which needs embeddings, hence a model, hence a secret the gate must never hold. Narrowing the job to the data-independent subset would be a weaker gate wearing the name of the gate, and that is not something we do.
 - **Integration suite** (`tests/integration/`, `pytest.mark.integration`) exercises the full graph and the persistent memory backend. A subset needs a seeded PostgreSQL and a live LLM (Ollama / Vertex AI) that the hosted runner does not provide, so the job runs for visibility but is **non-blocking**. Locally, with services up: `uv run pytest tests/integration/ -m integration` (currently 16 pass / 3 require seeded Postgres + a running model).
 
+### Regression harness — what the numbers below are, and are not
+
+Read this before the table. A pass rate from this harness is **not a model score.**
+The replayed agent is the whole production graph, and most of that graph is
+deterministic — the router short-circuits, the guard refuses, the planner sets
+escalation intents — so a large share of the catalogue is closed without any LLM
+being called. We measure exactly how large by running the catalogue with every
+model backend pointed at a closed port (`make eval-null`, ~5s, no services):
+
+| Run | Score |
+| --- | --- |
+| **Null control — no LLM at all** | **122/174 (70%)** |
+| llama3.2:3b | 156/174 (90%) |
+
+An agent with **no language model whatsoever passes 70%** of this catalogue. So a
+"90%" is a 70-point deterministic floor plus 20 points of model. That floor is
+real engineering — the guard genuinely closes those cases — but it is not what a
+model score sounds like, and three things follow that we now enforce rather than
+hope for:
+
+- **A dead backend does not look like a failure.** With Ollama unreachable the
+  runner does not crash: every case completes and the report still says
+  `"model": "llama3.2:3b"`. The model field proves nothing; only generated tokens
+  do. `scripts/assert_model_spoke.py` fails any run that produced zero output
+  tokens, so a modelless run can never be filed as a model result.
+- **The null control is now a CI gate.** It is hermetic (no model, no Postgres, no
+  secrets), so `.github/workflows/eval.yml` runs it on **every push** and pins it
+  by exact match against `eval/baselines/null-control.json`. 70% of the catalogue
+  — the entire deterministic layer — can no longer regress unnoticed. The model
+  half is operator-triggered on a machine that has a model; a hosted runner cannot
+  honestly do it, so it is not asked to.
+- **The domain bars are below the floor.** The agents' `min_pass_rate` are 55% /
+  65% / 55%; the null control clears their domain sets at 72% / 89% / 61%. As
+  written, no domain bar can fail a run that the deterministic layer already
+  passes. Raising them is a governed change to `eval/sets/*.json` and is not done
+  silently. Details and the full breakdown: [`docs/eval.md`](./docs/eval.md).
+
 ### Regression harness — fleet release gates (llama3.2:3b, 2026-07-04)
 
 Each agent is replayed against **its own bound evaluation set** (curated domain subset + the shared security floor), in all three languages. Domain rates are only meaningful against the agent's own set — the single inter-agent comparison is the **shared security floor (socle)**. There is deliberately no fleet-wide percentage: averaging different sets would manufacture a number with no referent.
@@ -289,7 +326,7 @@ On-prem serves several selectable Ollama models — **Llama 3.2 3B (default)**, 
 | HTTP                   | FastAPI                                         | —                                       |
 | Dashboard              | Next.js (under `webapp/frontend/`)              | —                                       |
 | Infrastructure         | Terraform → Cloud Run + Cloud SQL + Secret Manager | [docs/runbook.md](./docs/runbook.md) |
-| CI                     | GitHub Actions (5 workflows: ci, eval, deploy, security, supply-chain) | [ADR 0003](./docs/decisions/0003-ci-github-actions.md) |
+| CI                     | GitHub Actions (7 workflows: ci, eval, integration, deploy, security, supply-chain, deps) | [ADR 0003](./docs/decisions/0003-ci-github-actions.md) |
 
 The stack is **frozen**. Changes require an ADR under [`docs/decisions/`](./docs/decisions/).
 
