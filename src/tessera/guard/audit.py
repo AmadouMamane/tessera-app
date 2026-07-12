@@ -34,12 +34,12 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path  # noqa: TCH003  used at runtime by the file sink
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 # Leaf import (stdlib-only module): the authz vocabulary is shared with the agent
 # registry but lives outside ``tessera.agent`` so the guard never pulls the
 # LangGraph at import time (no cycle).
-from tessera.authz import AuthState
+from tessera.authz import Actor, AuthState
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -50,6 +50,7 @@ __all__ = [
     "AGENT_INVOCATION_TYPE",
     "AGENT_LIFECYCLE_PHASES",
     "CANARY_INVOCATION_TYPE",
+    "GUARD_ACTOR",
     "LEDGER_ATTESTATION_TYPE",
     "LEDGER_SEAL_TYPE",
     "ChainStatus",
@@ -268,6 +269,17 @@ def _coerce_arguments(arguments: Mapping[str, object]) -> dict[str, Any]:
     return safe
 
 
+#: The guard's own actor: it screened an input, refused a tool call, redacted an output. No
+#: human *ordered* any of that — the guard decided, on policy, and the decision is the event.
+#: Named rather than blank, so a reader can tell "the guard did this" from "the code forgot to
+#: say who did this"; the two are indistinguishable the moment either is allowed to be empty.
+#:
+#: The turn's *caller* is not lost by this: the entry already carries ``agent_id``, the
+#: conversation, and the screened ``arguments``. This field answers a different question —
+#: who is answerable for the act — and for a policy decision the answer is the policy engine.
+GUARD_ACTOR: Final = Actor.system("guard")
+
+
 def _build_entry(
     *,
     target: str,
@@ -278,7 +290,27 @@ def _build_entry(
     model: str | None,
     data_residency: str,
     agent_id: str,
+    actor: Actor,
 ) -> dict[str, Any]:
+    """Build one S1 guard-audit entry. It names its author, or it does not get built.
+
+    ``actor`` sits at the **top level**, beside ``target`` and ``outcome`` — never inside
+    ``arguments``. That is where the eight sibling emitters in this module put it, and where
+    the three readers look: the cockpit Journal (``api/routes/audit.py``), the governance feed,
+    and the SIEM export. This builder was the only one in the file with no actor slot at all,
+    which is why the GDPR erasure could be *fixed* and still read wrong — a name written where
+    nobody looks is durable and unread, and the Journal went on printing the LLM's model name
+    in the author column while the trail quietly held the truth. Worse than absent: a false
+    assurance.
+
+    **Version 3** — the schema gained ``actor``/``actor_role``, and the bump is load-bearing. A
+    *v2* entry has no author because it predates the field; a *v3* entry always has one. A
+    reader can therefore tell *"no author recorded, because this is old"* from *"no author
+    recorded, because something is broken"* — which adding the field silently would have made
+    indistinguishable, and which is exactly the ambiguity a regulator resolves against you. The
+    chain is unaffected: every entry hashes its own content, so the walk crosses the boundary
+    unbroken and old entries keep verifying.
+    """
     # Bitemporal stamps (S1 substrate): valid_* is when the event is effective
     # for the agent, recorded_at is when Tessera learned it (transaction time).
     # A guard decision is effective the instant it is taken and stays so (open
@@ -286,7 +318,7 @@ def _build_entry(
     now = datetime.now(UTC).isoformat()
     return {
         "type": "tessera.guard.audit",
-        "version": 2,
+        "version": 3,
         "occurred_at": now,
         "agent_id": agent_id,
         "valid_from": now,
@@ -294,6 +326,8 @@ def _build_entry(
         "recorded_at": now,
         "target": target,
         "outcome": outcome,
+        "actor": actor.principal,
+        "actor_role": actor.role,
         "model": model,
         "data_residency": data_residency,
         "arguments": _coerce_arguments(arguments),
@@ -373,10 +407,11 @@ def emit_audit(
     decisions: Iterable[GuardDecisionRecord],
     sink: Literal["stdout", "file", "cloud_logging", "postgres"],
     outcome: _Outcome,
+    actor: Actor,
     error: str | None = None,
     agent_id: str | None = None,
 ) -> None:
-    """Emit a single audit entry to ``sink``.
+    """Emit a single audit entry to ``sink``. It names WHO acted, or it does not compile.
 
     The function is fire-and-forget: callers do not need to await on it.
     Failures in the sink are swallowed and logged to stderr so that audit
@@ -385,6 +420,23 @@ def emit_audit(
     ``agent_id`` attributes the event to an agent (per-turn attribution); it
     defaults to the acting agent on the current turn so the data is partitioned
     by agent and the cockpit can scope by it.
+
+    ``actor`` attributes it to a **principal** — which agent ran is not who ordered the act,
+    and an erasure performed by ``support-client`` on behalf of nobody is not a record anyone
+    can be held to. It is **required and has no default**, deliberately and permanently:
+
+    * A default here would be the whole bug class back. An author who forgets the actor would
+      get a plausible one for free — ``"operator"``, ``"system"``, the model's name — and the
+      trail would read *complete* while naming nobody. That is strictly worse than a gap,
+      because a gap gets found and a plausible lie does not.
+    * There is no honest fallback available at this layer anyway. The bearer names the
+      frontend *service*, not a person (``api/security.py``); the request body is chosen by
+      the caller, so a caller could frame someone else; and ``agent_id`` names a program. The
+      only trustworthy name is the principal of a server-verified assertion, and only the
+      caller knows whether it holds one.
+    * So the call site must answer the question. :func:`tessera.api.security.actor_of` derives
+      it from a verified session; :meth:`Actor.system` names a non-human origin out loud. Both
+      are explicit, and that is the point — omission is not one of the options.
     """
     from tessera.agent.identity import resolve_agent_id
     from tessera.settings import LLMProfile, get_settings
@@ -408,6 +460,7 @@ def emit_audit(
         model=model,
         data_residency=settings.observability.data_residency,
         agent_id=resolve_agent_id(agent_id),
+        actor=actor,
     )
     _append_to_chain(entry, sink, settings.guard.audit_file)
 

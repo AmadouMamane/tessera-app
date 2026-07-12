@@ -42,7 +42,7 @@ import unicodedata
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
-from tessera.guard.audit import emit_audit, guard_disabled
+from tessera.guard.audit import GUARD_ACTOR, emit_audit, guard_disabled
 from tessera.guard.decisions import DecisionKind
 from tessera.observability.metrics import GUARD_DECISIONS_TOTAL
 from tessera.settings import LanguageCode, get_settings
@@ -440,6 +440,7 @@ def emit_refuse_ungrounded(target: str, detail: str) -> GuardDecisionRecord:
         arguments={"unsupported": detail},
         decisions=[record],
         sink=get_settings().guard.audit_sink,
+        actor=GUARD_ACTOR,
         outcome="allowed",
     )
     GUARD_DECISIONS_TOTAL.labels(

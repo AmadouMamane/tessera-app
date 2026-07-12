@@ -25,7 +25,7 @@ from tessera.api.operator import (
     SUPERADMIN_ROLES,
     resolve_request_context,
 )
-from tessera.authz import AuthState
+from tessera.authz import Actor, AuthState
 from tessera.settings import Environment, get_settings
 
 if TYPE_CHECKING:
@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "SecurityHeadersMiddleware",
+    "actor_of",
     "require_bearer",
     "require_collections_operator",
     "require_operator",
@@ -163,7 +164,42 @@ def require_bearer(request: Request) -> None:
         )
 
 
-def require_operator(request: Request) -> None:
+def actor_of(session: SessionContext) -> Actor:
+    """The one sanctioned way to turn a verified session into a ledger actor.
+
+    A single function, so there is a single place to be right — and a single place a reviewer
+    has to read to know that no governed act in this system can be attributed to a name the
+    caller chose. The value comes from ``verify_operator_assertion``: the ``principal`` claim of
+    an HMAC-SHA256 assertion whose key lives server-side (``api/operator.py``). The browser
+    never holds it, so the name in the trail is the one thing in the request a caller cannot
+    pick for themselves.
+
+    Everything else on the request is a *worse* answer, and each was tried somewhere in this
+    codebase before it was taken out:
+
+    * the **body** — F-1's ``requested_by``, a caller-chosen string that went straight into the
+      ledger, so a visitor could pin a governed action on a colleague;
+    * the **bearer** — F-5's ``require_bearer``, which names the frontend *service* the BFF
+      attaches for every visitor, and so names nobody;
+    * a **literal** — ``actor="operator"``, ``"Julie Dubois"``: plausible, constant, false.
+
+    Raises:
+        RuntimeError: if the session is not a verified operator. Defence in depth, and it
+            should be unreachable: an identity guard runs first and refuses with 401/403. If it
+            ever *is* reached, an unattributable act is in flight, and the honest outcome is a
+            500 the operator investigates — never a governed write with an invented author.
+    """
+    if session.auth_state is not AuthState.OPERATOR or not session.subject_id or not session.role:
+        raise RuntimeError(
+            "actor_of() was called on a session that is not a verified operator "
+            f"(auth_state={session.auth_state}, role={session.role!r}) — the route's identity "
+            "guard should have refused this caller. Refusing to attribute a governed act to a "
+            "principal the server has not verified."
+        )
+    return Actor(principal=session.subject_id, role=session.role)
+
+
+def require_operator(request: Request) -> SessionContext:
     """FastAPI dependency: this route mutates state, so a real operator must be behind it.
 
     Audit 2026-07-10, **P0 `broken-access-control`** — 26 operator mutation endpoints were
@@ -195,6 +231,12 @@ def require_operator(request: Request) -> None:
 
     Collapsing them into one status would tell an auditor to go and log in again, which they
     already have.
+
+    **Returns the verified session**, like :func:`require_collections_operator` already did, so
+    a handler that must NAME the actor can depend on this same callable and read the principal
+    the server verified (FastAPI caches the call per request — the guard still runs once). That
+    is the whole seam: the guard decides *may you*, and hands back the *who* — so the two can
+    never disagree, and a handler cannot obtain a name by any route that bypasses the check.
     """
     session, _surface = resolve_request_context(request)
     if session.auth_state is not AuthState.OPERATOR:
@@ -207,6 +249,7 @@ def require_operator(request: Request) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="this role is read-only on the cockpit control plane",
         )
+    return session
 
 
 def require_collections_operator(request: Request) -> SessionContext:

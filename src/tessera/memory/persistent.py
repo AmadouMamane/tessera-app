@@ -19,6 +19,7 @@ so a poisoned or PII-laden memory is screened before it reaches the prompt.
 from __future__ import annotations
 
 import sys
+from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
@@ -26,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Final
 from psycopg import sql
 from psycopg.rows import dict_row
 
+from tessera.authz import Actor
 from tessera.guard.redaction import mask_pan
 from tessera.memory import governance
 from tessera.memory.entities import ledger_from_json, ledger_to_json, mask_ledger_pans
@@ -55,6 +57,22 @@ __all__ = [
     "update_memory_text",
     "upsert_memory",
 ]
+
+#: Recall during a turn: the agent read the subject's own memories to answer them. Nobody
+#: ordered it — the graph did, on every turn.
+_TURN_ACTOR: Final = Actor.system("agent-turn")
+
+#: The retention scheduler (``api/main.py``), deleting personal data because its TTL elapsed —
+#: GDPR Art. 5(1)(e), storage limitation. It is a *deletion of a person's data*, so it belongs
+#: in the trail exactly as much as an operator's erasure does, and it now names itself rather
+#: than leaving an unexplained gap where rows used to be.
+_RETENTION_ACTOR: Final = Actor.system("retention-purge")
+
+#: The backend protocol's own ``forget`` (``MemoryBackend.forget``). Named separately from the
+#: operator erasure on purpose: if this ever *did* serve a human request, attributing it to the
+#: system would be a lie, and the distinct name is what makes that lie visible in the trail
+#: instead of hiding it under a shared "system".
+_BACKEND_FORGET_ACTOR: Final = Actor.system("memory-backend-forget")
 
 _TABLE: Final[sql.Identifier] = sql.Identifier("long_term_memory")
 # Above this cosine similarity, a new candidate is treated as the same memory
@@ -352,16 +370,44 @@ async def delete_subject(subject_id: str) -> int:
 
 
 async def purge_expired() -> int:
-    """Delete all memories past their retention window; return the row count."""
-    query = sql.SQL("DELETE FROM {table} WHERE expires_at <= now();").format(table=_TABLE)
+    """Delete all memories past their retention window; return the row count.
+
+    **The purge is a governed act, and it now leaves one.** This deletes a person's data —
+    GDPR Art. 5(1)(e), storage limitation — on a background scheduler (``api/main.py``), and
+    until now it wrote *nothing* to the audit trail: rows vanished, and no entry said whose,
+    how many, or why. An erasure the controller cannot account for is the same defect whether
+    a human ordered it or a cron did; the only difference is that nobody was even looking for
+    this one.
+
+    ``RETURNING subject_id`` is what makes the record per-*person* rather than a bare count.
+    Art. 30 asks for records of processing, and "417 rows deleted" is not a record of
+    processing anybody: it names no subject, so it cannot answer a subject's own access
+    request about their own deletion. One entry per subject, with what they lost.
+    """
+    query = sql.SQL("DELETE FROM {table} WHERE expires_at <= now() RETURNING subject_id;").format(
+        table=_TABLE
+    )
     pool = get_pool()
     if pool.closed:
         await pool.open()
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(query)
-        deleted = cur.rowcount or 0
+        rows = await cur.fetchall()
         await conn.commit()
-    return deleted
+
+    purged = Counter(str(row[0]) for row in rows)
+    for subject_id, count in purged.items():
+        governance.audit_memory(
+            action="memory.forget",
+            subject_id=subject_id,
+            decision="allow",
+            rationale=(
+                f"retention window elapsed: {count} "
+                f"{'memory' if count == 1 else 'memories'} purged (GDPR Art. 5(1)(e))"
+            ),
+            actor=_RETENTION_ACTOR,
+        )
+    return sum(purged.values())
 
 
 class PersistentBackend(SummaryBackend):
@@ -413,6 +459,7 @@ class PersistentBackend(SummaryBackend):
             subject_id=scope.subject_id,
             decision="allow",
             rationale=f"recalled {len(screened)}/{len(items)} item(s) after screening",
+            actor=_TURN_ACTOR,
         )
         return screened
 
@@ -427,5 +474,14 @@ class PersistentBackend(SummaryBackend):
             sys.stderr.write(f"tessera.memory.persistent: reflection failed: {exc}\n")
 
     async def forget(self, *, scope: MemoryScope) -> None:
-        """Erase every trace of the subject (GDPR Art. 17)."""
-        await governance.erase_subject(scope.conversation_id)
+        """Erase every trace of the subject (GDPR Art. 17), on the backend's own protocol path.
+
+        Distinct from the operator's ``DELETE /memory/{id}``, which threads the *human* who
+        ordered it. Nothing in ``src/`` currently calls this — the HTTP erasure goes straight to
+        :func:`~tessera.memory.governance.erase_subject` — so the honest actor here is the
+        backend itself. If a future caller routes a human's erasure through this method, the
+        actor must be threaded from that caller's verified session, not left as this one:
+        ``system:memory-backend-forget`` appearing in the trail for an act a person ordered is
+        precisely the mis-attribution this whole lane exists to make impossible.
+        """
+        await governance.erase_subject(scope.conversation_id, actor=_BACKEND_FORGET_ACTOR)

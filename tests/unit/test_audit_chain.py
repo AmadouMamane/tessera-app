@@ -32,6 +32,7 @@ def _emit(n: int) -> None:
             decisions=[],
             sink="file",
             outcome="allowed",
+            actor=audit.GUARD_ACTOR,
         )
 
 

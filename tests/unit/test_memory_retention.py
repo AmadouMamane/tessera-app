@@ -23,6 +23,7 @@ from uuid import uuid4
 import pytest
 
 from tessera.api import main as api_main
+from tessera.authz import Actor
 from tessera.memory import governance
 from tessera.settings import get_settings
 
@@ -151,9 +152,15 @@ class TestErasureIsTotal:
         monkeypatch.setattr(governance, "delete_consent", _delete_consent)
         monkeypatch.setattr(governance, "audit_memory", lambda **kw: audited.append(dict(kw)))
 
-        await governance.erase_subject(conversation_id)
+        who = Actor(principal="bob@bank.eu", role="admin")
+        await governance.erase_subject(conversation_id, actor=who)
 
         assert sorted(reached) == ["consent", "long_term", "summary", "transcript"]
         # The erasure is auditable — an unlogged deletion is not opposable.
         assert audited and audited[0]["action"] == "memory.forget"
         assert audited[0]["decision"] == "allow"
+        # ...and an erasure whose author is unknown is not opposable EITHER. Exactly one entry
+        # for one act, carrying the principal the caller threaded in — not a second event
+        # stamped at the route, which a regulator reading two would have to arbitrate between.
+        assert len(audited) == 1, "one erasure, one entry"
+        assert audited[0]["actor"] == who, "the erasure must name who ordered it"

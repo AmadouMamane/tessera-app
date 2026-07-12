@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from tessera.authz import Actor
 from tessera.guard.redaction import mask_pan
 from tessera.memory import governance
 from tessera.memory.entities import extract_entities
@@ -28,6 +29,12 @@ __all__ = ["form_memories"]
 # Hard cap on facts persisted per turn — bounds cost and prevents a single
 # adversarial turn from flooding the store.
 _MAX_FACTS_PER_TURN: Final[int] = 5
+
+#: The reflector is the agent forming its own memories after a turn — a cold-path write no
+#: human asked for. Named, so a `memory.write` the SYSTEM performed can never be mistaken in
+#: the trail for a rectification an operator performed (Art. 16), which is a human act and
+#: carries a human's name.
+_REFLECTOR_ACTOR: Final = Actor.system("memory-reflector")
 
 _DEFAULT_EXTRACT_INSTRUCTION: Final[str] = (
     "From the exchange below, extract at most five durable facts worth "
@@ -75,6 +82,7 @@ async def form_memories(scope: MemoryScope, turn: TurnRecord) -> None:
             subject_id=scope.subject_id,
             decision="deny",
             rationale="no long-term retention consent for subject",
+            actor=_REFLECTOR_ACTOR,
         )
         return
 
@@ -88,6 +96,7 @@ async def form_memories(scope: MemoryScope, turn: TurnRecord) -> None:
                 subject_id=scope.subject_id,
                 decision="deny",
                 rationale="candidate rejected by screen (poisoning/PII)",
+                actor=_REFLECTOR_ACTOR,
             )
             continue
         await upsert_memory(
@@ -103,4 +112,5 @@ async def form_memories(scope: MemoryScope, turn: TurnRecord) -> None:
         subject_id=scope.subject_id,
         decision="allow" if written else "transform",
         rationale=f"persisted {written}/{len(facts)} candidate fact(s)",
+        actor=_REFLECTOR_ACTOR,
     )

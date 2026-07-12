@@ -16,6 +16,7 @@ import psycopg
 import pytest
 
 from tessera.agent.state import ConversationMessage
+from tessera.authz import Actor
 from tessera.memory import scope_for
 from tessera.memory.governance import (
     consent_allows,
@@ -39,6 +40,10 @@ from tessera.memory.transcript import (
     load_transcript,
 )
 from tessera.settings import LanguageCode, get_settings
+
+#: The verified operator these integration tests act as. An erasure with no author is not
+#: a test of the erasure this product ships — the parameter has no default, on purpose.
+_A_TEST_OPERATOR = Actor(principal="integration@bank.eu", role="admin")
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -190,7 +195,7 @@ class TestReflectorAndConsent:
             hits = await search_memory(subject_id=scope.subject_id, query="français", top_k=5)
             assert any("français" in h.text for h in hits)
         finally:
-            await erase_subject(conv)
+            await erase_subject(conv, actor=_A_TEST_OPERATOR)
 
 
 @pytest.mark.usefixtures("_pg")
@@ -207,7 +212,7 @@ class TestErasure:
         )
         await set_consent(subject, granted=True)
 
-        await erase_subject(conv)
+        await erase_subject(conv, actor=_A_TEST_OPERATOR)
 
         assert await search_memory(subject_id=subject, query="souvenir", top_k=5) == []
         summary, _ = await load_summary(conv)
@@ -237,4 +242,4 @@ class TestPersistentBackendRecall:
             )
             assert any("français" in item.text for item in ctx.long_term)
         finally:
-            await erase_subject(conv)
+            await erase_subject(conv, actor=_A_TEST_OPERATOR)

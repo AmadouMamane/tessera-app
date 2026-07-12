@@ -15,19 +15,90 @@ both sides share one source of truth without coupling.
   (or a sensitive tool).
 * ``AuthState`` is the distinct, **server-derived** thing: the authorization a
   session has been proven to hold. It is never asserted by the client.
+* ``Actor`` is the third question, and the one the audit trail asks: not *may you*,
+  but **who did it**. Same rule, same reason — derived from a verified signal, never
+  from the caller.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import StrEnum
+from typing import Final
 
 __all__ = [
+    "SYSTEM_ROLE",
+    "Actor",
     "Audience",
     "Auth",
     "AuthState",
     "Surface",
     "auth_satisfies",
 ]
+
+#: The role an :class:`Actor` carries when no human ordered the act. It is a **value**, not
+#: an absence: "nobody passed an actor" and "the retention scheduler did it" must never look
+#: the same in the trail, and a ratchet must be able to tell them apart by reading the entry.
+SYSTEM_ROLE: Final = "system"
+
+
+@dataclass(frozen=True, slots=True)
+class Actor:
+    """WHO performed a governed act — the one field a ledger entry may never omit.
+
+    An act recorded without its author is not evidence; it is a rumour with a timestamp. The
+    GDPR asks the controller to *demonstrate* who did what (Art. 5(2) accountability, Art. 30
+    records of processing), and a trail that names the data subject but not the operator
+    cannot answer the only question a DPO will ever ask about an erasure: **who deleted this
+    person's record?** Until 2026-07-12 Tessera could not: ``audit_memory`` had no actor field
+    at all, so the most legally consequential act in the system — an irreversible deletion —
+    left a subject, an outcome, and nobody to answer for it.
+
+    There are exactly **two** ways to obtain one, and both are explicit at the call site:
+
+    * :func:`tessera.api.security.actor_of` — from a **server-verified** session: the
+      principal of the HMAC-signed operator assertion, whose key the browser never holds.
+      Never from a request body. A caller who can choose the name in the ledger can frame
+      someone else, and the ledger stops being a record of what happened.
+    * :meth:`system` — a **named** non-human origin (the guard, the agent's own turn, the
+      retention scheduler). The name is the point.
+
+    There is deliberately no third way, and **no default anywhere**. A default on an identity
+    field is the whole class of bug this type exists to close: it lets an author omit the one
+    thing that makes the record worth keeping, and read green while doing it.
+    """
+
+    #: The principal: a person's identifier from a verified assertion, or ``system:<task>``.
+    principal: str
+    #: The authority the principal held when it acted (its operator role, or ``system``).
+    role: str
+
+    def __post_init__(self) -> None:
+        """Reject the empty actor at construction — the failure must be loud, and early."""
+        if not self.principal or not self.role:
+            raise ValueError(
+                "an actor with an empty principal or role is not an actor "
+                f"(principal={self.principal!r}, role={self.role!r}); "
+                "derive it from a verified session, or name the system task that acted"
+            )
+
+    @classmethod
+    def system(cls, task: str) -> Actor:
+        """The actor for an act no human ordered — named, never blank.
+
+        ``task`` is what actually ran: ``guard``, ``agent-turn``, ``retention-purge``. Naming
+        it is not decoration; it is what lets a reader distinguish *"the scheduler deleted
+        these rows on its TTL"* from *"someone deleted them and the code forgot to say who"*.
+        The two must never render the same, and a bare ``"system"`` string makes them.
+        """
+        if not task:
+            raise ValueError("a system actor must name the task that acted")
+        return cls(principal=f"system:{task}", role=SYSTEM_ROLE)
+
+    @property
+    def is_system(self) -> bool:
+        """Whether no human ordered this act (see :meth:`system`)."""
+        return self.role == SYSTEM_ROLE
 
 
 class Audience(StrEnum):

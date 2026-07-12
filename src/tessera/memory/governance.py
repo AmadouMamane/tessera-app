@@ -38,6 +38,8 @@ from tessera.settings import get_settings
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from tessera.authz import Actor
+
 __all__ = [
     "ScreenResult",
     "audit_memory",
@@ -145,8 +147,28 @@ def audit_memory(
     subject_id: str,
     decision: Literal["allow", "deny", "transform"],
     rationale: str,
+    actor: Actor,
 ) -> None:
-    """Emit a memory action into the guard audit trail."""
+    """Emit a memory action into the guard audit trail — naming both people involved.
+
+    ``subject_id`` says **whose** data was touched. ``actor`` says **who touched it**. Until
+    2026-07-12 this function had only the first, so the trail could record that a subject's
+    entire record had been erased and never record who ordered it — on the one operation where
+    the GDPR itself demands the controller be able to demonstrate exactly that (Art. 5(2)
+    accountability, Art. 30 records of processing). For a product whose thesis is the opposable
+    audit trail, that is the most expensive sentence a DPO could read.
+
+    Args:
+        action: The memory action taken.
+        subject_id: WHOSE data it touched — the data subject.
+        decision: The guard's verdict.
+        rationale: Why.
+        actor: WHO touched it. **Required, no default** — see :class:`~tessera.authz.Actor`.
+            Derive it from a verified session (:func:`tessera.api.security.actor_of`) or name
+            the system task out loud (:meth:`~tessera.authz.Actor.system`). Never from a
+            request body: a caller who can pick the name in the ledger can pin an erasure on
+            someone else, which is not a record but a forgery with a hash.
+    """
     record = GuardDecisionRecord(
         target=action,
         decision=decision,
@@ -159,6 +181,7 @@ def audit_memory(
         decisions=[record],
         sink=get_settings().guard.audit_sink,
         outcome="allowed" if decision != "deny" else "denied",
+        actor=actor,
     )
 
 
@@ -235,13 +258,21 @@ async def delete_consent(subject_id: str) -> None:
         await conn.commit()
 
 
-async def erase_subject(conversation_id: UUID) -> None:
+async def erase_subject(conversation_id: UUID, *, actor: Actor) -> None:
     """Erase every trace of a subject across all memory layers (GDPR Art. 17).
 
     This is the canonical erasure used by both the persistent backend's
     ``forget`` and the ``DELETE /memory`` endpoint, so a deletion is total
     regardless of which backend is configured. Imports are deferred to avoid an
     import cycle with the layers it deletes from.
+
+    Args:
+        conversation_id: The subject to erase.
+        actor: WHO ordered it. **Required, no default.** The audit event is emitted **here**,
+            at the canonical erasure — the one function every path goes through — so the actor
+            is *threaded in* rather than stamped by a second call at the route. One act, one
+            entry: a regulator reading two entries for one deletion would have to guess which
+            is authoritative, and a caller-stamped second entry could disagree with the first.
     """
     from tessera.memory.persistent import delete_subject
     from tessera.memory.summary import delete_summary
@@ -257,4 +288,5 @@ async def erase_subject(conversation_id: UUID) -> None:
         subject_id=subject_id,
         decision="allow",
         rationale="subject erasure (GDPR Art. 17)",
+        actor=actor,
     )

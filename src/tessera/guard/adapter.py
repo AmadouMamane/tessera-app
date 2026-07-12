@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any
 
 from tessera.agent.sdk.instrument import tool_span
 from tessera.authz import auth_satisfies
-from tessera.guard.audit import current_auth_state, emit_audit, guard_disabled
+from tessera.guard.audit import GUARD_ACTOR, current_auth_state, emit_audit, guard_disabled
 from tessera.guard.decisions import (
     Decision,
     DecisionKind,
@@ -255,6 +255,7 @@ def check_user_input(
                 arguments={"text": "[redacted — matched deny pattern]"},
                 decisions=records,
                 sink=settings.guard.audit_sink,
+                actor=GUARD_ACTOR,
                 outcome="denied",
             )
             _record_guard_decision("user_input", "denied")
@@ -330,6 +331,7 @@ def check_exfiltration(
         arguments={"text": "[redacted — exfiltration request]"},
         decisions=[record],
         sink=get_settings().guard.audit_sink,
+        actor=GUARD_ACTOR,
         outcome="denied",
     )
     _record_guard_decision("user_input", "denied")
@@ -387,6 +389,7 @@ def check_third_party_pii(
             arguments={"text": "[redacted — third-party data request]"},
             decisions=[record],
             sink=get_settings().guard.audit_sink,
+            actor=GUARD_ACTOR,
             outcome="denied",
         )
         _record_guard_decision("user_input", "denied")
@@ -416,6 +419,7 @@ def emit_refuse_policy(policy_key: str) -> GuardDecisionRecord:
         arguments={"policy_key": policy_key},
         decisions=[record],
         sink=get_settings().guard.audit_sink,
+        actor=GUARD_ACTOR,
         outcome="denied",
     )
     _record_guard_decision("user_input", "denied")
@@ -474,6 +478,7 @@ async def guarded_invoke(
                 arguments=audit_args,
                 decisions=records,
                 sink=settings.guard.audit_sink,
+                actor=GUARD_ACTOR,
                 outcome="denied",
             )
             _record_guard_decision(tool_name, "denied")
@@ -496,6 +501,7 @@ async def guarded_invoke(
                 arguments=audit_args,
                 decisions=records,
                 sink=settings.guard.audit_sink,
+                actor=GUARD_ACTOR,
                 outcome="error",
                 error=str(exc),
             )
@@ -515,6 +521,7 @@ async def guarded_invoke(
             arguments=audit_args,
             decisions=records,
             sink=settings.guard.audit_sink,
+            actor=GUARD_ACTOR,
             outcome="allowed",
         )
         _record_guard_decision(tool_name, "allowed")

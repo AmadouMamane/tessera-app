@@ -148,7 +148,12 @@ def audit_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_handoff_event_is_a_distinct_s1_type_in_the_same_chain(audit_file: Path) -> None:
     # A guard audit, then an agent->agent handoff, share one hash chain.
     audit.emit_audit(
-        target="account_balance", arguments={}, decisions=[], sink="file", outcome="allowed"
+        target="account_balance",
+        arguments={},
+        decisions=[],
+        sink="file",
+        outcome="allowed",
+        actor=audit.GUARD_ACTOR,
     )
     audit.emit_handoff(
         from_agent="support-client",
