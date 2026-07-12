@@ -387,6 +387,14 @@ Vulnerability disclosure policy and threat model:
 
 On every push, `security.yml` runs CodeQL, `pip-audit`, `bandit`, `gitleaks`, a Trivy image scan, and a guard-policy lint; `supply-chain.yml` produces an SBOM and signs the image (cosign + SLSA provenance).
 
+### What the authorization model does and does not promise
+
+Stated here rather than left to be discovered, because a posture that is only true in the code is one nobody can hold us to.
+
+- **Every governed act names its author.** An erasure, a rectification, a consent change, a subject-access read — each writes a ledger entry carrying the principal of a server-verified operator assertion. The name can never come from the request body or the bearer token (the bearer names the *frontend service*, which the BFF attaches for every visitor, so it names nobody). Three ratchets enforce it, each mutation-tested. [ADR 0024](./docs/decisions/0024-every-governed-act-names-its-author.md).
+- **PII reads are gated by ROLE, not by PURPOSE.** Today **any verified operator can read any subject's** transcript and memory inventory — a `collections` operator included, for a customer with no debt file. Nothing in the system expresses *"this subject is mine to look at"*. The anonymous hole is closed (before 2026-07-12 those endpoints answered **anyone**, with no credential); purpose limitation (GDPR Art. 5(1)(b)) is **not implemented**. This is a conscious, dated choice — the shapes it could take, and their costs, are laid out in [ADR 0025](./docs/decisions/0025-pii-reads-are-gated-by-role-not-by-purpose.md), and the current posture is pinned by a test so it cannot drift in silence.
+- **Some governed acts still write no ledger entry at all** — switching a guardrail off, granting the synthesis privilege, promoting an agent to production (attributed to the literal string `"operator"`). Listed by name in ADR 0024's *Owed* section rather than quietly skipped.
+
 ---
 
 ## License
