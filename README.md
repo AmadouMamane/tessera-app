@@ -176,11 +176,7 @@ hope for:
   — the entire deterministic layer — can no longer regress unnoticed. The model
   half is operator-triggered on a machine that has a model; a hosted runner cannot
   honestly do it, so it is not asked to.
-- **The domain bars are below the floor.** The agents' `min_pass_rate` are 55% /
-  65% / 55%; the null control clears their domain sets at 72% / 89% / 61%. As
-  written, no domain bar can fail a run that the deterministic layer already
-  passes. Raising them is a governed change to `eval/sets/*.json` and is not done
-  silently. Details and the full breakdown: [`docs/eval.md`](./docs/eval.md).
+- **The domain bars are below the floor — so they are being removed.** The agents' `min_pass_rate` are 55% / 65% / 55%; the null control clears their domain sets at 72% / 89% / 61%. **Every one of them is already cleared by an agent with no LLM.** A gate that cannot fail is not a gate, so [ADR 0021](./docs/decisions/0021-eval-gate-on-measured-contribution.md) removes them and replaces them with the contribution rules, anchored on the measured floor. The critical floor stays — it can fail, and it does. Details: [`docs/eval.md`](./docs/eval.md).
 
 ### Regression harness — fleet release gates (llama3.2:3b, 2026-07-04)
 

@@ -278,7 +278,19 @@ replay is noise and is reported but not fatal. A replay in which no model answer
 
 **Rule 2 — positive contribution.** Of the 52 runs the null control *fails*, the model
 must close at least `--min-contribution`. That is the only population where a model can
-prove anything at all. The bar is calibrated on a sweep, never invented.
+prove anything at all.
+
+> **The bar is `30`, and it is NOT CALIBRATED.** Say so plainly: the three swept models
+> land at 36 / 35 / 36 of 52, and 30 leaves 5-6 cases of margin above the sampling noise we
+> measured. That is a *reasoned* choice, not a *measured* one — **no weak model has ever
+> been run against this catalogue**, and the only low point we hold is the null control at
+> 0/52, which bounds nothing useful from above. The constant is named
+> `MIN_CONTRIBUTION_UNCALIBRATED` and `check_contribution.py` prints the caveat every time
+> the default is used, so the heuristic cannot pass itself off as a measurement.
+>
+> **Debt:** sweep a deliberately weak model (a 1B, or a degraded config) and see where it
+> lands. That is the single act that turns 30 into a calibrated number, and it costs about
+> twenty minutes. Recorded in [ADR 0021](./decisions/0021-eval-gate-on-measured-contribution.md).
 
 **Rule 3 — no credit for the powerless.** A category the null control already passes in
 full (`policy_violation` 15/15, `escalation_failure` 6/6) cannot earn a model a single
@@ -298,6 +310,11 @@ uv run python scripts/check_contribution.py \
 
 The bars are a **function of the measured floor**, never an absolute number. When the
 catalogue changes, the floor is re-measured and the populations move with it.
+
+The old absolute domain bars (`min_pass_rate` 55% / 65% / 55% in `eval/sets/*.json`) are
+**removed** by [ADR 0021](./decisions/0021-eval-gate-on-measured-contribution.md): they sat
+*below* the 70% null floor, so an agent with no LLM already cleared every one of them. A
+gate that cannot fail is not a gate. The critical floor stays — it can fail, and it does.
 
 ## Grounding score semantics
 

@@ -128,12 +128,20 @@ eval-null-write: install
 #   make eval-contribution REPORT=eval/reports/sweep/gemma3-27b.json MIN=30
 eval-contribution: install
 	@test -n "$(REPORT)" || (echo "REPORT= is required" && exit 2)
-	@test -n "$(MIN)" || (echo "MIN= is required — rule 2's bar is calibrated on a sweep, never defaulted" && exit 2)
-	uv run python scripts/check_contribution.py --report $(REPORT) --min-contribution $(MIN)
+	uv run python scripts/check_contribution.py --report $(REPORT) $(if $(MIN),--min-contribution $(MIN))
 
 # Replay the catalogue against every local model and compare them against the null floor
 eval-sweep: install
 	uv run python scripts/run_model_sweep.py
+
+# DEBT (ADR 0021): rule 2's bar (30) is a reasoned floor, NOT a calibrated one — no weak
+# model has ever been run against this catalogue, so nothing bounds it from below except
+# the null control at 0/52. This target closes that debt: replay the catalogue against a
+# deliberately weak model and see where it lands. ~20 minutes.
+#   make eval-calibrate-weak MODEL=llama3.2:1b   (ollama pull it first)
+eval-calibrate-weak: install
+	@test -n "$(MODEL)" || (echo "MODEL= is required (e.g. llama3.2:1b)" && exit 2)
+	uv run python scripts/run_model_sweep.py --models $(MODEL) --out eval/reports/weak-model
 
 # Run one case: make eval-case CASE=07_prompt_injection_roleplay
 eval-case: install

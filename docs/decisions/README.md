@@ -31,6 +31,7 @@ wearing an ADR's number. They now live in `docs/status/` and `docs/incidents/`.
 | 0018 | [Assistant runtime turn contract](0018-assistant-runtime-turn-contract.md) |
 | 0019 | [Invocation binding](0019-invocation-binding.md) |
 | 0020 | [Production security hardening](0020-security-hardening.md) — *was a second 0008* |
+| 0021 | [The eval gate grades measured contribution; the absolute domain bars are removed](0021-eval-gate-on-measured-contribution.md) |
 | 0022 | [Hica external opposability seal — design note](0022-hica-seal-design-note.md) — *annex to 0015; was a second 0015* |
 
 *(0021 is reserved for `recouvrement-internal-operator-agent` — see below.)*

@@ -49,11 +49,34 @@ if TYPE_CHECKING:
     from eval.ratchet import Baseline
 
 __all__ = [
+    "MIN_CONTRIBUTION_UNCALIBRATED",
+    "UNCALIBRATED_NOTICE",
     "ContributionVerdict",
     "evaluate_contribution",
     "floor_populations",
     "zero_power_categories",
 ]
+
+#: Rule 2's bar. The name carries the truth so no caller can mistake it for a measurement.
+#:
+#: The three models of the 2026-07-12 sweep land at 36 / 35 / 36 out of 52. 30 sits 5-6
+#: cases below the lowest of them — enough margin to absorb the sampling noise we measured
+#: (several cases flip run to run), while still failing a model that contributes materially
+#: less. That is a *reasoned* choice, not a *calibrated* one, and the difference matters:
+#: we have never observed a weak model on this catalogue. The only low point we hold is the
+#: null control at 0/52, which bounds nothing useful from above.
+MIN_CONTRIBUTION_UNCALIBRATED = 30
+
+#: Printed by the CLI and quoted in the docs. An heuristic must never be dressed as a
+#: measurement.
+UNCALIBRATED_NOTICE = (
+    "min_contribution=30 is a WEAK-MODEL FLOOR and is NOT CALIBRATED: it was chosen to "
+    "leave 5-6 cases of margin above the measured sampling noise, NOT measured against a "
+    "population of weak models — none has ever been observed on this catalogue (the only "
+    "low point held is the null control at 0/52). DEBT: sweep a deliberately weak model "
+    "(a 1B, or a degraded config) and see where it lands; that is the single act that "
+    "turns 30 into a calibrated number, and it costs ~20 minutes."
+)
 
 
 def floor_populations(baseline: Baseline) -> tuple[frozenset[str], frozenset[str]]:

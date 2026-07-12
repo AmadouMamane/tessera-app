@@ -25,7 +25,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-from eval.contribution import evaluate_contribution, floor_populations
+from eval.contribution import (
+    MIN_CONTRIBUTION_UNCALIBRATED,
+    UNCALIBRATED_NOTICE,
+    evaluate_contribution,
+    floor_populations,
+)
 from eval.ratchet import load_baseline, model_spoke, report_verdicts
 from eval.sets import catalogue_categories
 
@@ -111,8 +116,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--min-contribution",
         type=int,
-        required=True,
-        help="Rule 2's bar: how many of the floor-failing runs the model must close.",
+        default=MIN_CONTRIBUTION_UNCALIBRATED,
+        help=(
+            "Rule 2's bar: how many of the floor-failing runs the model must close. "
+            f"Default {MIN_CONTRIBUTION_UNCALIBRATED} — a weak-model floor, NOT calibrated "
+            "(see eval.contribution.UNCALIBRATED_NOTICE)."
+        ),
     )
     parser.add_argument(
         "--no-reproduce",
@@ -156,6 +165,10 @@ def main(argv: list[str] | None = None) -> int:
         confirmed=confirmed,
     )
     sys.stdout.write(verdict.render() + "\n")
+    if args.min_contribution == MIN_CONTRIBUTION_UNCALIBRATED:
+        # Print it every time the default bar is used. A number that is not measured must
+        # say so at the moment it is applied, not only in a docstring nobody opens.
+        sys.stdout.write(f"\n! {UNCALIBRATED_NOTICE}\n")
     return 0 if verdict.ok else 1
 
 
