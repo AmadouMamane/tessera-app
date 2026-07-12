@@ -24,7 +24,26 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class SandboxDefaults:
-    """Live defaults for the Console sandbox playground (ADR 0010 Phase C)."""
+    """Live defaults the **cockpit Console** pre-fills its sandbox with.
+
+    The Console is a *generated operator surface* — **ADR 0019 §2 (increment I2)**: it composes
+    from the agent's own declarations, with no per-agent console code. These two values are the
+    live runtime facts it cannot declare: the system prompt actually in force and how many guard
+    rules the active policy carries.
+
+    They exist so an operator can *see* what they are about to relax. Relaxing it is governed
+    elsewhere and narrowly: ``sandbox_overrides_allowed`` (``api/routes/chat.py``) honours
+    ``system_prompt_override`` / ``guard_overrides`` **only** for
+    ``Surface.COCKPIT_EMBEDDED`` + ``AuthState.OPERATOR``, both server-derived — the audit's
+    P0 ``guard-bypass``. Reading the defaults is not permission to change them.
+
+    This docstring used to cite *"ADR 0010 Phase C"*, and that was **false**. ``Phase C`` exists
+    only in the recouvrement ADR, where it names the **business** console (``dedicated-ui``) —
+    and ADR 0013 forbids exactly this payload (a system prompt, a guard-rule count) on a business
+    surface. The citation pointed at the one ADR that rules the behaviour *out*. Corrected rather
+    than renumbered: a wrong reference is a defect on its own, not a casualty of a duplicate
+    number.
+    """
 
     system_prompt: str
     policy_rule_count: int
