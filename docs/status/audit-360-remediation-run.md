@@ -494,3 +494,117 @@ the content digest catches it. That is the incident's exact signature.
 - A self-inflicted lesson while building this: **`git checkout -- <file>` to undo a test mutation
   destroys your own uncommitted edits in that same file.** It ate the Makefile once. Back the file
   up and restore *your* copy — never HEAD's.
+## F-B — the GDPR erasure had no author · F-C — the read plane has no purpose (2026-07-12, night)
+
+Branch `claude/gdpr-actor-attribution`, cut from `main` @ `d2f9e5ca` (F-4/F-5/F-9 + F-6 landed).
+**HALT before merge** — this is the auth frontier and the ledger; the rule holds.
+
+### F-B — a right to erasure you cannot attribute is not a control
+
+`audit_memory(action, subject_id, decision, rationale)` had **no actor field at all**. So after
+F-5 the door was shut — the anonymous caller no longer erases — and the ledger could still record
+that a person's entire record had been deleted and never record **by whom**, ever. On the one
+operation where the regulation itself demands the controller be able to demonstrate exactly that
+(Art. 5(2) accountability, Art. 30 records of processing). Read from the canonical ledger before
+the fix:
+
+```
+target: memory.forget   arguments: {"subject_id": "…"}   outcome: allowed
+```
+
+A subject, an outcome, and nobody to answer for it.
+
+**The fix is a type, not a field.** `Actor(principal, role)` (`authz.py`), obtainable exactly two
+ways — `actor_of(session)` (the principal of an HMAC-signed assertion the server verified) or
+`Actor.system(task)` (a *named* non-human origin). **No default, anywhere.** That clause is the
+whole thing: a default hands a plausible name to an author who forgot the question, and the trail
+then reads *complete* while naming nobody. **A gap gets found; a plausible lie does not.**
+`mypy --strict` is the enforcement — twenty call sites could not compile without answering.
+
+### The half that would have shipped a FALSE ASSURANCE
+
+The first attempt at this fix (on another branch, not merged) wrote the actor into
+`arguments["actor"]`. It was durable. It was also **read by nobody**, and the two surfaces that
+display an author each went on showing a different wrong one:
+
+| surface | what it showed as the author of a GDPR erasure |
+| --- | --- |
+| cockpit **Journal** (`routes/audit.py:331`) | **the LLM's model name** — it keyed the actor read on `type.startswith("tessera.agent.")`, and the erasure's type is `tessera.guard.audit`, so it fell through to `model or target` |
+| **SIEM export** (`siem.py:100`) | **the erased data subject** — `actor = arguments["subject_id"]`, shipped to the bank's SOC as an `iam` event, severity 7 |
+
+`emit_audit` was the **only** entry builder in `guard/audit.py` with no top-level `actor` key; the
+other eight have one. The name had nowhere to go, so it went somewhere nobody looks. Fixed at the
+root: the actor is top-level, the entry is **version 3**, and a v2 entry (no author, honestly) is
+now distinguishable from a broken one.
+
+**Both surfaces had passing tests that DEMANDED the bug**: `assert export.events[0].actor == "s1"`
+(the subject id) and `assert entry.actor == "llama3.2:3b"`. That is why two reviews missed them —
+the confusion was green. Both are inverted, and `actor != subject` is now asserted outright.
+
+### Two acts had no entry at all — the same defect, one step further on
+
+- `PUT /memory/{id}/consent` — changed the **lawful basis** for retaining a person's data, silently.
+- `purge_expired()` — the retention scheduler, **deleting personal data** on its TTL, writing nothing.
+
+The purge now `RETURNING subject_id` and writes **one entry per person**. "417 rows deleted" is not
+a record of processing *anybody*: it names no subject, so it cannot answer that subject's own access
+request about their own deletion (Art. 30).
+
+### Ratchet #3 — ATTRIBUTION, mutation-tested twice
+
+The third question, after "who may come in?" (mutation) and "what does a stranger see?" (read):
+**does the register name the author?** Every mutating route behind an identity guard is invoked
+with a *verified* session; the entries it writes are captured **at `_append_to_chain`** — the
+built, about-to-be-hashed entry, not the call arguments — and must name that session's principal.
+
+| step | result | real exit |
+| --- | --- | --- |
+| baseline | 9 passed | **0** |
+| **actor buried in `arguments[]`** — *the other branch's fix* | **7 failed** · `EMPTY actor: memory.forget` | **1** |
+| **a human's erasure attributed to the system** | **1 failed** · `attributed a HUMAN's act to the system ('system:memory')` | **1** |
+| restored | 9 passed | **0** |
+
+The first red is the argument for the whole lane: **this ratchet rejects the fix that was about to
+be merged to `main`.** It would have passed any test that inspected the call. The payload is the
+judge — the same lesson the read ratchet's canary sweep taught, one layer down.
+
+### F-C — the read plane is gated by role, not by purpose (ADR only, no code)
+
+`SUBJECT_READ_ROLES = OPERATOR_ROLES`, so **every operator reads every subject** — a `collections`
+operator can read the memory inventory of a customer with no debt file. The anonymous hole is
+closed and that was the emergency; what replaced it is *"any verified operator"*, which contains no
+notion of purpose (Art. 5(1)(b)). Binding an operator to a subject is a **product decision** — by
+dossier, by tenant, by declared purpose — and it is not one to take alone. Delivered instead:
+
+- **[ADR 0025](../decisions/0025-pii-reads-are-gated-by-role-not-by-purpose.md)** — the problem, three options, their real costs, and the likely answer offered but *not taken*.
+- **`tests/unit/test_subject_read_posture.py`** — pins today's behaviour explicitly, including the sharpest case (the recouvrement operator reading a subject that is none of its business, **200**). It exists to **fail** the day someone narrows it, so the narrowing is a reviewed edit and not a silent tightening that breaks a console nobody was watching.
+- **an honest line in the README** — *PII reads are gated by ROLE, not by PURPOSE*, with the gap named.
+
+### Witnesses
+
+- **gate ×2 on the isolated worktree**, real exit codes `0` and `0` — `$?` captured with **no pipe**.
+  `${PIPESTATUS[0]}` is **empty in zsh** (the array is `$pipestatus`, 1-indexed) and manufactured a
+  false green on the first pass of this run, exactly as this repository has done before.
+- **1871 pytest** (main's 1858 + 9 attribution ratchet + 2 SIEM + 2 Journal), mypy strict 297 files,
+  ruff, tsc, biome, 251 vitest. The count reconciles by name; nothing was lost.
+- **both ratchets mutation-tested**, reds captured above and in the commit messages.
+
+### Known-open (named, not skipped)
+
+Governed acts that still write **no ledger entry at all** — same class, out of scope for this lane,
+listed in ADR 0024 §Owed: switching a guardrail off; `PUT /settings/synthesis-admin` (a superadmin
+privilege grant); `emit_agent_proposed`/`emit_agent_lifecycle` (**promoting an agent to production**,
+attributed to the literal `"operator"`); `curation_store.set_decision(decided_by=body.decided_by)`
+(**an actor taken from the request body** — F-1 exactly, still open); and
+`agent/recouvrement.py:2298`, where `requested_by: str = "Julie Dubois"` **is still the default**
+one level below the handler.
+
+### Run note — three agents, one worktree
+
+This lane was written in a **separate worktree** (`agents/claude-attr`) because a concurrent agent
+was committing to `agents/claude` and ran `git reset --hard` in it mid-run. Two of its effects are
+worth recording, because both produced a *false reading* before they were caught: a subagent reading
+the repo moved `HEAD` under a mutation test, which then reported `4 passed` at baseline **and** under
+mutation — a rubber stamp; and a merge of unreviewed work onto the **local** `main` had to be undone
+(`origin/main` was never touched). **A test result is only evidence if you can name the bytes it ran
+against.** One agent per worktree.
