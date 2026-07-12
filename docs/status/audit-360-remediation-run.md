@@ -615,6 +615,46 @@ and is **not** ruled (ADR 0025, *What is still not decided*).
 
 **We publish with today's posture said in the clear. We do not publish pretending better.**
 
+**Second ruling, same day — CAN a purpose be REFUSED? Not now, and the order is the point.**
+
+Refusing needs three things that do not exist: a **taxonomy** of legitimate purposes, a **policy**
+(which role may invoke which), and a **review process** for the grants — knowing a real incident does
+not wait for an approval. And the trap that decides it: **a purpose-check that is bypassed under
+pressure is WORSE than no check at all.** It manufactures the appearance of prevention while the
+emergency path stays open. Every SOC has its break-glass account; building purpose-refusal and then
+giving yourself a break-glass is compliance theatre on top of an unguarded door — and the theatre is
+what gets shown to the auditor.
+
+So: **1. RECORD (now)** — mandatory, attributed, permanent. **2. MEASURE** — see what people actually
+declare. **3. REFUSE (only then)** — if the data shows a class of read that should never happen.
+
+**It is the same doctrine as everywhere: do not set a threshold before you have measured both
+populations.** This project already paid for that lesson: the failure catalogue scores **122/174 =
+70% with no language model at all**, and the three domain bars (55/65/55%) sat **below** the null
+control's 72/89/61% — *every one of them a gate a disconnected agent already clears* (ADR 0021). A
+purpose taxonomy designed before the first purpose is declared is that same mistake in another column.
+
+**And phase 2 has its own null floor, which is what makes it a measurement rather than a survey.**
+What does a purpose field produce when the human is not thinking? The first dropdown option. `"check"`.
+`"-"`. The same string every time. That is the **null declaration**, and it is the population a
+taxonomy must be built AGAINST, not on top of. Two constraints follow, and they are design decisions,
+not preferences: **no dropdown during the measurement window** (a dropdown measures *your* taxonomy,
+not *their* reasons — free text plus a required, externally-checkable reference), and **the degenerate
+declarations are counted by name and reported FIRST**. If that share is high, the answer is not a
+taxonomy — it is that *the ask is not landing*.
+
+**The precondition for phase 3, which follows from the trap:** *if a refusal cannot be built without
+an emergency bypass, do not build the refusal.* The recording is then the whole control, and it is
+honest about being deterrence with evidence. It should be sold as exactly that — an act on someone's
+private record that is impossible to perform anonymously, impossible to perform without stating why,
+and impossible to erase afterwards. That is a real guarantee. It is not prevention, and the day we
+call it prevention is the day it stops being worth anything.
+
+**A correction kept on the record**: the first draft of this ADR's implementation section specified a
+typed reason (`incident` / `réclamation` / `audit` / `support`) — **an invented taxonomy, written
+before a single purpose has been declared**, i.e. the exact mistake, made inside the paragraph that
+forbids it. Struck, and left visible, because it is that easy to make.
+
 ### Witnesses
 
 - **gate ×2 on the isolated worktree**, real exit codes `0` and `0` — `$?` captured with **no pipe**.

@@ -69,6 +69,15 @@ read fills that slot with `"subject access request: 3 item(s)"` — *the system 
 did*, where the doctrine wants *the human saying why they did it*. Ruled, and scoped, in
 [ADR 0025](0025-pii-reads-are-gated-by-role-not-by-purpose.md).
 
+**The reason is recorded before it is adjudicated, and that order is itself ruled.** Checking a
+reason needs a taxonomy of legitimate ones, and a taxonomy invented before the first reason has been
+declared is a number nobody measured — the same defect the eval lane paid for when three domain bars
+turned out to sit *below* the score a disconnected agent already achieves
+([ADR 0021](0021-eval-gate-on-measured-contribution.md)). Worse, a reason-check that gets bypassed
+under pressure is **worse than no check**: it manufactures the appearance of prevention while the
+break-glass stays open. So: **record, then measure, then — only if the data demands it, and only if
+it can hold without an escape hatch — refuse.** ADR 0025 §*Sequencing*.
+
 ### What follows from rule 1
 
 * An **actor is a type**, not a string: `Actor(principal, role)` (`tessera/authz.py`), rejecting
