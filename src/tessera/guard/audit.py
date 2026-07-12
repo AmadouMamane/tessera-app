@@ -1,10 +1,25 @@
 """Structured audit-trail emission for guard decisions.
 
+**The sink is a transport; the ledger is the store (ADR 0023).** These are two independent
+things, and the chain is never a function of the sink. The sink chooses where the
+human-readable / observability *copy* of an entry goes; the opposable hash chain is persisted
+separately, upstream, into the promoted append-only Postgres ledger (fed by the fsync spool,
+linked by the drain under an advisory lock — ADR 0015).
+
 The audit sink is chosen at start-up from :attr:`GuardSettings.audit_sink`:
 
 * ``stdout`` — JSON-Lines on stdout, useful for local dev and tests.
-* ``cloud_logging`` — Google Cloud Logging, used in staging and prod.
-* ``postgres`` — a dedicated audit table; for regulatory replay only.
+* ``cloud_logging`` — Google Cloud Logging; the observability copy in staging/prod. It is a
+  *transport*, not the store: the entry is chained into the ledger regardless.
+* ``file`` — a single-writer flat file; in pre-cut file mode the file itself IS the chain.
+* ``postgres`` — the persistence IS the ledger spool/drain (upstream), so this sink adds no
+  separate copy; it never silently degrades to stdout.
+
+Whichever sink is chosen, every entry lands chained in the opposable ledger — or, in an
+exposed posture whose configuration cannot persist the chain, the process refuses to boot
+(:func:`validate_audit_chain_config`). Audit 2026-07-12, **F-6**: before ADR 0023 the ledger
+feed ran only ``if sink == "file"``, so ``cloud_logging`` (the documented staging sink) emitted
+to Cloud Logging and chained *nothing*.
 
 The on-disk schema is shared across sinks and matches
 ``docs/compliance.md``'s "audit record" section.
@@ -40,6 +55,7 @@ __all__ = [
     "ChainStatus",
     "build_ledger_attestation_entry",
     "build_ledger_seal_entry",
+    "chain_persists_for",
     "current_auth_state",
     "current_model",
     "emit_agent_invocation",
@@ -53,8 +69,76 @@ __all__ = [
     "emit_ledger_seal",
     "emit_routing",
     "guard_disabled",
+    "validate_audit_chain_config",
     "verify_audit_chain",
 ]
+
+#: The postures where the opposable audit chain is MANDATORY — the ones reachable from outside
+#: (ADR 0023). Symmetric with the three fail-closed key checks (``security.py``,
+#: ``_BEARER_REQUIRED_ENVIRONMENTS``): the question is not *"is this production?"* but *"can a
+#: stranger reach this?"*, and an exposed agent that cannot chain its ledger has silently lost
+#: the one guarantee the product is built on. Dev and CI are the only unexposed postures, and
+#: they keep the hermetic ``TESSERA_LEDGER_DUAL_WRITE=0`` loop.
+_CHAIN_REQUIRED_ENVIRONMENTS = frozenset({"staging", "production"})
+
+
+def chain_persists_for(sink: str, ledger_source: str, dual_write: bool) -> bool:
+    """Does this ``(sink, ledger_source, dual_write)`` triple durably persist the chain?
+
+    The single source of truth for the store decision (ADR 0023), used both by the emitter
+    (:func:`_append_to_chain`) and the boot check (:func:`validate_audit_chain_config`), so the
+    two can never disagree about what "chainable" means. Deliberately independent of the sink
+    except for the one mode where the sink IS the store:
+
+    * ``ledger_source == "postgres"`` with dual-write on — the drain persists it, for ANY sink;
+    * ``ledger_source == "file"`` with ``sink == "file"`` — the flat file itself is the chain.
+
+    Everything else stores the chain nowhere durable (an in-process hash thrown away, or a
+    transport-only copy on stdout/cloud_logging).
+    """
+    if ledger_source == "postgres":
+        return dual_write
+    return sink == "file"
+
+
+def _unchainable_message(sink: str, ledger_source: str, dual_write: bool) -> str:
+    """The boot-refusal text — one function, so the test asserts what the operator reads."""
+    return (
+        f"The audit chain cannot be persisted with audit_sink={sink!r}, "
+        f"TESSERA_LEDGER_SOURCE={ledger_source!r}, TESSERA_LEDGER_DUAL_WRITE="
+        f"{'1' if dual_write else '0'} — so guard decisions and business events would be "
+        "emitted to the sink but NEVER chained into the opposable ledger (ADR 0023, audit "
+        "F-6). The sink is a transport; the ledger is the store. Refusing to start rather than "
+        "silently running without opposability. Fix: keep TESSERA_LEDGER_SOURCE=postgres with "
+        "dual-write ON (any sink then chains), or set audit_sink=file for the flat-file chain."
+    )
+
+
+def validate_audit_chain_config() -> None:
+    """Fail-closed startup check: an exposed deployment must be able to PERSIST the chain.
+
+    Audit 2026-07-12, **P1 F-6** (ADR 0023). ``enqueue_ledger_entry`` — the only path to the
+    opposable ledger — used to run only ``if sink == "file"``. With the baked default
+    ``ledger_source=postgres`` and the documented staging sink ``cloud_logging``, entries were
+    emitted to Cloud Logging and never chained. An operator following the staging docs turned
+    opposability off with no signal.
+
+    Called once at ``build_app()`` alongside the three signing-key checks (ADR 0020). No-op in
+    dev/CI — the exemption is *not exposed*, drawn exactly as narrowly as the bearer's, so the
+    hermetic ``TESSERA_LEDGER_DUAL_WRITE=0`` loop is untouched.
+    """
+    from tessera.guard.ledger_store import dual_write_enabled, ledger_source
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    if settings.environment.value not in _CHAIN_REQUIRED_ENVIRONMENTS:
+        return
+    sink = settings.guard.audit_sink
+    source = ledger_source()
+    dual_write = dual_write_enabled()
+    if not chain_persists_for(sink, source, dual_write):
+        raise RuntimeError(_unchainable_message(sink, source, dual_write))
+
 
 # TESS-LEDGER-001 — the attestation entry type (point 4): a signed, appended entry that ratifies
 # historical ledger anomalies (forks/orphans) WITHOUT rewriting them (append-only is absolute).
@@ -242,13 +326,33 @@ def _emit_file(entry: dict[str, Any], path: Path) -> None:
         fp.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def _emit_postgres(entry: dict[str, Any]) -> None:
-    """Persist the audit entry to the dedicated audit table.
+def _emit_postgres(entry: dict[str, Any], *, chain_persisted: bool) -> None:  # noqa: ARG001  entry unused: persistence is the ledger, upstream
+    """The ``postgres`` sink — which never silently falls back to stdout (ADR 0023, F-6).
 
-    The implementation is deferred to a later increment; for now we fall back
-    to stdout so the call site does not need to special-case nothingness.
+    The Postgres *persistence* of an audit entry is the opposable ledger (the fsync spool +
+    drain, which assigns the hash linkage under the advisory lock), and it runs UPSTREAM of
+    this sink, independent of it. So when the ledger is active this sink is genuinely
+    redundant — the entry is already durably in the table — and the honest thing is to add no
+    second copy, not to write a misleading stdout line pretending "postgres" meant something.
+
+    The old stub did exactly that (``_emit_stdout(entry)``), which is how choosing the
+    ``postgres`` sink could persist nothing to any table while looking configured. The
+    doctrine is: either the entry is written, or the failure is audible.
+
+    ``chain_persisted`` is the store's own decision, computed once in :func:`_append_to_chain`.
+    True → the ledger has it; do nothing. False → the operator asked for ``postgres`` but the
+    ledger is NOT persisting this entry (``TESSERA_LEDGER_SOURCE=file`` or
+    ``TESSERA_LEDGER_DUAL_WRITE=0``), so raise — the sink dispatch surfaces it to stderr. In an
+    exposed posture this combination never boots (:func:`validate_audit_chain_config`).
     """
-    _emit_stdout(entry)
+    if chain_persisted:
+        return
+    raise RuntimeError(
+        "audit_sink=postgres but the opposable ledger is not persisting this entry "
+        "(TESSERA_LEDGER_SOURCE=file or TESSERA_LEDGER_DUAL_WRITE=0). The Postgres persistence "
+        "IS the ledger spool/drain; enable dual-write with ledger_source=postgres, or choose a "
+        "sink whose transport this deployment can honour."
+    )
 
 
 def emit_audit(
@@ -338,12 +442,19 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
       tail (survives restarts) and link at emit, exactly as before.
     """
     global _last_hash
-    from tessera.guard.ledger_store import enqueue_ledger_entry, ledger_source
+    from tessera.guard.ledger_store import dual_write_enabled, enqueue_ledger_entry, ledger_source
 
     # Position-independent identity, stamped in BOTH modes — the drain's idempotence key
     # (a crash-replayed drain must not recompute a different hash and duplicate the entry).
     entry["event_id"] = _event_identity(entry)
     cut = ledger_source() == "postgres"
+
+    # THE STORE DECISION, computed once and INDEPENDENT OF THE SINK (ADR 0023, audit F-6) —
+    # the same predicate the boot check enforces, so emit-time and boot-time can never
+    # disagree. Post-cut with dual-write the drain chains it for ANY sink; pre-cut file mode
+    # the flat file IS the chain. This replaces the old `if sink == "file"` gate that let a
+    # transport choice (stdout/cloud_logging) silently switch opposability off.
+    chain_persists = chain_persists_for(sink, ledger_source(), dual_write_enabled())
 
     if not cut:
         # File-escape mode: a single-writer flat file, so in-process chaining is correct.
@@ -353,6 +464,9 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
         entry["hash"] = _hash_core({k: v for k, v in entry.items() if k != "hash"})
         _last_hash = entry["hash"]
 
+    # THE SINK IS A TRANSPORT — the human-readable / observability copy. It never decides
+    # whether the entry is chained; that is the store's job (above: the in-process link for
+    # file mode; below: the spool for the opposable ledger).
     try:
         match sink:
             case "stdout":
@@ -366,18 +480,21 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
             case "cloud_logging":
                 _emit_cloud_logging(entry)
             case "postgres":
-                _emit_postgres(entry)
+                # The Postgres persistence is the ledger (below), not this sink. Redundant when
+                # the chain persists; loud (never silent stdout) when it does not — ADR 0023 #3.
+                _emit_postgres(entry, chain_persisted=chain_persists)
     except Exception as exc:
         # Best-effort at the sink: a failed emit is surfaced to stderr, never swallowed
-        # silently. Durability for the canonical path is the spool dual-write below (file
-        # sink); a postgres/cloud_logging sink failure leaves only this stderr record — a
-        # known limitation, not a hidden one (P0.2 grid).
+        # silently. Durability for the opposable chain is the spool below, not the sink — so a
+        # cloud_logging/postgres transport failure no longer costs the ledger entry.
         sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
-    if sink == "file":
-        # ADR 0015 §Amendment 3 — dual-write to the promoted append-only Postgres ledger via
-        # the durable spool (zero-loss). Post-cut this is the ONLY durable sink and the drain
-        # assigns the chain linkage under the advisory lock (fork-free); pre-cut it mirrors
-        # the canonical file. The boot reconcile replays the spool.
+
+    # THE LEDGER IS A STORE — persistence happens upstream of, and independent from, the sink
+    # (ADR 0023). Post-cut the drain assigns the chain linkage under the advisory lock
+    # (fork-free); pre-cut file mode mirrors the canonical file into the promoted table. The
+    # boot reconcile replays the spool. Audit F-6: this was `if sink == "file"`, so choosing
+    # the documented staging sink (cloud_logging) skipped the opposable chain entirely.
+    if chain_persists:
         enqueue_ledger_entry(entry)
 
 

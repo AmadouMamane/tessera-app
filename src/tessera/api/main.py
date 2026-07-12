@@ -46,6 +46,7 @@ from tessera.api.security import (
 )
 from tessera.api.session import validate_session_signing_key
 from tessera.api.settings_store import ensure_settings_schema
+from tessera.guard.audit import validate_audit_chain_config
 from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema
 from tessera.memory.summary import ensure_summary_schema
@@ -313,6 +314,10 @@ def build_app() -> FastAPI:
     # The third member of the family, missing until the 2026-07-10 audit: an unset bearer
     # made require_bearer and AuthMiddleware no-ops, publishing audit/memory/settings.
     validate_bearer_token()
+    # The fourth (ADR 0023, audit 2026-07-12 F-6): an exposed deployment whose audit_sink /
+    # ledger_source combination cannot PERSIST the hash chain refuses to boot, rather than
+    # emitting to the sink while silently chaining nothing into the opposable ledger.
+    validate_audit_chain_config()
     # Docs/OpenAPI are on for local dev, off in production, and can be closed
     # explicitly (expose_docs=False) on an internet-reachable non-prod agent.
     docs_on = settings.api.expose_docs and not settings.is_production()
