@@ -74,7 +74,7 @@ def test_structural_gate_carried_by_the_run_matches_the_render() -> None:
     # render: structural.blocking_t1 == render.blocking_t1 + render.waived_active.
     snap = load_agent_or_global_snapshot("support-client")
     triples = [(s.case_id, s.language, s.passed) for s in snap.sessions]
-    sg = structural_gate(triples, min_pass_rate=snap.gate_min_pass_rate or 0.0)
+    sg = structural_gate(triples)
     gv = build_gate_view(snap)
     assert sg["tier_counts"] == gv.tier_counts
     bd = sg["breakdown"]

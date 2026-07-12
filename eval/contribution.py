@@ -26,6 +26,14 @@ apply to are derived from the committed null baseline rather than written down:
   must pass at least ``min_contribution``. This is the only population where a model can
   prove anything at all.
 
+  ``min_contribution`` is reasoned against **one** population (the catalogue's 52), and
+  it travels with that population and no other. Grade a single agent's set — a subset —
+  and the floor must be cut down to it first (:func:`restrict_baseline`), at which point
+  the bar no longer applies to what is left: rescaling it would invent exactly the kind
+  of number ADR 0021 deleted. So a per-set run is gated on **Rule 1 alone** and Rule 2 is
+  reported as a measurement (``min_contribution=None``). Gating a set's contribution is
+  ADR 0021's debt (b), and it closes with that set's measured history — never a constant.
+
 * **Rule 3 — no credit for the powerless.** A category every run of which the null
   control already passes (currently ``policy_violation`` 15/15 and ``escalation_failure``
   6/6) cannot earn the model a single point. This falls out of the arithmetic rather than
@@ -38,15 +46,13 @@ The bars are therefore a **function of the measured floor**, never an absolute n
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
-from eval.ratchet import report_verdicts
+from eval.ratchet import Baseline, report_verdicts
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Set as AbstractSet
-
-    from eval.ratchet import Baseline
 
 __all__ = [
     "MIN_CONTRIBUTION_UNCALIBRATED",
@@ -54,6 +60,7 @@ __all__ = [
     "ContributionVerdict",
     "evaluate_contribution",
     "floor_populations",
+    "restrict_baseline",
     "zero_power_categories",
 ]
 
@@ -93,6 +100,47 @@ def floor_populations(baseline: Baseline) -> tuple[frozenset[str], frozenset[str
     return floor_pass, floor_fail
 
 
+def restrict_baseline(baseline: Baseline, case_ids: AbstractSet[str]) -> Baseline:
+    """The set's OWN floor — the null control restricted to one eval set's cases.
+
+    This is what ADR 0021 §3(a) means by "the agent's own measured floor", and it is
+    **not** free the way that ADR claims. Rule 1's population is an intersection, so it
+    does restrict itself against an agent-scoped report — but Rule 2's *denominator*
+    does not: :func:`floor_populations` reads the whole committed baseline, so
+    ``contribution_population`` would stay at the catalogue's 52 runs even when the set
+    under test only contains twenty of them. Grading a twenty-case set against a
+    fifty-two-run population is not a strict gate, it is an arithmetic error — the
+    contribution could not reach the bar however good the model was.
+
+    Restricting the baseline first is the fix, and it invents nothing: the numbers still
+    come from the committed null control, only the population is cut down to the cases
+    the set actually contains.
+
+    Args:
+        baseline: The committed null control, catalogue-wide.
+        case_ids: The set's effective case ids (security floor included).
+
+    Returns:
+        The same baseline, holding only the runs whose case belongs to the set.
+
+    Raises:
+        ValueError: If no baseline run belongs to the set — the floor would be empty and
+            every rule would read vacuously true. Failing loudly beats grading nothing.
+    """
+    verdicts = {k: ok for k, ok in baseline.verdicts.items() if k.split("|", 1)[0] in case_ids}
+    if not verdicts:
+        msg = (
+            "the null baseline holds no run for this eval set — it was captured against a "
+            "different catalogue. Regenerate it (make eval-null) rather than grading against "
+            "an empty floor."
+        )
+        raise ValueError(msg)
+    note = (baseline.note + " | " if baseline.note else "") + (
+        f"restricted to {len(verdicts)} of {len(baseline.verdicts)} runs — the eval set's own floor"
+    )
+    return replace(baseline, verdicts=verdicts, note=note)
+
+
 def zero_power_categories(baseline: Baseline, categories: Mapping[str, str]) -> tuple[str, ...]:
     """Categories the null control already passes in full — no model can earn credit there.
 
@@ -125,7 +173,12 @@ class ContributionVerdict:
     unconfirmed_breaks: tuple[str, ...]
     contribution: int
     contribution_population: int
-    min_contribution: int
+    #: ``None`` = Rule 2 is MEASURED and reported, but gates nothing. That is the honest
+    #: state for a per-set floor: 30 was reasoned against the catalogue's 52-run
+    #: population, and rescaling it to a smaller set would be inventing a number — which
+    #: is precisely what ADR 0021 removed. Per-set gating of the contribution is debt (b),
+    #: and it closes with a per-set history, not with a fresh constant.
+    min_contribution: int | None
     zero_power: tuple[str, ...] = ()
     absolute_passed: int = 0
     absolute_total: int = 0
@@ -151,7 +204,12 @@ class ContributionVerdict:
                 else ""
             ),
             f"  rule 2 — contribution: {self.contribution}/{self.contribution_population}"
-            f" ({self.contribution_rate:.0%}) vs min {self.min_contribution}",
+            f" ({self.contribution_rate:.0%})"
+            + (
+                f" vs min {self.min_contribution}"
+                if self.min_contribution is not None
+                else " — MEASURED, no bar (a per-set bar would be an invented number)"
+            ),
         ]
         lines += [f"      BROKE (confirmed) {k}" for k in self.confirmed_breaks]
         lines += [f"      broke once, not reproduced: {k}" for k in self.unconfirmed_breaks]
@@ -168,24 +226,30 @@ def evaluate_contribution(
     report: dict[str, Any],
     baseline: Baseline,
     *,
-    min_contribution: int,
+    min_contribution: int | None,
     categories: Mapping[str, str] | None = None,
     confirmed: AbstractSet[str] | None = None,
 ) -> ContributionVerdict:
     """Grade a model run on its delta over the null floor.
 
+    Pass a baseline already narrowed by :func:`restrict_baseline` to grade an
+    agent-scoped run against its set's own floor (ADR 0021 §3a).
+
     Args:
         report: A parsed runner report for the model.
-        baseline: The committed null control.
+        baseline: The committed null control — catalogue-wide, or restricted to a set.
         min_contribution: Rule 2's bar — how many of the floor-failing runs the model
-            must close. Calibrated on a sweep, never invented.
+            must close. Reasoned against a *specific* population, so it travels with
+            that population and no other. ``None`` measures Rule 2 without gating on it,
+            which is the only honest option for a population no bar was reasoned against.
         categories: ``{case_id: category}``, used to report the zero-power categories.
         confirmed: The breaks that were reproduced on a second replay. ``None`` means no
             reproduction pass was run, and every candidate break is treated as confirmed
             (fail closed — an ungraded break is not a forgiven one).
 
     Returns:
-        A :class:`ContributionVerdict`; ``ok`` iff Rule 1 and Rule 2 both hold.
+        A :class:`ContributionVerdict`; ``ok`` iff Rule 1 holds, and Rule 2 too when it
+        is gated at all.
     """
     run = report_verdicts(report)
     floor_pass, floor_fail = floor_populations(baseline)
@@ -202,7 +266,7 @@ def evaluate_contribution(
             f"rule 1: the model breaks {len(confirmed_breaks)} run(s) the agent passes "
             f"with NO model at all — it is worse than nothing on them"
         )
-    if contribution < min_contribution:
+    if min_contribution is not None and contribution < min_contribution:
         reasons.append(
             f"rule 2: contribution {contribution} < {min_contribution} of the "
             f"{len(floor_fail)} runs the null floor fails"

@@ -200,11 +200,27 @@ export const AgentEvaluationsGateSocleSchema = z.object({
 });
 
 export const AgentEvaluationsGateDomainSchema = z.object({
-  ok: z.boolean(),
   passed: z.number().int(),
   total: z.number().int(),
   rate: z.number(),
-  min: z.number(),
+  gating: z.literal(false),
+});
+
+export const AgentEvaluationsGateContributionPayloadSchema = z.object({
+  available: z.literal(true),
+  title: z.string(),
+  model: z.string(),
+  floor_passed: z.number().int(),
+  floor_total: z.number().int(),
+  regression_candidates: z.array(z.string()),
+  contribution: z.number().int(),
+  contribution_population: z.number().int(),
+  gated: z.literal(false),
+  note: z.string(),
+});
+
+export const AgentEvaluationsGateContributionUnavailableSchema = z.object({
+  available: z.literal(false),
 });
 
 export const AgentEvaluationsGateBreakdownGrainSchema = z.object({
@@ -273,7 +289,6 @@ export const AgentEvaluationsGateWaiversSchema = z.object({
 export const AgentEvaluationsGateSchema = z.object({
   passed: z.boolean(),
   failed_critical: z.array(z.string()),
-  min_pass_rate: z.number(),
   standard_passed: z.number().int(),
   standard_total: z.number().int(),
   label: z.string(),
@@ -285,6 +300,10 @@ export const AgentEvaluationsGateSchema = z.object({
   counts: AgentEvaluationsGateCountsSchema,
   socle: AgentEvaluationsGateSocleSchema,
   domain: AgentEvaluationsGateDomainSchema,
+  contribution: z.union([
+    AgentEvaluationsGateContributionPayloadSchema,
+    AgentEvaluationsGateContributionUnavailableSchema,
+  ]),
   breakdown_grain: AgentEvaluationsGateBreakdownGrainSchema,
   tiers: z.array(AgentEvaluationsGateTiersItemSchema),
   venn: AgentEvaluationsGateVennSchema,

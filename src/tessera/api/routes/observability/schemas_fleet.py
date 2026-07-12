@@ -703,13 +703,17 @@ class AgentEvaluationsGateSocle(BaseModel):
 
 
 class AgentEvaluationsGateDomain(BaseModel):
-    """agent-evaluations.gate.domain."""
+    """agent-evaluations.gate.domain — a MEASUREMENT, not a gate (ADR 0021).
 
-    ok: bool
+    `ok` and `min` are gone with the domain bar they expressed. `gating` is `False` and
+    says it on the wire: a consumer that reads this block cannot mistake the rate for a
+    verdict, and cannot resurrect a threshold by inferring one from a missing key.
+    """
+
     passed: int
     total: int
     rate: float
-    min: float
+    gating: Literal[False]
 
 
 class AgentEvaluationsGateBreakdownGrain(BaseModel):
@@ -789,12 +793,46 @@ class AgentEvaluationsGateWaivers(BaseModel):
     items: list[None]
 
 
+class AgentEvaluationsGateContributionUnavailable(BaseModel):
+    """Honest-empty: no set bound, no committed floor, or NO MODEL SPOKE in the run.
+
+    The last one is the reason this union exists rather than a zeroed payload. A run whose
+    every backend was unreachable still writes its configured `model` and still passes 70%
+    of the catalogue on the deterministic layer alone — reporting `contribution: 0,
+    regressions: 0` for it would render as a clean bill of health for a model that never
+    answered. Generated tokens are the witness, and when they are absent the block degrades.
+    """
+
+    available: Literal[False]
+
+
+class AgentEvaluationsGateContributionPayload(BaseModel):
+    """`available: True` GUARANTEES every field below. That is the point of the union.
+
+    What replaces the removed domain bar (ADR 0021 §3a): the model's delta over the null
+    control restricted to THIS set's cases. `gated` is `False` — rule 2 is measured here,
+    never gated, because a per-set bar would be an invented number, which is exactly what
+    the ADR deleted. `regression_candidates` are candidates, not confirmed regressions: a
+    break counts only once replayed, and the cockpit cannot replay.
+    """
+
+    available: Literal[True]
+    title: str
+    model: str
+    floor_passed: int
+    floor_total: int
+    regression_candidates: list[str]
+    contribution: int
+    contribution_population: int
+    gated: Literal[False]
+    note: str
+
+
 class AgentEvaluationsGate(BaseModel):
     """agent-evaluations.gate."""
 
     passed: bool
     failed_critical: list[str]
-    min_pass_rate: float
     standard_passed: int
     standard_total: int
     label: str
@@ -806,6 +844,9 @@ class AgentEvaluationsGate(BaseModel):
     counts: AgentEvaluationsGateCounts
     socle: AgentEvaluationsGateSocle
     domain: AgentEvaluationsGateDomain
+    contribution: (
+        AgentEvaluationsGateContributionPayload | AgentEvaluationsGateContributionUnavailable
+    )
     breakdown_grain: AgentEvaluationsGateBreakdownGrain
     tiers: list[AgentEvaluationsGateTiersItem]
     venn: AgentEvaluationsGateVenn

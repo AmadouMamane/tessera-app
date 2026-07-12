@@ -23,8 +23,12 @@ cross-page navigation, verified end to end. Free-text data is verbatim French
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
+from eval.contribution import evaluate_contribution, restrict_baseline
+from eval.ratchet import load_baseline
+from eval.sets import load_eval_set
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.observability.eval.agent_judge import load_agent_judge
 from tessera.observability.eval_data import (
@@ -43,6 +47,9 @@ __all__ = ["compute_agent_evaluations"]
 
 _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
 
+#: The committed null control — the measured floor the contribution block grades against.
+_NULL_BASELINE = Path(__file__).resolve().parents[3] / "eval" / "baselines" / "null-control.json"
+
 
 def _loc(lang: str, fr: str, de: str, en: str) -> str:
     """Pick the locale variant of an inline string (fr / de / en)."""
@@ -59,19 +66,22 @@ _GATE_TR: dict[str, tuple[str, str]] = {
     "Bloquant · socle (T0)": ("Blockierend · Sockel (T0)", "Blocking · core (T0)"),
     "Bloquant · critique (T1)": ("Blockierend · kritisch (T1)", "Blocking · critical (T1)"),
     "Dérogé actif": ("Aktive Ausnahme", "Active waiver"),
-    "Échec · domaine (T2)": ("Fehler · Domaene (T2)", "Failure · domain (T2)"),
+    "Échec · domaine (T2, non bloquant)": (
+        "Fehler · Domaene (T2, nicht blockierend)",
+        "Failure · domain (T2, non-blocking)",
+    ),
     "Non exécuté": ("Nicht ausgefuehrt", "Not executed"),
     # tier labels (eval_tiers._TIER_LABEL)
     "Cœur non-dérogeable": ("Nicht ausnehmbarer Kern", "Non-waivable core"),
     "Critique dérogeable": ("Ausnehmbar kritisch", "Waivable critical"),
     "Domaine gradé": ("Gradierte Domaene", "Graded domain"),
-    # verdict labels (eval_gate_view._verdict)
+    # verdict labels (eval_gate_view._verdict). "BLOQUÉ (domaine)" is gone with the bar
+    # that produced it (ADR 0021): no domain rate can block a release any more.
     "BLOQUÉ par le socle": ("DURCH SOCKEL BLOCKIERT", "BLOCKED by core"),
     "BLOQUÉ (critiques non dérogés)": (
         "BLOCKIERT (kritische ohne Ausnahme)",
         "BLOCKED (unwaived critical)",
     ),
-    "BLOQUÉ (domaine)": ("BLOCKIERT (Domaene)", "BLOCKED (domain)"),
     "PASSE": ("BESTANDEN", "PASS"),
     # verdict reasons (static variants)
     "Un cas du socle dur (T0) a échoué ou n'a pas été exécuté.": (
@@ -82,13 +92,9 @@ _GATE_TR: dict[str, tuple[str, str]] = {
         "Ein kritischer Fall wurde nicht ausgefuehrt (kein Nachweis = blockierend).",
         "A critical case was not executed (no evidence = blocking).",
     ),
-    "Le taux de réussite du domaine (T2) est sous le seuil requis.": (
-        "Die Erfolgsrate der Domaene (T2) liegt unter dem erforderlichen Schwellenwert.",
-        "The domain (T2) pass rate is below the required threshold.",
-    ),
-    "Socle intact, aucun critique non dérogé, domaine conforme.": (
-        "Sockel intakt, kein kritischer ohne Ausnahme, Domaene konform.",
-        "Core intact, no unwaived critical, domain compliant.",
+    "Socle intact, aucun critique non dérogé, aucun critique non exécuté.": (
+        "Sockel intakt, kein kritischer ohne Ausnahme, kein kritischer nicht ausgefuehrt.",
+        "Core intact, no unwaived critical, no critical left unexecuted.",
     ),
     # waiver status labels (eval_waivers._STATUS_LABEL)
     "Dérogation active": ("Aktive Ausnahme", "Active waiver"),
@@ -423,7 +429,6 @@ def _gate_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
         "failed_critical": sorted(
             {s.case_id for s in gv.statuses if s.status_key == "bloquant_socle"}
         ),
-        "min_pass_rate": gv.min_pass_rate,
         "standard_passed": gv.domain_passed,
         "standard_total": gv.domain_total,
         "label": _gate(gv.verdict_label, lang),
@@ -443,13 +448,15 @@ def _gate_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
         },
         "counts": {"passed": gv.passed_exec, "failed": gv.failed_exec},
         "socle": {"ok": gv.socle_ok, "passed": gv.socle_passed, "total": gv.socle_total},
+        # T2: a measurement. No `ok`, no `min` — there is no bar (ADR 0021), and the page
+        # must not print one. `gating: False` says so on the wire rather than by omission.
         "domain": {
-            "ok": gv.domain_ok,
             "passed": gv.domain_passed,
             "total": gv.domain_total,
             "rate": round(gv.domain_pass_rate, 4),
-            "min": gv.min_pass_rate,
+            "gating": False,
         },
+        "contribution": _contribution_block(snap, lang),
         "breakdown_grain": {
             "blocking_socle": gv.blocking_socle,
             "blocking_t1": gv.blocking_t1,
@@ -470,6 +477,83 @@ def _gate_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
         "socle_by_category": _socle_by_category(gv),
         "critical_cases": _critical_cases(gv, titles, lang),
         "waivers": _waivers_block(gv, lang),
+    }
+
+
+def _contribution_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
+    """What the model EARNED over this set's own null floor — the bar's replacement.
+
+    ADR 0021 removed the absolute domain bar and put nothing decorative in its place.
+    What the page prints instead is measured end to end: the set's floor is the committed
+    null control (``eval/baselines/null-control.json``) restricted to the set's own cases,
+    and the two numbers shown are the model's delta over it — the runs it BREAKS that the
+    agent passes with no model at all (rule 1), and the runs it CLOSES that the floor
+    fails (rule 2). No threshold appears, because none exists.
+
+    Two honesty guards, both load-bearing:
+
+    * **A modelless run is not a good one.** The report's ``model`` field is written even
+      when every backend was unreachable, so it proves nothing; generated tokens do. A run
+      with zero output tokens contributed nothing and broke nothing, and reporting "0
+      regressions" for it would read as a clean bill of health. It degrades instead.
+    * **The cockpit cannot reproduce a break.** Sampling is stochastic, and ADR 0021 only
+      counts a regression once replayed — which needs the model. So a break is surfaced
+      here as a *candidate*, with the command that settles it, and never as a confirmed
+      regression the page has no standing to declare.
+    """
+    unavailable: dict[str, object] = {"available": False}
+    _, output_tokens = snap.token_totals()
+    if not snap.eval_set or not output_tokens:
+        return unavailable
+    try:
+        eval_set = load_eval_set(snap.eval_set)
+        floor = restrict_baseline(load_baseline(_NULL_BASELINE), set(eval_set.effective_case_ids))
+    except (KeyError, ValueError, TypeError, OSError):
+        # No committed floor for this set (a moved catalogue, an absent baseline): there
+        # is nothing to measure a contribution against, and a fabricated one is worse
+        # than none. Honest-empty — the page degrades, it does not invent (0015).
+        return unavailable
+
+    report = {
+        "model": snap.model,
+        "results": [
+            {"case_id": s.case_id, "language": s.language, "passed": s.passed}
+            for s in snap.sessions
+        ],
+    }
+    verdict = evaluate_contribution(report, floor, min_contribution=None)
+
+    return {
+        "available": True,
+        "title": _loc(
+            lang,
+            "Contribution du modèle (au-dessus du plancher du set)",
+            "Modellbeitrag (ueber dem Sockelwert des Sets)",
+            "Model contribution (over the set's own floor)",
+        ),
+        "model": snap.model,
+        # The set's own measured floor — the bar, and it was never chosen.
+        "floor_passed": floor.passed,
+        "floor_total": floor.total,
+        # Rule 1: runs the floor passes and this run breaks. CANDIDATES — see the docstring.
+        "regression_candidates": list(verdict.confirmed_breaks),
+        # Rule 2: of the runs the floor fails, how many the model closes. Measured, ungated.
+        "contribution": verdict.contribution,
+        "contribution_population": verdict.contribution_population,
+        "gated": False,
+        "note": _loc(
+            lang,
+            "Aucun seuil : la barre est le plancher mesuré de ce set (null control), "
+            "jamais un nombre choisi. Une régression n'est acquise qu'une fois REJOUÉE — "
+            "le cockpit ne peut pas rejouer : scripts/check_contribution.py tranche.",
+            "Keine Schwelle: die Messlatte ist der gemessene Sockelwert dieses Sets "
+            "(Null-Kontrolle), nie eine gewaehlte Zahl. Eine Regression zaehlt erst nach "
+            "WIEDERHOLUNG — das Cockpit kann nicht wiederholen: "
+            "scripts/check_contribution.py entscheidet.",
+            "No threshold: the bar is this set's measured floor (the null control), never "
+            "a chosen number. A regression only counts once REPLAYED — the cockpit cannot "
+            "replay: scripts/check_contribution.py settles it.",
+        ),
     }
 
 

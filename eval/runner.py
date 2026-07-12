@@ -262,23 +262,24 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def _build_gate(
     eval_set: EvalSet | None, results: list[CaseResult]
 ) -> tuple[GateVerdict | None, dict[str, object] | None]:
-    """Compute the two-level gate verdict + its JSON payload for an agent run."""
+    """Compute the critical-floor gate verdict + its JSON payload for an agent run.
+
+    ``standard_*`` are stamped as a measurement, not a bar: no threshold is applied to
+    them and none is written to the report (ADR 0021).
+    """
     if eval_set is None:
         return None, None
     verdict = evaluate_gate(
         [(r.case_id, r.passed) for r in results],
         critical_ids=critical_case_ids(),
-        min_pass_rate=eval_set.gate.min_pass_rate,
     )
     payload: dict[str, object] = {
         "passed": verdict.passed,
         "critical_ok": verdict.critical_ok,
-        "standard_ok": verdict.standard_ok,
         "failed_critical": list(verdict.failed_critical),
         "standard_total": verdict.standard_total,
         "standard_passed": verdict.standard_passed,
         "standard_pass_rate": round(verdict.standard_pass_rate, 4),
-        "min_pass_rate": verdict.min_pass_rate,
     }
     return verdict, payload
 
@@ -391,16 +392,13 @@ async def _run_all(args: argparse.Namespace) -> int:
         "estimated_cost_eur": float(budget.estimated_cost_eur),
     }
 
-    # Two-level eval-gate (only for an agent run): the exit code is the verdict.
+    # Critical-floor eval-gate (only for an agent run): the exit code is the verdict.
     verdict, gate_payload = _build_gate(eval_set, results)
     # Tier-aware *structural* policy gate carried by the run itself, so the report
     # is authoritative for the structural verdict (the page only layers the
     # dynamic waiver delta on top at render). None for a non-agent catalogue run.
     policy_gate = (
-        structural_gate(
-            [(r.case_id, r.language, r.passed) for r in results],
-            min_pass_rate=eval_set.gate.min_pass_rate,
-        )
+        structural_gate([(r.case_id, r.language, r.passed) for r in results])
         if eval_set is not None
         else None
     )

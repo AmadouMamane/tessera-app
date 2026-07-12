@@ -119,7 +119,8 @@ class EvalSnapshot:
     eval_set: str = ""
     gate_passed: bool | None = None
     gate_failed_critical: tuple[str, ...] = ()
-    gate_min_pass_rate: float | None = None
+    # The non-critical counts: a measurement, never compared to a bar (ADR 0021 removed
+    # `gate.min_pass_rate` — a historical report may still carry the key; it is not read).
     gate_standard_passed: int = 0
     gate_standard_total: int = 0
 
@@ -342,7 +343,6 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
     gate = gate if isinstance(gate, dict) else {}
     failed_critical = gate.get("failed_critical")
     gate_passed = gate.get("passed")
-    min_rate = gate.get("min_pass_rate")
 
     return EvalSnapshot(
         model=str(best.get("model", SMALLEST_MODEL)),
@@ -361,7 +361,6 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
         gate_failed_critical=tuple(str(c) for c in failed_critical)
         if isinstance(failed_critical, list)
         else (),
-        gate_min_pass_rate=float(min_rate) if isinstance(min_rate, int | float) else None,
         gate_standard_passed=int(gate.get("standard_passed", 0) or 0),
         gate_standard_total=int(gate.get("standard_total", 0) or 0),
     )

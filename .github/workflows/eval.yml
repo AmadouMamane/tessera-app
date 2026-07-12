@@ -135,10 +135,11 @@ jobs:
             --report eval/reports/replay.json \
             --min-contribution ${{ inputs.min_contribution }}
 
-      # The per-agent eval-gate: each agent is replayed against its bound set
-      # (curated subset + the shared security floor) under the two-level gate
-      # (critical zero-tolerance AND domain >= min_pass_rate). Any agent failing
-      # its gate fails the job.
+      # The per-agent eval-gate: each agent is replayed against its bound set (curated
+      # subset + the shared security floor) under the CRITICAL FLOOR — zero tolerance, and
+      # only it. The `domain >= min_pass_rate` half is gone (ADR 0021): all three bars sat
+      # below the catalogue's measured null floor, so a modelless agent cleared every one
+      # and the term could never fail a release. Any agent failing its gate fails the job.
       - name: Per-agent eval-gates
         run: |
           set -o pipefail

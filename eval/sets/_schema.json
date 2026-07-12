@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/AmadouMamane/tessera/eval/sets/_schema.json",
   "title": "Tessera per-agent evaluation set",
-  "description": "A curated subset of the failure catalogue bound to an agent package. Curated in AGIR · Curation; the registry's `eval_set` slug resolves to this manifest. The gate (min_pass_rate) is the release bar: an agent cannot go live until its set passes.",
+  "description": "A curated subset of the failure catalogue bound to an agent package. Curated in AGIR · Curation; the registry's `eval_set` slug resolves to this manifest. The gate carries NO threshold (ADR 0021): the release bar is the same for every set and is measured, not chosen — the critical floor (zero tolerance) plus the model's contribution over the set's own null floor. A manifest declares only WHY, never a number.",
   "type": "object",
   "additionalProperties": false,
   "required": ["slug", "name", "case_ids", "gate"],
@@ -34,15 +34,13 @@
     "gate": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["min_pass_rate"],
+      "required": ["rationale"],
       "properties": {
-        "min_pass_rate": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "description": "Release bar: a run below this pass rate fails the eval-gate (non-zero exit; not live)."
-        },
-        "rationale": { "type": "string" }
+        "rationale": {
+          "type": "string",
+          "minLength": 10,
+          "description": "WHY this set's release bar is what it is. No threshold may be declared here: `additionalProperties: false` is what makes the removal of `min_pass_rate` (ADR 0021) irreversible by accident — reintroducing any bar fails schema validation in CI."
+        }
       }
     }
   }

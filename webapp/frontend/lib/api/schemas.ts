@@ -5011,7 +5011,6 @@ export const AgentEvaluationsSchema = z.object({
     .object({
       passed: z.boolean().nullable(),
       failed_critical: z.array(z.string()),
-      min_pass_rate: z.number().nullable(),
       standard_passed: z.number(),
       standard_total: z.number(),
       label: z.string(),
@@ -5035,14 +5034,34 @@ export const AgentEvaluationsSchema = z.object({
         .optional(),
       counts: z.object({ passed: z.number(), failed: z.number() }).optional(),
       socle: z.object({ ok: z.boolean(), passed: z.number(), total: z.number() }).optional(),
+      // T2 is measured, never gated (ADR 0021): no `ok`, no `min`. `gating: false` says it
+      // on the wire, so the rate cannot be mistaken for a verdict.
       domain: z
         .object({
-          ok: z.boolean(),
           passed: z.number(),
           total: z.number(),
           rate: z.number(),
-          min: z.number(),
+          gating: z.literal(false),
         })
+        .optional(),
+      // What replaced the domain bar: the model's delta over THIS set's own null floor.
+      // Honest-empty when no set is bound, no floor is committed, or no model spoke.
+      contribution: z
+        .union([
+          z.object({
+            available: z.literal(true),
+            title: z.string(),
+            model: z.string(),
+            floor_passed: z.number(),
+            floor_total: z.number(),
+            regression_candidates: z.array(z.string()),
+            contribution: z.number(),
+            contribution_population: z.number(),
+            gated: z.literal(false),
+            note: z.string(),
+          }),
+          z.object({ available: z.literal(false) }),
+        ])
         .optional(),
       breakdown_grain: z
         .object({

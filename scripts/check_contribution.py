@@ -11,9 +11,21 @@ gate reads the delta instead (see :mod:`eval.contribution`):
 * Rule 2 — the model must close at least ``--min-contribution`` of the 52 runs the null
   control fails. That is the only population where a model can prove anything.
 
+An **agent-scoped** report (one carrying an ``eval_set``) is graded against that set's
+OWN floor — the null control restricted to the set's cases (ADR 0021 §3a). Two things
+follow, and both are load-bearing: the restriction is *required* (Rule 2's denominator is
+read off the baseline, so an unrestricted floor measures a twenty-case set against the
+catalogue's fifty-two-run population), and once restricted, ``--min-contribution`` no
+longer applies — 30 was reasoned against that 52-run population, and rescaling it would
+invent the very kind of number ADR 0021 removed. A per-set run therefore gates on **Rule 1
+alone**, and its contribution is measured and printed. Gating it needs the set's own
+history: ADR 0021's debt (b).
+
 Usage:
     uv run python scripts/check_contribution.py \\
         --report eval/reports/sweep/gemma3-27b.json --min-contribution 30
+    uv run python scripts/check_contribution.py \\
+        --report eval/reports/local/latest_recouvrement.json   # per-set: rule 1 gates
 """
 
 from __future__ import annotations
@@ -24,15 +36,17 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from eval.contribution import (
     MIN_CONTRIBUTION_UNCALIBRATED,
     UNCALIBRATED_NOTICE,
     evaluate_contribution,
     floor_populations,
+    restrict_baseline,
 )
-from eval.ratchet import load_baseline, model_spoke, report_verdicts
-from eval.sets import catalogue_categories
+from eval.ratchet import Baseline, load_baseline, model_spoke, report_verdicts
+from eval.sets import catalogue_categories, load_eval_set
 
 NULL_BASELINE = Path("eval/baselines/null-control.json")
 
@@ -108,6 +122,22 @@ def _confirm_breaks(candidates: list[str], model: str) -> tuple[set[str], list[s
     return confirmed, inconclusive
 
 
+def _floor_for(report: dict[str, Any], baseline: Baseline) -> tuple[Baseline, bool]:
+    """Return (the floor to grade against, whether it is an agent set's own floor).
+
+    An agent-scoped report is graded against the null control **restricted to its set**
+    (ADR 0021 §3a). Restricting is not cosmetic: Rule 2's denominator is read off the
+    baseline, so an unrestricted floor would measure a twenty-case set against the
+    catalogue's fifty-two-run population and under-report its contribution by
+    construction.
+    """
+    slug = str(report.get("eval_set") or "")
+    if not slug:
+        return baseline, False
+    eval_set = load_eval_set(slug)
+    return restrict_baseline(baseline, set(eval_set.effective_case_ids)), True
+
+
 def main(argv: list[str] | None = None) -> int:
     """Exit code is the gate verdict."""
     parser = argparse.ArgumentParser(description="Grade a model on its contribution.")
@@ -116,11 +146,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--min-contribution",
         type=int,
-        default=MIN_CONTRIBUTION_UNCALIBRATED,
+        default=None,
         help=(
             "Rule 2's bar: how many of the floor-failing runs the model must close. "
-            f"Default {MIN_CONTRIBUTION_UNCALIBRATED} — a weak-model floor, NOT calibrated "
-            "(see eval.contribution.UNCALIBRATED_NOTICE)."
+            f"Defaults to {MIN_CONTRIBUTION_UNCALIBRATED} for a CATALOGUE run — a weak-model "
+            "floor, NOT calibrated (see eval.contribution.UNCALIBRATED_NOTICE). For an "
+            "AGENT-SCOPED run it defaults to no bar at all: 30 was reasoned against the "
+            "catalogue's 52-run population and rescaling it to a smaller set would invent a "
+            "number. Rule 1 still gates; Rule 2 is measured and reported."
         ),
     )
     parser.add_argument(
@@ -138,7 +171,20 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    baseline = load_baseline(args.baseline)
+    baseline, per_set = _floor_for(report, load_baseline(args.baseline))
+    min_contribution = args.min_contribution
+    if min_contribution is None and not per_set:
+        min_contribution = MIN_CONTRIBUTION_UNCALIBRATED
+    if per_set:
+        sys.stdout.write(
+            f"agent-scoped report (set '{report.get('eval_set')}'): grading against that set's "
+            f"OWN floor — {baseline.passed}/{baseline.total} runs the null control passes there"
+            + (
+                ".\n"
+                if min_contribution is None
+                else f", with an EXPLICIT rule-2 bar of {min_contribution} (yours, not derived).\n"
+            )
+        )
     model = str(report.get("model") or "")
     run = report_verdicts(report)
     floor_pass, _ = floor_populations(baseline)
@@ -160,15 +206,22 @@ def main(argv: list[str] | None = None) -> int:
     verdict = evaluate_contribution(
         report,
         baseline,
-        min_contribution=args.min_contribution,
+        min_contribution=min_contribution,
         categories=catalogue_categories(),
         confirmed=confirmed,
     )
     sys.stdout.write(verdict.render() + "\n")
-    if args.min_contribution == MIN_CONTRIBUTION_UNCALIBRATED:
+    if min_contribution == MIN_CONTRIBUTION_UNCALIBRATED:
         # Print it every time the default bar is used. A number that is not measured must
         # say so at the moment it is applied, not only in a docstring nobody opens.
         sys.stdout.write(f"\n! {UNCALIBRATED_NOTICE}\n")
+    if min_contribution is None:
+        sys.stdout.write(
+            "\n! Rule 2 was MEASURED, not gated: this set's contribution has no bar, because "
+            "any per-set bar would be invented rather than measured. What gates here is Rule 1 "
+            "— zero regression on the set's own floor. Gating the contribution needs that set's "
+            "measured HISTORY (ADR 0021, debt (b)), which does not exist yet.\n"
+        )
     return 0 if verdict.ok else 1
 
 

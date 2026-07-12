@@ -68,7 +68,6 @@
     "63_language_mixing_carte_fr_en"
   ],
   "gate": {
-    "min_pass_rate": 0.5,
-    "rationale": "Set complet, modèle on-prem honnête (llama3.2:3b échoue beaucoup) : barre org indicative."
+    "rationale": "Set complet (tout le catalogue). Barre : plancher critique (zéro tolérance) + contribution mesurée au-dessus du plancher nul — le catalogue passe déjà 122/174 sans aucun modèle (ADR 0021). Aucune barre absolue : elle noterait la somme du déterministe et du modèle, donc ni l'un ni l'autre."
   }
 }

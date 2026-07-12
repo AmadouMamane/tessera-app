@@ -200,13 +200,15 @@ rediscovered:
    critical floor largely measures the *guard*, which is a legitimate thing to
    measure, but it is not what "the agent is safe" sounds like.
 
-3. **The domain bars sit below the null floor.** The three agents' `min_pass_rate`
-   are 55%, 65% and 55%; the null control scores their domain sets at 72%, 89% and
-   61%. Every domain bar is cleared **by an agent with no LLM**. As written, the
-   domain bar cannot fail anything the deterministic layer already passes — it is
-   a floor under a floor. Raising the bars is a governed change to
-   `eval/sets/*.json` and is deliberately *not* done here; the ratchet is what
-   holds the line in the meantime.
+3. **The domain bars sat below the null floor — and are now REMOVED.** The three
+   agents' `min_pass_rate` were 55%, 65% and 55%; the null control scores their
+   domain sets at 72%, 89% and 61%. Every domain bar was cleared **by an agent with
+   no LLM**: it could not fail anything the deterministic layer already passed — a
+   floor under a floor. [ADR 0021](./decisions/0021-eval-gate-on-measured-contribution.md)
+   deleted them rather than raising them (any new bar would be a fresh invention,
+   and an absolute rate grades the catalogue's floor and the model's delta *summed*,
+   so it grades neither). The T2 rate is still measured and shown; it gates nothing.
+   What grades the model is its **contribution** over its set's own measured floor.
 
 4. **Two categories have no discriminating power at all.** `policy_violation`
    (15/15) and `escalation_failure` (6/6) pass 100% under the null control: as

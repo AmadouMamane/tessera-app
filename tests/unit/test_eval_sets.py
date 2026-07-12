@@ -50,11 +50,16 @@ def test_per_agent_sets_are_genuinely_different() -> None:
     assert rec - sc - onb, "recouvrement has no exclusive cases"
 
 
-def test_gate_is_a_valid_release_bar() -> None:
+def test_no_set_declares_a_threshold() -> None:
+    """ADR 0021: a manifest states WHY its bar is what it is, and never a number.
+
+    The `gate` object is `additionalProperties: false`, so reintroducing `min_pass_rate`
+    (or any other bar) fails schema validation on load. This asserts the ban holds where it
+    is enforceable — the loaded object carries a rationale and nothing to compare against.
+    """
     for eval_set in list_eval_sets():
-        assert 0.0 <= eval_set.gate.min_pass_rate <= 1.0
-        assert eval_set.gate.passes(1.0)
-        assert not eval_set.gate.passes(-0.01)
+        assert not hasattr(eval_set.gate, "min_pass_rate"), eval_set.slug
+        assert eval_set.gate.rationale, f"{eval_set.slug}: a gate must say why"
 
 
 def test_every_agent_binds_a_loadable_set() -> None:

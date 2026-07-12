@@ -1,11 +1,13 @@
 """Governed agent lifecycle — propose → review → approve → release (Phase 4b-③).
 
 This closes the governed-package loop: an agent (or a new version) only goes
-**live** once a run of ITS own evaluation set clears the two-level eval-gate
-(critical floor zero-tolerance AND domain ≥ min_pass_rate). The decision is read
-from the agent's own run report; the transition is recorded as a hash-chained S1
-event (``released`` on success, ``release_blocked`` otherwise), so the promotion
-is opposable and reconstructable in État à date.
+**live** once a run of ITS own evaluation set clears the eval-gate — the **critical
+floor**, zero tolerance, and only it (ADR 0021 removed the ``domain >= min_pass_rate``
+half: every bar it compared against sat below the catalogue's measured null floor, so it
+could never deny a release). The decision is read from the agent's own run report; the
+transition is recorded as a hash-chained S1 event (``released`` on success,
+``release_blocked`` otherwise), so the promotion is opposable and reconstructable in
+État à date.
 
 The registry itself is approved as a unit (ADR 0012) and not mutated at runtime —
 this module governs the *promotion decision*, not a live registry edit.
@@ -41,19 +43,29 @@ _TR: dict[str, tuple[str, str, str]] = {
         "no evaluation run for this agent - run its eval set first.",
     ),
     "r_validated": (
-        "eval-gate validé (socle critique OK + domaine ≥ seuil).",
-        "Eval-Gate bestanden (kritische Basis OK + Domaene ≥ Schwelle).",
-        "eval-gate passed (critical floor OK + domain >= threshold).",
+        "eval-gate validé (plancher critique OK, zéro tolérance).",
+        "Eval-Gate bestanden (kritische Basis OK, null Toleranz).",
+        "eval-gate passed (critical floor OK, zero tolerance).",
     ),
     "r_blocked_critical": (
         "bloqué par le socle critique (zéro tolérance) : {cats}",
         "durch die kritische Basis blockiert (Null-Toleranz): {cats}",
         "blocked by the critical floor (zero tolerance): {cats}",
     ),
-    "r_blocked_domain": (
-        "bloqué : le taux du domaine est sous le seuil de l'eval set.",
-        "blockiert: die Domaenenrate liegt unter der Schwelle des Eval-Sets.",
-        "blocked: the domain rate is below the eval set threshold.",
+    # A gate that failed WITHOUT naming a critical failure. Since ADR 0021 removed the
+    # domain bar, the only way the current gate produces this is an empty run — so the
+    # message says that, and names the other possibility rather than guessing: a report
+    # filed BEFORE the ADR, whose `passed: false` was the removed bar's doing.
+    "r_blocked_no_critical": (
+        "bloqué sans échec critique nommé : run vide (absence de preuve = bloquant), "
+        "ou rapport antérieur à l'ADR 0021 dont le verdict venait de la barre de domaine, "
+        "supprimée depuis. Relancer l'eval set tranche.",
+        "blockiert ohne benannten kritischen Fehler: leerer Lauf (kein Nachweis = "
+        "blockierend) oder ein Bericht von vor ADR 0021, dessen Urteil von der inzwischen "
+        "entfernten Domaenen-Schwelle stammte. Das Eval-Set erneut ausfuehren entscheidet.",
+        "blocked with no critical failure named: an empty run (absence of proof is "
+        "blocking), or a report filed before ADR 0021 whose verdict came from the domain "
+        "bar, since removed. Re-running the eval set settles it.",
     ),
     "r_no_verdict": (
         "aucun verdict de gate sur ce run (relancez via --agent).",
@@ -215,7 +227,7 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
                 cats=", ".join(snap.gate_failed_critical)
             )
         elif snap.gate_passed is False:
-            reason = _t("r_blocked_domain", lang)
+            reason = _t("r_blocked_no_critical", lang)
         else:
             reason = _t("r_no_verdict", lang)
     elif not level_ok:

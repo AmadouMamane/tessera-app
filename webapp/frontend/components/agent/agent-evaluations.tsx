@@ -506,6 +506,57 @@ function LiensUtiles() {
   );
 }
 
+/** What the model EARNED over this set's own null floor — the domain bar's replacement.
+ *
+ *  ADR 0021 deleted the absolute bar and put no decoration in its place. Every number
+ *  here is measured: the floor is the committed null control restricted to this set's
+ *  cases, and the tile shows the model's delta over it. Two things it deliberately does
+ *  NOT do — print a threshold (there is none), and call a break a regression (a break
+ *  counts only once replayed, and a dashboard cannot replay). */
+function ContributionTile({
+  contribution,
+  locale,
+}: {
+  contribution: NonNullable<Data["gate"]>["contribution"];
+  locale: string;
+}) {
+  const shell = "rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2";
+  const heading = pick(locale, "Contribution du modèle", "Modellbeitrag", "Model contribution");
+  // Honest-empty: no set bound, no committed floor, or NO MODEL SPOKE. Printing "0
+  // regressions, 0 contribution" for a run no model answered would read as a pass.
+  if (!contribution?.available) {
+    return (
+      <div className={shell}>
+        <span className="text-[var(--tessera-text-muted)]">{heading}</span>
+        <p className="mt-0.5 font-medium text-[var(--tessera-text-muted)]">
+          {pick(locale, "Non mesurable", "Nicht messbar", "Not measurable")}
+        </p>
+      </div>
+    );
+  }
+  const breaks = contribution.regression_candidates.length;
+  return (
+    <div className={shell} title={contribution.note}>
+      <span className="text-[var(--tessera-text-muted)]">
+        {heading}{" "}
+        <span className="opacity-70">
+          ({pick(locale, "plancher du set", "Sockel des Sets", "the set's own floor")}{" "}
+          {contribution.floor_passed}/{contribution.floor_total})
+        </span>
+      </span>
+      <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
+        +{contribution.contribution}/{contribution.contribution_population}{" "}
+        <span className={breaks > 0 ? "text-[#ffce8a]" : "text-[#7fe3b3]"}>
+          ·{" "}
+          {breaks > 0
+            ? `${breaks} ${pick(locale, "régression candidate", "Regressionskandidat", "candidate regression")}${breaks > 1 ? "s" : ""}`
+            : pick(locale, "0 régression", "0 Regression", "0 regressions")}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 /** Release-gate verdict as the page headline (policy §6: the verdict — not the
  *  aggregate score — is the title). Full-width banner, colour tied to conformity. */
 function VerdictBanner({ data }: { data: Data }) {
@@ -596,7 +647,7 @@ function VerdictBanner({ data }: { data: Data }) {
           <ReleaseControl />
         </div>
       </div>
-      <div className="grid gap-2 text-[11px] sm:grid-cols-3">
+      <div className="grid gap-2 text-[11px] sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
           <span className="text-[var(--tessera-text-muted)]">
             {pick(
@@ -618,21 +669,26 @@ function VerdictBanner({ data }: { data: Data }) {
                 : pick(locale, "Conforme", "Konform", "Compliant")}
           </p>
         </div>
+        {/* T2 used to print "(seuil 55 %)" next to this count. The threshold is gone —
+            all three sat BELOW the catalogue's measured null floor, so an agent with no
+            model at all cleared them (ADR 0021). What is left is the measurement, said
+            to be one. No tone is applied: there is nothing to be compliant WITH. */}
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
           <span className="text-[var(--tessera-text-muted)]">
-            {pick(locale, "Gate domaine (T2)", "Domaenen-Gate (T2)", "Domain gate (T2)")}
+            {pick(
+              locale,
+              "Domaine (T2) — mesuré, ne bloque pas",
+              "Domaene (T2) — gemessen, nicht blockierend",
+              "Domain (T2) — measured, non-blocking",
+            )}
           </span>
-          <p
-            className={`mt-0.5 font-medium ${gate.domain?.ok ? "text-[#7fe3b3]" : "text-[#ffce8a]"}`}
-          >
+          <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
             {gate.domain
-              ? `${gate.domain.passed}/${gate.domain.total}`
+              ? `${gate.domain.passed}/${gate.domain.total} (${Math.round(gate.domain.rate * 100)}%)`
               : `${gate.standard_passed}/${gate.standard_total}`}
-            {typeof gate.min_pass_rate === "number"
-              ? ` (${pick(locale, "seuil", "Schwelle", "threshold")} ${Math.round(gate.min_pass_rate * 100)}%)`
-              : ""}
           </p>
         </div>
+        <ContributionTile contribution={gate.contribution} locale={locale} />
         <div className="rounded-md border border-[var(--tessera-border)]/60 bg-black/15 px-2.5 py-2">
           <span className="text-[var(--tessera-text-muted)]">
             {pick(
@@ -698,15 +754,10 @@ function ActionsRequises({
         `Replay ${bg.non_executed_critical} non-executed critical case(s)`,
       ),
     );
-  if (gate.domain && !gate.domain.ok)
-    actions.push(
-      pick(
-        locale,
-        "Remonter le taux du domaine (T2) au seuil",
-        "Domaenen-Rate (T2) auf die Schwelle anheben",
-        "Raise the domain (T2) rate to the threshold",
-      ),
-    );
+  // "Raise the domain rate to the threshold" is gone with the threshold (ADR 0021). It was
+  // never an action either: no domain rate has ever blocked a release, so no domain rate has
+  // ever been required to reach anything. A T2 failure is now surfaced where it is true —
+  // the measured tile and the case table — never as a condition of shipping.
   actions.push(
     pick(
       locale,

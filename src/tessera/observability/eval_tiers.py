@@ -10,8 +10,12 @@ failure into one of three tiers:
 * **Tier 1 — critique dérogeable**: high-stakes cases *outside* the floor,
   blocking by default, levable only under a governed waiver. Enumerated in
   ``eval/tiers.yaml`` (curated, versioned).
-* **Tier 2 — domaine gradé**: everything else, judged against the set's
-  ``min_pass_rate``.
+* **Tier 2 — domaine mesuré**: everything else. Its pass rate is measured and shown;
+  it is judged against **nothing** (ADR 0021). T2 used to carry the set's
+  ``min_pass_rate``, and every one of those bars sat below the catalogue's measured
+  null floor — a modelless agent cleared them all, so the tier could not deny a
+  release. T2 is still a real classification (it says a failure is not existential);
+  it is no longer a gate.
 
 This module is the single source of truth for ``tier_for(case_id)``. T0 is
 derived from the socle (never duplicated), T1 from the versioned YAML, T2 is the

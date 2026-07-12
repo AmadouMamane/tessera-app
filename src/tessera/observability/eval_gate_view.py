@@ -10,8 +10,18 @@ registry, **all reconciled at one directing grain**.
 The binding contract is ``docs/design/eval-gate-policy.md`` (it primes over the
 normative image for verdict + numbers). Every count here is derived from the run
 — nothing is fabricated. The gate is recomputed from first principles (it does
-not trust the report's pre-baked two-level ``gate`` block), so the three tiers,
-the per-(case, langue) grain and the waivers are all honoured.
+not trust the report's pre-baked ``gate`` block), so the three tiers, the
+per-(case, langue) grain and the waivers are all honoured.
+
+**Tier 2 no longer gates** (ADR 0021). It used to: the domain rate had to clear the
+set's ``min_pass_rate``, and that condition was the fourth term of the release formula.
+All three bars sat *below* the catalogue's measured null floor — an agent with no model
+at all cleared every one — so the term could not fail, and a term that cannot fail does
+not belong in a verdict. T2 survives as a **classification** and its rate as a
+**measurement**: both are shown, neither is compared to anything. What blocks a release
+is the critical floor (T0 unwaivable, T1 unwaived, and any critical left unexecuted —
+absence of proof is blocking). What grades the *model* is its contribution over the
+set's own null floor, computed in :mod:`eval.contribution`, not here.
 """
 
 from __future__ import annotations
@@ -42,7 +52,8 @@ _STATUS_LABEL: dict[str, tuple[str, str]] = {
     "bloquant_socle": ("Bloquant · socle (T0)", "crit"),
     "bloquant_t1": ("Bloquant · critique (T1)", "crit"),
     "deroge_actif": ("Dérogé actif", "warn"),
-    "echec_domaine": ("Échec · domaine (T2)", "bad"),
+    # T2 fails are real and shown — they simply do not block (ADR 0021).
+    "echec_domaine": ("Échec · domaine (T2, non bloquant)", "bad"),
     "non_execute": ("Non exécuté", "crit"),
 }
 
@@ -93,7 +104,6 @@ class GateView:
     candidate_version: str
     statuses: list[GateCaseStatus]
     waivers: list[EffectiveWaiver]
-    min_pass_rate: float
     # Grains (policy §4): three distinct populations, shown distinctly.
     executions: int = 0
     distinct_cases: int = 0
@@ -104,9 +114,9 @@ class GateView:
     socle_total: int = 0
     socle_passed: int = 0
     socle_ok: bool = True
+    # T2: measured, never gated (ADR 0021) — hence no `domain_ok`.
     domain_total: int = 0
     domain_passed: int = 0
-    domain_ok: bool = True
     # Critical breakdown (policy section 6) at case, langue grain.
     blocking_socle: int = 0
     blocking_t1: int = 0
@@ -147,10 +157,14 @@ def _expected_universe(snap: EvalSnapshot) -> set[tuple[str, str]]:
     return universe or {(s.case_id, s.language) for s in snap.sessions}
 
 
-def _verdict(
-    *, socle_ok: bool, t1_unwaived: int, non_exec_crit: int, domain_ok: bool
-) -> tuple[bool, str, str, str]:
-    """Return (passed, label, tone, reason) per the policy's gate formula."""
+def _verdict(*, socle_ok: bool, t1_unwaived: int, non_exec_crit: int) -> tuple[bool, str, str, str]:
+    """Return (passed, label, tone, reason) per the policy's gate formula.
+
+    The formula is the critical floor, and only it (ADR 0021). The domain term it used
+    to carry — ``domain_rate >= min_pass_rate`` — was removed, not relaxed: every bar it
+    compared against sat below the measured null floor, so it never denied a release and
+    never could.
+    """
     if not socle_ok or non_exec_crit:
         if not socle_ok:
             reason = "Un cas du socle dur (T0) a échoué ou n'a pas été exécuté."
@@ -162,24 +176,26 @@ def _verdict(
             f"{t1_unwaived} cas critique(s) dérogeable(s) (T1) en échec sans dérogation " "active."
         )
         return False, "BLOQUÉ (critiques non dérogés)", "crit", reason
-    if not domain_ok:
-        reason = "Le taux de réussite du domaine (T2) est sous le seuil requis."
-        return False, "BLOQUÉ (domaine)", "bad", reason
-    return True, "PASSE", "good", "Socle intact, aucun critique non dérogé, domaine conforme."
+    return (
+        True,
+        "PASSE",
+        "good",
+        "Socle intact, aucun critique non dérogé, aucun critique non exécuté.",
+    )
 
 
-def structural_gate(
-    results: Sequence[tuple[str, str, bool]], *, min_pass_rate: float
-) -> dict[str, object]:
+def structural_gate(results: Sequence[tuple[str, str, bool]]) -> dict[str, object]:
     """The tier-aware **structural** gate, at the (case, langue) grain — no waivers.
 
     This is the policy-shaped gate the *run itself* can carry (stamped into the
     report by the eval runner), so the report is authoritative for the structural
-    verdict instead of the cruder two-level block. It deliberately excludes
-    waivers and expiry: those are **dynamic** (clock-dependent) and resolved at
-    render by :func:`build_gate_view`, which layers the active-waiver delta on top
-    of this same tier classification. ``results`` are ``(case_id, language,
-    passed)`` triples for the reference run.
+    verdict. It deliberately excludes waivers and expiry: those are **dynamic**
+    (clock-dependent) and resolved at render by :func:`build_gate_view`, which layers
+    the active-waiver delta on top of this same tier classification. ``results`` are
+    ``(case_id, language, passed)`` triples for the reference run.
+
+    The T2 block it returns is a **measurement** and carries no ``ok``: nothing is
+    compared to a threshold, because there is none (ADR 0021).
     """
     tiers = load_tier_map()
     counts = {"T0": 0, "T1": 0, "T2": 0}
@@ -200,9 +216,8 @@ def structural_gate(
             domain_passed += int(passed)
     socle_ok = socle_total > 0 and socle_passed == socle_total
     domain_rate = domain_passed / domain_total if domain_total else 1.0
-    domain_ok = domain_rate >= min_pass_rate
     passed, label, tone, reason = _verdict(
-        socle_ok=socle_ok, t1_unwaived=blocking_t1, non_exec_crit=0, domain_ok=domain_ok
+        socle_ok=socle_ok, t1_unwaived=blocking_t1, non_exec_crit=0
     )
     return {
         "grain": "case_language",
@@ -210,15 +225,14 @@ def structural_gate(
         "label": label,
         "tone": tone,
         "reason": reason,
-        "min_pass_rate": min_pass_rate,
         "tier_counts": counts,
         "executions": sum(counts.values()),
         "socle": {"ok": socle_ok, "passed": socle_passed, "total": socle_total},
         "domain": {
-            "ok": domain_ok,
             "passed": domain_passed,
             "total": domain_total,
             "rate": round(domain_rate, 4),
+            "gating": False,
         },
         "breakdown": {"blocking_socle": blocking_socle, "blocking_t1": blocking_t1},
         "note": "Gate structurel (sans dérogations) ; les dérogations sont résolues au rendu.",
@@ -304,9 +318,6 @@ def build_gate_view(snap: EvalSnapshot, *, now: datetime | None = None) -> GateV
     domain_st = [s for s in statuses if s.tier == "T2"]
     domain_total = len(domain_st)
     domain_passed = sum(1 for s in domain_st if s.passed)
-    domain_rate = domain_passed / domain_total if domain_total else 1.0
-    min_rate_or_none = snap.gate_min_pass_rate
-    domain_ok = min_rate_or_none is None or domain_rate >= min_rate_or_none
 
     blocking_socle = sum(1 for s in statuses if s.status_key == "bloquant_socle")
     blocking_t1 = sum(1 for s in statuses if s.status_key == "bloquant_t1")
@@ -321,12 +332,10 @@ def build_gate_view(snap: EvalSnapshot, *, now: datetime | None = None) -> GateV
         "T2": sum(1 for s in statuses if s.tier == "T2"),
     }
 
-    min_rate = snap.gate_min_pass_rate if snap.gate_min_pass_rate is not None else 0.0
     passed, label, tone, reason = _verdict(
         socle_ok=socle_ok,
         t1_unwaived=blocking_t1,
         non_exec_crit=non_executed_critical,
-        domain_ok=domain_ok,
     )
 
     return GateView(
@@ -337,7 +346,6 @@ def build_gate_view(snap: EvalSnapshot, *, now: datetime | None = None) -> GateV
         candidate_version=candidate,
         statuses=statuses,
         waivers=waivers,
-        min_pass_rate=min_rate,
         executions=executions,
         distinct_cases=distinct_cases,
         socle_cases=socle_cases,
@@ -348,7 +356,6 @@ def build_gate_view(snap: EvalSnapshot, *, now: datetime | None = None) -> GateV
         socle_ok=socle_ok,
         domain_total=domain_total,
         domain_passed=domain_passed,
-        domain_ok=domain_ok,
         blocking_socle=blocking_socle,
         blocking_t1=blocking_t1,
         waived_active=waived_active,

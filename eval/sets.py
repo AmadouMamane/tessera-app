@@ -2,9 +2,16 @@
 
 Each agent package BINDS an evaluation set by slug (`Agent.eval_set`); the slug
 resolves to a manifest under ``eval/sets/<slug>.json`` listing the catalogue case
-ids the agent is judged on, plus a release ``gate`` (minimum pass rate). This is
-the curated, opposable artifact behind "evaluated as a whole": an agent cannot go
-live until a run of ITS set clears the gate.
+ids the agent is judged on, plus a release ``gate``. This is the curated, opposable
+artifact behind "evaluated as a whole": an agent cannot go live until a run of ITS
+set clears the gate.
+
+The gate carries **no number** (ADR 0021). It used to declare a ``min_pass_rate``, and
+the three of them (55% / 65% / 55%) all sat *below* the catalogue's measured null floor
+— an agent with no model at all cleared every one. What a set's ``gate`` holds now is
+the *rationale*: the release bar itself is the same for every set, and it is measured
+rather than chosen — the critical floor (zero tolerance, :mod:`eval.gate`) plus the
+model's contribution over the set's OWN null floor (:mod:`eval.contribution`).
 
 The loader is strict on purpose — every listed case id must exist under
 ``eval/failures/`` — so a typo in a manifest fails loudly in CI rather than
@@ -43,14 +50,13 @@ SECURITY_FLOOR_SLUG = "socle-securite"
 
 @dataclass(frozen=True, slots=True)
 class EvalGate:
-    """The release bar for an evaluation set."""
+    """Why an evaluation set's release bar is what it is.
 
-    min_pass_rate: float
+    It holds no threshold: the bar is not per-set and not chosen (ADR 0021). It is the
+    critical floor, plus contribution over the set's own measured null floor.
+    """
+
     rationale: str = ""
-
-    def passes(self, pass_rate: float) -> bool:
-        """Whether a run's pass rate clears the gate."""
-        return pass_rate >= self.min_pass_rate
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,10 +141,7 @@ def _coerce_set(payload: dict[str, object], stem: str, schema: dict[str, object]
     if not isinstance(gate_raw, dict):
         msg = f"eval set {slug!r} has a malformed gate"
         raise TypeError(msg)
-    gate = EvalGate(
-        min_pass_rate=float(gate_raw["min_pass_rate"]),
-        rationale=str(gate_raw.get("rationale", "")),
-    )
+    gate = EvalGate(rationale=str(gate_raw.get("rationale", "")))
     return EvalSet(
         slug=slug,
         name=str(payload["name"]),
