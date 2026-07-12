@@ -14,6 +14,20 @@ from tessera.api.routes.observability._common import (
     _scores_for,
     _serialize_conversations,
 )
+from tessera.api.routes.observability.schemas_fleet import (
+    AccessPayload,
+    AccessUnavailable,
+    AgentEvaluationsPayload,
+    AgentEvaluationsUnavailable,
+    ChromePayload,
+    ChromeUnavailable,
+    FleetPayload,
+    FleetUnavailable,
+    RbacMatrixPayload,
+    RbacMatrixUnavailable,
+    SandboxConfigPayload,
+    SandboxConfigUnavailable,
+)
 from tessera.memory import transcript
 from tessera.observability import (
     access as access_mod,
@@ -76,7 +90,7 @@ async def observability_agent_historique(
         return {"available": False}
 
 
-@router.get("/observability/fleet")
+@router.get("/observability/fleet", response_model=FleetPayload | FleetUnavailable)
 async def observability_fleet(lang: str = "fr") -> dict[str, object]:
     """Fleet rollup: per-agent observable KPIs + deduplicated org totals.
 
@@ -89,7 +103,7 @@ async def observability_fleet(lang: str = "fr") -> dict[str, object]:
         return {"available": False}
 
 
-@router.get("/observability/rbac-matrix")
+@router.get("/observability/rbac-matrix", response_model=RbacMatrixPayload | RbacMatrixUnavailable)
 async def observability_rbac_matrix(agent: str = "all") -> dict[str, object]:
     """RBAC role x agent matrix (real roles x real agents). Global, filterable.
 
@@ -141,7 +155,10 @@ async def observability_agent_lifecycle(
         return {"available": False}
 
 
-@router.get("/observability/agent-evaluations")
+@router.get(
+    "/observability/agent-evaluations",
+    response_model=AgentEvaluationsPayload | AgentEvaluationsUnavailable,
+)
 async def observability_agent_evaluations(
     agent_id: str = DEFAULT_AGENT_ID,
     lang: str = "fr",
@@ -187,7 +204,9 @@ async def observability_agent_prompts(
         return {"available": False}
 
 
-@router.get("/observability/sandbox-config")
+@router.get(
+    "/observability/sandbox-config", response_model=SandboxConfigPayload | SandboxConfigUnavailable
+)
 async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
     """Defaults for the Console sandbox playground (model/prompt/guardrails).
 
@@ -345,7 +364,7 @@ async def observability_agent_synthese(
         return {"available": False}
 
 
-@router.get("/observability/chrome")
+@router.get("/observability/chrome", response_model=ChromePayload | ChromeUnavailable)
 async def observability_chrome(lang: str = "fr") -> dict[str, object]:
     """Sidebar badges and bell notifications — every number a count, every count a page.
 
@@ -360,7 +379,7 @@ async def observability_chrome(lang: str = "fr") -> dict[str, object]:
         return {"available": False}
 
 
-@router.get("/observability/access")
+@router.get("/observability/access", response_model=AccessPayload | AccessUnavailable)
 async def observability_access(lang: str = "fr") -> dict[str, object]:
     """Roles & access overview (page #18).
 
