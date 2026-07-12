@@ -285,3 +285,66 @@ Both are recorded because the table above is only worth what the method behind i
    being tested was not the file that had been committed. Hence the sha column: it is not
    decoration, it is what makes the row a fact. (`dev-status` before every curl is the same
    discipline, one level up; this is its unit-test-level twin.)
+
+---
+
+## F-6 — P1 · the audit chain de-branches by configuration (ADR 0023)
+
+**Status: closed on `claude/fix-audit-chain-sink`, cut from `main` @ `02ad18dc`.**
+Lane B, independent of lane A (touches `guard/audit.py` + a new ADR, not `api/routes`/`webapp`),
+so the two compose. One commit: `b287b419`.
+
+The finding in one sentence: `enqueue_ledger_entry` — the only path into the opposable ledger —
+ran only `if sink == "file"`, so with the baked default `ledger_source=postgres` and the
+documented staging sink `cloud_logging`, every entry was emitted to Cloud Logging and chained
+**nowhere**. Opposability — the product's whole thesis — was switchable off by a *transport*
+choice, silently. `_emit_postgres` was a stub that fell back to stdout, so the `postgres` sink
+persisted nothing to a table either.
+
+### Doctrine (ADR 0023): the sink is a transport, the ledger is the store
+
+1. Persistence is upstream of the sink, unconditional. The store decision is one shared
+   predicate — `chain_persists_for(sink, ledger_source, dual_write)` — used by both the
+   emitter and the boot check, so they cannot disagree. Post-cut with dual-write, the drain
+   chains **every** sink (it routes to the drain, not a second in-process chainer — that was
+   the fork bug ADR 0015 closed).
+2. Fail-closed at boot: `validate_audit_chain_config()` at `build_app()`, the fourth of the
+   fail-closed family (ADR 0020). Exposed + unchainable config → refuse, naming the culprit.
+   Exemption is *not exposed*, so the hermetic `TESSERA_LEDGER_DUAL_WRITE=0` dev/CI loop stands.
+3. `_emit_postgres` never silently → stdout: no-op when the ledger already has it, raises loudly
+   when it does not.
+
+### The ratchet (the class, not the instance)
+
+`test_audit_chain_independent_of_sink.py` walks **every** sink from the `_Sink` `Literal` type
+and asserts each either enqueues to the ledger or the boot refuses — no third outcome, and a
+sink added later cannot skip it. Mutation-tested: reverting to `if sink == "file"` turns it red
+on `stdout`, `cloud_logging` and `postgres` (only `file` passes — the pre-fix behaviour).
+
+### Live proof (fresh process, real boot)
+
+| config | outcome |
+|---|---|
+| `staging` · `sink=cloud_logging` · `ledger_source=file` (unchainable) | **REFUSES boot**, message names both settings |
+| `staging` · `sink=cloud_logging` · `ledger_source=postgres` (default) | **BOOTS** — it now chains |
+| runtime: `cloud_logging` sink, postgres ledger | entry **enqueued** to the ledger (was: dropped) |
+
+51 existing ledger/audit tests pass unchanged — the drain, spool, cutover and promotion
+behaviour is untouched; only the gate feeding it is widened.
+
+### Witnesses
+
+- **gate ×2**, real exit codes (below).
+- **live refusal** (boot refuses the unchainable staging config) + **positive control** (the
+  default staging config boots) + **non-regression** (51 ledger/audit tests green, drain
+  unchanged).
+
+### Known-open / owed
+
+- **CI witness absent** (billing-blocked) — two local gates are the guard rail.
+- **Merge order — done as written**: lane A landed first (`origin/main` = `362b33a7`), lane B was
+  rebased onto it, and the gate was re-run **on the rebased tree** — a rebase is not a merge, so
+  the gate that ran before it does not vouch for the tree after it. The only conflict was the
+  predicted append in this file.
+- **TSA / "Scellé · opposable" badge untouched** by decision — this repairs the mechanism, not
+  the opposability promise or its external attestation (ADR 0015 §Corr.3c / 0022).
