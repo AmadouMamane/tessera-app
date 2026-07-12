@@ -27,13 +27,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from fastapi import HTTPException
 from fastapi.routing import APIRoute
+from pydantic import SecretStr
+from starlette.requests import Request
 
 from tessera.api.security import (
     require_collections_operator,
     require_operator,
+    require_subject_reader,
     require_superadmin,
 )
+from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,6 +46,10 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+#: The service bearer, as the BFF would present it. Any value: what matters is that the
+#: caller presents the *correct* one — the frontend does, for every visitor it proxies.
+_SERVICE_BEARER = "the-frontend-service-token"
 
 #: The dependencies this repo recognises as an auth gate at the routing layer.
 #:
@@ -62,6 +71,13 @@ MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 KNOWN_AUTH_GUARDS: frozenset[Callable[..., object]] = frozenset(
     {require_operator, require_collections_operator, require_superadmin}
 )
+
+#: Every dependency this repo uses as an IDENTITY gate, on ANY plane — the mutation guards
+#: above plus the read plane's ``require_subject_reader`` (F-4). The behavioural definition
+#: below is asserted over all of them: the doctrine "a guard is what refuses a stranger" is
+#: not a property of the write plane, it is a property of a guard. A read guard that
+#: degraded to provenance would hand a transcript to the same stranger.
+IDENTITY_GUARDS: frozenset[Callable[..., object]] = KNOWN_AUTH_GUARDS | {require_subject_reader}
 
 #: Mutating routes whose AUTH LIVES IN THE HANDLER, each with its reason. Frozen by an
 #: equality assertion below — an entry that gains a routing-layer guard must be removed,
@@ -88,6 +104,116 @@ SELF_AUTHENTICATING: frozenset[tuple[str, str]] = frozenset(
 #: self-authenticating handler. This is the set F-1 lived in. It is frozen at zero —
 #: never add an entry; give the route a guard instead.
 UNGATED_EXCEPTIONS: frozenset[tuple[str, str]] = frozenset()
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────
+# THE DEFINITION. A guard is what refuses a stranger.
+#
+# A bearer says WHERE a call comes from, never WHO makes it.
+#
+# Everything above this line is a LIST, and a list can be wrong. F-5 is what a wrong list
+# costs: `require_bearer` sat in KNOWN_AUTH_GUARDS, so the ratchet built to forbid the
+# anonymous writer *certified* `DELETE /memory/{conversation_id}` — the erasure of any
+# subject's memory — as guarded. Measured on `main` before this branch: an anonymous
+# caller received **204 No Content**. The guard-rail was blind to its own class, because
+# membership of the list was asserted by NOBODY.
+#
+# So the list stops being a claim and becomes a test. Below, every member of
+# IDENTITY_GUARDS — the mutation plane's guards AND the read plane's — is CALLED with the
+# request a stranger actually sends, and must refuse it. Adding a provenance guard back to
+# either set does not "pass review": it fails here, on the spot, today and in ten years.
+# ─────────────────────────────────────────────────────────────────────────────────────
+
+
+def _a_stranger_behind_the_frontend(*, present_bearer: bool) -> Request:
+    """The request a stranger's browser actually produces, once the BFF has proxied it.
+
+    This is the whole subtlety, and getting it wrong would make this test a rubber stamp.
+    "Anonymous" does NOT mean "carries nothing": the front's BFF attaches the **service
+    bearer on the caller's behalf**, so a stranger's request reaches the agent carrying a
+    perfectly valid one. A test that sent *no* bearer would let `require_bearer` answer 401
+    and look like a guard — proving only that the stranger did not paste a secret they were
+    never asked for.
+
+    So the request carries the correct bearer and no identity: no operator assertion, no
+    session cookie. Anything that refuses THIS is a guard. Anything that admits it is
+    provenance, whatever its name.
+    """
+    headers: list[tuple[bytes, bytes]] = []
+    if present_bearer:
+        headers.append((b"authorization", f"Bearer {_SERVICE_BEARER}".encode()))
+    return Request(
+        {
+            "type": "http",
+            "method": "DELETE",
+            "path": "/memory/00000000-0000-0000-0000-000000000000",
+            "raw_path": b"/memory/00000000-0000-0000-0000-000000000000",
+            "query_string": b"",
+            "root_path": "",
+            "scheme": "http",
+            "http_version": "1.1",
+            "headers": headers,
+            "client": ("203.0.113.7", 51234),
+            "server": ("testserver", 80),
+        }
+    )
+
+
+@pytest.fixture
+def _service_bearer_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The PRODUCTION posture: a bearer is configured, and the caller presents the right one."""
+    monkeypatch.setattr(get_settings().api, "bearer_token", SecretStr(_SERVICE_BEARER))
+
+
+@pytest.fixture
+def _no_bearer_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The CI/dev posture — the one `make gate` runs in, where `require_bearer` is a no-op."""
+    monkeypatch.setattr(get_settings().api, "bearer_token", None)
+
+
+@pytest.mark.usefixtures("_service_bearer_configured")
+@pytest.mark.parametrize("guard", sorted(IDENTITY_GUARDS, key=lambda g: g.__name__))
+def test_every_known_guard_refuses_a_stranger_who_carries_a_valid_bearer(
+    guard: Callable[..., object],
+) -> None:
+    """THE ratchet on the ratchet: membership of KNOWN_AUTH_GUARDS is now earned, not claimed.
+
+    The caller presents everything the frontend legitimately attaches — a **valid** service
+    bearer — and nothing that says who they are. A guard must answer 401.
+
+    `require_bearer` fails this test, and that is precisely why the test exists: it admits
+    this caller (the bearer is correct), so it is provenance, not identity, and it can never
+    return to the set above. The check is behavioural, so no future edit can smuggle a
+    provenance dependency back in by simply adding a name to a frozenset.
+    """
+    with pytest.raises(HTTPException) as raised:
+        guard(_a_stranger_behind_the_frontend(present_bearer=True))
+
+    assert raised.value.status_code == 401, (
+        f"{guard.__name__} answered {raised.value.status_code} to a caller carrying a valid "
+        "service bearer and NO identity — a guard must refuse a stranger with 401"
+    )
+
+
+@pytest.mark.usefixtures("_no_bearer_configured")
+@pytest.mark.parametrize("guard", sorted(IDENTITY_GUARDS, key=lambda g: g.__name__))
+def test_every_known_guard_refuses_a_stranger_in_the_ci_posture_too(
+    guard: Callable[..., object],
+) -> None:
+    """The same demand in the posture the gate itself runs in — where a no-op is invisible.
+
+    With no token configured, `require_bearer` returns `None` without looking at anything.
+    That is the posture of every `make gate` and every CI run, so a guard that degrades to a
+    no-op here would be *certified green by the very suite meant to catch it*. Asserting both
+    postures is what makes the ratchet independent of how the environment happens to be set.
+    """
+    with pytest.raises(HTTPException) as raised:
+        guard(_a_stranger_behind_the_frontend(present_bearer=False))
+
+    assert raised.value.status_code == 401, (
+        f"{guard.__name__} answered {raised.value.status_code} to an unidentified caller in "
+        "the CI posture — a guard that is a no-op without configuration is not a guard"
+    )
 
 
 @pytest.fixture(scope="module")
