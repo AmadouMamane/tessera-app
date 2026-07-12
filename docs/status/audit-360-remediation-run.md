@@ -209,9 +209,79 @@ kept under unset/local/ci, an explicit password accepted, the refusal named in t
   guard rail, same posture as every merge since 2026-07-10.
 - **The seeded e2e run** for the resume flow and the gated cockpit pages is owed when CI
   returns; the vitest layer covers the units, not the browser round-trip.
-- **`main` advanced to `02ad18dc`** (eval commits) during this work; the branch is based on
-  `6b78055f` and must be rebased onto current `main` before the fast-forward.
+- ~~**`main` advanced to `02ad18dc`**~~ — **resolved**: the branch was rebased onto it
+  (`30cab63a`) and the gate re-run on the rebased tree. A rebase is not a merge: the gate that
+  ran before it does not vouch for the tree after it.
 - **Systemic class, logged not fixed here** (operator ruling): three defects this week share
   one shape — `extra="ignore"` swallowing a wrong Ollama field, a wrong `response_model`
   stripping fields, `audit_sink=stdout` cutting the chain — *silent union where a loud failure
   belonged*. Owed as a debt sweep (`extra="forbid"` on settings), not this lane.
+
+---
+
+## The guard-rail was blind to its own class (2026-07-12, later)
+
+F-5 above was closed **by hand**: `require_bearer` was removed from `KNOWN_AUTH_GUARDS`, one
+name deleted from a frozenset. That closes the instance and leaves the class wide open —
+nothing in the repository asserted the list, so the next author could put a provenance
+dependency back into it and pass review. The ratchet built to forbid the anonymous writer had
+been *certifying* the GDPR mutations, because each of them carried a "recognised guard".
+
+A list can be wrong. So the list stops being a claim and becomes a test.
+
+### The invariant, in one line
+
+> **A guard is what refuses a stranger. A bearer says where a call comes from, never who makes it.**
+
+Every member of `IDENTITY_GUARDS` — the write plane's guards **and** the read plane's
+`require_subject_reader` — is now *called* with the request a stranger actually sends, and
+must raise 401. The doctrine is a property of a guard, not of the write plane: a read guard
+that degraded to provenance would hand a transcript to the same stranger.
+
+**The request is the whole subtlety, and getting it wrong would make this a rubber stamp.**
+"Anonymous" does not mean "carries nothing": the BFF attaches the service bearer *on the
+caller's behalf*, so a stranger reaches the agent holding a perfectly valid one. A test that
+sent *no* bearer would let `require_bearer` answer 401 and **look like a guard** — proving
+only that the stranger had not pasted a secret nobody asked them for. So the stranger presents
+the **correct** bearer and no identity. Whatever refuses that is a guard; whatever admits it
+is provenance, whatever its name.
+
+Asserted in **both postures**, because the no-op is invisible in exactly one of them: with no
+token configured — the posture every `make gate` and every CI run uses — `require_bearer`
+returns `None` without looking at anything, so a guard that degraded to a no-op there would be
+certified green *by the very suite meant to catch it*.
+
+### Mutation-tested, under sha control
+
+A ratchet nobody has seen red is not a ratchet. `require_bearer` put back into
+`KNOWN_AUTH_GUARDS`, nothing else touched:
+
+| step | `test_mutation_routes_carry_auth.py` (sha256, 12) | pytest | real exit |
+|---|---|---|---|
+| baseline, as committed | `78af61da2835` | 12 passed | **0** |
+| `require_bearer` back in the set | `04ae4e4a44f8` | **2 failed**, 12 passed | **1** |
+| restored | `78af61da2835` | 12 passed | **0** |
+
+The red names the doctrine rather than a line number, on **both** postures:
+
+```
+FAILED …::test_every_known_guard_refuses_a_stranger_who_carries_a_valid_bearer[require_bearer]
+FAILED …::test_every_known_guard_refuses_a_stranger_in_the_ci_posture_too[require_bearer]
+E   Failed: DID NOT RAISE <class 'fastapi.exceptions.HTTPException'>
+        guard = <function require_bearer …>
+```
+
+### Two traps that each manufactured a false reading first
+
+Both are recorded because the table above is only worth what the method behind it is worth.
+
+1. **`${PIPESTATUS[0]}` is empty in zsh.** The array is `$pipestatus`, and it is 1-indexed.
+   Every "real exit code" in the first pass was the empty string, printed next to a `tail`ed
+   pytest summary — the exact false-green this repository has manufactured before. Every exit
+   code in the table is `$?`, captured with **no pipe in between**.
+2. **A test result is only evidence if you can name the bytes it ran against.** The first
+   mutation run read `4 passed` at baseline *and* `4 passed` under mutation — a rubber-stamp
+   verdict — because a concurrent process had moved `HEAD` under the worktree mid-run. The file
+   being tested was not the file that had been committed. Hence the sha column: it is not
+   decoration, it is what makes the row a fact. (`dev-status` before every curl is the same
+   discipline, one level up; this is its unit-test-level twin.)
