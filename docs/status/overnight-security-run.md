@@ -34,6 +34,13 @@ which is the only guard rail it has.
 | A7 | **P1** — split the 3 219-line observability god-router (152 routes, 11 modules) | `9caea197` |
 | A8 | **P1** — ADR hygiene: logs out of `docs/decisions/`, index, collision ratchet | *this commit* |
 
+> **2026-07-12 — the review happened.** Amadou ruled on the three open questions below; they are
+> applied on the branch, which is now rebased onto `main` = `d964ad31`. See
+> **[Lane B — reviewed and finalised](#lane-b--reviewed-and-finalised-2026-07-12)** at the foot of
+> this file for what changed, what was re-proven after the rebase, and the one thing still owed
+> to a human (the Terraform `apply`). Still **not merged** — that is Amadou's call, and the hole
+> is still open on `main` until it is.
+
 ### Waiting for review (lane B) — `claude/security-seam` @ `e4286be6`, NOT merged
 
 Twice-green locally. **The four P0s of the security seam are closed on that branch**, each with
@@ -260,3 +267,146 @@ a ratchet quietly stops ratcheting.
 
 The renumbering itself is **parked with a plan**, for the reason given above: 138 + 55 ambiguous
 references, and a decision record that lies is worse than one with a duplicate number.
+
+---
+
+## Lane B — reviewed and finalised (2026-07-12)
+
+Amadou reviewed the branch and ruled on the three open questions. The branch is **rebased onto
+`main` = `d964ad31`** (it was cut at `9caea197`, so it had missed only A8) and carries the three
+rulings. It is **still not merged**: the anonymous-mutation hole remains open on `main` until it
+is, and closing it is now the highest-value merge in the repo.
+
+### The three rulings, applied
+
+**(a) The auditor is READ-ONLY on the mutation plane.** *(was review question 3)*
+
+`AuthState.OPERATOR` is one bit: it says *an* operator is asking, never *which*. An `auditor`
+sets it, so the B2 fix — mounting the 26 mutations behind `require_operator` — still let the
+audit role promote an agent to production. ADR 0009 had said the opposite since 2026-06-03
+(*"auditor … **not settings**"*); nothing enforced it anywhere an attacker could reach.
+
+The mechanism was already on the wire and being thrown away: the signed assertion carries
+`role`, the verifier already checks it against `OPERATOR_ROLES` — and then dropped it into a
+display label. `SessionContext` now carries it. `MUTATION_ROLES = {admin, superadmin}`
+(`api/operator.py`), mirrored by `canMutateCockpit` (front). Agent = authority, front = the
+friendly refusal at the edge.
+
+- auditor → **403** on all 26 mutations; **200** on the reads (verified live against
+  `/observability/access`, and 116 of the 121 parameter-free GETs answer 200 to an auditor with
+  no infra running).
+- **401 and 403 are kept distinct.** 401 = we don't know who you are. 403 = we know exactly who
+  you are and the answer is still no. Collapsing them tells an authenticated auditor to go and
+  log in again — a lie about what went wrong, and an invitation to hunt for a second account.
+- **Consequence beyond the brief, stated so it can be objected to:** `collections` is refused
+  too. It is the ADR 0010 Phase C *business* role; the front never gave it cockpit access, but
+  its assertion verifies as `OPERATOR`, so the **agent was laxer than its own edge** — a
+  `dedicated-ui` assertion replayed against `/observability/agents/release` would have been
+  honoured. Reading the role closes that in the same stroke. Shipping a guard weaker than the
+  edge already enforcing it was not a defensible middle.
+- ADR 0009 amended with the decision and its limit.
+
+**(b) The read plane is UNCHANGED this cycle.** *(was review question 1)*
+
+The 126 GET reads stay public. Not locked, not partially locked. → backlog below.
+
+**(c) Staging requires the bearer.** *(was review question 2)*
+
+The B3 boot check gated on `is_production()`, and staging is not production — but staging *is*
+routinely internet-reachable, which is the only property the bearer cares about. The check now
+gates on `_BEARER_REQUIRED_ENVIRONMENTS = {staging, production}`: the line is drawn at
+**exposed**, not at **production**. `local` and `ci` still boot with no secret material (the
+documented posture; the local loop and the gate depend on it), and they are now the *only* two
+exempted. A ratchet test fails if a new `Environment` member is added without classifying it —
+otherwise a future `PREVIEW` posture would land silently on the permissive side, which is the
+exact shape of the bug being closed.
+
+### Re-proven after the rebase
+
+A rebase can quietly empty a proof — the fix lands, the "it failed before" claim rots. Re-run
+against the pre-fix tree (`src/`, `infra/`, `webapp/` reset to `d964ad31`, tests kept):
+
+| | Pre-fix result | Nature of the proof |
+|---|---|---|
+| **B1** guard-bypass | collection `ImportError` | *Weak on its own* — it only proves the gate function is new. So the pre-fix code was **exercised directly**: 4 guard decisions are taken straight off the request body, including `pii_guard_off = bool(request.guard_overrides and "pii" in …)`. An anonymous `POST /chat` with `guard_overrides=["pii"]` switched the streaming PII redactor **off**. |
+| **B2** anon mutations | **28 failed** | Behavioural, endpoint by endpoint: every one of the 26 answered a caller with no session at all. |
+| **B3** bearer fail-open | collection `ImportError` | Same weakness, same treatment: pre-fix, in `TESSERA_ENVIRONMENT=production` with no bearer, `require_bearer(<request with no Authorization header>)` **returns `None`** — no exception, request admitted. The missing secret opened the door. |
+| **B4** terraform | **8 failed** | Text ratchet on the `.tf` (see the honest limit below). |
+
+Post-fix, on the rebased tree: **all four pass**, plus the new auditor→403 / auditor-reads-200
+and staging-fail-closed tests.
+
+### Still owed to a human — the Terraform `apply`
+
+The `.tf` changes are a **text-level ratchet only**. `terraform` is not installed on this
+machine and the gate does not run `terraform validate`, so nothing here is machine-verified —
+the tests prove the open defaults cannot come back silently, *not* that the configuration is
+correct.
+
+`is_locked = true` on the audit bucket is a **fact of configuration that has no effect until
+`terraform apply`** — merging this branch changes nothing in GCP. And the `apply` is
+**irreversible**: a locked retention policy cannot be unlocked, shortened, or deleted, and the
+bucket cannot be deleted until every object has aged out. That is exactly what makes the audit
+trail opposable, and it is a one-way door. **Not applied here. Amadou's call, deliberately.**
+
+### Backlog
+
+- **`read-plane data-classification` (P1).** Classify the 126 observability GET reads by
+  sensitivity and gate the sensitive ones. They are not uniform — aggregate posture sits next to
+  operational detail — so this is a design slice, not a flag flip, and locking them wholesale
+  would 404 the cockpit for the operators the change is meant to protect. Ruling (b) explicitly
+  deferred it; it is not "done", it is *not yet started*.
+- **The other two secrets still boot in staging.** This cycle extended only the **bearer** check
+  to staging (that was the ruling). The session signing key and the operator assertion key still
+  gate on `is_production()`, so a staging deployment can still boot without them. Not a
+  regression — it is the pre-existing posture, now visibly asymmetric with the bearer. One line
+  each, but it is a policy call and nobody asked for it. Left for a human.
+
+### PARKED — the deployed secret provisioning is short of what the code requires
+
+Found while checking that B2 does not break the cockpit. **Not decided, per the mandate: it is
+a secret-provisioning call on a substrate I cannot validate (no `terraform` here).** It does not
+block the merge — merging changes nothing in GCP — but it must be settled before the next
+`apply`/deploy.
+
+`infra/terraform/secrets.tf` manages exactly four secrets:
+
+    postgres_url · bearer_token · audit_signing_key · vertex_project_id
+
+Consequently:
+
+| Secret | Who needs it | Provisioned by Terraform? |
+|---|---|---|
+| `TESSERA_API__SESSION_SIGNING_KEY` | agent (customer session) | **no** |
+| `TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY` | agent (verify the assertion) | **no** |
+| `TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY` | **front** (mint the assertion) | **no** |
+| `AUTH_SECRET` | **front** (next-auth `auth()`) | **no** — and `Dockerfile.frontend:21` claims *"injected at runtime by Cloud Run"*, which `cloud_run_frontend.tf` does not do |
+
+The frontend service receives exactly two env vars: `TESSERA_BACKEND_URL` and
+`TESSERA_BACKEND_TOKEN`. The agent service receives the bearer and the Postgres DSN, and neither
+signing key.
+
+Two things follow, and they are different:
+
+1. **Pre-existing, not from this branch.** `variable "environment"` defaults to `production`, and
+   `validate_session_signing_key()` / `validate_operator_assertion_key()` have *always*
+   refused to boot in production without their keys. So **whatever is keeping the deployed demo
+   alive is not described by this Terraform** — the secrets are coming from somewhere else
+   (console, `gcloud`, a workspace with a non-production `environment`), or the deploy is not
+   running this configuration. I could not determine which from here and did not guess.
+2. **This branch raises the stakes.** B2 makes the FRONT mint an operator assertion. Without
+   `AUTH_SECRET` the front can establish no session at all (role `null` → **401**); with a
+   session but no signing key, `mintOperatorAssertion` returns null (→ **503**, with a
+   diagnosable log line). Either way, after this branch is deployed the cockpit's 26 mutation
+   buttons stop working **until the front is given those two secrets**.
+
+   That is the correct direction — fail-closed beats "any anonymous visitor can promote an agent
+   to production" — but it is a visible product consequence and it should not be discovered in
+   production.
+
+**The fix is mechanical** (add the keys to `managed_secrets`, generate them like B4 already does
+for `bearer_token`/`audit_signing_key`, grant the frontend SA read on the operator key + a new
+`auth_secret`, and add four `env`/`secret_key_ref` blocks — the front's operator key MUST carry
+the same VALUE as the agent's, single underscore on the front, double on the agent). It is left
+undone because it is unverifiable here and nobody asked for it: **`terraform plan` is the
+witness, and it belongs to Amadou.**

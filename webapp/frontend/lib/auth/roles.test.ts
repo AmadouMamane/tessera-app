@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import type { Role } from "@/lib/auth/accounts";
 import {
+  canMutateCockpit,
   hasCockpitAccess,
   hasCollectionsAccess,
   hasProductAccess,
@@ -13,6 +15,10 @@ import {
 // situational-awareness overview, not the fleet list or an agent's synthèse.
 const COCKPIT_LANDING = "/surveiller/vue-ensemble";
 const OPERATOR_ROLES = ["admin", "auditor", "superadmin"] as const;
+
+// Every role in the system. Enumerated so a predicate can be pinned over the WHOLE
+// space rather than over the examples someone happened to think of.
+const ROLES: Role[] = ["admin", "auditor", "superadmin", "collections"];
 
 // ADR 0013 — entry routing by audience. `spaceRedirectForRole` only chooses the
 // LANDING; the operator-rbac guard (hasCockpitAccess, enforced in the cockpit
@@ -91,5 +97,43 @@ describe("operatorSurfaceForHint — surface bound to the role, not the hint", (
     expect(operatorSurfaceForHint(null, "recouvrement")).toBeNull();
     expect(operatorSurfaceForHint("admin", null)).toBeNull();
     expect(operatorSurfaceForHint("admin", "widget")).toBeNull();
+  });
+});
+
+// Least privilege on the cockpit control plane (operator decision, 2026-07-12).
+// SEEING a surface and being able to CHANGE it are different rights, and until now
+// the codebase had only the first. `hasCockpitAccess` admits the auditor — correctly,
+// it must read the audit trail — and the 26 observability POSTs rode on that same
+// predicate, so the audit role could promote an agent to production.
+describe("canMutateCockpit — the auditor reads and does not write (ADR 0009)", () => {
+  it("admits the roles with write authority", () => {
+    expect(canMutateCockpit("admin")).toBe(true);
+    expect(canMutateCockpit("superadmin")).toBe(true);
+  });
+
+  it("refuses the auditor — an audit role that can change what it audits is not one", () => {
+    // The load-bearing assertion of the whole decision. ADR 0009 said this in prose on
+    // 2026-06-03 ("auditor … not settings"); nothing enforced it on the mutation plane.
+    expect(canMutateCockpit("auditor")).toBe(false);
+  });
+
+  it("keeps the auditor's READ authority intact — least privilege, not paralysis", () => {
+    // The other half. A change that locked the auditor out of the cockpit entirely would
+    // have "enforced" ADR 0009 by breaking the role it protects.
+    expect(hasCockpitAccess("auditor")).toBe(true);
+    expect(isOperator("auditor")).toBe(true);
+  });
+
+  it("refuses the business plane and the anonymous visitor", () => {
+    expect(canMutateCockpit("collections")).toBe(false);
+    expect(canMutateCockpit(null)).toBe(false);
+  });
+
+  it("is strictly narrower than cockpit access — the gap IS the decision", () => {
+    const cockpit = ROLES.filter(hasCockpitAccess);
+    const writers = ROLES.filter(canMutateCockpit);
+
+    expect(writers.every((role) => cockpit.includes(role))).toBe(true);
+    expect(cockpit.filter((role) => !writers.includes(role))).toEqual(["auditor"]);
   });
 });

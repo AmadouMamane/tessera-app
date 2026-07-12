@@ -134,6 +134,16 @@ class SessionContext:
     authenticated: bool
     label: str | None
     demo: bool
+    #: The RBAC role (ADR 0009) when the session came from a verified operator assertion:
+    #: ``admin`` / ``superadmin`` / ``auditor`` / ``collections``. ``None`` on the customer
+    #: path, which has no role.
+    #:
+    #: ``AuthState`` answers *"is this an operator?"* and stops there — so before this
+    #: field existed, the agent could not tell an **auditor** from an **admin** and let
+    #: both promote an agent to production. The role was already on the wire (the signed
+    #: assertion carries it and the verifier checks it against ``OPERATOR_ROLES``); it was
+    #: simply dropped into a display label and never read again. Least privilege needs it.
+    role: str | None = None
 
 
 def issue_session_token(subject_id: str, auth_state: AuthState) -> str:

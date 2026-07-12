@@ -18,16 +18,21 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from tessera.api.operator import resolve_request_context
+from tessera.api.operator import MUTATION_ROLES, resolve_request_context
 from tessera.authz import AuthState
-from tessera.settings import get_settings
+from tessera.settings import Environment, get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from starlette.responses import Response
 
-__all__ = ["SecurityHeadersMiddleware", "require_bearer"]
+__all__ = [
+    "SecurityHeadersMiddleware",
+    "require_bearer",
+    "require_operator",
+    "validate_bearer_token",
+]
 
 
 # A conservative, framework-agnostic header set. CSP is intentionally strict:
@@ -71,18 +76,31 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-#: Raised at boot when production has no bearer configured. Named so the message is one
-#: string, testable, and identical wherever it surfaces.
-_MISSING_BEARER_IN_PROD = (
-    "TESSERA_API__BEARER_TOKEN is unset in a production deployment. The bearer is not "
-    "optional there: require_bearer and AuthMiddleware both no-op when it is None, which "
-    "would silently publish the audit ledger, the memory (GDPR) surface and the runtime "
-    "settings. Refusing to start rather than booting wide open."
+#: The postures that must configure the service bearer, i.e. the ones that are *reachable
+#: from outside*. Staging joined production on the operator's call (2026-07-12): a staging
+#: agent is routinely internet-reachable, and an unset bearer there publishes exactly the
+#: same audit ledger, memory (GDPR) surface and runtime settings as it would in production.
+#:
+#: ``is_production()`` was the wrong question. It asks *"is this the prod project?"* when what
+#: the bearer guards against is *"can a stranger reach this?"* — and for staging the honest
+#: answer is yes. Dev and CI are the only postures that are genuinely not exposed.
+_BEARER_REQUIRED_ENVIRONMENTS: frozenset[Environment] = frozenset(
+    {Environment.STAGING, Environment.PRODUCTION}
 )
 
 
+def _missing_bearer_message(environment: Environment) -> str:
+    """The boot-refusal text — one function, so the test asserts what the operator reads."""
+    return (
+        f"TESSERA_API__BEARER_TOKEN is unset in a {environment.value} deployment. The bearer "
+        "is not optional there: require_bearer and AuthMiddleware both no-op when it is None, "
+        "which would silently publish the audit ledger, the memory (GDPR) surface and the "
+        "runtime settings. Refusing to start rather than booting wide open."
+    )
+
+
 def validate_bearer_token() -> None:
-    """Fail-closed startup check: production must configure the service bearer.
+    """Fail-closed startup check: a deployed agent must configure the service bearer.
 
     Audit 2026-07-10, **P0 `auth-fail-open`** — security.py:80 · middleware.py:68 · main.py:265.
 
@@ -93,12 +111,14 @@ def validate_bearer_token() -> None:
     failure mode was *silent* and pointed the wrong way: a missing secret opened the doors
     instead of closing them.
 
-    Dev/CI stay reachable without secret material — that is the documented posture, and the
-    tests and local loop depend on it. Only production refuses.
+    Applies to **staging and production** (:data:`_BEARER_REQUIRED_ENVIRONMENTS`). Dev/CI stay
+    reachable without secret material — that is the documented posture, and the tests and the
+    local loop depend on it. That pressure is precisely what re-loosens such checks later, so
+    the exemption is drawn as narrowly as it can be: not-exposed, rather than not-production.
     """
     settings = get_settings()
-    if settings.api.bearer_token is None and settings.is_production():
-        raise RuntimeError(_MISSING_BEARER_IN_PROD)
+    if settings.api.bearer_token is None and settings.environment in _BEARER_REQUIRED_ENVIRONMENTS:
+        raise RuntimeError(_missing_bearer_message(settings.environment))
 
 
 def require_bearer(request: Request) -> None:
@@ -151,10 +171,28 @@ def require_operator(request: Request) -> None:
     deliberately *falls through* to the customer path for an unverified assertion (never an
     escalation, correct for a chat turn); a mutation must not accept that fallthrough, so the
     auth state is checked explicitly rather than inferred.
+
+    **Being an operator is not enough — the role must carry write authority** (operator
+    decision, 2026-07-12; :data:`~tessera.api.operator.MUTATION_ROLES`). ``AuthState.OPERATOR``
+    is one bit: it says *an* operator is asking, never *which*. An ``auditor`` satisfies it, and
+    ADR 0009 has said since day one that the auditor reads and does not write — so gating on the
+    bit alone would have let the audit role promote an agent to production, rewrite runtime
+    config and switch a guardrail off. The two refusals are deliberately different codes:
+
+    * **401** — we do not know who you are (no valid assertion). *Authenticate.*
+    * **403** — we know exactly who you are, and you may not do this. *Nothing to retry.*
+
+    Collapsing them into one status would tell an auditor to go and log in again, which they
+    already have.
     """
     session, _surface = resolve_request_context(request)
     if session.auth_state is not AuthState.OPERATOR:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="operator authentication required",
+        )
+    if session.role not in MUTATION_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="this role is read-only on the cockpit control plane",
         )

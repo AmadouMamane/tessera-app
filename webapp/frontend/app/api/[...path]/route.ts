@@ -17,7 +17,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { isOperator } from "@/lib/auth/roles";
+import { canMutateCockpit } from "@/lib/auth/roles";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 import { OPERATOR_ASSERTION_HEADER, mintOperatorAssertion } from "@/lib/server/operator-assertion";
 
@@ -85,6 +85,10 @@ export async function GET(
  * the mutation plane is gated, and it is gated on BOTH sides: here, so an anonymous POST is
  * refused at the edge; and in the agent, where the `mutations` router requires a verified
  * operator assertion. The frontend gate is the friendly one; the agent gate is the real one.
+ *
+ * Being an operator is not enough: the role must carry WRITE authority (`canMutateCockpit`).
+ * The `auditor` reads and does not write (ADR 0009), so it is refused here — with a 403, not
+ * a 401: it is authenticated, it simply may not do this.
  */
 export async function POST(
   request: NextRequest,
@@ -96,9 +100,19 @@ export async function POST(
   }
   const session = await auth();
   const role = session?.user?.role ?? null;
-  // `role === null` first so TypeScript narrows it: isOperator is a predicate, not a guard.
-  if (role === null || !isOperator(role)) {
+  // 401 and 403 are different answers and the order matters. No session at all → we do not
+  // know who is asking (401, "authenticate"). A session whose role has no write authority —
+  // an `auditor`, who reads and does not write (ADR 0009) — → we know exactly who is asking
+  // and the answer is still no (403, "nothing to retry"). Telling an auditor to log in again
+  // when they already have is a lie about what went wrong.
+  if (role === null) {
     return NextResponse.json({ detail: "operator authentication required" }, { status: 401 });
+  }
+  if (!canMutateCockpit(role)) {
+    return NextResponse.json(
+      { detail: "this role is read-only on the cockpit control plane" },
+      { status: 403 },
+    );
   }
 
   // Mint the signed assertion the agent verifies. Without it the agent's `mutations` router

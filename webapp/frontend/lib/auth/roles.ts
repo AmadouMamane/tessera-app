@@ -43,6 +43,30 @@ export function hasCockpitAccess(role: Role | null): boolean {
 }
 
 /**
+ * Who may MUTATE from the cockpit control plane — promote an agent to production,
+ * rewrite runtime configuration, switch a guardrail off, decide curation, mutate
+ * the governance stores (the 26 observability POSTs).
+ *
+ * Deliberately narrower than `hasCockpitAccess`, and the gap is the decision
+ * (operator call, 2026-07-12): **the auditor reads and does not write.** ADR 0009
+ * always said as much — *"auditor (audit + budget + eval detail, not settings)"* —
+ * but that was only ever enforced by which pages the front chose to render. Seeing
+ * a surface and being able to change it are different rights; an audit role that can
+ * change what it audits is not an audit role.
+ *
+ * `collections` is the business plane (ADR 0010 Phase C) and never held cockpit
+ * authority at all, so it is excluded here too — by `isAdmin` rather than by an
+ * extra clause.
+ *
+ * This is the EDGE's copy of the rule; the authority is the agent's `MUTATION_ROLES`
+ * (`src/tessera/api/operator.py`), which re-checks it on the signed assertion. A
+ * predicate in the browser's own BFF can only ever be the friendly refusal.
+ */
+export function canMutateCockpit(role: Role | null): boolean {
+  return isAdmin(role);
+}
+
+/**
  * Who may reach recouvrement's dedicated business console (`/recouvrement`, ADR
  * 0010 Phase C). The `collections` business-plane role enters it directly; the
  * platform operators may also enter to supervise. A customer/anonymous session

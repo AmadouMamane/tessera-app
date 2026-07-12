@@ -74,6 +74,46 @@ IdP with an email allow-list.
 - Adds `/[locale]/login`, `/api/auth/*`, and a `SessionProvider` in the locale
   layout; adds a demo-credentials banner and lock affordances on gated nav.
 
+## Update — the auditor is read-only on the mutation plane (2026-07-12)
+
+The role table above says `auditor` gets *"audit + budget + eval detail, **not settings**"*.
+That sentence was never enforced anywhere an attacker could reach. It shaped **which pages the
+front chose to render** — which is decoration, not access control — and the agent, once ADR 0010
+Phase B gave it a verified operator identity, gated on `AuthState.OPERATOR`: **one bit**, which
+says *an* operator is asking and never *which*. An auditor sets that bit. So an auditor could
+call all 26 observability mutations: promote an agent to production, rewrite runtime
+configuration, switch a guardrail off, mutate the governance stores.
+
+**Decision (operator call, 2026-07-12): the mutation plane requires *write authority*, not
+merely operator status.**
+
+- `MUTATION_ROLES = {admin, superadmin}` (`src/tessera/api/operator.py`), mirrored by
+  `canMutateCockpit` in `webapp/frontend/lib/auth/roles.ts`. The agent's copy is the authority;
+  the front's is the friendly refusal at the edge.
+- The signed assertion already carried `role` and the verifier already checked it against
+  `OPERATOR_ROLES` — it was then dropped into a display label and never read again.
+  `SessionContext` now carries it, which is the whole mechanism.
+- **`auditor` keeps every read**, including the audit trail: least privilege is not paralysis,
+  and an "enforcement" that locked the auditor out of the cockpit would have broken the role it
+  claims to protect. Reads are untouched (see below).
+- **`collections`** (the ADR 0010 Phase C business plane) is excluded too. The front never gave
+  it cockpit access, but its assertion verifies as `OPERATOR`, so the *agent* was laxer than its
+  own edge — a `dedicated-ui` assertion replayed against `/observability/agents/release` would
+  have been honoured.
+- **401 and 403 stay distinct.** 401 = we do not know who you are. 403 = we know exactly who you
+  are and the answer is still no. Telling an authenticated auditor to log in again is a lie
+  about what went wrong, and an invitation to go looking for a second account.
+
+An audit role that can change what it audits is not an audit role.
+
+### Not decided here: the read plane (P1, open)
+
+The 126 observability **GET** reads stay public this cycle. They are not uniform — some are
+aggregate posture, some carry operational detail — and classifying them by sensitivity is a
+design slice, not a flag flip. Locking them wholesale would 404 the cockpit for the very
+operators this ADR protects. Tracked as **`read-plane data-classification` (P1)** in
+`docs/status/overnight-security-run.md`.
+
 ## Update — operator identity forwarding to the agent (done for the operator tier)
 
 This ADR deferred *"propagating identity to the agent … so the agent enforces

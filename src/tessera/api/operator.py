@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 _LOG = get_logger("tessera.api.operator")
 
 __all__ = [
+    "MUTATION_ROLES",
     "OPERATOR_ASSERTION_HEADER",
     "OPERATOR_ROLES",
     "issue_operator_assertion",
@@ -63,6 +64,24 @@ OPERATOR_ASSERTION_HEADER = "x-tessera-operator-assertion"
 #: superadmin). All map to ``AuthState.OPERATOR`` on the agent — the role string is
 #: carried for the audit label, the auth floor it satisfies is operator-rbac.
 OPERATOR_ROLES: frozenset[str] = frozenset({"admin", "auditor", "superadmin", "collections"})
+
+#: The roles that may MUTATE state from the cockpit control plane — promote an agent to
+#: production, rewrite runtime configuration, switch a guardrail off, mutate the governance
+#: stores. Strictly narrower than :data:`OPERATOR_ROLES`, and that gap is the point:
+#:
+#: * ``auditor`` reads and does not write. ADR 0009 already said so — *"auditor (audit +
+#:   budget + eval detail, **not settings**)"* — but only the front ever enforced it, and
+#:   only on which pages it rendered. The agent gated on ``AuthState.OPERATOR``, which an
+#:   auditor satisfies, so an auditor could reach every one of the 26 mutations. An audit
+#:   role that can change what it audits is not an audit role.
+#: * ``collections`` is the *business*-plane role (recouvrement's dedicated console, ADR
+#:   0010 Phase C). It never had cockpit authority — ``hasCockpitAccess`` in the front says
+#:   so — but its assertion verifies as OPERATOR all the same, so the agent was laxer than
+#:   its own edge. It is not a platform operator and does not administer the platform.
+#:
+#: Mirrors ``canMutateCockpit`` in ``webapp/frontend/lib/auth/roles.ts``. The front's copy is
+#: the friendly refusal; THIS one is the authority (the browser never holds the signing key).
+MUTATION_ROLES: frozenset[str] = frozenset({"admin", "superadmin"})
 
 #: Assertion lifetime. Short — it is minted per turn from a live session, not stored.
 OPERATOR_ASSERTION_MAX_AGE_SECONDS = 5 * 60
@@ -211,6 +230,9 @@ def verify_operator_assertion(token: str) -> tuple[SessionContext, Surface] | No
         authenticated=True,
         label=f"Opérateur · {principal} ({role})",
         demo=True,
+        # Carried, not just displayed. AuthState says "an operator"; the role says *which*,
+        # and least privilege is decided on the second question (see MUTATION_ROLES).
+        role=role,
     )
     return session, Surface(surface_value)
 
