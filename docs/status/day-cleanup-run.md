@@ -8,7 +8,7 @@ took **two consecutive full local `make gate` passes** — the only witness avai
 | Lot | What | Hash |
 |---|---|---|
 | 1 | **P0.3 `sql-fstring`** — the class of interpolated SQL identifiers, closed | *this commit* |
-| 2 | **A8** — ADR renumbering: the three live collisions dissolved | *pending* |
+| 2 | **A8** — ADR renumbering | **HALTED, not merged** — see below |
 
 ---
 
@@ -119,3 +119,88 @@ The ratchet accepts either form, so the migration can land incrementally without
 
 Twice-green: two consecutive `make gate` at `EXIT=0` — ruff, `ruff format --check`, mypy
 (295 files), **1741 backend tests**, biome, tsc, 185 frontend tests.
+
+---
+
+## Lot 2 — ADR renumbering: **HALTED, not merged**
+
+The brief's own guardrail was *"HALT if a single reference is ambiguous — we do not guess in the
+decision registry."* It was reached. The work is **stashed, not lost**
+(`git stash list` → *"LOT2 adr-renumber — HALTED"*), and the adjudication — the expensive part —
+is written up in **[`adr-renumber-evidence.md`](adr-renumber-evidence.md)**.
+
+### What happened, in order
+
+**The direction was wrong, and the operator changed it.** The brief kept `recouvrement` at 0010
+because it is "the most referenced by the security work". True — but over the whole tree,
+`frontier-observability` is referenced **183 times to recouvrement's 52**, it is the senior
+(2026-06-08 vs 06-22), and `docs/decisions/README.md`'s own committed plan says the opposite.
+Every rewrite is a chance to make the record lie, so the low-count sense should move. Asked;
+operator inverted it. Final mapping in the evidence file.
+
+**Then the automated pass produced a lie.** It rewrote, in `docs/production-posture.md`:
+
+```
+-  ## 4. The audit ledger (ADR 0015)
++  ## 4. The audit ledger (ADR 0022)
+```
+
+The audit ledger is the **spine's** subject. The pass saw the word *seal* nearby and re-pointed
+a heading at the seal design note. That is a decision record asserting something false — which
+this repo's own doctrine calls a **defect**, where a duplicate number is only an **annoyance**.
+
+The root cause is worth keeping: **the seal was DECIDED in ADR 0015 (§Correction 3c, the spine)
+and only DESIGNED in the annex.** So a bare `ADR 0015` beside the word "seal" means *the spine* —
+the opposite of the obvious reading. `guard/seal.py`, `guard/audit.py`, `settings.py` are all
+correct as they stand.
+
+**And one reference cannot be resolved at all:**
+
+```python
+class SandboxDefaults:
+    """Live defaults for the Console sandbox playground (ADR 0010 Phase C)."""
+```
+
+The *Console* is the cockpit (frontier). *Phase C* is recouvrement's phase letter. Nothing —
+not the file, not the commit, not the dates — settles it. That is the HALT.
+
+### Two findings that outlast the lot
+
+**References wrap across lines.** `api/operator.py:77` and `lib/auth/roles.ts:70` end a line with
+`ADR` and begin the next with `0010 Phase C`. No grep sees them, so **every count is an
+undercount** — the index's "138", the audit's, and my own 245. A rename pass that verifies with
+`grep` will report "0 remaining" while the record still lies. Same family as lot 1's discovery
+that ruff's S608 cannot see an indented multi-line f-string: a syntactic check with a shape it
+cannot see.
+
+**The ADR bodies cross-reference each other.** `0009-dashboard-auth-rbac` and
+`0013-entry-routing-by-audience` both cite `ADR 0010 Phase B/C` in their own text. Skipping
+`docs/decisions/` — the natural instinct, since those are the files being renamed — leaves the
+decision record contradicting itself.
+
+### What is now known, and cheap
+
+The evidence file carries the **structural discriminators**, which are strong and were not
+obvious:
+
+* frontier numbers its rollout **Phase 1..6** and its features by **canonical idea IDs**
+  (`docs/observability-ideas.md`: *"Companion to ADR 0010 … the numbers are canonical IDs"*);
+  recouvrement numbers its rollout **Phase A/B/C** and has no ideas. Disjoint by construction.
+* **Creation dates settle the rest** — anything written before 2026-06-22 predates the second
+  0008 and the second 0010 and is therefore unambiguous. Where dates collide, the origin commit
+  does: `session.py:88`'s `(ADR 0008/0009)` was written by the commit that *created*
+  `0008-agent-audience-and-surface.md`.
+
+**And 0015 turns out to be free**: the seal annex is referenced **only by filename** — zero bare
+references mean it. `0015 → 0022` is a rename plus five links, and shrinks the frozen set from
+three to two on its own.
+
+### Recommendation
+
+Do them **separately, smallest first**: `0015` (provably safe, do it any time) → `0008` (75 refs,
+the date test resolves nearly all) → `0010` (245+, wrapped refs, and needs a human ruling on
+`SandboxDefaults` first). **`0010` should not be attempted while CI is down** — there is no
+independent witness for a semantic rewrite of the project's memory.
+
+The ratchet in `tests/unit/test_adr_hygiene.py` is unchanged and still freezes the three
+collisions. It has not gone stale: nothing was renumbered.
