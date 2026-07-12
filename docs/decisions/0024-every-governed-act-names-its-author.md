@@ -45,7 +45,29 @@ Two rules. They are the same rule, said about facts and about configuration.
 
 > **1. Every governed act names its author, derived from a signal the server verified.**
 >
+> **1b. And its reason.**
+>
 > **2. Every configuration that cannot hold a guarantee refuses to start.**
+
+### On rule 1b — the author is *verified*, the reason is *declared*
+
+The two halves are not symmetric, and pretending they are is how a purpose field becomes theatre.
+
+The **author** is a fact the server establishes: the principal of an HMAC-signed assertion whose key
+the browser never holds. The caller cannot choose it. The **reason** is a *claim the caller makes*.
+The server cannot check that `incident INC-4412` is true, and no amount of engineering will let it.
+
+What it *can* do is make the claim **mandatory, attributed, and permanent** — so that acting without
+a reason becomes impossible, and acting under a false one becomes a durable, signed, personally
+attributable act somebody can find later. That is purpose limitation **as a mechanism**, and it is
+weaker than prevention. It should be sold as exactly what it is.
+
+The slot for it already exists and has since the beginning: `GuardDecisionRecord.rationale` is
+hashed into the chain, and it already reaches both readers — the SIEM export (`message`) and the
+cockpit Journal (`decisions[]`). What is missing is not a field. It is **the ask**: today a subject
+read fills that slot with `"subject access request: 3 item(s)"` — *the system describing what it
+did*, where the doctrine wants *the human saying why they did it*. Ruled, and scoped, in
+[ADR 0025](0025-pii-reads-are-gated-by-role-not-by-purpose.md).
 
 ### What follows from rule 1
 

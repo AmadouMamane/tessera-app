@@ -1,136 +1,167 @@
-# 25. PII reads are gated by ROLE, not by PURPOSE — stated, dated, and not yet decided
+# 25. Subject reads will be gated by DECLARED PURPOSE — the target, ruled. Today's posture: role only, said out loud
 
 Date: 2026-07-12
 
 ## Status
 
-**Proposed — posture recorded, decision deferred.** No code changes. The current behaviour is
-pinned by a test (`tests/unit/test_subject_read_posture.py`) so that it cannot drift, in either
-direction, without somebody reading this page.
+**Accepted — direction ruled, implementation deferred.** (Operator ruling, 2026-07-12.)
 
-This is deliberately not a fix. Choosing *which* operator may read *which* subject is a product
-decision about how Tessera is sold and operated, and the person writing this does not have the
-inputs to make it.
+Two things are settled here, and one is deliberately not:
+
+* **Settled**: the target shape is **declared purpose**. Not per-dossier, not per-tenant — those are
+  rejected, and the reason is below.
+* **Settled**: **today's posture is role-only, and it ships stated plainly.** The README says so,
+  and `tests/unit/test_subject_read_posture.py` pins it — including its sharpest case. We publish
+  with this posture said in the clear. We do not publish pretending better.
+* **Open**: whether a declared purpose may ever *refuse* a read, or only *record* it. That is the
+  next ruling, and it is a different question. See *What is still not decided*.
 
 ## Context
 
-Audit 2026-07-12, **F-C**. One line, in `src/tessera/api/operator.py`:
+Audit 2026-07-12, **F-C**. One line in `src/tessera/api/operator.py`:
 
 ```python
-SUBJECT_READ_ROLES: frozenset[str] = OPERATOR_ROLES   # = {admin, auditor, superadmin, collections}
+SUBJECT_READ_ROLES: frozenset[str] = OPERATOR_ROLES   # {admin, auditor, superadmin, collections}
 ```
 
-So **every operator, of every role, may read the transcript, memory inventory and turn detail of
-every subject in the system** — a `collections` operator included, and `collections` is the role
-whose console exists to work one debt file at a time.
+Every verified operator may read every subject's transcript, memory inventory and turn detail. A
+`collections` operator can read the memory of a customer with no debt file, no case, and no
+relationship with recouvrement at all. Nothing in the system expresses *"this subject is mine to
+look at."*
 
-The anonymous hole is closed and that is real progress: before F-4, `GET
-/observability/conversation-messages?conversation_id=…` returned any conversation's complete
-transcript to **anyone on the internet**, with no credential at all. What replaced it is *"any
-verified operator"*. That is an enormous improvement and it is **not a defensible GDPR posture for
-a real tenant**, because it contains no notion of *purpose*:
+The anonymous hole is closed, and **that** was the emergency: before F-4, those endpoints returned
+any customer's complete transcript to **anyone on the internet**, with no credential at all. What
+replaced it is *"any verified operator"* — an enormous improvement, and not a posture a bank's DPO
+would sign.
 
-* Nothing anywhere says **"this subject is mine to look at."**
-* A recouvrement agent handling one file can read the chat history of every other customer of the
-  bank, including customers who have no debt and no relationship with recouvrement at all.
-* The trail now records **who** read a record (this lane's other half, [ADR 0024](0024-every-governed-act-names-its-author.md)) — which makes the gap *visible*
-  and, notably, does not close it. Being able to prove after the fact that Alice read Bob's
-  transcript is accountability; it is not purpose limitation (GDPR Art. 5(1)(b)), and it is not
-  data minimisation (Art. 5(1)(c)).
+## Decision
 
-Two honest observations that bound how urgent this is:
+> **A subject read is gated by a DECLARED PURPOSE, recorded in the ledger with the read.**
 
-* Today Tessera is a **single-tenant reference implementation with a demo corpus**. "Every
-  operator" is a handful of seeded accounts, and the subjects are generated. Nobody's real chat
-  history is exposed to anybody.
-* The moment there is a second tenant, or one real customer, this line is a finding. It is
-  cheaper to decide the shape now, while the answer is still free to choose, than after a schema
-  exists that assumes the flat one.
+### Why not per-dossier, and why not per-tenant
 
-## The decision to be made
+Both were on the table. Both are **rejected**, and not on cost — on fit.
 
-**What binds an operator to a subject?** Three shapes, with what each actually costs.
+They are **access-control shapes borrowed from a CRM**: bind the operator to a record, let them see
+what they own. That is the right model when the operator's job is *to work a file*. It is the wrong
+model here, because **it fights the operator's actual job**, which is to govern agents **across all
+files at once** — read a failing turn wherever it happened, chase a guardrail refusal through
+whatever conversation triggered it, audit a fleet's behaviour over a population.
 
-### Option A — scope by *dossier* (case ownership)
+Scoped by dossier, the operator who is supposed to notice that an agent is misbehaving *across*
+customers can only look at the customers already assigned to them. The control would be real and
+the product would be broken; worse, it would be broken in the direction that hides exactly the
+failures Tessera exists to surface. A tenant boundary is the same objection at a coarser grain, plus
+a schema migration and a change to the signed assertion payload — a large bill for a shape that does
+not match the work.
 
-A subject is readable by the operators assigned to a case that references it.
+Rejecting them is not a deferral. It is the finding: **the operator's relationship to a subject is
+not ownership. It is an errand.** And an errand has a *reason*.
 
-* **Needs**: a case↔operator assignment table, and a case↔subject link. Recouvrement already has
-  the notion of a *dossier* (`case_id`), so half of this exists.
-* **Cost**: every subject-scoped read grows a join and an authorization query. The cockpit's
-  "Récents" list stops being "the last N conversations" and becomes "the last N conversations
-  *you may see*" — which changes several endpoints from a `SELECT` into a filtered one, and
-  changes the front's empty states.
-* **Sharp edge**: what does an `auditor` see? An audit role that can only audit its own cases is
-  not an audit role. This option needs a documented override, and an override is exactly where a
-  purpose limitation quietly becomes a formality again.
-* **Fits**: the recouvrement business plane, almost exactly.
-* **Does not fit**: the platform-operator surfaces (fleet, eval, guardrails), where there is no
-  case at all.
+### Why purpose — and why it is not a new mechanism
 
-### Option B — scope by *tenant*
+**Reading a person's record is an act on a governed system.** It is not a lookup, it is not
+plumbing: it is a human deciding to open someone's private conversation. And this repository already
+has a doctrine for governed acts, ruled one page earlier:
 
-A subject belongs to a tenant; an operator belongs to one or more tenants; a read requires overlap.
+> [ADR 0024](0024-every-governed-act-names-its-author.md) — *every governed act names its author, derived from a signal the server verified.*
 
-* **Needs**: a `tenant_id` on the subject, on the operator assertion, and on every subject-scoped
-  store. It is a **schema migration and a change to the signed assertion payload** — the widest
-  change of the three, and the one that must happen *before* real data exists, not after.
-* **Cost**: the highest up-front, the lowest per-endpoint. Once the column is there, the gate is
-  one predicate applied uniformly, and it composes with A rather than competing with it.
-* **Fits**: the actual commercial shape of a European banking product (a bank is a tenant), and
-  it is what a prospect's security questionnaire asks about first.
-* **Sharp edge**: it is a lie unless it reaches *every* store — the transcript, the memory, the
-  replay bundles, the eval scores, the business events. A tenant boundary with one hole is not a
-  tenant boundary.
+Purpose limitation is that same doctrine's second half. An act leaves a trace **with its reason**.
+GDPR Art. 5(1)(b) says exactly this under another name; the regulation is not asking for a new
+control, it is asking for the one already written into the ledger's schema.
 
-### Option C — scope by *purpose* (declared, time-boxed access)
+That is the whole argument, and it is why *purpose* is not a fourth option bolted on to three
+access-control designs. It is the only one of the three that is **already the project's doctrine**.
 
-An operator declares why they are opening a subject; the grant is recorded, scoped and expires.
-"Break-glass with a reason."
+### The slot already exists — and both readers already read it
 
-* **Needs**: no schema change to the subjects at all — a grant table and a step in the UI.
-* **Cost**: friction on every read, and it moves the guarantee from *prevention* to *deterrence*.
-  It is only as good as the review of the grants, which is a process, not a mechanism.
-* **Fits**: the auditor and the support escalation, where any prior binding is by definition
-  wrong — those roles exist precisely to look at things they were not previously assigned.
-* **Sharp edge**: with the actor now in the ledger ([ADR 0024](0024-every-governed-act-names-its-author.md)), Tessera already has the *evidence* half of
-  this for free. What is missing is the *ask*.
+This is the finding that makes the target cheap, and it should be stated before anyone estimates it:
 
-### The likely answer, offered but not taken
+| | |
+|---|---|
+| `GuardDecisionRecord.rationale: str` (`agent/state.py:116`) | every act already carries a **reason** field |
+| `_record_to_dict` (`guard/audit.py`) | it is already **hashed into the opposable chain** |
+| `siem.py:133` — `message=rationale` | it already reaches the **bank's SOC** |
+| `routes/audit.py:391` — `decisions=decision_maps` | it already reaches the **cockpit Journal** |
 
-**B as the boundary, A inside it, C for the roles that must cross both** — tenant as the hard
-wall, dossier as the day-to-day scope, purpose-declaration as the audited exception for the
-auditor and the escalation path. That is three mechanisms, and it is a body of work, not a night.
-It is written here so that whoever decides is choosing, not discovering.
+And here is what that field contains today, for a subject access read
+(`api/routes/memory.py:151`):
 
-## What this ADR does now
+```python
+rationale=f"subject access request: {len(stored)} item(s)"
+```
 
-1. **States the posture out loud.** PII reads are gated by **role**, not by **purpose**. Today,
-   every verified operator can read every subject. This is a *conscious, dated choice*, not an
-   oversight — and it is recorded as such in the README and the remediation ledger, because a
-   posture that is only true in the code is one nobody can hold us to.
-2. **Pins it with a test.** `tests/unit/test_subject_read_posture.py` invokes a subject-scoped
-   read as a `collections` operator against a subject that has nothing to do with recouvrement,
-   and asserts **200**. The test's *purpose is to fail* the day this changes: narrowing the
-   posture (good) must be a reviewed edit to this file and that one, not a silent tightening that
-   breaks a console nobody was watching; widening it further is impossible (it is already
-   maximal), which is itself the finding stated as an assertion.
-3. **Refuses to implement.** See Status.
+**The system describing what it did — not the human saying why they did it.**
+
+The doctrine was in the schema all along. The chain carries it. Both surfaces display it. What is
+missing is **the ask**.
+
+## What implementing it looks like (a shape, not a spec)
+
+1. A subject-scoped read carries a **purpose**: a typed reason (`incident`, `réclamation`, `audit`,
+   `support`) plus a reference (`INC-4412`, `CL-9981`). **Required, and with no default** — the same
+   clause, for the same reason, as `Actor` in ADR 0024: a default hands a plausible reason to an
+   operator who never had one, and the trail then reads *justified* while explaining nothing.
+2. It **replaces** the system-generated `rationale` on `memory.read`. One field, one meaning: *why
+   this happened*, said by whoever caused it.
+3. It rides the existing chain to the existing readers. No new store, no new surface, no migration.
+4. **Ratchet #3 grows a clause.** `test_governed_acts_name_their_author.py` already asserts that a
+   guarded route's entry names its principal. It gains: *a subject read whose `rationale` was
+   generated by the system, rather than declared by the caller, is a red.* The ratchet that closed
+   the author gap is the same one that closes the reason gap — which is the strongest evidence that
+   this really is one doctrine and not two.
+
+## What a declared purpose actually buys — said plainly
+
+It is **deterrence with evidence, not prevention.** The server cannot check that *"incident
+INC-4412"* is true. It can make the declaration **mandatory, attributed, and permanent** — so that
+reading a stranger's record without a reason becomes impossible, and reading it with a false one
+becomes a durable, signed, personally-attributable act that a DPO can find later.
+
+That distinction matters and must not be blurred in a sales conversation: this closes *purpose
+limitation as a mechanism*. It does not make a determined insider unable to read a record. If the
+threat model needs **prevention**, purpose alone does not deliver it, and that is what the open
+question below is about.
+
+## Today's posture — shipped, stated plainly
+
+**Role only.** Any verified operator reads any subject. This is recorded:
+
+* in the **README** (`## Security`), in the same words as here;
+* in **`tests/unit/test_subject_read_posture.py`**, which asserts today's behaviour *including its
+  sharpest case* — the recouvrement operator reading a subject that is none of its business, **200**
+  — and which exists to **go red the day someone tightens it**, so the tightening is a reviewed edit
+  and not a silent change that breaks a console nobody was watching.
+
+A test that pins a known gap is not a test that blesses it. It is the difference between a weakness
+someone chose and a weakness nobody noticed. **We publish with this posture said in the clear. We do
+not publish pretending better.**
+
+## What is still not decided
+
+**May a declared purpose ever be refused?** Recording a reason and *checking* one are different
+systems. A gate that can refuse needs a policy over purposes ("`collections` may not open a subject
+under `audit`"), an escalation path for the refusal, and an answer to the question of who reviews
+the grants — which is a process, and a process is not a mechanism. Until that is ruled, the purpose
+is **recorded, not adjudicated**, and this ADR does not pretend otherwise.
 
 ## Consequences
 
-The gap is now **visible, dated, and cheap to find** — in the README, in the ledger, in an ADR,
-and in a test that names it. It is not closed. Anyone reading the repository can see exactly what
-Tessera does and does not promise about who may look at whom, which is the honest position for a
-reference implementation whose front page says *the value is in the assembly, not the invention*.
+**Good.** The direction is chosen on doctrine rather than on convenience, and it turns out to be the
+doctrine the project already had. The implementation is bounded — one required field, one ratchet
+clause, no migration — because the chain and both of its readers already carry the slot.
 
-The alternative — leaving `SUBJECT_READ_ROLES = OPERATOR_ROLES` undocumented because it is "only
-a demo" — is how a demo posture becomes a production posture without anyone deciding.
+**Honest.** Until it lands, every verified operator can read every subject, and the repository says
+so in four places rather than none.
+
+**Costly, in the right direction.** Every subject read grows a mandatory question. That is friction
+on exactly the path where friction is the product.
 
 ## References
 
-- [ADR 0024](0024-every-governed-act-names-its-author.md) — every governed act names its author. The trail now records *who read*; this ADR is about *who may*.
+- [ADR 0024](0024-every-governed-act-names-its-author.md) — every governed act names its author **and its reason**. This ADR is that doctrine applied to reads.
 - `src/tessera/api/operator.py` — `SUBJECT_READ_ROLES`, `OPERATOR_ROLES`, `MUTATION_ROLES`
+- `src/tessera/agent/state.py` — `GuardDecisionRecord.rationale`, the slot that already exists
+- `tests/unit/test_subject_read_posture.py` — today's posture, pinned
 - `tests/unit/test_subject_reads_carry_auth.py` — the read ratchet (a stranger sees nothing)
-- `tests/unit/test_subject_read_posture.py` — this posture, pinned
-- GDPR Art. 5(1)(b) purpose limitation, Art. 5(1)(c) data minimisation, Art. 32 security of processing
+- GDPR Art. 5(1)(b) purpose limitation, Art. 5(1)(c) data minimisation, Art. 5(2) accountability

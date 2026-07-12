@@ -15,14 +15,21 @@ replaced it is *"any verified operator"*. That is a large real improvement, and 
 defensible GDPR posture for a real tenant**, because it contains no notion of *purpose*: nothing
 anywhere says "this subject is mine to look at" (Art. 5(1)(b), purpose limitation).
 
-**This file does not fix that.** Binding an operator to a subject — by dossier, by tenant, by
-declared purpose — is a product decision with real costs on every read path, and ADR 0025 lays
-out the three shapes and declines to choose. What this file does is make the posture a *fact on
-the record* rather than an emergent property of a frozenset:
+**This file does not fix that, and the fix it is waiting for is now ruled.** Operator ruling,
+2026-07-12 ([ADR 0025](../../docs/decisions/0025-pii-reads-are-gated-by-role-not-by-purpose.md)):
+subject reads will be gated by **declared purpose** — *not* by dossier and *not* by tenant, which
+are access-control shapes borrowed from a CRM and would fight the operator's actual job, which is
+governing agents **across** all files at once. Reading a person's record is an act on a governed
+system, and the doctrine for those is already written: an act names its author (ADR 0024) **and its
+reason**. GDPR Art. 5(1)(b) is that same rule under another name.
+
+Until it lands, the posture below is what Tessera does, and it is published in the clear rather
+than dressed up. What this file does is make the posture a *fact on the record* rather than an
+emergent property of a frozenset:
 
 * it asserts what the system does **today**, out loud, in a test whose name says so;
-* it therefore **fails the day someone changes it** — which is the point. Narrowing the posture is
-  the right thing to do and must be a *reviewed* edit to this file and to ADR 0025, not a silent
+* it therefore **fails the day the purpose gate lands** — which is the point. That narrowing is the
+  right thing to do and must be a *reviewed* edit to this file and to ADR 0025, not a silent
   tightening that breaks a console nobody was watching. Widening it further is impossible: it is
   already maximal, and that sentence IS the finding.
 
@@ -104,16 +111,17 @@ def _read_subject_as(app: FastAPI, *, principal: str, role: str) -> int:
 def test_today_every_operator_role_reads_every_subject(app: FastAPI, role: str) -> None:
     """THE POSTURE, 2026-07-12. Every role. Any subject. Including ``collections``.
 
-    If this goes red, someone has narrowed the read plane — which is the RIGHT direction, and
-    which must not happen by accident. Read ADR 0025, decide which of the three shapes was
-    implemented, and delete this test in the same commit that closes the gap it names.
+    If this goes red, the **declared-purpose gate** landed (ADR 0025) — the ruled target, and the
+    right direction. Delete this test in the same commit that closes the gap it names, and replace
+    it with the one that asserts a read without a declared reason is refused. If it went red for any
+    OTHER cause, a console just broke and nobody meant it to.
     """
     status = _read_subject_as(app, principal=f"{role}@bank.eu", role=role)
 
     assert status == 200, (
-        f"the {role!r} operator was refused a subject read ({status}). If that refusal is "
-        "deliberate, the posture recorded in ADR 0025 has changed and this test must change with "
-        "it — in the same commit, in review. If it is not deliberate, a console just broke."
+        f"the {role!r} operator was refused a subject read ({status}). If that refusal is the "
+        "declared-purpose gate landing, this test has done its job — retire it here, in review, in "
+        "the same commit as ADR 0025's implementation. If it is not deliberate, a console broke."
     )
 
 
