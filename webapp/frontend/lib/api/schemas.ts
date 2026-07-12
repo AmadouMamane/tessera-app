@@ -265,8 +265,15 @@ export const AuditEntrySchema = z.object({
   prev_hash: z.string().nullable().optional(),
   hash: z.string().nullable().optional(),
   event_type: AuditEventTypeSchema.default("other"),
-  actor: z.string().default("audit-log"),
-  actor_role: AuditActorRoleSchema.default("system"),
+  // No `.default()` on either — the same rule as the backend model, for the same reason, on the
+  // plane where it is easiest to forget. `.default("audit-log")` meant that a ledger entry which
+  // arrived WITHOUT an author was rendered in the Journal's author column as "audit-log": the
+  // frontend manufacturing an attribution the backend never made. A missing author must reach
+  // the eye as missing. The backend always sends one (`_UNRECORDED_ACTOR` when the entry has
+  // none), so this now fails loudly at parse time if that ever stops being true — which is the
+  // point: a schema that fills in a plausible name cannot tell you it stopped being true.
+  actor: z.string(),
+  actor_role: AuditActorRoleSchema,
   scope: z.string().default("global"),
   object_label: z.string().default("audit event"),
   policy_rule: z.string().nullable().optional(),

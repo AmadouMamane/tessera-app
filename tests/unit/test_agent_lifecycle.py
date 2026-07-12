@@ -19,8 +19,12 @@ import pytest
 from eval.contribution import restrict_baseline
 from eval.ratchet import load_baseline
 from eval.sets import load_eval_set
+from tessera.authz import Actor
 from tessera.observability import agent_lifecycle as lifecycle, eval_floor
 from tessera.observability.eval_data import EvalSnapshot, SessionRow
+
+#: A real, named promoter — a promotion signed "admin" names an authority, not a person.
+_PROMOTER = Actor(principal="jules@bank.eu", role="admin")
 
 
 @pytest.fixture(autouse=True)
@@ -161,7 +165,7 @@ def test_request_release_emits_blocked_event(monkeypatch: pytest.MonkeyPatch) ->
         emitted.update(kwargs)
 
     monkeypatch.setattr(lifecycle, "emit_agent_lifecycle", _capture)
-    decision = lifecycle.request_release("support-client", actor="admin")
+    decision = lifecycle.request_release("support-client", actor=_PROMOTER)
     assert not decision.allowed
     assert emitted["phase"] == "release_blocked"
     assert emitted["agent_id"] == "support-client"
@@ -171,7 +175,7 @@ def test_request_release_emits_released_when_allowed(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(lifecycle, "load_eval_snapshot", lambda _aid: _snapshot(gate_passed=True))
     emitted: dict[str, object] = {}
     monkeypatch.setattr(lifecycle, "emit_agent_lifecycle", lambda **kw: emitted.update(kw))
-    decision = lifecycle.request_release("support-client")
+    decision = lifecycle.request_release("support-client", actor=_PROMOTER)
     assert decision.allowed
     assert emitted["phase"] == "released"
 

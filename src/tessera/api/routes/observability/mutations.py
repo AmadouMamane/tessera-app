@@ -26,6 +26,7 @@ from tessera.api.security import actor_of, require_operator
 from tessera.api.session import (  # noqa: TCH001  — FastAPI resolves Depends annotations at runtime
     SessionContext,
 )
+from tessera.guard.audit import emit_governance_mutation
 from tessera.observability import (
     ablation as ablation_mod,
     agent_a_faire as agent_a_faire_mod,
@@ -235,47 +236,81 @@ async def observability_shadow(payload: ShadowRequest) -> dict[str, object]:
 
 
 @router.post("/observability/agents/propose")
-async def observability_agents_propose(body: _AgentProposeBody) -> dict[str, object]:
+async def observability_agents_propose(
+    body: _AgentProposeBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
     """Record a governed, audited proposal to add an agent.
 
     An agent is a package approved as a unit (ADR 0012), so the registry is not
     mutated at runtime: this emits an auditable S1 event (proposal) that feeds the
     propose -> review -> release flow. RBAC is enforced on the client; the event
     captures the intent durably either way.
+
+    The proposal named ``"operator"`` as its author until 2026-07-13 — the default on
+    ``emit_agent_proposed``, which this route never overrode. It names the verified principal now.
     """
     from tessera.guard.audit import emit_agent_proposed
 
     name = body.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="name is required")
-    emit_agent_proposed(name=name)
+    emit_agent_proposed(name=name, actor=actor_of(session))
     return {"available": True, "proposed": name}
 
 
 @router.post("/observability/agents/release")
-async def observability_agents_release(body: _AgentReleaseBody) -> dict[str, object]:
+async def observability_agents_release(
+    body: _AgentReleaseBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
     """Attempt to promote an agent to live — gated by its eval-gate.
 
     An agent only goes live once a run of ITS own set cleared the two-level gate.
     The attempt is recorded as a hash-chained S1 event (``released`` on success,
     ``release_blocked`` otherwise), so the promotion is opposable either way.
+
+    **Opposable to whom, though?** The gate's verdict was in the chain and the promoter's name
+    was not: ``request_release`` defaulted its ``actor`` to the literal ``"operator"``, so every
+    promotion this fleet ever performed carried the same author. Two people promoting two agents
+    produced two byte-identical attributions — a record that cannot distinguish them is not a
+    record of who did it. ``actor_of(session)`` is the principal of the verified assertion.
     """
     from tessera.observability.agent_lifecycle import request_release
 
     agent_id = body.agent_id.strip()
     if not agent_id:
         raise HTTPException(status_code=422, detail="agent_id is required")
-    decision = request_release(agent_id)
+    decision = request_release(agent_id, actor=actor_of(session))
     return {"available": True, **decision.as_dict()}
 
 
 @router.post("/observability/agent-garde-fous/rule-state")
 async def observability_agent_garde_fous_mutate(
-    body: _RuleStateBody, lang: str = "fr"
+    body: _RuleStateBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+    lang: str = "fr",
 ) -> dict[str, object]:
-    """Persist an enable/disable change and return the fresh payload."""
+    """Persist an enable/disable change and return the fresh payload.
+
+    **Switching a guardrail off is the single most sensitive act this cockpit offers**, and it
+    wrote nothing at all to the ledger (ADR 0024 §Owed). The store flipped a flag in a JSON file
+    and returned a fresh page; the chain never learned that the injection screen had been
+    disabled, still less by whom. Every incident review that ever asked *"was the guard on?"*
+    would have been answered from the guard's **current** state, which is the one thing that
+    cannot testify about the past.
+
+    The entry is written **before** the mutation, and that ordering is deliberate: if the store
+    write fails, the ledger holds an attempt that did not take effect — recoverable, and visibly
+    odd. The reverse order loses the act entirely on exactly the runs where something went wrong.
+    """
     if body.key not in agent_garde_fous_mod.available_rules():
         raise HTTPException(status_code=404, detail="unknown rule")
+    emit_governance_mutation(
+        target="guard.rule_state",
+        detail={"rule": body.key, "enabled": body.enabled},
+        actor=actor_of(session),
+    )
     agent_garde_fous_mod.set_rule_state(body.key, enabled=body.enabled)
     return {"available": True, **(await agent_garde_fous_mod.build_agent_garde_fous(lang))}
 
@@ -372,12 +407,24 @@ async def observability_automations_evaluate(lang: str = "fr") -> dict[str, obje
 @router.post("/observability/automations/rule-state")
 async def observability_automations_rule_state(
     body: _AutomationRuleStateBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
 ) -> dict[str, object]:
-    """Persist a rule's enabled flag; 404 on unknown rule; returns fresh payload."""
+    """Persist a rule's enabled flag; 404 on unknown rule; returns fresh payload.
+
+    The exact twin of the guardrail toggle above, silent for the same reason, and found by
+    asking the question *as a class* rather than route by route: ADR 0024 §Owed named the
+    guardrail; the class ratchet named this one too. That is the difference between fixing a
+    finding and closing a class — the second one catches the instance nobody wrote down.
+    """
     from tessera.observability import automation_store
 
     if body.rule_id not in automation_store.available_rule_ids():
         raise HTTPException(status_code=404, detail="unknown automation rule")
+    emit_governance_mutation(
+        target="automation.rule_state",
+        detail={"rule": body.rule_id, "enabled": body.enabled},
+        actor=actor_of(session),
+    )
     automation_store.set_rule_enabled(body.rule_id, enabled=body.enabled)
     return {"available": True, **automations_mod.compute_automations_overview(body.lang)}
 

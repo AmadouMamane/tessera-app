@@ -9,6 +9,7 @@ is best-effort and gated; the backfill inserts exactly the difference.
 
 from __future__ import annotations
 
+from tessera.authz import Actor
 from tessera.observability import business_events as be, erasure
 from tessera.observability.business_events import (
     BusinessEventName,
@@ -28,6 +29,12 @@ from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter, C
 def _to_row() -> dict[str, object]:
     reset_business_event_store()
     event = record_business_event(
+        # kind=operator says a HUMAN ordered this, so the author must BE one. Pairing an
+        # `operator` kind with a system author is now a hard error, and it is worth saying why
+        # that is not pedantry: the old envelope could not express the contradiction at all —
+        # one field answered both questions, so "a human did it" and "the system did it" were
+        # the same string, and nothing could ever have caught them disagreeing.
+        author=Actor(principal="julie@bank.eu", role="collections"),
         event_name=BusinessEventName.BUSINESS_RULE_CHECKED,
         agent_id="recouvrement",
         conversation_id="conv-be",
@@ -35,7 +42,7 @@ def _to_row() -> dict[str, object]:
         workflow_id="recouvrement_collections_v1",
         decision="allowed",
         payload={"rule_id": "contact_window"},
-        actor="operator",
+        actor_kind="operator",
     )
     return event.to_row()
 
@@ -120,7 +127,7 @@ def test_read_store_rebuilds_events(monkeypatch) -> None:  # type: ignore[no-unt
     events = ClickHouseBusinessEventStore().list(agent_id="recouvrement")
     assert len(events) == 1
     assert events[0].event_name == "business_rule.checked"
-    assert events[0].actor == "operator"
+    assert events[0].actor_kind == "operator"
     assert stub.calls[0]["agent_id"] == "recouvrement"  # filter pushed through
 
 
@@ -223,6 +230,7 @@ def test_record_business_event_dual_writes_the_owned_row(monkeypatch) -> None:  
     monkeypatch.setattr(cbe, "record_business_event_row", lambda row: captured.append(dict(row)))
     reset_business_event_store()
     record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=BusinessEventName.INTENT_ROUTED,
         agent_id="recouvrement",
         conversation_id="conv-dw",

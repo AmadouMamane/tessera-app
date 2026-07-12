@@ -17,6 +17,7 @@ from tessera.agent.sdk.testkit import (
     verify_event_stream,
     verify_turn_span,
 )
+from tessera.authz import Actor
 from tessera.observability import semconv
 from tessera.observability.business_events import (
     GRAMMAR_EVENT_NAMES,
@@ -35,6 +36,11 @@ class _RecordingSpan:
         self.attrs[key] = value
 
 
+#: These envelopes are built by a test, not by a turn. Saying so is the honest answer to "who
+#: authored this event" — and the envelope now requires an answer, which is the whole point.
+_FIXTURE_ACTOR = Actor.system("test-fixture")
+
+
 def _event(name: BusinessEventName, **overrides: object) -> BusinessEvent:
     """A minimally-populated envelope; ``overrides`` set the per-event fields."""
     base: dict[str, object] = {
@@ -43,6 +49,8 @@ def _event(name: BusinessEventName, **overrides: object) -> BusinessEvent:
         "agent_id": "recouvrement",
         "conversation_id": "conv-1",
         "turn_id": "turn-1",
+        "author_principal": _FIXTURE_ACTOR.principal,
+        "author_role": _FIXTURE_ACTOR.role,
     }
     base.update(overrides)
     return BusinessEvent(**base)  # type: ignore[arg-type]
@@ -158,6 +166,8 @@ class TestGrammarConformance:
             agent_id="x",
             conversation_id="c",
             turn_id="t",
+            author_principal=_FIXTURE_ACTOR.principal,
+            author_role=_FIXTURE_ACTOR.role,
         )
         violations = verify_business_event(rogue, synthetic=False)
         assert any("workflow grammar" in v for v in violations)

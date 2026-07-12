@@ -28,7 +28,11 @@ from tessera.agent.registry import get_agent
 from tessera.agent.sdk.testkit import verify_business_event, verify_turn_result
 from tessera.agent.turn_contract import TURN_RESULT_KEYS
 from tessera.observability.agent_console import capability_forms, compute_agent_console
-from tessera.observability.business_events import BusinessEvent
+from tessera.observability.business_events import (
+    UNATTRIBUTED_PRINCIPAL,
+    UNATTRIBUTED_ROLE,
+    BusinessEvent,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -195,7 +199,15 @@ def _emitted_event(duplex: ModuleType, *, synthetic: bool) -> BusinessEvent:
     result = duplex.handle_turn(_turn_input(synthetic=synthetic))
     events = result["businessEvents"]
     assert len(events) == 1
-    return BusinessEvent(**events[0])
+    # The example agent is FORBIDDEN from importing tessera (test_example_agents), so its
+    # events cross the wire without an author. Tessera does not ingest them today (ADR 0019
+    # §A1.2 (b) holds only for that reason); rebuilding one here must therefore SAY that the
+    # author is unknown rather than quietly invent one.
+    return BusinessEvent(
+        **events[0],
+        author_principal=UNATTRIBUTED_PRINCIPAL,
+        author_role=UNATTRIBUTED_ROLE,
+    )
 
 
 def test_a_synthetic_turns_events_are_stamped_across_the_wire(duplex: ModuleType) -> None:

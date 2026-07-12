@@ -34,6 +34,11 @@ def _as_operator(monkeypatch, *, surface: Surface = Surface.COCKPIT_EMBEDDED) ->
         authenticated=True,
         label="Opérateur · op-jules (admin)",
         demo=True,
+        # The label said "(admin)" and the field was never set: the fixture had drifted from
+        # anything `verify_operator_assertion` can actually produce (operator.py builds the ONE
+        # operator session there is, and always with a role). `actor_of` refuses a role-less
+        # operator, which is how the drift surfaced.
+        role="admin",
     )
     monkeypatch.setattr(invoke_routes, "resolve_request_context", lambda _req: (session, surface))
 

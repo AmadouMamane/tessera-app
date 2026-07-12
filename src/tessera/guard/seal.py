@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
 
-from tessera.guard.audit import LEDGER_SEAL_TYPE, emit_ledger_seal
+from tessera.guard.audit import LEDGER_SEAL_TYPE, SEAL_ACTOR, emit_ledger_seal
 from tessera.guard.ledger_store import (
     LedgerTreeStatus,
     ledger_source,
@@ -600,5 +600,7 @@ def run_seal_cycle(
         sealed_at=token.sealed_at,
         qualified=token.qualified,
         divergence=continuity in {"divergent", "rewrite"},
+        # The off-chronology cycle sealed the head; no operator asked for this one.
+        actor=SEAL_ACTOR,
     )
     return SealCycleResult(True, "sealed", head, prev_head, continuity, token.sealed_at)

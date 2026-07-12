@@ -27,9 +27,14 @@ from langgraph.graph import END, START, StateGraph
 
 from tessera.agent.registry import get_agent
 from tessera.agent.sdk.instrument import instrument_node
-from tessera.authz import Surface
+from tessera.authz import Actor, Surface
+from tessera.guard.audit import AGENT_TURN_ACTOR
 from tessera.observability import business_events as business_events_mod, business_scoring, replay
-from tessera.observability.business_events import BusinessEventName, record_business_event
+from tessera.observability.business_events import (
+    ActorKind,
+    BusinessEventName,
+    record_business_event,
+)
 from tessera.recouvrement import ensure_recouvrement_scorer_registered
 from tessera.recouvrement.capabilities import (
     capability_for_action,
@@ -355,6 +360,7 @@ def verify_surface_authorization(state: RecouvrementWorkflowState) -> dict[str, 
     if _surface_allowed(surface):
         return {"authorized": True}
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ACTION_BLOCKED,
         decision="blocked",
         reason_codes=["UNAUTHORIZED_SURFACE"],
@@ -578,6 +584,7 @@ def load_case_context(state: RecouvrementWorkflowState) -> dict[str, object]:
     """Load the centralised RC-2048 snapshot."""
     case = _case_for(state["case_id"])
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.CASE_CONTEXT_LOADED,
         payload={
             "client": case.client,
@@ -631,6 +638,7 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
         confidence = 0.72
     capability_id = capability_for_task(intent)
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.INTENT_ROUTED,
         payload={"intent": intent, "confidence": confidence, "active_task": active_task},
         **_event_common(
@@ -718,6 +726,7 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
             "case_id": state["case_id"],
         }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.SLOTS_EXTRACTED,
         payload=slots,
         **_event_common(state, node_name="extract_recouvrement_slots"),
@@ -752,6 +761,7 @@ def evaluate_contact_policy(state: RecouvrementWorkflowState) -> dict[str, objec
         "is_within_window": is_within,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.BUSINESS_RULE_CHECKED,
         decision=decision["decision"],
         reason_codes=decision["reason_codes"],
@@ -764,6 +774,7 @@ def evaluate_contact_policy(state: RecouvrementWorkflowState) -> dict[str, objec
         **_event_common(state, node_name="evaluate_contact_policy"),
     )
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.POLICY_DECISION_MADE,
         decision=decision["decision"],
         reason_codes=decision["reason_codes"],
@@ -775,6 +786,7 @@ def evaluate_contact_policy(state: RecouvrementWorkflowState) -> dict[str, objec
     )
     if blocked:
         record_business_event(
+            author=AGENT_TURN_ACTOR,
             event_name=BusinessEventName.ACTION_BLOCKED,
             decision="blocked",
             reason_codes=decision["reason_codes"],
@@ -818,6 +830,7 @@ def evaluate_schedule_policy(state: RecouvrementWorkflowState) -> dict[str, obje
         "schedule_created": False,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.BUSINESS_RULE_CHECKED,
         decision=decision["decision"],
         reason_codes=decision["reason_codes"],
@@ -829,6 +842,7 @@ def evaluate_schedule_policy(state: RecouvrementWorkflowState) -> dict[str, obje
         **_event_common(state, node_name="evaluate_schedule_policy"),
     )
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.POLICY_DECISION_MADE,
         decision=decision["decision"],
         reason_codes=decision["reason_codes"],
@@ -949,6 +963,7 @@ def review_client_message_policy(state: RecouvrementWorkflowState) -> dict[str, 
         "no_message_sent": True,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.POLICY_DECISION_MADE,
         decision=decision["decision"],
         reason_codes=decision["reason_codes"],
@@ -998,6 +1013,7 @@ def review_case_summary_policy(state: RecouvrementWorkflowState) -> dict[str, ob
         "validation_decision": False,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.POLICY_DECISION_MADE,
         decision=decision["decision"],
         reason_codes=decision["reason_codes"],
@@ -1052,6 +1068,7 @@ def review_payment_options_policy(state: RecouvrementWorkflowState) -> dict[str,
         "no_external_effect": True,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.POLICY_DECISION_MADE,
         decision=decision["decision"],
         reason_codes=decision["reason_codes"],
@@ -1177,6 +1194,7 @@ def build_case_summary_artifact(state: RecouvrementWorkflowState) -> dict[str, o
         "nextActions": next_actions,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1285,6 +1303,7 @@ def build_payment_options_artifact(state: RecouvrementWorkflowState) -> dict[str
         "nextActions": next_actions,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1377,6 +1396,7 @@ def build_contact_rule_artifact(state: RecouvrementWorkflowState) -> dict[str, o
         "nextActions": next_actions,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1471,6 +1491,7 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
         "nextActions": next_actions,
     }
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1486,6 +1507,7 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
         **_event_common(state, node_name="build_schedule_proposal_artifact"),
     )
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.VALIDATION_REQUESTED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1502,6 +1524,7 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
         **_event_common(state, node_name="build_schedule_proposal_artifact"),
     )
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ACTION_PREPARED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1633,6 +1656,7 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
             "Échéancier non créé",
         ]
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1654,6 +1678,7 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
     )
     if policy["validation_required"]:
         record_business_event(
+            author=AGENT_TURN_ACTOR,
             event_name=BusinessEventName.VALIDATION_REQUESTED,
             artifact_id=artifact["id"],
             artifact_type=artifact["type"],
@@ -1670,6 +1695,7 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
             **_event_common(state, node_name="build_reminder_draft_artifact"),
         )
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ACTION_PREPARED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -1822,6 +1848,7 @@ def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object
         }
     event_artifact = state["artifact"]
     record_business_event(
+        author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.MESSAGE_GENERATED,
         artifact_id=event_artifact["id"],
         artifact_type=event_artifact["type"],
@@ -2295,7 +2322,7 @@ def run_recouvrement_action_workflow_v1(
     case_id: str,
     artifact: RecouvrementArtifact,
     action_name: str,
-    requested_by: str = "Julie Dubois",
+    actor: Actor,
     conversation_id: str | None = None,
     turn_id: str | None = None,
     surface: str = DEFAULT_SURFACE,
@@ -2303,7 +2330,25 @@ def run_recouvrement_action_workflow_v1(
     model: str = RECOUVREMENT_WORKFLOW_ID,
     environment: str = "dev",
 ) -> RecouvrementOutput:
-    """Run a controlled backend cycle for sensitive actions on Recouvrement artifacts."""
+    """Run a controlled backend cycle for sensitive actions on Recouvrement artifacts.
+
+    ``actor`` is WHO ordered the action — an :class:`~tessera.authz.Actor`, required, no default.
+
+    It was ``requested_by: str = "Julie Dubois"``: a **fabricated human**, one level below the
+    handler, and it survived every fix that came near it. F-1 removed the field from the request
+    body and hardened the route, so the *caller* could no longer choose the name — and this
+    default sat underneath, ready to sign a governed action in the name of a person who does not
+    exist, for any caller that simply omitted the argument. Nine tests did exactly that and read
+    green. The route above did pass a name, so production never hit it, which is precisely what
+    made it survive: a lie that is never *executed* is never *caught*, and it stays in the code
+    naming the anti-pattern that ``security.py`` was, two thousand lines away, warning about.
+
+    The type is the fix, not the vigilance. An :class:`Actor` has exactly two constructors —
+    ``actor_of(session)`` (a server-verified principal) and ``Actor.system(task)`` (a named
+    non-human origin) — and it rejects an empty principal at construction. So "the caller chose
+    the name", "the name is blank", and "the name is a plausible constant nobody passed" all
+    became **unrepresentable** rather than merely discouraged.
+    """
     canonical_action = _canonical_artifact_action(action_name)
     action_capability_id = capability_for_artifact_type(artifact["type"]) or capability_for_action(
         canonical_action
@@ -2322,6 +2367,9 @@ def run_recouvrement_action_workflow_v1(
         event_state["capability_id"] = action_capability_id
     if not _surface_allowed(surface):
         record_business_event(
+            # The collections officer ordered this action. The ledger names them.
+            author=actor,
+            actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
             event_name=BusinessEventName.ACTION_BLOCKED,
             decision="blocked",
             reason_codes=["UNAUTHORIZED_SURFACE"],
@@ -2333,7 +2381,7 @@ def run_recouvrement_action_workflow_v1(
                 "case_id": case_id,
                 "current_status": artifact["status"],
                 "target_status": artifact["status"],
-                "requested_by": requested_by,
+                "requested_by": actor.principal,
                 "requires_validation": False,
                 "no_external_effect": True,
             },
@@ -2400,6 +2448,9 @@ def run_recouvrement_action_workflow_v1(
     case = _case_for(case_id)
     event_state["case"] = case
     record_business_event(
+        # The collections officer ordered this action. The ledger names them.
+        author=actor,
+        actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
         event_name=BusinessEventName.CASE_CONTEXT_LOADED,
         payload={
             "client": case.client,
@@ -2412,11 +2463,14 @@ def run_recouvrement_action_workflow_v1(
     decision = _artifact_action_decision(
         artifact=artifact,
         action_name=canonical_action,
-        requested_by=requested_by,
+        requested_by=actor.principal,
         case=case,
     )
     action_payload = _action_payload(decision)
     record_business_event(
+        # The collections officer ordered this action. The ledger names them.
+        author=actor,
+        actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
         event_name=BusinessEventName.ACTION_REQUESTED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],
@@ -2427,6 +2481,9 @@ def run_recouvrement_action_workflow_v1(
     )
     if decision["blocked"]:
         record_business_event(
+            # The collections officer ordered this action. The ledger names them.
+            author=actor,
+            actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
             event_name=BusinessEventName.ACTION_BLOCKED,
             decision="blocked",
             reason_codes=decision["reason_codes"],
@@ -2439,6 +2496,9 @@ def run_recouvrement_action_workflow_v1(
         visible_reply = _artifact_action_visible_reply(decision)
         card_updates, suggested_actions = _artifact_action_cards(decision)
         record_business_event(
+            # The collections officer ordered this action. The ledger names them.
+            author=actor,
+            actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
             event_name=BusinessEventName.MESSAGE_GENERATED,
             artifact_id=artifact["id"],
             artifact_type=artifact["type"],
@@ -2466,6 +2526,9 @@ def run_recouvrement_action_workflow_v1(
         )
 
     record_business_event(
+        # The collections officer ordered this action. The ledger names them.
+        author=actor,
+        actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
         event_name=BusinessEventName.POLICY_DECISION_MADE,
         decision="prepared",
         reason_codes=decision["reason_codes"],
@@ -2483,6 +2546,9 @@ def run_recouvrement_action_workflow_v1(
     updated_artifact = _updated_artifact_for_action(artifact, decision)
     if canonical_action == "submit_for_validation":
         record_business_event(
+            # The collections officer ordered this action. The ledger names them.
+            author=actor,
+            actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
             event_name=BusinessEventName.VALIDATION_REQUESTED,
             artifact_id=artifact["id"],
             artifact_type=artifact["type"],
@@ -2500,6 +2566,9 @@ def run_recouvrement_action_workflow_v1(
         )
     if decision["target_status"] != decision["current_status"]:
         record_business_event(
+            # The collections officer ordered this action. The ledger names them.
+            author=actor,
+            actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
             event_name=BusinessEventName.ARTIFACT_STATUS_CHANGED,
             artifact_id=artifact["id"],
             artifact_type=artifact["type"],
@@ -2511,7 +2580,7 @@ def run_recouvrement_action_workflow_v1(
                 "new_status": decision["target_status"],
                 "status_reason": canonical_action,
                 "action_name": canonical_action,
-                "requested_by": requested_by,
+                "requested_by": actor.principal,
                 "requires_validation": decision["requires_validation"],
                 "no_external_effect": True,
             },
@@ -2519,6 +2588,9 @@ def run_recouvrement_action_workflow_v1(
         )
     if canonical_action != "copy_artifact_text":
         record_business_event(
+            # The collections officer ordered this action. The ledger names them.
+            author=actor,
+            actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
             event_name=BusinessEventName.ACTION_PREPARED,
             decision="prepared",
             reason_codes=decision["reason_codes"],
@@ -2530,6 +2602,9 @@ def run_recouvrement_action_workflow_v1(
         )
     visible_reply = _artifact_action_visible_reply(decision)
     record_business_event(
+        # The collections officer ordered this action. The ledger names them.
+        author=actor,
+        actor_kind=ActorKind.INTERNAL_COLLABORATOR.value,
         event_name=BusinessEventName.MESSAGE_GENERATED,
         artifact_id=artifact["id"],
         artifact_type=artifact["type"],

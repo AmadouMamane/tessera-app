@@ -170,7 +170,7 @@ def test_handoff_event_is_a_distinct_s1_type_in_the_same_chain(audit_file: Path)
     assert handoff["from_agent"] == "support-client"
     assert handoff["to_agent"] == "onboarding"
     assert handoff["agent_id"] == "onboarding"  # credited to the receiving agent
-    assert handoff["actor"] == "system"
+    assert handoff["actor"] == "system:supervisor"  # named: not a bare "system" nobody can place
     # Chained onto the previous entry (tamper-evident across event types).
     assert handoff["prev_hash"] == lines[0]["hash"]
     status = audit.verify_audit_chain(audit_file)

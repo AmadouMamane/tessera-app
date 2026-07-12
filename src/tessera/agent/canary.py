@@ -196,7 +196,7 @@ async def run_canary_cycle(
     invocation and its verdict — emitted on green AND red (the invocation happened either way; the
     ledger is where governed acts live). The S1 entry doubles as the descriptor's freshness record.
     """
-    from tessera.guard.audit import emit_canary_invocation
+    from tessera.guard.audit import CANARY_ACTOR, emit_canary_invocation
 
     resolved = invoker or InProcessChatInvoker()
     binding = InvocationBinding.IN_PROCESS_CHAT.value  # the only binding the scheduler drives (I4)
@@ -212,6 +212,9 @@ async def run_canary_cycle(
         turn_id=turn_id,
         duration_ms=outcome.duration_ms,
         error=outcome.error,
+        # No human ordered this turn — the scheduler fired it. Named, not blank, and not
+        # "operator": a reader must never have to guess whether a person was behind a probe.
+        actor=CANARY_ACTOR,
     )
     return CanaryCycleResult(
         agent_id=agent_id,

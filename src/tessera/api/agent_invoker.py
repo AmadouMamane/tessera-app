@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from tessera.agent.turn_contract import TurnInput
+    from tessera.authz import Actor
 
 __all__ = [
     "DEFAULT_HTTP_TIMEOUT_MS",
@@ -89,7 +90,7 @@ class HttpTurnInvoker:
         turn_input: TurnInput,
         *,
         operator_assertion: str,
-        actor: str,
+        actor: Actor,
         conversation_id: str,
         turn_id: str,
         synthetic: bool,
@@ -99,6 +100,9 @@ class HttpTurnInvoker:
         ``operator_assertion`` is the verified token the route resolved (0010 Phase B); the
         invoker forwards it verbatim and refuses an empty one (no anonymous invocation, §4).
         One S1 event is emitted whichever way the turn goes — the invocation happened either way.
+
+        ``actor`` is WHO drove the turn — an :class:`Actor`, not a string, so the route cannot
+        hand this an invented name and the ledger cannot receive one.
 
         ``synthetic`` (ADR 0019 §Amendment 1 A1.1) is the turn's posture, written onto the wire
         here — the one place the platform speaks to an out-of-process agent, so the one place it
@@ -206,7 +210,7 @@ class HttpTurnInvoker:
     def _audit(
         *,
         agent_id: str,
-        actor: str,
+        actor: Actor,
         outcome: InvocationOutcome,
         conversation_id: str,
         turn_id: str,

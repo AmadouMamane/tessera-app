@@ -32,6 +32,7 @@ from tessera.agent.sdk.testkit import (
 from tessera.api.agent_invoker import HttpTurnInvoker
 from tessera.api.operator import OPERATOR_ASSERTION_HEADER, issue_operator_assertion
 from tessera.api.routes import chat as chat_route
+from tessera.authz import Actor
 from tessera.observability import semconv
 from tessera.observability.business_events import (
     BusinessEvent,
@@ -40,6 +41,9 @@ from tessera.observability.business_events import (
     mark_synthetic_turn,
 )
 from tessera.settings import get_settings
+
+#: Built by a test, not by a turn — and the envelope now insists on an answer to "who".
+_FIXTURE_ACTOR = Actor.system("test-fixture")
 
 if TYPE_CHECKING:
     from tessera.agent.turn_contract import TurnInput
@@ -189,7 +193,7 @@ async def _invoke_capturing(*, synthetic: bool) -> dict[str, Any]:
         "turn-agent",
         turn_input,
         operator_assertion="assertion",
-        actor="op",
+        actor=Actor(principal="op@bank.eu", role="admin"),
         conversation_id="c",
         turn_id="t",
         synthetic=synthetic,
@@ -221,7 +225,7 @@ async def test_the_callers_posture_overrides_whatever_the_turn_input_carried() -
         "turn-agent",
         turn_input,
         operator_assertion="assertion",
-        actor="op",
+        actor=Actor(principal="op@bank.eu", role="admin"),
         conversation_id="c",
         turn_id="t",
         synthetic=True,
@@ -277,6 +281,8 @@ def _grammar_event(*, synthetic: bool) -> BusinessEvent:
         agent_id="duplex-agent",
         conversation_id="c",
         turn_id="t",
+        author_principal=_FIXTURE_ACTOR.principal,
+        author_role=_FIXTURE_ACTOR.role,
         synthetic=synthetic,
     )
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pytest
 
+from tessera.authz import Actor
 from tessera.guard.audit import _hash_core
 from tessera.guard.ledger_store import (
     LEDGER_ATTESTATION_TYPE,
@@ -143,6 +144,7 @@ class TestTreeAwareVerification:
 
         rows = _three()
         att = build_ledger_attestation_entry(
+            actor=Actor(principal="ops@bank.eu", role="admin"),
             incident="TESS-LEDGER-001",
             cause="concurrent writers extended a per-process head",
             decision="re-anchor by attestation, never rewrite",

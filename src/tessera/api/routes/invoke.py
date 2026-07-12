@@ -31,6 +31,7 @@ from tessera.agent.registry import Agent, InvocationBinding, get_agent, routable
 from tessera.api.agent_invoker import HttpTurnInvoker
 from tessera.api.operator import OPERATOR_ASSERTION_HEADER, resolve_request_context
 from tessera.api.ratelimit import InvokeThrottledError, get_invoke_limiter
+from tessera.api.security import actor_of
 from tessera.authz import AuthState
 
 if TYPE_CHECKING:
@@ -153,18 +154,23 @@ async def invoke_agent(
     # refused with an honest 429 + Retry-After, never silently dropped.
     limiter = get_invoke_limiter()
     role = surface.value
+    # WHO is driving this turn. ``actor_of`` RAISES on a session the server has not verified —
+    # where ``session.subject_id or "operator"`` used to hand the ledger a plausible constant and
+    # move on. That expression was this file's, and ``recouvrement_assistant`` copied it by name
+    # ("the invoke-route idiom"), which is how a single convenient fallback becomes a house style.
+    # A 500 on an unattributable act is the honest outcome; a governed write signed "operator" is
+    # not. It doubles as the rate-limit bucket, so there is exactly one notion of "who" per turn.
+    actor = actor_of(session)
     try:
         with limiter.concurrency_slot(agent_id=agent_id, role=role):
-            limiter.check_rate(
-                agent_id=agent_id, role=role, subject=session.subject_id or "operator"
-            )
+            limiter.check_rate(agent_id=agent_id, role=role, subject=actor.principal)
             outcome = await HttpTurnInvoker().invoke(
                 agent_id,
                 turn_input,
                 # Forward the verified assertion the caller carried (0010 Phase B) — the invoker
                 # refuses an empty one, so a dev with the key unset gets an honest red, not a leak.
                 operator_assertion=request.headers.get(OPERATOR_ASSERTION_HEADER) or "",
-                actor=session.subject_id or "operator",
+                actor=actor,
                 conversation_id=conversation_id,
                 turn_id=turn_id,
                 # This route IS the Console test bench: operator-only, never on a product path

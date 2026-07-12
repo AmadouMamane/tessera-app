@@ -15,7 +15,7 @@ from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import TYPE_CHECKING, Final, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
@@ -36,10 +36,15 @@ from tessera.observability.metrics import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
+    # A leaf module (stdlib-only), so this could be a runtime import with no cycle. It is an
+    # annotation only — nothing here constructs an Actor — and this is NOT a FastAPI route, so
+    # deferring it is safe (a route's Depends annotations ARE resolved at runtime; this is not one).
+    from tessera.authz import Actor
+
 __all__ = [
     "ACTORS",
     "HUMAN_ACTORS",
-    "Actor",
+    "ActorKind",
     "AgentBusinessEvent",
     "ArtifactSink",
     "AuditSink",
@@ -135,7 +140,17 @@ class BusinessEventName(StrEnum):
 
 
 EVENT_SCHEMA_VERSION = "business_event.v1"
-EVENT_VERSION = 1
+#: **2** since 2026-07-13: the envelope gained a required author (``author_principal`` /
+#: ``author_role``). This is the number that reaches the ledger entry's ``version`` key, and it
+#: is what lets a reader tell an entry with **no author because the schema had none** (v1, an
+#: honest historical gap) from one with **no author because something broke** (v2, a defect).
+#: Adding the field silently would have collapsed those two into one unreadable state.
+#:
+#: ``EVENT_SCHEMA_VERSION`` deliberately stays ``business_event.v1``: the addition is additive on
+#: the READ side (a v1 consumer ignores an unknown key), and ``_validate_envelope`` rejects a
+#: schema_version mismatch — bumping the string would make every stored historical row fail to
+#: replay, which is a rewrite of the past by another name.
+EVENT_VERSION = 2
 #: ADR 0017 §2 — the workflow grammar is a versioned spec, stamped on every event.
 #: It versions independently from the envelope ``schema_version``.
 GRAMMAR_VERSION = "workflow_grammar.v1"
@@ -144,12 +159,24 @@ GRAMMAR_VERSION = "workflow_grammar.v1"
 GRAMMAR_EVENT_NAMES: frozenset[str] = frozenset(name.value for name in BusinessEventName)
 
 
-class Actor(StrEnum):
-    """Closed vocabulary for the party a business event is attributed to (ADR 0017 §A2.1).
+class ActorKind(StrEnum):
+    """Closed vocabulary for the KIND of party a business event is attributed to (§A2.1).
 
     ``actor`` was a free string defaulting to ``system``; this narrows it to a closed
     set. The narrowing is additive — every event emitted before this amendment is
     ``system``, so the envelope stays ``business_event.v1``.
+
+    **It was called ``Actor``, and the name was the bug.** Every member here is a *category* —
+    ``operator`` is an authority, ``internal_collaborator`` is a relationship — and not one of
+    them is a name. But the field it typed was called ``actor``, the ledger key it was written
+    to is called ``actor``, and every reader of that key (the cockpit Journal, the governance
+    feed, the SIEM export) renders it as **the author**. So a governed action taken by a named
+    collections officer was displayed, and exported to the bank's SOC, as having been performed
+    by "operator" — a word that is true of everyone and identifies no one.
+
+    Renamed rather than carved out of the identity ratchet. A ratchet exception would have said
+    "this field looks like an identity but trust us"; the rename says what is actually true, and
+    then the ratchet needs no exception. The *person* now lives in ``author_principal``.
     """
 
     SYSTEM = "system"
@@ -159,10 +186,19 @@ class Actor(StrEnum):
 
 
 #: The closed ``actor`` vocabulary (§A2.1) — validated at emit time.
-ACTORS: frozenset[str] = frozenset(a.value for a in Actor)
+ACTORS: frozenset[str] = frozenset(a.value for a in ActorKind)
 #: The human actors: a ``human_action``-level business fact (§A2.2) is exactly an event
 #: whose actor is one of these — the distinction the 3-level ladder is built on.
-HUMAN_ACTORS: frozenset[str] = frozenset(ACTORS - {Actor.SYSTEM.value})
+HUMAN_ACTORS: frozenset[str] = frozenset(ACTORS - {ActorKind.SYSTEM.value})
+
+#: What a stored row that PREDATES ``author_principal`` reads back as. Named, and neither blank
+#: nor a person: a pre-2026-07-13 row has no author because the envelope had no such field — an
+#: honest historical gap — and a reader must be able to tell that from a live event whose author
+#: went missing. Defaulting it to ``"system"`` would have merged those two into one string, which
+#: is the exact merge this whole lane exists to undo. A regulator resolves an ambiguity like that
+#: against the controller.
+UNATTRIBUTED_PRINCIPAL: Final = "unattributed:pre-author-envelope"
+UNATTRIBUTED_ROLE: Final = "unattributed"
 
 
 class BusinessPayloadValidationError(ValueError):
@@ -266,6 +302,14 @@ class BusinessEvent:
     agent_id: str
     conversation_id: str
     turn_id: str
+    # WHO — the person who ordered the act, or a named system task. Required, and placed among
+    # the required fields deliberately: a business event that reaches the opposable journal
+    # (``classification.auditable``) is a governed act, and a governed act names its author.
+    # ``actor`` below answers a DIFFERENT question — see its comment. The two were one field
+    # until 2026-07-13, and that conflation is what let a named collections officer's action be
+    # exported to the bank's SOC as having been performed by "system".
+    author_principal: str
+    author_role: str
     schema_version: str = EVENT_SCHEMA_VERSION
     event_version: int = EVENT_VERSION
     grammar_version: str = GRAMMAR_VERSION
@@ -290,12 +334,24 @@ class BusinessEvent:
     decision: str | None = None
     reason_codes: tuple[str, ...] = ()
     payload: dict[str, object] = field(default_factory=dict)
-    actor: str = "system"
+    # WHAT KIND of party (ADR 0017 §A2.1) — a closed vocabulary, NOT a name. This is the input to
+    # the 3-level ladder (§A2.2: a `human_action` fact is one whose kind is in HUMAN_ACTORS), and
+    # it keeps its default because a *classification* that defaults is not an identity that
+    # defaults. It is only safe to default it now that it is no longer mistaken for the author.
+    actor_kind: str = ActorKind.SYSTEM.value
     classification: BusinessEventClassification = field(default_factory=BusinessEventClassification)
 
     def to_row(self) -> dict[str, object]:
-        """Serialise the event for projection, replay, and audit sinks."""
+        """Serialise the event for projection, replay, and audit sinks.
+
+        The row key stays ``actor``. The *attribute* was renamed to ``actor_kind`` (it is a
+        category, never a name — see :class:`ActorKind`), but ``actor`` is a durable ClickHouse
+        column and the key three stored media already carry. Renaming a column is a migration;
+        renaming a Python field is a Tuesday. The honesty belongs in the code that people read,
+        and the compatibility belongs on the wire that history is written on.
+        """
         row = asdict(self)
+        row["actor"] = row.pop("actor_kind")
         row["version"] = self.event_version
         row["reason_codes"] = list(self.reason_codes)
         row["classification"] = asdict(self.classification)
@@ -895,7 +951,12 @@ def _row_to_event(row: dict[str, object]) -> BusinessEvent | None:
                 tuple(str(code) for code in reason_codes) if isinstance(reason_codes, list) else ()
             ),
             payload=dict(payload_mapping) if payload_mapping is not None else {},
-            actor=str(row.get("actor", "system")),
+            # A row stored before the author existed reads back as UNATTRIBUTED, never as
+            # "system": the gap is historical and honest, and it must not be laundered into a
+            # claim that a system task performed the act.
+            author_principal=str(row.get("author_principal") or UNATTRIBUTED_PRINCIPAL),
+            author_role=str(row.get("author_role") or UNATTRIBUTED_ROLE),
+            actor_kind=str(row.get("actor", ActorKind.SYSTEM.value)),
             classification=classification,
             schema_version=str(row.get("schema_version", EVENT_SCHEMA_VERSION)),
             event_version=event_version,
@@ -1244,7 +1305,8 @@ def record_business_event(
     decision: str | None = None,
     reason_codes: Iterable[str] = (),
     payload: Mapping[str, object] | None = None,
-    actor: str = "system",
+    author: Actor,
+    actor_kind: str = ActorKind.SYSTEM.value,
     classification: BusinessEventClassification | None = None,
     audit_sink: _AuditSink | None = None,
 ) -> BusinessEvent:
@@ -1252,11 +1314,24 @@ def record_business_event(
 
     ``synthetic`` defaults to the current turn's synthetic mark (ADR 0019 §4): a business event
     emitted inside a canary turn inherits it without the emitter having to pass it explicitly.
+
+    ``author`` is **WHO** (required, no default); ``actor`` is **WHAT KIND** of party (§A2.1,
+    defaulted, a classification). They are checked against each other below, because a payload
+    that claims a human ordered the act while naming the system as its author — or the reverse —
+    is not a record anyone can rely on, and until now the envelope had no way to even express the
+    contradiction: there was one field, and it was doing both jobs badly.
     """
     raw_payload = _json_safe_payload(payload)
     name = _event_name_value(event_name)
-    if actor not in ACTORS:
-        msg = f"unknown actor {actor!r}: expected one of {sorted(ACTORS)}"
+    if actor_kind not in ACTORS:
+        msg = f"unknown actor kind {actor_kind!r}: expected one of {sorted(ACTORS)}"
+        raise BusinessPayloadValidationError(msg)
+    if author.is_system is not (actor_kind == ActorKind.SYSTEM.value):
+        msg = (
+            f"the envelope contradicts itself: author={author.principal!r} "
+            f"(system={author.is_system}) but kind={actor_kind!r}. A human-ordered act must name "
+            "the human who ordered it, and a system act must not be dressed as a human one."
+        )
         raise BusinessPayloadValidationError(msg)
     reasons = tuple(str(code) for code in reason_codes)
     safe_payload = _validate_event_payload(
@@ -1296,7 +1371,9 @@ def record_business_event(
         decision=decision,
         reason_codes=reasons,
         payload=safe_payload,
-        actor=actor,
+        author_principal=author.principal,
+        author_role=author.role,
+        actor_kind=actor_kind,
         classification=resolved_classification,
     )
     if event.classification.observable:

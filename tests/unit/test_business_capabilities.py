@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 import pytest
 
 from tessera.agent.recouvrement import RECOUVREMENT_AGENT_ID, RECOUVREMENT_WORKFLOW_ID
+from tessera.authz import Actor
 from tessera.observability import business_capabilities, business_events
 from tessera.recouvrement.scoring import ensure_recouvrement_scorer_registered
 
@@ -31,6 +32,7 @@ def test_unknown_capability_row_is_rendered_as_non_attribue(
     in_memory_business_events: None,
 ) -> None:
     business_events.record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=business_events.BusinessEventName.INTENT_ROUTED,
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
@@ -62,6 +64,7 @@ def test_conformity_is_unknown_when_only_diagnostic_trace_score_exists(
     in_memory_business_events: None,
 ) -> None:
     business_events.record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=business_events.BusinessEventName.CASE_CONTEXT_LOADED,
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
@@ -90,6 +93,7 @@ def test_business_signals_are_aggregated_per_run(
 ) -> None:
     ensure_recouvrement_scorer_registered()
     business_events.record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=business_events.BusinessEventName.ACTION_PREPARED,
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
@@ -102,6 +106,7 @@ def test_business_signals_are_aggregated_per_run(
         payload={"action_name": "prepare_schedule_proposal"},
     )
     business_events.record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=business_events.BusinessEventName.ACTION_PREPARED,
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
@@ -165,6 +170,7 @@ def test_signal_evidence_counts_real_runs_checks_and_the_last_look(
         ),
     ):
         business_events.record_business_event(
+            author=Actor.system("test-fixture"),
             event_name=business_events.BusinessEventName.ACTION_PREPARED,
             agent_id=RECOUVREMENT_AGENT_ID,
             workflow_id=RECOUVREMENT_WORKFLOW_ID,

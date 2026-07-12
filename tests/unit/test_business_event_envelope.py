@@ -7,6 +7,7 @@ and the rebuild. Domain emitters own the mapping; this pins the envelope surface
 
 from __future__ import annotations
 
+from tessera.authz import Actor
 from tessera.observability.business_events import (
     BusinessEvent,
     BusinessEventName,
@@ -14,6 +15,9 @@ from tessera.observability.business_events import (
     record_business_event,
     reset_business_event_store,
 )
+
+#: Built by a test, not by a turn — and the envelope now insists on an answer to "who".
+_FIXTURE_ACTOR = Actor.system("test-fixture")
 
 
 def test_capability_id_defaults_to_none_and_serialises() -> None:
@@ -23,6 +27,8 @@ def test_capability_id_defaults_to_none_and_serialises() -> None:
         agent_id="recouvrement",
         conversation_id="c1",
         turn_id="t1",
+        author_principal=_FIXTURE_ACTOR.principal,
+        author_role=_FIXTURE_ACTOR.role,
     )
     assert event.capability_id is None
     row = event.to_row()
@@ -33,6 +39,7 @@ def test_capability_id_defaults_to_none_and_serialises() -> None:
 def test_record_business_event_stamps_capability_id_into_to_row() -> None:
     reset_business_event_store()
     event = record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=BusinessEventName.INTENT_ROUTED,
         agent_id="recouvrement",
         conversation_id="c1",
@@ -45,6 +52,7 @@ def test_record_business_event_stamps_capability_id_into_to_row() -> None:
 
 def test_capability_id_round_trips_through_rebuild() -> None:
     original = record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=BusinessEventName.INTENT_ROUTED,
         agent_id="recouvrement",
         conversation_id="c1",

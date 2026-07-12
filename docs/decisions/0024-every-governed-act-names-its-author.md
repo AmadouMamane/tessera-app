@@ -151,13 +151,31 @@ sixth agent and a bad night.
 current, because an ADR that lists a closed finding as open is the same species of lie as a ledger
 entry with no author — it is a record that does not match the world.
 
-* `POST /observability/agent-garde-fous/rule-state` — **switching a guardrail off** writes nothing.
-* `PUT /settings/synthesis-admin` — a superadmin privilege grant, no trace.
-* `emit_agent_proposed` / `emit_agent_lifecycle` — **promoting an agent to production** is
-  attributed to the literal string `"operator"`, which is a role and not a person.
-* `agent/recouvrement.py` — `requested_by: str = "Julie Dubois"` **is still there** as a default
-  one level below the handler, and the 32 business events on the human action path still carry
-  `actor="system"` on the envelope.
+* ~~`POST /observability/agent-garde-fous/rule-state`~~ — **CLOSED.** Switching a guardrail off now
+  writes an `emit_governance_mutation` entry naming `actor_of(session)`, **before** the store write:
+  if the store fails, the chain holds an attempt that did not take effect (recoverable, and visibly
+  odd), where the reverse order loses the act entirely on precisely the runs where something broke.
+  Asking the question *as a class* rather than route-by-route immediately surfaced a **fourth** act
+  nobody had written down — `POST /observability/automations/rule-state`, the toggle's exact twin,
+  silent for the same reason. That is the argument for a ratchet over a checklist, in one line.
+* ~~`PUT /settings/synthesis-admin`~~ — **CLOSED.** The guard moved out of `dependencies=[...]` and
+  into the signature, and that move *is* the fix: as a dependency it proved a superadmin was present
+  and handed the handler **nothing**, so the handler had no way to say who. As a parameter it
+  returns the verified `SessionContext`. Its model also gained `extra="forbid"` — it doubles as the
+  request body, and its name (`SynthesisAdminFlag`) ends in neither `Body` nor `Request`, so the
+  request-model ratchet **could not see it**. A blind spot in a ratchet is a finding about the
+  ratchet.
+* ~~`emit_agent_proposed` / `emit_agent_lifecycle`~~ — **CLOSED.** Both take `actor: Actor`,
+  required. Ten S1 emitters now do; nine of them previously wrote a bare `actor` string and **no
+  `actor_role` at all**, so the Journal inferred the role by heuristic from the event's shape.
+  Inference is exactly what a recorded field replaces.
+* ~~`agent/recouvrement.py`~~ — **CLOSED.** `actor: Actor`, required, no default. Both clauses:
+  the fabricated human is gone, and the envelope gained a **required author** (`author_principal` /
+  `author_role`) distinct from its closed-vocabulary **kind** (`actor`, now typed `ActorKind`). The
+  32 events split honestly — the 22 the graph performs are `system:agent-turn`; the 10 a human
+  ordered name the verified officer and carry `internal_collaborator`. Attributing the agent's own
+  policy evaluation to the officer who typed the message would have been a fresh lie of the same
+  family.
 * ~~`curation_store.set_decision(decided_by=body.decided_by)`~~ — **CLOSED** (`3d47641f`,
   *"authentication is not attribution — the register was open beside the locked door"*). It is the
   first finding closed *by* this doctrine rather than *alongside* it, and it is worth recording why
@@ -169,6 +187,23 @@ entry with no author — it is a record that does not match the world.
   It also proves the sharper half of the doctrine: that route had carried `require_operator` since
   the 26 anonymous mutations were closed. **The door was locked and the register was open beside
   it.** A guard answers *may you come in*; only a server-derived actor answers *who signed*.
+
+**Still owed** (2026-07-13). One instance survives, and it is a different *kind* of instance —
+which is why it is named here rather than quietly swept in:
+
+* `webapp/frontend/components/recouvrement/recouvrement-product-experience.tsx` — the collections
+  console hardcodes **`Julie Dubois`** as the signed-in operator: the account chip (`:2291`,
+  `:2298`) and the agent's own system prompt (`:321`, *"Tu es l'assistant interne Recouvrement …
+  pour Julie Dubois"*). Nothing here reaches the ledger — the chain now records the principal the
+  HMAC verified — so this is **not** an attribution bug. It is the *display* half of the same
+  family: the console tells every operator that they are Julie Dubois while the trail correctly
+  records who they actually are, and a UI that names a different person than the register is a
+  discrepancy someone will one day have to explain. The fix is to derive the chip (and the prompt's
+  addressee) from the session, which changes the demo persona and the agent's instructions — a
+  product decision, not a security one, and it is deliberately not taken here.
+  The identity ratchet is scoped to `src/` and **says so in its own docstring**: in a test the name
+  is an attack payload (`test_recouvrement_assistant_auth_closed` posts it to prove the contract
+  answers 422), and banning it there would delete the proof that it is refused.
 
 ## References
 

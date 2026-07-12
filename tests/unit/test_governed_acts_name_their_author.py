@@ -36,6 +36,7 @@ from __future__ import annotations
 import ast
 import sys
 import uuid
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -47,7 +48,7 @@ from pydantic import SecretStr
 from tessera.api.main import build_app
 from tessera.api.operator import OPERATOR_ASSERTION_HEADER, issue_operator_assertion
 from tessera.api.security import require_operator, require_subject_reader
-from tessera.authz import SYSTEM_ROLE
+from tessera.authz import SYSTEM_ROLE, Actor
 from tessera.guard import audit as audit_mod
 from tessera.settings import get_settings
 
@@ -277,45 +278,159 @@ def test_the_governed_acts_of_the_gdpr_plane_are_exactly_these(app: FastAPI) -> 
 # ─────────────────────────────────────────────────────────────────────────────────────────
 
 
-def test_every_s1_emitter_stamps_a_top_level_actor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Walk every ``emit_*`` in the audit module and assert the entry it chains names an author.
+#: One driver per ``emit_*`` in ``guard/audit.py``. Frozen with ``==`` against the module below.
+#:
+#: This list exists because the test underneath it **used to claim it did not need one**. Its
+#: docstring read *"Discovered from the module, not from a list: an emitter added tomorrow is
+#: swept in automatically"* — and its body was five hardcoded calls. Five of the ten emitters
+#: were never exercised, including ``emit_agent_lifecycle``, which is the one that signs an
+#: agent's promotion to production. The sentence was true of the design somebody intended and
+#: false of the code, which is the most expensive kind of comment there is.
+#:
+#: Worse, the sweep was *certifying the bug*: it called ``emit_agent_proposed(name="x")`` with no
+#: actor and asserted the entry had one. It passed — because the default ``actor: str =
+#: "operator"`` supplied it. A ratchet whose green depended on the very literal it existed to
+#: forbid. So the emitters are now discovered for real, every one is driven, and the drivers pass
+#: their actor explicitly: an emitter added tomorrow breaks the ``==`` and its author must decide,
+#: in review, what its entry says about who acted.
+_HUMAN = Actor(principal=PRINCIPAL, role=ROLE)
 
-    Discovered from the module, not from a list: an emitter added tomorrow is swept in
-    automatically, and one that forgets its actor cannot pass by being absent from a list nobody
-    maintained. This is the sink ratchet's shape (``typing.get_args(_Sink)``) applied to the
-    other half of ADR 0023's doctrine — there, no transport may disable the store; here, no
-    entry may enter the store without saying who caused it.
-    """
-    captured: list[dict[str, Any]] = []
-    monkeypatch.setattr(audit_mod, "_append_to_chain", lambda entry, _s, _f: captured.append(entry))
-    monkeypatch.setattr(get_settings().guard, "audit_sink", "stdout")
-
-    audit_mod.emit_audit(
+EMITTER_DRIVERS: dict[str, Callable[[], object]] = {
+    "emit_audit": lambda: audit_mod.emit_audit(
         target="t",
         arguments={},
         decisions=[],
         sink="stdout",
         outcome="allowed",
         actor=audit_mod.GUARD_ACTOR,
-    )
-    audit_mod.emit_handoff(
+    ),
+    "emit_governance_mutation": lambda: audit_mod.emit_governance_mutation(
+        target="guard.rule_state",
+        detail={"rule": "r", "enabled": False},
+        actor=_HUMAN,
+        sink="stdout",
+    ),
+    "emit_handoff": lambda: audit_mod.emit_handoff(
         from_agent="a", to_agent="b", conversation_id="c", turn_id="t", reason="r", sink="stdout"
-    )
-    audit_mod.emit_routing(
+    ),
+    "emit_routing": lambda: audit_mod.emit_routing(
         agent_id="a", conversation_id="c", turn_id="t", reason="r", handoff=False, sink="stdout"
-    )
-    audit_mod.emit_agent_proposed(name="x", sink="stdout")
-    audit_mod.emit_canary_invocation(
-        agent_id="a", binding="b", verdict="pass", conversation_id="c", turn_id="t", sink="stdout"
+    ),
+    "emit_business_event_audit": lambda: audit_mod.emit_business_event_audit(
+        event={
+            "event_name": "intent.routed",
+            "author_principal": PRINCIPAL,
+            "author_role": ROLE,
+            "actor": "operator",
+        },
+        sink="stdout",
+    ),
+    "emit_agent_proposed": lambda: audit_mod.emit_agent_proposed(
+        name="x", actor=_HUMAN, sink="stdout"
+    ),
+    "emit_agent_lifecycle": lambda: audit_mod.emit_agent_lifecycle(
+        agent_id="a", phase="released", actor=_HUMAN, sink="stdout"
+    ),
+    "emit_canary_invocation": lambda: audit_mod.emit_canary_invocation(
+        agent_id="a",
+        binding="b",
+        verdict="pass",
+        conversation_id="c",
+        turn_id="t",
+        actor=audit_mod.CANARY_ACTOR,
+        sink="stdout",
+    ),
+    "emit_agent_invocation": lambda: audit_mod.emit_agent_invocation(
+        agent_id="a",
+        binding="b",
+        verdict="pass",
+        actor=_HUMAN,
+        conversation_id="c",
+        turn_id="t",
+        sink="stdout",
+    ),
+    "emit_ledger_attestation": lambda: audit_mod.emit_ledger_attestation(
+        incident="i",
+        cause="c",
+        decision="d",
+        evidence={},
+        forks=[],
+        orphans=[],
+        actor=_HUMAN,
+        sink="stdout",
+    ),
+    "emit_ledger_seal": lambda: audit_mod.emit_ledger_seal(
+        sealed_head="h",
+        prev_sealed_head=None,
+        provider="noop",
+        tsa=None,
+        token_b64="",
+        sealed_at="2026-07-13T00:00:00+00:00",
+        qualified=False,
+        actor=audit_mod.SEAL_ACTOR,
+        sink="stdout",
+    ),
+}
+
+
+def test_every_s1_emitter_is_driven_by_this_file() -> None:
+    """Frozen with ``==``. An emitter cannot dodge the sweep below by being new.
+
+    The previous version of this ratchet *said* it discovered emitters from the module and did
+    not. This is the discovery it promised — and it is a ``==``, not a ``<=``, so a stale driver
+    (an emitter deleted from the module) fails just as loudly as a missing one. A list that is
+    allowed to rot becomes a fiction, and a fiction that reads green is what we are here to stop.
+    """
+    live = {
+        name
+        for name in vars(audit_mod)
+        if name.startswith("emit_") and callable(getattr(audit_mod, name))
+    }
+
+    assert live == set(EMITTER_DRIVERS), (
+        "the S1 emitters and the drivers in this file have diverged: "
+        f"undriven={sorted(live - set(EMITTER_DRIVERS))} "
+        f"stale={sorted(set(EMITTER_DRIVERS) - live)}. An emitter with no driver has never been "
+        "asked what its entry says about who acted."
     )
 
-    assert captured, "no emitter was exercised — this test would then prove nothing"
+
+@pytest.mark.parametrize("emitter", sorted(EMITTER_DRIVERS))
+def test_every_s1_emitter_stamps_a_top_level_actor_and_role(
+    monkeypatch: pytest.MonkeyPatch, emitter: str
+) -> None:
+    """Every entry that enters the opposable chain names an author AND the authority they held.
+
+    ``actor_role`` is asserted too, and that is not symmetry for its own sake: it is what lets a
+    reader separate ``system:`` principals (the guard, the seal cycle, the scheduler — they acted
+    on policy and cannot be asked what they were thinking) from a person who can be. Nine of the
+    ten emitters wrote a bare ``actor`` and no role at all, so the Journal's role column was
+    inferred by heuristic from the event's shape — inference is exactly what a recorded field
+    replaces.
+    """
+    captured: list[dict[str, Any]] = []
+    monkeypatch.setattr(audit_mod, "_append_to_chain", lambda entry, _s, _f: captured.append(entry))
+    monkeypatch.setattr(get_settings().guard, "audit_sink", "stdout")
+
+    EMITTER_DRIVERS[emitter]()
+
+    assert captured, f"{emitter} chained nothing — the driver proves nothing"
     for entry in captured:
         actor = entry.get("actor")
         assert isinstance(actor, str) and actor, (
-            f"{entry.get('type')} enters the opposable chain with no top-level `actor` key. "
-            "Every reader of this journal — the cockpit Journal, the governance feed, the SIEM "
-            "export — looks there and only there. An entry without it is an act nobody performed."
+            f"{emitter} enters the opposable chain with no top-level `actor` key. Every reader of "
+            "this journal — the cockpit Journal, the governance feed, the SIEM export — looks "
+            "there and only there. An entry without it is an act nobody performed."
+        )
+        assert entry.get("actor_role"), (
+            f"{emitter} names an author but not the authority they held. `system:seal-cycle` and "
+            "`bob@bank.eu` are answerable in entirely different ways, and a reader must not have "
+            "to infer which one they are holding from the shape of the event."
+        )
+        assert actor != SYSTEM_ROLE, (
+            f"{emitter} wrote the bare string {SYSTEM_ROLE!r}. That is the one value that cannot "
+            "be told apart from an omission: `Actor.system(task)` exists so that 'the seal cycle "
+            "did this' never renders identically to 'the code forgot to say who did this'."
         )
 
 
@@ -376,6 +491,9 @@ ACTOR_FIELD_NAMES = (
 )
 
 _API_SRC = Path(__file__).resolve().parents[2] / "src" / "tessera" / "api"
+#: The class ratchet below walks **all** of it. The body/model ratchets police the wire; an
+#: identity default is a lie the wire never sees, and it lived two thousand lines from any route.
+_SRC = Path(__file__).resolve().parents[2] / "src" / "tessera"
 
 
 #: The names a route binds a request body to. An attribute read off one of these, whose name
@@ -451,4 +569,461 @@ def test_no_request_model_declares_a_field_that_names_the_author() -> None:
         "handler does with it, the wire now accepts an identity the caller chose. Delete the "
         "field and set `extra='forbid'`, so a caller who still sends one gets a loud 422 "
         "instead of a silently ignored forgery."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# THE CLASS: an identity that has a DEFAULT VALUE — wherever it lives.
+#
+# The two ratchets above police the WIRE: a body may not carry an author, a request model may
+# not declare one. Both are about what a caller can send. Neither could see the finding that
+# outlived them both.
+#
+#     agent/recouvrement.py:2298    requested_by: str = "Julie Dubois"
+#
+# Not on a route. Not on a model. Not reachable from the wire at all — a default on a keyword
+# argument, one call below the handler, in a file no authz ratchet had any reason to read. F-1
+# removed the body field and hardened the route, and this sat underneath it the whole time,
+# ready to sign a governed action in the name of a person who does not exist for any caller that
+# simply omitted the argument. Nine tests did exactly that, in green, for two months.
+#
+# It survived because it was never EXECUTED in production — the route always passed a name. A lie
+# that never runs is never caught, and it decays into furniture. By 2026-07-13 `security.py:184`
+# named `"Julie Dubois"` in its own doctrine as the canonical anti-pattern while, two thousand
+# lines away, the value itself was still the default. The codebase was describing the bug it had.
+#
+# So the rule is stated as a CLASS and enforced structurally, everywhere:
+#
+#     An identity field may not have a default value. Anywhere.
+#
+# The asymmetry with a *classification* is the whole content of the rule, and it is why
+# `business_events.actor` (the §A2.1 party KIND) was renamed to `ActorKind` rather than carved
+# out with an exception. "Which category of party" has a safe answer when nobody says — `system`
+# — and getting it wrong mislabels a row. "Who did this" has none: every candidate default is a
+# plausible constant, and a plausible constant in the author column is worse than a gap, because
+# a gap gets found and a lie does not. An exception list would have said "this looks like an
+# identity but trust us". The rename says what was actually true, and then no exception is needed.
+# ─────────────────────────────────────────────────────────────────────────────────────────
+
+
+def _names_somebody(default: ast.expr | None) -> bool:
+    """Whether this default puts a NAME where a person should be.
+
+    The precise class, and the distinction is the doctrine's own sentence — *a gap gets found and
+    a lie does not*:
+
+    * ``= None`` **names nobody.** It is an honest absence. A reader sees a hole and asks about
+      it; nothing is asserted that is untrue. Allowed — and it costs nothing, because the
+      *envelope's* author (``BusinessEvent.author_principal``, ``Actor``) is required with no
+      default at all, so a governed act still cannot reach the ledger unattributed. The empty
+      case is caught behaviourally, by the emitter sweep, where the entry is the judge.
+    * ``= "operator"`` / ``"system"`` / ``"seal-cycle"`` / ``"Julie Dubois"`` / ``"audit-log"``
+      **name somebody.** Every one is plausible, constant, and false, and the trail reads
+      *complete* while identifying no one. That is strictly worse than the hole.
+
+    So: a default that evaluates to ``None`` is fine; anything else on an identity field is the
+    finding. Banning ``None`` too would have been the tidier rule and the wrong one — it would
+    have forced ``requested_by`` onto payloads that genuinely have no requester, and a required
+    field with nothing true to put in it is how fabricated values get born in the first place.
+    """
+    return default is not None and not (isinstance(default, ast.Constant) and default.value is None)
+
+
+def _identity_defaults_in(path: Path) -> list[str]:
+    """Every default that NAMES somebody on an identity-named field, in one file. AST, not regex.
+
+    Two shapes, because both were live on 2026-07-13:
+
+    * a **parameter** with a default — ``def f(*, actor: str = "operator")``. Seven of the ten
+      S1 emitters, ``request_release`` (which signs an agent's promotion to production), and the
+      ghost itself.
+    * a **declared field** with a value — ``actor: str = "audit-log"`` on the audit *response*
+      model, which meant an entry reaching the Journal without an author was rendered as having
+      been performed by a thing called "audit-log". Nothing ever hit it. That is not a defence:
+      it is exactly how ``"Julie Dubois"`` survived two months and three fixes that walked past it.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    found: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            args = node.args
+            positional = args.posonlyargs + args.args
+            pad = len(positional) - len(args.defaults)
+            pairs: list[tuple[ast.arg, ast.expr | None]] = [
+                (arg, args.defaults[i - pad] if i >= pad else None)
+                for i, arg in enumerate(positional)
+            ]
+            pairs += list(zip(args.kwonlyargs, args.kw_defaults, strict=True))
+            for arg, default in pairs:
+                if arg.arg in ACTOR_FIELD_NAMES and _names_somebody(default):
+                    found.append(
+                        f"{path.name}:{node.lineno} — "
+                        f"def {node.name}({arg.arg}={ast.unparse(default)})"  # type: ignore[arg-type]
+                    )
+        if (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id in ACTOR_FIELD_NAMES
+            and _names_somebody(node.value)
+        ):
+            found.append(
+                f"{path.name}:{node.lineno} — {node.target.id} = {ast.unparse(node.value)}"  # type: ignore[arg-type]
+            )
+    return found
+
+
+def test_no_identity_field_anywhere_in_the_package_has_a_default() -> None:
+    """THE CLASS. Walks all of ``src/tessera`` — not the routes, not the models: everything.
+
+    Fourteen fields failed this on 2026-07-13, and only one of them (`recouvrement.py`) was
+    written down anywhere as a finding. That ratio is the argument for the ratchet: a review
+    catches the instance somebody thought to look for, and a class ratchet catches the thirteen
+    nobody did — including ``build_ledger_seal_entry(actor="seal-cycle")``, which signs the
+    chain's own external seal, and ``request_release(actor="operator")``, which signs an agent's
+    promotion to production.
+    """
+    guilty = sorted(f for path in _SRC.rglob("*.py") for f in _identity_defaults_in(path))
+
+    assert not guilty, (
+        "an identity field has a DEFAULT VALUE:\n  "
+        + "\n  ".join(guilty)
+        + "\n\nA default here lets an author omit the one field that makes the record worth "
+        "keeping — and read green while doing it. Every candidate default is a plausible "
+        'constant: `"operator"` is a role and not a person, `"system"` cannot be told apart '
+        'from an omission, `"Julie Dubois"` is a person who does not exist. Require an `Actor`: '
+        "`actor_of(session)` for a human, `Actor.system(<task>)` when no human ordered the act. "
+        "If the field is a CLASSIFICATION and not an identity, it is misnamed — rename it "
+        "(`ActorKind`), do not except it."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# THE GOVERNANCE PLANE — behavioural. Never an ImportError; always the real route, the real
+# emitter, and the real entry.
+#
+# ADR 0024 §Owed listed three governed acts that changed the system and wrote NOTHING:
+#
+#   * `POST /observability/agent-garde-fous/rule-state` — switching a guardrail off.
+#   * `PUT  /settings/synthesis-admin`                  — a superadmin privilege grant.
+#   * `POST /observability/agents/release`              — promoting an agent to production,
+#                                                          signed by the literal "operator".
+#
+# The first two left no residue at all. Every incident review that ever asked "was the injection
+# screen on at 14:05, and who turned it off?" would have been answered from the guard's CURRENT
+# state — the one thing that cannot testify about the past. The third wrote an entry and signed
+# it with a role, so two people promoting two agents produced two byte-identical attributions.
+#
+# Asking the question as a CLASS rather than route-by-route immediately found a fourth nobody had
+# written down: `POST /observability/automations/rule-state`, the guardrail toggle's exact twin.
+# That is the entire argument for a ratchet over a checklist.
+# ─────────────────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class _Act:
+    """One governed act: the request that performs it, and the role it takes to be allowed."""
+
+    method: str
+    url: str
+    role: str
+    json: dict[str, Any] | None = None
+
+
+#: Frozen with ``==`` against the app's real governance-mutation routes, below. A cockpit
+#: mutation added tomorrow cannot ship without a driver here — which means it cannot ship
+#: without someone stating, on the record, what its ledger entry says about who acted.
+GOVERNANCE_ACTS: dict[str, _Act] = {
+    "switch a guardrail off": _Act(
+        "POST",
+        "/observability/agent-garde-fous/rule-state",
+        "admin",
+        {"key": "__RULE__", "enabled": False},
+    ),
+    "switch an automation rule off": _Act(
+        "POST",
+        "/observability/automations/rule-state",
+        "admin",
+        {"rule_id": "__AUTOMATION__", "enabled": False},
+    ),
+    "promote an agent to production": _Act(
+        "POST", "/observability/agents/release", "admin", {"agent_id": "support-client"}
+    ),
+    "propose an agent for the fleet": _Act(
+        "POST", "/observability/agents/propose", "admin", {"name": "new-agent"}
+    ),
+    "grant an admin sight of the synthesis": _Act(
+        "PUT", "/settings/synthesis-admin", "superadmin", {"enabled": True}
+    ),
+}
+
+
+@pytest.fixture
+def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stub the STORES, never the emitters — the lesson the GDPR ratchet paid for.
+
+    Stubbing an emitter is how a suite certifies a fix that never happened. So each store's
+    write is neutralised (they want Postgres and a JSON file on disk) and every ledger call
+    above them runs for real, through the real route, into the real ``_append_to_chain``.
+    """
+
+    async def _set_flag(*, enabled: bool) -> bool:
+        return enabled
+
+    monkeypatch.setattr("tessera.api.routes.settings.set_synthesis_admin", _set_flag)
+    monkeypatch.setattr(
+        "tessera.observability.agent_garde_fous.set_rule_state", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        "tessera.observability.automation_store.set_rule_enabled", lambda *_a, **_k: None
+    )
+
+
+def _resolve(act: _Act) -> _Act:
+    """Fill the placeholders from the live stores — a driver must use a REAL rule id."""
+    from tessera.observability import agent_garde_fous, automation_store
+
+    body = dict(act.json or {})
+    if body.get("key") == "__RULE__":
+        body["key"] = sorted(agent_garde_fous.available_rules())[0]
+    if body.get("rule_id") == "__AUTOMATION__":
+        body["rule_id"] = sorted(automation_store.available_rule_ids())[0]
+    return replace(act, json=body)
+
+
+@pytest.mark.usefixtures("_operator_key", "_governance_stores")
+@pytest.mark.parametrize("name", sorted(GOVERNANCE_ACTS))
+def test_every_governance_act_writes_an_entry_that_names_its_author(
+    app: FastAPI, ledger: list[dict[str, Any]], name: str
+) -> None:
+    """Perform the act as a verified operator. It must write, and the entry must name them.
+
+    Two assertions, two different bugs, and the first is the one ADR 0024 could not close:
+
+    * ``assert ledger`` — the act wrote **something**. Switching a guardrail off wrote nothing
+      at all; an act that leaves no trace is not governed, whatever the compliance page says.
+    * ``actor == PRINCIPAL`` — and it wrote the **person**, not ``"operator"``. A role is true
+      of everyone and identifies no one.
+    """
+    act = _resolve(GOVERNANCE_ACTS[name])
+    token = issue_operator_assertion(principal=PRINCIPAL, role=act.role)
+    client = TestClient(app, raise_server_exceptions=False)
+
+    response = client.request(
+        act.method, act.url, headers={OPERATOR_ASSERTION_HEADER: token}, json=act.json
+    )
+
+    assert (
+        response.status_code < 400
+    ), f"{name}: the probe answered {response.status_code} and never reached the act"
+    assert ledger, (
+        f"{name} changed the system and wrote NOTHING to the chain. An act with no entry has no "
+        "author, no timestamp and no way to be disputed — it did not happen, as far as any "
+        "reviewer can ever prove. (This is how switching a guardrail off shipped.)"
+    )
+    for entry in ledger:
+        actor = entry.get("actor")
+        assert actor == PRINCIPAL, (
+            f"{name} named {actor!r} as its author, but the verified assertion said "
+            f'{PRINCIPAL!r}. `"operator"` is a ROLE — it answers what authority acted and '
+            "answers *who* with a word that is true of everyone."
+        )
+        assert entry.get("actor_role") == act.role
+
+
+def test_the_governance_acts_are_exactly_these(app: FastAPI) -> None:
+    """Frozen ``==`` against the app. A new cockpit mutation cannot dodge the ratchet by being new.
+
+    Scoped to the routers that carry governance mutations. ``<=`` would let a route be added and
+    simply never driven — present, changing the system, and never asked what it records about
+    who did it. ``==`` puts this file in the diff instead.
+    """
+    driven = {(a.method, a.url) for a in GOVERNANCE_ACTS.values()}
+    live = {
+        (method, route.path)
+        for route in app.routes
+        if isinstance(route, APIRoute)
+        for method in route.methods - {"HEAD", "OPTIONS"}
+        if _is_governance_mutation(route, method)
+    }
+
+    assert live == driven, (
+        "the app's governance mutations and the acts driven here have diverged: "
+        f"undriven={sorted(live - driven)} stale={sorted(driven - live)}"
+    )
+
+
+def _is_governance_mutation(route: APIRoute, method: str) -> bool:
+    """A write on the cockpit control plane, or the settings plane — the acts §Owed named."""
+    if method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return False
+    governed_prefixes = (
+        "/observability/agent-garde-fous/",
+        "/observability/automations/rule-state",
+        "/observability/agents/",
+        "/settings/",
+    )
+    return route.path.startswith(governed_prefixes)
+
+
+# ─────────────────────────────────────────────────────────────────────────────────────────
+# THE GHOST — `agent/recouvrement.py:2298`, `requested_by: str = "Julie Dubois"`.
+# ─────────────────────────────────────────────────────────────────────────────────────────
+
+
+def test_a_recouvrement_action_writes_the_verified_actor_into_the_chain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The whole lane, end to end, through the real workflow: the chain names the real officer.
+
+    The workflow RUNS — thirty-odd business events, the real ``record_business_event``, the real
+    ``emit_business_event_audit``, the real ``_append_to_chain``. Only the chain's tail is
+    captured. Stubbing the workflow here would test the seam and miss the floor, which is exactly
+    the mistake that let ``"Julie Dubois"`` live one call below a route that was already correct.
+
+    Three things are asserted, and each was false until 2026-07-13:
+
+    1. the chain names ``julie.moreau@credit-aurore.eu`` — the principal the HMAC verified;
+    2. the entry's ``actor_kind`` says ``internal_collaborator``, so the 3-level ladder finally
+       counts this as the human action it is (it read ``system`` for all 32 of these events);
+    3. the fabricated human appears **nowhere** in anything the chain received.
+    """
+    from tessera.agent.recouvrement import run_recouvrement_action_workflow_v1
+    from tessera.observability.business_events import reset_business_event_store
+
+    # This test runs the REAL workflow, so it really emits into the process-wide business-event
+    # store — and `test_operator_items` reads that store. Left dirty, this probe's RC-2048 case
+    # surfaced in another file's operator queue and failed it. Stubbing the workflow would have
+    # avoided the leak *and* the proof; resetting the store keeps both.
+    reset_business_event_store()
+    entries: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        audit_mod, "_append_to_chain", lambda entry, _sink, _file: entries.append(entry)
+    )
+    officer = Actor(principal="julie.moreau@credit-aurore.eu", role="collections")
+
+    run_recouvrement_action_workflow_v1(
+        case_id="RC-2048",
+        artifact={
+            "id": "RC-2048-reminder-v1",
+            "type": "reminder_draft_v1",
+            "task": "artifact_action",
+            "title": "Relance",
+            "status": "draft",
+            "content": {},
+        },
+        action_name="submit_for_validation",
+        actor=officer,
+    )
+
+    assert entries, "a governed artifact transition wrote nothing to the chain"
+    authored = [e for e in entries if e.get("actor")]
+    assert authored, "every entry the action wrote is unattributed"
+    for entry in authored:
+        assert entry["actor"] == officer.principal, (
+            f"the chain says {entry['actor']!r} performed this action. The verified assertion "
+            f"said {officer.principal!r}. Before this lane it said 'system' — the envelope's "
+            "closed-vocabulary KIND, written into the one key every reader treats as the AUTHOR."
+        )
+        assert entry.get("actor_role") == "collections"
+        assert entry.get("actor_kind") == "internal_collaborator", (
+            "the party KIND must say a human ordered this. All 32 of recouvrement's business "
+            "events carried kind=system, so the §A2.2 ladder scored a human action as machine."
+        )
+
+    blob = repr(entries)
+    assert _GHOST not in blob, "the fabricated human reached the opposable chain"
+
+    reset_business_event_store()  # leave the shared store as we found it
+
+
+def test_the_ghost_is_gone_and_cannot_be_reintroduced_by_omission() -> None:
+    """``actor`` is required. Omitting it is a TypeError, not a fabricated human.
+
+    This is the whole difference between a default and a required type, stated as an
+    executable sentence. Nine tests called this function without an author and read green.
+    """
+    from tessera.agent.recouvrement import run_recouvrement_action_workflow_v1
+
+    with pytest.raises(TypeError, match="actor"):
+        run_recouvrement_action_workflow_v1(  # type: ignore[call-arg]
+            case_id="RC-2048",
+            artifact={
+                "id": "a",
+                "type": "reminder_draft_v1",
+                "task": "artifact_action",
+                "title": "t",
+                "status": "draft",
+                "content": {},
+            },
+            action_name="copy_artifact_text",
+        )
+
+
+#: The fabricated human. Kept as a fragment so this very line is not a hit for its own ratchet.
+_GHOST = "Julie" + " Dubois"
+
+_REPO = Path(__file__).resolve().parents[2]
+
+
+def _docstring_nodes(tree: ast.AST) -> set[int]:
+    """The ``id()`` of every string constant that is a DOCSTRING — prose, not a value."""
+    docstrings: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        body = getattr(node, "body", None)
+        if not body:
+            continue
+        first = body[0]
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            docstrings.add(id(first.value))
+    return docstrings
+
+
+def test_the_fabricated_human_survives_nowhere_as_a_value() -> None:
+    """The name may be **quoted** as the anti-pattern. It may not be a **value** anyone can act on.
+
+    The distinction is drawn with the AST, not a file allowlist, because the allowlist is the
+    weaker instrument and this codebase has already been burned by exactly that weakness. A
+    doctrine must be able to quote the bug it forbids — ``security.py:184`` names this string as
+    the canonical plausible-constant — and the *whole finding* was that for two months that
+    citation sat two thousand lines away from the live default it was describing. **The codebase
+    named its own bug and kept it.** A per-file allowlist cannot tell those two apart; it would
+    have had to allowlist ``security.py``, and would then have said nothing at all about a value
+    reintroduced in the same file.
+
+    So the rule is structural and exact: a **docstring** may contain the name (that is prose, and
+    prose is how a doctrine works); **any other string constant may not** (that is a value, and a
+    value is something the ledger can end up carrying). Comments never appear in the AST at all,
+    so they are prose for free.
+
+    Scoped to ``src/`` — to the code that RUNS — and that boundary is not laziness. In a test the
+    name is an **attack payload**: ``test_recouvrement_assistant_auth_closed`` posts it in a body
+    precisely to prove the contract answers 422. Banning it there would delete the proof that it
+    is refused, which is the one place the string genuinely earns its keep.
+    """
+    src = _REPO / "src"
+    offenders: list[str] = []
+    for path in sorted(src.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        prose = _docstring_nodes(tree)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and _GHOST in node.value
+                and id(node) not in prose
+            ):
+                offenders.append(f"{path.relative_to(_REPO)}:{node.lineno} — {node.value[:60]!r}")
+
+    assert not offenders, (
+        f"{_GHOST!r} is still a VALUE in the production source:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nA plausible constant in the author column is worse than a gap: a gap gets found "
+        "and a lie does not. If this is meant as a counter-example, it belongs in a DOCSTRING — "
+        "which this ratchet allows, deliberately — never in a string a caller can read back out."
     )

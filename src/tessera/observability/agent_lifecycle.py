@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from tessera.authz import Actor  # noqa: TCH001  — a runtime annotation on a public signature
 from tessera.guard.audit import emit_agent_lifecycle
 from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.business_capabilities import (
@@ -319,11 +320,16 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
     )
 
 
-def request_release(agent_id: str, *, actor: str = "operator") -> ReleaseDecision:
+def request_release(agent_id: str, *, actor: Actor) -> ReleaseDecision:
     """Attempt to promote ``agent_id`` to live, gated by its eval-gate.
 
     Emits a hash-chained ``released`` event on success or ``release_blocked``
     otherwise — either way the intent + verdict are recorded durably.
+
+    ``actor`` is WHO asked for the promotion, and it is required. It was ``str = "operator"``,
+    and the release route called this with the agent id alone — so the most consequential act in
+    the fleet went into the chain signed by a **role**, identical for every person who ever
+    performed it. The gate's verdict was opposable; the promoter's name was not there to oppose.
     """
     decision = release_decision(agent_id)
     phase = "released" if decision.allowed else "release_blocked"

@@ -15,10 +15,14 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from tessera.agent import canary
+from tessera.authz import Actor
 from tessera.guard import audit
 from tessera.guard.audit import CANARY_INVOCATION_TYPE
 from tessera.observability import business_events as be, quality_nets as qn
 from tessera.observability.quality_nets import canary_descriptor
+
+#: Built by a test, not by a turn — and the envelope now insists on an answer to "who".
+_FIXTURE_ACTOR = Actor.system("test-fixture")
 
 
 class _FakeInvoker:
@@ -100,6 +104,7 @@ def test_emit_canary_invocation_stamps_synthetic_in_the_ledger(monkeypatch) -> N
     captured: dict[str, object] = {}
     monkeypatch.setattr(audit, "_append_to_chain", lambda entry, *_a, **_k: captured.update(entry))
     audit.emit_canary_invocation(
+        actor=_FIXTURE_ACTOR,
         agent_id="recouvrement",
         binding="in_process_chat",
         verdict="green",
@@ -174,6 +179,8 @@ def _metric_event(*, synthetic: bool) -> be.BusinessEvent:
         agent_id="recouvrement",
         conversation_id="c",
         turn_id="t",
+        author_principal=_FIXTURE_ACTOR.principal,
+        author_role=_FIXTURE_ACTOR.role,
         synthetic=synthetic,
         classification=be.BusinessEventClassification(metric_input=True),
     )
@@ -198,6 +205,7 @@ def test_non_synthetic_metric_event_does_move_the_counter(monkeypatch) -> None:
 def test_synthetic_event_excluded_from_business_reads() -> None:
     be.reset_business_event_store()
     be.record_business_event(
+        author=_FIXTURE_ACTOR,
         event_name=be.BusinessEventName.INTENT_ROUTED,
         agent_id="canary-probe-agent",
         conversation_id="c1",
@@ -217,6 +225,7 @@ def test_synthetic_turn_context_stamps_and_excludes() -> None:
     # the mark from the context — the graph's emitters need no change.
     with be.synthetic_turn():
         be.record_business_event(
+            author=_FIXTURE_ACTOR,
             event_name=be.BusinessEventName.INTENT_ROUTED,
             agent_id="ctx-agent",
             conversation_id="c2",
@@ -229,6 +238,7 @@ def test_synthetic_turn_context_stamps_and_excludes() -> None:
 def test_non_synthetic_event_is_visible() -> None:
     be.reset_business_event_store()
     be.record_business_event(
+        author=_FIXTURE_ACTOR,
         event_name=be.BusinessEventName.INTENT_ROUTED,
         agent_id="real-agent",
         conversation_id="c3",

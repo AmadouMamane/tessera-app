@@ -26,7 +26,7 @@ from tessera.api.routes.recouvrement_assistant import (
     recouvrement_assistant_message,
 )
 from tessera.api.security import require_collections_operator
-from tessera.authz import Surface
+from tessera.authz import Actor, Surface
 from tessera.guard import audit
 from tessera.observability import (
     business_capabilities as business_capabilities_mod,
@@ -39,6 +39,10 @@ from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot, reset_snapshot_cache
 from tessera.recouvrement.scoring import RecouvrementBusinessScorer
 from tessera.settings import get_settings
+
+#: The verified collections officer. Not a default, not a literal: a real principal a
+#: server-side assertion could actually have carried.
+_OFFICER = Actor(principal="julie@credit-aurore.eu", role="collections")
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -831,6 +835,7 @@ def test_recouvrement_action_submits_schedule_for_validation_without_creation(
     )
 
     output = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=schedule["artifact"],
         action_name="submit_for_validation",
@@ -888,6 +893,7 @@ def test_recouvrement_action_workflow_stamps_artifact_capability_id(
     )
 
     output = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=schedule["artifact"],
         action_name="submit_for_validation",
@@ -910,6 +916,7 @@ def test_recouvrement_action_prepares_insertion_without_new_draft(
     )
 
     output = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=draft["artifact"],
         action_name="insert_artifact_in_case",
@@ -954,6 +961,7 @@ def test_recouvrement_action_prepares_tomorrow_reminder_for_blocked_contact(
     )
 
     output = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=contact["artifact"],
         action_name="prepare_reminder_tomorrow",
@@ -986,6 +994,7 @@ def test_recouvrement_action_denies_unauthorized_surface(
     )
 
     output = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=schedule["artifact"],
         action_name="submit_for_validation",
@@ -1075,6 +1084,7 @@ async def test_business_capability_aggregate_is_server_side_and_keeps_unknown_ho
         assistant_state={"activeTask": "propose_schedule"},
     )
     business_events_mod.record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=business_events_mod.BusinessEventName.INTENT_ROUTED,
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
@@ -1116,6 +1126,7 @@ def test_business_event_payload_validation_and_versioning(
 ) -> None:
     with pytest.raises(business_events_mod.BusinessPayloadValidationError):
         business_events_mod.record_business_event(
+            author=Actor.system("test-fixture"),
             event_name=business_events_mod.BusinessEventName.ACTION_BLOCKED,
             agent_id=RECOUVREMENT_AGENT_ID,
             workflow_id=RECOUVREMENT_WORKFLOW_ID,
@@ -1130,6 +1141,7 @@ def test_business_event_payload_validation_and_versioning(
         )
 
     event = business_events_mod.record_business_event(
+        author=Actor.system("test-fixture"),
         event_name=business_events_mod.BusinessEventName.BUSINESS_RULE_CHECKED,
         agent_id=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
@@ -1149,8 +1161,8 @@ def test_business_event_payload_validation_and_versioning(
     )
     row = event.to_row()
     assert row["schema_version"] == "business_event.v1"
-    assert row["event_version"] == 1
-    assert row["version"] == 1
+    assert row["event_version"] == 2  # the envelope gained a required author (ADR 0024)
+    assert row["version"] == 2  # the envelope gained a required author (ADR 0024)
 
 
 async def test_recouvrement_assistant_endpoint_returns_structured_contract(
@@ -1376,6 +1388,7 @@ def test_recouvrement_payment_options_actions_are_prepared_without_external_effe
     )
 
     validation = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=payment["artifact"],
         action_name="submit_for_validation",
@@ -1383,6 +1396,7 @@ def test_recouvrement_payment_options_actions_are_prepared_without_external_effe
         turn_id="turn-payment-validation",
     )
     insertion = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=payment["artifact"],
         action_name="insert_artifact_in_case",
@@ -1441,6 +1455,7 @@ async def test_observability_business_runs_groups_turns_artifacts_actions_and_sc
         },
     )
     validation = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=schedule["artifact"],
         action_name="submit_for_validation",
@@ -1448,6 +1463,7 @@ async def test_observability_business_runs_groups_turns_artifacts_actions_and_sc
         turn_id="turn-submit-validation",
     )
     insertion = run_recouvrement_action_workflow_v1(
+        actor=_OFFICER,
         case_id="RC-2048",
         artifact=message["artifact"],
         action_name="insert_artifact_in_case",

@@ -49,11 +49,15 @@ if TYPE_CHECKING:
 __all__ = [
     "AGENT_INVOCATION_TYPE",
     "AGENT_LIFECYCLE_PHASES",
+    "AGENT_TURN_ACTOR",
+    "CANARY_ACTOR",
     "CANARY_INVOCATION_TYPE",
     "GUARD_ACTOR",
     "HANDOFF_TYPE",
     "LEDGER_ATTESTATION_TYPE",
     "LEDGER_SEAL_TYPE",
+    "SEAL_ACTOR",
+    "SUPERVISOR_ACTOR",
     "ChainStatus",
     "build_ledger_attestation_entry",
     "build_ledger_seal_entry",
@@ -66,6 +70,7 @@ __all__ = [
     "emit_audit",
     "emit_business_event_audit",
     "emit_canary_invocation",
+    "emit_governance_mutation",
     "emit_handoff",
     "emit_ledger_attestation",
     "emit_ledger_seal",
@@ -284,6 +289,26 @@ def _coerce_arguments(arguments: Mapping[str, object]) -> dict[str, Any]:
 #: conversation, and the screened ``arguments``. This field answers a different question —
 #: who is answerable for the act — and for a policy decision the answer is the policy engine.
 GUARD_ACTOR: Final = Actor.system("guard")
+
+#: The supervisor's own actor: it routed a turn, or moved it between agents. No human chose the
+#: destination — the router did, on the turn's intent. Named, because the bare string ``"system"``
+#: these two emitters used to write is the one value that cannot be told apart from an omission.
+SUPERVISOR_ACTOR: Final = Actor.system("supervisor")
+
+#: The scheduler that fires synthetic canary turns (ADR 0019 §4). It is not an operator, and
+#: writing ``"canary-scheduler"`` as a bare literal made it look like one to every reader that
+#: does not know the vocabulary by heart. ``system:canary-scheduler`` says both things at once.
+CANARY_ACTOR: Final = Actor.system("canary-scheduler")
+
+#: The off-chronology cycle that seals the chain head with an external TSA (ADR 0015 §Amend. 3).
+SEAL_ACTOR: Final = Actor.system("seal-cycle")
+
+#: The agent's own turn: the workflow evaluated a policy, built an artifact, drafted a reply.
+#: A human opened the conversation, but a human did not *perform* these — the graph did, and
+#: attributing them to the operator who typed the message would be a fresh lie of exactly the
+#: family this module exists to kill. What the human ordered is the ACTION path, and that one
+#: carries the verified operator (see ``run_recouvrement_action_workflow_v1``).
+AGENT_TURN_ACTOR: Final = Actor.system("agent-turn")
 
 
 def _build_entry(
@@ -599,7 +624,7 @@ def emit_handoff(
     now = datetime.now(UTC).isoformat()
     entry: dict[str, Any] = {
         "type": HANDOFF_TYPE,
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "agent_id": to_agent,
         "from_agent": from_agent,
@@ -610,7 +635,8 @@ def emit_handoff(
         "conversation_id": conversation_id,
         "turn_id": turn_id,
         "reason": reason,
-        "actor": "system",
+        "actor": SUPERVISOR_ACTOR.principal,
+        "actor_role": SUPERVISOR_ACTOR.role,
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 
@@ -640,7 +666,7 @@ def emit_routing(
     now = datetime.now(UTC).isoformat()
     entry: dict[str, Any] = {
         "type": "tessera.agent.routing",
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "agent_id": agent_id,
         "from_agent": from_agent,
@@ -651,7 +677,8 @@ def emit_routing(
         "turn_id": turn_id,
         "reason": reason,
         "handoff": handoff,
-        "actor": "system",
+        "actor": SUPERVISOR_ACTOR.principal,
+        "actor_role": SUPERVISOR_ACTOR.role,
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 
@@ -661,7 +688,25 @@ def emit_business_event_audit(
     event: Mapping[str, Any],
     sink: _Sink | None = None,
 ) -> None:
-    """Append a normalised business event to the opposable S1 audit journal."""
+    """Append a normalised business event to the opposable S1 audit journal.
+
+    **One ledger, one meaning for ``actor``.** Until 2026-07-13 this emitter wrote the business
+    event's *closed-vocabulary kind* (``system`` / ``operator`` / ``internal_collaborator``,
+    ADR 0017 §A2.1) into the ``actor`` key — while every *other* entry type wrote a **person**
+    there (``_build_entry``'s ``actor.principal``). One key, two meanings, and the readers cannot
+    tell which they are holding: the cockpit Journal, the governance feed and the SIEM export all
+    render ``actor`` as *the author*, so a governed action taken by a named collections officer
+    was displayed, and exported to the bank's SOC, as having been performed by ``operator`` — a
+    role — or by ``system`` — nobody. A union of two types under one key is not a schema; it is a
+    coin flip the reader is not told they are making.
+
+    The three keys are now three questions, and each has exactly one answer:
+
+    * ``actor`` — **WHO**: the verified principal, or ``system:<task>``. Same as every other entry.
+    * ``actor_role`` — the authority they held.
+    * ``actor_kind`` — **WHAT KIND** of party (§A2.1). This is what the 3-level ladder reads, and
+      it stays exactly what it was; it simply stops being mistaken for a name.
+    """
     from tessera.settings import get_settings
 
     settings = get_settings()
@@ -689,17 +734,68 @@ def emit_business_event_audit(
         "recorded_at": now,
         "conversation_id": str(event.get("conversation_id", "")),
         "turn_id": str(event.get("turn_id", "")),
-        "actor": str(event.get("actor", "system")),
+        # WHO — a person, or a named system task. Never a role word, never blank.
+        "actor": str(event.get("author_principal", "")),
+        "actor_role": str(event.get("author_role", "")),
+        # WHAT KIND of party (§A2.1) — the ladder's input, no longer masquerading as a name.
+        "actor_kind": str(event.get("actor", "system")),
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 
 
-def emit_agent_proposed(*, name: str, actor: str = "operator", sink: _Sink | None = None) -> None:
+def emit_governance_mutation(
+    *,
+    target: str,
+    detail: Mapping[str, object],
+    actor: Actor,
+    sink: _Sink | None = None,
+) -> None:
+    """Append one **cockpit governance mutation** to the opposable S1 journal.
+
+    ADR 0024 §Owed listed three governed acts that changed the system and wrote *nothing*:
+    switching a guardrail off, granting superadmin visibility of the synthesis, and disabling an
+    automation rule. Each is a control that the compliance story rests on, each was reachable by
+    a verified operator, and each left the chain unchanged — so the ledger's answer to *"who
+    turned the injection guard off before that incident?"* was silence. **An act that leaves no
+    trace is not governed**, whatever the doc says, and it is the doc that is wrong.
+
+    This is a named wrapper over :func:`emit_audit`, not a new event type, and that is the whole
+    point: the three readers of this journal — the cockpit Journal, the governance feed, the SIEM
+    export — already parse ``tessera.guard.audit`` and already look at its top-level ``actor``.
+    A new type would have been durable and **unread**, which is the failure this codebase has
+    already made once (the GDPR erasure's author, written into ``arguments`` where nothing looks).
+    Reuse the entry shape that has readers; do not invent one that has none.
+
+    Args:
+        target: what was acted on — ``guard.rule_state``, ``settings.synthesis_admin``.
+        detail: the act's parameters (which rule, on or off). Not its author.
+        actor: WHO did it. ``actor_of(session)``. Required, and there is no honest default.
+        sink: override the configured audit sink (tests).
+    """
+    from tessera.settings import get_settings
+
+    settings = get_settings()
+    emit_audit(
+        target=target,
+        arguments=detail,
+        decisions=[],
+        sink=sink if sink is not None else settings.guard.audit_sink,
+        outcome="allowed",
+        actor=actor,
+    )
+
+
+def emit_agent_proposed(*, name: str, actor: Actor, sink: _Sink | None = None) -> None:
     """Emit a governed proposal to add an agent to the fleet (S1 event).
 
     The registry is approved as a unit (ADR 0012), so creation is a proposal, not
     a runtime mutation: this records the intent as a hash-chained
     ``tessera.agent.proposed`` event feeding the propose -> review -> release flow.
+
+    ``actor`` was ``str = "operator"`` — a **role, not a person** — and the route below it never
+    passed one, so every proposal in the chain was signed by the same plausible constant. A
+    default on an identity field is the whole bug: it lets the one field that makes the record
+    worth keeping be omitted, and read green while it happens.
     """
     from tessera.settings import get_settings
 
@@ -708,13 +804,14 @@ def emit_agent_proposed(*, name: str, actor: str = "operator", sink: _Sink | Non
     now = datetime.now(UTC).isoformat()
     entry: dict[str, Any] = {
         "type": "tessera.agent.proposed",
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "valid_from": now,
         "valid_to": None,
         "recorded_at": now,
         "proposed_name": name,
-        "actor": actor,
+        "actor": actor.principal,
+        "actor_role": actor.role,
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
 
@@ -734,17 +831,25 @@ def emit_agent_lifecycle(
     *,
     agent_id: str,
     phase: str,
-    actor: str = "operator",
+    actor: Actor,
     detail: Mapping[str, Any] | None = None,
     sink: _Sink | None = None,
 ) -> None:
     """Emit a governed agent lifecycle transition (S1 event).
 
+    **Promoting an agent to production is the most consequential act an operator can take in
+    this system**, and until 2026-07-13 the chain recorded it as having been performed by
+    ``"operator"`` — the default on this parameter, which the release route never overrode. That
+    is a role, not a person: it answers *what authority acted*, and answers *who* with a word
+    that is true of everyone and identifies no one. Two agents promoted by two different people
+    produced two byte-identical attributions.
+
     Args:
         agent_id: the agent the transition applies to.
         phase: one of :data:`AGENT_LIFECYCLE_PHASES`. The event type is
             ``tessera.agent.<phase>``, hash-chained alongside the proposal.
-        actor: who performed the transition (operator/admin/system).
+        actor: WHO performed the transition. Required, no default — ``actor_of(session)`` for a
+            human promotion, :meth:`Actor.system` for a gate that blocked one on its own.
         detail: extra opposable fields (e.g. the gate verdict on release).
         sink: override the configured audit sink (tests).
     """
@@ -758,13 +863,14 @@ def emit_agent_lifecycle(
     now = datetime.now(UTC).isoformat()
     entry: dict[str, Any] = {
         "type": f"tessera.agent.{phase}",
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "valid_from": now,
         "valid_to": None,
         "recorded_at": now,
         "agent_id": agent_id,
-        "actor": actor,
+        "actor": actor.principal,
+        "actor_role": actor.role,
         **(dict(detail) if detail else {}),
     }
     _append_to_chain(entry, resolved_sink, settings.guard.audit_file)
@@ -779,17 +885,22 @@ def emit_canary_invocation(
     turn_id: str,
     duration_ms: float | None = None,
     error: str | None = None,
-    actor: str = "canary-scheduler",
+    actor: Actor,
     sink: _Sink | None = None,
 ) -> None:
     """Emit one scheduled-canary invocation into the S1 journal (ADR 0019 §4).
 
     Every cockpit→agent invocation is a governed act: one entry per synthetic canary turn records
-    who ran it (``actor`` = the scheduler), which agent, the binding used, the verdict
-    (``green`` / ``red``), and the turn ids — hash-chained like every other S1 event and
-    reconstructable in État à date. It is also the durable freshness record the canary descriptor
-    reads for the synthetic-run facet (no second store). ``synthetic: True`` is stamped so a reader
-    can never mistake a canary probe for a real turn.
+    who ran it (``actor`` = :data:`CANARY_ACTOR`, the scheduler), which agent, the binding used,
+    the verdict (``green`` / ``red``), and the turn ids — hash-chained like every other S1 event
+    and reconstructable in État à date. It is also the durable freshness record the canary
+    descriptor reads for the synthetic-run facet (no second store). ``synthetic: True`` is stamped
+    so a reader can never mistake a canary probe for a real turn.
+
+    ``actor`` is required and typed even though there is only ever one right answer: a default
+    here would be a default on an identity field, and the caller passing :data:`CANARY_ACTOR`
+    explicitly is what makes the entry say ``system:canary-scheduler`` rather than a bare word
+    that a reader has to already know is not a person.
     """
     from tessera.settings import get_settings
 
@@ -798,13 +909,14 @@ def emit_canary_invocation(
     now = datetime.now(UTC).isoformat()
     entry: dict[str, Any] = {
         "type": CANARY_INVOCATION_TYPE,
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "valid_from": now,
         "valid_to": None,
         "recorded_at": now,
         "agent_id": agent_id,
-        "actor": actor,
+        "actor": actor.principal,
+        "actor_role": actor.role,
         "binding": binding,
         "verdict": verdict,
         "synthetic": True,
@@ -821,7 +933,7 @@ def emit_agent_invocation(
     agent_id: str,
     binding: str,
     verdict: str,
-    actor: str,
+    actor: Actor,
     conversation_id: str,
     turn_id: str,
     duration_ms: float | None = None,
@@ -845,13 +957,14 @@ def emit_agent_invocation(
     now = datetime.now(UTC).isoformat()
     entry: dict[str, Any] = {
         "type": AGENT_INVOCATION_TYPE,
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "valid_from": now,
         "valid_to": None,
         "recorded_at": now,
         "agent_id": agent_id,
-        "actor": actor,
+        "actor": actor.principal,
+        "actor_role": actor.role,
         "binding": binding,
         "verdict": verdict,
         "synthetic": True,
@@ -873,7 +986,7 @@ def build_ledger_attestation_entry(
     forks: Iterable[Mapping[str, Any]],
     orphans: Iterable[str],
     anchor_seq: int | None = None,
-    actor: str = "operator",
+    actor: Actor,
 ) -> dict[str, Any]:
     """Build (do not append) an attestation entry ratifying historical ledger anomalies.
 
@@ -888,12 +1001,13 @@ def build_ledger_attestation_entry(
     now = datetime.now(UTC).isoformat()
     return {
         "type": LEDGER_ATTESTATION_TYPE,
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "valid_from": now,
         "valid_to": None,
         "recorded_at": now,
-        "actor": actor,
+        "actor": actor.principal,
+        "actor_role": actor.role,
         "incident": incident,
         "cause": cause,
         "decision": decision,
@@ -915,7 +1029,7 @@ def emit_ledger_attestation(
     forks: Iterable[Mapping[str, Any]],
     orphans: Iterable[str],
     anchor_seq: int | None = None,
-    actor: str = "operator",
+    actor: Actor,
     sink: _Sink | None = None,
 ) -> dict[str, Any]:
     """Append an attestation entry into the tamper-evident ledger (chained + durable).
@@ -952,7 +1066,7 @@ def build_ledger_seal_entry(
     sealed_at: str,
     qualified: bool,
     divergence: bool = False,
-    actor: str = "seal-cycle",
+    actor: Actor,
 ) -> dict[str, Any]:
     """Build (do not append) a Hica seal entry attesting the chain head at seal time.
 
@@ -966,10 +1080,11 @@ def build_ledger_seal_entry(
     now = datetime.now(UTC).isoformat()
     return {
         "type": LEDGER_SEAL_TYPE,
-        "version": 1,
+        "version": 2,
         "occurred_at": now,
         "recorded_at": now,
-        "actor": actor,
+        "actor": actor.principal,
+        "actor_role": actor.role,
         "provider": provider,
         "tsa": tsa,
         "qualified": qualified,
@@ -991,7 +1106,7 @@ def emit_ledger_seal(
     sealed_at: str,
     qualified: bool,
     divergence: bool = False,
-    actor: str = "seal-cycle",
+    actor: Actor,
     sink: _Sink | None = None,
 ) -> dict[str, Any]:
     """Append a Hica seal entry into the tamper-evident ledger (chained + durable).

@@ -24,17 +24,31 @@ The read stays on the bearer floor: it returns one boolean, no subject data.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from typing import Annotated
 
-from tessera.api.security import require_superadmin
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict
+
+from tessera.api.security import actor_of, require_superadmin
+from tessera.api.session import (  # noqa: TCH001  — FastAPI resolves Depends annotations at runtime
+    SessionContext,
+)
 from tessera.api.settings_store import get_synthesis_admin, set_synthesis_admin
+from tessera.guard.audit import emit_governance_mutation
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
 class SynthesisAdminFlag(BaseModel):
-    """Whether the ``admin`` role may view the failure synthesis."""
+    """Whether the ``admin`` role may view the failure synthesis.
+
+    ``extra="forbid"``, and the reason is not hygiene. This model is bound to the **request
+    body** of the grant below, so any field it tolerates is a field a caller can send. A body
+    that tries to name an author now gets a loud 422 instead of a silently ignored forgery —
+    the same closure as ``_CurationDecisionBody`` (ADR 0024).
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     enabled: bool
 
@@ -45,11 +59,29 @@ async def read_synthesis_admin() -> SynthesisAdminFlag:
     return SynthesisAdminFlag(enabled=await get_synthesis_admin())
 
 
-@router.put(
-    "/synthesis-admin",
-    response_model=SynthesisAdminFlag,
-    dependencies=[Depends(require_superadmin)],
-)
-async def write_synthesis_admin(flag: SynthesisAdminFlag) -> SynthesisAdminFlag:
-    """Grant or revoke admin visibility of the synthesis (superadmin action)."""
+@router.put("/synthesis-admin", response_model=SynthesisAdminFlag)
+async def write_synthesis_admin(
+    flag: SynthesisAdminFlag,
+    session: Annotated[SessionContext, Depends(require_superadmin)],
+) -> SynthesisAdminFlag:
+    """Grant or revoke admin visibility of the synthesis (superadmin action).
+
+    **This is a privilege grant, and it left no trace** (ADR 0024 §Owed). It decides whether the
+    ``admin`` role may read the failure synthesis — which is why only a superadmin may flip it,
+    so an admin cannot grant it to itself. The authority check was in place; the *record* was
+    not. Nothing in the chain said the grant had ever been made, and nothing said by whom, so
+    the one control standing between ``admin`` and that data could be opened and closed with no
+    residue. A privilege that can be granted invisibly is a privilege nobody can audit.
+
+    The guard moved from ``dependencies=[...]`` into the signature on purpose: as a *dependency*
+    it proved a superadmin was there and handed back **nothing**, so the handler had no way to
+    say who. As a *parameter* it returns the verified ``SessionContext``, and ``actor_of`` turns
+    it into the one name the caller could not have chosen. FastAPI caches it per-request — the
+    guard still runs exactly once.
+    """
+    emit_governance_mutation(
+        target="settings.synthesis_admin",
+        detail={"enabled": flag.enabled},
+        actor=actor_of(session),
+    )
     return SynthesisAdminFlag(enabled=await set_synthesis_admin(enabled=flag.enabled))

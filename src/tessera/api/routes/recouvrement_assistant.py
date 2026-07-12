@@ -31,7 +31,7 @@ from tessera.agent.recouvrement import (
     run_recouvrement_action_workflow_v1,
     run_recouvrement_graph_v1,
 )
-from tessera.api.security import require_collections_operator
+from tessera.api.security import actor_of, require_collections_operator
 from tessera.api.session import (
     SessionContext,  # noqa: TCH001  — FastAPI resolves Annotated at runtime
 )
@@ -125,10 +125,16 @@ async def recouvrement_assistant_action(
     offload. The audit named only the message path; this one blocks identically.
 
     ``session`` is the router guard's own return value (FastAPI caches the dependency
-    per-request — the guard runs once). ``requested_by`` is the verified principal from
-    the signed assertion: the ledger records who *proved* they asked, not who the body
-    *claimed* asked. The ``or "operator"`` narrowing is the invoke-route idiom and is
-    unreachable in practice — a verified assertion always carries a non-empty principal.
+    per-request — the guard runs once). ``actor_of(session)`` is the verified principal from the
+    signed assertion: the ledger records who *proved* they asked, not who the body *claimed*
+    asked.
+
+    This call used to read ``requested_by=session.subject_id or "operator"`` and the docstring
+    defended the fallback as "unreachable in practice". It was two lies stacked, and the second
+    hid the first: the ``or "operator"`` was a literal this file would never reach, feeding a
+    parameter whose *own* default — one call away, in ``recouvrement.py`` — was ``"Julie
+    Dubois"``. Both are gone. ``actor_of`` raises on an unverified session rather than inventing
+    a name, and the parameter it feeds has no default left to fall back to.
     """
     return dict(
         await run_in_threadpool(
@@ -136,7 +142,7 @@ async def recouvrement_assistant_action(
             case_id=payload.case_id,
             artifact=_artifact_from_request(payload.artifact),
             action_name=payload.action_name,
-            requested_by=session.subject_id or "operator",
+            actor=actor_of(session),
             conversation_id=payload.conversation_id,
             turn_id=payload.turn_id,
             surface=payload.surface,

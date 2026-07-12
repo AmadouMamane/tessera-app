@@ -58,8 +58,15 @@ class AuditEntry(BaseModel):
     prev_hash: str | None = None
     hash: str | None = None
     event_type: AuditEventType = "other"
-    actor: str = "audit-log"
-    actor_role: AuditActorRole = "system"
+    # No default, on either. This is a RESPONSE model — naming the author is the whole point of
+    # the ledger view — and ``actor: str = "audit-log"`` meant that an entry which reached this
+    # model without an author was rendered as having been performed by a thing called
+    # "audit-log". That is the same species of bug as ``"Julie Dubois"``: a plausible constant
+    # standing where a person should be, invisible precisely because nothing ever hit it. The
+    # resolver below always supplies a value — ``_UNRECORDED_ACTOR`` when the entry genuinely has
+    # none — so the default was pure latent lie, and a latent lie is one refactor from a live one.
+    actor: str
+    actor_role: AuditActorRole
     scope: str = "global"
     object_label: str = "audit event"
     policy_rule: str | None = None

@@ -36,7 +36,7 @@ from tessera.api.operator import (
 )
 from tessera.api.routes import recouvrement_assistant
 from tessera.api.security import require_collections_operator
-from tessera.authz import Surface
+from tessera.authz import Actor, Surface
 from tessera.settings import get_settings
 
 #: Two handlers, each registered on its canonical path and its ``/api`` alias.
@@ -221,6 +221,14 @@ class TestAttributionComesFromTheAssertion:
         The workflow itself is stubbed (store-backed, ~30 ledger events — not an authz
         concern); what is under test is the seam: the route must pass the identity the
         HMAC verified, and nothing else, because the body no longer carries one.
+
+        What crosses the seam is now an :class:`Actor`, not a ``str``, and that is the half of
+        F-1 this test could not previously reach. It asserted ``requested_by == "julie.moreau"``
+        and passed — while one call below, ``run_recouvrement_action_workflow_v1`` still declared
+        ``requested_by: str = "Julie Dubois"``. The seam was right and the floor beneath it was
+        rotten: any caller that simply *omitted* the argument got a fabricated human, and nine
+        tests did exactly that, in green. A ``str`` parameter cannot tell those two apart. An
+        ``Actor`` has no default to fall through to, so there is no longer a second answer.
         """
         captured: dict[str, Any] = {}
 
@@ -234,4 +242,5 @@ class TestAttributionComesFromTheAssertion:
         response = client.post("/recouvrement-assistant/action", json=_ACTION_BODY)
 
         assert response.status_code == 200
-        assert captured["requested_by"] == "julie.moreau"
+        assert "requested_by" not in captured, "the caller-chosen name has no way in at all"
+        assert captured["actor"] == Actor(principal="julie.moreau", role="collections")
