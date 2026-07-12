@@ -255,18 +255,23 @@ state (`target`, `decision` ∈ {allow, deny, transform}, `policy_rule`,
 (`type: tessera.guard.audit`, `version: 1`) with the target, outcome,
 JSON-coerced arguments, the list of decisions, and any error.
 
-The sink is selected at start-up from `GuardSettings.audit_sink`:
+**The sink is a transport; the ledger is the store** (ADR 0023). The opposable hash chain is
+persisted upstream of the sink, into the append-only Postgres ledger, for **every** sink —
+the chain is not a configuration option. The sink only selects where an extra copy is
+carried:
 
 - `stdout` — JSON-Lines on stdout, for local dev and tests.
 - `file` — appended JSON-Lines to a configured path, parent dirs created as
-  needed.
-- `cloud_logging` — Google Cloud Logging via `logger.log_struct`, used in
-  staging and prod; lazily imported, with graceful degradation to stdout if the
-  client library is absent.
-- `postgres` — a dedicated audit table for regulatory replay; currently
-  deferred and falling back to stdout.
+  needed. Pre-cut, this file is itself the chain.
+- `cloud_logging` — Google Cloud Logging via `logger.log_struct`; the observability copy in
+  staging and prod. Lazily imported, and if the client library is absent it **raises**. It
+  used to "degrade gracefully" to stdout, which meant an operator's chosen sink was silently
+  empty while every dashboard built on it read zero (audit F-6).
+- `postgres` — no separate copy: the Postgres persistence of an entry *is* the ledger,
+  upstream. It never writes a stdout line pretending to be a table.
 
-Emission is fire-and-forget: sink failures are swallowed and logged to stderr so
-that audit problems never block the agent's main path. Argument values are
+Emission of the *copy* is fire-and-forget: a transport failure is named on stderr and does
+not block the agent's main path — and since ADR 0023 it costs no ledger entry either, which
+is precisely what makes failing loudly affordable. Argument values are
 coerced to JSON primitives, with non-primitive values rendered via `repr` so an
 audit entry is always serialisable.

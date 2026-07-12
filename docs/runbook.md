@@ -132,10 +132,19 @@ are resolved from Secret Manager at start. Defaults are from
 The **front-end** service takes two of its own variables (`infra/terraform/cloud_run_frontend.tf`): `TESSERA_BACKEND_URL` (set to the agent service URI) and `TESSERA_BACKEND_TOKEN` (the **same** value as the agent's `bearer_token` secret — it is server-only and injected into outbound calls, never exposed to the browser).
 
 The audit signing key and Vertex project id secrets are populated as above; the
-guard's audit sink is set to `cloud_logging` in production so entries flow into
-the audit GCS bucket via the log sink. Other settings (pool sizes, confidence
-threshold, timeouts) keep their defaults unless overridden by their respective
-`TESSERA_*` variables.
+guard's audit sink is set to `cloud_logging` in production so an **observability copy** of
+each entry flows into the audit GCS bucket via the log sink.
+
+> **The sink is not the audit trail** (ADR 0023). The opposable record is the hash-chained,
+> append-only Postgres ledger, and it is written for *every* sink — `AUDIT_SINK` chooses
+> where a copy is carried, and no value of it can switch opposability off. A deployment whose
+> configuration could not chain (`TESSERA_LEDGER_SOURCE=file`, or dual-write disabled) now
+> **refuses to boot** rather than running without a trail. Before audit F-6 the ledger feed
+> ran only when the sink was `file`, so this very page — recommending `cloud_logging` —
+> instructed operators to turn opposability off.
+
+Other settings (pool sizes, confidence threshold, timeouts) keep their defaults unless
+overridden by their respective `TESSERA_*` variables.
 
 ## Health checks
 
@@ -208,12 +217,19 @@ failure-catalogue prompts) when no live traffic exists.
 
 ## Audit log
 
-- **Local:** JSON lines written to `/tmp/tessera/audit.log`
-  (`GuardSettings.audit_file`, sink `file`).
-- **Production:** the guard's audit sink is `cloud_logging`; entries carry
+**Where the evidence actually is.** The opposable trail is the hash-chained, append-only
+table `audit_ledger` in Postgres (schema `tessera_<env>`), written for every sink and not
+configurable (ADR 0023). Verify it with `verify_audit_chain`; everything below is a *copy*.
+
+- **Do not look for the trail in a file.** Post-cut (`TESSERA_LEDGER_SOURCE=postgres`, the
+  shipped default) the flat-file write **stops** — `/tmp/tessera/<env>/audit.log` does not
+  exist, and reading it "proves" an event was never written when it is safely in the ledger.
+  The file is the chain only in the pre-cut `file` escape mode.
+- **Production copy:** the sink is `cloud_logging`; entries carry
   `jsonPayload.type="tessera.guard.audit"`. A log sink routes exactly those
   entries to the dedicated GCS bucket `PROJECT-SERVICE-audit` for independent
-  archiving and review.
+  archiving and review. If the transport is down it says so on stderr and **the ledger entry
+  is unaffected** — a red line here is not a lost proof.
 - **Format:** one JSON object per entry, including outcome (`denied` / allowed),
   the target tool, and the decision context.
 - **Retention / rotation:** the main log bucket honours `log_retention_days`;

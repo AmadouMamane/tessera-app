@@ -124,14 +124,30 @@ which keeps personal data out of the model context.
 ## Audit trail as a compliance artifact
 
 The audit trail is the structured evidence record for every guard decision. It
-is emitted by `emit_audit` in `src/tessera/guard/audit.py`. The sink is chosen
-at start-up:
+is emitted by `emit_audit` in `src/tessera/guard/audit.py`.
 
-- `stdout` — JSON-Lines, for local development and tests.
-- `file` — appended JSON-Lines to a configured path.
-- `cloud_logging` — Google Cloud Logging, for staging and production.
-- `postgres` — a dedicated audit table for regulatory replay (implementation
-  deferred; currently falls back to stdout).
+**The sink is a transport; the ledger is the store** ([ADR 0023](./decisions/0023-audit-chain-independent-of-sink.md)).
+These are orthogonal, and the distinction is the one that matters to a regulator:
+
+- The **opposable record** is the hash-chained, append-only Postgres ledger
+  (`tessera_local.audit_ledger`), fed by the fsync spool and linked by the drain under an
+  advisory lock (ADR 0015). It is **not configurable**: every entry is chained there
+  whatever the sink, and an exposed deployment that *could not* chain refuses to boot.
+- The **sink** selects where an additional, human-readable *copy* is carried — nothing more.
+  No value of it can switch opposability off, and none of them is the evidence.
+
+| sink | what it carries |
+| --- | --- |
+| `stdout` | JSON-Lines on stdout — local development and tests. |
+| `file` | Appended JSON-Lines at a configured path. Pre-cut, this file IS the chain; post-cut the ledger is, and the flat file stops. |
+| `cloud_logging` | The observability copy in staging/production, for dashboards and retention. |
+| `postgres` | No separate copy: the Postgres persistence of an entry **is** the ledger, upstream. |
+
+Until 2026-07-12 (audit **F-6**) this section documented `postgres` as *"currently falls back
+to stdout"* and the ledger feed ran only when the sink was `file` — so the documented
+staging sink, `cloud_logging`, emitted entries to Cloud Logging and chained **nothing**. An
+operator following this page turned opposability off without a signal. No sink falls back to
+anything now: a transport that cannot emit fails loudly, and the chain is untouched by it.
 
 ### Audit record shape
 

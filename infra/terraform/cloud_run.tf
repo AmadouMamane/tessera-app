@@ -103,9 +103,26 @@ resource "google_cloud_run_v2_service" "agent" {
         name  = "TESSERA_OBSERVABILITY__CLOUD_LOGGING_PROJECT"
         value = var.project_id
       }
+      # The audit SINK is a transport — where an observability copy of each entry is carried
+      # (ADR 0023). It is NOT the audit trail, and no value of it can switch opposability off.
       env {
         name  = "TESSERA_GUARD__AUDIT_SINK"
         value = "cloud_logging"
+      }
+
+      # The audit STORE — the opposable, hash-chained, append-only Postgres ledger. These are
+      # the shipped defaults, declared here on purpose: what makes production opposable must be
+      # readable in the infrastructure, not inferred from a constant in the source. The agent
+      # REFUSES TO BOOT in staging/production if this pair cannot chain (`validate_audit_chain_
+      # config`), so a future edit here fails loudly at deploy instead of quietly shipping an
+      # unauditable service — which is exactly what audit F-6 found, with the sink alone set.
+      env {
+        name  = "TESSERA_LEDGER_SOURCE"
+        value = "postgres"
+      }
+      env {
+        name  = "TESSERA_LEDGER_DUAL_WRITE"
+        value = "1"
       }
 
       # ── Secret-backed environment variables ──────────────────────────────────

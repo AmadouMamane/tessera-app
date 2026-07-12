@@ -5,10 +5,15 @@ Composes the "Preuves & exporteurs" overview. The page has two halves:
 * **The derivable core is REAL.** The proof posture (artifact counts), the
   artifact distribution and the cryptographic-verification zone are computed
   from the actual durable stores this build owns — the hash-chained audit ledger
-  (:func:`verify_audit_chain`), the eval-score store (the reader seam), the
-  replay-bundle store (``persisted_bundles``) and the eval-report archive
-  (``iter_report_files``). The chain integrity is reported honestly: verified
-  when the on-disk chain re-derives, broken (with the first bad index) otherwise.
+  (:func:`~tessera.guard.ledger_store.verify_active_ledger`), the eval-score store (the
+  reader seam), the replay-bundle store (``persisted_bundles``) and the eval-report
+  archive (``iter_report_files``). The chain integrity is reported honestly: verified
+  when the chain re-derives, broken (with the first bad index) otherwise.
+
+  It is read from the **active store**, never from ``guard.audit_file``: post-cut that
+  flat file is never written, so verifying it would report a flawless empty chain while
+  the real one went unread (ADR 0023; the ban is asserted in
+  ``test_audit_chain_independent_of_sink.py``).
 
 * **The export / SIEM subsystem is a demonstration.** Evidence-pack assembly,
   signing and export, the exporters & destinations, control-case linkage, the

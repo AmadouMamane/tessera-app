@@ -308,12 +308,23 @@ def _emit_stdout(entry: dict[str, Any]) -> None:
 
 
 def _emit_cloud_logging(entry: dict[str, Any]) -> None:
-    """Lazily import google-cloud-logging to avoid a hard dep at start-up."""
-    try:
-        from google.cloud import logging as cloud_logging
-    except ImportError:
-        _emit_stdout(entry)  # graceful degradation
-        return
+    """The Cloud Logging transport. It emits, or it FAILS — it never pretends (ADR 0023, F-6).
+
+    Lazily imports google-cloud-logging so the dependency is not needed at start-up. When the
+    import is missing, this used to call ``_emit_stdout`` under a comment reading *"graceful
+    degradation"* — and there is no such thing on an audit path. The operator asked for entries
+    in Cloud Logging; the process wrote them to a container's stdout and said nothing. Every
+    dashboard, alert and retention rule built on that sink was quietly empty, and the only way
+    to find out was to go looking for something you had no reason to doubt.
+
+    So the ImportError propagates. The sink dispatch in :func:`_append_to_chain` catches it and
+    writes a named failure to stderr — loud, and *cheap*, because since ADR 0023 the sink is a
+    lateral copy: the opposable chain is persisted upstream, by the store, and a dead transport
+    no longer costs a single ledger entry. Failing loudly here is now free of the one thing that
+    ever justified degrading gracefully.
+    """
+    from google.cloud import logging as cloud_logging
+
     client = cloud_logging.Client()  # type: ignore[no-untyped-call]
     logger = client.logger("tessera-guard-audit")  # type: ignore[no-untyped-call]
     logger.log_struct(entry, severity="INFO")
@@ -484,10 +495,17 @@ def _append_to_chain(entry: dict[str, Any], sink: _Sink, audit_file: Path) -> No
                 # the chain persists; loud (never silent stdout) when it does not — ADR 0023 #3.
                 _emit_postgres(entry, chain_persisted=chain_persists)
     except Exception as exc:
-        # Best-effort at the sink: a failed emit is surfaced to stderr, never swallowed
-        # silently. Durability for the opposable chain is the spool below, not the sink — so a
-        # cloud_logging/postgres transport failure no longer costs the ledger entry.
-        sys.stderr.write(f"tessera.guard.audit: sink {sink!r} failed: {exc}\n")
+        # A dead TRANSPORT is loud, and it is not a lost proof. Both halves matter: the sink
+        # never degrades silently (a "graceful" stdout fallback is how cloud_logging emptied
+        # every dashboard built on it), and the operator reading this line must not conclude
+        # that opposability was lost — the chain is persisted below, by the store, and this
+        # failure did not touch it (ADR 0023). A stderr line that omitted that would send
+        # someone hunting a breach that did not happen.
+        sys.stderr.write(
+            f"tessera.guard.audit: sink {sink!r} FAILED to emit its copy: {exc} — "
+            f"the opposable chain is UNAFFECTED (it is persisted by the ledger, not the sink; "
+            f"chained here: {chain_persists}). Fix the transport; the trail is intact.\n"
+        )
 
     # THE LEDGER IS A STORE — persistence happens upstream of, and independent from, the sink
     # (ADR 0023). Post-cut the drain assigns the chain linkage under the advisory lock

@@ -37,6 +37,11 @@ if TYPE_CHECKING:
 #: drift. A new sink value forces a decision here.
 ALL_SINKS: tuple[str, ...] = typing.get_args(_Sink)
 
+#: The SHIPPED cloud-logging transport, bound before the autouse fixture below replaces it with
+#: a no-op. Without this, the "no silent degradation" test would assert against the fixture's
+#: own stub and pass however the real function behaves.
+_REAL_EMIT_CLOUD_LOGGING = audit._emit_cloud_logging
+
 
 def _entry() -> dict[str, Any]:
     return {
@@ -203,3 +208,118 @@ def test_emit_postgres_never_silently_falls_back_to_stdout(
     with pytest.raises(RuntimeError, match="Postgres persistence IS the ledger"):
         audit._emit_postgres(_entry(), chain_persisted=False)
     assert capsys.readouterr().out == ""
+
+
+class TestNoTransportDegradesSilently:
+    """The second half of ADR 0023 #3, and the one a green suite hid: a transport EMITS or FAILS.
+
+    `_emit_postgres` was not the only liar. `_emit_cloud_logging` swallowed a missing provider
+    and wrote the entry to **stdout**, under a comment reading *"graceful degradation"* — so an
+    operator who configured Cloud Logging (the sink the runbook and the Terraform both select
+    for production) got entries in a container's stdout instead, and nothing said so. Every
+    dashboard, alert and retention rule built on that sink was quietly empty.
+
+    There is no graceful degradation on an audit path. The distinction ADR 0023 buys is what
+    makes failing loudly *cheap*: the sink is a lateral copy, so a dead transport costs an
+    observability copy and **not one ledger entry**. Both halves are asserted here.
+    """
+
+    def test_a_missing_cloud_logging_provider_raises_instead_of_writing_to_stdout(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The exact regression: the import fails → it must NOT quietly become the stdout sink.
+
+        ``_REAL_EMIT_CLOUD_LOGGING`` is bound at import, *before* the autouse fixture silences
+        the transports — otherwise this test would assert against the fixture's own no-op and
+        pass no matter what the shipped function does.
+        """
+        import builtins
+
+        real_import = builtins.__import__
+
+        def _no_google(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name.startswith("google"):
+                msg = "No module named 'google.cloud'"
+                raise ImportError(msg)
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", _no_google)
+
+        with pytest.raises(ImportError):
+            _REAL_EMIT_CLOUD_LOGGING(_entry())
+
+        assert capsys.readouterr().out == "", (
+            "a provider that cannot emit wrote the entry to stdout — that is the 'graceful "
+            "degradation' F-6 removed: the operator's chosen sink is silently empty"
+        )
+
+    def test_a_dead_transport_still_leaves_the_entry_chained(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        spy_enqueue: list[dict[str, Any]],
+        tmp_path: Path,
+    ) -> None:
+        """Why failing loudly is now free: the store does not depend on the transport.
+
+        The transport raises; the sink dispatch records it on stderr; and the opposable entry
+        is in the ledger all the same. Before ADR 0023 this scenario had the opposite shape —
+        the sink decided whether the chain happened at all.
+        """
+
+        def _boom(_e: dict[str, Any]) -> None:
+            msg = "cloud logging is down"
+            raise RuntimeError(msg)
+
+        monkeypatch.setattr(audit, "_emit_cloud_logging", _boom)
+        monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "postgres")
+        monkeypatch.setenv("TESSERA_LEDGER_DUAL_WRITE", "1")
+
+        _append_to_chain(_entry(), "cloud_logging", tmp_path / "audit.log")
+
+        assert (
+            len(spy_enqueue) == 1
+        ), "a dead transport cost a ledger entry — the store must not depend on the sink"
+
+
+class TestNobodyVerifiesTheChainByReadingTheDeadFile:
+    """The symmetric hole: the STORE moved, so a verifier aimed at the old one green-lights air.
+
+    `verify_audit_chain(path)` is the *file* primitive, and on an absent file it answers
+    `ChainStatus(verified=True, length=0)` — defensible when the file WAS the store, and a
+    loaded gun now that it is not: post-cut (`ledger_source=postgres`, the shipped default) the
+    flat file is **never written**, so anything that verifies `guard.audit_file` reports a
+    perfect, empty, non-existent chain while the real one — 25k+ opposable rows — goes unread.
+
+    Today no production module does this: every chain-integrity surface goes through the
+    store-aware `verify_active_ledger` / `active_ledger_tree_status`, which dispatch on
+    `ledger_source()`. This test is what stops the next one from reaching for the primitive,
+    because reaching for it is the natural mistake — the function has the obvious name.
+    """
+
+    def test_the_file_primitive_still_green_lights_an_absent_file(self, tmp_path: Path) -> None:
+        """Stated, not hidden. This is WHY the ban below exists — it is the trap's mechanism."""
+        status = audit.verify_audit_chain(tmp_path / "does-not-exist.log")
+
+        assert status.verified is True
+        assert status.length == 0
+
+    def test_no_src_module_verifies_the_chain_from_the_configured_audit_file(self) -> None:
+        """The ban: chain integrity is read from the ACTIVE STORE, never from the dead file."""
+        import pathlib
+        import re
+
+        src = pathlib.Path(__file__).resolve().parents[2] / "src" / "tessera"
+        # `verify_audit_chain(<anything>.guard.audit_file)` — the exact shape of the mistake.
+        offender = re.compile(r"verify_audit_chain\(\s*[^)]*guard\.audit_file")
+        guilty = [
+            str(f.relative_to(src))
+            for f in src.rglob("*.py")
+            if offender.search(f.read_text(encoding="utf-8"))
+        ]
+
+        assert not guilty, (
+            f"{guilty} verifies the audit chain by reading `guard.audit_file` — post-cut that "
+            "file is never written, so this reports `verified=True, length=0` on a chain it "
+            "never opened. Use verify_active_ledger()/active_ledger_tree_status(), which "
+            "dispatch on the active store (ADR 0023)."
+        )
