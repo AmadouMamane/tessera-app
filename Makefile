@@ -1,7 +1,8 @@
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
         obs-up obs-down obs-logs dev-secrets \
-        gate gate-py gate-web
+        gate gate-twice gate-checks gate-py gate-web \
+        claim release whoowns
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -34,6 +35,23 @@ precommit: install
 # All quality checks in sequence (used locally before pushing)
 check: format-check lint typecheck
 
+# ── Worktree ownership ──────────────────────────────────────────────────────
+#
+# `make dev-status` says which checkout a SERVER serves. Nothing said which agent
+# owns a TREE — and on 2026-07-12 two agents wrote into `agents/claude` at once:
+# one stashed the other's uncommitted work mid-flight and switched the branch under
+# it. Advisory by design (nothing on a shared filesystem can truly lock), and that
+# is enough: it turns a silent collision into a loud refusal.
+
+claim:
+	@uv run python scripts/worktree_owner.py claim $(if $(FORCE),--force,)
+
+release:
+	@uv run python scripts/worktree_owner.py release
+
+whoowns:
+	@uv run python scripts/worktree_owner.py check
+
 # ── The gate ────────────────────────────────────────────────────────────────
 #
 # `gate` is the single definition of what "green" means in this repository.
@@ -45,10 +63,41 @@ check: format-check lint typecheck
 # dependency install. Anything that needs Postgres, ClickHouse, an LLM or a
 # browser lives in `test-integration` or in the `e2e` job, never here.
 #
-# The discipline is *twice*-green: run `make gate` two complete times before
-# merging. A check that passes once and fails once is a red check.
+# EVERY GATE NAMES THE TREE IT RAN ON. A bare exit 0 proves nothing: on
+# 2026-07-12 two `make gate` runs returned exit 0 having run on two DIFFERENT
+# trees (a concurrent agent stashed the changes and switched the branch between
+# the passes), the test counts silently differed — 1862, then 1858 — and it read
+# as a clean twice-green. With CI billing-blocked, the local gate is this
+# project's ONLY witness, and a witness that cannot say what it saw is not one.
+#
+# So `gate` fingerprints the tree (worktree · branch · HEAD · dirty · a digest of
+# the actual CONTENT) before AND after the run — the incident happened *during* a
+# pass, not only between passes — and VOIDS the verdict (exit 3, distinct from a
+# red 1) if the tree moved underneath it.
+#
+# The discipline is *twice*-green, and `gate-twice` is now the only honest way to
+# claim it: it asserts BY MACHINE that both passes were green **on one and the
+# same tree**. Running `make gate` twice by hand and remembering that both were
+# green is precisely what failed.
 
-gate: gate-py gate-web
+# An agent does not run the gate in a worktree another agent owns: the gate MUTATES
+# (uv sync, a pnpm install, caches), and a second writer is how the 2026-07-12 witness
+# was corrupted. Unclaimed trees are allowed on purpose — the marker must not become a
+# ceremony that stops the operator's own hands; what it stops is the SILENT second writer.
+gate:
+	@uv run python scripts/worktree_owner.py check
+	@uv run python scripts/gate_witness.py run --slot $(or $(GATE_SLOT),1) -- $(MAKE) gate-checks
+
+# Two passes, one tree — asserted, never remembered.
+gate-twice:
+	@$(MAKE) gate GATE_SLOT=1
+	@$(MAKE) gate GATE_SLOT=2
+	@uv run python scripts/gate_witness.py twice
+
+# The checks themselves. Kept as their own target so the witness wraps the whole
+# run as a unit, and so CI can call the checks directly when it has no worktree to
+# be confused about.
+gate-checks: gate-py gate-web
 
 gate-py: install
 	uv run ruff check .

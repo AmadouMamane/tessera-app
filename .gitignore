@@ -88,3 +88,10 @@ scripts/_gen_*.py
 
 # The eval null-control scratch dir (a control, never a published result — see Makefile)
 .eval-control/
+
+# Gate witness + worktree ownership (process P0, 2026-07-12). Both describe THIS
+# checkout and must never travel to another one: a committed fingerprint would be a
+# claim about a tree the reader is not standing in, and a committed owner marker would
+# claim every clone at once.
+.gate/
+.worktree-owner

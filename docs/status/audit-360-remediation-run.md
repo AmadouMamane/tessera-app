@@ -348,3 +348,67 @@ behaviour is untouched; only the gate feeding it is widened.
   predicted append in this file.
 - **TSA / "Scellé · opposable" badge untouched** by decision — this repairs the mechanism, not
   the opposability promise or its external attestation (ADR 0015 §Corr.3c / 0022).
+
+---
+
+## PROCESS P0 — the identity of the tree. A gate that cannot say what it saw is not a witness.
+
+Branch `claude/gate-tree-identity`, worktree `agents/eval`. **This is not a code finding; it is a
+finding about how we know anything at all.**
+
+### The incident
+
+Two `make gate` runs returned **exit 0**. They had run on **two different trees**: a concurrent
+agent, working in the same worktree, stashed the uncommitted changes and switched the branch
+between the passes. The test counts differed — **1862, then 1858** — and nobody noticed, because
+a gate reports a verdict and never says **what it looked at**. It read as a clean twice-green.
+It was not one. A later run showed 51 failures that belonged to the other agent's half-written
+`authz.py`.
+
+CI is billing-blocked. The local gate is this project's **only** witness. A witness that cannot
+name its subject gives an **unfalsifiable** verdict — and an unfalsifiable green is worse than a
+red, because a red at least stops you.
+
+### What ships
+
+- **`scripts/gate_witness.py` — every verdict names its tree.** The fingerprint is
+  *worktree · branch · HEAD · dirty · a sha256 of the actual CONTENT* (the porcelain status **and**
+  the patch of tracked modifications). Content, not just the commit id: the stash that corrupted
+  the witness left `M src/tessera/guard/audit.py` dirty *before and after* — same branch, same
+  HEAD, same dirty-file count — so a coarse (branch, head, dirty?) check would have called those
+  two trees identical while 241 lines went missing.
+- **Taken before AND after each pass.** The incident happened *during* a run, not only between
+  runs. A pass whose tree moved underneath it is **VOID — exit 3**, deliberately not the red 1:
+  conflating "unusable" with "failed" would let a void run be read as an honest red.
+- **`make gate-twice` — asserted by machine, never remembered.** It runs both passes and refuses
+  unless they saw **one and the same tree**, naming what moved.
+- **`scripts/worktree_owner.py` + `make claim` / `release` / `whoowns`.** `dev-status` says which
+  checkout a *server* serves; nothing said who owns a *tree*. Advisory by design (nothing on a
+  shared filesystem truly locks) — and that is enough: it turns a silent collision into a loud
+  refusal. `make gate` refuses to run in a worktree another agent owns; an **unclaimed** tree is
+  allowed on purpose, so the marker never becomes a ceremony that stops the operator's own hands.
+- **A ratchet on the Makefile itself** (`tests/unit/test_gate_witness.py`), because that is where
+  a future author "simplifies" the wrapper away: `gate` must go through the witness, `gate-twice`
+  must compare, `gate` must check ownership.
+
+### The proofs (all four run, none staged)
+
+| what | result |
+| --- | --- |
+| two green passes, tree mutated between them | **TWICE-GREEN REFUSED** — *"the two passes ran on DIFFERENT TREES · CONTENT REWRITTEN IN PLACE"* |
+| tree mutated **during** a pass (gate exited 0) | **VOID, exit 3** — *"the gate itself exited 0, and that number means nothing: it describes a tree that no longer exists"* |
+| `TESSERA_AGENT=intruder make gate` on a claimed tree | **REFUSED, exit 2**, naming the owner |
+| `make gate-twice` on this very branch | **exit 0 — TWICE-GREEN, both passes green on ONE tree** |
+
+Note the subtlety in the first two: `DIRTY(5)` before *and* after, same branch, same HEAD. Only
+the content digest catches it. That is the incident's exact signature.
+
+### Known-open
+
+- **The marker is advisory.** A process that ignores it still collides. It cannot be otherwise on
+  a shared filesystem, and pretending to lock would be a worse lie than not locking.
+- **Untracked file *contents*** are not in the digest (their presence is). Stated, not hidden: the
+  identity is strong on tracked code, which is what a gate judges.
+- A self-inflicted lesson while building this: **`git checkout -- <file>` to undo a test mutation
+  destroys your own uncommitted edits in that same file.** It ate the Makefile once. Back the file
+  up and restore *your* copy — never HEAD's.

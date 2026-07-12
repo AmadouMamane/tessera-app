@@ -259,12 +259,29 @@ As of 2026-07-07 this repo lives under a shared umbrella:
 
 **Branch model: trunk-based.** `main` is the only long-lived branch, protected by the twice-green
 gate (`ruff check` + `ruff format --check` + `mypy` + `tsc --noEmit` + `biome check` +
-`pytest -m "not integration"`, run twice in a row). Each agent works in its own dedicated
+`pytest -m "not integration"`). Each agent works in its own dedicated
 worktree under `agents/<name>/` on short-lived branches named `<agent>/<sujet>`, cut from a
 fresh `main`, and lands (merges into `main`) as soon as the gate is green — no `develop`, no
 long-running feature branches. At every slice boundary, resync the worktree's branch from
 `main` before starting the next unit of work (once the previous branch has landed, cut the next
 one with `git checkout -b <agent>/<next-sujet> main`).
+
+**Twice-green is `make gate-twice`, never `make gate` twice by hand** (process P0, 2026-07-12).
+Running it by hand and *remembering* that both passes were green is exactly what failed: two
+`make gate` runs returned **exit 0 on two different trees** — a concurrent agent had stashed the
+working changes and switched the worktree's branch between the passes — the test counts silently
+differed (1862, then 1858), and it read as a clean twice-green. CI is billing-blocked, so the
+local gate is this project's ONLY witness, and a verdict that cannot name the tree it judged is
+unfalsifiable.
+
+- **Every gate prints and records its tree** — worktree · branch · HEAD · dirty · a digest of the
+  actual content — taken *before and after* the run. A pass whose tree moved underneath it is
+  **VOID** (exit 3, deliberately not the red 1: unusable is not the same as failed).
+- **`make gate-twice`** runs both passes and asserts **by machine** that they saw the same tree.
+  Two green passes on two trees are REFUSED, and the refusal names what moved.
+- **`make claim` before you work in a worktree**, `make release` when you leave. A worktree has
+  ONE writer. The marker is advisory (nothing on a shared filesystem truly locks), and that is
+  enough: it turns a silent collision into a loud refusal. `make whoowns` asks.
 
 Progress across slices/steps is tracked in `docs/status/0017-execution-status.md` — read it
 first when resuming work, it is the single source of truth for what's done, in flight, and next.
