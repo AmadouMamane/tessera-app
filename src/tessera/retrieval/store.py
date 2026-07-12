@@ -23,6 +23,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from tessera.retrieval.embeddings import embedding_dimension
 from tessera.settings import LanguageCode, get_settings
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
@@ -121,7 +122,7 @@ async def _connection() -> AsyncIterator[AsyncConnection[Any]]:
 async def ensure_schema() -> None:
     """Create the documents table and HNSW index idempotently."""
     settings = get_settings()
-    table = settings.postgres.vector_table
+    table = safe_identifier(settings.postgres.vector_table)
     dim = embedding_dimension()
     async with _connection() as conn, conn.cursor() as cur:
         await cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
@@ -160,7 +161,7 @@ async def insert_documents(records: Sequence[DocumentRecord]) -> int:
     """Bulk-insert ``records``; returns the number of rows actually inserted."""
     if not records:
         return 0
-    table = get_settings().postgres.vector_table
+    table = safe_identifier(get_settings().postgres.vector_table)
     async with _connection() as conn, conn.cursor() as cur:
         rows = [
             (
@@ -200,7 +201,7 @@ async def knn_search(
     the regulation lookup where EU texts are stored in their source language
     regardless of the active conversation language.
     """
-    table = get_settings().postgres.vector_table
+    table = safe_identifier(get_settings().postgres.vector_table)
     async with _connection() as conn:
         conn.row_factory = dict_row
         async with conn.cursor() as cur:

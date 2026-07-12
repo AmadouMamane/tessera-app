@@ -24,6 +24,8 @@ import threading
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from tessera.sql import safe_qualified_identifier
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -172,9 +174,11 @@ def _insert(line: bytes) -> None:
 
     try:
         adapter = _get_adapter()
-        adapter.execute(
-            f"INSERT INTO {adapter.business_events_table} FORMAT JSONEachRow", data=line
-        )
+        # The adapter's property already validates; re-gating here keeps ONE rule with no
+        # exceptions — the value spliced into the query is the value proven safe, at the site
+        # that splices it. A rule with an exception is a rule nobody can check mechanically.
+        table = safe_qualified_identifier(adapter.business_events_table)
+        adapter.execute(f"INSERT INTO {table} FORMAT JSONEachRow", data=line)
     except SpineUnavailableError as exc:
         # Best-effort: the in-process store + replay bundles stay the read substrate until
         # the flip bakes; a lagging store surfaces as shadow divergence, never a silent gap.

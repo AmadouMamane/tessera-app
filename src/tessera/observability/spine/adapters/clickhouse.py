@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -34,6 +33,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
+from tessera.sql import safe_identifier, safe_qualified_identifier
 
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
@@ -69,15 +69,14 @@ _BE_TOTAL_ORDER_DESC: Final = (
 _TOTAL_ORDER: Final = "scored_at, metric, trace_id, conversation_id"
 _TOTAL_ORDER_DESC: Final = "scored_at DESC, metric DESC, trace_id DESC, conversation_id DESC"
 
-ONLINE_SCORES_TABLE: Final = "eval_online_scores"
+# Validated at definition, not merely trusted for being a literal: these names are spliced
+# into DDL, and the point of `tessera.sql` is that no identifier reaches a query unchecked —
+# including the ones that look obviously fine today (audit P0.3 `sql-fstring`).
+ONLINE_SCORES_TABLE: Final = safe_identifier("eval_online_scores")
 # The owned durable home of business events (ADR 0017 §5). Dimensional, traffic-driven
 # monitoring telemetry — direct insert, MergeTree + monthly partitions + 6-month TTL,
 # aligned with ``eval_online_scores``. The opposable facet stays in the Postgres ledger.
-BUSINESS_EVENTS_TABLE: Final = "business_events"
-
-# Database / identifier names are interpolated into DDL, so they must stay plain
-# identifiers even though they come from trusted env config — defence in depth.
-_IDENTIFIER: Final = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+BUSINESS_EVENTS_TABLE: Final = safe_identifier("business_events")
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,9 +89,23 @@ class ClickHouseConfig:
     database: str
 
     def __post_init__(self) -> None:
-        if not _IDENTIFIER.match(self.database):
+        """Refuse a database name that could not be a database name.
+
+        ``database`` comes from ``TESSERA_CLICKHOUSE_DATABASE`` and is spliced into
+        ``CREATE DATABASE`` and into every qualified table name, so it is the widest door on
+        the ClickHouse side. This used to run a local ``^[A-Za-z_][A-Za-z0-9_]*$`` with
+        ``re.match`` — which, the ``$`` anchor notwithstanding, accepted a trailing newline.
+        The shared gate uses ``fullmatch``.
+
+        The message is re-raised with the setting's name: the shared gate can only say *"this
+        is not an identifier"*, and an operator reading a crashed container needs to know
+        **which** knob they turned.
+        """
+        try:
+            safe_identifier(self.database)
+        except ValueError as exc:
             msg = f"clickhouse database must be a plain identifier; got {self.database!r}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
     @classmethod
     def from_env(cls) -> ClickHouseConfig:
@@ -198,13 +211,18 @@ class ClickHouseAdapter:
 
     @property
     def table(self) -> str:
-        """The fully-qualified owned online-scores table (``<database>.<table>``)."""
-        return f"{self._config.database}.{ONLINE_SCORES_TABLE}"
+        """The fully-qualified owned online-scores table (``<database>.<table>``).
+
+        Re-validated here, though both halves were checked when they were built: this string
+        is what actually reaches the query text, and the rule is that the *value spliced in*
+        is the value proven safe — not an ancestor of it.
+        """
+        return safe_qualified_identifier(f"{self._config.database}.{ONLINE_SCORES_TABLE}")
 
     @property
     def business_events_table(self) -> str:
         """The fully-qualified owned business-events table (ADR 0017 §5)."""
-        return f"{self._config.database}.{BUSINESS_EVENTS_TABLE}"
+        return safe_qualified_identifier(f"{self._config.database}.{BUSINESS_EVENTS_TABLE}")
 
     def execute(
         self, query: str, *, data: bytes | None = None, params: dict[str, str] | None = None

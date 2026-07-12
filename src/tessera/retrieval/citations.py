@@ -14,9 +14,13 @@ Two daily counter tables keep reads trivial and feed per-day sparklines:
 
 Writes are best-effort: a telemetry failure must never break a retrieval, so
 :func:`record_retrieval_query` swallows every exception. The schema is created
-idempotently on first write. Table names are module constants (never user
-input), so the f-string SQL is safe — the ``# noqa: S608`` mirrors the rest of
-the data-access layer.
+idempotently on first write.
+
+The table names are module constants and are **validated** by
+:func:`tessera.sql.safe_identifier` at definition — not merely trusted for being literals
+(audit P0.3 ``sql-fstring``). The ``# noqa: S608`` suppressions stay because S608 is a
+syntactic rule and cannot see that validation; see ``tessera.sql`` for why they cannot be
+deleted and what would replace them.
 """
 
 from __future__ import annotations
@@ -30,6 +34,7 @@ from typing import TYPE_CHECKING, Any
 from psycopg.rows import tuple_row
 
 from tessera.retrieval.store import get_pool
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterable
@@ -45,8 +50,9 @@ __all__ = [
     "record_retrieval_query",
 ]
 
-_QUERY_TABLE = "retrieval_query_daily"
-_CATEGORY_TABLE = "retrieval_citation_daily"
+# Validated at definition, like every other identifier (audit P0.3 `sql-fstring`).
+_QUERY_TABLE = safe_identifier("retrieval_query_daily")
+_CATEGORY_TABLE = safe_identifier("retrieval_citation_daily")
 
 # Set once the tables are known to exist, so the hot path skips the DDL.
 _schema_ready = False

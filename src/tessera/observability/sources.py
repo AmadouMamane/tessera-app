@@ -49,6 +49,7 @@ from tessera.observability.knowledge import (
 from tessera.retrieval.chunking import ChunkerConfig
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -521,7 +522,12 @@ async def _daily_growth(table: str) -> list[dict[str, object]]:
     The corpus has no time axis (one ingest batch), but the two memory tables
     carry a real ``created_at`` spanning weeks - so this is genuine history, not
     a fabricated snapshot timeline. Returns [] if the table is absent.
+
+    ``table`` is spliced into the query, so it is validated here rather than trusted from the
+    caller. Both callers pass a literal today; the signature says ``str``, and a signature is
+    what the next caller reads.
     """
+    table = safe_identifier(table)
     async with _connection() as conn:
         conn.row_factory = dict_row
         try:

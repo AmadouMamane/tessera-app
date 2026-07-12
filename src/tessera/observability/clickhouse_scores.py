@@ -25,6 +25,8 @@ import threading
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from tessera.sql import safe_qualified_identifier
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -136,7 +138,8 @@ def _insert(line: bytes) -> None:
 
     try:
         adapter = _get_adapter()
-        adapter.execute(f"INSERT INTO {adapter.table} FORMAT JSONEachRow", data=line)
+        table = safe_qualified_identifier(adapter.table)
+        adapter.execute(f"INSERT INTO {table} FORMAT JSONEachRow", data=line)
     except SpineUnavailableError as exc:
         # Best-effort: jsonl stays the system of record until the G4 parity flip; the
         # shadow-divergence gate is what catches a lagging store — never a silent number.

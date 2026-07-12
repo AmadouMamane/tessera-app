@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
@@ -72,12 +73,13 @@ class PostgresGatingAdapter:
             conditions.append("model = %s")
             params.append(scope.model)
         where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-        # S608: the table name is a fixed module constant and every value is a bound
-        # parameter — nothing user-controlled enters the SQL text.
+        # S608 cannot be removed: it is a syntactic rule and cannot see the validation below.
+        # It is earned, though — the table is validated by `safe_identifier` and every value
+        # is a bound parameter, so nothing but a proven identifier enters the SQL text.
         query = (
             "SELECT run_id, case_id, agent_id, language, model, metric, score, passed,"  # noqa: S608
-            f" catalogue_version, judge_model, scored_at FROM {GATING_TABLE}{where}"
-            f"{GATING_TOTAL_ORDER}"
+            f" catalogue_version, judge_model, scored_at FROM {safe_identifier(GATING_TABLE)}"
+            f"{where}{GATING_TOTAL_ORDER}"
         )
         try:
             with psycopg.connect(
@@ -85,7 +87,12 @@ class PostgresGatingAdapter:
                 connect_timeout=_CONNECT_TIMEOUT_S,
                 options=f"-c statement_timeout={_STATEMENT_TIMEOUT_MS}",
             ) as conn:
-                conn.execute(f"SET search_path TO {settings.pg_schema}, public")
+                # `pg_schema` is derived from the Environment enum, so it was never reachable
+                # by an attacker — but it was spliced into SQL with NO check of any kind, and
+                # "safe because of where it comes from" is exactly the reasoning the audit
+                # asked us to stop relying on. Validated like every other identifier.
+                schema = safe_identifier(settings.pg_schema)
+                conn.execute(f"SET search_path TO {schema}, public")
                 with conn.cursor(row_factory=dict_row) as cur:
                     cur.execute(query, params)
                     records = cur.fetchall()

@@ -23,6 +23,7 @@ from tessera.retrieval import citations
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -330,7 +331,7 @@ def _ago(iso: str, lang: str) -> str:
 
 async def _fetch_rows() -> list[dict[str, object]]:
     """Return every chunk's (corpus, source, language, category, locator, inserted_at)."""
-    table = get_settings().postgres.vector_table
+    table = safe_identifier(get_settings().postgres.vector_table)
     async with _connection() as conn:
         conn.row_factory = dict_row
         async with conn.cursor() as cur:

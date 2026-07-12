@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
 from tessera.retrieval.store import get_pool
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -38,7 +39,10 @@ __all__ = [
     "record_gating_rows",
 ]
 
-GATING_TABLE: Final = "eval_gating_scores"
+# Validated at definition (audit P0.3 `sql-fstring`). Found by the class ratchet, not by the
+# audit and not by ruff: this module's `INSERT INTO {GATING_TABLE}` sits in an indented
+# multi-line f-string, the shape S608's heuristic does not see.
+GATING_TABLE: Final = safe_identifier("eval_gating_scores")
 
 # The harness produces one deterministic verdict per case x language — the socle's single
 # metric today. A numeric judge metric added to the harness later becomes another metric

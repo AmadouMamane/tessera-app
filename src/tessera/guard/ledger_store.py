@@ -51,6 +51,7 @@ from tessera.guard.audit import (
     _hash_core,
     verify_audit_chain,
 )
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -79,7 +80,10 @@ __all__ = [
     "verify_ledger_tree",
 ]
 
-LEDGER_TABLE: Final = "audit_ledger"
+# Validated at definition (audit P0.3 `sql-fstring`). This is the table the whole opposable
+# audit chain lives in — the one name in the codebase where a silently different table would
+# be worst — so it goes through the same gate as every other identifier, literal or not.
+LEDGER_TABLE: Final = safe_identifier("audit_ledger")
 _GENESIS: Final = "0" * 64
 
 # §Amendment 3 DDL: (seq, occurred_at, agent_id, payload, prev_hash, hash), append-only.
@@ -256,7 +260,7 @@ def _connect_sync() -> Any:
 
     settings = get_settings()
     conn = psycopg.connect(str(settings.postgres.dsn), connect_timeout=2)
-    conn.execute(f"SET search_path TO {settings.pg_schema}, public")
+    conn.execute(f"SET search_path TO {safe_identifier(settings.pg_schema)}, public")
     return conn
 
 

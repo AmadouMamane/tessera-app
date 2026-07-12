@@ -43,6 +43,7 @@ from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.knowledge import _SOURCE_META, _source_name
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -265,7 +266,7 @@ def _scan_handoffs(path: Path, at: datetime | None) -> list[dict[str, Any]]:
 
 
 async def _fetch_documents() -> list[dict[str, Any]]:
-    table = get_settings().postgres.vector_table
+    table = safe_identifier(get_settings().postgres.vector_table)
     async with _connection() as conn:
         conn.row_factory = dict_row
         async with conn.cursor() as cur:

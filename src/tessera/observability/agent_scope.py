@@ -14,26 +14,20 @@ table; pages layer their own observable per-agent KPIs on top.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from psycopg import AsyncCursor
 
 __all__ = ["OrgRollup", "dedup_org_total"]
 
-# SQL identifiers are interpolated (table / column names cannot be bound params),
-# so we constrain them to a strict allowlist shape before they touch a query.
-_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
-
-
-def _ident(name: str) -> str:
-    """Return ``name`` if it is a safe SQL identifier, else raise ``ValueError``."""
-    if not _IDENT.match(name):
-        msg = f"unsafe SQL identifier: {name!r}"
-        raise ValueError(msg)
-    return name
+# This module used to carry its own `_ident` — `^[a-z_][a-z0-9_]*$` with `re.match` — while
+# the ClickHouse adapter carried a second, differently-spelled one. Two private validators for
+# one rule, neither reused, and `re.match` let a trailing newline through both. There is now
+# one gate: `tessera.sql.safe_identifier` (audit P0.3 `sql-fstring`).
 
 
 def _as_int(value: object) -> int:
@@ -85,13 +79,13 @@ async def dedup_org_total(
     Returns:
         An :class:`OrgRollup`.
     """
-    table_id = _ident(table)
-    entity_id = _ident(entity_col)
-    agent_id = _ident(agent_col)
+    table_id = safe_identifier(table)
+    entity_id = safe_identifier(entity_col)
+    agent_id = safe_identifier(agent_col)
 
-    # Every interpolation is an identifier validated by _ident() above. The unused, injection-
-    # prone `where` predicate parameter was removed (P0.3 class closure): no raw SQL text is
-    # accepted here, so these f-strings are safe by construction, not by caller convention.
+    # Every interpolation is an identifier validated above. The unused, injection-prone `where`
+    # predicate parameter was removed (P0.3 class closure): no raw SQL text is accepted here,
+    # so these f-strings are safe by construction, not by caller convention.
     per_agent_sql = (
         f"SELECT {agent_id} AS agent, count(DISTINCT {entity_id}) AS n "  # noqa: S608
         f"FROM {table_id} GROUP BY {agent_id}"

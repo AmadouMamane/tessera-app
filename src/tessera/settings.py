@@ -28,6 +28,8 @@ from typing import Annotated, Literal
 from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from tessera.sql import safe_identifier
+
 # Resolve bundled defaults relative to the installed package, not the process
 # working directory: the backend may be launched from anywhere (uvicorn, tests,
 # Cloud Run) and must still find the policy shipped at src/tessera/guard/.
@@ -167,6 +169,22 @@ class PostgresSettings(BaseSettings):
     pool_max_size: int = 10
     statement_timeout_ms: int = 5_000
     vector_table: str = "documents"
+
+    @field_validator("vector_table")
+    @classmethod
+    def _validate_vector_table(cls, value: str) -> str:
+        """Refuse a table name that could not be a table name (audit P0.3 `sql-fstring`).
+
+        This name is a **SQL identifier**, and an identifier cannot be bound as a parameter —
+        it is spliced into the query text (`retrieval/store.py`, `observability/knowledge.py`,
+        `observability/etat_a_date.py`). It is also settable from the environment
+        (`TESSERA_POSTGRES__VECTOR_TABLE`), which makes it the widest door in the class.
+
+        Validating here means an unsafe value cannot exist in the process at all — the
+        deployment fails to start rather than building a query around it. The interpolation
+        sites validate again, independently; see `tessera.sql`.
+        """
+        return safe_identifier(value)
 
 
 class GuardSettings(BaseSettings):
