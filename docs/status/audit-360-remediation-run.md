@@ -351,6 +351,88 @@ behaviour is untouched; only the gate feeding it is widened.
 
 ---
 
+## F-6, closed on the sink's own honesty — the two halves ADR 0023 left open
+
+Branch `claude/f6-sink-honesty` (`d2ffc00c`), `origin/main` + 1, **HALT before merge**.
+
+ADR 0023 detached the ledger from the sink. It did not finish the sink, and it left the
+symmetric hole — the *verifier* — untouched.
+
+### 1. A transport emits, or it fails. It never pretends.
+
+`_emit_cloud_logging` still swallowed a missing provider and wrote the entry to **stdout**,
+under a comment reading *"graceful degradation"*. There is no such thing on an audit path. An
+operator who configured Cloud Logging — the sink `runbook.md` recommends and `cloud_run.tf`
+applies — got entries in a container's stdout, and nothing said so: every dashboard, alert and
+retention rule built on that sink read zero.
+
+Failing loudly is affordable **because** of ADR 0023, and that is the whole argument: the sink
+is a lateral copy, so a dead transport costs an observability copy and **not one ledger entry**.
+The stderr line now says exactly that — an operator reading a red audit line must not go hunting
+a breach that did not happen.
+
+### 2. Nothing verifies the chain by reading the dead file
+
+`verify_audit_chain(path)` answers `ChainStatus(verified=True, length=0)` on an **absent** file
+— defensible when the file WAS the store, a loaded gun now that it is not: post-cut the flat
+file is never written, so verifying `guard.audit_file` reports a flawless, empty, non-existent
+chain while 25 000+ opposable rows go unread. **No production module does this** (every
+integrity surface goes through the store-aware `verify_active_ledger` /
+`active_ledger_tree_status` — checked, and it was an alarm I raised and then disproved). The ban
+is asserted anyway, because reaching for the primitive is the natural mistake: it has the
+obvious name.
+
+### 3. The docs stop calling a sink the audit trail
+
+`compliance.md` documented `postgres` as *"currently falls back to stdout"*; `design.md`
+promised *"graceful degradation"*; `runbook.md` told production operators the audit trail **was**
+`cloud_logging`. `.env.example` omitted `file` from its own list. All corrected. And
+`cloud_run.tf` now **declares** `TESSERA_LEDGER_SOURCE=postgres` + `TESSERA_LEDGER_DUAL_WRITE=1`:
+what makes production opposable was previously readable nowhere in the infrastructure.
+
+### Witnesses
+
+- **Three ratchets, each mutation-tested** — a ratchet nobody has tried to break polices
+  nothing. Re-adding `if sink == "file"` fails **8** tests; restoring the stdout fallback fails
+  the degradation test; pointing any `src` module at `guard.audit_file` fails the ban.
+- **Behavioural, against the real store** (`tessera_local.audit_ledger`, never a file — the file
+  sink is cut):
+
+| sink | outcome |
+| --- | --- |
+| `stdout` | seq 29622 — **chained**, `prev_hash` resolves to a real entry |
+| `file` | seq 29623 — **chained** |
+| `cloud_logging` | seq 29624 — **chained**, *and the transport failed loudly* (no ADC credentials) |
+| `postgres` | seq 29625 — **chained** |
+
+  `verify_active_ledger()` → `verified=True, length=25 509`. Append-only intact: **+4 rows**,
+  the pre-existing head row unchanged. The `cloud_logging` failure was not staged — the machine
+  has no ADC — and it proved both rules at once: the transport died **loudly**, and the entry
+  was chained **anyway**.
+- **gate ×2 GREEN, exit 0 and exit 0, 1862 passed both times**, run in an **isolated worktree**
+  (see below).
+
+### ⚠️ Process finding — this worktree was contested, and a gate lied
+
+Another agent worked in `agents/claude` concurrently. It found my uncommitted work, correctly
+judged it *"NOT MINE"*, and **stashed it** with restore instructions — then switched the
+worktree to its own branch. Consequences, all of them silent:
+
+- Two `make gate` runs reported **exit 0** on **different trees** (1862 then 1858). A green gate
+  is worthless if the tree moved under it — the "twice" in twice-green assumes one tree.
+- A later run showed **51 failures** that were the other agent's half-written `authz.py` (+71),
+  not my code.
+- My commit landed on **their** branch (`claude/fix-gdpr-actor-attribution`), because the
+  worktree had been switched under me.
+
+Recovered without touching their work: `git stash pop`, commit immediately, then verify in a
+**throwaway isolated worktree** at my own commit — the only place a gate means anything while a
+worktree is contested. My commit now lives on `claude/f6-sink-honesty`; their branch still
+carries it as its parent, which is theirs to rebase if they wish.
+
+**Owed:** a worktree must have one writer. `dev-status` tells you which checkout a *server*
+serves; nothing tells you which agent owns a *worktree*. Two green gates on a contested tree
+prove nothing at all.
 ## PROCESS P0 — the identity of the tree. A gate that cannot say what it saw is not a witness.
 
 Branch `claude/gate-tree-identity`, worktree `agents/eval`. **This is not a code finding; it is a
