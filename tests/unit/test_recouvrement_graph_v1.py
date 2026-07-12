@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 from prometheus_client import generate_latest
+from pydantic import SecretStr
+from starlette.requests import Request
 
 from tessera.agent.recouvrement import (
     RECOUVREMENT_AGENT_ID,
@@ -15,6 +17,7 @@ from tessera.agent.recouvrement import (
     run_recouvrement_action_workflow_v1,
     run_recouvrement_graph_v1,
 )
+from tessera.api.operator import OPERATOR_ASSERTION_HEADER, issue_operator_assertion
 from tessera.api.routes import observability as obs
 from tessera.api.routes.recouvrement_assistant import (
     RecouvrementAssistantActionRequest,
@@ -22,6 +25,8 @@ from tessera.api.routes.recouvrement_assistant import (
     recouvrement_assistant_action,
     recouvrement_assistant_message,
 )
+from tessera.api.security import require_collections_operator
+from tessera.authz import Surface
 from tessera.guard import audit
 from tessera.observability import (
     business_capabilities as business_capabilities_mod,
@@ -37,6 +42,8 @@ from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from tessera.api.session import SessionContext
 
 
 @pytest.fixture
@@ -1279,8 +1286,31 @@ async def test_recouvrement_assistant_endpoint_returns_payment_options_contract(
     ]
 
 
+def _verified_collections_session(
+    monkeypatch: pytest.MonkeyPatch, principal: str = "collections"
+) -> SessionContext:
+    """A ``SessionContext`` produced by the REAL verification chain, never hand-assembled.
+
+    The action handler takes the verified operator identity as a required argument (audit
+    2026-07-12, P0 F-1); a direct-call test supplies it the way FastAPI's injection does —
+    genuinely signed assertion, verified by ``require_collections_operator``. Hand-building
+    the dataclass would re-teach the codebase that identities can be asserted rather than
+    proven, which is the habit F-1 grew from.
+    """
+    settings = get_settings()
+    monkeypatch.setattr(settings.api, "operator_assertion_signing_key", SecretStr("test-key"))
+    token = issue_operator_assertion(
+        principal=principal, role="collections", surface=Surface.DEDICATED_UI
+    )
+    request = Request(
+        {"type": "http", "headers": [(OPERATOR_ASSERTION_HEADER.encode(), token.encode())]}
+    )
+    return require_collections_operator(request)
+
+
 async def test_recouvrement_assistant_action_endpoint_returns_governed_action_contract(
     observed_recouvrement_stores: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     draft = run_recouvrement_graph_v1(
         case_id="RC-2048",
@@ -1296,12 +1326,17 @@ async def test_recouvrement_assistant_action_endpoint_returns_governed_action_co
         conversation_id="conv-rc-action-endpoint",
         turn_id="turn-action-endpoint",
     )
-    output = await recouvrement_assistant_action(payload)
+    output = await recouvrement_assistant_action(
+        payload, session=_verified_collections_session(monkeypatch, principal="aline.durand")
+    )
 
     assert output["artifact"]["type"] == "reminder_draft_v1"
     assert output["artifact"]["status"] == "insertion_prepared"
     assert output["artifact"]["content"]["case_write_executed"] is False
     assert output["artifact"]["content"]["no_external_effect"] is True
+    # Attribution is part of the governed contract now (P0 F-1): the artifact records the
+    # principal the HMAC verified — not a body field, which the contract no longer has.
+    assert output["artifact"]["content"]["last_action_requested_by"] == "aline.durand"
     assert "Aucune écriture définitive" in output["visibleReply"]
     assert {row["event_name"] for row in output["businessEvents"]} >= {
         "action.requested",
@@ -1310,6 +1345,23 @@ async def test_recouvrement_assistant_action_endpoint_returns_governed_action_co
         "action.prepared",
         "message.generated",
     }
+
+
+def test_recouvrement_assistant_action_endpoint_refuses_to_run_without_an_identity() -> None:
+    """The other half of the governed contract: no verified identity, no action.
+
+    ``TypeError`` at the call boundary — the handler cannot even bind without a session,
+    and the parameter must never grow a default (that would be F-1's spoofable
+    attribution reintroduced for test convenience). Its HTTP-facing twin — anonymous
+    POST → 401 before the body is read — lives in `test_recouvrement_assistant_auth_closed`.
+    """
+    payload = RecouvrementAssistantActionRequest(
+        artifact={"id": "a", "type": "t", "task": "x", "title": "T", "status": "draft"},
+        action_name="approve",
+    )
+
+    with pytest.raises(TypeError):
+        recouvrement_assistant_action(payload)  # type: ignore[call-arg]
 
 
 def test_recouvrement_payment_options_actions_are_prepared_without_external_effect(

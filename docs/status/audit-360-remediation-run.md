@@ -71,6 +71,24 @@ This session ran in a sandbox whose only Python is 3.10; the codebase is 3.12-on
   2026-07-11 lane B: no independent witness ran tonight (CI still billing-blocked), so the
   two consecutive local passes are the only guard rail — do not merge on one.
 
+### 2026-07-12 · host gate pass 1 — RED, cause understood, fixed on the branch
+
+The first host `make gate` broke on two **pre-existing** tests that call the action
+handler *directly*, outside FastAPI's injection
+(`test_recouvrement_event_loop.py::test_action_route_does_not_pin_the_event_loop`,
+`test_recouvrement_graph_v1.py::test_recouvrement_assistant_action_endpoint_returns_governed_action_contract`):
+`TypeError: recouvrement_assistant_action() missing 1 required positional argument:
+'session'`. Correct consequence of the fix — the handler now demands the verified
+identity — wrong tests. Fixed (`69603f10^..`) by supplying the identity the way the
+runtime does: a genuinely signed assertion pushed through `require_collections_operator`
+(never a hand-assembled `SessionContext` literal, which would re-teach asserted-not-proven
+identity). **The parameter kept NO default** — a default identity on that argument is F-1
+reintroduced for test convenience, "Julie Dubois" one level up — and both files now pin
+the seam: direct call without a session refuses (`TypeError` at bind), and
+`inspect.signature` asserts the `session` parameter has no default. The governed-contract
+test also gained the end-to-end attribution assert:
+`artifact.content.last_action_requested_by == "aline.durand"`, the assertion's principal.
+
 ### Owed follow-ups
 
 - F-5 (memory/GDPR mutations behind `require_bearer` only) is the *next* window; the

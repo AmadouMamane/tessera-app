@@ -16,9 +16,15 @@ work offloaded it ticks freely.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import time
 from typing import TYPE_CHECKING, Any
 
+import pytest
+from pydantic import SecretStr
+from starlette.requests import Request
+
+from tessera.api.operator import OPERATOR_ASSERTION_HEADER, issue_operator_assertion
 from tessera.api.routes import recouvrement_assistant as module
 from tessera.api.routes.recouvrement_assistant import (
     RecouvrementAssistantActionRequest,
@@ -26,9 +32,12 @@ from tessera.api.routes.recouvrement_assistant import (
     recouvrement_assistant_action,
     recouvrement_assistant_message,
 )
+from tessera.api.security import require_collections_operator
+from tessera.authz import Surface
+from tessera.settings import get_settings
 
 if TYPE_CHECKING:
-    import pytest
+    from tessera.api.session import SessionContext
 
 # Long enough to dwarf scheduler jitter, short enough to keep the gate fast.
 _BLOCKING_S = 0.30
@@ -59,6 +68,27 @@ def _blocking(**_: object) -> dict[str, object]:
     return {"visibleReply": "ok"}
 
 
+def _verified_session(monkeypatch: pytest.MonkeyPatch) -> SessionContext:
+    """A ``SessionContext`` produced by the REAL verification chain, never hand-assembled.
+
+    The action handler takes the verified operator identity as a required argument (audit
+    2026-07-12, P0 F-1) — so a test that calls it directly must supply one, the same way
+    FastAPI's injection does: mint a genuinely signed assertion, put it on a request, and
+    let ``require_collections_operator`` verify it. Building a ``SessionContext(...)``
+    literal here would quietly re-teach the codebase that identities can be asserted
+    rather than proven — the exact habit F-1 grew from.
+    """
+    settings = get_settings()
+    monkeypatch.setattr(settings.api, "operator_assertion_signing_key", SecretStr("test-key"))
+    token = issue_operator_assertion(
+        principal="collections", role="collections", surface=Surface.DEDICATED_UI
+    )
+    request = Request(
+        {"type": "http", "headers": [(OPERATOR_ASSERTION_HEADER.encode(), token.encode())]}
+    )
+    return require_collections_operator(request)
+
+
 async def test_message_route_does_not_pin_the_event_loop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -85,8 +115,30 @@ async def test_action_route_does_not_pin_the_event_loop(
             RecouvrementAssistantActionRequest(
                 artifact={"id": "a", "type": "t", "task": "x", "title": "T", "status": "draft"},
                 action_name="approve",
-            )
+            ),
+            session=_verified_session(monkeypatch),
         )
     )
 
     assert ticks >= 10
+
+
+def test_action_route_refuses_to_run_without_a_verified_identity() -> None:
+    """The seam this file now supplies is load-bearing — assert it both ways.
+
+    Calling the handler without a session must refuse at the signature (``TypeError`` —
+    the code cannot even bind, let alone write to the ledger), and the ``session``
+    parameter must have NO default: a default identity on this argument would be the F-1
+    vulnerability reintroduced for test convenience — "Julie Dubois" one level up. The
+    handler never invents an identity; its callers prove one.
+    """
+    payload = RecouvrementAssistantActionRequest(
+        artifact={"id": "a", "type": "t", "task": "x", "title": "T", "status": "draft"},
+        action_name="approve",
+    )
+
+    with pytest.raises(TypeError):
+        recouvrement_assistant_action(payload)  # type: ignore[call-arg]
+
+    session_param = inspect.signature(recouvrement_assistant_action).parameters["session"]
+    assert session_param.default is inspect.Parameter.empty
