@@ -9,11 +9,9 @@ This file closes the class.
 The rule: every route that can change state (POST/PUT/PATCH/DELETE) on the real, fully
 assembled app must either
 
-* carry a recognised auth dependency — ``require_operator`` (cockpit control plane),
-  ``require_collections_operator`` (recouvrement business plane), or ``require_bearer``
-  (service-to-service floor; its known insufficiency for person-attribution on the memory
-  surface is F-5, the next window — a *weaker guard* is that finding, an *absent* one is
-  this file's) — or
+* carry a recognised auth dependency — one that establishes **who** is asking:
+  ``require_operator`` (cockpit control plane), ``require_collections_operator``
+  (recouvrement business plane) or ``require_superadmin`` (the synthesis grant) — or
 * appear in :data:`SELF_AUTHENTICATING` — routes whose handler resolves and refuses
   callers itself, each for a documented reason. That set is asserted with ``==``, so it
   can neither grow nor go stale silently: adding a self-authenticating mutation means
@@ -32,9 +30,9 @@ import pytest
 from fastapi.routing import APIRoute
 
 from tessera.api.security import (
-    require_bearer,
     require_collections_operator,
     require_operator,
+    require_superadmin,
 )
 
 if TYPE_CHECKING:
@@ -45,8 +43,24 @@ if TYPE_CHECKING:
 MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 #: The dependencies this repo recognises as an auth gate at the routing layer.
+#:
+#: ``require_bearer`` is deliberately NOT here (audit 2026-07-12, **P1 F-5**). It was, until
+#: this file's own premise was turned on itself: **the bearer says WHERE a call comes from,
+#: never WHO makes it — so it cannot gate a mutation.** The repo proves this in its own
+#: source (``security.py``, :func:`~tessera.api.security.require_operator`): the BFF attaches
+#: the service bearer on the caller's behalf, so an anonymous visitor's request reaches the
+#: agent carrying a perfectly valid one. Recognising it here made the ratchet built to close
+#: the "anonymous writer" class *certify* the GDPR mutations (``/memory/*``) and the runtime
+#: settings (``/settings/*``) as safe, because they were mounted behind
+#: ``dependencies=[Depends(require_bearer)]`` (``main.py``). The guard-rail embodied the very
+#: confusion it existed to forbid.
+#:
+#: Removing it turned this ratchet red on exactly those routes. That red WAS F-5, and the
+#: only admissible way to make it green again is the one taken here: give those routes an
+#: identity guard. Not an entry in :data:`SELF_AUTHENTICATING`, and never one in
+#: :data:`UNGATED_EXCEPTIONS`.
 KNOWN_AUTH_GUARDS: frozenset[Callable[..., object]] = frozenset(
-    {require_operator, require_collections_operator, require_bearer}
+    {require_operator, require_collections_operator, require_superadmin}
 )
 
 #: Mutating routes whose AUTH LIVES IN THE HANDLER, each with its reason. Frozen by an

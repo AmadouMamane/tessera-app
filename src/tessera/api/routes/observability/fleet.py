@@ -12,7 +12,6 @@ from tessera.api.routes.observability._common import (
     _SYNTHESE_PERIODS,
     _agent_or_none,
     _scores_for,
-    _serialize_conversations,
 )
 from tessera.api.routes.observability.schemas_fleet import (
     AccessPayload,
@@ -28,14 +27,12 @@ from tessera.api.routes.observability.schemas_fleet import (
     SandboxConfigPayload,
     SandboxConfigUnavailable,
 )
-from tessera.memory import transcript
 from tessera.observability import (
     access as access_mod,
     agent_a_faire as agent_a_faire_mod,
     agent_configurations as agent_configurations_mod,
     agent_evaluations as agent_evaluations_mod,
     agent_garde_fous as agent_garde_fous_mod,
-    agent_historique as agent_historique_mod,
     agent_prompts as agent_prompts_mod,
     agent_synthese as agent_synthese_mod,
     chrome as chrome_mod,
@@ -47,47 +44,9 @@ from tessera.observability import (
     routing_intent as routing_intent_mod,
     users as users_mod,
 )
-from tessera.observability.spine.capabilities import capability_for
 from tessera.observability.spine.runtime import get_runtime_provider
 
 router = APIRouter()
-
-
-@router.get("/observability/agent-historique")
-async def observability_agent_historique(
-    agent_id: str = DEFAULT_AGENT_ID,
-    lang: str = "fr",
-) -> dict[str, object]:
-    """Agent Session History dashboard (reference image 30).
-
-    Inner tab strip, KPI strip, filterable sessions table, chart row (trend,
-    sessions by agent, score distribution, success gauge), watchlist, quick
-    actions and a per-session detail panel. Deterministic fixture; degrades to
-    ``available: false``. ``agent_id`` scopes the in-page navigation links;
-    ``lang`` localizes the chrome (fr / de / en).
-    """
-    try:
-        payload: dict[str, object] = {
-            "available": True,
-            **agent_historique_mod.compute_agent_historique(agent_id, lang),
-        }
-        # The eval-session half of this payload — KPI strip, trend, sessions-by-agent,
-        # score distribution, success gauge, watchlist — is a deterministic fixture. It is
-        # shaped like telemetry, so without this stamp the operator UI presents it as live.
-        # Read from the capability registry rather than written as a literal, so the stamp
-        # cannot drift from the declaration (the snapshot's ScopeReport does the same).
-        payload["synthetic"] = capability_for("agent_historique").synthetic
-        # Real live conversations from the transcript, surfaced ALONGSIDE the eval
-        # sessions (additive — the eval KPIs/charts stay untouched). These are the
-        # operator's actual turns, not scored runs, so they get their own honest
-        # block rather than fabricated eval scores.
-        payload["live_conversations"] = _serialize_conversations(
-            await transcript.list_conversations(agent_id, limit=50)
-        )
-        return payload
-    except Exception as exc:  # never break the dashboard
-        sys.stderr.write(f"tessera.observability.agent_historique: failed: {exc}\n")
-        return {"available": False}
 
 
 @router.get("/observability/fleet", response_model=FleetPayload | FleetUnavailable)

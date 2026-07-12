@@ -22,11 +22,9 @@ from tessera.observability import (
     curation as curation_mod,
     etat_a_date as etat_a_date_mod,
     funnel as funnel_mod,
-    handoffs as handoffs_mod,
     improvement as improvement_mod,
     inbox as inbox_mod,
     journey as journey_mod,
-    replay as replay_mod,
     sessions as sessions_mod,
 )
 from tessera.observability.spine.adapters import read_scores
@@ -209,13 +207,6 @@ async def observability_curation(lang: str = "fr") -> dict[str, object]:
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.curation: failed: {exc}\n")
         return {"available": False}
-
-
-@router.get("/observability/handoffs")
-async def observability_handoffs() -> dict[str, object]:
-    """Delegation-chain handoff tracing and broken-handoff detection (#189)."""
-    turns = [(b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()]
-    return asdict(handoffs_mod.analyze_handoffs(turns))
 
 
 @router.get("/observability/journey")

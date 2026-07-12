@@ -43,15 +43,34 @@ if TYPE_CHECKING:
 __all__ = [
     "DEMO_CUSTOMER_ID",
     "DEMO_CUSTOMER_LABEL",
+    "RESUME_TOKEN_HEADER",
+    "RESUME_TOKEN_MAX_AGE_SECONDS",
     "SESSION_COOKIE",
     "SessionContext",
     "clear_session_cookie",
+    "issue_resume_token",
     "issue_session_token",
     "resolve_session",
     "set_session_cookie",
     "validate_session_signing_key",
+    "verify_resume_token",
     "verify_session_token",
 ]
+
+#: Header the product widget presents its conversation-resume capability in.
+RESUME_TOKEN_HEADER = "x-tessera-resume-token"  # noqa: S105  a header NAME, not a secret
+
+#: Domain separator for the resume MAC. Both token families are HMAC-SHA256 under the same
+#: key, so without this a session token and a resume token could in principle be made to
+#: verify for one another. They are different grants and must never be interchangeable.
+_RESUME_DOMAIN = "tessera.resume.v1"
+
+#: How long a browser may resume its own conversation. Deliberately longer than the 8-hour
+#: session (a customer returning next week still expects their chat) and deliberately NOT
+#: unbounded: this is a bearer capability sitting in ``localStorage``, so it must age out
+#: rather than grant a read forever. On expiry the widget starts a fresh conversation —
+#: exactly what it already does when the transcript comes back empty.
+RESUME_TOKEN_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
 
 #: Cookie name carrying the signed session token.
 SESSION_COOKIE = "tessera_session"
@@ -152,6 +171,75 @@ def issue_session_token(subject_id: str, auth_state: AuthState) -> str:
     body = _b64e(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
     signature = _b64e(hmac.new(_signing_key(), body.encode("ascii"), hashlib.sha256).digest())
     return f"{body}.{signature}"
+
+
+def issue_resume_token(conversation_id: str) -> str:
+    """Sign the capability that lets a browser re-read the conversation it just held.
+
+    Audit 2026-07-12, **P1 F-4**. The product widget resumes the customer's own chat after
+    a reload, and until now it did so by asking ``GET /observability/conversation-messages``
+    for a raw ``conversation_id`` — an endpoint that answered *anyone*, for *any* id. Its
+    code carried the defence in a comment: *"It is a capability the customer's browser
+    already holds … so there is no cross-customer exposure"*. That was an argument about
+    what the widget asks for, not about what the server grants — and the capability did not
+    hold anyway, because ``GET /observability/conversations`` published the ids next to the
+    ``title``, which is the conversation's opening user message. A directory defeats a
+    secret url.
+
+    So the transcript read moved behind an operator guard, and the customer keeps its own
+    resume through this token: the server mints it at ``turn.start`` for the browser it is
+    streaming to, and demands it back. Possession of the id is no longer enough; possession
+    of a **signed** statement that this browser was told that id, is.
+
+    This does NOT authenticate a person — the customer plane has no per-person identity
+    (the session cookie is minted only at ``/session/login``, and every demo customer shares
+    one :data:`DEMO_CUSTOMER_ID`). It is a bearer capability over one conversation, which is
+    the honest name for what the widget always relied on. Giving customers a real identity
+    is an ADR, not a night's work.
+
+    Domain-separated (:data:`_RESUME_DOMAIN`) so a resume token can never be confused with,
+    or substituted for, a session token — both are HMACs under the same key.
+    """
+    payload = {"cid": conversation_id, "iat": int(time.time())}
+    body = _b64e(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    signature = _b64e(_resume_mac(body))
+    return f"{body}.{signature}"
+
+
+def _resume_mac(body: str) -> bytes:
+    """MAC over the domain-separated body, so the two token families cannot cross."""
+    message = f"{_RESUME_DOMAIN}.{body}".encode("ascii")
+    return hmac.new(_signing_key(), message, hashlib.sha256).digest()
+
+
+def verify_resume_token(token: str, conversation_id: str) -> bool:  # noqa: PLR0911  fail-closed: each invalid shape refuses explicitly
+    """True only if ``token`` is this server's signed capability for ``conversation_id``.
+
+    Fails closed on every invalid shape: bad form, forged/edited signature, expired stamp,
+    or — the one that matters — a **valid token for a different conversation**. A caller
+    cannot present the token of a conversation it legitimately holds and swap the id.
+    The MAC check is constant-time.
+    """
+    body, _, signature = token.partition(".")
+    if not body or not signature:
+        return False
+    try:
+        presented = _b64d(signature)
+    except ValueError:  # binascii.Error subclasses ValueError
+        return False
+    if not hmac.compare_digest(_resume_mac(body), presented):
+        return False
+    try:
+        payload = json.loads(_b64d(body))
+    except ValueError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    issued_at = payload.get("iat")
+    if not isinstance(issued_at, int) or time.time() - issued_at > RESUME_TOKEN_MAX_AGE_SECONDS:
+        return False
+    claimed = payload.get("cid")
+    return isinstance(claimed, str) and hmac.compare_digest(claimed, conversation_id)
 
 
 def verify_session_token(token: str) -> SessionContext | None:  # noqa: PLR0911  fail-closed: each invalid shape returns None explicitly

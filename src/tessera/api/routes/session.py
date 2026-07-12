@@ -9,8 +9,11 @@ signature, cookie hardening, and server-side ``auth_state`` derivation are real
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from uuid import UUID
+
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict
+from starlette import status
 from starlette.requests import (
     Request,  # noqa: TCH002  runtime-needed: FastAPI resolves the handler annotation
 )
@@ -19,12 +22,15 @@ from starlette.responses import JSONResponse
 from tessera.api.session import (
     DEMO_CUSTOMER_ID,
     DEMO_CUSTOMER_LABEL,
+    RESUME_TOKEN_HEADER,
     clear_session_cookie,
     issue_session_token,
     resolve_session,
     set_session_cookie,
+    verify_resume_token,
 )
 from tessera.authz import AuthState
+from tessera.memory.transcript import load_transcript
 
 router = APIRouter(tags=["session"])
 
@@ -94,3 +100,70 @@ async def session_logout() -> JSONResponse:
     response = JSONResponse(body.model_dump())
     clear_session_cookie(response)
     return response
+
+
+class OwnTranscriptMessage(BaseModel):
+    """One persisted message of the caller's own conversation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    role: str
+    content: str
+
+
+class OwnTranscript(BaseModel):
+    """The caller's own conversation, replayed for the widget after a reload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    conversation_id: str
+    messages: list[OwnTranscriptMessage]
+
+
+@router.get("/session/transcript", response_model=OwnTranscript)
+async def own_transcript(request: Request, conversation_id: str) -> OwnTranscript:
+    """Replay the caller's OWN conversation, against a signed resume capability.
+
+    Audit 2026-07-12, **P1 F-4**. The product widget used to resume by asking
+    ``/observability/conversation-messages`` for a raw id — an operator endpoint that
+    answered anyone, for any conversation. That surface is now gated
+    (:func:`~tessera.api.security.require_subject_reader`), and the customer keeps its own
+    resume here, where the grant is *proved* rather than assumed: the caller must present
+    the :func:`~tessera.api.session.issue_resume_token` capability this server minted, for
+    **this** conversation, at ``turn.start``.
+
+    Self-authenticating by design — like ``/chat`` and ``/session/login``, it belongs to the
+    customer plane, which has no operator assertion and (today) no per-person identity. The
+    capability is what stands in for one, and it is honest about being a bearer grant: it
+    proves *this browser was told this id by this server*, not *who* the browser belongs to.
+
+    Refusals, in the repo's two-code doctrine — and note that BOTH are 403, deliberately:
+    there is no "log in and retry" here, since logging in would not help. A caller either
+    holds the capability or does not.
+
+    * **403** — no capability presented. The id alone is not a grant (it never was; the
+      conversations directory published it next to the opening user message).
+    * **403** — a capability that does not verify for THIS conversation: forged, edited,
+      expired, or a valid token for a *different* conversation being swapped onto this id.
+    """
+    presented = request.headers.get(RESUME_TOKEN_HEADER)
+    if not presented or not verify_resume_token(presented, conversation_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="a valid resume capability is required for this conversation",
+        )
+    try:
+        stored = await load_transcript(UUID(conversation_id))
+    except ValueError:  # malformed id — the capability cannot have verified for it anyway
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="a valid resume capability is required for this conversation",
+        ) from None
+    return OwnTranscript(
+        conversation_id=conversation_id,
+        messages=[
+            OwnTranscriptMessage(role=m.role, content=m.content)
+            for m in stored
+            if m.role in ("user", "assistant")
+        ],
+    )

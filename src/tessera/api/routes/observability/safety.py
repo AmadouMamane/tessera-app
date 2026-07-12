@@ -14,7 +14,6 @@ from tessera.api.routes.observability._common import (
     _scores_for,
 )
 from tessera.observability import (
-    context_overflow as context_overflow_mod,
     cost_anomaly as cost_anomaly_mod,
     cross_tenant as cross_tenant_mod,
     embedding_inversion as embedding_inversion_mod,
@@ -225,16 +224,6 @@ async def observability_redteam() -> dict[str, object]:
 async def observability_refusal() -> dict[str, object]:
     """Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden)."""
     return asdict(refusal_mod.compute_refusal_calibration())
-
-
-@router.get("/observability/context-overflow")
-async def observability_context_overflow() -> dict[str, object]:
-    """Context truncation/overflow vs the input window across captured turns (#89)."""
-    turns = [
-        (b.question, [c for c in b.context.split("\n\n") if c.strip()])
-        for b in replay_mod.recent_bundles()
-    ]
-    return asdict(context_overflow_mod.analyze_overflow(turns))
 
 
 @router.get("/observability/guard-retraction")

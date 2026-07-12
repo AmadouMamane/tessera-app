@@ -57,15 +57,20 @@ async def test_the_history_route_stamps_its_fixture_half(monkeypatch: pytest.Mon
     carried KPI/trend/distribution blocks with no marker at all, so the operator UI
     presented fixed numbers in the shape of telemetry.
     """
-    # The handler lives in the `fleet` surface module since the god-router split; patch it
-    # where it lives, and call it through the package root re-export, as callers do.
+    # The handler moved to the `pii` surface module (audit 2026-07-12, F-4): its
+    # `live_conversations` block is real transcript data, and a conversation `title` is the
+    # customer's opening message — so the route now sits behind `require_subject_reader`.
+    # Patch it where it lives, and call it through the package root re-export, as callers do.
+    # (The guard is declared on the router, so a direct call still exercises the payload —
+    # which is what this test is about; the refusal itself is proven in
+    # `test_subject_reads_carry_auth.py`.)
     from tessera.api.routes import observability
-    from tessera.api.routes.observability import fleet
+    from tessera.api.routes.observability import pii
 
     async def _no_conversations(agent_id: str, limit: int = 50) -> list[object]:
         return []
 
-    monkeypatch.setattr(fleet.transcript, "list_conversations", _no_conversations)
+    monkeypatch.setattr(pii.transcript, "list_conversations", _no_conversations)
 
     payload = await observability.observability_agent_historique(agent_id="tessera-support")
 

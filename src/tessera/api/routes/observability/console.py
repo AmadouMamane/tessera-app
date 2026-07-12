@@ -1,34 +1,38 @@
-"""Observability routes — console surface."""
+"""Observability routes — console surface. AGGREGATES ONLY.
+
+The subject-scoped reads that used to live here — the transcript, the conversations
+directory, the session detail, the replay bundles, the trajectory, the provenance, the
+trace-snapshot drifts, the console feedback — moved to :mod:`.pii`, behind
+``require_subject_reader`` (audit 2026-07-12, **P1 F-4**). What is left returns counts,
+rates, shapes and config: the public cockpit surface ADR 0009 declares, and it stays public.
+
+Two routes here still *read* subject records on their way to a number — ``tail-sampling``
+(retention statistics over replay bundles) and ``replay-shadow`` (which projects only
+``bundle_id[:12]``, agent, model and timestamps). They are public deliberately, and the read
+ratchet holds them there by name: an aggregate that starts carrying a question or an answer
+must move next door.
+"""
 
 from __future__ import annotations
 
 import sys
 from dataclasses import asdict
-from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.api.routes.observability._common import (
     _read_audit_entries,
     _scores_for,
-    _serialize_conversations,
 )
-from tessera.memory import transcript
 from tessera.observability import (
     agent_console as agent_console_mod,
     assistant as assistant_mod,
-    console_feedback as console_feedback_mod,
     langfuse_obs as langfuse_obs_mod,
-    provenance as provenance_mod,
     replay as replay_mod,
     replay_shadow as replay_shadow_mod,
-    retrieval_quality as retrieval_quality_mod,
-    session_detail as session_detail_mod,
     span_propagation as span_propagation_mod,
     tail_sampling as tail_sampling_mod,
-    trace_snapshot as trace_snapshot_mod,
-    trajectory as trajectory_mod,
 )
 from tessera.observability._asof import occurred_before
 from tessera.observability.spine.runtime import get_runtime_provider
@@ -159,70 +163,6 @@ async def observability_tail_sampling() -> dict[str, object]:
     return asdict(tail_sampling_mod.analyze_sampling(replay_mod.recent_bundles()))
 
 
-@router.get("/observability/conversations")
-async def observability_conversations(
-    agent_id: str = DEFAULT_AGENT_ID,
-    limit: int = 30,
-) -> dict[str, object]:
-    """Recent conversations handled by ``agent_id`` (most-recently-active first).
-
-    Powers the business console's "Récents" list. Degrades to an empty list
-    rather than breaking the console.
-    """
-    try:
-        bounded = max(1, min(limit, 100))
-        return {
-            "available": True,
-            "conversations": _serialize_conversations(
-                await transcript.list_conversations(agent_id, limit=bounded)
-            ),
-        }
-    except Exception as exc:  # never break the console
-        sys.stderr.write(f"tessera.observability.conversations: failed: {exc}\n")
-        return {"available": False, "conversations": []}
-
-
-@router.get("/observability/conversation-messages")
-async def observability_conversation_messages(conversation_id: str) -> dict[str, object]:
-    """The persisted user/assistant messages of one conversation, in order.
-
-    Used by the business console to RESUME a "Récents" conversation: it loads the
-    transcript back into the chat and continues the same ``conversation_id``.
-    Degrades to an empty list for an unknown / malformed id.
-    """
-    try:
-        messages = await transcript.load_transcript(UUID(conversation_id))
-        return {
-            "available": True,
-            "conversation_id": conversation_id,
-            "messages": [
-                {"role": m.role, "content": m.content}
-                for m in messages
-                if m.role in ("user", "assistant")
-            ],
-        }
-    except Exception as exc:  # never break the console
-        sys.stderr.write(f"tessera.observability.conversation_messages: failed: {exc}\n")
-        return {"available": False, "messages": []}
-
-
-@router.get("/observability/session-detail")
-async def observability_session_detail(
-    conversation_id: str, at: str | None = None
-) -> dict[str, object]:
-    """Turn-by-turn detail of one conversation with per-turn agent attribution.
-
-    Shows which agent handled each turn (so a handed-over conversation reads as a
-    clear hand-over) plus the S1 handoff events. ``at`` bounds the handoff read
-    (as-of). Degrades to ``available: false`` for an unknown/empty conversation.
-    """
-    try:
-        return await session_detail_mod.compute_session_detail(conversation_id, at)
-    except Exception as exc:  # never break the page
-        sys.stderr.write(f"tessera.observability.session_detail: failed: {exc}\n")
-        return {"available": False}
-
-
 @router.get("/observability/agent-console")
 async def observability_agent_console(
     lang: str = "fr", agent: str = DEFAULT_AGENT_ID
@@ -242,12 +182,6 @@ async def observability_agent_console(
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_console: failed: {exc}\n")
         return {"available": False}
-
-
-@router.get("/observability/agent-console/feedback")
-async def observability_agent_console_feedback(conversation_id: str) -> dict[str, object]:
-    """Return the persisted ``{turn: rating}`` operator feedback for a conversation."""
-    return {"ratings": console_feedback_mod.console_feedback(conversation_id)}
 
 
 @router.get("/observability/assistant")
@@ -304,12 +238,6 @@ async def observability_replay_shadow(lang: str = "fr") -> dict[str, object]:
         return {"available": False}
 
 
-@router.get("/observability/replays")
-async def observability_replays() -> dict[str, object]:
-    """List the captured turns available for regression replay (newest last)."""
-    return {"bundles": [asdict(b) for b in replay_mod.recent_bundles()]}
-
-
 @router.get("/observability/graph-topology")
 async def observability_graph_topology() -> dict[str, object]:
     """Topology fingerprint of the live agent graph vs the golden pin (#87).
@@ -318,31 +246,3 @@ async def observability_graph_topology() -> dict[str, object]:
     langgraph) and read through the spine port — the cockpit never builds the graph.
     """
     return get_runtime_provider().graph_topology()
-
-
-@router.get("/observability/trace-snapshot")
-async def observability_trace_snapshot() -> dict[str, object]:
-    """Golden-trace snapshot diff of executed-node shapes across turns (#41)."""
-    turns = [(b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()]
-    return asdict(trace_snapshot_mod.diff_traces(turns))
-
-
-@router.get("/observability/trajectory/{bundle_id}")
-async def observability_trajectory(bundle_id: str) -> dict[str, object]:
-    """Step-by-step trajectory of a captured turn (session theater)."""
-    bundle = replay_mod.get_bundle(bundle_id)
-    if bundle is None:
-        raise HTTPException(status_code=404, detail="replay bundle not found")
-    return asdict(trajectory_mod.build_trajectory(bundle))
-
-
-@router.get("/observability/provenance/{bundle_id}")
-async def observability_provenance(bundle_id: str) -> dict[str, object]:
-    """Claim-level attribution of a captured turn to its retrieved chunks."""
-    bundle = replay_mod.get_bundle(bundle_id)
-    if bundle is None:
-        raise HTTPException(status_code=404, detail="replay bundle not found")
-    chunks = [c for c in bundle.context.split("\n\n") if c.strip()]
-    report = await provenance_mod.attribute(bundle.original_answer, chunks)
-    util = retrieval_quality_mod.utilization(report, len(chunks))
-    return {**asdict(report), "utilization": asdict(util)}

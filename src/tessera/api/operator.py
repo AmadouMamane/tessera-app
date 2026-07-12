@@ -50,6 +50,8 @@ __all__ = [
     "MUTATION_ROLES",
     "OPERATOR_ASSERTION_HEADER",
     "OPERATOR_ROLES",
+    "SUBJECT_READ_ROLES",
+    "SUPERADMIN_ROLES",
     "issue_operator_assertion",
     "resolve_request_context",
     "validate_operator_assertion_key",
@@ -100,6 +102,39 @@ MUTATION_ROLES: frozenset[str] = frozenset({"admin", "superadmin"})
 #: Mirrors ``canActOnCollections`` in ``webapp/frontend/lib/auth/roles.ts``. As with the
 #: cockpit pair, the front's copy is the friendly refusal; THIS one is the authority.
 COLLECTIONS_MUTATION_ROLES: frozenset[str] = frozenset({"collections", "admin", "superadmin"})
+
+#: The roles that may read SUBJECT-SCOPED data — a conversation transcript, a session's
+#: turn-by-turn detail, the memory inventory, a subject's erasure footprint (audit
+#: 2026-07-12, **P1 F-4**). Personal data under the GDPR, and until now readable by anyone
+#: on the internet: the observability router was mounted with no route-level auth at all.
+#:
+#: This is the READ plane, so — unlike :data:`MUTATION_ROLES` — it is deliberately *not*
+#: narrower than :data:`OPERATOR_ROLES`. It is exactly equal to it, and each role earns its
+#: place:
+#:
+#: * ``auditor`` — reading IS its trade. ADR 0009 gives it "audit + budget + eval detail";
+#:   an audit role that cannot read what it audits is not an audit role. The asymmetry with
+#:   the mutation plane is the whole doctrine: **the auditor reads and does not write.**
+#: * ``collections`` — the recouvrement console's own role. Its "Récents" list and its
+#:   conversation resume ARE these endpoints (``/observability/conversations``,
+#:   ``/observability/conversation-messages``); cutting it out would gate the console
+#:   against the role it exists for.
+#: * ``admin`` / ``superadmin`` — the platform operators.
+#:
+#: So the gate this set expresses is precisely *"a verified operator, of any role"* — never
+#: *"anyone at all"*, which is what the surface answered before. The equality with
+#: ``OPERATOR_ROLES`` is asserted by the read ratchet, so narrowing it later is a reviewed
+#: edit and not a silent drift.
+SUBJECT_READ_ROLES: frozenset[str] = OPERATOR_ROLES
+
+#: The single role that may grant "an admin may see the synthesis" (``PUT
+#: /settings/synthesis-admin``). An ``admin`` must NOT be able to grant it to itself, which
+#: is exactly what :data:`MUTATION_ROLES` would have allowed: the front already enforced
+#: superadmin-only at its edge (``app/api/settings/synthesis-access/route.ts``) while the
+#: agent, in its own words, "persists the flag without its own role check" — so the rule
+#: lived only in the browser's own BFF. An operator assertion is not path-bound: an admin
+#: holding one minted for any cockpit mutation could replay it here. THIS is the authority.
+SUPERADMIN_ROLES: frozenset[str] = frozenset({"superadmin"})
 
 #: Assertion lifetime. Short — it is minted per turn from a live session, not stored.
 OPERATOR_ASSERTION_MAX_AGE_SECONDS = 5 * 60

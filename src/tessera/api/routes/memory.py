@@ -1,14 +1,31 @@
-"""Memory governance endpoints — GDPR erasure and consent (ADR 0007).
+"""Memory governance endpoints — GDPR erasure, access, rectification and consent (ADR 0007).
 
-These expose the two regulator-facing capabilities of the memory layer:
+These expose the regulator-facing capabilities of the memory layer:
 
 * ``DELETE /memory/{conversation_id}`` — erase every trace of a subject across
   all memory layers (Art. 17). Total regardless of the configured backend.
+* ``GET /memory/{conversation_id}/items`` — the memories held for a subject (Art. 15).
+* ``PATCH /memory/{conversation_id}/items/{memory_id}`` — rectify one (Art. 16).
 * ``PUT /memory/{conversation_id}/consent`` — grant or revoke long-term
   retention consent for a subject.
 
-The subject is identified by its conversation id while no authentication layer
-exists (ADR 0007, "Identity").
+**Two planes, two guards** (audit 2026-07-12, F-4 + F-5). Until then the whole module was
+mounted behind ``dependencies=[Depends(require_bearer)]`` and nothing else, which is a
+service credential the BFF attaches on any caller's behalf: it says *"this came from our
+frontend"*, never *"who is asking"*. Erasing, rectifying or reading the personal data of an
+arbitrary subject demands the second answer.
+
+* the **writes** carry :func:`~tessera.api.security.require_operator` — the cockpit control
+  plane's role set, so the ``auditor`` is refused (it reads and does not write, on every
+  plane) and no anonymous caller can erase or rewrite a subject's record;
+* the **read** carries :func:`~tessera.api.security.require_subject_reader` — every operator
+  role, auditor included, because reading is what an auditor is FOR.
+
+Both are declared on their router rather than at the mount site, so a route added to this
+module cannot forget its guard (the ``mutations.py`` model, and F-1's structural lesson).
+
+The subject is still identified by its conversation id (ADR 0007, "Identity") — the caller,
+now, is identified by a signed operator assertion.
 """
 
 from __future__ import annotations
@@ -16,14 +33,21 @@ from __future__ import annotations
 import uuid  # noqa: TCH003  — FastAPI resolves path-param annotations at runtime
 from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from starlette import status
 from starlette.responses import Response
 
+from tessera.api.security import require_operator, require_subject_reader
 from tessera.memory import governance, persistent
 
-router = APIRouter(tags=["memory"])
+#: The GDPR write plane: erase, rectify, consent. A verified operator with write authority.
+router = APIRouter(tags=["memory"], dependencies=[Depends(require_operator)])
+
+#: The GDPR read plane (Art. 15 access). Subject-scoped personal data, so every operator
+#: role may read it — the auditor above all. Kept a separate router precisely so the read
+#: is not silently swept into the writers' role set, nor the writes into the readers'.
+read_router = APIRouter(tags=["memory"], dependencies=[Depends(require_subject_reader)])
 
 
 class ConsentRequest(BaseModel):
@@ -87,7 +111,7 @@ async def erase_memory(conversation_id: uuid.UUID) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/memory/{conversation_id}/items")
+@read_router.get("/memory/{conversation_id}/items")
 async def list_memory_items(conversation_id: uuid.UUID) -> MemoryItemsResponse:
     """List the memories held for a subject (GDPR Art. 15 access)."""
     subject_id = str(conversation_id)

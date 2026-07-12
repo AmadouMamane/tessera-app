@@ -21,6 +21,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from tessera.api.operator import (
     COLLECTIONS_MUTATION_ROLES,
     MUTATION_ROLES,
+    SUBJECT_READ_ROLES,
+    SUPERADMIN_ROLES,
     resolve_request_context,
 )
 from tessera.authz import AuthState
@@ -38,6 +40,8 @@ __all__ = [
     "require_bearer",
     "require_collections_operator",
     "require_operator",
+    "require_subject_reader",
+    "require_superadmin",
     "validate_bearer_token",
 ]
 
@@ -240,5 +244,81 @@ def require_collections_operator(request: Request) -> SessionContext:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="this role is read-only on the recouvrement business plane",
+        )
+    return session
+
+
+def require_subject_reader(request: Request) -> SessionContext:
+    """FastAPI dependency: this route returns SUBJECT-SCOPED data, so prove who is asking.
+
+    Audit 2026-07-12, **P1 F-4** — ``GET /observability/conversation-messages?conversation_id=…``
+    returned the complete transcript of *any* conversation to *anyone*. The observability
+    router was mounted with no route-level auth (``main.py``, under a comment reading
+    "public surface"), and the front's BFF proxy listed ``observability`` in ``ALWAYS_PUBLIC``
+    — so an anonymous visitor of the public demo reached it through the front, with the
+    service bearer attached on their behalf.
+
+    The uuid4 conversation id was the de-facto capability, and it did not hold: the same
+    router published ``/observability/conversations``, whose rows carry the id **and** the
+    ``title`` — which ``memory/transcript.py`` defines as *"the conversation's opening user
+    message"*. List, then read. The directory defeated the capability.
+
+    Distinct from the mutation guards on purpose. The cockpit plane narrows to writers
+    (:data:`~tessera.api.operator.MUTATION_ROLES`); this one admits **every operator role**
+    (:data:`~tessera.api.operator.SUBJECT_READ_ROLES`) — the ``auditor`` because reading is
+    its trade, ``collections`` because these endpoints ARE its console. The bit that matters
+    here is the one the surface never checked at all: *is a verified operator asking?*
+
+    * **401** — no verified assertion. Anonymous, or a customer. *Authenticate.*
+    * **403** — a verified operator whose role may not read here (unreachable today by
+      construction, since the set equals ``OPERATOR_ROLES``; kept explicit so that
+      narrowing the set is a one-line policy edit and not a rewrite of this guard).
+
+    Returns the verified session so a handler can scope its read to the caller when that
+    becomes possible. It is NOT possible today: the customer plane has no per-person
+    identity (the session cookie is minted only at ``/session/login``, and every demo
+    customer shares one ``DEMO_CUSTOMER_ID``), which is why the customer's own transcript
+    resume goes through a signed capability instead — see
+    :func:`~tessera.api.session.issue_resume_token`.
+    """
+    session, _surface = resolve_request_context(request)
+    if session.auth_state is not AuthState.OPERATOR:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="operator authentication required",
+        )
+    if session.role not in SUBJECT_READ_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="this role may not read subject-scoped data",
+        )
+    return session
+
+
+def require_superadmin(request: Request) -> SessionContext:
+    """FastAPI dependency: only the superadmin may grant "an admin may see the synthesis".
+
+    Audit 2026-07-12, **P1 F-5** — ``PUT /settings/synthesis-admin`` sat behind
+    ``require_bearer`` alone, and the front's BFF said the quiet part out loud: *"The
+    enforcement lives here (the front holds the identity); the agent persists the flag
+    without its own role check."* A rule enforced only in the browser's own BFF is not
+    enforced: the bearer authenticates the frontend *service*, so any caller the BFF proxies
+    — and, with the bearer in hand, any caller at all — could flip the grant.
+
+    Why not :func:`require_operator`? Because ``MUTATION_ROLES`` admits ``admin``, and the
+    whole point of this flag is that an **admin must not grant it to itself**. The operator
+    assertion is not path-bound (it carries principal/role/surface/iat, no audience), so an
+    admin holding one minted for any cockpit mutation could otherwise replay it here.
+    """
+    session, _surface = resolve_request_context(request)
+    if session.auth_state is not AuthState.OPERATOR:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="operator authentication required",
+        )
+    if session.role not in SUPERADMIN_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only the superadmin may grant synthesis access",
         )
     return session

@@ -4,8 +4,18 @@ Was a single 3 219-line, 152-route module (audit 2026-07-10, `god-router`): publ
 PII reads and 26 privileged mutations interleaved in one flat router, with nowhere to attach
 a single ``dependencies=``. That flatness was the root cause of the authorization drift.
 
-The 26 mutations now live in ONE module behind ONE router (``mutations``), which is the seam
-an operator guard mounts on. The reads are grouped by surface. Route paths are unchanged.
+Three planes now, each a router, each its own seam for a guard:
+
+* ``mutations`` — the 26 operator POSTs, behind ``require_operator`` (closed 2026-07-11).
+* ``pii`` — the SUBJECT-SCOPED reads, behind ``require_subject_reader`` (closed by this
+  change, audit 2026-07-12 P1 F-4). Transcripts, session detail, replay bundles, memory
+  inventory, erasure footprints: personal data, and until now served to anyone who asked.
+* everything else — the public aggregate surface ADR 0009 declares: scores, rates, levels,
+  badges, signals. It carries no subject and it stays open.
+
+The split that mattered was never read-vs-write. It is *"can this response identify
+someone?"* — and the 2026-07-10 split, which grouped reads by **page**, could not express it:
+``console`` held the transcript next to the span-propagation probe. Route paths are unchanged.
 """
 
 from __future__ import annotations
@@ -21,6 +31,7 @@ from tessera.api.routes.observability import (
     fleet,
     memory,
     mutations,
+    pii,
     safety,
     signals,
 )
@@ -41,7 +52,6 @@ from tessera.api.routes.observability.business import (
     observability_curation,
     observability_etat_a_date,
     observability_funnel,
-    observability_handoffs,
     observability_improvement,
     observability_inbox,
     observability_journey,
@@ -74,21 +84,13 @@ from tessera.api.routes.observability.compliance import (
 )
 from tessera.api.routes.observability.console import (
     observability_agent_console,
-    observability_agent_console_feedback,
     observability_assistant,
-    observability_conversation_messages,
-    observability_conversations,
     observability_graph_topology,
-    observability_provenance,
     observability_replay_shadow,
-    observability_replays,
-    observability_session_detail,
     observability_span_propagation,
     observability_tail_sampling,
     observability_timeline,
-    observability_trace_snapshot,
     observability_traces_obs,
-    observability_trajectory,
 )
 from tessera.api.routes.observability.evals import (
     observability_calibration,
@@ -114,7 +116,6 @@ from tessera.api.routes.observability.fleet import (
     observability_agent_connaissances,
     observability_agent_evaluations,
     observability_agent_garde_fous,
-    observability_agent_historique,
     observability_agent_lifecycle,
     observability_agent_prompts,
     observability_agent_synthese,
@@ -129,9 +130,7 @@ from tessera.api.routes.observability.fleet import (
 )
 from tessera.api.routes.observability.memory import (
     observability_erasure_coverage,
-    observability_erasure_preview,
     observability_memory,
-    observability_memory_inventory,
 )
 from tessera.api.routes.observability.mutations import (
     observability_ablation,
@@ -161,8 +160,22 @@ from tessera.api.routes.observability.mutations import (
     observability_sycophancy,
     observability_why,
 )
-from tessera.api.routes.observability.safety import (
+from tessera.api.routes.observability.pii import (
+    observability_agent_console_feedback,
+    observability_agent_historique,
     observability_context_overflow,
+    observability_conversation_messages,
+    observability_conversations,
+    observability_erasure_preview,
+    observability_handoffs,
+    observability_memory_inventory,
+    observability_provenance,
+    observability_replays,
+    observability_session_detail,
+    observability_trace_snapshot,
+    observability_trajectory,
+)
+from tessera.api.routes.observability.safety import (
     observability_cross_tenant,
     observability_embedding_inversion,
     observability_embedding_skew,
@@ -218,6 +231,11 @@ router.include_router(fleet.router)
 router.include_router(memory.router)
 router.include_router(safety.router)
 router.include_router(signals.router)
+
+# Subject-scoped reads: transcripts, session detail, replay bundles, memory inventory,
+# erasure footprints. Personal data (GDPR), NOT the public aggregate surface — one router so
+# the read guard, like the mutation guard, has a single seam (audit 2026-07-12, P1 F-4).
+router.include_router(pii.router)
 
 # Mutations: the 26 operator POSTs. Mounted as one router so a guard has a single seam.
 router.include_router(mutations.router)

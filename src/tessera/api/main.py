@@ -360,12 +360,23 @@ def build_app() -> FastAPI:
     # Customer-facing session (demo login/logout) — public like /chat, no bearer
     # gate. It is the server-side source of auth_state the supervisor reads.
     app.include_router(session_routes.router)
-    # Aggregate eval scores are a public surface (ADR 0009) — no bearer gate.
+    # Aggregate eval scores are a public surface (ADR 0009) — no bearer gate. The
+    # SUBJECT-SCOPED reads inside this router (transcripts, session detail, memory
+    # inventory, erasure footprints) are NOT public and never were meant to be: they
+    # carry require_subject_reader on their own router (routes/observability/pii.py).
+    # Audit 2026-07-12, P1 F-4 — this line's old comment said "public surface" flatly,
+    # and the router obeyed it: `GET /observability/conversation-messages` served any
+    # conversation's transcript to anyone.
     app.include_router(observability_routes.router)
-    # Defence in depth: the read surfaces require the bearer token at the route
-    # level too, not only via the global middleware (ADR 0020).
+    # Defence in depth: the read surfaces require the bearer token at the route level
+    # too, not only via the global middleware (ADR 0020). The bearer is a FLOOR here, not
+    # the gate — it says the call came from our frontend, never who made it (F-5). The
+    # memory routers carry the identity guard themselves (require_operator for the GDPR
+    # writes, require_subject_reader for the Art. 15 read), and /settings' write carries
+    # require_superadmin.
     app.include_router(audit.router, dependencies=[Depends(require_bearer)])
     app.include_router(memory.router, dependencies=[Depends(require_bearer)])
+    app.include_router(memory.read_router, dependencies=[Depends(require_bearer)])
     app.include_router(settings_routes.router, dependencies=[Depends(require_bearer)])
 
     # Drop the per-message ASGI "http send"/"http receive" child spans: the SSE

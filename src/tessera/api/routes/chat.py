@@ -43,6 +43,7 @@ from tessera.agent.state import (
 )
 from tessera.agent.supervisor import RoutingDecision, route_turn
 from tessera.api.operator import resolve_request_context
+from tessera.api.session import issue_resume_token
 from tessera.authz import AuthState
 from tessera.guard.audit import (
     current_auth_state,
@@ -830,7 +831,19 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     graph = _streaming_graph()
     config: dict[str, object] = {"configurable": {"thread_id": str(turn_id)}}
     started = time.perf_counter()
-    yield _sse("turn.start", {"conversation_id": str(conversation_id), "turn_id": str(turn_id)})
+    # The resume capability rides with the id it authorizes (audit 2026-07-12, F-4). The
+    # widget stores both and presents them together to re-read ITS OWN transcript, now that
+    # /observability/conversation-messages is operator-only. Knowing the id is no longer
+    # enough — the id was never a secret, it was published next to the opening user message
+    # by /observability/conversations.
+    yield _sse(
+        "turn.start",
+        {
+            "conversation_id": str(conversation_id),
+            "turn_id": str(turn_id),
+            "resume_token": issue_resume_token(str(conversation_id)),
+        },
+    )
 
     # Phase 1: run graph up to (but not including) the reporter node.
     # Escalation and injection-block paths complete fully here. Per-node latencies
