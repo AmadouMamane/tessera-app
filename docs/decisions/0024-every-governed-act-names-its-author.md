@@ -147,8 +147,9 @@ controller.
 one must too. That is the point, and it is the only version of this that survives contact with a
 sixth agent and a bad night.
 
-**Owed, and named rather than quietly skipped.** These are governed acts that still write no
-ledger entry at all — the same class, out of scope for this lane, and now on the record:
+**Owed, and named rather than quietly skipped.** Governed acts that this lane did not close. Kept
+current, because an ADR that lists a closed finding as open is the same species of lie as a ledger
+entry with no author — it is a record that does not match the world.
 
 * `POST /observability/agent-garde-fous/rule-state` — **switching a guardrail off** writes nothing.
 * `PUT /settings/synthesis-admin` — a superadmin privilege grant, no trace.
@@ -157,8 +158,17 @@ ledger entry at all — the same class, out of scope for this lane, and now on t
 * `agent/recouvrement.py` — `requested_by: str = "Julie Dubois"` **is still there** as a default
   one level below the handler, and the 32 business events on the human action path still carry
   `actor="system"` on the envelope.
-* `curation_store.set_decision(decided_by=body.decided_by)` — an actor **taken from the request
-  body**, which is F-1 exactly, still open.
+* ~~`curation_store.set_decision(decided_by=body.decided_by)`~~ — **CLOSED** (`3d47641f`,
+  *"authentication is not attribution — the register was open beside the locked door"*). It is the
+  first finding closed *by* this doctrine rather than *alongside* it, and it is worth recording why
+  that worked: `set_decision` now takes an `Actor`, required. An `Actor` cannot be constructed from
+  a request body — `actor_of` takes a verified session, `Actor.system` names a task, and there is no
+  third constructor — and it rejects an empty principal at construction. **The two ways that record
+  could lie ("the caller chose the name", "the name is blank") became unrepresentable**, which is
+  what a type buys that a code review does not.
+  It also proves the sharper half of the doctrine: that route had carried `require_operator` since
+  the 26 anonymous mutations were closed. **The door was locked and the register was open beside
+  it.** A guard answers *may you come in*; only a server-derived actor answers *who signed*.
 
 ## References
 
