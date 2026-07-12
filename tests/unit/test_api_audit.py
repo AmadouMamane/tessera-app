@@ -39,12 +39,71 @@ def test_entry_normalisation_exposes_auditable_dashboard_fields() -> None:
     )
 
     assert entry.event_type == "tool"
-    assert entry.actor == "llama3.2:3b"
-    assert entry.actor_role == "service"
     assert entry.scope == "eu"
     assert entry.object_label == "AC-12345"
     assert entry.policy_rule == "tool.account_balance.allow"
     assert entry.proof_ref == "abcdef123456"
+    # A version-1 entry recorded no author. It says so. It used to render `model or target` —
+    # so the Journal's "who did this" column showed **llama3.2:3b**, and this test demanded it.
+    assert entry.actor == "auteur non enregistré"
+    assert "llama" not in entry.actor
+    assert entry.actor_role == "service"
+
+
+def test_the_journal_names_the_operator_who_erased_a_record() -> None:
+    """The finding, at the surface a DPO actually reads.
+
+    The GDPR erasure's entry type is ``tessera.guard.audit``. The Journal keyed its actor read
+    on ``type.startswith("tessera.agent.")`` — so the erasure fell through to ``model or
+    target`` and the cockpit displayed **the LLM's model name** in the author column, for the
+    single most consequential act in the system. The name was written in the entry the whole
+    time; the reader looked in the wrong place.
+
+    Keyed now on the *presence of the field*, which is the thing that is actually true.
+    """
+    entry = audit._entry_from_payload(
+        {
+            "version": 3,
+            "occurred_at": "2026-07-12T22:00:00+00:00",
+            "target": "memory.forget",
+            "outcome": "allowed",
+            "model": "llama3.2:3b",
+            "actor": "bob@bank.eu",
+            "actor_role": "admin",
+            "arguments": {"subject_id": "SUB-1"},
+            "decisions": [
+                {"decision": "allow", "policy_rule": "memory.forget.governance", "rationale": "x"}
+            ],
+        }
+    )
+
+    assert entry.actor == "bob@bank.eu"
+    assert entry.actor_role == "human", "a named principal is a person, and can be asked"
+    assert entry.model == "llama3.2:3b", "the model is still recorded — it is simply not the author"
+
+
+def test_the_journal_marks_a_system_actor_as_a_machine() -> None:
+    """The retention purge deleted a person's data. Nobody ordered it, and it says which task did.
+
+    ``system:`` principals are machines that acted on policy — the distinction a reader of an
+    audit trail needs, because a machine cannot be asked what it was thinking. Rendering them as
+    "human" would be the same class of lie in the other direction.
+    """
+    entry = audit._entry_from_payload(
+        {
+            "version": 3,
+            "occurred_at": "2026-07-12T22:00:00+00:00",
+            "target": "memory.forget",
+            "outcome": "allowed",
+            "actor": "system:retention-purge",
+            "actor_role": "system",
+            "arguments": {"subject_id": "SUB-1"},
+            "decisions": [],
+        }
+    )
+
+    assert entry.actor == "system:retention-purge"
+    assert entry.actor_role == "system"
 
 
 def test_overview_counts_current_window_and_previous_delta() -> None:

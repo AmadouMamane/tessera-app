@@ -19,6 +19,7 @@ from typing import Annotated, Literal, cast
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from tessera.authz import SYSTEM_ROLE
 from tessera.guard.ledger_store import (
     active_ledger_tree_status,
     ledger_source,
@@ -269,6 +270,51 @@ def _actor_role(event_type: AuditEventType, outcome: AuditOutcome) -> AuditActor
     return "system"
 
 
+#: What the Journal shows when the entry never recorded an author (audit entry v2 and earlier).
+#: The column used to fall back to ``model or target`` — so the cockpit displayed **the LLM's
+#: model name** as the person who erased a customer's record. That is not an empty column, it is
+#: a wrong one, and it is the shape of mistake that survives review precisely because it looks
+#: populated. An act whose author was never written down says so, and the ``version`` beside it
+#: says why.
+_UNRECORDED_ACTOR = "auteur non enregistré"
+
+
+def _actor_of_payload(
+    payload: dict[str, object],
+    *,
+    is_governance: bool,
+    event_type: AuditEventType,
+    outcome: AuditOutcome,
+) -> tuple[str, AuditActorRole]:
+    """WHO performed the act, read from where the writer puts it: the entry's TOP level.
+
+    Every S1 event — guard audit (v3+), hand-off, routing, lifecycle, invocation, seal — stamps
+    ``actor`` at the top level. Keying the read on the *event type* (``tessera.agent.*``) rather
+    than on the presence of the field is what made the Journal misread the GDPR erasure: the
+    erasure's type is ``tessera.guard.audit``, so it took the ``else`` branch and rendered
+    ``model or target`` — the LLM's model name, in the column headed "who did this". The name
+    was in the entry all along; nobody looked at it.
+
+    ``actor_role`` separates a person from a machine, which is the distinction a reader of an
+    audit trail actually needs: ``system:`` principals (the guard, the retention purge, the
+    reflector) acted on policy and cannot be asked what they were thinking; everything else is
+    somebody who can. The old heuristic survives for entries that predate the field, and only
+    for them — it *infers* a role from the event's shape, and inference is exactly what a
+    recorded actor replaces.
+    """
+    recorded = _first_text(payload.get("actor"))
+    if recorded:
+        role = _first_text(payload.get("actor_role"))
+        is_machine = role == SYSTEM_ROLE or recorded.startswith(f"{SYSTEM_ROLE}:")
+        return recorded, "system" if is_machine else "human"
+    if is_governance:
+        # Governance events (routing/hand-off) have always carried "system" here; keep their
+        # existing label untouched, so this change adds honesty where there was a lie and
+        # changes nothing where there was not.
+        return "système", "human"
+    return _UNRECORDED_ACTOR, _actor_role(event_type, outcome)
+
+
 def _object_label(target: str, arguments: dict[str, object], policy_rule: str | None) -> str:
     for key in ("account_id", "ticket_id", "subject_id", "conversation_id", "trace_id"):
         text = _first_text(arguments.get(key))
@@ -328,7 +374,9 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
     data_residency = _first_text(payload.get("data_residency"))
     hash_value = _first_text(payload.get("hash"))
     raw_version = payload.get("version")
-    actor = (_first_text(payload.get("actor")) or "système") if is_governance else (model or target)
+    actor, actor_role = _actor_of_payload(
+        payload, is_governance=is_governance, event_type=event_type, outcome=outcome
+    )
     object_label = (
         _governance_label(event_kind, payload)
         if is_governance
@@ -348,7 +396,7 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
         hash=hash_value,
         event_type=event_type,
         actor=actor,
-        actor_role="human" if is_governance else _actor_role(event_type, outcome),
+        actor_role=actor_role,
         scope=data_residency or "local",
         object_label=object_label,
         policy_rule=policy_rule,
