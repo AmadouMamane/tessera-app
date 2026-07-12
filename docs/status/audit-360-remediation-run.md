@@ -112,12 +112,106 @@ a curl*, and *a failing boot must refuse loudly, not bury an `OSError` in a log*
 
 ### Owed follow-ups
 
-- F-5 (memory/GDPR mutations behind `require_bearer` only) is the *next* window; the
-  ratchet deliberately recognises `require_bearer` as an auth floor so that finding stays
-  a "weaker guard" finding, not an "absent guard" one.
 - The e2e path (`recouvrement-product-experience`) still calls these routes as a logged-in
   collections operator — expected unaffected (the BFF mints for it), to be confirmed by the
   seeded e2e run when the CI witness returns.
 - Front demo note: the assistant drawer is now honestly auth-gated — an anonymous visitor
   of the public demo can *see* the recouvrement page only if routed there, and its assistant
   actions now 401 at the edge instead of silently writing to the ledger.
+
+---
+
+## F-4 + F-5 + F-9 — P1 · PII reads, GDPR mutations, and published default credentials
+
+**Status: closed on `claude/fix-pii-reads-and-default-accounts`, all four witnesses green.**
+Base: `main` = `6b78055f` (carries F-1). Three commits: the agent identity model
+(`29f1f71d`), the BFF edge (`494a2721`), the default accounts (`44f20795`).
+
+One sentence each. **F-5**: `DELETE/PATCH/PUT /memory/*` and `PUT /settings/synthesis-admin`
+sat behind `require_bearer` alone — provenance, not identity — and the *ratchet built to
+close F-1 was certifying them as safe*. **F-4**: `GET /observability/conversation-messages`
+returned any conversation's transcript to anyone, and `GET /observability/conversations`
+published the ids next to the opening user message (`title`) — a directory, then a read.
+**F-9**: `admin/tessera-admin` and its siblings, published in this repo, stayed valid in any
+deployment missing three env vars — fail-OPEN, the bearer's old shape.
+
+### The one that mattered: the guard-rail embodied the confusion
+
+F-5's first gesture was to remove `require_bearer` from the mutation ratchet's
+`KNOWN_AUTH_GUARDS`. The ratchet went red on exactly `/memory/*` and `/settings/*` — *that
+red was F-5* — and it is green again by giving those routes an identity guard
+(`require_operator`, `require_superadmin`), never by an exception. `UNGATED_EXCEPTIONS` stays
+frozen at zero.
+
+### The payload is the judge, and it found what review missed
+
+The read ratchet (`test_subject_reads_carry_auth.py`) does not reason about which store a
+handler touches — it seeds a canary into every store holding a person's words, sweeps every
+GET as an anonymous caller, and fails if the canary comes back. It caught **three leaks the
+audit and a dedicated payload survey had both filed as aggregates**: `/observability/handoffs`
+and `/observability/context-overflow` (each echoes a turn's question as a row label) and
+`/observability/agent-historique` (a synthetic dashboard with one real `live_conversations`
+block). Mutation-tested: with the guard removed it goes red and names all eleven+three
+leaking routes with the exact strings they emit.
+
+### An empty state is not a refusal (the trap in the fix itself)
+
+`historique/[sessionId]/page.tsx` returned `null` on failure and rendered "aucune
+conversation"; the security dashboard rendered `?? 0`. Gating the endpoints without fixing
+these callers would have told an anonymous visitor the transcript was *empty* and *0 memories
+were expiring* — trading a leak for a lie. Both now distinguish "there is no data" from "you
+may not see it" (`isAccessDenied`, three locales).
+
+### Live proof — reference server (`02ad18dc`, "before") vs preview from this worktree (`44f20795`, "after")
+
+`make dev-status` confirmed the HEAD under test on both sides before every curl. `/healthz`
+200 throughout is what makes each 401 mean *"refuses"*, not *"server down"*.
+
+| call | before (main-ish) | after (branch) |
+|---|---|---|
+| `GET /healthz` (positive control) | 200 | **200** |
+| `GET :8099/observability/conversation-messages`, anon (agent direct) | **200** | **401** |
+| `GET :3097/api/observability/conversation-messages`, anon (public BFF door) | **200** | **401** |
+| `GET /observability/conversations`, anon (the enumerator — 7.4 kb of ids+titles) | **200** | **401** |
+| `GET /observability/erasure-coverage`, anon (public aggregate, 3 ints) | 200 | **200** |
+| `GET /observability/scores · snapshot · fleet · tail-sampling · memory`, anon | 200 | **200** |
+| `GET /observability/{conversations,memory-inventory}`, **auditor** assertion | — | **200** |
+| `GET /observability/conversations`, **collections** assertion (its console) | — | **200** |
+| `DELETE /memory/{id}`, anon | 200/bearer | **401** |
+| `DELETE /memory/{id}`, **auditor** (reads, does not write) | — | **403** |
+| `PUT /settings/synthesis-admin`, **admin** (may not grant itself) | — | **403** |
+| `PUT /settings/synthesis-admin`, **superadmin** (the one role that may) | — | **200** |
+| `GET /session/transcript`, id only (leaked) | — | **403** |
+| `GET /session/transcript`, valid token for *another* conversation, swapped | — | **403** |
+| `GET /session/transcript`, matching signed capability | — | **200** |
+
+Non-regression, in one line: the public aggregate cockpit is untouched (200), the auditor and
+collections still read their surfaces (200), and the customer still resumes their own chat
+(200) — while every anonymous PII read and every under-gated GDPR mutation now refuses.
+
+F-9 is a boot-time module decision, proven by the 13 vitest cases exercising the real
+`accounts.ts` (no logic mocked): defaults refused under staging/production/`NODE_ENV=production`,
+kept under unset/local/ci, an explicit password accepted, the refusal named in the log.
+
+### Witnesses
+
+- **gate ×2**, real exit codes `0` and `0` (1811 pytest + 251 vitest + mypy strict + ruff +
+  tsc + biome). Not echo-piped — `$?` captured directly.
+- **live refusal** proven on servers booted from *this* worktree (`dev-status`: `44f20795`),
+  same URLs/ports that answered 200 the moment before on the reference checkout.
+- **positive control** (`/healthz` 200) on every probe.
+- **non-regression**: aggregates public, auditor/collections read, superadmin writes, customer
+  resumes — all 200.
+
+### Known-open / owed
+
+- **CI witness still absent** (billing-blocked): the two consecutive local gates are the only
+  guard rail, same posture as every merge since 2026-07-10.
+- **The seeded e2e run** for the resume flow and the gated cockpit pages is owed when CI
+  returns; the vitest layer covers the units, not the browser round-trip.
+- **`main` advanced to `02ad18dc`** (eval commits) during this work; the branch is based on
+  `6b78055f` and must be rebased onto current `main` before the fast-forward.
+- **Systemic class, logged not fixed here** (operator ruling): three defects this week share
+  one shape — `extra="ignore"` swallowing a wrong Ollama field, a wrong `response_model`
+  stripping fields, `audit_sink=stdout` cutting the chain — *silent union where a loud failure
+  belonged*. Owed as a debt sweep (`extra="forbid"` on settings), not this lane.
