@@ -122,6 +122,19 @@ eval-null-write: install
 	uv run python scripts/check_ratchet.py \
 		--report $(NULL_REPORT) --baseline $(NULL_BASELINE) --write
 
+# Grade a model on its CONTRIBUTION over the null floor, not on its absolute rate
+# (ruling 2026-07-12). llama3.2:3b and gemma3:27b both score 157/174 — the absolute rate
+# cannot tell apart a model that degrades the agent from one that does not.
+#   make eval-contribution REPORT=eval/reports/sweep/gemma3-27b.json MIN=30
+eval-contribution: install
+	@test -n "$(REPORT)" || (echo "REPORT= is required" && exit 2)
+	@test -n "$(MIN)" || (echo "MIN= is required — rule 2's bar is calibrated on a sweep, never defaulted" && exit 2)
+	uv run python scripts/check_contribution.py --report $(REPORT) --min-contribution $(MIN)
+
+# Replay the catalogue against every local model and compare them against the null floor
+eval-sweep: install
+	uv run python scripts/run_model_sweep.py
+
 # Run one case: make eval-case CASE=07_prompt_injection_roleplay
 eval-case: install
 	uv run python scripts/run_eval.py --case $(CASE)

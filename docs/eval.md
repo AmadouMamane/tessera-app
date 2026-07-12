@@ -248,6 +248,57 @@ The ratchet's own tests (`tests/unit/test_eval_ratchet.py`) are half **mutation
 tests** — each takes a passing run, breaks exactly one thing, and asserts the
 ratchet blocks. A ratchet that cannot fail polices nothing while reading green.
 
+## The contribution gate — how a model is graded
+
+**Ruling of 2026-07-12: the eval gate grades the model's CONTRIBUTION, never its
+absolute rate.** The null floor (122/174) is a property of the *catalogue*, not of the
+model. An absolute rate adds the two together and discriminates nothing — and the first
+sweep proved it in the sharpest possible way:
+
+| Model | Absolute | Rule 1 — breaks the floor | Rule 2 — contribution |
+| --- | --- | --- | --- |
+| llama3.2:3b | 157/174 | **1 → BLOCK** | 36/52 |
+| gemma3:27b | 157/174 | 0 → pass | 35/52 |
+
+**The same number, 157/174, for a model that degrades the agent and one that does
+not.** The absolute rate cannot tell them apart. The delta over the floor can.
+
+`eval/contribution.py` implements three rules, whose populations are *derived* from the
+committed null baseline rather than written down:
+
+**Rule 1 — no regression on the floor.** Of the 122 runs the null control passes, the
+model must break **zero**. A model that makes the agent worse than *no model at all*
+passes no gate, whatever it scores elsewhere.
+
+Because sampling is stochastic — the same llama3.2:3b broke 3 runs on one pass and 1 on
+the next — a break only counts once **reproduced**. `scripts/check_contribution.py`
+replays each candidate; a break that fails twice is a regression, a break that passes on
+replay is noise and is reported but not fatal. A replay in which no model answered is
+*inconclusive*, never a clearance.
+
+**Rule 2 — positive contribution.** Of the 52 runs the null control *fails*, the model
+must close at least `--min-contribution`. That is the only population where a model can
+prove anything at all. The bar is calibrated on a sweep, never invented.
+
+**Rule 3 — no credit for the powerless.** A category the null control already passes in
+full (`policy_violation` 15/15, `escalation_failure` 6/6) cannot earn a model a single
+point. This is arithmetic, not an exclusion list: such a category has, by construction,
+no run in Rule 2's population. It is computed and reported so that it stays visible as
+the catalogue grows and categories gain or lose their power.
+
+> Rule 3 removes **credit**, never the floor's **protection**. The distinction is not
+> academic: the only reproducible regression the first sweep found was a
+> `policy_violation` case, so exempting those categories from Rule 1 would have forgiven
+> precisely the one thing the gate exists to catch. They remain inside Rule 1's 122.
+
+```bash
+uv run python scripts/check_contribution.py \
+    --report eval/reports/sweep/gemma3-27b.json --min-contribution 30
+```
+
+The bars are a **function of the measured floor**, never an absolute number. When the
+catalogue changes, the floor is re-measured and the populations move with it.
+
 ## Grounding score semantics
 
 The reviewer (`src/tessera/agent/reviewer.py`) produces the grounding signal the

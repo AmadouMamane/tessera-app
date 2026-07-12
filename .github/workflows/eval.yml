@@ -41,6 +41,10 @@ on:
         description: "Restrict the replay to one language (fr, de, en). Empty = all."
         required: false
         default: ""
+      min_contribution:
+        description: "Rule 2's bar — how many of the 52 floor-failing runs the model must close. Calibrated on a sweep, never invented."
+        required: false
+        default: "30"
 
 permissions:
   contents: read
@@ -119,6 +123,17 @@ jobs:
       # `model` field claims. Fail rather than file it.
       - name: Assert a model actually answered
         run: uv run python scripts/assert_model_spoke.py eval/reports/replay.json
+
+      # The contribution gate (ruling 2026-07-12). The absolute rate is NOT the grade:
+      # llama3.2:3b and gemma3:27b both score 157/174, yet one of them breaks a case the
+      # agent passes with no model at all. Rule 1 — zero regressions on the 122 runs the
+      # null floor passes (each candidate replayed, because sampling is stochastic).
+      # Rule 2 — close at least `min_contribution` of the 52 runs the floor fails.
+      - name: Contribution gate (delta over the null floor)
+        run: |
+          uv run python scripts/check_contribution.py \
+            --report eval/reports/replay.json \
+            --min-contribution ${{ inputs.min_contribution }}
 
       # The per-agent eval-gate: each agent is replayed against its bound set
       # (curated subset + the shared security floor) under the two-level gate

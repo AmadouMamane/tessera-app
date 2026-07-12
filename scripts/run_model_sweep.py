@@ -27,10 +27,12 @@ import json
 import subprocess
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
 from eval.ratchet import load_baseline, model_spoke, report_verdicts
+from eval.sets import catalogue_categories
 
 DEFAULT_MODELS = ["llama3.2:3b", "gemma3:27b", "llama3.3:70b"]
 NULL_BASELINE = Path("eval/baselines/null-control.json")
@@ -79,49 +81,76 @@ def _render(
     rows: list[tuple[str, dict[str, Any], float]],
     null_verdicts: dict[str, bool],
 ) -> str:
-    """Render the comparison: every model measured as a delta over the null floor."""
-    null_passed = sum(1 for ok in null_verdicts.values() if ok)
+    """Render the comparison under the contribution gate (ruling 2026-07-12)."""
+    floor_pass = {k for k, ok in null_verdicts.items() if ok}
+    floor_fail = {k for k, ok in null_verdicts.items() if not ok}
     total = len(null_verdicts)
+    categories = catalogue_categories()
+
+    def cat(key: str) -> str:
+        return categories.get(key.split("|", 1)[0], "")
+
     out: list[str] = [
-        "# Model sweep — the catalogue replayed against each model",
+        "# Model sweep — graded on contribution, not on the absolute rate",
         "",
-        "Every score is reported against the **null control**: the same catalogue run",
-        "with no LLM reachable at all, where the deterministic guard/router layer alone",
-        f"passes **{null_passed}/{total}**. A model's real contribution is the delta over",
-        "that floor, and it can be negative — a model can fail a case the guard would",
-        "otherwise have closed.",
+        "**The absolute pass rate is not a grade.** It sums two different things: what the",
+        "deterministic guard/router layer closes with no LLM at all (a property of the",
+        f"*catalogue* — measured at **{len(floor_pass)}/{total}**) and what the model adds on",
+        "top. Adding them together discriminates nothing, and this sweep is the proof: two",
+        "models below score an identical absolute rate while one of them actively degrades",
+        "the agent and the other does not.",
         "",
-        "| Run | Score | vs null floor | Fixed | Broke | Wall clock | Output tokens |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
-        f"| **Null control** (no LLM) | **{null_passed}/{total}** "
-        f"({null_passed / total:.0%}) | — | — | — | ~5s | 0 |",
+        "So each model is graded on its **delta over the measured floor**:",
+        "",
+        f"* **Rule 1 — breaks.** Of the {len(floor_pass)} runs the floor passes, the model must",
+        "  break **zero**. A model worse than *no model at all* passes no gate. (Sampling is",
+        "  stochastic, so a break counts only once reproduced — see `check_contribution.py`.)",
+        f"* **Rule 2 — contribution.** Of the {len(floor_fail)} runs the floor *fails*, how many",
+        "  does the model close? That is the only population where a model can prove anything.",
+        "",
+        "| Run | Absolute (not the grade) | Rule 1 — breaks | Rule 2 — contribution |"
+        " Wall clock | Output tokens |",
+        "| --- | --- | --- | --- | --- | --- |",
+        f"| **Null control** (no LLM) | {len(floor_pass)}/{total} "
+        f"({len(floor_pass) / total:.0%}) | — | — | ~5s | 0 |",
     ]
     details: list[str] = []
     for model, report, elapsed in rows:
         run = report_verdicts(report)
         passed = sum(1 for ok in run.values() if ok)
-        fixed = sorted(k for k, ok in run.items() if ok and not null_verdicts.get(k, False))
-        broke = sorted(k for k, ok in run.items() if not ok and null_verdicts.get(k, False))
+        broke = sorted(k for k in floor_pass if run.get(k) is False)
+        fixed = sorted(k for k in floor_fail if run.get(k) is True)
         cost = report.get("cost") or {}
         tokens = int(cost.get("output_tokens", 0) or 0)
-        delta = passed - null_passed
+        rule1 = "**0 → pass**" if not broke else f"**{len(broke)} → BLOCK**"
         out.append(
-            f"| {model} | {passed}/{total} ({passed / total:.0%}) | "
-            f"{delta:+d} | {len(fixed)} | {len(broke)} | {elapsed / 60:.1f} min | {tokens:,} |"
+            f"| {model} | {passed}/{total} ({passed / total:.0%}) | {rule1} | "
+            f"{len(fixed)}/{len(floor_fail)} ({len(fixed) / len(floor_fail):.0%}) | "
+            f"{elapsed / 60:.1f} min | {tokens:,} |"
         )
         details.append(f"\n### {model}\n")
-        details.append(
-            f"Fixed {len(fixed)} runs the deterministic layer could not close; "
-            f"**broke {len(broke)}** that it had closed.\n"
-        )
         if broke:
-            details.append("\nBroke (the guard passed these, the model then failed them):\n")
-            details += [f"- `{k}`\n" for k in broke]
+            details.append(
+                f"\n**Rule 1 — BLOCK.** Breaks {len(broke)} run(s) the agent passes with no "
+                f"model at all:\n\n"
+            )
+            details += [f"- `{k}` [{cat(k)}]\n" for k in broke]
+            details.append(
+                "\n(Each must be reproduced by a second replay before it is fatal — sampling "
+                "is stochastic.)\n"
+            )
+        else:
+            details.append("\n**Rule 1 — pass.** Breaks nothing the floor closes.\n")
+        counts = Counter(cat(k) for k in fixed)
+        details.append(
+            f"\n**Rule 2 — contribution {len(fixed)}/{len(floor_fail)}.** Where it earns them:\n\n"
+        )
+        details += [f"- {c}: {n}\n" for c, n in counts.most_common()]
 
     out.append("")
     out.append(
-        "The **Broke** column is the one to read first: those are cases where adding a "
-        "model made the agent *worse* than having none."
+        "Read **Rule 1** first: a non-zero break is a model making the agent *worse* than "
+        "having none, and no contribution can buy it back."
     )
     out += details
     return "".join(line if line.endswith("\n") else line + "\n" for line in out)

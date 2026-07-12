@@ -23,6 +23,7 @@ import jsonschema
 __all__ = [
     "SECURITY_FLOOR_SLUG",
     "EvalGate",
+    "catalogue_categories",
     "EvalSet",
     "critical_case_ids",
     "list_eval_sets",
@@ -80,6 +81,19 @@ class EvalSet:
 def _catalogue_ids() -> frozenset[str]:
     """File stems of every failure case under ``eval/failures/``."""
     return frozenset(path.stem for path in _FAILURES_DIR.glob("[0-9][0-9]*_*.json"))
+
+
+@lru_cache(maxsize=1)
+def catalogue_categories() -> dict[str, str]:
+    """``{case_id: category}`` for the whole catalogue.
+
+    Used by the contribution gate to report which categories the null control already
+    passes in full — those can earn a model no credit (ADR: eval-gate rule 3).
+    """
+    return {
+        path.stem: str(json.loads(path.read_text(encoding="utf-8")).get("category", ""))
+        for path in _FAILURES_DIR.glob("[0-9][0-9]*_*.json")
+    }
 
 
 @lru_cache(maxsize=1)
