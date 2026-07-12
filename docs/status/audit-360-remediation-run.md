@@ -89,6 +89,27 @@ the seam: direct call without a session refuses (`TypeError` at bind), and
 test also gained the end-to-end attribution assert:
 `artifact.content.last_action_requested_by == "aline.durand"`, the assertion's principal.
 
+### 2026-07-12 · the attack, closed on a running server (not only in tests)
+
+Proven against the branch booted on the canonical ports (`dev-status`: git `812e37e3` on
+both), with the **same URLs and the same ports** that answered `200 OK` the day before on
+`main` (`dev-status`: git `5cf51435`) — so the before/after reads directly:
+
+| call | main (`5cf51435`) | branch (`812e37e3`) |
+|---|---|---|
+| `GET :8099/healthz` (positive control) | 200 | **200** |
+| `POST :8099/recouvrement-assistant/action`, anonymous | **200** | **401** |
+| `POST :3097/api/recouvrement-assistant/action`, anonymous, `requested_by: "Mallory"` | **200** | **401** |
+
+The `healthz` 200 is what makes the two 401s mean *"the route refuses"* rather than
+*"the server is down"*. The first attempt to prove this failed for reasons that had
+nothing to do with the fix, and the reasons are worth recording: the servers under test
+were the **reference checkout's** (main, pre-fix) — `dev-status` exists precisely to say
+so and was the tool that caught it — and the subsequent worktree preview died on a
+**metrics-port collision** (see the `chore(dev)` commit below), leaving an orphan frontend
+that blocked the retry. Two lessons, both cheap: *always read `dev-status` before trusting
+a curl*, and *a failing boot must refuse loudly, not bury an `OSError` in a log*.
+
 ### Owed follow-ups
 
 - F-5 (memory/GDPR mutations behind `require_bearer` only) is the *next* window; the
