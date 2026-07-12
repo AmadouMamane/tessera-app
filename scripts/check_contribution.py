@@ -32,9 +32,15 @@ from eval.sets import catalogue_categories
 NULL_BASELINE = Path("eval/baselines/null-control.json")
 
 
-def _replay(case_id: str, language: str, model: str, tmp: Path) -> bool | None:
-    """Replay one (case, language) against the model. True/False = passed; None = no verdict."""
-    report = tmp / f"{case_id}_{language}.json"
+#: A replay in which no model answered proves nothing — but it is usually transient (a
+#: model swap under memory pressure, observed live during the first sweep), not a dead
+#: backend. Retry before giving up, rather than reporting a whole run inconclusive on one
+#: hiccup.
+_REPLAY_ATTEMPTS = 3
+
+
+def _replay_once(case_id: str, language: str, model: str, report: Path) -> bool | None:
+    """One replay. True/False = the case passed/failed; None = no model answered."""
     subprocess.run(
         [
             sys.executable,
@@ -56,11 +62,23 @@ def _replay(case_id: str, language: str, model: str, tmp: Path) -> bool | None:
         return None
     payload = json.loads(report.read_text(encoding="utf-8"))
     if not model_spoke(payload):
-        # A replay in which no model answered proves nothing either way; refuse to let it
-        # silently "confirm" or "clear" a break.
+        # 0 generated tokens: the model never answered, so this replay neither confirms
+        # nor clears the break. Never treat it as a clearance — a dead backend would
+        # otherwise absolve every regression at once.
         return None
-    verdicts = report_verdicts(payload)
-    return verdicts.get(f"{case_id}|{language}")
+    return report_verdicts(payload).get(f"{case_id}|{language}")
+
+
+def _replay(case_id: str, language: str, model: str, tmp: Path) -> bool | None:
+    """Replay a case, retrying past transient no-answer runs. None = still inconclusive."""
+    for attempt in range(_REPLAY_ATTEMPTS):
+        report = tmp / f"{case_id}_{language}_{attempt}.json"
+        verdict = _replay_once(case_id, language, model, report)
+        if verdict is not None:
+            return verdict
+        sys.stdout.write("(no model answer, retrying) ")
+        sys.stdout.flush()
+    return None
 
 
 def _confirm_breaks(candidates: list[str], model: str) -> tuple[set[str], list[str]]:

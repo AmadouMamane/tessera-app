@@ -108,7 +108,11 @@ def _render(
         f"* **Rule 2 — contribution.** Of the {len(floor_fail)} runs the floor *fails*, how many",
         "  does the model close? That is the only population where a model can prove anything.",
         "",
-        "| Run | Absolute (not the grade) | Rule 1 — breaks | Rule 2 — contribution |"
+        "A break here is a **candidate**: sampling is stochastic, so `check_contribution.py`",
+        "replays each one and only a break that fails twice is a regression. On the first",
+        "sweep, 3 of llama3.3:70b's 4 candidates turned out to be noise.",
+        "",
+        "| Run | Absolute (not the grade) | Rule 1 — candidate breaks | Rule 2 — contribution |"
         " Wall clock | Output tokens |",
         "| --- | --- | --- | --- | --- | --- |",
         f"| **Null control** (no LLM) | {len(floor_pass)}/{total} "
