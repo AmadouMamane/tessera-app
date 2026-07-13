@@ -20,6 +20,7 @@ to a path exactly as it speaks to a URL. No network, and therefore no reason to 
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -46,6 +47,62 @@ def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
     )
+
+
+def _merge_ff_only(repo: Path, branch: str) -> subprocess.CompletedProcess[str]:
+    """The exact command both lanes ran on 2026-07-13, and it looked completely innocent."""
+    return subprocess.run(  # noqa: S603  literal argv, hermetic temp repo
+        ["git", "merge", "--ff-only", branch],  # noqa: S607
+        cwd=repo,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _install_guard(repo: Path) -> None:
+    """Wire the guard into ``repo`` **exactly as `make hooks` wires it into this one**.
+
+    Two details here are load-bearing, and the first version of this fixture had both wrong —
+    which made the hook test pass *for the wrong reason*, i.e. it made it an instance of the
+    disease it was written to catch.
+
+    * **A real interpreter at `.venv/bin/python`.** The hook runs that one and nothing else (the
+      system python3 on macOS is 3.9, and `verdict.py` needs 3.11+). With no interpreter there,
+      the hook never gets as far as the guard: it refuses with *"no interpreter"*, git aborts the
+      transaction, the string `main-guard` duly appears in stderr — and an assertion looking for
+      that string goes green **while the guard has not run at all**. The merge was refused because
+      the witness was ASLEEP, not because it looked and objected.
+
+    * **Installed into the COMMON `.git/hooks/`** — never `core.hooksPath`, which is the precise
+      mis-wiring this guard exists to have survived (relative, it resolves against each worktree's
+      own root, so it never reached `main`). The old fixture set `core.hooksPath` — testing the
+      guard through a wiring that `test_core_hookspath_is_not_hijacked` forbids the Makefile from
+      ever using again. A test that installs a thing the way nobody installs it is testing a
+      fiction.
+    """
+    (repo / "scripts").mkdir(exist_ok=True)
+    (repo / "scripts" / "main_guard.py").write_text(
+        (_ROOT / "scripts" / "main_guard.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    (repo / "src" / "tessera").mkdir(parents=True, exist_ok=True)
+    (repo / "src" / "tessera" / "__init__.py").write_text("", encoding="utf-8")
+    (repo / "src" / "tessera" / "verdict.py").write_text(
+        (_ROOT / "src" / "tessera" / "verdict.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    venv_bin = repo / ".venv" / "bin"
+    venv_bin.mkdir(parents=True, exist_ok=True)
+    (venv_bin / "python").symlink_to(sys.executable)
+
+    common = Path(
+        _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir").stdout.strip()
+    )
+    hooks = common / "hooks"
+    hooks.mkdir(parents=True, exist_ok=True)
+    installed = hooks / _HOOK.name
+    installed.write_text(_HOOK.read_text(encoding="utf-8"), encoding="utf-8")
+    installed.chmod(0o755)
 
 
 def _commit(cwd: Path, lane: str, message: str) -> str:
@@ -227,8 +284,15 @@ class TestTheLegalAdvance:
         assert exit_code(verdict) == EXIT_OK
 
     def test_a_deletion_has_no_history_to_fork(self) -> None:
-        """An all-zero oid is a creation or a deletion. There is no divergent history to make."""
-        assert main_guard.main(["0" * 40]) == EXIT_OK
+        """An all-zero oid is a creation or a deletion. There is no divergent history to make.
+
+        Through the **CLI**, deliberately: `advance` is the verb the hook actually invokes, and
+        this test called the guard's *previous* argument shape (a bare tip, no subcommand) for as
+        long as it took to notice — it raised `SystemExit(2)` inside argparse, which is the same
+        exit code as a refusal. A test that drives an interface the caller does not use is a test
+        of a program nobody runs.
+        """
+        assert main_guard.main(["advance", "0" * 40]) == EXIT_OK
 
     def test_the_bypass_passes_but_says_so_out_loud(
         self, forked: dict[str, Path | str], monkeypatch: pytest.MonkeyPatch
@@ -251,58 +315,131 @@ class TestTheLegalAdvance:
 class TestTheHookIsWhatActuallyRefuses:
     """*A guard is what refuses a stranger* — not what appears in a list of guards (ADR 0026).
 
-    So the hook is not read. It is **installed into a real repository, and the real forbidden
-    `git merge --ff-only` is run against it.** `KNOWN_AUTH_GUARDS` certified an anonymous DELETE
-    because membership of a list had been asserted by nobody; this file does not repeat that.
+    So the hook is not read. It is **installed into a real repository, wired up the way `make
+    hooks` wires it, given a real interpreter — and the real forbidden `git merge --ff-only` is
+    run against it.** `KNOWN_AUTH_GUARDS` certified an anonymous DELETE because membership of a
+    list had been asserted by nobody; this file does not repeat that.
+
+    .. rubric:: And the first version of this class WAS GREEN FOR THE WRONG REASON
+
+    Which is worth spelling out, because it is the disease the whole file is about, caught inside
+    the test written to catch it. The fixture installed no interpreter at `.venv/bin/python`. So
+    the hook never reached the guard at all: it refused with *"no interpreter at .venv/bin/python"*,
+    git aborted the transaction, the string `main-guard` appeared in stderr — and the sole
+    assertion, ``assert "main-guard" in merge.stderr``, passed. **A hook that could not run the
+    guard produced a green test for a guard that never ran.** The sha of the remote's actual tip
+    appeared nowhere in that output, for the excellent reason that nobody had asked the remote.
+
+    So the assertion is now the one thing a wrong implementation *cannot fake*: **the refusal must
+    name the sha `origin/main` is actually at.** A hook that cannot run cannot print it. A guard
+    reading `refs/remotes/origin/main` cannot print it either — the stale cache has never seen it.
+    A test must demand the evidence of what was LOOKED AT, not merely the fact that something spoke.
     """
 
     def test_a_real_forking_merge_is_refused_by_git_itself(
         self, forked: dict[str, Path | str]
     ) -> None:
-        """The incident, end to end: a legal-looking fast-forward, aborted by the hook.
+        """The incident, end to end: a legal-looking fast-forward, aborted by the hook — and the
+        refusal NAMES THE FORK it prevented.
 
-        Mutation: `chmod -x .githooks/reference-transaction`, or make it `exit 0`. The merge
-        succeeds and `main` forks — in a test, this time.
+        Mutation: `chmod -x` the installed hook, or make it `exit 0`. The merge succeeds and
+        `main` forks — in a test, this time.
         """
         us = forked["us"]
         assert isinstance(us, Path)
-
-        # Install the guard exactly as a checkout would carry it.
-        (us / "scripts").mkdir()
-        (us / "scripts" / "main_guard.py").write_text(
-            (_ROOT / "scripts" / "main_guard.py").read_text(encoding="utf-8"), encoding="utf-8"
-        )
-        (us / "src" / "tessera").mkdir(parents=True)
-        (us / "src" / "tessera" / "__init__.py").write_text("", encoding="utf-8")
-        (us / "src" / "tessera" / "verdict.py").write_text(
-            (_ROOT / "src" / "tessera" / "verdict.py").read_text(encoding="utf-8"), encoding="utf-8"
-        )
-        hooks = us / ".githooks"
-        hooks.mkdir()
-        installed = hooks / "reference-transaction"
-        installed.write_text(_HOOK.read_text(encoding="utf-8"), encoding="utf-8")
-        installed.chmod(0o755)
-        _git(us, "config", "core.hooksPath", ".githooks")
+        _install_guard(us)
+        # Fetched, so the guard holds BOTH tips as real objects and can be precise about the fork.
+        # (The unfetched case — the incident verbatim — is the next test, and it refuses too.)
+        _git(us, "fetch", "origin")
+        theirs = str(forked["theirs"])
 
         before = _git(us, "rev-parse", "main").stdout.strip()
-
-        # The exact command both lanes ran on 2026-07-13, and it looked completely innocent.
-        merge = subprocess.run(  # noqa: S603  literal argv, hermetic temp repo
-            ["git", "merge", "--ff-only", "our-lane"],  # noqa: S607
-            cwd=us,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        merge = _merge_ff_only(us, "our-lane")
 
         assert merge.returncode != 0, (
             "`git merge --ff-only` FORKED THE TRUNK and git reported success. The hook did not "
             "fire, or it fired and passed. This is the incident, reproduced, unguarded."
         )
-        assert "main-guard" in merge.stderr, f"the refusal did not name itself:\n{merge.stderr}"
-        assert (
-            _git(us, "rev-parse", "main").stdout.strip() == before
-        ), "the merge was refused and `main` MOVED ANYWAY — the transaction was not aborted."
+        assert "no interpreter" not in merge.stderr, (
+            "the merge was refused because THE HOOK COULD NOT RUN THE GUARD — not because the "
+            "guard looked and objected. That is a green test for a witness that never woke up, "
+            f"and it is exactly how this test passed before it was fixed:\n{merge.stderr}"
+        )
+        assert theirs[:12] in merge.stderr, (
+            "the refusal does not name the sha origin/main is ACTUALLY at. A hook that never "
+            "reached the guard could not print it; a guard reading the stale cached ref could not "
+            "print it either. This sha IS the proof that the remote itself was asked — it is what "
+            f"separates a guard that was right from a guard that merely spoke:\n{merge.stderr}"
+        )
+        assert "fork" in merge.stderr.lower(), (
+            f"the refusal does not say what it prevented:\n{merge.stderr}"
+        )
+        assert _git(us, "rev-parse", "main").stdout.strip() == before, (
+            "the merge was refused and `main` MOVED ANYWAY — the transaction was not aborted. "
+            "PUBLISHING A VERDICT IS NOT ENFORCING IT: this hook, first written into git's "
+            "`committed` phase, printed its refusal IN FULL while git answered `Fast-forward` "
+            "and exited 0."
+        )
+
+    def test_the_unfetched_incident_is_refused_as_a_blind_spot(
+        self, forked: dict[str, Path | str]
+    ) -> None:
+        """And **without** the fetch — which is the incident, verbatim: *nobody fetched*.
+
+        Here the guard cannot resolve the remote's tip as a local object, so it cannot count how
+        far behind you are. What it must not do is shrug. It refuses, it names the sha the remote
+        just gave it, and it says the word `fetch`. *A witness that cannot see reports a blind
+        spot — it may never report "ok".*
+        """
+        us = forked["us"]
+        assert isinstance(us, Path)
+        _install_guard(us)  # NO fetch. That omission IS the incident.
+
+        before = _git(us, "rev-parse", "main").stdout.strip()
+        merge = _merge_ff_only(us, "our-lane")
+
+        assert merge.returncode != 0, "the unfetched fork — the incident itself — was let through"
+        assert "no interpreter" not in merge.stderr, merge.stderr
+        assert str(forked["theirs"])[:12] in merge.stderr, (
+            f"the blind-spot refusal does not name the tip the remote reported:\n{merge.stderr}"
+        )
+        assert "fetch" in merge.stderr.lower(), (
+            f"it refused without saying what would make the answer knowable:\n{merge.stderr}"
+        )
+        assert _git(us, "rev-parse", "main").stdout.strip() == before
+
+    def test_the_hook_lets_a_reconciled_advance_through(
+        self, forked: dict[str, Path | str]
+    ) -> None:
+        """It must also **not** refuse — and nothing above proves that.
+
+        A hook of `echo main-guard >&2; exit 1` satisfies every assertion in the two tests above.
+        It also refuses every legal advance, and so it is torn out within a day, which leaves the
+        trunk exactly as unguarded as it was before anybody wrote a guard. *A guard that refuses
+        everything is a guard that will not be there tomorrow.*
+
+        So: reconcile the branch onto the remote's tip, and the same `git merge --ff-only` must
+        now SUCCEED — and actually move `main`.
+        """
+        us = forked["us"]
+        assert isinstance(us, Path)
+        _install_guard(us)
+        _git(us, "fetch", "origin")
+        _git(us, "checkout", "our-lane")
+        _git(us, "rebase", "origin/main")
+        reconciled = _git(us, "rev-parse", "HEAD").stdout.strip()
+        _git(us, "checkout", "main")
+
+        merge = _merge_ff_only(us, "our-lane")
+
+        assert merge.returncode == 0, (
+            f"the hook REFUSED A LEGAL ADVANCE — it cries wolf, and a guard that cries wolf is "
+            f"uninstalled by Friday:\n{merge.stdout}\n{merge.stderr}"
+        )
+        assert _git(us, "rev-parse", "main").stdout.strip() == reconciled, (
+            "the hook exited 0 and `main` did not move — it aborted the transaction in silence, "
+            "which is a refusal that does not even know it is one."
+        )
 
 class TestAnUninstalledGuardIsAWitnessThatDoesNotRun:
     """The eighth instance — and the first version of this file **was** it.
