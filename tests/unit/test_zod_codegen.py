@@ -7,6 +7,17 @@ schemas it replaced, because nobody re-reads a file whose header says DO NOT EDI
 
 So: regenerate into a temp file and compare. If a `response_model` changes and this fails, the
 fix is one command, printed in the message.
+
+**This test needs `biome`**, because the generator runs the output through it and the checked-in
+file is biome-formatted: an unformatted regeneration would differ on whitespace alone. On a
+worktree where `pnpm install` has never run, that dependency used to surface as *this test
+failing* — i.e. as the sentence "the checked-in zod is stale", an accusation against code that was
+perfectly fine. The real cause, `Command "biome" not found`, was three subprocess layers down and
+nowhere in the output.
+
+A test that cannot run has not found a bug. It has found a **blind spot**, and it must say so:
+`require_node_tool` names the true cause, counts the hole, and — inside the gate, where the
+toolchain is installed *before* the python suite — refuses to skip at all. See `tests/tooling.py`.
 """
 
 from __future__ import annotations
@@ -14,6 +25,8 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+
+from tests.tooling import require_node_tool
 
 _ROOT = Path(__file__).resolve().parents[2]
 _GENERATED = _ROOT / "webapp" / "frontend" / "lib" / "api" / "generated" / "fleet.ts"
@@ -27,6 +40,15 @@ _REGENERATE = (
 
 def test_the_checked_in_zod_matches_the_current_openapi(tmp_path: Path) -> None:
     """The single source of truth is the backend. This asserts the copy has not drifted."""
+    require_node_tool(
+        "biome",
+        needed_for=(
+            "whether webapp/frontend/lib/api/generated/fleet.ts still matches the backend's "
+            "OpenAPI — the generator formats through biome, so without it the comparison is "
+            "meaningless, not failing"
+        ),
+    )
+
     fresh = tmp_path / "fleet.ts"
 
     subprocess.run(  # noqa: S603

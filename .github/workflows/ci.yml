@@ -85,11 +85,18 @@ jobs:
           key: pnpm-${{ runner.os }}-${{ hashFiles('webapp/frontend/pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ runner.os }}-
 
+      # FRONTEND FIRST, and the order is load-bearing — the same order `make gate-checks`
+      # uses, for the same reason. The python suite contains a test that judges the frontend
+      # (tests/unit/test_zod_codegen.py formats through `biome`), and only the pnpm STORE is
+      # cached above — never `node_modules/`. So on a cold runner `make gate-py` would run
+      # before anything had installed biome, and would go red claiming "the checked-in zod is
+      # stale": an environment problem wearing a code regression's clothes. It never fired
+      # only because CI is billing-blocked; it was armed the whole time.
+      - name: Frontend — install, tsc, biome, vitest
+        run: make gate-web
+
       - name: Python — ruff, mypy, pytest (not integration)
         run: make gate-py
-
-      - name: Frontend — tsc, biome, vitest
-        run: make gate-web
 
   e2e:
     name: e2e (Playwright, production build)

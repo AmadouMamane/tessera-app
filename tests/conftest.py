@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for the Tessera test suite."""
+"""Shared pytest fixtures for the Tessera test suite, and the blind-spot census."""
 
 from __future__ import annotations
 
@@ -11,9 +11,41 @@ import pytest
 from tessera.agent.state import AgentState, new_state
 from tessera.memory import get_memory_backend
 from tessera.settings import LanguageCode, Settings, get_settings
+from tessera.verdict import CannotSay, NotOk, Ok, render
+from tests.tooling import BLIND_SPOTS, census, in_gate
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """State, at the end of every run, how many tests could NOT look at what they judge.
+
+    Printed even when the count is zero. A census that only speaks up when it has bad news is a
+    census a reader learns to stop looking for — and a skipped test that scrolls past in a 1900-test
+    run is invisible, which is how `detect-secrets` ran green for weeks while checking nothing
+    (F-14). "0 blind spots" has to be **said**.
+
+    Inside the gate the count is not merely reported, it is *enforced*: `gate-web` installs the
+    frontend toolchain before `gate-py` runs, so a tooling skip there means the gate is broken, and
+    the session goes red rather than green-with-a-hole. See `tests/tooling.py`.
+    """
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is None:  # `-p no:terminal`: no one to tell, so make no claim
+        return
+
+    verdict = census(BLIND_SPOTS, in_the_gate=in_gate())
+    match verdict:
+        case Ok():
+            reporter.write_line(f"[tooling] {render(verdict)}", green=True)
+        case CannotSay():
+            reporter.write_sep("=", "TOOLING BLIND SPOTS — TESTS THAT COULD NOT LOOK", yellow=True)
+            reporter.write_line(render(verdict), yellow=True)
+        case NotOk():
+            reporter.write_sep("=", "TOOLING BLIND SPOTS INSIDE THE GATE", red=True, bold=True)
+            reporter.write_line(render(verdict), red=True)
+            # The gate's green is withdrawn. A hole the gate stepped over is not a pass.
+            session.exitstatus = 1
 
 
 @pytest.fixture(autouse=True)

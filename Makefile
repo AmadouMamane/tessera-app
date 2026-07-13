@@ -142,13 +142,31 @@ gate-twice:
 # The checks themselves. Kept as their own target so the witness wraps the whole
 # run as a unit, and so CI can call the checks directly when it has no worktree to
 # be confused about.
-gate-checks: gate-py gate-web
+#
+# gate-WEB FIRST, AND THAT ORDER IS LOAD-BEARING. The python suite contains a test
+# that judges the frontend (tests/unit/test_zod_codegen.py regenerates the zod schema,
+# and the generator formats through `biome`). With `gate-py` first, a virgin worktree —
+# where `pnpm install` has never run — went RED on that test, and the red said "the
+# checked-in zod is stale": an accusation against code that was perfectly fine, while
+# the truth (`Command "biome" not found`, exit 254) was three subprocess layers down and
+# in none of the output. A false red is the same disease as a false green, and it is in
+# one way worse: a false green lulls you, a FALSE RED TRAINS YOU TO IGNORE REDS.
+#
+# So the toolchain is installed BEFORE the suite that needs it. The test's own guard
+# (`require_node_tool`) then reports a named blind spot outside the gate — and inside it,
+# where the tooling is guaranteed, refuses to skip at all. See tests/tooling.py.
+gate-checks: gate-web gate-py
 
+# TESSERA_GATE=1 means exactly one thing: THE TOOLCHAIN IS ALREADY INSTALLED (gate-web
+# ran first). Under it, a test that cannot find its tool does not skip — it goes RED and
+# names the tool, because here its absence cannot mean "bare machine", it can only mean
+# the gate is broken. A skip that hides is a green light over a hole (F-14: detect-secrets
+# with no baseline was a permanently-green job that checked nothing).
 gate-py: install
 	uv run ruff check .
 	uv run ruff format --check .
 	uv run mypy src/tessera
-	uv run pytest -m "not integration" --cov=src/tessera --cov-report=term-missing --cov-fail-under=0
+	TESSERA_GATE=1 uv run pytest -m "not integration" --cov=src/tessera --cov-report=term-missing --cov-fail-under=0
 
 gate-web:
 	cd webapp/frontend && corepack pnpm install --frozen-lockfile
