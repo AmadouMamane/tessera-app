@@ -122,27 +122,31 @@ export async function FailureSynthesis({
         key: fam.label,
         label: fam.label,
         category,
-        caseIds: fam.case_ids,
+        caseIds: [...new Set(fam.case_ids)],
         note: fam.note,
         fix: fixFor(category, fam.fix),
         isFamily: true,
       };
     });
   } else {
-    const groups = new Map<string, string[]>();
+    // A case that fails in `fr` AND in `de` is ONE case, not two. `results` holds one row per
+    // (case, language), so pushing `case_id` per failed row listed `08 08 11 41 43 43` — six chips
+    // for four cases — and handed React two children with the same key. The set is not a
+    // formality: the column is headed "cases", and it was counting runs.
+    const groups = new Map<string, Set<string>>();
     for (const r of failed) {
       const key = KNOWN.has(r.category) ? r.category : "unknown";
       const bucket = groups.get(key);
-      if (bucket) bucket.push(r.case_id);
-      else groups.set(key, [r.case_id]);
+      if (bucket) bucket.add(r.case_id);
+      else groups.set(key, new Set([r.case_id]));
     }
     rows = [...groups.entries()]
-      .sort((a, b) => b[1].length - a[1].length)
+      .sort((a, b) => b[1].size - a[1].size)
       .map(([category, caseIds]) => ({
         key: category,
         label: t(`categories.${category}`),
         category,
-        caseIds,
+        caseIds: [...caseIds],
         note: "",
         fix: t(`failureSynthesis.fixes.${category}`),
         isFamily: false,

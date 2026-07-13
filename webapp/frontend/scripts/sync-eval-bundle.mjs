@@ -1,18 +1,33 @@
-// Regenerate the bundled eval scorecard fallback (`webapp/frontend/data/eval/`)
-// from the LIVE run reports (`eval/reports/`) at build time.
+// Regenerate the bundled eval fallback (`webapp/frontend/data/eval/`) from the LIVE artefacts
+// at build time.
 //
-// Why this exists: `lib/eval.ts` prefers the live repo reports, but the deployed
-// standalone image has no repo root, so it falls back to this bundle. Without a
-// regeneration step the bundle drifts (it was a hand-curated snapshot), and the
-// deployed cockpit would show STALE verdicts that disagree with the launcher and
-// the live reports. This script keeps the fallback equal to the latest run.
+// Why this exists: `lib/eval-sweep.ts` prefers the repository's own files, but the deployed
+// standalone image has no repo root, so it falls back to this bundle. Without a regeneration
+// step the bundle drifts — and it HAD drifted: the committed fallback carried a three-case,
+// zero-token run from 20 June, which the cockpit rendered as "3/3 — 100%".
 //
-// It is a no-op when `eval/reports/` is absent (e.g. inside the standalone image
-// build, where the committed bundle is used as-is) and never fails the build.
+// What it bundles, and why all three are needed:
+//   - `eval/reports/sweep/`      the runs. A sweep is N runs on ONE case set; "latest" cannot
+//                                represent one, so the whole sweep travels, not a single file.
+//   - `eval/baselines/null-control.json`  the FLOOR (122/174 with no model at all). Without it
+//                                the image cannot decompose a score, and an undecomposed score
+//                                is the one thing this screen may not print.
+//   - `eval/failures/*.json`     the catalogue, assembled into one array. It carries the prompts,
+//                                the pass criteria and the source citations — the evidence behind
+//                                every verdict, and the reason the bench is not "invented".
+//
+// It is a no-op when the repo is absent (inside the image build, where the committed bundle is
+// used as-is), a no-op when there is no sweep to sync from (a bundle is never deleted because a
+// checkout happens to have no reports), and it never fails the build.
 
-import { copyFile, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+const log = (message) => {
+  // biome-ignore lint/suspicious/noConsole: build-script status output
+  console.log(`[sync-eval-bundle] ${message}`);
+};
 
 async function findRepoRoot(start) {
   let dir = resolve(start);
@@ -29,69 +44,81 @@ async function findRepoRoot(start) {
   }
 }
 
+async function exists(path) {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Drop every `.json` under `dir` that the new bundle does not claim. */
+async function pruneStale(dir, keep) {
+  for (const existing of await readdir(dir)) {
+    if (existing.endsWith(".json") && !keep.has(existing)) {
+      await rm(join(dir, existing));
+      log(`dropped stale ${existing}`);
+    }
+  }
+}
+
 async function main() {
   const here = dirname(fileURLToPath(import.meta.url));
   const root = await findRepoRoot(here);
   if (!root) {
-    // biome-ignore lint/suspicious/noConsole: build-script status output
-    console.log("[sync-eval-bundle] no repo root — keeping committed bundle.");
+    log("no repo root — keeping the committed bundle.");
     return;
   }
-  const src = join(root, "eval", "reports");
+
+  const sweepSrc = join(root, "eval", "reports", "sweep");
+  if (!(await exists(sweepSrc))) {
+    // "Nothing to sync from" is NOT "the bundle is stale". Falling through would delete the
+    // deployed cockpit's only data source.
+    log("no eval/reports/sweep — keeping the committed bundle.");
+    return;
+  }
+
   const dest = join(root, "webapp", "frontend", "data", "eval");
-  try {
-    await stat(src);
-  } catch {
-    // biome-ignore lint/suspicious/noConsole: build-script status output
-    console.log("[sync-eval-bundle] no eval/reports — keeping committed bundle.");
-    return;
+  const sweepDest = join(dest, "sweep");
+  await mkdir(sweepDest, { recursive: true });
+
+  // 1. The sweep's runs, verbatim. The loader deduplicates the aliases (a run appears as a
+  //    timestamped file, a model-named file and `latest.json`), so no selection happens here.
+  const runs = (await readdir(sweepSrc)).filter((f) => f.endsWith(".json"));
+  for (const file of runs) await copyFile(join(sweepSrc, file), join(sweepDest, file));
+  await pruneStale(sweepDest, new Set(runs));
+
+  // 2. The committed floor. The image reads it, never recomputes it.
+  const floorSrc = join(root, "eval", "baselines", "null-control.json");
+  const bundled = new Set();
+  if (await exists(floorSrc)) {
+    await copyFile(floorSrc, join(dest, "null-control.json"));
+    bundled.add("null-control.json");
+  } else {
+    log("WARNING: no committed null baseline — the image will not be able to decompose a score.");
   }
 
-  const files = await readdir(src);
-  const keep = new Set();
-  // Global latest scorecard.
-  if (files.includes("latest.json")) keep.add("latest.json");
-  // Per-agent latests + the timestamped archive each one points at, so the
-  // deployed history view shows the agent's real reference run.
-  for (const f of files.filter((n) => /^latest_.+\.json$/.test(n))) {
-    keep.add(f);
-    try {
-      const doc = JSON.parse(await readFile(join(src, f), "utf-8"));
-      const runAt = typeof doc.run_at === "string" ? doc.run_at : null;
-      const agent = typeof doc.agent_id === "string" ? doc.agent_id : null;
-      if (runAt) {
-        for (const g of files) {
-          if (g.startsWith(runAt) && (!agent || g.includes(agent))) keep.add(g);
-        }
-      }
-    } catch {
-      // skip malformed latest_*.json
+  // 3. The catalogue, assembled. One file rather than 63: the image reads it whole, every time.
+  const casesDir = join(root, "eval", "failures");
+  if (await exists(casesDir)) {
+    const files = (await readdir(casesDir))
+      .filter((f) => f.endsWith(".json") && !f.startsWith("_"))
+      .sort();
+    const cases = [];
+    for (const file of files) {
+      cases.push(JSON.parse(await readFile(join(casesDir, file), "utf-8")));
     }
+    await writeFile(join(dest, "catalogue.json"), `${JSON.stringify(cases, null, 2)}\n`);
+    bundled.add("catalogue.json");
+    log(`assembled ${cases.length} cases into catalogue.json`);
   }
 
-  // An empty keep set means `eval/reports/` holds no `latest*.json` — the runs live
-  // under `eval/reports/local/`, which is the shape of both the main checkout and the
-  // agent worktrees today. That is "nothing to sync from", NOT "the bundle is stale":
-  // falling through would `rm` all seven committed fallback files and leave the
-  // deployed cockpit with no scorecard at all. Same contract as the two guards above.
-  if (keep.size === 0) {
-    // biome-ignore lint/suspicious/noConsole: build-script status output
-    console.log("[sync-eval-bundle] no latest*.json in eval/reports — keeping committed bundle.");
-    return;
-  }
+  // The `latest*.json` files the old single-run loader read are dead weight now, and dead weight
+  // that still parses is how a three-week-old run gets published as today's.
+  await pruneStale(dest, bundled);
 
-  await mkdir(dest, { recursive: true });
-  // Drop stale bundle files no longer in the keep set.
-  for (const existing of await readdir(dest)) {
-    if (existing.endsWith(".json") && !keep.has(existing)) {
-      await rm(join(dest, existing));
-    }
-  }
-  for (const k of keep) {
-    await copyFile(join(src, k), join(dest, k));
-  }
-  // biome-ignore lint/suspicious/noConsole: build-script status output
-  console.log(`[sync-eval-bundle] refreshed ${keep.size} file(s) from the latest run.`);
+  log(`refreshed ${runs.length} sweep file(s), the floor and the catalogue.`);
 }
 
 main().catch((err) => {

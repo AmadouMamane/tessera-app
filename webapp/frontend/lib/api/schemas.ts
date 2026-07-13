@@ -414,6 +414,16 @@ export const ScorecardResultSchema = z.object({
   category: z.string().default(""),
   title: z.string().default(""),
   expected_behavior: z.string().default(""),
+  // The runner records the execution context per (case, language) and the report HOLDS it —
+  // but zod strips what it does not declare, so omitting these silently emptied block 4 of the
+  // case detail (tools, duration, tokens) while the JSON on disk had it all along. Nullable
+  // rather than zero-defaulted: a report written before the runner recorded a duration has no
+  // duration, and 0 ms would be a fabricated measurement.
+  duration_ms: z.number().nullable().default(null),
+  input_tokens: z.number().nullable().default(null),
+  output_tokens: z.number().nullable().default(null),
+  started_at: z.string().nullable().default(null),
+  ended_at: z.string().nullable().default(null),
 });
 export type ScorecardResult = z.infer<typeof ScorecardResultSchema>;
 
@@ -476,6 +486,75 @@ export const RunMetaSchema = z.object({
   cost: RunCostSchema.nullable().optional(),
 });
 export type RunMeta = z.infer<typeof RunMetaSchema>;
+
+// ---------------------------------------------------------------------------
+// The sweep, the floor, and the catalogue (spec §A1.4)
+//
+// With three models scored on one dataset, "latest" stops meaning anything — a single
+// `latest.json` cannot represent a sweep, and the screen that read one was showing a
+// three-week-old, three-case, zero-token run as if it were the current result. A SWEEP is
+// N runs on ONE catalogue version. The screen reads the sweep; it never reads "a run".
+
+/**
+ * The committed null control (`eval/baselines/null-control.json`): what the deterministic
+ * guard/router layer passes with NO model at all — 122 of 174. This is the FLOOR, and the
+ * dashboard READS it (criterion 12). It is never recomputed here: a floor computed by the
+ * surface that displays it would be marking its own homework.
+ */
+export const NullControlBaselineSchema = z.object({
+  kind: z.literal("null_control"),
+  model: z.string().nullable().optional(),
+  catalogue_version: z.string().nullable().optional(),
+  note: z.string().optional(),
+  totals: z.object({ total: z.number().int(), passed: z.number().int() }),
+  /** `{"<case_id>|<language>": passed}` — the harness's own key (`eval/ratchet.py::_key`). */
+  verdicts: z.record(z.string(), z.boolean()),
+});
+export type NullControlBaseline = z.infer<typeof NullControlBaselineSchema>;
+
+/** Why a case exists. The citation IS the proof the bench was not invented. */
+export const EvalSourceReferenceSchema = z.object({
+  citation: z.string(),
+  url: z.string().optional(),
+  urls: z.array(z.string()).default([]),
+  notes: z.string().optional(),
+});
+export type EvalSourceReference = z.infer<typeof EvalSourceReferenceSchema>;
+
+/** Every criterion the harness knows how to check (`eval/failures/_schema.json`). */
+export const EvalPassCriteriaSchema = z.object({
+  must_not_contain: z.array(z.string()).optional(),
+  must_contain_any: z.array(z.string()).optional(),
+  must_not_match: z.array(z.string()).optional(),
+  must_escalate: z.boolean().optional(),
+  min_confidence: z.number().optional(),
+  max_confidence: z.number().optional(),
+  must_cite_source: z.boolean().optional(),
+  must_not_invoke_tools: z.array(z.string()).optional(),
+  must_invoke_tools: z.array(z.string()).optional(),
+});
+export type EvalPassCriteria = z.infer<typeof EvalPassCriteriaSchema>;
+
+export const EvalPromptSchema = z.object({
+  user: z.string(),
+  system_override: z.string().optional(),
+});
+export type EvalPrompt = z.infer<typeof EvalPromptSchema>;
+
+/** One failure case as the CATALOGUE defines it — a versioned artefact, never a result. */
+export const EvalCaseSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  category: z.string(),
+  severity: z.enum(["critical", "standard"]).default("standard"),
+  source_reference: EvalSourceReferenceSchema,
+  languages: z.array(LocaleSchema),
+  prompts: z.record(z.string(), EvalPromptSchema),
+  expected_behavior: z.string(),
+  pass_criteria: EvalPassCriteriaSchema.default({}),
+  tags: z.array(z.string()).default([]),
+});
+export type EvalCase = z.infer<typeof EvalCaseSchema>;
 
 // ---------------------------------------------------------------------------
 // Observability — live online-eval scores (eval-as-telemetry, ADR 0010)

@@ -812,6 +812,54 @@
     "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher; filters the audit chain by agent_id (stamped events)."
   },
   "eval": {
+    "score": {
+      "unnamedModel": "unnamed model",
+      "unstamped": "unstamped",
+      "absoluteIsNotTheGrade": "absolute — this is not the grade",
+      "floor": "guard floor",
+      "floorHint": "passed with no model at all",
+      "contribution": "contribution",
+      "contributionHint": "of the {population} cases the floor fails ({rate})",
+      "breaks": "breaks",
+      "breaksCandidate": "cases the guard held on its own — a candidate break, which a dashboard cannot replay",
+      "breaksNone": "no break",
+      "breaksNoneHint": "degrades nothing the guard held on its own",
+      "verdict": {
+        "block": "BLOCKED",
+        "pass": "PASS"
+      },
+      "rule": "rule {n}",
+      "uncalibrated": "Rule 2's bar: {min}. A REASONED choice, never a CALIBRATED one — no weak model has ever been measured on this catalogue.",
+      "rule2NotGated": "Rule 2 is measured but gates nothing: a bar reasoned against another population would be an invented number.",
+      "noModel": {
+        "title": "no model answered",
+        "body": "0 tokens generated. The report's “model” field names the CONFIGURED model — a dead backend still writes a complete report naming it. With no tokens there is nothing to grade."
+      },
+      "noFloor": {
+        "title": "no committed floor",
+        "body": "Without the null control the guard's share cannot be separated from the model's. Nothing is published, rather than a rate that adds them together."
+      },
+      "offReferential": {
+        "title": "different référentiel",
+        "body": "This run was scored against case set {run}, the floor against {floor}. The gap is not attributable to the model."
+      }
+    },
+    "sweep": {
+      "title": "Sweep — {count, plural, one {# model} other {# models}} on a single case set",
+      "subtitle": "A sweep is N runs on ONE version of the case set. With three models, “the latest run” stops meaning anything.",
+      "referential": "référentiel {version}",
+      "freshness": "{days, plural, =0 {last run today} one {last run # day ago} other {last run # days ago}}",
+      "freshnessUnknown": "date of the last run unknown",
+      "floorRead": "floor read from the committed baseline: {passed}/{total} passed with no model at all",
+      "staleCatalogue": "The case set moved under this sweep: it was scored against {run}, and the catalogue now stands at {current}. These verdicts are about cases that are no longer today's.",
+      "offReferential": "{count, plural, one {# run set aside} other {# runs set aside}} — scored against another case set, so not comparable.",
+      "noRecentRun": "no recent run on the current référentiel",
+      "pickRun": "Run shown in detail",
+      "empty": {
+        "title": "no readable sweep",
+        "body": "Neither eval/reports/sweep/ nor the data/eval/ bundle could be read. Nothing is displayed, rather than a default number."
+      }
+    },
     "title": "Regression scorecard",
     "description": "Tessera is exercised against a catalogue of publicly documented agent failures. Failing cases stay visible — nothing is hidden.",
     "summary": {
