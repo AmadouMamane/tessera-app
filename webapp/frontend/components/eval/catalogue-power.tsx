@@ -42,6 +42,19 @@ export async function CataloguePowerCard({
     );
   }
 
+  if (state.kind === "unreadable") {
+    // The artefact is THERE and this code cannot read it. Saying "not measured yet" would be a
+    // witness reporting its own ignorance as a property of the world.
+    return (
+      <Card>
+        <CardContent className="flex flex-col gap-2 p-5">
+          <Header title={t("power.title")} />
+          <Note tone="warning">{t("power.unreadable", { reason: state.reason })}</Note>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (state.kind === "off-referential") {
     // A refusal, not a zero. The classification describes cases that no longer exist, so its
     // counts are VOID — printing them next to the current catalogue would be a lie with a
@@ -61,9 +74,22 @@ export async function CataloguePowerCard({
     );
   }
 
-  const { power, case_counts, catalogue_version, strong_model, weak_model, strong_n, weak_n } =
-    state.power;
+  const {
+    power,
+    case_counts,
+    catalogue_version,
+    strong_model,
+    weak_model,
+    strong_n,
+    weak_n,
+    detection_power,
+  } = state.power;
   const measured = power.discriminating_cases;
+
+  // The design's detection floor. When it is absent, the experiment could not have rejected the
+  // null WHATEVER it observed — and then not one of the counts below may be read as "no effect".
+  const blind = "blind_spot" in detection_power;
+  const mde = blind ? null : detection_power.minimum_detectable_effect;
 
   return (
     <Card>
@@ -80,30 +106,64 @@ export async function CataloguePowerCard({
           </div>
         </div>
 
-        {/* The breakdown the brief asks for, in one line, over CASES. */}
-        <p className="text-sm">
-          <span className="font-semibold">{t("power.cases", { total: power.total_cases })}</span>
-          <span className="text-[var(--muted-foreground)]">
-            {" · "}
-            {t("power.dead", { n: case_counts.dead })}
-            {" · "}
-            {t("power.unstable", { n: power.unstable_cases })}
-            {" · "}
-            {t("power.nonDiscriminating", { n: case_counts.non_discriminating })}
-            {" · "}
-            {t("power.undecided", { n: case_counts.undecided })}
-            {" · "}
-          </span>
-          <span className="font-semibold text-gold-700 dark:text-gold-400">
-            {t("power.discriminating", { n: case_counts.discriminating })}
-            {" · "}
-            {t("power.inverted", { n: case_counts.inverted })}
-          </span>
-        </p>
+        {/* THE THREE BUCKETS, and they do not share a bucket. Over CASES. */}
+        <dl className="grid gap-2 sm:grid-cols-3">
+          <Bucket
+            label={t("power.bucket.fact")}
+            n={
+              case_counts.dead +
+              case_counts.inverted +
+              case_counts.saturated +
+              case_counts.unreached
+            }
+            detail={t("power.bucket.factDetail", {
+              dead: case_counts.dead,
+              inverted: case_counts.inverted,
+              saturated: case_counts.saturated,
+              unreached: case_counts.unreached,
+            })}
+          />
+          <Bucket
+            label={t("power.bucket.certified")}
+            n={case_counts.discriminating + case_counts.reversed}
+            detail={t("power.bucket.certifiedDetail", {
+              discriminating: case_counts.discriminating,
+              reversed: case_counts.reversed,
+            })}
+            tone="gold"
+          />
+          <Bucket
+            label={t("power.bucket.cannotSay")}
+            n={case_counts.underpowered}
+            detail={
+              mde === null
+                ? t("power.bucket.cannotSayNoPower")
+                : t("power.bucket.cannotSayDetail", { mde })
+            }
+          />
+        </dl>
 
         {/* The headline. Everything above is arithmetic; this is the finding. */}
         <p className="font-semibold text-base">
           {t("power.headline", { measured, total: power.total_cases })}
+        </p>
+
+        {/* The number that licenses every "does not separate" above it. Never omitted: a count of
+            non-discriminating cases with no detection floor beside it is a claim with no power. */}
+        <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
+          {mde === null
+            ? t("power.noPower", {
+                blindSpot: (detection_power as { blind_spot: string }).blind_spot,
+              })
+            : t("power.mde", { mde, strongN: strong_n, weakN: weak_n })}
+        </p>
+
+        <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
+          {t("power.corrections", {
+            holm: power.holm_runs,
+            bh: power.bh_runs,
+            gap: power.correction_gap.length,
+          })}
         </p>
 
         <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
@@ -113,6 +173,35 @@ export async function CataloguePowerCard({
         {measured * 2 < power.total_cases ? <Note tone="warning">{t("power.warning")}</Note> : null}
       </CardContent>
     </Card>
+  );
+}
+
+/** One of the three buckets. The count is large; the composition is small and never hidden. */
+function Bucket({
+  label,
+  n,
+  detail,
+  tone,
+}: {
+  label: string;
+  n: number;
+  detail: string;
+  tone?: "gold";
+}) {
+  return (
+    <div className="rounded-md border border-[var(--border)] bg-[var(--muted)] p-3">
+      <dt className="font-medium text-[var(--muted-foreground)] text-xs uppercase tracking-wide">
+        {label}
+      </dt>
+      <dd
+        className={`font-semibold text-lg tabular-nums ${
+          tone === "gold" ? "text-gold-700 dark:text-gold-400" : ""
+        }`}
+      >
+        {n}
+      </dd>
+      <dd className="text-[var(--muted-foreground)] text-xs leading-relaxed">{detail}</dd>
+    </div>
   );
 }
 

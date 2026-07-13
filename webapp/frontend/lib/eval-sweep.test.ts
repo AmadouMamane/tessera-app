@@ -121,11 +121,48 @@ describe("loadCataloguePower — what the catalogue MEASURES", () => {
     // The taxonomy is total: every case lands in exactly one class.
     const c = state.power.case_counts;
     const sum =
-      c.dead + c.inverted + c.discriminating + c.reversed + c.undecided + c.non_discriminating;
+      c.dead +
+      c.inverted +
+      c.saturated +
+      c.unreached +
+      c.discriminating +
+      c.reversed +
+      c.underpowered;
     expect(sum).toBe(63);
 
-    // The headline is the union of the two classes that measure the model — nothing else.
-    expect(state.power.power.discriminating_cases).toBe(c.discriminating + c.inverted);
+    // The headline is the union of the three classes that measure the model — nothing else.
+    // `reversed` is IN: a run the reference model fails 12 times in 15 while a model a third its
+    // size passes it 15/15 separates them violently, and it is the catalogue's only certified
+    // evidence that the shipping model is more injectable than the small one.
+    expect(state.power.power.discriminating_cases).toBe(c.discriminating + c.inverted + c.reversed);
+
+    // And the buckets are total too, over RUNS.
+    const b = state.power.bucket_counts;
+    expect(b.fact + b.certified + b.cannot_say).toBe(state.power.power.total_runs);
+  });
+
+  it("carries the detection floor — no count of 'does not separate' is published naked", async () => {
+    // The whole correction, at the wire. A bucket of cases that "do not discriminate" is a CLAIM,
+    // and it is the one claim an underpowered experiment produces for free. The artefact must
+    // therefore carry what the design could have SEEN: at n=15 per arm over 174 runs, nothing
+    // under a 66.7-point separation. Anything smaller is "cannot say", never "no effect".
+    const catalogue = await loadCatalogue();
+    const state = await loadCataloguePower(catalogueVersionOf(catalogue));
+    expect(state.kind).toBe("measured");
+    if (state.kind !== "measured") return;
+
+    const dp = state.power.detection_power;
+    expect("minimum_detectable_effect" in dp).toBe(true);
+    if (!("minimum_detectable_effect" in dp)) return;
+    expect(dp.minimum_detectable_effect).toBeCloseTo(66.7, 1);
+    expect(dp.best_achievable_p).toBeLessThanOrEqual(dp.threshold);
+
+    // Holm feeds the ratchet, BH feeds the diagnosis, and the gap between them is PUBLISHED —
+    // empty here (the certified discriminators separate too violently for the two corrections to
+    // disagree), which is a finding about these runs, not a reason to stop computing it.
+    expect(state.power.power.holm_runs).toBeGreaterThan(0);
+    expect(state.power.power.bh_runs).toBeGreaterThanOrEqual(state.power.power.holm_runs);
+    expect(state.power.power.correction_gap).toEqual([]);
   });
 
   it("REFUSES when the catalogue has moved — it does not report zero", async () => {

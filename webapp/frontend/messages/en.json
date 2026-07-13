@@ -1071,18 +1071,24 @@
     "power": {
       "title": "What the catalogue measures",
       "notMeasured": "The catalogue's discriminating power has not been measured. It is measured (make eval-power-write), never declared.",
-      "offReferential": "Classification VOID: it was measured on referential {measured}, and the catalogue is now {current}. Its counts describe cases that no longer exist — re-measure rather than reinterpret.",
+      "unreadable": "The measurement EXISTS and this code cannot read it — that is not an absence, it is a blind spot: {reason}. Reporting \"not measured yet\" would present our ignorance as a property of the world.",
+      "offReferential": "Classification VOID: it was measured on référentiel {measured}, and the catalogue is now {current}. Its counts describe cases that no longer exist — re-measure, do not reinterpret.",
       "sample": "{strong} vs {weak} · {n} passes",
-      "cases": "{total, plural, one {# case} other {# cases}}",
-      "dead": "{n} dead",
-      "unstable": "{n} unstable",
-      "nonDiscriminating": "{n} non-discriminating",
-      "undecided": "{n} undecided",
-      "discriminating": "{n} discriminating",
-      "inverted": "{n} inverted",
-      "headline": "{measured, plural, =0 {No case of # actually measures the model.} one {# case of {total} actually measures the model.} other {# cases of {total} actually measure the model.}}",
-      "method": "Derived from the null control and {strongN} + {weakN} full passes. A case discriminates if it separates the strong model from the weak one (Fisher exact, one-tailed, Holm-corrected across the whole catalogue); it is inverted if the null control passes it and a model reproducibly breaks it — there, the model is worse than silence.",
-      "warning": "The null control — no model, zero tokens — already passes 122 of the 174 runs. A dead case exercises the deterministic layer (guard, router), not the model: it inflates the pass rate while measuring nothing about the model."
+      "bucket": {
+        "fact": "Fact — observed",
+        "factDetail": "{dead} dead (silence closes them) · {inverted} inverted (the model is worse than silence) · {saturated} saturated · {unreached} unreached. No p-value, no power: one does not test a fact.",
+        "certified": "Certified — Holm",
+        "certifiedDetail": "{discriminating} discriminating · {reversed} reversed (the WEAK model wins). The inference survived the multiplicity correction.",
+        "cannotSay": "Cannot say",
+        "cannotSayDetail": "A real difference below {mde} points, which this many passes cannot certify. These cases are NOT dead: they are unknown, and the remedy is more passes, not a firmer adjective.",
+        "cannotSayNoPower": "This design could have certified nothing, whatever it observed. Not one of these cases may be called dead or non-discriminating."
+      },
+      "mde": "This design ({strongN} + {weakN} passes) is blind to anything under a {mde}-point separation. Any smaller effect is \"cannot say\" — never \"no effect\".",
+      "noPower": "NO POWER: {blindSpot}",
+      "corrections": "Holm certifies {holm} runs (it feeds the ratchet — it must never count a discriminator that isn't one); Benjamini-Hochberg certifies {bh} (it feeds the diagnosis). The gap between them: {gap}.",
+      "headline": "{measured, plural, =0 {Not one case of # actually measures the model.} one {# case of {total} actually measures the model.} other {# cases of {total} actually measure the model.}}",
+      "method": "Derived from the null control and {strongN} + {weakN} full passes. A case discriminates if it separates the two models (Fisher exact, one-tailed, corrected across the whole catalogue); inverted if the null control passes it and the model that ships reproducibly breaks it — the agent is worse than silence there.",
+      "warning": "The null control — no model, zero tokens — already passes 122 of the 174 runs. A dead case tests the deterministic layer (guard, router), not the model: it inflates the pass rate and measures nothing about the model."
     }
   },
   "health": {

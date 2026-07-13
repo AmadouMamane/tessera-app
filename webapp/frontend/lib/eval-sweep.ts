@@ -142,10 +142,18 @@ async function sources(): Promise<Sources | null> {
  * rather than numbers: unusable is not the same as zero (ADR 0026). The screen prints the
  * reason instead of a hole, because a tile that renders nothing is indistinguishable from a
  * catalogue with no discriminating power at all — and those are opposite facts.
+ *
+ * Four states, and `unreadable` is the one that was missing. "Nobody has measured this" and "it
+ * was measured and I cannot read the artefact" are **different facts**, and both used to arrive as
+ * `not-measured`. A schema change on the Python side — exactly what this lot did — would then have
+ * silently reclassified a live measurement as an absent one, and the tile would have said "not
+ * measured yet" about a file sitting right there with 174 verdicts in it. It says what it cannot
+ * read now.
  */
 export type CataloguePowerState =
   | { kind: "measured"; power: CataloguePower }
   | { kind: "not-measured" }
+  | { kind: "unreadable"; reason: string }
   | { kind: "off-referential"; measuredOn: string; current: string };
 
 export async function loadCataloguePower(
@@ -153,12 +161,30 @@ export async function loadCataloguePower(
 ): Promise<CataloguePowerState> {
   const src = await sources();
   if (!src) return { kind: "not-measured" };
-  let power: CataloguePower;
+
+  let raw: unknown;
   try {
-    power = CataloguePowerSchema.parse(JSON.parse(await readFile(src.powerFile, "utf-8")));
+    raw = JSON.parse(await readFile(src.powerFile, "utf-8"));
   } catch {
+    // No artefact at all. Nobody has run the measurement — an honest absence.
     return { kind: "not-measured" };
   }
+
+  const parsed = CataloguePowerSchema.safeParse(raw);
+  if (!parsed.success) {
+    // The artefact EXISTS and this code cannot read it. That is a blind spot, not an absence, and
+    // reporting it as "not measured yet" would be a witness describing its own ignorance as a
+    // property of the world.
+    return {
+      kind: "unreadable",
+      reason: parsed.error.issues
+        .slice(0, 3)
+        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+        .join("; "),
+    };
+  }
+
+  const power = parsed.data;
   if (power.catalogue_version !== currentCatalogueVersion) {
     return {
       kind: "off-referential",

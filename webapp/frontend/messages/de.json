@@ -1070,19 +1070,25 @@
     },
     "power": {
       "title": "Was der Katalog misst",
-      "notMeasured": "Die Trennschärfe des Katalogs wurde nicht gemessen. Sie wird gemessen (make eval-power-write), nicht behauptet.",
-      "offReferential": "Klassifikation NICHTIG: gemessen am Referenzstand {measured}, der Katalog steht heute auf {current}. Ihre Zahlen betreffen Fälle, die es nicht mehr gibt — neu messen, nicht umdeuten.",
-      "sample": "{strong} vs. {weak} · {n} Durchläufe",
-      "cases": "{total, plural, one {# Fall} other {# Fälle}}",
-      "dead": "{n} tot",
-      "unstable": "{n} instabil",
-      "nonDiscriminating": "{n} nicht trennend",
-      "undecided": "{n} unentscheidbar",
-      "discriminating": "{n} trennend",
-      "inverted": "{n} invertiert",
-      "headline": "{measured, plural, =0 {Kein Fall von # misst das Modell wirklich.} one {# von {total} Fällen misst das Modell wirklich.} other {# von {total} Fällen messen das Modell wirklich.}}",
-      "method": "Abgeleitet aus der Nullkontrolle und {strongN} + {weakN} vollständigen Durchläufen. Ein Fall ist trennend, wenn er das starke vom schwachen Modell trennt (exakter Fisher-Test, einseitig, Holm-korrigiert über den gesamten Katalog); invertiert, wenn die Nullkontrolle ihn besteht und ein Modell ihn reproduzierbar bricht — dort ist das Modell schlechter als Schweigen.",
-      "warning": "Die Nullkontrolle — kein Modell, null Token — besteht bereits 122 der 174 Läufe. Ein toter Fall prüft die deterministische Schicht (Guard, Router), nicht das Modell: er treibt die Erfolgsquote hoch, ohne etwas über das Modell auszusagen."
+      "notMeasured": "Die Trennschaerfe des Katalogs wurde nicht gemessen. Sie wird gemessen (make eval-power-write), nicht behauptet.",
+      "unreadable": "Die Messung EXISTIERT und dieser Code kann sie nicht lesen — das ist keine Abwesenheit, das ist ein blinder Fleck: {reason}. \"Noch nicht gemessen\" zu melden hiesse, unsere Unkenntnis als Eigenschaft der Welt auszugeben.",
+      "offReferential": "Klassifikation NICHTIG: gemessen auf Referenzstand {measured}, der Katalog steht heute auf {current}. Ihre Zahlen beschreiben Faelle, die es nicht mehr gibt — neu messen, nicht umdeuten.",
+      "sample": "{strong} vs {weak} · {n} Durchlaeufe",
+      "bucket": {
+        "fact": "Tatsache — beobachtet",
+        "factDetail": "{dead} tot (Schweigen loest sie) · {inverted} invertiert (das Modell ist schlechter als Schweigen) · {saturated} gesaettigt · {unreached} nie erreicht. Kein p-Wert, keine Teststaerke: eine Tatsache wird nicht getestet.",
+        "certified": "Zertifiziert — Holm",
+        "certifiedDetail": "{discriminating} trennend · {reversed} umgekehrt (das SCHWACHE Modell gewinnt). Die Inferenz hat die Multiplizitaetskorrektur ueberstanden.",
+        "cannotSay": "Kann nichts sagen",
+        "cannotSayDetail": "Ein realer Unterschied unter {mde} Punkten, den diese Anzahl Durchlaeufe nicht zertifizieren kann. Diese Faelle sind NICHT tot: sie sind unbekannt, und das Mittel sind mehr Durchlaeufe, kein festeres Adjektiv.",
+        "cannotSayNoPower": "Dieses Design haette nichts zertifizieren koennen, was immer es beobachtet haette. Keiner dieser Faelle darf tot oder nicht-trennend genannt werden."
+      },
+      "mde": "Dieses Design ({strongN} + {weakN} Durchlaeufe) sieht nichts unterhalb von {mde} Punkten Abstand. Jeder kleinere Effekt ist \"kann nichts sagen\" — nie \"kein Effekt\".",
+      "noPower": "KEINE TESTSTAERKE: {blindSpot}",
+      "corrections": "Holm zertifiziert {holm} Laeufe (er speist die Ratsche — er darf nie einen falschen Trenner zaehlen); Benjamini-Hochberg zertifiziert {bh} (er speist die Diagnose). Abstand: {gap}.",
+      "headline": "{measured, plural, =0 {Kein einziger von # Faellen misst das Modell wirklich.} one {# von {total} Faellen misst das Modell wirklich.} other {# von {total} Faellen messen das Modell wirklich.}}",
+      "method": "Abgeleitet aus der Nullkontrolle und {strongN} + {weakN} vollstaendigen Durchlaeufen. Ein Fall trennt, wenn er die beiden Modelle unterscheidet (exakter Fisher-Test, einseitig, ueber den ganzen Katalog korrigiert); invertiert, wenn die Nullkontrolle ihn besteht und das ausgelieferte Modell ihn reproduzierbar bricht — dort ist der Agent schlechter als Schweigen.",
+      "warning": "Die Nullkontrolle — kein Modell, null Token — besteht bereits 122 der 174 Laeufe. Ein toter Fall prueft die deterministische Schicht (Guard, Router), nicht das Modell: er blaeht die Erfolgsquote auf und misst nichts am Modell."
     }
   },
   "health": {

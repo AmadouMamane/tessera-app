@@ -525,6 +525,26 @@ export type NullControlBaseline = z.infer<typeof NullControlBaselineSchema>;
  * Declare every field that is rendered: zod **strips undeclared keys in silence**, so a count
  * left out here would not throw, it would simply vanish and the tile would render a hole.
  */
+/**
+ * What the design could have DETECTED — the licence to report an absence.
+ *
+ * Mirrors `tessera.verdict.Power`. It is present iff the experiment could have rejected the null
+ * *at all*; when it could not, the artefact carries a `blind_spot` instead, and no run in it may
+ * be called dead or non-discriminating. That is not a display convention, it is enforced in the
+ * type on the Python side: `NoEffect` cannot be constructed without a `Power`.
+ */
+export const DetectionPowerSchema = z.union([
+  z.object({
+    samples: z.number().int(),
+    threshold: z.number(),
+    best_achievable_p: z.number(),
+    /** The smallest effect this design could have certified. Anything under it is CANNOT SAY. */
+    minimum_detectable_effect: z.number(),
+    effect_unit: z.string(),
+  }),
+  z.object({ blind_spot: z.string() }),
+]);
+
 export const CataloguePowerSchema = z.object({
   kind: z.literal("catalogue_power"),
   /** The case set this classification describes. A different one makes it VOID, not stale. */
@@ -535,6 +555,9 @@ export const CataloguePowerSchema = z.object({
   strong_n: z.number().int(),
   weak_n: z.number().int(),
   alpha: z.number(),
+  /** `alpha / runs` — the tightest step, and the level the detection power is quoted against. */
+  threshold: z.number(),
+  detection_power: DetectionPowerSchema,
   power: z.object({
     discriminating_cases: z.number().int(),
     discriminating_runs: z.number().int(),
@@ -542,14 +565,36 @@ export const CataloguePowerSchema = z.object({
     total_runs: z.number().int(),
     unstable_cases: z.number().int(),
     unstable_runs: z.number().int(),
+    /** Holm certifies the ratchet's number; BH feeds the diagnosis. Both are published. */
+    holm_runs: z.number().int(),
+    bh_runs: z.number().int(),
+    /** Runs BH certifies and Holm does not — what the ratchet's conservatism costs. */
+    correction_gap: z.array(z.string()),
+  }),
+  /**
+   * The three buckets, and they do not share a bucket.
+   *
+   * `fact` is observed (no p-value, no power — the null control is deterministic). `certified` is
+   * an inference that survived the multiplicity correction. `cannot_say` is the honest output of a
+   * test that could not see: **not dead, unknown**, and it is the distinction that keeps a
+   * modest-but-real discriminator off a removal list.
+   */
+  bucket_counts: z.object({
+    fact: z.number().int(),
+    certified: z.number().int(),
+    cannot_say: z.number().int(),
   }),
   case_counts: z.object({
+    // FACT — observed.
     dead: z.number().int(),
     inverted: z.number().int(),
+    saturated: z.number().int(),
+    unreached: z.number().int(),
+    // CERTIFIED — inferred, and it survived Holm.
     discriminating: z.number().int(),
     reversed: z.number().int(),
-    undecided: z.number().int(),
-    non_discriminating: z.number().int(),
+    // CANNOT SAY — underpowered. Never "no effect".
+    underpowered: z.number().int(),
   }),
 });
 export type CataloguePower = z.infer<typeof CataloguePowerSchema>;
