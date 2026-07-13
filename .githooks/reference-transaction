@@ -12,6 +12,21 @@
 # `pre-merge-commit` never runs for the exact operation that forked the trunk. `reference-transaction`
 # fires for every ref update, and a non-zero exit in the `prepared` phase ABORTS the transaction.
 #
+# WHERE THIS FILE LIVES, AND WHY IT MATTERS. It is INSTALLED (copied) into the repository's COMMON
+# `.git/hooks/` — never wired up with `core.hooksPath`. The first version did use `core.hooksPath
+# = .githooks`, and it dug the exact hole it was built to fill:
+#
+#   * a relative `core.hooksPath` resolves against EACH WORKTREE'S OWN ROOT, so the hook was only
+#     present in trees whose branch happened to carry `.githooks/` — and `main` did not. The guard
+#     DID NOT RUN IN THE CHECKOUT WHERE THE TRUNK LIVES. A witness that does not run refuses
+#     nothing; it merely protects the trees that opted in, and the fork was made of not opting in.
+#   * it also hijacked git's whole hook lookup, so `.git/hooks/pre-commit` — where `pre-commit
+#     install` writes — became unreachable. A silently disabled hook, armed and waiting.
+#
+# `hooks/` is a COMMON path: git resolves it to the shared `.git/hooks/` from every linked
+# worktree (verified, not assumed). One installed file therefore guards every worktree, whatever
+# branch each one carries, and `pre-commit` keeps its own slot.
+#
 # stdin, one line per ref: <old-oid> <new-oid> <ref-name>
 set -o pipefail
 
@@ -20,6 +35,19 @@ phase="$1"
 
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 
+bypassed() {
+  [ -n "${TESSERA_MAIN_GUARD_BYPASS:-}" ] && [ "${TESSERA_MAIN_GUARD_BYPASS}" != "0" ]
+}
+
+refuse() {
+  echo "" >&2
+  echo "[main-guard] [CANNOT SAY] refs/heads/main is moving and I could not check it." >&2
+  echo "  $1" >&2
+  echo "  Nothing verified whether this forks the trunk, and a blind spot is not a pass" >&2
+  echo "  (ADR 0026). Deliberate override:  TESSERA_MAIN_GUARD_BYPASS=1" >&2
+  exit 1
+}
+
 while read -r _old new ref; do
   [ "$ref" = "refs/heads/main" ] || continue
   # An all-zero new oid is a DELETION, an all-zero old oid a CREATION (clone, initial fetch).
@@ -27,27 +55,24 @@ while read -r _old new ref; do
   case "$new" in
     0000000000000000000000000000000000000000) continue ;;
   esac
+  bypassed && continue
 
-  # The guard is python, and it lives in the repo it guards. If it is not there — an old branch,
-  # a half-checkout — SAY SO and refuse. A guard that cannot find itself is a blind spot, and a
-  # blind spot is not a pass (ADR 0026). The bypass is the documented way through.
-  if [ ! -f "$root/scripts/main_guard.py" ]; then
-    if [ -n "${TESSERA_MAIN_GUARD_BYPASS:-}" ] && [ "${TESSERA_MAIN_GUARD_BYPASS}" != "0" ]; then
-      continue
-    fi
-    echo "[main-guard] [CANNOT SAY] refs/heads/main is moving and scripts/main_guard.py is not in" >&2
-    echo "  this checkout, so nothing checked whether this forks the trunk. Refusing." >&2
-    echo "  (checkout a branch that has it, or: TESSERA_MAIN_GUARD_BYPASS=1)" >&2
-    exit 1
-  fi
+  # The guard lives in the repo it guards. A checkout that does not carry it cannot be checked —
+  # say so, and refuse. (It self-heals: once `main` carries the guard, every tree rebased on it
+  # has it too.)
+  [ -f "$root/scripts/main_guard.py" ] || refuse \
+    "scripts/main_guard.py is not in this checkout — check out a branch that carries it."
 
-  # `uv run` would re-resolve the environment on every ref update — slow, and it writes to the
-  # tree the transaction is about to change. The guard only needs stdlib + tessera.verdict, so it
-  # is run against the venv's interpreter directly, and falls back to `python3` when there is none.
+  # THE PROJECT'S VENV, AND NOTHING ELSE. `verdict.py` needs `match` and `assert_never` (3.11+),
+  # and macOS's system python3 is 3.9: falling back to it produced an ImportError TRACEBACK where
+  # a verdict belonged — a red that is right for the wrong reason, unreadable, and therefore a red
+  # people learn to ignore. If the interpreter is not there, that is a blind spot, and it is said.
   py="$root/.venv/bin/python"
-  [ -x "$py" ] || py="$(command -v python3)" || exit 0
+  [ -x "$py" ] || refuse \
+    "no interpreter at .venv/bin/python (the guard needs 3.11+). Run:  make install"
 
-  PYTHONPATH="$root/src${PYTHONPATH:+:$PYTHONPATH}" "$py" "$root/scripts/main_guard.py" "$new" || exit 1
+  PYTHONPATH="$root/src${PYTHONPATH:+:$PYTHONPATH}" "$py" \
+    "$root/scripts/main_guard.py" advance "$new" || exit 1
 done
 
 exit 0

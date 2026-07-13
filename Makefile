@@ -77,32 +77,49 @@ check: format-check lint typecheck
 #
 #     origin/main must be an ANCESTOR of whatever main is about to become.
 #
-# `hooks` installs `.githooks/reference-transaction`, which fires that check on ANY update
-# to refs/heads/main — a `git merge --ff-only`, a bare `git merge`, a `git commit` straight
-# onto the branch, a `git reset`. NOT a target somebody has to remember: the fork was made
-# of not remembering. (`pre-merge-commit` would have been useless — a FAST-FORWARD CREATES
-# NO COMMIT, so it never fires for the exact operation that forked the trunk.)
+# `hooks` INSTALLS `.githooks/reference-transaction` — it copies it into the repository's
+# COMMON `.git/hooks/`. It fires on ANY update to refs/heads/main: a `git merge --ff-only`, a
+# bare `git merge`, a `git commit` straight onto the branch, a `git reset`. NOT a target
+# somebody has to remember: the fork was made of not remembering. (`pre-merge-commit` would
+# have been useless — a FAST-FORWARD CREATES NO COMMIT, so it never fires for the exact
+# operation that forked the trunk.)
 #
-# And the guard asks the REMOTE — `git ls-remote` — never `refs/remotes/origin/main`, which
-# is a photograph of the remote taken at your last fetch, and the last fetch is the event
-# that did not happen. Offline ⇒ CANNOT SAY ⇒ refused: "probably nothing moved" is the bug,
-# in its purest form. Deliberate override: TESSERA_MAIN_GUARD_BYPASS=1, which says so aloud.
+# AND THE FIRST VERSION OF THIS TARGET DUG THE HOLE IT WAS BUILT TO FILL. It did
+# `git config core.hooksPath .githooks`, and:
 #
-# Wired into `install`, so it is installed by the time anything else in this file runs. The
-# path is relative, and git resolves a relative `core.hooksPath` against the ROOT OF THE
-# WORKING TREE — so each worktree gets the hook from its own checkout, which is what we want.
+#   * a RELATIVE core.hooksPath resolves against EACH WORKTREE'S OWN ROOT — so the hook existed
+#     only in trees whose branch carried `.githooks/`, and `main` did not. THE GUARD DID NOT RUN
+#     IN THE CHECKOUT WHERE THE TRUNK LIVES. An uninstalled guard is not a weak guard; it is a
+#     WITNESS THAT DOES NOT RUN. It refuses nothing, and it protects the trees that opted in —
+#     and the fork was made of not opting in.
+#   * it hijacked git's entire hook lookup, so `.git/hooks/pre-commit` (where `pre-commit
+#     install` writes) became unreachable. A silently disabled hook, armed and waiting.
+#
+# `hooks/` is a COMMON path: git resolves it to the shared `.git/hooks/` from EVERY linked
+# worktree — verified by asking git (`git rev-parse --git-path`), not assumed from its docs. So
+# ONE installed file guards every worktree whatever branch it carries, and pre-commit keeps its
+# own slot. core.hooksPath is unset here, deliberately, to undo the damage.
+#
+# And the guard asks the REMOTE — `git ls-remote` — never `refs/remotes/origin/main`, which is a
+# photograph of the remote taken at your last fetch, and the last fetch is the event that did not
+# happen. Offline ⇒ CANNOT SAY ⇒ refused: "probably nothing moved" is the bug in its purest form.
+# Deliberate override: TESSERA_MAIN_GUARD_BYPASS=1, which says so aloud.
 hooks:
-	@git config core.hooksPath .githooks
-	@test -x .githooks/reference-transaction || { \
-	  echo "✗ .githooks/reference-transaction is not executable — the trunk is UNGUARDED"; exit 1; }
+	@if [ "$$(git config --get core.hooksPath || true)" = ".githooks" ]; then \
+	  git config --unset core.hooksPath; \
+	  echo "  (unset core.hooksPath — it hid .git/hooks/pre-commit and did not reach main)"; \
+	fi
+	@install -m 0755 .githooks/reference-transaction \
+	  "$$(git rev-parse --path-format=absolute --git-common-dir)/hooks/reference-transaction"
 
-# The sanctioned way to advance the trunk. `git merge --ff-only` still works and is still
-# guarded (that is the whole point of the hook); this target exists so the verdict is printed
-# before the merge rather than discovered by it.
+# The sanctioned way to advance the trunk. `git merge --ff-only` still works and is still guarded
+# (that is the whole point of the hook); this target exists so the verdict is printed BEFORE the
+# merge rather than discovered by it.
 #   make land BRANCH=claude/some-branch
 land: install
 	@test -n "$(BRANCH)" || { echo "BRANCH= is required (e.g. make land BRANCH=claude/x)"; exit 2; }
-	@uv run python scripts/main_guard.py $$(git rev-parse $(BRANCH))
+	@uv run python scripts/main_guard.py installed
+	@uv run python scripts/main_guard.py advance $$(git rev-parse $(BRANCH))
 	@git merge --ff-only $(BRANCH)
 
 # ── Worktree ownership ──────────────────────────────────────────────────────
@@ -130,7 +147,16 @@ land: install
 session:
 	@uv run python scripts/worktree_owner.py session
 
+# A GUARD NOBODY INSTALLED IS A DECORATION. `claim` says "I am working here"; the first thing an
+# agent working here needs to know is whether the trunk it may land on is actually protected. So
+# it is checked, and a missing hook REFUSES (exit 2) — never a warning printed above an exit 0.
+#
+# That distinction is the whole week's lesson, and this repo has now paid for it three times:
+# `dev-status` printed `⚠ STALE · RESTART` and returned 0; the trunk hook, moved to git's
+# `committed` phase, printed its refusal IN FULL while `git merge --ff-only` answered
+# `Fast-forward` and exited 0. PUBLISHING A VERDICT IS NOT ENFORCING IT.
 claim:
+	@uv run python scripts/main_guard.py installed
 	@uv run python scripts/worktree_owner.py claim $(if $(FORCE),--force,)
 
 release:
@@ -199,7 +225,16 @@ memory-check:
 # (uv sync, a pnpm install, caches), and a second writer is how the 2026-07-12 witness
 # was corrupted. Unclaimed trees are allowed on purpose — the marker must not become a
 # ceremony that stops the operator's own hands; what it stops is the SILENT second writer.
+# A GREEN GATE IS A LICENCE TO LAND. So before it certifies anything, it establishes that the
+# trunk it licences you to touch is actually guarded — asked of GIT (`git rev-parse --git-path`),
+# never re-derived from `core.hooksPath`, and the installed hook is hashed against the one this
+# checkout ships, because what git runs is the COPY and a copy drifts.
+#
+# Deliberately NOT a prerequisite that would install it: `gate: hooks` would make this check
+# unfailable, and a check that cannot fail is a green light with a name. It REFUSES, and it names
+# the one command that fixes it.
 gate:
+	@uv run python scripts/main_guard.py installed
 	@uv run python scripts/worktree_owner.py check
 	@uv run python scripts/gate_witness.py run --slot $(or $(GATE_SLOT),1) -- $(MAKE) gate-checks
 

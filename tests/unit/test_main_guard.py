@@ -304,6 +304,150 @@ class TestTheHookIsWhatActuallyRefuses:
             _git(us, "rev-parse", "main").stdout.strip() == before
         ), "the merge was refused and `main` MOVED ANYWAY — the transaction was not aborted."
 
+class TestAnUninstalledGuardIsAWitnessThatDoesNotRun:
+    """The eighth instance — and the first version of this file **was** it.
+
+    It shipped a hook and never checked that git would ever reach it. `make hooks` set
+    ``core.hooksPath = .githooks``, and a *relative* hooksPath resolves against **each worktree's
+    own root** — so the hook existed only in trees whose branch happened to carry `.githooks/`,
+    and **`main` did not**. The guard did not run in the checkout where the trunk lives. It also
+    hijacked git's whole hook lookup, so `.git/hooks/pre-commit` became unreachable: a second hook,
+    silently disabled, armed and waiting.
+
+    An uninstalled guard is not a *weak* guard. It is a **witness that does not run** — it refuses
+    nothing, and it protects exactly the trees that opted in, *and the fork was made of not opting
+    in*.
+
+    So `make gate` and `make claim` ask **git** — not `core.hooksPath` — where it would look, and
+    they **refuse** when the answer is nowhere. Not a warning above an exit 0: this repository has
+    now paid three times for the difference between *publishing* a verdict and *enforcing* one.
+    """
+
+    @pytest.fixture
+    def tree(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        """A repo that ships the guard's hook and has not installed it."""
+        _git(tmp_path, "init", "--initial-branch=main", str(tmp_path / "repo"))
+        repo = tmp_path / "repo"
+        (repo / ".githooks").mkdir()
+        (repo / ".githooks" / "reference-transaction").write_text(
+            _HOOK.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        monkeypatch.chdir(repo)
+        return repo
+
+    def _hooks_dir(self, repo: Path) -> Path:
+        out = _git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        return Path(out.stdout.strip()) / "hooks"
+
+    def test_an_uninstalled_hook_is_refused_not_warned_about(self, tree: Path) -> None:
+        """`git rev-parse --git-path` says where git WOULD look. Nothing is there ⇒ NotOk."""
+        verdict = main_guard.check_installed()
+
+        assert isinstance(verdict, NotOk)
+        assert "UNGUARDED" in verdict.reason
+        assert "make hooks" in verdict.reason
+        assert exit_code(verdict) != EXIT_OK, (
+            "an unguarded trunk exited 0. That is a warning printed above a pass — the exact shape "
+            "of `dev-status` printing ⚠ STALE and returning 0."
+        )
+
+    def test_an_installed_hook_that_git_would_run_is_ok(self, tree: Path) -> None:
+        """And it names the path git resolved, and the digest it matched. Evidence, not a tick."""
+        hooks = self._hooks_dir(tree)
+        hooks.mkdir(parents=True, exist_ok=True)
+        installed = hooks / "reference-transaction"
+        installed.write_text(_HOOK.read_text(encoding="utf-8"), encoding="utf-8")
+        installed.chmod(0o755)
+
+        verdict = main_guard.check_installed()
+
+        assert isinstance(verdict, Ok)
+        assert str(installed) in verdict.evidence
+
+    def test_a_non_executable_hook_is_refused(self, tree: Path) -> None:
+        """**Git skips a non-executable hook IN SILENCE.** The file is there and nothing runs it."""
+        hooks = self._hooks_dir(tree)
+        hooks.mkdir(parents=True, exist_ok=True)
+        installed = hooks / "reference-transaction"
+        installed.write_text(_HOOK.read_text(encoding="utf-8"), encoding="utf-8")
+        installed.chmod(0o644)
+
+        verdict = main_guard.check_installed()
+
+        assert isinstance(verdict, NotOk)
+        assert "not executable" in verdict.reason
+        assert exit_code(verdict) != EXIT_OK
+
+    def test_a_drifted_copy_is_refused(self, tree: Path) -> None:
+        """**What git runs is the COPY.** Checking the tracked source would check a file nobody
+        executes — the neighbourhood, one last time, in the guard that exists to name it.
+        """
+        hooks = self._hooks_dir(tree)
+        hooks.mkdir(parents=True, exist_ok=True)
+        installed = hooks / "reference-transaction"
+        installed.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")  # a hook that refuses nothing
+        installed.chmod(0o755)
+
+        verdict = main_guard.check_installed()
+
+        assert isinstance(verdict, NotOk)
+        assert "NOT the one this checkout ships" in verdict.reason
+        assert exit_code(verdict) != EXIT_OK
+
+
+class TestTheGateRefusesAnUnguardedTrunk:
+    """A green gate is a LICENCE TO LAND. It may not be granted over an unguarded trunk."""
+
+    def test_gate_and_claim_check_the_installation_first(self) -> None:
+        """And they check it FIRST — before the tree fingerprint, before anything.
+
+        Mutation: delete either line. Red. A gate that certifies a tree whose trunk nothing
+        protects is handing out a licence to fork it.
+        """
+        makefile = (_ROOT / "Makefile").read_text(encoding="utf-8")
+
+        for target in ("gate", "claim"):
+            recipe = makefile.split(f"\n{target}:\n", 1)[1].split("\n\n", 1)[0]
+            first = recipe.strip().splitlines()[0]
+            assert "main_guard.py installed" in first, (
+                f"`make {target}` does not check that the trunk guard is installed, or does not "
+                f"check it first. Its first line is:\n    {first}\n"
+                "An uninstalled guard is a witness that does not run."
+            )
+
+    def test_the_gate_does_not_silently_install_it(self) -> None:
+        """`gate: hooks` would make the check UNFAILABLE — a green light with a name.
+
+        The gate must be able to go red for the reason it exists. A check that repairs the thing
+        it checks has not checked anything.
+        """
+        makefile = (_ROOT / "Makefile").read_text(encoding="utf-8")
+
+        assert "\ngate: hooks" not in makefile and "\ngate:hooks" not in makefile, (
+            "`gate` now depends on `hooks`, so it installs the guard and then verifies the guard "
+            "it just installed. That check can never fail, and a check that cannot fail is not a "
+            "check — it is a decoration with a name (F-14: detect-secrets scanned into /dev/null "
+            "and reported success for a year)."
+        )
+
+    def test_core_hookspath_is_not_hijacked(self) -> None:
+        """The first version set `core.hooksPath` and **silently disabled pre-commit's slot**.
+
+        `pre-commit install` writes `.git/hooks/pre-commit`. With `core.hooksPath = .githooks`, git
+        never looks there again — and says nothing. The guard dug the exact kind of hole it exists
+        to name.
+        """
+        makefile = (_ROOT / "Makefile").read_text(encoding="utf-8")
+        recipe = makefile.split("\nhooks:\n", 1)[1].split("\n\n", 1)[0]
+
+        assert "git config core.hooksPath" not in recipe, (
+            "`make hooks` is setting core.hooksPath again. A relative one resolves against EACH "
+            "WORKTREE'S ROOT (so it misses `main`, which carries no .githooks/), and it hides "
+            "`.git/hooks/pre-commit` from git entirely. Install into the COMMON hooks dir instead: "
+            "git resolves `hooks/` there from every worktree, whatever branch it carries."
+        )
+        assert "--git-common-dir" in recipe
+
     def test_the_hook_is_executable_and_delegates_to_the_guard(self) -> None:
         """A hook that is not executable is a file. Git skips it in silence — a guard that is not
         there, and nothing anywhere says so.
@@ -336,4 +480,3 @@ class TestTheHookIsWhatActuallyRefuses:
             "`make install` no longer depends on `hooks`, so a fresh checkout is unguarded until "
             "somebody remembers a target. The fork was MADE OF not remembering."
         )
-        assert "core.hooksPath .githooks" in makefile

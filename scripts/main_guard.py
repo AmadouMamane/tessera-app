@@ -55,15 +55,25 @@ Escape hatch: ``TESSERA_MAIN_GUARD_BYPASS=1`` — deliberate, loud, and it says 
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import Final
 
 from tessera.verdict import CannotSay, NotOk, Ok, Verdict, exit_code, render
 
 #: The trunk. The only branch this guard has an opinion about.
 TRUNK: Final = "main"
+
+#: The hook whose exit code aborts a ref transaction on `refs/heads/main`.
+HOOK: Final = "reference-transaction"
+
+#: The tracked source of that hook. What is *installed* is a COPY of this, and the copy is the
+#: thing git runs — so the copy is what gets interrogated, never this.
+HOOK_SOURCE: Final = Path(".githooks") / HOOK
 
 #: The remote whose `main` is the truth. Not the local ref that is named after it.
 REMOTE: Final = "origin"
@@ -209,27 +219,114 @@ def check_advance(new_tip: str) -> Verdict:
     )
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Exit code is the verdict. ``2`` = do not proceed — refused, or unknowable.
+_INSTALL: Final = "make hooks"
 
-    Called two ways, and the second is the one that makes this mechanical rather than polite:
 
-    * ``main_guard.py <new-tip>`` — by `make land`, and by a human who wants to ask.
-    * from ``.githooks/reference-transaction``, on **any** update to ``refs/heads/main`` — a
-      `git merge --ff-only`, a bare `git merge`, a `git commit` onto the branch, a `git reset`.
-      A guard you have to remember to invoke is a guard, and the fork was made of not remembering.
+def check_installed() -> Verdict:
+    """**Is the guard actually RUNNING in this tree?** — the question the guard forgot to ask.
+
+    An uninstalled guard is not a weak guard. It is **a witness that does not run**: it refuses
+    nothing at all, and it protects only the trees that opted in — and *the fork was made of not
+    opting in*. The first version of this file shipped a hook and never checked that git would ever
+    reach it, which is the same shape as `dev-status` printing ``⚠ STALE`` and returning ``0``:
+    **publishing a verdict is not enforcing it.**
+
+    So the question is asked of **git**, not of the config:
+
+        git rev-parse --git-path hooks/reference-transaction
+
+    That is git's *own* answer to "where would I look for this hook?" — it honours ``core.hooksPath``,
+    the common-dir redirect for linked worktrees, everything. Reading ``core.hooksPath`` ourselves and
+    re-deriving the path would be re-implementing git's resolution and then trusting our copy of it:
+    the neighbourhood, once more.
+
+    And the file found there is **hashed against the tracked source**. The installed hook is a
+    *copy*; a copy drifts, and what git runs is the copy. A guard that verified the repository's
+    `.githooks/` file while git ran a stale copy from `.git/hooks/` would be checking a thing nobody
+    executes.
+
+    Returns:
+        ``Ok`` with the path git resolved and the digest it matched. ``NotOk`` when the hook is
+        absent, unreadable, not executable, or not ours — we looked, and it is not there.
+        ``CannotSay`` when git itself would not answer.
     """
-    args = list(sys.argv[1:] if argv is None else argv)
-    new_tip = args[0] if args else "HEAD"
+    proc = _git("rev-parse", "--path-format=absolute", "--git-path", f"hooks/{HOOK}")
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return CannotSay(
+            f"git will not say where it looks for the `{HOOK}` hook "
+            f"(`git rev-parse --git-path` exited {proc.returncode}), so I cannot tell whether the "
+            "trunk is guarded at all. A blind spot is not a pass."
+        )
+    installed = Path(proc.stdout.strip())
 
-    if new_tip == _ZERO:  # a creation, or a deletion. There is no history here to fork.
-        return 0
+    source = Path(_git("rev-parse", "--show-toplevel").stdout.strip() or ".") / HOOK_SOURCE
+    if not source.is_file():
+        return CannotSay(
+            f"{HOOK_SOURCE} is not in this checkout, so I have nothing to compare the installed "
+            "hook against. Check out a branch that carries the guard."
+        )
+    want = hashlib.sha256(source.read_bytes()).hexdigest()
 
-    verdict = check_advance(new_tip)
+    if not installed.is_file():
+        return NotOk(
+            f"THE TRUNK IS UNGUARDED. git would run `{installed}` on every update to "
+            f"refs/heads/{TRUNK}, and that file does not exist — so nothing would stop a "
+            f"`git merge --ff-only` from forking `{TRUNK}`, which is exactly what happened on "
+            "2026-07-13.\n"
+            f"  An uninstalled guard is a WITNESS THAT DOES NOT RUN. Install it:  {_INSTALL}"
+        )
+    if not os.access(installed, os.X_OK):
+        return NotOk(
+            f"`{installed}` is not executable, and **git skips a non-executable hook in silence** "
+            f"— so the trunk is unguarded and nothing anywhere says so.  {_INSTALL}"
+        )
+
+    got = hashlib.sha256(installed.read_bytes()).hexdigest()
+    if got != want:
+        return NotOk(
+            f"the hook git would run is NOT the one this checkout ships.\n"
+            f"  git runs : {installed}  (sha256 {got[:12]})\n"
+            f"  we ship  : {source}  (sha256 {want[:12]})\n"
+            "  The installed hook is a COPY, and a copy drifts. What git executes is the copy, so "
+            f"the copy is what must be right.  {_INSTALL}"
+        )
+
+    return Ok(f"git runs {installed} on refs/heads/{TRUNK}; it is ours (sha256 {got[:12]})")
+
+
+def _publish(verdict: Verdict) -> int:
     stream = sys.stdout if isinstance(verdict, Ok) else sys.stderr
     stream.write(f"\n[main-guard] {render(verdict)}\n")
     stream.flush()
     return exit_code(verdict)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Exit code is the verdict. ``2`` = do not proceed — refused, or unknowable.
+
+    Two subcommands, and the second exists because the first was useless without it:
+
+    * ``advance <new-tip>`` — may `main` become this? Called by ``.githooks/reference-transaction``
+      on **any** update to ``refs/heads/main``, and by `make land`.
+    * ``installed`` — **is the hook actually wired up in this tree?** Called by `make gate` and
+      `make claim`, which REFUSE when it is not. A guard nobody installed is a decoration, and
+      this repository has spent a week learning that a verdict which is published but not
+      *enforced* is worth nothing at all.
+    """
+    parser = argparse.ArgumentParser(description="Keep there being exactly one trunk.")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    advance = sub.add_parser("advance", help="may `main` become this commit?")
+    advance.add_argument("tip", help="the commit `main` is about to point at")
+    sub.add_parser("installed", help="is the trunk guard actually running in this tree?")
+
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+
+    if args.cmd == "installed":
+        return _publish(check_installed())
+
+    if args.tip == _ZERO:  # a creation, or a deletion. There is no history here to fork.
+        return 0
+    return _publish(check_advance(args.tip))
 
 
 if __name__ == "__main__":  # pragma: no cover  thin CLI shim
