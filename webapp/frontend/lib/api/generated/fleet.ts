@@ -221,6 +221,7 @@ export const AgentEvaluationsGateContributionPayloadSchema = z.object({
 
 export const AgentEvaluationsGateContributionUnavailableSchema = z.object({
   available: z.literal(false),
+  refusal: z.string().nullable().optional(),
 });
 
 export const AgentEvaluationsGateBreakdownGrainSchema = z.object({

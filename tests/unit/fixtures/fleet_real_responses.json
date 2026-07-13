@@ -9860,7 +9860,8 @@
           "gating": false
         },
         "contribution": {
-          "available": false
+          "available": false,
+          "refusal": "this run is not scoped to an eval set — there is no set floor to grade it against"
         },
         "breakdown_grain": {
           "blocking_socle": 10,
@@ -10822,7 +10823,8 @@
           "gating": false
         },
         "contribution": {
-          "available": false
+          "available": false,
+          "refusal": "this run is not scoped to an eval set — there is no set floor to grade it against"
         },
         "breakdown_grain": {
           "blocking_socle": 10,
@@ -11784,7 +11786,8 @@
           "gating": false
         },
         "contribution": {
-          "available": false
+          "available": false,
+          "refusal": "this run is not scoped to an eval set — there is no set floor to grade it against"
         },
         "breakdown_grain": {
           "blocking_socle": 10,
