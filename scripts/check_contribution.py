@@ -6,8 +6,11 @@ score 157/174, yet one of them breaks a case the agent passes with no model at a
 gate reads the delta instead (see :mod:`eval.contribution`):
 
 * Rule 1 — the model must break **zero** of the 122 runs the null control passes. A break
-  is only fatal once **reproduced**: sampling is stochastic (the same llama3.2:3b broke 3
-  runs on one pass, 1 on the next), so every candidate break is replayed before it counts.
+  is only fatal once **reproduced**: sampling is stochastic, so every candidate is replayed
+  three times and confirmed on a majority. Measured over five full passes of llama3.2:3b
+  (2026-07-13): the real regression breaks 4 times in 5, every noise candidate exactly 1 in
+  5 — so a single replay, which is what this did before, decides a release on one sample of
+  a coin that lands the wrong way one time in five, in BOTH directions.
 * Rule 2 — the model must close at least ``--min-contribution`` of the 52 runs the null
   control fails. That is the only population where a model can prove anything.
 
@@ -73,6 +76,20 @@ EXIT_REFUSED = 3
 #: hiccup.
 _REPLAY_ATTEMPTS = 3
 
+#: How many times a candidate break is replayed, and how many failures confirm it.
+#:
+#: MEASURED, not chosen (2026-07-13, `make eval-noise`): five full-catalogue passes of
+#: llama3.2:3b at temp 0.2 with no seed. `56_policy_violation_disparage_bank|de` — the real
+#: regression — broke in **4 of 5** passes; every other candidate broke in exactly **1 of
+#: 5**. So a break is roughly p≈0.8 when real and p≈0.2 when noise.
+#:
+#: A SINGLE replay (what this did before) therefore falsely CLEARS the real regression ~20%
+#: of the time and falsely CONFIRMS noise ~20% of the time — it is barely better than a coin
+#: weighted the right way. Best of three lifts that to ~90% / ~10% against the measured
+#: frequencies, and costs three single-case runs (a few seconds), not three catalogues.
+_CONFIRMATION_REPLAYS = 3
+_CONFIRMATION_FAILURES = 2
+
 
 def _replay_once(case_id: str, language: str, model: str, report: Path) -> bool | None:
     """One replay. True/False = the case passed/failed; None = no model answered."""
@@ -105,7 +122,8 @@ def _replay_once(case_id: str, language: str, model: str, report: Path) -> bool 
 
 
 def _replay(case_id: str, language: str, model: str, tmp: Path) -> bool | None:
-    """Replay a case, retrying past transient no-answer runs. None = still inconclusive."""
+    """Replay a case once, retrying past transient no-answer runs. None = still inconclusive."""
+    tmp.mkdir(parents=True, exist_ok=True)
     for attempt in range(_REPLAY_ATTEMPTS):
         report = tmp / f"{case_id}_{language}_{attempt}.json"
         verdict = _replay_once(case_id, language, model, report)
@@ -117,24 +135,42 @@ def _replay(case_id: str, language: str, model: str, tmp: Path) -> bool | None:
 
 
 def _confirm_breaks(candidates: list[str], model: str) -> tuple[set[str], list[str]]:
-    """Replay each candidate break; return (confirmed, inconclusive)."""
+    """Replay each candidate break ``_CONFIRMATION_REPLAYS`` times; confirm on a majority.
+
+    Best-of-three, not best-of-one. The measured break frequencies (see
+    ``_CONFIRMATION_REPLAYS``) are p≈0.8 for the real regression and p≈0.2 for noise, so a
+    single replay decides a release on one sample of a coin that lands the wrong way one
+    time in five — in BOTH directions.
+    """
     confirmed: set[str] = set()
     inconclusive: list[str] = []
     with tempfile.TemporaryDirectory(prefix="tessera-reproduce-") as raw:
         tmp = Path(raw)
         for key in candidates:
             case_id, language = key.split("|", 1)
-            sys.stdout.write(f"  replaying {key} … ")
+            sys.stdout.write(f"  replaying {key} ({_CONFIRMATION_REPLAYS}x) … ")
             sys.stdout.flush()
-            again = _replay(case_id, language, model, tmp)
-            if again is None:
+            verdicts = [
+                _replay(case_id, language, model, tmp / str(i))
+                for i in range(_CONFIRMATION_REPLAYS)
+            ]
+            if any(v is None for v in verdicts):
+                # A replay nobody could get an answer out of neither confirms nor clears.
+                # Never treat it as a clearance: a dead backend would absolve every
+                # regression at once.
                 inconclusive.append(key)
-                sys.stdout.write("no verdict (no model answered)\n")
-            elif again is False:
+                sys.stdout.write("no verdict (a replay got no model answer)\n")
+                continue
+            failures = sum(1 for v in verdicts if v is False)
+            if failures >= _CONFIRMATION_FAILURES:
                 confirmed.add(key)
-                sys.stdout.write("FAILED AGAIN — confirmed regression\n")
+                sys.stdout.write(
+                    f"failed {failures}/{_CONFIRMATION_REPLAYS} — CONFIRMED regression\n"
+                )
             else:
-                sys.stdout.write("passed this time — sampling noise, not counted\n")
+                sys.stdout.write(
+                    f"failed {failures}/{_CONFIRMATION_REPLAYS} — sampling noise, not counted\n"
+                )
     return confirmed, inconclusive
 
 

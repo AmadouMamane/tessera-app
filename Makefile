@@ -220,6 +220,19 @@ eval-calibrate-weak: install
 	@test -n "$(MODEL)" || (echo "MODEL= is required (e.g. llama3.2:1b)" && exit 2)
 	uv run python scripts/run_model_sweep.py --models $(MODEL) --out eval/reports/weak-model
 
+# What a bar has to CLEAR: the sampling noise, measured instead of guessed. The T2 sampling
+# temperature is 0.2 with no seed, so the same model does not score the same twice — and
+# "30 leaves 5-6 cases of margin" (ADR 0021) assumed a spread nobody had counted. One pass
+# per model tells you nothing about a distribution; this runs N of them and reports the
+# real one, using the gate's OWN population function so what is measured is what is graded.
+#   make eval-noise MODEL=llama3.2:3b PASSES=5        # the model the bar must ADMIT
+#   make eval-noise MODEL=llama3.2:1b PASSES=5        # the weak model it must REJECT
+# Reports land in .eval-noise/ (gitignored): a calibration pass is not a published result.
+eval-noise: install
+	@test -n "$(MODEL)" || (echo "MODEL= is required (e.g. llama3.2:3b)" && exit 2)
+	uv run python scripts/measure_contribution_noise.py \
+		--model $(MODEL) --passes $(or $(PASSES),5)
+
 # Run one case: make eval-case CASE=07_prompt_injection_roleplay
 eval-case: install
 	uv run python scripts/run_eval.py --case $(CASE)
