@@ -59,6 +59,49 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-13 — **ADR 0026: a witness interrogates the thing, never its neighbourhood. `make
+  dev-status` was asking git about a DIRECTORY and printing the answer as if it were about the
+  PROCESS.** Landed `ce61a01a` (twice-green, on an **isolated** worktree at the exact commit — see
+  the incident below). The operator found it, and he was right that it matters more than the perf:
+  it is a hole in the witness this project has depended on all week. `dev-status` ran `lsof` → the
+  process's **cwd** → `git -C "$cwd" rev-parse HEAD`, and printed it under a column named `git`.
+  Move the checkout under a live server and the witness reports the new sha with total composure —
+  which is exactly what it did on 2026-07-13, while the operator's browser paid **1 087 ms** for a
+  badge that costs 20 ms and every witness on the machine said all was well. **The fix, and its one
+  load-bearing line:** the process hashes the `.py` files **the interpreter actually loaded it
+  from** (`Path(__file__).parent` — a checkout, a site-packages install, a container image alike;
+  **no git required**), captures it **at import**, and **freezes** it. A value recomputed per
+  request would describe the *disk*, and the disk is not the process — that is the original bug,
+  re-armed. `/healthz` publishes `code_digest` / `code_sha` / `code_sha_source` / `code_dirty`
+  (`version` was the *package* version — frozen for months, and the only thing the endpoint ever
+  said about its own code). `dev-status` asks the server, re-hashes the checkout **with the same
+  function**, and prints **STALE · RESTART** on divergence. **Verified live**: the server
+  recognises itself; slip a file under it → STALE; remove it → green. The OLD `dev-status` printed
+  the same reassuring sha in all three cases. **Honest unknowns throughout**: `code_sha = None`
+  (never `""`, never a placeholder) when the process cannot know; `code_dirty = None` — never a
+  comfortable `false` — when `git status` did not answer; and a server publishing no digest is
+  **CANNOT SAY · RESTART**, never `ok`. *A witness that cannot see must report a blind spot.*
+  **Ratchet, mutation-tested three ways**: make `identity()` recompute ("it's cheap") → 2 red; put
+  `git rev-parse` back in the Makefile recipe → red; declare a silent server healthy → red.
+  **The doctrine (ADR 0026, the methodological twin of 0024)** — three guard-rails have now
+  reported success over a hole because each asked an ADJACENT question: the gate read a pipeline's
+  last line instead of its exit code (`$PIPESTATUS[0]` is empty in zsh); a guard checked a **name
+  in a list** instead of calling it with a stranger's request (`require_bearer` in
+  `KNOWN_AUTH_GUARDS` → anonymous `DELETE /memory/{id}` got **204**); `dev-status` asked a
+  **directory** instead of the server. *A gate reports its own exit code; a guard is what refuses a
+  stranger; a server states which code it loaded; a contract is what it honours.*
+  **⚠️ INCIDENT, third occurrence, and the ownership marker did NOT stop it:** a second agent wrote
+  **11 files** into `agents/claude` while this lot's gate was running — the gate correctly went
+  **VOID** (the tree moved underneath it), which is the 2026-07-12 fix working. But `make claim`
+  records the agent's **name**, and both writers are called `claude`: **two Claude sessions in one
+  worktree recognise each other as legitimate.** The marker identifies a *role*, not a *session*.
+  Nothing was destroyed (no stash, no checkout — the 07-12 mistake was not repeated); the verdict
+  was taken in a **throwaway isolated worktree at the exact commit**, which is the only honest way
+  to judge a tree somebody else is writing to. **Owed: the claim marker must carry a session id.**
+  Also owed (pre-existing, found by the isolated run): `gate-py` runs a **Python** test that shells
+  out to **biome**, a node tool only `gate-web` installs — so the gate cannot pass in a fresh
+  worktree without a manual `pnpm install` first.
+
 - 2026-07-13 — **FIXED, and the trace proves it: `/observability/fleet` 3 938 → 430 ms; the
   event loop is no longer frozen; the cockpit can now explain its own latency.** Branch
   `claude/fleet-perf-spans` (twice-green on the committed tree, `787acbe99e80`). Full write-up
