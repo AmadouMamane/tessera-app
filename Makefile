@@ -355,17 +355,17 @@ LEDGER_BACKUP_DIR   ?= backups/ledger
 
 .PHONY: ledger-backup ledger-restore-drill
 
-ledger-backup:
-	@mkdir -p $(LEDGER_BACKUP_DIR)
-	@ts=$$(date -u +%Y%m%dT%H%M%SZ); \
-	 out=$(LEDGER_BACKUP_DIR)/audit_ledger-$(LEDGER_SCHEMA)-$$ts.sql.gz; \
-	 docker exec $(LEDGER_PG_CONTAINER) pg_dump -U tessera -d $(LEDGER_DB) \
-	   --data-only --no-owner --no-privileges -t $(LEDGER_SCHEMA).audit_ledger | gzip -9 > $$out; \
-	 sha=$$(shasum -a 256 $$out | cut -d' ' -f1); \
-	 printf '%s  %s\n' "$$sha" "$$(basename $$out)" > $$out.sha256; \
-	 rows=$$(docker exec $(LEDGER_PG_CONTAINER) psql -U tessera -d $(LEDGER_DB) -tAc \
-	   "SELECT count(*) FROM $(LEDGER_SCHEMA).audit_ledger"); \
-	 echo "✓ $$out ($$(du -h $$out | cut -f1), $$rows rows) sha256=$$sha"
+# A BACKUP THAT CANNOT FAIL IS NOT A BACKUP. This recipe used to be three laundered exit
+# codes stacked on one line — a `pg_dump | gzip` pipeline (exit = gzip's), a `;`-chain with
+# no `set -e`, and a closing `echo "✓"` — and against a container that does not exist it
+# printed a tick, exited 0, and wrote a SHA-256-notarised archive of zero bytes. The sidecar
+# authenticated the emptiness. See scripts/ledger_backup.py, which now does the work and
+# INTERROGATES THE ARTEFACT: no `COPY <schema>.audit_ledger` header in the dump ⇒ no file is
+# written and the verdict is NOT OK. An empty *ledger* passes; a failed *dump* cannot.
+ledger-backup: install
+	@LEDGER_PG_CONTAINER=$(LEDGER_PG_CONTAINER) LEDGER_DB=$(LEDGER_DB) \
+	 LEDGER_SCHEMA=$(LEDGER_SCHEMA) LEDGER_BACKUP_DIR=$(LEDGER_BACKUP_DIR) \
+	 uv run python scripts/ledger_backup.py
 
 # Prove the newest backup restores to a verifying chain (throwaway db, tree-aware verify).
 ledger-restore-drill: install
