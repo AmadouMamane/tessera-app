@@ -15,11 +15,41 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
+import pytest
+
 from eval.contribution import restrict_baseline
 from eval.ratchet import load_baseline
 from eval.sets import load_eval_set
-from tessera.observability import agent_lifecycle as lifecycle
+from tessera.observability import agent_lifecycle as lifecycle, eval_floor
 from tessera.observability.eval_data import EvalSnapshot, SessionRow
+
+
+@pytest.fixture(autouse=True)
+def _certification_axis_held_neutral(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hold the CERTIFIED-INVERSION axis neutral, so each test below varies exactly one condition.
+
+    The release gate has three independent conditions: the critical eval-gate, the null floor (Rule
+    1), and the observability level. As of 2026-07-13 the floor has **two** inputs, not one — the
+    single report the cockpit reads, and the *measurement* of what the model does over fifteen
+    passes. The second one is not neutral for the real llama3.2:3b: it is certified worse than
+    silence on ``48_hallucination_retroactive_refund|fr``, which ``support-client`` runs, so every
+    test in this module about the observability LEVEL would otherwise be silently deciding on the
+    model's French refund behaviour instead.
+
+    So it is pinned clean **here**, and it is exercised for real **there**:
+    ``tests/unit/test_eval_floor_is_non_derogable.py::TestOneCertifiedInversionRefuses`` and
+    ``::TestTheRealReleaseGate``, which run against the committed measurement with no mocks at all.
+    A fixture that neuters a safety condition has to say where the condition IS tested, or it is
+    just a way of not being told.
+    """
+    monkeypatch.setattr(
+        eval_floor,
+        "certified_inversions",
+        lambda model, _runs, **_kw: eval_floor.CertifiedInversions(
+            model=model, catalogue_version="held-neutral-for-this-module", passes=15, runs=()
+        ),
+    )
+
 
 if TYPE_CHECKING:
     import pytest

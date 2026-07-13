@@ -50,7 +50,7 @@ from eval.discrimination import (
     load_samples,
     minimum_viable_samples,
 )
-from eval.ratchet import catalogue_version, load_baseline
+from eval.ratchet import catalogue_on_disk, load_baseline
 from tessera.verdict import CannotSay, NoEffect, NotOk, Ok, Power, Verdict, render
 
 NULL_BASELINE = Path("eval/baselines/null-control.json")
@@ -58,38 +58,6 @@ SAMPLES = Path("eval/baselines/discrimination-samples.json")
 CLASSIFICATION = Path("eval/baselines/discrimination.json")
 FAILURES = Path("eval/failures")
 RAW = Path(".eval-noise")
-
-
-def _catalogue_on_disk(failures: Path) -> str | None:
-    """Ask the CASE FILES which catalogue this is. Never the artefact's own say-so.
-
-    **This function exists because the ratchet was green under its own mutation**, and it was
-    green for the fourth time in this repository for the fifth-identical reason (ADR 0026): it
-    interrogated its *neighbourhood* instead of the thing.
-
-    Deleting ``eval/failures/26_citation_fabrication_cjue.json`` removes **two of the three**
-    Holm-certified discriminators from the catalogue. The check went on reporting ``[OK]``, exit
-    0 — because everything it read agreed with everything else it read. The committed matrix has
-    63 cases' worth of columns; the committed null floor names 63 cases; the frozen classification
-    names 63 cases; all three carry ``catalogue_version = "63-071edbdc"`` and all three were
-    **fossils**. Not one of them ever looked at ``eval/failures/``.
-
-    So this looks. The identity is derived from the case files on disk with the same function the
-    runner stamps reports with, and the check refuses (``CannotSay``, exit 3) the moment it and
-    the committed floor disagree — because from that moment on, every count in the classification
-    describes runs that no longer exist.
-
-    Args:
-        failures: The catalogue directory.
-
-    Returns:
-        The ``count-hash`` identity of the case files, or ``None`` if the directory is not there
-        to be read — a blind spot, not a zero.
-    """
-    if not failures.is_dir():
-        return None
-    ids = [p.stem for p in sorted(failures.glob("*.json")) if not p.stem.startswith("_")]
-    return catalogue_version(ids) if ids else None
 
 
 #: The catalogue's measured discriminating power — the number the whole exercise produces.
@@ -176,8 +144,10 @@ def main() -> int:  # noqa: PLR0911
     # ASK THE CATALOGUE, NOT THE ARTEFACTS. Everything below this line derives from committed
     # files that all agree with one another and none of which has ever opened eval/failures/. Ask
     # them alone and a deleted case is invisible: this check reported [OK] with two of its three
-    # Holm-certified discriminators removed from disk. See `_catalogue_on_disk`.
-    on_disk = _catalogue_on_disk(args.failures)
+    # Holm-certified discriminators removed from disk. THE CHAIN ENDS HERE — one function looks at
+    # the source, and it is `eval.ratchet.catalogue_on_disk`, shared with the release gate so there
+    # is no second implementation to drift from this one.
+    on_disk = catalogue_on_disk(args.failures)
     if on_disk is None:
         sys.stdout.write(
             render(

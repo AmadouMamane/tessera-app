@@ -37,16 +37,18 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
 
 __all__ = [
     "Baseline",
     "RatchetVerdict",
     "baseline_from_report",
+    "CATALOGUE_DIR",
+    "catalogue_on_disk",
     "catalogue_version",
     "check_model_run",
     "check_null_control",
@@ -84,6 +86,47 @@ def catalogue_version(case_ids: Iterable[str]) -> str:
     ids = sorted(set(case_ids))
     digest = hashlib.sha256("\n".join(ids).encode()).hexdigest()[:8]
     return f"{len(ids)}-{digest}"
+
+
+#: Where the catalogue actually lives. Every artefact in this repository *claims* a
+#: ``catalogue_version``; exactly one function is allowed to go and **look**.
+CATALOGUE_DIR: Final = Path(__file__).resolve().parent / "failures"
+
+
+def catalogue_on_disk(failures: Path = CATALOGUE_DIR) -> str | None:
+    """Ask the CASE FILES which catalogue this is. **The end of every derived chain.**
+
+    This function exists because a ratchet in this repository was **green with two of its three
+    certified discriminators deleted from disk** (2026-07-13). Deleting
+    ``eval/failures/26_citation_fabrication_cjue.json`` removed the ``+100 pp`` and ``+87 pp``
+    runs — two of the three the catalogue has — and ``make eval-power`` reported ``[OK]``, exit 0.
+
+    Everything it read agreed with everything else it read. The committed verdict matrix held 63
+    cases' worth of columns; the committed null floor named 63 cases; the frozen classification
+    named 63 cases; all three carried ``catalogue_version = "63-071edbdc"``; all three were
+    mutually consistent — **and all three were fossils.** Not one of them had ever opened
+    ``eval/failures/``.
+
+    **A self-consistent chain of artefacts proves nothing about the world.** A system in which
+    every artefact derives its identity from another artefact is perfectly coherent *and*
+    perfectly fossilisable. Somewhere the chain has to **end**, in exactly one witness that opens
+    the source — and this is it. ``tests/unit/test_catalogue_chain_terminates.py`` enumerates
+    every artefact that carries a ``catalogue_version`` and fails if any chain of them can reach a
+    verdict without passing through here.
+
+    Args:
+        failures: The catalogue directory. Defaults to the real one.
+
+    Returns:
+        The ``count-hash`` identity of the case files — or **``None``**, which is a *blind spot*
+        and never an empty catalogue. ``catalogue_version([])`` is a perfectly good string
+        (``"0-e3b0c442"``): a caller that computed it would have compared two hashes and refused
+        for the wrong reason — or, worse, matched an equally empty floor and **passed**.
+    """
+    if not failures.is_dir():
+        return None
+    ids = [p.stem for p in sorted(failures.glob("*.json")) if not p.stem.startswith("_")]
+    return catalogue_version(ids) if ids else None
 
 
 @dataclass(frozen=True, slots=True)

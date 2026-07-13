@@ -100,11 +100,24 @@ def test_an_unproven_level_never_satisfies_the_release_gate(
     from types import SimpleNamespace
 
     from tessera.observability import agent_lifecycle as lifecycle
+    from tessera.observability import eval_floor
 
     _no_business_events(monkeypatch)
     _governed(monkeypatch, value=True)
     monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None: "dormant")
     monkeypatch.setattr(lifecycle, "load_eval_snapshot", lambda _aid: _passing_snapshot())
+    # Hold the CERTIFIED-INVERSION axis neutral: this test is about the observability LEVEL, and
+    # `recouvrement` runs `56_policy_violation_disparage_bank|de`, on which the real llama3.2:3b is
+    # certified worse than silence — so the null floor would block first and this test would pass
+    # for a reason it never meant to assert. The certification is exercised for real in
+    # tests/unit/test_eval_floor_is_non_derogable.py.
+    monkeypatch.setattr(
+        eval_floor,
+        "certified_inversions",
+        lambda model, _runs, **_kw: eval_floor.CertifiedInversions(
+            model=model, catalogue_version="held-neutral-for-this-test", passes=15, runs=()
+        ),
+    )
     monkeypatch.setattr(lifecycle, "declares_external_effects", lambda _aid: False)
     monkeypatch.setattr(
         lifecycle, "get_settings", lambda: SimpleNamespace(is_production=lambda: True)

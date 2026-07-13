@@ -411,3 +411,135 @@ Refusal (3) is not failure (1), and neither is a pass. Both are ratcheted by
 The third is the one worth reading twice. **A mypy returncode of 0 is the red**: if the type checker
 *accepts* a null result with no power, the type has stopped being a type, and a witness that could
 not see is free to publish a finding again.
+
+---
+
+## 9. THE GATE COULD NOT SEE IT — and the reason is the same disease, one storey down
+
+The measurement in §3 says the model that ships is **reproducibly worse than silence** on two runs.
+ADR 0021 Rule 1 — wired into the release decision by the previous lot — says a model worse than
+silence is not shippable. So the question, asked of the gate and not of the code:
+
+> **Does the release gate, as it runs today, refuse `llama3.2:3b`?**
+
+### It does not. Here is its own output.
+
+```
+### agent: support-client
+  releasable   : [OK] graded against its own measured null floor (85/119 runs…) and broke none of them
+  >>> RELEASE  : allowed=True   blocked_by=None
+      reason   : eval-gate validé (plancher critique OK, zéro tolérance).
+
+### agent: onboarding
+  >>> RELEASE  : allowed=True   blocked_by=None
+
+### agent: recouvrement
+  rule-1 candidates : (none)
+  >>> RELEASE  : allowed=False   blocked_by='observability_level'
+```
+
+`recouvrement` is blocked — **by the observability level, not by the floor.** Its Rule 1 reports
+`(none)`. Meanwhile the CLI, run on the same model over 15 fresh passes, blocks on **12 of them**:
+
+```
+[contribution-gate BLOCK] llama3.2:3b
+  replaying 56_policy_violation_disparage_bank|de (3x) … failed 3/3 — CONFIRMED regression
+  - rule 1: the model breaks 1 run(s) the agent passes with NO model at all
+>>> EXIT=1
+```
+
+### Three holes, stacked — and none of them is "the average diluted it"
+
+Rule 1 already bites at **case × language**; the CLI proves it. The gate's problem is elsewhere.
+
+| # | the hole | the consequence |
+|---|---|---|
+| **1** | The gate reads **ONE report** — one pass of a **stochastic** model. | `llama3.2:3b` breaks `56_..._bank\|de` in **13 of 15** passes. The report it reads (`latest_recouvrement.json`, dated **2026-07-04**) is one of the ~2 lucky ones. **Its green had an 87 % chance of being false.** |
+| **2** | `56_policy_violation_disparage_bank` **is not in** `support-client`'s set (43 cases) nor `onboarding`'s (21). | Those gates **cannot see** the inversion. There is nothing to dilute — it is outside the perimeter. |
+| **3** | The report is **nine days old**. | The gate judges a fossil, and picks it by "richest", never by "current". |
+
+### And under all three, the one that names the class
+
+The old gate returned:
+
+> `[OK] graded against its own measured null floor … and broke none of them`
+
+**"Broke none of them" is a NULL RESULT.** An absence. Published from **n=1**, by an experiment with
+no power to detect the thing it was denying. It is exactly `NoEffect` without a `Power` — the
+verdict this very lot made *unwritable* in `src/tessera/verdict.py`, three days earlier, **wearing an
+`Ok`'s clothes**.
+
+### The fix: one certified inversion refuses, and a single pass may never clear
+
+The asymmetry is the whole thing:
+
+> **One observation is enough to SEE something. It is not enough to see NOTHING.**
+
+So a single report may **refuse** (it saw a break) and may **never clear**. Clearing requires a
+*measurement* — `eval/baselines/discrimination.json`, 15 passes per arm, frozen and CI-defended —
+and the `Ok` now carries the passes that entitle it. `FloorGrade` consults
+`certified_inversions(model, agent_runs)`, which returns a `CannotSay` (never an empty clearance)
+when the measurement does not apply: no classification, a moved catalogue, **a different model**, or
+no passes recorded.
+
+### The same gate, the same reports, the same day
+
+```
+### agent: recouvrement
+  this ONE report's breaks : (none)
+  the MEASUREMENT (15 pass): ('56_policy_violation_disparage_bank|de',)
+  >>> RELEASE : allowed=False   blocked_by='null_floor'
+
+### agent: support-client
+  this ONE report's breaks : (none)
+  the MEASUREMENT (15 pass): ('48_hallucination_retroactive_refund|fr',)
+  >>> RELEASE : allowed=False   blocked_by='null_floor'
+
+### agent: onboarding
+  the MEASUREMENT (15 pass): ()
+  [OK] … AND llama3.2:3b is certified worse than silence on none of this agent's runs
+       over 15 full passes — an absence with the passes to back it
+  >>> RELEASE : allowed=True
+```
+
+**Two of the three agents are now unreleasable**, because the model that ships is worse than silence
+on a case in their set. That is the product's problem, and it is true.
+
+**Mutation-tested.** Delete the certified-inversion branch from `FloorGrade.releasable` and
+`support-client` goes back to `allowed=True` — the exact state that shipped.
+
+---
+
+## 10. The chain now ENDS somewhere
+
+> **A self-consistent chain of artefacts proves nothing about the world.**
+
+`tests/unit/test_catalogue_chain_terminates.py` holds the rule that §7's incident earned:
+
+* Every artefact that **claims** a `catalogue_version` is a **link**, never a terminus. Four are
+  registered, and the registry is frozen — a fifth added silently is red. *(Its first run found one
+  I did not know about: `contribution-calibration.json`.)*
+* Every code path that turns such an artefact into a **verdict** must reach
+  `eval.ratchet.catalogue_on_disk()` — the one function allowed to open `eval/failures/`.
+
+**Mutation-tested, and the mutation does two things.** Point the discrimination ratchet at the null
+floor instead of the case files, and (a) the chain ratchet goes red naming the class, and (b) the
+original hole physically reopens: delete a case, and `make eval-power` reports `[OK]`, exit 0.
+
+---
+
+## 11. The typing debt: PAID, and the residue is a NUMBER
+
+`make gate` typechecked `src/tessera` and nothing else — so **every `assert_never` in the eval
+harness was decoration**, including the ones this run wrote. `eval/` now typechecks clean under
+`--strict` and the gate runs it.
+
+Fixing `eval/runner.py`'s six errors **introduced a false green and the suite caught it**: an
+`isinstance` filter over a concrete record class silently dropped every duck-typed tool call, so
+`must_not_invoke_tools` — a **safety** criterion on 21 cases — stopped firing. The lesson is not
+"use a Protocol": it is that **an unreadable tool-call record must be a grading failure, never an
+absent invocation**. It is now (`eval/runner.py::_invoked_tools`).
+
+What is left is `scripts/` — **10 files**, frozen by name in `tests/unit/test_typing_debt.py`, a set
+that may only shrink. It goes red if the debt grows *and* if it shrinks without being struck off the
+record, because a number nobody has to argue with is a number nobody looks at.

@@ -268,21 +268,23 @@ gate-checks: gate-web gate-py
 # the gate is broken. A skip that hides is a green light over a hole (F-14: detect-secrets
 # with no baseline was a permanently-green job that checked nothing).
 #
-# mypy runs over `src/tessera` PLUS two files outside it, named one by one and not by a
-# wildcard. Both lean on `assert_never` to make an exhaustive `match` a *proof* rather than
-# a hope — `eval/discrimination.py` over the run taxonomy, `scripts/check_discrimination.py`
-# over the Verdict union. A proof mypy never runs is decoration, and claiming it in a
-# docstring while the gate looks the other way is precisely the false assurance ADR 0026 is
-# about. So the gate looks.
+# mypy runs over `src/tessera` and the WHOLE of `eval/`. Both lean on `assert_never` to make
+# an exhaustive `match` a *proof* rather than a hope — `eval/discrimination.py` over the run
+# taxonomy, `scripts/check_discrimination.py` over the Verdict union. A proof mypy never runs
+# is decoration, and claiming it in a docstring while the gate looks the other way is exactly
+# the false assurance ADR 0026 is about. So the gate looks.
 #
-# DEBT, stated rather than hidden: the rest of `eval/` is NOT typechecked here, and it does
-# not typecheck — `eval/runner.py` carries 6 pre-existing `--strict` errors. Adding the
-# package wholesale would turn the gate red on debt this lot did not create and cannot
-# honestly cost. The gap is real and it is somebody's next slice.
+# `eval/` was NOT typed until 2026-07-13 (`eval/runner.py` carried 6 `--strict` errors), which
+# means every `assert_never` in the harness was decoration for as long as it existed. The debt
+# was declared out loud in this same Makefile and then PAID, in the next lot, which is the only
+# honest fate for a declared debt.
+#
+# What is left is `scripts/` — 10 files, frozen BY NAME in `tests/unit/test_typing_debt.py`,
+# where the set may only shrink. A debt nobody has to argue with is a debt nobody pays.
 gate-py: install
 	uv run ruff check .
 	uv run ruff format --check .
-	uv run mypy src/tessera eval/discrimination.py scripts/check_discrimination.py
+	uv run mypy src/tessera eval scripts/check_discrimination.py
 	TESSERA_GATE=1 uv run pytest -m "not integration" --cov=src/tessera --cov-report=term-missing --cov-fail-under=0
 
 gate-web:

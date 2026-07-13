@@ -600,16 +600,14 @@ class TestTheCheckAsksTheCatalogueNotItsOwnArtefacts:
     """
 
     def test_the_cli_derives_the_catalogue_identity_from_the_case_files(self) -> None:
-        from scripts.check_discrimination import _catalogue_on_disk
-
-        from eval.ratchet import catalogue_version
+        from eval.ratchet import catalogue_on_disk, catalogue_version
 
         ids = [
             p.stem
             for p in sorted((REPO / "eval" / "failures").glob("*.json"))
             if not p.stem.startswith("_")
         ]
-        assert _catalogue_on_disk(REPO / "eval" / "failures") == catalogue_version(ids)
+        assert catalogue_on_disk(REPO / "eval" / "failures") == catalogue_version(ids)
 
     def test_a_catalogue_that_is_not_there_is_a_blind_spot__never_an_empty_one(
         self, tmp_path: Path
@@ -621,10 +619,10 @@ class TestTheCheckAsksTheCatalogueNotItsOwnArtefacts:
         *wrong reason*, or worse, matched an equally empty floor and passed. The absence of the
         thing is not a property of the thing.
         """
-        from scripts.check_discrimination import _catalogue_on_disk
+        from eval.ratchet import catalogue_on_disk
 
-        assert _catalogue_on_disk(tmp_path / "does-not-exist") is None
-        assert _catalogue_on_disk(tmp_path) is None  # exists, but empty
+        assert catalogue_on_disk(tmp_path / "does-not-exist") is None
+        assert catalogue_on_disk(tmp_path) is None  # exists, but empty
 
     def test_deleting_a_case_makes_the_committed_evidence_describe_a_dead_catalogue(
         self, tmp_path: Path
@@ -635,9 +633,7 @@ class TestTheCheckAsksTheCatalogueNotItsOwnArtefacts:
         point, and the whole danger. What changes is the catalogue, and only something that looks
         at the catalogue can see it.
         """
-        from scripts.check_discrimination import _catalogue_on_disk
-
-        from eval.ratchet import catalogue_version
+        from eval.ratchet import catalogue_on_disk, catalogue_version
 
         cut = tmp_path / "failures"
         cut.mkdir()
@@ -650,7 +646,7 @@ class TestTheCheckAsksTheCatalogueNotItsOwnArtefacts:
             (cut / p.name).write_bytes(p.read_bytes())
 
         frozen = load_power(CLASSIFICATION)
-        mutated = _catalogue_on_disk(cut)
+        mutated = catalogue_on_disk(cut)
         assert mutated is not None
         assert (
             mutated != frozen.catalogue_version
