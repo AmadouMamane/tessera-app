@@ -235,10 +235,10 @@ def check_installed() -> Verdict:
 
         git rev-parse --git-path hooks/reference-transaction
 
-    That is git's *own* answer to "where would I look for this hook?" — it honours ``core.hooksPath``,
-    the common-dir redirect for linked worktrees, everything. Reading ``core.hooksPath`` ourselves and
-    re-deriving the path would be re-implementing git's resolution and then trusting our copy of it:
-    the neighbourhood, once more.
+    That is git's *own* answer to "where would I look for this hook?" — it honours
+    ``core.hooksPath``, the common-dir redirect for linked worktrees, everything. Reading
+    ``core.hooksPath`` ourselves and re-deriving the path would be re-implementing git's
+    resolution and then trusting our copy of it: the neighbourhood, once more.
 
     And the file found there is **hashed against the tracked source**. The installed hook is a
     *copy*; a copy drifts, and what git runs is the copy. A guard that verified the repository's

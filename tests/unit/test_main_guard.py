@@ -371,9 +371,9 @@ class TestTheHookIsWhatActuallyRefuses:
             "print it either. This sha IS the proof that the remote itself was asked — it is what "
             f"separates a guard that was right from a guard that merely spoke:\n{merge.stderr}"
         )
-        assert "fork" in merge.stderr.lower(), (
-            f"the refusal does not say what it prevented:\n{merge.stderr}"
-        )
+        assert (
+            "fork" in merge.stderr.lower()
+        ), f"the refusal does not say what it prevented:\n{merge.stderr}"
         assert _git(us, "rev-parse", "main").stdout.strip() == before, (
             "the merge was refused and `main` MOVED ANYWAY — the transaction was not aborted. "
             "PUBLISHING A VERDICT IS NOT ENFORCING IT: this hook, first written into git's "
@@ -400,12 +400,12 @@ class TestTheHookIsWhatActuallyRefuses:
 
         assert merge.returncode != 0, "the unfetched fork — the incident itself — was let through"
         assert "no interpreter" not in merge.stderr, merge.stderr
-        assert str(forked["theirs"])[:12] in merge.stderr, (
-            f"the blind-spot refusal does not name the tip the remote reported:\n{merge.stderr}"
-        )
-        assert "fetch" in merge.stderr.lower(), (
-            f"it refused without saying what would make the answer knowable:\n{merge.stderr}"
-        )
+        assert (
+            str(forked["theirs"])[:12] in merge.stderr
+        ), f"the blind-spot refusal does not name the tip the remote reported:\n{merge.stderr}"
+        assert (
+            "fetch" in merge.stderr.lower()
+        ), f"it refused without saying what would make the answer knowable:\n{merge.stderr}"
         assert _git(us, "rev-parse", "main").stdout.strip() == before
 
     def test_the_hook_lets_a_reconciled_advance_through(
@@ -440,6 +440,7 @@ class TestTheHookIsWhatActuallyRefuses:
             "the hook exited 0 and `main` did not move — it aborted the transaction in silence, "
             "which is a refusal that does not even know it is one."
         )
+
 
 class TestAnUninstalledGuardIsAWitnessThatDoesNotRun:
     """The eighth instance — and the first version of this file **was** it.
