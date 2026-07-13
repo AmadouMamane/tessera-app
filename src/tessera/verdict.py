@@ -58,8 +58,10 @@ __all__ = [
     "EXIT_OK",
     "EXIT_REFUSED",
     "CannotSay",
+    "NoEffect",
     "NotOk",
     "Ok",
+    "Power",
     "Verdict",
     "exit_code",
     "render",
@@ -169,11 +171,123 @@ class CannotSay(_Verdict):
             )
 
 
-#: The closed union. Deliberately an alias over three ``@final`` classes rather than an open base
-#: class: ``render`` and ``exit_code`` match on it exhaustively under ``assert_never``, so a fourth
+@final
+@dataclass(frozen=True, slots=True)
+class Power:
+    """The licence to report a null result: what the test **could** have detected.
+
+    :class:`Ok` may not be constructed without its evidence. This is that same rule, turned on the
+    one verdict a *badly designed experiment produces for free* — **"no effect"**.
+
+    A null result is not the absence of a claim. It is a claim — *"I looked, and there is nothing
+    there"* — and it is the claim an underpowered test manufactures out of nothing. This project
+    has the receipt. The eval catalogue was first sampled at five passes per model. At n=5 the
+    smallest p-value a **perfect** separation can produce is ``1/C(10,5) = 0.0040``; the
+    multiplicity-corrected threshold over the catalogue's 174 runs is ``0.05/174 = 0.00029``. The
+    *floor* of what that experiment could produce sat **above** the *ceiling* of what the
+    correction would accept. "Zero discriminating cases" was therefore guaranteed by the design —
+    equally true of a perfect catalogue and a worthless one — and nothing, anywhere, would have
+    stopped the sentence being written, published, and believed. It is ADR 0026's disease in its
+    purest form: a witness that could not see, reporting.
+
+    So an absence carries the power that authorises it. :class:`NoEffect` cannot be built without a
+    ``Power``, and a ``Power`` **cannot be built by a test that could not have rejected the null
+    whatever it observed**. Such a test has no null result to report. It has a blind spot — and the
+    type makes it say so (:class:`CannotSay`).
+
+    Args:
+        samples: How many observations the test actually had. The unit is the caller's (per arm, in
+            total, per subject); what matters is that it is positive, and *stated*.
+        threshold: The significance level the null was tested at, **after** any multiplicity
+            correction. Correcting for 174 tests and then quoting the uncorrected 0.05 here would be
+            the same lie, one indirection deeper.
+        best_achievable_p: The smallest p-value this design can produce — the p of the most extreme
+            result it is *capable of observing*. This is the field that does the work.
+        minimum_detectable_effect: The smallest effect the design could have certified, in
+            ``effect_unit``. What the reader needs in order to know what the null result does
+            **not**
+            exclude — and the number that was missing every single time.
+        effect_unit: What ``minimum_detectable_effect`` is measured in. A bare number is not an
+            effect size.
+    """
+
+    samples: int
+    threshold: float
+    best_achievable_p: float
+    minimum_detectable_effect: float
+    effect_unit: str
+
+    def __post_init__(self) -> None:
+        """Refuse the power a test does not have. This is the whole ratchet, and it is ten lines."""
+        if self.samples <= 0:
+            msg = "a test with no observations has no power, and no null result to report."
+            raise ValueError(msg)
+        if not self.effect_unit.strip():
+            msg = (
+                f"minimum_detectable_effect={self.minimum_detectable_effect} in WHAT? A bare "
+                f"number "
+                f"is not an effect size — name the unit."
+            )
+            raise ValueError(msg)
+        if self.best_achievable_p > self.threshold:
+            msg = (
+                f"this design CANNOT reject the null — not for this effect, not for any "
+                f"effect. The most extreme result it is capable of observing has "
+                f"p={self.best_achievable_p:.3g}, "
+                f"and the threshold is {self.threshold:.3g}. It would have returned 'no effect' "
+                f"whatever the world did, so its silence carries exactly zero information. That is "
+                f"not a null result: it is a BLIND SPOT. Report CannotSay(...) instead — and "
+                f"say how "
+                f"many observations would buy the answer."
+            )
+            raise ValueError(msg)
+
+    def __str__(self) -> str:
+        """The power, in the one sentence a reader needs in order to size the silence."""
+        return (
+            f"n={self.samples} at threshold {self.threshold:.3g}; the smallest effect it could "
+            f"have "
+            f"certified is {self.minimum_detectable_effect:g} {self.effect_unit}"
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class NoEffect(_Verdict):
+    """The witness looked **for** something, did not find it — and says what it *could* have found.
+
+    Distinct from :class:`NotOk`, and the distinction is the point. ``NotOk`` is a **positive**
+    observation of something wrong ("the tree moved under the run"; "silence closes this case").
+    ``NoEffect`` is the report of an **absence** — and an absence is only worth reporting by a
+    witness that would have seen the thing had it been there.
+
+    That witness is :class:`Power`, and it is a required field with no default:
+    ``NoEffect("no difference between the models")`` **does not typecheck**. That sentence is
+    exactly what this class exists to make unwritable.
+
+    Args:
+        claim: The absence, stated. What was looked for, and not found.
+        power: The licence to say so.
+    """
+
+    claim: str
+    power: Power
+
+    def __post_init__(self) -> None:
+        """An unnamed absence is indistinguishable from never having looked."""
+        if not self.claim.strip():
+            msg = "NoEffect('') names no absence. Say what you looked for and did not find."
+            raise ValueError(msg)
+
+
+#: The closed union. Deliberately an alias over four ``@final`` classes rather than an open base
+#: class: ``render`` and ``exit_code`` match on it exhaustively under ``assert_never``, so a fifth
 #: verdict invented tomorrow cannot be added without every consumer being made to handle it —
 #: mypy fails the build until they do. Illegal states unrepresentable (ADR 0019 §I1).
-Verdict = Ok | NotOk | CannotSay
+#:
+#: ``NoEffect`` was the fourth, and it arrived exactly as this comment predicted the fourth would:
+#: mypy failed the build in every consumer until each one said what it does with a null result.
+Verdict = Ok | NotOk | NoEffect | CannotSay
 
 
 def render(verdict: Verdict) -> str:
@@ -193,6 +307,8 @@ def render(verdict: Verdict) -> str:
             return f"[OK] {evidence}"
         case NotOk(reason=reason):
             return f"[NOT OK] {reason}"
+        case NoEffect(claim=claim, power=power):
+            return f"[NO EFFECT] {claim} — {power}"
         case CannotSay(blind_spot=blind_spot):
             return f"[CANNOT SAY] {blind_spot}"
     assert_never(verdict)  # pragma: no cover — exhaustive; the line exists so mypy proves it is
@@ -204,15 +320,30 @@ def exit_code(verdict: Verdict) -> int:
     ``Ok`` — and only ``Ok`` — is ``0``. A ``CannotSay`` exits ``2``, exactly like a refusal,
     because a caller that proceeds on a blind spot has done the thing all four incidents did.
 
+    **``NoEffect`` is not ``Ok``**, and the temptation to make it so is worth naming. A witness that
+    set out to find something and came back empty-handed has not established that the thing is
+    fine; it has established that *it did not find it*, to within its power. Whether that is good
+    news depends entirely on what the caller was hoping for — a null result is a green light for
+    "did I break anything?" and a red one for "does this case discriminate?" — and **a type must
+    not guess which**. So it exits with the other non-``Ok`` verdicts, and a caller for whom a
+    bounded absence really is the good news must say so deliberately::
+
+        match check():
+            case NoEffect(claim, power):
+                return Ok(f"{claim} (and the test could have seen {power})")
+
+    That conversion is three lines and it forces the power into the evidence, where a human reads
+    it. The alternative — a silent ``0`` — is a green light over a hole with extra steps.
+
     Args:
         verdict: The verdict to translate.
 
     Returns:
-        :data:`EXIT_OK` for :class:`Ok`, :data:`EXIT_REFUSED` for the other two.
+        :data:`EXIT_OK` for :class:`Ok`, :data:`EXIT_REFUSED` for the other three.
     """
     match verdict:
         case Ok():
             return EXIT_OK
-        case NotOk() | CannotSay():
+        case NotOk() | NoEffect() | CannotSay():
             return EXIT_REFUSED
     assert_never(verdict)  # pragma: no cover — exhaustive; the line exists so mypy proves it is

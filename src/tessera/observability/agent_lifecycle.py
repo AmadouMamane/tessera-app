@@ -27,6 +27,7 @@ from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.eval_floor import grade_against_own_floor
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
+from tessera.verdict import Ok
 
 __all__ = [
     "ReleaseDecision",
@@ -275,7 +276,11 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
     # computed and rendered on the Évaluations page all along — and the Release button on
     # that same page did not read it. It does now.
     floor = grade_against_own_floor(snap)
-    floor_ok = floor.releasable
+    # `releasable` is a Verdict, and ONLY an Ok releases. A NotOk (the model broke a run its own
+    # guard closes unaided) and a CannotSay (there was no usable floor to grade it against) both
+    # mean "do not ship" — for entirely different reasons, which `block_reason()` carries to the
+    # reader instead of flattening, as the bool this replaced did.
+    floor_ok = isinstance(floor.releasable, Ok)
 
     if not eval_passed:
         if snap.gate_failed_critical:

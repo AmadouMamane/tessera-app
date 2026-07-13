@@ -117,6 +117,9 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::eval": "delegate",  # → scripts/run_eval.py
     "Makefile::eval-contribution": "delegate",  # → scripts/check_contribution.py
     "Makefile::eval-null-write": "action",  # it WRITES the baseline; that is not a judgement
+    "Makefile::eval-power": "delegate",  # → scripts/check_discrimination.py
+    "Makefile::eval-power-write": "action",  # it RE-MEASURES and writes; that is not a judgement
+    "Makefile::eval-noise": "action",  # it produces passes (a GPU-hour); it judges nothing
     "Makefile::eval-sweep": "action",
     "Makefile::eval-calibrate-weak": "action",
     "Makefile::eval-case": "action",
@@ -158,6 +161,12 @@ _EXIT_WITNESSES: dict[str, str] = {
     "scripts/gate_witness.py": "VERDICT",  # EXIT_VOID=3: "unusable" is not "failed"
     "scripts/worktree_owner.py": "VERDICT",  # Ok | NotOk | CannotSay
     "scripts/dev_status.py": "VERDICT",  # fixed: the exit code IS the verdict now
+    # check_power() returns a Verdict; `_exit_code` maps it exhaustively under assert_never, and
+    # keeps 3 for CannotSay (the catalogue moved — unusable is not failed).
+    "scripts/check_discrimination.py": "VERDICT",
+    # It runs N passes of the catalogue and writes them to a scratch dir. It reports whether the
+    # passes RAN, never whether they were good — the judging is check_discrimination.py's job.
+    "scripts/measure_contribution_noise.py": "action",
     "scripts/ledger_backup.py": "VERDICT",  # new: it interrogates the artefact it wrote
     "scripts/check_ratchet.py": "VERDICT",  # fixed: a missing report is a named red
     "scripts/landed.py": "VERDICT",  # EXIT_NOT_LANDED=4, distinct from a crash

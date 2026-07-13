@@ -187,10 +187,22 @@ gate-checks: gate-web gate-py
 # names the tool, because here its absence cannot mean "bare machine", it can only mean
 # the gate is broken. A skip that hides is a green light over a hole (F-14: detect-secrets
 # with no baseline was a permanently-green job that checked nothing).
+#
+# mypy runs over `src/tessera` PLUS two files outside it, named one by one and not by a
+# wildcard. Both lean on `assert_never` to make an exhaustive `match` a *proof* rather than
+# a hope — `eval/discrimination.py` over the run taxonomy, `scripts/check_discrimination.py`
+# over the Verdict union. A proof mypy never runs is decoration, and claiming it in a
+# docstring while the gate looks the other way is precisely the false assurance ADR 0026 is
+# about. So the gate looks.
+#
+# DEBT, stated rather than hidden: the rest of `eval/` is NOT typechecked here, and it does
+# not typecheck — `eval/runner.py` carries 6 pre-existing `--strict` errors. Adding the
+# package wholesale would turn the gate red on debt this lot did not create and cannot
+# honestly cost. The gap is real and it is somebody's next slice.
 gate-py: install
 	uv run ruff check .
 	uv run ruff format --check .
-	uv run mypy src/tessera
+	uv run mypy src/tessera eval/discrimination.py scripts/check_discrimination.py
 	TESSERA_GATE=1 uv run pytest -m "not integration" --cov=src/tessera --cov-report=term-missing --cov-fail-under=0
 
 gate-web:

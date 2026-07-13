@@ -21,17 +21,24 @@ from typing import Any
 import pytest
 
 from eval.discrimination import (
+    _CLASS_RANK,
     ALPHA,
+    BUCKET_OF,
     Sample,
+    bh_qvalues,
+    bh_reject,
     check_power,
     classify,
+    detection_power,
     dump_power,
     fisher_greater,
     holm_reject,
     load_power,
     load_samples,
+    minimum_viable_samples,
 )
 from eval.ratchet import Baseline
+from tessera.verdict import CannotSay, NoEffect, NotOk, Ok, Power
 
 REPO = Path(__file__).resolve().parents[2]
 SAMPLES = REPO / "eval" / "baselines" / "discrimination-samples.json"
@@ -146,7 +153,8 @@ class TestTheTaxonomy:
         floor = _baseline({"a|fr": True})
         once = [{"a|fr": False}, *_repeat({"a|fr": True}, 14)]
         power = classify(floor, _sample("s", once), _sample("w", _repeat({"a|fr": True}, 15)))
-        assert power.runs[0].klass == "undecided"
+        assert power.runs[0].klass == "underpowered"
+        assert power.runs[0].bucket == "cannot_say"
         assert not power.runs[0].measures_the_model
 
     def test_a_break_by_the_weak_model_alone_is_a_discriminator__not_a_harm(self) -> None:
@@ -179,7 +187,15 @@ class TestTheTaxonomy:
         assert power.runs[0].klass == "discriminating"
         assert power.runs[0].measures_the_model
 
-    def test_reversed__the_weak_model_separates__an_anomaly_never_a_credit(self) -> None:
+    def test_reversed__the_weak_model_separates__and_it_is_credited(self) -> None:
+        """The correction. A reversal separates the models — violently — and it is credited.
+
+        The reference model fails it every pass; a model a third its size passes it every pass.
+        That is not a *failure* to discriminate: it is the sharpest discrimination in the
+        catalogue, plus a certified defect of the model that ships. Filing it as "an anomaly,
+        never a credit" (as an earlier draft of this module did) would have let it be deleted
+        without turning the ratchet red — taking the only evidence of the defect with it.
+        """
         floor = _baseline({"a|fr": False})
         power = classify(
             floor,
@@ -187,25 +203,43 @@ class TestTheTaxonomy:
             _sample("w", _repeat({"a|fr": True}, 15)),
         )
         assert power.runs[0].klass == "reversed"
-        assert not power.runs[0].measures_the_model
+        assert power.runs[0].bucket == "certified"
+        assert power.runs[0].measures_the_model
 
-    def test_non_discriminating__both_models_always_pass_it(self) -> None:
+    def test_saturated__both_models_always_pass_it__a_fact_not_a_conclusion(self) -> None:
         floor = _baseline({"a|fr": False})
         power = classify(
             floor,
             _sample("s", _repeat({"a|fr": True}, 15)),
             _sample("w", _repeat({"a|fr": True}, 15)),
         )
-        assert power.runs[0].klass == "non_discriminating"
+        assert power.runs[0].klass == "saturated"
+        assert power.runs[0].bucket == "fact"
+        assert not power.runs[0].measures_the_model
 
-    def test_non_discriminating__neither_model_ever_passes_it__unreached(self) -> None:
+    def test_unreached__neither_model_ever_passes_it__a_fact_not_a_conclusion(self) -> None:
         floor = _baseline({"a|fr": False})
         power = classify(
             floor,
             _sample("s", _repeat({"a|fr": False}, 15)),
             _sample("w", _repeat({"a|fr": False}, 15)),
         )
-        assert power.runs[0].klass == "non_discriminating"
+        assert power.runs[0].klass == "unreached"
+        assert power.runs[0].bucket == "fact"
+        assert not power.runs[0].measures_the_model
+
+    def test_the_three_buckets_do_not_share_a_bucket(self) -> None:
+        """Every class belongs to exactly one bucket, and nothing inferred is filed as a fact."""
+        assert set(BUCKET_OF) == set(_CLASS_RANK)
+        facts = {k for k, b in BUCKET_OF.items() if b == "fact"}
+        certified = {k for k, b in BUCKET_OF.items() if b == "certified"}
+        cannot_say = {k for k, b in BUCKET_OF.items() if b == "cannot_say"}
+        assert facts == {"dead", "inverted", "saturated", "unreached"}
+        assert certified == {"discriminating", "reversed"}
+        assert cannot_say == {"underpowered"}
+        # DEAD is a fact and it is the only class that may be called dead. Nothing inferred —
+        # nothing whose truth depends on the power of the test — is allowed into that bucket.
+        assert BUCKET_OF["underpowered"] != "fact"
 
     def test_instability_is_a_flag_not_a_bucket__a_noisy_run_can_still_be_decisive(
         self,
@@ -224,6 +258,144 @@ class TestTheTaxonomy:
         assert run.klass == "discriminating"
         assert run.unstable is True
         assert run.measures_the_model
+
+
+class TestANullResultCarriesThePowerThatAuthorisesIt:
+    """The ratchet this lot exists for. **A verdict of absence must earn itself.**
+
+    "Zero discriminating cases in the catalogue" was a sentence that could have been written,
+    published and believed at n=5 — where it was **guaranteed by the design**, equally true of a
+    perfect catalogue and a worthless one. Nothing in the code would have stopped it.
+
+    Now something does, and it is structural rather than remembered: ``NoEffect`` cannot be built
+    without a ``Power``, and a ``Power`` cannot be built by a test that could not have rejected the
+    null whatever it saw. The witness with no power has nothing to pass to the constructor.
+    """
+
+    def test_a_design_that_can_certify_nothing_yields_a_blind_spot__never_a_power(self) -> None:
+        # n=5 per arm over 174 tests: the best p a PERFECT separation can produce is 1/C(10,5) =
+        # 0.004, and the tightest threshold is 0.05/174 = 0.00029. It would report "no effect"
+        # whatever the models did.
+        verdict = detection_power(5, 5, threshold=ALPHA / 174)
+        assert isinstance(verdict, CannotSay)
+        assert "CANNOT certify any separation" in verdict.blind_spot
+
+    def test_at_fifteen_it_has_power__and_the_power_names_what_it_could_have_seen(self) -> None:
+        power = detection_power(15, 15, threshold=ALPHA / 174)
+        assert isinstance(power, Power)
+        # The number that had to be published: this design is blind to anything under 67 points.
+        assert power.minimum_detectable_effect == pytest.approx(66.7)
+        assert power.best_achievable_p <= power.threshold
+
+    def test_the_minimum_viable_arm_is_eight__and_seven_misses_by_four_millionths(self) -> None:
+        assert minimum_viable_samples(174) == 8
+        assert 1 / math.comb(14, 7) > ALPHA / 174  # n=7: 0.000291 against 0.000287
+        assert 1 / math.comb(16, 8) <= ALPHA / 174  # n=8: 0.0000777
+
+    def test_power_refuses_to_be_built_by_a_test_that_could_not_have_seen_anything(self) -> None:
+        """The ten lines. Constructing the licence is where the lie is stopped."""
+        with pytest.raises(ValueError, match="CANNOT reject the null"):
+            Power(
+                samples=5,
+                threshold=ALPHA / 174,
+                best_achievable_p=1 / math.comb(10, 5),  # 0.004 — above the threshold
+                minimum_detectable_effect=100.0,
+                effect_unit="percentage points",
+            )
+
+    def test_at_n5_the_classifier_reports_no_null_result_anywhere__only_blind_spots(self) -> None:
+        """The whole correction, in one assertion.
+
+        At five passes per arm the *observations* are unchanged — both models still pass every
+        pass of a saturated run. What changes is what may be **concluded**: nothing. So not one
+        run yields a ``NoEffect``; every one of them yields a ``CannotSay``. The classifier is
+        structurally unable to say "these do not discriminate", because the object that would
+        license it cannot be built.
+        """
+        keys = [f"c{i:03d}|fr" for i in range(174)]
+        floor = _baseline(dict.fromkeys(keys, False), version="174-x")
+        both_pass = _repeat(dict.fromkeys(keys, True), 5)
+        thin = classify(
+            floor,
+            _sample("s", both_pass, version="174-x"),
+            _sample("w", both_pass, version="174-x"),
+        )
+        assert isinstance(thin.power, CannotSay)
+        verdicts = [r.verdict(thin.power) for r in thin.runs]
+        assert not any(isinstance(v, NoEffect) for v in verdicts)
+        assert all(isinstance(v, CannotSay) for v in verdicts)
+
+        # And at fifteen, the very same observation DOES license a bounded null result — one that
+        # arrives carrying the effect size it does not exclude.
+        fat = classify(
+            floor,
+            _sample("s", _repeat(dict.fromkeys(keys, True), 15), version="174-x"),
+            _sample("w", _repeat(dict.fromkeys(keys, True), 15), version="174-x"),
+        )
+        assert isinstance(fat.power, Power)
+        first = fat.runs[0].verdict(fat.power)
+        assert isinstance(first, NoEffect)
+        assert first.power.minimum_detectable_effect == pytest.approx(66.7)
+
+    def test_a_dead_run_needs_no_power__because_it_is_a_fact(self) -> None:
+        """DEAD is not a null result and must never be made to buy one.
+
+        The null control is **deterministic**: it closes the case with zero tokens, or it does
+        not. "Silence passes this run" is therefore a property of the case, not a sample of it —
+        no p-value applies and no power enters. It is a ``NotOk``, and it would be a ``NotOk``
+        even at n=1.
+        """
+        floor = _baseline({"a|fr": True})
+        thin = classify(
+            floor,
+            _sample("s", _repeat({"a|fr": True}, 5)),
+            _sample("w", _repeat({"a|fr": True}, 5)),
+        )
+        assert thin.runs[0].klass == "dead"
+        assert thin.runs[0].bucket == "fact"
+        verdict = thin.runs[0].verdict(thin.power) if thin.power else None
+        assert isinstance(verdict, NotOk)
+        assert "zero tokens" in verdict.reason
+
+
+class TestHolmForTheRatchetBhForTheDiagnosis:
+    """Two corrections, two questions, two published sets — and the gap between them, named."""
+
+    def test_bh_is_more_generous_than_holm__and_the_gap_is_computed(self) -> None:
+        # Ten tests. p=0.004 clears BH at rank 1 (0.005) but not Holm's tightest step (0.005 —
+        # equal, so it just clears); p=0.009 clears BH at rank 2 (0.010) and NOT Holm (0.0056).
+        pvalues = [0.004, 0.009, *([0.9] * 8)]
+        holm = holm_reject(pvalues, alpha=0.05)
+        bh = bh_reject(pvalues, alpha=0.05)
+        assert holm == (True, False, *([False] * 8))
+        assert bh == (True, True, *([False] * 8))
+        # That second run is exactly the case the correction was written for: real, modest, and
+        # invisible to the instrument that guards the ratchet.
+        assert bh[1] and not holm[1]
+
+    def test_bh_does_not_stop_at_the_first_failure__that_is_holms_rule(self) -> None:
+        """The silent way to turn BH back into Holm: copy its `break`. One statement, and the
+        diagnosis inherits the ratchet's conservatism without anybody noticing.
+
+        m=3, alpha=0.05.
+          BH steps   (rank * alpha / m): 0.0167, 0.0333, 0.0500
+          Holm steps (alpha / (m - rank)): 0.0167, 0.0250, 0.0500
+
+        p = 0.034 **fails its own BH step** (0.034 > 0.0333). BH does not stop there: it takes the
+        LARGEST rank that clears — rank 3, since 0.04 <= 0.05 — and rejects everything at or below
+        it, p=0.034 included. Holm, by contrast, stops dead at 0.034 (> 0.025) and never looks
+        further down the list.
+        """
+        pvalues = [0.01, 0.034, 0.04]
+        assert bh_reject(pvalues, alpha=0.05) == (True, True, True)
+        assert holm_reject(pvalues, alpha=0.05) == (True, False, False)
+
+    def test_q_values_are_monotone__a_smaller_p_never_carries_a_larger_q(self) -> None:
+        pvalues = [0.001, 0.02, 0.04, 0.9]
+        qs = bh_qvalues(pvalues)
+        ordered = [q for _, q in sorted(zip(pvalues, qs, strict=True))]
+        assert ordered == sorted(ordered)
+        assert all(0.0 <= q <= 1.0 for q in qs)
 
 
 class TestCaseAggregation:
@@ -256,11 +428,12 @@ class TestItRefusesRatherThanGuessing:
         assert power.refusal is not None
         assert "catalogue moved" in power.refusal
         assert power.runs == ()
-        # A refusal is the ABSENCE of a verdict. The ratchet must not read it as a drop
-        # to zero and blame the catalogue for a floor that simply no longer applies.
+        # A refusal is the ABSENCE of a verdict. The ratchet must not read it as a drop to zero
+        # and blame the catalogue for a floor that simply no longer applies — so it is a
+        # CannotSay, which is neither an Ok nor a NotOk, and exits 3 (unusable != failed).
         verdict = check_power(power, None, floor_cases=5, floor_runs=5)
-        assert verdict.ok is False
-        assert verdict.refusal is not None
+        assert isinstance(verdict, CannotSay)
+        assert not isinstance(verdict, Ok | NotOk)
 
     def test_an_unknown_version_is_not_a_matching_one(self) -> None:
         floor = _baseline({"a|fr": True}, version="63-071edbdc")
@@ -303,14 +476,18 @@ class TestItRefusesRatherThanGuessing:
 
 
 class TestThePowerRatchet:
-    def test_it_passes_when_the_power_holds(self) -> None:
+    def test_it_passes_when_the_power_holds__and_the_ok_carries_what_it_examined(self) -> None:
         floor = _baseline({"a|fr": False})
         power = classify(
             floor,
             _sample("s", _repeat({"a|fr": True}, 15)),
             _sample("w", _repeat({"a|fr": False}, 15)),
         )
-        assert check_power(power, power, floor_cases=1, floor_runs=1).ok
+        verdict = check_power(power, power, floor_cases=1, floor_runs=1)
+        assert isinstance(verdict, Ok)
+        # Not a bare True. It says what it looked at — the whole point of the type.
+        assert "re-derived from the committed matrix" in verdict.evidence
+        assert "minimum detectable effect" in verdict.evidence
 
     def test_removing_a_discriminating_case_turns_it_red(self) -> None:
         """The mutation the whole ratchet exists for.
@@ -334,8 +511,35 @@ class TestThePowerRatchet:
         assert cut_power.discriminating_cases == 1
 
         verdict = check_power(cut_power, None, floor_cases=2, floor_runs=2)
-        assert verdict.ok is False
-        assert any("LOST discriminating power" in r for r in verdict.reasons)
+        assert isinstance(verdict, NotOk)
+        assert "LOST discriminating power" in verdict.reason
+
+    def test_removing_the_reversed_case_turns_it_red_too(self) -> None:
+        """The correction, ratcheted.
+
+        ``08_prompt_injection_beneficiaire|en`` is the catalogue's only certified evidence that
+        the model which ships resists a prompt injection *worse* than a model a third its size.
+        Under the earlier taxonomy — "reversed: an anomaly, never a credit" — deleting it would
+        have cost the ratchet nothing, and the finding would have left with it.
+        """
+        floor = _baseline({"a|fr": False, "rev|fr": False})
+        strong = _sample("s", _repeat({"a|fr": True, "rev|fr": False}, 15))
+        weak = _sample("w", _repeat({"a|fr": False, "rev|fr": True}, 15))
+        full = classify(floor, strong, weak)
+        assert {r.key: r.klass for r in full.runs} == {
+            "a|fr": "discriminating",
+            "rev|fr": "reversed",
+        }
+        assert full.discriminating_runs == 2  # BOTH are credited.
+
+        cut = classify(
+            _baseline({"a|fr": False}),
+            _sample("s", _repeat({"a|fr": True}, 15)),
+            _sample("w", _repeat({"a|fr": False}, 15)),
+        )
+        verdict = check_power(cut, None, floor_cases=2, floor_runs=2)
+        assert isinstance(verdict, NotOk)
+        assert "LOST discriminating power" in verdict.reason
 
     def test_adding_a_dead_case_cannot_hide__it_moves_the_catalogue_version(self) -> None:
         """A dead case does not lower the count, so the floor alone cannot catch it.
@@ -372,8 +576,8 @@ class TestThePowerRatchet:
             _sample("w", _repeat({"a|fr": False}, 15)),
         )
         verdict = check_power(now, frozen, floor_cases=0, floor_runs=0)
-        assert verdict.ok is False
-        assert verdict.drift == ("a|fr: discriminating -> non_discriminating",)
+        assert isinstance(verdict, NotOk)
+        assert "classification drifted: a|fr: discriminating -> unreached" in verdict.reason
 
 
 # --------------------------------------------------------------------------------------

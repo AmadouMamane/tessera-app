@@ -24,9 +24,142 @@ from pathlib import Path
 
 import pytest
 
-from tessera.verdict import EXIT_OK, EXIT_REFUSED, CannotSay, NotOk, Ok, exit_code, render
+from tessera.verdict import (
+    EXIT_OK,
+    EXIT_REFUSED,
+    CannotSay,
+    NoEffect,
+    NotOk,
+    Ok,
+    Power,
+    exit_code,
+    render,
+)
 
 _ROOT = Path(__file__).resolve().parents[2]
+
+
+class TestANullResultCarriesItsPower:
+    """The fourth verdict, and the same idea as the first.
+
+    ``Ok`` may not be built without its evidence. ``NoEffect`` may not be built without its
+    **power** — because "no effect" is the one claim a *badly designed* experiment produces for
+    free, and this repository has the receipt: the eval catalogue was sampled at five passes per
+    model, where the best p a **perfect** separation can produce (``1/C(10,5)`` = 0.0040) sits
+    ABOVE the corrected threshold it would have to clear (``0.05/174`` = 0.00029). "Zero
+    discriminating cases" was guaranteed by the design — as true of a perfect catalogue as of a
+    worthless one — and nothing in the code would have stopped the sentence being written.
+    """
+
+    def test_the_type_checker_refuses_a_null_result_with_no_power(self, tmp_path: Path) -> None:
+        """**The ratchet.** mypy — not the interpreter — must reject `NoEffect("no effect")`.
+
+        Mutation: give `power` a default (`power: Power | None = None`). mypy then accepts the
+        bare claim, this test goes red, and the type stops being a type: any witness could publish
+        an absence it never had the power to observe. A returncode of 0 here IS the red.
+        """
+        snippet = tmp_path / "snippet.py"
+        snippet.write_text(
+            "from tessera.verdict import NoEffect\n"
+            "\n"
+            "# The sentence this class exists to make unwritable. No power: MUST NOT compile.\n"
+            'verdict = NoEffect("no discriminating cases in the catalogue")\n',
+            encoding="utf-8",
+        )
+
+        proc = _mypy(snippet, tmp_path)
+
+        assert proc.returncode != 0, (
+            "mypy ACCEPTED `NoEffect('no discriminating cases in the catalogue')` — a null result "
+            "is now publishable by a test that could not have detected anything, and the type is "
+            f"decoration. mypy said:\n{proc.stdout}"
+        )
+        assert "call-arg" in proc.stdout, (
+            "mypy rejected the snippet, but not for the missing power. The ratchet must fail for "
+            f"the RIGHT reason, or it is measuring its neighbourhood too:\n{proc.stdout}"
+        )
+
+    def test_power_refuses_the_design_that_could_not_have_seen_anything(self) -> None:
+        """The runtime half, and the ten lines that carry the whole idea.
+
+        Even holding a ``Power`` object, a witness cannot fabricate one: the constructor asks what
+        the *most extreme observable result* of the design would have scored, and refuses when even
+        that would have failed to clear the threshold. Such a test has no null result to report —
+        it has a blind spot, and it must say so.
+        """
+        with pytest.raises(ValueError, match="CANNOT reject the null"):
+            Power(
+                samples=5,
+                threshold=0.05 / 174,  # 0.000287
+                best_achievable_p=0.00397,  # 1/C(10,5): a PERFECT separation at n=5
+                minimum_detectable_effect=100.0,
+                effect_unit="percentage points",
+            )
+
+    def test_a_power_that_could_see_is_accepted__and_says_what_it_could_have_seen(self) -> None:
+        power = Power(
+            samples=15,
+            threshold=0.05 / 174,
+            best_achievable_p=6.45e-9,  # 1/C(30,15)
+            minimum_detectable_effect=66.7,
+            effect_unit="percentage points of pass rate",
+        )
+        assert "66.7 percentage points" in str(power)
+        assert "n=15" in str(power)
+
+    def test_an_unnamed_absence_is_refused(self) -> None:
+        power = Power(
+            samples=15,
+            threshold=0.05 / 174,
+            best_achievable_p=6.45e-9,
+            minimum_detectable_effect=66.7,
+            effect_unit="pp",
+        )
+        with pytest.raises(ValueError, match="names no absence"):
+            NoEffect(claim="   ", power=power)
+
+    def test_a_bare_effect_size_with_no_unit_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="in WHAT"):
+            Power(
+                samples=15,
+                threshold=0.05 / 174,
+                best_achievable_p=6.45e-9,
+                minimum_detectable_effect=66.7,
+                effect_unit="",
+            )
+
+    def test_a_null_result_is_not_an_ok__it_may_not_open_a_gate_by_itself(self) -> None:
+        """A witness that came back empty-handed has not established that the thing is fine.
+
+        Whether a bounded absence is good news depends entirely on what the caller was hoping for
+        — green for "did I break anything?", red for "does this case discriminate?" — and a type
+        must not guess. So it exits with the other non-Ok verdicts, and a caller for whom the null
+        result really *is* the good news must convert it deliberately, which forces the power into
+        the evidence where a human reads it.
+        """
+        power = Power(
+            samples=15,
+            threshold=0.05 / 174,
+            best_achievable_p=6.45e-9,
+            minimum_detectable_effect=66.7,
+            effect_unit="pp",
+        )
+        verdict = NoEffect(claim="the two models do not separate on this run", power=power)
+        assert exit_code(verdict) == EXIT_REFUSED
+        assert exit_code(verdict) != EXIT_OK
+        assert render(verdict).startswith("[NO EFFECT] ")
+        assert "66.7 pp" in render(verdict)
+
+    def test_a_null_result_may_not_be_used_as_a_boolean_either(self) -> None:
+        power = Power(
+            samples=15,
+            threshold=0.05 / 174,
+            best_achievable_p=6.45e-9,
+            minimum_detectable_effect=66.7,
+            effect_unit="pp",
+        )
+        with pytest.raises(TypeError, match="not a boolean"):
+            bool(NoEffect(claim="they do not separate", power=power))
 
 
 class TestOkCarriesItsEvidence:

@@ -38,11 +38,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 from eval.contribution import evaluate_contribution, restrict_baseline
 from eval.ratchet import load_baseline
 from eval.sets import load_eval_set
+from tessera.verdict import CannotSay, NoEffect, NotOk, Ok, Verdict
 
 if TYPE_CHECKING:
     from eval.contribution import ContributionVerdict
@@ -91,29 +92,64 @@ class FloorGrade:
         return self.verdict.confirmed_breaks if self.verdict else ()
 
     @property
-    def releasable(self) -> bool:
-        """Whether the floor permits a release — Rule 1, fail-closed.
+    def releasable(self) -> Verdict:
+        """Whether the floor permits a release — Rule 1, fail-closed, **and it says what it saw**.
 
-        ``True`` only when the run was actually graded and broke nothing the agent already
-        passes with no model at all. Everything else — a stale floor, an absent floor, an
-        unreplayed candidate break — is a floor that did not clear this model, and a floor
-        that did not clear it does not release it.
+        A :class:`~tessera.verdict.Verdict` and not a ``bool``, because **one bit is exactly how
+        this went wrong the first time**: Rule 1 was computed, rendered on the Contribution tile,
+        and then ignored by the only decision it governs — the Release button, in the same
+        component file, read ``gate.passed`` and nothing else. A bit cannot be asked what it
+        looked at, so nobody asked.
+
+        And the bool hid a second thing, which the type surfaced the moment it replaced it: the
+        old ``releasable`` returned ``False`` **both** when the model broke the floor *and* when
+        there was no floor to grade against. Fail-closed is right in both cases — a floor that
+        did not clear this model does not release it — but they are different facts, and this
+        class's own docstring says so ("``graded=False`` means there is no verdict, not a bad
+        one; the distinction is the whole point"). It was the whole point everywhere except in
+        the property that decides.
+
+        Returns:
+            ``Ok`` carrying the floor it cleared; ``NotOk`` naming the runs it broke; ``CannotSay``
+            when there was no usable floor — never a bare ``True``.
         """
-        return self.graded and not self.regression_candidates
+        if not self.graded:
+            return CannotSay(
+                self.obstacle
+                or "this run was not graded against a null floor, and an ungraded run is not a "
+                "cleared one"
+            )
+        breaks = self.regression_candidates
+        if breaks:
+            return NotOk(
+                f"the model breaks {len(breaks)} run(s) this agent passes with NO model at all "
+                f"({', '.join(breaks)}) — it is worse than nothing on them. Sampling is "
+                f"stochastic, so replay to confirm or clear it: "
+                f"`make eval-contribution REPORT=eval/reports/local/latest_<agent>.json`"
+            )
+        return Ok(
+            f"graded against its own measured null floor ({self.floor_passed}/{self.floor_total} "
+            f"runs the agent passes with no model at all) and broke none of them"
+        )
 
     def block_reason(self) -> str | None:
-        """One line naming what the floor holds against this run (``None`` when it clears)."""
-        if self.releasable:
-            return None
-        if not self.graded:
-            return self.obstacle
-        broke = ", ".join(self.regression_candidates)
-        return (
-            f"the model breaks {len(self.regression_candidates)} run(s) this agent passes "
-            f"with NO model at all ({broke}) — it is worse than nothing on them. Sampling is "
-            f"stochastic, so replay to confirm or clear it: "
-            f"`make eval-contribution REPORT=eval/reports/local/latest_<agent>.json`"
-        )
+        """One line naming what the floor holds against this run (``None`` when it clears).
+
+        The string form of :attr:`releasable`, kept for the wire and the UI, which speak in
+        nullable strings. It is derived from the verdict rather than recomputed beside it — two
+        functions answering the same question their own way is how the tile and the button came
+        to disagree.
+        """
+        match self.releasable:
+            case Ok():
+                return None
+            case NotOk(reason=reason):
+                return reason
+            case CannotSay(blind_spot=blind_spot):
+                return blind_spot
+            case NoEffect(claim=claim):  # pragma: no cover — a floor has no null result to report
+                return claim
+        assert_never(self.releasable)  # pragma: no cover — exhaustive; mypy proves it is
 
 
 def grade_against_own_floor(snap: EvalSnapshot) -> FloorGrade:
