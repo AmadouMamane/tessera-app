@@ -184,7 +184,7 @@ of them** — and requires the registry to contain **all** of them, classified. 
 verdicts**: they decide whether something *passes*, and they say it with one bit.
 
 ```
-OWED_VERDICTS = 44      # this may only go down
+OWED_BOOL_VERDICTS = 44      # this may only go down
 ```
 
 What is mechanical: the completeness. A new bool-returning function cannot appear without its author

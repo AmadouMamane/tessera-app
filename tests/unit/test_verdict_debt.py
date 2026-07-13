@@ -1,4 +1,4 @@
-"""The debt — 44 witnesses in this repo still render a verdict as a bare ``bool``.
+"""The debt — 44 witnesses in this repo still render a verdict as a bare ``bool`` **annotation**.
 
 `src/tessera/verdict.py` makes it structurally impossible for a *new* witness to publish "ok"
 without saying what it looked at. It does nothing at all about the ones already written, and
@@ -6,6 +6,20 @@ pretending otherwise would be its own small false green.
 
 So the debt is declared, the way `OWED_COUNT = 17` declared the unbounded ledger reads: **named,
 counted, frozen, and only allowed to go down.** An intention is not a plan; a number is.
+
+**READ THE NAME OF THE NUMBER.** It is :data:`OWED_BOOL_VERDICTS`, and it was called
+``OWED_VERDICTS`` for exactly one day. That name claimed *the verdicts*; this registry sees **one
+syntactic shape of one of them** — an AST walk over `-> bool` annotations in `src/` and `scripts/`.
+A witness may just as well publish its verdict as a dict with an ``ok`` key, as the string
+``"PASS"``, as ``None``-and-raise, or — and this is the one that matters — **as an exit code**.
+*The first incident in this entire story was an exit code*: the empty ``${PIPESTATUS[0]}`` that
+manufactured a green. A registry that embodies the doctrine and cannot see the surface the doctrine
+was born on is not yet lying, but it is one careless reading away from it: ``OWED_VERDICTS = 44``
+invites "44 witnesses left to fix", and the truth is "44 **of one shape**". So the number now says
+its shape in its name, and :data:`BLIND_SPOTS` says the rest out loud, in the code, beside it.
+
+That is this repo's own rule, turned on this repo's own instrument: *a witness that cannot see must
+report a blind spot — it may never report "ok"* (ADR 0026).
 
 **What is mechanical here, and what is a judgement.** The scan is an AST walk over every `-> bool`
 (and `-> bool | None`) function in `src/` and `scripts/` — 97 of them — and the registry below must
@@ -24,16 +38,41 @@ are not symmetrical.
 
 **What paying it down looks like.** Not a bulk rewrite — that is an ADR's work, not a night's. It
 is: when you next touch one of these, return a `Verdict`, delete its line here, and lower
-:data:`OWED_VERDICTS`. The number is meant to be read, and it is meant to be embarrassing.
+:data:`OWED_BOOL_VERDICTS`. The number is meant to be read, and it is meant to be embarrassing.
 """
 
 from __future__ import annotations
 
 import ast
 from pathlib import Path
+from typing import Final
 
 _ROOT = Path(__file__).resolve().parents[2]
 _SCANNED = (_ROOT / "src" / "tessera", _ROOT / "scripts")
+
+#: **What this registry does not see.** Declared in the code, beside the number, because a
+#: number without its scope is read as its scope.
+#:
+#: The key is the verdict shape this AST scan is blind to. The value names the registry that
+#: *does* cover it, or ``None`` — which means **nobody covers it**, and that is stated rather
+#: than left for the next reader to discover the way the last four were discovered.
+#:
+#: A `None` here is not a to-do. It is an honest gap, and the whole difference between this
+#: project's guard-rails and the ones that failed is that the gaps are written down.
+BLIND_SPOTS: Final[dict[str, str | None]] = {
+    # THE ONE THAT MATTERS. Every `make` target, every script, every CI step is an exit-code
+    # witness, and the origin instance of ADR 0026 was exactly this: a pipeline's exit code
+    # read off the wrong command. Covered — see the module named below.
+    "an exit code — `make`, a script, a CI step: the verdict is `$?`": (
+        "tests/unit/test_exit_witness_debt.py"
+    ),
+    # A dict verdict reads as `if result["ok"]:` — a bit again, wearing a key.
+    "a dict with an `ok`/`passed` key": None,
+    # `\"PASS\"` / `\"FAILED\"` — a bit, spelled. And `if status:` is true for BOTH of them.
+    "a string verdict (`PASS` / `FAILED`)": None,
+    # Returns `None`, raises on failure. Honest under `set -e`, invisible under `except`.
+    "`-> None`, raising on failure": None,
+}
 
 #: Every `-> bool` function in `src/` and `scripts/`, and what kind of thing it is.
 #:
@@ -158,9 +197,14 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/settings.py::Settings.is_production": "config",
 }
 
-#: How many of them decide whether something PASSES, and say it with one bit.
+#: How many `-> bool` functions decide whether something PASSES, and say it with one bit.
 #: **THIS MAY ONLY GO DOWN.**
-OWED_VERDICTS = 44
+#:
+#: The name carries the scope on purpose: this is not "the verdicts this repo owes", it is the
+#: ones that owe it *in this shape*. See :data:`BLIND_SPOTS` for the shapes it cannot see, and
+#: `OWED_EXIT_WITNESSES` (tests/unit/test_exit_witness_debt.py) for the surface the whole
+#: doctrine was born on.
+OWED_BOOL_VERDICTS = 44
 
 
 def _returns_bool(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
@@ -205,25 +249,83 @@ def _bool_functions() -> dict[str, int]:
     return found
 
 
+class TestTheRegistryDeclaresWhatItCannotSee:
+    """The instrument, held to its own rule.
+
+    This registry is itself a witness — it publishes a number about the state of the repo — and
+    ADR 0026's corollary applies to it exactly as it applies to everything it scans: *a witness
+    that cannot see must report a blind spot; it may never report "ok"*.
+
+    Its blind spot is real and it is not small: it scans a **syntactic proxy** (`-> bool`) for a
+    **semantic class** (a witness that publishes a bit). The class it cannot see includes the one
+    the whole doctrine was born on — an exit code.
+    """
+
+    def test_the_blind_spots_are_declared(self) -> None:
+        """The declaration exists, and it names the exit-code surface.
+
+        Mutation: delete the exit-code key from `BLIND_SPOTS`. Red. The number may not be
+        published next to a silence about what it does not cover — that silence is precisely how
+        `OWED_BOOL_VERDICTS = 44` would come to be read as "44 witnesses left to fix".
+        """
+        assert BLIND_SPOTS, (
+            "BLIND_SPOTS is empty. This registry scans `-> bool` annotations — a syntactic proxy "
+            "for a semantic class. It cannot possibly see everything, and a witness that cannot "
+            "see must SAY SO (ADR 0026)."
+        )
+
+        exit_spots = [spot for spot in BLIND_SPOTS if "exit code" in spot]
+        assert exit_spots, (
+            "the EXIT-CODE blind spot is no longer declared. It is the one that matters: every "
+            "make target, every script and every CI step publishes its verdict as `$?`, and the "
+            "very first incident of ADR 0026 was an exit code — the empty `${PIPESTATUS[0]}` "
+            "that manufactured a green. Put it back."
+        )
+
+    def test_a_declared_cover_must_actually_exist(self) -> None:
+        """A blind spot claimed as covered must name a module that IS THERE.
+
+        This is the doctrine applied to the doctrine's own bookkeeping: *a claim is not a fact*.
+        `KNOWN_AUTH_GUARDS` certified an anonymous DELETE because membership of a list had been
+        asserted by nobody. So a cover named here is opened, not believed.
+
+        Mutation: delete `tests/unit/test_exit_witness_debt.py`. Red — the blind spot goes back to
+        being uncovered, and this registry may not go on claiming otherwise.
+        """
+        missing = {
+            spot: cover
+            for spot, cover in BLIND_SPOTS.items()
+            if cover is not None and not (_ROOT / cover).exists()
+        }
+
+        assert not missing, (
+            "these blind spots name a registry that covers them, and the registry IS NOT THERE:\n"
+            + "\n".join(f"  {spot!r} → {cover}" for spot, cover in sorted(missing.items()))
+            + "\nEither the cover was deleted (put it back, or set the value to None and own the "
+            "gap honestly), or it was never written."
+        )
+
+
 class TestTheDebtIsANumber:
     """It is 44. It may only go down."""
 
     def test_the_owed_count_is_the_number_of_verdicts_in_the_registry(self) -> None:
         """The count and the list cannot drift: the count IS the list, counted.
 
-        Mutation: lower `OWED_VERDICTS` to 44 without converting anything. Red — the number cannot
+        Mutation: lower `OWED_BOOL_VERDICTS` without converting anything. Red — the number cannot
         be improved by editing the number, which is the only way a frozen count is worth anything.
         """
         owed = sum(1 for kind in _BOOL_FUNCTIONS.values() if kind == "VERDICT")
 
-        assert owed == OWED_VERDICTS, (
-            f"the debt moved ({owed} vs {OWED_VERDICTS}). If you converted a witness to a Verdict, "
-            "delete its line and LOWER the number — that is the whole point of it being a number."
+        assert owed == OWED_BOOL_VERDICTS, (
+            f"the debt moved ({owed} vs {OWED_BOOL_VERDICTS}). If you converted a witness to a "
+            "Verdict, delete its line and LOWER the number — that is the whole point of it being "
+            "a number."
         )
 
     def test_the_debt_never_grows(self) -> None:
         """A new `-> bool` verdict may not be born. Convert it, or justify it in the registry."""
-        assert OWED_VERDICTS <= 44, (
+        assert OWED_BOOL_VERDICTS <= 44, (
             "the debt went UP. A new witness was written that publishes a pass/fail as one bit, "
             "throwing away what it looked at. Return a Verdict instead (src/tessera/verdict.py)."
         )
@@ -262,7 +364,7 @@ class TestTheFreeze:
 
         assert not stale, (
             "these are in the registry but no longer return a bool — excellent. Delete them, and "
-            "if they were VERDICTs, lower OWED_VERDICTS so the debt shrinks ON THE RECORD:\n"
+            "if they were VERDICTs, lower OWED_BOOL_VERDICTS so the debt shrinks ON THE RECORD:\n"
             + "\n".join(f"  {key}" for key in stale)
         )
 

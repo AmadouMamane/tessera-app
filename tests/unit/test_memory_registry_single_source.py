@@ -69,7 +69,7 @@ INSIGHT_NUMBER = re.compile(r"^#{2,3} (?:Insight )?(\d+)(?![\d+\w])", re.MULTILI
 #: They are NOT renumbered here. An insight's number is cited from other insights, from
 #: `synthesis_tessera.md`, and from commit messages; CLAUDE.md's own rule is *never renumber an
 #: existing insight*. So the damage is frozen, counted, and made unable to grow — exactly like
-#: `OWED_VERDICTS` and `OWED_COUNT`. A number that names two insights names neither, and what a
+#: `OWED_BOOL_VERDICTS` and `OWED_COUNT`. A number that names two insights names neither, and what a
 #: ratchet can still guarantee is that **no new one is born.**
 #:
 #: This may only go DOWN — by renumbering the YOUNGER insight of a pair to the tail of the
@@ -172,7 +172,7 @@ def test_no_new_insight_number_collision() -> None:
 def test_the_collision_debt_only_goes_down() -> None:
     """A resolved collision must LEAVE the frozen set, or the number stops meaning anything.
 
-    The same two-sided freeze as `OWED_VERDICTS`: it may shrink, never grow. A debt that is paid
+    The same two-sided freeze as `OWED_BOOL_VERDICTS`: it may shrink, never grow. A debt that is paid
     and still reported as owed is a number nobody trusts, and an untrusted number is not a
     ratchet — it is a decoration with an integer in it.
 

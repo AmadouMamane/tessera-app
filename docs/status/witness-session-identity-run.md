@@ -164,7 +164,7 @@ of them** — and requires the registry to hold **all** of them, classified. **4
 decide whether something *passes* and say it with one bit.
 
 ```
-OWED_VERDICTS = 44      # this may only go down
+OWED_BOOL_VERDICTS = 44      # this may only go down
 ```
 
 The freeze is two-sided (nothing new may appear unclassified; nothing converted may rot in the
@@ -175,7 +175,7 @@ immediately: `eval_floor.py::FloorGrade.releasable` exists on the *eval* branch 
 > **Note for whoever lands `claude/eval-gate-lift`:** it adds `FloorGrade.releasable` — a release
 > verdict returning `bool`. The freeze will demand it be registered. Add
 > `"src/tessera/observability/eval_floor.py::FloorGrade.releasable": "VERDICT"` and raise
-> `OWED_VERDICTS` to 45 — **or**, better, have it return a `Verdict` and leave the number alone.
+> `OWED_BOOL_VERDICTS` to 45 — **or**, better, have it return a `Verdict` and leave the number alone.
 
 ---
 
