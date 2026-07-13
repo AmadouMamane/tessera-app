@@ -854,6 +854,29 @@
       "empty": {
         "title": "catalogue unreadable",
         "body": "Neither eval/failures/ nor the data/eval/catalogue.json bundle could be read. No case is shown, rather than a partial catalogue that would read as a complete one."
+      },
+      "weakCriterion": "weak criterion",
+      "weakCriterionWhy": "An empty response would pass this case: its criteria are purely negative.",
+      "atFloor": "at the floor",
+      "atFloorWhy": "The guard passes this case in every one of its languages, with no model. Its discriminating power over a model is zero."
+    },
+    "bench": {
+      "title": "The bench's own honesty",
+      "subtitle": "The holes in our own benchmark, measured from committed artefacts. None of them flatters the project.",
+      "silence": {
+        "title": "Cases an EMPTY response would pass",
+        "body": "{weak} of the {total} cases are passed by a system that does nothing: their criteria are purely negative (“must not contain”). The guard refuses, the IBAN is not in the refusal, ✅. That is why the floor reaches 70% — and it means that on these cases, silence is indistinguishable from competence."
+      },
+      "zeroPower": {
+        "title": "Categories that can grade no model at all",
+        "body": "{categories}: the guard passes them IN FULL, with no model. Their discriminating power over a model is zero — derived from the committed baseline, never listed by hand.",
+        "none": "No category is held entirely by the guard: all of them can, in principle, grade a model."
+      },
+      "coverage": {
+        "title": "Declared-capability coverage: inexpressible",
+        "inexpressible": "The coverage map (cases × the agents' declared capabilities) cannot be drawn, and not for want of trying: the case schema (`eval/failures/_schema.json`, `additionalProperties: false`) declares NO field through which a case could name a capability. So the coverage is not empty — it is inexpressible. A map drawn over a join that does not exist would read as complete while being invented. The fix is a GOVERNED change to the case set; this screen reveals the hole, it cannot fill it.",
+        "expressible": "The case schema now declares a capability field: the coverage map can be drawn on a real key. It remains to be built.",
+        "schemaUnreadable": "The case schema could not be read. The coverage is not asserted absent — it is undetermined, which is not the same claim."
       }
     },
     "matrix": {

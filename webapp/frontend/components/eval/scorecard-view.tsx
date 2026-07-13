@@ -74,6 +74,9 @@ export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: Sc
         <CatalogueTab
           catalogue={sweep?.catalogue ?? []}
           version={sweep?.currentCatalogueVersion ?? null}
+          floor={sweep?.floor ?? null}
+          categoryOf={sweep?.categoryOf ?? {}}
+          caseSchemaFields={sweep?.caseSchemaFields ?? []}
           locale={locale}
         />
       </div>

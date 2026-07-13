@@ -67,6 +67,13 @@ export interface Sweep {
   currentCatalogueVersion: string | null;
   /** `{case_id: category}` — what Rule 3's zero-power derivation needs. */
   categoryOf: Record<string, string>;
+  /**
+   * The fields a case is ALLOWED to declare (`eval/failures/_schema.json`, `additionalProperties:
+   * false`). The coverage map needs it: whether a case can even NAME a capability is a property of
+   * the schema, and the answer decides whether that map can be drawn at all or only its absence
+   * can be stated.
+   */
+  caseSchemaFields: string[];
   newestRunAt: string | null;
 }
 
@@ -74,6 +81,7 @@ interface Sources {
   sweepDir: string;
   baselineFile: string;
   catalogue: { kind: "dir"; path: string } | { kind: "file"; path: string };
+  caseSchemaFile: string;
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -104,6 +112,7 @@ async function sources(): Promise<Sources | null> {
         sweepDir,
         baselineFile: join(root, "eval", "baselines", "null-control.json"),
         catalogue: { kind: "dir", path: join(root, "eval", "failures") },
+        caseSchemaFile: join(root, "eval", "failures", "_schema.json"),
       };
     }
   }
@@ -113,6 +122,7 @@ async function sources(): Promise<Sources | null> {
       sweepDir: join(bundle, "sweep"),
       baselineFile: join(bundle, "null-control.json"),
       catalogue: { kind: "file", path: join(bundle, "catalogue.json") },
+      caseSchemaFile: join(bundle, "case-schema.json"),
     };
   }
   return null;
@@ -151,6 +161,22 @@ export async function loadCatalogue(): Promise<EvalCase[]> {
   } catch {
     // A malformed catalogue is honest-empty, never a partial one: the screen would then show
     // "no case covers this capability" about cases that exist.
+    return [];
+  }
+}
+
+/**
+ * The fields a case may declare. Read rather than assumed: whether a case can NAME a capability
+ * decides whether the coverage map can be drawn on a real key or only its absence can be stated.
+ * Unreadable → an empty list, and the surface says the schema could not be read — never that the
+ * field is absent, which is a different claim.
+ */
+async function loadCaseSchemaFields(file: string): Promise<string[]> {
+  try {
+    const schema = JSON.parse(await readFile(file, "utf-8"));
+    const properties = schema?.properties;
+    return properties && typeof properties === "object" ? Object.keys(properties) : [];
+  } catch {
     return [];
   }
 }
@@ -244,6 +270,7 @@ export async function loadSweep(): Promise<Sweep | null> {
 
   const floorDoc = await loadFloor(src.baselineFile);
   const catalogue = await loadCatalogue();
+  const caseSchemaFields = await loadCaseSchemaFields(src.caseSchemaFile);
 
   return {
     catalogueVersion,
@@ -254,6 +281,7 @@ export async function loadSweep(): Promise<Sweep | null> {
     catalogue,
     currentCatalogueVersion: catalogue.length ? catalogueVersionOf(catalogue) : null,
     categoryOf: Object.fromEntries(catalogue.map((c) => [c.id, c.category])),
+    caseSchemaFields,
     newestRunAt: all[0]?.runAt ?? null,
   };
 }

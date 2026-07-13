@@ -253,3 +253,50 @@ Sur le désaccord de tête, on *lit* la cause — le 3B refuse **en citant l'ins
 **sans la citer**.
 
 **Captures** : `lot4-fr-comparaison.png`, `lot4-fr-desaccord.png`.
+
+---
+
+## LOT 5 — l'honnêteté du banc d'essai  ✅
+
+Trois constats, tous **dérivés d'artefacts commités** (les définitions de cas, leur schéma, la
+baseline). Aucun ne flatte le projet.
+
+### 1. Les cas qu'une réponse VIDE passerait — **15 sur 63**
+
+`passedBySilence()` est raisonné contre le comportement **réel** du harnais sur un run vide
+(`final_response=""`, pas d'escalade, pas d'outil, pas de confiance, pas de citation), critère par
+critère. Le piège est `max_confidence` : sans confiance enregistrée, `conf is not None and conf > max`
+est **faux**, donc la borne n'est **pas** dépassée et le **silence passe**. `min_confidence` est son
+miroir exact et le silence **échoue**.
+
+**Mesuré : 15 des 63 cas**, dont **13 dans la tranche 41-63** — ce qui **confirme la thèse d'Opus**,
+désormais mesurée et **épinglée par un test**. Et le détail qui glace : **`56_policy_violation_disparage_bank`**,
+le cas même que `llama3.2:3b` **casse**, est un cas qu'une **réponse vide passerait**. Le modèle y
+est *pire que le silence*.
+
+### 2. Les catégories qui ne peuvent noter aucun modèle
+
+`escalation_failure` et `policy_violation` : le garde les passe **intégralement**. Leur pouvoir
+discriminant sur un modèle est **nul** — et c'est **dérivé de la baseline**, jamais listé à la main
+(une catégorie qui gagne un cas échouant quitte la liste toute seule).
+
+Chaque cas porte désormais sa pastille : **« au plancher »** (41 cas sur 63) ou rien.
+
+### 3. La carte de couverture — **RULING : elle est inexprimable, et le dire vaut mieux que la tracer**
+
+La spec demande une carte cas × **capacités déclarées** des AgentSpecs. J'ai d'abord **mesuré** :
+**aucun des 63 cas ne référence une seule capacité déclarée** (`summarize_case`,
+`check_contact_rule`, `draft_reminder`, `propose_schedule`…). Puis j'ai cherché **pourquoi**, et la
+raison est **structurelle, pas accidentelle** :
+
+> `eval/failures/_schema.json` pose `additionalProperties: false` et **ne déclare aucun champ** par
+> lequel un cas pourrait **nommer** une capacité.
+
+La couverture n'est donc pas *vide* : elle est **inexprimable**. Une carte tracée sur une jointure
+qui n'existe pas se lirait **comme complète tout en étant inventée** — exactement la faute que cet
+écran existe pour refuser. **Je n'ai pas fabriqué la jointure.** L'écran énonce le trou et son motif,
+et un **test l'épingle** : le jour où le dataset gagne ce champ (un changement **gouverné** — l'UI
+révèle le trou, elle ne peut pas le combler), le test **casse** et dit d'aller construire la carte
+sur une vraie clé.
+
+**Captures** : `lot5-fr-honnetete.png`, `lot5-fr-pastilles.png`.

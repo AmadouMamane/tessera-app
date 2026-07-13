@@ -854,6 +854,29 @@
       "empty": {
         "title": "Katalog nicht lesbar",
         "body": "Weder eval/failures/ noch das Bundle data/eval/catalogue.json waren lesbar. Es wird kein Fall angezeigt statt eines Teilkatalogs, der für vollständig gehalten würde."
+      },
+      "weakCriterion": "schwaches Kriterium",
+      "weakCriterionWhy": "Eine leere Antwort bestünde diesen Fall: seine Kriterien sind rein negativ.",
+      "atFloor": "am Sockel",
+      "atFloorWhy": "Die Guard-Schicht besteht diesen Fall in allen Sprachen, ohne jedes Modell. Seine Trennschärfe gegenüber einem Modell ist null."
+    },
+    "bench": {
+      "title": "Die Ehrlichkeit des Prüfstands",
+      "subtitle": "Die Löcher im eigenen Prüfstand, gemessen an committeten Artefakten. Keines davon schmeichelt dem Projekt.",
+      "silence": {
+        "title": "Fälle, die eine LEERE Antwort bestehen würde",
+        "body": "{weak} von {total} Fällen werden von einem System bestanden, das nichts tut: ihre Kriterien sind rein negativ („darf nicht enthalten“). Die Guard-Schicht lehnt ab, die IBAN steht nicht in der Ablehnung, ✅. Das ist der Grund für den 70-%-Sockel — und es heißt: bei diesen Fällen ist Schweigen von Kompetenz nicht zu unterscheiden."
+      },
+      "zeroPower": {
+        "title": "Kategorien, die kein Modell benoten können",
+        "body": "{categories}: die Guard-Schicht besteht sie VOLLSTÄNDIG, ohne jedes Modell. Ihre Trennschärfe gegenüber einem Modell ist null — aus der committeten Baseline abgeleitet, nie von Hand aufgelistet.",
+        "none": "Keine Kategorie wird vollständig von der Guard-Schicht gehalten: alle können ein Modell grundsätzlich benoten."
+      },
+      "coverage": {
+        "title": "Abdeckung der deklarierten Fähigkeiten: nicht ausdrückbar",
+        "inexpressible": "Die Abdeckungskarte (Fälle × deklarierte Agenten-Fähigkeiten) lässt sich nicht zeichnen, und nicht aus Mangel an Versuch: das Fall-Schema (`eval/failures/_schema.json`, `additionalProperties: false`) deklariert KEIN Feld, über das ein Fall eine Fähigkeit benennen könnte. Die Abdeckung ist also nicht leer — sie ist nicht ausdrückbar. Eine Karte über einen Join, den es nicht gibt, läse sich vollständig und wäre erfunden. Die Behebung ist eine GOVERNTE Änderung des Fallsatzes; dieser Bildschirm deckt das Loch auf, füllen kann er es nicht.",
+        "expressible": "Das Fall-Schema deklariert nun ein Fähigkeitsfeld: die Abdeckungskarte kann auf einem echten Schlüssel gezeichnet werden. Sie ist noch zu bauen.",
+        "schemaUnreadable": "Das Fall-Schema war nicht lesbar. Die Abdeckung wird nicht als fehlend behauptet — sie ist unbestimmt, was nicht dasselbe ist."
       }
     },
     "matrix": {

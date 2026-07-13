@@ -1,13 +1,16 @@
-import { BookOpen, ChevronRight, ExternalLink, ShieldAlert } from "lucide-react";
+import { BookOpen, ChevronRight, ExternalLink, EyeOff, ShieldAlert, ShieldOff } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { BenchHonesty } from "@/components/eval/bench-honesty";
 import { CriterionLine } from "@/components/eval/criterion-line";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Link } from "@/i18n/navigation";
 import type { EvalCase } from "@/lib/api/schemas";
+import { type CasePower, casePower, passedBySilence } from "@/lib/eval-bench";
 import { listCriteria } from "@/lib/eval-criteria";
+import type { Floor } from "@/lib/eval-score";
 
 /**
  * `Jeu de cas` — the dataset as a versioned ARTEFACT, with no result anywhere on it.
@@ -20,10 +23,17 @@ import { listCriteria } from "@/lib/eval-criteria";
 export async function CatalogueTab({
   catalogue,
   version,
+  floor,
+  categoryOf,
+  caseSchemaFields,
   locale,
 }: {
   catalogue: EvalCase[];
   version: string | null;
+  /** The committed floor. It is what says whether a case can grade a MODEL at all (§A1.7). */
+  floor: Floor | null;
+  categoryOf: Readonly<Record<string, string>>;
+  caseSchemaFields: string[];
   locale: string;
 }) {
   const t = await getTranslations({ locale, namespace: "eval" });
@@ -81,6 +91,16 @@ export async function CatalogueTab({
         </CardContent>
       </Card>
 
+      {/* The bench's own blind spots, before its contents. Showing the holes in your own benchmark
+          is the most complete form of the honesty doctrine — and it is the point of this tab. */}
+      <BenchHonesty
+        catalogue={catalogue}
+        floor={floor}
+        categoryOf={categoryOf}
+        caseSchemaFields={caseSchemaFields}
+        locale={locale}
+      />
+
       <div className="flex flex-col gap-3">
         {categories.map(([category, cases]) => (
           <Card key={category}>
@@ -96,7 +116,7 @@ export async function CatalogueTab({
               </summary>
               <div className="flex flex-col gap-3 border-[var(--border)] border-t p-4">
                 {cases.map((c) => (
-                  <CaseSheet key={c.id} evalCase={c} locale={locale} />
+                  <CaseSheet key={c.id} evalCase={c} floor={floor} locale={locale} />
                 ))}
               </div>
             </details>
@@ -108,11 +128,24 @@ export async function CatalogueTab({
 }
 
 /** One case, on the DEFINITION side: what it demands, in which languages, and why it exists. */
-async function CaseSheet({ evalCase, locale }: { evalCase: EvalCase; locale: string }) {
+async function CaseSheet({
+  evalCase,
+  floor,
+  locale,
+}: {
+  evalCase: EvalCase;
+  floor: Floor | null;
+  locale: string;
+}) {
   const t = await getTranslations({ locale, namespace: "eval" });
   const criteria = listCriteria(evalCase.pass_criteria);
   const source = evalCase.source_reference;
   const url = source.url ?? source.urls[0];
+
+  // The two chips that say what this case is actually worth (§A1.7, §A1.8). Both are derived:
+  // one from the case's own criteria, the other from the committed floor.
+  const weak = passedBySilence(criteria);
+  const power: CasePower = casePower(evalCase.id, floor?.verdicts ?? null);
 
   return (
     <details className="group/case rounded-md border border-[var(--border)] bg-[var(--muted)]/20">
@@ -124,6 +157,18 @@ async function CaseSheet({ evalCase, locale }: { evalCase: EvalCase; locale: str
           <Badge tone="danger" className="gap-1">
             <ShieldAlert className="h-3 w-3" />
             {t("catalogue.severity.critical")}
+          </Badge>
+        ) : null}
+        {weak ? (
+          <Badge tone="warning" className="gap-1" title={t("catalogue.weakCriterionWhy")}>
+            <EyeOff className="h-3 w-3" />
+            {t("catalogue.weakCriterion")}
+          </Badge>
+        ) : null}
+        {power === "floor" ? (
+          <Badge tone="neutral" className="gap-1" title={t("catalogue.atFloorWhy")}>
+            <ShieldOff className="h-3 w-3" />
+            {t("catalogue.atFloor")}
           </Badge>
         ) : null}
         <span className="flex items-center gap-1 font-mono text-[10px] text-[var(--muted-foreground)] uppercase">

@@ -854,6 +854,29 @@
       "empty": {
         "title": "catalogue illisible",
         "body": "Ni eval/failures/ ni le bundle data/eval/catalogue.json n'ont pu être lus. Aucun cas n'est affiché, plutôt qu'un catalogue partiel qui passerait pour complet."
+      },
+      "weakCriterion": "critère faible",
+      "weakCriterionWhy": "Une réponse vide passerait ce cas : ses critères sont uniquement négatifs.",
+      "atFloor": "au plancher",
+      "atFloorWhy": "Le garde passe ce cas dans toutes ses langues, sans aucun modèle. Son pouvoir discriminant sur un modèle est nul."
+    },
+    "bench": {
+      "title": "L'honnêteté du banc d'essai",
+      "subtitle": "Les trous de notre propre banc, mesurés depuis des artefacts commités. Aucun ne flatte le projet.",
+      "silence": {
+        "title": "Des cas qu'une réponse VIDE passerait",
+        "body": "{weak} des {total} cas sont passés par un système qui ne fait rien : leurs critères sont uniquement négatifs (« ne doit pas contenir »). Le garde refuse, l'IBAN n'est pas dans le refus, ✅. C'est la raison du plancher à 70 % — et cela veut dire que, sur ces cas, le silence est indistinguable de la compétence."
+      },
+      "zeroPower": {
+        "title": "Des catégories qui ne peuvent noter aucun modèle",
+        "body": "{categories} : le garde les passe INTÉGRALEMENT, sans aucun modèle. Leur pouvoir discriminant sur un modèle est nul — dérivé de la baseline commitée, jamais listé à la main.",
+        "none": "Aucune catégorie n'est entièrement tenue par le garde : toutes peuvent, en principe, noter un modèle."
+      },
+      "coverage": {
+        "title": "Couverture des capacités déclarées : inexprimable",
+        "inexpressible": "La carte de couverture (cas × capacités déclarées des agents) ne peut pas être tracée, et pas faute d'essayer : le schéma des cas (`eval/failures/_schema.json`, `additionalProperties: false`) ne déclare AUCUN champ par lequel un cas pourrait nommer une capacité. La couverture n'est donc pas vide — elle est inexprimable. Une carte tracée sur une jointure qui n'existe pas se lirait comme complète tout en étant inventée. Le correctif est un changement GOUVERNÉ du jeu de cas ; cet écran révèle le trou, il ne peut pas le combler.",
+        "expressible": "Le schéma des cas déclare désormais un champ de capacité : la carte de couverture peut être tracée sur une vraie clé. Elle reste à construire.",
+        "schemaUnreadable": "Le schéma des cas n'a pas pu être lu. La couverture n'est pas affirmée absente — elle est indéterminée, ce qui n'est pas la même chose."
       }
     },
     "matrix": {

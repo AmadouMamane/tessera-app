@@ -112,6 +112,15 @@ async function main() {
     await writeFile(join(dest, "catalogue.json"), `${JSON.stringify(cases, null, 2)}\n`);
     bundled.add("catalogue.json");
     log(`assembled ${cases.length} cases into catalogue.json`);
+
+    // 4. The case SCHEMA. The coverage card reads it to answer a question the catalogue cannot:
+    //    can a case even NAME a capability it covers? (`additionalProperties: false` and no such
+    //    field ⇒ the map is not empty, it is inexpressible.) Bundled so the image can say so too.
+    const schema = join(casesDir, "_schema.json");
+    if (await exists(schema)) {
+      await copyFile(schema, join(dest, "case-schema.json"));
+      bundled.add("case-schema.json");
+    }
   }
 
   // The `latest*.json` files the old single-run loader read are dead weight now, and dead weight
