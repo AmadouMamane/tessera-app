@@ -172,8 +172,8 @@ def test_no_new_insight_number_collision() -> None:
 def test_the_collision_debt_only_goes_down() -> None:
     """A resolved collision must LEAVE the frozen set, or the number stops meaning anything.
 
-    The same two-sided freeze as `OWED_BOOL_VERDICTS`: it may shrink, never grow. A debt that is paid
-    and still reported as owed is a number nobody trusts, and an untrusted number is not a
+    The same two-sided freeze as `OWED_BOOL_VERDICTS`: it may shrink, never grow. A debt that is
+    paid and still reported as owed is a number nobody trusts, and an untrusted number is not a
     ratchet — it is a decoration with an integer in it.
 
     It is also what makes the ratchet unable to go quietly blind again. Narrow the pattern back
