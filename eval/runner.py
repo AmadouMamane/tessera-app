@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hashlib
 import json
 import os
 import re
@@ -22,6 +21,7 @@ from pathlib import Path
 import jsonschema
 
 from eval.gate import GateVerdict, evaluate_gate
+from eval.ratchet import catalogue_version
 from eval.scorecard import build_scorecard
 from eval.sets import EvalSet, critical_case_ids, load_eval_set
 from tessera.agent import compile_graph
@@ -77,11 +77,14 @@ def _catalogue_version(cases: list[dict[str, object]]) -> str:
     """Short identifier of the catalogue a run was scored against (count + id hash).
 
     Lets the dashboard distinguish runs across catalogue versions so pass rates
-    measured on different case sets are never compared as if equivalent.
+    measured on different case sets are never compared as if equivalent — and lets the
+    contribution gate refuse to grade a run against a floor captured on another set.
+
+    Delegates to :func:`eval.ratchet.catalogue_version`: the identity the runner *stamps*
+    and the identity the gate *checks* must be the same function, or a floor and a run
+    could disagree about which catalogue they mean while both being right.
     """
-    ids = sorted(str(c["id"]) for c in cases)
-    digest = hashlib.sha256("\n".join(ids).encode()).hexdigest()[:8]
-    return f"{len(ids)}-{digest}"
+    return catalogue_version(str(c["id"]) for c in cases)
 
 
 def _check_substrings(pass_criteria: dict[str, object], response: str) -> list[str]:

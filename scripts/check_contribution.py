@@ -21,6 +21,17 @@ invent the very kind of number ADR 0021 removed. A per-set run therefore gates o
 alone**, and its contribution is measured and printed. Gating it needs the set's own
 history: ADR 0021's debt (b).
 
+Exit codes — a refusal and a failure are different facts and never share one:
+
+* ``0`` PASS — the model was graded and cleared the rules.
+* ``1`` BLOCK — the model was graded and failed. A verdict *on the model*.
+* ``2`` INCONCLUSIVE — a candidate break could not be replayed (no model answered), so it
+  can be neither confirmed nor cleared.
+* ``3`` REFUSED — the model was **not graded at all**: the floor cannot be shown to apply
+  to this run (the catalogue moved, or a side does not say which catalogue it means). The
+  absence of a verdict, not a bad one. Same code, and the same reason, as the gate
+  witness's VOID: unusable is not the same as failed.
+
 Usage:
     uv run python scripts/check_contribution.py \\
         --report eval/reports/sweep/gemma3-27b.json --min-contribution 30
@@ -45,10 +56,15 @@ from eval.contribution import (
     floor_populations,
     restrict_baseline,
 )
-from eval.ratchet import Baseline, load_baseline, model_spoke, report_verdicts
+from eval.ratchet import Baseline, floor_mismatch, load_baseline, model_spoke, report_verdicts
 from eval.sets import catalogue_categories, load_eval_set
 
 NULL_BASELINE = Path("eval/baselines/null-control.json")
+
+#: Exit code for "the model was NOT graded". Deliberately not 1: a BLOCK is a verdict on
+#: the model, a REFUSAL is the absence of one, and a caller that cannot tell them apart
+#: will eventually report "the model failed" about a run nobody judged.
+EXIT_REFUSED = 3
 
 
 #: A replay in which no model answered proves nothing — but it is usually transient (a
@@ -171,7 +187,35 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    baseline, per_set = _floor_for(report, load_baseline(args.baseline))
+    # Restrict FIRST, then check the version. An agent-scoped run is scored against its own
+    # set, so its catalogue_version is that set's (`28-990f1447`), never the full
+    # catalogue's (`63-071edbdc`) — comparing it to the unrestricted floor would refuse
+    # every legitimate per-set run. `restrict_baseline` re-derives the floor's identity from
+    # the cases it actually holds, which is what makes the two comparable at all.
+    try:
+        baseline, per_set = _floor_for(report, load_baseline(args.baseline))
+    except ValueError as exc:  # the floor holds NO run for this set — a moved catalogue
+        sys.stderr.write(f"[contribution-gate REFUSED] NOT GRADED — {exc}\n")
+        return EXIT_REFUSED
+
+    # And refuse BEFORE the replay pass: replaying candidate breaks against a floor that
+    # cannot judge this run spends ~20 minutes of model time to produce a number with no
+    # referent.
+    stale = floor_mismatch(baseline, report)
+    if stale is not None:
+        sys.stderr.write(
+            f"[contribution-gate REFUSED] NOT GRADED — this floor cannot judge this run:\n"
+            f"  - {stale}\n"
+            f"  floor: {args.baseline}"
+            + (f" restricted to set {report.get('eval_set')!r}" if per_set else "")
+            + f" → catalogue {baseline.catalogue_version!r}\n"
+            f"  run:   {args.report} → catalogue "
+            f"{str(report.get('catalogue_version') or '') !r}\n"
+            f"No lift is reported: every rule counts against a population that no longer "
+            f"exists.\nRegenerate the floor with `make eval-null-write` and commit the diff.\n"
+        )
+        return EXIT_REFUSED
+
     min_contribution = args.min_contribution
     if min_contribution is None and not per_set:
         min_contribution = MIN_CONTRIBUTION_UNCALIBRATED

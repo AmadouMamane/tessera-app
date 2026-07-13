@@ -34,20 +34,24 @@ polices nothing).
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
 __all__ = [
     "Baseline",
     "RatchetVerdict",
     "baseline_from_report",
+    "catalogue_version",
     "check_model_run",
     "check_null_control",
     "dump_baseline",
+    "floor_mismatch",
     "load_baseline",
     "model_spoke",
     "report_verdicts",
@@ -57,6 +61,29 @@ BaselineKind = Literal["null_control", "model_run"]
 
 #: Separator for the ``case_id|language`` keys of a baseline's verdict map.
 _KEY_SEP = "|"
+
+
+def catalogue_version(case_ids: Iterable[str]) -> str:
+    """The ``count-hash`` identity of a set of cases.
+
+    **The one definition.** The runner stamps every report with it, and the ratchet and
+    the contribution gate compare against it — so if two of them computed it their own
+    way, a floor and a run could name the same catalogue by different strings, or worse,
+    different catalogues by the same one. It lives here, and the runner imports it.
+
+    Derived from the case ids alone: a catalogue that gains, loses or renames a case gets
+    a new identity, and nothing that was measured against the old one can be compared to
+    it without saying so.
+
+    Args:
+        case_ids: The ids of the cases in the set (order and duplicates are irrelevant).
+
+    Returns:
+        ``"<count>-<8 hex>"`` — e.g. ``"63-071edbdc"`` for the full catalogue.
+    """
+    ids = sorted(set(case_ids))
+    digest = hashlib.sha256("\n".join(ids).encode()).hexdigest()[:8]
+    return f"{len(ids)}-{digest}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,15 +243,53 @@ def _compare(
     return regressions, improvements, missing, unexpected
 
 
-def _catalogue_reasons(baseline: Baseline, report: dict[str, Any]) -> list[str]:
+def floor_mismatch(baseline: Baseline, report: dict[str, Any]) -> str | None:
+    """Why this baseline cannot judge this run — or ``None`` if it can.
+
+    A baseline is a **witness**, and a witness expires. It records the verdicts of one
+    catalogue; the moment the case set moves, every number derived from it — a regression,
+    a contribution, a lift — is computed against a population that no longer exists. The
+    check is therefore a precondition of grading at all, not one finding among others.
+
+    **Strict on purpose: an unknown version is not a matching one.** The first version of
+    this check read ``if baseline.catalogue_version and version and version != ...``, so an
+    *empty* version on either side skipped the comparison and the ratchet read green — it
+    compared a baseline of unknown provenance against a run from an unknown catalogue and
+    called them equal. Absence of a version is absence of proof, and this gate answers the
+    question it was asked ("can this floor judge this run?") rather than the neighbouring
+    one it can answer more easily ("do two strings differ?").
+
+    Args:
+        baseline: The committed reference.
+        report: A parsed runner report.
+
+    Returns:
+        A one-line reason the comparison is void, or ``None`` when both sides name the
+        same catalogue.
+    """
     version = str(report.get("catalogue_version") or "")
-    if baseline.catalogue_version and version and version != baseline.catalogue_version:
-        return [
+    if not baseline.catalogue_version:
+        return (
+            "the baseline does not name the catalogue it was captured against — it cannot "
+            "be shown to judge this run. Regenerate it (`make eval-null-write`)."
+        )
+    if not version:
+        return (
+            "the run does not name the catalogue it was scored against — it cannot be shown "
+            "to be judged by this baseline. Re-run it with a current runner."
+        )
+    if version != baseline.catalogue_version:
+        return (
             f"catalogue moved: run is {version!r}, baseline is "
             f"{baseline.catalogue_version!r} — regenerate the baseline rather than "
             f"comparing across case sets"
-        ]
-    return []
+        )
+    return None
+
+
+def _catalogue_reasons(baseline: Baseline, report: dict[str, Any]) -> list[str]:
+    reason = floor_mismatch(baseline, report)
+    return [reason] if reason else []
 
 
 def check_null_control(report: dict[str, Any], baseline: Baseline) -> RatchetVerdict:

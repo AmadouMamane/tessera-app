@@ -102,13 +102,20 @@ class TestTheContributionThatReplacesIt:
         # Rule 2 is measured, never gated: a per-set bar would be an invented number.
         assert contribution["gated"] is False
 
-    def test_an_unrestricted_floor_would_misgrade_a_set(self) -> None:
+    def test_an_unrestricted_floor_is_REFUSED_not_misgraded(self) -> None:
         """ADR 0021 §3(a) is wrong that the per-set axis is free. This is why.
 
-        Graded against the whole catalogue's floor, `recouvrement`'s real run reads its
-        contribution as a fraction of 52 runs — 32 of which its set does not even contain —
-        and fails Rule 2's bar of 30 by construction, at any model quality. Restricted to
-        the set's own floor, the same run reads a contribution it can actually be judged on.
+        Graded against the whole catalogue's floor, `recouvrement`'s real run used to read
+        its contribution as a fraction of 52 runs — 32 of which its set does not even
+        contain — and to fail Rule 2's bar of 30 by construction, at any model quality.
+        `restrict_baseline` is what fixes the denominator.
+
+        This test used to assert that the unrestricted floor produced that *wrong number*.
+        It cannot any more, and the reason is the point: the run says it was scored against
+        `28-990f1447` and the catalogue floor says `63-071edbdc`, so the gate now **refuses
+        to grade at all** rather than grading against a population the run never covered. A
+        wrong number and no number are different failures, and the stronger gate is the one
+        that declines to invent the first.
         """
         report = json.loads(
             Path("eval/reports/local/latest_recouvrement.json").read_text(encoding="utf-8")
@@ -118,14 +125,24 @@ class TestTheContributionThatReplacesIt:
             catalogue_floor, set(load_eval_set("recouvrement").effective_case_ids)
         )
 
-        wrong = evaluate_contribution(report, catalogue_floor, min_contribution=30)
+        refused = evaluate_contribution(report, catalogue_floor, min_contribution=30)
         right = evaluate_contribution(report, set_floor, min_contribution=None)
 
-        # Same numerator; the denominator is what the restriction fixes.
-        assert wrong.contribution == right.contribution
-        assert wrong.contribution_population > right.contribution_population
-        assert not wrong.ok  # rule 2 fails against a population the set does not cover
+        # The catalogue-wide floor does not apply to a per-set run, and says so.
+        assert not refused.ok
+        assert refused.refusal is not None
+        assert "catalogue moved" in refused.refusal
+        # It reports NO grade — not a zero, not a fraction of a population it cannot see.
+        assert refused.contribution == 0
+        assert refused.contribution_population == 0
+        assert "REFUSED" in refused.render()
+        assert "BLOCK" not in refused.render(), "a refusal is not a verdict on the model"
+
+        # The set's own floor names the set's own cases, so it can judge the run.
+        assert set_floor.catalogue_version == report["catalogue_version"] == "28-990f1447"
+        assert right.refusal is None
         assert right.ok  # rule 1 holds on the set's own floor — the honest verdict
+        assert right.contribution_population == 13
 
     def test_a_modelless_run_is_not_reported_as_a_clean_contribution(self) -> None:
         """Zero output tokens = no model answered. It must degrade, not read as 0 regressions.
@@ -144,4 +161,8 @@ class TestTheContributionThatReplacesIt:
         )
         assert silent.token_totals()[1] == 0
 
-        assert contribution_block(silent, "fr") == {"available": False}
+        block = contribution_block(silent, "fr")
+        assert block["available"] is False
+        # It degrades AND says why — an honest-empty that cannot explain itself sends the
+        # reader hunting for a bug in the page instead of at the backend that never spoke.
+        assert "no model spoke" in str(block["refusal"])

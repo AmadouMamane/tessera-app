@@ -42,6 +42,14 @@ apply to are derived from the committed null baseline rather than written down:
   grows and categories gain or lose their power.
 
 The bars are therefore a **function of the measured floor**, never an absolute number.
+
+**And a floor expires.** Every one of those rules reads its population off the committed
+null control, so the moment the catalogue moves, the populations are counts of runs that
+no longer exist and every rule silently grades the wrong thing — Rule 2's denominator
+would still say 52 for a catalogue that now holds sixty. The gate therefore **refuses to
+rule** on a floor it cannot show applies (:func:`eval.ratchet.floor_mismatch`), rather
+than grading as best it can. A refusal is not a failure: the model was not judged and is
+not badged, which is exactly what a missing witness should produce.
 """
 
 from __future__ import annotations
@@ -49,7 +57,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
-from eval.ratchet import Baseline, report_verdicts
+from eval.ratchet import Baseline, catalogue_version, floor_mismatch, report_verdicts
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Set as AbstractSet
@@ -121,7 +129,8 @@ def restrict_baseline(baseline: Baseline, case_ids: AbstractSet[str]) -> Baselin
         case_ids: The set's effective case ids (security floor included).
 
     Returns:
-        The same baseline, holding only the runs whose case belongs to the set.
+        The same baseline, holding only the runs whose case belongs to the set — and
+        **naming the case set it now holds**, not the one it was cut from.
 
     Raises:
         ValueError: If no baseline run belongs to the set — the floor would be empty and
@@ -138,7 +147,18 @@ def restrict_baseline(baseline: Baseline, case_ids: AbstractSet[str]) -> Baselin
     note = (baseline.note + " | " if baseline.note else "") + (
         f"restricted to {len(verdicts)} of {len(baseline.verdicts)} runs — the eval set's own floor"
     )
-    return replace(baseline, verdicts=verdicts, note=note)
+    # Its identity is RE-DERIVED from the cases it now holds, never inherited. A floor cut
+    # down to recouvrement's 28 cases is a 28-case floor; keeping the parent's
+    # `63-071edbdc` would have it claim to be the whole catalogue while holding less than
+    # half of it — and that claim is what an agent-scoped run is checked against. The
+    # inherited version silently matched nothing, so nothing could catch a set whose cases
+    # had moved out from under its floor.
+    return replace(
+        baseline,
+        verdicts=verdicts,
+        note=note,
+        catalogue_version=catalogue_version(k.split("|", 1)[0] for k in verdicts),
+    )
 
 
 def zero_power_categories(baseline: Baseline, categories: Mapping[str, str]) -> tuple[str, ...]:
@@ -183,6 +203,14 @@ class ContributionVerdict:
     absolute_passed: int = 0
     absolute_total: int = 0
     reasons: list[str] = field(default_factory=list)
+    #: Set iff the gate could not judge this run at all — the floor does not apply to it
+    #: (the catalogue moved, or one side never said which catalogue it means). The model is
+    #: then NOT GRADED, and every count above is left at zero rather than computed against a
+    #: population that does not exist. ``ok`` is False, but for a different reason than a
+    #: BLOCK, and the two must never be collapsed: BLOCK is a verdict on the model, REFUSED
+    #: is the absence of one. (Same distinction the gate witness draws with its VOID exit 3 —
+    #: unusable is not the same as failed.)
+    refusal: str | None = None
 
     @property
     def contribution_rate(self) -> float:
@@ -193,6 +221,19 @@ class ContributionVerdict:
 
     def render(self) -> str:
         """Multi-line human summary for the CI log."""
+        if self.refusal is not None:
+            return "\n".join(
+                [
+                    f"[contribution-gate REFUSED] {self.model}",
+                    "  NOT GRADED — this floor cannot judge this run:",
+                    f"  - {self.refusal}",
+                    "  No absolute, no contribution and no lift are reported, because each "
+                    "would be counted",
+                    "  against a population that no longer exists. Regenerate the floor "
+                    "(`make eval-null-write`)",
+                    "  and re-run; do not compare across case sets.",
+                ]
+            )
         verdict = "PASS" if self.ok else "BLOCK"
         lines = [
             f"[contribution-gate {verdict}] {self.model}",
@@ -249,8 +290,26 @@ def evaluate_contribution(
 
     Returns:
         A :class:`ContributionVerdict`; ``ok`` iff Rule 1 holds, and Rule 2 too when it
-        is gated at all.
+        is gated at all. If the floor cannot be shown to apply to this run, the run is
+        **not graded**: ``refusal`` says why, ``ok`` is False, and every count is left at
+        zero rather than measured against a population that no longer exists.
     """
+    # Before anything is counted: can this floor judge this run at all? Every rule below
+    # reads its population off the baseline, so a floor captured on another catalogue does
+    # not make the grade *approximate* — it makes it meaningless. Fail closed, and say so.
+    stale = floor_mismatch(baseline, report)
+    if stale is not None:
+        return ContributionVerdict(
+            ok=False,
+            model=str(report.get("model") or ""),
+            confirmed_breaks=(),
+            unconfirmed_breaks=(),
+            contribution=0,
+            contribution_population=0,
+            min_contribution=min_contribution,
+            refusal=stale,
+        )
+
     run = report_verdicts(report)
     floor_pass, floor_fail = floor_populations(baseline)
 
