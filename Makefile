@@ -1,3 +1,28 @@
+# ── The shell every recipe runs under ───────────────────────────────────────
+#
+# A PIPELINE'S EXIT CODE IS ITS LAST COMMAND'S. Nothing else in this file matters
+# as much, because that sentence is the origin of ADR 0026: `git merge 2>&1 | tail -1`
+# printed `Updating a..b` while the error went to stderr, the pipe ate the status,
+# and two gates read green over a failed merge.
+#
+# GNU make defaults SHELL to `/bin/sh`, which has no `pipefail` at all on a Linux
+# runner (dash) and does not enable it on macOS (bash-as-sh). So every `cmd | filter`
+# in this file reported the FILTER's success. Measured, on 2026-07-13, in this very
+# file: `make ledger-backup` against a container that does not exist printed a ✓,
+# exited 0, and wrote a SHA-256-notarised archive of ZERO BYTES — because `gzip`
+# compresses a failed `pg_dump`'s empty output with complete success.
+#
+# `-o pipefail` makes a pipeline report the FIRST command that failed. It is set here,
+# once, for every recipe, rather than remembered at each pipe — a discipline that must
+# be remembered at each site is a discipline that will be missed at one.
+#
+# `-e` is deliberately NOT set: `dev-up`'s port guard is a `lsof … && { exit 1; }` whose
+# NEGATIVE case (port free ⇒ lsof exits 1) is the healthy one, and `-e` would abort the
+# target on it — a false red, which trains you to ignore reds. Verdicts do not live in
+# `;`-chains here; `tests/unit/test_exit_witness_debt.py` is what keeps it that way.
+SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -c
+
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
         obs-up obs-down obs-logs dev-secrets \

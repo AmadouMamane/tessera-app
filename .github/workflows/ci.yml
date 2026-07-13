@@ -199,8 +199,16 @@ jobs:
       # this runner's Postgres. `ON_ERROR_STOP` because a half-restored corpus
       # would surface as a dozen mislabelled content assertions, never as "the
       # seed failed" — the same class of lie the missing AUTH_SECRET told.
+      #
+      # `set -o pipefail` — GitHub runs `run:` blocks under `bash -e {0}`: `-e` is on,
+      # PIPEFAIL IS NOT. Without it a pipeline reports its LAST command, so `gunzip |
+      # psql` reported psql's success while gunzip choked on a truncated fixture (psql
+      # cheerfully applies the valid prefix — ON_ERROR_STOP stops SQL *errors*, not a
+      # short read), and `psql | tee` reported that TEE HAD WRITTEN A FILE. A dead
+      # database was a green seed step. This is ADR 0026's origin instance, in CI.
       - name: Seed Postgres from the committed fixture
         run: |
+          set -o pipefail
           gunzip -c fixtures/e2e/pgvector-seed.sql.gz \
             | psql "$TESSERA_POSTGRES__DSN" -v ON_ERROR_STOP=1 -q
           psql "$TESSERA_POSTGRES__DSN" -tAc \
