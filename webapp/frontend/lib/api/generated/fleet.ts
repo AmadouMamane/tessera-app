@@ -628,6 +628,9 @@ export const FleetPayloadSchema = z.object({
   naive_sum_conversations: z.number().int(),
   shared_conversations: z.number().int(),
   dedup_saved: z.number().int(),
+  handoff_events: z.number().int(),
+  handoff_conversations: z.number().int(),
+  handoff_conversations_seen_shared: z.number().int(),
 });
 
 export const FleetUnavailableSchema = z.object({

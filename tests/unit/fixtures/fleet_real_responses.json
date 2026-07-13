@@ -1188,7 +1188,10 @@
       },
       "naive_sum_conversations": 415,
       "shared_conversations": 0,
-      "dedup_saved": 0
+      "dedup_saved": 0,
+      "handoff_events": 34,
+      "handoff_conversations": 34,
+      "handoff_conversations_seen_shared": 0
     },
     {
       "available": true,
@@ -1546,7 +1549,10 @@
       },
       "naive_sum_conversations": 415,
       "shared_conversations": 0,
-      "dedup_saved": 0
+      "dedup_saved": 0,
+      "handoff_events": 34,
+      "handoff_conversations": 34,
+      "handoff_conversations_seen_shared": 0
     },
     {
       "available": true,
@@ -1904,7 +1910,10 @@
       },
       "naive_sum_conversations": 415,
       "shared_conversations": 0,
-      "dedup_saved": 0
+      "dedup_saved": 0,
+      "handoff_events": 34,
+      "handoff_conversations": 34,
+      "handoff_conversations_seen_shared": 0
     }
   ],
   "access": [

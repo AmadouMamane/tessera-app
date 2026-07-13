@@ -20,9 +20,11 @@ from typing import TYPE_CHECKING
 from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from psycopg import AsyncCursor
 
-__all__ = ["OrgRollup", "dedup_org_total"]
+__all__ = ["OrgRollup", "dedup_org_total", "shared_entities_among"]
 
 # This module used to carry its own `_ident` — `^[a-z_][a-z0-9_]*$` with `re.match` — while
 # the ClickHouse adapter carried a second, differently-spelled one. Two private validators for
@@ -115,3 +117,49 @@ async def dedup_org_total(
         dedup_saved=naive_sum - org,
         by_agent=by_agent,
     )
+
+
+async def shared_entities_among(
+    cur: AsyncCursor[dict[str, object]],
+    *,
+    table: str,
+    entity_col: str,
+    entities: Collection[str],
+    agent_col: str = "agent_id",
+) -> int:
+    """How many of ``entities`` this table has seen under MORE THAN ONE agent.
+
+    This is the reconciliation half of the dedup story. ``OrgRollup.shared`` answers a
+    question about the table's own neighbourhood — "which of MY entities touch two
+    agents?" — and it reads 0 with total composure when the handed-off journeys the S1
+    journal attests never share an id in this table at all. So the caller passes the
+    exact entities the journal claims crossed agents, and this asks the table about
+    *those*: every one it cannot find under two agents is a journey the dedup silently
+    double-counts. The two numbers travel together to the UI, which states the gap —
+    never "0 dédoublonnées" dressed as a completed reconciliation.
+
+    Args:
+        cur: an async cursor whose ``row_factory`` yields ``dict`` rows.
+        table: the entity table (validated identifier).
+        entity_col: the distinct entity column (validated).
+        entities: the entity ids the journal attests; empty ⇒ 0 without a query.
+        agent_col: the agent column, default ``agent_id`` (validated).
+
+    Returns:
+        The count of ``entities`` present in ``table`` under >1 distinct agent.
+    """
+    if not entities:
+        return 0
+    table_id = safe_identifier(table)
+    entity_id = safe_identifier(entity_col)
+    agent_id = safe_identifier(agent_col)
+    # Identifiers validated above; the id list travels as a bound parameter, never as text.
+    sql = (
+        f"SELECT count(*) AS n FROM ("  # noqa: S608
+        f"  SELECT {entity_id} FROM {table_id} "
+        f"  WHERE {entity_id} = ANY(%s) "
+        f"  GROUP BY {entity_id} HAVING count(DISTINCT {agent_id}) > 1"
+        f") s"
+    )
+    await cur.execute(sql, (sorted(entities),))
+    return _as_int((await cur.fetchone() or {}).get("n"))

@@ -132,6 +132,8 @@ def _ledger_rows(sql: str, params: object = None) -> list[tuple[Any, ...]]:  # n
         return [(f"h{LEDGER_ROWS - 1}",)]  # the checkpoint's anchor still holds
     if "to_agent" in s and "from_agent" in s:
         return [(AGENTS[i], AGENTS[(i + 1) % len(AGENTS)], 1) for i in range(n)]
+    if "conversation_id" in s and _GROUP_BY.search(s):
+        return [(f"conv-{i}", 1) for i in range(n)]  # (cid, count) — the reconciliation groups
     if _DISTINCT_ON.search(s):
         return [(AGENTS[i], _payload(i)) for i in range(n)]
     if "select seq, payload, hash, prev_hash" in s:

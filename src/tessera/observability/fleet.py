@@ -19,11 +19,16 @@ from typing import TYPE_CHECKING, Any
 from psycopg.rows import dict_row
 
 from tessera.guard.audit import HANDOFF_TYPE
-from tessera.guard.ledger_store import handoff_counts, ledger_source, read_ledger_entries
+from tessera.guard.ledger_store import (
+    handoff_conversations,
+    handoff_counts,
+    ledger_source,
+    read_ledger_entries,
+)
 from tessera.observability import quality_nets, turn_evidence
 from tessera.observability.agent_health import health_state
 from tessera.observability.agent_release import fleet_release_states
-from tessera.observability.agent_scope import dedup_org_total
+from tessera.observability.agent_scope import dedup_org_total, shared_entities_among
 from tessera.observability.agentspec_projection import (
     declared_observability_level,
     declares_telemetry,
@@ -89,28 +94,43 @@ def _agent_records() -> dict[str, Agent]:
         return {}
 
 
-def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int]]:
-    """Count S1 handoff events per agent: (incoming by to_agent, outgoing by from_agent).
+def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int], int, set[str]]:
+    """S1 handoff journal, per agent and per journey: ``(incoming, outgoing, events, conv_ids)``.
+
+    ``incoming``/``outgoing`` count events by ``to_agent``/``from_agent``. ``events`` is the
+    total number of attested handoffs, and ``conv_ids`` the distinct conversation ids they
+    carry — the exact journeys the journal claims crossed two agents. Those ids exist so the
+    dedup can be *reconciled* against the journal instead of merely computed beside it: a
+    conversation store that never shares an id reads "0 shared" forever, and only the journal
+    can contradict it.
 
     A count is an aggregate, and an aggregate belongs in the database. In postgres mode this is
-    one indexed ``GROUP BY`` returning one row per handoff pair that actually occurred; it used
-    to read all 29 600 ledger entries into Python to find the few dozen that were handoffs.
-    File mode has no index and keeps the scan — irreducible there, and honest about it.
+    two indexed ``GROUP BY``s; it used to read all 29 600 ledger entries into Python to find
+    the few dozen that were handoffs. File mode has no index and keeps the scan — irreducible
+    there, and honest about it.
     """
     if ledger_source() == "postgres":
-        return handoff_counts()
+        pg_incoming, pg_outgoing = handoff_counts()
+        pg_events, pg_conv_ids = handoff_conversations()
+        return pg_incoming, pg_outgoing, pg_events, pg_conv_ids
     incoming: dict[str, int] = {}
     outgoing: dict[str, int] = {}
+    events = 0
+    conv_ids: set[str] = set()
     for obj in read_ledger_entries(audit_path):
         if obj.get("type") != HANDOFF_TYPE:
             continue
+        events += 1
         to_agent = str(obj.get("to_agent", ""))
         from_agent = str(obj.get("from_agent", ""))
+        conversation_id = str(obj.get("conversation_id", ""))
         if to_agent:
             incoming[to_agent] = incoming.get(to_agent, 0) + 1
         if from_agent:
             outgoing[from_agent] = outgoing.get(from_agent, 0) + 1
-    return incoming, outgoing
+        if conversation_id:
+            conv_ids.add(conversation_id)
+    return incoming, outgoing, events, conv_ids
 
 
 def _integrity_broken() -> bool:
@@ -180,6 +200,13 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     ``lang`` localizes the per-agent release ``verdict_label``; all other fields
     are language-independent.
     """
+    # The handoff journal is read BEFORE the SQL block — alone among the ledger reads, it cannot
+    # join the gather below: the dedup reconciliation has to ask the conversation store about the
+    # exact journeys the journal attests, so their ids must exist before the cursor closes.
+    incoming, outgoing, handoff_events, handoff_convs = await asyncio.to_thread(
+        _handoff_counts, get_settings().guard.audit_file
+    )
+
     with store_read(
         "postgres", "conversation_messages.fleet_rollup", target="conversation_messages"
     ) as read:
@@ -210,6 +237,17 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 rollup = await dedup_org_total(
                     cur, table="conversation_messages", entity_col="conversation_id"
                 )
+                # Reconciliation: `rollup.shared` answers about this table's own neighbourhood
+                # and reads 0 with composure when handed-off journeys never share an id here.
+                # So ask about the journeys the S1 journal actually attests: every one this
+                # store cannot see under two agents is double-counted by the dedup, and the
+                # payload carries both numbers so the UI states the gap instead of "0 shared".
+                handoff_seen_shared = await shared_entities_among(
+                    cur,
+                    table="conversation_messages",
+                    entity_col="conversation_id",
+                    entities=handoff_convs,
+                )
         read.rows_read(len(by_agent))
 
     # Every read below is SYNCHRONOUS — Postgres, Prometheus, the ledger, the eval snapshots.
@@ -219,7 +257,6 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     # the reads cheap fixes only the first. They go to threads, and — being independent — they
     # go there together.
     #
-    #   * handoffs — one indexed GROUP BY over the ledger;
     #   * releases — the eval/gating facts;
     #   * records  — the manifests (the registry seam);
     #   * observed — ONE Prometheus read for the whole fleet: which agents the cockpit has
@@ -229,14 +266,12 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     #     it records, so it is a fleet-wide fact, not a per-card one;
     #   * canaries — ONE query for every agent's last verdict, not one query per agent.
     (
-        (incoming, outgoing),
         releases,
         records,
         observed_turns,
         integrity_broken,
         canary_verdicts,
     ) = await asyncio.gather(
-        asyncio.to_thread(_handoff_counts, get_settings().guard.audit_file),
         asyncio.to_thread(fleet_release_states, lang),
         asyncio.to_thread(_agent_records),
         asyncio.to_thread(turn_evidence.agents_with_turn_evidence),
@@ -331,4 +366,12 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
         "naive_sum_conversations": rollup.naive_sum,
         "shared_conversations": rollup.shared,
         "dedup_saved": rollup.dedup_saved,
+        # The handoff reconciliation, as numbers — never a pre-digested "ok". The journal
+        # attests `handoff_events` transfers over `handoff_conversations` journeys; the
+        # conversation store can see `…_seen_shared` of them under two agents. A gap means
+        # the org total double-counts journeys the journal proves are single, and the UI
+        # must say so beside the dedup line.
+        "handoff_events": handoff_events,
+        "handoff_conversations": len(handoff_convs),
+        "handoff_conversations_seen_shared": handoff_seen_shared,
     }

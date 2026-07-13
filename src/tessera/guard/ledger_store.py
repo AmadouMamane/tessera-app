@@ -71,6 +71,7 @@ __all__ = [
     "dual_write_enabled",
     "enqueue_ledger_entry",
     "ensure_audit_ledger_schema",
+    "handoff_conversations",
     "handoff_counts",
     "latest_entries_of_type_by_agent",
     "latest_entry_of_type_for_agent",
@@ -839,6 +840,31 @@ def handoff_counts() -> tuple[dict[str, int], dict[str, int]]:
         if isinstance(from_agent, str) and from_agent:
             outgoing[from_agent] = outgoing.get(from_agent, 0) + int(count)
     return incoming, outgoing
+
+
+def handoff_conversations() -> tuple[int, set[str]]:
+    """``(total S1 handoff events, distinct conversation ids they attest)`` — one aggregate.
+
+    The ids come back alongside the count because the fleet's dedup reconciliation has to
+    ask the conversation store about *these exact journeys* — which of them it can actually
+    see under two agents. A bare count could only be compared to another bare count, and two
+    totals agreeing says nothing about whether they describe the same conversations.
+    """
+    query = (
+        f"SELECT payload->>'conversation_id' AS cid, count(*) AS n "  # noqa: S608
+        f"FROM {LEDGER_TABLE} WHERE payload->>'type' = %s GROUP BY 1"
+    )
+    with (
+        store_read("postgres", "audit_ledger.handoff_conversations", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, (HANDOFF_TYPE,))
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    events = sum(int(n) for _cid, n in rows)
+    ids = {cid for cid, _n in rows if isinstance(cid, str) and cid}
+    return events, ids
 
 
 def ledger_length_as_of(at: datetime) -> int:

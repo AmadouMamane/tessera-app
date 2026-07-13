@@ -122,6 +122,16 @@ class TestTheRequestPathsThisLotFixed:
 
         _assert_within_budget(reads, "ledger_store.handoff_counts")
 
+    def test_the_fleets_handoff_reconciliation_is_an_aggregate(self, fake_ledger: None) -> None:
+        """The journeys the journal attests come back grouped in SQL — never the chain in Python."""
+        from tessera.guard.ledger_store import handoff_conversations
+
+        with store_spans.recording() as reads:
+            events, conv_ids = handoff_conversations()
+
+        assert events >= 1 and conv_ids, "the fake ledger attests handoffs; none came back"
+        _assert_within_budget(reads, "ledger_store.handoff_conversations")
+
     def test_the_fleets_integrity_dot_is_incremental(self, fake_ledger: None) -> None:
         """The health dot asks the weak question, and pays the weak price.
 

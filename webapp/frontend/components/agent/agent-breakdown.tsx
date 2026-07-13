@@ -42,6 +42,12 @@ export async function AgentBreakdown({
 }) {
   const t = await getTranslations({ locale, namespace: "agentScope" });
   const agents = fleet?.agents ?? [];
+  // Handoff reconciliation — the S1 journal's claim vs what the conversation store can see.
+  // `shared_conversations` alone reads 0 with composure when handed-off journeys never share
+  // an id in the store, so the footer must state the journal's side too, and name any gap.
+  const attested = fleet?.handoff_conversations ?? 0;
+  const seenShared = fleet?.handoff_conversations_seen_shared ?? 0;
+  const handoffGap = attested - seenShared;
 
   if (!fleet || agents.length === 0) {
     return (
@@ -114,11 +120,28 @@ export async function AgentBreakdown({
                 colSpan={4}
                 className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
               >
-                {t("dedupExplain", {
-                  naive: fmtInt(fleet.naive_sum_conversations ?? 0),
-                  saved: fmtInt(fleet.dedup_saved ?? 0),
-                  shared: fmtInt(fleet.shared_conversations ?? 0),
-                })}
+                <span className="block">
+                  {t("dedupExplain", {
+                    naive: fmtInt(fleet.naive_sum_conversations ?? 0),
+                    saved: fmtInt(fleet.dedup_saved ?? 0),
+                    shared: fmtInt(fleet.shared_conversations ?? 0),
+                  })}
+                </span>
+                {attested > 0 ? (
+                  handoffGap > 0 ? (
+                    <span className="mt-0.5 block text-amber-300/90">
+                      {t("handoffGap", {
+                        events: fmtInt(fleet.handoff_events ?? 0),
+                        attested: fmtInt(attested),
+                        seen: fmtInt(seenShared),
+                      })}
+                    </span>
+                  ) : (
+                    <span className="mt-0.5 block">
+                      {t("handoffReconciled", { attested: fmtInt(attested) })}
+                    </span>
+                  )
+                ) : null}
               </td>
             </tr>
           </tfoot>
