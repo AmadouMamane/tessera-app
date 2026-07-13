@@ -53,6 +53,7 @@ from tessera.guard.ledger_store import (
     LedgerTreeStatus,
     _connect_sync,
 )
+from tessera.observability.store_spans import store_read
 from tessera.sql import safe_identifier
 
 CHECKPOINT_TABLE: Final = safe_identifier("audit_ledger_checkpoint")
@@ -133,31 +134,50 @@ def ensure_checkpoint_schema(conn: Any) -> None:
 
 
 def _rows_above(conn: Any, seq: int) -> list[_Row]:
-    """Every row above ``seq``, oldest first — an index range scan on the primary key."""
-    rows = conn.execute(
-        f"SELECT seq, payload, hash, prev_hash FROM {LEDGER_TABLE} "  # noqa: S608 — fixed ident
-        f"WHERE seq > %s ORDER BY seq",
-        (seq,),
-    ).fetchall()
+    """Every row above ``seq``, oldest first — an index range scan on the primary key.
+
+    The one read here that can be O(ledger): on a full walk ``seq`` is 0 and this materialises
+    the whole chain. It is instrumented for exactly that reason — when the badge does re-read
+    29 600 rows, the trace must say so out loud instead of hiding it inside a fast average.
+    """
+    with store_read("postgres", "audit_ledger.rows_above", target=LEDGER_TABLE) as read:
+        rows = conn.execute(
+            f"SELECT seq, payload, hash, prev_hash FROM {LEDGER_TABLE} "  # noqa: S608 — fixed ident
+            f"WHERE seq > %s ORDER BY seq",
+            (seq,),
+        ).fetchall()
+        read.rows_read(len(rows))
     return [_Row(int(r[0]), r[1], str(r[2]), str(r[3])) for r in rows if isinstance(r[1], dict)]
 
 
 def _length(conn: Any) -> int:
-    row = conn.execute(f"SELECT count(*) FROM {LEDGER_TABLE}").fetchone()  # noqa: S608
+    with store_read("postgres", "audit_ledger.length", target=LEDGER_TABLE) as read:
+        row = conn.execute(f"SELECT count(*) FROM {LEDGER_TABLE}").fetchone()  # noqa: S608
+        read.rows_read(1 if row else 0)
     return int(row[0]) if row else 0
 
 
 def _max_seq(conn: Any) -> int:
-    row = conn.execute(f"SELECT COALESCE(max(seq), 0) FROM {LEDGER_TABLE}").fetchone()  # noqa: S608
+    with store_read("postgres", "audit_ledger.max_seq", target=LEDGER_TABLE) as read:
+        row = conn.execute(
+            f"SELECT COALESCE(max(seq), 0) FROM {LEDGER_TABLE}"  # noqa: S608
+        ).fetchone()
+        read.rows_read(1 if row else 0)
     return int(row[0]) if row else 0
 
 
 def _all_forks(conn: Any) -> tuple[LedgerForkPoint, ...]:
-    """Every fork point in the whole table — the FULL walk only."""
-    rows = conn.execute(
-        f"SELECT prev_hash, array_agg(hash ORDER BY seq) FROM {LEDGER_TABLE} "  # noqa: S608
-        f"GROUP BY prev_hash HAVING count(*) > 1"
-    ).fetchall()
+    """Every fork point in the whole table — the FULL walk only.
+
+    Groups 29 600 rows in the database and returns the 29 that fork. The row count on the span is
+    29, not 29 600, and that is correct: what costs is what is materialised in Python.
+    """
+    with store_read("postgres", "audit_ledger.forks_all", target=LEDGER_TABLE) as read:
+        rows = conn.execute(
+            f"SELECT prev_hash, array_agg(hash ORDER BY seq) FROM {LEDGER_TABLE} "  # noqa: S608
+            f"GROUP BY prev_hash HAVING count(*) > 1"
+        ).fetchall()
+        read.rows_read(len(rows))
     return tuple(LedgerForkPoint(str(r[0]), tuple(str(h) for h in r[1])) for r in rows)
 
 
@@ -167,34 +187,40 @@ def _forks_touching(conn: Any, seq: int) -> tuple[LedgerForkPoint, ...]:
     A parent no new row points at cannot have gained a child (append-only), so its state in the
     checkpoint still holds. This is what makes fork detection O(new) instead of O(ledger).
     """
-    rows = conn.execute(
-        f"SELECT a.prev_hash, array_agg(a.hash ORDER BY a.seq) FROM {LEDGER_TABLE} a "  # noqa: S608
-        f"WHERE a.prev_hash IN (SELECT prev_hash FROM {LEDGER_TABLE} WHERE seq > %s) "
-        f"GROUP BY a.prev_hash HAVING count(*) > 1",
-        (seq,),
-    ).fetchall()
+    with store_read("postgres", "audit_ledger.forks_touching", target=LEDGER_TABLE) as read:
+        rows = conn.execute(
+            f"SELECT a.prev_hash, array_agg(a.hash ORDER BY a.seq) FROM {LEDGER_TABLE} a "  # noqa: S608
+            f"WHERE a.prev_hash IN (SELECT prev_hash FROM {LEDGER_TABLE} WHERE seq > %s) "
+            f"GROUP BY a.prev_hash HAVING count(*) > 1",
+            (seq,),
+        ).fetchall()
+        read.rows_read(len(rows))
     return tuple(LedgerForkPoint(str(r[0]), tuple(str(h) for h in r[1])) for r in rows)
 
 
 def _all_orphans(conn: Any) -> tuple[_Orphan, ...]:
     """Every row whose declared parent is absent — the FULL walk only."""
-    rows = conn.execute(
-        f"SELECT a.hash, a.prev_hash FROM {LEDGER_TABLE} a "  # noqa: S608 — fixed identifier
-        f"WHERE a.prev_hash <> %s "
-        f"AND NOT EXISTS (SELECT 1 FROM {LEDGER_TABLE} b WHERE b.hash = a.prev_hash)",
-        (_GENESIS,),
-    ).fetchall()
+    with store_read("postgres", "audit_ledger.orphans_all", target=LEDGER_TABLE) as read:
+        rows = conn.execute(
+            f"SELECT a.hash, a.prev_hash FROM {LEDGER_TABLE} a "  # noqa: S608 — fixed identifier
+            f"WHERE a.prev_hash <> %s "
+            f"AND NOT EXISTS (SELECT 1 FROM {LEDGER_TABLE} b WHERE b.hash = a.prev_hash)",
+            (_GENESIS,),
+        ).fetchall()
+        read.rows_read(len(rows))
     return tuple(_Orphan(str(r[0]), str(r[1])) for r in rows)
 
 
 def _orphans_above(conn: Any, seq: int) -> tuple[_Orphan, ...]:
     """Rows above ``seq`` whose declared parent is absent — O(new), on the hash unique index."""
-    rows = conn.execute(
-        f"SELECT a.hash, a.prev_hash FROM {LEDGER_TABLE} a "  # noqa: S608 — fixed identifier
-        f"WHERE a.seq > %s AND a.prev_hash <> %s "
-        f"AND NOT EXISTS (SELECT 1 FROM {LEDGER_TABLE} b WHERE b.hash = a.prev_hash)",
-        (seq, _GENESIS),
-    ).fetchall()
+    with store_read("postgres", "audit_ledger.orphans_above", target=LEDGER_TABLE) as read:
+        rows = conn.execute(
+            f"SELECT a.hash, a.prev_hash FROM {LEDGER_TABLE} a "  # noqa: S608 — fixed identifier
+            f"WHERE a.seq > %s AND a.prev_hash <> %s "
+            f"AND NOT EXISTS (SELECT 1 FROM {LEDGER_TABLE} b WHERE b.hash = a.prev_hash)",
+            (seq, _GENESIS),
+        ).fetchall()
+        read.rows_read(len(rows))
     return tuple(_Orphan(str(r[0]), str(r[1])) for r in rows)
 
 
@@ -432,3 +458,34 @@ def run_full_verification() -> LedgerVerdict:
     chain was last read, and the reader can decide whether that is recent enough.
     """
     return verify_ledger_incremental(force_full=True)
+
+
+def active_ledger_verdict(path: Any = None) -> LedgerVerdict:
+    """The ACTIVE ledger's live verdict — incremental on the table, a full walk on a flat file.
+
+    The seam for every caller that needs to know *whether the chain is intact right now* and does
+    not need to prove it to a third party: the fleet's health dots, the header's integrity bell.
+    They ask a weaker question than :func:`tessera.guard.seal.active_ledger_opposability` — "is
+    there a proven break?", not "can I oppose this chain to a regulator?" — and they may pay a
+    weaker price for it.
+
+    The verdict always carries **the provenance of its own claim**: when the chain was last walked
+    end to end, and how many entries have been verified against the checkpoint since. A caller may
+    then show a green dot AND say what that green rests on. A checkpoint trusted in silence would
+    be an assumption wearing the clothes of a proof; this one hands you its age unasked.
+
+    File mode has no checkpoint — the walk IS full, every time — so the provenance says exactly
+    that: walked now, nothing outstanding.
+    """
+    from tessera.guard.ledger_store import active_ledger_tree_status, ledger_source
+
+    if ledger_source() == "postgres":
+        return verify_ledger_incremental()
+    tree = active_ledger_tree_status(path)
+    return LedgerVerdict(
+        tree=tree,
+        full_verified_at=datetime.now(UTC),
+        entries_since_full=0,
+        entries_verified_now=tree.length,
+        checkpoint_used=False,
+    )

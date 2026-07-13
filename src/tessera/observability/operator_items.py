@@ -301,6 +301,16 @@ def load_items(agent_id: str | None = None) -> list[OperatorItem]:
     set, only that agent's items are returned; ``None`` aggregates the whole fleet. An agent
     with no eval run of its own contributes nothing (honest — never a fabricated split).
     """
+    from tessera.observability.store_spans import store_read
+
+    with store_read("file", "operator_items.load", target="eval/reports") as read:
+        items = _load_items_uninstrumented(agent_id)
+        read.rows_read(len(items))
+    return items
+
+
+def _load_items_uninstrumented(agent_id: str | None = None) -> list[OperatorItem]:
+    """The real work of :func:`load_items` — the eval snapshots, read from disk."""
     state = _load_state()
     items: list[OperatorItem] = []
     for aid in _agent_targets(agent_id):

@@ -172,22 +172,23 @@ def _canary_notifications(lang: str) -> list[dict[str, object]]:
 
     The canary already writes a durable S1 verdict per run; nothing new is stored here.
     A green canary, or an agent that never ran one, produces nothing.
+
+    ONE query for the whole fleet. This bell hangs in the header of all 32 cockpit pages, and it
+    used to ask the question once per agent — each ask loading all 29 600 ledger entries into
+    memory. The header alone was six full ledger reads, on every page load.
     """
     notifications: list[dict[str, object]] = []
     try:
         from tessera.agent.registry import list_agents
-        from tessera.observability.quality_nets import latest_canary_verdict
-    except Exception:
+        from tessera.observability.quality_nets import latest_canary_verdicts
+
+        verdicts = latest_canary_verdicts()
+    except Exception:  # an unreadable ledger must not silence the bell (0015)
+        LOG.warning("chrome.canary_unreadable")
         return notifications
 
     for agent in list_agents():
-        try:
-            verdict = latest_canary_verdict(agent.id)
-        except Exception:  # one unreadable agent must not silence the others
-            LOG.warning("chrome.canary_unreadable", extra={"agent_id": agent.id})
-            # best-effort: one agent's unreadable canary won't gate the chrome bell (0015)
-            continue
-        if verdict == "red":
+        if verdicts.get(agent.id) == "red":
             notifications.append(
                 {
                     "id": f"canary:{agent.id}",
@@ -200,19 +201,26 @@ def _canary_notifications(lang: str) -> list[dict[str, object]]:
 
 
 def _ledger_notifications(lang: str) -> list[dict[str, object]]:
-    """Ledger integrity and seal posture — the two facts État à date already proves."""
+    """Ledger integrity and seal posture — the two facts État à date already proves.
+
+    Two cheap reads, not one expensive one. The bell hangs in the header of all 32 cockpit pages
+    and it used to call ``active_ledger_opposability`` — the FULL opposability verdict, 29 600
+    rows re-hashed in Python, on every page load — to ask two yes/no questions. It now asks the
+    incremental verdict for the chain and the typed seal facet for the posture. Neither
+    materialises the chain, and neither claims more than the bell needs.
+    """
     notifications: list[dict[str, object]] = []
     try:
-        from tessera.guard.seal import active_ledger_opposability
+        from tessera.guard.ledger_checkpoint import active_ledger_verdict
+        from tessera.guard.seal import active_ledger_seal_status
 
-        opposability = active_ledger_opposability()
+        content_integrity = active_ledger_verdict().tree.content_integrity
+        seal_state = active_ledger_seal_status().state
     except Exception:
         LOG.warning("chrome.opposability_unreadable")
         return notifications
-    if not opposability:
-        return notifications
 
-    if not bool(opposability.get("content_integrity", True)):
+    if not content_integrity:
         notifications.append(
             {
                 "id": "ledger:integrity",
@@ -221,7 +229,6 @@ def _ledger_notifications(lang: str) -> list[dict[str, object]]:
                 "tone": "danger",
             }
         )
-    seal_state = str(opposability.get("seal_state", "absent"))
     if seal_state in _DEGRADED_SEAL_STATES:
         notifications.append(
             {

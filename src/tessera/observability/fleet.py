@@ -13,11 +13,13 @@ eval (Phase 4) and is intentionally absent here.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from psycopg.rows import dict_row
 
-from tessera.guard.ledger_store import read_ledger_entries
+from tessera.guard.audit import HANDOFF_TYPE
+from tessera.guard.ledger_store import handoff_counts, ledger_source, read_ledger_entries
 from tessera.observability import quality_nets, turn_evidence
 from tessera.observability.agent_health import health_state
 from tessera.observability.agent_release import fleet_release_states
@@ -30,6 +32,7 @@ from tessera.observability.agentspec_projection import (
 )
 from tessera.observability.business_capabilities import business_capability_aggregate
 from tessera.observability.operator_items import load_items
+from tessera.observability.store_spans import store_read
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
 
@@ -87,11 +90,19 @@ def _agent_records() -> dict[str, Agent]:
 
 
 def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int]]:
-    """Count S1 handoff events per agent: (incoming by to_agent, outgoing by from_agent)."""
+    """Count S1 handoff events per agent: (incoming by to_agent, outgoing by from_agent).
+
+    A count is an aggregate, and an aggregate belongs in the database. In postgres mode this is
+    one indexed ``GROUP BY`` returning one row per handoff pair that actually occurred; it used
+    to read all 29 600 ledger entries into Python to find the few dozen that were handoffs.
+    File mode has no index and keeps the scan — irreducible there, and honest about it.
+    """
+    if ledger_source() == "postgres":
+        return handoff_counts()
     incoming: dict[str, int] = {}
     outgoing: dict[str, int] = {}
     for obj in read_ledger_entries(audit_path):
-        if obj.get("type") != "tessera.agent.handoff":
+        if obj.get("type") != HANDOFF_TYPE:
             continue
         to_agent = str(obj.get("to_agent", ""))
         from_agent = str(obj.get("from_agent", ""))
@@ -105,26 +116,33 @@ def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int]]:
 def _integrity_broken() -> bool:
     """Whether the audit ledger's content integrity fails to verify — fleet-wide.
 
+    A health dot asks the weak question — "is there a PROVEN break?" — so it asks the incremental
+    verdict, where a verified prefix stays verified because the append-only trigger enforces it.
+    It used to ask ``active_ledger_opposability``, which computes the entire §9 opposability badge
+    — a full re-hash of 29 600 rows AND a third-party seal evaluation — of which the fleet then
+    used exactly one boolean. The rest was fetched and dropped.
+
     Unreadable ⇒ ``False``: an unreachable ledger is not a proven break, and painting every
     dot red because the cockpit could not look would be the same over-claim in reverse.
     """
     try:
-        from tessera.guard.seal import active_ledger_opposability
+        from tessera.guard.ledger_checkpoint import active_ledger_verdict
 
-        opposability = active_ledger_opposability()
+        return not active_ledger_verdict().tree.content_integrity
     except Exception:
         return False
-    if not opposability:
-        return False
-    return not bool(opposability.get("content_integrity", True))
 
 
-def _canary_red(agent_id: str) -> bool:
-    """Whether this agent's last canary invocation failed. Never ran ⇒ not red."""
+def _canary_verdicts() -> dict[str, str]:
+    """Every agent's last canary verdict, in ONE query — never one query per agent.
+
+    The fleet asks this about all its agents at once. Asked one at a time it was six full ledger
+    reads per request; asked as the question it is, it is one indexed row per agent.
+    """
     try:
-        return quality_nets.latest_canary_verdict(agent_id) == "red"
+        return quality_nets.latest_canary_verdicts()
     except Exception:
-        return False
+        return {}
 
 
 def _business_card_facts(aid: str, record: Agent | None) -> dict[str, object]:
@@ -162,46 +180,89 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     ``lang`` localizes the per-agent release ``verdict_label``; all other fields
     are language-independent.
     """
-    async with _connection() as conn:
-        conn.row_factory = dict_row
-        async with conn.cursor() as cur:
-            await cur.execute(
-                "SELECT agent_id, "  # noqa: S608  (escalation clause is a constant)
-                "count(DISTINCT conversation_id) AS convs, "
-                "count(*) FILTER (WHERE role = 'user') AS turns, "
-                "count(*) AS msgs, "
-                f"count(*) FILTER (WHERE role = 'assistant' AND ({_ESCALATION_ILIKE})) AS escal, "
-                "count(*) FILTER (WHERE role = 'assistant') AS answers, "
-                "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat "
-                "FROM conversation_messages GROUP BY agent_id"
-            )
-            by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
+    with store_read(
+        "postgres", "conversation_messages.fleet_rollup", target="conversation_messages"
+    ) as read:
+        async with _connection() as conn:
+            conn.row_factory = dict_row
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT agent_id, "  # noqa: S608  (escalation clause is a constant)
+                    "count(DISTINCT conversation_id) AS convs, "
+                    "count(*) FILTER (WHERE role = 'user') AS turns, "
+                    "count(*) AS msgs, "
+                    f"count(*) FILTER (WHERE role = 'assistant' AND ({_ESCALATION_ILIKE})) "
+                    "AS escal, "
+                    "count(*) FILTER (WHERE role = 'assistant') AS answers, "
+                    "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat "
+                    "FROM conversation_messages GROUP BY agent_id"
+                )
+                by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
 
-            await cur.execute(
-                "SELECT count(*) FILTER (WHERE role = 'user') AS turns FROM conversation_messages"
-            )
-            org_turns = int((await cur.fetchone() or {}).get("turns") or 0)
+                await cur.execute(
+                    "SELECT count(*) FILTER (WHERE role = 'user') AS turns "
+                    "FROM conversation_messages"
+                )
+                org_turns = int((await cur.fetchone() or {}).get("turns") or 0)
 
-            # Deduplicated conversation rollup via the shared helper — a handoff
-            # conversation counts ONCE for the org, never the per-agent sum.
-            rollup = await dedup_org_total(
-                cur, table="conversation_messages", entity_col="conversation_id"
-            )
+                # Deduplicated conversation rollup via the shared helper — a handoff
+                # conversation counts ONCE for the org, never the per-agent sum.
+                rollup = await dedup_org_total(
+                    cur, table="conversation_messages", entity_col="conversation_id"
+                )
+        read.rows_read(len(by_agent))
 
-    incoming, outgoing = _handoff_counts(get_settings().guard.audit_file)
-    releases = fleet_release_states(lang)
-    records = _agent_records()
-    # One Prometheus read for the whole fleet: which agents the cockpit has OBSERVED
-    # emitting turns (ADR 0017 §F). ``None`` = evidence disabled/unreachable, which proves
-    # nothing — the computed level falls back and the badge says the rung is only declared.
-    observed_turns = turn_evidence.agents_with_turn_evidence()
-    # One ledger read for the whole fleet: a broken chain indicts every agent it records,
-    # so this is a fleet-wide fact, not a per-card one.
-    integrity_broken = _integrity_broken()
+    # Every read below is SYNCHRONOUS — Postgres, Prometheus, the ledger, the eval snapshots.
+    # Called inline they ran on the event loop, and the whole server froze for as long as the
+    # slowest one took: a `/healthz` costing 2 ms at rest was measured at 3 639 ms while ONE
+    # fleet request was in flight. The cost and the blocking are two different bugs, and making
+    # the reads cheap fixes only the first. They go to threads, and — being independent — they
+    # go there together.
+    #
+    #   * handoffs — one indexed GROUP BY over the ledger;
+    #   * releases — the eval/gating facts;
+    #   * records  — the manifests (the registry seam);
+    #   * observed — ONE Prometheus read for the whole fleet: which agents the cockpit has
+    #     OBSERVED emitting turns (ADR 0017 §F). ``None`` = evidence disabled/unreachable, which
+    #     proves nothing — the computed level falls back and the badge says the rung is declared;
+    #   * integrity — ONE ledger verdict for the whole fleet: a broken chain indicts every agent
+    #     it records, so it is a fleet-wide fact, not a per-card one;
+    #   * canaries — ONE query for every agent's last verdict, not one query per agent.
+    (
+        (incoming, outgoing),
+        releases,
+        records,
+        observed_turns,
+        integrity_broken,
+        canary_verdicts,
+    ) = await asyncio.gather(
+        asyncio.to_thread(_handoff_counts, get_settings().guard.audit_file),
+        asyncio.to_thread(fleet_release_states, lang),
+        asyncio.to_thread(_agent_records),
+        asyncio.to_thread(turn_evidence.agents_with_turn_evidence),
+        asyncio.to_thread(_integrity_broken),
+        asyncio.to_thread(_canary_verdicts),
+    )
+
+    registry = _registry_agents()
+    # The per-card business facts are per-agent reads (ClickHouse + the operator queue) and were
+    # also inline. Same rule: off the loop, and concurrently with each other.
+    business_by_agent = dict(
+        zip(
+            [reg["id"] for reg in registry],
+            await asyncio.gather(
+                *(
+                    asyncio.to_thread(_business_card_facts, reg["id"], records.get(reg["id"]))
+                    for reg in registry
+                )
+            ),
+            strict=True,
+        )
+    )
 
     # Registry first (every agent appears), enriched with its real slice.
     agents: list[dict[str, Any]] = []
-    for reg in _registry_agents():
+    for reg in registry:
         aid = reg["id"]
         row = by_agent.get(aid, {})
         answers = int(row.get("answers") or 0)
@@ -225,7 +286,7 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
         level_declared = (
             declared_observability_level(record, governed=governed) if record is not None else None
         )
-        business_facts = _business_card_facts(aid, record)
+        business_facts = business_by_agent[aid]
         agents.append(
             {
                 "id": aid,
@@ -245,7 +306,7 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 # observed evidence, never merely the absence of bad news.
                 "health": health_state(
                     escalation_rate=escalation_rate,
-                    canary_red=_canary_red(aid),
+                    canary_red=canary_verdicts.get(aid) == "red",
                     integrity_broken=integrity_broken,
                     turn_evidence=evidence,
                 ),

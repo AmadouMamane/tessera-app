@@ -144,7 +144,7 @@ def _read_audit_ledger() -> list[dict[str, object]]:
     """
     import json
 
-    from tessera.guard.ledger_store import ledger_source, load_ledger_payloads_sync
+    from tessera.guard.ledger_store import ledger_source, load_ledger_payloads_of_type
     from tessera.settings import get_settings
 
     if ledger_source() == "postgres":
@@ -153,11 +153,17 @@ def _read_audit_ledger() -> list[dict[str, object]]:
         from tessera.observability.spine.adapters.base import SpineUnavailableError
 
         try:
-            payloads = load_ledger_payloads_sync()
+            # Filtered in SQL rather than in Python. Be clear about what this is NOT: the
+            # guard-audit rows are **94 % of the chain** (24 250 of 25 716, measured), so pushing
+            # the type filter down saves ~6 % and this read still materialises the whole ledger
+            # for practical purposes. It is the right SHAPE, not a fix. The cost fix is a bounded
+            # read (a window, or pagination), and it is OWED — see the frozen offender list in
+            # tests/unit/test_ledger_read_budget.py. A type filter is only cheap when the type is
+            # rare, and this one is the ledger.
+            return list(load_ledger_payloads_of_type("tessera.guard.audit"))
         except psycopg.Error as exc:
             msg = f"promoted ledger unreachable: {exc}"
             raise SpineUnavailableError(msg) from exc
-        return [p for p in payloads if p.get("type") == "tessera.guard.audit"]
 
     path = get_settings().guard.audit_file
     entries: list[dict[str, object]] = []

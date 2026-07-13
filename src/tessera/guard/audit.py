@@ -51,6 +51,7 @@ __all__ = [
     "AGENT_LIFECYCLE_PHASES",
     "CANARY_INVOCATION_TYPE",
     "GUARD_ACTOR",
+    "HANDOFF_TYPE",
     "LEDGER_ATTESTATION_TYPE",
     "LEDGER_SEAL_TYPE",
     "ChainStatus",
@@ -159,6 +160,11 @@ LEDGER_SEAL_TYPE = "tessera.ledger.seal"
 # A test is an action on a governed system, and the ledger is where actions live; the same entry
 # is the durable freshness record the canary descriptor reads (no second store).
 CANARY_INVOCATION_TYPE = "tessera.agent.canary"
+
+# The agent→agent handoff event (S1). Named here because the fleet now COUNTS these in SQL rather
+# than by loading every ledger entry and filtering in Python: a type that is queried needs one
+# spelling, not one literal at the emitter and another at each of its readers.
+HANDOFF_TYPE = "tessera.agent.handoff"
 
 # ADR 0019 §I3/§4 — the operator-driven counterpart of the canary event: one S1 entry per Console
 # (or other declared-consumer) invocation over the http binding, recording WHO tested (the operator
@@ -592,7 +598,7 @@ def emit_handoff(
     resolved_sink: _Sink = sink if sink is not None else settings.guard.audit_sink
     now = datetime.now(UTC).isoformat()
     entry: dict[str, Any] = {
-        "type": "tessera.agent.handoff",
+        "type": HANDOFF_TYPE,
         "version": 1,
         "occurred_at": now,
         "agent_id": to_agent,

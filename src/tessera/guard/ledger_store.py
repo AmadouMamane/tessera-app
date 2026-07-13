@@ -45,12 +45,14 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
 from tessera.guard.audit import (
+    HANDOFF_TYPE,
     LEDGER_ATTESTATION_TYPE,
     ChainStatus,
     _event_identity,
     _hash_core,
     verify_audit_chain,
 )
+from tessera.observability.store_spans import store_read
 from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
@@ -69,9 +71,13 @@ __all__ = [
     "dual_write_enabled",
     "enqueue_ledger_entry",
     "ensure_audit_ledger_schema",
+    "handoff_counts",
+    "latest_entries_of_type_by_agent",
+    "latest_entry_of_type_for_agent",
     "ledger_available",
     "ledger_head_hash",
     "ledger_source",
+    "load_ledger_payloads_of_type",
     "load_ledger_payloads_sync",
     "read_ledger_entries",
     "shadow_verify_ledger",
@@ -113,6 +119,13 @@ CREATE_LEDGER_INDEXES: Final = (
     # are killing. (Measured after ANALYZE: a fresh index with stale statistics still gets the
     # slow plan — the index alone is not the fix, the statistics are part of it.)
     f"CREATE INDEX IF NOT EXISTS audit_ledger_prev ON {LEDGER_TABLE} (prev_hash)",
+    # "What was this agent's last canary verdict?" — one row. The fleet answered it by loading
+    # all 29 600 payloads and scanning them in Python, once PER AGENT. This index is what lets
+    # the question be asked the way it is shaped: a ``WHERE type=… AND agent_id=…`` on a
+    # ``seq DESC`` tail. ``seq DESC`` is in the index so the LIMIT 1 is a single index fetch and
+    # never a sort. It also serves the handoff/lifecycle counts (same leading column).
+    f"CREATE INDEX IF NOT EXISTS audit_ledger_type_agent_seq ON {LEDGER_TABLE} "
+    f"((payload->>'type'), (payload->>'agent_id'), seq DESC)",
 )
 
 # TESS-LEDGER-001 — the fork guard (belt + suspenders to the advisory lock). A partial UNIQUE
@@ -430,21 +443,23 @@ def enqueue_ledger_entry(entry: Mapping[str, Any]) -> None:
 
 def _file_entries(path: Path) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    with path.open("r", encoding="utf-8") as fp:
-        for raw in fp:
-            stripped = raw.strip()
-            if not stripped:
-                continue
-            try:
-                obj = json.loads(stripped)
-            except json.JSONDecodeError:
-                # Drop a corrupt line (a partial write on crash) but make it VISIBLE — a
-                # silently skipped ledger line is a lost record; the chain verifier still
-                # catches any real break later. Best-effort read, non-gating (0015).
-                sys.stderr.write(f"tessera.ledger: skipped an unparseable line in {path}\n")
-                continue
-            if isinstance(obj, dict):
-                entries.append(obj)
+    with store_read("file", "audit_log.entries", target=path.name) as read:
+        with path.open("r", encoding="utf-8") as fp:
+            for raw in fp:
+                stripped = raw.strip()
+                if not stripped:
+                    continue
+                try:
+                    obj = json.loads(stripped)
+                except json.JSONDecodeError:
+                    # Drop a corrupt line (a partial write on crash) but make it VISIBLE — a
+                    # silently skipped ledger line is a lost record; the chain verifier still
+                    # catches any real break later. Best-effort read, non-gating (0015).
+                    sys.stderr.write(f"tessera.ledger: skipped an unparseable line in {path}\n")
+                    continue
+                if isinstance(obj, dict):
+                    entries.append(obj)
+        read.rows_read(len(entries))
     return entries
 
 
@@ -622,9 +637,14 @@ def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
             query += " WHERE occurred_at <= %s"
             params.append(cutoff)
     query += " ORDER BY seq"
-    with _connect_sync() as conn, conn.cursor() as cur:
+    with (
+        store_read("postgres", "audit_ledger.payloads_all", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
         cur.execute(query, params)
         rows = cur.fetchall()
+        read.rows_read(len(rows))
     return [row[0] for row in rows if isinstance(row[0], dict)]
 
 
@@ -691,9 +711,14 @@ def load_ledger_payloads_window(
     if clauses:
         query += " WHERE " + " AND ".join(clauses)
     query += " ORDER BY seq"
-    with _connect_sync() as conn, conn.cursor() as cur:
+    with (
+        store_read("postgres", "audit_ledger.payloads_window", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
         cur.execute(query, params)
         rows = cur.fetchall()
+        read.rows_read(len(rows))
     return [row[0] for row in rows if isinstance(row[0], dict)]
 
 
@@ -716,10 +741,104 @@ def load_ledger_payloads_of_type(entry_type: str, at: str | None = None) -> list
             query += " AND occurred_at <= %s"
             params.append(cutoff)
     query += " ORDER BY seq"
-    with _connect_sync() as conn, conn.cursor() as cur:
+    with (
+        store_read("postgres", "audit_ledger.payloads_of_type", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
         cur.execute(query, params)
         rows = cur.fetchall()
+        read.rows_read(len(rows))
     return [row[0] for row in rows if isinstance(row[0], dict)]
+
+
+def latest_entry_of_type_for_agent(entry_type: str, agent_id: str) -> dict[str, Any] | None:
+    """The most recent entry of ``entry_type`` for one agent — ONE indexed row, ~1 ms.
+
+    The question the fleet's health dot and the cockpit's bell both ask: *what was this agent's
+    last canary verdict?* It used to be answered by loading all 29 600 payloads into memory and
+    scanning them in Python — once per agent, six times per fleet request, and again per page
+    for the header. A one-row question, costing a full table read.
+
+    Ordered by ``seq DESC``: the chain's insert order IS its order, so the tail of the filtered
+    set is the most recent run — the same entry the Python scan selected by keeping the LAST
+    match of an oldest→newest walk.
+    """
+    query = (
+        f"SELECT payload FROM {LEDGER_TABLE} "  # noqa: S608 — fixed identifier, bound params
+        f"WHERE payload->>'type' = %s AND payload->>'agent_id' = %s "
+        f"ORDER BY seq DESC LIMIT 1"
+    )
+    with (
+        store_read(
+            "postgres", "audit_ledger.latest_of_type_for_agent", target=LEDGER_TABLE
+        ) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, (entry_type, agent_id))
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    if not rows or not isinstance(rows[0][0], dict):
+        return None
+    return dict(rows[0][0])
+
+
+def latest_entries_of_type_by_agent(entry_type: str) -> dict[str, dict[str, Any]]:
+    """The most recent entry of ``entry_type`` for EVERY agent — one query, one row per agent.
+
+    The fleet asks the canary question about all its agents at once, so it should ask once.
+    ``DISTINCT ON`` walks the ``(type, agent_id, seq DESC)`` index and takes the first row of
+    each agent's group: N rows, one round trip, instead of N full table reads.
+    """
+    query = (
+        f"SELECT DISTINCT ON (payload->>'agent_id') payload->>'agent_id', payload "  # noqa: S608
+        f"FROM {LEDGER_TABLE} "
+        f"WHERE payload->>'type' = %s AND payload->>'agent_id' IS NOT NULL "
+        f"ORDER BY payload->>'agent_id', seq DESC"
+    )
+    with (
+        store_read("postgres", "audit_ledger.latest_of_type_by_agent", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, (entry_type,))
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    return {
+        str(row[0]): dict(row[1])
+        for row in rows
+        if isinstance(row[0], str) and isinstance(row[1], dict)
+    }
+
+
+def handoff_counts() -> tuple[dict[str, int], dict[str, int]]:
+    """Handoffs per agent — ``(incoming by to_agent, outgoing by from_agent)`` — counted in SQL.
+
+    The fleet used to read every ledger entry to count a handful of handoff events. The count is
+    an aggregate, and an aggregate belongs in the database: this returns one row per
+    ``(to_agent, from_agent)`` pair that actually occurred, on the ``(type, …)`` index.
+    """
+    query = (
+        f"SELECT payload->>'to_agent', payload->>'from_agent', count(*) "  # noqa: S608
+        f"FROM {LEDGER_TABLE} WHERE payload->>'type' = %s GROUP BY 1, 2"
+    )
+    with (
+        store_read("postgres", "audit_ledger.handoff_counts", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, (HANDOFF_TYPE,))
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    incoming: dict[str, int] = {}
+    outgoing: dict[str, int] = {}
+    for to_agent, from_agent, count in rows:
+        if isinstance(to_agent, str) and to_agent:
+            incoming[to_agent] = incoming.get(to_agent, 0) + int(count)
+        if isinstance(from_agent, str) and from_agent:
+            outgoing[from_agent] = outgoing.get(from_agent, 0) + int(count)
+    return incoming, outgoing
 
 
 def ledger_length_as_of(at: datetime) -> int:
@@ -728,11 +847,15 @@ def ledger_length_as_of(at: datetime) -> int:
     Was: load every payload, Pydantic-validate every row into an ``AuditEntry``, then count the
     ones inside the window. 3.3 ms in SQL against a full materialisation of 38 MB.
     """
-    with _connect_sync() as conn:
+    with (
+        store_read("postgres", "audit_ledger.length_as_of", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+    ):
         row = conn.execute(
             f"SELECT count(*) FROM {LEDGER_TABLE} WHERE occurred_at <= %s",  # noqa: S608
             (at,),
         ).fetchone()
+        read.rows_read(1 if row else 0)
     return int(row[0]) if row else 0
 
 
@@ -838,11 +961,20 @@ def verify_active_ledger(path: Path | None = None) -> ChainStatus:
 
 
 def active_ledger_tree_status(path: Path | None = None) -> LedgerTreeStatus:
-    """Tree-aware status of the ACTIVE ledger — the integrity badge's source (TESS-LEDGER-001).
+    """Tree-aware status of the ACTIVE ledger — the STRONG verdict: a full walk, every time.
 
-    Postgres mode returns the full ``{content_integrity, linear, forks, attested}`` verdict over
-    the promoted table. File mode has no forks (a single-writer append-only journal), so it lifts
-    the binary :func:`verify_audit_chain` result into the same shape (``linear == content``).
+    Postgres mode re-reads and re-hashes every row. That cost is deliberate and it is not the one
+    this lot removed: the callers of this function are the ones that *claim* something — the État
+    à date page asserts opposability to a regulator, and an assertion of that weight re-reads the
+    chain end to end rather than trusting a cached proof.
+
+    What a health dot needs is weaker and cheaper — "no proven break" — and it asks
+    :func:`tessera.guard.ledger_checkpoint.active_ledger_verdict`, which is incremental and which
+    *publishes when the chain was last walked in full*. The two questions are different, and this
+    is the one that pays.
+
+    File mode has no forks (a single-writer append-only journal), so it lifts the binary
+    :func:`verify_audit_chain` result into the same shape (``linear == content``).
     """
     from tessera.settings import get_settings
 

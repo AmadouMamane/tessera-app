@@ -57,6 +57,10 @@ __all__ = [
     "TESSERA_RETRIEVAL_CORPUS",
     "TESSERA_RETRIEVAL_HIT_COUNT",
     "TESSERA_RETRIEVAL_TOP_SCORE",
+    "TESSERA_STORE",
+    "TESSERA_STORE_OPERATION",
+    "TESSERA_STORE_ROWS",
+    "TESSERA_STORE_TARGET",
     "TESSERA_SYNTHETIC",
     "TESSERA_TURN_ID",
     "TESSERA_WORKFLOW_ID",
@@ -108,6 +112,23 @@ TESSERA_RETRIEVAL_CORPUS: Final = "tessera.retrieval.corpus"
 TESSERA_RETRIEVAL_CATEGORIES: Final = "tessera.retrieval.categories"
 TESSERA_RETRIEVAL_HIT_COUNT: Final = "tessera.retrieval.hit_count"
 TESSERA_RETRIEVAL_TOP_SCORE: Final = "tessera.retrieval.top_score"
+
+# Control-plane store reads. The agent runtime was instrumented span by span; the cockpit that
+# judges it emitted nothing, so its slowest endpoint was one span with zero children and not a
+# millisecond of it was attributed to anything.
+#: Which store a control-plane read touched: ``postgres`` / ``clickhouse`` / ``prometheus`` /
+#: ``file``.
+TESSERA_STORE: Final = "tessera.store"
+#: The question, named — ``audit_ledger.payloads_all``, ``audit_ledger.latest_of_type_for_agent``.
+TESSERA_STORE_OPERATION: Final = "tessera.store.operation"
+#: The table / metric / file the read addressed.
+TESSERA_STORE_TARGET: Final = "tessera.store.target"
+#: HOW MANY ROWS CAME BACK — the field that carries the finding. A duration says a read was slow;
+#: the row count says why, and it is the only one that makes six full 29 600-row scans legible as
+#: six full scans rather than as one opaque four-second box. It counts rows MATERIALISED, not rows
+#: scanned: an aggregate that groups 29 600 rows in the database and returns 29 is exactly the fix,
+#: and must not read as the offence.
+TESSERA_STORE_ROWS: Final = "tessera.store.rows"
 
 # OpenInference span-kind hint so Phoenix renders the retrieval span as a
 # retriever in its UI. Vendor-neutral backends simply ignore the extra attribute.

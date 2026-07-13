@@ -48,7 +48,12 @@ if TYPE_CHECKING:
 
     from tessera.agent.registry import Agent
 
-__all__ = ["canary_descriptor", "coverage_descriptor", "latest_canary_verdict"]
+__all__ = [
+    "canary_descriptor",
+    "coverage_descriptor",
+    "latest_canary_verdict",
+    "latest_canary_verdicts",
+]
 
 # Each required turn-span attribute (semconv key) → the business-event row field carrying
 # the same Scope dimension (the measurable coverage evidence). Span attrs and envelope
@@ -84,23 +89,27 @@ def _parse_iso(value: str) -> datetime | None:
 def _latest_canary_run(agent_id: str) -> Mapping[str, object] | None:
     """The most recent ``tessera.agent.canary`` S1 entry for the agent, or None.
 
-    Reads the active ledger medium-aware (postgres table since the H2 cut, else the flat file),
-    the same pattern the seal facet uses. Best-effort: an unreachable ledger yields None (the
-    descriptor then reports the synthetic run as ``never``), never a crash and never a fabricated
-    run — reading the S1 entry couples nothing new (the control plane already reads the ledger for
-    État à date / session detail; ``tessera.guard`` is not the agent runtime).
+    ONE indexed row. This function used to load **every** ledger payload — 29 600 of them, 38 MB
+    — into memory and scan them in Python to find the last match, and the fleet called it once
+    per agent. Six full table reads, per request, to answer six one-row questions; measured, that
+    single mistake was 3.6 of the fleet's 3.9 seconds.
+
+    Reads the active ledger medium-aware (postgres table since the H2 cut, else the flat file —
+    a file has no index, so there the scan is irreducible and stays). Best-effort: an unreachable
+    ledger yields None (the descriptor then reports the synthetic run as ``never``), never a crash
+    and never a fabricated run.
     """
     from tessera.guard.audit import CANARY_INVOCATION_TYPE
     from tessera.guard.ledger_store import (
+        latest_entry_of_type_for_agent,
         ledger_source,
-        load_ledger_payloads_sync,
         read_ledger_entries,
     )
 
     try:
-        payloads: list[dict[str, object]] = (
-            load_ledger_payloads_sync() if ledger_source() == "postgres" else read_ledger_entries()
-        )
+        if ledger_source() == "postgres":
+            return latest_entry_of_type_for_agent(CANARY_INVOCATION_TYPE, agent_id)
+        payloads: list[dict[str, object]] = read_ledger_entries()
     except Exception:  # an unreachable ledger must never break a cockpit read
         return None
     found: Mapping[str, object] | None = None
@@ -110,18 +119,62 @@ def _latest_canary_run(agent_id: str) -> Mapping[str, object] | None:
     return found
 
 
-def latest_canary_verdict(agent_id: str) -> str | None:
-    """The verdict of the agent's most recent canary invocation, or ``None`` if it never ran.
-
-    The one public reader of that S1 fact. The fleet's health dot and the cockpit bell both
-    ask this question, and a canary that never fired must answer ``None`` — "no bad news" and
-    "no news" are different facts, and only the caller knows which one it may treat as green.
-    """
-    run = _latest_canary_run(agent_id)
+def _verdict_of(run: Mapping[str, object] | None) -> str | None:
     if run is None:
         return None
     verdict = run.get("verdict")
     return str(verdict).lower() if verdict is not None else None
+
+
+def latest_canary_verdict(agent_id: str) -> str | None:
+    """The verdict of the agent's most recent canary invocation, or ``None`` if it never ran.
+
+    The one public reader of that S1 fact, for ONE agent. A canary that never fired must answer
+    ``None`` — "no bad news" and "no news" are different facts, and only the caller knows which
+    one it may treat as green.
+
+    Asking it about a whole fleet is :func:`latest_canary_verdicts`, which is one query rather
+    than N — see there for why that distinction is not cosmetic.
+    """
+    return _verdict_of(_latest_canary_run(agent_id))
+
+
+def latest_canary_verdicts() -> dict[str, str]:
+    """Every agent's latest canary verdict — ONE query for the whole fleet.
+
+    Both callers that need this need it for *all* agents at once: the fleet's health dots and the
+    cockpit's notification bell. Asked one agent at a time it was N round trips; asked as the
+    question it actually is, it is one ``DISTINCT ON`` over an index.
+
+    Agents that never ran a canary are simply ABSENT from the mapping — never present with a
+    fabricated green. The caller distinguishes "no news" from "good news"; this function refuses
+    to make that choice for it.
+    """
+    from tessera.guard.audit import CANARY_INVOCATION_TYPE
+    from tessera.guard.ledger_store import (
+        latest_entries_of_type_by_agent,
+        ledger_source,
+        read_ledger_entries,
+    )
+
+    try:
+        if ledger_source() == "postgres":
+            runs = latest_entries_of_type_by_agent(CANARY_INVOCATION_TYPE)
+        else:
+            latest: dict[str, dict[str, object]] = {}
+            for payload in read_ledger_entries():  # oldest→newest: the last match wins
+                agent_id = payload.get("agent_id")
+                if payload.get("type") == CANARY_INVOCATION_TYPE and isinstance(agent_id, str):
+                    latest[agent_id] = payload
+            runs = latest
+    except Exception:  # an unreachable ledger must never break a cockpit read
+        return {}
+    verdicts: dict[str, str] = {}
+    for agent_id, run in runs.items():
+        verdict = _verdict_of(run)
+        if verdict is not None:
+            verdicts[agent_id] = verdict
+    return verdicts
 
 
 def _synthetic_run_facet(agent_id: str, *, reference: datetime) -> dict[str, object]:

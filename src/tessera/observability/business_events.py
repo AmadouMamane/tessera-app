@@ -1071,22 +1071,27 @@ def business_event_rows(
     Synthetic (canary) events are excluded by default (ADR 0019 §4) — see
     :func:`persisted_business_events`.
     """
-    return [
-        event.to_row()
-        for event in recent_business_events(
-            at=at,
-            agent_id=agent_id,
-            workflow_id=workflow_id,
-            conversation_id=conversation_id,
-            turn_id=turn_id,
-            case_id=case_id,
-            capability_id=capability_id,
-            event_name=event_name,
-            artifact_type=artifact_type,
-            decision=decision,
-            include_synthetic=include_synthetic,
-        )
-    ]
+    from tessera.observability.store_spans import store_read
+
+    with store_read("business_events", "business_events.rows", target="business_events") as read:
+        rows = [
+            event.to_row()
+            for event in recent_business_events(
+                at=at,
+                agent_id=agent_id,
+                workflow_id=workflow_id,
+                conversation_id=conversation_id,
+                turn_id=turn_id,
+                case_id=case_id,
+                capability_id=capability_id,
+                event_name=event_name,
+                artifact_type=artifact_type,
+                decision=decision,
+                include_synthetic=include_synthetic,
+            )
+        ]
+        read.rows_read(len(rows))
+    return rows
 
 
 def _label(value: str | None) -> str:

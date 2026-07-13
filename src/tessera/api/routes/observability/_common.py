@@ -344,9 +344,22 @@ def _serialize_conversations(
 
 
 def _read_audit_entries() -> list[dict[str, object]]:
-    """Guard-audit entries from the ACTIVE ledger source (§Amendment 3 seam; best effort)."""
-    from tessera.guard.ledger_store import read_ledger_entries
+    """Guard-audit entries from the ACTIVE ledger source (§Amendment 3 seam; best effort).
 
+    The type filter runs in SQL rather than in Python — the right shape, and **not** a fix: the
+    guard-audit rows are 94 % of the chain (24 250 of 25 716, measured), so this still hands the
+    whole ledger to the caller. It stays on the frozen offender list in
+    ``tests/unit/test_ledger_read_budget.py`` until it reads a bounded window, and the row count
+    on its span says so out loud.
+    """
+    from tessera.guard.ledger_store import (
+        ledger_source,
+        load_ledger_payloads_of_type,
+        read_ledger_entries,
+    )
+
+    if ledger_source() == "postgres":
+        return list(load_ledger_payloads_of_type("tessera.guard.audit"))
     return [obj for obj in read_ledger_entries() if obj.get("type") == "tessera.guard.audit"]
 
 

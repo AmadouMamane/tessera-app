@@ -20,6 +20,7 @@ import urllib.request
 from typing import TYPE_CHECKING
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
+from tessera.observability.store_spans import store_read
 
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
@@ -61,8 +62,11 @@ class PrometheusAdapter:
         params = {"query": query}
         if at:
             params["time"] = at
-        payload = self._get("/api/v1/query", params)
-        return _result(payload)
+        with store_read("prometheus", "prometheus.instant", target=self._base_url) as read:
+            payload = self._get("/api/v1/query", params)
+            rows = _result(payload)
+            read.rows_read(len(rows))
+        return rows
 
     def range(self, query: str, *, start: str, end: str, step: str) -> list[dict[str, object]]:
         """Evaluate a range PromQL query with an adaptive ``step`` (bounded point count)."""

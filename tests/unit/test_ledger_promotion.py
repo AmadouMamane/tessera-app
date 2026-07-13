@@ -186,6 +186,14 @@ class TestSourceSwitch:
         assert dual_write_enabled() is False
 
     def test_promoted_read_degrades_honestly_when_unreachable(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        """An unreachable ledger raises — it never fabricates an empty audit history.
+
+        The assertion is unchanged; only the seam it fakes moved. The spine used to load EVERY
+        payload and drop the non-guard rows in Python, so the double went on
+        ``load_ledger_payloads_sync``; it now asks the database for the type it wants, so the
+        double goes on ``load_ledger_payloads_of_type``. What is being pinned — Postgres down
+        ⇒ ``SpineUnavailableError``, never a silent zero — is exactly what it was.
+        """
         import psycopg
 
         from tessera.observability.spine.adapters import current
@@ -193,10 +201,10 @@ class TestSourceSwitch:
 
         monkeypatch.setenv("TESSERA_LEDGER_SOURCE", "postgres")
 
-        def _down() -> list[dict[str, object]]:
+        def _down(_entry_type: str, _at: str | None = None) -> list[dict[str, object]]:
             raise psycopg.OperationalError("down")
 
-        monkeypatch.setattr("tessera.guard.ledger_store.load_ledger_payloads_sync", _down)
+        monkeypatch.setattr("tessera.guard.ledger_store.load_ledger_payloads_of_type", _down)
         with pytest.raises(SpineUnavailableError, match="promoted ledger"):
             current._read_audit_ledger()
 

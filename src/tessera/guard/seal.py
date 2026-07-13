@@ -483,6 +483,14 @@ def active_ledger_opposability(
     (third-party) → the register §9 badge. Every field is computed live; nothing is stored
     (register §9, "jamais cosmétique"). Raises on an unreachable ledger — the caller degrades to the
     honest "Vérification en cours", never a fabricated green.
+
+    It re-walks the whole chain, and it keeps doing so. This is the verdict of the page that
+    asserts opposability to a regulator; the cost of that assertion is reading what it asserts
+    about. What was wrong was not this function — it was the **fleet's health dot and the header
+    bell calling it** to extract one boolean, and paying for a full re-hash plus a seal
+    evaluation they discarded. Those two now ask
+    :func:`tessera.guard.ledger_checkpoint.active_ledger_verdict` and
+    :func:`active_ledger_seal_status`, which answer their weaker question at their weaker price.
     """
     from tessera.settings import get_settings
 
