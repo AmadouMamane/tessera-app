@@ -12,6 +12,7 @@ trusted as observed. These tests pin the repair:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tessera.observability import business_capabilities as bc, turn_evidence
@@ -120,20 +121,53 @@ def test_an_unproven_level_never_satisfies_the_release_gate(
 
 
 def _passing_snapshot() -> object:
-    from tessera.observability.eval_data import EvalSnapshot
+    """A run that clears the eval-gate AND is neutral on its null floor.
 
+    The floor must be neutral, not absent: the release decision grades the model against
+    the agent's own null control (ADR 0021, Rule 1), so a stub with no sessions would be
+    blocked as "no model spoke" and this test — which is about the observability LEVEL —
+    would pass for the wrong reason. Reproducing the floor exactly breaks nothing and
+    contributes nothing, leaving the level as the only thing that can block.
+    """
+    from eval.contribution import restrict_baseline
+    from eval.ratchet import load_baseline
+    from eval.sets import load_eval_set
+    from tessera.observability.eval_data import EvalSnapshot, SessionRow
+
+    floor = restrict_baseline(
+        load_baseline(Path("eval/baselines/null-control.json")),
+        set(load_eval_set(_AGENT).effective_case_ids),
+    )
+    sessions = tuple(
+        SessionRow(
+            case_id=key.split("|", 1)[0],
+            language=key.split("|", 1)[1],
+            category="",
+            title="",
+            passed=passed,
+            needs_escalation=False,
+            tools=(),
+            duration_ms=1.0,
+            input_tokens=3,
+            output_tokens=1,  # a model spoke — tokens are the only witness of that
+            response="…",
+            started_at="20260617T120000Z",
+        )
+        for key, passed in floor.verdicts.items()
+    )
     return EvalSnapshot(
         model="llama3.2:3b",
         run_at="20260617T120000Z",
-        catalogue_version="v1",
-        total=40,
-        passed=40,
-        languages=(("fr", 40),),
+        catalogue_version=floor.catalogue_version,
+        total=len(sessions),
+        passed=sum(1 for s in sessions if s.passed),
+        languages=(("fr", len(sessions)),),
         categories=(),
         escalations=0,
         tool_invocations=0,
-        sessions=(),
+        sessions=sessions,
         agent_id=_AGENT,
+        eval_set=_AGENT,
         gate_passed=True,
         gate_failed_critical=(),
     )

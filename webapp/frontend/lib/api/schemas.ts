@@ -5132,7 +5132,9 @@ export const AgentEvaluationsSchema = z.object({
         })
         .optional(),
       // What replaced the domain bar: the model's delta over THIS set's own null floor.
-      // Honest-empty when no set is bound, no floor is committed, or no model spoke.
+      // Honest-empty when no set is bound, no floor is committed, no model spoke, or the
+      // floor no longer covers this run's cases. `refusal` says WHICH — declare it or zod
+      // strips it in silence, and the empty state can never explain itself.
       contribution: z
         .union([
           z.object({
@@ -5147,7 +5149,10 @@ export const AgentEvaluationsSchema = z.object({
             gated: z.literal(false),
             note: z.string(),
           }),
-          z.object({ available: z.literal(false) }),
+          z.object({
+            available: z.literal(false),
+            refusal: z.string().nullish(),
+          }),
         ])
         .optional(),
       breakdown_grain: z

@@ -23,12 +23,8 @@ cross-page navigation, verified end to end. Free-text data is verbatim French
 from __future__ import annotations
 
 from datetime import date
-from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
-from eval.contribution import evaluate_contribution, restrict_baseline
-from eval.ratchet import load_baseline
-from eval.sets import load_eval_set
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.observability.eval.agent_judge import load_agent_judge
 from tessera.observability.eval_data import (
@@ -36,6 +32,7 @@ from tessera.observability.eval_data import (
     load_agent_or_global_snapshot,
     load_agent_run_history,
 )
+from tessera.observability.eval_floor import grade_against_own_floor
 from tessera.observability.eval_gate_view import GateView, build_gate_view
 from tessera.observability.eval_tiers import Tier, load_tier_map
 from tessera.observability.eval_waivers import verify_waiver_chain
@@ -46,9 +43,6 @@ if TYPE_CHECKING:
 __all__ = ["compute_agent_evaluations"]
 
 _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
-
-#: The committed null control — the measured floor the contribution block grades against.
-_NULL_BASELINE = Path(__file__).resolve().parents[3] / "eval" / "baselines" / "null-control.json"
 
 
 def _loc(lang: str, fr: str, de: str, en: str) -> str:
@@ -490,7 +484,7 @@ def _contribution_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
     agent passes with no model at all (rule 1), and the runs it CLOSES that the floor
     fails (rule 2). No threshold appears, because none exists.
 
-    Two honesty guards, both load-bearing:
+    Three honesty guards, all load-bearing:
 
     * **A modelless run is not a good one.** The report's ``model`` field is written even
       when every backend was unreachable, so it proves nothing; generated tokens do. A run
@@ -500,28 +494,28 @@ def _contribution_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
       counts a regression once replayed — which needs the model. So a break is surfaced
       here as a *candidate*, with the command that settles it, and never as a confirmed
       regression the page has no standing to declare.
+    * **A floor that does not apply grades nothing.** Every figure below is a count against
+      a population read off the committed null control, so if this set's cases have moved
+      since it was captured, the counts are of runs that no longer exist. The gate refuses
+      (``verdict.refusal``) and the tile degrades — because a refusal rendered as
+      "contribution 0/0" would read as a measured zero, which is the one thing worse than
+      showing nothing.
     """
-    unavailable: dict[str, object] = {"available": False}
-    _, output_tokens = snap.token_totals()
-    if not snap.eval_set or not output_tokens:
-        return unavailable
-    try:
-        eval_set = load_eval_set(snap.eval_set)
-        floor = restrict_baseline(load_baseline(_NULL_BASELINE), set(eval_set.effective_case_ids))
-    except (KeyError, ValueError, TypeError, OSError):
-        # No committed floor for this set (a moved catalogue, an absent baseline): there
-        # is nothing to measure a contribution against, and a fabricated one is worse
-        # than none. Honest-empty — the page degrades, it does not invent (0015).
-        return unavailable
-
-    report = {
-        "model": snap.model,
-        "results": [
-            {"case_id": s.case_id, "language": s.language, "passed": s.passed}
-            for s in snap.sessions
-        ],
-    }
-    verdict = evaluate_contribution(report, floor, min_contribution=None)
+    # ONE grader, shared with `agent_lifecycle.release_decision` — this tile and the Release
+    # button that sits beside it in the same component must read the same floor. They did
+    # not: the tile computed the contribution and the button ignored it entirely, so an
+    # agent could be SHOWN breaking a case the guard closes unaided and be released anyway.
+    # Two implementations of "the floor" is how they drifted; there is now only one.
+    grade = grade_against_own_floor(snap)
+    if not grade.graded:
+        # Honest-empty (0015): no floor applies to this run — no eval set, no model that
+        # spoke, or a floor whose cases have moved. A refusal must never render as a grade
+        # of zero, because "contribution 0/0" reads as a measured, clean tile. Degrade, and
+        # say why. (The release decision blocks on this same fact — an ungraded model is not
+        # a cleared one.)
+        return {"available": False, "refusal": grade.obstacle}
+    verdict = grade.verdict
+    assert verdict is not None
 
     return {
         "available": True,
@@ -533,8 +527,8 @@ def _contribution_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
         ),
         "model": snap.model,
         # The set's own measured floor — the bar, and it was never chosen.
-        "floor_passed": floor.passed,
-        "floor_total": floor.total,
+        "floor_passed": grade.floor_passed,
+        "floor_total": grade.floor_total,
         # Rule 1: runs the floor passes and this run breaks. CANDIDATES — see the docstring.
         "regression_candidates": list(verdict.confirmed_breaks),
         # Rule 2: of the runs the floor fails, how many the model closes. Measured, ungated.

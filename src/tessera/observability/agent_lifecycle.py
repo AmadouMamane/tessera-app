@@ -24,6 +24,7 @@ from tessera.observability.business_capabilities import (
     resolve_observability_level,
 )
 from tessera.observability.eval_data import load_eval_snapshot
+from tessera.observability.eval_floor import grade_against_own_floor
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
@@ -101,6 +102,14 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Blockiert (Observability-Stufe)",
         "Blocked (observability level)",
     ),
+    # ADR 0021 Rule 1. Named for what it means, not for the module it comes from: the point
+    # an operator must grasp in one glance is that the model made the agent WORSE than
+    # running with no model at all — not that some "floor check" failed.
+    "s_blocked_floor": (
+        "Bloqué (pire que sans modèle)",
+        "Blockiert (schlechter als ohne Modell)",
+        "Blocked (worse than no model)",
+    ),
     "s_awaiting": ("En attente d'évaluation", "Bewertung ausstehend", "Awaiting evaluation"),
 }
 
@@ -108,6 +117,22 @@ _TR: dict[str, tuple[str, str, str]] = {
 #: "eval-gate" when the gate passed and the observability level is what actually blocks.
 BLOCKED_BY_EVAL_GATE = "eval_gate"
 BLOCKED_BY_OBSERVABILITY_LEVEL = "observability_level"
+#: ADR 0021's Rule 1, finally binding on the decision it was written for: the model broke a
+#: run this agent passes with NO model at all. Its own condition, never folded into
+#: ``eval_gate`` — the critical floor and the null floor fail for different reasons and are
+#: fixed by different work, and a label that conflates them sends the operator to the wrong
+#: place.
+BLOCKED_BY_FLOOR = "null_floor"
+
+#: Block reason → state label. Exhaustive by construction: a `blocked_by` with no entry here
+#: would read as the critical eval-gate, which is exactly the misattribution `blocked_by`
+#: exists to prevent — `test_every_block_reason_has_its_own_label` fails if one is added
+#: without its label.
+_BLOCK_LABEL: dict[str | None, str] = {
+    BLOCKED_BY_EVAL_GATE: "s_blocked",
+    BLOCKED_BY_FLOOR: "s_blocked_floor",
+    BLOCKED_BY_OBSERVABILITY_LEVEL: "s_blocked_level",
+}
 
 
 def _t(key: str, lang: str) -> str:
@@ -125,15 +150,22 @@ def _level_at_least(level: str | None, required: str | None) -> bool:
     return _LEVEL_ORDER.get(level, -1) >= _LEVEL_ORDER.get(required, 99)
 
 
-def _blocked_by(*, eval_passed: bool, level_ok: bool) -> str | None:
+def _blocked_by(*, eval_passed: bool, floor_ok: bool, level_ok: bool) -> str | None:
     """Which condition blocks the release (``None`` when nothing does).
 
-    The eval-gate only when the gate failed; the observability level when the gate passed
-    but the L-level is short — so the state label never attributes a level block to the gate.
+    Reported in the order an operator must fix them: a failed critical case first, then a
+    model that is worse than no model at all, then an unobservable agent. Each block names
+    its own cause — the state label never attributes a floor break or a level shortfall to
+    the critical eval-gate, because they are three different problems with three different
+    fixes (ADR 0017 §A2.4 honesty, extended to ADR 0021's Rule 1).
     """
-    if eval_passed and level_ok:
-        return None
-    return BLOCKED_BY_EVAL_GATE if not eval_passed else BLOCKED_BY_OBSERVABILITY_LEVEL
+    if not eval_passed:
+        return BLOCKED_BY_EVAL_GATE
+    if not floor_ok:
+        return BLOCKED_BY_FLOOR
+    if not level_ok:
+        return BLOCKED_BY_OBSERVABILITY_LEVEL
+    return None
 
 
 # Latest governance phase, derived from the S1 chain (most recent wins).
@@ -166,6 +198,13 @@ class ReleaseDecision:
     # passed but the L-level is below the requirement). Lets the UI label the block
     # truthfully instead of always attributing it to the eval-gate.
     blocked_by: str | None = None
+    # ADR 0021 Rule 1 — the null-floor condition. `floor_graded` False means the model was
+    # NOT graded against its floor (no set, no model, or a floor that no longer applies), and
+    # that blocks: an ungraded model is not a cleared one. Recorded in the S1 event so the
+    # audit trail says which floor released the agent, not merely that something did — a
+    # verdict that cannot name what it judged is unfalsifiable.
+    floor_graded: bool = False
+    floor_regressions: tuple[str, ...] = ()
 
     def as_dict(self) -> dict[str, object]:
         """JSON-friendly view for the API + the S1 event detail."""
@@ -180,18 +219,25 @@ class ReleaseDecision:
             "observability_level": self.observability_level,
             "required_level": self.required_level,
             "blocked_by": self.blocked_by,
+            "floor_graded": self.floor_graded,
+            "floor_regressions": list(self.floor_regressions),
         }
 
 
 def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
     """Decide whether ``agent_id`` may go live (ADR 0017 §A2.4).
 
-    From its own eval-gate verdict AND its observability level — three conditions,
-    all required:
-    1. a run of the agent's OWN set that cleared the two-level eval-gate;
-    2. **no production below L2** — an agent whose guard/eval/audit facts the cockpit
+    From its own eval-gate verdict, its measured null floor AND its observability level —
+    four conditions, all required:
+    1. a run of the agent's OWN set that cleared the critical floor (zero tolerance);
+    2. **not worse than no model at all** (ADR 0021, Rule 1) — the model must break none of
+       the runs the agent already passes with every LLM backend unreachable. The critical
+       floor structurally cannot see this: 70% of the catalogue is closed by the
+       deterministic guard/router layer before a token is generated, so an agent can clear
+       every critical case while having *degraded* what worked without it;
+    3. **no production below L2** — an agent whose guard/eval/audit facts the cockpit
        cannot see is not releasable, whatever its scores;
-    3. **L3 when it declares external effects** — a capability reaching outside the
+    4. **L3 when it declares external effects** — a capability reaching outside the
        system (``requires_validation`` / ``external_action``) must have verifiable
        business events. The L-level is a *condition*, not a parallel lifecycle.
     """
@@ -221,6 +267,16 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
         )
 
     eval_passed = snap.gate_passed is True
+
+    # ADR 0021's Rule 1, as a RELEASE CONDITION. The critical floor above cannot see a model
+    # that is worse than no model at all: 122 of the catalogue's 174 runs pass with every LLM
+    # backend pointed at a closed port, so an agent can clear every critical case and still
+    # have BROKEN a run its own deterministic guard/router layer closes unaided. That was
+    # computed and rendered on the Évaluations page all along — and the Release button on
+    # that same page did not read it. It does now.
+    floor = grade_against_own_floor(snap)
+    floor_ok = floor.releasable
+
     if not eval_passed:
         if snap.gate_failed_critical:
             reason = _t("r_blocked_critical", lang).format(
@@ -230,6 +286,10 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
             reason = _t("r_blocked_no_critical", lang)
         else:
             reason = _t("r_no_verdict", lang)
+    elif not floor_ok:
+        # Not translated through _t(): the reason names case ids and the command that
+        # settles them, and a paraphrase of those would be less useful in every language.
+        reason = floor.block_reason() or ""
     elif not level_ok:
         lvl = level or _t("lvl_none", lang)
         key = "r_below_l3_external" if required_level == "L3" else "r_below_l2_prod"
@@ -239,7 +299,7 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
 
     return ReleaseDecision(
         agent_id=agent_id,
-        allowed=eval_passed and level_ok,
+        allowed=eval_passed and floor_ok and level_ok,
         reason=reason,
         has_run=True,
         gate_passed=snap.gate_passed,
@@ -247,8 +307,10 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
         run_at=snap.run_at,
         observability_level=level,
         required_level=required_level,
+        floor_graded=floor.graded,
+        floor_regressions=floor.regression_candidates,
         # Attribute the block to its real cause so the UI label never lies (§A2.4).
-        blocked_by=_blocked_by(eval_passed=eval_passed, level_ok=level_ok),
+        blocked_by=_blocked_by(eval_passed=eval_passed, floor_ok=floor_ok, level_ok=level_ok),
     )
 
 
@@ -301,13 +363,11 @@ def compute_agent_lifecycle(agent_id: str, lang: str = "fr") -> dict[str, object
     elif decision.allowed:
         state, tone = _t("s_ready", lang), "good"
     elif decision.has_run:
-        # Label the block by its real cause — the eval-gate one is reserved for a real
-        # gate failure; a level-only block reads "niveau d'observabilité" (§A2.4 honesty).
-        blocked_key = (
-            "s_blocked_level"
-            if decision.blocked_by == BLOCKED_BY_OBSERVABILITY_LEVEL
-            else "s_blocked"
-        )
+        # Label the block by its real cause. This was an if/else that fell back to the
+        # eval-gate label for anything it did not recognise — so a new block reason would
+        # silently be attributed to the critical gate, which is the very soft lie §A2.4
+        # added `blocked_by` to prevent. A mapping cannot fall through by accident.
+        blocked_key = _BLOCK_LABEL.get(decision.blocked_by, "s_blocked")
         state, tone = _t(blocked_key, lang), "bad"
     else:
         state, tone = _t("s_awaiting", lang), "warn"

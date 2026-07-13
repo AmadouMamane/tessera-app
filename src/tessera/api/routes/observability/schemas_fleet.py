@@ -794,16 +794,25 @@ class AgentEvaluationsGateWaivers(BaseModel):
 
 
 class AgentEvaluationsGateContributionUnavailable(BaseModel):
-    """Honest-empty: no set bound, no committed floor, or NO MODEL SPOKE in the run.
+    """Honest-empty: no set bound, no committed floor, NO MODEL SPOKE, or a STALE floor.
 
-    The last one is the reason this union exists rather than a zeroed payload. A run whose
-    every backend was unreachable still writes its configured `model` and still passes 70%
-    of the catalogue on the deterministic layer alone — reporting `contribution: 0,
-    regressions: 0` for it would render as a clean bill of health for a model that never
+    A run whose every backend was unreachable still writes its configured `model` and still
+    passes 70% of the catalogue on the deterministic layer alone — reporting `contribution:
+    0, regressions: 0` for it would render as a clean bill of health for a model that never
     answered. Generated tokens are the witness, and when they are absent the block degrades.
+    That is why this union exists rather than a zeroed payload.
+
+    The same applies to a floor that no longer covers the run's cases: the model was not
+    graded, and "0/0" would read as a measured zero. `refusal` carries WHY — an honest-empty
+    that cannot say why it is empty sends the reader hunting for a bug in the page instead
+    of at the floor that expired.
     """
 
     available: Literal[False]
+    #: Why nothing could be graded. Optional only because the field is new; the backend
+    #: always sets it. It MUST be declared here or the response model strips it in silence —
+    #: a wrong `response_model` does not 500, it quietly deletes the field.
+    refusal: str | None = None
 
 
 class AgentEvaluationsGateContributionPayload(BaseModel):
