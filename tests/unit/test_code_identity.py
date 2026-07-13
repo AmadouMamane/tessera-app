@@ -28,6 +28,7 @@ from scripts import dev_status
 
 from tessera import code_identity
 from tessera.api.routes import health
+from tessera.verdict import EXIT_OK, CannotSay, NotOk, Ok, Verdict, exit_code
 
 _PACKAGE = Path(code_identity.__file__).resolve().parent
 
@@ -191,7 +192,18 @@ class TestTheDigestIsEvidence:
 
 
 class TestTheWitnessReportsItsBlindSpots:
-    """A witness that cannot see must say so. It must never say ``ok``."""
+    """A witness that cannot see must say so. It must never say ``ok``.
+
+    **And "ok" is not only a word on a terminal.** Until 2026-07-13 every assertion in this class
+    was about the *string* the witness printed, and every one of them passed — while
+    ``dev_status.main()`` ended in a bare ``return 0``. The script printed ``⚠ CANNOT SAY`` and
+    told its caller **zero**, which is the only channel `make` can hear. The tests were true and
+    the tool was a false green, because the tests asked the same question the tool did: *what does
+    it say?* Nobody asked *what does it return?*
+
+    So every case below now asserts on the **exit code** as well. That is the assertion the fifth
+    instance of ADR 0026 would have failed.
+    """
 
     def test_a_server_that_will_not_say_what_it_loaded_is_not_pronounced_healthy(self) -> None:
         """The reassuring silence — the failure mode that let a stale server look fine for a week.
@@ -203,9 +215,9 @@ class TestTheWitnessReportsItsBlindSpots:
         loaded, verdict = dev_status._verdict({"status": "ok", "version": "0.3.0"}, cwd=None)
 
         assert loaded == "?"
-        assert "CANNOT SAY" in verdict
-        assert "RESTART" in verdict
-        assert "✓" not in verdict
+        assert isinstance(verdict, CannotSay)
+        assert "RESTART" in verdict.blind_spot
+        assert exit_code(verdict) != EXIT_OK, "a blind spot exited 0 — it told its caller 'ok'"
 
     def test_a_matching_digest_is_the_only_way_to_earn_a_tick(self, tmp_path: Path) -> None:
         """Green is earned by evidence: the process's digest equals the checkout's, right now."""
@@ -215,14 +227,42 @@ class TestTheWitnessReportsItsBlindSpots:
         digest = code_identity.source_digest(package)
 
         _, green = dev_status._verdict({"code_digest": digest, "code_sha": "abc"}, cwd=tmp_path)
-        assert "✓" in green
+        assert isinstance(green, Ok)
+        assert exit_code(green) == EXIT_OK
 
         (package / "mod.py").write_text("x = 2\n", encoding="utf-8")  # the checkout moves
 
         _, stale = dev_status._verdict({"code_digest": digest, "code_sha": "abc"}, cwd=tmp_path)
-        assert "STALE" in stale
-        assert "RESTART" in stale
-        assert "✓" not in stale
+        assert isinstance(stale, NotOk)
+        assert "STALE" in stale.reason
+        assert "RESTART" in stale.reason
+        assert exit_code(stale) != EXIT_OK, (
+            "STALE exited 0. `make dev-status` would be GREEN on a server that is not running the "
+            "code in this checkout — which is the incident ADR 0026 was written for, reported by "
+            "the very witness written to end it."
+        )
+
+    def test_a_process_that_cannot_be_asked_is_not_a_process_that_is_absent(self) -> None:
+        """``lsof`` refusing to run and ``lsof`` finding nothing are DIFFERENT FACTS.
+
+        The old `_listening_pid` collapsed both to ``None``, and the caller printed
+        ``(not running)`` — a machine that could not be interrogated, reported as a machine that
+        is not there. Four lines, the whole disease.
+        """
+        listening = dev_status._listening_pid("0")  # port 0: lsof runs, and matches nothing
+        assert isinstance(listening, dev_status.Listening)
+        assert listening.pid is None
+
+    def test_the_exit_code_is_the_worst_verdict_never_the_most_convenient(self) -> None:
+        """One stale server poisons the run. A green row may not out-vote a red one."""
+        rows: list[Verdict] = [Ok("the frontend is a proxy"), NotOk("STALE · RESTART")]
+        assert isinstance(dev_status._worst(rows), NotOk)
+
+        rows = [Ok("the frontend is a proxy"), CannotSay("it will not say what it loaded")]
+        assert isinstance(dev_status._worst(rows), CannotSay)
+
+        rows = [Ok("current"), Ok("also current")]
+        assert isinstance(dev_status._worst(rows), Ok)
 
     def test_dev_status_no_longer_asks_git_about_a_directory(self) -> None:
         """The literal regression, refused: the Makefile recipe may not re-derive the sha itself.
