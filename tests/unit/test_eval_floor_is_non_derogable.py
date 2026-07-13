@@ -97,6 +97,42 @@ def test_no_eval_set_smuggles_a_bar_past_the_schema() -> None:
 # ── 2. A stale floor is refused, never guessed ───────────────────────────────
 
 
+def test_the_committed_floor_names_the_cases_it_actually_holds() -> None:
+    """The floor's DECLARED identity must equal the cases it holds.
+
+    Found by mutation: change `catalogue_version` in the committed baseline to a lie and the
+    entire suite stayed GREEN. Everything downstream *derives* its identity — the runner
+    stamps reports from the case files, `restrict_baseline` recomputes from the cases it
+    keeps, the tests read the floor's version back out of the floor — so no one was ever
+    comparing the declaration against the thing declared. This is that one place.
+    """
+    floor = _floor()
+    held = {k.split("|", 1)[0] for k in floor.verdicts}
+    assert floor.catalogue_version == catalogue_version(held), (
+        "the committed floor declares a catalogue it does not hold — regenerate it "
+        "(`make eval-null-write`) rather than hand-editing its version"
+    )
+
+
+def test_the_committed_floor_is_not_stale_against_the_catalogue_on_disk() -> None:
+    """Add a case to `eval/failures/` and the floor is STALE — this is where that is caught.
+
+    The gate refuses a stale floor at grading time, which is fail-closed and correct. But
+    the refusal is a symptom; the cause is a floor nobody regenerated after the catalogue
+    moved, and nothing was watching for it. This fails the build the moment the case set and
+    its floor disagree, which is the only cheap moment to fix it.
+    """
+    on_disk = {p.stem for p in Path("eval/failures").glob("[0-9][0-9]*_*.json")}
+    held = {k.split("|", 1)[0] for k in _floor().verdicts}
+    missing, extra = sorted(on_disk - held), sorted(held - on_disk)
+    assert not missing and not extra, (
+        f"the null floor is STALE: {len(missing)} case(s) in the catalogue it never scored "
+        f"({missing[:3]}…), {len(extra)} it scored that no longer exist ({extra[:3]}…). "
+        f"Every lift measured against it is counted over a population that has moved. "
+        f"Regenerate: `make eval-null-write`, and commit the diff as the evidence."
+    )
+
+
 def _report(floor: Baseline, *, catalogue: str, tokens: int = 999) -> dict[str, object]:
     """A run that reproduces the floor exactly, stamped with a given catalogue identity."""
     return {
