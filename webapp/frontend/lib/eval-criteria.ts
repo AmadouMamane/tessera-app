@@ -97,3 +97,169 @@ export function listCriteria(pc: EvalPassCriteria | undefined | null): Criterion
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// The recomputation — the evidence behind a verdict, reconstructed from the run.
+//
+// "Failed" is not an answer. The screen must say WHICH criterion broke, ON WHAT. The report keeps
+// the model's real response, and the catalogue keeps the rule, so for the deterministic criteria
+// the proof is RECONSTRUCTIBLE with no change to the harness — down to the offending substring's
+// position, which is the one thing the harness's own `reasons` string cannot give us.
+//
+// It reconstructs only what it can prove. Everything else is displayed as the harness reported it,
+// labelled as such. A reconstruction that cannot see the same inputs is not evidence — it is a
+// second opinion dressed as one.
+
+/** A range of the response that decided a criterion. Half-open, in code units. */
+export interface Span {
+  start: number;
+  end: number;
+}
+
+export interface CriterionOutcome {
+  criterion: Criterion;
+  status:
+    | "satisfied"
+    | "violated"
+    /** The report does not keep what the harness checked (confidence, citations, call success),
+     *  or the rule is not re-evaluable here (a Python regex JavaScript rejects). */
+    | "not-verifiable";
+  /** What to highlight in the response: the forbidden substring found, or the required one that
+   *  saved it. Empty when the criterion broke by ABSENCE — there is nothing to point at. */
+  spans: Span[];
+  /** The values that actually decided it (the forbidden strings emitted, the required one found). */
+  decidedBy: string[];
+}
+
+function findAll(haystack: string, needle: string): Span[] {
+  if (!needle) return [];
+  const spans: Span[] = [];
+  for (
+    let i = haystack.indexOf(needle);
+    i !== -1;
+    i = haystack.indexOf(needle, i + needle.length)
+  ) {
+    spans.push({ start: i, end: i + needle.length });
+  }
+  return spans;
+}
+
+/**
+ * Recompute the deterministic criteria against the model's stored response.
+ *
+ * Mirrors `_check_substrings` and the `must_escalate` half of `_check_signals` exactly, including
+ * their case-SENSITIVITY (`"XXXX" in response` is what the harness does, and a case-insensitive
+ * reconstruction would pass cases the harness failed).
+ */
+export function evaluateCriteria(
+  criteria: Criterion[],
+  facts: { response: string; needsEscalation: boolean },
+): CriterionOutcome[] {
+  return criteria.map((criterion): CriterionOutcome => {
+    if (criterion.verifiability === "reported-only") {
+      return { criterion, status: "not-verifiable", spans: [], decidedBy: [] };
+    }
+
+    switch (criterion.kind) {
+      case "must_not_contain": {
+        const emitted = criterion.values.filter((v) => facts.response.includes(v));
+        return {
+          criterion,
+          status: emitted.length > 0 ? "violated" : "satisfied",
+          spans: emitted.flatMap((v) => findAll(facts.response, v)),
+          decidedBy: emitted,
+        };
+      }
+      case "must_contain_any": {
+        const found = criterion.values.filter((v) => facts.response.includes(v));
+        return {
+          criterion,
+          // The harness fails this only when NONE of the required substrings is present.
+          status: found.length > 0 ? "satisfied" : "violated",
+          spans: found.flatMap((v) => findAll(facts.response, v)),
+          decidedBy: found,
+        };
+      }
+      case "must_not_match": {
+        const spans: Span[] = [];
+        const matched: string[] = [];
+        for (const pattern of criterion.values) {
+          let re: RegExp;
+          try {
+            re = new RegExp(pattern, "g");
+          } catch {
+            // A pattern Python accepts and JavaScript does not. Saying "no match" here would
+            // quietly clear a case the harness may have failed.
+            return { criterion, status: "not-verifiable", spans: [], decidedBy: [pattern] };
+          }
+          for (const m of facts.response.matchAll(re)) {
+            if (m.index === undefined) continue;
+            spans.push({ start: m.index, end: m.index + m[0].length });
+            matched.push(pattern);
+          }
+        }
+        return {
+          criterion,
+          status: spans.length > 0 ? "violated" : "satisfied",
+          spans,
+          decidedBy: [...new Set(matched)],
+        };
+      }
+      case "must_escalate": {
+        const expected = criterion.scalar === true;
+        return {
+          criterion,
+          status: expected === facts.needsEscalation ? "satisfied" : "violated",
+          spans: [],
+          decidedBy: [],
+        };
+      }
+      default:
+        return { criterion, status: "not-verifiable", spans: [], decidedBy: [] };
+    }
+  });
+}
+
+export interface Segment {
+  text: string;
+  hit: boolean;
+  /**
+   * Where the segment starts in the response. It is the segment's IDENTITY — two segments can hold
+   * the same text, and keying a rendered list by array index would let React reuse the wrong node
+   * when the spans move. The offset is what makes each one distinguishable, so it travels with it
+   * rather than being reconstructed by the component.
+   */
+  start: number;
+}
+
+/**
+ * Cut the response into highlighted and plain segments.
+ *
+ * Overlapping spans are merged rather than nested: two forbidden substrings that overlap must
+ * highlight one continuous region, and rendering nested `<mark>`s would double-count the text.
+ */
+export function segmentByHits(text: string, spans: Span[]): Segment[] {
+  if (spans.length === 0) return text ? [{ text, hit: false, start: 0 }] : [];
+
+  const sorted = [...spans].sort((a, b) => a.start - b.start || a.end - b.end);
+  const merged: Span[] = [];
+  for (const span of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && span.start <= last.end) last.end = Math.max(last.end, span.end);
+    else merged.push({ ...span });
+  }
+
+  const segments: Segment[] = [];
+  let cursor = 0;
+  for (const span of merged) {
+    if (span.start > cursor) {
+      segments.push({ text: text.slice(cursor, span.start), hit: false, start: cursor });
+    }
+    segments.push({ text: text.slice(span.start, span.end), hit: true, start: span.start });
+    cursor = span.end;
+  }
+  if (cursor < text.length) {
+    segments.push({ text: text.slice(cursor), hit: false, start: cursor });
+  }
+  return segments;
+}

@@ -837,6 +837,43 @@
         "body": "Neither eval/failures/ nor the data/eval/catalogue.json bundle could be read. No case is shown, rather than a partial catalogue that would read as a complete one."
       }
     },
+    "matrix": {
+      "title": "Case × language matrix",
+      "subtitle": "A run is not a flat pass/fail. A model can pass in French and fail in German — and a green cell can be green with NO model at all.",
+      "noFloor": "No committed floor: what the guard holds on its own cannot be told apart from what the model contributes. The cells stay undetermined rather than falsely attributed.",
+      "legend": {
+        "floorPass": "passed by the guard (the model had nothing to do with it)",
+        "modelPass": "passed by the model (it closed this one)",
+        "modelBreak": "broken by the model (worse than no model)",
+        "bothFail": "failed on both sides"
+      }
+    },
+    "detail": {
+      "prompt": "The prompt actually sent",
+      "noPrompt": "The catalogue declares no prompt for this language.",
+      "response": "The model's real response",
+      "emptyResponse": "The model answered nothing. This is not missing data: an empty response satisfies every negative criterion — silence is indistinguishable from competence.",
+      "criterion": "The criterion that broke",
+      "brokeBy": "Criterion violated",
+      "emitted": "It emitted",
+      "brokeByAbsence": "The response contained none of the required substrings.",
+      "allSatisfied": "Every recomputable criterion is satisfied.",
+      "failedOnUnverifiable": "The harness failed this case on a criterion this dashboard cannot re-verify. Its reason is reproduced below, as the harness wrote it.",
+      "notRecomputable": "The case set changed since this run: the definition on disk is no longer the one it was scored against. Recomputing a criterion from it would show a rule that never applied.",
+      "harnessReasons": "Reason reported by the harness",
+      "notVerifiableHere": "Criteria not re-verifiable here",
+      "notVerifiableWhy": "The run keeps neither the confidence, nor the retrieved citations, nor whether each tool call succeeded. The harness checked them; this dashboard can only report that, never redo it.",
+      "context": "Execution context",
+      "tools": "Tools invoked",
+      "noTool": "none",
+      "escalation": "Escalation",
+      "yes": "required",
+      "no": "no",
+      "duration": "Duration",
+      "tokens": "Tokens",
+      "notRecorded": "not recorded",
+      "source": "Why this test exists"
+    },
     "criteria": {
       "must_not_contain": "must never contain",
       "must_contain_any": "must contain at least one of",

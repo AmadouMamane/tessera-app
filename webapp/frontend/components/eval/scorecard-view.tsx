@@ -2,17 +2,25 @@ import { AlertTriangle, CalendarClock, FileSearch, Layers } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { OperatorLocked } from "@/components/auth/operator-locked";
+import { CaseMatrix } from "@/components/eval/case-matrix";
+import { CaseRunDetail } from "@/components/eval/case-run-detail";
 import { CatalogueTab } from "@/components/eval/catalogue-tab";
 import { type EvalTab, EvalTabs } from "@/components/eval/eval-tabs";
 import { FailureSynthesis } from "@/components/eval/failure-synthesis";
-import { ResultsByCategory } from "@/components/eval/results-by-category";
 import { RunPicker } from "@/components/eval/run-picker";
 import { ScoreCard } from "@/components/eval/score-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { currentRole, isAdmin, isOperator, isSuperadmin } from "@/lib/auth/session";
-import { MIN_CONTRIBUTION_UNCALIBRATED, ageInDays, decomposeRun, isStale } from "@/lib/eval-score";
+import {
+  MIN_CONTRIBUTION_UNCALIBRATED,
+  ageInDays,
+  caseKey,
+  cellState,
+  decomposeRun,
+  isStale,
+} from "@/lib/eval-score";
 import { type Sweep, loadSweep, loadSweepRun } from "@/lib/eval-sweep";
 import { getSynthesisAdminFlag } from "@/lib/server/settings";
 
@@ -22,6 +30,9 @@ interface ScorecardViewProps {
   tab: EvalTab;
   /** Which run's per-case detail to open. A run id from the sweep, never a path. */
   run?: string;
+  /** Which cell of the matrix is open — a (case, language) pair. */
+  caseId?: string;
+  lang?: string;
 }
 
 /**
@@ -39,7 +50,7 @@ interface ScorecardViewProps {
  * What replaces them: the sweep's runs, each through the one {@link ScoreCard} that cannot
  * render a bare number, and the référentiel + freshness stated in the header — never implied.
  */
-export async function ScorecardView({ locale, tab, run }: ScorecardViewProps) {
+export async function ScorecardView({ locale, tab, run, caseId, lang }: ScorecardViewProps) {
   const [sweep, t] = await Promise.all([
     loadSweep(),
     getTranslations({ locale, namespace: "eval" }),
@@ -129,24 +140,54 @@ export async function ScorecardView({ locale, tab, run }: ScorecardViewProps) {
         ) : null}
 
         {operator && detail ? (
-          <ResultsByCategory
-            results={detail.results}
-            columns={{
-              case: t("columns.case"),
-              language: t("columns.language"),
-              result: t("columns.result"),
-              expected: t("columns.expected"),
-              failureReason: t("columns.failureReason"),
-            }}
-            passLabel={t("passed")}
-            failLabel={t("failed")}
-            filterLabels={{
-              all: t("resultFilter.all"),
-              failed: t("resultFilter.failed"),
-              passed: t("resultFilter.passed"),
-              empty: t("resultFilter.empty"),
-            }}
-          />
+          <>
+            {/* The case set moved under a run → its definitions are no longer the ones it was
+                scored against, and recomputing a criterion from them would show a rule that never
+                applied. The verdicts still display; only the reconstruction stands down. */}
+            {(() => {
+              const recomputable = !isStale(
+                selected.catalogueVersion,
+                sweep.currentCatalogueVersion,
+              );
+              const openCase = caseId
+                ? (sweep.catalogue.find((c) => c.id === caseId) ?? null)
+                : null;
+              const openResult =
+                caseId && lang
+                  ? (detail.results.find((r) => r.case_id === caseId && r.language === lang) ??
+                    null)
+                  : null;
+              return (
+                <>
+                  {openResult ? (
+                    <CaseRunDetail
+                      evalCase={openCase}
+                      result={openResult}
+                      state={
+                        sweep.floor
+                          ? cellState(
+                              caseKey(openResult.case_id, openResult.language),
+                              selected.verdicts,
+                              sweep.floor.verdicts,
+                            )
+                          : "unknown"
+                      }
+                      locale={locale}
+                      recomputable={recomputable}
+                    />
+                  ) : null}
+                  <CaseMatrix
+                    catalogue={sweep.catalogue}
+                    runVerdicts={selected.verdicts}
+                    floorVerdicts={sweep.floor?.verdicts ?? null}
+                    runId={selected.id}
+                    selected={caseId && lang ? { caseId, lang } : null}
+                    locale={locale}
+                  />
+                </>
+              );
+            })()}
+          </>
         ) : (
           <OperatorLocked locale={locale} />
         )}

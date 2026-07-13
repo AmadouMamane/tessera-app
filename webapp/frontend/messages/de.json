@@ -837,6 +837,43 @@
         "body": "Weder eval/failures/ noch das Bundle data/eval/catalogue.json waren lesbar. Es wird kein Fall angezeigt statt eines Teilkatalogs, der für vollständig gehalten würde."
       }
     },
+    "matrix": {
+      "title": "Matrix Fall × Sprache",
+      "subtitle": "Ein Lauf ist kein flaches Bestanden/Durchgefallen. Ein Modell kann auf Französisch bestehen und auf Deutsch scheitern — und eine grüne Zelle kann OHNE jedes Modell grün sein.",
+      "noFloor": "Kein committeter Sockel: Was die Guard-Schicht allein hält, lässt sich nicht von dem trennen, was das Modell beiträgt. Die Zellen bleiben unbestimmt, statt falsch zugeschrieben zu werden.",
+      "legend": {
+        "floorPass": "von der Guard-Schicht bestanden (das Modell hat daran keinen Anteil)",
+        "modelPass": "vom Modell bestanden (es hat ihn aufgefangen)",
+        "modelBreak": "vom Modell gebrochen (schlechter als ohne Modell)",
+        "bothFail": "auf beiden Seiten durchgefallen"
+      }
+    },
+    "detail": {
+      "prompt": "Der tatsächlich gesendete Prompt",
+      "noPrompt": "Der Katalog deklariert für diese Sprache keinen Prompt.",
+      "response": "Die tatsächliche Antwort des Modells",
+      "emptyResponse": "Das Modell hat nichts geantwortet. Das ist kein fehlender Datensatz: eine leere Antwort erfüllt jedes negative Kriterium — Schweigen ist von Kompetenz nicht zu unterscheiden.",
+      "criterion": "Das gebrochene Kriterium",
+      "brokeBy": "Verletztes Kriterium",
+      "emitted": "Ausgegeben",
+      "brokeByAbsence": "Die Antwort enthielt keine der geforderten Zeichenketten.",
+      "allSatisfied": "Alle nachrechenbaren Kriterien sind erfüllt.",
+      "failedOnUnverifiable": "Der Harness hat diesen Fall an einem Kriterium scheitern lassen, das dieses Dashboard nicht nachprüfen kann. Seine Begründung steht unten, so wie er sie geschrieben hat.",
+      "notRecomputable": "Der Fallsatz hat sich seit diesem Lauf geändert: die Definition auf der Platte ist nicht mehr die, gegen die bewertet wurde. Ein daraus nachgerechnetes Kriterium zeigte eine Regel, die nie galt.",
+      "harnessReasons": "Vom Harness gemeldete Begründung",
+      "notVerifiableHere": "Hier nicht nachprüfbare Kriterien",
+      "notVerifiableWhy": "Der Lauf bewahrt weder die Konfidenz noch die abgerufenen Quellen noch den Erfolg jedes einzelnen Werkzeugaufrufs. Der Harness hat sie geprüft; dieses Dashboard kann das nur berichten, nie wiederholen.",
+      "context": "Ausführungskontext",
+      "tools": "Aufgerufene Werkzeuge",
+      "noTool": "keine",
+      "escalation": "Eskalation",
+      "yes": "erforderlich",
+      "no": "nein",
+      "duration": "Dauer",
+      "tokens": "Tokens",
+      "notRecorded": "nicht erfasst",
+      "source": "Warum es diesen Test gibt"
+    },
     "criteria": {
       "must_not_contain": "darf niemals enthalten",
       "must_contain_any": "muss mindestens eines davon enthalten",

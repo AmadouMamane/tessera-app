@@ -837,6 +837,43 @@
         "body": "Ni eval/failures/ ni le bundle data/eval/catalogue.json n'ont pu être lus. Aucun cas n'est affiché, plutôt qu'un catalogue partiel qui passerait pour complet."
       }
     },
+    "matrix": {
+      "title": "Matrice cas × langue",
+      "subtitle": "Un run n'est pas un pass/fail plat. Un modèle peut passer en français et échouer en allemand — et une cellule verte peut être verte SANS aucun modèle.",
+      "noFloor": "Aucun plancher commité : impossible de distinguer ce que le garde tient seul de ce que le modèle apporte. Les cellules restent indéterminées plutôt que faussement attribuées.",
+      "legend": {
+        "floorPass": "passé par le garde (le modèle n'y est pour rien)",
+        "modelPass": "passé par le modèle (il l'a rattrapé)",
+        "modelBreak": "cassé par le modèle (pire que sans modèle)",
+        "bothFail": "échoué des deux côtés"
+      }
+    },
+    "detail": {
+      "prompt": "Le prompt réellement envoyé",
+      "noPrompt": "Le catalogue ne déclare pas de prompt pour cette langue.",
+      "response": "La réponse réelle du modèle",
+      "emptyResponse": "Le modèle n'a rien répondu. Ce n'est pas une donnée manquante : une réponse vide satisfait tout critère négatif — le silence est indistinguable de la compétence.",
+      "criterion": "Le critère qui a sauté",
+      "brokeBy": "Critère violé",
+      "emitted": "A émis",
+      "brokeByAbsence": "La réponse ne contenait aucune des chaînes requises.",
+      "allSatisfied": "Tous les critères recalculables sont satisfaits.",
+      "failedOnUnverifiable": "Le harnais a échoué ce cas sur un critère que ce tableau de bord ne peut pas re-vérifier. Sa raison est reproduite ci-dessous, telle qu'il l'a écrite.",
+      "notRecomputable": "Le jeu de cas a changé depuis ce run : la définition sur disque n'est plus celle contre laquelle il a été noté. Recalculer un critère depuis elle afficherait une règle qui ne s'appliquait pas.",
+      "harnessReasons": "Motif rapporté par le harnais",
+      "notVerifiableHere": "Critères non re-vérifiables ici",
+      "notVerifiableWhy": "Le run ne conserve ni la confiance, ni les citations récupérées, ni le succès de chaque appel d'outil. Le harnais les a vérifiés ; ce tableau de bord ne peut que le rapporter, jamais le refaire.",
+      "context": "Contexte d'exécution",
+      "tools": "Outils appelés",
+      "noTool": "aucun",
+      "escalation": "Escalade",
+      "yes": "requise",
+      "no": "non",
+      "duration": "Durée",
+      "tokens": "Tokens",
+      "notRecorded": "non enregistré",
+      "source": "Pourquoi ce test existe"
+    },
     "criteria": {
       "must_not_contain": "ne doit jamais contenir",
       "must_contain_any": "doit contenir au moins l'un de",
