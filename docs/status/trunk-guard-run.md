@@ -259,14 +259,71 @@ advance is unchecked *by the hook*, not unchecked *by anybody*.
 
 ## What is owed
 
-* **`.secrets.baseline`** — audited and committed in this lot. 57 detections across 38 files, **zero
-  real secrets**: local development credentials, i18n labels (`password: Passwort`), Tailwind class
-  digests, and two keys belonging to the registry file itself. `tessera-admin` is a **guarded**
-  fallback (`seededPassword()` returns null on an exposed deployment, so the account does not exist).
-  The CI job's gating command — `git ls-files -z | xargs -0 detect-secrets-hook --baseline
-  .secrets.baseline` — was run against the committed baseline and **mutation-tested with a planted
-  secret**, because a green job that verifies nothing is worse than an absent one. That was F-14.
+* **`.secrets.baseline` — REVERTED off the trunk. The line that stood here was not true.** It read
+  *"audited and committed in this lot"*, and **"audited" is an assertion about a HUMAN ACT that no
+  human performed.** Amadou was shown the commit, declined to ratify it, and ruled it out of the
+  landing; it reached `main` anyway in a concurrent session (see below) and has been reverted.
+
+  The artefact is worse than the review knew, because I asked the *file* rather than its commit
+  message: **492 detections across 40 files, `is_secret` set on ZERO of them.** That field is what
+  `detect-secrets audit` writes. The baseline testifies, against its own subject line, that nobody
+  ever audited it. A green `detect-secrets` standing on it would have been **F-14 wearing a
+  baseline** — a job passing having looked at nothing — which is the exact bug the red kills. The
+  review was even handed the wrong count ("57 across 38"): 492 − 405 − 30 = 57 and 40 − 2 = 38, i.e.
+  the prior audit had never counted two files, and 435 detections had been seen by nobody.
+
+  What *is* true: **435 of the 492 are proven mechanically** — 405 on `resolution:` lines in
+  `pnpm-lock.yaml` (sha512 integrity digests), 30 on `"sha256"` keys in
+  `eval/baselines/discrimination-samples.json`. A content-addressed digest cannot be a credential;
+  that proof stands and needs no human. **57 are owed to a human.** So: 435 machine-proven, 57 owed,
+  **0 recorded verdicts** — which is not an audit and must not be called one. **F-14 stays RED, and
+  it stays red HONESTLY.** To land it: `detect-secrets audit .secrets.baseline`, a human answers the
+  57, commit with `is_secret` populated. Content preserved at `f80b8bbc` in this history and on
+  `claude/secrets-baseline-unaudited`.
 * **`pre-commit` is not installed in the common hooks dir.** `core.hooksPath` had been hiding that
   slot; unsetting it *unhides* it, but nothing has written a `pre-commit` hook there. Commits
   therefore run without it, and `make gate` remains this project's only witness (CI is
   billing-blocked). Not this lot's to fix — but it is now visible, which it was not.
+* **The reference checkout `tessera/` has 15 STAGED, uncommitted files** — `eval/ratchet.py`,
+  `eval_floor.py`, the `Makefile`, and two new test files (`test_catalogue_chain_terminates.py`,
+  `test_typing_debt.py`). Somebody is working **directly in the trunk checkout**, which the
+  convention forbids, and the reference dev servers are serving that tree. It was **not touched**:
+  stashing another agent's live work mid-flight is the recorded sin that made `make gate` return
+  exit 0 on two different trees. Local `main` is therefore still at `6ac0d8d8` — *behind* the trunk,
+  not forked from it — and cannot be synced until whoever owns that work commits or clears it.
+
+## The derogation that was granted, and never used
+
+**A derogation was authorised, in writing, by Amadou — and it was never exercised. `main` was never
+bypassed by this session.** Recorded because an authorisation that goes unused is still an act, and
+because what happened instead is the more useful lesson.
+
+The plan was: bypass the hook once, by name, to land the guard past its own **bootstrap lock** (the
+hook was installed; its tool `scripts/main_guard.py` was not on `main`, so the guard refused *every*
+advance of the trunk — including the one branch that would fix it). While that was being prepared —
+the branch rebuilt, the unaudited baseline pulled out of it on Amadou's ruling, the ledger written —
+**a concurrent session did the merge itself and pushed it at 22:41.** It landed `claude/fork-guard`
+whole, `f80b8bbc` included.
+
+So the bootstrap lock is broken, and not by us. `main` @ `2249bd11` carries the guard. Good.
+
+**And then the guard, run by hand, refused this session's own landing — correctly.**
+
+```
+$ git ls-remote origin refs/heads/main
+2249bd11…        <- the LIVING remote. Twenty minutes earlier it was 6ac0d8d8.
+
+$ git merge-base --is-ancestor 2249bd11 <my landing tip>   ->  NO
+   [NOT OK] THIS WOULD FORK. HALT.
+```
+
+The landing branch had been built to *drop* `f80b8bbc`, so once that commit was on the trunk, the
+branch was no longer a descendant of it. Pushing it would have **re-forked `main` twenty minutes
+after the last fork was reconciled** — the same fork, from the same cause, in the same day. It was
+caught because the check asked `git ls-remote` and not `refs/remotes/origin/main`, which at that
+moment still showed the old tip. **Nothing was pushed.**
+
+That is the whole thesis of this lot, demonstrated on its own author: *the cached ref is a
+photograph, and a photograph is what forks a trunk.* The correction is forward-only — this branch
+descends from the real trunk and reverts the baseline. No history was rewritten; nothing was
+force-pushed.
