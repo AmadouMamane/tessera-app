@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# `main` may not be advanced past a remote nobody looked at. See scripts/main_guard.py.
+#
+# WHY A HOOK AND NOT A MAKE TARGET. A target is opt-in, and the fork of 2026-07-13 was MADE OF
+# somebody not opting in: `main` was advanced by an ordinary `git merge --ff-only`, from a base
+# that a stale cached ref said was current. "Only one agent touches main" was written down, and
+# writing it down has now failed to stop every single instance in this repo's history of green
+# lights over holes. This fires on ANY update to refs/heads/main — a merge, a bare merge, a
+# commit straight onto the branch, a reset. There is nothing to remember.
+#
+# WHY `reference-transaction` AND NOT `pre-merge-commit`. **A fast-forward creates no commit**, so
+# `pre-merge-commit` never runs for the exact operation that forked the trunk. `reference-transaction`
+# fires for every ref update, and a non-zero exit in the `prepared` phase ABORTS the transaction.
+#
+# stdin, one line per ref: <old-oid> <new-oid> <ref-name>
+set -o pipefail
+
+phase="$1"
+[ "$phase" = "prepared" ] || exit 0
+
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+while read -r _old new ref; do
+  [ "$ref" = "refs/heads/main" ] || continue
+  # An all-zero new oid is a DELETION, an all-zero old oid a CREATION (clone, initial fetch).
+  # Neither can fork a trunk: there is no divergent history to make.
+  case "$new" in
+    0000000000000000000000000000000000000000) continue ;;
+  esac
+
+  # The guard is python, and it lives in the repo it guards. If it is not there — an old branch,
+  # a half-checkout — SAY SO and refuse. A guard that cannot find itself is a blind spot, and a
+  # blind spot is not a pass (ADR 0026). The bypass is the documented way through.
+  if [ ! -f "$root/scripts/main_guard.py" ]; then
+    if [ -n "${TESSERA_MAIN_GUARD_BYPASS:-}" ] && [ "${TESSERA_MAIN_GUARD_BYPASS}" != "0" ]; then
+      continue
+    fi
+    echo "[main-guard] [CANNOT SAY] refs/heads/main is moving and scripts/main_guard.py is not in" >&2
+    echo "  this checkout, so nothing checked whether this forks the trunk. Refusing." >&2
+    echo "  (checkout a branch that has it, or: TESSERA_MAIN_GUARD_BYPASS=1)" >&2
+    exit 1
+  fi
+
+  # `uv run` would re-resolve the environment on every ref update — slow, and it writes to the
+  # tree the transaction is about to change. The guard only needs stdlib + tessera.verdict, so it
+  # is run against the venv's interpreter directly, and falls back to `python3` when there is none.
+  py="$root/.venv/bin/python"
+  [ -x "$py" ] || py="$(command -v python3)" || exit 0
+
+  PYTHONPATH="$root/src${PYTHONPATH:+:$PYTHONPATH}" "$py" "$root/scripts/main_guard.py" "$new" || exit 1
+done
+
+exit 0

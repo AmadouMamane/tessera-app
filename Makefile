@@ -31,7 +31,7 @@ SHELL := /bin/bash
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
-install:
+install: hooks
 	uv sync
 
 install-all:
@@ -59,6 +59,51 @@ precommit: install
 
 # All quality checks in sequence (used locally before pushing)
 check: format-check lint typecheck
+
+# ── The trunk, and the guard that keeps there being exactly one ─────────────
+#
+# On 2026-07-13 `main` FORKED:
+#
+#     5a0e9065 ──┬── 34b59c0d   origin/main   (+10, the eval lane, pushed)
+#                └── c6a2048c   main          (+15, the witness lane, never pushed)
+#
+# Neither an ancestor of the other; no fast-forward left in either direction. It was not
+# caused by a bad merge. Each lane advanced ITS OWN `main` from a base it believed was
+# current — and the belief was a CACHED REF. Nobody fetched.
+#
+# "Only one agent touches main" was the rule, and it was written down, and writing it down
+# has now failed to stop every single instance in this repo's history of a green light over
+# a hole. So it is mechanical now, and it is one sentence:
+#
+#     origin/main must be an ANCESTOR of whatever main is about to become.
+#
+# `hooks` installs `.githooks/reference-transaction`, which fires that check on ANY update
+# to refs/heads/main — a `git merge --ff-only`, a bare `git merge`, a `git commit` straight
+# onto the branch, a `git reset`. NOT a target somebody has to remember: the fork was made
+# of not remembering. (`pre-merge-commit` would have been useless — a FAST-FORWARD CREATES
+# NO COMMIT, so it never fires for the exact operation that forked the trunk.)
+#
+# And the guard asks the REMOTE — `git ls-remote` — never `refs/remotes/origin/main`, which
+# is a photograph of the remote taken at your last fetch, and the last fetch is the event
+# that did not happen. Offline ⇒ CANNOT SAY ⇒ refused: "probably nothing moved" is the bug,
+# in its purest form. Deliberate override: TESSERA_MAIN_GUARD_BYPASS=1, which says so aloud.
+#
+# Wired into `install`, so it is installed by the time anything else in this file runs. The
+# path is relative, and git resolves a relative `core.hooksPath` against the ROOT OF THE
+# WORKING TREE — so each worktree gets the hook from its own checkout, which is what we want.
+hooks:
+	@git config core.hooksPath .githooks
+	@test -x .githooks/reference-transaction || { \
+	  echo "✗ .githooks/reference-transaction is not executable — the trunk is UNGUARDED"; exit 1; }
+
+# The sanctioned way to advance the trunk. `git merge --ff-only` still works and is still
+# guarded (that is the whole point of the hook); this target exists so the verdict is printed
+# before the merge rather than discovered by it.
+#   make land BRANCH=claude/some-branch
+land: install
+	@test -n "$(BRANCH)" || { echo "BRANCH= is required (e.g. make land BRANCH=claude/x)"; exit 2; }
+	@uv run python scripts/main_guard.py $$(git rev-parse $(BRANCH))
+	@git merge --ff-only $(BRANCH)
 
 # ── Worktree ownership ──────────────────────────────────────────────────────
 #

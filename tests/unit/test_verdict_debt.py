@@ -144,6 +144,13 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # `check()` is what publishes a Verdict about this tree; this only asks whether a pid runs,
     # and it already answers `None` when it cannot know — which is the same rule, in miniature.
     "scripts/worktree_owner.py::_process_alive": "data",
+    # Same shape, and it arrived the same way: the freeze caught it on the day it was written.
+    # `check_advance()` is what publishes the Verdict about the trunk; this only asks a question
+    # ABOUT THE GRAPH — is X in Y's history — and it answers `None` when git cannot tell, which is
+    # load-bearing: "I have never seen that object" is not "no", and reading one as the other
+    # would be a FALSE REFUSAL. It is not the debt, and it does not join the debt: a debt you pay
+    # by enrolling in it is not a debt.
+    "scripts/main_guard.py::_is_ancestor": "data",
     "src/tessera/agent/capability_schema.py::_matches": "filter",
     "src/tessera/agent/recouvrement.py::_artifact_mentions_schedule": "text",
     "src/tessera/agent/recouvrement.py::_has_contact_rule_intent": "intent",

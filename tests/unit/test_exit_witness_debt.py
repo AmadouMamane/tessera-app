@@ -86,6 +86,12 @@ _MAKEFILE: Final = _ROOT / "Makefile"
 _SCRIPTS: Final = _ROOT / "scripts"
 _WORKFLOWS: Final = _ROOT / ".github" / "workflows"
 
+#: A FOURTH surface, added 2026-07-13 with the trunk guard. A git hook's exit code *aborts a ref
+#: transaction* — it is an exit-code witness by the purest definition, and it was about to be an
+#: **unregistered** one, which is the exact hole this registry exists to close. The surface is
+#: scanned, not the file: a second hook added tomorrow cannot slip in unclassified.
+_HOOKS: Final = _ROOT / ".githooks"
+
 #: Every exit-code witness in the three surfaces, and what kind of thing it is.
 #: Keys are the artefact's own names: ``Makefile::<target>``, ``scripts/<file>``,
 #: ``.github/workflows/<file>::<job>``.
@@ -125,6 +131,11 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::eval-case": "action",
     "Makefile::eval-lang": "action",
     "Makefile::eval-demo": "action",
+    # ── the trunk. `main` FORKED on 2026-07-13 because nobody fetched, and "one agent touches
+    #    main" is a SOCIAL rule — which has now failed to stop every instance in this repo's
+    #    history of a green light over a hole. So it is mechanical. ─────────────────────────────
+    "Makefile::hooks": "action",  # installs core.hooksPath; wired into `install`
+    "Makefile::land": "action",  # it ADVANCES the trunk. Its verdict is scripts/main_guard.py's
     # ── the ledger ─────────────────────────────────────────────────────────────────────────────
     "Makefile::ledger-backup": "delegate",  # → scripts/ledger_backup.py  (was a live false green)
     "Makefile::ledger-restore-drill": "delegate",  # → scripts/ledger_restore_drill.py
@@ -160,6 +171,12 @@ _EXIT_WITNESSES: dict[str, str] = {
     # ── witnesses that publish a Verdict, or their own unlaundered code ────────────────────────
     "scripts/gate_witness.py": "VERDICT",  # EXIT_VOID=3: "unusable" is not "failed"
     "scripts/worktree_owner.py": "VERDICT",  # Ok | NotOk | CannotSay
+    # It asks the REMOTE (`git ls-remote`), never `refs/remotes/origin/main` — which is a
+    # PHOTOGRAPH of the remote taken at your last fetch, and the last fetch is the event that
+    # did not happen. Unreachable remote ⇒ CannotSay ⇒ exit 2: "probably nothing moved" is the bug.
+    "scripts/main_guard.py": "VERDICT",
+    # ── the fourth surface: a hook's exit code ABORTS the ref transaction ──────────────────────
+    ".githooks/reference-transaction": "VERDICT",  # → scripts/main_guard.py, on refs/heads/main
     "scripts/dev_status.py": "VERDICT",  # fixed: the exit code IS the verdict now
     # check_power() returns a Verdict; `_exit_code` maps it exhaustively under assert_never, and
     # keeps 3 for CannotSay (the catalogue moved — unusable is not failed).
@@ -295,6 +312,17 @@ def _script_files() -> set[str]:
     }
 
 
+def _hook_files() -> set[str]:
+    """Every git hook. Its exit code ABORTS A REF TRANSACTION — it is an exit-code witness."""
+    if not _HOOKS.is_dir():
+        return set()
+    return {
+        f".githooks/{path.name}"
+        for path in _HOOKS.iterdir()
+        if path.is_file() and not path.name.startswith(".")
+    }
+
+
 def _ci_jobs() -> set[str]:
     """Every job in every workflow, parsed from the YAML — never grepped.
 
@@ -310,7 +338,7 @@ def _ci_jobs() -> set[str]:
 
 
 def _all_witnesses() -> set[str]:
-    return _make_targets() | _script_files() | _ci_jobs()
+    return _make_targets() | _script_files() | _ci_jobs() | _hook_files()
 
 
 class TestTheDebtIsANumber:
