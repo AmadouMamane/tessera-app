@@ -59,6 +59,48 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-13 — **FIXED, and the trace proves it: `/observability/fleet` 3 938 → 430 ms; the
+  event loop is no longer frozen; the cockpit can now explain its own latency.** Branch
+  `claude/fleet-perf-spans` (twice-green on the committed tree, `787acbe99e80`). Full write-up
+  with every number: **`docs/status/perf-fleet-run.md`**. Headline: fleet **3 938 → 430 ms**
+  (×9.2) · chrome, the header of all 32 pages, **3 725 → 714 ms** · **`/healthz` while one fleet
+  request is in flight: 3 639 → 5 ms** (×728) · ledger rows materialised per fleet request
+  **~206 000 → 3**. The trace cascade went from **1 span, 0 children, nothing attributed** to 32
+  named children carrying their row counts. **The third number was never diagnosed and is the
+  most important: the reads were synchronous inside an async route, so ONE fleet request froze
+  the WHOLE server** — which is also why the operator's `/audit/integrity` read 1 169–7 270 ms
+  while the endpoint itself already cost 20 ms: it was queued behind the browser's own polling.
+  Cost and event-loop blocking are two different bugs, and making the reads cheap fixes only the
+  first. **Order of work, and it mattered: instrument, THEN correct.** Every control-plane store
+  read now emits a span with store · operation · duration · **rows materialised**
+  (`observability/store_spans.py`). It is that row count — not the duration — that makes an
+  O(ledger) read legible, and it found three things nobody had asked for: (1) **chrome was 3 725
+  ms** and was not in the diagnosis; (2) **a full 25 716-row read still survives on the chrome
+  path** (`incidents.open_incidents()`, 361 ms) — without the cascade I would have shipped chrome
+  believing it clean; (3) **the same class, a third time, outside the ledger**:
+  `load_eval_snapshot(agent_id)` **parses every eval report and filters by agent in Python**, once
+  per agent — six agents, six full parses, and it is now the fleet's dominant remaining cost.
+  **The STRONG verifiers were deliberately left alone**: `verify_active_ledger` and État à date
+  still re-walk and re-hash all 25 716 rows every time. Six existing tests went red when a first
+  draft routed them through the checkpoint, and **they were right**: `ChainStatus` carries no
+  provenance, so backing it with a cached proof is "a checkpoint trusted in silence" — the thing
+  the checkpoint module's own docstring forbids. The bug was never those functions; it was **the
+  health dot and the header bell calling them to extract one boolean**. A health dot asks a weaker
+  question ("is there a PROVEN break?") and may pay a weaker price — provided it says so, which
+  `active_ledger_verdict` does (it hands back the age of the last full walk, unasked).
+  **THE RATCHET (the deliverable), mutation-tested on both levels:** a **row budget** over the
+  fixed paths, counted through the instrumentation itself (re-introduce the old scan → red on the
+  fleet AND the header bell), and an **AST freeze** on the modules that can materialise the chain
+  (a seventh reader → refused by name). **What is NOT claimed:
+  `load_ledger_payloads_of_type` is NOT a bounded reader** — it is bounded only when the type is
+  RARE, and `tessera.guard.audit` is **24 250 of 25 716 rows = 94 %** of the chain. Pushing that
+  filter into SQL *reads* like a fix in the diff and saves ~6 %. **A ratchet keyed on the function
+  NAME would have certified a full scan; this one counts rows.** **The class is not closed
+  everywhere and the doc says so: 17 request paths still read the whole ledger** — named,
+  counted, frozen, and asserted in CI so the debt is a figure that must go down. **⚠️ For the
+  operator: the reference backend (:8099) is running code from BEFORE the integrity fix landed**
+  (process started 12/07 23:56, fix landed 13/07 08:32) — `make dev-status` reports the git head
+  of the *checkout*, not the code the *process* loaded. A restart activates 1 087 ms → 20 ms.
 
 - 2026-07-13 — **PERF: the cockpit's main page reads the ENTIRE audit ledger SIX TIMES per
   request — and the parked P1 became the product's principal cost.** Measured, after two
