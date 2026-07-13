@@ -73,6 +73,13 @@ landed:
 	@test -n "$(BRANCH)" || (echo "BRANCH= is required (e.g. make landed BRANCH=claude/x)" && exit 2)
 	@uv run python scripts/landed.py --branch $(BRANCH) $(if $(BASE),--base $(BASE),)
 
+# The insight registry has ONE source of truth. On 2026-07-12 it had two, under the same
+# name, in two harness directories — and the BIGGER one was the DEAD one, so "keep the most
+# recent" would have destroyed 98 insights in silence. This target refuses a second registry
+# and refuses two insights sharing a number. It also runs inside `make gate`.
+memory-check:
+	@uv run pytest tests/unit/test_memory_registry_single_source.py -q
+
 # ── The gate ────────────────────────────────────────────────────────────────
 #
 # `gate` is the single definition of what "green" means in this repository.

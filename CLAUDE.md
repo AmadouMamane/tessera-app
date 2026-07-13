@@ -332,6 +332,21 @@ After fixing a non-obvious bug, discovering an architectural lesson, or solving 
 
 Do this during the session, not at the end. If in doubt whether something is worth saving, save it.
 
+**ONE registry, ONE file, ONE number (2026-07-13).** The registry lived in **two** diverged
+copies of the same name, one per harness, and nobody read both. The **bigger** file was the
+**dead** one: "keep the most recent" would have destroyed 98 insights in silence. They are now
+merged (union — nothing deleted, number collisions renumbered with the elder keeping its number)
+into a single canonical file; every harness path is a **symlink** to it. Two rules are enforced by
+`make memory-check`, which `make gate` runs:
+
+- **no second file of the same name** — the one you write must be the one the next agent reads;
+- **no two insights sharing a number** — during the very merge that fixed the first rule, a third
+  agent appended two insights under numbers already taken twice. A number that names two insights
+  names neither.
+
+Before appending, take the **highest** number in the canonical file and add one. Never renumber an
+existing insight: numbers are cited from elsewhere.
+
 ## How Claude Code should behave in this repository
 
 Default to reading the relevant ADR before changing structural choices. When a request would deviate from the canonical tree above, ask before doing it and propose an ADR draft. When introducing a new dependency, justify it in the relevant ADR or open a new one — Tessera's positioning depends on minimal, well-cited reuse, not feature creep. When in doubt about scope, prefer cutting over extending: the day-twenty deadline takes precedence over completeness.
