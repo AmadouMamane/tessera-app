@@ -118,6 +118,39 @@ evidence and no verdict may be used as a boolean. The *question* a witness asks 
 unpoliceable. What is now impossible is publishing the answer without saying what was examined —
 which is the only reason any of these five were ever found.
 
+## Postscript, 2026-07-13 — the fifth was in the witness written for the third
+
+`make dev-status`, the tool this ADR's third row produced, prints `⚠ STALE — this server is NOT
+running the code in this checkout · RESTART`. It prints `⚠ CANNOT SAY (this server predates the
+code-identity witness)`. And `main()` ended in `return 0`, unconditionally: it said the right thing
+in the channel a **human** reads and said **"ok"** in the only channel a **Makefile** can hear.
+
+The rule had been implemented in the *rendering* and forgotten in the *exit code* — which is to say
+forgotten on **the surface this ADR was born on**. Clause 1 above is *"a gate reports its own exit
+code"*, and the corollary is *"a witness that cannot see may never report ok"*; nobody had noticed
+that an exit code of `0` **is** a report of "ok", so the two clauses had a seam and the fifth
+instance lived in it.
+
+Its **tests were green**, and that is the part worth keeping. Every assertion in
+`TestTheWitnessReportsItsBlindSpots` was about the *string* the witness printed — so the tests asked
+**the same question the tool asked** (*what does it say?*) and nobody asked *what does it return?*.
+A test that shares the tool's blind spot is not a check; it is the tool, agreeing with itself.
+
+Two others were open beside it, and both were the origin mechanic, unaltered:
+
+* **`make ledger-backup` could not fail.** `pg_dump | gzip > $out` under `/bin/sh` (no `pipefail`),
+  in a `;`-chain with no `set -e`, ending in `echo "✓"`. Against a container that does not exist it
+  printed a tick, exited **0**, and wrote a SHA-256-notarised archive of **zero bytes**. The backup
+  of the audit ledger.
+* **`make eval-null` graded the previous run's report** when the harness died, because the `-` that
+  legitimately ignores the runner's designed exit-1 also ignores a crash. A per-push CI gate,
+  exiting 0 with a harness that could not start.
+
+Enforcement is now on the surface itself: `tests/unit/test_exit_witness_debt.py` registers **every**
+`make` target, script and CI job (110 of them), two-sided-frozen, and forbids any pipeline anywhere
+from deciding a verdict without `pipefail`. `${PIPESTATUS[0]}` — *empty in zsh*, the array that
+started all this — is banned outright.
+
 ## References
 
 * [ADR 0023](0023-audit-chain-independent-of-sink.md) — no transport may disable the store; the

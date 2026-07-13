@@ -197,6 +197,36 @@ symmetrical.
 Paying it down is not a bulk rewrite. It is: when you next touch one of these, return a `Verdict`,
 delete its line, lower the number.
 
+### And the number was called `OWED_VERDICTS` for exactly one day
+
+It scanned `-> bool` **annotations**. That is a *syntactic proxy* for a *semantic class*, and the
+name claimed the class. A witness can publish its verdict as a dict with an `ok` key, as the string
+`"PASS"`, as `None`-and-raise — **or as an exit code**. Which is what it was *the first time*: the
+empty `${PIPESTATUS[0]}` of [ADR 0026](0026-a-witness-interrogates-the-thing.md)'s origin instance.
+**The registry that embodies this doctrine was blind to the surface the doctrine was born on**, and
+`OWED_VERDICTS = 44` was one careless reading — "44 witnesses left to fix" — away from being a lie.
+
+So the number carries its shape in its name, the registry **declares its blind spots in the code,
+beside it** (`BLIND_SPOTS`), and a blind spot claimed as *covered* must name a module that exists —
+a claim is not a fact, and `KNOWN_AUTH_GUARDS` certified an anonymous `DELETE` because membership of
+a list had been asserted by nobody.
+
+The exit-code surface is now open, and it is the bigger one: **110 witnesses** — every `make` target,
+every script, every CI job — enumerated from the artefacts, two-sided-frozen, classified by hand in
+`tests/unit/test_exit_witness_debt.py`.
+
+```
+OWED_EXIT_WITNESSES = 10     # witnesses that claim a verdict and cannot deliver one
+```
+
+Opening it found **five live false greens**, three of them fixed on the spot, and one of those was
+`make dev-status` — *this doctrine's own witness*, printing `⚠ STALE · RESTART`, printing `⚠ CANNOT
+SAY`, and then returning **0**. The rule had been implemented in the rendering and forgotten in the
+exit code. Its tests were green, and they were green because they asked *the same question the tool
+asked*: what does it **say**. Nobody asked what it **returns**.
+
+Full account: `docs/status/witness-exit-surface-run.md`.
+
 ## Enforcement
 
 Each clause is a test that fails, and each has been **seen red under its own mutation**.
