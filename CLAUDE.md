@@ -361,8 +361,26 @@ into a single canonical file; every harness path is a **symlink** to it. Two rul
   agent appended two insights under numbers already taken twice. A number that names two insights
   names neither.
 
-Before appending, take the **highest** number in the canonical file and add one. Never renumber an
-existing insight: numbers are cited from elsewhere.
+**And that second rule was itself green over a hole until 2026-07-13.** It matched only headings
+of the form `## Insight N` — 139 of the registry's **199** — while the other 60 use `### N. Title`.
+It policed 70 % of the file and reported on all of it, and in the 30 % it could not see, `### 2.`
+already named two different insights. Made to see, it found **58 numbers that each name more than
+one insight**. Those are frozen (`_FROZEN_COLLISIONS`, a debt that may only go down); a **59th is
+red**. ADR 0026's sixth instance, and the corollary exactly: *a witness that cannot see may never
+report "ok"*.
+
+**So "take the highest number and add one" is a trap, and it caught me.** With two conventions in
+one file, the highest number among *the headings that look like yours* is not the highest number.
+Counting only `### N.` answers **60** — and `## Insight 60` has existed for months. Read it from
+the whole file:
+
+```bash
+uv run python -c "from tests.unit.test_memory_registry_single_source import next_free_number; \
+from pathlib import Path; print(next_free_number(Path.home().joinpath('.claude/projects/-Users-amadou-local-apps-tessera-app-tessera/memory/insights_tessera.md').read_text()))"
+```
+
+Never renumber an **existing** insight: its number is cited from other insights, from
+`synthesis_tessera.md`, and from commit messages.
 
 ## How Claude Code should behave in this repository
 

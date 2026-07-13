@@ -179,15 +179,54 @@ immediately: `eval_floor.py::FloorGrade.releasable` exists on the *eval* branch 
 
 ---
 
-## Two things found while doing this, worth their own lines
+## The sixth instance, found while writing the memory note for the fifth
 
-**1. The ratchet caught its own author.** The first version of the CI-ordering test did
+Appending an insight to the registry meant reading the highest number in it. The repo's own gate
+ratchet, `test_no_two_insights_share_a_number`, matched headings like `## Insight N`. **The registry
+uses two conventions:**
+
+| convention | headings | the ratchet |
+|---|---|---|
+| `## Insight 12` | **139** | reads them |
+| `### 12. Some Title` | **60** | **blind** |
+
+It policed **139 of 199** headings and published a verdict about *the registry*. And in the 30 % it
+could not see, `### 2.` already named **two different insights**. Green, for as long as the ratchet
+has existed. The corollary, exactly: *a witness that cannot see may never report "ok"*.
+
+Made to see, it found **58 numbers that each name more than one insight** (`2` names three) — two
+numbering spaces that grew side by side for months with nothing reading both.
+
+**It caught me first.** "The highest number in the file" is **140**, not 59. An agent counting only
+the headings that look like the recent ones answers **60** — and `## Insight 60` has existed for
+months. I did exactly that, and created collision 59. Renumbered to **141**; `next_free_number()`
+now answers from the whole file, and CLAUDE.md no longer tells the next agent to do what I did.
+
+The 58 are **frozen, not renumbered** (a number is cited from other insights, from
+`synthesis_tessera.md`, and from commit messages — CLAUDE.md forbids renumbering an existing one).
+A 59th is red. And the freeze is two-sided, so the ratchet **cannot go quietly blind again**: narrow
+the pattern back and it reports all 58 as "resolved", which is red.
+
+| mutation | the red |
+|---|---|
+| restore the literal `Insight ` in the pattern | *"collision(s) [1, 2, 4 … 59] are RESOLVED — remove them from `_FROZEN_COLLISIONS`"* |
+| drop `2` from the frozen set | *"A NEW NUMBER NAMES TWO INSIGHTS: [2]"* |
+
+---
+
+## Two more things, worth their own lines
+
+**1. The ratchet caught its own author, twice.** The first version of the CI-ordering test did
 `_CI.index("make gate-py")` — and matched the words inside the *comment I had just written* to
 explain the ordering, reporting the fix as broken. A witness reading a file's **prose** is reading
-the neighbourhood of the thing that **runs**. It now parses the workflow's steps. This is instance
-number six, produced by me, inside the ADR about it, ten minutes after writing the ADR.
+the neighbourhood of the thing that **runs**. It now parses the workflow's steps.
 
-**2. `claude/eval-gate-lift` is currently RED on ruff** — `tests/unit/test_eval_no_domain_bar.py:105`,
+**2. I walked into the trap in my own memory.** Undoing a mutation with `git checkout -- <file>`
+reverts to **HEAD**, and my memory-ratchet rewrite was not committed — so it was eaten. I had
+committed before the first four mutation tests precisely for this reason, and then forgot for the
+fifth. **Commit, then mutate.** Written here because the next person will forget too.
+
+**3. `claude/eval-gate-lift` is currently RED on ruff** — `tests/unit/test_eval_no_domain_bar.py:105`,
 `N802` (`test_an_unrestricted_floor_is_REFUSED_not_misgraded`). Not mine, not fixed here; flagged so
 the owning session sees it before merging.
 
