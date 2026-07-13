@@ -74,23 +74,45 @@ __all__ = [
 
 #: Rule 2's bar. The name carries the truth so no caller can mistake it for a measurement.
 #:
-#: The three models of the 2026-07-12 sweep land at 36 / 35 / 36 out of 52. 30 sits 5-6
-#: cases below the lowest of them — enough margin to absorb the sampling noise we measured
-#: (several cases flip run to run), while still failing a model that contributes materially
-#: less. That is a *reasoned* choice, not a *calibrated* one, and the difference matters:
-#: we have never observed a weak model on this catalogue. The only low point we hold is the
-#: null control at 0/52, which bounds nothing useful from above.
+#: **The calibration was attempted on 2026-07-13, and it FAILED.** ADR 0021 said the debt
+#: closed by sweeping a deliberately weak model — "the single act that turns 30 into a
+#: calibrated number, and it costs ~20 minutes". It was run (`make eval-noise`, 5 full
+#: passes each, the gate's own population function):
+#:
+#:     llama3.2:3b  (the model the bar must ADMIT)   [35, 36, 33, 36, 36]   min 33
+#:     llama3.2:1b  (the model the bar must REJECT)  [33, 33, 35, 32, 31]   min 31
+#:
+#: The distributions **OVERLAP**: the 1B's best pass (35) beats the 3B's worst (33), so NO
+#: bar admits every pass of the default model and rejects every pass of a model one third
+#: its size. And 30 sits below BOTH minima — against the only weak anchor we have, it fails
+#: nothing. A 1B is not weak on this catalogue: it contributes 32.8 of 52 on average, 2.4
+#: runs behind the 3B.
+#:
+#: The bar is NOT therefore a decoration in the sense ADR 0021 killed the domain bars with —
+#: those were cleared *by the null control itself*, and this one is not (the null control
+#: scores 0/52 and fails it). It still catches a model that contributes almost nothing. What
+#: it demonstrably cannot do is what its name promises: separate a WEAK model from a good
+#: one. The debt stays open, and the cheap remedy the ADR prescribed is now ruled out.
+#:
+#: Rule 1, by contrast, discriminates sharply on the same data — the 1B breaks 9 distinct
+#: floor runs to the 3B's 5. The rule anchored on the MEASURED FLOOR works; the rule with a
+#: CHOSEN NUMBER does not. That is ADR 0021's own thesis, proven a second time against its
+#: own surviving bar.
 MIN_CONTRIBUTION_UNCALIBRATED = 30
 
 #: Printed by the CLI and quoted in the docs. An heuristic must never be dressed as a
 #: measurement.
 UNCALIBRATED_NOTICE = (
-    "min_contribution=30 is a WEAK-MODEL FLOOR and is NOT CALIBRATED: it was chosen to "
-    "leave 5-6 cases of margin above the measured sampling noise, NOT measured against a "
-    "population of weak models — none has ever been observed on this catalogue (the only "
-    "low point held is the null control at 0/52). DEBT: sweep a deliberately weak model "
-    "(a 1B, or a degraded config) and see where it lands; that is the single act that "
-    "turns 30 into a calibrated number, and it costs ~20 minutes."
+    "min_contribution=30 is a WEAK-MODEL FLOOR and is STILL NOT CALIBRATED — and as of "
+    "2026-07-13 we know the prescribed remedy does not work. Five full passes of a "
+    "deliberately weak model (llama3.2:1b) land at [33, 33, 35, 32, 31] of 52; the default "
+    "llama3.2:3b lands at [35, 36, 33, 36, 36]. The distributions OVERLAP (the weak model's "
+    "best pass beats the default's worst), so NO bar separates them, and 30 is below both "
+    "minima: against the only weak anchor we have, it fails nothing. It still catches a "
+    "model contributing almost nothing (the null control scores 0/52 and fails it) — but it "
+    "cannot do what its name promises. DEBT (open): a genuinely weak anchor, which a 1B is "
+    "not. What DOES discriminate on the same data is Rule 1: the weak model breaks 9 "
+    "distinct floor runs to the default's 5."
 )
 
 

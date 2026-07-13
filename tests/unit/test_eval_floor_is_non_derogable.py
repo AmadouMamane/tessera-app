@@ -25,7 +25,13 @@ from pathlib import Path
 
 import pytest
 
-from eval.contribution import evaluate_contribution, floor_populations, restrict_baseline
+from eval.contribution import (
+    MIN_CONTRIBUTION_UNCALIBRATED,
+    UNCALIBRATED_NOTICE,
+    evaluate_contribution,
+    floor_populations,
+    restrict_baseline,
+)
 from eval.ratchet import Baseline, catalogue_version, load_baseline
 from eval.sets import list_eval_sets, load_eval_set
 
@@ -216,7 +222,60 @@ def test_a_restricted_floor_names_the_cases_it_actually_holds() -> None:
             assert restricted.catalogue_version != floor.catalogue_version
 
 
-# ── 3. The floor binds the RELEASE, not just a tile ──────────────────────────
+# ── 3. Rule 2's bar was measured, and it does not separate the models ────────
+
+
+def test_rule_2s_bar_is_measured_inert_and_says_so() -> None:
+    """The bar of 30 CANNOT fail either model we swept. Pinned so nobody re-claims it works.
+
+    ADR 0021 prescribed the fix for its own debt: "sweep a deliberately weak model … that is
+    the single act that turns 30 into a calibrated number, and it costs ~20 minutes." It was
+    run on 2026-07-13, five full passes each. It failed:
+
+        llama3.2:3b  (must ADMIT)   [35, 36, 33, 36, 36]   min 33
+        llama3.2:1b  (must REJECT)  [33, 33, 35, 32, 31]   min 31
+
+    The distributions OVERLAP — a 1B is not weak on this catalogue — so no bar separates
+    them, and 30 is below both minima. This test fails if someone later "calibrates" the bar
+    without a new measurement, or quietly raises it so that it appears to bite.
+    """
+    art = json.loads(Path("eval/baselines/contribution-calibration.json").read_text("utf-8"))
+    models = art["models"]
+    default = models["llama3.2:3b"]["contribution"]
+    weak = models["llama3.2:1b"]["contribution"]
+
+    # No bar admits every pass of the default and rejects every pass of the weak model.
+    assert weak["max"] >= default["min"], "the distributions must be recorded as overlapping"
+    # And the bar in force fails NEITHER of them.
+    bar = art["min_contribution_in_force"]
+    assert bar == MIN_CONTRIBUTION_UNCALIBRATED
+    assert bar < default["min"] and bar < weak["min"], (
+        "the bar sits below both models' worst pass: against the only weak anchor we have, "
+        "it fails nothing"
+    )
+    # The constant must SAY it, at the point of use, and not only in a docstring.
+    assert "NOT CALIBRATED" in UNCALIBRATED_NOTICE
+    assert "OVERLAP" in UNCALIBRATED_NOTICE
+
+
+def test_rule_1_discriminates_where_rule_2_does_not() -> None:
+    """The positive half, and the reason this lot wired RULE 1 into the release decision.
+
+    On the very same passes, the weak model breaks 9 distinct runs of the null floor to the
+    default's 5. The rule anchored on the MEASURED FLOOR separates the models; the rule with
+    a CHOSEN NUMBER does not. That is ADR 0021's thesis, proven a second time — against its
+    own surviving bar.
+    """
+    art = json.loads(Path("eval/baselines/contribution-calibration.json").read_text("utf-8"))
+    default_breaks = art["models"]["llama3.2:3b"]["rule1_distinct_breaks"]
+    weak_breaks = art["models"]["llama3.2:1b"]["rule1_distinct_breaks"]
+    assert len(weak_breaks) > len(default_breaks), (
+        "the weak model must break MORE of the floor — this is what Rule 1 sees and the "
+        "contribution rate does not"
+    )
+
+
+# ── 4. The floor binds the RELEASE, not just a tile ──────────────────────────
 
 
 def test_rule_1_cannot_be_bought_off_by_a_perfect_contribution() -> None:
