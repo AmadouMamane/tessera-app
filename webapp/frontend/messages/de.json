@@ -812,6 +812,54 @@
     "agentFilterHint": "Globaler GOUVERNER/PLATEFORME-Filter — getrennt vom AGENT-Umschalter; filtert die Audit-Kette nach agent_id (gestempelte Ereignisse)."
   },
   "eval": {
+    "score": {
+      "unnamedModel": "unbenanntes Modell",
+      "unstamped": "ohne Stempel",
+      "absoluteIsNotTheGrade": "absolut — das ist nicht die Note",
+      "floor": "Sockel der Guard-Schicht",
+      "floorHint": "ohne jedes Modell bestanden",
+      "contribution": "Beitrag",
+      "contributionHint": "von den {population} Fällen, die der Sockel nicht hält ({rate})",
+      "breaks": "bricht",
+      "breaksCandidate": "Fälle, die der Sockel allein hielt — Bruch-Kandidat, den ein Dashboard nicht nachspielen kann",
+      "breaksNone": "kein Bruch",
+      "breaksNoneHint": "verschlechtert nichts, was der Sockel allein hielt",
+      "verdict": {
+        "block": "BLOCKIERT",
+        "pass": "BESTANDEN"
+      },
+      "rule": "Regel {n}",
+      "uncalibrated": "Schwelle der Regel 2: {min}. BEGRÜNDET gewählt, nie KALIBRIERT — auf diesem Katalog wurde nie ein schwaches Modell gemessen.",
+      "rule2NotGated": "Regel 2 wird gemessen, aber nicht gegatet: eine auf eine andere Population begründete Schwelle wäre eine erfundene Zahl.",
+      "noModel": {
+        "title": "kein Modell hat geantwortet",
+        "body": "0 Tokens erzeugt. Das Feld „model“ im Report nennt das KONFIGURIERTE Modell — auch ein totes Backend liefert einen vollständigen Report, der es nennt. Ohne Tokens gibt es nichts zu benoten."
+      },
+      "noFloor": {
+        "title": "kein committeter Sockel",
+        "body": "Ohne die Nullkontrolle lässt sich der Anteil der Guard-Schicht nicht vom Anteil des Modells trennen. Es wird nichts veröffentlicht statt einer Rate, die beide addiert."
+      },
+      "offReferential": {
+        "title": "anderer Referenzstand",
+        "body": "Dieser Lauf wurde gegen den Fallsatz {run} bewertet, der Sockel gegen {floor}. Die Differenz ist nicht dem Modell zuzuschreiben."
+      }
+    },
+    "sweep": {
+      "title": "Sweep — {count, plural, one {# Modell} other {# Modelle}} auf einem einzigen Fallsatz",
+      "subtitle": "Ein Sweep sind N Läufe auf EINER Version des Fallsatzes. Bei drei Modellen bedeutet „der letzte Lauf“ nichts mehr.",
+      "referential": "Referenzstand {version}",
+      "freshness": "{days, plural, =0 {letzter Lauf heute} one {letzter Lauf vor # Tag} other {letzter Lauf vor # Tagen}}",
+      "freshnessUnknown": "Datum des letzten Laufs unbekannt",
+      "floorRead": "Sockel aus der committeten Baseline gelesen: {passed}/{total} ohne jedes Modell bestanden",
+      "staleCatalogue": "Der Fallsatz hat sich unter diesem Sweep bewegt: bewertet gegen {run}, der Katalog steht heute auf {current}. Diese Urteile betreffen Fälle, die es so nicht mehr gibt.",
+      "offReferential": "{count, plural, one {# Lauf ausgeschlossen} other {# Läufe ausgeschlossen}} — gegen einen anderen Fallsatz bewertet, also nicht vergleichbar.",
+      "noRecentRun": "kein aktueller Lauf auf dem geltenden Referenzstand",
+      "pickRun": "Im Detail angezeigter Lauf",
+      "empty": {
+        "title": "kein lesbarer Sweep",
+        "body": "Weder eval/reports/sweep/ noch das Bundle data/eval/ waren lesbar. Es wird nichts angezeigt statt einer Vorgabezahl."
+      }
+    },
     "title": "Regressionsscore",
     "description": "Tessera wird gegen einen Katalog öffentlich dokumentierter Agentenfehler getestet. Durchgefallene Fälle bleiben sichtbar — nichts wird versteckt.",
     "summary": {

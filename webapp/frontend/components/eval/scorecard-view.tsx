@@ -1,309 +1,208 @@
-import { CircleDollarSign, FileSearch } from "lucide-react";
+import { AlertTriangle, CalendarClock, FileSearch, Layers } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { OperatorLocked } from "@/components/auth/operator-locked";
-import { BestRunHighlight } from "@/components/eval/best-run-highlight";
-import { CompareControls } from "@/components/eval/compare-controls";
-import { EvalTabs } from "@/components/eval/eval-tabs";
 import { FailureSynthesis } from "@/components/eval/failure-synthesis";
-import { ModelComparison } from "@/components/eval/model-comparison";
 import { ResultsByCategory } from "@/components/eval/results-by-category";
-import { RunHistoryPanel } from "@/components/eval/run-history-panel";
+import { RunPicker } from "@/components/eval/run-picker";
+import { ScoreCard } from "@/components/eval/score-card";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { RunCost, ScorecardDocument } from "@/lib/api/schemas";
 import { currentRole, isAdmin, isOperator, isSuperadmin } from "@/lib/auth/session";
-import { loadAllRuns, loadScorecard } from "@/lib/eval";
+import { MIN_CONTRIBUTION_UNCALIBRATED, ageInDays, decomposeRun, isStale } from "@/lib/eval-score";
+import { type Sweep, loadSweep, loadSweepRun } from "@/lib/eval-sweep";
 import { getSynthesisAdminFlag } from "@/lib/server/settings";
 
 interface ScorecardViewProps {
   locale: string;
-  filename?: string;
-  vs?: string;
+  /** Which run's per-case detail to open. A run id from the sweep, never a path. */
+  run?: string;
 }
 
-export async function ScorecardView({ locale, filename, vs }: ScorecardViewProps) {
-  const [runs, t] = await Promise.all([
-    loadAllRuns(),
+/**
+ * The eval surface, rebuilt on the SWEEP.
+ *
+ * What it used to do, and why none of it survived:
+ *
+ *  - It read `latest.json`, which resolved to a THREE-CASE, ZERO-TOKEN run from 20 June, and
+ *    rendered "3/3 — 100%". A run no model ever answered, published as a perfect score.
+ *  - Its `SummaryRow` printed a raw pass rate. A raw rate adds the guard's deterministic floor
+ *    to the model's contribution and reads as if the model earned the sum (§A1.2).
+ *  - Its `BestRunHighlight` pinned "the best run" by that rate. The sweep proves the rate ranks
+ *    nothing: two models tie at 157/174 and one of them degrades the agent.
+ *
+ * What replaces them: the sweep's runs, each through the one {@link ScoreCard} that cannot
+ * render a bare number, and the référentiel + freshness stated in the header — never implied.
+ */
+export async function ScorecardView({ locale, run }: ScorecardViewProps) {
+  const [sweep, t] = await Promise.all([
+    loadSweep(),
     getTranslations({ locale, namespace: "eval" }),
   ]);
 
-  // Aggregate scores stay public (showcase); the per-case detail — case status
-  // and failure reasons, i.e. a map of the live deployment's weaknesses — is an
-  // operator surface (ADR 0009).
+  // Default to the NEWEST run, never the best-scoring one. "Newest" is a fact about a run;
+  // "best" would be a ranking, and on this catalogue the absolute rate ranks nothing.
+  const selected = sweep?.runs.find((r) => r.id === run) ?? sweep?.runs[0];
+
+  if (!sweep || !selected) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <EmptyState
+            icon={<FileSearch />}
+            title={t("sweep.empty.title")}
+            description={t("sweep.empty.body")}
+          />
+          <div className="mt-6 rounded-md bg-[var(--muted)]/40 p-4 font-mono text-xs leading-relaxed text-[var(--muted-foreground)]">
+            $ uv run python scripts/run_eval.py --report eval/reports/sweep/&lt;model&gt;.json
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Aggregate scores stay public (showcase); the per-case detail — case status and failure
+  // reasons, i.e. a map of the live deployment's weaknesses — is an operator surface (ADR 0009).
   const role = await currentRole();
   const operator = isOperator(role);
   const superadmin = isSuperadmin(role);
   const admin = isAdmin(role);
-
-  // The synthesis is superadmin-only by default; the superadmin can grant the
-  // admin role visibility via a DB-persisted toggle. Only fetch the flag when it
-  // could matter (superadmin sees the toggle; admin's visibility depends on it).
   const synthesisForAdmin = superadmin || admin ? await getSynthesisAdminFlag() : false;
   const showSynthesis = superadmin || (admin && synthesisForAdmin);
 
-  // Default the landing to the best-scoring run of the CURRENT catalogue (the
-  // version of the most recent run), so the headline isn't a high score from a
-  // smaller/older catalogue. Older-catalogue runs stay visible (and badged) in
-  // the history. Falls back to all runs when no version is stamped.
-  const currentVersion = runs[0]?.catalogue_version ?? null;
-  const currentRuns = currentVersion
-    ? runs.filter((r) => r.catalogue_version === currentVersion)
-    : runs;
-  const bestRun = currentRuns.length
-    ? currentRuns.reduce((best, r) => (r.summary.pass_rate > best.summary.pass_rate ? r : best))
-    : null;
+  const detail = await loadSweepRun(selected.id, sweep);
 
-  // Cumulative *eval* budget across all runs (the report is the system of record;
-  // distinct from the live agent's *prod* /budget). Admin-only.
-  const evalCostCumulativeEur = runs.reduce((s, r) => s + (r.cost?.estimated_cost_eur ?? 0), 0);
+  return (
+    <div className="flex flex-col gap-6 pb-10">
+      <SweepHeader sweep={sweep} locale={locale} />
 
-  // Comparison = run A (the viewed run) vs run B (user-picked via ?vs=). Both
-  // are selectable; B defaults to the latest run of a different model.
-  const aFile = filename ?? bestRun?.filename;
-  const scorecard = await loadScorecard(aFile);
-  const aModel = scorecard?.model ?? null;
-  const bFile =
-    vs ??
-    runs.find((r) => r.model && r.model !== aModel && r.filename !== aFile)?.filename ??
-    runs.find((r) => r.filename !== aFile)?.filename;
-  const bScorecard = operator && bFile ? await loadScorecard(bFile) : null;
-  const comparePair =
-    scorecard && bScorecard
-      ? {
-          a: { model: scorecard.model ?? null, run_at: scorecard.run_at ?? null, doc: scorecard },
-          b: {
-            model: bScorecard.model ?? null,
-            run_at: bScorecard.run_at ?? null,
-            doc: bScorecard,
-          },
-        }
-      : null;
+      {/* Every run of the sweep, decomposed. Three cards, one référentiel, no ranking. */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {sweep.runs.map((r) => (
+          <ScoreCard
+            key={r.id}
+            card={decomposeRun(r, sweep.floor, MIN_CONTRIBUTION_UNCALIBRATED)}
+            locale={locale}
+            runAt={r.runAt}
+          />
+        ))}
+      </div>
 
-  const detail = (
-    <div className="flex flex-col gap-6">
-      {/* Best run pinned to the top so the first impression is the flagship score */}
-      {bestRun && <BestRunHighlight run={bestRun} locale={locale} />}
-
-      {/* Evolution history (per-run model badges) */}
-      {runs.length > 0 && <RunHistoryPanel runs={runs} currentFile={aFile} />}
-
-      {/* Selecting a run (history row or best-run banner) scrolls here, via ScrollLink. */}
       <div id="run-detail" className="flex scroll-mt-4 flex-col gap-6">
-        {!scorecard ? (
-          <Card>
-            <CardContent className="p-6">
-              <EmptyState icon={<FileSearch />} title={t("title")} description={t("description")} />
-              <div className="mt-6 rounded-md bg-[var(--muted)]/40 p-4 font-mono text-xs leading-relaxed text-[var(--muted-foreground)]">
-                $ uv run python scripts/run_eval.py
-              </div>
-            </CardContent>
-          </Card>
+        <RunPicker
+          runs={sweep.runs.map((r) => ({ id: r.id, model: r.model, runAt: r.runAt }))}
+          selected={selected.id}
+          label={t("sweep.pickRun")}
+        />
+
+        {showSynthesis && detail ? (
+          <FailureSynthesis synthesis={detail.synthesis} results={detail.results} locale={locale} />
+        ) : null}
+
+        {operator && detail ? (
+          <ResultsByCategory
+            results={detail.results}
+            columns={{
+              case: t("columns.case"),
+              language: t("columns.language"),
+              result: t("columns.result"),
+              expected: t("columns.expected"),
+              failureReason: t("columns.failureReason"),
+            }}
+            passLabel={t("passed")}
+            failLabel={t("failed")}
+            filterLabels={{
+              all: t("resultFilter.all"),
+              failed: t("resultFilter.failed"),
+              passed: t("resultFilter.passed"),
+              empty: t("resultFilter.empty"),
+            }}
+          />
         ) : (
-          <>
-            {/* Summary tiles */}
-            <SummaryRow
-              scorecard={scorecard}
-              labels={{
-                total: t("summary.total"),
-                passed: t("summary.passed"),
-                failed: t("summary.failed"),
-                rate: t("summary.rate"),
-              }}
-            />
-            {/* Eval LLM budget — admin-only, distinct from the prod /budget */}
-            {admin && scorecard.cost ? (
-              <EvalBudgetCard
-                cost={scorecard.cost}
-                cumulativeEur={evalCostCumulativeEur}
-                labels={{
-                  title: t("evalBudget.title"),
-                  thisRun: t("evalBudget.thisRun"),
-                  cumulative: t("evalBudget.cumulative"),
-                }}
-              />
-            ) : null}
-            {/* Failure synthesis — superadmin by default; the superadmin can
-                grant the admin role visibility from Settings (DB-persisted). */}
-            {showSynthesis ? (
-              <FailureSynthesis
-                synthesis={scorecard.synthesis}
-                results={scorecard.results}
-                locale={locale}
-              />
-            ) : null}
-            {/* Results by category — operator surface (failure reasons) */}
-            {operator ? (
-              <ResultsByCategory
-                results={scorecard.results}
-                columns={{
-                  case: t("columns.case"),
-                  language: t("columns.language"),
-                  result: t("columns.result"),
-                  expected: t("columns.expected"),
-                  failureReason: t("columns.failureReason"),
-                }}
-                passLabel={t("passed")}
-                failLabel={t("failed")}
-                filterLabels={{
-                  all: t("resultFilter.all"),
-                  failed: t("resultFilter.failed"),
-                  passed: t("resultFilter.passed"),
-                  empty: t("resultFilter.empty"),
-                }}
-              />
-            ) : (
-              <OperatorLocked locale={locale} />
-            )}
-          </>
+          <OperatorLocked locale={locale} />
         )}
       </div>
     </div>
   );
-
-  return (
-    <EvalTabs
-      detail={detail}
-      compare={
-        // The comparison renders a per-case pass/fail table — same sensitivity
-        // as the detail — so it is operator-only. For visitors `compare` is null
-        // and EvalTabs hides the toggle entirely.
-        operator && comparePair ? (
-          <div className="flex flex-col gap-5 pb-10">
-            <CompareControls
-              runs={runs}
-              aFile={aFile}
-              bFile={bFile}
-              labels={{ a: t("compareRunA"), b: t("compareRunB") }}
-            />
-            <ModelComparison a={comparePair.a} b={comparePair.b} locale={locale} />
-          </div>
-        ) : null
-      }
-      labels={{ detail: t("viewRun"), compare: t("viewCompare") }}
-    />
-  );
 }
 
-interface SummaryLabels {
-  total: string;
-  passed: string;
-  failed: string;
-  rate: string;
-}
+/**
+ * The référentiel and the freshness, stated before any number is shown.
+ *
+ * Criterion 4 asks for the freshness and criterion 2 for the référentiel, and both are here for
+ * the same reason: a verdict without the case set it was scored against, and without the date it
+ * was scored on, is a number an operator cannot act on.
+ */
+async function SweepHeader({ sweep, locale }: { sweep: Sweep; locale: string }) {
+  const t = await getTranslations({ locale, namespace: "eval" });
+  const days = ageInDays(sweep.newestRunAt, new Date());
+  const stale = isStale(sweep.catalogueVersion, sweep.currentCatalogueVersion);
 
-function SummaryRow({
-  scorecard,
-  labels,
-}: {
-  scorecard: ScorecardDocument;
-  labels: SummaryLabels;
-}) {
-  const { summary } = scorecard;
-  const passRate = `${(summary.pass_rate * 100).toFixed(0)}%`;
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <SummaryTile label={labels.total} value={summary.total} />
-      <SummaryTile label={labels.passed} value={summary.passed} tone="success" />
-      <SummaryTile label={labels.failed} value={summary.failed} tone="danger" />
-      <SummaryTile label={labels.rate} value={passRate} tone="navy" />
-    </div>
-  );
-}
-
-function EvalBudgetCard({
-  cost,
-  cumulativeEur,
-  labels,
-}: {
-  cost: RunCost;
-  cumulativeEur: number;
-  labels: { title: string; thisRun: string; cumulative: string };
-}) {
-  const recorded = cost.input_tokens > 0 || cost.output_tokens > 0;
   return (
     <Card>
-      <CardContent className="flex flex-wrap items-center gap-x-10 gap-y-3 py-4">
-        <div className="flex items-center gap-2">
-          <CircleDollarSign className="h-4 w-4 text-gold-500" />
-          <span className="font-medium text-sm">{labels.title}</span>
+      <CardContent className="flex flex-col gap-3 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-gold-600 dark:text-gold-400" />
+            <h2 className="font-semibold text-base">
+              {t("sweep.title", { count: sweep.runs.length })}
+            </h2>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="navy" className="font-mono">
+              {t("sweep.referential", { version: sweep.catalogueVersion ?? "—" })}
+            </Badge>
+            <Badge tone={days !== null && days > 0 ? "neutral" : "success"} className="gap-1.5">
+              <CalendarClock className="h-3 w-3" />
+              {days === null ? t("sweep.freshnessUnknown") : t("sweep.freshness", { days })}
+            </Badge>
+          </div>
         </div>
-        <div className="flex flex-col">
-          <span className="text-xs text-[var(--muted-foreground)]">{labels.thisRun}</span>
-          {recorded ? (
-            <>
-              <span className="font-serif font-semibold text-xl tabular-nums">
-                € {cost.estimated_cost_eur.toFixed(4)}
-              </span>
-              <span className="text-[11px] text-[var(--muted-foreground)] tabular-nums">
-                {cost.input_tokens.toLocaleString()} in · {cost.output_tokens.toLocaleString()} out
-              </span>
-            </>
-          ) : (
-            // Runs scored before per-run cost was recorded carry no usage.
-            <span className="font-serif font-semibold text-xl text-[var(--muted-foreground)]">
-              —
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col">
-          <span className="text-xs text-[var(--muted-foreground)]">{labels.cumulative}</span>
-          <span className="font-serif font-semibold text-xl tabular-nums">
-            € {cumulativeEur.toFixed(4)}
-          </span>
-        </div>
+
+        <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
+          {t("sweep.subtitle")}
+        </p>
+
+        {sweep.floorTotals ? (
+          <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
+            {t("sweep.floorRead", {
+              passed: sweep.floorTotals.passed,
+              total: sweep.floorTotals.total,
+            })}
+          </p>
+        ) : null}
+
+        {stale ? (
+          <Note tone="warning">
+            {t("sweep.staleCatalogue", {
+              run: sweep.catalogueVersion ?? "—",
+              current: sweep.currentCatalogueVersion ?? "—",
+            })}
+          </Note>
+        ) : null}
+
+        {sweep.offReferential.length > 0 ? (
+          <Note tone="warning">
+            {t("sweep.offReferential", { count: sweep.offReferential.length })}
+          </Note>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 
-interface SummaryTileProps {
-  label: string;
-  value: number | string;
-  tone?: "success" | "danger" | "navy";
-}
-
-function SummaryTile({ label, value, tone }: SummaryTileProps) {
-  const valueColor =
-    tone === "success"
-      ? "text-green-700 dark:text-green-400"
-      : tone === "danger"
-        ? "text-red-700 dark:text-red-400"
-        : tone === "navy"
-          ? "text-navy-900 dark:text-gold-400"
-          : "text-[var(--foreground)]";
-  const accent =
-    tone === "success"
-      ? "from-green-500/70"
-      : tone === "danger"
-        ? "from-red-500/70"
-        : tone === "navy"
-          ? "from-gold-500/70"
-          : "from-[var(--border)]";
-  const glow =
-    tone === "success"
-      ? "bg-green-500/[0.07]"
-      : tone === "danger"
-        ? "bg-red-500/[0.07]"
-        : tone === "navy"
-          ? "bg-gold-500/[0.08]"
-          : "bg-transparent";
+function Note({ children, tone }: { children: React.ReactNode; tone: "warning" }) {
   return (
-    <Card className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-elevated)]">
-      <div
-        className={`pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${accent} via-transparent to-transparent`}
-      />
-      <div
-        className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl ${glow}`}
-      />
-      <CardContent className="flex flex-col items-center gap-1.5 py-6">
-        <span className="text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
-          {label}
-        </span>
-        <span className={`font-serif text-4xl font-semibold tabular-nums ${valueColor}`}>
-          {value}
-        </span>
-      </CardContent>
-    </Card>
+    <div
+      className={`flex items-start gap-2 rounded-md border p-2.5 text-xs leading-relaxed ${
+        tone === "warning"
+          ? "border-warning-500/30 bg-warning-50 text-warning-800 dark:bg-warning-700/15 dark:text-warning-100"
+          : ""
+      }`}
+    >
+      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>{children}</span>
+    </div>
   );
 }

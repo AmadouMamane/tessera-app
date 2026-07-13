@@ -6,7 +6,15 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignore": ["node_modules", ".next", "out", "playwright-report", "test-results", "coverage"]
+    "ignore": [
+      "node_modules",
+      ".next",
+      "out",
+      "playwright-report",
+      "test-results",
+      "coverage",
+      "data/eval/**"
+    ]
   },
   "formatter": {
     "enabled": true,

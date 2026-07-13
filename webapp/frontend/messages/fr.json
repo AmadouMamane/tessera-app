@@ -812,6 +812,54 @@
     "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT ; filtre la chaîne d'audit par agent_id (événements stampés)."
   },
   "eval": {
+    "score": {
+      "unnamedModel": "modèle non nommé",
+      "unstamped": "non estampillé",
+      "absoluteIsNotTheGrade": "absolu — ce n'est pas la note",
+      "floor": "plancher du garde",
+      "floorHint": "passés sans aucun modèle",
+      "contribution": "contribution",
+      "contributionHint": "sur les {population} cas que le garde échoue ({rate})",
+      "breaks": "casse",
+      "breaksCandidate": "cas que le garde tenait seul — casse candidate, qu'un tableau de bord ne peut pas rejouer",
+      "breaksNone": "aucune casse",
+      "breaksNoneHint": "ne dégrade rien que le garde tenait seul",
+      "verdict": {
+        "block": "BLOQUÉ",
+        "pass": "PASSÉ"
+      },
+      "rule": "règle {n}",
+      "uncalibrated": "Barre de la règle 2 : {min}. Choix RAISONNÉ, jamais CALIBRÉ — aucun modèle faible n'a jamais été mesuré sur ce catalogue.",
+      "rule2NotGated": "Règle 2 mesurée, sans barre : une barre raisonnée sur une autre population serait un nombre inventé.",
+      "noModel": {
+        "title": "aucun modèle n'a répondu",
+        "body": "0 token généré. Le champ « modèle » du rapport nomme le modèle CONFIGURÉ — un backend mort produit un rapport complet qui le nomme quand même. Sans token, il n'y a rien à noter."
+      },
+      "noFloor": {
+        "title": "aucun plancher commité",
+        "body": "Sans le contrôle nul, la part du garde ne peut pas être séparée de celle du modèle. Rien n'est publié, plutôt qu'un taux qui les additionne."
+      },
+      "offReferential": {
+        "title": "référentiel différent",
+        "body": "Ce run a été noté sur le jeu de cas {run}, le plancher sur {floor}. L'écart n'est pas attribuable au modèle."
+      }
+    },
+    "sweep": {
+      "title": "Sweep — {count, plural, one {# modèle} other {# modèles}} sur un seul jeu de cas",
+      "subtitle": "Un sweep, c'est N runs sur UNE version de jeu de cas. Avec trois modèles, « le dernier run » ne veut plus rien dire.",
+      "referential": "référentiel {version}",
+      "freshness": "{days, plural, =0 {dernier run aujourd'hui} one {dernier run il y a # jour} other {dernier run il y a # jours}}",
+      "freshnessUnknown": "date du dernier run inconnue",
+      "floorRead": "plancher lu dans la baseline commitée : {passed}/{total} passés sans aucun modèle",
+      "staleCatalogue": "Le jeu de cas a bougé sous ce sweep : il a été noté sur {run}, le catalogue est aujourd'hui en {current}. Ces verdicts portent sur des cas qui ne sont plus ceux d'aujourd'hui.",
+      "offReferential": "{count, plural, one {# run écarté} other {# runs écartés}} — noté sur un autre jeu de cas, donc non comparable.",
+      "noRecentRun": "aucun run récent sur le référentiel courant",
+      "pickRun": "Run affiché en détail",
+      "empty": {
+        "title": "aucun sweep lisible",
+        "body": "Ni eval/reports/sweep/ ni le bundle data/eval/ n'ont pu être lus. Rien n'est affiché, plutôt qu'un chiffre par défaut."
+      }
+    },
     "title": "Score de non-régression",
     "description": "Tessera est confrontée à un catalogue d'échecs publiquement documentés. Les cas qui échouent sont visibles, pas masqués.",
     "summary": {
