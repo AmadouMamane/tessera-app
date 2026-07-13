@@ -124,3 +124,40 @@ harnais, preuve non conservée**, jamais recalculés en douce.
   opposés*. Si ce test passe un jour pour la mauvaise raison, c'est que l'écran s'est remis à
   classer sur le taux.
 - Front complet : `lint` 0 erreur · `typecheck` propre · **282 tests** verts.
+
+**Captures** : `/tmp/tessera-qualite/lot1-fr-admin.png`.
+**Landé** : `origin/main = 588b094e` (gate-twice vert sur un seul arbre, vérifié par contenu).
+
+---
+
+## LOT 2 — l'ossature  ✅
+
+**Deux onglets, pas trois.** Un dataset est un **artefact versionné** ; un run est un **événement**
+(§P3). Ils se séparent. Le troisième onglet (`Comparaison`) arrive au **lot 4** : je refuse
+d'afficher un onglet vide — une porte qui ne mène nulle part est un mensonge d'interface.
+
+**Les onglets sont des LIENS, pas un `useState`.** Deux conséquences, toutes deux voulues : seul
+l'onglet ouvert est rendu côté serveur (le catalogue fait 63 cas, un run 174 résultats — tout rendre
+pour pouvoir basculer est du gâchis), et **un onglet est une URL qu'un opérateur peut envoyer**.
+
+| Fichier | Rôle |
+| --- | --- |
+| `components/eval/eval-tabs.tsx` | réécrit : navigation par liens, `?tab=`, deep-linkable |
+| `components/eval/catalogue-tab.tsx` | **onglet A** — les 63 cas par catégorie, dépliables, avec la fiche de définition |
+| `components/eval/criterion-line.tsx` | une ligne de critère lisible, **partagée** avec la fiche d'exécution (lot 3) |
+| `lib/eval-criteria.ts` + test | **module pur** — énumère les critères d'un cas et, surtout, dit lesquels sont **fidèlement recalculables** |
+
+**La fiche de cas montre la preuve** : comportement attendu, critères en clair (« ne doit jamais
+contenir : `FR76 3000…` »), **les prompts réellement envoyés dans les trois langues**, et la
+**source citée avec son lien** (OWASP LLM Top 10, DORA, CNIL…). Cette évidence dormait dans
+`eval/failures/*.json` et **aucune surface ne l'avait jamais montrée**.
+
+**Supprimés :** `run-history-panel.tsx` et `scroll-link.tsx` (orphelins ; le panneau d'historique
+affichait une colonne « Taux »).
+
+**Un piège attrapé par le linter :** le namespace `eval` avait déjà une clé `catalogue` (une
+**chaîne**), et j'y ajoutais un `catalogue` (un **objet**). `JSON.parse` garde le dernier —
+l'une des deux aurait disparu **en silence**. Les clés mortes (`bestRun`, `catalogue`,
+`catalogueCoverage`, consommées par les composants supprimés) sont retirées des trois langues.
+
+**Captures** : `lot2-fr-jeu-de-cas.png`, `lot2-fr-fiche-cas.png`.

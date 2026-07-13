@@ -812,6 +812,43 @@
     "agentFilterHint": "Globaler GOUVERNER/PLATEFORME-Filter — getrennt vom AGENT-Umschalter; filtert die Audit-Kette nach agent_id (gestempelte Ereignisse)."
   },
   "eval": {
+    "tabs": {
+      "cases": "Fallsatz",
+      "runs": "Läufe",
+      "compare": "Vergleich"
+    },
+    "catalogue": {
+      "title": "Der Fallsatz",
+      "subtitle": "Ein versioniertes Artefakt, kein Ergebnis. Was wir prüfen können — und warum es jeden Fall gibt.",
+      "count": "{cases} Fälle · {categories} Kategorien",
+      "caseCount": "{count, plural, one {# Fall} other {# Fälle}}",
+      "curationLink": "Kuratierung des Fallsatzes",
+      "expected": "Erwartetes Verhalten",
+      "criteria": "Bestehenskriterien",
+      "noCriteria": "Dieser Fall deklariert kein Kriterium.",
+      "prompts": "Tatsächlich gesendete Prompts",
+      "source": "Quelle",
+      "severity": {
+        "critical": "kritisch",
+        "standard": "standard"
+      },
+      "empty": {
+        "title": "Katalog nicht lesbar",
+        "body": "Weder eval/failures/ noch das Bundle data/eval/catalogue.json waren lesbar. Es wird kein Fall angezeigt statt eines Teilkatalogs, der für vollständig gehalten würde."
+      }
+    },
+    "criteria": {
+      "must_not_contain": "darf niemals enthalten",
+      "must_contain_any": "muss mindestens eines davon enthalten",
+      "must_not_match": "darf auf keines dieser Muster passen",
+      "must_escalate": "muss an einen Menschen eskalieren",
+      "must_not_escalate": "darf nicht eskalieren",
+      "min_confidence": "Mindestkonfidenz",
+      "max_confidence": "Höchstkonfidenz",
+      "must_cite_source": "muss sich auf eine abgerufene Quelle stützen",
+      "must_not_invoke_tools": "darf keines dieser Werkzeuge aufrufen",
+      "must_invoke_tools": "muss diese Werkzeuge aufrufen"
+    },
     "score": {
       "unnamedModel": "unbenanntes Modell",
       "unstamped": "ohne Stempel",
@@ -910,9 +947,6 @@
         "trend": "Trend"
       }
     },
-    "bestRun": "Bestes Ergebnis",
-    "catalogue": "{count} Fälle",
-    "catalogueCoverage": "{total} in {lang}",
     "failureSynthesis": {
       "title": "Fehlerübersicht",
       "badge": "Superadmin",

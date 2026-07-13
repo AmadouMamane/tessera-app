@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { parseTab } from "@/components/eval/eval-tabs";
 import { ScorecardView } from "@/components/eval/scorecard-view";
 import { AppShell } from "@/components/layout/app-shell";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 interface EvalPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ run?: string }>;
+  searchParams: Promise<{ tab?: string; run?: string }>;
 }
 
 export async function generateMetadata({ params }: EvalPageProps) {
@@ -19,12 +20,12 @@ export async function generateMetadata({ params }: EvalPageProps) {
 
 export default async function EvalPage({ params, searchParams }: EvalPageProps) {
   const { locale } = await params;
-  const { run } = await searchParams;
+  const { tab, run } = await searchParams;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "eval" });
   return (
     <AppShell title={t("title")} description={t("description")}>
-      <ScorecardView locale={locale} run={run} />
+      <ScorecardView locale={locale} tab={parseTab(tab)} run={run} />
     </AppShell>
   );
 }

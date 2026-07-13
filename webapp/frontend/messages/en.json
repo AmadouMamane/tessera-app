@@ -812,6 +812,43 @@
     "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher; filters the audit chain by agent_id (stamped events)."
   },
   "eval": {
+    "tabs": {
+      "cases": "Case set",
+      "runs": "Runs",
+      "compare": "Comparison"
+    },
+    "catalogue": {
+      "title": "The case set",
+      "subtitle": "A versioned artefact, not a result. What we know how to test, and why each case exists.",
+      "count": "{cases} cases · {categories} categories",
+      "caseCount": "{count, plural, one {# case} other {# cases}}",
+      "curationLink": "Case-set curation",
+      "expected": "Expected behaviour",
+      "criteria": "Pass criteria",
+      "noCriteria": "This case declares no criterion.",
+      "prompts": "Prompts actually sent",
+      "source": "Source",
+      "severity": {
+        "critical": "critical",
+        "standard": "standard"
+      },
+      "empty": {
+        "title": "catalogue unreadable",
+        "body": "Neither eval/failures/ nor the data/eval/catalogue.json bundle could be read. No case is shown, rather than a partial catalogue that would read as a complete one."
+      }
+    },
+    "criteria": {
+      "must_not_contain": "must never contain",
+      "must_contain_any": "must contain at least one of",
+      "must_not_match": "must match none of these patterns",
+      "must_escalate": "must escalate to a human",
+      "must_not_escalate": "must not escalate",
+      "min_confidence": "minimum confidence",
+      "max_confidence": "maximum confidence",
+      "must_cite_source": "must be backed by a retrieved source",
+      "must_not_invoke_tools": "must invoke none of these tools",
+      "must_invoke_tools": "must invoke these tools"
+    },
     "score": {
       "unnamedModel": "unnamed model",
       "unstamped": "unstamped",
@@ -910,9 +947,6 @@
         "trend": "Trend"
       }
     },
-    "bestRun": "Best run",
-    "catalogue": "{count} cases",
-    "catalogueCoverage": "{total} in {lang}",
     "failureSynthesis": {
       "title": "Failure synthesis",
       "badge": "superadmin",

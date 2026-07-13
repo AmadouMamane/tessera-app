@@ -812,6 +812,43 @@
     "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT ; filtre la chaîne d'audit par agent_id (événements stampés)."
   },
   "eval": {
+    "tabs": {
+      "cases": "Jeu de cas",
+      "runs": "Exécutions",
+      "compare": "Comparaison"
+    },
+    "catalogue": {
+      "title": "Le jeu de cas",
+      "subtitle": "Un artefact versionné, pas un résultat. Ce qu'on sait tester, et pourquoi chaque cas existe.",
+      "count": "{cases} cas · {categories} catégories",
+      "caseCount": "{count, plural, one {# cas} other {# cas}}",
+      "curationLink": "Curation du jeu de cas",
+      "expected": "Comportement attendu",
+      "criteria": "Critères de réussite",
+      "noCriteria": "Ce cas ne déclare aucun critère.",
+      "prompts": "Prompts réellement envoyés",
+      "source": "Source",
+      "severity": {
+        "critical": "critique",
+        "standard": "standard"
+      },
+      "empty": {
+        "title": "catalogue illisible",
+        "body": "Ni eval/failures/ ni le bundle data/eval/catalogue.json n'ont pu être lus. Aucun cas n'est affiché, plutôt qu'un catalogue partiel qui passerait pour complet."
+      }
+    },
+    "criteria": {
+      "must_not_contain": "ne doit jamais contenir",
+      "must_contain_any": "doit contenir au moins l'un de",
+      "must_not_match": "ne doit correspondre à aucun de ces motifs",
+      "must_escalate": "doit escalader vers un humain",
+      "must_not_escalate": "ne doit pas escalader",
+      "min_confidence": "confiance minimale",
+      "max_confidence": "confiance maximale",
+      "must_cite_source": "doit s'appuyer sur une source récupérée",
+      "must_not_invoke_tools": "ne doit invoquer aucun de ces outils",
+      "must_invoke_tools": "doit invoquer ces outils"
+    },
     "score": {
       "unnamedModel": "modèle non nommé",
       "unstamped": "non estampillé",
@@ -910,9 +947,6 @@
         "trend": "Évolution"
       }
     },
-    "bestRun": "Meilleur run",
-    "catalogue": "{count} cas",
-    "catalogueCoverage": "{total} en {lang}",
     "failureSynthesis": {
       "title": "Synthèse des échecs",
       "badge": "super-admin",

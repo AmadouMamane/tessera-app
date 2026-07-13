@@ -1,54 +1,53 @@
-"use client";
-
-import { type ReactNode, useState } from "react";
-
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
 /**
- * Segmented switch between the run detail and the model comparison, so clicking
- * a run in the history immediately updates the visible detail (the comparison
- * no longer pushes it off-screen). When there is nothing to compare (<2
- * model-tagged runs) the toggle is hidden and only the detail is shown.
+ * The three surfaces of this screen, and why they are three (spec §P3).
+ *
+ * A DATASET is a versioned artefact. A RUN is an event. The screen used to fold them into one
+ * tab, which makes the central question of any evaluation unanswerable: *did the score move
+ * because the model changed, or because the test changed?*
+ *
+ * The tabs are LINKS, not local state. Two consequences, both wanted: only the open tab is
+ * rendered on the server (the catalogue is 63 cases, a run is 174 results — rendering all three
+ * to switch between them is waste), and a tab is a URL an operator can send to someone.
  */
+export type EvalTab = "cases" | "runs" | "compare";
+
+export const EVAL_TABS: readonly EvalTab[] = ["cases", "runs"] as const;
+
+/** The URL's `?tab=`, narrowed. An unknown value opens the runs — never a blank screen. */
+export function parseTab(value: string | undefined): EvalTab {
+  return EVAL_TABS.includes(value as EvalTab) ? (value as EvalTab) : "runs";
+}
+
 export function EvalTabs({
-  detail,
-  compare,
+  active,
   labels,
 }: {
-  detail: ReactNode;
-  compare: ReactNode | null;
-  labels: { detail: string; compare: string };
+  active: EvalTab;
+  labels: Record<EvalTab, string>;
 }) {
-  const [view, setView] = useState<"detail" | "compare">("detail");
-
-  if (!compare) return <div className="pb-10">{detail}</div>;
-
-  const tabs = [
-    { key: "detail" as const, label: labels.detail },
-    { key: "compare" as const, label: labels.compare },
-  ];
-
   return (
-    <div className="flex flex-col gap-6 pb-10">
-      <div className="inline-flex self-start rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            aria-pressed={view === tab.key}
-            onClick={() => setView(tab.key)}
-            className={cn(
-              "rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors",
-              view === tab.key
-                ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
-                : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-      <div>{view === "detail" ? detail : compare}</div>
-    </div>
+    <nav
+      aria-label="sections"
+      className="inline-flex self-start rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 p-1"
+    >
+      {EVAL_TABS.map((tab) => (
+        <Link
+          key={tab}
+          href={{ pathname: "/eval", query: { tab } }}
+          aria-current={active === tab ? "page" : undefined}
+          className={cn(
+            "rounded-md px-3.5 py-1.5 font-medium text-sm transition-colors",
+            active === tab
+              ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+          )}
+        >
+          {labels[tab]}
+        </Link>
+      ))}
+    </nav>
   );
 }

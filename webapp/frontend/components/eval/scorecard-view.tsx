@@ -2,6 +2,8 @@ import { AlertTriangle, CalendarClock, FileSearch, Layers } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { OperatorLocked } from "@/components/auth/operator-locked";
+import { CatalogueTab } from "@/components/eval/catalogue-tab";
+import { type EvalTab, EvalTabs } from "@/components/eval/eval-tabs";
 import { FailureSynthesis } from "@/components/eval/failure-synthesis";
 import { ResultsByCategory } from "@/components/eval/results-by-category";
 import { RunPicker } from "@/components/eval/run-picker";
@@ -16,6 +18,8 @@ import { getSynthesisAdminFlag } from "@/lib/server/settings";
 
 interface ScorecardViewProps {
   locale: string;
+  /** Which surface is open. A dataset is an artefact, a run is an event — they are not one tab. */
+  tab: EvalTab;
   /** Which run's per-case detail to open. A run id from the sweep, never a path. */
   run?: string;
 }
@@ -35,11 +39,31 @@ interface ScorecardViewProps {
  * What replaces them: the sweep's runs, each through the one {@link ScoreCard} that cannot
  * render a bare number, and the référentiel + freshness stated in the header — never implied.
  */
-export async function ScorecardView({ locale, run }: ScorecardViewProps) {
+export async function ScorecardView({ locale, tab, run }: ScorecardViewProps) {
   const [sweep, t] = await Promise.all([
     loadSweep(),
     getTranslations({ locale, namespace: "eval" }),
   ]);
+
+  const tabs = (
+    <EvalTabs
+      active={tab}
+      labels={{ cases: t("tabs.cases"), runs: t("tabs.runs"), compare: t("tabs.compare") }}
+    />
+  );
+
+  if (tab === "cases") {
+    return (
+      <div className="flex flex-col gap-6 pb-10">
+        {tabs}
+        <CatalogueTab
+          catalogue={sweep?.catalogue ?? []}
+          version={sweep?.currentCatalogueVersion ?? null}
+          locale={locale}
+        />
+      </div>
+    );
+  }
 
   // Default to the NEWEST run, never the best-scoring one. "Newest" is a fact about a run;
   // "best" would be a ranking, and on this catalogue the absolute rate ranks nothing.
@@ -47,18 +71,21 @@ export async function ScorecardView({ locale, run }: ScorecardViewProps) {
 
   if (!sweep || !selected) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <EmptyState
-            icon={<FileSearch />}
-            title={t("sweep.empty.title")}
-            description={t("sweep.empty.body")}
-          />
-          <div className="mt-6 rounded-md bg-[var(--muted)]/40 p-4 font-mono text-xs leading-relaxed text-[var(--muted-foreground)]">
-            $ uv run python scripts/run_eval.py --report eval/reports/sweep/&lt;model&gt;.json
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-6 pb-10">
+        {tabs}
+        <Card>
+          <CardContent className="p-6">
+            <EmptyState
+              icon={<FileSearch />}
+              title={t("sweep.empty.title")}
+              description={t("sweep.empty.body")}
+            />
+            <div className="mt-6 rounded-md bg-[var(--muted)]/40 p-4 font-mono text-xs leading-relaxed text-[var(--muted-foreground)]">
+              $ uv run python scripts/run_eval.py --report eval/reports/sweep/&lt;model&gt;.json
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -75,6 +102,7 @@ export async function ScorecardView({ locale, run }: ScorecardViewProps) {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
+      {tabs}
       <SweepHeader sweep={sweep} locale={locale} />
 
       {/* Every run of the sweep, decomposed. Three cards, one référentiel, no ranking. */}
