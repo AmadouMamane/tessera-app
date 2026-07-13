@@ -524,6 +524,13 @@ function ContributionTile({
   const heading = pick(locale, "Contribution du modèle", "Modellbeitrag", "Model contribution");
   // Honest-empty: no set bound, no committed floor, or NO MODEL SPOKE. Printing "0
   // regressions, 0 contribution" for a run no model answered would read as a pass.
+  //
+  // And it says WHY. The backend has carried `refusal` since 34b59c0d, and this tile dropped
+  // it on the floor for a static "Non mesurable" — a reason written where nobody reads it is a
+  // FALSE ASSURANCE, not a fix. "No model answered" and "the catalogue moved under this floor"
+  // are different facts with different remedies, and the operator is the one who has to act on
+  // them. The reason is the backend's own English (eval_floor.py does not localise it): showing
+  // the real one untranslated beats showing a translated nothing.
   if (!contribution?.available) {
     return (
       <div className={shell}>
@@ -531,6 +538,11 @@ function ContributionTile({
         <p className="mt-0.5 font-medium text-[var(--tessera-text-muted)]">
           {pick(locale, "Non mesurable", "Nicht messbar", "Not measurable")}
         </p>
+        {contribution?.refusal ? (
+          <p className="mt-1 text-[10px] text-[var(--tessera-text-muted)] leading-snug">
+            {contribution.refusal}
+          </p>
+        ) : null}
       </div>
     );
   }
