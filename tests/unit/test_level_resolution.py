@@ -99,8 +99,7 @@ def test_an_unproven_level_never_satisfies_the_release_gate(
     """
     from types import SimpleNamespace
 
-    from tessera.observability import agent_lifecycle as lifecycle
-    from tessera.observability import eval_floor
+    from tessera.observability import agent_lifecycle as lifecycle, eval_floor
 
     _no_business_events(monkeypatch)
     _governed(monkeypatch, value=True)

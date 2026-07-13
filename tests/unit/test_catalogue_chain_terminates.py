@@ -119,7 +119,7 @@ class TestTheChainEndsAtTheSource:
         assert catalogue_version([]) == "0-e3b0c442"  # …and it would have looked like an answer
 
     @pytest.mark.parametrize("artefact", _CLAIMING_ARTEFACTS)
-    def test_every_claiming_artefact_is_a_LINK_and_agrees_with_the_source(
+    def test_every_claiming_artefact_is_a_link_and_agrees_with_the_source(
         self, artefact: str
     ) -> None:
         """Each one quotes a ``catalogue_version``. Today they all quote the truth — verify it.

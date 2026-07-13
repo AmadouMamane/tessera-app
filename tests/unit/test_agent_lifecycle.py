@@ -13,7 +13,6 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
 
 import pytest
 
@@ -50,9 +49,6 @@ def _certification_axis_held_neutral(monkeypatch: pytest.MonkeyPatch) -> None:
         ),
     )
 
-
-if TYPE_CHECKING:
-    import pytest
 
 _NULL_BASELINE = Path("eval/baselines/null-control.json")
 
