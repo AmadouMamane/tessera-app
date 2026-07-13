@@ -235,14 +235,25 @@ def _biome_format(target: Path) -> None:
     Without this the generator and the formatter disagree on whitespace, the checked-in file is
     formatted by whoever touched it last, and the up-to-date ratchet fails for a reason that has
     nothing to do with the contract. Emit exactly what the gate expects.
+
+    And when biome cannot run, SAY SO. `check=True` used to raise a CalledProcessError whose
+    traceback the caller captured and discarded, turning pnpm's `Command "biome" not found` (254)
+    into a bare exit 1 — which the test above then reported as "the checked-in zod is stale". Three
+    layers, and the cause was laundered out at every one. An environment problem must not be
+    allowed to arrive dressed as a code regression.
     """
     frontend = Path(__file__).resolve().parents[1] / "webapp" / "frontend"
-    subprocess.run(
-        ["corepack", "pnpm", "exec", "biome", "format", "--write", str(target.resolve())],
-        cwd=frontend,
-        check=True,
-        capture_output=True,
-    )
+    argv = ["corepack", "pnpm", "exec", "biome", "format", "--write", str(target.resolve())]
+    proc = subprocess.run(argv, cwd=frontend, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        said = (proc.stderr or proc.stdout).strip().splitlines()
+        cause = said[-1].strip() if said else f"exit {proc.returncode}, and it said nothing"
+        raise SystemExit(
+            f"biome could not format {target}: {cause}\n"
+            "  This is the ENVIRONMENT, not the schema: the frontend toolchain is not installed "
+            "in this worktree.\n"
+            "    make gate-web    (or: cd webapp/frontend && corepack pnpm install)"
+        )
 
 
 if __name__ == "__main__":

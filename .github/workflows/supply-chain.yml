@@ -52,14 +52,30 @@ jobs:
       - name: Install detect-secrets
         run: pip install detect-secrets==1.5.0
 
+      # A CHECK THAT CANNOT FAIL IS NOT A CHECK.
+      #
+      # This step used to end in `detect-secrets scan > /dev/null` whenever `.secrets.baseline`
+      # was absent — which is always, because it has never been committed. `detect-secrets scan`
+      # PRINTS its findings and EXITS 0 regardless of what it finds; with stdout sent to
+      # /dev/null the job was green, permanently, having checked nothing and said nothing.
+      #
+      # This exact failure is quoted in the Makefile as a lesson already learned ("F-14:
+      # detect-secrets with no baseline was a permanently-green job that checked nothing"). The
+      # lesson was written down and the job was never fixed. It only never fired because CI is
+      # billing-blocked; it was armed the whole time.
+      #
+      # `detect-secrets-hook` is the gating command — `scan` is the *authoring* one, and
+      # `scan --baseline` REWRITES the baseline in place and exits 0, so it could not gate
+      # either. And a missing baseline is now a BLIND SPOT, said out loud and exiting non-zero:
+      # a witness that cannot see may never report "ok" (ADR 0026).
       - name: Scan against baseline
         run: |
-          if [ -f .secrets.baseline ]; then
-            detect-secrets scan --baseline .secrets.baseline
-          else
-            echo "No .secrets.baseline committed yet; running an audit-only scan."
-            detect-secrets scan > /dev/null
+          set -o pipefail
+          if [ ! -f .secrets.baseline ]; then
+            echo "::error title=detect-secrets has no baseline::.secrets.baseline is not committed, so this job cannot tell a new secret from a known one. That is a BLIND SPOT, and a blind spot is not a pass. Create it once and commit it:  detect-secrets scan > .secrets.baseline"
+            exit 1
           fi
+          git ls-files -z | xargs -0 detect-secrets-hook --baseline .secrets.baseline
 
   sign-and-provenance:
     name: cosign sign + SLSA provenance

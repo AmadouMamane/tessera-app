@@ -2,10 +2,17 @@
 // scripts/perf-probe.mjs — ADR 0015 §Performance measurement harness.
 //
 // A performance budget is a GATE, not a hope: this probe measures the cockpit snapshot read
-// model against the budget table and exits non-zero if p95 exceeds it, so a perf regression
-// fails the phase rather than the operator's eyes. It runs inside the twice-green gate from
-// Phase A (against the current stores first), so the fast read model is proven before any
-// source swap.
+// model against the budget table and exits non-zero if p95 exceeds it.
+//
+// ⚠ AND IT IS A HOPE, TODAY. This header used to end "It runs inside the twice-green gate from
+// Phase A" — and it does not. It is invoked from NOWHERE: not the Makefile, not a workflow, not
+// package.json. Only prose mentions it. **A gate that is never called cannot fail**, and a file
+// that says it gates when nothing runs it is a false green with a shebang — the same shape as
+// the `detect-secrets` job that scanned into /dev/null and reported success for a year.
+//
+// It needs a live backend serving /observability/snapshot, so wiring it into the hermetic gate
+// is a lot of its own. Until then the claim is corrected rather than dressed up, and the debt is
+// named where debts live: `OWED_EXIT_WITNESSES`, tests/unit/test_exit_witness_debt.py.
 //
 // It measures, against a running backend serving `GET /observability/snapshot`:
 //   • cold compute p95   — distinct scopes (each a cache miss), all signals in one pass

@@ -85,11 +85,18 @@ jobs:
           key: pnpm-${{ runner.os }}-${{ hashFiles('webapp/frontend/pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ runner.os }}-
 
+      # FRONTEND FIRST, and the order is load-bearing — the same order `make gate-checks`
+      # uses, for the same reason. The python suite contains a test that judges the frontend
+      # (tests/unit/test_zod_codegen.py formats through `biome`), and only the pnpm STORE is
+      # cached above — never `node_modules/`. So on a cold runner `make gate-py` would run
+      # before anything had installed biome, and would go red claiming "the checked-in zod is
+      # stale": an environment problem wearing a code regression's clothes. It never fired
+      # only because CI is billing-blocked; it was armed the whole time.
+      - name: Frontend — install, tsc, biome, vitest
+        run: make gate-web
+
       - name: Python — ruff, mypy, pytest (not integration)
         run: make gate-py
-
-      - name: Frontend — tsc, biome, vitest
-        run: make gate-web
 
   e2e:
     name: e2e (Playwright, production build)
@@ -192,8 +199,16 @@ jobs:
       # this runner's Postgres. `ON_ERROR_STOP` because a half-restored corpus
       # would surface as a dozen mislabelled content assertions, never as "the
       # seed failed" — the same class of lie the missing AUTH_SECRET told.
+      #
+      # `set -o pipefail` — GitHub runs `run:` blocks under `bash -e {0}`: `-e` is on,
+      # PIPEFAIL IS NOT. Without it a pipeline reports its LAST command, so `gunzip |
+      # psql` reported psql's success while gunzip choked on a truncated fixture (psql
+      # cheerfully applies the valid prefix — ON_ERROR_STOP stops SQL *errors*, not a
+      # short read), and `psql | tee` reported that TEE HAD WRITTEN A FILE. A dead
+      # database was a green seed step. This is ADR 0026's origin instance, in CI.
       - name: Seed Postgres from the committed fixture
         run: |
+          set -o pipefail
           gunzip -c fixtures/e2e/pgvector-seed.sql.gz \
             | psql "$TESSERA_POSTGRES__DSN" -v ON_ERROR_STOP=1 -q
           psql "$TESSERA_POSTGRES__DSN" -tAc \

@@ -34,11 +34,29 @@ And when it **cannot** know — the server is down, or predates this witness and
 digest — it says so. It does not say ``ok``. A witness that cannot see must report a blind spot,
 never a clean bill of health: that is the whole failure it was built to end.
 
+.. rubric:: 2026-07-13, the fifth instance — and it was in here
+
+All of the above was true of what this script **printed**, and false of what it **returned**.
+``main()`` ended in ``return 0``, unconditionally. It printed ``⚠ STALE — this server is NOT
+running the code in this checkout · RESTART``, and it printed ``⚠ CANNOT SAY (this server predates
+the code-identity witness)``, and then it told its caller, in the only language a caller reads,
+**ok**. ``make dev-status`` was green on every one of its own failure verdicts.
+
+The doctrine had been implemented in the *rendering* and forgotten in the *exit code* — which is to
+say, forgotten on **the exact surface it was born on**: the origin instance of ADR 0026 is an empty
+``${PIPESTATUS[0]}`` that manufactured a green. A verdict a human must read to act on is not a
+verdict a machine can act on, and this repo's own rule — *a witness that cannot see may never
+report "ok"* — does not have an exception for the shell.
+
+So the exit code is now the verdict (:mod:`tessera.verdict`): ``0`` iff the servers we can ask are
+running the code in this checkout; ``2`` for STALE and for every blind spot alike, because to a
+caller they mean the same thing — *do not proceed on my say-so*.
+
 The **frontend** row is deliberately different, and labelled as such. Its ``/api/healthz`` is a
 *proxy* to the backend, so it cannot speak about itself; and it is served by ``next dev``, which
 recompiles on change and therefore does not accumulate the staleness ``uvicorn`` does (booted
 once, ``reload`` off, code loaded exactly once and never again). What is printed for it is the
-**checkout**'s head, and the column says so.
+**checkout**'s head, and the column says so — it is a report, and it is not voted on.
 """
 
 from __future__ import annotations
@@ -55,6 +73,7 @@ from typing import Any, Final
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from tessera.code_identity import source_digest
+from tessera.verdict import CannotSay, NotOk, Ok, Verdict, exit_code, render
 
 _TIMEOUT_S: Final = 5.0
 _SHORT: Final = 12
@@ -69,7 +88,21 @@ class Row:
     speaks_for_itself: bool
 
 
-def _listening_pid(port: str) -> str | None:
+@dataclass(frozen=True, slots=True)
+class Listening:
+    """What is on the port. ``pid=None`` means **nothing is** — an observation, not a failure."""
+
+    pid: str | None
+
+
+def _listening_pid(port: str) -> Listening | CannotSay:
+    """Who listens on ``port``? Three answers, and the third one used to be missing.
+
+    ``lsof`` refusing to run (absent, sandboxed, out of file descriptors) and ``lsof`` returning
+    nothing are **different facts**, and this function used to collapse both into ``None`` — which
+    the caller then printed as ``(not running)``. A machine that could not be asked was reported as
+    a machine that is not there. That is the shape of every incident in ADR 0026, in four lines.
+    """
     try:
         out = subprocess.run(
             ["lsof", "-nP", f"-tiTCP:{port}", "-sTCP:LISTEN"],
@@ -78,10 +111,16 @@ def _listening_pid(port: str) -> str | None:
             timeout=_TIMEOUT_S,
             check=False,
         )
-    except (OSError, subprocess.SubprocessError):
-        return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        return CannotSay(f"cannot ask which process listens on :{port} — `lsof` did not run: {exc}")
+    # lsof exits 1 when nothing matches. That is not an error, it is the answer "nobody".
+    if out.returncode > 1:
+        return CannotSay(
+            f"cannot ask which process listens on :{port} — `lsof` exited {out.returncode}: "
+            f"{out.stderr.strip() or '(no message)'}"
+        )
     pid = out.stdout.strip().splitlines()
-    return pid[0] if pid else None
+    return Listening(pid=pid[0] if pid else None)
 
 
 def _process_cwd(pid: str) -> Path | None:
@@ -127,7 +166,7 @@ def _checkout_head(directory: Path) -> str:
     return out.stdout.strip() or "-"
 
 
-def _verdict(health: dict[str, Any], cwd: Path | None) -> tuple[str, str]:
+def _verdict(health: dict[str, Any], cwd: Path | None) -> tuple[str, Verdict]:
     """Does this process run the code in this checkout? Returns ``(loaded, verdict)``.
 
     The comparison is digest-to-digest: what the PROCESS says it loaded, against what the
@@ -142,7 +181,10 @@ def _verdict(health: dict[str, Any], cwd: Path | None) -> tuple[str, str]:
         # An older server, from before this witness existed. It cannot say what it loaded — and
         # this script must NOT fill that silence with a reassuring guess. A blind spot is reported
         # as a blind spot; that is the entire failure this lot exists to end.
-        return "?", "⚠ CANNOT SAY (this server predates the code-identity witness) · RESTART"
+        return "?", CannotSay(
+            "this server predates the code-identity witness and will not say what it loaded "
+            "· RESTART it and the question becomes answerable"
+        )
 
     sha = health.get("code_sha")
     dirty = health.get("code_dirty")
@@ -152,50 +194,108 @@ def _verdict(health: dict[str, Any], cwd: Path | None) -> tuple[str, str]:
 
     package = cwd / "src" / "tessera" if cwd else None
     if package is None or not package.is_dir():
-        return loaded, "· cannot compare (no source tree at its working directory)"
+        return loaded, CannotSay(
+            "cannot compare: there is no source tree at this process's working directory, so "
+            "there is nothing to hash it against"
+        )
 
     if source_digest(package) == loaded_digest:
-        return loaded, "✓ it IS the code in this checkout"
-    return loaded, "⚠ STALE — this server is NOT running the code in this checkout · RESTART"
+        return loaded, Ok(f"it IS the code in this checkout (digest {loaded_digest[:_SHORT]})")
+    return loaded, NotOk(
+        "STALE — this server is NOT running the code in this checkout · RESTART "
+        f"(it loaded {loaded_digest[:_SHORT]}, the checkout is {source_digest(package)[:_SHORT]})"
+    )
+
+
+def _mark(verdict: Verdict) -> str:
+    """The tick or the warning, for the human reading the row. ``Ok`` — and only ``Ok`` — is ✓."""
+    return "✓" if isinstance(verdict, Ok) else "⚠"
+
+
+def _row_verdict(row: Row) -> Verdict:
+    """One server, one verdict — and the row printed on the way."""
+    listening = _listening_pid(row.port)
+    if isinstance(listening, CannotSay):
+        print(f"  {row.name:<8} :{row.port:<5} ⚠ {listening.blind_spot}")
+        return listening
+
+    if listening.pid is None:
+        # We looked, with a working `lsof`, and nothing is there. That is a FACT, not a hole: a
+        # server that is not running cannot be stale. Reporting it as a failure would be a false
+        # red, and a false red trains you to ignore reds.
+        print(f"  {row.name:<8} :{row.port:<5} (not running)")
+        return Ok(f"{row.name} is not running on :{row.port} — nothing to be stale")
+
+    pid = listening.pid
+    health = _health(row.port, row.health_path)
+    alive = "ok" if health is not None else "DOWN"
+
+    if not row.speaks_for_itself:
+        # It proxies /healthz to the backend, so its body describes the BACKEND, not itself.
+        # Print the checkout it was started from, and LABEL it as the checkout — never as a
+        # claim about the running code. `next dev` recompiles on change, so it does not go
+        # stale the way uvicorn does (booted once, reload off). This row is a REPORT: it makes
+        # no claim, so it casts no vote.
+        cwd = _process_cwd(pid)
+        head = _checkout_head(cwd) if cwd else "-"
+        print(
+            f"  {row.name:<8} :{row.port:<5} pid {pid:<7} "
+            f"checkout {head:<9} (next dev recompiles)   {alive}"
+        )
+        return Ok(f"{row.name} on :{row.port} is a proxy — it makes no claim about its own code")
+
+    if health is None:
+        print(
+            f"  {row.name:<8} :{row.port:<5} pid {pid:<7} loaded ?"
+            f"                     {alive}  ⚠ it will not say what it loaded"
+        )
+        return CannotSay(
+            f"{row.name} on :{row.port} (pid {pid}) is listening but will not answer "
+            f"{row.health_path} — it cannot be asked what it loaded"
+        )
+
+    loaded, verdict = _verdict(health, _process_cwd(pid))
+    detail = render(verdict).split("] ", 1)[-1]
+    print(
+        f"  {row.name:<8} :{row.port:<5} pid {pid:<7} loaded {loaded:<20} "
+        f"{alive}  {_mark(verdict)} {detail}"
+    )
+    return verdict
+
+
+def _worst(verdicts: list[Verdict]) -> Verdict:
+    """The verdict the process publishes: the worst one, never the most convenient one.
+
+    A ``NotOk`` outranks a ``CannotSay`` outranks an ``Ok`` — and note there is no reduction here
+    that could produce an ``Ok`` out of anything else, because :class:`Ok` cannot be constructed
+    without evidence and there is none to give.
+    """
+    for verdict in verdicts:
+        if isinstance(verdict, NotOk):
+            return verdict
+    for verdict in verdicts:
+        if isinstance(verdict, CannotSay):
+            return verdict
+    return Ok("; ".join(v.evidence for v in verdicts if isinstance(v, Ok)) or "nothing to report")
 
 
 def main() -> int:
+    """Exit code IS the verdict. ``0`` only when every server we could ask is current.
+
+    This line used to be ``return 0``. It printed STALE and it printed CANNOT SAY, and it returned
+    zero for both — the witness of ADR 0026, reporting "ok" on its own blind spot, in the one
+    channel its caller actually reads.
+    """
     rows = (
         Row("frontend", sys.argv[1], "/api/healthz", speaks_for_itself=False),
         Row("backend", sys.argv[2], "/healthz", speaks_for_itself=True),
     )
-    for row in rows:
-        pid = _listening_pid(row.port)
-        if pid is None:
-            print(f"  {row.name:<8} :{row.port:<5} (not running)")
-            continue
+    verdict = _worst([_row_verdict(row) for row in rows])
 
-        health = _health(row.port, row.health_path)
-        alive = "ok" if health is not None else "DOWN"
-
-        if not row.speaks_for_itself:
-            # It proxies /healthz to the backend, so its body describes the BACKEND, not itself.
-            # Print the checkout it was started from, and LABEL it as the checkout — never as a
-            # claim about the running code. `next dev` recompiles on change, so it does not go
-            # stale the way uvicorn does (booted once, reload off).
-            cwd = _process_cwd(pid)
-            head = _checkout_head(cwd) if cwd else "-"
-            print(
-                f"  {row.name:<8} :{row.port:<5} pid {pid:<7} "
-                f"checkout {head:<9} (next dev recompiles)   {alive}"
-            )
-            continue
-
-        if health is None:
-            print(
-                f"  {row.name:<8} :{row.port:<5} pid {pid:<7} loaded ?"
-                f"                     {alive}  ⚠ it will not say what it loaded"
-            )
-            continue
-
-        loaded, verdict = _verdict(health, _process_cwd(pid))
-        print(f"  {row.name:<8} :{row.port:<5} pid {pid:<7} loaded {loaded:<20} {alive}  {verdict}")
-    return 0
+    stream = sys.stdout if isinstance(verdict, Ok) else sys.stderr
+    stream.write(f"\n[dev-status] {render(verdict)}\n")
+    stream.flush()
+    return exit_code(verdict)
 
 
 if __name__ == "__main__":

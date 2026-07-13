@@ -52,6 +52,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point; the exit code is the ratchet verdict."""
     args = _parse_args(argv)
+
+    # A MISSING REPORT IS A BLIND SPOT, AND A BLIND SPOT IS NOT A PASS — but it must also not be
+    # a traceback. `make eval-null` runs the harness under a `-` (its exit code cannot distinguish
+    # "52 cases need a model" from "the runner crashed"), then deletes the report directory so that
+    # what lands here can only have come from THIS run. If nothing is here, the runner did not
+    # produce it, and that is the fact worth printing — not a FileNotFoundError whose reader has to
+    # reconstruct why.
+    if not args.report.exists():
+        sys.stderr.write(
+            f"✗ no report at {args.report} — the runner did not produce one.\n"
+            "  The ratchet grades an ARTEFACT, and there is no artefact. This is not a pass and it "
+            "is not a regression: the run did not happen.\n"
+            "  Look above this line for what the harness said before it died.\n"
+        )
+        return 1
+
     report = json.loads(args.report.read_text(encoding="utf-8"))
 
     if args.write:

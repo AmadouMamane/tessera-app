@@ -1,8 +1,33 @@
+# ── The shell every recipe runs under ───────────────────────────────────────
+#
+# A PIPELINE'S EXIT CODE IS ITS LAST COMMAND'S. Nothing else in this file matters
+# as much, because that sentence is the origin of ADR 0026: `git merge 2>&1 | tail -1`
+# printed `Updating a..b` while the error went to stderr, the pipe ate the status,
+# and two gates read green over a failed merge.
+#
+# GNU make defaults SHELL to `/bin/sh`, which has no `pipefail` at all on a Linux
+# runner (dash) and does not enable it on macOS (bash-as-sh). So every `cmd | filter`
+# in this file reported the FILTER's success. Measured, on 2026-07-13, in this very
+# file: `make ledger-backup` against a container that does not exist printed a ✓,
+# exited 0, and wrote a SHA-256-notarised archive of ZERO BYTES — because `gzip`
+# compresses a failed `pg_dump`'s empty output with complete success.
+#
+# `-o pipefail` makes a pipeline report the FIRST command that failed. It is set here,
+# once, for every recipe, rather than remembered at each pipe — a discipline that must
+# be remembered at each site is a discipline that will be missed at one.
+#
+# `-e` is deliberately NOT set: `dev-up`'s port guard is a `lsof … && { exit 1; }` whose
+# NEGATIVE case (port free ⇒ lsof exits 1) is the healthy one, and `-e` would abort the
+# target on it — a false red, which trains you to ignore reds. Verdicts do not live in
+# `;`-chains here; `tests/unit/test_exit_witness_debt.py` is what keeps it that way.
+SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -c
+
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
         obs-up obs-down obs-logs dev-secrets \
         gate gate-twice gate-checks gate-py gate-web \
-        claim release whoowns landed
+        claim release whoowns session landed
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -42,6 +67,23 @@ check: format-check lint typecheck
 # one stashed the other's uncommitted work mid-flight and switched the branch under
 # it. Advisory by design (nothing on a shared filesystem can truly lock), and that
 # is enough: it turns a silent collision into a loud refusal.
+#
+# EXCEPT IT DID NOT. The first version resolved an agent's identity from THE NAME OF
+# THE DIRECTORY IT STOOD IN. `agents/claude/` ⇒ owner "claude" — for every Claude
+# session alive. On 2026-07-13 SEVEN of them had their cwd in that tree; each read the
+# marker, found its own name, and concluded it was home. The marker was identifying a
+# ROLE, and a role is not a writer. (ADR 0026's fourth instance, inside the very tool
+# built to police the third.)
+#
+# So identity is now ASSERTED BY THE SESSION and never derived from a path:
+#
+#   eval "$(make session)"     ← mint TESSERA_SESSION_ID once, keep it for the session
+#
+# A caller with no session id gets CANNOT SAY and exit 2 — never "you are home". The
+# role survives in the marker for a HUMAN to read; it decides nothing.
+
+session:
+	@uv run python scripts/worktree_owner.py session
 
 claim:
 	@uv run python scripts/worktree_owner.py claim $(if $(FORCE),--force,)
@@ -125,13 +167,31 @@ gate-twice:
 # The checks themselves. Kept as their own target so the witness wraps the whole
 # run as a unit, and so CI can call the checks directly when it has no worktree to
 # be confused about.
-gate-checks: gate-py gate-web
+#
+# gate-WEB FIRST, AND THAT ORDER IS LOAD-BEARING. The python suite contains a test
+# that judges the frontend (tests/unit/test_zod_codegen.py regenerates the zod schema,
+# and the generator formats through `biome`). With `gate-py` first, a virgin worktree —
+# where `pnpm install` has never run — went RED on that test, and the red said "the
+# checked-in zod is stale": an accusation against code that was perfectly fine, while
+# the truth (`Command "biome" not found`, exit 254) was three subprocess layers down and
+# in none of the output. A false red is the same disease as a false green, and it is in
+# one way worse: a false green lulls you, a FALSE RED TRAINS YOU TO IGNORE REDS.
+#
+# So the toolchain is installed BEFORE the suite that needs it. The test's own guard
+# (`require_node_tool`) then reports a named blind spot outside the gate — and inside it,
+# where the tooling is guaranteed, refuses to skip at all. See tests/tooling.py.
+gate-checks: gate-web gate-py
 
+# TESSERA_GATE=1 means exactly one thing: THE TOOLCHAIN IS ALREADY INSTALLED (gate-web
+# ran first). Under it, a test that cannot find its tool does not skip — it goes RED and
+# names the tool, because here its absence cannot mean "bare machine", it can only mean
+# the gate is broken. A skip that hides is a green light over a hole (F-14: detect-secrets
+# with no baseline was a permanently-green job that checked nothing).
 gate-py: install
 	uv run ruff check .
 	uv run ruff format --check .
 	uv run mypy src/tessera
-	uv run pytest -m "not integration" --cov=src/tessera --cov-report=term-missing --cov-fail-under=0
+	TESSERA_GATE=1 uv run pytest -m "not integration" --cov=src/tessera --cov-report=term-missing --cov-fail-under=0
 
 gate-web:
 	cd webapp/frontend && corepack pnpm install --frozen-lockfile
@@ -185,7 +245,20 @@ NULL_BASELINE := eval/baselines/null-control.json
 
 # The runner exits 1 here by design — 52 of the 174 runs need a model and fail
 # without one. That exit code is NOT the verdict for the control; the ratchet is.
+#
+# AND THE `-` SWALLOWS EVERYTHING, NOT ONLY THE EXPECTED 1. A crash exits 1 too, and an
+# exit code genuinely cannot tell "52 cases failed, as designed" from "the runner died on
+# an import error" — that is a real blind spot, not a fixable one. So the witness stops
+# asking the runner's exit code and asks THE ARTEFACT: the report it grades must have been
+# produced by THIS run. Measured, 2026-07-13, before the `rm -rf` below existed: with
+# `run_eval.py` replaced by `raise SystemExit("BOOM")`, the previous run's report was still
+# on disk, `check_ratchet` graded it, printed `[ratchet PASS] 122/174`, and `make eval-null`
+# — a per-push CI gate — exited **0** with a runner that could not start.
+#
+# CI never saw it: a fresh checkout has no stale report. It was armed on every developer
+# machine, and CI's immunity was an accident of the runner being clean, not a design.
 eval-null: install
+	@rm -rf $(dir $(NULL_REPORT))
 	-TESSERA_LLM_PROFILE=on_prem TESSERA_OLLAMA_HOST=$(NULL_HOST) \
 		uv run python scripts/run_eval.py --report $(NULL_REPORT)
 	uv run python scripts/check_ratchet.py \
@@ -193,7 +266,11 @@ eval-null: install
 
 # Refresh the control's baseline after a DELIBERATE change to the deterministic
 # layer. Commit the diff — it is the evidence of what moved and why.
+# Same `rm -rf`, and here it matters even more: this target OVERWRITES THE COMMITTED
+# BASELINE from the report it finds. A stale report would have been promoted to the
+# reference every future run is graded against.
 eval-null-write: install
+	@rm -rf $(dir $(NULL_REPORT))
 	-TESSERA_LLM_PROFILE=on_prem TESSERA_OLLAMA_HOST=$(NULL_HOST) \
 		uv run python scripts/run_eval.py --report $(NULL_REPORT)
 	uv run python scripts/check_ratchet.py \
@@ -326,17 +403,17 @@ LEDGER_BACKUP_DIR   ?= backups/ledger
 
 .PHONY: ledger-backup ledger-restore-drill
 
-ledger-backup:
-	@mkdir -p $(LEDGER_BACKUP_DIR)
-	@ts=$$(date -u +%Y%m%dT%H%M%SZ); \
-	 out=$(LEDGER_BACKUP_DIR)/audit_ledger-$(LEDGER_SCHEMA)-$$ts.sql.gz; \
-	 docker exec $(LEDGER_PG_CONTAINER) pg_dump -U tessera -d $(LEDGER_DB) \
-	   --data-only --no-owner --no-privileges -t $(LEDGER_SCHEMA).audit_ledger | gzip -9 > $$out; \
-	 sha=$$(shasum -a 256 $$out | cut -d' ' -f1); \
-	 printf '%s  %s\n' "$$sha" "$$(basename $$out)" > $$out.sha256; \
-	 rows=$$(docker exec $(LEDGER_PG_CONTAINER) psql -U tessera -d $(LEDGER_DB) -tAc \
-	   "SELECT count(*) FROM $(LEDGER_SCHEMA).audit_ledger"); \
-	 echo "✓ $$out ($$(du -h $$out | cut -f1), $$rows rows) sha256=$$sha"
+# A BACKUP THAT CANNOT FAIL IS NOT A BACKUP. This recipe used to be three laundered exit
+# codes stacked on one line — a `pg_dump | gzip` pipeline (exit = gzip's), a `;`-chain with
+# no `set -e`, and a closing `echo "✓"` — and against a container that does not exist it
+# printed a tick, exited 0, and wrote a SHA-256-notarised archive of zero bytes. The sidecar
+# authenticated the emptiness. See scripts/ledger_backup.py, which now does the work and
+# INTERROGATES THE ARTEFACT: no `COPY <schema>.audit_ledger` header in the dump ⇒ no file is
+# written and the verdict is NOT OK. An empty *ledger* passes; a failed *dump* cannot.
+ledger-backup: install
+	@LEDGER_PG_CONTAINER=$(LEDGER_PG_CONTAINER) LEDGER_DB=$(LEDGER_DB) \
+	 LEDGER_SCHEMA=$(LEDGER_SCHEMA) LEDGER_BACKUP_DIR=$(LEDGER_BACKUP_DIR) \
+	 uv run python scripts/ledger_backup.py
 
 # Prove the newest backup restores to a verifying chain (throwaway db, tree-aware verify).
 ledger-restore-drill: install
