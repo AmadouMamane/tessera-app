@@ -80,6 +80,14 @@ jobs:
       - name: Replay the catalogue with no model, and ratchet it
         run: make eval-null
 
+      # The catalogue's discriminating power is a NUMBER, and it may not fall. Re-derived
+      # from the COMMITTED evidence (the verdict matrix), so it needs no model either.
+      # Deleting a case that separates a good model from a bad one turns this red; adding a
+      # dead one moves the catalogue version, which REFUSES the classification (exit 3)
+      # until someone re-measures and argues with the new density.
+      - name: Ratchet what the catalogue MEASURES
+        run: make eval-power
+
       - name: Upload the control report
         if: always()
         uses: actions/upload-artifact@v4

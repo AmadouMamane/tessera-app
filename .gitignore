@@ -97,4 +97,4 @@ scripts/_gen_*.py
 .worktree-owner
 
 # The contribution-calibration scratch dir (passes, never a published result — see Makefile)
-.eval-noise/
+.eval-noise*/

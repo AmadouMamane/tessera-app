@@ -28,6 +28,8 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 
 import {
+  type CataloguePower,
+  CataloguePowerSchema,
   type EvalCase,
   EvalCaseSchema,
   NullControlBaselineSchema,
@@ -80,6 +82,8 @@ export interface Sweep {
 interface Sources {
   sweepDir: string;
   baselineFile: string;
+  /** What the catalogue MEASURES (`eval/baselines/discrimination.json`) — not how it scored. */
+  powerFile: string;
   catalogue: { kind: "dir"; path: string } | { kind: "file"; path: string };
   caseSchemaFile: string;
 }
@@ -111,6 +115,7 @@ async function sources(): Promise<Sources | null> {
       return {
         sweepDir,
         baselineFile: join(root, "eval", "baselines", "null-control.json"),
+        powerFile: join(root, "eval", "baselines", "discrimination.json"),
         catalogue: { kind: "dir", path: join(root, "eval", "failures") },
         caseSchemaFile: join(root, "eval", "failures", "_schema.json"),
       };
@@ -121,11 +126,47 @@ async function sources(): Promise<Sources | null> {
     return {
       sweepDir: join(bundle, "sweep"),
       baselineFile: join(bundle, "null-control.json"),
+      powerFile: join(bundle, "discrimination.json"),
       catalogue: { kind: "file", path: join(bundle, "catalogue.json") },
       caseSchemaFile: join(bundle, "case-schema.json"),
     };
   }
   return null;
+}
+
+/**
+ * What the catalogue measures — or WHY that cannot be said.
+ *
+ * The classification is pinned to the case set it was measured on. If the catalogue has moved
+ * since, every count in it describes runs that no longer exist, so this returns a REFUSAL
+ * rather than numbers: unusable is not the same as zero (ADR 0026). The screen prints the
+ * reason instead of a hole, because a tile that renders nothing is indistinguishable from a
+ * catalogue with no discriminating power at all — and those are opposite facts.
+ */
+export type CataloguePowerState =
+  | { kind: "measured"; power: CataloguePower }
+  | { kind: "not-measured" }
+  | { kind: "off-referential"; measuredOn: string; current: string };
+
+export async function loadCataloguePower(
+  currentCatalogueVersion: string,
+): Promise<CataloguePowerState> {
+  const src = await sources();
+  if (!src) return { kind: "not-measured" };
+  let power: CataloguePower;
+  try {
+    power = CataloguePowerSchema.parse(JSON.parse(await readFile(src.powerFile, "utf-8")));
+  } catch {
+    return { kind: "not-measured" };
+  }
+  if (power.catalogue_version !== currentCatalogueVersion) {
+    return {
+      kind: "off-referential",
+      measuredOn: power.catalogue_version,
+      current: currentCatalogueVersion,
+    };
+  }
+  return { kind: "measured", power };
 }
 
 /**

@@ -1067,6 +1067,22 @@
       "language_mixing": "Mélange de langues",
       "escalation_failure": "Défaut d'escalade",
       "unknown": "Autre"
+    },
+    "power": {
+      "title": "Ce que le catalogue mesure",
+      "notMeasured": "La puissance discriminante du catalogue n'a pas été mesurée. Elle se mesure (make eval-power-write), elle ne se déclare pas.",
+      "offReferential": "Classification NULLE : elle a été mesurée sur le référentiel {measured}, le catalogue est aujourd'hui en {current}. Ses comptes portent sur des cas qui n'existent plus — il faut re-mesurer, pas réinterpréter.",
+      "sample": "{strong} vs {weak} · {n} passes",
+      "cases": "{total, plural, one {# cas} other {# cas}}",
+      "dead": "{n} morts",
+      "unstable": "{n} instables",
+      "nonDiscriminating": "{n} non-discriminants",
+      "undecided": "{n} indécidables",
+      "discriminating": "{n} discriminants",
+      "inverted": "{n} inversés",
+      "headline": "{measured, plural, =0 {Aucun cas sur # ne mesure vraiment le modèle.} one {# cas sur {total} mesure vraiment le modèle.} other {# cas sur {total} mesurent vraiment le modèle.}}",
+      "method": "Dérivé du contrôle nul et de {strongN} + {weakN} passes complètes. Un cas est discriminant s'il sépare le modèle fort du faible (Fisher exact, unilatéral, corrigé de Holm sur tout le catalogue) ; inversé si le contrôle nul le passe et qu'un modèle le casse de façon reproductible — le modèle y est pire que le silence.",
+      "warning": "Le contrôle nul — aucun modèle, zéro token — passe déjà 122 des 174 runs. Un cas mort teste la couche déterministe (garde, routeur), pas le modèle : il gonfle le taux de réussite sans rien mesurer du modèle."
     }
   },
   "health": {

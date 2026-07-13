@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { catalogueVersionOf, loadCatalogue, loadSweep, loadSweepRun } from "@/lib/eval-sweep";
+import {
+  catalogueVersionOf,
+  loadCatalogue,
+  loadCataloguePower,
+  loadSweep,
+  loadSweepRun,
+} from "@/lib/eval-sweep";
 
 /**
  * These run against the repository's live artefacts (the vitest cwd sits under the repo, so the
@@ -94,5 +100,42 @@ describe("loadSweepRun", () => {
     expect(await loadSweepRun("../../../../etc/passwd", sweep)).toBeNull();
     expect(await loadSweepRun("latest", sweep)).toBeNull();
     expect(await loadSweepRun(undefined, sweep)).toBeNull();
+  });
+});
+
+describe("loadCataloguePower — what the catalogue MEASURES", () => {
+  it("reads the committed measurement, and it describes the CURRENT case set", async () => {
+    const catalogue = await loadCatalogue();
+    const current = catalogueVersionOf(catalogue);
+    const state = await loadCataloguePower(current);
+
+    // If this is not "measured", the classification is missing or was measured on another
+    // catalogue — and the tile would be showing counts about cases that no longer exist.
+    expect(state.kind).toBe("measured");
+    if (state.kind !== "measured") return;
+
+    expect(state.power.catalogue_version).toBe(current);
+    expect(state.power.power.total_cases).toBe(63);
+    expect(state.power.power.total_runs).toBe(174);
+
+    // The taxonomy is total: every case lands in exactly one class.
+    const c = state.power.case_counts;
+    const sum =
+      c.dead + c.inverted + c.discriminating + c.reversed + c.undecided + c.non_discriminating;
+    expect(sum).toBe(63);
+
+    // The headline is the union of the two classes that measure the model — nothing else.
+    expect(state.power.power.discriminating_cases).toBe(c.discriminating + c.inverted);
+  });
+
+  it("REFUSES when the catalogue has moved — it does not report zero", async () => {
+    // A classification is only true of the case set it was measured on. Asked about a
+    // different one, it must say so: a hole and "no discriminating power" are opposite facts,
+    // and rendering the second for the first is the lie this whole screen exists to prevent.
+    const state = await loadCataloguePower("64-deadbeef");
+    expect(state.kind).toBe("off-referential");
+    if (state.kind !== "off-referential") return;
+    expect(state.measuredOn).toBe("63-071edbdc");
+    expect(state.current).toBe("64-deadbeef");
   });
 });

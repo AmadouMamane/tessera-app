@@ -211,6 +211,24 @@ eval-contribution: install
 eval-sweep: install
 	uv run python scripts/run_model_sweep.py
 
+# What the CATALOGUE measures — the question a pass rate cannot answer. The null control
+# passes 122 of the 174 runs with no model at all, so most of the score is the deterministic
+# layer; each run is classified by what it SEPARATES (Fisher exact, Holm-corrected over the
+# whole catalogue), derived from the null floor and repeated passes of a strong and a weak
+# model. No case declares its own power.
+#
+# This is the CHECK: it re-derives the classification from the COMMITTED evidence, so it needs
+# no model, no GPU and no services — CI runs it on every push. Exit 3 (not 1) when the
+# catalogue has moved: the classification was not judged, which is not the same as failing.
+eval-power: install
+	uv run python scripts/check_discrimination.py
+
+# RE-MEASURE. Needs the raw passes in .eval-noise/ (make eval-noise MODEL=… PASSES=15) — a
+# GPU-hour. Rewrites both the evidence and the classification derived from it, and prints the
+# new power floor to freeze in scripts/check_discrimination.py.
+eval-power-write: install
+	uv run python scripts/check_discrimination.py --write
+
 # DEBT (ADR 0021): rule 2's bar (30) is a reasoned floor, NOT a calibrated one — no weak
 # model has ever been run against this catalogue, so nothing bounds it from below except
 # the null control at 0/52. This target closes that debt: replay the catalogue against a

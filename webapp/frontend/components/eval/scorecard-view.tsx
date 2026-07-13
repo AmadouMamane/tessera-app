@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { OperatorLocked } from "@/components/auth/operator-locked";
 import { CaseMatrix } from "@/components/eval/case-matrix";
 import { CaseRunDetail } from "@/components/eval/case-run-detail";
+import { CataloguePowerCard } from "@/components/eval/catalogue-power";
 import { CatalogueTab } from "@/components/eval/catalogue-tab";
 import { CompareTab } from "@/components/eval/compare-tab";
 import { type EvalTab, EvalTabs } from "@/components/eval/eval-tabs";
@@ -22,7 +23,7 @@ import {
   decomposeRun,
   isStale,
 } from "@/lib/eval-score";
-import { type Sweep, loadSweep, loadSweepRun } from "@/lib/eval-sweep";
+import { type Sweep, loadCataloguePower, loadSweep, loadSweepRun } from "@/lib/eval-sweep";
 import { getSynthesisAdminFlag } from "@/lib/server/settings";
 
 interface ScorecardViewProps {
@@ -151,10 +152,15 @@ export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: Sc
 
   const detail = await loadSweepRun(selected.id, sweep);
 
+  // What the catalogue MEASURES — asked of the current case set, so a classification that was
+  // measured on another one is refused rather than shown (`loadCataloguePower`).
+  const power = await loadCataloguePower(sweep.currentCatalogueVersion ?? "");
+
   return (
     <div className="flex flex-col gap-6 pb-10">
       {tabs}
       <SweepHeader sweep={sweep} locale={locale} />
+      <CataloguePowerCard state={power} locale={locale} />
 
       {/* Every run of the sweep, decomposed. Three cards, one référentiel, no ranking. */}
       <div className="grid gap-4 lg:grid-cols-3">

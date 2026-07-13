@@ -512,6 +512,48 @@ export const NullControlBaselineSchema = z.object({
 });
 export type NullControlBaseline = z.infer<typeof NullControlBaselineSchema>;
 
+/**
+ * What the catalogue MEASURES — `eval/baselines/discrimination.json`, written by
+ * `eval.discrimination`.
+ *
+ * A pass rate says how well the model did. It cannot say whether a case tests the *model* at
+ * all: the null control (no model, zero tokens) already passes 122 of the 174 runs, so most of
+ * the score is the deterministic guard/router layer. Each run is therefore classified by what
+ * it separates, measured over repeated passes of a strong and a weak model — never declared by
+ * the case itself.
+ *
+ * Declare every field that is rendered: zod **strips undeclared keys in silence**, so a count
+ * left out here would not throw, it would simply vanish and the tile would render a hole.
+ */
+export const CataloguePowerSchema = z.object({
+  kind: z.literal("catalogue_power"),
+  /** The case set this classification describes. A different one makes it VOID, not stale. */
+  catalogue_version: z.string(),
+  strong_model: z.string(),
+  weak_model: z.string(),
+  /** Passes per arm — the honesty of every p-value behind the counts. */
+  strong_n: z.number().int(),
+  weak_n: z.number().int(),
+  alpha: z.number(),
+  power: z.object({
+    discriminating_cases: z.number().int(),
+    discriminating_runs: z.number().int(),
+    total_cases: z.number().int(),
+    total_runs: z.number().int(),
+    unstable_cases: z.number().int(),
+    unstable_runs: z.number().int(),
+  }),
+  case_counts: z.object({
+    dead: z.number().int(),
+    inverted: z.number().int(),
+    discriminating: z.number().int(),
+    reversed: z.number().int(),
+    undecided: z.number().int(),
+    non_discriminating: z.number().int(),
+  }),
+});
+export type CataloguePower = z.infer<typeof CataloguePowerSchema>;
+
 /** Why a case exists. The citation IS the proof the bench was not invented. */
 export const EvalSourceReferenceSchema = z.object({
   citation: z.string(),
