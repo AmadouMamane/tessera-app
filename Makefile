@@ -26,7 +26,7 @@ SHELL := /bin/bash
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
         obs-up obs-down obs-logs dev-secrets \
-        gate gate-twice gate-checks gate-py gate-web \
+        gate gate-twice gate-checks gate-py gate-web tooling \
         claim release whoowns session landed
 
 # ── Dependencies ────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ session:
 # `dev-status` printed `⚠ STALE · RESTART` and returned 0; the trunk hook, moved to git's
 # `committed` phase, printed its refusal IN FULL while `git merge --ff-only` answered
 # `Fast-forward` and exited 0. PUBLISHING A VERDICT IS NOT ENFORCING IT.
-claim:
+claim: tooling
 	@uv run python scripts/main_guard.py installed
 	@uv run python scripts/worktree_owner.py claim $(if $(FORCE),--force,)
 
@@ -233,10 +233,69 @@ memory-check:
 # Deliberately NOT a prerequisite that would install it: `gate: hooks` would make this check
 # unfailable, and a check that cannot fail is a green light with a name. It REFUSES, and it names
 # the one command that fixes it.
-gate:
+gate: tooling
 	@uv run python scripts/main_guard.py installed
 	@uv run python scripts/worktree_owner.py check
 	@uv run python scripts/gate_witness.py run --slot $(or $(GATE_SLOT),1) -- $(MAKE) gate-checks
+
+# ── The gate must be able to SEE before it may say anything ─────────────────────────────────────
+#
+# `gate` and `claim` open by asking `scripts/main_guard.py` whether the trunk is guarded. That
+# question cannot be ASKED if the tool that asks it is not in this checkout — and on 2026-07-13 it
+# was not. The hook was installed; its tool lived on a branch that had not landed. The guard
+# therefore refused EVERY advance of the trunk, including the one branch that carried the tool: a
+# BOOTSTRAP LOCK, and it took a written derogation from Amadou to break it.
+#
+# The gate did refuse in that state. It refused like this:
+#
+#     .venv/bin/python3: can't open file '.../scripts/main_guard.py': [Errno 2] No such file
+#     make: *** [gate] Error 2
+#
+# THAT IS A REFUSAL THAT IS RIGHT BY ACCIDENT. Non-zero, yes — but it publishes no verdict, it
+# names no condition, and it gives no command that repairs it. A red nobody can act on is a red
+# people learn to ignore, and a false red is the same disease as a false green. ADR 0026 says a
+# witness that cannot see reports a BLIND SPOT and may never report "ok" — it may not report
+# gibberish either, because gibberish is how a blind spot gets mistaken for noise.
+#
+# So the tooling is interrogated FIRST, and in SHELL — a check for a missing interpreter cannot be
+# written in the language that interpreter runs. It asks the THING (is the file here? is the
+# interpreter executable?), never its neighbourhood, and it says exactly what repairs it. It is a
+# check, never an install: `tooling: install` would make it unfailable, which is the same mistake
+# `gate: hooks` would have been.
+tooling:
+	@root="$$(git rev-parse --show-toplevel)"; \
+	rc=0; \
+	for f in scripts/main_guard.py scripts/worktree_owner.py; do \
+	  if [ ! -r "$$root/$$f" ]; then \
+	    rc=2; \
+	    echo ""; \
+	    echo "[tooling] [CANNOT SAY] the gate cannot judge the trunk: its own tool is missing."; \
+	    echo "  absent: $$f"; \
+	    if git cat-file -e "HEAD:$$f" 2>/dev/null; then \
+	      echo "  It IS tracked at HEAD, so it was deleted from the working tree. Restore it:"; \
+	      echo "      git checkout -- $$f"; \
+	    else \
+	      echo "  THIS BRANCH DOES NOT CARRY IT — the bootstrap lock of 2026-07-13. The hook is"; \
+	      echo "  installed, its tool is not here, so the guard refuses every advance of the trunk"; \
+	      echo "  including the branch that would fix it. The trunk carries it; rebase onto it:"; \
+	      echo "      git fetch origin && git rebase origin/main"; \
+	    fi; \
+	  fi; \
+	done; \
+	if [ ! -x "$$root/.venv/bin/python" ]; then \
+	  rc=2; \
+	  echo ""; \
+	  echo "[tooling] [CANNOT SAY] no interpreter at .venv/bin/python."; \
+	  echo "  The trunk hook runs THAT python and no other: the guard needs 3.11+ (match,"; \
+	  echo "  assert_never), and macOS's system python3 is 3.9 — falling back to it put an"; \
+	  echo "  ImportError traceback where a verdict belonged."; \
+	  echo "      make install"; \
+	fi; \
+	if [ "$$rc" -ne 0 ]; then \
+	  echo ""; \
+	  echo "  A witness that cannot see reports a blind spot. It may never report 'ok' (ADR 0026)."; \
+	  exit $$rc; \
+	fi
 
 # Two passes, one tree — asserted, never remembered.
 gate-twice:
