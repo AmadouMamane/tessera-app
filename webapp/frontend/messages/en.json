@@ -1762,7 +1762,7 @@
   },
   "quality": {
     "title": "AI Quality",
-    "subtitle": "Evaluations, regressions, hallucinations, grounding and response improvement.",
+    "subtitle": "Quality signals, SLOs, runs, models and the judge — continuous monitoring of responses.",
     "sections": {
       "quality": "Faithfulness & evaluation",
       "security": "Security & guard",
@@ -3062,6 +3062,11 @@
       "createCase": "Create a case",
       "assignOwner": "Assign an owner",
       "dualControl": "Dual control · Admin+"
+    },
+    "evalDoor": {
+      "lead": "Evaluations, regressions and the release gate",
+      "body": "The case set, the floor measured with no model at all, and what the model adds on top: they do not live on this page.",
+      "cta": "Open Evaluations"
     }
   },
   "security": {

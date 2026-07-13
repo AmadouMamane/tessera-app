@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { AppShell } from "@/components/layout/app-shell";
 import { ObservabilityDashboard } from "@/components/observability/observability-dashboard";
+import { EvalDoor } from "@/components/surveiller/eval-door";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
 import { loadFleet } from "@/lib/server/fleet";
@@ -34,6 +35,10 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
       <div className="mb-5">
         <SignalBreachHero variant="gauge" />
       </div>
+      {/* `/eval` had no inbound link anywhere in the app — no sidebar entry, no palette
+          action — while this page's subtitle promised the very thing that lives there.
+          The subtitle now describes what this page serves; this is the way to the rest. */}
+      <EvalDoor />
       <ObservabilityDashboard
         agentScope={<GovScopeSection fleet={fleet} scope={scope} locale={locale} />}
       />

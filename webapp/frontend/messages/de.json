@@ -1762,7 +1762,7 @@
   },
   "quality": {
     "title": "KI-Qualität",
-    "subtitle": "Bewertungen, Regressionen, Halluzinationen, Verankerung und Verbesserung der Antworten.",
+    "subtitle": "Qualitätssignale, SLO, Läufe, Modelle und Judge — die laufende Überwachung der Antworten.",
     "sections": {
       "quality": "Treue & Bewertung",
       "security": "Sicherheit & Schutz",
@@ -3062,6 +3062,11 @@
       "createCase": "Case erstellen",
       "assignOwner": "Verantwortlicher zuweisen",
       "dualControl": "Dual control · Admin+"
+    },
+    "evalDoor": {
+      "lead": "Bewertungen, Regressionen und Release-Gate",
+      "body": "Der Fallsatz, der ganz ohne Modell gemessene Sockelwert und der Beitrag des Modells darüber liegen nicht auf dieser Seite.",
+      "cta": "Bewertungen öffnen"
     }
   },
   "security": {

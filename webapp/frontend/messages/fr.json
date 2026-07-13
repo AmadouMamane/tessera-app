@@ -1762,7 +1762,7 @@
   },
   "quality": {
     "title": "Qualité IA",
-    "subtitle": "Évaluations, régressions, hallucinations, ancrage et amélioration des réponses.",
+    "subtitle": "Signaux qualité, SLO, runs, modèles et juge — le suivi continu des réponses.",
     "sections": {
       "quality": "Fidélité & évaluation",
       "security": "Sécurité & garde",
@@ -3062,6 +3062,11 @@
       "createCase": "Créer un case",
       "assignOwner": "Assigner un responsable",
       "dualControl": "Dual control · Admin+"
+    },
+    "evalDoor": {
+      "lead": "Évaluations, régressions et gate de release",
+      "body": "Le jeu de cas, le plancher mesuré sans aucun modèle, et ce que le modèle ajoute par-dessus : ils ne sont pas sur cette page.",
+      "cta": "Ouvrir les Évaluations"
     }
   },
   "security": {
