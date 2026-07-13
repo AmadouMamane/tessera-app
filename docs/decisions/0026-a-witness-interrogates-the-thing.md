@@ -99,6 +99,25 @@ pattern is semantic, not syntactic. What is enforced is the three known instance
 to look for. When the fourth appears, it will appear the same way the first three did: as a green
 light over a hole, found by someone who checked the thing itself.
 
+## Postscript, 2026-07-13 — the fourth was already there, green, while this was being written
+
+It was in `scripts/worktree_owner.py`, the tool built to police the third. `make claim` resolved an
+agent's identity from **the name of the directory it was standing in**, so all **seven** live Claude
+sessions with a working directory in `agents/claude/` resolved to the owner `"claude"`, read the
+marker, found their own name in it, and concluded they were home. The marker refused nobody. It was
+identifying a **role**; a role is not a writer. (A fifth was beside it: the `pid` in the marker was
+`os.getpid()` of the claim *subprocess* — a liveness field guaranteed to be false one second later.)
+
+The prediction was right about the manner, and wrong only about the tense.
+
+[ADR 0027](0027-a-verdict-carries-its-evidence.md) records it and closes the part of the class that
+*does* have a syntactic handle: **the shape of the answer**. Every incident above published a
+verdict as a bare bit and threw the evidence away, and a bit cannot be interrogated. `Verdict =
+Ok(evidence) | NotOk(reason) | CannotSay(blind_spot)`, where an `Ok` is unconstructible without its
+evidence and no verdict may be used as a boolean. The *question* a witness asks stays semantic and
+unpoliceable. What is now impossible is publishing the answer without saying what was examined —
+which is the only reason any of these five were ever found.
+
 ## References
 
 * [ADR 0023](0023-audit-chain-independent-of-sink.md) — no transport may disable the store; the

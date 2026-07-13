@@ -279,9 +279,24 @@ unfalsifiable.
   **VOID** (exit 3, deliberately not the red 1: unusable is not the same as failed).
 - **`make gate-twice`** runs both passes and asserts **by machine** that they saw the same tree.
   Two green passes on two trees are REFUSED, and the refusal names what moved.
-- **`make claim` before you work in a worktree**, `make release` when you leave. A worktree has
-  ONE writer. The marker is advisory (nothing on a shared filesystem truly locks), and that is
-  enough: it turns a silent collision into a loud refusal. `make whoowns` asks.
+- **Say who you are, then `make claim`.** Identity is **asserted by the SESSION**, never derived
+  from a path — `make claim` used to read the *worktree's directory name*, so all seven live Claude
+  sessions in `agents/claude/` resolved to the owner `"claude"`, each read the marker, found its own
+  name, and believed it was home. **A role is not a writer** (ADR 0027). Mint an id **once** and
+  keep it for the whole session — a fresh uuid per command would make every command its own session:
+
+      eval "$(make session)"        # a human shell
+      export TESSERA_SESSION_ID=…   # an agent / CI: one uuid, minted once, kept
+
+  Then `make claim` before you work in a worktree, `make release` when you leave. A worktree has ONE
+  writer. A caller with no session id gets **CANNOT SAY** and exit 2 — never "you are home". The
+  marker is advisory (nothing on a shared filesystem truly locks), and that is enough **provided it
+  tells the truth**: it turns a silent collision into a loud refusal. `make whoowns` asks.
+- **Never take a verdict on a tree somebody else is writing in.** Destroy nothing — no stash, no
+  checkout, no reset — and gate an **isolated copy at the exact commit** (a disposable worktree).
+  On 2026-07-12 an agent correctly judged foreign changes *"NOT MINE"* and then **stashed them** to
+  get a clean tree: it destroyed the other's work *and* produced a verdict about a tree that no
+  longer existed. Both halves are wrong.
 
 Progress across slices/steps is tracked in `docs/status/0017-execution-status.md` — read it
 first when resuming work, it is the single source of truth for what's done, in flight, and next.
