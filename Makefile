@@ -245,7 +245,20 @@ NULL_BASELINE := eval/baselines/null-control.json
 
 # The runner exits 1 here by design — 52 of the 174 runs need a model and fail
 # without one. That exit code is NOT the verdict for the control; the ratchet is.
+#
+# AND THE `-` SWALLOWS EVERYTHING, NOT ONLY THE EXPECTED 1. A crash exits 1 too, and an
+# exit code genuinely cannot tell "52 cases failed, as designed" from "the runner died on
+# an import error" — that is a real blind spot, not a fixable one. So the witness stops
+# asking the runner's exit code and asks THE ARTEFACT: the report it grades must have been
+# produced by THIS run. Measured, 2026-07-13, before the `rm -rf` below existed: with
+# `run_eval.py` replaced by `raise SystemExit("BOOM")`, the previous run's report was still
+# on disk, `check_ratchet` graded it, printed `[ratchet PASS] 122/174`, and `make eval-null`
+# — a per-push CI gate — exited **0** with a runner that could not start.
+#
+# CI never saw it: a fresh checkout has no stale report. It was armed on every developer
+# machine, and CI's immunity was an accident of the runner being clean, not a design.
 eval-null: install
+	@rm -rf $(dir $(NULL_REPORT))
 	-TESSERA_LLM_PROFILE=on_prem TESSERA_OLLAMA_HOST=$(NULL_HOST) \
 		uv run python scripts/run_eval.py --report $(NULL_REPORT)
 	uv run python scripts/check_ratchet.py \
@@ -253,7 +266,11 @@ eval-null: install
 
 # Refresh the control's baseline after a DELIBERATE change to the deterministic
 # layer. Commit the diff — it is the evidence of what moved and why.
+# Same `rm -rf`, and here it matters even more: this target OVERWRITES THE COMMITTED
+# BASELINE from the report it finds. A stale report would have been promoted to the
+# reference every future run is graded against.
 eval-null-write: install
+	@rm -rf $(dir $(NULL_REPORT))
 	-TESSERA_LLM_PROFILE=on_prem TESSERA_OLLAMA_HOST=$(NULL_HOST) \
 		uv run python scripts/run_eval.py --report $(NULL_REPORT)
 	uv run python scripts/check_ratchet.py \
