@@ -817,6 +817,25 @@
       "runs": "Läufe",
       "compare": "Vergleich"
     },
+    "compare": {
+      "referential": "Referenzstand (verriegelt)",
+      "modelA": "Modell A",
+      "modelB": "Modell B",
+      "locked": "Ein Lauf ist ein Fallsatz × EIN Modell. „Zwei Modelle auf einem Lauf vergleichen“ gibt es nicht: zuerst wird der Referenzstand gewählt, dann zwei Modelle unter den Läufen, die darauf liefen.",
+      "offReferential": "⚠ Diese beiden Läufe liefen NICHT auf demselben Fallsatz ({a} gegen {b}). Der Unterschied ist ein Unterschied des TESTS, bevor er einer des Modells ist — er ist nicht dem Modell allein zuzuschreiben.",
+      "cost": "Die tatsächlichen Kosten",
+      "costWhy": "Qualität ohne Kosten zu vergleichen ist die Hälfte der Entscheidung.",
+      "sizeBuysNothing": "Kontraintuitives Ergebnis, auf diesem Sweep gemessen: {bigger} ({biggerB} Milliarden Parameter) trägt WENIGER bei als {smaller} ({smallerB} Milliarden). Auf diesem Katalog kauft Modellgröße nichts. Das ist ein Ergebnis, keine Anekdote.",
+      "disagreements": "{count, plural, =0 {Keine Abweichung} one {# Abweichung} other {# Abweichungen}}",
+      "disagreementsWhy": "Fälle, in denen beide Modelle dasselbe sagen, unterscheiden nichts: sie sind ausgeschlossen ({agreed} Läufe). Ein Bruch des Sockels steht oben — nichts wiegt schwerer als „schlechter als ohne Modell“.",
+      "byCategory": "Delta nach Kategorie — ein Modell ist nicht im Durchschnitt besser, es ist irgendwo besser",
+      "categoryWins": "{model} gewinnt {n}",
+      "categoryTie": "kein Unterschied",
+      "noDisagreement": {
+        "title": "Beide Modelle stimmen in allen Fällen überein",
+        "body": "Kein Fall unterscheidet sie auf diesem Referenzstand. Die absolute Rate sagte nichts weiter."
+      }
+    },
     "catalogue": {
       "title": "Der Fallsatz",
       "subtitle": "Ein versioniertes Artefakt, kein Ergebnis. Was wir prüfen können — und warum es jeden Fall gibt.",

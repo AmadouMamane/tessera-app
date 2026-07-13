@@ -817,6 +817,25 @@
       "runs": "Exécutions",
       "compare": "Comparaison"
     },
+    "compare": {
+      "referential": "Référentiel (verrouillé)",
+      "modelA": "Modèle A",
+      "modelB": "Modèle B",
+      "locked": "Un run, c'est un jeu de cas × UN modèle. « Comparer deux modèles sur un run » n'existe pas : on choisit d'abord le référentiel, puis deux modèles parmi les runs qui ont tourné dessus.",
+      "offReferential": "⚠ Ces deux runs n'ont PAS tourné sur le même jeu de cas ({a} contre {b}). L'écart entre eux est un écart de TEST avant d'être un écart de modèle — il n'est pas attribuable au modèle seul.",
+      "cost": "Le coût réel",
+      "costWhy": "Comparer la qualité sans le coût, c'est la moitié de la décision.",
+      "sizeBuysNothing": "Résultat contre-intuitif, mesuré sur ce sweep : {bigger} ({biggerB} milliards de paramètres) contribue MOINS que {smaller} ({smallerB} milliards). Sur ce catalogue, la taille du modèle n'achète rien. C'est un résultat, pas une anecdote.",
+      "disagreements": "{count, plural, =0 {Aucun désaccord} one {# désaccord} other {# désaccords}}",
+      "disagreementsWhy": "Les cas où les deux modèles disent la même chose ne discriminent rien : ils sont exclus ({agreed} runs). Une casse du plancher passe en tête — rien ne prime sur « pire que sans modèle ».",
+      "byCategory": "Delta par catégorie — un modèle n'est pas meilleur en moyenne, il est meilleur quelque part",
+      "categoryWins": "{model} gagne {n}",
+      "categoryTie": "aucun écart",
+      "noDisagreement": {
+        "title": "Les deux modèles sont d'accord sur tous les cas",
+        "body": "Aucun cas ne les distingue sur ce référentiel. Le taux absolu ne dirait rien de plus."
+      }
+    },
     "catalogue": {
       "title": "Le jeu de cas",
       "subtitle": "Un artefact versionné, pas un résultat. Ce qu'on sait tester, et pourquoi chaque cas existe.",

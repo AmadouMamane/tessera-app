@@ -219,3 +219,37 @@ que de le museler, j'ai donné aux segments leur **vraie identité** — leur of
 Le linter posait la bonne question.
 
 **Captures** : `lot3-fr-matrice-el.png`, `lot3-fr-fiche-cassee.png`.
+
+---
+
+## LOT 4 — la comparaison, verrouillée sur le référentiel  ✅
+
+Le troisième onglet ouvre. **Le référentiel se choisit AVANT les modèles** : un run est un jeu de cas
+× **UN** modèle, donc « comparer deux modèles sur un run » n'existe pas — la prémisse était fausse et
+la spec le dit. Le jeu de cas s'affiche comme ce qu'il est : un **cadenas** sur la comparaison, pas
+un filtre qu'on oublie. Si quelqu'un force deux runs de référentiels différents (URL directe), la
+page **le crie** en rouge (critère 2).
+
+**Aucun classement sur le taux absolu** (critère 10). Le module ne calcule *aucun* ordre : il calcule
+les **désaccords**, parce que les cas où deux modèles disent la même chose sont exactement ceux qui
+n'apprennent rien sur aucun des deux. Et la **casse du plancher passe en tête** — rien ne prime sur
+« pire que sans modèle ».
+
+| Fichier | Rôle |
+| --- | --- |
+| `lib/eval-compare.ts` + test | **module pur** — désaccords triés par gravité, delta par catégorie, garde-fou de référentiel, `sizeBuysNothing()` |
+| `components/eval/compare-tab.tsx` | l'onglet : deux cartes de score, le coût, les désaccords dépliables (deux réponses côte à côte + le critère sauté de chaque côté), le delta par catégorie |
+| `components/eval/compare-controls.tsx` | réécrit : référentiel verrouillé → modèles. L'ancien affichait `· 90%` **dans le sélecteur lui-même** |
+
+**Le résultat contre-intuitif est DÉRIVÉ, jamais écrit en dur.** `parseParamCount()` lit la taille
+dans le tag du modèle (`gemma3:27b` → 27) et `sizeBuysNothing()` ne renvoie quelque chose que si le
+**plus gros contribue strictement moins**. La phrase n'apparaît donc que quand les deux runs sous les
+yeux du lecteur la démontrent — et elle continuera d'être vérifiée sur les modèles balayés ensuite,
+au lieu d'être une phrase que quelqu'un a tapée un jour.
+
+**Mesuré, et affiché** : `llama3.2:3b` et `gemma3:27b` ne divergent que sur **2 cas sur 174**
+(172 accords), et **le coût les sépare bien plus que la qualité** : 4,3 min contre **22,1 min**.
+Sur le désaccord de tête, on *lit* la cause — le 3B refuse **en citant l'insulte**, le 27B refuse
+**sans la citer**.
+
+**Captures** : `lot4-fr-comparaison.png`, `lot4-fr-desaccord.png`.

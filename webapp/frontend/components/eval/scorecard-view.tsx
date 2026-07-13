@@ -5,6 +5,7 @@ import { OperatorLocked } from "@/components/auth/operator-locked";
 import { CaseMatrix } from "@/components/eval/case-matrix";
 import { CaseRunDetail } from "@/components/eval/case-run-detail";
 import { CatalogueTab } from "@/components/eval/catalogue-tab";
+import { CompareTab } from "@/components/eval/compare-tab";
 import { type EvalTab, EvalTabs } from "@/components/eval/eval-tabs";
 import { FailureSynthesis } from "@/components/eval/failure-synthesis";
 import { RunPicker } from "@/components/eval/run-picker";
@@ -33,6 +34,9 @@ interface ScorecardViewProps {
   /** Which cell of the matrix is open — a (case, language) pair. */
   caseId?: string;
   lang?: string;
+  /** The two runs being compared. Both are ids the sweep holds; neither is a path. */
+  a?: string;
+  b?: string;
 }
 
 /**
@@ -50,7 +54,7 @@ interface ScorecardViewProps {
  * What replaces them: the sweep's runs, each through the one {@link ScoreCard} that cannot
  * render a bare number, and the référentiel + freshness stated in the header — never implied.
  */
-export async function ScorecardView({ locale, tab, run, caseId, lang }: ScorecardViewProps) {
+export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: ScorecardViewProps) {
   const [sweep, t] = await Promise.all([
     loadSweep(),
     getTranslations({ locale, namespace: "eval" }),
@@ -79,6 +83,39 @@ export async function ScorecardView({ locale, tab, run, caseId, lang }: Scorecar
   // Default to the NEWEST run, never the best-scoring one. "Newest" is a fact about a run;
   // "best" would be a ranking, and on this catalogue the absolute rate ranks nothing.
   const selected = sweep?.runs.find((r) => r.id === run) ?? sweep?.runs[0];
+
+  if (tab === "compare" && sweep && sweep.runs.length >= 2) {
+    // The comparison renders per-case verdicts and the models' real responses — the same
+    // sensitivity as the detail, so the same operator gate (ADR 0009).
+    const role = await currentRole();
+    if (!isOperator(role)) {
+      return (
+        <div className="flex flex-col gap-6 pb-10">
+          {tabs}
+          <OperatorLocked locale={locale} />
+        </div>
+      );
+    }
+    // Two DIFFERENT models by default. Not "the two best" — on this catalogue the absolute rate
+    // ranks nothing, so there is no such thing.
+    const runA = sweep.runs.find((r) => r.id === a) ?? sweep.runs[0];
+    const runB =
+      sweep.runs.find((r) => r.id === b) ??
+      sweep.runs.find((r) => r.id !== runA?.id && r.model !== runA?.model) ??
+      sweep.runs.find((r) => r.id !== runA?.id);
+    const [docA, docB] = await Promise.all([
+      loadSweepRun(runA?.id, sweep),
+      loadSweepRun(runB?.id, sweep),
+    ]);
+    if (runA && runB && docA && docB) {
+      return (
+        <div className="flex flex-col gap-6 pb-10">
+          {tabs}
+          <CompareTab sweep={sweep} a={runA} b={runB} docA={docA} docB={docB} locale={locale} />
+        </div>
+      );
+    }
+  }
 
   if (!sweep || !selected) {
     return (

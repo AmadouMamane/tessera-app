@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
  */
 export type EvalTab = "cases" | "runs" | "compare";
 
-export const EVAL_TABS: readonly EvalTab[] = ["cases", "runs"] as const;
+export const EVAL_TABS: readonly EvalTab[] = ["cases", "runs", "compare"] as const;
 
 /** The URL's `?tab=`, narrowed. An unknown value opens the runs — never a blank screen. */
 export function parseTab(value: string | undefined): EvalTab {

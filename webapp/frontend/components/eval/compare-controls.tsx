@@ -1,8 +1,11 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
+import type { RunOption } from "@/components/eval/run-picker";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -12,27 +15,27 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import type { RunMeta } from "@/lib/api/schemas";
 import { shortRunDate } from "@/lib/format";
 import { findModel } from "@/lib/models";
 
-function optionLabel(run: RunMeta): string {
-  const model = run.model ? findModel(run.model).label : "—";
-  const pct = Math.round(run.summary.pass_rate * 100);
-  const date = shortRunDate(run.run_at);
-  return `${date} · ${model} · ${pct}%`;
-}
-
 /**
- * Two run pickers (A / B) for the model comparison. Selection drives the URL
- * (?run=A&vs=B) so the server re-renders the comparison for any two runs the
- * user chooses — not just the latest per model.
+ * The référentiel FIRST, the models second (§3 C).
+ *
+ * The picker this replaces let a reader choose any two runs by id and appended `· 90%` to every
+ * option. Two failures in one control: a raw pass rate — the one number this screen forbids — sat
+ * inside the very thing used to choose what to compare, and nothing stopped the two runs from
+ * having been scored on DIFFERENT case sets, which makes any gap between them a gap of *test*
+ * before it is a gap of *model*.
+ *
+ * So the case set is shown as what it is: a LOCK on the comparison, not a filter. Only the runs
+ * scored against it can be picked, and the options carry the date and the model — nothing else.
  */
 type CompareControlsProps = {
-  runs: RunMeta[];
-  aFile?: string;
-  bFile?: string;
-  labels: { a: string; b: string };
+  runs: RunOption[];
+  a: string;
+  b: string;
+  version: string | null;
+  labels: { referential: string; modelA: string; modelB: string; locked: string };
 };
 
 export function CompareControls(props: CompareControlsProps) {
@@ -40,9 +43,8 @@ export function CompareControls(props: CompareControlsProps) {
     <Suspense
       fallback={
         <div className="flex flex-wrap items-end gap-4">
-          <Skeleton className="h-9 w-64 rounded-md" />
-          <span className="pb-2 text-sm text-[var(--muted-foreground)]">vs</span>
-          <Skeleton className="h-9 w-64 rounded-md" />
+          <Skeleton className="h-9 w-56 rounded-md" />
+          <Skeleton className="h-9 w-56 rounded-md" />
         </div>
       }
     >
@@ -51,22 +53,34 @@ export function CompareControls(props: CompareControlsProps) {
   );
 }
 
-function CompareControlsInner({ runs, aFile, bFile, labels }: CompareControlsProps) {
+function CompareControlsInner({ runs, a, b, version, labels }: CompareControlsProps) {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
 
-  function navigate(key: "run" | "vs", value: string) {
+  function navigate(key: "a" | "b", value: string) {
     const params = new URLSearchParams(search.toString());
+    params.set("tab", "compare");
     params.set(key, value);
     router.replace(`${pathname}?${params.toString()}`);
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-4">
-      <Picker label={labels.a} value={aFile} runs={runs} onChange={(v) => navigate("run", v)} />
-      <span className="pb-2 text-sm text-[var(--muted-foreground)]">vs</span>
-      <Picker label={labels.b} value={bFile} runs={runs} onChange={(v) => navigate("vs", v)} />
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+      <div className="flex flex-col gap-1">
+        <span className="font-medium text-[var(--muted-foreground)] text-xs">
+          {labels.referential}
+        </span>
+        <Badge tone="navy" className="gap-1.5 px-2.5 py-1.5 font-mono">
+          <Lock className="h-3 w-3" />
+          {version ?? "—"}
+        </Badge>
+      </div>
+      <Picker label={labels.modelA} value={a} runs={runs} onChange={(v) => navigate("a", v)} />
+      <Picker label={labels.modelB} value={b} runs={runs} onChange={(v) => navigate("b", v)} />
+      <p className="max-w-md text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+        {labels.locked}
+      </p>
     </div>
   );
 }
@@ -78,21 +92,21 @@ function Picker({
   onChange,
 }: {
   label: string;
-  value?: string;
-  runs: RunMeta[];
+  value: string;
+  runs: RunOption[];
   onChange: (value: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-[var(--muted-foreground)]">{label}</span>
+      <span className="font-medium text-[var(--muted-foreground)] text-xs">{label}</span>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-64" aria-label={label}>
+        <SelectTrigger className="w-60" aria-label={label}>
           <SelectValue placeholder={label} />
         </SelectTrigger>
         <SelectContent>
           {runs.map((run) => (
-            <SelectItem key={run.filename} value={run.filename}>
-              {optionLabel(run)}
+            <SelectItem key={run.id} value={run.id}>
+              {`${shortRunDate(run.runAt ?? "")} · ${run.model ? findModel(run.model).label : "—"}`}
             </SelectItem>
           ))}
         </SelectContent>

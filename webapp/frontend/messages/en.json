@@ -817,6 +817,25 @@
       "runs": "Runs",
       "compare": "Comparison"
     },
+    "compare": {
+      "referential": "Référentiel (locked)",
+      "modelA": "Model A",
+      "modelB": "Model B",
+      "locked": "A run is a case set × ONE model. “Compare two models on a run” does not exist: the référentiel is chosen first, then two models among the runs that were scored against it.",
+      "offReferential": "⚠ These two runs did NOT run on the same case set ({a} vs {b}). The gap between them is a gap of TEST before it is a gap of model — it is not attributable to the model alone.",
+      "cost": "The real cost",
+      "costWhy": "Comparing quality without cost is half a decision.",
+      "sizeBuysNothing": "A counter-intuitive result, measured on this sweep: {bigger} ({biggerB} billion parameters) contributes LESS than {smaller} ({smallerB} billion). On this catalogue, model size buys nothing. That is a result, not an anecdote.",
+      "disagreements": "{count, plural, =0 {No disagreement} one {# disagreement} other {# disagreements}}",
+      "disagreementsWhy": "The cases where both models say the same thing discriminate nothing: they are left out ({agreed} runs). A break of the floor sorts first — nothing outranks being worse than having no model.",
+      "byCategory": "Delta by category — a model is not better on average, it is better somewhere",
+      "categoryWins": "{model} wins {n}",
+      "categoryTie": "no gap",
+      "noDisagreement": {
+        "title": "Both models agree on every case",
+        "body": "No case tells them apart on this référentiel. The absolute rate would say nothing more."
+      }
+    },
     "catalogue": {
       "title": "The case set",
       "subtitle": "A versioned artefact, not a result. What we know how to test, and why each case exists.",
