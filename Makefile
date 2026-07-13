@@ -407,9 +407,21 @@ dev-down:
 	@for p in $(DEV_FPORT) $(DEV_BPORT); do pids=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); [ -n "$$pids" ] && { echo "  SIGKILL :$$p ($$pids)"; kill -9 $$pids 2>/dev/null; }; done; true
 	@echo "✓ dev-down: :$(DEV_FPORT) and :$(DEV_BPORT) free"
 
-# Ports, PIDs, git head of the served checkout, health.
+# Ports, PIDs, and — the point — WHAT CODE THE PROCESS ACTUALLY LOADED, asked of the process.
+#
+# This target used to do `lsof` → the process's cwd → `git -C "$cwd" rev-parse HEAD`, and print
+# the answer in a column labelled `git`. Every reader took that to mean "the code this server is
+# serving". It never was: it was the git head of a DIRECTORY, and a directory is not a process.
+# Move the checkout under a live server and the witness reported the new sha with complete
+# composure — which is exactly what happened on 2026-07-13, while the operator's browser paid
+# 1 087 ms for a badge that costs 20 ms and every witness on the machine said all was well.
+#
+# A witness interrogates the thing, never its neighbourhood (ADR 0026). The server now publishes,
+# on /healthz, a digest of the source it loaded — captured at import and frozen, so a moving
+# checkout cannot change it — and `dev_status.py` re-hashes the checkout with the SAME function
+# and compares. Divergence ⇒ STALE · RESTART, loudly. Cannot ask ⇒ said out loud, never "ok".
 dev-status:
-	@for row in "frontend $(DEV_FPORT) /api/healthz" "backend $(DEV_BPORT) /healthz"; do set -- $$row; pid=$$(lsof -nP -tiTCP:$$2 -sTCP:LISTEN 2>/dev/null | head -1); if [ -n "$$pid" ]; then cwd=$$(lsof -a -p $$pid -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1); head=$$(git -C "$$cwd" rev-parse --short HEAD 2>/dev/null || echo -); h=$$(curl -sf --max-time 5 http://localhost:$$2$$3 >/dev/null 2>&1 && echo ok || echo DOWN); printf "  %-8s :%-5s pid %-7s git %-9s %s\n" "$$1" "$$2" "$$pid" "$$head" "$$h"; else printf "  %-8s :%-5s (not running)\n" "$$1" "$$2"; fi; done
+	@uv run python scripts/dev_status.py $(DEV_FPORT) $(DEV_BPORT)
 
 # Temporary validation server from a worktree on a custom port. The Prometheus
 # metrics port is derived too, not just the API port: it is bound unconditionally

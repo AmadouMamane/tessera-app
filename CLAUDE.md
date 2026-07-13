@@ -319,6 +319,8 @@ Read these before making any architecture-shaping change. They are short and bin
 - `docs/decisions/0005-tools-vs-workers-separation.md` — LangGraph nodes versus LLM-callable tools
 - `docs/decisions/0006-locale-prefixed-routing.md` — dashboard pages live under `app/[locale]/`, supersedes the single-locale `app/page.tsx` shape in the canonical tree above
 - `docs/decisions/0007-agent-memory-architecture.md` — agent memory: durable conversation transcript (Mechanism A) + pluggable `MemoryBackend` (window/summary/persistent tiers on pgvector, with langmem/mem0/zep adapters); adds the `src/tessera/memory/` package to the canonical tree
+- `docs/decisions/0024-every-governed-act-names-its-author.md` — every governed act names its author (verified) and its reason (declared); no identity field may carry a default that names somebody
+- `docs/decisions/0026-a-witness-interrogates-the-thing.md` — **a witness interrogates the thing, never its neighbourhood.** A gate reports its own exit code; a guard is what refuses a stranger; a server states which code it loaded; a contract is what it honours. And: a witness that cannot see reports a blind spot — it may never report "ok". Read it before writing any check, ratchet or status command: three guard-rails have already reported success over a hole because they asked an adjacent question
 
 ## Communication rules (permanent, no exception)
 

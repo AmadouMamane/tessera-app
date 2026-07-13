@@ -8,6 +8,7 @@ from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
 from tessera import __version__
+from tessera.code_identity import identity
 from tessera.llm import get_budget_tracker
 from tessera.settings import LLMProfile, get_settings
 
@@ -42,7 +43,15 @@ async def _llm_reachable() -> bool:
 
 
 class HealthResponse(BaseModel):
-    """Body returned by ``/healthz`` and ``/readyz``."""
+    """Body returned by ``/healthz`` and ``/readyz``.
+
+    ``version`` is the *package* version — it changes on a release, not on a commit, and it was
+    the only thing this endpoint ever said about its own code. It is therefore useless for the
+    one question an operator actually has in front of a running server: **is this the code I
+    think it is?** The ``code_*`` fields answer that, and they answer it *about the process*
+    (ADR 0026): they are captured at import and frozen, so a checkout that moves underneath a
+    live server cannot change what it reports.
+    """
 
     status: str
     version: str
@@ -50,11 +59,41 @@ class HealthResponse(BaseModel):
     # process). Read-only context for the header badge — never a re-scoping control.
     environment: str
 
+    #: Content hash of the ``.py`` files this process LOADED. The evidence — no git required, so
+    #: it works identically in a container. This is what `make dev-status` compares.
+    code_digest: str
+    #: The commit that content came from. ``None`` when the process cannot know — never a
+    #: fabricated value that reads like knowledge.
+    code_sha: str | None
+    #: ``env`` (a build stamped it) · ``git`` (a source tree) · ``unknown`` (and that is a fact).
+    code_sha_source: str
+    #: Uncommitted edits at load time. ``None`` = unknowable, never a comfortable ``false``.
+    code_dirty: bool | None
+
+
+def _health(status_text: str) -> HealthResponse:
+    """One body, one place the code identity is read from — frozen at import, never recomputed."""
+    code = identity()
+    return HealthResponse(
+        status=status_text,
+        version=__version__,
+        environment=get_settings().environment,
+        code_digest=code.digest,
+        code_sha=code.sha,
+        code_sha_source=code.sha_source,
+        code_dirty=code.dirty,
+    )
+
 
 @router.get("/healthz", response_model=HealthResponse)
 async def liveness() -> HealthResponse:
-    """Liveness probe — returns 200 as soon as the process is up."""
-    return HealthResponse(status="ok", version=__version__, environment=get_settings().environment)
+    """Liveness probe — returns 200 as soon as the process is up, and says what code it is.
+
+    The code identity is a frozen constant read here, never re-derived: if this handler called
+    ``git`` or hashed the filesystem, it would be reporting what is on disk **now** — which is
+    the question `dev-status` was already asking, and the reason it lied for a week.
+    """
+    return _health("ok")
 
 
 @router.get("/readyz", response_model=HealthResponse)
@@ -66,11 +105,10 @@ async def readiness(response: Response) -> HealthResponse:
     LLM backend is unreachable, which is what flips the Docker healthcheck (and
     any orchestrator) to unhealthy instead of serving silent escalations.
     """
-    env = get_settings().environment
     if not await _llm_reachable():
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return HealthResponse(status="llm_unreachable", version=__version__, environment=env)
-    return HealthResponse(status="ready", version=__version__, environment=env)
+        return _health("llm_unreachable")
+    return _health("ready")
 
 
 @router.get("/budget", response_class=Response, status_code=status.HTTP_200_OK)

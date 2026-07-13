@@ -36,6 +36,7 @@ wearing an ADR's number. They now live in `docs/status/` and `docs/incidents/`.
 | 0023 | [The audit chain is independent of the audit sink](0023-audit-chain-independent-of-sink.md) — *audit F-6; annex to 0015* |
 | 0024 | [Every governed act names its author; every configuration that cannot hold a guarantee refuses to boot](0024-every-governed-act-names-its-author.md) — *audit F-1/F-5/F-6/F-B, one doctrine; generalises 0023* |
 | 0025 | [Subject reads will be gated by DECLARED PURPOSE](0025-pii-reads-are-gated-by-role-not-by-purpose.md) — *audit F-C; **ruled** 2026-07-12: purpose, not dossier, not tenant. Today's posture (role only) ships stated plainly, pinned by a test* |
+| 0026 | [A witness interrogates the thing, never its neighbourhood](0026-a-witness-interrogates-the-thing.md) — *the methodological twin of 0024. Three guard-rails reported success over a hole because each asked an adjacent question: the gate read a pipeline's last line instead of its exit code; a guard checked a name in a list instead of calling it with a stranger's request; `dev-status` asked git about a **directory** instead of asking the server what it **loaded**. And: a witness that cannot see reports a blind spot — it may never report "ok"* |
 
 *(0021 is reserved for `recouvrement-internal-operator-agent` — see below.)*
 
