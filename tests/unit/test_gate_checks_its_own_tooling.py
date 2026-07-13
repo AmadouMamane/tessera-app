@@ -130,9 +130,9 @@ class TestTheGateRefusesWhenItsOwnToolIsMissing:
             f"BY ACCIDENT — that is the bug this ratchet exists for.\n{out}"
         )
         assert tool in out, f"it refused without naming the missing tool.\n{out}"
-        assert "rebase" in out, (
-            f"it named no repair. A red nobody can act on is a red people learn to ignore.\n{out}"
-        )
+        assert (
+            "rebase" in out
+        ), f"it named no repair. A red nobody can act on is a red people learn to ignore.\n{out}"
 
     def test_a_tool_deleted_from_the_worktree_names_the_restore_not_the_rebase(
         self, repo: Path
