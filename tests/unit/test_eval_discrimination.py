@@ -585,6 +585,79 @@ class TestThePowerRatchet:
 # --------------------------------------------------------------------------------------
 
 
+class TestTheCheckAsksTheCatalogueNotItsOwnArtefacts:
+    """The hole this ratchet fell into, and the guard that keeps it out.
+
+    ``make eval-power`` was **green with two of its three certified discriminators deleted from
+    disk**. It re-derived a 63-case classification from a 63-column matrix against a 63-case null
+    floor — three committed artefacts, in perfect agreement with one another, all three describing
+    a catalogue that no longer existed. Not one of them had ever opened ``eval/failures/``.
+
+    That is ADR 0026 exactly: *a witness interrogates the thing, never its neighbourhood* — and it
+    is the fourth time in this repository. So the CLI now derives the catalogue's identity from the
+    **case files**, with the same function the runner stamps reports with, and refuses the moment
+    it disagrees with the floor everything else is pinned to.
+    """
+
+    def test_the_cli_derives_the_catalogue_identity_from_the_case_files(self) -> None:
+        from scripts.check_discrimination import _catalogue_on_disk
+
+        from eval.ratchet import catalogue_version
+
+        ids = [
+            p.stem
+            for p in sorted((REPO / "eval" / "failures").glob("*.json"))
+            if not p.stem.startswith("_")
+        ]
+        assert _catalogue_on_disk(REPO / "eval" / "failures") == catalogue_version(ids)
+
+    def test_a_catalogue_that_is_not_there_is_a_blind_spot__never_an_empty_one(
+        self, tmp_path: Path
+    ) -> None:
+        """An unreadable catalogue must not read as a catalogue of zero cases.
+
+        ``catalogue_version([])`` is a perfectly good string — ``"0-e3b0c442"`` — and a check that
+        computed it would have compared two hashes, found them different, and refused for the
+        *wrong reason*, or worse, matched an equally empty floor and passed. The absence of the
+        thing is not a property of the thing.
+        """
+        from scripts.check_discrimination import _catalogue_on_disk
+
+        assert _catalogue_on_disk(tmp_path / "does-not-exist") is None
+        assert _catalogue_on_disk(tmp_path) is None  # exists, but empty
+
+    def test_deleting_a_case_makes_the_committed_evidence_describe_a_dead_catalogue(
+        self, tmp_path: Path
+    ) -> None:
+        """The mutation, at the level the CLI reads it.
+
+        The committed artefacts do not change when a case file is deleted — that is the whole
+        point, and the whole danger. What changes is the catalogue, and only something that looks
+        at the catalogue can see it.
+        """
+        from scripts.check_discrimination import _catalogue_on_disk
+
+        from eval.ratchet import catalogue_version
+
+        cut = tmp_path / "failures"
+        cut.mkdir()
+        kept = [
+            p
+            for p in sorted((REPO / "eval" / "failures").glob("*.json"))
+            if not p.stem.startswith("_") and p.stem != "26_citation_fabrication_cjue"
+        ]
+        for p in kept:
+            (cut / p.name).write_bytes(p.read_bytes())
+
+        frozen = load_power(CLASSIFICATION)
+        mutated = _catalogue_on_disk(cut)
+        assert mutated is not None
+        assert (
+            mutated != frozen.catalogue_version
+        ), "deleting a case did not change the catalogue's identity — the pin is not a pin"
+        assert mutated == catalogue_version([p.stem for p in kept])
+
+
 class TestTheCommittedMeasurement:
     """These read the real artefacts. If the evidence is gone, this is RED, never skipped:
     a test that cannot see must report a blind spot, not a pass (ADR 0026)."""

@@ -1392,7 +1392,7 @@ def check_power(
     if power.discriminating_runs < floor_runs:
         reasons.append(
             f"the catalogue LOST discriminating power: {power.discriminating_runs} runs measure "
-            f"model, the frozen floor is {floor_runs}."
+            f"the model, and the frozen floor is {floor_runs}."
         )
 
     if reasons:
