@@ -102,7 +102,7 @@ class TestTheContributionThatReplacesIt:
         # Rule 2 is measured, never gated: a per-set bar would be an invented number.
         assert contribution["gated"] is False
 
-    def test_an_unrestricted_floor_is_REFUSED_not_misgraded(self) -> None:
+    def test_an_unrestricted_floor_is_refused_not_misgraded(self) -> None:
         """ADR 0021 §3(a) is wrong that the per-set axis is free. This is why.
 
         Graded against the whole catalogue's floor, `recouvrement`'s real run used to read

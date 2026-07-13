@@ -100,6 +100,74 @@ on a number someone chose. Its honest form is the same two rules, applied **per 
   used, so the heuristic cannot pass itself off as a measurement. **The debt closes by
   sweeping a deliberately weak model (a 1B, or a degraded config) — roughly 20 minutes.**
 
+## Amendment 1 (2026-07-13) — the floor is enforced where a release is decided, and the weak-model calibration failed
+
+This ADR was **accepted, implemented, and not enforced.** Rule 1 was computed
+(`eval/contribution.py`), rendered (the Contribution tile on the agent's Évaluations page,
+shipped with `"gated": false`) — and the **Release button in that same component file**
+called `release_decision()`, which read only `gate.passed`: the critical floor. An agent
+could break a case its own deterministic guard/router layer closes unaided, be *shown*
+breaking it, and be released anyway. The screen told the truth; the button did not read it.
+
+The critical floor cannot see this and never could — that is the whole reason this ADR
+exists. Removing the domain bars left the gate with **no non-critical condition at all**.
+
+**1. Rule 1 is now a release condition.** `observability/eval_floor.py` is the single grader,
+read by both the tile and the button (two implementations of "the floor" is how they drifted
+apart). It fails closed on an unreplayed break, on a floor that no longer applies, and on no
+floor at all. `BLOCKED_BY_FLOOR` is its own reason with its own label — never folded into
+`eval_gate`, because the two fail for different reasons and are fixed by different work.
+
+**2. A floor expires, and the gate refuses rather than guessing.** Every rule reads its
+population off the committed null control, so a floor captured on another case set grades
+against runs that no longer exist. `evaluate_contribution` had **no `catalogue_version` check
+at all**; the ratchet's own was **fail-open** (an empty version on either side skipped the
+comparison and read green); and `restrict_baseline` **inherited** its parent's identity, so a
+floor holding 28 cases claimed to be the 63-case catalogue and matched no per-set run. All
+three are closed, the identity is now derived from the cases held, and a refusal is **not** a
+BLOCK: `check_contribution.py` exits **3**, not 1 — unusable is not the same as failed.
+
+**3. Debt (Rule 2's bar): the prescribed remedy was run, and it FAILED.** This ADR said the
+debt closed by sweeping a weak model — *"the single act that turns 30 into a calibrated
+number, and it costs ~20 minutes."* Five full passes per model (`make eval-noise`):
+
+| Model | Role | Contribution of 52, per pass | min | mean |
+| --- | --- | --- | --- | --- |
+| llama3.2:3b | the bar must **admit** it | 35, 36, 33, 36, 36 | **33** | 35.2 |
+| llama3.2:1b | the bar must **reject** it | 33, 33, 35, 32, 31 | **31** | 32.8 |
+
+**The distributions overlap.** The weak model's *best* pass (35) beats the default's *worst*
+(33), so **no bar** admits every pass of the default and rejects every pass of a model one
+third its size. And 30 sits below **both** minima: against the only weak anchor we have, it
+fails nothing. A 1B is not weak on this catalogue — it lands 2.4 runs of 52 behind the 3B.
+
+The bar is not thereby a decoration in the sense this ADR killed the domain bars with: those
+were cleared **by the null control itself**, and this one is not (the null control scores
+0/52 and fails it). It still catches a model contributing almost nothing. What it
+demonstrably cannot do is what its name promises — separate a *weak* model from a good one.
+**The debt stays open, and the cheap remedy is ruled out.** `MIN_CONTRIBUTION_UNCALIBRATED`
+now carries the measurement, and a test pins it so the bar cannot be "calibrated" without one.
+
+**4. This ADR's own claims, corrected by measurement.**
+
+- *"30 leaves 5-6 cases of margin above the measured sampling noise."* The noise had never
+  been measured — one pass per model tells you nothing about a distribution, and T2 samples
+  at temperature 0.2 with **no seed**. Measured: sd 1.3, spread 3, and the margin from 30 to
+  the default's worst pass is **3 cases, not 5-6**.
+- *"the only reproducible regression"* (`56_policy_violation_disparage_bank|de`, "failed 3
+  runs in a row"). It is **not deterministic**: it breaks in **4 of 5** passes. Every other
+  candidate breaks in exactly **1 of 5**. `check_contribution.py` confirmed a break with a
+  **single** replay — so it falsely *cleared* the real regression one time in five and falsely
+  *confirmed* noise one time in five. It is now best-of-three.
+
+**5. The half that works.** On the same passes, Rule 1 discriminates sharply: the weak model
+breaks **9** distinct floor runs to the default's **5**. The rule anchored on the *measured
+floor* separates the models; the rule with a *chosen number* does not. That is this ADR's own
+thesis, proven a second time — against its own surviving bar. It is Rule 1, not Rule 2, that
+now gates a release.
+
+Evidence: `eval/baselines/contribution-calibration.json`, `docs/status/eval-gate-lift-run.md`.
+
 ## Alternatives rejected
 
 - **Raise the domain bars above the null floor** (e.g. 75%). Rejected: it keeps grading the

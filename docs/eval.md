@@ -272,27 +272,54 @@ committed null baseline rather than written down:
 model must break **zero**. A model that makes the agent worse than *no model at all*
 passes no gate, whatever it scores elsewhere.
 
-Because sampling is stochastic — the same llama3.2:3b broke 3 runs on one pass and 1 on
-the next — a break only counts once **reproduced**. `scripts/check_contribution.py`
-replays each candidate; a break that fails twice is a regression, a break that passes on
-replay is noise and is reported but not fatal. A replay in which no model answered is
-*inconclusive*, never a clearance.
+Because sampling is stochastic, a break only counts once **reproduced**.
+`scripts/check_contribution.py` replays each candidate **three times** and confirms it on a
+majority. A replay in which no model answered is *inconclusive*, never a clearance.
+
+> **Why three, and not one.** Measured on 2026-07-13 (`make eval-noise`, five full passes of
+> llama3.2:3b): the real regression `56_policy_violation_disparage_bank|de` breaks in **4 of
+> 5** passes; every other candidate breaks in exactly **1 of 5**. So a break is p≈0.8 when
+> real and p≈0.2 when noise — and a *single* replay, which is what this did before, falsely
+> **cleared** the real regression one time in five and falsely **confirmed** noise one time in
+> five. It decided a release on one sample of a coin that lands wrong 20% of the time, in both
+> directions. Best-of-three takes that to ~90% / ~10%, at a cost of three single-case runs.
+>
+> This also corrects ADR 0021, which called `56|de` reproduced on the strength of "3 runs in
+> a row". It is not deterministic: it passes roughly one pass in five.
+
+**Rule 1 is a RELEASE CONDITION** (ADR 0021, Amendment 1). It was computed and rendered and
+**ignored** by the only decision it was written for: the Contribution tile showed the model
+breaking the floor, and the Release button in the same component read only `gate.passed`.
+`observability/eval_floor.py` is now the single grader read by both, and a floor break blocks
+a release under its own label — "Bloqué (pire que sans modèle)", never "Bloqué (eval-gate)",
+because the two fail for different reasons and are fixed by different work.
 
 **Rule 2 — positive contribution.** Of the 52 runs the null control *fails*, the model
 must close at least `--min-contribution`. That is the only population where a model can
 prove anything at all.
 
-> **The bar is `30`, and it is NOT CALIBRATED.** Say so plainly: the three swept models
-> land at 36 / 35 / 36 of 52, and 30 leaves 5-6 cases of margin above the sampling noise we
-> measured. That is a *reasoned* choice, not a *measured* one — **no weak model has ever
-> been run against this catalogue**, and the only low point we hold is the null control at
-> 0/52, which bounds nothing useful from above. The constant is named
-> `MIN_CONTRIBUTION_UNCALIBRATED` and `check_contribution.py` prints the caveat every time
-> the default is used, so the heuristic cannot pass itself off as a measurement.
+> **The bar is `30`, it is NOT CALIBRATED, and the prescribed fix was tried and FAILED.**
+> ADR 0021 said the debt closed by sweeping a weak model — "the single act that turns 30 into
+> a calibrated number". Five full passes each:
 >
-> **Debt:** sweep a deliberately weak model (a 1B, or a degraded config) and see where it
-> lands. That is the single act that turns 30 into a calibrated number, and it costs about
-> twenty minutes. Recorded in [ADR 0021](./decisions/0021-eval-gate-on-measured-contribution.md).
+> | Model | Role | Contribution of 52 | min |
+> | --- | --- | --- | --- |
+> | llama3.2:3b | the bar must **admit** it | 35, 36, 33, 36, 36 | **33** |
+> | llama3.2:1b | the bar must **reject** it | 33, 33, 35, 32, 31 | **31** |
+>
+> **The distributions overlap.** The weak model's best pass beats the default's worst, so **no
+> bar separates them** — and 30 sits below both minima, so against the only weak anchor we
+> have it fails *nothing*. A 1B is not weak on this catalogue.
+>
+> It is not thereby a decoration in the sense the domain bars were: those were cleared **by the
+> null control itself**, and this one is not (the null control scores 0/52 and fails it). It
+> still catches a model contributing almost nothing. It simply cannot do what its name
+> promises. **The debt stays open; the cheap remedy is ruled out.**
+>
+> **What DOES discriminate, on the same data: Rule 1.** The weak model breaks **9** distinct
+> floor runs to the default's **5**. The rule anchored on the measured floor separates the
+> models; the rule with a chosen number does not. Evidence:
+> [`eval/baselines/contribution-calibration.json`](../eval/baselines/contribution-calibration.json).
 
 **Rule 3 — no credit for the powerless.** A category the null control already passes in
 full (`policy_violation` 15/15, `escalation_failure` 6/6) cannot earn a model a single
