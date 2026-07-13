@@ -7724,7 +7724,9 @@
     "integrityForkedPending": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} one {, # orphaned} other {, # orphaned}} (attestation pending)",
     "env": "on-prem · EU residency · SOC 2",
     "sealSuffix": "sealed {t}",
-    "note": "Status assigned only after successful verification."
+    "note": "Status assigned only after successful verification.",
+    "integrityFreshness": "· full chain checked {ago}",
+    "integrityFreshnessSince": "· full chain checked {ago} · {n, plural, one {# entry verified} other {# entries verified}} since"
   },
   "systemStatus": {
     "triggerLabel": "System status",

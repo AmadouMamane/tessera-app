@@ -107,6 +107,12 @@ CREATE_LEDGER_INDEXES: Final = (
     # excluded; new rows carry it and dedup on it.
     f"CREATE UNIQUE INDEX IF NOT EXISTS audit_ledger_event_uq ON {LEDGER_TABLE} "
     f"((payload->>'event_id')) WHERE payload->>'event_id' IS NOT NULL",
+    # The incremental verifier asks, per new row: "which rows already claim this parent?" —
+    # that is fork detection. Without this index the question is a sequential scan and the fork
+    # delta degrades from 0.09 ms to 38 ms, i.e. back to O(ledger), which is the whole thing we
+    # are killing. (Measured after ANALYZE: a fresh index with stale statistics still gets the
+    # slow plan — the index alone is not the fix, the statistics are part of it.)
+    f"CREATE INDEX IF NOT EXISTS audit_ledger_prev ON {LEDGER_TABLE} (prev_hash)",
 )
 
 # TESS-LEDGER-001 — the fork guard (belt + suspenders to the advisory lock). A partial UNIQUE
@@ -628,7 +634,12 @@ def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
 # Consumers keep their own filters and call one of these instead of opening the file.
 
 
-def read_ledger_entries(path: Path | None = None) -> list[dict[str, Any]]:
+def read_ledger_entries(
+    path: Path | None = None,
+    *,
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> list[dict[str, Any]]:
     """Every ledger entry (oldest→newest) from the ACTIVE source — the single read seam.
 
     ``file`` (default) parses the flat journal at ``path`` — or the settings audit file
@@ -637,15 +648,92 @@ def read_ledger_entries(path: Path | None = None) -> list[dict[str, Any]]:
     yield the same dicts, so a caller's filtering is identical before and after the cut.
     In postgres mode an unreachable store raises ``psycopg.Error`` — the caller maps that
     to honest-empty (never a fabricated zero), exactly as the spine adapter does.
+
+    ``since``/``until`` bound the read IN SQL, on the ``occurred_at`` index. Without them a
+    single request materialises the whole 38 MB table before filtering a page out of it in
+    Python — the unbounded read that made ``GET /audit`` a DoS surface. Both default to None,
+    so the 21 existing callers are byte-for-byte unchanged.
+
+    NOT pushed down, and deliberately so: the eight payload-shape filters (target, outcome,
+    event_type, actor_role, scope, policy_rule, free-text q, agent) still run in Python over the
+    windowed rows, and therefore ``LIMIT`` cannot be pushed either — a SQL ``LIMIT 50`` applied
+    before those filters would return the wrong page, silently. Closing that needs the filters
+    expressed over the jsonb payload (a GIN index); it is written up as an owed item rather than
+    faked with a cap that reads like completeness.
     """
     if ledger_source() == "postgres":
-        return load_ledger_payloads_sync()
+        # No window → the historical seam, unchanged, so the 21 existing callers (and the test
+        # that pins this seam) keep the exact call they had.
+        if since is None and until is None:
+            return load_ledger_payloads_sync()
+        return load_ledger_payloads_window(since=since, until=until)
     from tessera.settings import get_settings
 
     target = path if path is not None else get_settings().guard.audit_file
     if not target.exists():
         return []
     return _file_entries(target)
+
+
+def load_ledger_payloads_window(
+    *, since: datetime | None = None, until: datetime | None = None
+) -> list[dict[str, Any]]:
+    """Payloads inside a time window (oldest→newest), bounded in SQL on the occurred_at index."""
+    query = f"SELECT payload FROM {LEDGER_TABLE}"  # noqa: S608 — fixed identifier
+    clauses: list[str] = []
+    params: list[object] = []
+    if since is not None:
+        clauses.append("occurred_at >= %s")
+        params.append(since)
+    if until is not None:
+        clauses.append("occurred_at <= %s")
+        params.append(until)
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
+    query += " ORDER BY seq"
+    with _connect_sync() as conn, conn.cursor() as cur:
+        cur.execute(query, params)
+        rows = cur.fetchall()
+    return [row[0] for row in rows if isinstance(row[0], dict)]
+
+
+def load_ledger_payloads_of_type(entry_type: str, at: str | None = None) -> list[dict[str, Any]]:
+    """Only the payloads of one ``type`` (oldest→newest) — a targeted read, not a full scan.
+
+    The seal facet needs the latest ``tessera.ledger.seal`` entry: a handful of rows. It was
+    getting them by loading all 25 634 payloads and filtering in Python, on every badge request.
+    """
+    query = f"SELECT payload FROM {LEDGER_TABLE} WHERE payload->>'type' = %s"  # noqa: S608
+    params: list[object] = [entry_type]
+    if at:
+        try:
+            cutoff = datetime.fromisoformat(at)
+        except ValueError:
+            cutoff = None
+        if cutoff is not None:
+            if cutoff.tzinfo is None:
+                cutoff = cutoff.replace(tzinfo=UTC)
+            query += " AND occurred_at <= %s"
+            params.append(cutoff)
+    query += " ORDER BY seq"
+    with _connect_sync() as conn, conn.cursor() as cur:
+        cur.execute(query, params)
+        rows = cur.fetchall()
+    return [row[0] for row in rows if isinstance(row[0], dict)]
+
+
+def ledger_length_as_of(at: datetime) -> int:
+    """How many entries existed at instant T — counted in SQL, on the ``occurred_at`` index.
+
+    Was: load every payload, Pydantic-validate every row into an ``AuditEntry``, then count the
+    ones inside the window. 3.3 ms in SQL against a full materialisation of 38 MB.
+    """
+    with _connect_sync() as conn:
+        row = conn.execute(
+            f"SELECT count(*) FROM {LEDGER_TABLE} WHERE occurred_at <= %s",  # noqa: S608
+            (at,),
+        ).fetchone()
+    return int(row[0]) if row else 0
 
 
 def ledger_head_hash() -> str | None:

@@ -209,6 +209,11 @@ class GuardSettings(BaseSettings):
     seal_tsa_qualified: bool = False  # eIDAS-qualified TSA? → "opposable" vs "non qualifié"
     seal_interval_s: int = 3600  # τ — the guaranteed upper bound on undetected-anomaly time
     seal_staleness_budget_s: int = 7200  # 2τ — beyond this a seal is "stale" → Intégrité partielle
+    # How often the WHOLE chain is re-walked and re-hashed (boot, then off-chrono). The badge
+    # verifies incrementally against a checkpoint on the request path; this is the walk that
+    # earns that checkpoint, and the badge publishes how long ago it last ran. 0 disables the
+    # loop — and the badge then says so, rather than quietly resting on an old proof.
+    ledger_verify_interval_s: int = 900
 
     @field_validator("escalation_confidence_threshold")
     @classmethod

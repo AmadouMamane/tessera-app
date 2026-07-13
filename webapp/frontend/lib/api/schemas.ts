@@ -292,6 +292,14 @@ export const AuditIntegritySchema = z.object({
   fork_count: z.number().int().default(0),
   orphan_count: z.number().int().default(0),
   attested: z.boolean().default(false),
+  // Verification provenance. Content integrity is checked INCREMENTALLY against a checkpoint (the
+  // ledger is append-only, so a verified prefix stays verified). These three fields are what stop
+  // that from being an assumption dressed as a proof: the badge says when the WHOLE chain was last
+  // walked, and how many entries have been verified incrementally since. Null in file mode, where
+  // every read walks the whole journal anyway.
+  full_verified_at: z.string().nullable().default(null),
+  entries_since_full: z.number().int().default(0),
+  checkpoint_used: z.boolean().default(false),
   // Hica external seal facet (ADR 0015 §Amendment 3 / §Correction 3c). `badge` is the register §9
   // opposability verdict, computed live from tree + seal — never stored, never cosmetic.
   seal_state: z

@@ -7726,7 +7726,9 @@
     "integrityForkedPending": "Intégrité contenu vérifiée · ordre total : {forks, plural, one {# fourche historique} other {# fourches historiques}}{orphans, plural, =0 {} one {, # orpheline} other {, # orphelines}} (attestation en attente)",
     "env": "Sur site · résidence UE · SOC 2",
     "sealSuffix": "scellé {t}",
-    "note": "Statut attribué uniquement après vérification réussie."
+    "note": "Statut attribué uniquement après vérification réussie.",
+    "integrityFreshness": "· chaîne complète contrôlée {ago}",
+    "integrityFreshnessSince": "· chaîne complète contrôlée {ago} · {n, plural, one {# entrée vérifiée} other {# entrées vérifiées}} depuis"
   },
   "systemStatus": {
     "triggerLabel": "État système",

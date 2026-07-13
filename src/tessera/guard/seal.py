@@ -34,6 +34,7 @@ from tessera.guard.audit import LEDGER_SEAL_TYPE, emit_ledger_seal
 from tessera.guard.ledger_store import (
     LedgerTreeStatus,
     ledger_source,
+    load_ledger_payloads_of_type,
     load_ledger_payloads_sync,
     read_ledger_entries,
     verify_ledger_tree,
@@ -435,16 +436,39 @@ def _read_active_payloads(
 def active_ledger_seal_status(
     path: Path | None = None, *, at: datetime | None = None
 ) -> SealStatus:
-    """Seal facet of the active ledger (footer suffix + ``/audit/integrity`` seal fields)."""
+    """Seal facet of the active ledger (footer suffix + ``/audit/integrity`` seal fields).
+
+    Two reads that were pure waste, both on the badge's hot path:
+
+    * Under the NoOp provider (the shipped default) ``evaluate_seal`` returns ``absent`` without
+      ever looking at a payload — yet this function loaded all 25 634 of them first, and threw
+      them away. The provider decision now happens BEFORE the read.
+    * When a provider IS configured, the seal only needs ``tessera.ledger.seal`` entries — a
+      handful. It now asks for those, instead of every row in the ledger.
+    """
     from tessera.settings import get_settings
 
     settings = get_settings()
     provider = get_seal_provider(settings)
-    payloads = _read_active_payloads(path, at=at)
+    now = datetime.now(UTC)
+    if isinstance(provider, NoOpProvider):
+        # The honesty short-circuit in evaluate_seal, hoisted above the read it made pointless.
+        return evaluate_seal(
+            (),
+            provider=provider,
+            now=now,
+            staleness_budget_s=settings.guard.seal_staleness_budget_s,
+            at=at,
+        )
+    payloads: Sequence[Mapping[str, object]]
+    if ledger_source() == "postgres":
+        payloads = load_ledger_payloads_of_type(LEDGER_SEAL_TYPE, at.isoformat() if at else None)
+    else:
+        payloads = _read_active_payloads(path, at=at)
     return evaluate_seal(
         payloads,
         provider=provider,
-        now=datetime.now(UTC),
+        now=now,
         staleness_budget_s=settings.guard.seal_staleness_budget_s,
         at=at,
     )

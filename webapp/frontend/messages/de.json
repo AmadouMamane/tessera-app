@@ -7724,7 +7724,9 @@
     "integrityForkedPending": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} one {, # verwaiste} other {, # verwaiste}} (Attestierung ausstehend)",
     "env": "Vor Ort · EU-Residenz · SOC 2",
     "sealSuffix": "versiegelt {t}",
-    "note": "Status erst nach erfolgreicher Prüfung vergeben."
+    "note": "Status erst nach erfolgreicher Prüfung vergeben.",
+    "integrityFreshness": "· vollständige Kette geprüft {ago}",
+    "integrityFreshnessSince": "· vollständige Kette geprüft {ago} · seitdem {n, plural, one {# Eintrag geprüft} other {# Einträge geprüft}}"
   },
   "systemStatus": {
     "triggerLabel": "Systemstatus",

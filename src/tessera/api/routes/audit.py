@@ -97,6 +97,15 @@ class AuditIntegrity(BaseModel):
     fork_count: int = 0
     orphan_count: int = 0
     attested: bool = False
+    # Verification provenance — the badge must say SINCE WHEN, never just "verified". Content
+    # integrity is now checked incrementally against a checkpoint (the ledger is append-only, so a
+    # verified prefix stays verified); these three fields are what stop that from being an
+    # assumption dressed as a proof. ``full_verified_at`` is when the WHOLE chain was last walked;
+    # ``entries_since_full`` is how many entries were verified incrementally since. Null in file
+    # mode, where every read walks the whole journal anyway.
+    full_verified_at: str | None = None
+    entries_since_full: int = 0
+    checkpoint_used: bool = False
     # Hica external seal facet (ADR 0015 §Amendment 3 pt3 / §Correction 3c pt4). ``badge`` is the
     # register §9 opposability verdict, computed live from tree + seal — never stored (design note).
     seal_state: Literal["absent", "verified", "stale", "unverifiable", "divergent"] = "absent"
@@ -405,9 +414,11 @@ def _entry_from_payload(payload: dict[str, object]) -> AuditEntry:
     )
 
 
-def _read_entries_uncached(path: Path) -> list[AuditEntry]:
+def _read_entries_uncached(
+    path: Path, *, since: datetime | None = None, until: datetime | None = None
+) -> list[AuditEntry]:
     out: list[AuditEntry] = []
-    for payload in read_ledger_entries(path):
+    for payload in read_ledger_entries(path, since=since, until=until):
         try:
             out.append(_entry_from_payload(payload))
         except (ValidationError, TypeError):
@@ -418,13 +429,21 @@ def _read_entries_uncached(path: Path) -> list[AuditEntry]:
     return out
 
 
-def _read_entries(path: Path) -> list[AuditEntry]:
+def _read_entries(
+    path: Path, *, since: datetime | None = None, until: datetime | None = None
+) -> list[AuditEntry]:
+    """Entries from the active source, optionally bounded to a time window IN SQL.
+
+    The window is the one filter that can be pushed down honestly (it is the ``occurred_at``
+    index). Without it, listing a 50-row page materialised all 25 634 rows and Pydantic-validated
+    every one of them — an unbounded read on a table that only grows.
+    """
     global _ENTRIES_CACHE
 
     # The stat-keyed cache is a file-mode optimisation; after the cut the promoted
     # table is the source (no file mtime/size to key on), so read it fresh each call.
     if ledger_source() == "postgres":
-        return _read_entries_uncached(path)
+        return _read_entries_uncached(path, since=since, until=until)
     state = _audit_file_state(path)
     with _ENTRIES_CACHE_LOCK:
         if _ENTRIES_CACHE is not None and _ENTRIES_CACHE.state == state:
@@ -444,13 +463,23 @@ def _safe_seal_status(path: Path) -> object:
         return SealStatus("absent", None, False, None, None, "seal status unavailable")
 
 
-def _integrity_from_tree(status: object, seal: object | None = None) -> AuditIntegrity:
+def _integrity_from_tree(
+    status: object,
+    seal: object | None = None,
+    freshness: object | None = None,
+) -> AuditIntegrity:
     """Lift the tree verdict + seal facet into the API model.
 
     ``verified`` = content integrity (tamper-evidence). ``badge`` is the register §9 opposability
     verdict, composed live from ``{content_integrity, linear, attested}`` and the seal — the single
     source of the badge (design note §6), never a stored string.
+
+    ``freshness`` (a ``LedgerVerdict``) carries WHEN the whole chain was last walked. It is
+    optional only because file mode has no checkpoint — there, every read walks the journal, so
+    "since when" is "now" and the fields stay null rather than claiming a checkpoint that does
+    not exist.
     """
+    from tessera.guard.ledger_checkpoint import LedgerVerdict
     from tessera.guard.ledger_store import LedgerTreeStatus
     from tessera.guard.seal import SealStatus, seal_badge
 
@@ -458,6 +487,7 @@ def _integrity_from_tree(status: object, seal: object | None = None) -> AuditInt
     seal_status = (
         seal if isinstance(seal, SealStatus) else SealStatus("absent", None, False, None, None)
     )
+    verdict = freshness if isinstance(freshness, LedgerVerdict) else None
     return AuditIntegrity(
         verified=status.content_integrity,
         length=status.length,
@@ -467,6 +497,13 @@ def _integrity_from_tree(status: object, seal: object | None = None) -> AuditInt
         fork_count=status.fork_count,
         orphan_count=status.orphan_count,
         attested=status.attested,
+        full_verified_at=(
+            verdict.full_verified_at.isoformat()
+            if verdict is not None and verdict.full_verified_at is not None
+            else None
+        ),
+        entries_since_full=verdict.entries_since_full if verdict is not None else 0,
+        checkpoint_used=verdict.checkpoint_used if verdict is not None else False,
         seal_state=seal_status.state,
         seal_provider=seal_status.provider,
         seal_qualified=seal_status.qualified,
@@ -477,10 +514,20 @@ def _integrity_from_tree(status: object, seal: object | None = None) -> AuditInt
 
 
 def _audit_integrity(path: Path) -> AuditIntegrity:
+    """The badge's verdict.
+
+    Postgres mode verifies INCREMENTALLY: content integrity is checked only for rows above a
+    persisted checkpoint (the append-only trigger makes a verified prefix permanently verified),
+    while forks/orphans/length are recomputed exactly in SQL every time. Re-walking 25 634 rows
+    per request cost 1.1 s and grew forever.
+    """
     global _INTEGRITY_CACHE
 
     if ledger_source() == "postgres":
-        return _integrity_from_tree(active_ledger_tree_status(path), _safe_seal_status(path))
+        from tessera.guard.ledger_checkpoint import verify_ledger_incremental
+
+        verdict = verify_ledger_incremental()
+        return _integrity_from_tree(verdict.tree, _safe_seal_status(path), verdict)
     state = _audit_file_state(path)
     with _INTEGRITY_CACHE_LOCK:
         if _INTEGRITY_CACHE is not None and _INTEGRITY_CACHE.state == state:
@@ -821,8 +868,11 @@ async def audit_list(
 ) -> AuditPage:
     """Return a paged slice of the audit log."""
     path = _resolve_audit_path()
+    since_at, until_at = _parse_datetime(since), _parse_datetime(until)
     entries = _filter_entries(
-        _read_entries(path),
+        # The window is applied in SQL (occurred_at index); the payload-shape filters below
+        # still run in Python, over the bounded set rather than over the whole table.
+        _read_entries(path, since=since_at, until=until_at),
         target=target,
         outcome=outcome,
         event_type=event_type,
@@ -830,8 +880,8 @@ async def audit_list(
         scope=scope,
         policy_rule=policy_rule,
         q=q,
-        since=_parse_datetime(since),
-        until=_parse_datetime(until),
+        since=since_at,
+        until=until_at,
         agent=agent,
     )
     entries = _newest_first(entries)  # most recent activity at the top
@@ -891,5 +941,12 @@ async def audit_integrity(at: str | None = None) -> AuditIntegrity:
     until = _parse_datetime(at)
     if until is None:
         return integrity
+    if ledger_source() == "postgres":
+        # Counted in SQL on the occurred_at index. This branch used to load every payload and
+        # Pydantic-validate every row into an AuditEntry just to count them — and the overview
+        # dashboard polls this endpoint WITH `at` every 15 seconds.
+        from tessera.guard.ledger_store import ledger_length_as_of
+
+        return integrity.model_copy(update={"length": ledger_length_as_of(until)})
     length = sum(1 for entry in _read_entries(path) if _within(entry, None, until))
     return integrity.model_copy(update={"length": length})

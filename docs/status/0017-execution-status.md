@@ -59,6 +59,14 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-13 — **PARKED, not fixed: Langfuse trace retention (~505k traces).** A second
+  front, deliberately left alone by the ledger-integrity lot. It is a *retention /
+  tail-sampling* problem (how much telemetry we keep and for how long), not a *verification*
+  problem (how much of the audit chain we re-walk per request), and conflating them would
+  hide one behind the other. Owner: unassigned. Whoever takes it: decide the retention
+  window and the sampling rule FIRST, then measure — the ledger lot's lesson is that a
+  threshold set before both populations are measured is a guess wearing a number.
+
 - 2026-07-11 — **Audit-remediation overnight run review: ACCEPTED (`ece4f1bf →
   d194c0b4`, origin; 65 files, +1682/−177).** Verified on pieces: recouvrement trio
   collapsed to one canonical route (the un-gated surface closed), invoke rate-limit +

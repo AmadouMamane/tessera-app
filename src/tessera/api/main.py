@@ -219,6 +219,58 @@ async def _start_canary_scheduler() -> list[asyncio.Task[None]]:
     return [_make_loop(canary.agent_id, canary.cadence_s) for canary in scheduled_canaries()]
 
 
+async def _start_ledger_verification_scheduler() -> asyncio.Task[None] | None:
+    """Re-walk the WHOLE ledger chain at boot, then off-chrono — the claim the badge leans on.
+
+    The integrity badge no longer re-hashes 25 634 rows per request (p50 was 1 093 ms on every
+    cockpit page, and 1 828 ms on the ``?at=`` branch the overview polls every 15 s). It verifies
+    only the rows above a persisted checkpoint, which the append-only trigger makes sound: a
+    verified prefix cannot change.
+
+    That soundness rests on the checkpoint having been earned. This loop is what earns it — and
+    keeps earning it. It walks and re-hashes every row, resets the freshness clock, and the badge
+    publishes that clock ("full chain checked 12 min ago · 412 entries verified since"). Without
+    this, "verified" would rest on a proof nobody had re-done, which is an assumption wearing the
+    clothes of a proof.
+
+    Verifies FIRST and sleeps after (like the retention purge), so a process that has been down
+    does not serve a badge backed by a checkpoint from before the outage.
+    """
+    from tessera.guard.ledger_checkpoint import run_full_verification
+    from tessera.guard.ledger_store import ledger_source
+    from tessera.settings import get_settings
+
+    if ledger_source() != "postgres":
+        return None  # file mode walks the whole journal on every read — nothing to checkpoint
+
+    log = obs_logging.get_logger("tessera.ledger")
+    interval = get_settings().guard.ledger_verify_interval_s
+    log.info("ledger.verify_posture", verifying=interval > 0, interval_s=interval or None)
+    if interval <= 0:
+        return None
+
+    async def _loop() -> None:
+        while True:
+            try:
+                verdict = await asyncio.to_thread(run_full_verification)
+                log.info(
+                    "ledger.full_verification",
+                    content_integrity=verdict.tree.content_integrity,
+                    linear=verdict.tree.linear,
+                    length=verdict.tree.length,
+                    forks=verdict.tree.fork_count,
+                    orphans=verdict.tree.orphan_count,
+                    entries_walked=verdict.entries_verified_now,
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # a cycle failure must never kill the loop
+                log.warning("ledger.full_verification_failed", error=str(exc))
+            await asyncio.sleep(interval)
+
+    return asyncio.create_task(_loop())
+
+
 async def _start_memory_purge_scheduler() -> asyncio.Task[None] | None:
     """Start the off-chrono GDPR retention purge (ADR 0007 §Retention). No-op when disabled.
 
@@ -268,6 +320,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     pool = get_pool()
     seal_task: asyncio.Task[None] | None = None
     purge_task: asyncio.Task[None] | None = None
+    verify_task: asyncio.Task[None] | None = None
     canary_tasks: list[asyncio.Task[None]] = []
     try:
         await pool.open()
@@ -287,9 +340,10 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         seal_task = await _start_seal_scheduler()  # ADR 0015 §Corr.3c — off-chrono; no-op if 'none'
         canary_tasks = await _start_canary_scheduler()  # ADR 0019 §I4 — off-chrono; idle by default
         purge_task = await _start_memory_purge_scheduler()  # ADR 0007 §Retention — off-chrono
+        verify_task = await _start_ledger_verification_scheduler()  # off-chrono full chain walk
         yield
     finally:
-        for task in (seal_task, purge_task, *canary_tasks):
+        for task in (seal_task, purge_task, verify_task, *canary_tasks):
             if task is not None:
                 task.cancel()
                 with suppress(asyncio.CancelledError):
