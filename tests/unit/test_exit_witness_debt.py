@@ -136,6 +136,13 @@ _EXIT_WITNESSES: dict[str, str] = {
     #    history of a green light over a hole. So it is mechanical. ─────────────────────────────
     "Makefile::hooks": "action",  # installs core.hooksPath; wired into `install`
     "Makefile::land": "action",  # it ADVANCES the trunk. Its verdict is scripts/main_guard.py's
+    # `gate` and `claim` open by asking main_guard.py whether the trunk is guarded — a question
+    # that CANNOT BE ASKED when the tool asking it is absent. It was absent: the hook was on
+    # `main`, its tool was on an unlanded branch, and the guard refused every advance of the trunk
+    # including the branch that would fix it. In that state `make gate` refused with `python3:
+    # can't open file` — non-zero, and RIGHT BY ACCIDENT: no verdict, nothing named, no repair.
+    # Now it is a CannotSay with the exact command. Honest from birth, so the debt does not move.
+    "Makefile::tooling": "VERDICT",
     # ── the ledger ─────────────────────────────────────────────────────────────────────────────
     "Makefile::ledger-backup": "delegate",  # → scripts/ledger_backup.py  (was a live false green)
     "Makefile::ledger-restore-drill": "delegate",  # → scripts/ledger_restore_drill.py
