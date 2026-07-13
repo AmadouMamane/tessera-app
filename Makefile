@@ -2,7 +2,7 @@
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
         obs-up obs-down obs-logs dev-secrets \
         gate gate-twice gate-checks gate-py gate-web \
-        claim release whoowns landed
+        claim release whoowns session landed
 
 # ── Dependencies ────────────────────────────────────────────────────────────
 
@@ -42,6 +42,23 @@ check: format-check lint typecheck
 # one stashed the other's uncommitted work mid-flight and switched the branch under
 # it. Advisory by design (nothing on a shared filesystem can truly lock), and that
 # is enough: it turns a silent collision into a loud refusal.
+#
+# EXCEPT IT DID NOT. The first version resolved an agent's identity from THE NAME OF
+# THE DIRECTORY IT STOOD IN. `agents/claude/` ⇒ owner "claude" — for every Claude
+# session alive. On 2026-07-13 SEVEN of them had their cwd in that tree; each read the
+# marker, found its own name, and concluded it was home. The marker was identifying a
+# ROLE, and a role is not a writer. (ADR 0026's fourth instance, inside the very tool
+# built to police the third.)
+#
+# So identity is now ASSERTED BY THE SESSION and never derived from a path:
+#
+#   eval "$(make session)"     ← mint TESSERA_SESSION_ID once, keep it for the session
+#
+# A caller with no session id gets CANNOT SAY and exit 2 — never "you are home". The
+# role survives in the marker for a HUMAN to read; it decides nothing.
+
+session:
+	@uv run python scripts/worktree_owner.py session
 
 claim:
 	@uv run python scripts/worktree_owner.py claim $(if $(FORCE),--force,)
