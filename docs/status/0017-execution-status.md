@@ -59,6 +59,317 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+
+- 2026-07-13 — **PERF: the cockpit's main page reads the ENTIRE audit ledger SIX TIMES per
+  request — and the parked P1 became the product's principal cost.** Measured, after two
+  wrong Claude hypotheses (see below): `/healthz` 12 ms · `/observability/snapshot` 53 ms ·
+  `/audit/integrity` **1 114 ms** · `/observability/fleet` **4 011 ms** · the Prometheus
+  turn-evidence query **13 ms** (exonerated). Postgres has sent **413 GB**. **Root cause:**
+  `compute_fleet()` calls `_canary_red(aid)` **per agent** → `latest_canary_verdict` →
+  `_latest_canary_run` → **`load_ledger_payloads_sync()` which loads all ~29 600 ledger
+  entries into memory**, to answer *"what was this agent's last canary verdict?"* — a
+  question one indexed `WHERE type=… AND agent_id=… ORDER BY seq DESC LIMIT 1` answers in
+  ~1 ms. Plus `_integrity_broken()`, a full chain walk. Six full ledger reads per request,
+  **synchronously inside an async route** (it blocks the event loop too — the same class as
+  the recouvrement graph bug). The arithmetic closes exactly: 1 full read = 1.1 s, and
+  1 + 5 ≈ 4 s. **This IS the `dos-memory` P1 from the 2026-07-10 audit — parked THREE times
+  as "not blocking".** It is now the principal cost of the product's main page. **Doctrine:
+  a debt deferred as "not blocking" is only not-blocking until the data grows; an
+  append-only store guarantees it will.** **Second finding, arguably bigger: the
+  observability platform cannot explain its own slowest endpoint.** The Phoenix trace for
+  the 3.9 s `fleet` request is **ONE span with ZERO children** — the HTTP layer is
+  auto-instrumented, but the control plane's own store reads (Postgres, ClickHouse, ledger)
+  emit nothing. The agent runtime is beautifully instrumented; **the cockpit is a black box
+  to itself.** A governance tool that does not observe itself applies to others a rule it
+  exempts itself from. **CLAUDE'S OWN FAILURES THIS MORNING, recorded:** (1) I diagnosed
+  "the machine is swapping" from container names and a 70B model — `/healthz` at 12 ms
+  refuted it; (2) I told the operator to `docker stop` the `observability-refinement`
+  stack, having inferred "ghost stack from an archived branch" from its NAME — **it is the
+  PRODUCTION stack serving his portfolio. He caught it before running it.** I issued a
+  destructive command about a system whose purpose I never asked. That is the eighth
+  inference-instead-of-measurement of this campaign and the first that would have caused
+  real damage. **Rule for myself, engraved: never issue a destructive command about a
+  component whose purpose you have not been told.**
+
+- 2026-07-12 — **F-6 finalised (`claude/f6-sink-honesty`, twice-green, merge GO). But the
+  finding that matters is a P0 on the PROCESS: a gate result that does not identify the
+  tree it ran on is unfalsifiable.** Another agent stashed the executor's uncommitted work
+  and switched the shared worktree to its own branch mid-run. Consequence, entirely
+  silent: **two `make gate` returned exit 0 on TWO DIFFERENT TREES** (1862 then 1858
+  tests). **The "twice" of twice-green assumes ONE tree** — without that guarantee it is
+  theatre, and since CI went billing-blocked the local gate has been our ONLY witness. We
+  have merged all week on a witness that does not say what it witnessed. **ORDERED,
+  IMMEDIATE:** (1) `make gate` prints and records a TREE FINGERPRINT next to its exit code
+  — branch, HEAD sha, dirty flag, worktree path; (2) a twice-green is only valid if BOTH
+  passes carry the SAME fingerprint — assert it mechanically, do not trust the operator's
+  memory; (3) worktree OWNERSHIP is declared (a lockfile or `.owner` marker) and an agent
+  refuses to mutate a worktree it does not own — `dev-status` says which checkout a server
+  serves, nothing says which agent owns a tree. **This retroactively weakens every
+  twice-green claimed since the CI went down** — not a reason to re-run them all, but a
+  reason to close the hole before the next merge. **Lot content ratified:** the silent
+  `# graceful degradation` fallback in `_emit_cloud_logging` is dead (an operator following
+  the runbook got audit entries in a container's stdout and every dashboard on it read zero,
+  with no signal); the docs/runbook/Terraform lies are fixed (`cloud_run.tf` now declares
+  LEDGER_SOURCE/DUAL_WRITE — what makes production opposable was readable nowhere in the
+  infrastructure). **And the symmetric hole nobody had seen — THE VERIFIER:**
+  `verify_audit_chain()` on an ABSENT file returns `verified=True, length=0`. After the
+  sink cut that file is never written. So verifying `guard.audit_file` certifies **a
+  perfect, empty, nonexistent chain** while 25 000 opposable lines are never read. **This
+  is the purest vacuous green in the whole corpus: a verifier that verifies nothing and
+  says "verified".** The trap was not armed (all surfaces go through
+  `verify_active_ledger` — the executor alarmed himself, VERIFIED BEFORE REPORTING, and
+  said "I was wrong"), but nothing forbade it and the primitive carries the obvious name.
+  Now forbidden by ratchet. Proofs against the real store: 4 sinks → chained (seq
+  29622-29625, prev_hash resolving), `verify_active_ledger()` → 25 509 lines verified,
+  append-only intact. Chance did better than staging: `cloud_logging` failed honestly on
+  its own (no ADC creds) **and the entry was chained anyway** — both rules proven at once.
+
+- 2026-07-12 — **THE NULL CONTROL: the eval gate has never gated anything.** Lot-0 eval
+  (points 1/3/4 done, gate green, `eval/lot0-harness-truth`) produced the most important
+  finding of the project. With **every LLM backend unplugged**, the catalogue passes
+  **122/174 (70%) in 5 seconds with 0 tokens generated** — the deterministic layers
+  (router short-circuits, guard refusals, planner escalations) do the work. So llama3.2's
+  "90%" is a **70-point floor + 20 points of model**, and it reads as a model score.
+  Worse: a dead backend does not crash the runner — every case completes, the report
+  still writes `"model": "llama3.2:3b"` (the CONFIGURED model, never proof of a call),
+  and the scorecard shows a pristine 70%. Nothing distinguished *the model is good* from
+  *the model is absent*. Measured consequences: **4 of 6 `critical` cases pass with no
+  model**; `policy_violation` (15/15) and `escalation_failure` (6/6) pass 100% modelless —
+  **zero discriminating power**; and the three domain bars (55/65/55%) are ALL BELOW the
+  70% null floor — **no bar can reject anything the guard already passes. The gate is
+  vacuous, at the scale of the entire quality claim.** **CLAUDE RULING — the gate scores
+  the MODEL'S CONTRIBUTION, never the absolute pass rate** (an absolute rate conflates
+  guard + model): (1) **non-regression on the floor** — the model must break ZERO cases
+  the null run passes (llama3.2:3b currently breaks 3 → RED today); (2) **positive
+  contribution** — the model must pass ≥X of the 52 cases the null run FAILS; (3)
+  categories where the null run passes 100% leave the MODEL gate entirely (they are the
+  guard's test suite, not the model's) or gain cases the guard cannot handle. The bars
+  become a function of the measured floor, never an absolute number. **Doctrine engraved:
+  every eval needs a NULL CONTROL. A score without a floor is not a score — it is the
+  sum of everything that was already true.** Ratchet shipped (`eval/ratchet.py`): the
+  witness that a model spoke is **tokens**, never the `model` field; the null run is a
+  committed 174-verdict baseline pinned by exact equality (an improvement fails too — a
+  refresh is deliberate and its diff is the proof); half the tests are mutation tests,
+  verified. Workflow split: the null control is HERMETIC (no model, no Postgres, no
+  secret) → runs on every push, locks 70% of the catalogue for free; the model half moves
+  to `workflow_dispatch` on a runner that actually has a model — because `ubuntu-latest`
+  has neither Ollama nor Vertex creds, so the nightly replay would have produced not a
+  weak verdict but a **false** one. Two self-retracted conclusions, both honest and both
+  instructive. **SYSTEMIC CLASS NAMED — silent degradation on malformed declaration.**
+  Three instances now, all the same shape: (a) `extra="ignore"` swallowed the wrong Ollama
+  field name (`host` vs `base_url`) → the config silently did nothing and 12 649 phantom
+  tokens appeared; (b) a mismatched `response_model` **silently erases** the field
+  (typing pilot); (c) `audit_sink=stdout` **silently disables** the ledger chain (F-6).
+  **In this codebase, a declaration error produces silent degradation, not a loud
+  failure.** That is the systemic vulnerability class — it deserves its own sweep
+  (`extra="forbid"` on settings; fail-loud on unknown keys) and it is the thread that
+  connects F-6, the typing pilot, and this finding.
+
+- 2026-07-12 — **P0 STILL OPEN — third audit (Fable) is RIGHT, and it is worse than
+  reported. CONFIRMED by Claude line-by-line.** `POST /recouvrement-assistant/{message,
+  action}`: the backend router is mounted BARE (`APIRouter(tags=[...])`, zero
+  dependencies, `main.py:351`) and `requested_by: str = Field(default="Julie Dubois")`
+  takes the ACTOR from the request body. The laundering path is NOT the `[...path]` BFF
+  (that 404s this head) — it is a **dedicated Next handler**
+  (`app/api/recouvrement-assistant/message/route.ts`) that performs **no session check at
+  all**, takes the raw body, and forwards it to the backend **with the service bearer
+  attached** (`backendHeaders`). So an anonymous visitor, from a browser, on the front's
+  public origin, executes a governed workflow — and the opposable ledger records whatever
+  actor the caller typed. **This is not merely an auth hole: it is a LEDGER INTEGRITY
+  hole.** The hash chain, anti-fork index and RFC-3161 seal make the record tamper-evident
+  AFTER the write; a caller-declared actor produces an entry that is perfectly chained,
+  perfectly sealed, and LYING ABOUT WHO ACTED. A lie written through the front door is
+  worse than tampering — tampering is detectable. **Claude owns the miss:** I hardened the
+  CONTROL plane (the 26 observability mutations) and left the BUSINESS plane wide open —
+  the same `provenance ≠ identity` class I had just engraved. We fixed 26 routes and never
+  fixed the PATTERN that let a 27th exist unguarded. **The fix must be plane-correct, not
+  the obvious one:** `require_operator` would be WRONG here (control-plane gate; would
+  conflate the planes ADR 0013 separates). recouvrement's console is the BUSINESS plane
+  (`dedicated-ui`, `collections` tier, ADR 0010 Phase C) — and `operator.py:163` already
+  knows that surface. Fix = (1) backend router behind a business-plane dependency
+  resolving a verified `collections` identity from the signed assertion; (2) **delete
+  `requested_by` from the request model entirely** — a field naming the actor must NEVER
+  be caller-supplied, it is derived server-side from the verified session; (3) the Next
+  handler verifies the session + role BEFORE proxying, and forwards the assertion — it must
+  never launder an anonymous call with the service bearer. **(4) CLOSE THE CLASS, not the
+  instance: a ratchet that enumerates every mounted router and FAILS if any lacks a
+  plane-appropriate guard.** That ratchet is the real deliverable — without it there will
+  be a 28th. Two independent audits (opus, Fable) also converge on the unmet CLAUDE.md
+  non-negotiable (an upstream `mcp-firewall` PR, no trace) and on the visibility thesis
+  (close the P0 → go public → the CI/branch-protection/0010 tripwires all resolve at once).
+
+- 2026-07-11 — **Backend-typing PILOT (fleet, `dc820593`) RATIFIED — pattern approved,
+  scale-up gated on three rulings below. THE FINDING THAT JUSTIFIES PILOTING: a wrong
+  `response_model` does not fail — it SILENTLY REMOVES the field.** FastAPI filters the
+  response through the model: the executor's first pass modelled `available` as a union
+  everywhere (the obvious reading of the name) and FastAPI silently erased **20 fields per
+  agent on the flagship route** — no exception, no log. Root cause: `available: false`
+  carries TWO meanings under one key — degradation (honest-empty, 1 key ⇒ discriminated
+  union) on 16 routes, and "eval not run" (a plain boolean, 20 keys either way) on
+  `agents[].release`. **Doctrine: typing a backend is a DATA-LOSS risk surface, not a
+  validation one. Never type a route without the byte-identity round-trip ratchet — it is
+  the only thing that catches the silent erase, and it is why models must be derived from
+  observed live responses (123 sampled), never from a plausible reading of the code.**
+  **CLAUDE CORRECTION #4 (owned):** my brief asserted the front does `as` casts on raw
+  JSON (from the audit's `validation-gap`). FALSE — zero casts; the front already
+  validates with hand-written zod and `request()` throws on divergence. The real gap runs
+  in BOTH directions: 13 of 14 schemas model an all-optional union (they would accept a
+  backend that lost `agents` entirely — validation in name only), and ONE errs the other
+  way. Fourth time this campaign I asserted from inference where the executor measured.
+  **LIVE BUG, own lot, fix now:** `AccessOverviewSchema` REQUIRES every field, so the
+  degraded `{available:false}` response makes zod throw and the page break — it breaks
+  exactly when the store is down, i.e. when the honest-empty response exists precisely to
+  keep it standing. The pilot found it; un-wiring the generated module left it live on
+  main. **RULING Q1 — front and back migrate TOGETHER, one domain per lot.** A generated
+  schema nothing consumes is dead weight that drifts. The "9 files must handle
+  `available:false` explicitly" is not a cost, it is THE POINT: those files currently
+  pretend degradation cannot happen. Honest-empty enforced by the type system is this
+  project's own thesis applied to the type layer. **RULING Q2 — closedness is decided by
+  the PRODUCER, never by the observed sample.** Three categories, evidence per field:
+  (a) closed by code construction (backend Enum/Literal/exhaustive branch) ⇒ declare
+  `Literal[...]`; mypy then guards any new branch. (b) closed by manifest declaration
+  (capabilities, signal catalog) ⇒ GENERATE the enum from the manifest (0018-C precedent;
+  never hand-written). (c) open (data, config, store, LLM output) ⇒ stays `str`. Key
+  consequence: where the hand zod's 97 enums cover an OPEN domain they are the *same bug
+  class as AccessOverviewSchema one level up* — a validator that rejects reality. So the
+  apparent "precision regression" is sometimes the removal of a FALSE CLAIM. Never infer
+  closedness from the 123-response sample: **observation gives a lower bound on the value
+  set** — the third instance of that doctrine (grep counts, linter blind spots, now enum
+  domains). **NEW SCALE-UP CONDITION (Claude):** 161 distinct shapes over 18 routes ⇒
+  ~1 900 models at 164 routes. Generated is fine for maintenance but it lands in the
+  FRONTEND BUNDLE: measure the generated-zod bundle delta on fleet and extrapolate BEFORE
+  scaling; if it trends to megabytes, shape dedup (shared sub-models) is decided now, not
+  after 164 routes of it exist.
+
+- 2026-07-11 — **ADR renumbering (reduced scope) ACCEPTED and CLOSED (`ba62652d`).**
+  Verified: collisions down to `{0010}` alone; the false citation fixed in an isolated
+  commit (`11f4d3d8`) — the executor sharpened the adjudication into its best form: *the
+  docstring cited the only ADR that forbids its own behaviour*. `0015→0022` free (0 bare
+  refs, 6 links); `0008→0020` by **proof, not heuristic** — creation dates 2026-05-31 vs
+  2026-06-22, so any reference predating June 22 can only mean the elder (23 of 25 fall
+  that way). `_FROZEN_COLLISIONS = {"0010"}`, documented in three places as the first live
+  tripwire of the CI banner. **Two doctrines engraved, both generalising beyond ADRs:**
+  (1) **A fourth grep-invisible reference form exists** — ADR headers cite by bare number
+  WITH a gloss (`0008 (security hardening)`), self-disambiguating but only if you look for
+  the form; with line-broken references that makes two forms no grep sees, so **every
+  count in this repo is a lower bound, mine included**. (2) **Verification must be
+  bidirectional**: "zero old number left on the moved sense" says nothing about FALSE
+  MOVES (a reference that should have stayed and got re-pointed) — that was precisely the
+  first attempt's flaw, and it is the same shape as the boundary ratchet's exact-set
+  equality and the vacuous-green lesson: **a one-directional check proves one error class
+  absent while being blind to its mirror.** The ratchet is now mutated in both directions
+  (new collision → red; stale frozen entry → red). Operator housekeeping: `stash@{0}`
+  (the known-wrong first attempt) is droppable.
+
+- 2026-07-11 — **Day-cleanup review. Lot 1 (SQL identifier class, `772be359`) ACCEPTED.
+  Lot 2 (ADR renumbering) HALT RATIFIED — the executor refused to make the registry lie,
+  applying our own rule against our own brief. Third Claude design correction accepted.**
+  **Lot 1.** `safe_identifier` (fullmatch, bounded at 63 = Postgres NAMEDATALEN−1 — a name
+  Postgres would silently truncate is refused, because a silently-different table is worse
+  than a hard failure) routed at BOTH ends: ingestion validators and every interpolation
+  site. Three findings the audit and the brief both missed — **and one of them corrects
+  MY audit's own number**: `retrieval/store.py` carried NO `noqa` because ruff never
+  flagged it (S608 misses indented multiline f-strings), and it is the main consumer of
+  `vector_table`, the one identifier a deployment can set from the environment. My audit
+  counted "7 f-string SQL sites" by grepping `execute(f"` — the same blind spot, so the
+  real count was higher. **Doctrine: counting a linter's suppressions inherits the
+  linter's blind spots — and so does counting with a grep shaped like the linter.** Also
+  found: two pre-existing private validators, both `re.match` (accepts a trailing `\n`);
+  `psycopg.sql.Identifier` already the superior idiom in `memory/`. Brief corrected on
+  evidence: `noqa: S608` CANNOT be removed (S608 is syntactic — verified, not assumed).
+  And the executor caught his own vacuous ratchet: v1 had the very bug it policed (a
+  module-level escape hatch whitelisted `store.py`; mutation-test green) → rewritten on
+  the AST, re-mutated → red. **Lot 2 — HALTED, nothing renumbered, stashed.** The
+  automated pass rewrote `## 4. The audit ledger (ADR 0015)` → `(ADR 0022)`: wrong — the
+  audit ledger is the SPINE's subject; the seal was DECIDED in 0015 §Corr.3c and only
+  DESIGNED in the annex, so "ADR 0015" near the word *seal* means the spine. The
+  expensive work is kept: `docs/status/adr-renumber-evidence.md` (structural
+  discriminants — frontier numbers Phase 1–6, recouvrement letters Phase A/B/C, disjoint
+  by construction; historical — neither collision existed before 2026-06-22) plus a trap
+  that **invalidates every grep-based count in this campaign, mine included: references
+  break across line ends** ("ADR" / "0010 Phase C"), so all counts (my "138") are
+  UNDERcounts. **CLAUDE MAPPING CORRECTED (3rd correction accepted):** my brief kept
+  recouvrement (52 refs) at 0010 and moved frontier (183) — backwards. I inferred
+  centrality from my recent context instead of counting. The SMALL sense moves: **frontier
+  KEEPS 0010; recouvrement → 0021.** Fewer rewrites = fewer chances to make the record
+  lie. **CLAUDE ADJUDICATION — the unreadable reference (`spine/runtime.py:27`,
+  "Console sandbox playground (ADR 0010 Phase C)"):** it points to NEITHER. Phase C exists
+  only in recouvrement, where it is the *dedicated business console* (`dedicated-ui`) —
+  and `SandboxDefaults` carries `system_prompt` + `policy_rule_count`, which ADR 0013
+  FORBIDS on any business surface. A business console cannot hold these. It is a
+  **mis-citation, already lying before anyone tried to renumber it**: do not renumber it —
+  FIX it to cite what actually governs the cockpit Console sandbox (ADR 0019 §I2 + the
+  security seam's rule: overrides honored only for COCKPIT_EMBEDDED + OPERATOR), and drop
+  the phantom "Phase C". **Go-forward:** 0015→0022 (free — filename refs only) and
+  0008→0020 (mechanical) proceed now; **0010→0021 WAITS FOR CI** — a semantic rewrite of
+  the project's memory with no independent witness is exactly what the bounded acceptance
+  is meant to gate. This is the campaign's first live tripwire.
+
+- 2026-07-11 — **Security run review: Lane A ACCEPTED (`60ec9d99 → d964ad31`, 9 lots);
+  Lane B (`claude/security-seam @ e4286be6`) SUBSTANCE APPROVED, merge gated on operator
+  decisions + rebase. Two of CLAUDE's own security design rulings were WRONG and the
+  executor caught both with evidence — recorded so the corpus owns it.** (1) B2 as I
+  ruled it (mount mutations behind `require_bearer`) could NEVER have closed the anon-
+  mutation P0: the BFF attaches a **service-to-service** bearer on the caller's behalf
+  (route.ts:3-4), so an anonymous visitor's mutation arrives perfectly bearer-
+  authenticated. The bearer answers *"did this come from our frontend?"*, never *"who is
+  asking?"* — a fix behind it looks right and changes nothing. Correct fix, verified on
+  the branch: the mutations router requires a verified **operator assertion**
+  (`APIRouter(dependencies=[Depends(require_operator)])`, identity not provenance).
+  **Doctrine engraved: provenance ≠ identity — an auth check must name WHO, not WHERE
+  FROM.** (2) B1 as I ruled it gated the state's `guard_overrides` but I missed a
+  SECOND read site — chat.py:857 read `request.guard_overrides` straight from the raw
+  body, below the gate, controlling the streaming PII redactor: an anonymous caller
+  could still get an unredacted PAN on the wire. Branch fix reads the gated value at
+  both sites. **Doctrine: a body-sourced privileged field must be gated at EVERY read,
+  not just the first — grep the field, don't trust the entry point.** Lane A's first
+  act ratified as exemplary: main was gate-RED at open (a lint that landed during the
+  billing-blocked night with no CI witness); opus fixed it FIRST (`a56bb287`) so no
+  later green claim rested on a red base — honesty holding unsupervised. Live exposure
+  confirmed still open on main (anon `POST /observability/agents/release` → 200) until
+  B merges — so B's review is closing an OPEN hole, not cleanup. Branch was cut atop the
+  A7 god-router split (mutations live in the split `observability/mutations.py`); it must
+  be **rebased on `d964ad31` and re-verified before merge** (main moved 9 lots under it).
+  Four decisions are the operator's (read-plane locking, staging bearer, auditor mutate,
+  terraform text-ratchet-not-proof); Claude's recommendations relayed. ADR renumbering
+  PARKED with the right reason (138 refs to "ADR 0010" spanning two ADRs — a record that
+  lies is worse than a duplicate number; do it deliberately, not at 3am).
+  **— MERGE GO (2026-07-11).** Branch `8a269a97` rebased clean on `d964ad31` (2 commits),
+  three operator rulings applied and proven: `MUTATION_ROLES = {admin, superadmin}` (auditor
+  AND collections excluded — auditor 403 on mutation / 200 on read), staging in
+  `_BEARER_REQUIRED_ENVIRONMENTS` with a ratchet on any new Environment. Executor caught his
+  OWN vacuous-green — B1/B3 closure tests failed only at ImportError (proves the guard is new,
+  not that the hole existed), so he re-exercised the pre-fix code behaviorally: anon `/chat`
+  with `guard_overrides=["pii"]` did disable the streaming redactor; prod without bearer did
+  admit the request. The doctrine held on its author's own tests. Auditor fix exceeded brief
+  in the right direction: rbac.py/access.py already CLAIMED auditor is read-only (true on
+  screen, false on the wire) — a ratchet now binds the displayed matrix to the real guard,
+  both ways. **Post-merge obligations (NOT merge blockers — merge changes nothing in GCP):**
+  (1) Terraform manages only 4 secrets; it lacks the session key, operator-assertion key and
+  AUTH_SECRET — B2 makes the front mint the assertion, so after any deploy the 26 mutation
+  buttons fail-closed (401/503) until the front has them: fix the secret provisioning BEFORE
+  the next `terraform apply`, never discover it in prod. (2) `is_locked=true` on the audit
+  bucket is config that only bites at `apply` (irreversible) — operator's call, not the
+  merge's. Both written up in the security run journal.
+  **— MERGED + LIVE-VERIFIED (2026-07-11, `origin/main = 8a269a97`, FF).** All six audit
+  P0s now closed on main. Attack replayed against the restarted reference: anon
+  `POST /observability/agents/release` went **422 → 401** (the 422 was the proof it had
+  been reaching body validation — one valid `agent_id` from promoting an agent in prod);
+  public `GET /observability/access` stays 200 (cockpit intact). Third consecutive night
+  with CI billing-blocked — the merge's only witness was two local gate passes. This is
+  now a standing risk, not an incident: recommend restoring an independent witness by
+  stripping CI to the hermetic gate only (minutes-cheap, drops the expensive e2e prod
+  build that was never gating), OR going public — now UNBLOCKED by this very merge (you
+  don't publish a repo with a live anon-mutation hole), which buys free Actions + free
+  branch protection at once.
+  **— Operator decision (2026-07-11): ACCEPT the gap for now, no structural change.**
+  Legitimate for a solo, careful operator; recorded, not glossed. Honest state stands:
+  `main` is neither branch-protected nor CI-verified; the only gate is one local pass per
+  lot; nobody writes that `main` is protected or that twice-green is structural. This is a
+  BOUNDED acceptance — it flips to «restore the witness» (strip CI to the hermetic gate, or
+  go public) at the first of: a second contributor touches `main`, a real deployment, going
+  public, or the first time discipline visibly slips (a red merged, a broken `main`). Until
+  one fires, the residual risk is accepted deliberately.
 - 2026-07-13 — **PARKED, not fixed: Langfuse trace retention (~505k traces).** A second
   front, deliberately left alone by the ledger-integrity lot. It is a *retention /
   tail-sampling* problem (how much telemetry we keep and for how long), not a *verification*
