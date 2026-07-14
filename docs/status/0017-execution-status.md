@@ -59,6 +59,71 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-14 — **`/observability/fleet` answered 500 when there was nothing to observe.** The
+  component whose entire job is to observe could not observe its own absence of data — the
+  project's disease, in the component that sells the cure. Landed `54756402` + `ca67f31c`
+  (twice-green on one tree).
+
+  **The cause is not the one the symptom suggests.** The handler read
+  `{"available": True, **await compute_fleet(lang)}` inside a `try/except`. `compute_fleet`
+  **did not raise** — so the `except` never saw it. It returned, correctly, `release=None` (no
+  eval has ever run) and `level=None` (no manifest): the honest-empty its own comments insist on
+  (*"None … → honest-empty, not 'L0'"*). But the `response_model` had been **generated from 31
+  live samples** in which every agent happened to have both, so those fields were declared
+  required and non-null. FastAPI validated the RESPONSE, matched neither arm of the union — not
+  `FleetPayload` (nulls where non-null was promised), not `FleetUnavailable` (`available` is
+  True) — and raised.
+
+  > *A `try`/`except` catches an exception. A partial-but-successful return walks straight past
+  > it. And a SAMPLE shows what WAS there; it can never show what is ALLOWED to be absent.*
+
+  **The contract is true by construction now.** `compute_fleet` returns a `FleetData` TypedDict
+  (and `AgentRelease.as_dict()` a `ReleaseFacts`, typed at its source), so a missing or mistyped
+  field is a **mypy error at build**, not a 500 at runtime; the route CONSTRUCTS the model rather
+  than splatting a dict. `**business_facts` is spread by hand for the same reason — a `**` of an
+  untyped dict is a hole mypy cannot see through, and this whole bug is a shape nobody checked
+  reaching the wire. The schema now says what the code always did: `| None`, and deliberately
+  **without a default** — nullable is not optional, the key must still be PRESENT, because
+  `available: True` guaranteeing a complete payload is the entire point of the union.
+
+  **`available: false` here would have been a second bug.** An agent that has done nothing is a
+  FACT worth rendering. Three states, three answers: data (even all-zero) → `available: true`
+  COMPLETE (the operator of a fresh install still sees their fleet); the read failed →
+  `available: false`, logged as a failure; the payload breaks its own contract → `available:
+  false` **too**, but logged as a **CONTRACT BREAK** — a bug in us, not an absence of data, and
+  it must not drown in the ordinary empty. Never a 500 either way.
+
+  **And that log line immediately earned its keep.** With the unit ratchet green and the fix
+  committed, the route was driven against a REAL virgin install (empty Postgres, empty ledger) —
+  and degraded, naming `north_star.evidence.last_checked_at`: declared `str`, returned `None` by
+  a producer whose own docstring says *"A metric no run ever produced yields zeros and `None` —
+  the genuine zero-data case"*. **The same disease, one level deeper, and only the live render
+  could find it**: my fixture's virgin agent had `north_star: None`, so the payload never
+  descended into `evidence` at all. *A fixture that stops short of a branch cannot fail on it.*
+  Fixed, and the fixture now carries the state the live install is actually in.
+
+  **Verified live** on an empty database and an empty ledger: **HTTP 200, `available: true`, six
+  agents served with zeroes**, no contract break. The ratchet is driven through the **real router**
+  with a TestClient — never by calling `compute_fleet` directly, because the bug lives in FastAPI's
+  RESPONSE validation, which a direct function call does not traverse. A unit test on the function
+  was green throughout; that is exactly how this survived. Mutation-tested: restore the raw splat →
+  red; restore the non-nullable schema → red; **both (the code as it shipped) → the literal 500 is
+  back**.
+
+  **The class is NOT closed, and is not claimed to be.** 64 observability handlers stamp
+  `{"available": True, **compute(...)}`; only the **six** with a `response_model` can 500 this way
+  (the other 58 have no contract at all — a quieter disease: they serve whatever the compute
+  produced and the cockpit silently misses fields). `fleet` is fixed; the remaining **five**
+  (`rbac-matrix`, `chrome`, `access`, `agent-evaluations`, `sandbox-config`) are FROZEN BY NAME
+  with an asserted count that may only go DOWN, checked against the **AST** so the freeze describes
+  the code rather than a memory of it.
+
+  *The AST witness earned its own scar, twice: v1 read the source TEXT and went red on the very
+  docstring that explains the bug (the prose quotes the pattern it forbids); v2 forbade the `**`
+  splat and went red on the FIX, whose `model_validate({"available": True, **data})` splats too —
+  but into a validator. It asks the precise question now: what does this handler RETURN? A brittle
+  red is how the next person deletes the assertion instead of fixing the parser.*
+
 - 2026-07-14 — **A branch that lied about its own name, twice — and carried nothing.**
   `claude/fix-gdpr-actor-attribution` (1 commit, `d2ffc00c`) did NOT carry the GDPR actor
   attribution: that had landed long before. It carried **the F-6 audit-sink honesty** — the sink
