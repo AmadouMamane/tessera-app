@@ -19,6 +19,7 @@ to a path exactly as it speaks to a URL. No network, and therefore no reason to 
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -541,12 +542,22 @@ class TestTheGateRefusesAnUnguardedTrunk:
 
         Mutation: delete either line. Red. A gate that certifies a tree whose trunk nothing
         protects is handing out a licence to fork it.
+
+        The target line is matched with prerequisites ALLOWED. It used to be split on the literal
+        ``"\\ngate:\\n"``, which silently assumed the target had none — and the day `gate: tooling`
+        was added (a check that the guard's own tool is *present*, without which this very line
+        cannot run) the parser stopped finding the recipe at all. It did not go red for the reason
+        it exists; it went red because it could no longer look. **A witness that cannot see must
+        say so, not fail obscurely** — and a brittle parser is how a real assertion gets deleted by
+        someone in a hurry to make their branch green.
         """
         makefile = (_ROOT / "Makefile").read_text(encoding="utf-8")
 
         for target in ("gate", "claim"):
-            recipe = makefile.split(f"\n{target}:\n", 1)[1].split("\n\n", 1)[0]
-            first = recipe.strip().splitlines()[0]
+            match = re.search(rf"^{target}:[^\n]*\n(?P<recipe>(?:\t[^\n]*\n)+)", makefile, re.M)
+            assert match is not None, f"`{target}` is not a target with a recipe any more."
+
+            first = match.group("recipe").strip().splitlines()[0]
             assert "main_guard.py installed" in first, (
                 f"`make {target}` does not check that the trunk guard is installed, or does not "
                 f"check it first. Its first line is:\n    {first}\n"
