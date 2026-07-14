@@ -396,12 +396,17 @@ worktree except the one where the trunk lives.
   and destroyed the uncommitted work. **Commit, then mutate** — the rule held; the commit had
   silently failed in the broken-git window, so there was nothing to restore *to*.)
 
-* **The reference checkout `tessera/` holds 15 STAGED, uncommitted files** — `eval/ratchet.py`,
-  `eval_floor.py`, the `Makefile`, two new test files. Somebody is working **directly in the trunk
-  checkout**, which the convention forbids, and the reference dev servers serve that tree. It was
-  **not touched**: stashing another agent's live work is the recorded sin that once made `make gate`
-  return exit 0 on two different trees. Local `main` is therefore *behind* the trunk — not forked
-  from it — and cannot be synced until whoever owns that work commits or clears it. This is why the
-  landings in this lot were pushed **branch → `refs/heads/main`** rather than fast-forwarded through
-  the main checkout: git rejects a non-fast-forward push by default, so the remote enforced what the
-  hook would have, and the guard was additionally run **by hand** on each landed tip.
+* **The reference checkout `tessera/` held 15 STAGED, uncommitted files — and it has since been
+  resolved by the session that owned them.** For a while somebody was working **directly in the
+  trunk checkout**, which the convention forbids, with the reference dev servers serving that tree.
+  It was **not touched here**: stashing another agent's live work is the recorded sin that once made
+  `make gate` return exit 0 on two different trees. *That refusal was right even though the danger
+  turned out to be smaller than it looked* — the staged blobs were later proven byte-identical to
+  `claude/rule1-bites…` and restored without loss. **You do not get to know that in advance**, and a
+  decision is judged on what was knowable when it was taken.
+
+  While it stood, local `main` could not be fast-forwarded (a moved ref under a stale index can
+  silently commit a revert), so this lot's landings were pushed **branch → `refs/heads/main`**
+  instead: git rejects a non-fast-forward push by default, so the remote enforced exactly what the
+  hook would have, and `main_guard.py advance <tip>` was additionally run **by hand** on every
+  landed tip. `tessera/` is now clean and synced with the trunk.
