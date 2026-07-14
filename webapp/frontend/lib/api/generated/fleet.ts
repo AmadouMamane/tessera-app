@@ -551,6 +551,8 @@ export const FleetAgentsItemReleaseSchema = z.object({
   summary_total: z.number().int(),
   socle_passed: z.number().int(),
   socle_total: z.number().int(),
+  floor_ok: z.boolean(),
+  floor_block: z.string().nullable(),
 });
 
 export const FleetAgentsItemNorthStarTrendPointsItemSchema = z.object({

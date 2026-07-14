@@ -18,7 +18,9 @@ import hashlib
 from dataclasses import dataclass
 
 from tessera.observability.eval_data import load_eval_snapshot
+from tessera.observability.eval_floor import grade_against_own_floor
 from tessera.observability.eval_gate_view import build_gate_view
+from tessera.verdict import NotOk, Ok
 
 __all__ = ["AgentRelease", "agent_release_state", "fleet_release_states"]
 
@@ -33,6 +35,8 @@ _VERDICT_TR: dict[str, tuple[str, str]] = {
         "BLOCKED (unwaived critical)",
     ),
     "BLOQUÉ (domaine)": ("BLOCKIERT (Domaene)", "BLOCKED (domain)"),
+    "BLOQUÉ (règle 1)": ("BLOCKIERT (Regel 1)", "BLOCKED (rule 1)"),
+    "NE PEUT PAS DIRE (plancher)": ("KANN NICHT SAGEN (Sockel)", "CANNOT SAY (floor)"),
     "PASSE": ("BESTANDEN", "PASS"),
     "Éval non exécutée": ("Eval nicht ausgefuehrt", "Eval not run"),
 }
@@ -105,6 +109,12 @@ class AgentRelease:
     # Shared security floor — the ONLY cross-agent comparable axis.
     socle_passed: int = 0
     socle_total: int = 0
+    # ADR 0021 Rule 1, as this column's OWN release condition. `floor_ok` is True only when the
+    # measured null floor produced an `Ok` for this agent's run; `floor_block` carries the one
+    # line naming what the floor holds against it (a certified inversion, a break this run saw,
+    # or a blind spot) — the wire speaks in nullable strings, the Verdict lives in eval_floor.
+    floor_ok: bool = False
+    floor_block: str | None = None
 
     @property
     def verdict_stale(self) -> bool:
@@ -138,6 +148,8 @@ class AgentRelease:
             "summary_total": self.summary_total,
             "socle_passed": self.socle_passed,
             "socle_total": self.socle_total,
+            "floor_ok": self.floor_ok,
+            "floor_block": self.floor_block,
         }
 
 
@@ -156,12 +168,29 @@ def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
             verdict_label=_verdict_label("Éval non exécutée", lang),
         )
     gate = build_gate_view(snap)
+    # ADR 0021 Rule 1, HERE TOO. The Release button on the Évaluations page learned to read the
+    # measured floor (the tile and the button used to disagree in the same component file) — and
+    # the fleet's "état de release" column plus AGIR/Release Control, the surfaces an operator
+    # actually scans, kept reading `gate.passed` alone. On 2026-07-14 they rendered PASSE for two
+    # agents whose models are CERTIFIED worse than silence on runs those very agents execute.
+    # Same grader, same verdict, every surface: only an `Ok` releases; a `NotOk` names the
+    # certified inversion; a `CannotSay` (no floor with the power to clear) ships nothing either,
+    # and the label keeps the two refusals distinct — a blind spot must never be dressed as a
+    # measured block, nor either of them as a pass.
+    floor = grade_against_own_floor(snap)
+    floor_ok = isinstance(floor.releasable, Ok)
+    verdict_label = gate.verdict_label
+    verdict_tone = gate.verdict_tone
+    if gate.passed and not floor_ok:
+        blocked = isinstance(floor.releasable, NotOk)
+        verdict_label = "BLOQUÉ (règle 1)" if blocked else "NE PEUT PAS DIRE (plancher)"
+        verdict_tone = "crit" if blocked else "bad"
     return AgentRelease(
         agent_id=agent_id,
         available=True,
-        passed=gate.passed,
-        verdict_label=_verdict_label(gate.verdict_label, lang),
-        verdict_tone=gate.verdict_tone,
+        passed=gate.passed and floor_ok,
+        verdict_label=_verdict_label(verdict_label, lang),
+        verdict_tone=verdict_tone,
         candidate_version=gate.candidate_version,
         eval_set=snap.eval_set,
         executions=gate.executions,
@@ -176,6 +205,8 @@ def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
         summary_total=snap.total,
         socle_passed=gate.socle_passed,
         socle_total=gate.socle_total,
+        floor_ok=floor_ok,
+        floor_block=floor.block_reason(),
     )
 
 

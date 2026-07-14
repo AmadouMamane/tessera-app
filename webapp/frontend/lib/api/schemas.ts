@@ -5651,6 +5651,10 @@ export const FleetSchema = z.object({
             summary_total: z.number().optional(),
             socle_passed: z.number().optional(),
             socle_total: z.number().optional(),
+            // ADR 0021 Rule 1 on the release column: the measured floor's verdict and the one
+            // line naming its refusal — declared here or zod strips them before any reader.
+            floor_ok: z.boolean().optional(),
+            floor_block: z.string().nullable().optional(),
           })
           .nullable()
           .optional(),

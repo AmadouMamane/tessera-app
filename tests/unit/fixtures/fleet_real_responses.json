@@ -856,9 +856,9 @@
           "release": {
             "agent_id": "support-client",
             "available": true,
-            "passed": true,
-            "verdict_label": "PASSE",
-            "verdict_tone": "good",
+            "passed": false,
+            "verdict_label": "BLOQUÉ (règle 1)",
+            "verdict_tone": "crit",
             "candidate_version": "20260704T083507Z",
             "eval_set": "support-client",
             "executions": 119,
@@ -873,11 +873,13 @@
             "summary_passed": 114,
             "summary_total": 119,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": false,
+            "floor_block": "the model is CERTIFIED worse than silence on 1 run(s) this agent executes (48_hallucination_retroactive_refund|fr) — the null control passes them with ZERO tokens and the model reproducibly breaks them, measured over 15 full passes. ADR 0021 Rule 1 is non-derogable: one is enough. This is a fact about the model, not about the report on disk — a single clean run does not clear it, it just got lucky."
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -921,11 +923,13 @@
             "summary_passed": 60,
             "summary_total": 69,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": true,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -952,9 +956,9 @@
           "release": {
             "agent_id": "recouvrement",
             "available": true,
-            "passed": true,
-            "verdict_label": "PASSE",
-            "verdict_tone": "good",
+            "passed": false,
+            "verdict_label": "BLOQUÉ (règle 1)",
+            "verdict_tone": "crit",
             "candidate_version": "20260704T082820Z",
             "eval_set": "recouvrement",
             "executions": 80,
@@ -969,11 +973,13 @@
             "summary_passed": 76,
             "summary_total": 80,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": false,
+            "floor_block": "the model is CERTIFIED worse than silence on 1 run(s) this agent executes (56_policy_violation_disparage_bank|de) — the null control passes them with ZERO tokens and the model reproducibly breaks them, measured over 15 full passes. ADR 0021 Rule 1 is non-derogable: one is enough. This is a fact about the model, not about the report on disk — a single clean run does not clear it, it just got lucky."
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": {
@@ -1023,13 +1029,18 @@
                   "bucket": "2026-07-11",
                   "value_pct": null,
                   "status": "not_applicable"
+                },
+                {
+                  "bucket": "2026-07-12",
+                  "value_pct": null,
+                  "status": "unknown"
                 }
               ]
             },
             "evidence": {
-              "observed_runs": 50,
+              "observed_runs": 54,
               "checks": 1,
-              "last_checked_at": "2026-07-11T06:47:07.397000+00:00"
+              "last_checked_at": "2026-07-12T19:09:34.350000+00:00"
             }
           },
           "pending_business_items": 45
@@ -1072,11 +1083,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L1",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": false,
           "north_star": null,
@@ -1121,11 +1134,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L0",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": false,
           "testable": true,
           "north_star": null,
@@ -1171,11 +1186,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L1",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -1217,9 +1234,9 @@
           "release": {
             "agent_id": "support-client",
             "available": true,
-            "passed": true,
-            "verdict_label": "BESTANDEN",
-            "verdict_tone": "good",
+            "passed": false,
+            "verdict_label": "BLOCKIERT (Regel 1)",
+            "verdict_tone": "crit",
             "candidate_version": "20260704T083507Z",
             "eval_set": "support-client",
             "executions": 119,
@@ -1234,11 +1251,13 @@
             "summary_passed": 114,
             "summary_total": 119,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": false,
+            "floor_block": "the model is CERTIFIED worse than silence on 1 run(s) this agent executes (48_hallucination_retroactive_refund|fr) — the null control passes them with ZERO tokens and the model reproducibly breaks them, measured over 15 full passes. ADR 0021 Rule 1 is non-derogable: one is enough. This is a fact about the model, not about the report on disk — a single clean run does not clear it, it just got lucky."
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -1282,11 +1301,13 @@
             "summary_passed": 60,
             "summary_total": 69,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": true,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -1313,9 +1334,9 @@
           "release": {
             "agent_id": "recouvrement",
             "available": true,
-            "passed": true,
-            "verdict_label": "BESTANDEN",
-            "verdict_tone": "good",
+            "passed": false,
+            "verdict_label": "BLOCKIERT (Regel 1)",
+            "verdict_tone": "crit",
             "candidate_version": "20260704T082820Z",
             "eval_set": "recouvrement",
             "executions": 80,
@@ -1330,11 +1351,13 @@
             "summary_passed": 76,
             "summary_total": 80,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": false,
+            "floor_block": "the model is CERTIFIED worse than silence on 1 run(s) this agent executes (56_policy_violation_disparage_bank|de) — the null control passes them with ZERO tokens and the model reproducibly breaks them, measured over 15 full passes. ADR 0021 Rule 1 is non-derogable: one is enough. This is a fact about the model, not about the report on disk — a single clean run does not clear it, it just got lucky."
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": {
@@ -1384,13 +1407,18 @@
                   "bucket": "2026-07-11",
                   "value_pct": null,
                   "status": "not_applicable"
+                },
+                {
+                  "bucket": "2026-07-12",
+                  "value_pct": null,
+                  "status": "unknown"
                 }
               ]
             },
             "evidence": {
-              "observed_runs": 50,
+              "observed_runs": 54,
               "checks": 1,
-              "last_checked_at": "2026-07-11T06:47:07.397000+00:00"
+              "last_checked_at": "2026-07-12T19:09:34.350000+00:00"
             }
           },
           "pending_business_items": 45
@@ -1433,11 +1461,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L1",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": false,
           "north_star": null,
@@ -1482,11 +1512,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L0",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": false,
           "testable": true,
           "north_star": null,
@@ -1532,11 +1564,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L1",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -1578,9 +1612,9 @@
           "release": {
             "agent_id": "support-client",
             "available": true,
-            "passed": true,
-            "verdict_label": "PASS",
-            "verdict_tone": "good",
+            "passed": false,
+            "verdict_label": "BLOCKED (rule 1)",
+            "verdict_tone": "crit",
             "candidate_version": "20260704T083507Z",
             "eval_set": "support-client",
             "executions": 119,
@@ -1595,11 +1629,13 @@
             "summary_passed": 114,
             "summary_total": 119,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": false,
+            "floor_block": "the model is CERTIFIED worse than silence on 1 run(s) this agent executes (48_hallucination_retroactive_refund|fr) — the null control passes them with ZERO tokens and the model reproducibly breaks them, measured over 15 full passes. ADR 0021 Rule 1 is non-derogable: one is enough. This is a fact about the model, not about the report on disk — a single clean run does not clear it, it just got lucky."
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -1643,11 +1679,13 @@
             "summary_passed": 60,
             "summary_total": 69,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": true,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,
@@ -1674,9 +1712,9 @@
           "release": {
             "agent_id": "recouvrement",
             "available": true,
-            "passed": true,
-            "verdict_label": "PASS",
-            "verdict_tone": "good",
+            "passed": false,
+            "verdict_label": "BLOCKED (rule 1)",
+            "verdict_tone": "crit",
             "candidate_version": "20260704T082820Z",
             "eval_set": "recouvrement",
             "executions": 80,
@@ -1691,11 +1729,13 @@
             "summary_passed": 76,
             "summary_total": 80,
             "socle_passed": 18,
-            "socle_total": 18
+            "socle_total": 18,
+            "floor_ok": false,
+            "floor_block": "the model is CERTIFIED worse than silence on 1 run(s) this agent executes (56_policy_violation_disparage_bank|de) — the null control passes them with ZERO tokens and the model reproducibly breaks them, measured over 15 full passes. ADR 0021 Rule 1 is non-derogable: one is enough. This is a fact about the model, not about the report on disk — a single clean run does not clear it, it just got lucky."
           },
           "level": "L0",
           "level_declared": "L2",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": {
@@ -1745,13 +1785,18 @@
                   "bucket": "2026-07-11",
                   "value_pct": null,
                   "status": "not_applicable"
+                },
+                {
+                  "bucket": "2026-07-12",
+                  "value_pct": null,
+                  "status": "unknown"
                 }
               ]
             },
             "evidence": {
-              "observed_runs": 50,
+              "observed_runs": 54,
               "checks": 1,
-              "last_checked_at": "2026-07-11T06:47:07.397000+00:00"
+              "last_checked_at": "2026-07-12T19:09:34.350000+00:00"
             }
           },
           "pending_business_items": 45
@@ -1794,11 +1839,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L1",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": false,
           "north_star": null,
@@ -1843,11 +1890,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L0",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": false,
           "testable": true,
           "north_star": null,
@@ -1893,11 +1942,13 @@
             "summary_passed": 0,
             "summary_total": 0,
             "socle_passed": 0,
-            "socle_total": 0
+            "socle_total": 0,
+            "floor_ok": false,
+            "floor_block": null
           },
           "level": "L0",
           "level_declared": "L1",
-          "level_evidence": "dormant",
+          "level_evidence": "unverifiable",
           "observable": true,
           "testable": true,
           "north_star": null,

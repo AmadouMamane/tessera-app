@@ -235,6 +235,10 @@ class FleetAgentsItemRelease(BaseModel):
     summary_total: int
     socle_passed: int
     socle_total: int
+    # ADR 0021 Rule 1 on this column too: whether the measured null floor cleared the run, and
+    # the one line naming what it holds against it when it did not (null when it clears).
+    floor_ok: bool
+    floor_block: str | None
 
 
 class FleetAgentsItemNorthStarTrendPointsItem(BaseModel):
