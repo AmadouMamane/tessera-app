@@ -59,6 +59,56 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-14 — **The per-agent table answered a question nobody asked, and the one it was sitting
+  under went unanswered.** `AgentBreakdown` had its columns HARDCODED — its own docstring conceded
+  "this is the MONITORING facet" — so on `/surveiller/qualite-ia` the banner cried **Fidélité
+  71,6 % < 95 % · 19/67 mauvais** and the table directly beneath it, the only surface with a row
+  per agent, replied with **latency** and **handoffs**. Not one column could name the agent burning
+  the SLO. Landed `b94965da` (the lens + the ratchet) and `04e7ae9c` (reachability + honest
+  emptiness); twice-green on one tree at the tip.
+
+  **The engine already knew the answer** — `GET /observability/snapshot` returns, per signal, a
+  `report` naming the scope dimensions it HONOURED and those it IGNORED, and `SignalCapability`
+  already declares which signals have no per-agent substrate at all. The report crossed the wire
+  (it survives zod) and **no component had ever read it.** The columns are now a lens:
+  `monitoring` (default, byte-identical everywhere it already rendered — pinned by a
+  non-regression test), `alarm` (value · gap to SLO in points · contribution, **sorted by
+  contribution descending**), `quality` (fidelity · hallucination · blocking regressions · gate ·
+  eval freshness) and `masked`.
+
+  **The ratchet — a number nobody can prove is a number nobody may read.** `selectHonouredSignal`
+  is the only door into a lens cell: it yields a value ONLY when the signal's own report declares
+  `agent` honoured, and every refusal is a distinct value the cell can name (`not-honoured`,
+  `org-wide`, `unavailable`, `no-report`, `absent`, `schema-drift`). **A missing or unreadable
+  report refuses too** — a witness that cannot see may never report "ok" (ADR 0026).
+  Mutation-tested three ways: swap in `selectSignal` → 5 red; delete the `isOrgWide` guard → red;
+  let the masked lens render a table → red.
+
+  **The reconciliation is REUSED, never re-implemented.** `7101bb2a` already put the honest logic
+  in the footer, and its comment names the trap: `shared_conversations` alone *reads 0 with
+  composure*. The sum of the per-agent slices does NOT reconcile with the org total by
+  construction — a handed-off journey touches two agents and counts once for the org — so a column
+  where the slices add up exactly would be a **coincidence, not a proof**. The alarm lens prints
+  **∑ slices beside the org total** and states the relation (equal, or a named gap in amber,
+  pointing at the handoff line below it). Live, on real data, it reads *"∑ contributions par agent
+  = 19 · total org = 19 — cohérents sur cette fenêtre"* — true here, and it would have SAID so had
+  it not been.
+
+  **Two holes only the live page could find.** (1) The org-wide mask was **unreachable**: the
+  loader always asked about `slo`, so `masked` never occurred in production — a tested, real,
+  invisible capability. Selecting a row in the signal registry now focuses it (`?signal=`) and the
+  server re-plans: click *Efficacité du firewall* → the table masks and says why, and the Fiche
+  signal's new **"Décomposable par agent"** row (read from the capability registry, never guessed)
+  says *Non — org-wide par construction*. Both surfaces read the SAME descriptor, so they cannot
+  disagree. (2) Three of the six live agents have **n = 0 turns**, and their cells rendered exactly
+  like a refused read. A measured emptiness is not an unprovable slice; `no-sample` is now its own
+  reason, in all three locales.
+
+  **Perf, measured before deciding — not assumed.** Six agents = six snapshot reads: **96 ms cold
+  in total, 14 ms warm for all six** (~2,4 ms each; the ADR 0015 read-through cache + single-flight
+  do their job). **No batch endpoint was added**: touching the read plan is the review boundary, and
+  the measurement says it is not needed.
+
 - 2026-07-13 — **ADR 0026: a witness interrogates the thing, never its neighbourhood. `make
   dev-status` was asking git about a DIRECTORY and printing the answer as if it were about the
   PROCESS.** Landed `ce61a01a` (twice-green, on an **isolated** worktree at the exact commit — see
