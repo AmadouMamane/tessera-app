@@ -7838,6 +7838,7 @@
     "contribUnknown": "Beitragsabgleich nicht möglich: Org-Gesamt oder Agenten-Anteile nicht verfügbar.",
     "staleEval": "Verdikt veraltet: der Katalog hat sich seit dieser Eval geändert.",
     "refusal": {
+      "no-sample": "Keine Turns dieses Agenten im Fenster — gemessen, nicht verweigert.",
       "absent": "Signal fehlt im Snapshot für diesen Agenten.",
       "schema-drift": "Payload außerhalb des Vertrags — Wert verweigert.",
       "no-report": "Kein lesbarer Scope-Report — der Anteil ist nicht beweisbar.",

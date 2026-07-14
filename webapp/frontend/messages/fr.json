@@ -7840,6 +7840,7 @@
     "contribUnknown": "Réconciliation des contributions impossible : total org ou tranches par agent indisponibles.",
     "staleEval": "Verdict daté : le catalogue a évolué depuis cette éval.",
     "refusal": {
+      "no-sample": "Aucun tour de cet agent sur la fenêtre — mesuré, pas refusé.",
       "absent": "Signal absent du snapshot pour cet agent.",
       "schema-drift": "Payload hors contrat — valeur refusée.",
       "no-report": "Pas de report de scope lisible — la tranche ne peut être prouvée.",

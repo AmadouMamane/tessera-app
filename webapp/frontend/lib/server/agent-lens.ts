@@ -42,11 +42,15 @@ async function fetchSnapshot(params: {
   }
 }
 
-export async function loadBreakdownLens(fleet: Fleet | null): Promise<BreakdownLens> {
+export async function loadBreakdownLens(
+  fleet: Fleet | null,
+  signalId?: string,
+): Promise<BreakdownLens> {
   const agents = fleet?.agents ?? [];
   if (agents.length === 0) return { kind: "monitoring" };
   const org = await fetchSnapshot({ signals: "slo" });
-  const plan = planLens(org);
+  const plan = planLens(org, signalId);
+  // An org-wide signal is settled by its declared capability alone: no per-agent fan-out at all.
   if (plan.kind === "masked") return { kind: "masked", signalId: plan.signalId };
   const signals = plan.kind === "alarm" ? "slo" : "slo,scores";
   const perAgent: AgentSnapshot[] = await Promise.all(

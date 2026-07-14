@@ -1,9 +1,8 @@
 import { getTranslations } from "next-intl/server";
 
-import type { AlarmLens, BreakdownLens, QualityLens } from "@/lib/agent-lens";
+import type { AlarmLens, BreakdownLens, CellEmpty, QualityLens } from "@/lib/agent-lens";
 import { AGENT_SCOPE_ALL } from "@/lib/agent-scope";
 import type { Fleet } from "@/lib/api/schemas";
-import type { ScopedRefusal } from "@/lib/overview-snapshot";
 
 const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 const fmtPct = (n: number) => `${n.toFixed(1).replace(".", ",")} %`;
@@ -34,9 +33,13 @@ function ReleaseCell({ agent, t }: { agent: FleetAgent; t: Translator }) {
   );
 }
 
-/** An honest empty cell: a dash that says WHY (the selection's refusal), never a bare gap. */
-function RefusedCell({ refusal, t }: { refusal: ScopedRefusal | null; t: Translator }) {
-  return <span title={refusal ? t(`refusal.${refusal}`) : undefined}>—</span>;
+/**
+ * An honest empty cell: a dash that says WHY, never a bare gap. A refusal (the report could
+ * not prove the slice) and "no sample" (the read succeeded, the window was empty) are both
+ * dashes on screen — but they are NOT the same fact, and the title says which.
+ */
+function EmptyCell({ reason, t }: { reason: CellEmpty | null; t: Translator }) {
+  return <span title={reason ? t(`refusal.${reason}`) : undefined}>—</span>;
 }
 
 function rowClass(selected: boolean, dimmed: boolean): string {
@@ -305,26 +308,18 @@ function AlarmTable({
             <tr key={a.id} className={rowClass(selected, dimmed)}>
               <td className="py-1.5 pr-3 font-medium">{a.name}</td>
               <td className="py-1.5 pr-3 text-right tabular-nums">
-                {row.value === null ? (
-                  <RefusedCell refusal={row.refusal} t={t} />
-                ) : (
-                  fmtRate(row.value)
-                )}
+                {row.value === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtRate(row.value)}
               </td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
                   row.gapPp !== null && row.gapPp < 0 ? "text-red-300" : ""
                 }`}
               >
-                {row.gapPp === null ? (
-                  <RefusedCell refusal={row.refusal} t={t} />
-                ) : (
-                  fmtPp(row.gapPp)
-                )}
+                {row.gapPp === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtPp(row.gapPp)}
               </td>
               <td className="py-1.5 pr-3 text-right tabular-nums">
                 {row.nBad === null ? (
-                  <RefusedCell refusal={row.refusal} t={t} />
+                  <EmptyCell reason={row.refusal} t={t} />
                 ) : (
                   `${fmtInt(row.nBad)} / ${fmtInt(row.n ?? 0)}`
                 )}
@@ -424,14 +419,14 @@ function QualityTable({
               <td className="py-1.5 pr-3 font-medium">{a.name}</td>
               <td className="py-1.5 pr-3 text-right tabular-nums">
                 {row?.faithfulness == null ? (
-                  <RefusedCell refusal={row?.faithfulnessRefusal ?? "absent"} t={t} />
+                  <EmptyCell reason={row?.faithfulnessRefusal ?? "absent"} t={t} />
                 ) : (
                   fmtRate(row.faithfulness)
                 )}
               </td>
               <td className="py-1.5 pr-3 text-right tabular-nums">
                 {row?.hallucination == null ? (
-                  <RefusedCell refusal={row?.hallucinationRefusal ?? "absent"} t={t} />
+                  <EmptyCell reason={row?.hallucinationRefusal ?? "absent"} t={t} />
                 ) : (
                   fmtRate(row.hallucination)
                 )}

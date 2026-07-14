@@ -7838,6 +7838,7 @@
     "contribUnknown": "Cannot reconcile contributions: org total or per-agent slices unavailable.",
     "staleEval": "Stale verdict: the catalogue changed since this eval.",
     "refusal": {
+      "no-sample": "No turns from this agent on the window — measured, not refused.",
       "absent": "Signal missing from the snapshot for this agent.",
       "schema-drift": "Payload off-contract — value refused.",
       "no-report": "No readable scope report — the slice cannot be proven.",

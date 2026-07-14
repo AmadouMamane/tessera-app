@@ -21,8 +21,11 @@ import {
   Stethoscope,
   TrendingUp,
 } from "lucide-react";
+// `Route` is already taken in this module by the lucide ICON of that name — alias Next's
+// typed-route type so the cast below cannot silently mean the icon.
+import type { Route as NextRoute } from "next";
 import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { type ReactNode, useState } from "react";
@@ -119,6 +122,7 @@ import type {
   RunSummary,
   WhatChanged,
 } from "@/lib/api/schemas";
+import { SIGNAL_FOCUS_PARAM, registryIdFor } from "@/lib/signal-focus";
 
 const POLL_MS = 5_000;
 
@@ -191,6 +195,21 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+  const router = useRouter();
+  const pathname = usePathname();
+
+  /**
+   * Selecting a signal in the registry FOCUSES it (`?signal=`), so the per-agent breakdown
+   * above re-plans its lens on the server: it answers that signal, or — when the signal is
+   * org-wide by construction — masks the table and says why. Without this the masked lens
+   * would be unreachable, and an unreachable capability is a decoration.
+   */
+  function focusSignal(row: SignalRow) {
+    setSelectedSignal(row);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(SIGNAL_FOCUS_PARAM, registryIdFor(row.key));
+    router.replace(`${pathname}?${params.toString()}` as NextRoute, { scroll: false });
+  }
 
   const slo = useQuery({
     queryKey: ["slo", asOf, scope],
@@ -684,7 +703,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               <SignalsTable
                 rows={signalRows}
                 selectedKey={selectedSignal?.key ?? null}
-                onSelect={setSelectedSignal}
+                onSelect={focusSignal}
               />
               <div className="grid gap-2 lg:grid-cols-3">
                 <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />

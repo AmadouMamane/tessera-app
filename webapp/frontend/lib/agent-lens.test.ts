@@ -19,6 +19,8 @@ import { describe, expect, it } from "vitest";
 
 import { buildAlarmLens, buildQualityLens, planLens } from "@/lib/agent-lens";
 import type { OverviewSnapshot } from "@/lib/overview-snapshot";
+import { readSignalFocus, registryIdFor } from "@/lib/signal-focus";
+import { isOrgWide } from "@/lib/signal-registry";
 
 const SLO_DATA = {
   metric: "faithfulness",
@@ -149,6 +151,39 @@ describe("the ratchet: no lens may display a number the report declares NOT HONO
   });
 });
 
+describe("the focused signal (?signal=) is what reaches the lens", () => {
+  it("reads the focus from the URL, and treats an empty one as 'no focus'", () => {
+    expect(readSignalFocus({ signal: "firewall" })).toBe("firewall");
+    expect(readSignalFocus(new URLSearchParams("signal=refusal&agent=all"))).toBe("refusal");
+    expect(readSignalFocus({})).toBeUndefined();
+    expect(readSignalFocus({ signal: "  " })).toBeUndefined();
+  });
+
+  it("maps the UI row key to the id the CAPABILITY REGISTRY knows it by", () => {
+    // The registry says `pii_leak`; the signals table's row key is `piiLeak`. One mapping,
+    // in one place — the rail's explanation and the table's masking must agree by construction.
+    expect(registryIdFor("piiLeak")).toBe("pii_leak");
+    expect(registryIdFor("firewall")).toBe("firewall");
+  });
+
+  it("focusing an org-wide signal masks the table — the state is REACHABLE from the UI", () => {
+    // Selecting the row in the registry sets ?signal=<id>; the server re-plans the lens.
+    // Without this the masked lens would exist and never render, which is a decoration.
+    for (const uiKey of ["firewall", "refusal"]) {
+      const id = registryIdFor(uiKey);
+      expect(isOrgWide(id)).toBe(true);
+      expect(planLens(snapshot(HONOURED), id)).toEqual({ kind: "masked", signalId: id });
+    }
+  });
+
+  it("focusing a per-agent signal we cannot read per agent falls back to quality, never to a guess", () => {
+    // `toxicity` IS per-agent, but this lens has no per-agent reader for it. We show what we
+    // can prove (the quality lens) rather than dress the SLO's numbers up as toxicity's.
+    expect(isOrgWide("toxicity")).toBe(false);
+    expect(planLens(snapshot(HONOURED), "toxicity")).toEqual({ kind: "quality" });
+  });
+});
+
 describe("the alarm lens names the culprit", () => {
   const heavy = snapshot(HONOURED, { ...SLO_DATA, n: 40, n_bad: 14, good_rate: 0.65 });
   const light = snapshot(HONOURED, { ...SLO_DATA, n: 20, n_bad: 4, good_rate: 0.8 });
@@ -198,10 +233,30 @@ describe("the alarm lens names the culprit", () => {
     expect(lens.orgN).toBe(67);
   });
 
-  it("n = 0 is 'no sample', never a fabricated 0 % — the cell stays empty", () => {
+  it("n = 0 is 'no sample', never a fabricated 0 % — and it is NOT a refusal", () => {
+    // Three of the six live agents have zero turns. A measured emptiness and an unprovable
+    // slice are both dashes on screen, but they are different facts: the read SUCCEEDED here.
+    // Collapsing them would make the honest case look like the broken one.
     const empty = snapshot(HONOURED, { ...SLO_DATA, n: 0, n_bad: 0, good_rate: 0 });
     const lens = buildAlarmLens("slo", snapshot(HONOURED), [{ agentId: "quiet", snapshot: empty }]);
     if (lens.kind !== "alarm") throw new Error("expected the alarm lens");
-    expect(row(lens.rows, 0)).toMatchObject({ value: null, gapPp: null, nBad: null, n: 0 });
+    expect(row(lens.rows, 0)).toMatchObject({
+      value: null,
+      gapPp: null,
+      nBad: null,
+      n: 0,
+      refusal: "no-sample",
+    });
+  });
+
+  it("an agent with no turns does not inflate the ∑ of contributions", () => {
+    const empty = snapshot(HONOURED, { ...SLO_DATA, n: 0, n_bad: 0, good_rate: 0 });
+    const org = snapshot(HONOURED, { ...SLO_DATA, n: 67, n_bad: 19 });
+    const lens = buildAlarmLens("slo", org, [
+      { agentId: "heavy", snapshot: heavy },
+      { agentId: "quiet", snapshot: empty },
+    ]);
+    if (lens.kind !== "alarm") throw new Error("expected the alarm lens");
+    expect(lens.sumNBad).toBe(14); // heavy only — the empty agent contributes nothing, not a 0-row
   });
 });

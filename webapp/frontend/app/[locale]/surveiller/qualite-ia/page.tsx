@@ -11,6 +11,7 @@ import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
 import { loadBreakdownLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
+import { readSignalFocus } from "@/lib/signal-focus";
 
 // The evaluations view gates the per-case detail on the session (cookies) per request.
 export const dynamic = "force-dynamic";
@@ -76,10 +77,11 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
   const t = await getTranslations({ locale, namespace: "quality" });
   const scope = readAgentScope(sp);
   const fleet = await loadFleet(locale);
-  // The breakdown lens answers the page's question: the breached signal when the SLO
-  // hero is in alarm (per-agent culprits, sorted by contribution), the quality lens
-  // otherwise — never volume/latency columns under a quality banner.
-  const lens = await loadBreakdownLens(fleet);
+  // The breakdown lens answers the page's question: the breached signal when the SLO hero is in
+  // alarm (per-agent culprits, sorted by contribution), the quality lens otherwise — never
+  // volume/latency columns under a quality banner. `?signal=` focuses one signal from the
+  // registry; an org-wide one masks the table and says why (its capability, not a guess).
+  const lens = await loadBreakdownLens(fleet, readSignalFocus(sp));
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <QualityViewSwitch active="signals" locale={locale} />

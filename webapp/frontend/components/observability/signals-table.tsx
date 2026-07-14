@@ -32,6 +32,7 @@ import type {
   ToxicityReport,
   WhatChanged,
 } from "@/lib/api/schemas";
+import { registryIdFor } from "@/lib/signal-focus";
 import { capabilityFor } from "@/lib/signal-registry";
 
 /** Tabs a signals-rail link can route to (mirrors the dashboard TabKey). */
@@ -1203,18 +1204,18 @@ function gate(rows: SignalRow[], cat: SignalCategory): boolean {
   return !rows.some((r) => r.category === cat && r.status === "crit");
 }
 
-/** UI row keys whose capability-registry id is spelled differently. */
-const REGISTRY_ID: Record<string, string> = { piiLeak: "pii_leak" };
-
 /**
  * The "Décomposable par agent" value for the Fiche signal — read from the capability
- * registry (the `capabilities.py` mirror), NEVER guessed. Three honest states: a declared
- * per-agent signal says yes; a declared org-wide signal says why the breakdown table
- * cannot exist for it; an undeclared id says "undeclared" — a witness that cannot see
- * may never report "ok" (ADR 0026).
+ * registry (the `capabilities.py` mirror), NEVER guessed. It is the SAME descriptor that
+ * masks the per-agent breakdown table, so the rail can never explain an absence the table
+ * did not have, nor stay silent about one it did.
+ *
+ * Three honest states: a declared per-agent signal says yes; a declared org-wide signal says
+ * why the breakdown cannot exist for it; an undeclared id says so rather than defaulting to
+ * "yes" — a witness that cannot see may never report "ok" (ADR 0026).
  */
 function byAgentState(uiKey: string): "yes" | "no" | "undeclared" {
-  const capability = capabilityFor(REGISTRY_ID[uiKey] ?? uiKey);
+  const capability = capabilityFor(registryIdFor(uiKey));
   if (capability === undefined) return "undeclared";
   return capability.dimensions.includes("agent") ? "yes" : "no";
 }
@@ -1424,7 +1425,11 @@ function RailKV({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-[var(--muted-foreground)]">{k}</span>
-      <span className="truncate text-right">{v}</span>
+      {/* The rail is narrow and the value truncates; the title keeps it READABLE. A reason an
+          operator cannot finish reading ("org-wide par construc…") explains nothing. */}
+      <span className="truncate text-right" title={v}>
+        {v}
+      </span>
     </div>
   );
 }
