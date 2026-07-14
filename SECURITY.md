@@ -52,7 +52,7 @@ regression harness, the corpus pipeline, the Terraform/infra definitions, and
 the dashboard under `webapp/`.
 
 **Out of scope:** third-party services and dependencies (report those upstream —
-`mcp-firewall`, Vertex AI, Ollama, Postgres), findings that require a compromised
+Vertex AI, Ollama, Postgres), findings that require a compromised
 host or insider access already modelled in the threat model, and the documented
 open risks below.
 
@@ -70,7 +70,7 @@ tracked:
 
 ## Security practices in this repository
 
-- Runtime guard (`mcp-firewall`) on every tool call; PII redaction at the guard.
+- Runtime guard (first-party, ADR 0028) on every tool call; PII redaction at the guard.
 - Bearer-token auth (`secrets.compare_digest`); route-level authz on the read
   surfaces; deployment-aware security headers (ADR 0020).
 - Rate limiting and a request-size ceiling on the API (ADR 0020).

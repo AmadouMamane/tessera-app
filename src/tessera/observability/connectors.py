@@ -3,8 +3,8 @@
 Unlike a generic SaaS-integration catalogue, this surfaces Tessera's *real*
 external dependencies — the frozen stack from ``CLAUDE.md`` and the system
 profile: the frontier LLM (Vertex AI), the local LLM (Ollama / Llama 3.3 70B),
-the retrieval store (PostgreSQL + pgvector), the runtime guard (``mcp-firewall``,
-the pinned dependency), GCP Secret Manager, Cloud Logging / Monitoring, Cloud Run
+the retrieval store (PostgreSQL + pgvector), the runtime guard (first-party,
+in-process — ADR 0028), GCP Secret Manager, Cloud Logging / Monitoring, Cloud Run
 and Cloud SQL.
 
 Status reflects the active runtime mode (``Settings``): on the on-premises path
@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from tessera import __version__
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
@@ -93,12 +94,13 @@ _TR: dict[str, tuple[str, str, str]] = {
         "extension. Cloud SQL in the cloud deployment.",
     ),
     "d_fw": (
-        "Garde-fou d'exécution consommé comme dépendance épinglée. Filtre "
-        "injections de prompt, fuites PII et appels d'outils privilégiés.",
-        "Laufzeit-Guardrail als gepinnte Abhaengigkeit. Filtert Prompt-Injections, "
-        "PII-Lecks und privilegierte Tool-Aufrufe.",
-        "Runtime guardrail consumed as a pinned dependency. Filters prompt "
-        "injections, PII leaks and privileged tool calls.",
+        "Garde-fou d'exécution interne (première partie), point de passage "
+        "unique des appels d'outils. Filtre injections de prompt, fuites PII "
+        "et appels d'outils privilégiés.",
+        "Hauseigener Laufzeit-Guardrail am einzigen Tool-Chokepoint. Filtert "
+        "Prompt-Injections, PII-Lecks und privilegierte Tool-Aufrufe.",
+        "First-party runtime guardrail at the single tool-call chokepoint. "
+        "Filters prompt injections, PII leaks and privileged tool calls.",
     ),
     "d_secrets": (
         "Résolution des secrets au démarrage du conteneur (mots de passe DB, "
@@ -267,16 +269,16 @@ def compute_connectors(lang: str = "fr") -> dict[str, object]:
         },
         {
             "id": "CX-FIREWALL",
-            "name": "mcp-firewall",
+            "name": "Tessera guard (first-party)",
             "category": "guard",
             "status": "active",
             "environment": "in-proc",
             "latency": "3 ms",
             "last_check": _ago(30, "s", lang),
             "description": _t("d_fw", lang),
-            "endpoint": "dependency: mcp-firewall",
+            "endpoint": "in-process: tessera.guard.adapter",
             "auth": _t("a_inproc", lang),
-            "version": "0.9.4",
+            "version": __version__,
             "role": _t("r_fw", lang),
         },
         {

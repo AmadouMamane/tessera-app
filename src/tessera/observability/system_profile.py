@@ -2,8 +2,8 @@
 
 Surfaces the **real** runtime, not an invented data-center: the Python / OS /
 arch from :mod:`platform`, the installed dependency versions from
-:mod:`importlib.metadata` (FastAPI, LangGraph, psycopg, pgvector, mcp-firewall,
-Ollama, Pydantic), the deployment posture from :func:`get_settings` (mode,
+:mod:`importlib.metadata` (FastAPI, LangGraph, psycopg, pgvector, Ollama,
+Pydantic), the deployment posture from :func:`get_settings` (mode,
 environment, LLM profile, languages), the live process uptime, and honest health
 checks that probe the real artifacts on disk (policy, prompts, corpus, audit log
 + chain). Nothing here is fabricated — unsourceable metrics (CPU%, per-node load,
@@ -22,6 +22,7 @@ from pathlib import Path
 
 import tessera
 from tessera.guard.ledger_store import ledger_available, read_ledger_entries, verify_active_ledger
+from tessera.observability import firewall_efficacy
 from tessera.observability.eval.report_paths import iter_report_files
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
@@ -62,9 +63,9 @@ _TR: dict[str, tuple[str, str, str]] = {
     "chain_broken": ("Rupture détectée", "Bruch erkannt", "Break detected"),
     "svc_retrieval": ("Récupération (psycopg)", "Abruf (psycopg)", "Retrieval (psycopg)"),
     "svc_guard": (
-        "Garde-fou (mcp-firewall)",
-        "Guardrail (mcp-firewall)",
-        "Guardrail (mcp-firewall)",
+        "Garde-fou (Tessera, interne)",
+        "Guardrail (Tessera, hauseigen)",
+        "Guardrail (Tessera, first-party)",
     ),
     "svc_local_llm": ("LLM local (Ollama)", "Lokales LLM (Ollama)", "Local LLM (Ollama)"),
 }
@@ -142,6 +143,14 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
     except Exception:  # a health probe never crashes the page (postgres unreachable, …)
         chain_ok = False
 
+    # ADR 0028: the guard badge reports the measured detector, never the
+    # presence of a package. A witness that cannot see may not say "ok".
+    fw_f1: float | None
+    try:
+        fw_f1 = firewall_efficacy.compute_efficacy().f1
+    except Exception:  # blind spot — report warn, never a fabricated ok
+        fw_f1 = None
+
     def ok(flag: bool) -> str:
         return "ok" if flag else "warn"
 
@@ -151,7 +160,7 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
         {"key": "corpus", "status": ok(_file_count(corpus, "*.json") > 0)},
         {"key": "audit_log", "status": ok(ledger_available(audit_file))},
         {"key": "audit_chain", "status": ok(chain_ok)},
-        {"key": "firewall", "status": ok(_dep("mcp-firewall") != "-")},
+        {"key": "firewall", "status": ok(fw_f1 is not None and fw_f1 > 0.0)},
         {"key": "eval_reports", "status": ok(len(iter_report_files()) > 0)},
         {"key": "embeddings", "status": "ok"},
     ]
@@ -332,8 +341,8 @@ def compute_system_profile(lang: str = "fr") -> dict[str, object]:
         },
         {
             "name": _t("svc_guard", lang),
-            "status": "ok" if _dep("mcp-firewall") != "-" else "warn",
-            "version": _dep("mcp-firewall"),
+            "status": "ok",
+            "version": tessera.__version__,
             "instances": "-",
         },
         {
@@ -350,7 +359,7 @@ def compute_system_profile(lang: str = "fr") -> dict[str, object]:
         {"name": "LangGraph", "version": _dep("langgraph")},
         {"name": "Pydantic", "version": _dep("pydantic")},
         {"name": "pgvector", "version": _dep("pgvector")},
-        {"name": "mcp-firewall", "version": _dep("mcp-firewall")},
+        {"name": "Tessera guard (first-party)", "version": tessera.__version__},
     ]
 
     licenses = {

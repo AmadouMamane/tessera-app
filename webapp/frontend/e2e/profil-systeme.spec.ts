@@ -27,8 +27,8 @@ test.beforeEach(async ({ page }) => {
 test("reports the real runtime and installed dependencies", async ({ page }) => {
   // The versions panel lists real installed dependencies.
   await expect(page.getByText("FastAPI").first()).toBeVisible();
-  // mcp-firewall is the pinned dependency that defends the reuse positioning.
-  await expect(page.getByText("mcp-firewall").first()).toBeVisible();
+  // The guard is first-party (ADR 0028); its row carries Tessera's own version.
+  await expect(page.getByText("Tessera guard").first()).toBeVisible();
 });
 
 test("shows the honest health checks", async ({ page }) => {

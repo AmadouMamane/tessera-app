@@ -43,10 +43,10 @@ encodes two operational expectations:
   emitted as structured audit records (`src/tessera/guard/audit.py`) suitable
   for feeding an ICT-incident reporting pipeline. Tessera does not file reports
   itself; it produces the evidence trail an operator would need.
-- **Third-party (ICT) risk.** The single runtime third party in the request
-  path is `mcp-firewall`, consumed as a pinned dependency. Pinning and the
-  audit of every guard decision are the third-party-risk controls Tessera
-  exposes.
+- **Third-party (ICT) risk.** The guard path carries no third-party component:
+  the runtime guard is first-party (ADR 0028). Third-party risk in the request
+  path reduces to the LLM providers and the managed database; the audit of
+  every guard decision is the control Tessera exposes.
 
 Note that DORA targets the financial entity's operational resilience, not the
 retail customer directly. Failure cases `35_regulatory_misstatement_dora_retail`
@@ -75,7 +75,7 @@ than the CNIL corpus, which is a known coverage gap tracked in
 
 ## Guard policy structure
 
-The runtime guard is `mcp-firewall` consumed as a dependency and configured
+The runtime guard is first-party (ADR 0028) and configured
 through `src/tessera/guard/policy.yaml`. The adapter
 (`src/tessera/guard/adapter.py`) reads the policy at start-up and re-reads it on
 `SIGHUP`. The policy has three top-level sections.

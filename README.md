@@ -5,7 +5,7 @@
 **A multilingual (FR / DE / EN) banking support LLM agent for the European retail market.**
 
 Grounded in EU regulatory corpora (DORA, CNIL, BaFin, GDPR).
-Guarded at runtime by [`mcp-firewall`](https://github.com/ressl/mcp-firewall).
+Guarded at runtime by a first-party, policy-driven guard at a single tool-call chokepoint — every decision audited, its efficacy measured (ADR 0028).
 Validated by a non-regression harness over 63 publicly documented agent failures.
 Deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.3 70B locally on Apple Silicon.
 
@@ -97,7 +97,7 @@ Tessera is a **complete, opinionated, deployed assembly** of four quality layers
 
 It builds deliberately on proven components rather than reinventing them:
 
-- Runtime guarding via [`mcp-firewall`](https://github.com/ressl/mcp-firewall), consumed as a pinned dependency.
+- A first-party runtime guard behind a single declared seam (`src/tessera/guard/adapter.py`); [`mcp-firewall`](https://github.com/ressl/mcp-firewall) is cited as prior art for the category (ADR 0028).
 - A non-regression harness whose patterns draw on [AgentAssay](https://github.com/agentassay) and [Promptfoo](https://github.com/promptfoo/promptfoo).
 - An audit-trail design informed by the AEGIS research line.
 
@@ -107,7 +107,7 @@ The engineering work is the end-to-end integration and the EU banking domain sem
 
 | Project / Paper        | Role                                          |
 | ---------------------- | --------------------------------------------- |
-| `mcp-firewall` (ressl) | Runtime guardrail layer — pinned dependency   |
+| [`mcp-firewall`](https://github.com/ressl/mcp-firewall) (ressl) | Guard-category prior art (ADR 0028) |
 | AEGIS                  | Audit-trail design pattern                    |
 | DFAH                   | Failure taxonomy for agent harnesses          |
 | AgentAssay             | Regression-test scaffolding patterns          |
@@ -238,7 +238,7 @@ Full breakdown: [`eval/reports/sweep/comparison.md`](./eval/reports/sweep/compar
                 │       escalation]
                 │             │
                 │             ▼
-                │   LLM-callable tools  ◀── guarded by mcp-firewall
+                │   LLM-callable tools  ◀── first-party guard (ADR 0028)
                 │   (account_balance, card_block,
                 │    transaction_search, loan_simulate,
                 │    ticket_escalate)
@@ -329,7 +329,7 @@ On-prem serves several selectable Ollama models — **Llama 3.2 3B (default)**, 
 | Retrieval              | PostgreSQL + `pgvector`                         | [docs/design.md](./docs/design.md)      |
 | Frontier LLM           | Vertex AI                                       | [docs/design.md](./docs/design.md)      |
 | Local LLM              | Selectable Ollama models (Llama 3.2 3B default → Llama 3.3 70B), Apple Silicon | [docs/on_prem.md](./docs/on_prem.md) |
-| Runtime guardrails     | `mcp-firewall` (pinned dependency)              | [docs/safety.md](./docs/safety.md)      |
+| Runtime guardrails     | First-party guard (single chokepoint, ADR 0028) | [docs/safety.md](./docs/safety.md)      |
 | HTTP                   | FastAPI                                         | —                                       |
 | Dashboard              | Next.js (under `webapp/frontend/`)              | —                                       |
 | Infrastructure         | Terraform → Cloud Run + Cloud SQL + Secret Manager | [docs/runbook.md](./docs/runbook.md) |

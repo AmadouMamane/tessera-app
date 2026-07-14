@@ -378,7 +378,7 @@ def seed_demo_waivers(
             approver_role="Compliance Officer (double-contrôle DORA/CNIL)",
             scope=f"{case_id} · {language} · candidat {short}",
             compensating_controls=[
-                "Garde-fou runtime mcp-firewall en mode blocage sur ce motif",
+                "Garde-fou runtime (première partie) en mode blocage sur ce motif",
                 "Revue humaine obligatoire de toute action irréversible (HITL)",
                 "Alerte temps-réel + plafond d'exposition journalier",
             ],

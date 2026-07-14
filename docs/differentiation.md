@@ -7,10 +7,10 @@ builds on, and records what makes the assembly defensible.
 
 Tessera deliberately reuses proven components instead of reinventing them:
 
-- **Runtime guard** — `mcp-firewall`, consumed as a pinned dependency.
-  `src/tessera/guard/adapter.py` is an adapter: when `mcp_firewall` is importable
-  it delegates decision logic to it; otherwise it falls back to a local policy
-  engine exposing the same interface.
+- **Runtime guard** — first-party, behind the single declared seam
+  `src/tessera/guard/adapter.py` (ADR 0028). `mcp-firewall` (ressl) is the
+  category's prior art; the earlier claim that it provided this layer was
+  false — the dependency was never invoked.
 - **Regression harness** — declarative-case + assertion patterns in the spirit of
   AgentAssay and Promptfoo. The schema, runner, and scorecard are purpose-built
   glue over those patterns.
@@ -41,7 +41,7 @@ semantics:
 
 | Project | Role in Tessera | Relationship |
 | --- | --- | --- |
-| `mcp-firewall` (ressl) | Runtime guard / tool-call policy engine | Dependency (pinned) |
+| `mcp-firewall` (ressl) | Runtime guard / tool-call policy engine | Prior art (ADR 0028) |
 | AEGIS | Structured audit-trail design | Inspiration |
 | DFAH | Failure-taxonomy framing for the catalogue | Inspiration |
 | AgentAssay | Declarative-case + assertion pattern | Inspiration |

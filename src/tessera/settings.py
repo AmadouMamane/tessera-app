@@ -188,7 +188,7 @@ class PostgresSettings(BaseSettings):
 
 
 class GuardSettings(BaseSettings):
-    """Runtime guardrail configuration — wraps mcp-firewall."""
+    """Runtime guardrail configuration for the first-party guard (ADR 0028)."""
 
     model_config = SettingsConfigDict(env_prefix="TESSERA_GUARD_", extra="ignore")
 

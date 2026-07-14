@@ -1048,7 +1048,7 @@
       },
       "noRootCause": "— (lancer une synthèse avec le modèle le plus capable)",
       "fixes": {
-        "prompt_injection": "Renforcer le filtrage d'entrée du guard (mcp-firewall) et le rappel d'instruction système ; ne jamais exposer le prompt système.",
+        "prompt_injection": "Renforcer le filtrage d'entrée du guard et le rappel d'instruction système ; ne jamais exposer le prompt système.",
         "pii_leak": "Durcir la couche PII/outils : masquer PAN/IBAN et refuser l'accès aux données de tiers avant tout appel d'outil.",
         "hallucination": "Exiger une citation récupérée (RAG) avant toute affirmation factuelle ; sans source, répondre par l'incertitude.",
         "overconfidence": "Recalibrer et abaisser les seuils de confiance, et forcer une nuance ou une rétractation au-dessus du seuil.",
@@ -6595,7 +6595,7 @@
       "corpus": "Corpus réglementaire",
       "audit_log": "Journal d'audit",
       "audit_chain": "Chaîne d'audit",
-      "firewall": "Pare-feu (mcp-firewall)",
+      "firewall": "Garde-fou — détecteur d'injection (mesuré)",
       "eval_reports": "Rapports d'évaluation",
       "embeddings": "Embeddings",
       "viewAll": "Voir toutes les vérifications"

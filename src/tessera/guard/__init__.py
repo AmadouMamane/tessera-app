@@ -1,7 +1,7 @@
 """Runtime guardrail layer for Tessera.
 
-The guard wraps every tool invocation with a firewall check sourced from
-``policy.yaml`` and the upstream :mod:`mcp_firewall` library. Decisions are
+The guard wraps every tool invocation with a first-party, policy-driven
+check sourced from ``policy.yaml`` (ADR 0028). Decisions are
 recorded as :class:`GuardDecisionRecord` entries on the agent state and as
 structured audit-trail entries through :mod:`tessera.guard.audit`.
 

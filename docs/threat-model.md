@@ -2,8 +2,8 @@
 
 This document is a STRIDE-style threat model for Tessera: a multilingual
 (FR/DE/EN) banking support agent that grounds answers in EU regulatory corpora,
-calls tools that touch customer account data, and runs behind a runtime guard
-layer (`mcp-firewall`). It enumerates the assets worth protecting, the
+calls tools that touch customer account data, and runs behind a first-party
+runtime guard layer (ADR 0028). It enumerates the assets worth protecting, the
 adversaries we model, the attack surface, the concrete attack vectors with their
 mitigations and residual gaps, and the open risks we have chosen to document
 rather than claim are solved.
@@ -67,7 +67,7 @@ category prefix.
 document (indirect) instructs the agent to ignore its system prompt, reveal
 data, or call a tool it should not.
 
-**Mitigation.** `mcp-firewall` performs argument-level pattern matching at the
+**Mitigation.** The first-party guard performs argument-level pattern matching at the
 tool-call boundary, independent of what the model "decided" to do. Six prompt
 injection regression cases exercise this: direct override, roleplay framing,
 transfer (`virement`) and beneficiary manipulation, motive-field injection, and

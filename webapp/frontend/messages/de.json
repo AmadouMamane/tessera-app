@@ -1048,7 +1048,7 @@
       },
       "noRootCause": "— (Synthese mit dem leistungsstärksten Modell ausführen)",
       "fixes": {
-        "prompt_injection": "Eingabefilter des Guard (mcp-firewall) und die System-Instruktions-Erinnerung stärken; den System-Prompt nie offenlegen.",
+        "prompt_injection": "Eingabefilter des Guard und die System-Instruktions-Erinnerung stärken; den System-Prompt nie offenlegen.",
         "pii_leak": "PII-/Tool-Schicht härten: PAN/IBAN maskieren und Zugriff auf Drittdaten vor jedem Tool-Aufruf verweigern.",
         "hallucination": "Vor jeder Tatsachenaussage eine abgerufene Quelle (RAG) verlangen; ohne Quelle mit Unsicherheit antworten.",
         "overconfidence": "Konfidenzschwellen neu kalibrieren und senken und oberhalb der Schwelle eine Relativierung oder Rücknahme erzwingen.",
@@ -6595,7 +6595,7 @@
       "corpus": "Regulatorisches Korpus",
       "audit_log": "Audit-Log",
       "audit_chain": "Audit-Kette",
-      "firewall": "Firewall (mcp-firewall)",
+      "firewall": "Guardrail — Injektionsdetektor (gemessen)",
       "eval_reports": "Auswertungsberichte",
       "embeddings": "Embeddings",
       "viewAll": "Alle Prüfungen ansehen"

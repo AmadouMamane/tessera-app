@@ -329,7 +329,7 @@ def _detail(
         ],
         # Security = how the firewall enforces it.
         "security_rows": [
-            {"label": _t("sl_fw", lang), "value": "mcp-firewall"},
+            {"label": _t("sl_fw", lang), "value": "tessera.guard (first-party)"},
             {"label": _t("sl_rule", lang), "value": f"tool.{tid}.allow"},
             {"label": _t("sl_argval", lang), "value": "Pydantic strict (extra=forbid)"},
             {"label": _t("sl_onviol", lang), "value": _t("sv_deny_logged", lang)},

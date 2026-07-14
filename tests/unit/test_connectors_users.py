@@ -18,7 +18,7 @@ def test_connectors_cover_the_real_stack() -> None:
     assert any("Ollama" in n for n in names)
     assert any("Vertex AI" in n for n in names)
     assert any("pgvector" in n for n in names)
-    assert "mcp-firewall" in names
+    assert "Tessera guard (first-party)" in names
     # Exactly one LLM path is active at a time (on-prem XOR frontier).
     llm = [c for c in payload["connectors"] if c["id"] in {"CX-LLM-LOCAL", "CX-LLM-FRONTIER"}]
     actives = [c for c in llm if c["status"] == "active"]

@@ -1048,7 +1048,7 @@
       },
       "noRootCause": "— (run a synthesis with the most capable model)",
       "fixes": {
-        "prompt_injection": "Harden the guard's input filtering (mcp-firewall) and the system-instruction reminder; never expose the system prompt.",
+        "prompt_injection": "Harden the guard's input filtering and the system-instruction reminder; never expose the system prompt.",
         "pii_leak": "Harden the PII/tools layer: mask PAN/IBAN and refuse access to third-party data before any tool call.",
         "hallucination": "Require a retrieved citation (RAG) before any factual claim; with no source, answer with uncertainty.",
         "overconfidence": "Recalibrate and lower the confidence thresholds, and force a hedge or retraction above the threshold.",
@@ -6595,7 +6595,7 @@
       "corpus": "Regulatory corpus",
       "audit_log": "Audit log",
       "audit_chain": "Audit chain",
-      "firewall": "Firewall (mcp-firewall)",
+      "firewall": "Guard — injection detector (measured)",
       "eval_reports": "Evaluation reports",
       "embeddings": "Embeddings",
       "viewAll": "View all checks"

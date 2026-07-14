@@ -108,7 +108,7 @@ class ToolCallRecord:
 
 @dataclass(frozen=True, slots=True)
 class GuardDecisionRecord:
-    """One decision emitted by the runtime guard (mcp-firewall adapter)."""
+    """One decision emitted by the runtime guard (first-party adapter)."""
 
     target: str  # tool or worker name being guarded
     decision: Literal["allow", "deny", "transform"]

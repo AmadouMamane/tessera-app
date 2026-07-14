@@ -4,11 +4,11 @@ This file is read automatically by Codex at the start of every session in this r
 
 ## Pitch
 
-Tessera is a production-grade reference implementation of a multilingual (FR / DE / EN) banking support LLM agent for the European retail market. The agent is grounded in EU regulatory corpora (DORA, CNIL, BaFin, GDPR), enforces runtime guardrails through the `mcp-firewall` dependency, ships with a non-regression harness over forty publicly documented agent failures, and is deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.3 70B locally on Apple Silicon. The name comes from the Roman *tessera*, an identification token granting access — the semantic theme is identity and permission check at every call.
+Tessera is a production-grade reference implementation of a multilingual (FR / DE / EN) banking support LLM agent for the European retail market. The agent is grounded in EU regulatory corpora (DORA, CNIL, BaFin, GDPR), enforces runtime guardrails through a first-party guard at a single tool-call chokepoint, ships with a non-regression harness over forty publicly documented agent failures, and is deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.3 70B locally on Apple Silicon. The name comes from the Roman *tessera*, an identification token granting access — the semantic theme is identity and permission check at every call.
 
 ## Honest positioning (non-negotiable, first page of README)
 
-Tessera is neither a new firewall, nor a new test framework, nor a new safety methodology. The firewall layer is `mcp-firewall` consumed as a dependency. The harness draws its patterns from AgentAssay and Promptfoo. The audit approach is inspired by AEGIS. What Tessera contributes is a complete, opinionated, deployed assembly of the four quality layers — runtime guard, offline regression harness, structured audit trail, human-in-the-loop escalation — wired end to end for one specific use case: European retail banking customer support in three languages with explicit regulatory grounding. The value is in the assembly and the EU business semantics, not technical invention. Any framing of the project that drifts toward "new framework" must be rejected.
+Tessera is neither a new firewall, nor a new test framework, nor a new safety methodology. The guard layer is first-party behind one declared seam (`guard/adapter.py`), and its reference implementation is being extracted into the separate `limes` package (ADR 0028); `mcp-firewall` is the category's prior art. The harness draws its patterns from AgentAssay and Promptfoo. The audit approach is inspired by AEGIS. What Tessera contributes is a complete, opinionated, deployed assembly of the four quality layers — runtime guard, offline regression harness, structured audit trail, human-in-the-loop escalation — wired end to end for one specific use case: European retail banking customer support in three languages with explicit regulatory grounding. The value is in the assembly and the EU business semantics, not technical invention. Any framing of the project that drifts toward "new framework" must be rejected.
 
 Competitors and inspirations cited explicitly on the front page: `mcp-firewall` (ressl), AEGIS, DFAH, AgentAssay, Promptfoo, STING, Bernstein, ALTK. External academic citations must be verified against the actual papers before being committed to `docs/differentiation.md`.
 
@@ -16,7 +16,7 @@ Competitors and inspirations cited explicitly on the front page: `mcp-firewall` 
 
 Python 3.12. Dependency management via `uv` exclusively — no `requirements.txt`, no `pip`, no `poetry`. Code quality via `ruff` (lint + format) and `mypy` in strict mode. Testing via `pytest` with `pytest-asyncio` for the agent paths. Pre-commit hooks enforce all of the above at commit time.
 
-Agent orchestration via LangGraph. Retrieval via PostgreSQL with `pgvector`, run locally on M1 Ultra for development and on Cloud SQL for the deployed demo. Embeddings from Vertex AI for the frontier path and from a local Ollama setup for the on-premises path. The frontier LLM is reached through Vertex AI; the local LLM is Llama 3.3 70B served by Ollama. Runtime guardrails through `mcp-firewall`, consumed as a pinned dependency. At least one upstream contribution to `mcp-firewall` must land within the project window — this is what defends the "reuse, don't reinvent" positioning, and is non-negotiable.
+Agent orchestration via LangGraph. Retrieval via PostgreSQL with `pgvector`, run locally on M1 Ultra for development and on Cloud SQL for the deployed demo. Embeddings from Vertex AI for the frontier path and from a local Ollama setup for the on-premises path. The frontier LLM is reached through Vertex AI; the local LLM is Llama 3.3 70B served by Ollama. Runtime guardrails through the first-party guard (`src/tessera/guard/`), policy-driven and measured by `firewall_efficacy` (ADR 0028); the reference implementation is being extracted into the separate `limes` package. The "reuse, don't reinvent" positioning is defended by cited patterns and measured claims — an unread dependency defends nothing (ADR 0028).
 
 The HTTP layer is FastAPI. The dashboard is a Next.js application under `webapp/frontend/`. The infrastructure is described in Terraform under `infra/terraform/` and deployed to Google Cloud Run with Cloud SQL, Secret Manager, and Cloud Logging / Cloud Monitoring. CI is GitHub Actions, with four separate workflows: `ci.yml`, `eval.yml`, `deploy.yml`, `security.yml`.
 
@@ -26,7 +26,7 @@ Ship-or-die at day twenty. If schedule slips, cut scope, never extend time. The 
 
 The README must document tests that pass and tests that fail with their root causes. No marketing fluff, no hidden failures. Every external citation must point to a verified, reachable source. No notebooks, ever.
 
-OSS dependencies and inspirations must be cited explicitly on the README front page, with links. At least one upstream PR on `mcp-firewall` must land before day twenty.
+OSS dependencies and inspirations must be cited explicitly on the README front page, with links.
 
 ## Conventions
 

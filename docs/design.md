@@ -16,10 +16,10 @@ agents, each verifiable independently:
 
 1. **Runtime guard** — every tool call passes through a single chokepoint
    (`src/tessera/guard/adapter.py`) that applies allow/deny/transform policy
-   before the underlying tool runs. This is where `mcp-firewall` plugs in as a
-   dependency; when it is importable the adapter delegates decision logic to
-   it, otherwise it falls back to the local policy engine in
-   `src/tessera/guard/decisions.py`. The interface is identical either way.
+   before the underlying tool runs. The decision logic is the first-party
+   policy engine in `src/tessera/guard/decisions.py`; the adapter is the
+   declared seam behind which an alternative guard backend can be plugged
+   (ADR 0028). The interface is identical either way.
 2. **Offline regression harness** — a catalogue of 63 publicly documented
    agent failures lives under `eval/failures/` and is replayed against the live
    graph nightly in CI and per agent on demand. See `docs/eval.md`.

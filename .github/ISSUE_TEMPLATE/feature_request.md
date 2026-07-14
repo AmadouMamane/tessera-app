@@ -19,7 +19,7 @@ assignees: amadou
 ## Alternatives considered
 
 <!-- What other approaches did you evaluate and why were they rejected?
-     If this could be solved by contributing upstream to mcp-firewall, AgentAssay, or Promptfoo,
+     If this could be solved by contributing upstream to AgentAssay or Promptfoo,
      explain why it belongs in Tessera instead. -->
 
 ## EU / banking context

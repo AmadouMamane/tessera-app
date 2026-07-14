@@ -50,7 +50,7 @@
 | --- | --- | --- | --- |
 | red-team | **test d'intrusion** | Angriffstest | red-team |
 | guardrail | **garde-fou** | Schutzregel | guardrail |
-| firewall (mcp-firewall) | **pare-feu** | Firewall | firewall |
+| firewall (first-party guard) | **pare-feu** | Firewall | firewall |
 | PII leak | **fuite de données personnelles** | Datenleck (PII) | PII leak |
 | prompt injection | **injection de requête** | Prompt-Injection | prompt injection |
 | override / waiver | **dérogation gouvernée** *(garder « dérogation »)* | gesteuerte Ausnahme | governed waiver |

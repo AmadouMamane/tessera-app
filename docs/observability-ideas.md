@@ -88,7 +88,7 @@ ideas (e.g. "ties #48") point at these. Do not renumber.
 10. **Lineage / response SBOM** — per response, the full bill of materials: model, prompt, retrieved-doc, and guard-policy versions.
 11. **Claim-level attribution / provenance graph** — link each claim to the chunk that caused it; a claim with no parent = structural hallucination.
 12. **Uncertainty observability** — logprobs/entropy as a hallucination signal; high entropy on factual claims = route to judge.
-13. **Firewall efficacy ROC** — TP/FP of `mcp-firewall` over the 40 failures + real prod injections.
+13. **Firewall efficacy ROC** — TP/FP of the first-party guard over the failure corpus + real prod injections.
 14. **End-to-end distributed trace + multilingual canaries** — W3C Trace Context front→BFF→agent→tools; continuous golden FR/DE/EN heartbeat conversations.
 
 ## 3. Reliability engineering (SRE for LLM)
@@ -98,7 +98,7 @@ ideas (e.g. "ties #48") point at these. Do not renumber.
 
 ## 4. Self-checking & guard signals
 18. **Self-consistency / ensemble disagreement** — sample N times, variance = uncertainty (complements #12).
-19. **Guard decision explainability** — capture which `mcp-firewall` rule fired as span attributes.
+19. **Guard decision explainability** — capture which guard rule fired as span attributes.
 
 ## 5. Human, session & streaming signals
 20. **Human feedback validates the judge** — thumbs/escalation/re-ask correlated with judge scores; real humans calibrate the LLM judge (#2).
@@ -241,7 +241,7 @@ ideas (e.g. "ties #48") point at these. Do not renumber.
 105. **Threat-model-driven obs (top-down)** — derive signals from `docs/threat-model.md`, not bottom-up accretion.
 106. **Multi-cloud portability proof** — same backbone exporting to AWS (X-Ray/CloudWatch) + Azure Monitor.
 107. **Extract `tessera-otel-genai` OSS lib** — instrumentation + redaction + semconv helpers as a pip-installable package.
-108. **Upstream contribution (beyond mcp-firewall)** — PR to OpenInference/OpenLLMetry/OTel GenAI SIG. *(Timing gated on explicit go-ahead.)*
+108. **Upstream contribution** — PR to OpenInference/OpenLLMetry/OTel GenAI SIG. *(Timing gated on explicit go-ahead.)*
 109. **Sovereignty proof** — egress monitor proving zero customer data leaves the box in `on_prem`.
 110. **TCO / cost model doc** — total cost on-prem vs GCP, with numbers.
 111. **Observability error budget** — document what we accept *not* to see (sampling, redaction).
@@ -304,7 +304,7 @@ ideas (e.g. "ties #48") point at these. Do not renumber.
 ## 39. Comparative / competitive
 153. **Honest differentiation matrix** — vs AEGIS/DFAH/AgentAssay/Promptfoo/STING, gaps included.
 154. **Head-to-head eval** — same failure suite through Promptfoo and Tessera; compare coverage.
-155. **"Reused vs invented" map** — visualise the assembly (mcp-firewall/Phoenix/OTel) vs the thin original layer.
+155. **"Reused vs invented" map** — visualise the assembly (guard/Phoenix/OTel) vs the thin original layer.
 156. **Migration-cost / lock-in quantified** — cost to swap Phoenix→Langfuse, native→Mem0 (proves ADR 0007 reversibility).
 157. **Living competitive radar** — track where competitors add features Tessera lacks.
 

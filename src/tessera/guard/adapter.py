@@ -11,10 +11,10 @@ performs three jobs:
 3. **Post-flight audit** — record a :class:`GuardDecisionRecord` per decision
    into an audit sink (see :mod:`tessera.guard.audit`).
 
-When the upstream :mod:`mcp_firewall` library is importable, the adapter
-delegates its decision logic to it; otherwise it falls back to the
-policy-based implementation in this module. Either way the *interface* is
-identical so callers do not branch on backend availability.
+The decision logic is first-party and policy-driven
+(:mod:`tessera.guard.decisions`). This module is also the declared seam
+(ADR 0028): a different guard backend can be plugged behind the same
+interface without callers branching on backend availability.
 """
 
 from __future__ import annotations
@@ -87,23 +87,6 @@ class GuardedResult:
     result: Any
     error: str | None
     decisions: tuple[GuardDecisionRecord, ...] = field(default_factory=tuple)
-
-
-# ---------------------------------------------------------------------------
-# Optional mcp-firewall backend
-# ---------------------------------------------------------------------------
-
-
-def _load_mcp_firewall() -> Any | None:
-    """Return the mcp_firewall module if installed, else ``None``."""
-    try:
-        import mcp_firewall
-    except ImportError:
-        return None
-    return mcp_firewall
-
-
-_MCP_FIREWALL = _load_mcp_firewall()
 
 
 # ---------------------------------------------------------------------------

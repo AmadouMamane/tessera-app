@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tessera"
 version = "0.3.0"
-description = "Multilingual (FR/DE/EN) banking support LLM agent for the European retail market, grounded in EU regulatory corpora and guarded by mcp-firewall."
+description = "Multilingual (FR/DE/EN) banking support LLM agent for the European retail market, grounded in EU regulatory corpora, with a first-party runtime guard on every tool call."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -59,8 +59,6 @@ dependencies = [
     # Rate limiting (ADR 0020) — the `limits` library does the windowing/storage;
     # we only add a thin deployment-aware middleware. No hand-rolled limiter.
     "limits>=3.13,<5",
-    # Runtime guard (consumed as dependency — see docs/differentiation.md)
-    "mcp-firewall>=0.1.0,<0.4",
     # Retrieval
     "psycopg[binary,pool]>=3.2.3,<4",
     "pgvector>=0.3.6,<0.4",
@@ -296,7 +294,6 @@ module = [
     "pgvector.*",
     "ollama.*",
     "openai.*",
-    "mcp_firewall.*",
     "langfuse.*",
     "promptfoo.*",
     "deepeval.*",
@@ -353,7 +350,7 @@ markers = [
     "fr: French-language agent path",
     "de: German-language agent path",
     "en: English-language agent path",
-    "firewall: tests that exercise the mcp-firewall adapter",
+    "guard: tests that exercise the first-party guard adapter",
     "regression: non-regression failure cases (see eval/failures/)",
 ]
 filterwarnings = [

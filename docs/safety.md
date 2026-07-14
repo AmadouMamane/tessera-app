@@ -1,6 +1,6 @@
 # Safety
 
-Safety in Tessera is layered: a runtime guard (`mcp-firewall`) in front of every
+Safety in Tessera is layered: a first-party runtime guard in front of every
 tool call, a deterministic reviewer that scores each turn and escalates on low
 confidence, and an offline non-regression harness of 63 documented failure
 cases gating CI. This document is the operational reference for those layers and
@@ -28,10 +28,12 @@ Adjacent categories also covered by the harness: `policy_violation` (32–34),
 `regulatory_misstatement` (35–37), `language_mixing` (38–39), and
 `escalation_failure` (40).
 
-## mcp-firewall integration
+## Guard integration (first-party)
 
-The guard is `mcp-firewall` consumed as a pinned dependency, configured by
-`src/tessera/guard/policy.yaml` and wrapped by the adapter
+The guard is first-party (ADR 0028 — the earlier claim that `mcp-firewall`
+provided this layer was false: the dependency was never invoked). It is
+configured by `src/tessera/guard/policy.yaml`, implemented in
+`src/tessera/guard/decisions.py`, and exposed through the adapter
 (`src/tessera/guard/adapter.py`). The adapter sits between the agent and every
 LLM-callable tool: each call is checked against the policy before execution, and
 the decision is emitted to the audit trail.

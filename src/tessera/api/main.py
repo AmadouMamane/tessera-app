@@ -380,7 +380,7 @@ def build_app() -> FastAPI:
         version=__version__,
         description=(
             "Multilingual (FR/DE/EN) banking support LLM agent, grounded in EU "
-            "regulatory corpora and guarded by mcp-firewall."
+            "regulatory corpora, with a first-party runtime guard on every tool call."
         ),
         docs_url="/docs" if docs_on else None,
         redoc_url=None,

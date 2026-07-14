@@ -10,7 +10,7 @@ from tessera.guard.adapter import guarded_invoke
 from tessera.guard.audit import current_auth_state
 from tessera.settings import LanguageCode
 
-pytestmark = [pytest.mark.integration, pytest.mark.firewall]
+pytestmark = [pytest.mark.integration, pytest.mark.guard]
 
 
 class TestFirewallAgainstRealPolicy:
