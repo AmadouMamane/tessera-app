@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { EVAL_PATHNAME, evalQuery } from "@/components/eval/eval-route";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import type { EvalCase } from "@/lib/api/schemas";
@@ -167,7 +168,10 @@ function Cell({
 
   return (
     <Link
-      href={{ pathname: "/eval", query: { tab: "runs", run: runId, case: evalCase.id, lang } }}
+      href={{
+        pathname: EVAL_PATHNAME,
+        query: evalQuery({ tab: "runs", run: runId, case: evalCase.id, lang }),
+      }}
       scroll={false}
       aria-label={`${evalCase.id} ${lang}`}
       title={`${evalCase.id} · ${lang}`}

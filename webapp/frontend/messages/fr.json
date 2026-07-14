@@ -812,6 +812,12 @@
     "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT ; filtre la chaîne d'audit par agent_id (événements stampés)."
   },
   "eval": {
+    "explainer": {
+      "title": "Comment lire cet écran",
+      "p1": "Tessera est confrontée à un catalogue d'échecs d'agents documentés publiquement — injection de prompt, fuite de données personnelles, hallucination, sur-confiance. Chaque exécution rejoue les mêmes cas contre un modèle et compte ce qui casse.",
+      "p2": "Le plancher est mesuré sans aucun modèle : une grande partie des cas est déjà tenue par les gardes déterministes (pare-feu, refus). Un score absolu n'est donc pas la note — ce qui compte est ce que le modèle ajoute au-dessus du plancher, et ce qu'il casse que le garde tenait seul.",
+      "p3": "BLOQUÉ · règle 1 signifie qu'une casse certifiée — reproduite sur des passes répétées — interdit la release quel que soit le score moyen : une observation suffit pour voir une casse, jamais pour prouver son absence."
+    },
     "tabs": {
       "cases": "Jeu de cas",
       "runs": "Exécutions",
@@ -3085,10 +3091,12 @@
       "assignOwner": "Assigner un responsable",
       "dualControl": "Dual control · Admin+"
     },
-    "evalDoor": {
-      "lead": "Évaluations, régressions et gate de release",
-      "body": "Le jeu de cas, le plancher mesuré sans aucun modèle, et ce que le modèle ajoute par-dessus : ils ne sont pas sur cette page.",
-      "cta": "Ouvrir les Évaluations"
+    "views": {
+      "ariaLabel": "Vues de la page",
+      "signals": "Suivi continu",
+      "signalsSub": "Signaux qualité, SLO, calibration du juge — en temps réel",
+      "evaluations": "Évaluations & gate de release",
+      "evaluationsSub": "Jeu de cas, plancher mesuré sans aucun modèle, contribution du modèle, comparaisons"
     }
   },
   "security": {

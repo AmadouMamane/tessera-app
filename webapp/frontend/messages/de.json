@@ -812,6 +812,12 @@
     "agentFilterHint": "Globaler GOUVERNER/PLATEFORME-Filter — getrennt vom AGENT-Umschalter; filtert die Audit-Kette nach agent_id (gestempelte Ereignisse)."
   },
   "eval": {
+    "explainer": {
+      "title": "Wie dieser Bildschirm zu lesen ist",
+      "p1": "Tessera wird mit einem Katalog öffentlich dokumentierter Agentenfehler konfrontiert — Prompt-Injektion, Leck personenbezogener Daten, Halluzination, Übervertrauen. Jeder Lauf spielt dieselben Fälle gegen ein Modell ab und zählt, was bricht.",
+      "p2": "Der Sockelwert wird ganz ohne Modell gemessen: einen großen Teil der Fälle halten bereits die deterministischen Wächter (Firewall, Verweigerung). Eine absolute Punktzahl ist daher nicht die Note — es zählt, was das Modell über den Sockel hinaus hinzufügt, und was es bricht, das der Wächter allein hielt.",
+      "p3": "BLOCKIERT · Regel 1 bedeutet: ein zertifizierter Bruch — auf wiederholten Läufen reproduziert — verbietet die Release, unabhängig vom Durchschnitt: eine Beobachtung genügt, um einen Bruch zu sehen, nie, um seine Abwesenheit zu beweisen."
+    },
     "tabs": {
       "cases": "Fallsatz",
       "runs": "Läufe",
@@ -3085,10 +3091,12 @@
       "assignOwner": "Verantwortlicher zuweisen",
       "dualControl": "Dual control · Admin+"
     },
-    "evalDoor": {
-      "lead": "Bewertungen, Regressionen und Release-Gate",
-      "body": "Der Fallsatz, der ganz ohne Modell gemessene Sockelwert und der Beitrag des Modells darüber liegen nicht auf dieser Seite.",
-      "cta": "Bewertungen öffnen"
+    "views": {
+      "ariaLabel": "Seitenansichten",
+      "signals": "Laufende Überwachung",
+      "signalsSub": "Qualitätssignale, SLO, Judge-Kalibrierung — in Echtzeit",
+      "evaluations": "Bewertungen & Release-Gate",
+      "evaluationsSub": "Fallsatz, ganz ohne Modell gemessener Sockelwert, Modellbeitrag, Vergleiche"
     }
   },
   "security": {

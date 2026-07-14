@@ -1,46 +1,28 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
-
-import { parseTab } from "@/components/eval/eval-tabs";
-import { ScorecardView } from "@/components/eval/scorecard-view";
-import { AppShell } from "@/components/layout/app-shell";
-
-// ScorecardView gates the per-case detail on the session (cookies) per request.
-export const dynamic = "force-dynamic";
+import { EVAL_PATHNAME, evalQuery } from "@/components/eval/eval-route";
+import { redirect } from "@/i18n/navigation";
 
 interface EvalPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{
-    tab?: string;
-    run?: string;
-    case?: string;
-    lang?: string;
-    a?: string;
-    b?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata({ params }: EvalPageProps) {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "eval" });
-  return { title: t("title") };
-}
+/** The params the eval screen understands — the only ones worth carrying through. */
+const EVAL_PARAMS = ["tab", "run", "case", "lang", "a", "b"] as const;
 
+/**
+ * `/eval` moved INTO `/surveiller/qualite-ia` (its `?vue=evaluations` view) — the page whose
+ * sidebar entry had been promising this content while the screen itself was an orphan. This
+ * redirect keeps every deep link an operator ever sent working, params intact.
+ */
 export default async function EvalPage({ params, searchParams }: EvalPageProps) {
   const { locale } = await params;
-  const { tab, run, case: caseId, lang, a, b } = await searchParams;
-  setRequestLocale(locale);
-  const t = await getTranslations({ locale, namespace: "eval" });
-  return (
-    <AppShell title={t("title")} description={t("description")}>
-      <ScorecardView
-        locale={locale}
-        tab={parseTab(tab)}
-        run={run}
-        caseId={caseId}
-        lang={lang}
-        a={a}
-        b={b}
-      />
-    </AppShell>
-  );
+  const sp = await searchParams;
+  const carried: Record<string, string> = {};
+  for (const key of EVAL_PARAMS) {
+    const value = sp[key];
+    if (typeof value === "string" && value) {
+      carried[key] = value;
+    }
+  }
+  redirect({ href: { pathname: EVAL_PATHNAME, query: evalQuery(carried) }, locale });
 }

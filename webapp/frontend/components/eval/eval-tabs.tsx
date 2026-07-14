@@ -1,3 +1,4 @@
+import { EVAL_PATHNAME, evalQuery } from "@/components/eval/eval-route";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
@@ -36,7 +37,7 @@ export function EvalTabs({
       {EVAL_TABS.map((tab) => (
         <Link
           key={tab}
-          href={{ pathname: "/eval", query: { tab } }}
+          href={{ pathname: EVAL_PATHNAME, query: evalQuery({ tab }) }}
           aria-current={active === tab ? "page" : undefined}
           className={cn(
             "rounded-md px-3.5 py-1.5 font-medium text-sm transition-colors",

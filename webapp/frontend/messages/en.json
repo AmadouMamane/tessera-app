@@ -812,6 +812,12 @@
     "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher; filters the audit chain by agent_id (stamped events)."
   },
   "eval": {
+    "explainer": {
+      "title": "How to read this screen",
+      "p1": "Tessera is confronted with a catalogue of publicly documented agent failures — prompt injection, PII leaks, hallucination, overconfidence. Every run replays the same cases against a model and counts what breaks.",
+      "p2": "The floor is measured with no model at all: a large share of the cases is already held by the deterministic guards (firewall, refusals). An absolute score is therefore not the grade — what matters is what the model adds above the floor, and what it breaks that the guard held on its own.",
+      "p3": "BLOCKED · rule 1 means a certified break — reproduced across repeated passes — forbids the release regardless of the average score: one observation is enough to see a break, never to prove its absence."
+    },
     "tabs": {
       "cases": "Case set",
       "runs": "Runs",
@@ -3085,10 +3091,12 @@
       "assignOwner": "Assign an owner",
       "dualControl": "Dual control · Admin+"
     },
-    "evalDoor": {
-      "lead": "Evaluations, regressions and the release gate",
-      "body": "The case set, the floor measured with no model at all, and what the model adds on top: they do not live on this page.",
-      "cta": "Open Evaluations"
+    "views": {
+      "ariaLabel": "Page views",
+      "signals": "Continuous monitoring",
+      "signalsSub": "Quality signals, SLOs, judge calibration — live",
+      "evaluations": "Evaluations & release gate",
+      "evaluationsSub": "Case set, floor measured with no model at all, model contribution, comparisons"
     }
   },
   "security": {
