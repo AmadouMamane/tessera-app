@@ -213,8 +213,8 @@ def test_a_model_that_only_rides_the_floor_contributes_nothing() -> None:
 def test_two_models_with_the_same_absolute_score_are_graded_differently() -> None:
     """The sweep, in miniature: identical absolute rate, opposite verdicts.
 
-    llama3.2:3b and gemma3:27b both scored 157/174. The absolute rate cannot tell them
-    apart; the delta over the floor can, and must.
+    llama3.2:3b and gemma3:27b both scored 156/174 (157 before the ADR 0028 §5 grader
+    fix). The absolute rate cannot tell them apart; the delta over the floor can, and must.
     """
     breaks_the_floor = _grade(
         {

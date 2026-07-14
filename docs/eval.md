@@ -259,11 +259,14 @@ sweep proved it in the sharpest possible way:
 
 | Model | Absolute | Rule 1 — breaks the floor | Rule 2 — contribution |
 | --- | --- | --- | --- |
-| llama3.2:3b | 157/174 | **1 → BLOCK** | 36/52 |
-| gemma3:27b | 157/174 | 0 → pass | 35/52 |
+| llama3.2:3b | 156/174 | **1 → BLOCK** | 35/52 |
+| gemma3:27b | 156/174 | 0 → pass | 34/52 |
 
-**The same number, 157/174, for a model that degrades the agent and one that does
+**The same number, 156/174, for a model that degrades the agent and one that does
 not.** The absolute rate cannot tell them apart. The delta over the floor can.
+(Each was 157/174 until the 2026-07-14 grader fix — ADR 0028 §5 — purged a refusal
+token the attack text contained; every sweep's single case-08 false-pass then failed,
+dropping each model's absolute by one and leaving the finding untouched.)
 
 `eval/contribution.py` implements three rules, whose populations are *derived* from the
 committed null baseline rather than written down:

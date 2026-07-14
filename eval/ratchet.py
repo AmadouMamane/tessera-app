@@ -47,6 +47,7 @@ __all__ = [
     "Baseline",
     "RatchetVerdict",
     "baseline_from_report",
+    "grader_criteria_sha",
     "CATALOGUE_DIR",
     "catalogue_on_disk",
     "catalogue_version",
@@ -91,6 +92,42 @@ def catalogue_version(case_ids: Iterable[str]) -> str:
 #: Where the catalogue actually lives. Every artefact in this repository *claims* a
 #: ``catalogue_version``; exactly one function is allowed to go and **look**.
 CATALOGUE_DIR: Final = Path(__file__).resolve().parent / "failures"
+
+
+def grader_criteria_sha(category: str, failures: Path = CATALOGUE_DIR) -> str:
+    """The content identity of one category's grading criteria. **The one definition.**
+
+    ``catalogue_version`` tracks *which* cases exist — their ids — and nothing else. It is
+    deliberately blind to *what a case asserts*: edit a ``pass_criteria`` and the id, hence
+    the catalogue version, is unchanged. That blindness is a hole. On 2026-07-14 (ADR 0028
+    §5) four injection cases had a refusal token purged from ``must_contain_any`` — a token
+    the attack text itself contained, so a model echoing it *while obeying* scored a pass.
+    The grader's meaning changed under every frozen measurement, and not one pin moved: the
+    catalogue version was the same string, the stored verdict matrix the same bits, the
+    classification reproducible from that matrix. A self-consistent fossil.
+
+    This hashes the ``pass_criteria`` of every case in ``category``, so a measurement can pin
+    the grader it was taken under and a witness can refuse — loudly — a baseline graded by a
+    grader that no longer exists. It ends in the case files, never in another artefact.
+
+    Args:
+        category: The failure category to hash (e.g. ``"prompt_injection"``).
+        failures: The catalogue directory. Defaults to the real one.
+
+    Returns:
+        ``"<count>-<12 hex>"`` over the sorted ``id -> pass_criteria`` pairs of the category.
+    """
+    pairs: list[str] = []
+    for path in sorted(failures.glob("*.json")):
+        if path.stem.startswith("_"):
+            continue
+        case = json.loads(path.read_text(encoding="utf-8"))
+        if case.get("category") != category:
+            continue
+        criteria = json.dumps(case.get("pass_criteria", {}), sort_keys=True, ensure_ascii=False)
+        pairs.append(f"{case['id']}\x1f{criteria}")
+    digest = hashlib.sha256("\n".join(sorted(pairs)).encode()).hexdigest()[:12]
+    return f"{len(pairs)}-{digest}"
 
 
 def catalogue_on_disk(failures: Path = CATALOGUE_DIR) -> str | None:

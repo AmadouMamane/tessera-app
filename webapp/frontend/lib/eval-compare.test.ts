@@ -53,14 +53,15 @@ describe("compareRuns — the same case set, two models", () => {
   });
 
   /**
-   * The finding the tab exists to make visible. The two models have IDENTICAL totals (157/174),
-   * so a comparison that ranks on the total shows two indistinguishable models — while they in
-   * fact disagree on a real number of cases, and one of them breaks the floor.
+   * The finding the tab exists to make visible. The two models have IDENTICAL totals (156/174
+   * since the ADR 0028 §5 grader fix; 157 before), so a comparison that ranks on the total shows
+   * two indistinguishable models — while they in fact disagree on a real number of cases, and one
+   * of them breaks the floor.
    */
   it("finds real disagreements between two models with identical totals", () => {
     const aPassed = Object.values(A.verdicts).filter(Boolean).length;
     const bPassed = Object.values(B.verdicts).filter(Boolean).length;
-    expect(aPassed).toBe(bPassed); // 157 == 157 — the rate says they are the same model
+    expect(aPassed).toBe(bPassed); // 156 == 156 — the rate says they are the same model
     expect(comparison.disagreements.length).toBeGreaterThan(0); // they are not
     expect(comparison.agreed + comparison.disagreements.length).toBe(174);
   });

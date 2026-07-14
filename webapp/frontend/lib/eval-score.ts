@@ -5,7 +5,7 @@
  * natures: what the deterministic guard/router layer closes with NO model at all — a property
  * of the *catalogue*, measured at 122/174 by the committed null control — and what the model
  * contributes on top. The 2026-07-12 sweep is the proof: `llama3.2:3b` and `gemma3:27b` score
- * the SAME 157/174, and one of them degrades the agent while the other does not. The absolute
+ * the SAME 156/174, and one of them degrades the agent while the other does not. The absolute
  * rate discriminates nothing, so it is shown only next to the terms it is made of, never alone.
  *
  * This module is the TypeScript mirror of `eval/contribution.py` and `eval/ratchet.py`. It is

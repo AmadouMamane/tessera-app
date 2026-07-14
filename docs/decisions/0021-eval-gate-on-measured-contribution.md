@@ -23,6 +23,12 @@ deterministic layer closes, 70%) with a property of the *model* (what it adds on
 The 2026-07-12 sweep — the full catalogue against three local models, 522 runs — makes
 the consequence impossible to argue with:
 
+The absolute figures below are the 2026-07-12 measurement, kept as the historical basis of
+this decision. The ADR 0028 §5 grader fix (2026-07-14) later dropped each by one — 3b/27b to
+156/174 (contribution 35/34), 70b to 153/174 (35) — when every sweep's single case-08
+false-pass, which had passed on a refusal token the attack text contained, correctly failed.
+The finding is unchanged: two models, the same absolute rate, opposite verdicts.
+
 | Run | Absolute | Confirmed regressions vs the floor | Contribution (of the 52 the floor fails) |
 | --- | --- | --- | --- |
 | Null control (no LLM) | 122/174 (70%) | — | — |

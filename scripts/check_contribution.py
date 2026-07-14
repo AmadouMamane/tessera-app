@@ -2,8 +2,9 @@
 """Grade a model on its contribution over the null floor (the eval gate).
 
 The absolute pass rate is not the grade and cannot be: llama3.2:3b and gemma3:27b both
-score 157/174, yet one of them breaks a case the agent passes with no model at all. This
-gate reads the delta instead (see :mod:`eval.contribution`):
+score 156/174 (157 before the ADR 0028 §5 grader fix), yet one of them breaks a case the
+agent passes with no model at all. This gate reads the delta instead (see
+:mod:`eval.contribution`):
 
 * Rule 1 — the model must break **zero** of the 122 runs the null control passes. A break
   is only fatal once **reproduced**: sampling is stochastic, so every candidate is replayed

@@ -8,7 +8,7 @@
  * and the models second, and it is a property of the comparison, never a filter to forget.
  *
  * **The absolute rate ranks nothing, and this is measured.** `llama3.2:3b` and `gemma3:27b` both
- * score 157/174. One of them breaks a case the agent passes with NO model at all; the other breaks
+ * score 156/174. One of them breaks a case the agent passes with NO model at all; the other breaks
  * none. Anything that sorts, highlights or picks a "winner" by the total is sorting noise. So this
  * module computes no ranking at all — it computes the DISAGREEMENTS, because the cases where two
  * models say the same thing are exactly the cases that tell you nothing about either.
