@@ -25,7 +25,7 @@ SHELL := /bin/bash
 
 .PHONY: install lint typecheck format test test-integration test-all \
         coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
-        obs-up obs-down obs-logs dev-secrets \
+        obs-up obs-up-core obs-down obs-logs obs-guard obs-secrets dev-secrets \
         gate gate-twice gate-checks gate-py gate-web tooling \
         claim release whoowns session landed
 
@@ -605,23 +605,114 @@ dev-secrets:
 # ── Observability stack (OTel collector -> Phoenix + Langfuse + Grafana) ─────
 # The agent only feeds traces when TESSERA_OBSERVABILITY__OTEL_ENDPOINT points at the
 # collector (see .env.example). `obs-up` boots the full stack:
-#   Phoenix    http://localhost:16006   (LLM traces — canonical)
-#   Langfuse   http://localhost:3900    (cost / tokens / latency / sessions)
-#   Prometheus http://localhost:19090   (ops metrics)
-#   Grafana    http://localhost:13000   (SLO dashboards; admin / claude-demo-pw)
+#   Phoenix    http://127.0.0.1:16006   (LLM traces — canonical)
+#   Langfuse   http://127.0.0.1:3900    (cost / tokens / latency / sessions)
+#   Prometheus http://127.0.0.1:19090   (ops metrics)
+#   Grafana    http://127.0.0.1:13000   (SLO dashboards)
 # Langfuse v3 + ClickHouse + MinIO are memory-hungry — use `obs-up-core` for the
 # lean trace-only path (collector + Phoenix) when Docker memory is tight.
-obs-up:
-	docker compose -f docker-compose.obs.claude.yml up -d
+#
+# ⚠ THIS STACK HOLDS THE LLM TRACES, AND THE LLM TRACES ARE CUSTOMER CONVERSATIONS.
+#
+# Every credential in it used to be a literal (`clickhouse/clickhouse`, `minio/miniosecret`,
+# `claude-demo-pw`, and an `ENCRYPTION_KEY` of SIXTY-FOUR ZEROS), and every port was published on
+# 0.0.0.0 — every interface. On any shared network a stranger could open Langfuse and read every
+# transcript with a password that is readable on GitHub. That is **F-9** — "default accounts stay
+# valid when the env vars are missing" — closed in the app, and left wide open in the plane that
+# holds the transcripts. The question is never "is this production?"; it is **"can a stranger
+# reach it?"**.
+#
+# So there is NO DEFAULT CREDENTIAL, anywhere, and the stack REFUSES to boot without explicit
+# ones. `make obs-secrets` is the escape hatch, and it is deliberately narrow: it generates
+# RANDOM credentials into a gitignored `.env.obs.local`. **It removes the typing, never the
+# security** — which is why dev/CI may use it and a reachable stack loses nothing by it.
+OBS_ENV_FILE := .env.obs.local
+# `--env-file` is passed ONLY when the file is there: `docker compose --env-file <missing>` exits 1
+# ("couldn't find env file") EVEN WHEN the variables are exported — so hard-coding the flag would
+# have made the guard advertise a road it then blocks ("or export them yourself"). Recursive `=`,
+# not `:=`, so the test is made when the recipe runs, not when the Makefile is parsed.
+OBS_ENV_ARG   = $(if $(wildcard $(OBS_ENV_FILE)),--env-file $(OBS_ENV_FILE),)
+OBS_COMPOSE   = docker compose $(OBS_ENV_ARG) -f docker-compose.obs.claude.yml
 
-obs-up-core:
-	docker compose -f docker-compose.obs.claude.yml up -d otel-collector phoenix prometheus grafana
+# The credentials the stack cannot run without. A username is not a credential and is not here.
+OBS_SECRETS := TESSERA_OBS_LANGFUSE_DB_PASSWORD TESSERA_OBS_SALT TESSERA_OBS_ENCRYPTION_KEY \
+               TESSERA_OBS_CLICKHOUSE_PASSWORD TESSERA_OBS_MINIO_PASSWORD \
+               TESSERA_OBS_REDIS_PASSWORD TESSERA_OBS_NEXTAUTH_SECRET \
+               TESSERA_OBS_LANGFUSE_PUBLIC_KEY TESSERA_OBS_LANGFUSE_SECRET_KEY \
+               TESSERA_OBS_LANGFUSE_OTEL_BASIC_AUTH TESSERA_OBS_LANGFUSE_USER_PASSWORD \
+               TESSERA_OBS_GRAFANA_PASSWORD
+
+# A guard, never an install. `obs-guard: obs-secrets` would generate the very credentials it is
+# meant to demand — a check that repairs what it checks has checked nothing (F-14, `gate: hooks`).
+obs-guard:
+	@missing=""; \
+	env_file="$(OBS_ENV_FILE)"; \
+	case "$$env_file" in /*) ;; *) env_file="./$$env_file" ;; esac; \
+	if [ -f "$$env_file" ]; then \
+	  seen="$(OBS_ENV_FILE) (present)"; \
+	  set -a; . "$$env_file"; set +a; \
+	else \
+	  seen="$(OBS_ENV_FILE) (ABSENT)"; \
+	fi; \
+	for v in $(OBS_SECRETS); do \
+	  [ -n "$${!v}" ] || missing="$$missing $$v"; \
+	done; \
+	if [ -n "$$missing" ]; then \
+	  echo ""; \
+	  echo "[obs-guard] [NOT OK] REFUSING to start the observability stack: it has no credentials."; \
+	  echo "  This stack holds the LLM traces, and the LLM traces are customer conversations."; \
+	  echo "  Looked at: the environment, and $$seen"; \
+	  echo "  Unset:"; \
+	  for v in $$missing; do echo "      $$v"; done; \
+	  echo ""; \
+	  echo "  Generate random ones (gitignored, never committed):"; \
+	  echo "      make obs-secrets"; \
+	  echo "  Or export them yourself. There is no default, because A DEFAULT THAT IS A"; \
+	  echo "  CREDENTIAL IS THE BUG — it is F-9, and it was open in this file until 2026-07-14."; \
+	  exit 2; \
+	fi
+
+# The narrow, declared escape hatch. It writes RANDOM credentials — it removes the TYPING, not the
+# security, so there is no weak default left anywhere for anyone to forget.
+obs-secrets:
+	@if [ -f "$(OBS_ENV_FILE)" ]; then \
+	  echo "$(OBS_ENV_FILE) already exists — nothing to do (delete it to rotate)."; \
+	else \
+	  umask 077; \
+	  pk="pk-lf-$$(openssl rand -hex 12)"; \
+	  sk="sk-lf-$$(openssl rand -hex 24)"; \
+	  { \
+	    echo "# Written by \`make obs-secrets\`. GITIGNORED — never commit this."; \
+	    echo "# Random, not weak: the escape hatch removes the typing, never the security."; \
+	    echo "TESSERA_OBS_LANGFUSE_DB_PASSWORD=$$(openssl rand -hex 24)"; \
+	    echo "TESSERA_OBS_SALT=$$(openssl rand -hex 24)"; \
+	    echo "TESSERA_OBS_ENCRYPTION_KEY=$$(openssl rand -hex 32)"; \
+	    echo "TESSERA_OBS_CLICKHOUSE_PASSWORD=$$(openssl rand -hex 24)"; \
+	    echo "TESSERA_OBS_MINIO_PASSWORD=$$(openssl rand -hex 24)"; \
+	    echo "TESSERA_OBS_REDIS_PASSWORD=$$(openssl rand -hex 24)"; \
+	    echo "TESSERA_OBS_NEXTAUTH_SECRET=$$(openssl rand -hex 32)"; \
+	    echo "TESSERA_OBS_LANGFUSE_PUBLIC_KEY=$$pk"; \
+	    echo "TESSERA_OBS_LANGFUSE_SECRET_KEY=$$sk"; \
+	    echo "TESSERA_OBS_LANGFUSE_OTEL_BASIC_AUTH=$$(printf '%s:%s' "$$pk" "$$sk" | base64 | tr -d '\n')"; \
+	    echo "TESSERA_OBS_LANGFUSE_USER_PASSWORD=$$(openssl rand -hex 16)"; \
+	    echo "TESSERA_OBS_GRAFANA_PASSWORD=$$(openssl rand -hex 16)"; \
+	  } > "$(OBS_ENV_FILE)"; \
+	  echo "wrote $(OBS_ENV_FILE) (umask 077) — 12 random credentials, gitignored."; \
+	  echo "  ENCRYPTION_KEY is 64 hex chars, as Langfuse requires. It used to be sixty-four ZEROS."; \
+	  echo "  The OTLP basic-auth header is DERIVED from the key pair, so the two cannot drift."; \
+	fi
+
+obs-up: obs-guard
+	$(OBS_COMPOSE) up -d
+
+obs-up-core: obs-guard
+	$(OBS_COMPOSE) up -d otel-collector phoenix prometheus grafana
 
 obs-down:
-	docker compose -f docker-compose.obs.claude.yml down
+	$(OBS_COMPOSE) down
 
 obs-logs:
-	docker compose -f docker-compose.obs.claude.yml logs -f otel-collector phoenix prometheus grafana
+	$(OBS_COMPOSE) logs -f otel-collector phoenix prometheus grafana
 
 # ── Local development ───────────────────────────────────────────────────────
 

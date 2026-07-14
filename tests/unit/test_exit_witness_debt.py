@@ -173,6 +173,14 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::obs-up-core": "action",
     "Makefile::obs-down": "action",
     "Makefile::obs-logs": "action",
+    # The observability stack holds the LLM traces, and the LLM traces are customer conversations.
+    # Every credential in it was a literal and every port was published on 0.0.0.0 — F-9, in the one
+    # plane that holds the transcripts. `obs-guard` REFUSES the boot when a credential is unset, and
+    # a refusal is a verdict: exit 2, naming what is missing and the command that fixes it.
+    "Makefile::obs-guard": "VERDICT",
+    # It WRITES the credentials. That is an act, not a judgement — and it must never become a
+    # prerequisite of the guard, or the guard would generate the very thing it demands.
+    "Makefile::obs-secrets": "action",
     "Makefile::help": "report",
     # ══ scripts/ ═══════════════════════════════════════════════════════════════════════════════
     # ── witnesses that publish a Verdict, or their own unlaundered code ────────────────────────
