@@ -13,7 +13,7 @@ policy-correct eval-gate verdict (:mod:`agent_release`). Nothing is fabricated.
 
 from __future__ import annotations
 
-from tessera.observability.agent_release import agent_release_state
+from tessera.observability.agent_release import ReleaseFacts, agent_release_state
 
 __all__ = ["KINDS", "catalogue_consumers"]
 
@@ -75,10 +75,12 @@ def catalogue_consumers(
         for item in _items_for(agent, kind):
             by_item.setdefault(item, []).append(agent)
 
-    # Cache the (expensive) gate verdict per agent across all items.
-    verdicts: dict[str, dict[str, object]] = {}
+    # Cache the (expensive) gate verdict per agent across all items. `ReleaseFacts` is the
+    # release verdict's OWN type (agent_release), so this consumer inherits the contract rather
+    # than restating it as a free-form dict.
+    verdicts: dict[str, ReleaseFacts] = {}
 
-    def verdict_of(agent_id: str) -> dict[str, object]:
+    def verdict_of(agent_id: str) -> ReleaseFacts:
         if agent_id not in verdicts:
             verdicts[agent_id] = agent_release_state(agent_id, lang).as_dict()
         return verdicts[agent_id]
