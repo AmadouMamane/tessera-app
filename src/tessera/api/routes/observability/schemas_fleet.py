@@ -304,9 +304,19 @@ class FleetAgentsItem(BaseModel):
     handoffs_in: int
     handoffs_out: int
     health: str
-    release: FleetAgentsItemRelease
-    level: str
-    level_declared: str
+    # These three are NULLABLE, and the code always knew it: `release` is None until an eval has
+    # run, `level`/`level_declared` are None until the agent has an AgentSpec manifest — the
+    # honest-empty the fleet module documents in so many words ("None … → honest-empty, not L0").
+    #
+    # They were generated as required and non-null from 31 live samples in which every agent
+    # happened to have both. A sample shows what WAS there; it can never show what is ALLOWED to
+    # be absent. The result: a virgin install — no eval, no manifest — produced a payload that
+    # satisfied neither arm of the union, and the fleet route answered 500. No default is given
+    # (`| None` alone, never `= None`): the key must still be PRESENT, because `available: True`
+    # promising a complete payload is the entire point of this union.
+    release: FleetAgentsItemRelease | None
+    level: str | None
+    level_declared: str | None
     level_evidence: str
     observable: bool
     testable: bool

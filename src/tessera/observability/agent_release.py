@@ -16,13 +16,47 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from typing import TypedDict
 
 from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.eval_floor import grade_against_own_floor
 from tessera.observability.eval_gate_view import build_gate_view
 from tessera.verdict import NotOk, Ok
 
-__all__ = ["AgentRelease", "agent_release_state", "fleet_release_states"]
+__all__ = ["AgentRelease", "ReleaseFacts", "agent_release_state", "fleet_release_states"]
+
+
+class ReleaseFacts(TypedDict):
+    """The release verdict exactly as the wire carries it (:meth:`AgentRelease.as_dict`).
+
+    Typed at its SOURCE so every consumer inherits the contract instead of restating it.
+    ``floor_block`` is the only nullable field: it names what the measured floor holds against
+    the run, and is ``None`` when the floor clears it (ADR 0021 Rule 1).
+    """
+
+    agent_id: str
+    available: bool
+    passed: bool
+    verdict_label: str
+    verdict_tone: str
+    candidate_version: str
+    eval_set: str
+    executions: int
+    socle_ok: bool
+    blocking_socle: int
+    blocking_t1: int
+    waived_active: int
+    run_at: str
+    catalogue_version: str
+    current_catalogue_version: str
+    verdict_stale: bool
+    summary_passed: int
+    summary_total: int
+    socle_passed: int
+    socle_total: int
+    floor_ok: bool
+    floor_block: str | None
+
 
 _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
 
@@ -125,7 +159,7 @@ class AgentRelease:
             and self.catalogue_version != self.current_catalogue_version
         )
 
-    def as_dict(self) -> dict[str, object]:
+    def as_dict(self) -> ReleaseFacts:
         """Serialise for the API payload (fleet + release control)."""
         return {
             "agent_id": self.agent_id,

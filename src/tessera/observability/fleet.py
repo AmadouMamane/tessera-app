@@ -14,7 +14,7 @@ eval (Phase 4) and is intentionally absent here.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from psycopg.rows import dict_row
 
@@ -27,7 +27,7 @@ from tessera.guard.ledger_store import (
 )
 from tessera.observability import quality_nets, turn_evidence
 from tessera.observability.agent_health import health_state
-from tessera.observability.agent_release import fleet_release_states
+from tessera.observability.agent_release import ReleaseFacts, fleet_release_states
 from tessera.observability.agent_scope import dedup_org_total, shared_entities_among
 from tessera.observability.agentspec_projection import (
     declared_observability_level,
@@ -46,7 +46,81 @@ if TYPE_CHECKING:
 
     from tessera.agent.registry import Agent
 
-__all__ = ["compute_fleet"]
+__all__ = ["BusinessCardFacts", "FleetAgent", "FleetData", "FleetOrgTotals", "compute_fleet"]
+
+
+# --- The payload's shape, as a TYPE ------------------------------------------------------------
+#
+# This existed only as a dict literal, and the route stamped ``{"available": True, **it}`` onto a
+# `response_model` that had been GENERATED from live samples. Every field those samples happened to
+# show populated became non-optional — so `release`, `level` and `level_declared`, which this module
+# has ALWAYS returned as ``None`` for an agent with no eval run and no manifest (the honest-empty
+# the comments below insist on), were declared as required non-null.
+#
+# Nothing failed. `compute_fleet` did not raise, so the handler's ``except`` never saw it: FastAPI
+# validated the RESPONSE, found a payload that satisfied neither arm of the union, and answered
+# **500** — on a virgin install, from the component whose entire job is to observe. *A try/except
+# catches an exception; a partial-but-successful return walks straight past it.*
+#
+# So the shape is a type now, and mypy checks it AT BUILD. It is deliberately exact about the one
+# thing that broke — WHICH FIELDS MAY BE NULL — because that is the axis the generated schema got
+# wrong and a sample-derived model can never get right: a sample shows what happened to be there,
+# never what is allowed to be absent.
+class BusinessCardFacts(TypedDict):
+    """The manifest-derived business chip on a fleet card."""
+
+    north_star: dict[str, Any] | None
+    pending_business_items: int
+
+
+class FleetAgent(TypedDict):
+    """One fleet card. The three nullable fields are the honest-empty this module owes."""
+
+    id: str
+    name: str
+    owner: str
+    audience: str
+    description: str
+    tags: list[str]
+    conversations: int
+    turns: int
+    messages: int
+    escalation_rate: float
+    latency_ms: float | None
+    handoffs_in: int
+    handoffs_out: int
+    health: str
+    #: ``None`` when NO eval has ever run for this agent. Not a failure — a fact.
+    release: ReleaseFacts | None
+    #: ``None`` when the agent has no AgentSpec manifest yet — honest-empty, never "L0".
+    level: str | None
+    level_declared: str | None
+    level_evidence: str
+    observable: bool
+    testable: bool
+    north_star: dict[str, Any] | None
+    pending_business_items: int
+
+
+class FleetOrgTotals(TypedDict):
+    """Org totals — DISTINCT conversations, never the per-agent sum."""
+
+    conversations: int
+    turns: int
+
+
+class FleetData(TypedDict):
+    """Everything ``available: true`` promises. A missing key is now a mypy error, not a 500."""
+
+    agents: list[FleetAgent]
+    org: FleetOrgTotals
+    naive_sum_conversations: int
+    shared_conversations: int
+    dedup_saved: int
+    handoff_events: int
+    handoff_conversations: int
+    handoff_conversations_seen_shared: int
+
 
 _ESCALATION_ILIKE = (
     "content ILIKE '%%escalad%%' OR content ILIKE '%%conseiller%%' "
@@ -165,7 +239,7 @@ def _canary_verdicts() -> dict[str, str]:
         return {}
 
 
-def _business_card_facts(aid: str, record: Agent | None) -> dict[str, object]:
+def _business_card_facts(aid: str, record: Agent | None) -> BusinessCardFacts:
     """Manifest-derived business chip + pending operator items for one fleet card."""
     if record is None or record.observability is None:
         return {"north_star": None, "pending_business_items": 0}
@@ -194,7 +268,7 @@ def _business_card_facts(aid: str, record: Agent | None) -> dict[str, object]:
     return {"north_star": north_star, "pending_business_items": pending}
 
 
-async def compute_fleet(lang: str = "fr") -> dict[str, object]:
+async def compute_fleet(lang: str = "fr") -> FleetData:
     """Return the fleet payload: per-agent observable KPIs + deduplicated org totals.
 
     ``lang`` localizes the per-agent release ``verdict_label``; all other fields
@@ -296,7 +370,7 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
     )
 
     # Registry first (every agent appears), enriched with its real slice.
-    agents: list[dict[str, Any]] = []
+    agents: list[FleetAgent] = []
     for reg in registry:
         aid = reg["id"]
         row = by_agent.get(aid, {})
@@ -345,6 +419,8 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                     integrity_broken=integrity_broken,
                     turn_evidence=evidence,
                 ),
+                # `None` when NO eval has ever run — a fact about the agent, not a failure of
+                # this read. The response model used to forbid it and answered 500 instead.
                 "release": rel.as_dict() if rel else None,
                 # ADR 0017 §4 — observability level (L0-L2 in Phase B; None when the agent
                 # has no AgentSpec manifest yet → honest-empty, not "L0").
@@ -356,7 +432,11 @@ async def compute_fleet(lang: str = "fr") -> dict[str, object]:
                 # un-manifested agent — the chip is then absent, not falsely negative.
                 "observable": record is not None and declares_telemetry(record),
                 "testable": record is not None and is_invocable(record),
-                **business_facts,
+                # Spread out by hand, not `**business_facts`: a `**` of an untyped dict is a hole
+                # mypy cannot see through, and this whole change exists because a shape nobody
+                # checked reached the wire.
+                "north_star": business_facts["north_star"],
+                "pending_business_items": business_facts["pending_business_items"],
             }
         )
 

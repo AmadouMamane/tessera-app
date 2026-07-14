@@ -6,6 +6,7 @@ import sys
 from dataclasses import asdict
 
 from fastapi import APIRouter
+from pydantic import ValidationError
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.api.routes.observability._common import (
@@ -50,16 +51,37 @@ router = APIRouter()
 
 
 @router.get("/observability/fleet", response_model=FleetPayload | FleetUnavailable)
-async def observability_fleet(lang: str = "fr") -> dict[str, object]:
+async def observability_fleet(lang: str = "fr") -> FleetPayload | FleetUnavailable:
     """Fleet rollup: per-agent observable KPIs + deduplicated org totals.
 
     ``lang`` localizes the per-agent release verdict label.
+
+    The payload is **constructed**, never splatted. ``{"available": True, **compute()}`` was a
+    promise the code did not keep: `compute_fleet` returns `None` for an agent with no eval run
+    and no manifest — the honest-empty it owes — while the sample-derived response model declared
+    those fields non-null. Nothing raised, so the ``except`` below never saw it; FastAPI validated
+    the response, matched neither arm of the union, and served **500** on a virgin install.
+
+    Three states, three answers, and they are not the same answer:
+
+    * data (even all-zero) → ``available: true`` with a COMPLETE payload. An agent that has done
+      nothing is a fact worth rendering, not an outage: the operator still gets the fleet.
+    * the read failed (Postgres unreachable, …) → ``available: false``, logged as a failure.
+    * the payload does not honour its own contract → ``available: false`` too, but logged as a
+      **contract break**, because that is a bug in us, not an absence of data. A 500 would take
+      the page down at the exact moment it is most needed; drowning it in the ordinary empty
+      state would hide it forever. So it degrades, and it SAYS which of the two happened.
     """
     try:
-        return {"available": True, **await fleet_mod.compute_fleet(lang)}
+        data = await fleet_mod.compute_fleet(lang)
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.fleet: failed: {exc}\n")
-        return {"available": False}
+        return FleetUnavailable(available=False)
+    try:
+        return FleetPayload.model_validate({"available": True, **data})
+    except ValidationError as exc:  # a shape we promised and did not deliver
+        sys.stderr.write(f"tessera.observability.fleet: CONTRACT BREAK, payload rejected: {exc}\n")
+        return FleetUnavailable(available=False)
 
 
 @router.get("/observability/rbac-matrix", response_model=RbacMatrixPayload | RbacMatrixUnavailable)
