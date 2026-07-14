@@ -263,7 +263,11 @@ class FleetAgentsItemNorthStarEvidence(BaseModel):
 
     observed_runs: int
     checks: int
-    last_checked_at: str
+    # The same disease, one level deeper — and ONLY the live virgin install found it. The
+    # producer says so in its own docstring: "A metric no run ever produced yields zeros and
+    # ``None`` — the genuine zero-data case, which keeps its dash." The samples this model was
+    # generated from all had a run; none of them could show that None was allowed.
+    last_checked_at: str | None
 
 
 class FleetAgentsItemNorthStar(BaseModel):

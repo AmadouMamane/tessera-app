@@ -33,7 +33,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from tessera.api.routes.observability import fleet as fleet_routes, router as observability_router
-from tessera.api.routes.observability.schemas_fleet import FleetAgentsItem, FleetPayload
+from tessera.api.routes.observability.schemas_fleet import (
+    FleetAgentsItem,
+    FleetAgentsItemNorthStarEvidence,
+    FleetPayload,
+)
 from tessera.observability.fleet import FleetAgent, FleetData
 
 if TYPE_CHECKING:
@@ -67,8 +71,29 @@ VIRGIN_AGENT: FleetAgent = {
     "pending_business_items": 0,
 }
 
+#: An agent that DOES declare a north-star metric, which no run has ever scored.
+#:
+#: This one exists because the fixture above was **less honest than reality**, and only a live
+#: virgin install exposed it: with `north_star: None` the payload never reached
+#: `north_star.evidence.last_checked_at` — declared `str`, returned `None` by a producer whose own
+#: docstring says "A metric no run ever produced yields zeros and ``None`` — the genuine zero-data
+#: case". The same disease, one level deeper, and a test fixture that stopped short of it.
+NEVER_SCORED_AGENT: FleetAgent = {
+    **VIRGIN_AGENT,
+    "id": "recouvrement",
+    "name": "Recouvrement",
+    "north_star": {
+        "agent_id": "recouvrement",
+        "key": "contact_window_compliance",
+        "north_star": True,
+        "status": "no_data",
+        "value": None,
+        "evidence": {"observed_runs": 0, "checks": 0, "last_checked_at": None},
+    },
+}
+
 VIRGIN_FLEET: FleetData = {
-    "agents": [VIRGIN_AGENT],
+    "agents": [VIRGIN_AGENT, NEVER_SCORED_AGENT],
     "org": {"conversations": 0, "turns": 0},
     "naive_sum_conversations": 0,
     "shared_conversations": 0,
@@ -171,7 +196,7 @@ class TestAnEmptyLedgerIsAFactNotAnOutage:
         body = _client().get("/observability/fleet").json()
 
         assert body["available"] is True
-        assert [a["id"] for a in body["agents"]] == ["support-client"]
+        assert [a["id"] for a in body["agents"]] == ["support-client", "recouvrement"]
         # The nulls survive the wire — they are the honest-empty, not a field to be dropped.
         assert body["agents"][0]["release"] is None
         assert body["agents"][0]["level"] is None
@@ -249,6 +274,21 @@ class TestTheContractIsTrueByConstruction:
         assert type(None) in get_args(annotation), (
             f"FleetAgentsItem.{field} forbids None, but compute_fleet returns None for it — "
             "this is the exact shape that answered 500 on a virgin install"
+        )
+
+    def test_the_field_only_a_live_virgin_install_found_is_nullable_too(self) -> None:
+        """`north_star.evidence.last_checked_at` — the same bug, one level deeper.
+
+        The TestClient fixture above did not have a north-star, so it never reached this field.
+        A real virgin install did, and the route logged a CONTRACT BREAK naming it. Its producer
+        always knew: "A metric no run ever produced yields zeros and ``None`` — the genuine
+        zero-data case." The generated model forbade exactly that.
+        """
+        annotation = FleetAgentsItemNorthStarEvidence.model_fields["last_checked_at"].annotation
+
+        assert type(None) in get_args(annotation), (
+            "north_star.evidence.last_checked_at forbids None, but a metric no run ever scored "
+            "returns None for it — a virgin install then degrades on a CONTRACT BREAK"
         )
 
     @pytest.mark.parametrize("field", ["release", "level", "level_declared"])

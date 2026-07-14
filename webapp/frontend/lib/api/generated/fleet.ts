@@ -571,7 +571,7 @@ export const FleetAgentsItemNorthStarTrendSchema = z.object({
 export const FleetAgentsItemNorthStarEvidenceSchema = z.object({
   observed_runs: z.number().int(),
   checks: z.number().int(),
-  last_checked_at: z.string(),
+  last_checked_at: z.string().nullable(),
 });
 
 export const FleetAgentsItemNorthStarSchema = z.object({
@@ -608,9 +608,9 @@ export const FleetAgentsItemSchema = z.object({
   handoffs_in: z.number().int(),
   handoffs_out: z.number().int(),
   health: z.string(),
-  release: FleetAgentsItemReleaseSchema,
-  level: z.string(),
-  level_declared: z.string(),
+  release: FleetAgentsItemReleaseSchema.nullable(),
+  level: z.string().nullable(),
+  level_declared: z.string().nullable(),
   level_evidence: z.string(),
   observable: z.boolean(),
   testable: z.boolean(),
