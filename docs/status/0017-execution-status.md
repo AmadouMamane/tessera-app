@@ -59,6 +59,27 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-14 — **A branch that lied about its own name, twice — and carried nothing.**
+  `claude/fix-gdpr-actor-attribution` (1 commit, `d2ffc00c`) did NOT carry the GDPR actor
+  attribution: that had landed long before. It carried **the F-6 audit-sink honesty** — the sink
+  that swallowed a missing Cloud Logging provider under a comment reading *"graceful degradation"*,
+  and the verifier that green-lit a dead file by answering `ChainStatus(verified=True, length=0)`
+  on a store that is never written post-cut. A name that lies is the quietest form of the disease
+  this project hunts, so it was renamed to **`claude/audit-sink-honesty`** for what it is.
+
+  **The rename then revealed the second lie: the branch carries nothing.** Rebased onto a fresh
+  `main`, git skipped the commit as *already applied*; the branch is **0 commits ahead and
+  byte-identical** to the trunk. Its substance was verified on `main` **by content, never by
+  ancestry** (the doctrine that cost a live P1): `_emit_cloud_logging` propagates the ImportError,
+  `tests/unit/test_audit_chain_independent_of_sink.py` is present, and `cloud_run.tf` declares
+  `TESSERA_LEDGER_SOURCE` + `TESSERA_LEDGER_DUAL_WRITE`. `make landed` agrees — *"touches nothing
+  origin/main does not already have."*
+
+  There was therefore **nothing to gate and nothing to fast-forward.** A fast-forward of an empty
+  branch is a ceremony, not a landing, and reporting one as a landing would have been precisely the
+  false green the branch itself was written to abolish. Dead stock; original sha `d2ffc00c` should
+  anyone ever want to read the patch that was written.
+
 - 2026-07-14 — **The per-agent table answered a question nobody asked, and the one it was sitting
   under went unanswered.** `AgentBreakdown` had its columns HARDCODED — its own docstring conceded
   "this is the MONITORING facet" — so on `/surveiller/qualite-ia` the banner cried **Fidélité
