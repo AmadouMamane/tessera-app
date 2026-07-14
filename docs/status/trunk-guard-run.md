@@ -275,11 +275,75 @@ advance is unchecked *by the hook*, not unchecked *by anybody*.
   What *is* true: **435 of the 492 are proven mechanically** — 405 on `resolution:` lines in
   `pnpm-lock.yaml` (sha512 integrity digests), 30 on `"sha256"` keys in
   `eval/baselines/discrimination-samples.json`. A content-addressed digest cannot be a credential;
-  that proof stands and needs no human. **57 are owed to a human.** So: 435 machine-proven, 57 owed,
-  **0 recorded verdicts** — which is not an audit and must not be called one. **F-14 stays RED, and
-  it stays red HONESTLY.** To land it: `detect-secrets audit .secrets.baseline`, a human answers the
-  57, commit with `is_secret` populated. Content preserved at `f80b8bbc` in this history and on
-  `claude/secrets-baseline-unaudited`.
+  that proof stands and needs no human. **57 were owed to a human.** So: 435 machine-proven, 57 owed,
+  **0 recorded verdicts** — which is not an audit and must not be called one.
+
+  ### ✅ RATIFIED — audited by Amadou on 2026-07-14, and the file now SAYS SO
+
+  **The 57 were read by hand by Amadou. `is_secret: false` is written on all 57.** ZERO real
+  secrets, ZERO rotations. `detect-secrets` is green **having looked**, mutation-proven on *this*
+  baseline (planted credential ⇒ `exit 1` naming the location; clean tree ⇒ `exit 0`). **F-14 is
+  closed HONESTLY.**
+
+  Three things about *how* it was ratified, because the how is the whole subject of this lot:
+
+  * **A human ratification relayed by an agent that did not look is the same fault, one storey up.**
+    Amadou said so himself and told me not to believe him. So all 57 were re-read against the real
+    files before anything was written. The verdict agrees with his, **independently**.
+  * **The 435 keep NO `is_secret` field, deliberately.** That field is what a *human* audit writes.
+    Stamping it on 435 entries no human read would be this very disease, merely inverted. Their
+    verdict is mechanical, it is fork-guard's work, and it is recorded here and in the commit — not
+    forged into a human's column.
+  * **The parked baseline had to be RE-SCANNED first, and this is the finding.** Its line numbers
+    had gone stale — the trunk moved under it, and *this session added 65 lines to the Makefile the
+    night before*. **Nine of the 57 pointed at the wrong line**: `Makefile:465` had become a comment
+    about an eval model; `messages/*.json:8138` had become `"kpi": {`. **Auditing those would have
+    been signing for lines that are not there.** Re-scanned with the version CI pins
+    (`detect-secrets==1.5.0`): **492 detections, 40 files, 0 new, 0 gone** — the same allowlist,
+    now pointing where it says, with `plugins_used`/`filters_used` asserted identical (a "fresh"
+    baseline with a weaker plugin set would be a downgrade wearing correct line numbers). *The hook
+    matches on hashed-secret, so the drift never broke the GATE — it broke the AUDIT, which is the
+    one thing being asked of a human here.*
+* **⚠ FOUND WHILE AUDITING THE 57, NOT FIXED HERE — `infra/terraform/postgres.tf:91` ships a DSN
+  scheme psycopg REJECTS.** Detection #30 is the Cloud SQL secret payload, and reading it to judge
+  whether the password was a literal (it is not — it is `${random_password.postgres.result}`,
+  generated at `apply`) exposed a different defect in the same line:
+
+  ```
+  postgresql+asyncpg://tessera:<generated>@/tessera?host=/cloudsql/...
+             ^^^^^^^^ psycopg does not accept the `+asyncpg` dialect suffix
+  ```
+
+  `postgresql+asyncpg://` is a **SQLAlchemy** URL, not a libpq/psycopg one. The deployed agent would
+  fail to connect. This is one of the **six fatal GCP defects** from the 360 audit, **confirmed in
+  passing** — recorded, deliberately not repaired, because it is not this lot and a drive-by fix to
+  infrastructure nobody is currently exercising is how a lot stops being reviewable.
+
+  *(The first draft of this very bullet quoted the Terraform assignment verbatim — and
+  `detect-secrets` flagged it: a `secret…= "…"` keyword pattern. **The ledger describing the secret
+  scanner tripped the secret scanner.** It is quoted by scheme rather than by assignment now. Worth
+  a line, because of HOW it was caught: not by `make gate`, which does not run `detect-secrets` at
+  all — see below.)*
+* **⚠ THE AUDITED BASELINE IS GUARDED BY A WITNESS THAT DOES NOT RUN — F-14's exact shape, one
+  storey up.** The scan is now honest. **Nothing executes it.** Asked of the artefacts, not assumed:
+
+  ```
+  Makefile mentions detect-secrets : 1   — and it is a COMMENT (the F-14 note)
+  declared in pyproject            : 0   — I had to install it into a scratch venv to check my own work
+  actually runs in                 : .github/workflows/supply-chain.yml   (CI ONLY)
+  and CI is BILLING-BLOCKED        : so it does not run at all
+  ```
+
+  `make gate` — *this project's only witness* — never invokes `detect-secrets`. So a new credential
+  committed tomorrow is caught by **nothing**. The baseline gates *correctly* when something runs it;
+  the defect is that nothing does. **A witness that does not run refuses nothing** — which is the
+  sentence F-14 was named for.
+
+  Proven, not theorised, and by accident: the first draft of the bullet above **introduced a new
+  detection into this very file**, and `make gate` was **green over it**. It surfaced only because
+  the hook was re-run by hand after a rebase. *Left as a decision for Amadou* (wiring it into the
+  gate costs a declared dev dependency and ~1–2 min per pass, ×2 for twice-green) — recorded here so
+  that the choice is made, rather than made by default.
 * **`pre-commit` is not installed in the common hooks dir.** `core.hooksPath` had been hiding that
   slot; unsetting it *unhides* it, but nothing has written a `pre-commit` hook there. Commits
   therefore run without it, and `make gate` remains this project's only witness (CI is
