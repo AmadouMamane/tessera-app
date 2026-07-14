@@ -327,3 +327,81 @@ That is the whole thesis of this lot, demonstrated on its own author: *the cache
 photograph, and a photograph is what forks a trunk.* The correction is forward-only — this branch
 descends from the real trunk and reverts the baseline. No history was rewritten; nothing was
 force-pushed.
+
+## The guard was seen to bite — both ways, on the real remote
+
+A guard nobody has seen refuse is not a guard. It was made to do both, against `git ls-remote`:
+
+```
+$ main_guard.py advance 306df605          # my own abandoned landing branch — it DROPS f80b8bbc
+[main-guard] [NOT OK] REFUSED — this would fork `main`.
+  origin/main is 2249bd11b615 (asked of origin just now, not read from the local cache).
+  It carries 2 commit(s) that 306df60544fb does not, so `main` would become a SECOND trunk…
+  >>> EXIT: 2
+
+$ main_guard.py advance cf6961a4          # the revert, descended from the real trunk
+[main-guard] [OK] `main` → cf6961a4c966 contains origin/main (2249bd11b615), asked of origin
+  just now. One trunk, still.
+  >>> EXIT: 0
+```
+
+It refused **the exact fork its own author was one command away from making**, and it named the
+live remote while doing it.
+
+## ⚠ The gate could not say why its own guard was missing
+
+The bootstrap lock was not an accident of sequencing. **It is a blind spot in the guard itself: it
+checks the trunk, and nothing checked that it COULD check the trunk.** Mutation-tested, both halves:
+
+| mutation | before | after |
+|---|---|---|
+| **hook uninstalled** | `[NOT OK] THE TRUNK IS UNGUARDED … Install it: make hooks` — exit 2, on **both** `gate` and `claim`. Already correct. | unchanged |
+| **`scripts/main_guard.py` deleted** | `python3: can't open file …` — exit 2, and **right by accident**: no verdict, nothing named, no repair | `[CANNOT SAY]` + the exact repair |
+
+A non-zero exit is not enough. That refusal published no verdict, named no condition and offered no
+command that fixes it — and **a red nobody can act on is a red people learn to ignore.** A false red
+is the same disease as a false green, and worse in one way: it trains you to discount reds.
+
+`make tooling` now interrogates the gate's own tooling and is a prerequisite of **both** `gate` and
+`claim`. It is written in **shell**, deliberately — *a check for a missing interpreter cannot be
+written in the language that interpreter runs.* It separates two illnesses that look identical and
+have opposite cures: **tracked at HEAD but gone from disk** ⇒ `git checkout -- <file>`; **absent
+from the branch entirely** ⇒ that *is* the bootstrap lock, and the cure is `git fetch origin && git
+rebase origin/main`. Telling someone to rebase when they merely deleted a file is a wrong
+instruction wearing a helpful face — an answer to the neighbouring question, which is the class of
+bug this project keeps paying for. `-x`, never `-f`, on the interpreter: git skips a non-executable
+hook **in silence**.
+
+It is a CHECK, never an install: `tooling: install` would make it unfailable, the same mistake
+`gate: hooks` would have been. Registered in the exit-witness registry as a `VERDICT` — honest from
+birth, so `OWED_EXIT_WITNESSES` does not move, which is what that number is for.
+
+**The ratchet was mutation-tested in both directions**, because this repository has already shipped
+a ratchet that was green under its own mutation: neuter the refusal (`rc=2` → `rc=0`) and five
+behavioural tests go red; orphan the check from `gate:` and the structural test goes red. The
+behavioural tests prove the *recipe* refuses and say nothing about whether anyone *calls* it — and
+an uninstalled witness refuses nothing. That gap is precisely how `.githooks/` guarded every
+worktree except the one where the trunk lives.
+
+## Two things that were NOT what they looked like
+
+* **`agents/eval` was reset to its original detached HEAD mid-work — and it was not another agent.**
+  It is the signature of a `git worktree prune` run from a **Cowork sandbox**, which destroys the
+  records of *live host* worktrees; the repair recreates `gitdir`/`HEAD`/`commondir` and re-reads
+  the tree, landing exactly back on the original detached HEAD. The claim marker was still ours
+  throughout, which is what rules out a takeover. Recorded here because *"another agent stomped my
+  tree"* was the natural reading, it was reasonable, and it was **wrong** — and a wrong attribution
+  is the same disease as a false green, merely pointed at a colleague. (What it *did* cost was real:
+  a `git checkout -- Makefile` intended to undo a test mutation restored to that stale HEAD instead
+  and destroyed the uncommitted work. **Commit, then mutate** — the rule held; the commit had
+  silently failed in the broken-git window, so there was nothing to restore *to*.)
+
+* **The reference checkout `tessera/` holds 15 STAGED, uncommitted files** — `eval/ratchet.py`,
+  `eval_floor.py`, the `Makefile`, two new test files. Somebody is working **directly in the trunk
+  checkout**, which the convention forbids, and the reference dev servers serve that tree. It was
+  **not touched**: stashing another agent's live work is the recorded sin that once made `make gate`
+  return exit 0 on two different trees. Local `main` is therefore *behind* the trunk — not forked
+  from it — and cannot be synced until whoever owns that work commits or clears it. This is why the
+  landings in this lot were pushed **branch → `refs/heads/main`** rather than fast-forwarded through
+  the main checkout: git rejects a non-fast-forward push by default, so the remote enforced what the
+  hook would have, and the guard was additionally run **by hand** on each landed tip.
