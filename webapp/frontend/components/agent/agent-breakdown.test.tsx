@@ -28,9 +28,17 @@ vi.mock("next-intl/server", () => ({
 }));
 
 import { AgentBreakdown } from "@/components/agent/agent-breakdown";
+import type { AlarmLens, MaskedLens, QualityLens } from "@/lib/agent-lens";
 import { FleetSchema } from "@/lib/api/schemas";
 
 afterEach(cleanup);
+
+/** Row `i` of the rendered table, or a loud failure — never a silently skipped assertion. */
+function rowAt(rows: HTMLElement[], i: number): HTMLElement {
+  const el = rows[i];
+  if (el === undefined) throw new Error(`no rendered row at index ${i} (got ${rows.length})`);
+  return el;
+}
 
 /** A wire-shaped fleet payload, parsed through the REAL schema — never a hand-typed object. */
 function fleetFromWire(reconciliation: {
@@ -61,6 +69,54 @@ function fleetFromWire(reconciliation: {
     shared_conversations: 0,
     dedup_saved: 0,
     ...reconciliation,
+  });
+}
+
+const NO_HANDOFFS = {
+  handoff_events: 0,
+  handoff_conversations: 0,
+  handoff_conversations_seen_shared: 0,
+};
+
+/** Two agents, so a table can name WHICH one burns the SLO. */
+function twoAgentFleet() {
+  return FleetSchema.parse({
+    available: true,
+    agents: [
+      {
+        id: "support-client",
+        name: "Support Client",
+        owner: "ops",
+        conversations: 274,
+        turns: 300,
+        messages: 600,
+        escalation_rate: 26.8,
+        latency_ms: 4600,
+        handoffs_in: 0,
+        handoffs_out: 34,
+        health: "green",
+        release: null,
+      },
+      {
+        id: "onboarding",
+        name: "Onboarding",
+        owner: "ops",
+        conversations: 141,
+        turns: 183,
+        messages: 300,
+        escalation_rate: 11.2,
+        latency_ms: 2300,
+        handoffs_in: 34,
+        handoffs_out: 0,
+        health: "green",
+        release: null,
+      },
+    ],
+    org: { conversations: 415, turns: 483 },
+    naive_sum_conversations: 415,
+    shared_conversations: 0,
+    dedup_saved: 0,
+    ...NO_HANDOFFS,
   });
 }
 
@@ -135,5 +191,169 @@ describe("the handoff reconciliation line under Total org (dédup)", () => {
       }[locale];
       expect(screen.getByText(pattern)).toBeTruthy();
     }
+  });
+});
+
+// ── The lens ────────────────────────────────────────────────────────────────────────────
+//
+// The columns used to be hardcoded, and the docstring said so: "this is the MONITORING view".
+// On Qualité IA that meant the banner cried "faithfulness 71,6 % < 95 %, 19/67 bad" and the
+// table below answered with LATENCY and HANDOFFS — the page asked a question at the top and
+// its own table occupied the space where the answer belonged. The columns are a lens now.
+
+describe("the default (monitoring) lens is UNCHANGED — the non-regression", () => {
+  it("keeps the historical columns and their numbers", async () => {
+    const fleet = fleetFromWire(NO_HANDOFFS);
+    render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
+
+    for (const col of [
+      "Volume",
+      "Refus/escalade",
+      "Latence",
+      "Transferts (e/s)",
+      "État de release",
+    ]) {
+      expect(screen.getByText(col)).toBeTruthy();
+    }
+    expect(screen.getByText("26,8 %")).toBeTruthy(); // escalation_rate
+    expect(screen.getByText("4,6 s")).toBeTruthy(); // latency_ms
+    expect(screen.getByText("0 / 34")).toBeTruthy(); // handoffs in / out
+    expect(screen.getByText("Éval non exécutée")).toBeTruthy();
+    // And no lens column has leaked into it.
+    expect(screen.queryByText(/Écart au SLO/)).toBeNull();
+    expect(screen.queryByText(/Contribution/)).toBeNull();
+  });
+});
+
+describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () => {
+  const alarm: AlarmLens = {
+    kind: "alarm",
+    signalId: "slo",
+    metric: "faithfulness",
+    target: 0.95,
+    orgNBad: 19,
+    orgN: 67,
+    sumNBad: 19,
+    rows: [
+      { agentId: "support-client", value: 0.65, gapPp: -30, nBad: 14, n: 40, refusal: null },
+      { agentId: "onboarding", value: 0.81, gapPp: -14, nBad: 5, n: 27, refusal: null },
+    ],
+  };
+
+  it("answers the breached signal per agent, sorted by contribution, and names the culprit", async () => {
+    render(
+      await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: alarm }),
+    );
+
+    expect(screen.getByText("Valeur (Fidélité)")).toBeTruthy();
+    expect(screen.getByText("Écart au SLO")).toBeTruthy();
+    expect(screen.getByText("Contribution (mauvais / total)")).toBeTruthy();
+    // The release column is the other lane's work — it rides in every lens, untouched.
+    expect(screen.getByText("État de release")).toBeTruthy();
+    // The heaviest contributor is first, and its numbers are named.
+    const rows = screen.getAllByRole("row");
+    expect(rowAt(rows, 1).textContent).toMatch(/Support Client/);
+    expect(rowAt(rows, 1).textContent).toMatch(/14 \/ 40/);
+    expect(rowAt(rows, 1).textContent).toMatch(/−30,0 pt|-30,0 pt/);
+    expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
+    // Monitoring columns are GONE — they answered a different question.
+    expect(screen.queryByText("Latence")).toBeNull();
+    expect(screen.queryByText("Transferts (e/s)")).toBeNull();
+  });
+
+  it("shows the contribution reconciliation — ∑ slices vs the deduplicated org total", async () => {
+    render(
+      await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: alarm }),
+    );
+    // 14 + 5 = 19 = the org's own count on this window: stated, not assumed.
+    expect(screen.getByText(/∑ contributions par agent = 19 · total org = 19/)).toBeTruthy();
+  });
+
+  it("WRITES the gap when the slices do not reconcile with the org total — never smooths it", async () => {
+    // A handed-off journey touches two agents and counts ONCE in the org: ∑ slices = org would
+    // be a coincidence, not a proof. The same discipline as the handoff footer above.
+    const unreconciled: AlarmLens = { ...alarm, sumNBad: 19, orgNBad: 17 };
+    render(
+      await AgentBreakdown({
+        fleet: twoAgentFleet(),
+        scope: "all",
+        locale: "fr",
+        lens: unreconciled,
+      }),
+    );
+    const line = screen.getByText(/∑ contributions par agent \(19\) ≠ total org \(17\)/);
+    expect(line.textContent).toMatch(/compte une fois dans le total org/);
+  });
+
+  it("a refused cell shows a dash that SAYS WHY — never a fabricated number", async () => {
+    const blind: AlarmLens = {
+      ...alarm,
+      rows: [
+        { agentId: "support-client", value: 0.65, gapPp: -30, nBad: 14, n: 40, refusal: null },
+        {
+          agentId: "onboarding",
+          value: null,
+          gapPp: null,
+          nBad: null,
+          n: null,
+          refusal: "not-honoured",
+        },
+      ],
+    };
+    render(
+      await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: blind }),
+    );
+    const rows = screen.getAllByRole("row");
+    expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
+    expect(rowAt(rows, 2).textContent).toMatch(/—/);
+    expect(
+      screen.getAllByTitle("Dimension agent non honorée par la lecture — valeur refusée.").length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe("an ORG-WIDE signal gets NO table — and the operator is told why", () => {
+  it("masks the table and states the reason, read from the capability registry", async () => {
+    const masked: MaskedLens = { kind: "masked", signalId: "firewall" };
+    render(
+      await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: masked }),
+    );
+    expect(screen.getByText(/org-wide par construction/)).toBeTruthy();
+    // No table at all — an inapplicable breakdown must not render as an empty one.
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByText("Support Client")).toBeNull();
+  });
+});
+
+describe("the quality lens answers the page's own question when nothing breaches", () => {
+  it("shows fidelity / hallucination / regression / gate / eval freshness", async () => {
+    const quality: QualityLens = {
+      kind: "quality",
+      rows: [
+        {
+          agentId: "support-client",
+          faithfulness: 0.962,
+          faithfulnessRefusal: null,
+          hallucination: 0.021,
+          hallucinationRefusal: null,
+        },
+        {
+          agentId: "onboarding",
+          faithfulness: null,
+          faithfulnessRefusal: "unavailable",
+          hallucination: null,
+          hallucinationRefusal: "unavailable",
+        },
+      ],
+    };
+    render(
+      await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: quality }),
+    );
+    expect(screen.getByText("Fidélité")).toBeTruthy();
+    expect(screen.getByText("Hallucination")).toBeTruthy();
+    expect(screen.getByText("Régr. bloquantes (T1)")).toBeTruthy();
+    expect(screen.getByText("Dernière éval")).toBeTruthy();
+    expect(screen.getByText("96,2 %")).toBeTruthy();
+    expect(screen.getAllByTitle("Signal non calculable sur cette fenêtre.").length).toBe(2);
   });
 });

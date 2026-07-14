@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { AgentBreakdown } from "@/components/agent/agent-breakdown";
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
+import type { BreakdownLens } from "@/lib/agent-lens";
 import { isScopedToAgent } from "@/lib/agent-scope";
 import type { Fleet } from "@/lib/api/schemas";
 
@@ -34,6 +35,7 @@ export async function GovScopeSection({
   signalsNote = true,
   signalHero = false,
   perAgent = true,
+  lens,
 }: {
   fleet: Fleet | null;
   scope: string;
@@ -41,6 +43,8 @@ export async function GovScopeSection({
   signalsNote?: boolean;
   signalHero?: boolean;
   perAgent?: boolean;
+  /** Column lens for the breakdown table (default: the historical monitoring columns). */
+  lens?: BreakdownLens;
 }) {
   const t = await getTranslations({ locale, namespace: "agentScope" });
   return (
@@ -50,7 +54,7 @@ export async function GovScopeSection({
         <AgentScopeFilter />
         <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
       </div>
-      <AgentBreakdown fleet={fleet} scope={scope} locale={locale} />
+      <AgentBreakdown fleet={fleet} scope={scope} locale={locale} lens={lens} />
       {/* Only when an agent is ACTUALLY selected: the note says "Filtre actif …",
           which is misleading on the default "Tous les agents" (no filter) view. The
           text matches the page: per-agent cards vs an org-posture aggregate. */}

@@ -17,7 +17,9 @@
  *    store degrades one card, exactly as it does today, and never blanks the page.
  */
 
-import type { z } from "zod";
+import { z } from "zod";
+
+import type { Dimension } from "./scope";
 
 /** The signal ids the backend's snapshot set actually carries (`snapshot_signal_ids()`). */
 export const SNAPSHOT_SIGNALS = [
@@ -66,4 +68,54 @@ export function selectSignal<TSchema extends z.ZodTypeAny>(
   if (!entry || entry.data === undefined || entry.data === null) return undefined;
   const parsed = schema.safeParse(entry.data);
   return parsed.success ? parsed.data : undefined;
+}
+
+/** The per-signal scope report exactly as the spine serialises it (`ScopeReport.as_dict`). */
+export const SnapshotReportSchema = z.object({
+  honoured: z.array(z.string()),
+  ignored: z.array(z.string()),
+  org_wide: z.boolean(),
+  synthetic: z.boolean(),
+  source: z.string(),
+  unavailable: z.boolean(),
+});
+export type SnapshotReport = z.infer<typeof SnapshotReportSchema>;
+
+/** Why a dimension-gated selection refused to hand out a value. */
+export type ScopedRefusal =
+  | "absent" // signal or data missing from the snapshot
+  | "schema-drift" // data present but fails the card's own schema
+  | "no-report" // no readable scope report — the slice cannot be proven, so it is refused
+  | "unavailable" // the report itself says the signal could not be computed
+  | "org-wide" // no per-agent substrate, by construction (capabilities.py)
+  | "not-honoured"; // the requested dimension was ignored, not honoured
+
+export type ScopedSelection<T> = { ok: true; data: T } | { ok: false; refusal: ScopedRefusal };
+
+/**
+ * The slice for `id`, handed out ONLY when the signal's own scope report declares
+ * `dimension` honoured — the backend honesty contract ("the filter-shown-but-ignored
+ * state is unrepresentable") ported to the client.
+ *
+ * Every refusal is a distinct value, never a silent `undefined`: a UI cell fed by this
+ * selection can say *why* it shows nothing. A missing or unreadable report refuses too —
+ * a witness that cannot see may never report "ok" (ADR 0026).
+ */
+export function selectHonouredSignal<TSchema extends z.ZodTypeAny>(
+  snapshot: OverviewSnapshot | undefined,
+  id: SnapshotSignalId,
+  schema: TSchema,
+  dimension: Dimension,
+): ScopedSelection<z.infer<TSchema>> {
+  const entry = snapshot?.signals?.[id];
+  if (!entry) return { ok: false, refusal: "absent" };
+  const report = SnapshotReportSchema.safeParse(entry.report);
+  if (!report.success) return { ok: false, refusal: "no-report" };
+  if (report.data.unavailable) return { ok: false, refusal: "unavailable" };
+  if (report.data.org_wide) return { ok: false, refusal: "org-wide" };
+  if (!report.data.honoured.includes(dimension)) return { ok: false, refusal: "not-honoured" };
+  if (entry.data === undefined || entry.data === null) return { ok: false, refusal: "absent" };
+  const parsed = schema.safeParse(entry.data);
+  if (!parsed.success) return { ok: false, refusal: "schema-drift" };
+  return { ok: true, data: parsed.data };
 }
