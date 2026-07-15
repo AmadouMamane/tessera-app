@@ -68,18 +68,22 @@ export async function loadBreakdownLens(
 }
 
 /** The GOUVERNER domains whose pages carry their own per-agent lens. */
-export type LensDomain = "security" | "compliance" | "reliability";
+export type LensDomain = "security" | "compliance" | "reliability" | "improvement";
 
 /**
  * The per-agent signals each domain page fans out for — ONLY signals measured to answer
  * `honoured: ["agent"]` (see `lib/agent-lens.ts` schemas). A domain fact the spine holds
  * org-wide (guard efficacy, injection bypass, latency p95) is deliberately absent: it is
- * not depositable per agent, so it does not become a column.
+ * not depositable per agent, so it does not become a column. `improvement` reuses the
+ * QUALITY lens (product decision, 2026-07-15): no per-agent improvement signal exists
+ * (`regression_risk` is org-wide), and the per-agent regression facts already live in the
+ * release payload the quality columns render — nothing invented.
  */
 const DOMAIN_SIGNALS: Record<LensDomain, string> = {
   security: "pii_leak,toxicity,tool_validity",
   compliance: "governance,audit_count",
   reliability: "tool_validity,cost",
+  improvement: "slo,scores",
 };
 
 /**
@@ -107,5 +111,7 @@ export async function loadDomainLens(
       return buildComplianceLens(perAgent);
     case "reliability":
       return buildReliabilityLens(perAgent);
+    case "improvement":
+      return buildQualityLens(perAgent);
   }
 }

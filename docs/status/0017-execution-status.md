@@ -80,6 +80,14 @@ updates this file after every step. A resuming session reads this first, then co
   **verified red under mutation**: bypassing the gate on `pii_leak` fails 4 tests. Vue
   d'ensemble and Qualité IA untouched (render non-regression pinned).
 
+  **Product decisions (Amadou, 2026-07-15).** *Amélioration* → reuses the QUALITY lens: no
+  per-agent improvement signal exists (`regression_risk` is org-wide by construction) and the
+  per-agent regression facts already live in the release payload the quality columns render —
+  nothing invented. *Incidents* → keeps the monitoring default for now; the per-agent
+  incidents lens is ▶ OWED as a **future lot**: attribute incident clusters to agents at the
+  source (the deny events carry `agent_id` in the ledger; `open_incidents()` clusters by rule
+  family only), THEN a lens — never a column before its substrate.
+
 - 2026-07-15 — **« Posture indisponible » (Conformité / Fiabilité / Amélioration) diagnosed on
   the live base: a REAL outage, not the fleet-500 class, not a legitimate empty.** All three
   routes answer `{"available": false}` because their computes RAISE: ClickHouse on `:18123`
