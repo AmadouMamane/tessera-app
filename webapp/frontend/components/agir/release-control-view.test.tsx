@@ -6,7 +6,7 @@
 // tests pin the reason chain end to end: a wire-shaped payload parsed through the REAL
 // schema must surface the floor's own words on the blocked card — and ONLY there.
 import { cleanup, render, screen } from "@testing-library/react";
-import { createTranslator, NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, createTranslator } from "next-intl";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

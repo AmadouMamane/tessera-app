@@ -4,7 +4,7 @@ import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { AppShell } from "@/components/layout/app-shell";
 import { ReliabilityDashboard } from "@/components/reliability/reliability-dashboard";
 import { readAgentScope } from "@/lib/agent-scope";
-import { loadDomainLens } from "@/lib/server/agent-lens";
+import { loadDeclaredLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
 
 interface ReliabilityPageProps {
@@ -33,7 +33,7 @@ export default async function ReliabilityPage({ params, searchParams }: Reliabil
           locale={locale}
           signalHero
           perAgent={false}
-          lens={await loadDomainLens(fleet, "reliability")}
+          lens={await loadDeclaredLens("/surveiller/fiabilite-cout", fleet)}
         />
       </div>
       <ReliabilityDashboard />

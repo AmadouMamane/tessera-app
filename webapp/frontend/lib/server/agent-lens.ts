@@ -14,6 +14,7 @@ import {
 } from "@/lib/agent-lens";
 import { type Fleet, OverviewSnapshotSchema } from "@/lib/api/schemas";
 import type { OverviewSnapshot } from "@/lib/overview-snapshot";
+import { type AgentBreakdownDomain, type DeclaredLensRoute, PAGE_NATURE } from "@/lib/page-nature";
 
 import { backendHeaders, backendUrl } from "./backend";
 
@@ -69,14 +70,14 @@ export async function loadBreakdownLens(
     : buildQualityLens(perAgent);
 }
 
-/** The GOUVERNER domains whose pages carry their own per-agent lens. */
-export type LensDomain =
-  | "security"
-  | "compliance"
-  | "reliability"
-  | "improvement"
-  | "observability"
-  | "proof";
+/**
+ * The GOUVERNER domains whose pages carry their own per-agent lens — the registry's
+ * breakdown domains minus `quality` (which routes through `loadBreakdownLens`, the
+ * dynamic alarm/quality/masked plan). Tied to `page-nature.ts` so a NEW breakdown domain
+ * declared there cannot exist without a signal fan-out here: `DOMAIN_SIGNALS` stops
+ * compiling until the domain is served.
+ */
+export type LensDomain = Exclude<AgentBreakdownDomain, "quality">;
 
 /**
  * The per-agent signals each domain page fans out for — ONLY signals measured to answer
@@ -133,4 +134,23 @@ export async function loadDomainLens(
     case "proof":
       return buildProofLens(perAgent);
   }
+}
+
+/**
+ * Load the lens a page DECLARES — the single door between the page-nature registry and
+ * the rendered columns. The page hands over its own route; the domain comes from
+ * `PAGE_NATURE`, never from the caller, so a page declared `lens:security` structurally
+ * cannot render another domain's columns. The route parameter only accepts routes whose
+ * declared nature is an AgentBreakdown lens (`DeclaredLensRoute`): calling this from an
+ * org-wide, monitoring or bespoke page is a compile error, not a runtime fallback.
+ */
+export async function loadDeclaredLens(
+  route: DeclaredLensRoute,
+  fleet: Fleet | null,
+  opts: { signalId?: string } = {},
+): Promise<BreakdownLens> {
+  const { domain } = PAGE_NATURE[route];
+  return domain === "quality"
+    ? loadBreakdownLens(fleet, opts.signalId)
+    : loadDomainLens(fleet, domain);
 }

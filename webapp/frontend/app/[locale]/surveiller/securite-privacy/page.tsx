@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SecurityDashboard } from "@/components/security/security-dashboard";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
-import { loadDomainLens } from "@/lib/server/agent-lens";
+import { loadDeclaredLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
 
 interface SecurityPageProps {
@@ -28,7 +28,7 @@ export default async function SecurityPage({ params, searchParams }: SecurityPag
   // The page's own per-agent question: PII leaks, toxicity, guard denials — the security
   // facts the spine deposits per agent. Org-wide probes (guard efficacy, injection bypass)
   // stay in the page body; they have no per-agent substrate and get no column.
-  const lens = await loadDomainLens(fleet, "security");
+  const lens = await loadDeclaredLens("/surveiller/securite-privacy", fleet);
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       {/* SLO breach alert LEADS; the dashboard's temporal rail sits directly beneath it;

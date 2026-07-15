@@ -9,7 +9,7 @@ import { ObservabilityDashboard } from "@/components/observability/observability
 import { QualityViewSwitch } from "@/components/surveiller/quality-view-switch";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
-import { loadBreakdownLens } from "@/lib/server/agent-lens";
+import { loadDeclaredLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
 import { readSignalFocus } from "@/lib/signal-focus";
 
@@ -81,7 +81,9 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
   // alarm (per-agent culprits, sorted by contribution), the quality lens otherwise — never
   // volume/latency columns under a quality banner. `?signal=` focuses one signal from the
   // registry; an org-wide one masks the table and says why (its capability, not a guess).
-  const lens = await loadBreakdownLens(fleet, readSignalFocus(sp));
+  const lens = await loadDeclaredLens("/surveiller/qualite-ia", fleet, {
+    signalId: readSignalFocus(sp),
+  });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <QualityViewSwitch active="signals" locale={locale} />

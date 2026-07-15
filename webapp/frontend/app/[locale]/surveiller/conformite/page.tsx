@@ -5,7 +5,7 @@ import { ComplianceDashboard } from "@/components/compliance/compliance-dashboar
 import { AppShell } from "@/components/layout/app-shell";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
-import { loadDomainLens } from "@/lib/server/agent-lens";
+import { loadDeclaredLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
 
 interface CompliancePageProps {
@@ -41,7 +41,7 @@ export default async function CompliancePage({ params, searchParams }: Complianc
             scope={scope}
             locale={locale}
             perAgent={false}
-            lens={await loadDomainLens(fleet, "compliance")}
+            lens={await loadDeclaredLens("/surveiller/conformite", fleet)}
           />
         }
       />

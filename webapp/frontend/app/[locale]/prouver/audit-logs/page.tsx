@@ -10,7 +10,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { readAgentScope } from "@/lib/agent-scope";
 import { AuditOverviewSchema, AuditPageSchema } from "@/lib/api/schemas";
 import { currentRole, isOperator } from "@/lib/auth/session";
-import { loadDomainLens } from "@/lib/server/agent-lens";
+import { loadDeclaredLens } from "@/lib/server/agent-lens";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 import { loadFleet } from "@/lib/server/fleet";
 
@@ -100,7 +100,7 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
     // entries (measured to deposit per agent). Chain INTEGRITY stays org-wide in the body.
     scope = readAgentScope(await searchParams);
     const fleet = await loadFleet(locale);
-    const lens = await loadDomainLens(fleet, "proof");
+    const lens = await loadDeclaredLens("/prouver/audit-logs", fleet);
     proofSection = <AgentBreakdown fleet={fleet} scope={scope} locale={locale} lens={lens} />;
   }
 
