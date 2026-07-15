@@ -15,6 +15,16 @@
 # docker-compose.obs.claude.yml (collector on :4418), prod-refinement ships its
 # own. The agent points at the right one via TESSERA_OTEL_COLLECTOR_ENDPOINT
 # (empty default = export off, as today).
+#
+# Ports: the datastore binds ${TESSERA_BIND:-127.0.0.1} — LOOPBACK by default.
+# A bare "5432:5432" is what Docker binds to 0.0.0.0, i.e. EVERY interface: on
+# 2026-07-15 this exact stack (audit ledger, conversation transcripts, GDPR
+# long-term memory — credentials published in this file) answered any host on
+# the LAN. This is F-9 at the base compose, the same class the obs stack closed
+# on 2026-07-14. Publishing to the network stays possible, but only as a
+# deliberate, declared act (`TESSERA_BIND=0.0.0.0 docker compose up`), never as
+# what you get by forgetting. Enforced over every docker-compose*.yml in the
+# repo by tests/unit/test_compose_datastores_bind_loopback.py.
 name: tessera-${TESSERA_ENV:-local}
 
 services:
@@ -27,7 +37,7 @@ services:
       POSTGRES_PASSWORD: tessera
       POSTGRES_DB: tessera
     ports:
-      - "${TESSERA_PG_PORT:-5432}:5432"
+      - "${TESSERA_BIND:-127.0.0.1}:${TESSERA_PG_PORT:-5432}:5432"
     volumes:
       - tessera_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -47,7 +57,7 @@ services:
   #   container_name: tessera-ollama
   #   restart: unless-stopped
   #   ports:
-  #     - "11434:11434"
+  #     - "${TESSERA_BIND:-127.0.0.1}:11434:11434"
   #   volumes:
   #     - tessera_ollama:/root/.ollama
   #   entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.3:70b && wait"]
