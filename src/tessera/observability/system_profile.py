@@ -143,13 +143,21 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
     except Exception:  # a health probe never crashes the page (postgres unreachable, …)
         chain_ok = False
 
-    # ADR 0028: the guard badge reports the measured detector, never the
-    # presence of a package. A witness that cannot see may not say "ok".
-    fw_f1: float | None
+    # ADR 0028/0029: the guard badge reports the measured detector, never the
+    # presence of a package. A witness that cannot see may not say "ok". Green
+    # requires (a) the limes injection detector to be the one that ran — F1 > 0
+    # alone is a hollow green, it cannot tell limes from a fallback — and (b) a
+    # dated, real F1. limes absent → compute_efficacy raises → warn (fail-closed).
+    fw: firewall_efficacy.EfficacyReport | None
     try:
-        fw_f1 = firewall_efficacy.compute_efficacy().f1
+        fw = firewall_efficacy.compute_efficacy()
     except Exception:  # blind spot — report warn, never a fabricated ok
-        fw_f1 = None
+        fw = None
+    firewall_active = (
+        fw is not None
+        and fw.detector_id == firewall_efficacy.LIMES_INJECTION_DETECTOR_ID
+        and fw.f1 > 0.0
+    )
 
     def ok(flag: bool) -> str:
         return "ok" if flag else "warn"
@@ -160,7 +168,7 @@ def _health(audit_file: Path) -> list[dict[str, str]]:
         {"key": "corpus", "status": ok(_file_count(corpus, "*.json") > 0)},
         {"key": "audit_log", "status": ok(ledger_available(audit_file))},
         {"key": "audit_chain", "status": ok(chain_ok)},
-        {"key": "firewall", "status": ok(fw_f1 is not None and fw_f1 > 0.0)},
+        {"key": "firewall", "status": ok(firewall_active)},
         {"key": "eval_reports", "status": ok(len(iter_report_files()) > 0)},
         {"key": "embeddings", "status": "ok"},
     ]

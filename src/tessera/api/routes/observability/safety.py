@@ -210,8 +210,15 @@ async def observability_embedding_skew() -> dict[str, object]:
 
 @router.get("/observability/firewall-efficacy")
 async def observability_firewall_efficacy() -> dict[str, object]:
-    """Detection efficacy of the guard over injection vs benign inputs."""
-    return asdict(firewall_mod.compute_efficacy())
+    """Detection efficacy of the guard over injection vs benign inputs.
+
+    The report is a deterministic fixed-corpus probe; the ``observed_at`` stamp is
+    the live recompute time (ADR 0029) — the measurement is dated by *when it was
+    read*, not by a wall clock baked into the reproducible measurement content.
+    """
+    from datetime import UTC, datetime
+
+    return {**asdict(firewall_mod.compute_efficacy()), "observed_at": datetime.now(UTC).isoformat()}
 
 
 @router.get("/observability/redteam")

@@ -84,6 +84,12 @@ dependencies = [
     "google-cloud-aiplatform>=1.133.0,<2",
     "openai>=2.40.0",
     "opentelemetry-exporter-otlp-proto-http>=1.28.0,<2",
+    # Runtime guard — the first-party injection detector, extracted into the
+    # separate `limes` package (ADR 0028/0029). Tessera CONSUMES it behind
+    # guard/adapter.py; the dependency runs one way only (Tessera -> limes).
+    # Sourced locally from the sibling repo (see [tool.uv.sources]) until limes
+    # is published — the packaging decision is Amadou's (ADR 0029 §HALT).
+    "limes",
 ]
 
 [project.optional-dependencies]
@@ -173,6 +179,16 @@ include = [
 [tool.uv]
 package = true
 required-version = ">=0.5.0"
+
+# limes is consumed from the sibling checkout at ../../../limes (ADR 0029).
+# This path is anchored at THIS pyproject's directory, which is an agent
+# worktree (apps/tessera-app/agents/<name>, depth 3 under apps). The reference
+# checkout apps/tessera-app/tessera sits at depth 2, so it needs ../../limes —
+# the two depths cannot share one relative string. Until limes is published to
+# an index (or vendored / submoduled), the durable fix is Amadou's call
+# (ADR 0029 §HALT). Editable so limes edits are picked up without a re-sync.
+[tool.uv.sources]
+limes = { path = "../../../limes", editable = true }
 
 # ---------------------------------------------------------------------------
 # Ruff — lint + format

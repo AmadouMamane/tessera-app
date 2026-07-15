@@ -11,16 +11,19 @@ performs three jobs:
 3. **Post-flight audit** — record a :class:`GuardDecisionRecord` per decision
    into an audit sink (see :mod:`tessera.guard.audit`).
 
-The decision logic is first-party and policy-driven
-(:mod:`tessera.guard.decisions`). This module is also the declared seam
-(ADR 0028): a different guard backend can be plugged behind the same
-interface without callers branching on backend availability.
+The tool allow/deny, auth-floor, language and argument checks are first-party
+and policy-driven (:mod:`tessera.guard.decisions`). Prompt-injection DETECTION
+is delegated to the ``limes`` package through :mod:`tessera.guard.limes_backend`
+— the declared backend this seam (ADR 0028) was built for, and the single source
+of truth for injection patterns (ADR 0029). A ``CannotSay`` verdict from limes
+blocks (fail-closed): a detector that could not look is never a pass.
 """
 
 from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from tessera.agent.sdk.instrument import tool_span
@@ -33,6 +36,7 @@ from tessera.guard.decisions import (
     ToolPolicy,
     load_policy,
 )
+from tessera.guard.limes_backend import check_injection
 from tessera.observability import semconv
 from tessera.observability.metrics import GUARD_DECISIONS_TOTAL
 from tessera.settings import LanguageCode, get_settings
@@ -208,15 +212,19 @@ def check_user_input(
     *,
     policy: Policy | None = None,
 ) -> InputCheckResult:
-    """Check raw user input against prompt-injection deny and transform patterns.
+    """Check raw user input for prompt injection (limes) and role-play sanitisation.
 
     Called at the start of every turn — before the LLM sees anything — so that
-    injected instructions never reach the language model.
+    injected instructions never reach the language model. Injection DETECTION is
+    delegated to the ``limes`` package (ADR 0028/0029), the single source of
+    truth for it: Tessera keeps no second copy of the patterns. A ``Deny`` or a
+    ``CannotSay`` verdict blocks (the latter fail-closed). The ``policy`` argument
+    still drives the first-party transform (sanitisation) layer.
 
     Returns:
-        An :class:`InputCheckResult` whose ``allowed`` flag is ``False`` when a
-        deny pattern matched, or ``True`` with a (potentially redacted)
-        ``sanitised_text`` when the input is acceptable.
+        An :class:`InputCheckResult` whose ``allowed`` flag is ``False`` when
+        limes refused (or could not look), or ``True`` with a (potentially
+        redacted) ``sanitised_text`` when the input is acceptable.
     """
     from tessera.agent.state import GuardDecisionRecord
 
@@ -224,30 +232,37 @@ def check_user_input(
     settings = get_settings()
     records: list[GuardDecisionRecord] = []
 
-    for pattern in active_policy.prompt_injection_deny:
-        if pattern.search(text):
-            record = GuardDecisionRecord(
-                target="user_input",
-                decision=DecisionKind.DENY.value,
-                policy_rule="prompt_injection.deny_patterns",
-                rationale=f"user input matched injection deny pattern: {pattern.pattern!r}",
-            )
-            records.append(record)
-            emit_audit(
-                target="user_input",
-                arguments={"text": "[redacted — matched deny pattern]"},
-                decisions=records,
-                sink=settings.guard.audit_sink,
-                actor=GUARD_ACTOR,
-                outcome="denied",
-            )
-            _record_guard_decision("user_input", "denied")
-            return InputCheckResult(
-                allowed=False,
-                sanitised_text=text,
-                decisions=tuple(records),
-            )
+    # Injection detection is delegated to limes (ADR 0029): Tessera holds no
+    # second copy of the patterns. The caller (Tessera) supplies the timestamp;
+    # limes never reads the wall clock, so a decision re-derives on replay.
+    outcome = check_injection(text, observed_at=datetime.now(UTC).isoformat())
+    if outcome.blocked:
+        record = GuardDecisionRecord(
+            target="user_input",
+            decision=DecisionKind.DENY.value,
+            policy_rule=outcome.rule,
+            rationale=outcome.rationale,
+        )
+        records.append(record)
+        emit_audit(
+            target="user_input",
+            arguments={"text": "[redacted — injection refused by limes]"},
+            decisions=records,
+            sink=settings.guard.audit_sink,
+            actor=GUARD_ACTOR,
+            outcome="denied",
+        )
+        _record_guard_decision("user_input", "denied")
+        return InputCheckResult(
+            allowed=False,
+            sanitised_text=text,
+            decisions=tuple(records),
+        )
 
+    # First-party sanitisation (allow-with-redaction) — a DECLARED, separate
+    # layer from limes' detection, never a second copy of its deny set. Empty
+    # today; kept so role-play cues limes ALLOWED can still be masked from the
+    # LLM without ever being confused with a duplicated injection detector.
     sanitised = text
     for pattern, replacement in active_policy.prompt_injection_transforms:
         sanitised = pattern.sub(replacement, sanitised)
@@ -266,8 +281,8 @@ def check_user_input(
             GuardDecisionRecord(
                 target="user_input",
                 decision=DecisionKind.ALLOW.value,
-                policy_rule="prompt_injection.deny_patterns",
-                rationale="user input passed all injection checks",
+                policy_rule=outcome.rule,
+                rationale=outcome.rationale,
             )
         )
 

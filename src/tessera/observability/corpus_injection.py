@@ -6,9 +6,11 @@ from the corpus. If an attacker plants "ignore your instructions and …" inside
 document, that instruction reaches the model through the back door of retrieval
 (OWASP LLM01, indirect prompt injection).
 
-This module screens each retrieved chunk against the same injection deny-patterns
-the guard applies to user input — matching the patterns directly so the scan has
-no audit side effect — and reports which chunks are poisoned.
+This module screens each retrieved chunk against the same injection patterns the
+guard applies to user input — the ``limes`` rule set (ADR 0029), the single
+source of truth. It matches the compiled patterns directly (so the scan has no
+audit side effect, and so it can report the RAW poisoned span that limes'
+detector redacts) and reports which chunks are poisoned.
 """
 
 from __future__ import annotations
@@ -16,12 +18,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from tessera.guard.decisions import load_policy
+from tessera.guard.limes_backend import injection_rules
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from tessera.guard.decisions import Policy
 
 __all__ = ["ChunkFinding", "CorpusScanReport", "scan_chunks"]
 
@@ -30,7 +30,13 @@ _SNIPPET_LEN = 160
 
 @dataclass(frozen=True, slots=True)
 class ChunkFinding:
-    """An injection pattern matched inside one retrieved chunk."""
+    """An injection rule matched inside one retrieved chunk.
+
+    Attributes:
+        index: Position of the chunk in the retrieved set.
+        pattern: The limes rule label that fired (e.g. ``injection:...``).
+        snippet: A short raw window around the match, for operator forensics.
+    """
 
     index: int
     pattern: str
@@ -54,21 +60,25 @@ def _snippet(text: str, start: int, end: int) -> str:
     return text[lo:hi][:_SNIPPET_LEN].replace("\n", " ").strip()
 
 
-def scan_chunks(chunks: Sequence[str], *, policy: Policy | None = None) -> CorpusScanReport:
-    """Screen each chunk against the guard's injection deny-patterns.
+def scan_chunks(chunks: Sequence[str]) -> CorpusScanReport:
+    """Screen each chunk against limes' injection patterns (ADR 0029).
+
+    The patterns are limes' own rule set — the single source of truth, the same
+    one the user-input guard runs — reached via
+    :func:`tessera.guard.limes_backend.injection_rules`.
 
     Args:
         chunks: The retrieved document chunks grounding an answer.
-        policy: The guard policy to read patterns from; loaded if omitted.
 
     Returns:
-        A :class:`CorpusScanReport` listing every poisoned chunk and pattern.
+        A :class:`CorpusScanReport` listing every poisoned chunk and the rule
+        that fired.
     """
-    active_policy = policy or load_policy()
+    rules = injection_rules()
     findings: list[ChunkFinding] = []
     poisoned: set[int] = set()
     for index, chunk in enumerate(chunks):
-        for pattern in active_policy.prompt_injection_deny:
+        for label, pattern in rules:
             match = pattern.search(chunk)
             if match is None:
                 continue
@@ -76,7 +86,7 @@ def scan_chunks(chunks: Sequence[str], *, policy: Policy | None = None) -> Corpu
             findings.append(
                 ChunkFinding(
                     index=index,
-                    pattern=pattern.pattern,
+                    pattern=label,
                     snippet=_snippet(chunk, match.start(), match.end()),
                 )
             )

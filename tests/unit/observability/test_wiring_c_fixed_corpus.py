@@ -59,8 +59,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from unittest.mock import patch
 
+from limes.detectors.injection import InjectionDetector
+from limes.policy import InjectionPolicy, Rule
+
 from tessera.api.routes.observability import _load_failure_items
-from tessera.guard.decisions import Policy, load_policy
+from tessera.guard import limes_backend
 from tessera.observability import (
     eval_data as eval_data_mod,
     failure_clustering as fc_mod,
@@ -130,12 +133,12 @@ def _emit_noise_score() -> None:
 
 # ═══════════════════════════════════════════════════════════════════════════
 # #13 — firewall-roc (firewall_efficacy.py:compute_efficacy)
-# Route: `firewall_mod.compute_efficacy()` bare -> loads real corpus + real
-# policy internally (no policy param exists on the function at all), so the
-# reactive seam is patching the module-level `load_policy` name it falls back
-# to — exactly what a real policy.yaml edit would change for the deployed route.
-# Empirically verified: dropping deny-pattern[10] ("ignore previous instructions")
-# drops true_positive 22 -> 21 over the real injection corpus (33 positives).
+# Route: `firewall_mod.compute_efficacy()` bare -> replays the real corpus through
+# `check_user_input`, whose injection detection is now `limes` (ADR 0029). The
+# reactive seam is therefore the limes detector — patching `limes_backend._detector`
+# is exactly what a real edit to limes' rule set would change for the deployed
+# route. Empirically verified: unplugging limes' own rules drops recall
+# 0.758 -> 0.667 over the real injection corpus (case 08 x3 flips back to bypassed).
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -143,27 +146,37 @@ def _obs_recall(payload: object) -> float:
     return cast("firewall_mod.EfficacyReport", payload).recall
 
 
-def _firewall_reactive_compute(policy: Policy) -> object:
-    def _fake_load_policy(path: Path | None = None) -> Policy:
-        return policy
+# ADR 0029: the firewall's detection source is now `limes`, not Tessera's policy.
+# The reactive seam is therefore the limes detector `check_user_input` runs — we
+# patch `limes_backend._detector` (the module-level seam the whole real path uses),
+# exactly as the pre-limes probe patched the module-level `load_policy`.
+def _limes_base_policy() -> InjectionPolicy:
+    return limes_backend._injection_policy()
 
-    with patch.object(firewall_mod, "load_policy", _fake_load_policy):
+
+def _detector_from(policy: InjectionPolicy) -> InjectionDetector:
+    return InjectionDetector(policy)
+
+
+def _drop_limes_origin_rules(policy: InjectionPolicy) -> InjectionPolicy:
+    # "Unplug limes' contribution": remove the `origin: limes` rules (the case-08
+    # closers), leaving the ported Tessera baseline. Empirically flips >=1 real
+    # positive — firewall recall 0.758 -> 0.667, redteam bypass 0.286 -> 0.367.
+    kept = tuple(rule for rule in policy.rules if rule.origin != "limes")
+    return InjectionPolicy(version=policy.version, policy_hash=policy.policy_hash, rules=kept)
+
+
+def _firewall_reactive_compute(policy: InjectionPolicy) -> object:
+    with patch.object(limes_backend, "_detector", lambda: _detector_from(policy)):
         return firewall_mod.compute_efficacy()
 
 
-def _firewall_drop_deny_pattern(policy: Policy) -> Policy:
-    # Empirically verified (see research pass): pattern[10] is the "ignore
-    # previous instructions" deny regex; dropping it flips >=1 real positive.
-    patterns = policy.prompt_injection_deny
-    return dataclasses.replace(policy, prompt_injection_deny=patterns[:10] + patterns[11:])
-
-
-_firewall_reactive_probe: Probe[Policy] = Probe(
+_firewall_reactive_probe: Probe[InjectionPolicy] = Probe(
     key="firewall-roc#13/reactive",
     compute=_firewall_reactive_compute,
     observe=_obs_recall,
-    base_source=load_policy(),
-    perturb=_firewall_drop_deny_pattern,
+    base_source=_limes_base_policy(),
+    perturb=_drop_limes_origin_rules,
     relation="down",
     seam="store",
     declared_class=_DECLARED_CLASS,
@@ -198,9 +211,10 @@ def test_firewall_roc_reactive_and_invariant() -> None:
 
 # ═══════════════════════════════════════════════════════════════════════════
 # #58 — refusal-calibration (refusal.py:compute_refusal_calibration)
-# Route calls it bare too. Reactive: add a deny pattern matching a REAL legit
-# question's first word -> over_refusal_rate rises (empirically verified:
-# 0.0 -> 0.25 over the real legit set).
+# Route calls it bare too; detection is limes (ADR 0029). Reactive: add a limes
+# rule matching a REAL legit question's first word -> that legit input is refused
+# -> over_refusal_rate rises (empirically verified: 0.0 -> 0.25 over the real
+# legit set). Seam = `limes_backend._detector`.
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -208,28 +222,31 @@ def _obs_over_refusal(payload: object) -> float:
     return cast("refusal_mod.RefusalReport", payload).over_refusal_rate
 
 
-def _refusal_reactive_compute(policy: Policy) -> object:
-    def _fake_load_policy(path: Path | None = None) -> Policy:
-        return policy
-
-    with patch.object(refusal_mod, "load_policy", _fake_load_policy):
+def _refusal_reactive_compute(policy: InjectionPolicy) -> object:
+    with patch.object(limes_backend, "_detector", lambda: _detector_from(policy)):
         return refusal_mod.compute_refusal_calibration()
 
 
-def _refusal_add_deny_matching_legit(policy: Policy) -> Policy:
+def _refusal_add_rule_matching_legit(policy: InjectionPolicy) -> InjectionPolicy:
+    # Add a limes rule matching a REAL legit question's first word → that legit
+    # input is now refused → over_refusal_rate rises (0.0 -> 0.25, verified).
     first_word = refusal_mod.load_legit()[0].split()[0]
-    new_pattern = re.compile(re.escape(first_word), re.IGNORECASE)
-    return dataclasses.replace(
-        policy, prompt_injection_deny=(*policy.prompt_injection_deny, new_pattern)
+    new_rule = Rule(
+        label="test:legit-word",
+        origin="limes",
+        pattern=re.compile(re.escape(first_word), re.IGNORECASE),
+    )
+    return InjectionPolicy(
+        version=policy.version, policy_hash=policy.policy_hash, rules=(*policy.rules, new_rule)
     )
 
 
-_refusal_reactive_probe: Probe[Policy] = Probe(
+_refusal_reactive_probe: Probe[InjectionPolicy] = Probe(
     key="refusal-calibration#58/reactive",
     compute=_refusal_reactive_compute,
     observe=_obs_over_refusal,
-    base_source=load_policy(),
-    perturb=_refusal_add_deny_matching_legit,
+    base_source=_limes_base_policy(),
+    perturb=_refusal_add_rule_matching_legit,
     relation="up",
     seam="store",
     declared_class=_DECLARED_CLASS,
@@ -264,9 +281,10 @@ def test_refusal_calibration_reactive_and_invariant() -> None:
 
 # ═══════════════════════════════════════════════════════════════════════════
 # #24 — continuous-red-team (redteam.py:run_redteam)
-# Same policy-drop perturbation as #13 (shared regex seam), observed on the
-# REAL adversarial corpus (49 attacks). Empirically verified: attack_success_rate
-# 0.367 -> 0.388 (18/49 -> 19/49 bypassed) when pattern[10] is dropped.
+# Same "unplug limes' rules" perturbation as #13 (shared limes seam), observed on
+# the REAL adversarial corpus (49 attacks). Detection is limes (ADR 0029).
+# Empirically verified: attack_success_rate 0.286 -> 0.367 when limes' own rules
+# are removed. Seam = `limes_backend._detector`.
 # ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -274,17 +292,18 @@ def _obs_attack_success(payload: object) -> float:
     return cast("redteam_mod.RedTeamSnapshot", payload).attack_success_rate
 
 
-def _redteam_reactive_compute(policy: Policy) -> object:
+def _redteam_reactive_compute(policy: InjectionPolicy) -> object:
     corpus = redteam_mod.load_adversarial_corpus()
-    return redteam_mod.run_redteam(corpus=corpus, policy=policy)
+    with patch.object(limes_backend, "_detector", lambda: _detector_from(policy)):
+        return redteam_mod.run_redteam(corpus=corpus)
 
 
-_redteam_reactive_probe: Probe[Policy] = Probe(
+_redteam_reactive_probe: Probe[InjectionPolicy] = Probe(
     key="continuous-red-team#24/reactive",
     compute=_redteam_reactive_compute,
     observe=_obs_attack_success,
-    base_source=load_policy(),
-    perturb=_firewall_drop_deny_pattern,  # same pattern[10] drop, same policy shape
+    base_source=_limes_base_policy(),
+    perturb=_drop_limes_origin_rules,  # same "unplug limes" perturbation as #13
     relation="up",
     seam="store",
     declared_class=_DECLARED_CLASS,

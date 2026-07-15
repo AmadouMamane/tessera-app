@@ -76,6 +76,11 @@ def test_firewall_badge_leaves_green_on_a_dead_detector(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A detector measuring F1 = 0 is a decoration; the badge may not stay green."""
-    monkeypatch.setattr(sp.firewall_efficacy, "compute_efficacy", lambda: SimpleNamespace(f1=0.0))
+    # A live limes detector (correct id) that nonetheless measures F1 = 0.
+    monkeypatch.setattr(
+        sp.firewall_efficacy,
+        "compute_efficacy",
+        lambda: SimpleNamespace(f1=0.0, detector_id="injection"),
+    )
     checks = {h["key"]: h["status"] for h in sp.compute_system_profile()["health_checks"]}
     assert checks["firewall"] != "ok"

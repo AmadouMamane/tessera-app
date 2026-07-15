@@ -12,6 +12,7 @@ from typing import Literal
 import yaml
 
 from tessera.authz import Auth
+from tessera.guard.limes_backend import injection_rules
 from tessera.settings import LanguageCode, get_settings
 
 __all__ = [
@@ -154,7 +155,19 @@ def load_policy(path: Path | None = None) -> Policy:
     }
 
     pi_raw = parsed.get("prompt_injection") or {}
-    deny = tuple(re.compile(str(p)) for p in pi_raw.get("deny_patterns", []) or [])
+    # Injection patterns live in `limes` now (ADR 0029), the single source of
+    # truth. The YAML deny list MUST stay empty — re-adding a pattern here would
+    # be the divergence bug ADR 0029 forbids, so we refuse it — and the field is
+    # DERIVED from limes, so every display / trajectory / retraction surface that
+    # reads policy.prompt_injection_deny reflects the one source, not a copy.
+    # (check_user_input runs the limes DETECTOR directly; see guard.adapter.)
+    if pi_raw.get("deny_patterns"):
+        raise ValueError(
+            "guard policy: prompt_injection.deny_patterns must be empty — injection "
+            "patterns moved to limes (ADR 0029). Add rules to limes' detector policy, "
+            "not here; this field is derived from limes at load time."
+        )
+    deny = tuple(pattern for _label, pattern in injection_rules())
     transforms_raw = pi_raw.get("transform_patterns", []) or []
     transforms = tuple(
         (re.compile(str(item["match"])), str(item.get("replacement", "[redacted]")))

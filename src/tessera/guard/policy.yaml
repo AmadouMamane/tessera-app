@@ -93,44 +93,21 @@ tools:
       transcript_excerpt:
         redact_in_audit: true
 
-# Patterns that mark the user's input as adversarial. ``deny_patterns`` reject
-# the turn entirely; ``transform_patterns`` strip the offending substring.
+# Prompt-injection DETECTION moved to the `limes` package (ADR 0028/0029).
+# `deny_patterns` used to hold Tessera's injection regexes; they were extracted
+# into limes (its `origin: tessera` rules ARE these patterns, verbatim), and
+# limes added the `origin: limes` rules that close case 08 (a `SYSTEM:` directive
+# hidden in a quoted payee name). This list MUST stay empty: limes is the single
+# source of truth. load_policy() DERIVES policy.prompt_injection_deny from limes
+# at load time (so display / trajectory / retraction surfaces read one source),
+# and REFUSES to load if a pattern is re-added here (that would be the divergence
+# bug ADR 0029 forbids). Add patterns to limes' detectors/policy.yaml instead.
+#
+# `transform_patterns` remains a first-party, DECLARED sanitisation layer
+# (allow-with-redaction of role-play cues limes allowed) — distinct from
+# detection, and empty today.
 prompt_injection:
-  deny_patterns:
-    # Roleplay / persona override — DENY (not transform: LLM must never see it)
-    - "(?i)\\b(act as|pretend to be|roleplay as|play the role of)\\b.{0,60}(no restriction|without rule|without limit|sans restriction|sans r[eè]gle|aucune limite|ohne Einschr[äa]nkung|keine Regeln)"
-    - "(?i)\\b(tu joues? le r[ôo]le|joue le r[ôo]le|fais semblant d'[eê]tre)\\b.{0,80}(sans|aucune|pas de).{0,30}(restriction|r[eè]gle|limite|contr[ôo]le)"
-    # Covers conjugated/inverted forms — "spielst du die Rolle", "du spielst
-    # die Rolle", "spiel jetzt die Rolle", "übernimm die Rolle" (case 07-de).
-    - "(?i)\\b(spiel(e|st|t)?\\s+(du\\s+)?(jetzt\\s+)?die Rolle|[üu]bernimm(st)?\\s+(du\\s+)?(jetzt\\s+)?die Rolle|tu so als ob du)\\b.{0,80}(ohne|keine).{0,30}(Einschr[äa]nkung|Regel|Grenze)"
-    # System-prompt extraction — "repeat the text above" (case 44, Sydney-style).
-    # Conjunctive: a repeat-verb followed by a context/system target. A benign
-    # "répète ta dernière réponse" or "repeat after me" never trips it.
-    - "(?i)\\b(r[ée]p[èeé]te[sz]?|r[ée]p[ée]ter|repeat|wiederhol(e|en|st|t)?)\\b.{0,80}\\b(au[- ]dessus|above|oberhalb|ce qui pr[ée]c[èe]de|instructions? initiales?|initial instructions|urspr[üu]nglichen? Anweisungen|system[- ]?prompt)"
-    # XML / pseudo-tag instruction injection (case 10)
-    - "</?\\s*(system|instruction|prompt|rule|override|admin)[^>]{0,50}>"
-    - "(?i)(</motif>|</raison>|</reason>|</field>).*<(system|instruction|prompt)"
-    # Encoded / obfuscated injection (case 11)
-    - "(?i)\\b(d[eé]code|decode|atob|btoa)\\b.{0,40}\\b(ex[eé]cute?|run|apply|follow)\\b"
-    - "(?i)\\b(base64|encodé|encoded)\\b.{0,60}\\b(instruction|r[eè]gle|rule|commande|command)\\b"
-    # Indirect injection via form fields — bracket-enclosed or quoted instructions (case 08)
-    - "(?i)\\[.{0,200}\\b(désactiv|disabl|bypass|override|ignor|contourne|suspens).{0,100}\\]"
-    - "(?i)\\{.{0,200}\\b(désactiv|disabl|bypass|override|ignor|contourne).{0,100}\\}"
-    # English
-    - "(?i)ignore (all previous|all|previous|the above) instructions"
-    - "(?i)you are now (a |an |the )?(new |different )?(assistant|system|agent)"
-    - "(?i)reveal (your|the) system prompt"
-    - "(?i)disregard (the|your) (rules|policy|guardrails)"
-    # French
-    - "(?i)ignore[sz]? (toutes? les?|les?) instructions? (pr[eé]c[eé]dentes?|ci-dessus|ant[eé]rieures?)"
-    - "(?i)tu es (maintenant |d[eé]sormais )?(un |une |le |la )?(nouvel?le? )?(assistant|syst[eè]me|agent)"
-    - "(?i)r[eé]v[eè]le[sz]? (ton|votre|le) (prompt syst[eè]me|syst[eè]me prompt)"
-    - "(?i)ignore[sz]? (tes|vos) (r[eè]gles?|politiques?|instructions?|contraintes?)"
-    # German
-    - "(?i)ignorier(e|st)? (alle? (vorherigen?|vorigen?|bisherigen?)|die obigen?) (Anweisungen?|Regeln?|Instruktionen?)"
-    - "(?i)du bist (jetzt |nun )?(ein |eine |der |die |das )?(neuer? )?(Assistent|System|Agent)"
-    - "(?i)(zeig|offenbar|enthüll)(e|st)? (dein(en?)?|das) (System[- ]?Prompt|Systemprompt)"
-    - "(?i)missachte (dein(e|en)?) (Regeln?|Richtlinien?|Anweisungen?)"
+  deny_patterns: []
   transform_patterns: []
 
 # Patterns that constitute personal data and must be masked from logs, from

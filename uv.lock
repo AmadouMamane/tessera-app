@@ -1759,6 +1759,25 @@ wheels = [
 ]
 
 [[package]]
+name = "limes"
+version = "0.1.0"
+source = { editable = "../../../limes" }
+dependencies = [
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pyyaml", specifier = ">=6.0" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "ruff", specifier = ">=0.6" },
+    { name = "types-pyyaml", specifier = ">=6.0" },
+]
+
+[[package]]
 name = "limits"
 version = "4.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3868,6 +3887,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langchain-google-vertexai" },
     { name = "langgraph" },
+    { name = "limes" },
     { name = "limits" },
     { name = "ollama" },
     { name = "openai" },
@@ -3944,6 +3964,7 @@ requires-dist = [
     { name = "langchain-google-vertexai", specifier = ">=2.0.10,<5" },
     { name = "langgraph", specifier = ">=1.0.10,<2" },
     { name = "langmem", marker = "extra == 'memory-langmem'", specifier = ">=0.0.10,<0.1" },
+    { name = "limes", editable = "../../../limes" },
     { name = "limits", specifier = ">=3.13,<5" },
     { name = "mem0ai", marker = "extra == 'memory-mem0'", specifier = ">=0.1.0,<0.2" },
     { name = "ollama", specifier = ">=0.4.1,<0.5" },
