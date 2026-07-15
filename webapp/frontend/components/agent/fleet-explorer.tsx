@@ -13,6 +13,7 @@ import {
   Star,
   Users,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
@@ -522,13 +523,24 @@ function AgentCard({
         ) : (
           <span />
         )}
-        <Link
-          href={agentPath(agent.id, "synthese")}
-          onClick={onOpen}
-          className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
-        >
-          {t("govern")} <ArrowRight className="h-3 w-3" />
-        </Link>
+        <span className="flex items-center gap-3">
+          {/* The door to the agent's OWN eval history (ER-01) — "voir les évals
+              d'un agent" must have a way in from the fleet. */}
+          <Link
+            href={agentPath(agent.id, "evaluations") as Route}
+            onClick={onOpen}
+            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-white"
+          >
+            {t("evaluations")}
+          </Link>
+          <Link
+            href={agentPath(agent.id, "synthese")}
+            onClick={onOpen}
+            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+          >
+            {t("govern")} <ArrowRight className="h-3 w-3" />
+          </Link>
+        </span>
       </div>
     </div>
   );
@@ -586,6 +598,14 @@ function AgentRow({
       })()}
       <ReleaseChip agent={agent} t={t} />
       <FavButton favorite={favorite} onToggle={onToggleFavorite} t={t} />
+      {/* The door to the agent's OWN eval history (ER-01). */}
+      <Link
+        href={agentPath(agent.id, "evaluations") as Route}
+        onClick={onOpen}
+        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-white"
+      >
+        {t("evaluations")}
+      </Link>
       <Link
         href={agentPath(agent.id, "synthese")}
         onClick={onOpen}

@@ -9,7 +9,7 @@
 // schema carries the three reconciliation fields (zod strips undeclared keys, so a missing
 // declaration would silently re-arm the bug).
 import { cleanup, render, screen } from "@testing-library/react";
-import { createTranslator } from "next-intl";
+import { type AbstractIntlMessages, NextIntlClientProvider, createTranslator } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import de from "@/messages/de.json";
@@ -569,7 +569,16 @@ describe("the quality lens answers the page's own question when nothing breaches
       ],
     };
     render(
-      await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: quality }),
+      // The quality lens names each agent as a client Link (the door to that agent's
+      // Évaluations page), and a client Link reads the intl context — hence the provider.
+      <NextIntlClientProvider locale="fr" messages={fr as unknown as AbstractIntlMessages}>
+        {await AgentBreakdown({
+          fleet: twoAgentFleet(),
+          scope: "all",
+          locale: "fr",
+          lens: quality,
+        })}
+      </NextIntlClientProvider>,
     );
     expect(screen.getByText("Fidélité")).toBeTruthy();
     expect(screen.getByText("Hallucination")).toBeTruthy();
@@ -577,5 +586,12 @@ describe("the quality lens answers the page's own question when nothing breaches
     expect(screen.getByText("Dernière éval")).toBeTruthy();
     expect(screen.getByText("96,2 %")).toBeTruthy();
     expect(screen.getAllByTitle("Signal non calculable sur cette fenêtre.").length).toBe(2);
+    // The row's door: each agent name resolves to ITS evaluations page.
+    const doors = screen
+      .getAllByRole("link")
+      .map((l) => l.getAttribute("href") ?? "")
+      .filter((h) => h.includes("/evaluations"));
+    expect(doors).toContain("/fr/agents/support-client/evaluations");
+    expect(doors).toContain("/fr/agents/onboarding/evaluations");
   });
 });

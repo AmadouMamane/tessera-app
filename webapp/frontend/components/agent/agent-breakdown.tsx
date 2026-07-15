@@ -1,5 +1,8 @@
+import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { Link } from "@/i18n/navigation";
+import { agentPath } from "@/lib/agent-context";
 import type {
   AlarmLens,
   BreakdownLens,
@@ -444,7 +447,17 @@ function QualityTable({
           const rel = a.release?.available ? a.release : null;
           return (
             <tr key={a.id} className={rowClass(selected, dimmed)}>
-              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+              {/* The quality lens answers "how is THIS agent evaluated?" — the row is
+                  the door to the agent's own Évaluations page (ER-01 run rail). */}
+              <td className="py-1.5 pr-3 font-medium">
+                <Link
+                  href={agentPath(a.id, "evaluations") as Route}
+                  title={t("openEvaluations")}
+                  className="hover:text-[#b9a6ff] hover:underline"
+                >
+                  {a.name}
+                </Link>
+              </td>
               <td className="py-1.5 pr-3 text-right tabular-nums">
                 {row?.faithfulness == null ? (
                   <EmptyCell reason={row?.faithfulnessRefusal ?? "absent"} t={t} />
