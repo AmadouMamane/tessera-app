@@ -746,7 +746,17 @@ _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 dev-up:
 	@echo "▶ dev-up from $(CURDIR) (git $$(git rev-parse --short HEAD 2>/dev/null)) — front :$(DEV_FPORT) / back :$(DEV_BPORT) / metrics :$(DEV_MPORT)"
 	@for p in $(DEV_FPORT) $(DEV_BPORT) $(DEV_MPORT); do lsof -nP -iTCP:$$p -sTCP:LISTEN >/dev/null 2>&1 && { echo "✗ port $$p in use — 'make dev-down' first (never two servers on one port)"; exit 1; }; done; true
-	@echo "  backend  → $(DEV_BACKEND_LOG)"; TESSERA_API__PORT=$(DEV_BPORT) TESSERA_OBS_METRICS_PORT=$(DEV_MPORT) nohup $(_SETSID) uv run python scripts/run_local.py >$(DEV_BACKEND_LOG) 2>&1 </dev/null &
+	@# The app-side ClickHouse READER drinks from the same canonical file as the stack it reads.
+	@# Found live (2026-07-15): the F-9 rotation secured the containers, and nobody taught the
+	@# backend the new password — its adapter fell back to the default and every ClickHouse-backed
+	@# read answered 403 (three postures "indisponible", five naked-500 routes). Absent file ⇒
+	@# defaults, unchanged (a fresh clone without an obs stack still boots).
+	@echo "  backend  → $(DEV_BACKEND_LOG)"; \
+	  if [ -f "$(OBS_ENV_FILE)" ]; then \
+	    obs_ch_pw=$$(. ./$(OBS_ENV_FILE) && printf %s "$$TESSERA_OBS_CLICKHOUSE_PASSWORD"); \
+	    export TESSERA_CLICKHOUSE_PASSWORD="$${TESSERA_CLICKHOUSE_PASSWORD:-$$obs_ch_pw}"; \
+	  fi; \
+	  TESSERA_API__PORT=$(DEV_BPORT) TESSERA_OBS_METRICS_PORT=$(DEV_MPORT) nohup $(_SETSID) uv run python scripts/run_local.py >$(DEV_BACKEND_LOG) 2>&1 </dev/null &
 	@echo "  frontend → $(DEV_FRONT_LOG)"; cd webapp/frontend && PORT=$(DEV_FPORT) TESSERA_BACKEND_URL=http://localhost:$(DEV_BPORT) nohup $(_SETSID) corepack pnpm dev >$(DEV_FRONT_LOG) 2>&1 </dev/null &
 	@printf "  backend :$(DEV_BPORT)/healthz … "; curl -sf --retry 60 --retry-connrefused --retry-delay 1 --max-time 120 http://localhost:$(DEV_BPORT)/healthz >/dev/null && echo ok || { echo "FAIL (see $(DEV_BACKEND_LOG))"; exit 1; }
 	@printf "  frontend :$(DEV_FPORT)/api/healthz … "; curl -sf --retry 90 --retry-connrefused --retry-delay 1 --max-time 240 http://localhost:$(DEV_FPORT)/api/healthz >/dev/null && echo ok || { echo "FAIL (see $(DEV_FRONT_LOG))"; exit 1; }
