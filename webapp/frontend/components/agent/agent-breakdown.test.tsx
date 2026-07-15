@@ -572,12 +572,14 @@ describe("the quality lens answers the page's own question when nothing breaches
       // The quality lens names each agent as a client Link (the door to that agent's
       // Évaluations page), and a client Link reads the intl context — hence the provider.
       <NextIntlClientProvider locale="fr" messages={fr as unknown as AbstractIntlMessages}>
-        {await AgentBreakdown({
-          fleet: twoAgentFleet(),
-          scope: "all",
-          locale: "fr",
-          lens: quality,
-        })}
+        {
+          await AgentBreakdown({
+            fleet: twoAgentFleet(),
+            scope: "all",
+            locale: "fr",
+            lens: quality,
+          })
+        }
       </NextIntlClientProvider>,
     );
     expect(screen.getByText("Fidélité")).toBeTruthy();
