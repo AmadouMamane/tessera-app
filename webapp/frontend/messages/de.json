@@ -7873,7 +7873,16 @@
   "releaseControl": {
     "viewFleet": "Alle Agenten anzeigen",
     "viewAgent": "Agent anzeigen",
+    "summaryCases": "Bestandene Fälle",
+    "floorReason": "Blockierungsgrund (Regel 1)",
+    "stale": "Verdikt veraltet",
+    "staleTitle": "Bewertet gegen Katalog {was}; aktueller Katalog {now}",
     "explain": {
+      "summaryCases": {
+        "what": "Die bestandenen Fälle des Referenzlaufs des Agenten, auf SEINEM eigenen Bewertungsset.",
+        "how": "passed/total der Laufzusammenfassung — nicht zwischen Agenten vergleichbar (jeder Agent hat sein eigenes Set; nur der Sockel ist vergleichbar).",
+        "source": "Archiv der Bewertungsläufe (agent_release)."
+      },
       "passing": {
         "what": "Die Zahl der Agenten, deren Bewertungs-Gate grün ist — also produktiv freigebbar.",
         "how": "Eindeutige Agenten mit konformem Gate-Verdikt (Sockel + kritische Fälle OK, kein ungedeckter blockierender Fall).",

@@ -7873,7 +7873,16 @@
   "releaseControl": {
     "viewFleet": "View all agents",
     "viewAgent": "View agent",
+    "summaryCases": "Cases passed",
+    "floorReason": "Blocking reason (rule 1)",
+    "stale": "Stale verdict",
+    "staleTitle": "Scored against catalogue {was}; current catalogue {now}",
     "explain": {
+      "summaryCases": {
+        "what": "The passed cases of the agent's reference run, on ITS own evaluation set.",
+        "how": "passed/total of the run summary — not comparable across agents (each agent has its own set; only the floor set compares).",
+        "source": "Evaluation run archive (agent_release)."
+      },
       "passing": {
         "what": "The number of agents whose eval gate is green — therefore releasable to production.",
         "how": "Distinct agents whose gate verdict is conformant (floor set + critical cases OK, no uncovered blocking case).",

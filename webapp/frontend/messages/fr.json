@@ -7875,7 +7875,16 @@
   "releaseControl": {
     "viewFleet": "Voir tous les agents",
     "viewAgent": "Voir l'agent",
+    "summaryCases": "Cas passés",
+    "floorReason": "Motif du blocage (règle 1)",
+    "stale": "Verdict périmé",
+    "staleTitle": "Évalué contre le catalogue {was} ; catalogue actuel {now}",
     "explain": {
+      "summaryCases": {
+        "what": "Les cas passés du run de référence de l'agent, sur SON propre jeu d'évaluation.",
+        "how": "passed/total du résumé du run — non comparable entre agents (chaque agent a son propre set ; seul le socle est comparable).",
+        "source": "Archive des runs d'évaluation (agent_release)."
+      },
       "passing": {
         "what": "Le nombre d'agents dont la porte d'évaluation est au vert — donc libérables en production.",
         "how": "Agents distincts dont le verdict de gate est conforme (socle + cas critiques OK, aucun cas bloquant non couvert).",

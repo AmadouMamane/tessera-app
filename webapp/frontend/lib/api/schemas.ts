@@ -5728,6 +5728,19 @@ export const ReleaseControlAgentSchema = z.object({
     blocking_socle: z.number(),
     blocking_t1: z.number(),
     waived_active: z.number(),
+    // The verdict's own evidence — provenance, pass counts, staleness and the ADR 0021
+    // Rule 1 floor reason. The backend has always sent them (`ReleaseFacts`); without
+    // these declarations zod strips them and the page can say BLOQUÉ but never WHY.
+    run_at: z.string().optional(),
+    catalogue_version: z.string().optional(),
+    current_catalogue_version: z.string().optional(),
+    verdict_stale: z.boolean().optional(),
+    summary_passed: z.number().optional(),
+    summary_total: z.number().optional(),
+    socle_passed: z.number().optional(),
+    socle_total: z.number().optional(),
+    floor_ok: z.boolean().optional(),
+    floor_block: z.string().nullable().optional(),
   }),
 });
 export const ReleaseControlSchema = z.object({

@@ -132,7 +132,20 @@ export async function ReleaseControlView({
                     VERDICT_TONE[rel.verdict_tone] ?? VERDICT_TONE.muted
                   }`}
                 >
-                  <span>{rel.verdict_label}</span>
+                  <span className="flex items-center gap-1.5">
+                    {rel.verdict_label}
+                    {rel.verdict_stale ? (
+                      <span
+                        className="rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium text-amber-300"
+                        title={t("staleTitle", {
+                          was: rel.catalogue_version ?? "",
+                          now: rel.current_catalogue_version ?? "",
+                        })}
+                      >
+                        {t("stale")}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="font-mono text-[0.58rem] opacity-80">
                     {rel.candidate_version}
                   </span>
@@ -149,8 +162,23 @@ export async function ReleaseControlView({
                   <Cell label={t("evalSet")} value={rel.eval_set} />
                   <Cell label={t("executions")} value={String(rel.executions)} />
                   <Cell
+                    label={t("summaryCases")}
+                    value={
+                      rel.summary_passed != null && rel.summary_total != null
+                        ? `${rel.summary_passed}/${rel.summary_total}`
+                        : "—"
+                    }
+                    info={info("summaryCases")}
+                  />
+                  <Cell
                     label={t("socle")}
-                    value={rel.socle_ok ? t("socleOk") : t("socleFail")}
+                    value={
+                      rel.socle_passed != null && rel.socle_total != null
+                        ? `${rel.socle_passed}/${rel.socle_total}`
+                        : rel.socle_ok
+                          ? t("socleOk")
+                          : t("socleFail")
+                    }
                     tone={rel.socle_ok ? "good" : "bad"}
                     info={info("socle")}
                   />
@@ -170,6 +198,20 @@ export async function ReleaseControlView({
                     info={info("waived")}
                   />
                 </dl>
+              ) : null}
+
+              {/* The REASON an operator ships or doesn't. The floor's certificate line is
+                  measured evidence (ADR 0021 Rule 1) — rendered verbatim under a localized
+                  label, never paraphrased: the page must show who is blocked AND why. */}
+              {rel.available && !rel.passed && rel.floor_block ? (
+                <div className="rounded-md border border-red-500/30 bg-red-500/5 px-2.5 py-1.5">
+                  <p className="text-[0.6rem] font-medium uppercase tracking-wide text-red-300">
+                    {t("floorReason")}
+                  </p>
+                  <p className="mt-0.5 text-[0.62rem] leading-relaxed text-[var(--tessera-text-muted)]">
+                    {rel.floor_block}
+                  </p>
+                </div>
               ) : null}
 
               {/* Governance flow stepper. */}
