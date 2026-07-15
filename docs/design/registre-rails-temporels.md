@@ -1,6 +1,8 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.3 (2026-06-27)
+> Section destinée à `docs/design/ui-contract.md` · v1.4 (2026-07-15)
+>
+> v1.4 — ER-01 passe à **Implémenté** (rail des runs d'évaluation, page AGENT / Évaluations) : `webapp/frontend/components/agent/evaluation-run-rail.tsx`, payload `src/tessera/observability/agent_evaluations.py` (`_runs_rail`).
 >
 > v1.3 — SR-01 passe à **Implémenté** (scrubber de signaux SURVEILLER) ; le rail de la Vue d'ensemble, jadis mal nommé « XT-01 » et porteur d'un « rejeu », est réaligné sur SR-01 (modes Live/Historique/Comparé/À une date, zéro replay d'exécution, deep-link URL). XT-01 reste « À faire » sur son home Console/AGIR.
 
@@ -43,7 +45,7 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | **TE-01** | Temporal Evidence Rail | Preuve opposable / reconstitution à T | `PROUVER / État à date` | S1 | C1 (as-of) | Normatif validé |
 | **OT-01** | Object Trace Rail | Historique local d'un objet agent | Configurations, Connaissances, Garde-fous, Prompts | S1 | C1 (par-objet) | Partiel — Connaissances cadré |
 | **AT-01** | Agent Activity Rail | Activité récente (feed) — *pas* les signaux | `AGENT / Synthèse` | S1 | C1 (feed) | À faire |
-| **ER-01** | Evaluation Run Rail | Historique des runs d'évaluation | `AGENT / Évaluations` | S3 | C2 | À faire |
+| **ER-01** | Evaluation Run Rail | Historique des runs d'évaluation | `AGENT / Évaluations` | S3 | C2 | Implémenté |
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | À faire |
 | **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | À faire |
 | **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | À faire |
@@ -52,6 +54,8 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 > **SR-01 (état au 2026-06-27)** — implémenté comme `components/overview/temporal-rail.tsx`, rendu par les pages SURVEILLER (Vue d'ensemble, Qualité IA, Conformité, Sécurité & privacy). Modes **Live · Historique · Comparé (baseline) · À une date** — navigation de **signaux** uniquement (S4/C4). **Aucun replay d'exécution** : ce composant ne rejoue jamais un tour/trace (déplacement d'un curseur T sur les signaux persistés, lus as-of-T). Mode actif **toujours affiché** ; état dérivé de l'**URL** (deep-link `?asof=&win=`), pas d'un état local ; fenêtre (Période) lue depuis le **window-store partagé**, non dupliquée (§8). Le code de rail (`SR-01`) reste interne — **jamais affiché** (§ glossaire). Auparavant mal nommé « XT-01 » sur la Vue d'ensemble : corrigé.
 
 > **XT-01 reste « À faire »** — son seul home est `AGENT / Console` et `AGIR / Replay` (trace d'exécution S2/C3, replay d'exécution). Il **n'est plus** sur la Vue d'ensemble. Le waterfall de trace de la Console (`TraceColumn`) en est l'amorce ; le rail XT-01 normatif complet (scrub de spans + replay) reste à spécifier/implémenter.
+
+> **ER-01 (état au 2026-07-15)** — implémenté comme `webapp/frontend/components/agent/evaluation-run-rail.tsx`, rendu par `AGENT / Évaluations` ; payload `runs` de `src/tessera/observability/agent_evaluations.py` (`_runs_rail`). Il parcourt les **runs d'évaluation** de l'agent (S3/C2 — journal de runs lu depuis `eval/reports/<env>/`, convergent avec la table `eval_gating` mesurée le 2026-07-15 : 29/29 runs partagés identiques) — **pas** les signaux (domaine du SR-01, S4/C4), **aucun replay**. Chaque point = un run portant sa **provenance stockée** (date + version de catalogue + modèle, `eval-gate-policy.md` § provenance — jamais une « dernière éval » unique) et le **verdict gate enregistré au moment du run** (absent = « non enregistré », jamais recalculé contre les dérogations d'aujourd'hui). Modes **Live (dernier run) · Historique (run sélectionné)**, toujours affichés ; sélection dérivée de l'**URL** (deep-link `?run=<run_at>`), jamais d'un état local. Honest-empty : agent sans run ⇒ rail explicitement vide (« Éval non exécutée ») ; 1 run ⇒ 1 point sans tendance ; **Δ** de taux seulement entre **deux** runs de la **même** version de catalogue. Le code de rail (`ER-01`) reste interne — **jamais affiché**. Portes d'entrée : la Vue par agent (lentille qualité de `SURVEILLER / Qualité IA`) et la Flotte mènent à la page Évaluations de l'agent.
 
 ## 5. Contrat de composant (commun)
 
