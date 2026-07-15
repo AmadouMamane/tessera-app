@@ -59,6 +59,36 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-15 — **The page-nature model of the WHOLE site, frozen** (branch
+  `claude/contextualisation-pages`, 5 commits `43c66d3e`→docs). The `is_org_wide` doctrine
+  applied to PAGES: 27 zone pages classified `org-wide | lens:<domaine> | redirect` in
+  `webapp/frontend/lib/page-nature.ts`, pinned literally by the ratchet
+  `lib/page-nature.test.ts` (fs discovery of the five zone dirs, two-sided completeness, ZERO
+  frozen exceptions, bites-class). The declaration is **load-bearing**: lens pages load through
+  `loadDeclaredLens(route, fleet)` which derives the domain FROM the registry — and flipping a
+  declaration to org-wide makes the page **fail to compile** (TS2345, `DeclaredLensRoute`).
+  Mutation-verified red ×3: generic render on a lens:security page; registry flipped org-wide
+  (ratchet ×2 + tsc); undeclared zone page. Matrix + HALT questions:
+  `docs/design/page-nature.md`.
+
+  **Measured before written** (`?agent=<id>&signals=…`, 6/6 agents, throttled after the probe
+  itself lied twice — 429s and 500s both read as "0/6 honoured" until interrogated): 17 signals
+  honour `agent` live; `traces` is declared CUBE but has NO registered read (declared-not-served
+  → not a substrat); requesting an unregistered signal id via `?signals=` is a naked 500
+  (consigned, fleet-500 class). Three new deliveries on that measurement: **release-control
+  names the REASON** (the zod release block stripped `floor_block`/`verdict_stale`/counts that
+  the backend always sent — the blocked card now renders the ADR 0021 Rule 1 certificate
+  verbatim, cas passés 76/80, socle 18/18, périmé badge); **observabilité gets its lens**
+  (anomalies + conformance per agent; pipeline health stays org-wide in the body);
+  **audit-logs gets the proof lens** (governance + audit_count under a distinct note; chain
+  INTEGRITY stays org-wide by design). Non-régression: Vue d'ensemble untouched; the five
+  contextualised pages keep their lenses (registry pin + 392 vitest green).
+
+  **HALT (product decisions, in the report):** curation-eval-set org-wide? configurer/{garde-fous,
+  politiques, sources-memoire} global or per-agent? incidents/automations/replay-shadow — retirer
+  la vue générique (pas de vue > fausse vue) or keep explicit monitoring until a substrate?
+  etat-a-date silently reconstructs DEFAULT_AGENT_ID — agent param or assume org-wide on-page?
+
 - 2026-07-15 — **Each GOUVERNER page now contextualises its per-agent view with ITS domain's
   columns** (branch `claude/agent-lens-per-domain`: `72be992f` + the incidents fix below). The
   lens system existed and only Qualité IA used it: Sécurité & Privacy, Conformité and
