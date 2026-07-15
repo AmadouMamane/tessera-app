@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAlarmLens,
   buildComplianceLens,
+  buildObservabilityLens,
   buildQualityLens,
   buildReliabilityLens,
   buildSecurityLens,
@@ -172,6 +173,8 @@ const DOMAIN_DATA: Record<string, Record<string, unknown>> = {
   governance: { available: true, total: 1, by_kind: { routing: 1 } },
   audit_count: { entry_count: 36193, agent: "support-client" },
   cost: { n_turns: 7, total_tokens: 11124, mean_tokens: 1589.14 },
+  anomalies: { n_anomalous: 0, n_sessions: 7, sessions: [] },
+  conformance: { conformance_rate: 1.0, n_calls: 9521, n_violations: 0, violations: [] },
 };
 
 function domainSnapshot(
@@ -314,6 +317,60 @@ describe("the domain lenses are gated the same way — none of them is a back do
     expect(r.toolRefusal).toBe("org-wide");
     expect(r.totalTokens).toBeNull();
     expect(r.costRefusal).toBe("org-wide");
+  });
+
+  it("observability: honoured values come through; the empty window is 'no-sample'", () => {
+    const r = row(
+      buildObservabilityLens([{ agentId: "a1", snapshot: domainSnapshot(HONOURED) }]).rows,
+      0,
+    );
+    expect(r).toMatchObject({
+      anomalous: 0,
+      sessions: 7,
+      anomaliesRefusal: null,
+      violations: 0,
+      calls: 9521,
+      conformanceRefusal: null,
+    });
+    const empty = domainSnapshot(HONOURED, {
+      anomalies: { n_anomalous: 0, n_sessions: 0, sessions: [] },
+      conformance: { conformance_rate: 1.0, n_calls: 0, n_violations: 0, violations: [] },
+    });
+    const q = row(buildObservabilityLens([{ agentId: "quiet", snapshot: empty }]).rows, 0);
+    expect(q).toMatchObject({
+      anomalous: null,
+      anomaliesRefusal: "no-sample",
+      violations: null,
+      conformanceRefusal: "no-sample",
+    });
+  });
+
+  it("observability: an org-wide report refuses the cells, whatever the data says", () => {
+    // THE ratchet the mutation test targets on this lens: bypass the gate on `anomalies`
+    // and this goes red — the data is present, the report refuses the slice.
+    const orgWide = domainSnapshot({ ...HONOURED, org_wide: true });
+    const r = row(buildObservabilityLens([{ agentId: "a1", snapshot: orgWide }]).rows, 0);
+    expect(r.anomalous).toBeNull();
+    expect(r.anomaliesRefusal).toBe("org-wide");
+    expect(r.violations).toBeNull();
+    expect(r.conformanceRefusal).toBe("org-wide");
+  });
+
+  it("observability: one signal's refusal empties ITS cells only — never its neighbours'", () => {
+    const mixed: OverviewSnapshot = {
+      signals: {
+        anomalies: {
+          data: DOMAIN_DATA.anomalies,
+          report: { ...HONOURED, honoured: ["time"], ignored: ["agent"] },
+        },
+        conformance: { data: DOMAIN_DATA.conformance, report: HONOURED },
+      },
+    };
+    const r = row(buildObservabilityLens([{ agentId: "a1", snapshot: mixed }]).rows, 0);
+    expect(r.anomaliesRefusal).toBe("not-honoured");
+    expect(r.anomalous).toBeNull();
+    expect(r.violations).toBe(0);
+    expect(r.calls).toBe(9521);
   });
 });
 

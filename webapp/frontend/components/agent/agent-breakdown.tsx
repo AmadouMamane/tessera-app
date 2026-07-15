@@ -5,6 +5,7 @@ import type {
   BreakdownLens,
   CellEmpty,
   ComplianceLens,
+  ObservabilityLens,
   QualityLens,
   ReliabilityLens,
   SecurityLens,
@@ -128,7 +129,9 @@ export async function AgentBreakdown({
             ? t("complianceNote")
             : lens.kind === "reliability"
               ? t("reliabilityNote")
-              : t("breakdownNote");
+              : lens.kind === "observability"
+                ? t("observabilityNote")
+                : t("breakdownNote");
 
   return (
     <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
@@ -147,6 +150,8 @@ export async function AgentBreakdown({
           <ComplianceTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : lens.kind === "reliability" ? (
           <ReliabilityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+        ) : lens.kind === "observability" ? (
+          <ObservabilityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : (
           <MonitoringTable
             agents={agents}
@@ -701,6 +706,80 @@ function ComplianceTable({
         })}
       </tbody>
       <DomainFoot fleet={fleet} t={t} span={4} />
+    </table>
+  );
+}
+
+/**
+ * The observability lens (Observabilité): behavioural anomalies and tool-call schema
+ * conformance per agent — the telemetry-plane facts measured to deposit per agent.
+ * Pipeline/collector health and Langfuse traces stay in the page body: org-wide (traces
+ * is declared per-agent but has no registered read), so deliberately no column here.
+ */
+function ObservabilityTable({
+  lens,
+  agents,
+  scope,
+  t,
+  fleet,
+}: {
+  lens: ObservabilityLens;
+  agents: FleetAgent[];
+  scope: string;
+  t: Translator;
+  fleet: Fleet;
+}) {
+  const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
+  return (
+    <table className="w-full text-[0.72rem]">
+      <thead>
+        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colAnomalies")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colConformance")}</th>
+          <th className="pb-2 font-medium">{t("colRelease")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {agents.map((a) => {
+          const row = byId.get(a.id);
+          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+          return (
+            <tr key={a.id} className={rowClass(selected, dimmed)}>
+              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+              <td
+                className={`py-1.5 pr-3 text-right tabular-nums ${
+                  row?.anomalous ? "text-red-300" : ""
+                }`}
+              >
+                <PairCell
+                  found={row?.anomalous ?? null}
+                  outOf={row?.sessions ?? null}
+                  reason={row?.anomaliesRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td
+                className={`py-1.5 pr-3 text-right tabular-nums ${
+                  row?.violations ? "text-red-300" : ""
+                }`}
+              >
+                <PairCell
+                  found={row?.violations ?? null}
+                  outOf={row?.calls ?? null}
+                  reason={row?.conformanceRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td className="py-1.5">
+                <ReleaseCell agent={a} t={t} />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <DomainFoot fleet={fleet} t={t} span={3} />
     </table>
   );
 }

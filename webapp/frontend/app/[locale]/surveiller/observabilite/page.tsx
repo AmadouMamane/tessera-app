@@ -4,6 +4,7 @@ import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { HealthDashboard } from "@/components/health/health-dashboard";
 import { AppShell } from "@/components/layout/app-shell";
 import { readAgentScope } from "@/lib/agent-scope";
+import { loadDomainLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
 
 interface HealthPageProps {
@@ -23,10 +24,21 @@ export default async function HealthPage({ params, searchParams }: HealthPagePro
   const scope = readAgentScope(await searchParams);
   const fleet = await loadFleet(locale);
   const t = await getTranslations({ locale, namespace: "health" });
+  // The page's own per-agent question: behavioural anomalies and tool-call schema
+  // conformance — the telemetry facts measured to deposit per agent. Pipeline health
+  // (collector, Langfuse traces) has no served per-agent substrate and stays in the body.
+  const lens = await loadDomainLens(fleet, "observability");
   return (
     <AppShell title={t("title")} description={t("description")}>
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero perAgent={false} />
+        <GovScopeSection
+          fleet={fleet}
+          scope={scope}
+          locale={locale}
+          signalHero
+          perAgent={false}
+          lens={lens}
+        />
       </div>
       <HealthDashboard />
     </AppShell>

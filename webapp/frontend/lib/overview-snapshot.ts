@@ -43,7 +43,12 @@ export type SnapshotSignalId = (typeof SNAPSHOT_SIGNALS)[number];
  * endpoint serves any registered signal id, with the same scope report. Measured live before
  * being listed here: each answers `honoured: ["agent"]` under `?agent=`.
  */
-export const LENS_EXTRA_SIGNALS = ["tool_validity", "governance", "audit_count"] as const;
+export const LENS_EXTRA_SIGNALS = [
+  "tool_validity",
+  "governance",
+  "audit_count",
+  "conformance",
+] as const;
 
 export type SelectableSignalId = SnapshotSignalId | (typeof LENS_EXTRA_SIGNALS)[number];
 

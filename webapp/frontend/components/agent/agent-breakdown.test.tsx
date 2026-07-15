@@ -32,6 +32,7 @@ import type {
   AlarmLens,
   ComplianceLens,
   MaskedLens,
+  ObservabilityLens,
   QualityLens,
   ReliabilityLens,
   SecurityLens,
@@ -468,6 +469,54 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
       screen.getAllByTitle("Dimension agent non honorée par la lecture — valeur refusée.").length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText("Volume")).toBeNull();
+  });
+
+  it("observability: anomalies / schema conformance — and the monitoring columns are GONE", async () => {
+    const observability: ObservabilityLens = {
+      kind: "observability",
+      rows: [
+        {
+          agentId: "support-client",
+          anomalous: 1,
+          sessions: 7,
+          anomaliesRefusal: null,
+          violations: 0,
+          calls: 9521,
+          conformanceRefusal: null,
+        },
+        {
+          agentId: "onboarding",
+          anomalous: null,
+          sessions: 0,
+          anomaliesRefusal: "no-sample",
+          violations: null,
+          calls: null,
+          conformanceRefusal: "not-honoured",
+        },
+      ],
+    };
+    render(
+      await AgentBreakdown({
+        fleet: twoAgentFleet(),
+        scope: "all",
+        locale: "fr",
+        lens: observability,
+      }),
+    );
+    expect(screen.getByText("Anomalies (anormales / sessions)")).toBeTruthy();
+    expect(screen.getByText("Conformité schéma (violations / appels)")).toBeTruthy();
+    expect(screen.getByText("État de release")).toBeTruthy();
+    expect(screen.getByText("1 / 7")).toBeTruthy();
+    expect(screen.getByText("0 / 9 521")).toBeTruthy();
+    // The empty window and the refused slice are BOTH dashes, but they say different things.
+    expect(
+      screen.getAllByTitle("Aucun tour de cet agent sur la fenêtre — mesuré, pas refusé.").length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByTitle("Dimension agent non honorée par la lecture — valeur refusée.").length,
+    ).toBe(1);
+    expect(screen.queryByText("Volume")).toBeNull();
+    expect(screen.queryByText("Transferts (e/s)")).toBeNull();
   });
 });
 

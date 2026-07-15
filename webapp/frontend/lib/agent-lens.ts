@@ -52,6 +52,8 @@ const CostSchema = z.object({
   total_tokens: z.number(),
   mean_tokens: z.number(),
 });
+const AnomaliesLensSchema = z.object({ n_anomalous: z.number(), n_sessions: z.number() });
+const ConformanceLensSchema = z.object({ n_calls: z.number(), n_violations: z.number() });
 
 /** One agent's snapshot, as the server loader hands it over. */
 export interface AgentSnapshot {
@@ -190,6 +192,30 @@ export interface ReliabilityLens {
   rows: ReliabilityLensRow[];
 }
 
+/**
+ * Observabilité: the telemetry-plane facts the spine deposits per agent — behavioural
+ * anomalies (`anomalies`) and tool-call schema conformance (`conformance`), both measured
+ * live to answer `honoured: ["agent"]`. What the page's body talks about but the spine
+ * only holds org-wide (pipeline health, collector state, Langfuse traces — declared
+ * per-agent but with no registered read) is NOT a column: no per-agent substrate, no column.
+ */
+export interface ObservabilityLensRow {
+  agentId: string;
+  /** Anomalous sessions / sessions screened. `null` + refusal when unproven; "no-sample" at 0. */
+  anomalous: number | null;
+  sessions: number | null;
+  anomaliesRefusal: CellEmpty | null;
+  /** Schema violations / tool calls checked — the agent's telemetry-contract conformance. */
+  violations: number | null;
+  calls: number | null;
+  conformanceRefusal: CellEmpty | null;
+}
+
+export interface ObservabilityLens {
+  kind: "observability";
+  rows: ObservabilityLensRow[];
+}
+
 export type BreakdownLens =
   | MonitoringLens
   | AlarmLens
@@ -197,7 +223,8 @@ export type BreakdownLens =
   | MaskedLens
   | SecurityLens
   | ComplianceLens
-  | ReliabilityLens;
+  | ReliabilityLens
+  | ObservabilityLens;
 
 export type LensPlan =
   | { kind: "alarm"; signalId: string }
@@ -352,6 +379,46 @@ export function buildComplianceLens(agentSnapshots: readonly AgentSnapshot[]): C
     },
   );
   return { kind: "compliance", rows };
+}
+
+/**
+ * Build the observability lens rows: anomalies and schema conformance, gated per signal
+ * through the same single door — one signal's refusal empties ITS cells only.
+ */
+export function buildObservabilityLens(
+  agentSnapshots: readonly AgentSnapshot[],
+): ObservabilityLens {
+  const rows: ObservabilityLensRow[] = agentSnapshots.map(
+    ({ agentId, snapshot }): ObservabilityLensRow => {
+      const anomalies = selectHonouredSignal(snapshot, "anomalies", AnomaliesLensSchema, "agent");
+      const conformance = selectHonouredSignal(
+        snapshot,
+        "conformance",
+        ConformanceLensSchema,
+        "agent",
+      );
+      return {
+        agentId,
+        anomalous:
+          anomalies.ok && anomalies.data.n_sessions > 0 ? anomalies.data.n_anomalous : null,
+        sessions: anomalies.ok ? anomalies.data.n_sessions : null,
+        anomaliesRefusal: anomalies.ok
+          ? anomalies.data.n_sessions === 0
+            ? "no-sample"
+            : null
+          : anomalies.refusal,
+        violations:
+          conformance.ok && conformance.data.n_calls > 0 ? conformance.data.n_violations : null,
+        calls: conformance.ok ? conformance.data.n_calls : null,
+        conformanceRefusal: conformance.ok
+          ? conformance.data.n_calls === 0
+            ? "no-sample"
+            : null
+          : conformance.refusal,
+      };
+    },
+  );
+  return { kind: "observability", rows };
 }
 
 /** Build the reliability lens rows: tool errors and token cost, gated per signal. */

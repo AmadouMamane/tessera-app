@@ -5,6 +5,7 @@ import {
   type BreakdownLens,
   buildAlarmLens,
   buildComplianceLens,
+  buildObservabilityLens,
   buildQualityLens,
   buildReliabilityLens,
   buildSecurityLens,
@@ -68,7 +69,12 @@ export async function loadBreakdownLens(
 }
 
 /** The GOUVERNER domains whose pages carry their own per-agent lens. */
-export type LensDomain = "security" | "compliance" | "reliability" | "improvement";
+export type LensDomain =
+  | "security"
+  | "compliance"
+  | "reliability"
+  | "improvement"
+  | "observability";
 
 /**
  * The per-agent signals each domain page fans out for — ONLY signals measured to answer
@@ -84,6 +90,10 @@ const DOMAIN_SIGNALS: Record<LensDomain, string> = {
   compliance: "governance,audit_count",
   reliability: "tool_validity,cost",
   improvement: "slo,scores",
+  // Measured 2026-07-15 (`?agent=<id>&signals=…`, 6/6 agents `honoured: ["agent"]`).
+  // `traces` is deliberately absent: declared per-agent in capabilities.py but with no
+  // registered read — a declared capability with no serve is not a substrate.
+  observability: "anomalies,conformance",
 };
 
 /**
@@ -113,5 +123,7 @@ export async function loadDomainLens(
       return buildReliabilityLens(perAgent);
     case "improvement":
       return buildQualityLens(perAgent);
+    case "observability":
+      return buildObservabilityLens(perAgent);
   }
 }
