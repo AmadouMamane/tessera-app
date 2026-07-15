@@ -337,7 +337,18 @@ function AlarmTable({
           const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
           return (
             <tr key={a.id} className={rowClass(selected, dimmed)}>
-              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+              {/* Same door as the quality lens: the alarm lens REPLACES it while a
+                  signal burns, and the way to an agent's evaluations must not
+                  disappear exactly when someone is investigating quality. */}
+              <td className="py-1.5 pr-3 font-medium">
+                <Link
+                  href={agentPath(a.id, "evaluations") as Route}
+                  title={t("openEvaluations")}
+                  className="hover:text-[#b9a6ff] hover:underline"
+                >
+                  {a.name}
+                </Link>
+              </td>
               <td className="py-1.5 pr-3 text-right tabular-nums">
                 {row.value === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtRate(row.value)}
               </td>

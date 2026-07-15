@@ -10,6 +10,7 @@
 // declaration would silently re-arm the bug).
 import { cleanup, render, screen } from "@testing-library/react";
 import { type AbstractIntlMessages, NextIntlClientProvider, createTranslator } from "next-intl";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import de from "@/messages/de.json";
@@ -40,6 +41,15 @@ import type {
 import { FleetSchema } from "@/lib/api/schemas";
 
 afterEach(cleanup);
+
+/** Render under the intl provider — lenses whose agent names are doors (client Links) need it. */
+function renderWithIntl(node: ReactNode) {
+  return render(
+    <NextIntlClientProvider locale="fr" messages={fr as unknown as AbstractIntlMessages}>
+      {node}
+    </NextIntlClientProvider>,
+  );
+}
 
 /** Row `i` of the rendered table, or a loud failure — never a silently skipped assertion. */
 function rowAt(rows: HTMLElement[], i: number): HTMLElement {
@@ -249,7 +259,7 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
   };
 
   it("answers the breached signal per agent, sorted by contribution, and names the culprit", async () => {
-    render(
+    renderWithIntl(
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: alarm }),
     );
 
@@ -267,10 +277,16 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
     // Monitoring columns are GONE — they answered a different question.
     expect(screen.queryByText("Latence")).toBeNull();
     expect(screen.queryByText("Transferts (e/s)")).toBeNull();
+    // The door survives the alarm: each culprit's name leads to ITS evaluations page.
+    const doors = screen
+      .getAllByRole("link")
+      .map((l) => l.getAttribute("href") ?? "")
+      .filter((h) => h.includes("/evaluations"));
+    expect(doors).toContain("/fr/agents/support-client/evaluations");
   });
 
   it("shows the contribution reconciliation — ∑ slices vs the deduplicated org total", async () => {
-    render(
+    renderWithIntl(
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: alarm }),
     );
     // 14 + 5 = 19 = the org's own count on this window: stated, not assumed.
@@ -281,7 +297,7 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
     // A handed-off journey touches two agents and counts ONCE in the org: ∑ slices = org would
     // be a coincidence, not a proof. The same discipline as the handoff footer above.
     const unreconciled: AlarmLens = { ...alarm, sumNBad: 19, orgNBad: 17 };
-    render(
+    renderWithIntl(
       await AgentBreakdown({
         fleet: twoAgentFleet(),
         scope: "all",
@@ -308,7 +324,7 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
         },
       ],
     };
-    render(
+    renderWithIntl(
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: blind }),
     );
     const rows = screen.getAllByRole("row");
