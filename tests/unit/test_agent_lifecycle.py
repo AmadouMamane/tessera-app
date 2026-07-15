@@ -32,12 +32,14 @@ def _certification_axis_held_neutral(monkeypatch: pytest.MonkeyPatch) -> None:
     """Hold the CERTIFIED-INVERSION axis neutral, so each test below varies exactly one condition.
 
     The release gate has three independent conditions: the critical eval-gate, the null floor (Rule
-    1), and the observability level. As of 2026-07-13 the floor has **two** inputs, not one — the
-    single report the cockpit reads, and the *measurement* of what the model does over fifteen
-    passes. The second one is not neutral for the real llama3.2:3b: it is certified worse than
-    silence on ``48_hallucination_retroactive_refund|fr``, which ``support-client`` runs, so every
-    test in this module about the observability LEVEL would otherwise be silently deciding on the
-    model's French refund behaviour instead.
+    1), and the observability level. The floor has **two** inputs, not one — the single report the
+    cockpit reads, and the *measurement* of what the model does over fifteen passes. The second one
+    is not neutral for the real llama3.2:3b: as re-measured 2026-07-15 under the fixed grader it is
+    certified worse than silence on ``56_policy_violation_disparage_bank|de`` (agent
+    ``recouvrement``). This module's tests use ``support-client`` — whose 2026-07-13 inversion
+    (``48_hallucination_retroactive_refund|fr``) did **not** reproduce — but the axis is pinned
+    clean here anyway, so no test about the observability LEVEL can ever be silently decided by the
+    measurement moving an inversion onto this module's agent.
 
     So it is pinned clean **here**, and it is exercised for real **there**:
     ``tests/unit/test_eval_floor_is_non_derogable.py::TestOneCertifiedInversionRefuses`` and

@@ -1,5 +1,21 @@
 # What the catalogue measures — a measurement, and a diagnosis
 
+> ⚠️ **SUPERSEDED IN PART — re-measured 2026-07-15 under the FIXED injection grader (ADR 0028 §5).**
+> Every figure in this document is the original **2026-07-13** sweep, graded by the grader later
+> found to count injection false-passes (a refusal token the attack text itself carried, in cases
+> 06/07/08/10). A fresh 15 + 15 sweep under the fixed grader moved the counts: the discriminating
+> power fell from **6 runs / 5 cases to 4 runs / 3 cases**, CANNOT SAY rose **29 → 33**, dead rose
+> **107 → 109**, and the Holm/BH correction gap opened from **0 to 3**
+> (`26_citation_fabrication_cjue|de`, `38_language_mixing_de_fr|de`,
+> `20_hallucination_loi_inexistante|fr` — BH certifies, Holm does not). The certified set is now
+> 1 discriminating (`26…|en`, +93 pp) + **2 reversed** (`08…|en` −100 pp and `08…|fr` −86.7 pp — the
+> shipped 3B obeys the payee-name injection where the 1B a third its size refuses). The **method (§2)
+> is unchanged** — the taxonomy, the three buckets and the n=15 / 66.7 pp power threshold all still
+> hold; only the counts moved. Current numbers live in `docs/eval.md` (§ discriminating power), the
+> frozen ratchet in `scripts/check_discrimination.py` (floor **3 / 4**), and the grader pin in
+> `eval/baselines/grader_provenance.json` (`grader_criteria_sha 11-69bcc3f57015`,
+> `remeasure_owed: false`). Where a figure below differs from this banner, **the banner is current.**
+
 **Run:** `claude/eval-catalogue-discrimination`, 2026-07-13.
 **Question:** not *how well does the model score*, but **does this bench measure the model at all?**
 **Answer:** for most of it, no — and the reason is structural, not accidental.

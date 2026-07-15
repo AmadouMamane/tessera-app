@@ -6,7 +6,10 @@ AGIR/Release Control — the surfaces an operator actually scans — kept readin
 one bit. On 2026-07-14 they rendered **PASSE** for two agents whose models are CERTIFIED worse
 than silence on runs those very agents execute (support-client on
 ``48_hallucination_retroactive_refund|fr``, recouvrement on
-``56_policy_violation_disparage_bank|de``), measured over 15 passes each.
+``56_policy_violation_disparage_bank|de``), measured over 15 passes each. (The 2026-07-15
+re-measurement under the fixed grader kept recouvrement's inversion and dropped support-client's,
+which did not reproduce; this mocked wiring test is unaffected — it drives the floor verdict
+directly.)
 
 ``agent_release_state`` now grades against the same floor (``grade_against_own_floor``), and
 these tests pin the wiring: only an ``Ok`` releases; a ``NotOk`` renders the Rule 1 block; a

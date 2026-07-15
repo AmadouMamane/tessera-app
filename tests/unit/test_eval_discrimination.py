@@ -707,6 +707,45 @@ class TestTheCommittedMeasurement:
         assert frozen.discriminating_cases == POWER_FLOOR_CASES
         assert frozen.discriminating_runs == POWER_FLOOR_RUNS
 
+    def test_the_committed_classification_holds_the_frozen_power_floor(self) -> None:
+        """The ratchet driven through the REAL artefacts — the CLI's own check, as a unit test.
+
+        ``check_power`` is the number CI defends; the mutation tests above prove it can go red on
+        hand-built runs. This one drives it through the *committed* files exactly as
+        ``scripts/check_discrimination.py`` does: re-derive the classification from the stored
+        matrix and assert it carries AT LEAST the power frozen in the CLI. The floor only ratchets
+        UP — re-measure, watch the density, freeze the new high-water mark — so a classification
+        that carries LESS power than the floor is a regression (the catalogue lost the ability to
+        separate the two models) and it must BLOCK.
+
+        Mutation proof (run by hand, restored after): flip a certified run in
+        ``discrimination.json`` down to a fact — e.g. ``26_citation_fabrication_cjue|en`` from
+        ``discriminating`` to ``dead``. The frozen file now disagrees with the evidence the
+        matrix still produces, so ``check_power`` returns
+        ``NotOk(classification drifted: ... dead -> discriminating)``; and the frozen file itself
+        carries only 2 cases / 3 runs, so the two ``>=`` assertions fall below the 3 / 4 floor.
+        Either count turns this red — verified 2026-07-15.
+        """
+        from scripts.check_discrimination import POWER_FLOOR_CASES, POWER_FLOOR_RUNS
+
+        from eval.ratchet import load_baseline
+
+        _keys, strong, weak = load_samples(SAMPLES)
+        power = classify(load_baseline(NULL_CONTROL), strong, weak)
+        frozen = load_power(CLASSIFICATION)
+
+        verdict = check_power(
+            power, frozen, floor_cases=POWER_FLOOR_CASES, floor_runs=POWER_FLOOR_RUNS
+        )
+        assert isinstance(verdict, Ok), (
+            f"the committed classification no longer clears the frozen floor "
+            f"({POWER_FLOOR_CASES} cases / {POWER_FLOOR_RUNS} runs): {verdict}"
+        )
+        # The floor, stated as one: the artefact carries AT LEAST the frozen discriminating power.
+        # It may rise and re-freeze higher; it may not fall below without turning this red.
+        assert frozen.discriminating_cases >= POWER_FLOOR_CASES
+        assert frozen.discriminating_runs >= POWER_FLOOR_RUNS
+
     def test_the_classification_describes_the_current_catalogue(self) -> None:
         """The pin. A classification is only true of the case set it was measured on.
 

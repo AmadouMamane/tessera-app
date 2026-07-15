@@ -50,10 +50,13 @@ They answer different questions, and this module publishes both.
   modest power fails to certify and falls into the bucket a reader will read as "noise".
 
 The gap between the two sets is **reported, never hidden** (:attr:`CataloguePower.correction_gap`).
-On the measurement committed to ``eval/baselines/discrimination.json`` it is **empty** — the
-certified discriminators separate so violently that both corrections agree — and that is a finding
-about *these* runs, not a licence to stop computing it. At a smaller effect size the two sets come
-apart, and the day they do, the diagnosis must not silently inherit the ratchet's caution.
+On the pre-fix-grader measurement it was **empty** — the certified discriminators separated so
+violently that both corrections agreed. Under the fixed injection grader (ADR 0028 §5, re-measured
+2026-07-15 into ``eval/baselines/discrimination.json``) the two sets **come apart**: three runs BH
+certifies and Holm will not (``26_citation_fabrication_cjue|de``, ``38_language_mixing_de_fr|de``,
+``20_hallucination_loi_inexistante|fr``). That is exactly the case this attribute exists for — the
+diagnosis must not silently inherit the ratchet's caution — and it is a finding about *these* runs,
+not a licence to stop computing it.
 
 The power of the catalogue is a NUMBER, and it is pinned to a catalogue
 -----------------------------------------------------------------------
