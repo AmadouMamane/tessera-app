@@ -351,17 +351,30 @@ def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
         },
     ]
 
-    # REAL feed: the latest deny events from the ledger (rule label + real time).
-    latest = sorted(core.events, key=lambda e: e[0], reverse=True)[:4]
-    recent_incidents = [
-        {
-            "id": _inc_id(rule),
-            "label": core.trigger_label(rule, lang),
-            "severity": severity,
-            "time": when.strftime("%H:%M"),
-        }
-        for when, rule, severity in latest
-    ]
+    # REAL feed: the latest deny events from the ledger (rule label + real time), ONE row
+    # per incident. The id is the cluster's (per rule), so a burst of denies from a single
+    # rule is one incident seen last at its latest time — never the same id four times
+    # (`key={inc.id}` downstream: an id that names two rows names neither). Found live:
+    # the four latest events all came from one injection campaign and the feed read
+    # INC-449 x4, which React reported as a duplicate-key error to the operator.
+    recent_feed_limit = 4
+    recent_incidents: list[dict[str, str]] = []
+    recent_seen: set[str] = set()
+    for when, rule, severity in sorted(core.events, key=lambda e: e[0], reverse=True):
+        inc_id = _inc_id(rule)
+        if inc_id in recent_seen:
+            continue
+        recent_seen.add(inc_id)
+        recent_incidents.append(
+            {
+                "id": inc_id,
+                "label": core.trigger_label(rule, lang),
+                "severity": severity,
+                "time": when.strftime("%H:%M"),
+            }
+        )
+        if len(recent_incidents) == recent_feed_limit:
+            break
     if not recent_incidents and core.low_score and core.low_last:
         recent_incidents = [
             {

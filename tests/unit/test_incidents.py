@@ -88,8 +88,18 @@ def test_recent_feed_and_footer_are_live(monkeypatch: pytest.MonkeyPatch) -> Non
     _wire(monkeypatch)
     payload = inc.compute_incidents_overview("en")
     recent = payload["recent_incidents"]
-    assert len(recent) == 4  # the 4 most recent in-window deny events
+    # 5 in-window deny EVENTS collapse to one row per INCIDENT (rule cluster): the feed
+    # lists incidents and its id is the row's identity. Found live: the four latest events
+    # were one injection burst and the feed read INC-449 four times — React reported the
+    # duplicate key to the operator as the dev-overlay "1 error" badge.
+    ids = [r["id"] for r in recent]
+    assert len(ids) == len(set(ids)), f"an id that names two rows names neither: {ids}"
+    assert len(recent) == 3  # injection, wire-transfer, pii — one row each
     assert recent[0]["label"] == "Prompt injection"
+    # The burst's single row is stamped with its LATEST event, not an older one.
+    assert recent[0]["time"] == (NOW - timedelta(hours=1)).strftime("%H:%M")
+    # What the dedup did not list is still counted, never silently dropped.
+    assert payload["recent_more"] == 2
     footer = payload["footer"]
     assert footer["critical"] == 2
     assert footer["proofs"] == 5  # real in-window deny events
