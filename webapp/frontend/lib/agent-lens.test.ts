@@ -17,7 +17,14 @@
 // A number nobody can prove is a number nobody should read.
 import { describe, expect, it } from "vitest";
 
-import { buildAlarmLens, buildQualityLens, planLens } from "@/lib/agent-lens";
+import {
+  buildAlarmLens,
+  buildComplianceLens,
+  buildQualityLens,
+  buildReliabilityLens,
+  buildSecurityLens,
+  planLens,
+} from "@/lib/agent-lens";
 import type { OverviewSnapshot } from "@/lib/overview-snapshot";
 import { readSignalFocus, registryIdFor } from "@/lib/signal-focus";
 import { isOrgWide } from "@/lib/signal-registry";
@@ -148,6 +155,165 @@ describe("the ratchet: no lens may display a number the report declares NOT HONO
       faithfulnessRefusal: "not-honoured",
       hallucination: null,
     });
+  });
+});
+
+// ── The domain lenses (Sécurité / Conformité / Fiabilité) ride the SAME gate ────────────────
+//
+// The wire shapes below are the LIVE measured payloads (2026-07-15, `?agent=<id>&signals=…`):
+// support-client answered pii_leak {n_turns:7, n_with_leak:0}, tool_validity {total:9521,
+// denied:133, errored:0}, governance {total:1}, audit_count {entry_count:36193}, cost
+// {n_turns:7, total_tokens:11124} — and hello/turn/duplex answered the same shapes at zero.
+
+const DOMAIN_DATA: Record<string, Record<string, unknown>> = {
+  pii_leak: { n_turns: 7, n_with_leak: 0, leak_rate: 0.0, total_leaked: 0 },
+  toxicity: { n_turns: 7, n_toxic: 0, toxicity_rate: 0.0 },
+  tool_validity: { total: 9521, allowed: 9388, denied: 133, errored: 0 },
+  governance: { available: true, total: 1, by_kind: { routing: 1 } },
+  audit_count: { entry_count: 36193, agent: "support-client" },
+  cost: { n_turns: 7, total_tokens: 11124, mean_tokens: 1589.14 },
+};
+
+function domainSnapshot(
+  report: Record<string, unknown>,
+  data: Record<string, Record<string, unknown>> = DOMAIN_DATA,
+): OverviewSnapshot {
+  return {
+    signals: Object.fromEntries(Object.entries(data).map(([id, d]) => [id, { data: d, report }])),
+  };
+}
+
+describe("the domain lenses are gated the same way — none of them is a back door", () => {
+  it("security: agent IGNORED ⇒ every cell refused, and says so", () => {
+    const ignored = domainSnapshot({ ...HONOURED, honoured: ["time"], ignored: ["agent"] });
+    const lens = buildSecurityLens([{ agentId: "a1", snapshot: ignored }]);
+    expect(row(lens.rows, 0)).toMatchObject({
+      piiLeaks: null,
+      piiRefusal: "not-honoured",
+      toxCount: null,
+      toxRefusal: "not-honoured",
+      guardDenied: null,
+      guardRefusal: "not-honoured",
+    });
+  });
+
+  it("security: a report saying ORG-WIDE ⇒ refused, even though the data is right there", () => {
+    // THE ratchet the mutation test targets: force a security column onto an org-wide
+    // signal and this goes red — the data is present, the report refuses the slice.
+    const orgWide = domainSnapshot({ ...HONOURED, org_wide: true });
+    const lens = buildSecurityLens([{ agentId: "a1", snapshot: orgWide }]);
+    expect(row(lens.rows, 0).piiLeaks).toBeNull();
+    expect(row(lens.rows, 0).piiRefusal).toBe("org-wide");
+    expect(row(lens.rows, 0).guardDenied).toBeNull();
+    expect(row(lens.rows, 0).guardRefusal).toBe("org-wide");
+  });
+
+  it("security: UNAVAILABLE ⇒ refused; NO readable report ⇒ refused", () => {
+    const dead = domainSnapshot({ ...HONOURED, unavailable: true });
+    expect(row(buildSecurityLens([{ agentId: "a1", snapshot: dead }]).rows, 0).piiRefusal).toBe(
+      "unavailable",
+    );
+    const noReport: OverviewSnapshot = {
+      signals: Object.fromEntries(Object.entries(DOMAIN_DATA).map(([id, d]) => [id, { data: d }])),
+    };
+    expect(row(buildSecurityLens([{ agentId: "a1", snapshot: noReport }]).rows, 0).piiRefusal).toBe(
+      "no-report",
+    );
+  });
+
+  it("security: one signal's refusal empties ITS cells only — never its neighbours'", () => {
+    const mixed: OverviewSnapshot = {
+      signals: {
+        pii_leak: {
+          data: DOMAIN_DATA.pii_leak,
+          report: { ...HONOURED, honoured: ["time"], ignored: ["agent"] },
+        },
+        toxicity: { data: DOMAIN_DATA.toxicity, report: HONOURED },
+        tool_validity: { data: DOMAIN_DATA.tool_validity, report: HONOURED },
+      },
+    };
+    const r = row(buildSecurityLens([{ agentId: "a1", snapshot: mixed }]).rows, 0);
+    expect(r.piiRefusal).toBe("not-honoured");
+    expect(r.toxCount).toBe(0);
+    expect(r.toxN).toBe(7);
+    expect(r.guardDenied).toBe(133);
+    expect(r.guardTotal).toBe(9521);
+  });
+
+  it("security: n = 0 is 'no sample', never a fabricated 0-of-0 — and it is NOT a refusal", () => {
+    const empty = domainSnapshot(HONOURED, {
+      pii_leak: { n_turns: 0, n_with_leak: 0 },
+      toxicity: { n_turns: 0, n_toxic: 0 },
+      tool_validity: { total: 0, allowed: 0, denied: 0, errored: 0 },
+    });
+    const r = row(buildSecurityLens([{ agentId: "quiet", snapshot: empty }]).rows, 0);
+    expect(r).toMatchObject({
+      piiLeaks: null,
+      piiN: 0,
+      piiRefusal: "no-sample",
+      toxRefusal: "no-sample",
+      guardRefusal: "no-sample",
+    });
+  });
+
+  it("compliance: counts are honest at ZERO — a proven read that found nothing is a 0, not a dash", () => {
+    const zeroed = domainSnapshot(HONOURED, {
+      governance: { available: true, total: 0 },
+      audit_count: { entry_count: 0 },
+    });
+    const r = row(buildComplianceLens([{ agentId: "hello-agent", snapshot: zeroed }]).rows, 0);
+    expect(r).toMatchObject({
+      governedActs: 0,
+      governedRefusal: null,
+      ledgerEntries: 0,
+      ledgerRefusal: null,
+    });
+  });
+
+  it("compliance: agent IGNORED ⇒ refused — 36 193 ledger entries do not excuse an unproven slice", () => {
+    const ignored = domainSnapshot({ ...HONOURED, honoured: ["time"], ignored: ["agent"] });
+    const r = row(buildComplianceLens([{ agentId: "a1", snapshot: ignored }]).rows, 0);
+    expect(r).toMatchObject({
+      governedActs: null,
+      governedRefusal: "not-honoured",
+      ledgerEntries: null,
+      ledgerRefusal: "not-honoured",
+    });
+  });
+
+  it("reliability: honoured values come through; the empty window is 'no-sample'", () => {
+    const r = row(
+      buildReliabilityLens([{ agentId: "a1", snapshot: domainSnapshot(HONOURED) }]).rows,
+      0,
+    );
+    expect(r).toMatchObject({
+      toolErrors: 0,
+      toolTotal: 9521,
+      toolRefusal: null,
+      totalTokens: 11124,
+      costN: 7,
+      costRefusal: null,
+    });
+    const empty = domainSnapshot(HONOURED, {
+      tool_validity: { total: 0, allowed: 0, denied: 0, errored: 0 },
+      cost: { n_turns: 0, total_tokens: 0, mean_tokens: 0 },
+    });
+    const q = row(buildReliabilityLens([{ agentId: "quiet", snapshot: empty }]).rows, 0);
+    expect(q).toMatchObject({
+      toolErrors: null,
+      toolRefusal: "no-sample",
+      totalTokens: null,
+      costRefusal: "no-sample",
+    });
+  });
+
+  it("reliability: an org-wide report refuses the cells, whatever the data says", () => {
+    const orgWide = domainSnapshot({ ...HONOURED, org_wide: true });
+    const r = row(buildReliabilityLens([{ agentId: "a1", snapshot: orgWide }]).rows, 0);
+    expect(r.toolErrors).toBeNull();
+    expect(r.toolRefusal).toBe("org-wide");
+    expect(r.totalTokens).toBeNull();
+    expect(r.costRefusal).toBe("org-wide");
   });
 });
 

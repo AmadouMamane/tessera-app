@@ -34,6 +34,25 @@ const SnapshotScoresSchema = z.object({
   scores: z.array(z.object({ metric: z.string(), score: z.number() })),
 });
 
+// Domain-lens payloads — like `SnapshotScoresSchema`, each declares ONLY the fields its lens
+// reads. The wire shapes were measured live (`?agent=<id>&signals=…`) before being written down,
+// never inferred from the route source: a sample shows what WAS there, and these are the fields
+// every agent's answer carried, including the three agents whose window is empty.
+const PiiLeakSchema = z.object({ n_turns: z.number(), n_with_leak: z.number() });
+const ToxicitySchema = z.object({ n_turns: z.number(), n_toxic: z.number() });
+const ToolValiditySchema = z.object({
+  total: z.number(),
+  denied: z.number(),
+  errored: z.number(),
+});
+const GovernanceFeedSchema = z.object({ total: z.number() });
+const AuditCountSchema = z.object({ entry_count: z.number() });
+const CostSchema = z.object({
+  n_turns: z.number(),
+  total_tokens: z.number(),
+  mean_tokens: z.number(),
+});
+
 /** One agent's snapshot, as the server loader hands it over. */
 export interface AgentSnapshot {
   agentId: string;
@@ -105,7 +124,80 @@ export interface MonitoringLens {
   kind: "monitoring";
 }
 
-export type BreakdownLens = MonitoringLens | AlarmLens | QualityLens | MaskedLens;
+/**
+ * Sécurité & Privacy: the per-agent security facts the spine actually deposits per agent —
+ * PII leaks, toxicity, guard denials (`tool_validity.denied`, the per-agent trace of the
+ * guard's enforcement). What the page's banner talks about but the spine only holds org-wide
+ * (`firewall` efficacy, injection bypass) is NOT a column: no per-agent substrate, no column.
+ */
+export interface SecurityLensRow {
+  agentId: string;
+  /** PII leaks found / turns screened. `null` + refusal when unproven; "no-sample" when n = 0. */
+  piiLeaks: number | null;
+  piiN: number | null;
+  piiRefusal: CellEmpty | null;
+  toxCount: number | null;
+  toxN: number | null;
+  toxRefusal: CellEmpty | null;
+  /** Tool calls the guard denied / total calls — per-agent guard enforcement, measured. */
+  guardDenied: number | null;
+  guardTotal: number | null;
+  guardRefusal: CellEmpty | null;
+}
+
+export interface SecurityLens {
+  kind: "security";
+  rows: SecurityLensRow[];
+}
+
+/**
+ * Conformité: governed acts (`governance`) and ledger entries (`audit_count`) per agent.
+ * These are COUNTS: an agent with zero governed acts on the window shows an honest 0, not a
+ * dash — zero acts is a fact. (Ledger *integrity* is org-wide by construction and is not here.)
+ */
+export interface ComplianceLensRow {
+  agentId: string;
+  governedActs: number | null;
+  governedRefusal: CellEmpty | null;
+  ledgerEntries: number | null;
+  ledgerRefusal: CellEmpty | null;
+}
+
+export interface ComplianceLens {
+  kind: "compliance";
+  rows: ComplianceLensRow[];
+}
+
+/**
+ * Fiabilité & coût: tool errors (`tool_validity.errored`) and token cost (`cost`) per agent.
+ * Latency p95 has NO per-agent substrate (the posture estimates it org-wide from the token
+ * distribution), so it is not a column; the table shows the fleet's own per-agent average
+ * latency instead — the same fact the monitoring lens already renders.
+ */
+export interface ReliabilityLensRow {
+  agentId: string;
+  toolErrors: number | null;
+  toolTotal: number | null;
+  toolRefusal: CellEmpty | null;
+  totalTokens: number | null;
+  meanTokens: number | null;
+  costN: number | null;
+  costRefusal: CellEmpty | null;
+}
+
+export interface ReliabilityLens {
+  kind: "reliability";
+  rows: ReliabilityLensRow[];
+}
+
+export type BreakdownLens =
+  | MonitoringLens
+  | AlarmLens
+  | QualityLens
+  | MaskedLens
+  | SecurityLens
+  | ComplianceLens
+  | ReliabilityLens;
 
 export type LensPlan =
   | { kind: "alarm"; signalId: string }
@@ -212,4 +304,73 @@ export function buildQualityLens(agentSnapshots: readonly AgentSnapshot[]): Qual
     };
   });
   return { kind: "quality", rows };
+}
+
+/**
+ * Build the security lens rows. Every value passes through `selectHonouredSignal` — the same
+ * single door as the alarm and quality lenses, per signal: one signal's refusal empties ITS
+ * cells only, never its neighbours'. Rates with an empty window (n = 0) are "no-sample".
+ */
+export function buildSecurityLens(agentSnapshots: readonly AgentSnapshot[]): SecurityLens {
+  const rows: SecurityLensRow[] = agentSnapshots.map(({ agentId, snapshot }): SecurityLensRow => {
+    const pii = selectHonouredSignal(snapshot, "pii_leak", PiiLeakSchema, "agent");
+    const tox = selectHonouredSignal(snapshot, "toxicity", ToxicitySchema, "agent");
+    const guard = selectHonouredSignal(snapshot, "tool_validity", ToolValiditySchema, "agent");
+    return {
+      agentId,
+      piiLeaks: pii.ok && pii.data.n_turns > 0 ? pii.data.n_with_leak : null,
+      piiN: pii.ok ? pii.data.n_turns : null,
+      piiRefusal: pii.ok ? (pii.data.n_turns === 0 ? "no-sample" : null) : pii.refusal,
+      toxCount: tox.ok && tox.data.n_turns > 0 ? tox.data.n_toxic : null,
+      toxN: tox.ok ? tox.data.n_turns : null,
+      toxRefusal: tox.ok ? (tox.data.n_turns === 0 ? "no-sample" : null) : tox.refusal,
+      guardDenied: guard.ok && guard.data.total > 0 ? guard.data.denied : null,
+      guardTotal: guard.ok ? guard.data.total : null,
+      guardRefusal: guard.ok ? (guard.data.total === 0 ? "no-sample" : null) : guard.refusal,
+    };
+  });
+  return { kind: "security", rows };
+}
+
+/**
+ * Build the compliance lens rows. Governed acts and ledger entries are COUNTS: a proven read
+ * that found nothing is an honest 0 (three of the six live agents have exactly that), never a
+ * dash — only an unproven read refuses.
+ */
+export function buildComplianceLens(agentSnapshots: readonly AgentSnapshot[]): ComplianceLens {
+  const rows: ComplianceLensRow[] = agentSnapshots.map(
+    ({ agentId, snapshot }): ComplianceLensRow => {
+      const gov = selectHonouredSignal(snapshot, "governance", GovernanceFeedSchema, "agent");
+      const ledger = selectHonouredSignal(snapshot, "audit_count", AuditCountSchema, "agent");
+      return {
+        agentId,
+        governedActs: gov.ok ? gov.data.total : null,
+        governedRefusal: gov.ok ? null : gov.refusal,
+        ledgerEntries: ledger.ok ? ledger.data.entry_count : null,
+        ledgerRefusal: ledger.ok ? null : ledger.refusal,
+      };
+    },
+  );
+  return { kind: "compliance", rows };
+}
+
+/** Build the reliability lens rows: tool errors and token cost, gated per signal. */
+export function buildReliabilityLens(agentSnapshots: readonly AgentSnapshot[]): ReliabilityLens {
+  const rows: ReliabilityLensRow[] = agentSnapshots.map(
+    ({ agentId, snapshot }): ReliabilityLensRow => {
+      const tools = selectHonouredSignal(snapshot, "tool_validity", ToolValiditySchema, "agent");
+      const cost = selectHonouredSignal(snapshot, "cost", CostSchema, "agent");
+      return {
+        agentId,
+        toolErrors: tools.ok && tools.data.total > 0 ? tools.data.errored : null,
+        toolTotal: tools.ok ? tools.data.total : null,
+        toolRefusal: tools.ok ? (tools.data.total === 0 ? "no-sample" : null) : tools.refusal,
+        totalTokens: cost.ok && cost.data.n_turns > 0 ? cost.data.total_tokens : null,
+        meanTokens: cost.ok && cost.data.n_turns > 0 ? cost.data.mean_tokens : null,
+        costN: cost.ok ? cost.data.n_turns : null,
+        costRefusal: cost.ok ? (cost.data.n_turns === 0 ? "no-sample" : null) : cost.refusal,
+      };
+    },
+  );
+  return { kind: "reliability", rows };
 }

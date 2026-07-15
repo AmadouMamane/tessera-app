@@ -4,6 +4,7 @@ import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { AppShell } from "@/components/layout/app-shell";
 import { ReliabilityDashboard } from "@/components/reliability/reliability-dashboard";
 import { readAgentScope } from "@/lib/agent-scope";
+import { loadDomainLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
 
 interface ReliabilityPageProps {
@@ -26,7 +27,14 @@ export default async function ReliabilityPage({ params, searchParams }: Reliabil
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} signalHero perAgent={false} />
+        <GovScopeSection
+          fleet={fleet}
+          scope={scope}
+          locale={locale}
+          signalHero
+          perAgent={false}
+          lens={await loadDomainLens(fleet, "reliability")}
+        />
       </div>
       <ReliabilityDashboard />
     </AppShell>

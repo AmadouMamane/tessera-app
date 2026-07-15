@@ -4,7 +4,10 @@ import {
   type AgentSnapshot,
   type BreakdownLens,
   buildAlarmLens,
+  buildComplianceLens,
   buildQualityLens,
+  buildReliabilityLens,
+  buildSecurityLens,
   planLens,
 } from "@/lib/agent-lens";
 import { type Fleet, OverviewSnapshotSchema } from "@/lib/api/schemas";
@@ -62,4 +65,47 @@ export async function loadBreakdownLens(
   return plan.kind === "alarm"
     ? buildAlarmLens(plan.signalId, org, perAgent)
     : buildQualityLens(perAgent);
+}
+
+/** The GOUVERNER domains whose pages carry their own per-agent lens. */
+export type LensDomain = "security" | "compliance" | "reliability";
+
+/**
+ * The per-agent signals each domain page fans out for — ONLY signals measured to answer
+ * `honoured: ["agent"]` (see `lib/agent-lens.ts` schemas). A domain fact the spine holds
+ * org-wide (guard efficacy, injection bypass, latency p95) is deliberately absent: it is
+ * not depositable per agent, so it does not become a column.
+ */
+const DOMAIN_SIGNALS: Record<LensDomain, string> = {
+  security: "pii_leak,toxicity,tool_validity",
+  compliance: "governance,audit_count",
+  reliability: "tool_validity,cost",
+};
+
+/**
+ * Server-side lens loader for the domain pages (Sécurité & Privacy, Conformité,
+ * Fiabilité & coût): one snapshot per fleet agent, no org plan step — the domain is the
+ * page's own question, not an alarm decision. Same cached + single-flighted endpoint as
+ * `loadBreakdownLens`; any failed read yields honest refusal cells, never a blank page.
+ */
+export async function loadDomainLens(
+  fleet: Fleet | null,
+  domain: LensDomain,
+): Promise<BreakdownLens> {
+  const agents = fleet?.agents ?? [];
+  if (agents.length === 0) return { kind: "monitoring" };
+  const perAgent: AgentSnapshot[] = await Promise.all(
+    agents.map(async (a) => ({
+      agentId: a.id,
+      snapshot: await fetchSnapshot({ agent: a.id, signals: DOMAIN_SIGNALS[domain] }),
+    })),
+  );
+  switch (domain) {
+    case "security":
+      return buildSecurityLens(perAgent);
+    case "compliance":
+      return buildComplianceLens(perAgent);
+    case "reliability":
+      return buildReliabilityLens(perAgent);
+  }
 }

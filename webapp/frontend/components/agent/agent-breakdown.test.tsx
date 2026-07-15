@@ -28,7 +28,14 @@ vi.mock("next-intl/server", () => ({
 }));
 
 import { AgentBreakdown } from "@/components/agent/agent-breakdown";
-import type { AlarmLens, MaskedLens, QualityLens } from "@/lib/agent-lens";
+import type {
+  AlarmLens,
+  ComplianceLens,
+  MaskedLens,
+  QualityLens,
+  ReliabilityLens,
+  SecurityLens,
+} from "@/lib/agent-lens";
 import { FleetSchema } from "@/lib/api/schemas";
 
 afterEach(cleanup);
@@ -322,6 +329,145 @@ describe("an ORG-WIDE signal gets NO table — and the operator is told why", ()
     // No table at all — an inapplicable breakdown must not render as an empty one.
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByText("Support Client")).toBeNull();
+  });
+});
+
+describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring everywhere", () => {
+  it("security: PII / toxicity / guard denials, and the monitoring columns are GONE", async () => {
+    const security: SecurityLens = {
+      kind: "security",
+      rows: [
+        {
+          agentId: "support-client",
+          piiLeaks: 2,
+          piiN: 7,
+          piiRefusal: null,
+          toxCount: 0,
+          toxN: 7,
+          toxRefusal: null,
+          guardDenied: 133,
+          guardTotal: 521,
+          guardRefusal: null,
+        },
+        {
+          agentId: "onboarding",
+          piiLeaks: null,
+          piiN: 0,
+          piiRefusal: "no-sample",
+          toxCount: null,
+          toxN: 0,
+          toxRefusal: "no-sample",
+          guardDenied: null,
+          guardTotal: null,
+          guardRefusal: "unavailable",
+        },
+      ],
+    };
+    render(
+      await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: security }),
+    );
+    expect(screen.getByText("Fuites PII (fuites / tours)")).toBeTruthy();
+    expect(screen.getByText("Toxicité (toxiques / tours)")).toBeTruthy();
+    expect(screen.getByText("Refus garde (refus / appels)")).toBeTruthy();
+    expect(screen.getByText("État de release")).toBeTruthy();
+    expect(screen.getByText("2 / 7")).toBeTruthy();
+    expect(screen.getByText("133 / 521")).toBeTruthy();
+    // The empty window and the dead read are BOTH dashes, but they say different things.
+    expect(
+      screen.getAllByTitle("Aucun tour de cet agent sur la fenêtre — mesuré, pas refusé.").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByTitle("Signal non calculable sur cette fenêtre.").length).toBe(1);
+    // Monitoring columns are GONE — they answered a different question.
+    expect(screen.queryByText("Volume")).toBeNull();
+    expect(screen.queryByText("Transferts (e/s)")).toBeNull();
+  });
+
+  it("compliance: governed acts and ledger entries — a proven ZERO renders as 0, not a dash", async () => {
+    const compliance: ComplianceLens = {
+      kind: "compliance",
+      rows: [
+        {
+          agentId: "support-client",
+          governedActs: 69,
+          governedRefusal: null,
+          ledgerEntries: 459,
+          ledgerRefusal: null,
+        },
+        {
+          agentId: "onboarding",
+          governedActs: 0,
+          governedRefusal: null,
+          ledgerEntries: 0,
+          ledgerRefusal: null,
+        },
+      ],
+    };
+    render(
+      await AgentBreakdown({
+        fleet: twoAgentFleet(),
+        scope: "all",
+        locale: "fr",
+        lens: compliance,
+      }),
+    );
+    expect(screen.getByText("Actes gouvernés")).toBeTruthy();
+    expect(screen.getByText("Entrées ledger")).toBeTruthy();
+    // The fleet's own escalation fact rides along — the same per-agent fact as monitoring.
+    expect(screen.getByText("Refus/escalade")).toBeTruthy();
+    expect(screen.getByText("69")).toBeTruthy();
+    expect(screen.getByText("459")).toBeTruthy();
+    const rows = screen.getAllByRole("row");
+    expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
+    // The zero row shows 0s (measured facts), never dashes.
+    expect(rowAt(rows, 2).textContent).not.toMatch(/—.*—/);
+    expect(screen.queryByText("Volume")).toBeNull();
+  });
+
+  it("reliability: tool errors / latency / cost — and a refused cost says why", async () => {
+    const reliability: ReliabilityLens = {
+      kind: "reliability",
+      rows: [
+        {
+          agentId: "support-client",
+          toolErrors: 3,
+          toolTotal: 521,
+          toolRefusal: null,
+          totalTokens: 124,
+          meanTokens: 17.7,
+          costN: 7,
+          costRefusal: null,
+        },
+        {
+          agentId: "onboarding",
+          toolErrors: null,
+          toolTotal: null,
+          toolRefusal: "not-honoured",
+          totalTokens: null,
+          meanTokens: null,
+          costN: null,
+          costRefusal: "not-honoured",
+        },
+      ],
+    };
+    render(
+      await AgentBreakdown({
+        fleet: twoAgentFleet(),
+        scope: "all",
+        locale: "fr",
+        lens: reliability,
+      }),
+    );
+    expect(screen.getByText("Erreurs outils (erreurs / appels)")).toBeTruthy();
+    expect(screen.getByText("Latence")).toBeTruthy();
+    expect(screen.getByText("Coût (tokens)")).toBeTruthy();
+    expect(screen.getByText("3 / 521")).toBeTruthy();
+    expect(screen.getByText("124")).toBeTruthy();
+    // The fleet's own average latency rides along (same fact as the monitoring column).
+    expect(screen.getByText("4,6 s")).toBeTruthy();
+    expect(
+      screen.getAllByTitle("Dimension agent non honorée par la lecture — valeur refusée.").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText("Volume")).toBeNull();
   });
 });
 

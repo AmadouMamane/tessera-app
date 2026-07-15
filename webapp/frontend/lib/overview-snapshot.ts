@@ -37,6 +37,16 @@ export const SNAPSHOT_SIGNALS = [
 
 export type SnapshotSignalId = (typeof SNAPSHOT_SIGNALS)[number];
 
+/**
+ * Registered per-agent signals the domain lenses fetch ON DEMAND via `?signals=` — they are
+ * NOT in the default snapshot set above (`in_snapshot=False` in `capabilities.py`), but the
+ * endpoint serves any registered signal id, with the same scope report. Measured live before
+ * being listed here: each answers `honoured: ["agent"]` under `?agent=`.
+ */
+export const LENS_EXTRA_SIGNALS = ["tool_validity", "governance", "audit_count"] as const;
+
+export type SelectableSignalId = SnapshotSignalId | (typeof LENS_EXTRA_SIGNALS)[number];
+
 /** One signal as the snapshot carries it: the payload, plus which scope dimensions it honoured. */
 export interface SnapshotEntry {
   data?: unknown;
@@ -61,7 +71,7 @@ export interface OverviewSnapshot {
  */
 export function selectSignal<TSchema extends z.ZodTypeAny>(
   snapshot: OverviewSnapshot | undefined,
-  id: SnapshotSignalId,
+  id: SelectableSignalId,
   schema: TSchema,
 ): z.infer<TSchema> | undefined {
   const entry = snapshot?.signals?.[id];
@@ -103,7 +113,7 @@ export type ScopedSelection<T> = { ok: true; data: T } | { ok: false; refusal: S
  */
 export function selectHonouredSignal<TSchema extends z.ZodTypeAny>(
   snapshot: OverviewSnapshot | undefined,
-  id: SnapshotSignalId,
+  id: SelectableSignalId,
   schema: TSchema,
   dimension: Dimension,
 ): ScopedSelection<z.infer<TSchema>> {

@@ -1,6 +1,14 @@
 import { getTranslations } from "next-intl/server";
 
-import type { AlarmLens, BreakdownLens, CellEmpty, QualityLens } from "@/lib/agent-lens";
+import type {
+  AlarmLens,
+  BreakdownLens,
+  CellEmpty,
+  ComplianceLens,
+  QualityLens,
+  ReliabilityLens,
+  SecurityLens,
+} from "@/lib/agent-lens";
 import { AGENT_SCOPE_ALL } from "@/lib/agent-scope";
 import type { Fleet } from "@/lib/api/schemas";
 
@@ -114,7 +122,13 @@ export async function AgentBreakdown({
       ? t("alarmNote", { metric: metricLabel(lens.metric, t) })
       : lens.kind === "quality"
         ? t("qualityNote")
-        : t("breakdownNote");
+        : lens.kind === "security"
+          ? t("securityNote")
+          : lens.kind === "compliance"
+            ? t("complianceNote")
+            : lens.kind === "reliability"
+              ? t("reliabilityNote")
+              : t("breakdownNote");
 
   return (
     <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
@@ -127,6 +141,12 @@ export async function AgentBreakdown({
           <AlarmTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : lens.kind === "quality" ? (
           <QualityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+        ) : lens.kind === "security" ? (
+          <SecurityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+        ) : lens.kind === "compliance" ? (
+          <ComplianceTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+        ) : lens.kind === "reliability" ? (
+          <ReliabilityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : (
           <MonitoringTable
             agents={agents}
@@ -475,6 +495,289 @@ function QualityTable({
           </td>
         </tr>
       </tfoot>
+    </table>
+  );
+}
+
+/** A "found / screened" pair, or the honest empty cell naming why. */
+function PairCell({
+  found,
+  outOf,
+  reason,
+  t,
+}: {
+  found: number | null;
+  outOf: number | null;
+  reason: CellEmpty | null;
+  t: Translator;
+}) {
+  if (found === null || outOf === null) return <EmptyCell reason={reason ?? "absent"} t={t} />;
+  return (
+    <>
+      {fmtInt(found)} / {fmtInt(outOf)}
+    </>
+  );
+}
+
+/** A plain count. 0 is a measured fact and renders as 0 — only an unproven read refuses. */
+function CountCell({
+  value,
+  reason,
+  t,
+}: {
+  value: number | null;
+  reason: CellEmpty | null;
+  t: Translator;
+}) {
+  if (value === null) return <EmptyCell reason={reason ?? "absent"} t={t} />;
+  return <>{fmtInt(value)}</>;
+}
+
+/** The shared tfoot of the domain lens tables: org total + the dedup/handoff reconciliation. */
+function DomainFoot({ fleet, t, span }: { fleet: Fleet; t: Translator; span: number }) {
+  const attested = fleet.handoff_conversations ?? 0;
+  const seenShared = fleet.handoff_conversations_seen_shared ?? 0;
+  return (
+    <tfoot>
+      <tr className="border-t-2 border-[#7c5cf5]/40">
+        <td className="py-2 pr-3 font-semibold text-[#b9a6ff]">{t("orgTotal")}</td>
+        <td
+          colSpan={span}
+          className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+        >
+          <DedupFooter
+            fleet={fleet}
+            t={t}
+            attested={attested}
+            seenShared={seenShared}
+            handoffGap={attested - seenShared}
+          />
+        </td>
+      </tr>
+    </tfoot>
+  );
+}
+
+/**
+ * The security lens (Sécurité & Privacy): the security facts the spine deposits PER AGENT —
+ * PII leaks, toxicity, guard denials. Guard efficacy and injection bypass are org-wide by
+ * construction and deliberately have no column here (the page body carries them org-wide).
+ */
+function SecurityTable({
+  lens,
+  agents,
+  scope,
+  t,
+  fleet,
+}: {
+  lens: SecurityLens;
+  agents: FleetAgent[];
+  scope: string;
+  t: Translator;
+  fleet: Fleet;
+}) {
+  const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
+  return (
+    <table className="w-full text-[0.72rem]">
+      <thead>
+        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colPiiLeaks")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colToxicity")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colGuardDenied")}</th>
+          <th className="pb-2 font-medium">{t("colRelease")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {agents.map((a) => {
+          const row = byId.get(a.id);
+          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+          return (
+            <tr key={a.id} className={rowClass(selected, dimmed)}>
+              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+              <td
+                className={`py-1.5 pr-3 text-right tabular-nums ${
+                  row?.piiLeaks ? "text-red-300" : ""
+                }`}
+              >
+                <PairCell
+                  found={row?.piiLeaks ?? null}
+                  outOf={row?.piiN ?? null}
+                  reason={row?.piiRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td
+                className={`py-1.5 pr-3 text-right tabular-nums ${
+                  row?.toxCount ? "text-red-300" : ""
+                }`}
+              >
+                <PairCell
+                  found={row?.toxCount ?? null}
+                  outOf={row?.toxN ?? null}
+                  reason={row?.toxRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular-nums">
+                <PairCell
+                  found={row?.guardDenied ?? null}
+                  outOf={row?.guardTotal ?? null}
+                  reason={row?.guardRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td className="py-1.5">
+                <ReleaseCell agent={a} t={t} />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <DomainFoot fleet={fleet} t={t} span={4} />
+    </table>
+  );
+}
+
+/**
+ * The compliance lens (Conformité): governed acts and ledger entries per agent (counts — an
+ * honest 0 is data), plus the fleet's own per-agent escalation rate, the same fact the
+ * monitoring lens renders. Ledger INTEGRITY is org-wide by construction: not a column.
+ */
+function ComplianceTable({
+  lens,
+  agents,
+  scope,
+  t,
+  fleet,
+}: {
+  lens: ComplianceLens;
+  agents: FleetAgent[];
+  scope: string;
+  t: Translator;
+  fleet: Fleet;
+}) {
+  const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
+  return (
+    <table className="w-full text-[0.72rem]">
+      <thead>
+        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colGovernedActs")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colLedgerEntries")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
+          <th className="pb-2 font-medium">{t("colRelease")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {agents.map((a) => {
+          const row = byId.get(a.id);
+          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+          return (
+            <tr key={a.id} className={rowClass(selected, dimmed)}>
+              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+              <td className="py-1.5 pr-3 text-right tabular-nums">
+                <CountCell
+                  value={row?.governedActs ?? null}
+                  reason={row?.governedRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular-nums">
+                <CountCell
+                  value={row?.ledgerEntries ?? null}
+                  reason={row?.ledgerRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
+              <td className="py-1.5">
+                <ReleaseCell agent={a} t={t} />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <DomainFoot fleet={fleet} t={t} span={4} />
+    </table>
+  );
+}
+
+/**
+ * The reliability lens (Fiabilité & coût): tool errors and token cost per agent, plus the
+ * fleet's own per-agent AVERAGE latency (the same fact as the monitoring column — latency
+ * p95 has no per-agent substrate and is deliberately not a column).
+ */
+function ReliabilityTable({
+  lens,
+  agents,
+  scope,
+  t,
+  fleet,
+}: {
+  lens: ReliabilityLens;
+  agents: FleetAgent[];
+  scope: string;
+  t: Translator;
+  fleet: Fleet;
+}) {
+  const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
+  return (
+    <table className="w-full text-[0.72rem]">
+      <thead>
+        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colToolErrors")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
+          <th className="pb-2 pr-3 text-right font-medium">{t("colCostTokens")}</th>
+          <th className="pb-2 font-medium">{t("colRelease")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {agents.map((a) => {
+          const row = byId.get(a.id);
+          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+          return (
+            <tr key={a.id} className={rowClass(selected, dimmed)}>
+              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+              <td
+                className={`py-1.5 pr-3 text-right tabular-nums ${
+                  row?.toolErrors ? "text-red-300" : ""
+                }`}
+              >
+                <PairCell
+                  found={row?.toolErrors ?? null}
+                  outOf={row?.toolTotal ?? null}
+                  reason={row?.toolRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtSecs(a.latency_ms)}</td>
+              <td
+                className="py-1.5 pr-3 text-right tabular-nums"
+                title={
+                  row?.meanTokens != null
+                    ? t("costMeanTitle", { mean: fmtInt(Math.round(row.meanTokens)) })
+                    : undefined
+                }
+              >
+                <CountCell
+                  value={row?.totalTokens ?? null}
+                  reason={row?.costRefusal ?? null}
+                  t={t}
+                />
+              </td>
+              <td className="py-1.5">
+                <ReleaseCell agent={a} t={t} />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+      <DomainFoot fleet={fleet} t={t} span={4} />
     </table>
   );
 }
