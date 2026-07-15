@@ -59,6 +59,55 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Log (newest first)
 
+- 2026-07-15 — **Each GOUVERNER page now contextualises its per-agent view with ITS domain's
+  columns** (branch `claude/agent-lens-per-domain`: `72be992f` + the incidents fix below). The
+  lens system existed and only Qualité IA used it: Sécurité & Privacy, Conformité and
+  Fiabilité & coût all rendered the monitoring columns (volume/latence/transferts) under
+  banners asking a different question. Three domain lenses now ride the same single door
+  (`selectHonouredSignal`), one builder each in `lib/agent-lens.ts`, fanned out by
+  `loadDomainLens` (`lib/server/agent-lens.ts`).
+
+  **The columns were measured, not invented.** `?agent=<id>&signals=…` was probed for all six
+  agents before a single column was written: `pii_leak`, `toxicity`, `tool_validity`,
+  `governance`, `audit_count`, `cost` answer `honoured: ["agent"]` with values that differ
+  across agents (e.g. `audit_count` = 36 193 / 53 / 459 / 0 / 0 / 0). What the task's starting
+  mapping hoped for but the spine only holds org-wide — **guard efficacy, injection bypass,
+  latency p95** — did NOT become a column: no per-agent substrate, no column. The guard's
+  per-agent trace that DOES exist (`tool_validity.denied`, 133 denies on support-client) is the
+  security lens's third column. Counts (actes gouvernés, entrées ledger) render an honest 0;
+  rates on an empty window say "no-sample"; every dash carries its reason. Ratchet extended to
+  the three builders (ignored / org-wide / unavailable / no-report / mixed-neighbour cases) and
+  **verified red under mutation**: bypassing the gate on `pii_leak` fails 4 tests. Vue
+  d'ensemble and Qualité IA untouched (render non-regression pinned).
+
+- 2026-07-15 — **« Posture indisponible » (Conformité / Fiabilité / Amélioration) diagnosed on
+  the live base: a REAL outage, not the fleet-500 class, not a legitimate empty.** All three
+  routes answer `{"available": false}` because their computes RAISE: ClickHouse on `:18123`
+  refuses authentication (`403 AUTHENTICATION_FAILED`, verbatim in the backend log with each
+  posture named). This is the F-9 residue: the fix secured the next boot, the still-running
+  containers predate it, and the backend now reads credentials the old containers never got.
+  The code's behaviour is exactly the doctrine — the failure is logged with its cause, the
+  screen says "indisponible", no invented zeros — so **no code change**: the remedy is the
+  still-owed operator action `make obs-down && make obs-secrets && make obs-up`. Verified
+  collaterally: `slo`/`scores` read `unavailable: true` per agent, so the Qualité IA lens is
+  honest-empty on the live base for the same reason, and recovers with the stack.
+
+  ⚠️ **Consigned, out of scope here: five MORE naked-500 routes.** The same ClickHouse refusal
+  500s `/observability/{roadmap,playbooks,timeline,slo,data-range}` — uncaught
+  `SpineUnavailableError` straight to ASGI, the fleet disease (no honest-empty contract, not
+  even the `try/except → available:false` floor). They are what the operator's browser console
+  shows as "Failed to load resource: 500" on Incidents and elsewhere. Candidates for the OWED
+  register's programme, one by one.
+
+- 2026-07-15 — **The Incidents page's dev-overlay "1 error" badge named and fixed**
+  (`4777afcf`). Named by opening the page in an instrumented browser (login → cockpit →
+  console): React's duplicate-key error — the recent feed emitted **INC-449 four times**,
+  one per deny EVENT of the same injection burst, and the component keys rows by `id`. The
+  feed now lists INCIDENTS (one row per rule cluster, stamped with its latest event;
+  `recent_more` counts the rest): an id that names two rows names neither. The remaining
+  console noise ("Failed to load resource: 500") is the five naked routes above — a data-plane
+  outage surfacing, not a frontend bug, and it disappears with the obs-stack reboot.
+
 - 2026-07-14 — **`/observability/fleet` answered 500 when there was nothing to observe.** The
   component whose entire job is to observe could not observe its own absence of data — the
   project's disease, in the component that sells the cure. Landed `54756402` + `ca67f31c`
