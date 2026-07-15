@@ -307,12 +307,19 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
   const d = q.data;
 
   if (!d?.available) {
+    // The per-agent context does not depend on the posture read (different store): a
+    // proven table must not hide behind an unrelated outage. The posture card still
+    // states its own unavailability — found live with ClickHouse down, the whole page
+    // collapsed to one sentence while the per-agent facts were sitting in Postgres.
     return (
-      <Card>
-        <CardContent className="py-10 text-center text-sm text-[var(--muted-foreground)]">
-          {q.isLoading ? tc("loading") : tc("unavailable")}
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-2">
+        {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-[var(--muted-foreground)]">
+            {q.isLoading ? tc("loading") : tc("unavailable")}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
