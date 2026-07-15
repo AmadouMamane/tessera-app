@@ -21,6 +21,7 @@ import {
   buildAlarmLens,
   buildComplianceLens,
   buildObservabilityLens,
+  buildProofLens,
   buildQualityLens,
   buildReliabilityLens,
   buildSecurityLens,
@@ -354,6 +355,23 @@ describe("the domain lenses are gated the same way — none of them is a back do
     expect(r.anomaliesRefusal).toBe("org-wide");
     expect(r.violations).toBeNull();
     expect(r.conformanceRefusal).toBe("org-wide");
+  });
+
+  it("proof: the SAME gated rows as compliance, under the proof kind — no second door", () => {
+    const snapshots = [{ agentId: "a1", snapshot: domainSnapshot(HONOURED) }];
+    const proof = buildProofLens(snapshots);
+    expect(proof.kind).toBe("proof");
+    expect(proof.rows).toEqual(buildComplianceLens(snapshots).rows);
+    // And it refuses the same way: an org-wide report empties the cells, data or not.
+    const orgWide = buildProofLens([
+      { agentId: "a1", snapshot: domainSnapshot({ ...HONOURED, org_wide: true }) },
+    ]);
+    expect(row(orgWide.rows, 0)).toMatchObject({
+      governedActs: null,
+      governedRefusal: "org-wide",
+      ledgerEntries: null,
+      ledgerRefusal: "org-wide",
+    });
   });
 
   it("observability: one signal's refusal empties ITS cells only — never its neighbours'", () => {

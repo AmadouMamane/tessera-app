@@ -7829,6 +7829,7 @@
     "complianceNote": "Per-agent compliance lens — governed acts, ledger entries, escalations. Ledger integrity stays org-wide.",
     "reliabilityNote": "Per-agent reliability lens — tool errors, average latency, cost. The p95 has no per-agent substrate.",
     "observabilityNote": "Per-agent observability lens — behavioural anomalies, tool-call schema conformance. Pipeline health (collector, traces) stays org-wide in the page body.",
+    "proofNote": "Per-agent proof lens — each agent's governed acts and ledger entries. Audit-chain integrity is org-wide by construction (a per-agent sub-chain would be a weaker guarantee) and stays in the page body.",
     "colAnomalies": "Anomalies (anomalous / sessions)",
     "colConformance": "Schema conformance (violations / calls)",
     "colPiiLeaks": "PII leaks (leaks / turns)",

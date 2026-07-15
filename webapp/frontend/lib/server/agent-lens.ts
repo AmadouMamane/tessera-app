@@ -6,6 +6,7 @@ import {
   buildAlarmLens,
   buildComplianceLens,
   buildObservabilityLens,
+  buildProofLens,
   buildQualityLens,
   buildReliabilityLens,
   buildSecurityLens,
@@ -74,7 +75,8 @@ export type LensDomain =
   | "compliance"
   | "reliability"
   | "improvement"
-  | "observability";
+  | "observability"
+  | "proof";
 
 /**
  * The per-agent signals each domain page fans out for — ONLY signals measured to answer
@@ -94,6 +96,9 @@ const DOMAIN_SIGNALS: Record<LensDomain, string> = {
   // `traces` is deliberately absent: declared per-agent in capabilities.py but with no
   // registered read — a declared capability with no serve is not a substrate.
   observability: "anomalies,conformance",
+  // The proof facts per agent ARE the compliance counts (same signals, same builder rows);
+  // audit-chain INTEGRITY is org-wide by construction and deliberately not fanned out.
+  proof: "governance,audit_count",
 };
 
 /**
@@ -125,5 +130,7 @@ export async function loadDomainLens(
       return buildQualityLens(perAgent);
     case "observability":
       return buildObservabilityLens(perAgent);
+    case "proof":
+      return buildProofLens(perAgent);
   }
 }

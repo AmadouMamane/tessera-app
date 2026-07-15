@@ -7831,6 +7831,7 @@
     "complianceNote": "Lentille conformité par agent — actes gouvernés, entrées au ledger, escalades. L'intégrité du ledger reste org-wide.",
     "reliabilityNote": "Lentille fiabilité par agent — erreurs outils, latence moyenne, coût. Le p95 n'a pas de substrat par agent.",
     "observabilityNote": "Lentille observabilité par agent — anomalies comportementales, conformité de schéma des appels outils. La santé du pipeline (collecteur, traces) reste org-wide dans le corps de page.",
+    "proofNote": "Lentille preuve par agent — actes gouvernés et entrées au ledger de chaque agent. L'intégrité de la chaîne d'audit est org-wide par construction (une sous-chaîne par agent serait une garantie plus faible) et reste dans le corps de page.",
     "colAnomalies": "Anomalies (anormales / sessions)",
     "colConformance": "Conformité schéma (violations / appels)",
     "colPiiLeaks": "Fuites PII (fuites / tours)",

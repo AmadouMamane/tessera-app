@@ -6,6 +6,7 @@ import type {
   CellEmpty,
   ComplianceLens,
   ObservabilityLens,
+  ProofLens,
   QualityLens,
   ReliabilityLens,
   SecurityLens,
@@ -131,7 +132,9 @@ export async function AgentBreakdown({
               ? t("reliabilityNote")
               : lens.kind === "observability"
                 ? t("observabilityNote")
-                : t("breakdownNote");
+                : lens.kind === "proof"
+                  ? t("proofNote")
+                  : t("breakdownNote");
 
   return (
     <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
@@ -146,7 +149,7 @@ export async function AgentBreakdown({
           <QualityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : lens.kind === "security" ? (
           <SecurityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
-        ) : lens.kind === "compliance" ? (
+        ) : lens.kind === "compliance" || lens.kind === "proof" ? (
           <ComplianceTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : lens.kind === "reliability" ? (
           <ReliabilityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
@@ -646,9 +649,10 @@ function SecurityTable({
 }
 
 /**
- * The compliance lens (Conformité): governed acts and ledger entries per agent (counts — an
- * honest 0 is data), plus the fleet's own per-agent escalation rate, the same fact the
- * monitoring lens renders. Ledger INTEGRITY is org-wide by construction: not a column.
+ * The compliance lens (Conformité) — and the proof lens (Journal d'audit), which reads the
+ * SAME two per-agent counts: governed acts and ledger entries (counts — an honest 0 is
+ * data), plus the fleet's own per-agent escalation rate, the same fact the monitoring lens
+ * renders. Ledger INTEGRITY is org-wide by construction: not a column in either.
  */
 function ComplianceTable({
   lens,
@@ -657,7 +661,7 @@ function ComplianceTable({
   t,
   fleet,
 }: {
-  lens: ComplianceLens;
+  lens: ComplianceLens | ProofLens;
   agents: FleetAgent[];
   scope: string;
   t: Translator;

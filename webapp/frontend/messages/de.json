@@ -7829,6 +7829,7 @@
     "complianceNote": "Compliance-Linse pro Agent — Governance-Akte, Ledger-Einträge, Eskalationen. Die Ledger-Integrität bleibt org-weit.",
     "reliabilityNote": "Zuverlässigkeitslinse pro Agent — Tool-Fehler, mittlere Latenz, Kosten. Das p95 hat kein Substrat pro Agent.",
     "observabilityNote": "Observability-Linse pro Agent — Verhaltensanomalien, Schema-Konformität der Tool-Aufrufe. Die Pipeline-Gesundheit (Collector, Traces) bleibt org-weit im Seiteninhalt.",
+    "proofNote": "Nachweis-Linse pro Agent — Governance-Akte und Ledger-Einträge jedes Agenten. Die Integrität der Audit-Kette ist konstruktionsbedingt org-weit (eine Teilkette pro Agent wäre eine schwächere Garantie) und bleibt im Seiteninhalt.",
     "colAnomalies": "Anomalien (anomal / Sitzungen)",
     "colConformance": "Schema-Konformität (Verstöße / Aufrufe)",
     "colPiiLeaks": "PII-Lecks (Lecks / Turns)",

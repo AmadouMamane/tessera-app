@@ -518,6 +518,33 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
     expect(screen.queryByText("Volume")).toBeNull();
     expect(screen.queryByText("Transferts (e/s)")).toBeNull();
   });
+
+  it("proof: the compliance columns under the proof note — the audit page names ITS question", async () => {
+    render(
+      await AgentBreakdown({
+        fleet: twoAgentFleet(),
+        scope: "all",
+        locale: "fr",
+        lens: {
+          kind: "proof",
+          rows: [
+            {
+              agentId: "support-client",
+              governedActs: 69,
+              governedRefusal: null,
+              ledgerEntries: 459,
+              ledgerRefusal: null,
+            },
+          ],
+        },
+      }),
+    );
+    expect(screen.getByText("Actes gouvernés")).toBeTruthy();
+    expect(screen.getByText("Entrées ledger")).toBeTruthy();
+    expect(screen.getByText(/Lentille preuve par agent/)).toBeTruthy();
+    expect(screen.queryByText(/Lentille conformité par agent/)).toBeNull();
+    expect(screen.queryByText("Volume")).toBeNull();
+  });
 });
 
 describe("the quality lens answers the page's own question when nothing breaches", () => {

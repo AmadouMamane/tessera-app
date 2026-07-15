@@ -171,6 +171,19 @@ export interface ComplianceLens {
 }
 
 /**
+ * Preuve (Journal d'audit): the per-agent proof facts are the SAME two counts the
+ * compliance lens reads — governed acts (`governance`) and ledger entries (`audit_count`)
+ * — so the rows are built by the same gated builder (precedent: improvement reuses
+ * quality). The kind differs so the page's note names ITS question: the audit chain's
+ * INTEGRITY is org-wide by construction (one hash chain, deliberately never per-agent)
+ * and stays in the page body — a per-agent sub-chain would be a weaker guarantee.
+ */
+export interface ProofLens {
+  kind: "proof";
+  rows: ComplianceLensRow[];
+}
+
+/**
  * Fiabilité & coût: tool errors (`tool_validity.errored`) and token cost (`cost`) per agent.
  * Latency p95 has NO per-agent substrate (the posture estimates it org-wide from the token
  * distribution), so it is not a column; the table shows the fleet's own per-agent average
@@ -224,7 +237,8 @@ export type BreakdownLens =
   | SecurityLens
   | ComplianceLens
   | ReliabilityLens
-  | ObservabilityLens;
+  | ObservabilityLens
+  | ProofLens;
 
 export type LensPlan =
   | { kind: "alarm"; signalId: string }
@@ -379,6 +393,11 @@ export function buildComplianceLens(agentSnapshots: readonly AgentSnapshot[]): C
     },
   );
   return { kind: "compliance", rows };
+}
+
+/** Build the proof lens rows — the compliance builder's gated rows under the proof kind. */
+export function buildProofLens(agentSnapshots: readonly AgentSnapshot[]): ProofLens {
+  return { kind: "proof", rows: buildComplianceLens(agentSnapshots).rows };
 }
 
 /**
