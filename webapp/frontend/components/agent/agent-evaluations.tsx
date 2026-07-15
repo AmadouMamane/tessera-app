@@ -37,6 +37,7 @@ import type { AgentEvaluations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
+import { EvaluationRunRail } from "./evaluation-run-rail";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 
@@ -278,7 +279,11 @@ export function AgentEvaluations() {
         onModeChange={temporal.changeMode}
       />
 
-      <GateJudgeRail data={data} />
+      {/* ER-01 (S3/C2): the run journal — distinct from the SR-01 signal scrubber above. */}
+      <div className="grid gap-2.5 xl:grid-cols-12">
+        <EvaluationRunRail data={data} className="xl:col-span-8" />
+        <JudgeMetrics data={data} className="xl:col-span-4" />
+      </div>
 
       <div className="grid gap-2.5 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
@@ -1137,76 +1142,45 @@ function GatePolicySection({ data }: { data: Data }) {
   );
 }
 
-function GateJudgeRail({ data }: { data: Data }) {
+function JudgeMetrics({ data, className }: { data: Data; className?: string }) {
   const locale = useLocale();
   const judge = data.judge;
-  const runs = data.runs;
-  if (!judge && !runs) return null;
+  if (!judge) return null;
 
   return (
-    <div className="grid gap-2.5 xl:grid-cols-12">
-      {/* Per-agent judged metrics (real local judge) */}
-      <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-6">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            {pick(locale, "Métriques jugées", "Bewertete Metriken", "Judged metrics")}
-          </span>
-          <span className="text-[10px] text-[var(--tessera-text-muted)]">
-            {judge?.available
-              ? (judge.judge_model ?? "")
-              : pick(locale, "indisponible", "nicht verfuegbar", "unavailable")}
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {(
-            [
-              [pick(locale, "Fidélité", "Treue", "Fidelity"), judge?.faithfulness],
-              [pick(locale, "Ancrage", "Grounding", "Grounding"), judge?.grounding],
-              [pick(locale, "Anti-halluc.", "Anti-Halluz.", "Anti-halluc."), judge?.hallucination],
-            ] as const
-          ).map(([label, value]) => (
-            <div key={label} className="flex flex-col">
-              <span className="text-base font-semibold text-[var(--tessera-text)]">
-                {judge?.available ? pct(value) : "—"}
-              </span>
-              <span className="text-[10px] text-[var(--tessera-text-muted)]">{label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ER-01 rail: per-agent run history */}
-      <section className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-6">
+    <section
+      className={cn(
+        "flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between">
         <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {runs?.title ?? pick(locale, "Historique des runs", "Lauf-Verlauf", "Run history")}
+          {pick(locale, "Métriques jugées", "Bewertete Metriken", "Judged metrics")}
         </span>
-        <div className="flex flex-wrap gap-1.5">
-          {(runs?.items ?? []).length === 0 ? (
-            <span className="text-[11px] text-[var(--tessera-text-muted)]">
-              {pick(locale, "Aucun run.", "Kein Lauf.", "No run.")}
+        <span className="text-[10px] text-[var(--tessera-text-muted)]">
+          {judge.available
+            ? (judge.judge_model ?? "")
+            : pick(locale, "indisponible", "nicht verfuegbar", "unavailable")}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {(
+          [
+            [pick(locale, "Fidélité", "Treue", "Fidelity"), judge.faithfulness],
+            [pick(locale, "Ancrage", "Grounding", "Grounding"), judge.grounding],
+            [pick(locale, "Anti-halluc.", "Anti-Halluz.", "Anti-halluc."), judge.hallucination],
+          ] as const
+        ).map(([label, value]) => (
+          <div key={label} className="flex flex-col">
+            <span className="text-base font-semibold text-[var(--tessera-text)]">
+              {judge.available ? pct(value) : "—"}
             </span>
-          ) : (
-            (runs?.items ?? []).map((r) => (
-              <div
-                key={r.run_at}
-                title={`${r.label} — ${r.score}/10 — ${r.gate_passed ? pick(locale, "validé", "bestanden", "passed") : pick(locale, "bloqué", "blockiert", "blocked")}`}
-                className="flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-1"
-              >
-                <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${
-                    r.gate_passed ? "bg-[#3fb37f]" : "bg-[#e0566f]"
-                  }`}
-                />
-                <span className="text-[10px] text-[var(--tessera-text-muted)]">{r.label}</span>
-                <span className="text-[10px] font-medium text-[var(--tessera-text)]">
-                  {r.score}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-    </div>
+            <span className="text-[10px] text-[var(--tessera-text-muted)]">{label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

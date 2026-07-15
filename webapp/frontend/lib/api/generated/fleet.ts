@@ -436,15 +436,22 @@ export const AgentEvaluationsTrendSchema = z.object({
 export const AgentEvaluationsRunsItemsItemSchema = z.object({
   run_at: z.string(),
   label: z.string(),
+  date_label: z.string(),
   pass_rate: z.number(),
   score: z.string(),
-  gate_passed: z.boolean(),
+  passed: z.number().int(),
+  total: z.number().int(),
+  gate_passed: z.boolean().nullable(),
   eval_set: z.string(),
+  catalogue_version: z.string(),
+  model: z.string(),
+  delta_pass_rate: z.number().nullable(),
 });
 
 export const AgentEvaluationsRunsSchema = z.object({
   title: z.string(),
   subtitle: z.string(),
+  empty_label: z.string(),
   items: z.array(AgentEvaluationsRunsItemsItemSchema),
   count: z.number().int(),
 });

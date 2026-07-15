@@ -5355,19 +5355,28 @@ export const AgentEvaluationsSchema = z.object({
       n: z.number().optional(),
     })
     .optional(),
+  // ER-01 run journal: per-run provenance (date + catalogue version + model) and the
+  // gate verdict recorded at run time (null = not recorded — said, never invented).
   runs: z
     .object({
       title: z.string(),
       subtitle: z.string(),
+      empty_label: z.string(),
       count: z.number(),
       items: z.array(
         z.object({
           run_at: z.string(),
           label: z.string(),
+          date_label: z.string(),
           pass_rate: z.number(),
           score: z.string(),
+          passed: z.number().int(),
+          total: z.number().int(),
           gate_passed: z.boolean().nullable(),
           eval_set: z.string(),
+          catalogue_version: z.string(),
+          model: z.string(),
+          delta_pass_rate: z.number().nullable(),
         }),
       ),
     })
