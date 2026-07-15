@@ -569,28 +569,65 @@ def _judge_block(agent_id: str) -> dict[str, object]:
 
 
 def _runs_rail(agent_id: str, lang: str) -> dict[str, object]:
-    """ER-01 rail: the agent's run history (which run/scores were current when)."""
+    """ER-01 rail payload: the agent's eval-run journal (S3), one point per run.
+
+    Each item carries its own stored provenance — run date + catalogue version +
+    model (eval-gate-policy § provenance: never a single "dernière éval" that
+    masks the staggering between agents) — and the gate verdict *recorded at run
+    time* (``None`` = not recorded, said as such, never recomputed against
+    today's waivers). ``delta_pass_rate`` is the one derived figure: pass-rate
+    delta vs the previous run, present only when a previous run exists AND was
+    scored against the same catalogue version — a cross-catalogue delta would
+    compare two different exams.
+    """
     history = load_agent_run_history(agent_id)
     items: list[dict[str, object]] = []
-    for entry in history:
+    for idx, entry in enumerate(history):
         moment = entry.run_datetime()
+        previous = history[idx + 1] if idx + 1 < len(history) else None
+        delta: float | None = None
+        if (
+            previous is not None
+            and previous.total > 0
+            and entry.total > 0
+            and previous.catalogue_version == entry.catalogue_version
+        ):
+            delta = round(entry.pass_rate - previous.pass_rate, 4)
         items.append(
             {
                 "run_at": entry.run_at,
                 "label": moment.strftime("%d/%m %H:%M") if moment else entry.run_at,
+                "date_label": moment.strftime("%d/%m") if moment else entry.run_at,
                 "pass_rate": round(entry.pass_rate, 4),
                 "score": _dot(entry.pass_rate * 10),
+                "passed": entry.passed,
+                "total": entry.total,
                 "gate_passed": entry.gate_passed,
                 "eval_set": entry.eval_set,
+                "catalogue_version": entry.catalogue_version,
+                "model": entry.model,
+                "delta_pass_rate": delta,
             }
         )
     return {
-        "title": _loc(lang, "Historique des runs", "Lauf-Verlauf", "Run history"),
+        "title": _loc(
+            lang,
+            "Historique des runs d'évaluation",
+            "Verlauf der Evaluierungslaeufe",
+            "Evaluation run history",
+        ),
         "subtitle": _loc(
             lang,
-            "Reconstruit quel run et quels scores étaient courants à chaque date.",
-            "Rekonstruiert, welcher Lauf und welche Scores zu jedem Datum aktuell waren.",
-            "Reconstructs which run and which scores were current at each date.",
+            "Chaque point est un run : date, version de catalogue, taux, verdict gate.",
+            "Jeder Punkt ist ein Lauf: Datum, Katalogversion, Rate, Gate-Urteil.",
+            "Each point is a run: date, catalogue version, rate, gate verdict.",
+        ),
+        "empty_label": _loc(
+            lang,
+            "Éval non exécutée — aucun run d'évaluation enregistré pour cet agent.",
+            "Evaluierung nicht ausgefuehrt — kein Evaluierungslauf fuer diesen Agenten "
+            "aufgezeichnet.",
+            "Eval not executed — no evaluation run recorded for this agent.",
         ),
         "items": items,
         "count": len(items),

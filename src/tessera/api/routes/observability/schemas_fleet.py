@@ -907,14 +907,26 @@ class AgentEvaluationsJudgePayload(BaseModel):
 
 
 class AgentEvaluationsRunsItemsItem(BaseModel):
-    """agent-evaluations.runs.items.item."""
+    """agent-evaluations.runs.items.item — one eval run on the ER-01 rail.
+
+    Provenance is per run (date + catalogue version + model, eval-gate-policy
+    § provenance). ``gate_passed`` is the verdict recorded at run time — ``None``
+    means "not recorded", which the rail says instead of inventing one.
+    ``delta_pass_rate`` is ``None`` unless a previous same-catalogue run exists.
+    """
 
     run_at: str
     label: str
+    date_label: str
     pass_rate: float
     score: str
-    gate_passed: bool
+    passed: int
+    total: int
+    gate_passed: bool | None
     eval_set: str
+    catalogue_version: str
+    model: str
+    delta_pass_rate: float | None
 
 
 class AgentEvaluationsRuns(BaseModel):
@@ -922,6 +934,7 @@ class AgentEvaluationsRuns(BaseModel):
 
     title: str
     subtitle: str
+    empty_label: str
     items: list[AgentEvaluationsRunsItemsItem]
     count: int
 

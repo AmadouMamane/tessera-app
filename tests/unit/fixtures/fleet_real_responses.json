@@ -3215,7 +3215,7 @@
         "label": "Catalogue d'échecs - llama3.2:3b",
         "updated_label": "Dernière exécution",
         "updated": "04/07/2026 08:35",
-        "updated_rel": "il y a 8 j",
+        "updated_rel": "il y a 11 j",
         "version_label": "Modèle évalué",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -3768,88 +3768,149 @@
         "n": 41
       },
       "runs": {
-        "title": "Historique des runs",
-        "subtitle": "Reconstruit quel run et quels scores étaient courants à chaque date.",
+        "title": "Historique des runs d'évaluation",
+        "subtitle": "Chaque point est un run : date, version de catalogue, taux, verdict gate.",
+        "empty_label": "Éval non exécutée — aucun run d'évaluation enregistré pour cet agent.",
         "items": [
           {
             "run_at": "20260704T083507Z",
             "label": "04/07 08:35",
+            "date_label": "04/07",
             "pass_rate": 0.958,
             "score": "9.6",
+            "passed": 114,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0084
           },
           {
             "run_at": "20260704T083116Z",
             "label": "04/07 08:31",
+            "date_label": "04/07",
             "pass_rate": 0.9496,
             "score": "9.5",
+            "passed": 113,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0168
           },
           {
             "run_at": "20260703T225158Z",
             "label": "03/07 22:51",
+            "date_label": "03/07",
             "pass_rate": 0.9328,
             "score": "9.3",
+            "passed": 111,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0588
           },
           {
             "run_at": "20260703T194240Z",
             "label": "03/07 19:42",
+            "date_label": "03/07",
             "pass_rate": 0.8739,
             "score": "8.7",
+            "passed": 104,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0252
           },
           {
             "run_at": "20260703T182156Z",
             "label": "03/07 18:21",
+            "date_label": "03/07",
             "pass_rate": 0.8487,
             "score": "8.5",
+            "passed": 101,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0252
           },
           {
             "run_at": "20260703T180647Z",
             "label": "03/07 18:06",
+            "date_label": "03/07",
             "pass_rate": 0.8235,
             "score": "8.2",
+            "passed": 98,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.1681
           },
           {
             "run_at": "20260703T131849Z",
             "label": "03/07 13:18",
+            "date_label": "03/07",
             "pass_rate": 0.6555,
             "score": "6.6",
+            "passed": 78,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0588
           },
           {
             "run_at": "20260703T124227Z",
             "label": "03/07 12:42",
+            "date_label": "03/07",
             "pass_rate": 0.5966,
             "score": "6.0",
+            "passed": 71,
+            "total": 119,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.1008
           },
           {
             "run_at": "20260618T083906Z",
             "label": "18/06 08:39",
+            "date_label": "18/06",
             "pass_rate": 0.4958,
             "score": "5.0",
+            "passed": 59,
+            "total": 119,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.1627
           },
           {
             "run_at": "20260617T145846Z",
             "label": "17/06 14:58",
+            "date_label": "17/06",
             "pass_rate": 0.6585,
             "score": "6.6",
+            "passed": 27,
+            "total": 41,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 10
@@ -3915,7 +3976,7 @@
         "label": "Fehlerkatalog - llama3.2:3b",
         "updated_label": "Letzte Ausfuehrung",
         "updated": "04/07/2026 08:35",
-        "updated_rel": "vor 8 T",
+        "updated_rel": "vor 11 T",
         "version_label": "Evaluiertes Modell",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -4468,88 +4529,149 @@
         "n": 41
       },
       "runs": {
-        "title": "Lauf-Verlauf",
-        "subtitle": "Rekonstruiert, welcher Lauf und welche Scores zu jedem Datum aktuell waren.",
+        "title": "Verlauf der Evaluierungslaeufe",
+        "subtitle": "Jeder Punkt ist ein Lauf: Datum, Katalogversion, Rate, Gate-Urteil.",
+        "empty_label": "Evaluierung nicht ausgefuehrt — kein Evaluierungslauf fuer diesen Agenten aufgezeichnet.",
         "items": [
           {
             "run_at": "20260704T083507Z",
             "label": "04/07 08:35",
+            "date_label": "04/07",
             "pass_rate": 0.958,
             "score": "9.6",
+            "passed": 114,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0084
           },
           {
             "run_at": "20260704T083116Z",
             "label": "04/07 08:31",
+            "date_label": "04/07",
             "pass_rate": 0.9496,
             "score": "9.5",
+            "passed": 113,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0168
           },
           {
             "run_at": "20260703T225158Z",
             "label": "03/07 22:51",
+            "date_label": "03/07",
             "pass_rate": 0.9328,
             "score": "9.3",
+            "passed": 111,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0588
           },
           {
             "run_at": "20260703T194240Z",
             "label": "03/07 19:42",
+            "date_label": "03/07",
             "pass_rate": 0.8739,
             "score": "8.7",
+            "passed": 104,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0252
           },
           {
             "run_at": "20260703T182156Z",
             "label": "03/07 18:21",
+            "date_label": "03/07",
             "pass_rate": 0.8487,
             "score": "8.5",
+            "passed": 101,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0252
           },
           {
             "run_at": "20260703T180647Z",
             "label": "03/07 18:06",
+            "date_label": "03/07",
             "pass_rate": 0.8235,
             "score": "8.2",
+            "passed": 98,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.1681
           },
           {
             "run_at": "20260703T131849Z",
             "label": "03/07 13:18",
+            "date_label": "03/07",
             "pass_rate": 0.6555,
             "score": "6.6",
+            "passed": 78,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0588
           },
           {
             "run_at": "20260703T124227Z",
             "label": "03/07 12:42",
+            "date_label": "03/07",
             "pass_rate": 0.5966,
             "score": "6.0",
+            "passed": 71,
+            "total": 119,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.1008
           },
           {
             "run_at": "20260618T083906Z",
             "label": "18/06 08:39",
+            "date_label": "18/06",
             "pass_rate": 0.4958,
             "score": "5.0",
+            "passed": 59,
+            "total": 119,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.1627
           },
           {
             "run_at": "20260617T145846Z",
             "label": "17/06 14:58",
+            "date_label": "17/06",
             "pass_rate": 0.6585,
             "score": "6.6",
+            "passed": 27,
+            "total": 41,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 10
@@ -4615,7 +4737,7 @@
         "label": "Failure catalogue - llama3.2:3b",
         "updated_label": "Last run",
         "updated": "04/07/2026 08:35",
-        "updated_rel": "8d ago",
+        "updated_rel": "11d ago",
         "version_label": "Evaluated model",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -5168,88 +5290,149 @@
         "n": 41
       },
       "runs": {
-        "title": "Run history",
-        "subtitle": "Reconstructs which run and which scores were current at each date.",
+        "title": "Evaluation run history",
+        "subtitle": "Each point is a run: date, catalogue version, rate, gate verdict.",
+        "empty_label": "Eval not executed — no evaluation run recorded for this agent.",
         "items": [
           {
             "run_at": "20260704T083507Z",
             "label": "04/07 08:35",
+            "date_label": "04/07",
             "pass_rate": 0.958,
             "score": "9.6",
+            "passed": 114,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0084
           },
           {
             "run_at": "20260704T083116Z",
             "label": "04/07 08:31",
+            "date_label": "04/07",
             "pass_rate": 0.9496,
             "score": "9.5",
+            "passed": 113,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0168
           },
           {
             "run_at": "20260703T225158Z",
             "label": "03/07 22:51",
+            "date_label": "03/07",
             "pass_rate": 0.9328,
             "score": "9.3",
+            "passed": 111,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0588
           },
           {
             "run_at": "20260703T194240Z",
             "label": "03/07 19:42",
+            "date_label": "03/07",
             "pass_rate": 0.8739,
             "score": "8.7",
+            "passed": 104,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0252
           },
           {
             "run_at": "20260703T182156Z",
             "label": "03/07 18:21",
+            "date_label": "03/07",
             "pass_rate": 0.8487,
             "score": "8.5",
+            "passed": 101,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0252
           },
           {
             "run_at": "20260703T180647Z",
             "label": "03/07 18:06",
+            "date_label": "03/07",
             "pass_rate": 0.8235,
             "score": "8.2",
+            "passed": 98,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.1681
           },
           {
             "run_at": "20260703T131849Z",
             "label": "03/07 13:18",
+            "date_label": "03/07",
             "pass_rate": 0.6555,
             "score": "6.6",
+            "passed": 78,
+            "total": 119,
             "gate_passed": true,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0588
           },
           {
             "run_at": "20260703T124227Z",
             "label": "03/07 12:42",
+            "date_label": "03/07",
             "pass_rate": 0.5966,
             "score": "6.0",
+            "passed": 71,
+            "total": 119,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.1008
           },
           {
             "run_at": "20260618T083906Z",
             "label": "18/06 08:39",
+            "date_label": "18/06",
             "pass_rate": 0.4958,
             "score": "5.0",
+            "passed": 59,
+            "total": 119,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.1627
           },
           {
             "run_at": "20260617T145846Z",
             "label": "17/06 14:58",
+            "date_label": "17/06",
             "pass_rate": 0.6585,
             "score": "6.6",
+            "passed": 27,
+            "total": 41,
             "gate_passed": false,
-            "eval_set": "support-client"
+            "eval_set": "support-client",
+            "catalogue_version": "43-83ed8a32",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 10
@@ -5315,7 +5498,7 @@
         "label": "Catalogue d'échecs - llama3.2:3b",
         "updated_label": "Dernière exécution",
         "updated": "04/07/2026 08:39",
-        "updated_rel": "il y a 8 j",
+        "updated_rel": "il y a 11 j",
         "version_label": "Modèle évalué",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -5844,80 +6027,135 @@
         "n": 24
       },
       "runs": {
-        "title": "Historique des runs",
-        "subtitle": "Reconstruit quel run et quels scores étaient courants à chaque date.",
+        "title": "Historique des runs d'évaluation",
+        "subtitle": "Chaque point est un run : date, version de catalogue, taux, verdict gate.",
+        "empty_label": "Éval non exécutée — aucun run d'évaluation enregistré pour cet agent.",
         "items": [
           {
             "run_at": "20260704T083938Z",
             "label": "04/07 08:39",
+            "date_label": "04/07",
             "pass_rate": 0.8696,
             "score": "8.7",
+            "passed": 60,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260704T083722Z",
             "label": "04/07 08:37",
+            "date_label": "04/07",
             "pass_rate": 0.8406,
             "score": "8.4",
+            "passed": 58,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.0145
           },
           {
             "run_at": "20260703T225415Z",
             "label": "03/07 22:54",
+            "date_label": "03/07",
             "pass_rate": 0.8551,
             "score": "8.6",
+            "passed": 59,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T194455Z",
             "label": "03/07 19:44",
+            "date_label": "03/07",
             "pass_rate": 0.8551,
             "score": "8.6",
+            "passed": 59,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0725
           },
           {
             "run_at": "20260703T182427Z",
             "label": "03/07 18:24",
+            "date_label": "03/07",
             "pass_rate": 0.7826,
             "score": "7.8",
+            "passed": 54,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260703T180922Z",
             "label": "03/07 18:09",
+            "date_label": "03/07",
             "pass_rate": 0.7536,
             "score": "7.5",
+            "passed": 52,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.087
           },
           {
             "run_at": "20260703T131129Z",
             "label": "03/07 13:11",
+            "date_label": "03/07",
             "pass_rate": 0.6667,
             "score": "6.7",
+            "passed": 46,
+            "total": 69,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260703T123413Z",
             "label": "03/07 12:34",
+            "date_label": "03/07",
             "pass_rate": 0.6377,
             "score": "6.4",
+            "passed": 44,
+            "total": 69,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.096
           },
           {
             "run_at": "20260617T150009Z",
             "label": "17/06 15:00",
+            "date_label": "17/06",
             "pass_rate": 0.5417,
             "score": "5.4",
+            "passed": 13,
+            "total": 24,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 9
@@ -5983,7 +6221,7 @@
         "label": "Fehlerkatalog - llama3.2:3b",
         "updated_label": "Letzte Ausfuehrung",
         "updated": "04/07/2026 08:39",
-        "updated_rel": "vor 8 T",
+        "updated_rel": "vor 11 T",
         "version_label": "Evaluiertes Modell",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -6512,80 +6750,135 @@
         "n": 24
       },
       "runs": {
-        "title": "Lauf-Verlauf",
-        "subtitle": "Rekonstruiert, welcher Lauf und welche Scores zu jedem Datum aktuell waren.",
+        "title": "Verlauf der Evaluierungslaeufe",
+        "subtitle": "Jeder Punkt ist ein Lauf: Datum, Katalogversion, Rate, Gate-Urteil.",
+        "empty_label": "Evaluierung nicht ausgefuehrt — kein Evaluierungslauf fuer diesen Agenten aufgezeichnet.",
         "items": [
           {
             "run_at": "20260704T083938Z",
             "label": "04/07 08:39",
+            "date_label": "04/07",
             "pass_rate": 0.8696,
             "score": "8.7",
+            "passed": 60,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260704T083722Z",
             "label": "04/07 08:37",
+            "date_label": "04/07",
             "pass_rate": 0.8406,
             "score": "8.4",
+            "passed": 58,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.0145
           },
           {
             "run_at": "20260703T225415Z",
             "label": "03/07 22:54",
+            "date_label": "03/07",
             "pass_rate": 0.8551,
             "score": "8.6",
+            "passed": 59,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T194455Z",
             "label": "03/07 19:44",
+            "date_label": "03/07",
             "pass_rate": 0.8551,
             "score": "8.6",
+            "passed": 59,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0725
           },
           {
             "run_at": "20260703T182427Z",
             "label": "03/07 18:24",
+            "date_label": "03/07",
             "pass_rate": 0.7826,
             "score": "7.8",
+            "passed": 54,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260703T180922Z",
             "label": "03/07 18:09",
+            "date_label": "03/07",
             "pass_rate": 0.7536,
             "score": "7.5",
+            "passed": 52,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.087
           },
           {
             "run_at": "20260703T131129Z",
             "label": "03/07 13:11",
+            "date_label": "03/07",
             "pass_rate": 0.6667,
             "score": "6.7",
+            "passed": 46,
+            "total": 69,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260703T123413Z",
             "label": "03/07 12:34",
+            "date_label": "03/07",
             "pass_rate": 0.6377,
             "score": "6.4",
+            "passed": 44,
+            "total": 69,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.096
           },
           {
             "run_at": "20260617T150009Z",
             "label": "17/06 15:00",
+            "date_label": "17/06",
             "pass_rate": 0.5417,
             "score": "5.4",
+            "passed": 13,
+            "total": 24,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 9
@@ -6651,7 +6944,7 @@
         "label": "Failure catalogue - llama3.2:3b",
         "updated_label": "Last run",
         "updated": "04/07/2026 08:39",
-        "updated_rel": "8d ago",
+        "updated_rel": "11d ago",
         "version_label": "Evaluated model",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -7180,80 +7473,135 @@
         "n": 24
       },
       "runs": {
-        "title": "Run history",
-        "subtitle": "Reconstructs which run and which scores were current at each date.",
+        "title": "Evaluation run history",
+        "subtitle": "Each point is a run: date, catalogue version, rate, gate verdict.",
+        "empty_label": "Eval not executed — no evaluation run recorded for this agent.",
         "items": [
           {
             "run_at": "20260704T083938Z",
             "label": "04/07 08:39",
+            "date_label": "04/07",
             "pass_rate": 0.8696,
             "score": "8.7",
+            "passed": 60,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260704T083722Z",
             "label": "04/07 08:37",
+            "date_label": "04/07",
             "pass_rate": 0.8406,
             "score": "8.4",
+            "passed": 58,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.0145
           },
           {
             "run_at": "20260703T225415Z",
             "label": "03/07 22:54",
+            "date_label": "03/07",
             "pass_rate": 0.8551,
             "score": "8.6",
+            "passed": 59,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T194455Z",
             "label": "03/07 19:44",
+            "date_label": "03/07",
             "pass_rate": 0.8551,
             "score": "8.6",
+            "passed": 59,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0725
           },
           {
             "run_at": "20260703T182427Z",
             "label": "03/07 18:24",
+            "date_label": "03/07",
             "pass_rate": 0.7826,
             "score": "7.8",
+            "passed": 54,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260703T180922Z",
             "label": "03/07 18:09",
+            "date_label": "03/07",
             "pass_rate": 0.7536,
             "score": "7.5",
+            "passed": 52,
+            "total": 69,
             "gate_passed": true,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.087
           },
           {
             "run_at": "20260703T131129Z",
             "label": "03/07 13:11",
+            "date_label": "03/07",
             "pass_rate": 0.6667,
             "score": "6.7",
+            "passed": 46,
+            "total": 69,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.029
           },
           {
             "run_at": "20260703T123413Z",
             "label": "03/07 12:34",
+            "date_label": "03/07",
             "pass_rate": 0.6377,
             "score": "6.4",
+            "passed": 44,
+            "total": 69,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.096
           },
           {
             "run_at": "20260617T150009Z",
             "label": "17/06 15:00",
+            "date_label": "17/06",
             "pass_rate": 0.5417,
             "score": "5.4",
+            "passed": 13,
+            "total": 24,
             "gate_passed": false,
-            "eval_set": "onboarding"
+            "eval_set": "onboarding",
+            "catalogue_version": "25-92b10927",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 9
@@ -7319,7 +7667,7 @@
         "label": "Catalogue d'échecs - llama3.2:3b",
         "updated_label": "Dernière exécution",
         "updated": "04/07/2026 08:28",
-        "updated_rel": "il y a 8 j",
+        "updated_rel": "il y a 11 j",
         "version_label": "Modèle évalué",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -7876,88 +8224,149 @@
         "n": 27
       },
       "runs": {
-        "title": "Historique des runs",
-        "subtitle": "Reconstruit quel run et quels scores étaient courants à chaque date.",
+        "title": "Historique des runs d'évaluation",
+        "subtitle": "Chaque point est un run : date, version de catalogue, taux, verdict gate.",
+        "empty_label": "Éval non exécutée — aucun run d'évaluation enregistré pour cet agent.",
         "items": [
           {
             "run_at": "20260704T082820Z",
             "label": "04/07 08:28",
+            "date_label": "04/07",
             "pass_rate": 0.95,
             "score": "9.5",
+            "passed": 76,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0125
           },
           {
             "run_at": "20260704T082658Z",
             "label": "04/07 08:26",
+            "date_label": "04/07",
             "pass_rate": 0.9375,
             "score": "9.4",
+            "passed": 75,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T224901Z",
             "label": "03/07 22:49",
+            "date_label": "03/07",
             "pass_rate": 0.9375,
             "score": "9.4",
+            "passed": 75,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0625
           },
           {
             "run_at": "20260703T193806Z",
             "label": "03/07 19:38",
+            "date_label": "03/07",
             "pass_rate": 0.875,
             "score": "8.8",
+            "passed": 70,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T193546Z",
             "label": "03/07 19:35",
+            "date_label": "03/07",
             "pass_rate": 0.875,
             "score": "8.8",
+            "passed": 70,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.15
           },
           {
             "run_at": "20260703T182738Z",
             "label": "03/07 18:27",
+            "date_label": "03/07",
             "pass_rate": 0.725,
             "score": "7.2",
+            "passed": 58,
+            "total": 80,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.025
           },
           {
             "run_at": "20260703T181228Z",
             "label": "03/07 18:12",
+            "date_label": "03/07",
             "pass_rate": 0.75,
             "score": "7.5",
+            "passed": 60,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T131435Z",
             "label": "03/07 13:14",
+            "date_label": "03/07",
             "pass_rate": 0.75,
             "score": "7.5",
+            "passed": 60,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0625
           },
           {
             "run_at": "20260703T123741Z",
             "label": "03/07 12:37",
+            "date_label": "03/07",
             "pass_rate": 0.6875,
             "score": "6.9",
+            "passed": 55,
+            "total": 80,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.0532
           },
           {
             "run_at": "20260617T150128Z",
             "label": "17/06 15:01",
+            "date_label": "17/06",
             "pass_rate": 0.7407,
             "score": "7.4",
+            "passed": 20,
+            "total": 27,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 10
@@ -8023,7 +8432,7 @@
         "label": "Fehlerkatalog - llama3.2:3b",
         "updated_label": "Letzte Ausfuehrung",
         "updated": "04/07/2026 08:28",
-        "updated_rel": "vor 8 T",
+        "updated_rel": "vor 11 T",
         "version_label": "Evaluiertes Modell",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -8580,88 +8989,149 @@
         "n": 27
       },
       "runs": {
-        "title": "Lauf-Verlauf",
-        "subtitle": "Rekonstruiert, welcher Lauf und welche Scores zu jedem Datum aktuell waren.",
+        "title": "Verlauf der Evaluierungslaeufe",
+        "subtitle": "Jeder Punkt ist ein Lauf: Datum, Katalogversion, Rate, Gate-Urteil.",
+        "empty_label": "Evaluierung nicht ausgefuehrt — kein Evaluierungslauf fuer diesen Agenten aufgezeichnet.",
         "items": [
           {
             "run_at": "20260704T082820Z",
             "label": "04/07 08:28",
+            "date_label": "04/07",
             "pass_rate": 0.95,
             "score": "9.5",
+            "passed": 76,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0125
           },
           {
             "run_at": "20260704T082658Z",
             "label": "04/07 08:26",
+            "date_label": "04/07",
             "pass_rate": 0.9375,
             "score": "9.4",
+            "passed": 75,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T224901Z",
             "label": "03/07 22:49",
+            "date_label": "03/07",
             "pass_rate": 0.9375,
             "score": "9.4",
+            "passed": 75,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0625
           },
           {
             "run_at": "20260703T193806Z",
             "label": "03/07 19:38",
+            "date_label": "03/07",
             "pass_rate": 0.875,
             "score": "8.8",
+            "passed": 70,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T193546Z",
             "label": "03/07 19:35",
+            "date_label": "03/07",
             "pass_rate": 0.875,
             "score": "8.8",
+            "passed": 70,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.15
           },
           {
             "run_at": "20260703T182738Z",
             "label": "03/07 18:27",
+            "date_label": "03/07",
             "pass_rate": 0.725,
             "score": "7.2",
+            "passed": 58,
+            "total": 80,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.025
           },
           {
             "run_at": "20260703T181228Z",
             "label": "03/07 18:12",
+            "date_label": "03/07",
             "pass_rate": 0.75,
             "score": "7.5",
+            "passed": 60,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T131435Z",
             "label": "03/07 13:14",
+            "date_label": "03/07",
             "pass_rate": 0.75,
             "score": "7.5",
+            "passed": 60,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0625
           },
           {
             "run_at": "20260703T123741Z",
             "label": "03/07 12:37",
+            "date_label": "03/07",
             "pass_rate": 0.6875,
             "score": "6.9",
+            "passed": 55,
+            "total": 80,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.0532
           },
           {
             "run_at": "20260617T150128Z",
             "label": "17/06 15:01",
+            "date_label": "17/06",
             "pass_rate": 0.7407,
             "score": "7.4",
+            "passed": 20,
+            "total": 27,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 10
@@ -8727,7 +9197,7 @@
         "label": "Failure catalogue - llama3.2:3b",
         "updated_label": "Last run",
         "updated": "04/07/2026 08:28",
-        "updated_rel": "8d ago",
+        "updated_rel": "11d ago",
         "version_label": "Evaluated model",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -9284,88 +9754,149 @@
         "n": 27
       },
       "runs": {
-        "title": "Run history",
-        "subtitle": "Reconstructs which run and which scores were current at each date.",
+        "title": "Evaluation run history",
+        "subtitle": "Each point is a run: date, catalogue version, rate, gate verdict.",
+        "empty_label": "Eval not executed — no evaluation run recorded for this agent.",
         "items": [
           {
             "run_at": "20260704T082820Z",
             "label": "04/07 08:28",
+            "date_label": "04/07",
             "pass_rate": 0.95,
             "score": "9.5",
+            "passed": 76,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0125
           },
           {
             "run_at": "20260704T082658Z",
             "label": "04/07 08:26",
+            "date_label": "04/07",
             "pass_rate": 0.9375,
             "score": "9.4",
+            "passed": 75,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T224901Z",
             "label": "03/07 22:49",
+            "date_label": "03/07",
             "pass_rate": 0.9375,
             "score": "9.4",
+            "passed": 75,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0625
           },
           {
             "run_at": "20260703T193806Z",
             "label": "03/07 19:38",
+            "date_label": "03/07",
             "pass_rate": 0.875,
             "score": "8.8",
+            "passed": 70,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T193546Z",
             "label": "03/07 19:35",
+            "date_label": "03/07",
             "pass_rate": 0.875,
             "score": "8.8",
+            "passed": 70,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.15
           },
           {
             "run_at": "20260703T182738Z",
             "label": "03/07 18:27",
+            "date_label": "03/07",
             "pass_rate": 0.725,
             "score": "7.2",
+            "passed": 58,
+            "total": 80,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.025
           },
           {
             "run_at": "20260703T181228Z",
             "label": "03/07 18:12",
+            "date_label": "03/07",
             "pass_rate": 0.75,
             "score": "7.5",
+            "passed": 60,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0
           },
           {
             "run_at": "20260703T131435Z",
             "label": "03/07 13:14",
+            "date_label": "03/07",
             "pass_rate": 0.75,
             "score": "7.5",
+            "passed": 60,
+            "total": 80,
             "gate_passed": true,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": 0.0625
           },
           {
             "run_at": "20260703T123741Z",
             "label": "03/07 12:37",
+            "date_label": "03/07",
             "pass_rate": 0.6875,
             "score": "6.9",
+            "passed": 55,
+            "total": 80,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": -0.0532
           },
           {
             "run_at": "20260617T150128Z",
             "label": "17/06 15:01",
+            "date_label": "17/06",
             "pass_rate": 0.7407,
             "score": "7.4",
+            "passed": 20,
+            "total": 27,
             "gate_passed": false,
-            "eval_set": "recouvrement"
+            "eval_set": "recouvrement",
+            "catalogue_version": "28-990f1447",
+            "model": "llama3.2:3b",
+            "delta_pass_rate": null
           }
         ],
         "count": 10
@@ -9431,7 +9962,7 @@
         "label": "Catalogue d'échecs - llama3.2:3b",
         "updated_label": "Dernière exécution",
         "updated": "16/06/2026 05:51",
-        "updated_rel": "il y a 26 j",
+        "updated_rel": "il y a 29 j",
         "version_label": "Modèle évalué",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -10328,8 +10859,9 @@
         "available": false
       },
       "runs": {
-        "title": "Historique des runs",
-        "subtitle": "Reconstruit quel run et quels scores étaient courants à chaque date.",
+        "title": "Historique des runs d'évaluation",
+        "subtitle": "Chaque point est un run : date, version de catalogue, taux, verdict gate.",
+        "empty_label": "Éval non exécutée — aucun run d'évaluation enregistré pour cet agent.",
         "items": [],
         "count": 0
       }
@@ -10394,7 +10926,7 @@
         "label": "Fehlerkatalog - llama3.2:3b",
         "updated_label": "Letzte Ausfuehrung",
         "updated": "16/06/2026 05:51",
-        "updated_rel": "vor 26 T",
+        "updated_rel": "vor 29 T",
         "version_label": "Evaluiertes Modell",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -11291,8 +11823,9 @@
         "available": false
       },
       "runs": {
-        "title": "Lauf-Verlauf",
-        "subtitle": "Rekonstruiert, welcher Lauf und welche Scores zu jedem Datum aktuell waren.",
+        "title": "Verlauf der Evaluierungslaeufe",
+        "subtitle": "Jeder Punkt ist ein Lauf: Datum, Katalogversion, Rate, Gate-Urteil.",
+        "empty_label": "Evaluierung nicht ausgefuehrt — kein Evaluierungslauf fuer diesen Agenten aufgezeichnet.",
         "items": [],
         "count": 0
       }
@@ -11357,7 +11890,7 @@
         "label": "Failure catalogue - llama3.2:3b",
         "updated_label": "Last run",
         "updated": "16/06/2026 05:51",
-        "updated_rel": "26d ago",
+        "updated_rel": "29d ago",
         "version_label": "Evaluated model",
         "version": "llama3.2:3b",
         "version_status": "On-prem",
@@ -12254,8 +12787,9 @@
         "available": false
       },
       "runs": {
-        "title": "Run history",
-        "subtitle": "Reconstructs which run and which scores were current at each date.",
+        "title": "Evaluation run history",
+        "subtitle": "Each point is a run: date, catalogue version, rate, gate verdict.",
+        "empty_label": "Eval not executed — no evaluation run recorded for this agent.",
         "items": [],
         "count": 0
       }

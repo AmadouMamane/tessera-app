@@ -174,13 +174,22 @@ class EvalSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class RunHistoryEntry:
-    """One per-agent run, for the ER-01 rail (run history) on the Evaluations page."""
+    """One per-agent run, for the ER-01 rail (run history) on the Evaluations page.
+
+    Every field is read from the run's own report — stored provenance, never derived:
+    the eval-gate policy (§ provenance) requires each run to carry its date AND its
+    catalogue version, and a gate verdict is only ever the one recorded at run time
+    (``None`` = not recorded, which the rail must say rather than invent). An empty
+    ``catalogue_version`` means the report did not record one.
+    """
 
     run_at: str
     total: int
     passed: int
     gate_passed: bool | None
     eval_set: str
+    catalogue_version: str
+    model: str
 
     @property
     def pass_rate(self) -> float:
@@ -224,6 +233,8 @@ def load_agent_run_history(agent_id: str, limit: int = 24) -> tuple[RunHistoryEn
             passed=int(summary.get("passed", 0) or 0),
             gate_passed=bool(gate_passed) if isinstance(gate_passed, bool) else None,
             eval_set=str(payload.get("eval_set") or ""),
+            catalogue_version=str(payload.get("catalogue_version") or ""),
+            model=str(payload.get("model") or ""),
         )
         # Dedup by run_at; keep the richest copy (latest mirrors an archive).
         existing = by_run.get(run_at)
