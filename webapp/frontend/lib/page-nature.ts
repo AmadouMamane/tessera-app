@@ -49,12 +49,13 @@ export type PageNature =
   | { kind: "lens"; domain: LensPageDomain };
 
 /**
- * The matrix, page → nature. Interim states recorded 2026-07-15: the four AGIR/monitoring
- * pages (incidents, automations, replay-shadow, curation) have NO per-agent substrate in
- * their own domain (measured: their signals are org-wide or fixtures; incident clusters
- * are not agent-attributed at the source) — they keep the EXPLICIT monitoring declaration
- * per the 2026-07-15 product decision on Incidents, with "remove the generic view"
- * proposed as a product decision (pas de vue > fausse vue).
+ * The matrix, page → nature. Product decisions (Amadou, 2026-07-15, HALT resolved): the
+ * four AGIR pages (incidents, automations, replay-shadow, curation) have NO per-agent
+ * substrate in their own domain (measured) — a card titled "Vue par agent" on them would
+ * suggest a decomposition of the domain that does not exist, so the generic view is
+ * REMOVED and they are org-wide (pas de vue > fausse décomposition). Replay is the one
+ * that deserves a REAL lens someday: `_RunDiff` in replay_shadow.py is already keyed by
+ * agent_id (OWED, small future lot). Never a column before its substrate.
  */
 export const PAGE_NATURE = {
   // ── SURVEILLER ────────────────────────────────────────────────────────────────────────
@@ -68,10 +69,10 @@ export const PAGE_NATURE = {
   "/surveiller/observabilite": { kind: "lens", domain: "observability" },
   // ── AGIR ──────────────────────────────────────────────────────────────────────────────
   "/agir/release-control": { kind: "lens", domain: "release" },
-  "/agir/incidents-playbooks": { kind: "lens", domain: "monitoring" },
-  "/agir/automations": { kind: "lens", domain: "monitoring" },
-  "/agir/replay-shadow": { kind: "lens", domain: "monitoring" },
-  "/agir/curation-eval-set": { kind: "lens", domain: "monitoring" },
+  "/agir/incidents-playbooks": { kind: "org-wide" },
+  "/agir/automations": { kind: "org-wide" },
+  "/agir/replay-shadow": { kind: "org-wide" },
+  "/agir/curation-eval-set": { kind: "org-wide" },
   // ── PROUVER ───────────────────────────────────────────────────────────────────────────
   "/prouver/audit-logs": { kind: "lens", domain: "proof" },
   "/prouver/etat-a-date": { kind: "org-wide" },

@@ -50,19 +50,19 @@ serait une garantie plus faible), l'état-à-date (le builder code en dur
 | `/surveiller/amelioration` | lens:improvement | réutilise quality (décision produit 2026-07-15) |
 | `/surveiller/observabilite` | lens:observability | **NOUVEAU** — anomalies, conformance |
 | `/agir/release-control` | lens:release | cartes par agent + **la raison** (floor_block, périmé, comptes) |
-| `/agir/incidents-playbooks` | lens:monitoring | pas de substrat incidents par agent — OWED (décision 2026-07-15) |
-| `/agir/automations` | lens:monitoring | signal org-wide — proposition en HALT |
-| `/agir/replay-shadow` | lens:monitoring | org-wide (mais `_RunDiff` interne EST par agent → substrat futur) |
-| `/agir/curation-eval-set` | lens:monitoring | fixture org — proposition org-wide en HALT |
+| `/agir/incidents-playbooks` | org-wide | vue générique RETIRÉE (décision 2026-07-15) — pas de substrat incidents par agent |
+| `/agir/automations` | org-wide | vue générique RETIRÉE (décision 2026-07-15) — signal org-wide |
+| `/agir/replay-shadow` | org-wide | vue générique RETIRÉE ; **OWED : vraie lentille replay** (`_RunDiff` interne EST par agent) |
+| `/agir/curation-eval-set` | org-wide | vue générique RETIRÉE (décision 2026-07-15) — catalogue transversal cas × modèles |
 | `/prouver/audit-logs` | lens:proof | **NOUVEAU** — governance, audit_count ; intégrité de chaîne = org-wide par conception |
-| `/prouver/etat-a-date` | org-wide | builder mono-agent (DEFAULT_AGENT_ID) — voir HALT |
+| `/prouver/etat-a-date` | org-wide | l'écran NOMME sa portée (agent par défaut Support client + flux org-wide) ; paramètre agent = OWED |
 | `/prouver/evidence-store` | org-wide | proofs sans décomposition agent |
 | `/configurer/signal-catalog` | org-wide | catalogue |
-| `/configurer/garde-fous` | org-wide | catalogue global (filtre "utilisé par" ≠ vue) — question en HALT |
-| `/configurer/modeles` | org-wide | idem |
+| `/configurer/garde-fous` | org-wide | catalogue global CONFIRMÉ (2026-07-15) — le par-agent vit dans `agents/[id]/garde-fous` |
+| `/configurer/modeles` | org-wide | idem (filtre "utilisé par" ≠ vue) |
 | `/configurer/connecteurs` | org-wide | config |
-| `/configurer/politiques` | org-wide | config globale — question en HALT |
-| `/configurer/sources-memoire` | org-wide | config globale — question en HALT |
+| `/configurer/politiques` | org-wide | config globale CONFIRMÉ (2026-07-15) |
+| `/configurer/sources-memoire` | org-wide | config globale CONFIRMÉ (2026-07-15) |
 | `/configurer/parametres` | org-wide | config |
 | `/configurer/integrations` | org-wide | config |
 | `/admin/utilisateurs` | org-wide | annuaire |
@@ -74,23 +74,35 @@ par construction — autre chantier), `/agents` (annuaire de flotte), `/a-traite
 `/a-faire` (files opérateur : listes dont chaque item porte son agent, pas des vues
 agrégées par agent), et les surfaces hors cockpit (login, produit, espaces, comprendre…).
 
-## Décisions produit en attente (HALT)
+## Décisions produit (Amadou, 2026-07-15 — HALT résolu, exécutées)
 
-1. **`agir/curation-eval-set`** — le catalogue est transversal (jeu de cas × modèles).
-   Proposition : **org-wide** (retirer le tableau monitoring générique). À trancher.
-2. **`configurer/{garde-fous, politiques, sources-memoire}`** — config globale, ou
-   déclinée par agent ? Les fiches par agent existent déjà sous `agents/[id]/garde-fous`.
-   Proposition : org-wide au niveau zone, le par-agent vit dans la fiche. À trancher.
-3. **`agir/{incidents-playbooks, automations, replay-shadow}`** — la spine n'expose pas
-   de fait par agent dans leur domaine. Proposition : **retirer la vue générique**
-   (pas de vue > fausse vue) et re-déclarer org-wide — OU garder monitoring explicite en
-   attendant le substrat (incidents : le lot futur « attribuer les clusters aux agents »
-   est déjà OWED ; replay : `_RunDiff` interne est déjà par agent, l'exposer est un petit
-   lot). À trancher page par page.
-4. **`prouver/etat-a-date`** — le builder reconstruit l'état d'UN agent implicite
-   (`DEFAULT_AGENT_ID`) sans le dire. Substrat partiel (audit log et transcript portent
-   l'agent). Proposition : petit lot « paramètre agent » OU assumer org-wide et l'écrire
-   sur la page. À trancher.
+1. **`agir/curation-eval-set`** → **org-wide, tableau générique retiré.** Le catalogue est
+   transversal (jeu de cas × modèles) ; une vue par agent y serait un mensonge de
+   décomposition.
+2. **`configurer/{garde-fous, politiques, sources-memoire}`** → **org-wide zone confirmé.**
+   Le par-agent vit déjà dans `agents/[id]/garde-fous` ; deux vues = doublon confus.
+3. **`agir/{incidents-playbooks, automations, replay-shadow}`** → **vue générique retirée,
+   org-wide** (pas de vue > fausse décomposition : une carte « Vue par agent » sur ces
+   pages suggère une décomposition du domaine qui n'existe pas — « monitoring explicite »
+   ne suffit pas). **OWED** : la vraie lentille replay par agent (`_RunDiff` de
+   `replay_shadow.py` est déjà keyé par `agent_id` — la seule des trois qui mérite une
+   vraie lentille) ; le lot « attribuer les clusters d'incidents aux agents » reste OWED.
+4. **`prouver/etat-a-date`** → **le défaut silencieux d'identité est tué d'abord** : le
+   champ Agent dit « Support client (agent par défaut) » et la bannière énonce la portée
+   réelle (package de l'agent par défaut ; flux de gouvernance org-wide). Un agent fantôme
+   ne décide plus silencieusement de ce que la page de preuve opposable prouve.
+   **OWED** : le paramètre agent (reconstruction par agent choisi), lot futur.
+
+Certificat règle 1 : **verbatim confirmé** — une pièce de mesure (identifiant de cas,
+chiffres), pas de la prose ; on ne traduit pas une pièce.
+
+## OWED consignés par ce lot
+
+- `?signals=<id non enregistré>` sur `/observability/snapshot` → **500 nu** (classe
+  fleet-500, aucun contrat honest-empty). Un jour, pas maintenant.
+- Lentille **replay par agent** (substrat interne `_RunDiff` déjà par agent_id).
+- Lot « incidents attribués aux agents à la source » (décision du 2026-07-15, inchangée).
+- `etat-a-date` : paramètre agent (preuve par agent choisie).
 
 ## Preuves du cliquet (mutations, toutes restaurées)
 

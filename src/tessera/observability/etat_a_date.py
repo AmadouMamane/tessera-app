@@ -780,7 +780,15 @@ def _assemble(
             else _loc(lang, "Maintenant (live)", "Jetzt (live)", "Now (live)"),
             "ref_code": _ref_code(at),
             "tenant": "Crédit Aurore",
-            "agent": _loc(lang, "Support client", "Kundensupport", "Customer support"),
+            # The reconstructed agent is DEFAULT_AGENT_ID, hardcoded — the screen must SAY
+            # so (product decision 2026-07-15): a phantom default must never silently
+            # decide what the opposable-proof page proves. Per-agent param: future lot.
+            "agent": _loc(
+                lang,
+                "Support client (agent par défaut)",
+                "Kundensupport (Standard-Agent)",
+                "Customer support (default agent)",
+            ),
             "context_source": _loc(lang, "Réponse", "Antwort", "Answer"),
             "timezone": "Europe/Paris",
             "scope": _scope_meta(scope, lang) if scope else None,
@@ -788,14 +796,20 @@ def _assemble(
                 lang,
                 "Reconstitué (accessibilité) n'est pas rejoué (sortie du modèle). Cette vue "
                 "reconstitue l'état accessible et applicable à T ; elle ne rejoue pas la réponse "
-                "exacte. Pour rejouer une exécution, utiliser AGIR - Replay.",
+                "exacte. Pour rejouer une exécution, utiliser AGIR - Replay. Portée : le package "
+                "de l'agent Support client (agent par défaut - seul agent reconstruit à ce "
+                "jour) ; les flux de gouvernance (ledger, passations) sont org-wide.",
                 "Rekonstruiert (Zugaenglichkeit) ist nicht Wiederholt (Modellausgabe). Diese "
                 "Ansicht rekonstruiert den zu T zugaenglichen und anwendbaren Zustand; sie "
                 "wiederholt nicht die exakte Antwort. Zum Wiederholen einer Ausfuehrung AGIR - "
-                "Replay verwenden.",
+                "Replay verwenden. Umfang: das Paket des Agenten Kundensupport (Standard-Agent "
+                "- derzeit einziger rekonstruierter Agent); die Governance-Stroeme (Ledger, "
+                "Uebergaben) sind org-weit.",
                 "Reconstructed (accessibility) is not Replayed (model output). This view "
                 "reconstructs the state accessible and applicable at T; it does not replay the "
-                "exact answer. To replay an execution, use AGIR - Replay.",
+                "exact answer. To replay an execution, use AGIR - Replay. Scope: the Customer "
+                "support agent's package (default agent - the only agent reconstructed today); "
+                "the governance streams (ledger, handoffs) are org-wide.",
             ),
         },
         "reconstructed": {

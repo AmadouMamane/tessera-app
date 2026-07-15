@@ -1,17 +1,13 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { CurationOverview } from "@/components/curation/curation-overview";
 import { AppShell } from "@/components/layout/app-shell";
-import { readAgentScope } from "@/lib/agent-scope";
 import { CurationOverviewSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
-import { loadFleet } from "@/lib/server/fleet";
 
 interface CurationPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: CurationPageProps) {
@@ -37,11 +33,9 @@ async function prefetchCuration(queryClient: QueryClient, locale: string) {
   });
 }
 
-export default async function CurationPage({ params, searchParams }: CurationPageProps) {
+export default async function CurationPage({ params }: CurationPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet(locale);
   const t = await getTranslations({ locale, namespace: "curation" });
   const queryClient = new QueryClient();
   try {
@@ -52,9 +46,6 @@ export default async function CurationPage({ params, searchParams }: CurationPag
 
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
-      <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} perAgent={false} />
-      </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <CurationOverview />
       </HydrationBoundary>

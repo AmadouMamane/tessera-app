@@ -84,10 +84,15 @@ updates this file after every step. A resuming session reads this first, then co
   INTEGRITY stays org-wide by design). Non-régression: Vue d'ensemble untouched; the five
   contextualised pages keep their lenses (registry pin + 392 vitest green).
 
-  **HALT (product decisions, in the report):** curation-eval-set org-wide? configurer/{garde-fous,
-  politiques, sources-memoire} global or per-agent? incidents/automations/replay-shadow — retirer
-  la vue générique (pas de vue > fausse vue) or keep explicit monitoring until a substrate?
-  etat-a-date silently reconstructs DEFAULT_AGENT_ID — agent param or assume org-wide on-page?
+  **HALT RÉSOLU (Amadou, même jour) — les 4 décisions exécutées:** (1) curation-eval-set →
+  org-wide, tableau générique retiré; (2) configurer/{garde-fous, politiques, sources-memoire} →
+  org-wide zone confirmé; (3) incidents + automations + replay-shadow → vue générique RETIRÉE,
+  org-wide (une carte « Vue par agent » y suggère une décomposition du domaine qui n'existe
+  pas) — OWED: la vraie lentille replay (`_RunDiff` déjà keyé par agent_id); (4) etat-a-date →
+  le défaut silencieux d'identité tué: le champ Agent dit « Support client (agent par défaut) »
+  et la bannière énonce la portée réelle (package de l'agent par défaut; flux de gouvernance
+  org-wide) — OWED: le paramètre agent. Certificat règle 1 verbatim confirmé. OWED consigné:
+  `?signals=<id non enregistré>` → 500 nu (classe fleet-500). Détails: docs/design/page-nature.md.
 
 - 2026-07-15 — **Each GOUVERNER page now contextualises its per-agent view with ITS domain's
   columns** (branch `claude/agent-lens-per-domain`: `72be992f` + the incidents fix below). The

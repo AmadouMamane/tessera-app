@@ -1,17 +1,13 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { IncidentsOverview } from "@/components/incidents/incidents-overview";
 import { AppShell } from "@/components/layout/app-shell";
-import { readAgentScope } from "@/lib/agent-scope";
 import { IncidentsOverviewSchema } from "@/lib/api/schemas";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
-import { loadFleet } from "@/lib/server/fleet";
 
 interface IncidentsPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: IncidentsPageProps) {
@@ -37,11 +33,9 @@ async function prefetchIncidents(queryClient: QueryClient, locale: string) {
   });
 }
 
-export default async function IncidentsPage({ params, searchParams }: IncidentsPageProps) {
+export default async function IncidentsPage({ params }: IncidentsPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet(locale);
   const t = await getTranslations({ locale, namespace: "incidents" });
   const queryClient = new QueryClient();
   try {
@@ -52,9 +46,6 @@ export default async function IncidentsPage({ params, searchParams }: IncidentsP
 
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
-      <div className="mb-3">
-        <GovScopeSection fleet={fleet} scope={scope} locale={locale} perAgent={false} />
-      </div>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <IncidentsOverview />
       </HydrationBoundary>
