@@ -341,11 +341,21 @@ async def _record_gating(payload: str) -> None:
     report file remains the archive of record and the idempotent sweep reconciles later.
     Non-agent catalogue runs produce no gating rows (the socle is per-agent) and log
     nothing. The Langfuse mirror is flushed before exit (CLI processes don't linger).
+
+    A refused run is not an unavailable store: a 0-token run carrying a ``model``
+    witness is turned away by the socle's door (``ModellessRunRefusedError``) and said so —
+    naming it "unavailable" would report the wrong fact about what happened.
     """
-    from tessera.observability.eval.gating_scores import record_gating_report
+    from tessera.observability.eval.gating_scores import (
+        ModellessRunRefusedError,
+        record_gating_report,
+    )
 
     try:
         inserted = await record_gating_report(json.loads(payload), flush_mirror=True)
+    except ModellessRunRefusedError as exc:
+        sys.stderr.write(f"gating REFUSED — run not recorded: {exc}\n")
+        return
     except Exception as exc:
         sys.stderr.write(f"gating store unavailable (report file remains the archive): {exc}\n")
         return

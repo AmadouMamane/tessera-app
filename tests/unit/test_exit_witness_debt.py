@@ -204,6 +204,11 @@ _EXIT_WITNESSES: dict[str, str] = {
     "scripts/landed.py": "VERDICT",  # EXIT_NOT_LANDED=4, distinct from a crash
     "scripts/seed_fixture.py": "VERDICT",  # --check; refuses a dump with no `vector(N)` column
     "scripts/assert_model_spoke.py": "VERDICT",
+    # Interrogates one date's gating runs (the archive's tokens + the rows' own spread),
+    # prints the evidence per run, deletes only under --apply. Its exit code is its own and
+    # can report the failure it exists to detect: 1 = the AFTER counts diverge from what it
+    # deleted, 2 = the store cannot be seen (a tool that cannot look never reports "ok").
+    "scripts/purge_modelless_gating_runs.py": "VERDICT",
     "scripts/phoenix_retrieval.py": "VERDICT",  # exits 1 on zero spans
     # ── OWED: they claim a verdict and cannot deliver one ──────────────────────────────────────
     # A dead backend does not crash the runner: it completes every case, still writes

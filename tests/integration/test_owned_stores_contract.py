@@ -248,6 +248,8 @@ class TestPostgresGatingContract:
             "agent_id": "contract-probe-agent",
             "model": "probe-model",
             "catalogue_version": "probe-1",
+            # the socle's door asks every entering run for tokens (ModellessRunRefusedError)
+            "cost": {"output_tokens": 1},
             "results": [
                 {"case_id": "probe_case", "language": "fr", "passed": True},
                 {"case_id": "probe_case", "language": "de", "passed": False},
@@ -291,6 +293,8 @@ class TestPostgresGatingContract:
             "agent_id": probe_agent,
             "model": "probe-model",
             "catalogue_version": "probe-1",
+            # the socle's door asks every entering run for tokens (ModellessRunRefusedError)
+            "cost": {"output_tokens": 1},
             "results": [
                 {"case_id": "01", "language": "fr", "passed": True},
                 {"case_id": "02", "language": "de", "passed": False},
@@ -338,6 +342,8 @@ class TestPostgresGatingContract:
                 "agent_id": probe_agent,
                 "model": "m",
                 "catalogue_version": "probe-1",
+                # the socle's door asks every entering run for tokens (ModellessRunRefusedError)
+                "cost": {"output_tokens": 1},
                 "results": [{"case_id": case_id, "language": "fr", "passed": True}],
             }
 

@@ -12,11 +12,16 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+import pytest
+
 from tessera.observability import clickhouse_scores, langfuse_scores
 from tessera.observability.eval.gating_scores import (
     GATING_METRIC,
     GatingScoreRow,
+    ModellessRunRefusedError,
     gating_rows_from_report,
+    ingest_gating_reports,
+    record_gating_report,
 )
 
 
@@ -191,6 +196,85 @@ class TestGatingRowsFromReport:
         assert gating_rows_from_report(self._report(run_at="bogus")) == []
 
 
+class TestZeroTokenGuard:
+    """The socle's door: no tokens → no model → the run does not enter (fail-closed).
+
+    Four table-only runs entered on 2026-07-12 wearing a ``model`` witness over 0
+    generated tokens — the null control filed as a model verdict. The guard
+    interrogates the THING (did a model emit anything?) via ``eval.ratchet.model_spoke``,
+    never the neighbourhood (is the model field filled?) — ADR 0026.
+    """
+
+    def _report(self, output_tokens: int, **overrides: object) -> dict[str, object]:
+        report: dict[str, object] = {
+            "run_at": "20260712T125537Z",
+            "agent_id": "support-client",
+            "model": "llama3.2:3b",
+            "catalogue_version": "63-071edbdc",
+            "cost": {"output_tokens": output_tokens},
+            "results": [
+                {"case_id": "01_prompt_injection", "language": "fr", "passed": True},
+            ],
+        }
+        report.update(overrides)
+        return report
+
+    def _durable_stub(self, monkeypatch, sink: list[object]) -> None:  # type: ignore[no-untyped-def]
+        async def _rows(rows: object) -> int:
+            sink.append(rows)
+            return len(rows)  # type: ignore[arg-type]
+
+        monkeypatch.setattr("tessera.observability.eval.gating_scores.record_gating_rows", _rows)
+
+    async def test_zero_token_run_with_model_witness_is_refused(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        durable: list[object] = []
+        self._durable_stub(monkeypatch, durable)
+        with pytest.raises(ModellessRunRefusedError) as excinfo:
+            await record_gating_report(self._report(output_tokens=0))
+        assert durable == []  # refused BEFORE any durable write
+        assert "0 output tokens" in str(excinfo.value)
+        assert "llama3.2:3b" in str(excinfo.value)  # the refusal names the lying witness
+
+    async def test_missing_cost_block_is_absence_of_proof_not_a_pass(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        durable: list[object] = []
+        self._durable_stub(monkeypatch, durable)
+        report = self._report(output_tokens=0)
+        del report["cost"]
+        with pytest.raises(ModellessRunRefusedError):
+            await record_gating_report(report)
+        assert durable == []
+
+    async def test_spoken_run_still_enters(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        durable: list[object] = []
+        self._durable_stub(monkeypatch, durable)
+        inserted = await record_gating_report(self._report(output_tokens=7736))
+        assert inserted == 1
+        assert len(durable) == 1
+
+    async def test_agentless_null_probe_never_had_rows_to_refuse(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        # A catalogue-wide probe (no agent_id) produces no rows at all — it stays in the
+        # file archive, guard or no guard. The refusal is about rows that WOULD enter
+        # wearing a model witness; this one never reaches the door.
+        durable: list[object] = []
+        self._durable_stub(monkeypatch, durable)
+        assert await record_gating_report(self._report(output_tokens=0, agent_id=None)) == 0
+        assert [batch for batch in durable if batch] == []  # nothing non-empty went durable
+
+    async def test_ingest_sweep_refuses_the_ghost_and_keeps_reconciling(  # type: ignore[no-untyped-def]
+        self, tmp_path, monkeypatch
+    ) -> None:
+        ghost = self._report(output_tokens=0)
+        healthy = self._report(output_tokens=512, run_at="20260713T090000Z", agent_id="onboarding")
+        (tmp_path / "a_ghost.json").write_text(json.dumps(ghost), encoding="utf-8")
+        (tmp_path / "b_healthy.json").write_text(json.dumps(healthy), encoding="utf-8")
+        monkeypatch.setenv("TESSERA_REPORTS_DIR", str(tmp_path))
+        durable: list[object] = []
+        self._durable_stub(monkeypatch, durable)
+        reports, inserted = await ingest_gating_reports()
+        # The ghost contributed nothing — and did not take the reconciliation down.
+        assert (reports, inserted) == (1, 1)
+
+
 class TestGatingMirror:
     def _row(self) -> GatingScoreRow:
         return GatingScoreRow(
@@ -265,3 +349,19 @@ class TestRunnerGatingHook:
         await runner._record_gating('{"agent_id": "x", "run_at": "20260620T143510Z"}')
         captured = capsys.readouterr()
         assert "gating store unavailable" in captured.err  # warned, not raised
+
+    async def test_refused_run_is_named_a_refusal_not_an_outage(self, monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+        # A turned-away ghost and a down Postgres are different facts; the CLI line
+        # must not report the wrong one (ADR 0026 — say what actually happened).
+        from eval import runner
+
+        async def _refuse(report: object, *, flush_mirror: bool = False) -> int:
+            raise ModellessRunRefusedError("no model spoke: 0 output tokens")
+
+        monkeypatch.setattr(
+            "tessera.observability.eval.gating_scores.record_gating_report", _refuse
+        )
+        await runner._record_gating('{"agent_id": "x", "run_at": "20260712T125537Z"}')
+        captured = capsys.readouterr()
+        assert "gating REFUSED — run not recorded" in captured.err
+        assert "unavailable" not in captured.err

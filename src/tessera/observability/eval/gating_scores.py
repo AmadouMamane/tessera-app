@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
+from eval.ratchet import model_spoke
 from tessera.retrieval.store import get_pool
 from tessera.sql import safe_identifier
 
@@ -31,6 +32,7 @@ __all__ = [
     "GATING_METRIC",
     "GATING_TABLE",
     "GatingScoreRow",
+    "ModellessRunRefusedError",
     "ensure_eval_gating_schema",
     "gating_row_dict",
     "gating_rows_from_report",
@@ -48,6 +50,21 @@ GATING_TABLE: Final = safe_identifier("eval_gating_scores")
 # metric today. A numeric judge metric added to the harness later becomes another metric
 # name under the same unique key; nothing here changes.
 GATING_METRIC: Final = "case_pass"
+
+
+class ModellessRunRefusedError(ValueError):
+    """A 0-token run carrying a ``model`` witness was refused entry to the gating socle.
+
+    A runner whose LLM backend is dead does not crash: every case still completes on
+    the deterministic layer alone, and the report still records the *configured*
+    ``model`` name. Filed in this table, such a run is a false witness — a row that
+    says a model was graded when nothing ever spoke. The honest witness that a model
+    spoke is generated tokens (:func:`eval.ratchet.model_spoke` — the one rule, reused
+    here, never copied), so the door asks for tokens and refuses without them,
+    fail-closed. Four such rows entered on 2026-07-12 (table-only, never published by
+    the archive, full sweeps in under 4 s); this exception is what closed the door.
+    """
+
 
 # Nature-1 DDL (ADR 0015 §Amendment 2) — the release-gating socle: bounded, opposable.
 CREATE_GATING_TABLE: Final = f"""
@@ -251,8 +268,24 @@ async def record_gating_report(report: Mapping[str, object], *, flush_mirror: bo
     so a boot-time re-sweep never re-sends the whole archive. ``flush_mirror`` drains
     the SDK batch before returning (for CLI exits — the eval runner). Returns the
     number of newly inserted rows.
+
+    Raises:
+        ModellessRunRefusedError: If the report would enter the socle (it has rows) while
+            no model generated a single token — recording it would file a null probe
+            as a model verdict. The refusal happens before any durable write.
     """
     rows = gating_rows_from_report(report)
+    if rows and not model_spoke(dict(report)):
+        msg = (
+            f"refusing to record gating run {rows[0].run_id!r}: the run generated "
+            f"0 output tokens yet the report claims model={report.get('model')!r}. "
+            f"The model field names the CONFIGURED model, never proof that one spoke "
+            f"— tokens are the witness. A modelless probe scores the deterministic "
+            f"layer alone; filed as a model run it becomes a false witness in the "
+            f"release socle. Re-run against a live backend, or leave it in the file "
+            f"archive only."
+        )
+        raise ModellessRunRefusedError(msg)
     inserted = await record_gating_rows(rows)
     if inserted:
         from tessera.observability import langfuse_scores
@@ -268,10 +301,14 @@ async def ingest_gating_reports() -> tuple[int, int]:
     release runs, and returns ``(reports_with_rows, rows_inserted)``. The unique key makes
     a re-sweep free, so this runs at every boot **and** serves as the G4 historical
     backfill — the file archive and the owned table converge without a separate tool.
-    Non-release (agent-less) reports contribute nothing, by design.
+    Non-release (agent-less) reports contribute nothing, by design. A modelless report
+    is refused at the door (:class:`ModellessRunRefusedError`) — logged with the file that
+    carried it, then the sweep keeps reconciling the rest of the archive: one ghost must
+    neither enter nor take the whole reconciliation down with it.
     """
     import json
 
+    from tessera.observability import logging as obs_logging
     from tessera.observability.eval.report_paths import iter_report_files
 
     reports_with_rows = 0
@@ -292,6 +329,12 @@ async def ingest_gating_reports() -> tuple[int, int]:
         if run_id in seen_runs:  # latest_<agent>.json duplicates its timestamped archive
             continue
         seen_runs.add(run_id)
+        try:
+            inserted_total += await record_gating_report(report)
+        except ModellessRunRefusedError as exc:
+            obs_logging.get_logger("tessera.spine").warning(
+                "gating.modelless_run_refused", report=path.name, error=str(exc)
+            )
+            continue
         reports_with_rows += 1
-        inserted_total += await record_gating_report(report)
     return reports_with_rows, inserted_total
