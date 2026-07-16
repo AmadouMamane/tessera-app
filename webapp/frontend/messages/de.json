@@ -7711,7 +7711,10 @@
         "how": "Letzte Status- und Zuweisungsänderungen.",
         "source": "Operator-Backlog (dauerhafter Zustand)."
       }
-    }
+    },
+    "quickNeedsRow": "Wählen Sie eine Zeile — diese Aktion erfolgt im Detailbereich",
+    "historyNote": "Statusübergänge werden nicht protokolliert — nur die obigen datierten Meilensteine sind erfasst.",
+    "noRelations": "Keine Beziehungen für dieses Element erfasst."
   },
   "etatADate": {
     "explain": {

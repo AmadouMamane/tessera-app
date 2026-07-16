@@ -7713,7 +7713,10 @@
         "how": "Derniers changements de statut et d'assignation opérés.",
         "source": "Backlog opérateur (état durable)."
       }
-    }
+    },
+    "quickNeedsRow": "Sélectionnez une ligne — cette action s'applique depuis le panneau de détail",
+    "historyNote": "Les transitions de statut ne sont pas journalisées — seuls les jalons datés ci-dessus sont capturés.",
+    "noRelations": "Aucune relation capturée pour cet élément."
   },
   "etatADate": {
     "explain": {

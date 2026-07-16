@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
@@ -29,6 +28,13 @@ import {
   useState,
 } from "react";
 
+import {
+  FilterDropdown,
+  ResetButton,
+  downloadBlob,
+  toCsv,
+} from "@/components/agent/agent-subtab-shared";
+import { Link } from "@/i18n/navigation";
 import { fetchAgentAFaire, mutateAFaireItem } from "@/lib/api/client";
 import type { AgentAFaire as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -86,6 +92,39 @@ const SORT_VALUE: ((it: TaskT) => string | number)[] = [
   (it) => it.status.toLowerCase(),
 ];
 
+// Client-side filter dimensions over the task rows. Tone keys are used where a
+// locale-independent key exists (prio_tone, status_tone); type/assignee filter
+// on the raw payload string. "all" disables a dimension.
+type Filters = {
+  prio: string;
+  type: string;
+  status: string;
+  assignee: string;
+  slaRisk: boolean;
+};
+const ALL_FILTERS: Filters = {
+  prio: "all",
+  type: "all",
+  status: "all",
+  assignee: "all",
+  slaRisk: false,
+};
+// Saved views, index-keyed to the backend `filters.views` order: all cases /
+// urgent / SLA at risk / assigned to me ("Moi" is the literal the assign
+// mutation writes, whatever the locale).
+const VIEW_PRESETS: Filters[] = [
+  ALL_FILTERS,
+  { ...ALL_FILTERS, prio: "crit" },
+  { ...ALL_FILTERS, slaRisk: true },
+  { ...ALL_FILTERS, assignee: "Moi" },
+];
+const sameFilters = (a: Filters, b: Filters) =>
+  a.prio === b.prio &&
+  a.type === b.type &&
+  a.status === b.status &&
+  a.assignee === b.assignee &&
+  a.slaRisk === b.slaRisk;
+
 export function AgentAFaire() {
   const t = useTranslations("agentAFaire");
   const locale = useLocale();
@@ -98,6 +137,7 @@ export function AgentAFaire() {
   });
 
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>(ALL_FILTERS);
   const [selected, setSelected] = useState<string | null>(null);
   const mutate = useMutation({
     mutationFn: (body: { item_id: string; status?: string; assignee?: string }) =>
@@ -108,15 +148,25 @@ export function AgentAFaire() {
   const tasks = data?.table?.tasks ?? [];
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (q === "") return tasks;
-    return tasks.filter(
-      (it) =>
-        it.title.toLowerCase().includes(q) ||
-        it.type.toLowerCase().includes(q) ||
-        it.source.toLowerCase().includes(q) ||
-        it.ref.toLowerCase().includes(q),
-    );
-  }, [tasks, search]);
+    return tasks.filter((it) => {
+      if (
+        q !== "" &&
+        !(
+          it.title.toLowerCase().includes(q) ||
+          it.type.toLowerCase().includes(q) ||
+          it.source.toLowerCase().includes(q) ||
+          it.ref.toLowerCase().includes(q)
+        )
+      )
+        return false;
+      if (filters.prio !== "all" && it.prio_tone !== filters.prio) return false;
+      if (filters.type !== "all" && it.type !== filters.type) return false;
+      if (filters.status !== "all" && it.status_tone !== filters.status) return false;
+      if (filters.assignee !== "all" && it.assignee !== filters.assignee) return false;
+      if (filters.slaRisk && it.sla_tone === "ok") return false;
+      return true;
+    });
+  }, [tasks, search, filters]);
 
   const details = data?.details ?? [];
   // The drawer opens only on an explicit row selection (Sources idiom).
@@ -148,14 +198,22 @@ export function AgentAFaire() {
         ))}
       </div>
 
-      <FilterStrip data={data} search={search} setSearch={setSearch} count={filtered.length} />
+      <FilterStrip
+        data={data}
+        tasks={tasks}
+        search={search}
+        setSearch={setSearch}
+        filters={filters}
+        setFilters={setFilters}
+        count={filtered.length}
+      />
 
       <TaskTable t={t} data={data} tasks={filtered} selected={selected} onSelect={setSelected} />
 
       <div className="grid min-w-0 items-start gap-2.5 md:grid-cols-2 xl:grid-cols-4">
         <Donut data={data} />
         <Sla data={data} />
-        <Quick data={data} />
+        <Quick t={t} data={data} />
         <Activity data={data} />
       </div>
 
@@ -178,6 +236,7 @@ export function AgentAFaire() {
 }
 
 function Rail({ data }: { data: Data }) {
+  const tc = useTranslations("common");
   const r = data.rail;
   if (!r) return null;
   return (
@@ -191,21 +250,24 @@ function Rail({ data }: { data: Data }) {
         </span>
       ))}
       <span className="ml-auto flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1 text-[var(--tessera-text-muted)]">
-        {r.period} <ChevronDown className="h-3.5 w-3.5" />
+        {r.period}
       </span>
       <span className="tabular-nums text-[var(--tessera-text)]">{r.updated}</span>
       <span className="flex items-center gap-1 text-emerald-300">
         <ArrowUpRight className="h-3.5 w-3.5" /> {r.now}
       </span>
       <span className="flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1 text-[var(--tessera-text-muted)]">
-        {r.scope} <ChevronDown className="h-3.5 w-3.5" />
+        {r.scope}
       </span>
-      <button
-        type="button"
-        className="flex h-8 items-center gap-1.5 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-[#c4b5fd] hover:bg-[#4c3fb0]/80"
-      >
-        <Layers className="h-3.5 w-3.5" /> {r.bulk}
-      </button>
+      <span title={tc("notWired")}>
+        <button
+          type="button"
+          disabled
+          className="flex h-8 cursor-not-allowed items-center gap-1.5 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-[#c4b5fd] opacity-50"
+        >
+          <Layers className="h-3.5 w-3.5" /> {r.bulk}
+        </button>
+      </span>
     </section>
   );
 }
@@ -230,12 +292,6 @@ function Timeline({ data }: { data: Data }) {
           </span>
         </span>
       ))}
-      <button
-        type="button"
-        className="ml-auto flex items-center gap-1 text-[0.66rem] text-[#87bfff] hover:text-[#a9d2ff]"
-      >
-        {tl.cta} <ChevronRight className="h-3 w-3" />
-      </button>
     </section>
   );
 }
@@ -314,20 +370,46 @@ function Spark({
   );
 }
 
-// Horizontal filter strip (Sources idiom): wired search + display selects + count.
+// Horizontal filter strip (Sources idiom): wired search + REAL selects whose
+// options derive from the live rows, saved-view preset pills, reset, count.
+// The select order is index-keyed to the backend contract: priority, type,
+// status, assignee — never matched by (localized) label.
 function FilterStrip({
   data,
+  tasks,
   search,
   setSearch,
+  filters,
+  setFilters,
   count,
 }: {
   data: Data;
+  tasks: TaskT[];
   search: string;
   setSearch: (v: string) => void;
+  filters: Filters;
+  setFilters: (f: Filters) => void;
   count: number;
 }) {
   const f = data.filters;
+  const options = useMemo(() => {
+    const uniq = (pairs: [string, string][]) => {
+      const seen = new Map<string, string>();
+      for (const [value, label] of pairs) if (!seen.has(value)) seen.set(value, label);
+      return [...seen.entries()].map(([value, label]) => ({ value, label }));
+    };
+    return {
+      prio: uniq(tasks.map((it) => [it.prio_tone, it.priority] as [string, string])).sort(
+        (a, b) => (PRIO_RANK[a.value] ?? 9) - (PRIO_RANK[b.value] ?? 9),
+      ),
+      type: uniq(tasks.map((it) => [it.type, it.type] as [string, string])),
+      status: uniq(tasks.map((it) => [it.status_tone, it.status] as [string, string])),
+      assignee: uniq(tasks.map((it) => [it.assignee, it.assignee] as [string, string])),
+    };
+  }, [tasks]);
   if (!f) return null;
+  const dims = ["prio", "type", "status", "assignee"] as const;
+  const touched = !sameFilters(filters, ALL_FILTERS) || search.trim() !== "";
   return (
     <section className="flex min-h-[54px] flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div className="relative min-w-[200px] flex-1">
@@ -341,26 +423,48 @@ function FilterStrip({
           className="h-9 w-full rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] pr-3 pl-9 text-xs text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
         />
       </div>
-      {f.selects.map((s) => (
-        <button
-          key={s.label}
-          type="button"
-          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.7rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <span className="text-[var(--tessera-text)]">{s.label}</span>
-          <span>{s.value}</span>
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-      ))}
-      {f.views.map((v) => (
-        <button
-          key={v}
-          type="button"
-          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.7rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <Eye className="h-3.5 w-3.5" /> {v}
-        </button>
-      ))}
+      {f.selects.map((s, i) => {
+        const dim = dims[i];
+        if (!dim) return null;
+        return (
+          <FilterDropdown
+            key={s.label}
+            label={s.label}
+            value={filters[dim]}
+            options={[{ value: "all", label: s.value }, ...options[dim]]}
+            onSelect={(v) => setFilters({ ...filters, [dim]: v })}
+          />
+        );
+      })}
+      {f.views.map((v, i) => {
+        const preset = VIEW_PRESETS[i];
+        if (!preset) return null;
+        const on = sameFilters(filters, preset);
+        return (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={on}
+            onClick={() => setFilters(preset)}
+            className={cn(
+              "flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-[0.7rem]",
+              on
+                ? "border-[#7c5cf5]/60 bg-[#4c3fb0]/25 text-[#c4b5fd]"
+                : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+            )}
+          >
+            <Eye className="h-3.5 w-3.5" /> {v}
+          </button>
+        );
+      })}
+      {touched ? (
+        <ResetButton
+          onClick={() => {
+            setFilters(ALL_FILTERS);
+            setSearch("");
+          }}
+        />
+      ) : null}
       <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)]">
         <Layers className="h-3.5 w-3.5" /> {count}
       </span>
@@ -683,6 +787,7 @@ function TaskDrawer({
     height: number;
   } | null>(null);
   const [shown, setShown] = useState(false);
+  const [tab, setTab] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
   useEffect(() => {
@@ -784,33 +889,82 @@ function TaskDrawer({
           <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
             <nav className="mb-2 flex items-center gap-4 border-b border-[var(--tessera-border)]">
               {d.tabs.map((tb, i) => (
-                <span
+                <button
                   key={tb}
+                  type="button"
+                  aria-pressed={i === tab}
+                  onClick={() => setTab(i)}
                   className={cn(
-                    "-mb-px border-b-2 py-1.5 text-[0.66rem]",
-                    i === 0
+                    "-mb-px border-b-2 py-1.5 text-[0.66rem] transition-colors",
+                    i === tab
                       ? "border-emerald-400 font-medium text-[var(--tessera-text)]"
-                      : "border-transparent text-[var(--tessera-text-muted)]",
+                      : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
                   )}
                 >
                   {tb}
-                </span>
+                </button>
               ))}
             </nav>
-            <dl className="flex flex-col gap-1.5 text-[0.7rem]">
-              {d.context.map((c) => (
-                <div key={c.label} className="flex items-center justify-between gap-2">
-                  <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
-                  <dd className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
-                    {c.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-2 text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {d.summary_label}
-            </p>
-            <p className="text-[0.7rem] leading-snug text-[var(--tessera-text)]">{d.summary}</p>
+            {tab === 0 ? (
+              <>
+                <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+                  {d.context.map((c) => (
+                    <div key={c.label} className="flex items-center justify-between gap-2">
+                      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
+                      <dd className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
+                        {c.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-2 text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                  {d.summary_label}
+                </p>
+                <p className="text-[0.7rem] leading-snug text-[var(--tessera-text)]">{d.summary}</p>
+              </>
+            ) : null}
+            {tab === 1 ? (
+              <>
+                <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+                  {d.sla_rows.map((r) => (
+                    <div key={r.label} className="flex items-center justify-between gap-2">
+                      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{r.label}</dt>
+                      <dd className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
+                        {r.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-2 text-[0.62rem] leading-snug text-[var(--tessera-text-muted)]">
+                  {t("historyNote")}
+                </p>
+              </>
+            ) : null}
+            {tab === 2 ? (
+              <>
+                <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+                  {d.context.slice(0, 1).map((c) => (
+                    <div key={c.label} className="flex items-center justify-between gap-2">
+                      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
+                      <dd className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
+                        {c.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <Link
+                  href="/surveiller/qualite-ia"
+                  className="mt-2 inline-flex items-center gap-1 text-[0.68rem] text-[#87bfff] hover:text-[#a9d2ff]"
+                >
+                  {d.selected.cta} <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </>
+            ) : null}
+            {tab === 3 ? (
+              <p className="py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+                {t("noRelations")}
+              </p>
+            ) : null}
           </div>
 
           {/* echeance & sla */}
@@ -903,10 +1057,9 @@ function TaskDrawer({
 
 function Panel({
   title,
-  cta,
   info,
   children,
-}: { title: string; cta?: string; info?: ReactNode; children: ReactNode }) {
+}: { title: string; info?: ReactNode; children: ReactNode }) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -914,14 +1067,6 @@ function Panel({
           <span className="min-w-0 truncate">{title}</span>
           {info}
         </h3>
-        {cta ? (
-          <button
-            type="button"
-            className="flex items-center gap-0.5 text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
-          >
-            {cta} <ChevronRight className="h-3 w-3" />
-          </button>
-        ) : null}
       </div>
       <div className="min-h-0 flex-1">{children}</div>
     </section>
@@ -936,7 +1081,7 @@ function Donut({ data }: { data: Data }) {
   const C = 2 * Math.PI * R;
   let off = 0;
   return (
-    <Panel title={d.title} cta={d.cta} info={<ExplainInfo k="donut" title={d.title} />}>
+    <Panel title={d.title} info={<ExplainInfo k="donut" title={d.title} />}>
       <div className="flex items-center gap-3">
         <div className="relative h-[112px] w-[112px] shrink-0">
           <svg viewBox="0 0 112 112" className="h-full w-full -rotate-90" aria-hidden="true">
@@ -995,7 +1140,7 @@ function Sla({ data }: { data: Data }) {
   if (!s) return null;
   const max = Math.max(...s.buckets.map((b) => b.count), 1);
   return (
-    <Panel title={s.title} cta={s.cta} info={<ExplainInfo k="sla" title={s.title} />}>
+    <Panel title={s.title} info={<ExplainInfo k="sla" title={s.title} />}>
       <ul className="flex flex-col gap-2">
         {s.buckets.map((b) => (
           <li key={b.label} className="flex items-center gap-2 text-[0.66rem]">
@@ -1016,8 +1161,9 @@ function Sla({ data }: { data: Data }) {
   );
 }
 
-function Quick({ data }: { data: Data }) {
+function Quick({ t, data }: { t: T; data: Data }) {
   const q = data.quick;
+  const tbl = data.table;
   if (!q) return null;
   const icons: LucideIcon[] = [
     ArrowUpRight,
@@ -1027,20 +1173,72 @@ function Quick({ data }: { data: Data }) {
     PlusCircle,
     FileSignature,
   ];
+  const exportCsv = () => {
+    if (!tbl) return;
+    downloadBlob(
+      "tessera-a-faire.csv",
+      "text/csv",
+      toCsv(
+        tbl.columns,
+        tbl.tasks.map((it) => [
+          it.priority,
+          it.type,
+          it.title,
+          `${it.source} ${it.ref}`,
+          it.assignee,
+          it.sla,
+          it.due,
+          it.status,
+        ]),
+      ),
+    );
+  };
+  const btnCls =
+    "flex w-full flex-col items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-2 text-center text-[0.6rem] text-[var(--tessera-text)]";
   return (
     <Panel title={q.title}>
       <div className="grid grid-cols-3 gap-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? ArrowUpRight;
-          return (
-            <button
-              key={it}
-              type="button"
-              className="flex flex-col items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-2 text-center text-[0.6rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
-            >
+          const inner = (
+            <>
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
               <span className="min-w-0 truncate">{it}</span>
-            </button>
+            </>
+          );
+          if (i === 4) {
+            return (
+              <Link
+                key={it}
+                href="/surveiller/qualite-ia"
+                className={cn(btnCls, "hover:border-[#7c5cf5]/50")}
+              >
+                {inner}
+              </Link>
+            );
+          }
+          if (i === 5) {
+            return (
+              <button
+                key={it}
+                type="button"
+                onClick={exportCsv}
+                className={cn(btnCls, "hover:border-[#7c5cf5]/50")}
+              >
+                {inner}
+              </button>
+            );
+          }
+          return (
+            <span key={it} title={t("quickNeedsRow")}>
+              <button
+                type="button"
+                disabled
+                className={cn(btnCls, "cursor-not-allowed opacity-50")}
+              >
+                {inner}
+              </button>
+            </span>
           );
         })}
       </div>
@@ -1052,7 +1250,7 @@ function Activity({ data }: { data: Data }) {
   const a = data.activity;
   if (!a) return null;
   return (
-    <Panel title={a.title} cta={a.cta} info={<ExplainInfo k="activity" title={a.title} />}>
+    <Panel title={a.title} info={<ExplainInfo k="activity" title={a.title} />}>
       <ul className="flex flex-col gap-1.5">
         {a.items.map((it, i) => (
           <li

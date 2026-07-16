@@ -77,3 +77,87 @@ test("'Prendre en charge' persists the workflow status", async ({ page }) => {
   await reopened.getByRole("button", { name: "Marquer resolu" }).click();
   await expect(reopened.getByText("Resolu").first()).toBeVisible();
 });
+
+// ── lot 2: the FilterStrip really filters, the drawer tabs are real ──────────
+
+test("the priority filter narrows the rows to the picked value, reset restores", async ({
+  page,
+}) => {
+  const total = await page.locator("table tbody tr").count();
+  const strip = page.locator("section", {
+    has: page.getByPlaceholder(/Rechercher dans la liste/),
+  });
+  // The strip dropdown, not the sortable column header of the same name.
+  await strip.getByRole("button", { name: /^Priorite/ }).click();
+  const items = page.getByRole("menuitem");
+  const label = ((await items.nth(1).textContent()) ?? "").replace("•", "").trim();
+  await items.nth(1).click();
+  const rows = page.locator("table tbody tr");
+  const n = await rows.count();
+  expect(n).toBeGreaterThan(0);
+  for (let i = 0; i < n; i++) {
+    await expect(rows.nth(i).locator("td").first()).toHaveText(label);
+  }
+  await page.getByRole("button", { name: "Réinitialiser" }).click();
+  expect(await page.locator("table tbody tr").count()).toBe(total);
+});
+
+test("saved views apply their preset and expose pressed state", async ({ page }) => {
+  const urgent = page.getByRole("button", { name: "Urgents", exact: true });
+  await expect(urgent).toHaveAttribute("aria-pressed", "false");
+  await urgent.click();
+  await expect(urgent).toHaveAttribute("aria-pressed", "true");
+  // Urgent is the single-priority preset: every visible badge carries ONE label.
+  const badges = await page.locator("table tbody tr td:first-child").allTextContents();
+  expect(new Set(badges.map((b) => b.trim())).size).toBeLessThanOrEqual(1);
+  const all = page.getByRole("button", { name: "Tous les cas" });
+  await all.click();
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+});
+
+test("the drawer tabs gate real content: history note, evidence link, honest relations", async ({
+  page,
+}) => {
+  await page.locator("table tbody tr").first().click();
+  const detail = page.getByRole("dialog");
+  await detail.getByRole("button", { name: "Historique" }).click();
+  await expect(detail.getByText(/jalons datés ci-dessus sont capturés/)).toBeVisible();
+  await detail.getByRole("button", { name: "Preuves" }).click();
+  await expect(detail.getByRole("link", { name: /Ouvrir dans les evaluations/ })).toHaveAttribute(
+    "href",
+    "/fr/surveiller/qualite-ia",
+  );
+  await detail.getByRole("button", { name: "Relations" }).click();
+  await expect(detail.getByText("Aucune relation capturée pour cet élément.")).toBeVisible();
+  await detail.getByRole("button", { name: "Contexte" }).click();
+  await expect(detail.getByText("Resume")).toBeVisible();
+});
+
+test("quick actions: real CSV export, real evaluations link, row-bound actions say so", async ({
+  page,
+}) => {
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exporter la liste" }).click();
+  expect((await dl).suggestedFilename()).toBe("tessera-a-faire.csv");
+  await expect(page.getByRole("link", { name: "Ouvrir les evaluations" })).toHaveAttribute(
+    "href",
+    "/fr/surveiller/qualite-ia",
+  );
+  // With no row selected, per-item actions are disabled and say why.
+  const take = page.getByRole("button", { name: "Prendre en charge" });
+  await expect(take).toBeDisabled();
+  await expect(take.locator("xpath=ancestor-or-self::*[@title]").first()).toHaveAttribute(
+    "title",
+    /panneau de détail/,
+  );
+});
+
+test("rail bulk is honestly disabled and the dead timeline CTA is gone", async ({ page }) => {
+  const bulk = page.getByRole("button", { name: "Actions groupees" });
+  await expect(bulk).toBeDisabled();
+  await expect(bulk.locator("xpath=ancestor-or-self::*[@title]").first()).toHaveAttribute(
+    "title",
+    "Non câblé — cette action arrive dans un lot dédié",
+  );
+  await expect(page.getByRole("button", { name: "Voir la timeline complete" })).toHaveCount(0);
+});

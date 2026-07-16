@@ -7711,7 +7711,10 @@
         "how": "Latest status and assignment changes.",
         "source": "Operator backlog (durable state)."
       }
-    }
+    },
+    "quickNeedsRow": "Select a row — this action is taken from the detail panel",
+    "historyNote": "Status transitions are not journaled — only the dated milestones above are captured.",
+    "noRelations": "No relations captured for this item."
   },
   "etatADate": {
     "explain": {
