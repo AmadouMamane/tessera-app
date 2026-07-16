@@ -31,6 +31,15 @@ import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 import { AgentCrossLinks } from "./agent-cross-links";
 import { AgentSubtabs } from "./agent-subtabs";
+import {
+  ContentTab,
+  ErrorsTab,
+  EvaluationsTab,
+  HistoriqueExportsTab,
+  MessagesTab,
+  TracesTab,
+  UsersTab,
+} from "./historique-tabs";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 
@@ -227,6 +236,8 @@ export function AgentHistorique() {
   const a = data.actions;
   const subtabs = data.subtabs ?? [];
   const active = subtab || subtabs[0] || "";
+  // Gate by index, not label: subtab labels are localized (FR/DE/EN).
+  const activeIdx = Math.max(0, subtabs.indexOf(active));
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <AgentCrossLinks page="historique" />
@@ -254,52 +265,13 @@ export function AgentHistorique() {
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
-        {(data.kpis ?? []).map((k, i) => (
-          <Kpi key={k.key} kpi={k} Icon={KPI_ICONS[i % KPI_ICONS.length] ?? Sparkles} />
-        ))}
-      </div>
-
-      <div className="grid gap-2.5 xl:grid-cols-12">
-        <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
-          <Filters
-            data={data}
-            search={search}
-            setSearch={setSearch}
-            catKey={catKey}
-            setCatKey={setCatKey}
-            langKey={langKey}
-            setLangKey={setLangKey}
-            statusKey={statusKey}
-            setStatusKey={setStatusKey}
-            scoreKey={scoreKey}
-            setScoreKey={setScoreKey}
-            onReset={resetFilters}
-          />
-          <SessionsTable
-            data={data}
-            rows={pageRows}
-            total={total}
-            selected={selectedRow?.sid ?? null}
-            onSelect={setSelected}
-            sortCol={sortCol}
-            sortDir={sortDir}
-            onSort={(col) => {
-              if (col === sortCol) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-              else {
-                setSortCol(col);
-                setSortDir("asc");
-              }
-            }}
-            page={safePage}
-            totalPages={totalPages}
-            start={total === 0 ? 0 : startIdx + 1}
-            end={Math.min(startIdx + perPage, total)}
-            perPage={perPage}
-            onPage={setPage}
-            onPerPage={setPerPage}
-          />
-          <LiveConversations data={data} locale={locale} />
+      {activeIdx === 0 ? (
+        <>
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
+            {(data.kpis ?? []).map((k, i) => (
+              <Kpi key={k.key} kpi={k} Icon={KPI_ICONS[i % KPI_ICONS.length] ?? Sparkles} />
+            ))}
+          </div>
           <div className="grid gap-2.5 lg:grid-cols-2 xl:grid-cols-4">
             <TrendCard data={data} />
             <ByAgent data={data} />
@@ -308,11 +280,75 @@ export function AgentHistorique() {
           </div>
           <div className="grid gap-2.5 md:grid-cols-2">
             <Watch data={data} />
-            <Quick data={data} onFailed={() => setStatusKey("bad")} onExport={exportCsv} />
+            <Quick
+              data={data}
+              onFailed={() => {
+                setStatusKey("bad");
+                setSubtab(subtabs[1] ?? "");
+              }}
+              onExport={exportCsv}
+            />
           </div>
+        </>
+      ) : null}
+
+      {activeIdx === 1 ? (
+        <div className="grid gap-2.5 xl:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
+            <Filters
+              data={data}
+              search={search}
+              setSearch={setSearch}
+              catKey={catKey}
+              setCatKey={setCatKey}
+              langKey={langKey}
+              setLangKey={setLangKey}
+              statusKey={statusKey}
+              setStatusKey={setStatusKey}
+              scoreKey={scoreKey}
+              setScoreKey={setScoreKey}
+              onReset={resetFilters}
+            />
+            <SessionsTable
+              data={data}
+              rows={pageRows}
+              total={total}
+              selected={selectedRow?.sid ?? null}
+              onSelect={setSelected}
+              sortCol={sortCol}
+              sortDir={sortDir}
+              onSort={(col) => {
+                if (col === sortCol) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                else {
+                  setSortCol(col);
+                  setSortDir("asc");
+                }
+              }}
+              page={safePage}
+              totalPages={totalPages}
+              start={total === 0 ? 0 : startIdx + 1}
+              end={Math.min(startIdx + perPage, total)}
+              perPage={perPage}
+              onPage={setPage}
+              onPerPage={setPerPage}
+            />
+          </div>
+          <Detail data={data} row={selectedRow} className="xl:col-span-4" />
         </div>
-        <Detail data={data} row={selectedRow} className="xl:col-span-4" />
-      </div>
+      ) : null}
+
+      {activeIdx === 2 ? (
+        <>
+          <MessagesTab data={data} />
+          <LiveConversations data={data} locale={locale} />
+        </>
+      ) : null}
+      {activeIdx === 3 ? <EvaluationsTab data={data} /> : null}
+      {activeIdx === 4 ? <TracesTab data={data} /> : null}
+      {activeIdx === 5 ? <UsersTab data={data} /> : null}
+      {activeIdx === 6 ? <ContentTab /> : null}
+      {activeIdx === 7 ? <ErrorsTab data={data} /> : null}
+      {activeIdx === 8 ? <HistoriqueExportsTab data={data} /> : null}
     </div>
   );
 }
