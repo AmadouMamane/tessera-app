@@ -33,11 +33,24 @@ test("the sub-tabs gate distinct real content", async ({ page }) => {
   await expect(page.getByText("Verdict du gate de release")).toBeVisible();
   await subtab(page, "Jeux d'évaluations").click();
   await expect(page.getByText("Verdict du gate de release")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Portée Tous" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Portée Cet agent + partagés" })).toBeVisible();
 
   // Exports gates to download cards.
   await subtab(page, "Exports").click();
   await expect(page.getByRole("button", { name: "Télécharger" }).first()).toBeVisible();
+});
+
+test("Jeux d'évaluations: default scope hides sets bound to other agents", async ({ page }) => {
+  await subtab(page, "Jeux d'évaluations").click();
+  // On the support-client page the default scope keeps this agent's set and the
+  // shared ones; sets bound to other agents (recouvrement, onboarding) stay out.
+  const table = page.locator("table");
+  await expect(table.getByText("Support Client — SAV", { exact: false })).toBeVisible();
+  await expect(table.getByText("Recouvrement —", { exact: false })).toHaveCount(0);
+  // Widening the Portée filter to "Tous" reveals the whole registry.
+  await page.getByRole("button", { name: "Portée Cet agent + partagés" }).click();
+  await page.getByRole("menuitem", { name: "Tous", exact: true }).click();
+  await expect(table.getByText("Recouvrement —", { exact: false }).first()).toBeVisible();
 });
 
 test("Dimensions: type filter narrows, header sorts, row opens the detail", async ({ page }) => {

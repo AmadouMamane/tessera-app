@@ -120,21 +120,26 @@ function DrawerBlock({ title, children }: { title: string; children: React.React
 
 export function SetsTab({ data }: { data: Data }) {
   const locale = useLocale();
+  const agentId = useAgentId();
   const sets = data.sets;
   const [search, setSearch] = useState("");
-  const [scope, setScope] = useState("all");
+  // Default scope: this agent's sets + shared ones. Sets bound to ANOTHER agent
+  // stay out unless the Portée filter is widened — on an agent-scoped page,
+  // listing foreign-bound sets at equal rank read as belonging to this agent.
+  const [scope, setScope] = useState("mine");
   const [selected, setSelected] = useState<string | null>(null);
 
   const rows = sets?.rows ?? [];
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
+      if (scope === "mine" && r.bound && r.agent_id !== agentId) return false;
       if (scope === "bound" && !r.bound) return false;
       if (scope === "shared" && r.bound) return false;
       if (q && !`${r.name} ${r.slug} ${r.description}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, search, scope]);
+  }, [rows, search, scope, agentId]);
 
   if (!sets)
     return (
@@ -248,16 +253,25 @@ export function SetsTab({ data }: { data: Data }) {
           value={scope}
           onSelect={setScope}
           options={[
+            {
+              value: "mine",
+              label: pick(
+                locale,
+                "Cet agent + partagés",
+                "Dieser Agent + geteilte",
+                "This agent + shared",
+              ),
+            },
             { value: "all", label: pick(locale, "Tous", "Alle", "All") },
             { value: "bound", label: sets.bound_label },
             { value: "shared", label: sets.shared_label },
           ]}
         />
-        {(search || scope !== "all") && (
+        {(search || scope !== "mine") && (
           <ResetButton
             onClick={() => {
               setSearch("");
-              setScope("all");
+              setScope("mine");
             }}
           />
         )}
