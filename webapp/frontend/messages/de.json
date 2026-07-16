@@ -168,7 +168,8 @@
       "dark": "Nachtblau",
       "slate": "Schiefer",
       "system": "System"
-    }
+    },
+    "notWired": "Nicht angebunden — diese Aktion folgt in einem eigenen Schritt"
   },
   "overview": {
     "title": "Übersicht",
@@ -4176,7 +4177,8 @@
     "actions": {
       "createTicket": "Ticket erstellen",
       "launchPlaybook": "Verfahren starten",
-      "evidencePack": "Evidence-Pack erzeugen"
+      "evidencePack": "Evidence-Pack erzeugen",
+      "exportJson": "Vorfälle exportieren (JSON)"
     },
     "zone": {
       "actual": "A · Aktueller Stand",

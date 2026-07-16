@@ -51,7 +51,7 @@ const RESULT_BADGE: Record<string, string> = {
   approb: "border-sky-500/30 bg-sky-500/15 text-sky-300",
 };
 
-const TABS = ["overview", "rules", "executions", "queue", "approvals", "audit"] as const;
+const TABS = ["overview", "rules", "executions", "approvals", "audit"] as const;
 type Tab = (typeof TABS)[number];
 
 type T = ReturnType<typeof useTranslations<"automations">>;
@@ -143,7 +143,7 @@ export function AutomationsOverview() {
             </div>
           </>
         ) : null}
-        {activeTab === "queue" || activeTab === "approvals" ? (
+        {activeTab === "approvals" ? (
           <div className="flex min-w-0 flex-col gap-2">
             <SyntheticNotice signalId="automation_workflow" compact />
             <div className="grid gap-3 xl:grid-cols-2">
@@ -237,14 +237,24 @@ export function AutomationsOverview() {
               </Zone>
             </div>
 
-            <AutomationsRail t={t} data={data} />
+            <AutomationsRail t={t} data={data} onViewApprovals={() => setActiveTab("approvals")} />
           </div>
 
           {/* Bottom band: approvals · guardrails · performance · savings · context */}
           <div className="grid gap-3 xl:grid-cols-12">
-            <Approvals t={t} data={data} className="xl:col-span-3" />
+            <Approvals
+              t={t}
+              data={data}
+              className="xl:col-span-3"
+              onViewAll={() => setActiveTab("approvals")}
+            />
             <Guardrails t={t} data={data} className="xl:col-span-2" />
-            <Performance t={t} data={data} className="xl:col-span-3" />
+            <Performance
+              t={t}
+              data={data}
+              className="xl:col-span-3"
+              onViewAll={() => setActiveTab("executions")}
+            />
             <Savings t={t} data={data} className="xl:col-span-2" />
             <ContextPanel t={t} data={data} className="xl:col-span-2" />
           </div>
@@ -539,7 +549,12 @@ function Journal({ t, data }: { t: T; data: Data }) {
 
 // ── right rail ───────────────────────────────────────────────────────────────
 
-function AutomationsRail({ t, data }: { t: T; data: Data }) {
+function AutomationsRail({
+  t,
+  data,
+  onViewApprovals,
+}: { t: T; data: Data; onViewApprovals: () => void }) {
+  const tc = useTranslations("common");
   const g = data.governance;
   return (
     <aside className="flex min-w-0 flex-col gap-3">
@@ -566,23 +581,60 @@ function AutomationsRail({ t, data }: { t: T; data: Data }) {
 
       <Panel title={t("panel.quickActions")}>
         <div className="grid grid-cols-2 gap-1.5">
-          {[
-            { key: "activate", icon: PlayCircle },
-            { key: "suspend", icon: PauseCircle },
-            { key: "openJournal", icon: ScrollText },
-            { key: "viewApprovals", icon: CheckCircle2 },
-          ].map((q) => (
-            <button
-              key={q.key}
-              type="button"
-              className="flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.66rem] transition-colors hover:bg-[var(--tessera-muted)]"
-            >
-              <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
-                {t(`quick.${q.key}`)}
-              </span>
-            </button>
-          ))}
+          {/* activate/suspend need the rule-state mutation wired per-rule (a later
+              lot) — disabled with the reason; the two others navigate for real. */}
+          {(
+            [
+              { key: "activate", icon: PlayCircle },
+              { key: "suspend", icon: PauseCircle },
+              { key: "openJournal", icon: ScrollText, href: "/prouver/audit-logs" },
+              { key: "viewApprovals", icon: CheckCircle2, onClick: onViewApprovals },
+            ] as {
+              key: string;
+              icon: typeof PlayCircle;
+              href?: Route;
+              onClick?: () => void;
+            }[]
+          ).map((q) => {
+            const cls =
+              "flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.66rem] transition-colors hover:bg-[var(--tessera-muted)]";
+            const body = (
+              <>
+                <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
+                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+                  {t(`quick.${q.key}`)}
+                </span>
+              </>
+            );
+            if (q.href) {
+              return (
+                <Link key={q.key} href={q.href} className={cls}>
+                  {body}
+                </Link>
+              );
+            }
+            if (q.onClick) {
+              return (
+                <button key={q.key} type="button" onClick={q.onClick} className={cls}>
+                  {body}
+                </button>
+              );
+            }
+            return (
+              <button
+                key={q.key}
+                type="button"
+                disabled
+                title={tc("notWired")}
+                className="flex cursor-not-allowed items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.66rem] opacity-60"
+              >
+                <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+                  {t(`quick.${q.key}`)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Panel>
 
@@ -631,14 +683,20 @@ function AutomationsRail({ t, data }: { t: T; data: Data }) {
 
 // ── bottom band ──────────────────────────────────────────────────────────────
 
-function Approvals({ t, data, className }: { t: T; data: Data; className?: string }) {
+function Approvals({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
+  const tc = useTranslations("common");
   // Approval queue — flagged demonstration (automation_workflow subsystem).
   return (
     <Panel
       title={t("zone.approvals").replace(/^H · /, "")}
       className={className}
       info={<KpiInfo k="zone.approvals" title={t("zone.approvals").replace(/^H · /, "")} />}
-      action={<ViewAll label={t("viewAll.all")} />}
+      action={<ViewAll label={t("viewAll.all")} onClick={onViewAll} />}
     >
       <SyntheticNotice signalId="automation_workflow" compact />
       {data.approvals.length === 0 ? (
@@ -655,12 +713,17 @@ function Approvals({ t, data, className }: { t: T; data: Data; className?: strin
                   {t("approve.since", { t: a.since })}
                 </p>
               </div>
-              <Button
-                size="sm"
-                className="h-7 shrink-0 border border-[#007a55] bg-[#005c42] px-2.5 text-[0.66rem] text-[#d6f0e3] hover:bg-[#006d4e]"
-              >
-                {t("approve.cta")}
-              </Button>
+              {/* Approving needs a governed endpoint (not built yet) — disabled and
+                  saying so beats a button that pretends to approve. */}
+              <span title={tc("notWired")} className="shrink-0">
+                <Button
+                  size="sm"
+                  disabled
+                  className="h-7 border border-[#007a55] bg-[#005c42] px-2.5 text-[0.66rem] text-[#d6f0e3] hover:bg-[#006d4e]"
+                >
+                  {t("approve.cta")}
+                </Button>
+              </span>
             </li>
           ))}
         </ul>
@@ -702,14 +765,19 @@ function Guardrails({ t, data, className }: { t: T; data: Data; className?: stri
   );
 }
 
-function Performance({ t, data, className }: { t: T; data: Data; className?: string }) {
+function Performance({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   const p = data.performance;
   return (
     <Panel
       title={t("zone.performance").replace(/^J · /, "")}
       className={className}
       info={<KpiInfo k="zone.performance" title={t("zone.performance").replace(/^J · /, "")} />}
-      action={<ViewAll label={t("viewAll.performance")} />}
+      action={<ViewAll label={t("viewAll.performance")} onClick={onViewAll} />}
     >
       <div className="h-[100px]">
         <StretchChart
@@ -772,7 +840,7 @@ function ContextPanel({ t, data, className }: { t: T; data: Data; className?: st
       title={t("zone.context").replace(/^L · /, "")}
       className={className}
       info={<KpiInfo k="zone.context" title={t("zone.context").replace(/^L · /, "")} />}
-      action={<ViewAll label={t("ctx.history")} />}
+      action={<ViewAll label={t("ctx.history")} href="/prouver/audit-logs" />}
     >
       <dl className="flex flex-col gap-1 text-[0.68rem]">
         {rows.map(([k, v]) => (
@@ -1001,7 +1069,9 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function ViewAll({ label, href }: { label: string; href?: Route }) {
+/** Panel action affordance: a Link when it has a target, a button when it has a
+ *  handler, nothing otherwise — never a dead button. */
+function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
     "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
   if (href) {
@@ -1011,11 +1081,14 @@ function ViewAll({ label, href }: { label: string; href?: Route }) {
       </Link>
     );
   }
-  return (
-    <button type="button" className={cls}>
-      {label} <ChevronRight className="h-3 w-3" />
-    </button>
-  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </button>
+    );
+  }
+  return null;
 }
 
 function Chip({

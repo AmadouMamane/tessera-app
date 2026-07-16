@@ -238,7 +238,12 @@ export function CurationOverview() {
                   <ActionCard key={a.key} action={a} t={t} />
                 ))}
               </div>
-              <RecentActivity t={t} data={data} className="xl:col-span-4" />
+              <RecentActivity
+                t={t}
+                data={data}
+                className="xl:col-span-4"
+                onViewAll={() => setActiveTab("history")}
+              />
             </div>
           </Zone>
 
@@ -811,7 +816,7 @@ function QualitySignals({ t, data, className }: { t: T; data: Data; className?: 
       title={t("panel.qualitySignals")}
       info={<ExplainInfo k="panel.qualitySignals" title={t("panel.qualitySignals")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.signals")} />}
+      action={<ViewAll label={t("viewAll.signals")} href="/surveiller/qualite-ia" />}
     >
       <SyntheticNotice signalId="curation" compact />
       <ul className="flex flex-col gap-2">
@@ -854,7 +859,7 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
       title={t("panel.linkedDatasets")}
       info={<ExplainInfo k="panel.linkedDatasets" title={t("panel.linkedDatasets")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.datasets")} />}
+      action={<ViewAll label={t("viewAll.datasets")} href="/surveiller/qualite-ia" />}
     >
       <SyntheticNotice signalId="curation" compact />
       <table className="w-full border-collapse text-left text-[0.68rem]">
@@ -886,6 +891,7 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
 // ── right rail ───────────────────────────────────────────────────────────────
 
 function CurationRail({ t, data }: { t: T; data: Data }) {
+  const tc = useTranslations("common");
   return (
     <aside className="flex min-w-0 flex-col gap-3">
       <SyntheticNotice signalId="curation" compact />
@@ -912,7 +918,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
       <Panel
         title={t("panel.release")}
         info={<ExplainInfo k="panel.release" title={t("panel.release")} />}
-        action={<ViewAll label={t("release.viewDetail")} />}
+        action={<ViewAll label={t("release.viewDetail")} href="/agir/release-control" />}
       >
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2 text-[0.72rem]">
@@ -949,12 +955,12 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
               {data.cohort}
             </span>
           </div>
-          <Button
-            size="sm"
-            className="h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+          <Link
+            href="/prouver/evidence-store"
+            className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] transition-colors hover:bg-[#4c3fb0]/60"
           >
             <FileSearch className="h-3.5 w-3.5" /> {t("evidence.openPack")}
-          </Button>
+          </Link>
         </div>
       </Panel>
 
@@ -994,21 +1000,39 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
 
       <Panel title={t("panel.quickActions")}>
         <ul className="flex flex-col gap-1">
-          {[
-            { key: "filterSensitivity", icon: Filter },
-            { key: "openCatalog", icon: ListChecks },
-            { key: "evidencePack", icon: FileSearch },
-          ].map((q) => (
+          {/* filterSensitivity/openCatalog need their mutation/catalog target (a later
+              lot) — disabled with the reason; the evidence pack navigates for real. */}
+          {(
+            [
+              { key: "filterSensitivity", icon: Filter },
+              { key: "openCatalog", icon: ListChecks },
+              { key: "evidencePack", icon: FileSearch, href: "/prouver/evidence-store" },
+            ] as { key: string; icon: typeof Filter; href?: Route }[]
+          ).map((q) => (
             <li key={q.key}>
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
-              >
-                <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
-                  {t(`quick.${q.key}`)}
-                </span>
-              </button>
+              {q.href ? (
+                <Link
+                  href={q.href}
+                  className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
+                >
+                  <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
+                  <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+                    {t(`quick.${q.key}`)}
+                  </span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title={tc("notWired")}
+                  className="flex w-full cursor-not-allowed items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] opacity-60"
+                >
+                  <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+                  <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+                    {t(`quick.${q.key}`)}
+                  </span>
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -1043,13 +1067,18 @@ function ActionCard({ action, t }: { action: Data["actions"][number]; t: T }) {
   );
 }
 
-function RecentActivity({ t, data, className }: { t: T; data: Data; className?: string }) {
+function RecentActivity({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   return (
     <Panel
       title={t("panel.recentActivity")}
       info={<ExplainInfo k="panel.recentActivity" title={t("panel.recentActivity")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.activities")} />}
+      action={<ViewAll label={t("viewAll.activities")} onClick={onViewAll} />}
     >
       <table className="w-full border-collapse text-left text-[0.7rem]">
         <thead>
@@ -1440,7 +1469,9 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function ViewAll({ label, href }: { label: string; href?: Route }) {
+/** Panel action affordance: a Link when it has a target, a button when it has a
+ *  handler, nothing otherwise — never a dead button. */
+function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
     "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
   if (href) {
@@ -1450,11 +1481,14 @@ function ViewAll({ label, href }: { label: string; href?: Route }) {
       </Link>
     );
   }
-  return (
-    <button type="button" className={cls}>
-      {label} <ChevronRight className="h-3 w-3" />
-    </button>
-  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </button>
+    );
+  }
+  return null;
 }
 
 function Chip({

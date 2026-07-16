@@ -186,6 +186,7 @@ export function InboxOverview() {
 // ── rail ─────────────────────────────────────────────────────────────────────
 
 function Rail({ t, data }: { t: T; data: Data }) {
+  const tc = useTranslations("common");
   const r = data.rail;
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
@@ -206,18 +207,24 @@ function Rail({ t, data }: { t: T; data: Data }) {
         <span className="tabular-nums text-[var(--tessera-text)]">{r.updated}</span>
       </span>
       <div className="ml-auto flex items-center gap-2">
-        <button
-          type="button"
-          className="flex h-8 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]"
-        >
-          <RefreshCcw className="h-3.5 w-3.5" /> {t("rail.replay")}
-        </button>
-        <Button
-          size="sm"
-          className="h-8 gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/80"
-        >
-          <Layers className="h-3.5 w-3.5" /> {t("rail.bulk")}
-        </Button>
+        <span title={tc("notWired")}>
+          <button
+            type="button"
+            disabled
+            className="flex h-8 cursor-not-allowed items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[var(--tessera-text-muted)] opacity-50"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" /> {t("rail.replay")}
+          </button>
+        </span>
+        <span title={tc("notWired")}>
+          <Button
+            size="sm"
+            disabled
+            className="h-8 gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-xs text-[#c4b5fd]"
+          >
+            <Layers className="h-3.5 w-3.5" /> {t("rail.bulk")}
+          </Button>
+        </span>
       </div>
     </section>
   );
@@ -831,7 +838,7 @@ function ByType({ t, data }: { t: T; data: Data }) {
   const C = 2 * Math.PI * R;
   let off = 0;
   return (
-    <Panel title={t("zone.byType")} action={<ViewAll label={t("sla.viewDetail")} />}>
+    <Panel title={t("zone.byType")}>
       <div className="flex items-center gap-3">
         <div className="relative h-[88px] w-[88px] shrink-0">
           <svg viewBox="0 0 72 72" className="h-full w-full -rotate-90" aria-hidden="true">
@@ -890,7 +897,7 @@ function ByType({ t, data }: { t: T; data: Data }) {
 function Sla({ t, data }: { t: T; data: Data }) {
   const max = Math.max(...data.sla_buckets.map((b) => b.count), 1);
   return (
-    <Panel title={t("zone.sla")} action={<ViewAll label={t("sla.viewSla")} />}>
+    <Panel title={t("zone.sla")}>
       <ul className="flex flex-col gap-2">
         {data.sla_buckets.map((b) => (
           <li key={b.key} className="flex items-center gap-2 text-[0.68rem]">
@@ -965,17 +972,6 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
 
 function Sep() {
   return <span className="hidden text-[var(--tessera-border-strong)] sm:inline">·</span>;
-}
-
-function ViewAll({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      className="flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
-    >
-      {label} <ChevronRight className="h-3 w-3" />
-    </button>
-  );
 }
 
 function Footer({ t, data }: { t: T; data: Data }) {

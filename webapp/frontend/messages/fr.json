@@ -168,7 +168,8 @@
       "dark": "Bleu nuit",
       "slate": "Ardoise",
       "system": "Système"
-    }
+    },
+    "notWired": "Non câblé — cette action arrive dans un lot dédié"
   },
   "overview": {
     "title": "Vue d’ensemble",
@@ -4176,7 +4177,8 @@
     "actions": {
       "createTicket": "Créer ticket",
       "launchPlaybook": "Lancer procédure",
-      "evidencePack": "Générer dossier de preuves"
+      "evidencePack": "Générer dossier de preuves",
+      "exportJson": "Exporter les incidents (JSON)"
     },
     "zone": {
       "actual": "A · État actuel",

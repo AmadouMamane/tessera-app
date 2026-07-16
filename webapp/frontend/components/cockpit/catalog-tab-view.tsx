@@ -4,7 +4,6 @@ import { type ReactNode, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   CatalogTab,
@@ -269,7 +268,7 @@ function TablePanel({
 
 /* ------------------------------------------------------------ detail panel */
 
-function DetailPanel({ detail, cta }: { detail: TabDetail; cta: string }) {
+function DetailPanel({ detail }: { detail: TabDetail }) {
   return (
     <Card className="flex flex-col xl:sticky xl:top-4">
       <CardHeader className="gap-1 pb-2">
@@ -334,26 +333,16 @@ function DetailPanel({ detail, cta }: { detail: TabDetail; cta: string }) {
         ))}
 
         <div className="flex flex-col gap-1 pt-1">
-          {detail.actions.map((a, i) =>
-            i === detail.actions.length - 1 ? (
-              <Button
-                key={a}
-                size="sm"
-                className="h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
-              >
-                {a}
-              </Button>
-            ) : (
-              <button
-                key={a}
-                type="button"
-                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
-              >
-                {a}
-              </button>
-            ),
-          )}
-          {cta ? <span className="sr-only">{cta}</span> : null}
+          {/* Catalogue actions are fixture strings with no handler yet (the real
+              store is a later lot) — labels, never buttons that do nothing. */}
+          {detail.actions.map((a) => (
+            <span
+              key={a}
+              className="flex items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border)] px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-text-muted)]"
+            >
+              {a}
+            </span>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -528,13 +517,12 @@ function Section({ s }: { s: TabSection }) {
       body = (
         <div className="flex flex-col gap-0.5">
           {s.actions.map((a) => (
-            <button
+            <span
               key={a}
-              type="button"
-              className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+              className="flex items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border)] px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-text-muted)]"
             >
               {a}
-            </button>
+            </span>
           ))}
         </div>
       );
@@ -559,12 +547,9 @@ function Section({ s }: { s: TabSection }) {
       <CardContent className="flex flex-1 flex-col justify-between gap-2">
         {body}
         {s.cta ? (
-          <button
-            type="button"
-            className="mt-1 self-start text-[0.62rem] text-[var(--tessera-green)] hover:underline"
-          >
+          <span className="mt-1 self-start text-[0.62rem] text-[var(--tessera-text-muted)]">
             {s.cta}
-          </button>
+          </span>
         ) : null}
       </CardContent>
     </Card>
@@ -606,7 +591,7 @@ export function CatalogTabView({ tab, footer }: { tab: CatalogTab; footer?: Reac
           </div>
         </div>
 
-        {tab.detail ? <DetailPanel detail={tab.detail} cta="" /> : null}
+        {tab.detail ? <DetailPanel detail={tab.detail} /> : null}
       </div>
 
       {footer}

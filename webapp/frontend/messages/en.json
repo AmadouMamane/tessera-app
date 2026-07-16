@@ -168,7 +168,8 @@
       "dark": "Midnight blue",
       "slate": "Slate",
       "system": "System"
-    }
+    },
+    "notWired": "Not wired — this action is coming in a dedicated lot"
   },
   "overview": {
     "title": "Overview",
@@ -4176,7 +4177,8 @@
     "actions": {
       "createTicket": "Create ticket",
       "launchPlaybook": "Launch playbook",
-      "evidencePack": "Generate evidence pack"
+      "evidencePack": "Generate evidence pack",
+      "exportJson": "Export incidents (JSON)"
     },
     "zone": {
       "actual": "A · Current state",

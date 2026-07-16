@@ -13,7 +13,6 @@ import {
   GitBranch,
   ListChecks,
   type LucideIcon,
-  MoreVertical,
   PlayCircle,
   Plus,
   RefreshCcw,
@@ -25,6 +24,7 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
@@ -109,7 +109,14 @@ export function IncidentsOverview() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} />
+      <CommandBar
+        t={t}
+        activeTab={activeTab}
+        onSelect={setActiveTab}
+        onExport={() =>
+          downloadBlob("tessera-incidents.json", "application/json", JSON.stringify(data, null, 2))
+        }
+      />
       <TemporalRail
         mode={temporal.mode}
         liveStatus={t("rail.realtime")}
@@ -150,13 +157,13 @@ export function IncidentsOverview() {
             <div className="grid gap-3 xl:grid-cols-12">
               <div className="flex min-w-0 flex-col gap-3 xl:col-span-7">
                 <PriorityQueue t={t} data={data} />
-                <Catalog t={t} data={data} />
+                <Catalog t={t} data={data} onViewAll={() => setActiveTab("playbooks")} />
               </div>
               <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:col-span-5">
                 <RecentIncidents t={t} data={data} />
                 <SlaEscalations t={t} data={data} />
                 <Distribution t={t} data={data} />
-                <ControlCases t={t} data={data} />
+                <ControlCases t={t} data={data} onViewAll={() => setActiveTab("incidents")} />
               </div>
             </div>
           </Zone>
@@ -166,7 +173,12 @@ export function IncidentsOverview() {
             <SyntheticNotice signalId="incidents" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <RunningPlaybook t={t} data={data} className="xl:col-span-4" />
-              <ResponseJournal t={t} data={data} className="xl:col-span-4" />
+              <ResponseJournal
+                t={t}
+                data={data}
+                className="xl:col-span-4"
+                onViewAll={() => setActiveTab("actions")}
+              />
               <Automations t={t} data={data} className="xl:col-span-2" />
               <QuickActions t={t} className="xl:col-span-2" />
             </div>
@@ -176,10 +188,20 @@ export function IncidentsOverview() {
           <Zone label={t("zone.impact")}>
             <SyntheticNotice signalId="incidents" compact />
             <div className="grid gap-3 xl:grid-cols-12">
-              <MttrChart t={t} data={data} className="xl:col-span-3" />
+              <MttrChart
+                t={t}
+                data={data}
+                className="xl:col-span-3"
+                onViewAll={() => setActiveTab("rapports")}
+              />
               <ResolutionBars t={t} data={data} className="xl:col-span-3" />
               <DomainBars t={t} data={data} className="xl:col-span-3" />
-              <Postmortems t={t} data={data} className="xl:col-span-3" />
+              <Postmortems
+                t={t}
+                data={data}
+                className="xl:col-span-3"
+                onViewAll={() => setActiveTab("postmortems")}
+              />
             </div>
           </Zone>
 
@@ -212,7 +234,9 @@ function CommandBar({
   t,
   activeTab,
   onSelect,
-}: { t: T; activeTab: TabKey; onSelect: (tab: TabKey) => void }) {
+  onExport,
+}: { t: T; activeTab: TabKey; onSelect: (tab: TabKey) => void; onExport: () => void }) {
+  const tc = useTranslations("common");
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <TabStrip
@@ -227,28 +251,34 @@ function CommandBar({
         }))}
       />
       <div className="flex shrink-0 items-center gap-2">
-        <Button
-          size="sm"
-          className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
-        >
-          <Plus className="h-4 w-4" /> {t("actions.createTicket")}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-        >
-          <PlayCircle className="h-4 w-4" /> {t("actions.launchPlaybook")}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+        {/* Create/launch need the incidents store (a later lot) — disabled and
+            saying so beats buttons that pretend to act. */}
+        <span title={tc("notWired")}>
+          <Button
+            size="sm"
+            disabled
+            className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
+          >
+            <Plus className="h-4 w-4" /> {t("actions.createTicket")}
+          </Button>
+        </span>
+        <span title={tc("notWired")}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled
+            className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+          >
+            <PlayCircle className="h-4 w-4" /> {t("actions.launchPlaybook")}
+          </Button>
+        </span>
+        <Link
+          href="/prouver/evidence-store"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs transition-colors hover:bg-[var(--tessera-muted)]"
         >
           <FileSearch className="h-4 w-4" /> {t("actions.evidencePack")}
-        </Button>
-        <IconBtn icon={Download} />
-        <IconBtn icon={MoreVertical} />
+        </Link>
+        <IconBtn icon={Download} onClick={onExport} label={t("actions.exportJson")} />
       </div>
     </section>
   );
@@ -324,9 +354,12 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
   );
 }
 
-function Catalog({ t, data }: { t: T; data: Data }) {
+function Catalog({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: () => void }) {
   return (
-    <Panel title={t("triage.catalog")} action={<ViewAll label={t("triage.viewCatalog")} />}>
+    <Panel
+      title={t("triage.catalog")}
+      action={<ViewAll label={t("triage.viewCatalog")} onClick={onViewAll} />}
+    >
       <SyntheticNotice signalId="incidents" compact />
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
         {data.playbook_catalog.map((pb) => (
@@ -409,9 +442,12 @@ function Distribution({ t, data }: { t: T; data: Data }) {
   );
 }
 
-function ControlCases({ t, data }: { t: T; data: Data }) {
+function ControlCases({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: () => void }) {
   return (
-    <Panel title={t("triage.controlCases")} action={<ViewAll label={t("triage.viewCases")} />}>
+    <Panel
+      title={t("triage.controlCases")}
+      action={<ViewAll label={t("triage.viewCases")} onClick={onViewAll} />}
+    >
       <ul className="flex flex-col gap-1.5">
         {data.control_cases.map((c) => (
           <li key={c.id} className="flex items-center gap-2 text-[0.72rem]">
@@ -486,12 +522,17 @@ function RunningPlaybook({ t, data, className }: { t: T; data: Data; className?:
   );
 }
 
-function ResponseJournal({ t, data, className }: { t: T; data: Data; className?: string }) {
+function ResponseJournal({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   return (
     <Panel
       className={className}
       title={t("exec.journal")}
-      action={<ViewAll label={t("exec.viewAll")} />}
+      action={<ViewAll label={t("exec.viewAll")} onClick={onViewAll} />}
     >
       <table className="w-full border-collapse text-left text-[0.7rem]">
         <thead>
@@ -527,7 +568,7 @@ function Automations({ t, data, className }: { t: T; data: Data; className?: str
     <Panel
       className={className}
       title={t("exec.automations")}
-      action={<ViewAll label={t("exec.viewAllAuto")} />}
+      action={<ViewAll label={t("exec.viewAllAuto")} href="/agir/automations" />}
     >
       <ul className="flex flex-col gap-1.5">
         {data.automations.map((a) => (
@@ -553,28 +594,46 @@ function Automations({ t, data, className }: { t: T; data: Data; className?: str
 }
 
 function QuickActions({ t, className }: { t: T; className?: string }) {
+  const tc = useTranslations("common");
+  // assignOwner/launchContainment/createJira need the incidents store (a later
+  // lot) — disabled with the reason; the two others navigate for real.
   const items = [
     { key: "assignOwner", icon: UserPlus, role: "Operator+" },
     { key: "launchContainment", icon: PlayCircle, role: "Operator+" },
-    { key: "freezeRelease", icon: GitBranch, role: "Operator+" },
+    { key: "freezeRelease", icon: GitBranch, role: "Operator+", href: "/agir/release-control" },
     { key: "createJira", icon: Ticket, role: "Operator+" },
-    { key: "evidencePack", icon: FileSearch, role: "Admin+" },
-  ] as const;
+    { key: "evidencePack", icon: FileSearch, role: "Admin+", href: "/prouver/evidence-store" },
+  ] as { key: string; icon: typeof UserPlus; role: string; href?: Route }[];
   return (
     <Panel className={className} title={t("exec.quickActions")}>
       <ul className="flex flex-col gap-1">
         {items.map((it) => (
           <li key={it.key}>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
-            >
-              <it.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
-                {t(`quick.${it.key}`)}
-              </span>
-              <RoleBadge role={it.role} />
-            </button>
+            {it.href ? (
+              <Link
+                href={it.href}
+                className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
+              >
+                <it.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
+                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+                  {t(`quick.${it.key}`)}
+                </span>
+                <RoleBadge role={it.role} />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title={tc("notWired")}
+                className="flex w-full cursor-not-allowed items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] opacity-60"
+              >
+                <it.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+                  {t(`quick.${it.key}`)}
+                </span>
+                <RoleBadge role={it.role} />
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -584,13 +643,18 @@ function QuickActions({ t, className }: { t: T; className?: string }) {
 
 // ── zone D ───────────────────────────────────────────────────────────────────
 
-function MttrChart({ t, data, className }: { t: T; data: Data; className?: string }) {
+function MttrChart({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   const s = data.mttr_series;
   return (
     <Panel
       className={className}
       title={t("impact.mttr")}
-      action={<ViewAll label={t("impact.viewFull")} />}
+      action={<ViewAll label={t("impact.viewFull")} onClick={onViewAll} />}
     >
       <div className="h-[110px]">
         <StretchChart
@@ -661,12 +725,17 @@ function DomainBars({ t, data, className }: { t: T; data: Data; className?: stri
   );
 }
 
-function Postmortems({ t, data, className }: { t: T; data: Data; className?: string }) {
+function Postmortems({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   return (
     <Panel
       className={className}
       title={t("impact.postmortems")}
-      action={<ViewAll label={t("impact.viewAll")} />}
+      action={<ViewAll label={t("impact.viewAll")} onClick={onViewAll} />}
     >
       <ul className="flex flex-col gap-2">
         {data.postmortems.map((p) => (
@@ -918,7 +987,9 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function ViewAll({ label, href }: { label: string; href?: Route }) {
+/** Panel action affordance: a Link when it has a target, a button when it has a
+ *  handler, nothing otherwise — never a dead button. */
+function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
     "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
   if (href) {
@@ -928,17 +999,26 @@ function ViewAll({ label, href }: { label: string; href?: Route }) {
       </Link>
     );
   }
-  return (
-    <button type="button" className={cls}>
-      {label} <ChevronRight className="h-3 w-3" />
-    </button>
-  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </button>
+    );
+  }
+  return null;
 }
 
-function IconBtn({ icon: Icon }: { icon: typeof Download }) {
+function IconBtn({
+  icon: Icon,
+  onClick,
+  label,
+}: { icon: typeof Download; onClick: () => void; label: string }) {
   return (
     <button
       type="button"
+      onClick={onClick}
+      aria-label={label}
       className="grid h-9 w-9 place-items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
     >
       <Icon className="h-4 w-4" />

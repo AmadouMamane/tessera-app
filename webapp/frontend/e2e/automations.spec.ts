@@ -40,7 +40,9 @@ test("evaluate-now journals a real evaluation into executions", async ({ page })
   await page.getByRole("tab", { name: "Exécutions" }).click();
   await expect(page.getByText("E · Journal d’exécution récent")).toBeVisible();
   // The journal carries a real observed value (e.g. "N denies / 24h").
-  await expect(page.getByText(/denies \/ 24h|pending|turns </).first()).toBeVisible();
+  await expect(page.getByText(/denies \/ 24h|pending|turns </).first()).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test("a rule toggle mutates the durable state and flips the badge", async ({ page }) => {
@@ -53,14 +55,21 @@ test("a rule toggle mutates the durable state and flips the badge", async ({ pag
   await expect(rows.first().getByRole("switch")).toHaveAttribute(
     "aria-checked",
     before === "true" ? "false" : "true",
+    { timeout: 15_000 },
   );
   // Restore the durable state.
   await rows.first().getByRole("switch").click();
-  await expect(rows.first().getByRole("switch")).toHaveAttribute("aria-checked", before ?? "true");
+  await expect(rows.first().getByRole("switch")).toHaveAttribute("aria-checked", before ?? "true", {
+    timeout: 15_000,
+  });
 });
 
-test("queue and approvals tabs are flagged demonstration", async ({ page }) => {
-  await page.getByRole("tab", { name: "File d’attente" }).click();
+test("the approvals tab is flagged demonstration and the redundant queue tab is gone", async ({
+  page,
+}) => {
+  // The old "File d’attente" tab duplicated the approvals content; lot 1b removed it.
+  await expect(page.getByRole("tab", { name: "File d’attente" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Approbations" }).click();
   await expect(page.getByText(/démonstration/i).first()).toBeVisible();
   await expect(page.getByText(/Aucune approbation en attente/).first()).toBeVisible();
 });

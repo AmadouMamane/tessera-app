@@ -14,10 +14,12 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -232,7 +234,12 @@ export function ReplayOverview() {
                     labelOf={(k) => t(`severity.${k}`)}
                   />
                 </Panel>
-                <RecentSessions t={t} data={data} className="xl:col-span-4" />
+                <RecentSessions
+                  t={t}
+                  data={data}
+                  className="xl:col-span-4"
+                  onViewAll={() => setActiveTab("sessions")}
+                />
               </div>
             </Zone>
 
@@ -242,8 +249,18 @@ export function ReplayOverview() {
               info={<Info k="zone.comparisons" title={t("zone.comparisons")} />}
             >
               <div className="grid gap-3 xl:grid-cols-12">
-                <TopDeviations t={t} data={data} className="xl:col-span-6" />
-                <Comparisons t={t} data={data} className="xl:col-span-3" />
+                <TopDeviations
+                  t={t}
+                  data={data}
+                  className="xl:col-span-6"
+                  onViewAll={() => setActiveTab("diffs")}
+                />
+                <Comparisons
+                  t={t}
+                  data={data}
+                  className="xl:col-span-3"
+                  onViewAll={() => setActiveTab("comparisons")}
+                />
                 <Regressions t={t} data={data} className="xl:col-span-3" />
               </div>
             </Zone>
@@ -280,9 +297,19 @@ export function ReplayOverview() {
                     showCount
                   />
                 </Panel>
-                <EvalsByCategory t={t} data={data} className="xl:col-span-2" />
-                <ProofsExports t={t} data={data} className="xl:col-span-2" />
-                <QuickActions t={t} className="xl:col-span-2" />
+                <EvalsByCategory
+                  t={t}
+                  data={data}
+                  className="xl:col-span-2"
+                  onViewAll={() => setActiveTab("evals")}
+                />
+                <ProofsExports
+                  t={t}
+                  data={data}
+                  className="xl:col-span-2"
+                  onViewAll={() => setActiveTab("exports")}
+                />
+                <QuickActions t={t} data={data} className="xl:col-span-2" />
               </div>
             </Zone>
           </div>
@@ -466,13 +493,18 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
   );
 }
 
-function RecentSessions({ t, data, className }: { t: T; data: Data; className?: string }) {
+function RecentSessions({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   return (
     <Panel
       title={t("panel.recentSessions")}
       info={<Info k="panel.recentSessions" title={t("panel.recentSessions")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.all")} />}
+      action={<ViewAll label={t("viewAll.all")} onClick={onViewAll} />}
     >
       <table className="w-full border-collapse text-left text-[0.7rem]">
         <thead>
@@ -506,13 +538,18 @@ function RecentSessions({ t, data, className }: { t: T; data: Data; className?: 
 
 // ── zone C ───────────────────────────────────────────────────────────────────
 
-function TopDeviations({ t, data, className }: { t: T; data: Data; className?: string }) {
+function TopDeviations({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   return (
     <Panel
       title={t("panel.topDeviations")}
       info={<Info k="panel.topDeviations" title={t("panel.topDeviations")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.deviations")} />}
+      action={<ViewAll label={t("viewAll.deviations")} onClick={onViewAll} />}
     >
       <table className="w-full border-collapse text-left text-[0.7rem]">
         <thead>
@@ -553,13 +590,18 @@ function TopDeviations({ t, data, className }: { t: T; data: Data; className?: s
   );
 }
 
-function Comparisons({ t, data, className }: { t: T; data: Data; className?: string }) {
+function Comparisons({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   return (
     <Panel
       title={t("panel.comparisons")}
       info={<Info k="panel.comparisons" title={t("panel.comparisons")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.comparisons")} />}
+      action={<ViewAll label={t("viewAll.comparisons")} onClick={onViewAll} />}
     >
       <table className="w-full border-collapse text-left text-[0.7rem]">
         <thead>
@@ -621,14 +663,19 @@ function Regressions({ t, data, className }: { t: T; data: Data; className?: str
 
 // ── zone D ───────────────────────────────────────────────────────────────────
 
-function EvalsByCategory({ t, data, className }: { t: T; data: Data; className?: string }) {
+function EvalsByCategory({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   const max = Math.max(...data.evals_by_category.map((c) => c.pct), 1);
   return (
     <Panel
       title={t("panel.evalsByCat")}
       info={<Info k="panel.evalsByCat" title={t("panel.evalsByCat")} />}
       className={className}
-      action={<ViewAll label={t("viewAll.categories")} />}
+      action={<ViewAll label={t("viewAll.categories")} onClick={onViewAll} />}
     >
       <ul className="flex flex-col gap-2">
         {data.evals_by_category.map((c) => (
@@ -652,7 +699,12 @@ function EvalsByCategory({ t, data, className }: { t: T; data: Data; className?:
   );
 }
 
-function ProofsExports({ t, data, className }: { t: T; data: Data; className?: string }) {
+function ProofsExports({
+  t,
+  data,
+  className,
+  onViewAll,
+}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
   // Export subsystem — flagged demonstration (shadow_traffic).
   const p = data.proofs_exports;
   const rows: [string, string][] = [
@@ -667,7 +719,7 @@ function ProofsExports({ t, data, className }: { t: T; data: Data; className?: s
       title={t("panel.proofsExports")}
       info={<Info k="panel.proofsExports" title={t("panel.proofsExports")} />}
       className={className}
-      action={<ViewAll label={t("exportBtn.all")} />}
+      action={<ViewAll label={t("exportBtn.all")} onClick={onViewAll} />}
     >
       <SyntheticNotice signalId="shadow_traffic" compact />
       <dl className="flex flex-col gap-1.5 text-[0.7rem]">
@@ -682,21 +734,37 @@ function ProofsExports({ t, data, className }: { t: T; data: Data; className?: s
   );
 }
 
-function QuickActions({ t, className }: { t: T; className?: string }) {
+function QuickActions({ t, data, className }: { t: T; data: Data; className?: string }) {
+  const tc = useTranslations("common");
   const items = [
     { key: "replaySession", icon: RefreshCcw },
     { key: "compareBaseline", icon: GitCompare },
     { key: "createBaseline", icon: Plus },
-    { key: "exportResults", icon: Download },
+    { key: "exportResults", icon: Download, export: true },
     { key: "scheduleReplay", icon: Clock3 },
-    { key: "viewLog", icon: FileSearch },
+    { key: "viewLog", icon: FileSearch, href: "/prouver/audit-logs" },
   ] as const;
   return (
     <Panel title={t("panel.quickActions")} className={className}>
       <ul className="flex flex-col gap-1">
         {items.map((it) => (
           <li key={it.key}>
-            <RailButton icon={it.icon} label={t(`quick.${it.key}`)} />
+            <RailButton
+              icon={it.icon}
+              label={t(`quick.${it.key}`)}
+              href={"href" in it ? it.href : undefined}
+              onClick={
+                "export" in it
+                  ? () =>
+                      downloadBlob(
+                        "tessera-replay.json",
+                        "application/json",
+                        JSON.stringify(data, null, 2),
+                      )
+                  : undefined
+              }
+              disabledTitle={tc("notWired")}
+            />
           </li>
         ))}
       </ul>
@@ -707,18 +775,26 @@ function QuickActions({ t, className }: { t: T; className?: string }) {
 // ── right rail ───────────────────────────────────────────────────────────────
 
 function ReplayRail({ t, data }: { t: T; data: Data }) {
+  const tc = useTranslations("common");
   return (
     <aside className="flex min-w-0 flex-col gap-3">
       <Panel title={t("rail.compareBaseline")}>
         <div className="flex flex-col gap-2">
-          <Select options={data.baselines.map((b) => b.label)} />
-          <Select options={[t("rail.allServices"), ...data.services]} />
-          <Button
-            size="sm"
-            className="h-9 w-full justify-center gap-2 border border-[#2e72d2] bg-[#1b4f8a] text-xs text-[#d8eaff] hover:bg-[#22609f]"
-          >
-            <RefreshCcw className="h-4 w-4" /> {t("rail.replayNow")}
-          </Button>
+          <Select options={data.baselines.map((b) => b.label)} disabled title={tc("notWired")} />
+          <Select
+            options={[t("rail.allServices"), ...data.services]}
+            disabled
+            title={tc("notWired")}
+          />
+          <span title={tc("notWired")}>
+            <Button
+              size="sm"
+              disabled
+              className="h-9 w-full justify-center gap-2 border border-[#2e72d2] bg-[#1b4f8a] text-xs text-[#d8eaff] hover:bg-[#22609f]"
+            >
+              <RefreshCcw className="h-4 w-4" /> {t("rail.replayNow")}
+            </Button>
+          </span>
         </div>
       </Panel>
 
@@ -744,7 +820,7 @@ function ReplayRail({ t, data }: { t: T; data: Data }) {
       <Panel
         title={t("rail.activity")}
         info={<Info k="panel.activity" title={t("rail.activity")} />}
-        action={<ViewAll label={t("rail.viewJournal")} />}
+        action={<ViewAll label={t("rail.viewJournal")} href="/prouver/audit-logs" />}
       >
         <ul className="flex flex-col gap-1.5">
           {data.activity_feed.map((a) => (
@@ -971,10 +1047,20 @@ function StatusBadge({ status, t }: { status: string; t: T }) {
   );
 }
 
-function Select({ options }: { options: string[] }) {
+function Select({
+  options,
+  disabled,
+  title,
+}: { options: string[]; disabled?: boolean; title?: string }) {
   return (
-    <div className="relative">
-      <select className="h-9 w-full cursor-pointer appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 pr-8 text-xs text-[var(--tessera-text)] outline-none">
+    <div className="relative" title={title}>
+      <select
+        disabled={disabled}
+        className={cn(
+          "h-9 w-full appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 pr-8 text-xs text-[var(--tessera-text)] outline-none",
+          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+        )}
+      >
         {options.map((o) => (
           <option key={o} className="bg-[var(--tessera-surface)]">
             {o}
@@ -986,14 +1072,53 @@ function Select({ options }: { options: string[] }) {
   );
 }
 
-function RailButton({ icon: Icon, label }: { icon: typeof Download; label: string }) {
+function RailButton({
+  icon: Icon,
+  label,
+  href,
+  onClick,
+  disabledTitle,
+}: {
+  icon: typeof Download;
+  label: string;
+  href?: Route;
+  onClick?: () => void;
+  disabledTitle?: string;
+}) {
+  const cls =
+    "flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors";
+  const inner = (
+    <>
+      <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
+      <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{label}</span>
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className={cn(cls, "hover:bg-[var(--tessera-muted)]")}>
+        {inner}
+      </Link>
+    );
+  }
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(cls, "hover:bg-[var(--tessera-muted)]")}
+      >
+        {inner}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
+      disabled
+      title={disabledTitle}
+      className={cn(cls, "cursor-not-allowed opacity-50")}
     >
-      <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-      <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{label}</span>
+      {inner}
     </button>
   );
 }
@@ -1006,15 +1131,24 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function ViewAll({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
-    >
-      {label} <ChevronRight className="h-3 w-3" />
-    </button>
-  );
+function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
+  const cls =
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </Link>
+    );
+  }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </button>
+    );
+  }
+  return null;
 }
 
 function Chip({
