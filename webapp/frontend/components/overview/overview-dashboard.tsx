@@ -2188,9 +2188,9 @@ function TrustFooter({
         {systemsOk ? t("systemsOk") : t("systemsDegraded")}
         {provTag ? <TimeTagChip kind="live" /> : null}
       </span>
-      <button type="button" className="ml-auto text-blue-300 hover:underline">
+      <Link href="/surveiller/observabilite" className="ml-auto text-blue-300 hover:underline">
         {t("viewHealth")} →
-      </button>
+      </Link>
     </footer>
   );
 }

@@ -353,8 +353,17 @@ function ActivePolicies({
                 <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{p.changed_by}</td>
                 <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{p.approved_by}</td>
                 <td className="px-1.5 py-1.5">
-                  <span className="inline-flex items-center gap-1 text-emerald-300">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{" "}
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1",
+                      p.status === "active"
+                        ? "text-emerald-300"
+                        : "text-[var(--tessera-text-muted)]",
+                    )}
+                  >
+                    <span
+                      className={cn("h-1.5 w-1.5 rounded-full", VDOT[p.status] ?? VDOT.draft)}
+                    />{" "}
                     {t(`pStatus.${p.status}`)}
                   </span>
                 </td>

@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Snowflake,
 } from "lucide-react";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
@@ -18,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@/i18n/navigation";
 import type {
   Calibration,
   CalibrationPoint,
@@ -388,7 +390,9 @@ function MiniLine({ buckets, baseline }: { buckets: SeriesBucket[]; baseline?: n
   );
 }
 
-/** A governed recommended-action card (zone D), faithful to image 05. */
+/** A governed recommended-action card (zone D), faithful to image 05. The CTA is a
+ *  Link when the action has a real home page, a disabled button (with the reason in
+ *  its title) when the action's endpoint does not exist yet — never a dead button. */
 function ActionCard({
   n,
   title,
@@ -396,6 +400,8 @@ function ActionCard({
   roles,
   cta,
   ctaTone = "outline",
+  href,
+  notWired,
 }: {
   n: number;
   title: string;
@@ -403,7 +409,14 @@ function ActionCard({
   roles: { label: string; tone: "warning" | "success" | "neutral" | "danger" }[];
   cta: string;
   ctaTone?: "outline" | "danger";
+  href?: Route;
+  notWired?: string;
 }) {
+  const ctaCls = `mt-auto h-7 justify-center text-[0.7rem] ${
+    ctaTone === "danger"
+      ? "border-[#b45309] bg-[#78350f]/40 text-amber-200 hover:bg-[#78350f]/60"
+      : ""
+  }`;
   return (
     <Card className="flex min-w-0 flex-col gap-2 p-3">
       <div className="flex items-start gap-2">
@@ -420,17 +433,20 @@ function ActionCard({
           </Badge>
         ))}
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        className={`mt-auto h-7 justify-center text-[0.7rem] ${
-          ctaTone === "danger"
-            ? "border-[#b45309] bg-[#78350f]/40 text-amber-200 hover:bg-[#78350f]/60"
-            : ""
-        }`}
-      >
-        {cta}
-      </Button>
+      {href ? (
+        <Link
+          href={href}
+          className={`inline-flex items-center rounded-md border border-[var(--tessera-border)] bg-transparent px-3 transition-colors hover:bg-[var(--tessera-muted)] ${ctaCls}`}
+        >
+          {cta}
+        </Link>
+      ) : (
+        <span title={notWired} className="mt-auto flex">
+          <Button size="sm" variant="outline" disabled className={`${ctaCls} mt-0 w-full`}>
+            {cta}
+          </Button>
+        </span>
+      )}
     </Card>
   );
 }
@@ -705,6 +721,7 @@ export function JudgeCalibration({
           desc={tq("judge.act.recalDesc")}
           roles={[{ label: "Operator+", tone: "success" }]}
           cta={tq("judge.act.recalCta")}
+          notWired={tq("judge.act.notWired")}
         />
         <ActionCard
           n={2}
@@ -712,6 +729,7 @@ export function JudgeCalibration({
           desc={tq("judge.act.curateDesc")}
           roles={[{ label: "Admin+", tone: "warning" }]}
           cta={tq("judge.act.curateCta")}
+          href="/agir/curation-eval-set"
         />
         <ActionCard
           n={3}
@@ -719,6 +737,7 @@ export function JudgeCalibration({
           desc={tq("judge.act.shadowDesc")}
           roles={[{ label: "Operator+", tone: "success" }]}
           cta={tq("judge.act.shadowCta")}
+          href="/agir/replay-shadow"
         />
         <ActionCard
           n={4}
@@ -730,6 +749,7 @@ export function JudgeCalibration({
           ]}
           cta={tq("judge.act.freezeCta")}
           ctaTone="danger"
+          href="/agir/release-control"
         />
         <ActionCard
           n={5}
@@ -737,6 +757,7 @@ export function JudgeCalibration({
           desc={tq("judge.act.complianceDesc")}
           roles={[{ label: "Compliance+", tone: "neutral" }]}
           cta={tq("judge.act.complianceCta")}
+          href="/surveiller/conformite"
         />
         <ActionCard
           n={6}
@@ -744,6 +765,7 @@ export function JudgeCalibration({
           desc={tq("judge.act.evidenceDesc")}
           roles={[{ label: "Auditor+", tone: "neutral" }]}
           cta={tq("judge.act.evidenceCta")}
+          href="/prouver/evidence-store"
         />
       </div>
 

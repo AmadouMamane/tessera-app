@@ -55,6 +55,8 @@ export function ModelCatalogue() {
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Closing must survive the rows[0] fallback below — null alone re-selects the first row.
+  const [dismissed, setDismissed] = useState(false);
 
   const rows = useMemo<Row[]>(() => {
     const all = data?.models ?? [];
@@ -73,7 +75,7 @@ export function ModelCatalogue() {
     );
   }
 
-  const selected = rows.find((m) => m.id === selectedId) ?? rows[0] ?? null;
+  const selected = dismissed ? null : (rows.find((m) => m.id === selectedId) ?? rows[0] ?? null);
 
   return (
     <div className="flex flex-col gap-3">
@@ -96,7 +98,7 @@ export function ModelCatalogue() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className={cn("grid gap-3", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
         <div className="overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           <table
             className="w-full border-collapse text-left text-[0.72rem]"
@@ -115,9 +117,15 @@ export function ModelCatalogue() {
               {rows.map((m) => (
                 <tr
                   key={m.id}
-                  onClick={() => setSelectedId(m.id)}
+                  onClick={() => {
+                    setDismissed(false);
+                    setSelectedId(m.id);
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") setSelectedId(m.id);
+                    if (e.key === "Enter" || e.key === " ") {
+                      setDismissed(false);
+                      setSelectedId(m.id);
+                    }
                   }}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a button; keyboard + role provided.
                   role="button"
@@ -157,9 +165,7 @@ export function ModelCatalogue() {
           </table>
         </div>
 
-        {selected ? (
-          <ModelDetail t={t} row={selected} onClose={() => setSelectedId(selected.id)} />
-        ) : null}
+        {selected ? <ModelDetail t={t} row={selected} onClose={() => setDismissed(true)} /> : null}
       </div>
       {data.note ? (
         <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{data.note}</p>

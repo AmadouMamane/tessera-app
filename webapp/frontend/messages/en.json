@@ -796,8 +796,8 @@
       "title": "Quick actions",
       "copyId": "Copy ID",
       "openProof": "Open proof",
-      "viewPolicy": "View policy",
-      "openCase": "Open case"
+      "viewPolicy": "Copy policy rule",
+      "openCase": "Copy case reference"
     },
     "footer": {
       "integrity": "Audit integrity",
@@ -2754,7 +2754,8 @@
         "complianceCta": "Open review",
         "evidenceTitle": "Generate quality evidence pack",
         "evidenceDesc": "Full proofs ready for audit.",
-        "evidenceCta": "Prepare the pack"
+        "evidenceCta": "Prepare the pack",
+        "notWired": "Not wired — judge recalibration is coming in a dedicated lot"
       }
     },
     "runs": {
@@ -3476,13 +3477,14 @@
       "used": "Used",
       "risk": "Risk",
       "siem": "SIEM / SOC (24h)",
-      "exportSiem": "Export to SIEM",
+      "exportSiem": "Export incidents (JSON)",
       "anomalies": "{n} session anomalies detected",
       "quickActions": "Quick actions",
       "qaRedteam": "Run red-team",
       "qaIncident": "Open incident",
       "qaPurge": "Purge GDPR memory",
-      "qaTicket": "Create compliance ticket"
+      "qaTicket": "Create compliance ticket",
+      "notWired": "Not wired — governed purge is coming in a dedicated lot"
     },
     "fail": {
       "injection": "Prompt injection",
@@ -3685,6 +3687,7 @@
     },
     "rail": {
       "lastEval": "Last evaluation",
+      "lastEvalMissing": "Not captured — the report does not carry an evaluation date yet",
       "live": "LIVE",
       "deadlines": "Upcoming deadlines",
       "criticalNc": "Critical non-conformities",
@@ -3695,7 +3698,8 @@
       "qaEvidence": "Generate evidence pack",
       "qaRemediation": "Remediation plan",
       "qaReport": "Export compliance report",
-      "qaRegistry": "Processing registry"
+      "qaRegistry": "Processing registry",
+      "notWired": "Not wired — no processing registry exists yet"
     },
     "sec": {
       "actual": "A · Regulatory posture",
@@ -6704,6 +6708,7 @@
       "export": "Export configuration",
       "import": "Import configuration",
       "save": "Save changes",
+      "notWired": "Not wired — configuration persistence is not connected yet",
       "viewAtDate": "View config at date",
       "compareTo": "Compare to",
       "history": "History & versions"

@@ -18,6 +18,7 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,16 @@ const TABS = [
   "audit",
   "system",
 ] as const;
+type Tab = (typeof TABS)[number];
+/** QuickConfig category key → the CommandBar tab that shows that category. */
+const CAT_TAB: Record<string, Tab> = {
+  security_policies: "security",
+  data_retention: "data",
+  models_ai: "models",
+  authentication: "access",
+  notifications: "notifications",
+  integrations: "integrations",
+};
 
 type T = ReturnType<typeof useTranslations<"parameters">>;
 type Data = ParametersData;
@@ -72,7 +83,7 @@ function ExplainInfo({ k, title }: { k: string; title: string }) {
 export function ParametersOverview() {
   const t = useTranslations("parameters");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const { data } = useQuery({
     queryKey: ["parameters-overview", locale],
     queryFn: ({ signal }) => fetchParametersOverview(locale, signal),
@@ -87,9 +98,12 @@ export function ParametersOverview() {
     );
   }
 
+  const onExport = () =>
+    downloadBlob("tessera-parameters.json", "application/json", JSON.stringify(data, null, 2));
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
-      <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} />
+      <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} onExport={onExport} />
       <ConfigVersionBar t={t} data={data} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -111,19 +125,19 @@ export function ParametersOverview() {
           className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]"
         >
           <div className="flex min-w-0 flex-col gap-3">
-            <QuickConfig t={t} data={data} />
+            <QuickConfig t={t} data={data} onConfigure={setActiveTab} />
             <RecentParams t={t} data={data} />
             <ModelsConfigured t={t} data={data} />
             <UsagePolicies t={t} data={data} />
           </div>
           <aside className="flex min-w-0 flex-col gap-3">
-            <ConfigState t={t} data={data} />
+            <ConfigState t={t} data={data} onViewDetail={() => setActiveTab("system")} />
             <Compliance t={t} data={data} />
             <Backup t={t} data={data} />
           </aside>
         </div>
       ) : (
-        <CategoryView t={t} data={data} tab={activeTab} />
+        <CategoryView t={t} data={data} tab={activeTab} onOpenTab={setActiveTab} />
       )}
 
       <Footer t={t} data={data} />
@@ -134,7 +148,12 @@ export function ParametersOverview() {
 /** A single config category (one of the CommandBar tabs): its real settings +
  *  the sections relevant to it. Categories with no real source (Notifications)
  *  render an honest empty state, never fabricated content. */
-function CategoryView({ t, data, tab }: { t: T; data: Data; tab: (typeof TABS)[number] }) {
+function CategoryView({
+  t,
+  data,
+  tab,
+  onOpenTab,
+}: { t: T; data: Data; tab: Tab; onOpenTab: (tab: Tab) => void }) {
   let extra: ReactNode = null;
   if (tab === "models") extra = <ModelsConfigured t={t} data={data} />;
   else if (tab === "security")
@@ -152,7 +171,7 @@ function CategoryView({ t, data, tab }: { t: T; data: Data; tab: (typeof TABS)[n
         <Backup t={t} data={data} />
       </>
     );
-  else if (tab === "general") extra = <QuickConfig t={t} data={data} />;
+  else if (tab === "general") extra = <QuickConfig t={t} data={data} onConfigure={onOpenTab} />;
   return (
     <div
       id="parameters-tabpanel"
@@ -172,10 +191,12 @@ function CommandBar({
   t,
   activeTab,
   onSelect,
+  onExport,
 }: {
   t: T;
-  activeTab: (typeof TABS)[number];
-  onSelect: (tab: (typeof TABS)[number]) => void;
+  activeTab: Tab;
+  onSelect: (tab: Tab) => void;
+  onExport: () => void;
 }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
@@ -211,23 +232,32 @@ function CommandBar({
         <Button
           size="sm"
           variant="outline"
+          onClick={onExport}
           className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
         >
           <Download className="h-4 w-4" /> {t("actions.export")}
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-        >
-          <UploadCloud className="h-4 w-4" /> {t("actions.import")}
-        </Button>
-        <Button
-          size="sm"
-          className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
-        >
-          <Save className="h-4 w-4" /> {t("actions.save")}
-        </Button>
+        {/* Import/Save need a config-mutation endpoint (not built yet) — disabled and
+            saying so beats a button that pretends to persist. */}
+        <span title={t("actions.notWired")}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled
+            className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
+          >
+            <UploadCloud className="h-4 w-4" /> {t("actions.import")}
+          </Button>
+        </span>
+        <span title={t("actions.notWired")}>
+          <Button
+            size="sm"
+            disabled
+            className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
+          >
+            <Save className="h-4 w-4" /> {t("actions.save")}
+          </Button>
+        </span>
       </div>
     </section>
   );
@@ -280,13 +310,13 @@ function CompactKpi({
 
 // ── left column ──────────────────────────────────────────────────────────────
 
-function QuickConfig({ t, data }: { t: T; data: Data }) {
+function QuickConfig({
+  t,
+  data,
+  onConfigure,
+}: { t: T; data: Data; onConfigure: (tab: Tab) => void }) {
   return (
-    <Panel
-      title={t("quick.title")}
-      info={<ExplainInfo k="quick" title={t("quick.title")} />}
-      action={<ViewAll label={t("quick.customize")} />}
-    >
+    <Panel title={t("quick.title")} info={<ExplainInfo k="quick" title={t("quick.title")} />}>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {data.categories.map((c) => {
           const Icon = CAT_ICON[c.key] ?? ShieldCheck;
@@ -306,6 +336,7 @@ function QuickConfig({ t, data }: { t: T; data: Data }) {
               </p>
               <button
                 type="button"
+                onClick={() => onConfigure(CAT_TAB[c.key] ?? "general")}
                 className="mt-auto self-start text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
               >
                 {t("quick.configure")} →
@@ -453,7 +484,7 @@ function ModelsConfigured({ t, data }: { t: T; data: Data }) {
 
 // ── right column ─────────────────────────────────────────────────────────────
 
-function ConfigState({ t, data }: { t: T; data: Data }) {
+function ConfigState({ t, data, onViewDetail }: { t: T; data: Data; onViewDetail?: () => void }) {
   const cs = data.config_state;
   const sum = cs.slices.reduce((s, x) => s + x.count, 0) || 1;
   const R = 41;
@@ -463,7 +494,7 @@ function ConfigState({ t, data }: { t: T; data: Data }) {
     <Panel
       title={t("state.title")}
       info={<ExplainInfo k="configState" title={t("state.title")} />}
-      action={<ViewAll label={t("state.viewDetail")} />}
+      action={<ViewAll label={t("state.viewDetail")} onClick={onViewDetail} />}
     >
       <div className="flex items-center gap-3">
         <div className="relative h-[112px] w-[112px] shrink-0">
@@ -542,9 +573,12 @@ function Compliance({ t, data }: { t: T; data: Data }) {
               {t(`compliance.${c.key}`)}
             </span>
             <span className="shrink-0 text-emerald-300">{t("compliance.conform")}</span>
-            <button type="button" className="shrink-0 text-[#87bfff]">
+            <Link
+              href="/surveiller/conformite"
+              className="shrink-0 text-[#87bfff] hover:text-[#a9d2ff]"
+            >
               {t("compliance.view")}
-            </button>
+            </Link>
           </li>
         ))}
       </ul>
@@ -627,7 +661,9 @@ function Sep() {
   return <span className="hidden text-[var(--tessera-border-strong)] sm:inline">·</span>;
 }
 
-function ViewAll({ label, href }: { label: string; href?: Route }) {
+/** Panel action affordance: a Link when it has a target, a button when it has a
+ *  handler, nothing otherwise — never a dead button. */
+function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
     "flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
   if (href) {
@@ -637,11 +673,14 @@ function ViewAll({ label, href }: { label: string; href?: Route }) {
       </Link>
     );
   }
-  return (
-    <button type="button" className={cls}>
-      {label} <ChevronRight className="h-3 w-3" />
-    </button>
-  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {label} <ChevronRight className="h-3 w-3" />
+      </button>
+    );
+  }
+  return null;
 }
 
 function Footer({ t, data }: { t: T; data: Data }) {

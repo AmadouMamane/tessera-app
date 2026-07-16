@@ -796,8 +796,8 @@
       "title": "Schnellaktionen",
       "copyId": "ID kopieren",
       "openProof": "Nachweis öffnen",
-      "viewPolicy": "Richtlinie anzeigen",
-      "openCase": "Fall öffnen"
+      "viewPolicy": "Policy-Regel kopieren",
+      "openCase": "Fall-Referenz kopieren"
     },
     "footer": {
       "integrity": "Audit-Integrität",
@@ -2754,7 +2754,8 @@
         "complianceCta": "Prüfung öffnen",
         "evidenceTitle": "Qualitäts-Evidence-Pack erzeugen",
         "evidenceDesc": "Vollständige Nachweise für Audit.",
-        "evidenceCta": "Pack vorbereiten"
+        "evidenceCta": "Pack vorbereiten",
+        "notWired": "Nicht angebunden — die Neukalibrierung des Judges folgt in einem eigenen Schritt"
       }
     },
     "runs": {
@@ -3476,13 +3477,14 @@
       "used": "Genutzt",
       "risk": "Risiko",
       "siem": "SIEM / SOC (24h)",
-      "exportSiem": "An SIEM exportieren",
+      "exportSiem": "Vorfälle exportieren (JSON)",
       "anomalies": "{n} Session-Anomalien erkannt",
       "quickActions": "Schnellaktionen",
       "qaRedteam": "Angriffstest starten",
       "qaIncident": "Vorfall öffnen",
       "qaPurge": "GDPR-Speicher löschen",
-      "qaTicket": "Compliance-Ticket erstellen"
+      "qaTicket": "Compliance-Ticket erstellen",
+      "notWired": "Nicht angebunden — die governte Löschung folgt in einem eigenen Schritt"
     },
     "fail": {
       "injection": "Prompt-Injektion",
@@ -3685,6 +3687,7 @@
     },
     "rail": {
       "lastEval": "Letzte Bewertung",
+      "lastEvalMissing": "Nicht erfasst — der Bericht trägt noch kein Bewertungsdatum",
       "live": "LIVE",
       "deadlines": "Anstehende Fristen",
       "criticalNc": "Kritische Nichtkonformitäten",
@@ -3695,7 +3698,8 @@
       "qaEvidence": "Evidence-Pack erzeugen",
       "qaRemediation": "Abhilfeplan",
       "qaReport": "Compliance-Bericht exportieren",
-      "qaRegistry": "Verarbeitungsverzeichnis"
+      "qaRegistry": "Verarbeitungsverzeichnis",
+      "notWired": "Nicht angebunden — ein Verarbeitungsverzeichnis existiert noch nicht"
     },
     "sec": {
       "actual": "A · Regulatorische Lage",
@@ -6704,6 +6708,7 @@
       "export": "Konfiguration exportieren",
       "import": "Konfiguration importieren",
       "save": "Änderungen speichern",
+      "notWired": "Nicht angebunden — die Konfigurations-Persistenz ist noch nicht verfügbar",
       "viewAtDate": "Konfiguration zum Datum",
       "compareTo": "Vergleichen mit",
       "history": "Verlauf & Versionen"

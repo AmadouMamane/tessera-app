@@ -18,6 +18,7 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -626,6 +627,16 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   };
   const tone = (rate: number | null, crit: number, warn: number): Tone =>
     rate == null ? "warn" : rate > crit ? "crit" : rate > warn ? "high" : "ok";
+  // Case refs come from the real failed-harness cases of the control's domain —
+  // never an invented "CASE-02xx" id (same rule as the SIEM card in the rail).
+  const caseRef = (cats: string[]): string => {
+    const ids = (failed.data?.cases ?? [])
+      .filter((c) => cats.some((k) => c.category.includes(k)))
+      .map((c) => c.case_id);
+    const first = ids[0];
+    if (!first) return "—";
+    return ids.length === 1 ? first : `${first} +${ids.length - 1}`;
+  };
   const controls: Control[] = [
     {
       key: "promptInjection",
@@ -634,7 +645,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       target: "< 20%",
       action: ts("ctrl.promptInjectionAction"),
       role: ts("role.security"),
-      case: "CASE-0201",
+      case: caseRef(["prompt_injection"]),
     },
     {
       key: "piiLeak",
@@ -643,7 +654,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       target: "0%",
       action: ts("ctrl.piiLeakAction"),
       role: ts("role.privacy"),
-      case: "CASE-0205",
+      case: caseRef(["pii"]),
     },
     {
       key: "crossTenant",
@@ -652,7 +663,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       target: "0%",
       action: ts("ctrl.crossTenantAction"),
       role: ts("role.security"),
-      case: "CASE-0214",
+      case: caseRef(["cross_tenant", "tenant"]),
     },
     {
       key: "toolMisuse",
@@ -661,7 +672,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       target: "< 5%",
       action: ts("ctrl.toolMisuseAction"),
       role: ts("role.security"),
-      case: "CASE-0206",
+      case: caseRef(["tool"]),
     },
     {
       key: "inversion",
@@ -670,7 +681,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       target: "0%",
       action: ts("ctrl.inversionAction"),
       role: ts("role.ml"),
-      case: "CASE-0228",
+      case: caseRef(["memory"]),
     },
     {
       key: "toxicity",
@@ -679,7 +690,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       target: "< 0.1%",
       action: ts("ctrl.toxicityAction"),
       role: ts("role.ml"),
-      case: "CASE-0231",
+      case: caseRef(["toxicity"]),
     },
   ];
 
@@ -1824,6 +1835,12 @@ function SecurityRail({
 }) {
   const ts = useTranslations("security");
   const incidents = (failed?.cases ?? []).slice(0, 5);
+  const onExportIncidents = () =>
+    downloadBlob(
+      "tessera-security-incidents.json",
+      "application/json",
+      JSON.stringify(failed?.cases ?? [], null, 2),
+    );
   const gates: { label: string; pass: boolean | "watch" }[] = [
     { label: ts("gate.security"), pass: firewall ? firewall.precision >= 0.9 : "watch" },
     { label: ts("gate.privacy"), pass: true },
@@ -1898,12 +1915,12 @@ function SecurityRail({
                 </Badge>
               </div>
             ))}
-            <Button
-              size="sm"
-              className="mt-1 h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+            <Link
+              href="/prouver/evidence-store"
+              className="mt-1 inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] transition-colors hover:bg-[#4c3fb0]/60"
             >
               {ts("rail.evidenceCta")}
-            </Button>
+            </Link>
           </CardContent>
         </Card>
 
@@ -1912,21 +1929,37 @@ function SecurityRail({
             <CardTitle className="text-sm">{ts("rail.quickActions")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-0.5">
-            {[
-              { key: "qaRedteam", icon: Siren },
-              { key: "qaIncident", icon: AlertTriangle },
-              { key: "qaPurge", icon: Trash2 },
-              { key: "qaTicket", icon: ShieldCheck },
-            ].map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
-              >
-                <a.icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{ts(`rail.${a.key}`)}</span>
-              </button>
-            ))}
+            {(
+              [
+                { key: "qaRedteam", icon: Siren, href: "/surveiller/qualite-ia" },
+                { key: "qaIncident", icon: AlertTriangle, href: "/agir/incidents-playbooks" },
+                { key: "qaPurge", icon: Trash2 },
+                { key: "qaTicket", icon: ShieldCheck, href: "/surveiller/conformite" },
+              ] as { key: string; icon: LucideIcon; href?: Route }[]
+            ).map((a) =>
+              a.href ? (
+                <Link
+                  key={a.key}
+                  href={a.href}
+                  className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+                >
+                  <a.icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{ts(`rail.${a.key}`)}</span>
+                </Link>
+              ) : (
+                // GDPR purge has no endpoint yet — honest disabled state, never a silent no-op.
+                <button
+                  key={a.key}
+                  type="button"
+                  disabled
+                  title={ts("rail.notWired")}
+                  className="flex cursor-not-allowed items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--muted-foreground)] opacity-60"
+                >
+                  <a.icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{ts(`rail.${a.key}`)}</span>
+                </button>
+              ),
+            )}
           </CardContent>
         </Card>
 
@@ -2002,7 +2035,12 @@ function SecurityRail({
                 </Badge>
               </div>
             ))}
-            <Button size="sm" variant="outline" className="mt-1 h-7 justify-center text-[0.7rem]">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onExportIncidents}
+              className="mt-1 h-7 justify-center text-[0.7rem]"
+            >
               {ts("rail.exportSiem")}
             </Button>
             {anomalies?.n_anomalous ? (

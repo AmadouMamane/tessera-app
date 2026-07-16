@@ -15,9 +15,11 @@ import {
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
@@ -506,6 +508,22 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() =>
+                        downloadBlob(
+                          "tessera-compliance-evidence.json",
+                          "application/json",
+                          JSON.stringify(
+                            {
+                              evidence_valid: d.evidence_valid ?? 0,
+                              evidence_missing: d.evidence_missing ?? 0,
+                              evidence_blocking: d.evidence_blocking ?? 0,
+                              controls: d.controls ?? [],
+                            },
+                            null,
+                            2,
+                          ),
+                        )
+                      }
                       className="mt-2 h-7 w-full justify-center text-[0.7rem]"
                     >
                       {tc("evidence.export")}
@@ -589,6 +607,13 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
               obligations={d.obligations ?? []}
               nc={d.non_conformities ?? []}
               fwLabel={fwLabel}
+              onExportReport={() =>
+                downloadBlob(
+                  "tessera-compliance.json",
+                  "application/json",
+                  JSON.stringify(d, null, 2),
+                )
+              }
             />
           </div>
 
@@ -740,10 +765,12 @@ function ComplianceRail({
   obligations,
   nc,
   fwLabel,
+  onExportReport,
 }: {
   obligations: ComplianceObligation[];
   nc: NonConformity[];
   fwLabel: (c: string) => string;
+  onExportReport: () => void;
 }) {
   const tc = useTranslations("compliance");
   const criticalNc = nc.filter((n) => n.severity === "high");
@@ -756,8 +783,9 @@ function ComplianceRail({
             <CardTitle className="text-sm">{tc("rail.lastEval")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-2 text-[0.72rem]">
-            <span className="font-serif text-base font-semibold tabular-nums">11/06/2026</span>
-            <Badge tone="success">{tc("rail.live")}</Badge>
+            {/* The compliance payload carries no evaluation date yet — say so, never
+                invent one (the previous hardcoded "11/06/2026" was a lie). */}
+            <span className="text-[var(--muted-foreground)]">{tc("rail.lastEvalMissing")}</span>
           </CardContent>
         </Card>
 
@@ -823,30 +851,55 @@ function ComplianceRail({
             <CardTitle className="text-sm">{tc("rail.quickActions")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-0.5">
-            {[
-              { key: "qaEvidence", icon: FileCheck2 },
-              { key: "qaRemediation", icon: ListChecks },
-              { key: "qaReport", icon: FileDown },
-              { key: "qaRegistry", icon: BookText },
-            ].map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
-              >
-                <a.icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{tc(`rail.${a.key}`)}</span>
-              </button>
-            ))}
+            {(
+              [
+                { key: "qaEvidence", icon: FileCheck2, href: "/prouver/evidence-store" },
+                { key: "qaRemediation", icon: ListChecks, href: "/surveiller/amelioration" },
+                { key: "qaReport", icon: FileDown, onClick: onExportReport },
+                { key: "qaRegistry", icon: BookText },
+              ] as { key: string; icon: LucideIcon; href?: Route; onClick?: () => void }[]
+            ).map((a) => {
+              const cls =
+                "flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]";
+              if (a.href) {
+                return (
+                  <Link key={a.key} href={a.href} className={cls}>
+                    <a.icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{tc(`rail.${a.key}`)}</span>
+                  </Link>
+                );
+              }
+              if (a.onClick) {
+                return (
+                  <button key={a.key} type="button" onClick={a.onClick} className={cls}>
+                    <a.icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{tc(`rail.${a.key}`)}</span>
+                  </button>
+                );
+              }
+              // No processing registry exists yet — honest disabled state, never a silent no-op.
+              return (
+                <button
+                  key={a.key}
+                  type="button"
+                  disabled
+                  title={tc("rail.notWired")}
+                  className="flex cursor-not-allowed items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--muted-foreground)] opacity-60"
+                >
+                  <a.icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{tc(`rail.${a.key}`)}</span>
+                </button>
+              );
+            })}
           </CardContent>
         </Card>
 
-        <Button
-          size="sm"
-          className="h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+        <Link
+          href="/prouver/evidence-store"
+          className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] transition-colors hover:bg-[#4c3fb0]/60"
         >
           {tc("rail.evidenceCta")}
-        </Button>
+        </Link>
       </div>
     </aside>
   );

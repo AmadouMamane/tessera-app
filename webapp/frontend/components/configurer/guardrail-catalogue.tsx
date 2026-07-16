@@ -22,6 +22,10 @@ const VERDICT_DOT: Record<string, string> = {
   bad: "bg-amber-400",
   muted: "bg-[var(--tessera-text-muted)]",
 };
+const STATUS_DOT: Record<string, string> = {
+  active: "bg-emerald-400",
+  available: "bg-[var(--tessera-text-muted)]",
+};
 
 /** ⓘ for a guardrail KPI, reading guardrailCatalogue.explain.<k>.{what,how,source?}. */
 function KpiInfo({ k, title }: { k: string; title: string }) {
@@ -49,6 +53,8 @@ export function GuardrailCatalogue() {
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Closing must survive the rows[0] fallback below — null alone re-selects the first row.
+  const [dismissed, setDismissed] = useState(false);
 
   const rows = useMemo<Row[]>(() => {
     const all = data?.blocks ?? [];
@@ -67,7 +73,7 @@ export function GuardrailCatalogue() {
     );
   }
 
-  const selected = rows.find((b) => b.id === selectedId) ?? rows[0] ?? null;
+  const selected = dismissed ? null : (rows.find((b) => b.id === selectedId) ?? rows[0] ?? null);
 
   return (
     <div className="flex flex-col gap-3">
@@ -92,7 +98,7 @@ export function GuardrailCatalogue() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className={cn("grid gap-3", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
         <div className="overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           <table
             className="w-full border-collapse text-left text-[0.72rem]"
@@ -111,9 +117,15 @@ export function GuardrailCatalogue() {
               {rows.map((b) => (
                 <tr
                   key={b.id}
-                  onClick={() => setSelectedId(b.id)}
+                  onClick={() => {
+                    setDismissed(false);
+                    setSelectedId(b.id);
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") setSelectedId(b.id);
+                    if (e.key === "Enter" || e.key === " ") {
+                      setDismissed(false);
+                      setSelectedId(b.id);
+                    }
                   }}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a button; keyboard + role provided.
                   role="button"
@@ -137,7 +149,12 @@ export function GuardrailCatalogue() {
                   </td>
                   <td className="px-2.5 py-1.5">
                     <span className="inline-flex items-center gap-1.5 text-[var(--tessera-text-muted)]">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          STATUS_DOT[b.status] ?? VERDICT_DOT.muted,
+                        )}
+                      />
                       {b.status_label}
                     </span>
                   </td>
@@ -151,7 +168,7 @@ export function GuardrailCatalogue() {
         </div>
 
         {selected ? (
-          <GuardrailDetail t={t} row={selected} onClose={() => setSelectedId(selected.id)} />
+          <GuardrailDetail t={t} row={selected} onClose={() => setDismissed(true)} />
         ) : null}
       </div>
       {data.note ? (

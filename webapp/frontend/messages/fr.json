@@ -796,8 +796,8 @@
       "title": "Actions rapides",
       "copyId": "Copier ID",
       "openProof": "Ouvrir preuve",
-      "viewPolicy": "Voir politique",
-      "openCase": "Ouvrir case"
+      "viewPolicy": "Copier la règle de politique",
+      "openCase": "Copier la réf. du dossier"
     },
     "footer": {
       "integrity": "Intégrité d'audit",
@@ -2754,7 +2754,8 @@
         "complianceCta": "Ouvrir revue",
         "evidenceTitle": "Générer dossier de preuves qualité",
         "evidenceDesc": "Preuves complètes à insérer pour audit.",
-        "evidenceCta": "Préparer le pack"
+        "evidenceCta": "Préparer le pack",
+        "notWired": "Non câblé — la recalibration du juge arrive dans un lot dédié"
       }
     },
     "runs": {
@@ -3476,13 +3477,14 @@
       "used": "Utilisé",
       "risk": "Risque",
       "siem": "SIEM / SOC (24h)",
-      "exportSiem": "Exporter vers SIEM",
+      "exportSiem": "Exporter les incidents (JSON)",
       "anomalies": "{n} anomalies de session détectées",
       "quickActions": "Actions rapides",
       "qaRedteam": "Lancer test d'intrusion",
       "qaIncident": "Ouvrir incident",
       "qaPurge": "Purger mémoire GDPR",
-      "qaTicket": "Créer ticket conformité"
+      "qaTicket": "Créer ticket conformité",
+      "notWired": "Non câblé — l'effacement gouverné arrive dans un lot dédié"
     },
     "fail": {
       "injection": "Injection de prompt",
@@ -3685,6 +3687,7 @@
     },
     "rail": {
       "lastEval": "Dernière évaluation",
+      "lastEvalMissing": "Non capturé — le rapport ne porte pas de date d'évaluation",
       "live": "LIVE",
       "deadlines": "Échéances à venir",
       "criticalNc": "Non conformités critiques",
@@ -3695,7 +3698,8 @@
       "qaEvidence": "Générer dossier de preuves",
       "qaRemediation": "Plan de remédiation",
       "qaReport": "Exporter rapport conformité",
-      "qaRegistry": "Registre des traitements"
+      "qaRegistry": "Registre des traitements",
+      "notWired": "Non câblé — aucun registre des traitements n'existe encore"
     },
     "sec": {
       "actual": "A · Posture réglementaire",
@@ -6704,6 +6708,7 @@
       "export": "Exporter la configuration",
       "import": "Importer la configuration",
       "save": "Enregistrer les modifications",
+      "notWired": "Non câblé — la persistance de configuration n'est pas encore branchée",
       "viewAtDate": "Voir configuration à date",
       "compareTo": "Comparer à",
       "history": "Historique & versions"

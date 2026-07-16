@@ -8,7 +8,6 @@ import {
   Database,
   ExternalLink,
   FileJson,
-  Filter,
   Hash,
   KeyRound,
   Search,
@@ -411,14 +410,6 @@ function FilterDeck({
             className="h-8 border-[var(--tessera-border)] bg-[var(--tessera-bg)] pl-9 text-xs"
           />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-[var(--tessera-border)] bg-[var(--tessera-bg)]"
-        >
-          <Filter className="h-4 w-4" />
-          {t("filters.button")}
-        </Button>
       </div>
       <div className="grid grid-cols-2 gap-2 px-2 pt-1.5 lg:grid-cols-4">
         <Select
