@@ -18,7 +18,9 @@ session'…"* — matched none of Tessera's own injection regexes (they require 
 angle tags; case 08 uses single quotes), so the guard let it through and the shipping `llama3.2:3b`
 obeyed it (0028 §5: fr and de FAIL, the en "pass" was a grader false green).
 
-`limes` (separate repo, `/Users/amadou/local/apps/limes`, HEAD `64f19a1`) measures the hole
+`limes` (separate repo, published at <https://github.com/AmadouMamane/Limes>; the measurement
+below was taken at its HEAD `64f19a1`, whose numbers the published `86bf21dd` preserves — the
+publication prep moved no digit) measures the hole
 **closed in isolation**: its injection detector blocks 25/33 corpus attacks incl. case 08 fr/de/en,
 with **0/8** benign inputs killed — the Tessera-regex baseline it ports blocks 22/33 and misses
 case 08 exactly as Tessera does. But a detector measured in isolation guards nothing: until Tessera
@@ -26,10 +28,13 @@ case 08 exactly as Tessera does. But a detector measured in isolation guards not
 
 ## Decision
 
-1. **Add `limes` as a one-way dependency.** `Tessera -> limes`, never the reverse. Sourced locally
-   from the sibling checkout (`[tool.uv.sources]`, `editable`), because limes is unpublished (its
-   name / PyPI / licence are Amadou's decisions, 0028 §"What this does not decide"). See §HALT for
-   the packaging caveat this local path carries.
+1. **Add `limes` as a one-way dependency.** `Tessera -> limes`, never the reverse. First sourced
+   locally from the sibling checkout (`[tool.uv.sources]`, `editable`) while limes was unpublished;
+   since its publication to <https://github.com/AmadouMamane/Limes> the dependency is a direct git
+   reference in `project.dependencies`, **pinned to a commit sha** so the lock resolves identically
+   from any checkout depth and any machine (see §HALT — resolved). limes is a **hard runtime
+   dependency**, never an optional extra: the backend fails closed, so limes absent means every
+   turn is refused.
 
 2. **Wire limes behind `guard/adapter.py`** — the seam 0028 declared. A new
    `guard/limes_backend.py` runs limes' `InjectionDetector` and maps its verdict onto the guard's
@@ -86,9 +91,9 @@ The ratchet (`tests/unit/test_guard_limes_injection.py`) pins all of it on the r
 a ratchet never seen red is not a ratchet. The badge's fail-closed is pinned the same way (blind
 measurement → warn; non-limes detector → warn).
 
-## HALT — the packaging decision is Amadou's
+## HALT — the packaging decision was Amadou's; taken 2026-07-16
 
-The local path source works for this session's flow but is **not durable**, and the reason is a
+The local path source worked for the session's flow but was **not durable**, and the reason was a
 real architecture problem, not a formality:
 
 * `[tool.uv.sources]` resolves the path relative to the pyproject's directory. The **agent
@@ -97,18 +102,29 @@ real architecture problem, not a formality:
   needs `../../limes`. One committed relative string cannot be correct in both. An absolute path
   works everywhere on *this* machine but hardcodes `/Users/amadou/...` into a tracked file, which
   breaks the day CI un-blocks or a second machine/contributor appears.
-* The committed value is `../../../limes` (correct for the worktree the gate and dev-preview run
-  from). After a merge to `main`, the reference checkout's `uv sync` would resolve it wrong.
 
-The durable fix — **vendor limes, git-submodule it, or wait for its PyPI publication** — is the same
-class of decision 0028 reserved for Amadou (limes' name / index / licence). It is **not tranchable
-in solo**, so this lot **HALTs before merge**: the work sits on `claude/phase2-tessera-consumes-limes`,
-proven and gate-green in the worktree, awaiting that call.
+**Resolution.** Amadou published limes (public repo,
+<https://github.com/AmadouMamane/Limes>) and chose the git dependency. The path source and
+`[tool.uv.sources]` are gone; `project.dependencies` carries
+`limes @ git+https://github.com/AmadouMamane/Limes.git@<sha>`, **pinned to a full commit sha**
+(`86bf21dd…`) for a stable, reproducible lock — bumping limes is a deliberate, reviewable edit,
+never a silent drift of `@main`. A git URL is depth-independent by construction; resolution is
+proven from both depths (agent worktree at depth 3 and a depth-2 checkout, `uv sync --frozen`).
+Consequences of the choice, wired in the same lot:
 
-Operational corollary of fail-closed, for whichever packaging is chosen: if limes is genuinely
-absent at runtime, `check_user_input` cannot inspect and every turn is refused (CannotSay → block).
+* the Docker builder stage installs `git` (uv shells out to git to fetch the dependency; the
+  runtime stage still ships none);
+* CI and any build environment need only outbound HTTPS to github.com — the repo is public, no
+  auth token is required, and GitHub-hosted runners ship git;
+* hatchling's `allow-direct-references` opt-in is set: Tessera is an application, not an index
+  package, so a direct reference in its metadata is deliberate.
+
+Operational corollary of fail-closed: if limes is genuinely absent at runtime,
+`check_user_input` cannot inspect and every turn is refused (CannotSay → block).
 That is the correct *security* posture and a loud "install limes" signal — but it means limes must
-be a hard runtime dependency of any deployed Tessera, not an optional extra.
+be a hard runtime dependency of any deployed Tessera, not an optional extra. It is declared
+exactly so (a required entry in `project.dependencies`, documented in the README quickstart and
+the runbook's deployment prerequisites).
 
 ## Consequences
 
@@ -118,5 +134,7 @@ be a hard runtime dependency of any deployed Tessera, not an optional extra.
 * "Reuse, don't reinvent" is now true *by consumption*: the injection corpus and patterns live in
   limes; Tessera holds no copy, and the single-source invariant is machine-enforced at policy load.
 * The `firewall` badge measures the active detector, dated — the last hollow-green path is closed.
-* This ADR does not decide limes' publication, name, or licence (0028), nor the packaging of the
-  dependency (§HALT). Those remain open, and this lot does not land without them.
+* limes' publication (name, index, licence) was decided by Amadou on 2026-07-16 — public GitHub
+  repo — and the dependency packaging with it (§HALT, resolved): a git reference pinned to a
+  commit sha. What remains open is only limes' possible future PyPI publication; if that happens,
+  the git pin becomes a normal version pin and nothing else in this ADR moves.

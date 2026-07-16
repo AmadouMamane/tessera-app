@@ -97,7 +97,7 @@ Tessera is a **complete, opinionated, deployed assembly** of four quality layers
 
 It builds deliberately on proven components rather than reinventing them:
 
-- A first-party runtime guard behind a single declared seam (`src/tessera/guard/adapter.py`). Its injection detection is the separate [`limes`](../limes) package, consumed behind that seam (ADR 0028/0029) — the single source of truth for the injection patterns, measured on the real turn path (F1 on the cockpit, not a package-presence badge). [`mcp-firewall`](https://github.com/ressl/mcp-firewall) is cited as prior art for the category.
+- A first-party runtime guard behind a single declared seam (`src/tessera/guard/adapter.py`). Its injection detection is the separate [`limes`](https://github.com/AmadouMamane/Limes) package, consumed behind that seam (ADR 0028/0029) — the single source of truth for the injection patterns, measured on the real turn path (F1 on the cockpit, not a package-presence badge). [`mcp-firewall`](https://github.com/ressl/mcp-firewall) is cited as prior art for the category.
 - A non-regression harness whose patterns draw on [AgentAssay](https://github.com/agentassay) and [Promptfoo](https://github.com/promptfoo/promptfoo).
 - An audit-trail design informed by the AEGIS research line.
 
@@ -272,6 +272,12 @@ uv sync                       # installs runtime + dev dependencies
 uv run pre-commit install     # enables ruff + mypy + hooks at commit time
 cp .env.example .env.local    # then edit secrets
 ```
+
+`uv sync` needs `git` on the PATH: the guard's injection detector,
+[`limes`](https://github.com/AmadouMamane/Limes), is a **hard runtime
+dependency** resolved from its public GitHub repo at a pinned commit (no
+auth required). It is deliberately not an optional extra — the guard fails
+closed, so a Tessera without limes refuses every turn (ADR 0029).
 
 ### Run the agent locally
 

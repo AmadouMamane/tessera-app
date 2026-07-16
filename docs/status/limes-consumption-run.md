@@ -1,13 +1,15 @@
 # Run status — phase 2: Tessera consumes limes (ADR 0029)
 
-Branch `claude/phase2-tessera-consumes-limes`, cut from `main` `eb9259b8`. **HALTs before merge**
-(packaging decision is Amadou's — see ADR 0029 §HALT). Single source of truth for this lot.
+Branch `claude/phase2-tessera-consumes-limes`, cut from `main` `eb9259b8`, rebased onto `main`
+`036079f4` for the final lot. **HALTs before merge** (Amadou does the FF). The packaging HALT is
+**resolved**: limes is published (<https://github.com/AmadouMamane/Limes>) and the dependency is
+git, pinned — see ADR 0029 §HALT and "Final lot" below. Single source of truth for this lot.
 
 ## What shipped
 
 | Piece | State | Where |
 |---|---|---|
-| `limes` added as one-way path dependency (`Tessera → limes`, editable) | ✅ | `pyproject.toml` (`dependencies` + `[tool.uv.sources]`) |
+| `limes` as one-way **git dependency, pinned sha** (`Tessera → limes`; path source removed) | ✅ | `pyproject.toml` (`dependencies`), `uv.lock` |
 | limes injection backend behind the guard seam | ✅ | `src/tessera/guard/limes_backend.py` (new) |
 | `check_user_input` delegates injection detection to limes; `CannotSay` → block (fail-closed) | ✅ | `src/tessera/guard/adapter.py` |
 | Single source of truth: YAML `deny_patterns` empty + **load refuses re-adds**; field derived from limes | ✅ | `src/tessera/guard/decisions.py`, `guard/policy.yaml` |
@@ -50,10 +52,25 @@ F1 0.86**, detector `injection@0.1.0` — identical to limes isolation. Legitima
 - **Full `make gate-twice`**: see the git trailer of the lot commit for the recorded tree digests.
 - CI remains billing-blocked → the local gate is the only witness (repo doctrine).
 
+## Final lot (2026-07-16) — path → published git, HALT packaging resolved
+
+Amadou published limes and took the packaging decision the first HALT reserved. This lot executes
+it:
+
+- `pyproject.toml`: `limes @ git+https://github.com/AmadouMamane/Limes.git@86bf21dd…` (full sha
+  pin, reproducible lock); `[tool.uv.sources]` removed — **one** source, the published repo, no
+  path fallback. hatchling `allow-direct-references` opt-in added (application, not index package).
+- `uv.lock` resolves limes from git; zero relative or absolute paths to limes anywhere.
+- Depth-independence proven: `uv sync` green from the agent worktree (depth 3) **and**
+  `uv sync --frozen` green from a disposable depth-2 checkout — the exact failure mode of the
+  path source, dissolved by construction.
+- `Dockerfile.agent` builder stage installs `git` (uv fetches the git dep); runtime stage
+  unchanged, still no git. CI note: public repo, no auth, hosted runners ship git.
+- Hard-runtime-dep documented (README quickstart, runbook prerequisites): fail-closed ⇒ limes
+  absent = every turn refused = dead app, by design; never an optional extra.
+
 ## Owed / open (for Amadou)
 
-1. **Packaging (HALT, blocks merge).** The local path `../../../limes` is correct from the agent
-   worktree (depth 3) but wrong from the reference checkout `tessera/` (depth 2, needs `../../limes`);
-   an absolute path hardcodes the home dir. Decision: vendor / submodule / wait-for-PyPI (ADR 0029 §HALT).
-2. **Fail-closed operational note.** limes absent ⇒ every turn refused (correct security, dead app).
-   limes must be a hard runtime dep of any deploy, not an optional extra.
+1. **Merge (HALT).** The branch is proven and gate-green at the rebased tip; Amadou does the FF.
+2. **Bumping limes** is now a deliberate edit of the pinned sha in `pyproject.toml` + `uv lock`;
+   if limes ever reaches PyPI, the git pin becomes a version pin (ADR 0029 §Consequences).

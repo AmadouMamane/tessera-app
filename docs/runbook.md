@@ -28,7 +28,13 @@ web**.
 - `gcloud` authenticated against the target project with rights to manage Cloud
   Run, Cloud SQL, Secret Manager, and IAM.
 - A container image for the agent, built from `infra/docker/Dockerfile.agent`
-  and pushed to a registry the Cloud Run service account can read.
+  and pushed to a registry the Cloud Run service account can read. The build
+  resolves [`limes`](https://github.com/AmadouMamane/Limes) — the guard's
+  injection detector and a **hard runtime dependency** (fail-closed: limes
+  absent ⇒ every turn refused, ADR 0029) — from its public GitHub repo at the
+  commit pinned in `pyproject.toml`/`uv.lock`. The build environment therefore
+  needs `git` and outbound HTTPS to github.com (the builder stage installs
+  git; no auth token is required, the repo is public).
 - A container image for the front-end, built from
   `infra/docker/Dockerfile.frontend`, pushed to the same registry (passed to
   Terraform as `frontend_image`).

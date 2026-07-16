@@ -183,6 +183,9 @@ jobs:
           key: pnpm-${{ runner.os }}-${{ hashFiles('webapp/frontend/pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ runner.os }}-
 
+      # limes resolves from git+https://github.com/AmadouMamane/Limes.git at a
+      # pinned sha (ADR 0029): public repo, no auth token needed; the hosted
+      # runners ship git, so `uv sync` needs nothing extra here.
       - name: Sync Python deps
         run: uv sync
 
