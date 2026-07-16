@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Shared primitives for the AGENT / Évaluations sub-tabs (Jeux d'évaluations,
- * Résultats, Dimensions, Comparaisons, Erreurs, Versions & historique, Exports).
+ * Shared primitives for the AGENT sub-tab views (Évaluations, Prompts,
+ * Historique...): the ones whose backend-declared `subtabs` pill strip must gate
+ * distinct, real content rather than decorate.
  *
  * Every sub-tab table gets the same mandatory "Connaissances treatment"
  * (functional-page-playbook): a filter bar, sortable column headers with
@@ -170,7 +171,7 @@ export function ResetButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
     >
-      <X className="h-3.5 w-3.5" /> {pick(locale, "Réinitialiser", "Zuruecksetzen", "Reset")}
+      <X className="h-3.5 w-3.5" /> {pick(locale, "Réinitialiser", "Zurücksetzen", "Reset")}
     </button>
   );
 }
@@ -502,7 +503,7 @@ function PageArrow({
       aria-label={
         dir === "prev"
           ? pick(locale, "Page précédente", "Vorherige Seite", "Previous page")
-          : pick(locale, "Page suivante", "Naechste Seite", "Next page")
+          : pick(locale, "Page suivante", "Nächste Seite", "Next page")
       }
       onClick={onClick}
       className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] enabled:hover:text-[var(--tessera-text)] disabled:opacity-40"

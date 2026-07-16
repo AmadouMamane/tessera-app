@@ -38,6 +38,7 @@ import { useAgentId } from "@/lib/use-agent-id";
 import { AgentCrossLinks } from "./agent-cross-links";
 import { AgentSubtabs } from "./agent-subtabs";
 import { DefineInstanceBanner } from "./define-instance-banner";
+import { I18nTab, VariablesTab } from "./prompt-tabs";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 type DetailT = NonNullable<Data["details"]>[number];
@@ -132,6 +133,8 @@ export function AgentPrompts() {
   const a = data.actions;
   const subtabs = data.subtabs ?? [];
   const active = subtab || subtabs[0] || "";
+  // Gate by index, not label: subtab labels are localized (FR/DE/EN).
+  const activeIdx = Math.max(0, subtabs.indexOf(active));
   const anyFilter = search !== "" || cat !== ALL || vars !== ALL;
   const resetAll = () => {
     setSearch("");
@@ -159,91 +162,101 @@ export function AgentPrompts() {
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={t("realtime")}
-        timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        windowEnd={temporal.windowEnd}
-        onPickDate={temporal.pickDate}
-        onModeChange={temporal.changeMode}
-      />
-
-      <Snapshot data={data} />
-
-      <DefineInstanceBanner
-        definition={data.definition}
-        governanceBanner={data.governance_banner}
-        instanceLabel="Configuration pour cet agent (instance)"
-        instanceHint="prompts actifs · édités par PR Git"
-      />
-
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
-        {(data.kpis ?? []).map((k, i) => (
-          <Kpi key={k.key} kpi={k} Icon={KPI_ICONS[i % KPI_ICONS.length] ?? FileCode2} />
-        ))}
-      </div>
-
-      <div className="grid gap-2.5 xl:grid-cols-12">
-        <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
-          <Filters
-            data={data}
-            search={search}
-            setSearch={setSearch}
-            cat={cat}
-            setCat={setCat}
-            vars={vars}
-            setVars={setVars}
-            rows={rows}
-            anyFilter={anyFilter}
-            onReset={resetAll}
+      {activeIdx === 0 ? (
+        <>
+          <TemporalRail
+            mode={temporal.mode}
+            liveStatus={t("realtime")}
+            timeline={railTimeline.data}
+            selectedAt={temporal.selectedAt}
+            onSelectedAtChange={temporal.setSelectedAt}
+            periodKey={temporal.periodKey}
+            onPeriodChange={temporal.setPeriodKey}
+            windowEnd={temporal.windowEnd}
+            onPickDate={temporal.pickDate}
+            onModeChange={temporal.changeMode}
           />
-          {anyFilter ? (
-            <div className="flex flex-wrap items-center gap-1.5" aria-live="polite">
-              {search !== "" ? (
-                <Chip label={`${t("searchPrefix")}: ${search}`} onRemove={() => setSearch("")} />
-              ) : null}
-              {cat !== ALL ? (
-                <Chip
-                  label={labelFor(rows, "type_tone", "type", cat)}
-                  onRemove={() => setCat(ALL)}
-                />
-              ) : null}
-              {vars !== ALL ? (
-                <Chip
-                  label={vars === "with" ? t("withVariables") : t("withoutVariables")}
-                  onRemove={() => setVars(ALL)}
-                />
-              ) : null}
-              <button
-                type="button"
-                onClick={resetAll}
-                className="text-[0.66rem] text-[#b9a6ff] hover:text-white"
-              >
-                {t("clearAll")}
-              </button>
-            </div>
-          ) : null}
-          <PromptsTable
-            data={data}
-            rows={filtered}
-            total={rows.length}
-            selected={detail?.key ?? null}
-            onSelect={setSelected}
+
+          <Snapshot data={data} />
+
+          <DefineInstanceBanner
+            definition={data.definition}
+            governanceBanner={data.governance_banner}
+            instanceLabel="Configuration pour cet agent (instance)"
+            instanceHint="prompts actifs · édités par PR Git"
           />
-          <div className="grid gap-2.5 md:grid-cols-3">
-            <Watch data={data} />
-            <Quick data={data} />
-            <ByType data={data} />
+
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
+            {(data.kpis ?? []).map((k, i) => (
+              <Kpi key={k.key} kpi={k} Icon={KPI_ICONS[i % KPI_ICONS.length] ?? FileCode2} />
+            ))}
           </div>
-        </div>
-        <Detail detail={detail} className="xl:col-span-4" />
-      </div>
 
-      <Footer data={data} />
+          <div className="grid gap-2.5 xl:grid-cols-12">
+            <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
+              <Filters
+                data={data}
+                search={search}
+                setSearch={setSearch}
+                cat={cat}
+                setCat={setCat}
+                vars={vars}
+                setVars={setVars}
+                rows={rows}
+                anyFilter={anyFilter}
+                onReset={resetAll}
+              />
+              {anyFilter ? (
+                <div className="flex flex-wrap items-center gap-1.5" aria-live="polite">
+                  {search !== "" ? (
+                    <Chip
+                      label={`${t("searchPrefix")}: ${search}`}
+                      onRemove={() => setSearch("")}
+                    />
+                  ) : null}
+                  {cat !== ALL ? (
+                    <Chip
+                      label={labelFor(rows, "type_tone", "type", cat)}
+                      onRemove={() => setCat(ALL)}
+                    />
+                  ) : null}
+                  {vars !== ALL ? (
+                    <Chip
+                      label={vars === "with" ? t("withVariables") : t("withoutVariables")}
+                      onRemove={() => setVars(ALL)}
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={resetAll}
+                    className="text-[0.66rem] text-[#b9a6ff] hover:text-white"
+                  >
+                    {t("clearAll")}
+                  </button>
+                </div>
+              ) : null}
+              <PromptsTable
+                data={data}
+                rows={filtered}
+                total={rows.length}
+                selected={detail?.key ?? null}
+                onSelect={setSelected}
+              />
+              <div className="grid gap-2.5 md:grid-cols-3">
+                <Watch data={data} />
+                <Quick data={data} />
+                <ByType data={data} />
+              </div>
+            </div>
+            <Detail detail={detail} className="xl:col-span-4" />
+          </div>
+
+          <Footer data={data} />
+        </>
+      ) : null}
+
+      {activeIdx === 1 ? <VariablesTab data={data} /> : null}
+      {activeIdx === 2 ? <I18nTab data={data} /> : null}
     </div>
   );
 }

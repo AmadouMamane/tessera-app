@@ -49,7 +49,7 @@ import {
   downloadBlob,
   pick,
   toCsv,
-} from "./evaluation-shared";
+} from "./agent-subtab-shared";
 
 type SetRow = NonNullable<Data["sets"]>["rows"][number];
 type CaseRow = NonNullable<Data["sets"]>["cases"][number];
@@ -228,11 +228,11 @@ export function SetsTab({ data }: { data: Data }) {
       <div className="flex flex-wrap gap-2">
         <Stat label={pick(locale, "Jeux", "Sets", "Sets")} value={String(sets.total)} />
         <Stat
-          label={pick(locale, "Cas au catalogue", "Faelle im Katalog", "Catalogue cases")}
+          label={pick(locale, "Cas au catalogue", "Fälle im Katalog", "Catalogue cases")}
           value={String(cases.length)}
         />
         <Stat
-          label={pick(locale, "Cas critiques", "Kritische Faelle", "Critical cases")}
+          label={pick(locale, "Cas critiques", "Kritische Fälle", "Critical cases")}
           value={String(cases.filter((c) => c.severity === "critical").length)}
           tone="text-[#ff9bb0]"
         />
@@ -531,7 +531,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
           {pick(
             locale,
             "Voir le verdict du gate et les cas critiques bloquants",
-            "Gate-Urteil und blockierende kritische Faelle ansehen",
+            "Gate-Urteil und blockierende kritische Fälle ansehen",
             "See the gate verdict and blocking critical cases",
           )}
           <ArrowRight className="h-3.5 w-3.5" />
@@ -582,7 +582,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
         columns={columns}
         rows={filtered}
         rowKey={rowKey}
-        noun={pick(locale, "cas", "Faelle", "cases")}
+        noun={pick(locale, "cas", "Fälle", "cases")}
         emptyLabel={mode === "failed" ? results.empty_errors : results.empty_results}
         selectedKey={selectedRow ? rowKey(selectedRow) : null}
         onRowClick={(r) => setSelected(rowKey(r))}
@@ -817,7 +817,7 @@ export function ComparaisonsTab({ data }: { data: Data }) {
       ),
     },
     {
-      label: pick(locale, "Cas réussis", "Bestandene Faelle", "Passed cases"),
+      label: pick(locale, "Cas réussis", "Bestandene Fälle", "Passed cases"),
       a: `${a.passed}/${a.total}`,
       b: `${b.passed}/${b.total}`,
     },
@@ -866,7 +866,7 @@ export function ComparaisonsTab({ data }: { data: Data }) {
           {pick(
             locale,
             "Versions de catalogue différentes - l'écart de taux compare deux examens distincts.",
-            "Unterschiedliche Katalogversionen - die Ratendifferenz vergleicht zwei verschiedene Pruefungen.",
+            "Unterschiedliche Katalogversionen - die Ratendifferenz vergleicht zwei verschiedene Prüfungen.",
             "Different catalogue versions - the rate delta compares two distinct exams.",
           )}
         </p>
@@ -918,7 +918,7 @@ export function VersionsTab({ data }: { data: Data }) {
       <div className="flex flex-col gap-2.5">
         <TabHeader title={title} subtitle={runs?.subtitle} />
         <EmptyState
-          label={runs?.empty_label ?? pick(locale, "Aucun run.", "Keine Laeufe.", "No runs.")}
+          label={runs?.empty_label ?? pick(locale, "Aucun run.", "Keine Läufe.", "No runs.")}
         />
       </div>
     );
@@ -1024,7 +1024,7 @@ export function VersionsTab({ data }: { data: Data }) {
         columns={columns}
         rows={items}
         rowKey={(r) => r.run_at}
-        noun={pick(locale, "runs", "Laeufe", "runs")}
+        noun={pick(locale, "runs", "Läufe", "runs")}
         emptyLabel={runs.empty_label}
         selectedKey={selectedRow?.run_at ?? null}
         onRowClick={(r) => setSelected(r.run_at)}
@@ -1063,7 +1063,7 @@ function VersionDrawer({ row, onClose }: { row: RunItem; onClose: () => void }) 
       </div>
       <DrawerBlock title={pick(locale, "Résultat", "Ergebnis", "Result")}>
         <div className="flex flex-col gap-1.5">
-          <DrawerField label={pick(locale, "Cas réussis", "Bestandene Faelle", "Passed cases")}>
+          <DrawerField label={pick(locale, "Cas réussis", "Bestandene Fälle", "Passed cases")}>
             {row.total > 0
               ? `${row.passed}/${row.total} (${nf.format(row.pass_rate * 100)}%)`
               : "-"}
@@ -1102,7 +1102,7 @@ function VersionDrawer({ row, onClose }: { row: RunItem; onClose: () => void }) 
         {pick(
           locale,
           "Ouvrir ce run dans la vue d'ensemble",
-          "Diesen Lauf in der Uebersicht oeffnen",
+          "Diesen Lauf in der Übersicht öffnen",
           "Open this run in the overview",
         )}
         <ArrowRight className="h-3.5 w-3.5" />
@@ -1135,7 +1135,7 @@ export function ExportsTab({ data }: { data: Data }) {
       desc: pick(
         locale,
         "Chaque cas exécuté : statut, latence, outils, jetons.",
-        "Jeder ausgefuehrte Fall: Status, Latenz, Tools, Tokens.",
+        "Jeder ausgeführte Fall: Status, Latenz, Tools, Tokens.",
         "Every executed case: status, latency, tools, tokens.",
       ),
       format: "CSV",
@@ -1267,7 +1267,7 @@ export function ExportsTab({ data }: { data: Data }) {
       desc: pick(
         locale,
         "Le verdict de release et les cas critiques.",
-        "Das Release-Urteil und die kritischen Faelle.",
+        "Das Release-Urteil und die kritischen Fälle.",
         "The release verdict and the critical cases.",
       ),
       format: "JSON",
@@ -1300,7 +1300,7 @@ export function ExportsTab({ data }: { data: Data }) {
           label={pick(
             locale,
             "Rien à exporter - éval non exécutée.",
-            "Nichts zu exportieren - Evaluierung nicht ausgefuehrt.",
+            "Nichts zu exportieren - Evaluierung nicht ausgeführt.",
             "Nothing to export - eval not executed.",
           )}
         />
