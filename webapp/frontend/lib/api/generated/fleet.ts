@@ -456,6 +456,108 @@ export const AgentEvaluationsRunsSchema = z.object({
   count: z.number().int(),
 });
 
+export const AgentEvaluationsSetsRowsItemSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  description: z.string(),
+  agent_id: z.string(),
+  bound: z.boolean(),
+  active: z.boolean(),
+  case_count: z.number().int(),
+  declared_count: z.number().int(),
+  floor_count: z.number().int(),
+  critical_count: z.number().int(),
+  standard_count: z.number().int(),
+  category_count: z.number().int(),
+  languages: z.array(z.string()),
+  gate_rationale: z.string(),
+  case_ids: z.array(z.string()),
+});
+
+export const AgentEvaluationsSetsCasesItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  category: z.string(),
+  category_label: z.string(),
+  category_tone: z.string(),
+  severity: z.string(),
+  severity_label: z.string(),
+  severity_tone: z.string(),
+  languages: z.array(z.string()),
+  tags: z.array(z.string()),
+  citation: z.string(),
+});
+
+export const AgentEvaluationsSetsSchema = z.object({
+  title: z.string(),
+  subtitle: z.string(),
+  columns: z.array(z.string()),
+  case_columns: z.array(z.string()),
+  rows: z.array(AgentEvaluationsSetsRowsItemSchema),
+  cases: z.array(AgentEvaluationsSetsCasesItemSchema),
+  total: z.number().int(),
+  active_slug: z.string(),
+  empty_label: z.string(),
+  cases_label: z.string(),
+  bound_label: z.string(),
+  shared_label: z.string(),
+  active_label: z.string(),
+  rationale_label: z.string(),
+  floor_note: z.string(),
+});
+
+export const AgentEvaluationsResultsRowsItemSchema = z.object({
+  case_id: z.string(),
+  title: z.string(),
+  language: z.string(),
+  category: z.string(),
+  category_label: z.string(),
+  category_tone: z.string(),
+  passed: z.boolean(),
+  status_label: z.string(),
+  status_tone: z.string(),
+  escalated: z.boolean(),
+  tools: z.array(z.string()),
+  tool_count: z.number().int(),
+  duration_ms: z.number(),
+  duration_label: z.string(),
+  input_tokens: z.number().int(),
+  output_tokens: z.number().int(),
+  total_tokens: z.number().int(),
+  question: z.string(),
+  response: z.string(),
+  reasons: z.array(z.string()),
+  started_at: z.string(),
+});
+
+export const AgentEvaluationsResultsLabelsSchema = z.object({
+  question: z.string(),
+  response: z.string(),
+  diagnostic: z.string(),
+  tools: z.string(),
+  no_tools: z.string(),
+  escalated: z.string(),
+  tokens: z.string(),
+  started: z.string(),
+  no_question: z.string(),
+});
+
+export const AgentEvaluationsResultsSchema = z.object({
+  title: z.string(),
+  subtitle: z.string(),
+  columns: z.array(z.string()),
+  rows: z.array(AgentEvaluationsResultsRowsItemSchema),
+  total: z.number().int(),
+  passed: z.number().int(),
+  failed: z.number().int(),
+  escalated: z.number().int(),
+  errors_title: z.string(),
+  errors_subtitle: z.string(),
+  empty_results: z.string(),
+  empty_errors: z.string(),
+  labels: AgentEvaluationsResultsLabelsSchema,
+});
+
 export const AgentEvaluationsPayloadSchema = z.object({
   available: z.literal(true),
   title: z.string(),
@@ -476,6 +578,8 @@ export const AgentEvaluationsPayloadSchema = z.object({
   gate: AgentEvaluationsGateSchema,
   judge: z.union([AgentEvaluationsJudgePayloadSchema, AgentEvaluationsJudgeUnavailableSchema]),
   runs: AgentEvaluationsRunsSchema,
+  sets: AgentEvaluationsSetsSchema,
+  results: AgentEvaluationsResultsSchema,
 });
 
 export const AgentEvaluationsUnavailableSchema = z.object({

@@ -18,7 +18,10 @@ export function AgentSubtabs({
 }) {
   if (tabs.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1 self-start rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1">
+    <div
+      data-agent-subtabs
+      className="flex flex-wrap items-center gap-1 self-start rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1"
+    >
       {tabs.map((tb) => {
         const on = tb === active;
         return (

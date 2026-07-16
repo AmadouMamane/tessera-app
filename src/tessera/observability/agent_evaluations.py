@@ -22,9 +22,13 @@ cross-page navigation, verified end to end. Free-text data is verbatim French
 
 from __future__ import annotations
 
+import json
 from datetime import date
+from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
+from eval.sets import list_eval_sets
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.observability.eval.agent_judge import load_agent_judge
 from tessera.observability.eval_data import (
@@ -634,6 +638,293 @@ def _runs_rail(agent_id: str, lang: str) -> dict[str, object]:
     }
 
 
+_FAILURES_DIR = Path(__file__).resolve().parents[3] / "eval" / "failures"
+_RESPONSE_SNIPPET = 320
+_QUESTION_SNIPPET = 320
+_MS_PER_S = 1000
+
+
+@lru_cache(maxsize=1)
+def _catalogue_cases() -> dict[str, dict[str, object]]:
+    """Failure-case metadata keyed by id, read once from ``eval/failures/``.
+
+    The run reports carry no user prompt, so the question text for the Results /
+    Errors views is joined from here (``prompts.<lang>.user``). Titles, severity,
+    categories, tags and the source citation are the case's own reference data.
+    """
+    cases: dict[str, dict[str, object]] = {}
+    for path in sorted(_FAILURES_DIR.glob("[0-9][0-9]*_*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        raw_prompts = payload.get("prompts")
+        prompts = raw_prompts if isinstance(raw_prompts, dict) else {}
+        questions = {
+            str(code): str(bundle.get("user", ""))
+            for code, bundle in prompts.items()
+            if isinstance(bundle, dict)
+        }
+        ref = payload.get("source_reference")
+        citation = str(ref.get("citation", "")) if isinstance(ref, dict) else ""
+        cases[path.stem] = {
+            "id": path.stem,
+            "title": str(payload.get("title", path.stem)),
+            "category": str(payload.get("category", "")),
+            "severity": str(payload.get("severity", "standard")),
+            "languages": [x for x in payload.get("languages", []) if isinstance(x, str)],
+            "tags": [x for x in payload.get("tags", []) if isinstance(x, str)],
+            "expected_behavior": str(payload.get("expected_behavior", "")),
+            "citation": citation,
+            "questions": questions,
+        }
+    return cases
+
+
+def _severity_label(severity: str, lang: str) -> tuple[str, str]:
+    """(localized label, stable tone key) for a case severity."""
+    if severity == "critical":
+        return _loc(lang, "Critique", "Kritisch", "Critical"), "crit"
+    return _loc(lang, "Standard", "Standard", "Standard"), "muted"
+
+
+def _snippet(text: str, limit: int) -> str:
+    """Collapse whitespace and cap to ``limit`` chars with an ellipsis."""
+    collapsed = " ".join(text.split())
+    return collapsed if len(collapsed) <= limit else collapsed[: limit - 1].rstrip() + "…"
+
+
+def _duration_label(ms: float, lang: str) -> str:
+    """Human latency: '12 ms' / '1,2 s' / '-' when untimed."""
+    del lang  # numeric format is locale-neutral here (comma decimal for seconds)
+    if ms <= 0:
+        return "-"
+    if ms >= _MS_PER_S:
+        return f"{_comma(ms / _MS_PER_S)} s"
+    return f"{round(ms)} ms"
+
+
+def _sets_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
+    """'Jeux d'évaluations': every curated eval set + the case catalogue.
+
+    Real source: ``eval/sets/*.json`` (the curated manifests an agent binds)
+    joined with ``eval/failures/*.json`` (case metadata). Set names/descriptions
+    are the manifests' own authored text; the chrome is localized. The active set
+    is the one THIS agent's run was scored on (``snap.eval_set``).
+    """
+    cases = _catalogue_cases()
+    active_slug = snap.eval_set
+    rows: list[dict[str, object]] = []
+    for eval_set in list_eval_sets():
+        effective = eval_set.effective_case_ids
+        known = [cases[c] for c in effective if c in cases]
+        cats = {str(m["category"]) for m in known}
+        crit = sum(1 for m in known if m["severity"] == "critical")
+        lang_codes: set[str] = set()
+        for meta in known:
+            questions = meta["questions"]
+            if isinstance(questions, dict):
+                lang_codes.update(str(code) for code in questions)
+        rows.append(
+            {
+                "slug": eval_set.slug,
+                "name": eval_set.name,
+                "description": eval_set.description,
+                "agent_id": eval_set.agent_id,
+                "bound": bool(eval_set.agent_id),
+                "active": bool(active_slug) and eval_set.slug == active_slug,
+                "case_count": len(effective),
+                "declared_count": len(eval_set.case_ids),
+                "floor_count": len(effective) - len(eval_set.case_ids),
+                "critical_count": crit,
+                "standard_count": len(known) - crit,
+                "category_count": len(cats),
+                "languages": sorted(lang_codes),
+                "gate_rationale": eval_set.gate.rationale,
+                "case_ids": list(effective),
+            }
+        )
+    case_rows: list[dict[str, object]] = []
+    for cid, meta in cases.items():
+        sev_label, sev_tone = _severity_label(str(meta["severity"]), lang)
+        cat_label, cat_tone = _group_label(str(meta["category"]), lang)
+        case_rows.append(
+            {
+                "id": cid,
+                "title": meta["title"],
+                "category": meta["category"],
+                "category_label": cat_label,
+                "category_tone": cat_tone,
+                "severity": meta["severity"],
+                "severity_label": sev_label,
+                "severity_tone": sev_tone,
+                "languages": meta["languages"],
+                "tags": meta["tags"],
+                "citation": meta["citation"],
+            }
+        )
+    return {
+        "title": _loc(lang, "Jeux d'évaluations", "Evaluierungssets", "Evaluation sets"),
+        "subtitle": _loc(
+            lang,
+            "Les jeux curés que les agents bindent - sous-ensembles du catalogue d'échecs.",
+            "Die kuratierten Sets, die Agenten binden - Teilmengen des Fehlerkatalogs.",
+            "The curated sets agents bind - subsets of the failure catalogue.",
+        ),
+        "columns": [
+            _loc(lang, "Jeu", "Set", "Set"),
+            _loc(lang, "Portée", "Geltungsbereich", "Scope"),
+            _loc(lang, "Cas", "Faelle", "Cases"),
+            _loc(lang, "Critiques", "Kritische", "Critical"),
+            _loc(lang, "Catégories", "Kategorien", "Categories"),
+            _loc(lang, "Langues", "Sprachen", "Languages"),
+        ],
+        "case_columns": [
+            _loc(lang, "Cas", "Fall", "Case"),
+            _loc(lang, "Type", "Typ", "Type"),
+            _loc(lang, "Sévérité", "Schweregrad", "Severity"),
+            _loc(lang, "Langues", "Sprachen", "Languages"),
+        ],
+        "rows": rows,
+        "cases": case_rows,
+        "total": len(rows),
+        "active_slug": active_slug,
+        "empty_label": _loc(
+            lang,
+            "Aucun jeu d'évaluations défini.",
+            "Kein Evaluierungsset definiert.",
+            "No evaluation set defined.",
+        ),
+        "cases_label": _loc(lang, "Cas du jeu", "Faelle des Sets", "Set cases"),
+        "bound_label": _loc(lang, "Lié à un agent", "An Agent gebunden", "Agent-bound"),
+        "shared_label": _loc(lang, "Partagé / global", "Geteilt / global", "Shared / global"),
+        "active_label": _loc(
+            lang, "Jeu actif (run courant)", "Aktives Set (akt. Lauf)", "Active set (current run)"
+        ),
+        "rationale_label": _loc(lang, "Barre de gate", "Gate-Schwelle", "Gate bar"),
+        "floor_note": _loc(
+            lang,
+            "dont socle de sécurité injecté",
+            "davon injizierter Sicherheitssockel",
+            "incl. injected security floor",
+        ),
+    }
+
+
+def _results_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
+    """'Résultats' / 'Erreurs': the run's per-case outcomes (``snap.sessions``).
+
+    Each session is one case x language execution. The user prompt is joined from
+    the case catalogue (the reports store only the answer); the grader's
+    ``reasons`` explain a pass/fail verbatim. Responses/questions are snippeted.
+    """
+    cases = _catalogue_cases()
+    rows: list[dict[str, object]] = []
+    for session in snap.sessions:
+        meta = cases.get(session.case_id)
+        question = ""
+        title = session.title or session.case_id
+        if meta is not None:
+            questions = meta.get("questions")
+            if isinstance(questions, dict):
+                question = str(questions.get(session.language, ""))
+            if not session.title:
+                title = str(meta.get("title", "")) or session.case_id
+        cat_label, cat_tone = _group_label(session.category, lang)
+        rows.append(
+            {
+                "case_id": session.case_id,
+                "title": title,
+                "language": session.language,
+                "category": session.category,
+                "category_label": cat_label,
+                "category_tone": cat_tone,
+                "passed": session.passed,
+                "status_label": _loc(lang, "Réussi", "Bestanden", "Passed")
+                if session.passed
+                else _loc(lang, "Échoué", "Fehlgeschlagen", "Failed"),
+                "status_tone": "good" if session.passed else "bad",
+                "escalated": session.needs_escalation,
+                "tools": list(session.tools),
+                "tool_count": len(session.tools),
+                "duration_ms": round(session.duration_ms, 3),
+                "duration_label": _duration_label(session.duration_ms, lang),
+                "input_tokens": session.input_tokens,
+                "output_tokens": session.output_tokens,
+                "total_tokens": session.total_tokens,
+                "question": _snippet(question, _QUESTION_SNIPPET),
+                "response": _snippet(session.response, _RESPONSE_SNIPPET),
+                "reasons": list(session.reasons),
+                "started_at": session.started_at,
+            }
+        )
+    total = len(rows)
+    passed = sum(1 for r in rows if r["passed"])
+    escalated = sum(1 for r in rows if r["escalated"])
+    return {
+        "title": _loc(lang, "Résultats du run", "Ergebnisse des Laufs", "Run results"),
+        "subtitle": _loc(
+            lang,
+            "Un résultat par cas x langue exécuté sur ce run.",
+            "Ein Ergebnis pro Fall x Sprache in diesem Lauf.",
+            "One result per case x language executed in this run.",
+        ),
+        "columns": [
+            _loc(lang, "Cas", "Fall", "Case"),
+            _loc(lang, "Type", "Typ", "Type"),
+            _loc(lang, "Langue", "Sprache", "Language"),
+            _loc(lang, "Statut", "Status", "Status"),
+            _loc(lang, "Latence", "Latenz", "Latency"),
+            _loc(lang, "Outils", "Tools", "Tools"),
+        ],
+        "rows": rows,
+        "total": total,
+        "passed": passed,
+        "failed": total - passed,
+        "escalated": escalated,
+        "errors_title": _loc(lang, "Cas en échec", "Fehlgeschlagene Faelle", "Failed cases"),
+        "errors_subtitle": _loc(
+            lang,
+            "Chaque échec porte le diagnostic du juge - pourquoi il a échoué.",
+            "Jeder Fehler traegt die Diagnose des Richters - warum er fehlschlug.",
+            "Each failure carries the judge's diagnostic - why it failed.",
+        ),
+        "empty_results": _loc(
+            lang,
+            "Aucun résultat - éval non exécutée pour cet agent.",
+            "Keine Ergebnisse - Evaluierung nicht ausgefuehrt.",
+            "No results - eval not executed for this agent.",
+        ),
+        "empty_errors": _loc(
+            lang,
+            "Aucun cas en échec sur ce run.",
+            "Keine fehlgeschlagenen Faelle in diesem Lauf.",
+            "No failed cases in this run.",
+        ),
+        "labels": {
+            "question": _loc(lang, "Requête de test", "Testanfrage", "Test query"),
+            "response": _loc(lang, "Réponse du modèle", "Modellantwort", "Model response"),
+            "diagnostic": _loc(
+                lang, "Diagnostic du juge", "Diagnose des Richters", "Judge diagnostic"
+            ),
+            "tools": _loc(lang, "Outils invoqués", "Aufgerufene Tools", "Invoked tools"),
+            "no_tools": _loc(lang, "Aucun outil invoqué", "Keine Tools aufgerufen", "No tools"),
+            "escalated": _loc(
+                lang, "Escalade requise", "Eskalation erforderlich", "Escalation required"
+            ),
+            "tokens": _loc(
+                lang, "Jetons (entrée / sortie)", "Tokens (Ein / Aus)", "Tokens (in / out)"
+            ),
+            "started": _loc(lang, "Exécuté", "Ausgefuehrt", "Executed"),
+            "no_question": _loc(
+                lang, "Requête indisponible", "Anfrage nicht verfuegbar", "Query unavailable"
+            ),
+        },
+    }
+
+
 def compute_agent_evaluations(
     agent_id: str = DEFAULT_AGENT_ID, lang: str = "fr"
 ) -> dict[str, object]:
@@ -988,4 +1279,6 @@ def compute_agent_evaluations(
         "gate": _gate_block(snap, lang),
         "judge": _judge_block(snap.agent_id or agent_id),
         "runs": _runs_rail(snap.agent_id or agent_id, lang),
+        "sets": _sets_block(snap, lang),
+        "results": _results_block(snap, lang),
     }

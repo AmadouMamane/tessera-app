@@ -939,6 +939,120 @@ class AgentEvaluationsRuns(BaseModel):
     count: int
 
 
+class AgentEvaluationsSetsRowsItem(BaseModel):
+    """agent-evaluations.sets.rows.item — one curated evaluation set."""
+
+    slug: str
+    name: str
+    description: str
+    agent_id: str
+    bound: bool
+    active: bool
+    case_count: int
+    declared_count: int
+    floor_count: int
+    critical_count: int
+    standard_count: int
+    category_count: int
+    languages: list[str]
+    gate_rationale: str
+    case_ids: list[str]
+
+
+class AgentEvaluationsSetsCasesItem(BaseModel):
+    """agent-evaluations.sets.cases.item — one failure-catalogue case."""
+
+    id: str
+    title: str
+    category: str
+    category_label: str
+    category_tone: str
+    severity: str
+    severity_label: str
+    severity_tone: str
+    languages: list[str]
+    tags: list[str]
+    citation: str
+
+
+class AgentEvaluationsSets(BaseModel):
+    """agent-evaluations.sets — curated eval sets + the case catalogue."""
+
+    title: str
+    subtitle: str
+    columns: list[str]
+    case_columns: list[str]
+    rows: list[AgentEvaluationsSetsRowsItem]
+    cases: list[AgentEvaluationsSetsCasesItem]
+    total: int
+    active_slug: str
+    empty_label: str
+    cases_label: str
+    bound_label: str
+    shared_label: str
+    active_label: str
+    rationale_label: str
+    floor_note: str
+
+
+class AgentEvaluationsResultsRowsItem(BaseModel):
+    """agent-evaluations.results.rows.item — one case x language run outcome."""
+
+    case_id: str
+    title: str
+    language: str
+    category: str
+    category_label: str
+    category_tone: str
+    passed: bool
+    status_label: str
+    status_tone: str
+    escalated: bool
+    tools: list[str]
+    tool_count: int
+    duration_ms: float
+    duration_label: str
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    question: str
+    response: str
+    reasons: list[str]
+    started_at: str
+
+
+class AgentEvaluationsResultsLabels(BaseModel):
+    """agent-evaluations.results.labels — the result drawer's localized chrome."""
+
+    question: str
+    response: str
+    diagnostic: str
+    tools: str
+    no_tools: str
+    escalated: str
+    tokens: str
+    started: str
+    no_question: str
+
+
+class AgentEvaluationsResults(BaseModel):
+    """agent-evaluations.results — the run's per-case outcomes (Results / Errors)."""
+
+    title: str
+    subtitle: str
+    columns: list[str]
+    rows: list[AgentEvaluationsResultsRowsItem]
+    total: int
+    passed: int
+    failed: int
+    escalated: int
+    errors_title: str
+    errors_subtitle: str
+    empty_results: str
+    empty_errors: str
+    labels: AgentEvaluationsResultsLabels
+
+
 class AgentEvaluationsUnavailable(BaseModel):
     """Honest-empty: the compute raised; the page must not break."""
 
@@ -967,3 +1081,5 @@ class AgentEvaluationsPayload(BaseModel):
     gate: AgentEvaluationsGate
     judge: AgentEvaluationsJudgePayload | AgentEvaluationsJudgeUnavailable
     runs: AgentEvaluationsRuns
+    sets: AgentEvaluationsSets
+    results: AgentEvaluationsResults

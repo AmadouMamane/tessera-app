@@ -88,6 +88,10 @@ class SessionRow:
     output_tokens: int
     response: str
     started_at: str
+    # The grader's diagnostic for THIS case (report ``reasons``): why it failed
+    # (or, for a pass, which criterion it cleared). Empty when the run predates the
+    # field. Surfaced verbatim on the Errors view so a failure explains itself.
+    reasons: tuple[str, ...] = ()
 
     @property
     def label(self) -> str:
@@ -342,6 +346,9 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
             output_tokens=int(r.get("output_tokens", 0) or 0),
             response=str(r.get("final_response", "")),
             started_at=str(r.get("started_at", "")),
+            reasons=tuple(str(x) for x in r["reasons"])
+            if isinstance(r.get("reasons"), list)
+            else (),
         )
         for r in results
     )

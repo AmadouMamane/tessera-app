@@ -38,6 +38,7 @@ import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 import { AgentSubtabs } from "./agent-subtabs";
 import { EvaluationRunRail } from "./evaluation-run-rail";
+import { ComparaisonsTab, ExportsTab, ResultsTab, SetsTab, VersionsTab } from "./evaluation-tabs";
 
 type RowT = NonNullable<Data["table"]>["rows"][number];
 
@@ -154,50 +155,6 @@ export function AgentEvaluations() {
     refetchInterval: 30_000,
   });
 
-  const [search, setSearch] = useState("");
-  const [typeKey, setTypeKey] = useState("all");
-  const [qualityKey, setQualityKey] = useState("all");
-  const [hallucKey, setHallucKey] = useState("all");
-  const [sortCol, setSortCol] = useState<number | null>(4);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
-  const [selected, setSelected] = useState<string | null>(null);
-
-  const allRows = data?.table?.rows ?? [];
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return allRows.filter((r) => {
-      if (typeKey !== "all" && r.type !== typeKey) return false;
-      if (qualityKey !== "all" && r.quality_key !== qualityKey) return false;
-      if (hallucKey === "with" && !r.is_fact) return false;
-      if (hallucKey === "without" && r.is_fact) return false;
-      if (q && !`${r.name} ${r.type} ${r.category_key}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [allRows, search, typeKey, qualityKey, hallucKey]);
-
-  const sorted = useMemo(() => {
-    if (sortCol === null) return filtered;
-    return [...filtered].sort((a, b) => compareRows(a, b, sortCol, sortDir));
-  }, [filtered, sortCol, sortDir]);
-
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / perPage));
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 on any filter/sort change
-  useEffect(() => setPage(1), [search, typeKey, qualityKey, hallucKey, sortCol, sortDir, perPage]);
-  const safePage = Math.min(page, totalPages);
-  const startIdx = (safePage - 1) * perPage;
-  const pageRows = sorted.slice(startIdx, startIdx + perPage);
-  const selectedRow = sorted.find((r) => r.name === selected) ?? pageRows[0] ?? allRows[0] ?? null;
-
-  const resetFilters = useCallback(() => {
-    setSearch("");
-    setTypeKey("all");
-    setQualityKey("all");
-    setHallucKey("all");
-  }, []);
-
   if (!data?.available) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-[var(--tessera-text-muted)]">
@@ -209,12 +166,19 @@ export function AgentEvaluations() {
   const a = data.actions;
   const subtabs = data.subtabs ?? [];
   const active = subtab || subtabs[0] || "";
+  // Gate by INDEX, not label: `active` and `subtabs[i]` are the same localized
+  // string, so index comparison is locale-safe (a hardcoded FR compare would not).
+  const activeIdx = Math.max(0, subtabs.indexOf(active));
+
   return (
     <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"
-          onClick={() => temporal.changeMode("history")}
+          onClick={() => {
+            setSubtab(subtabs[0] ?? "");
+            temporal.changeMode("history");
+          }}
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
           <CalendarClock className="h-4 w-4" /> {a?.asof}
@@ -229,6 +193,35 @@ export function AgentEvaluations() {
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
 
+      {activeIdx === 0 ? (
+        <OverviewTab data={data} temporal={temporal} railTimeline={railTimeline} />
+      ) : null}
+      {activeIdx === 1 ? <SetsTab data={data} /> : null}
+      {activeIdx === 2 ? <ResultsTab data={data} mode="all" /> : null}
+      {activeIdx === 3 ? <DimensionsTab data={data} /> : null}
+      {activeIdx === 4 ? <ComparaisonsTab data={data} /> : null}
+      {activeIdx === 5 ? <ResultsTab data={data} mode="failed" /> : null}
+      {activeIdx === 6 ? <VersionsTab data={data} /> : null}
+      {activeIdx === 7 ? <ExportsTab data={data} /> : null}
+    </div>
+  );
+}
+
+/** Vue d'ensemble: the gate-centric executive view. The per-category table moved
+ *  to Dimensions; the run journal + judged metrics stay here as a summary. */
+function OverviewTab({
+  data,
+  temporal,
+  railTimeline,
+}: {
+  data: Data;
+  temporal: ReturnType<typeof useTemporalState>;
+  railTimeline: ReturnType<typeof useRailTimeline>;
+}) {
+  const t = useTranslations("agentEvaluations");
+  const locale = useLocale();
+  return (
+    <div className="flex flex-col gap-2.5">
       {/* Verdict leads, with cross-links inline + remediation in the banner. */}
       <VerdictBanner data={data} />
       <LiensUtiles />
@@ -285,6 +278,79 @@ export function AgentEvaluations() {
         <JudgeMetrics data={data} className="xl:col-span-4" />
       </div>
 
+      <div className="grid gap-2.5 md:grid-cols-3">
+        <Watch data={data} />
+        <Quick data={data} />
+        <Trend data={data} />
+      </div>
+    </div>
+  );
+}
+
+/** Dimensions: the per-category evaluation table (pass rate by dimension) with
+ *  the full Connaissances treatment — filters, sortable headers, pagination and
+ *  a row-click detail panel. Owns its own table state. */
+function DimensionsTab({ data }: { data: Data }) {
+  const locale = useLocale();
+  const [search, setSearch] = useState("");
+  const [typeKey, setTypeKey] = useState("all");
+  const [qualityKey, setQualityKey] = useState("all");
+  const [hallucKey, setHallucKey] = useState("all");
+  const [sortCol, setSortCol] = useState<number | null>(4);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const allRows = data.table?.rows ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allRows.filter((r) => {
+      if (typeKey !== "all" && r.type !== typeKey) return false;
+      if (qualityKey !== "all" && r.quality_key !== qualityKey) return false;
+      if (hallucKey === "with" && !r.is_fact) return false;
+      if (hallucKey === "without" && r.is_fact) return false;
+      if (q && !`${r.name} ${r.type} ${r.category_key}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [allRows, search, typeKey, qualityKey, hallucKey]);
+
+  const sorted = useMemo(() => {
+    if (sortCol === null) return filtered;
+    return [...filtered].sort((a, b) => compareRows(a, b, sortCol, sortDir));
+  }, [filtered, sortCol, sortDir]);
+
+  const total = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset to page 1 on any filter/sort change
+  useEffect(() => setPage(1), [search, typeKey, qualityKey, hallucKey, sortCol, sortDir, perPage]);
+  const safePage = Math.min(page, totalPages);
+  const startIdx = (safePage - 1) * perPage;
+  const pageRows = sorted.slice(startIdx, startIdx + perPage);
+  const selectedRow = sorted.find((r) => r.name === selected) ?? pageRows[0] ?? allRows[0] ?? null;
+
+  const resetFilters = useCallback(() => {
+    setSearch("");
+    setTypeKey("all");
+    setQualityKey("all");
+    setHallucKey("all");
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-0.5">
+        <h2 className="text-[0.95rem] font-semibold text-[var(--tessera-text)]">
+          {pick(locale, "Dimensions", "Dimensionen", "Dimensions")}
+        </h2>
+        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+          {pick(
+            locale,
+            "Taux de réussite par catégorie du catalogue et métriques du juge.",
+            "Erfolgsrate je Katalogkategorie und Richter-Metriken.",
+            "Pass rate per catalogue category and judge metrics.",
+          )}
+        </p>
+      </div>
       <div className="grid gap-2.5 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
           <Filters
@@ -322,11 +388,7 @@ export function AgentEvaluations() {
             onPage={setPage}
             onPerPage={setPerPage}
           />
-          <div className="grid gap-2.5 md:grid-cols-3">
-            <Watch data={data} />
-            <Quick data={data} />
-            <Trend data={data} />
-          </div>
+          <JudgeMetrics data={data} />
         </div>
         <Detail data={data} row={selectedRow} className="xl:col-span-4" />
       </div>
