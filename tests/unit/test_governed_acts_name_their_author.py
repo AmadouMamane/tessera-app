@@ -802,6 +802,16 @@ GOVERNANCE_ACTS: dict[str, _Act] = {
         "superadmin",
         {"key": "llm.chat_model", "reason": "ratchet probe"},
     ),
+    # 12th act, 2026-07-17 (ADR 0031): a sampling-slider save changes production
+    # behaviour, so it joined the governed acts — and this registry's scope was
+    # widened to SEE its route (it was previously outside governed_prefixes,
+    # green by blind spot — ADR 0026).
+    "save an agent sampling slider": _Act(
+        "POST",
+        "/observability/agent-configurations/config",
+        "admin",
+        {"changes": {"temperature": 0.35}, "lang": "fr"},
+    ),
 }
 
 
@@ -875,6 +885,26 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
         "tessera.observability.incident_store.transition_incident", _transition_incident
     )
     monkeypatch.setattr("tessera.observability.incident_store.attach_playbook", _attach_playbook)
+
+    # Agent-configurations save (12th act, ADR 0031): stub the STORE write (it
+    # wants a JSON file on disk) and the runtime-effectiveness read (it wants
+    # the ADR 0030 override store); route, emitter and chain stay real. The
+    # stub reports every posted key as changed so the act fires.
+    def _set_agent_config(
+        changes: dict[str, object], agent_id: str = "", *, author: str | None = None
+    ) -> list[str]:
+        assert author, "the route must pass the verified principal, never None"
+        return sorted(changes)
+
+    async def _serving(_slug: str) -> tuple[str, str, tuple[str, ...]]:
+        return "llama3.2:3b", "ollama", ("temperature",)
+
+    monkeypatch.setattr(
+        "tessera.observability.agent_configurations.set_agent_config", _set_agent_config
+    )
+    monkeypatch.setattr(
+        "tessera.observability.agent_configurations._serving_effectiveness", _serving
+    )
 
 
 def _resolve(act: _Act) -> _Act:
@@ -963,6 +993,8 @@ def _is_governance_mutation(route: APIRoute, method: str) -> bool:
         "/observability/agents/",
         "/observability/evidence-packs",
         "/observability/incidents",
+        # 2026-07-17 (ADR 0031): the sampling-slider save became a governed act.
+        "/observability/agent-configurations/config",
         "/settings/",
     )
     return route.path.startswith(governed_prefixes)

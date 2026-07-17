@@ -180,6 +180,12 @@ class AgentState(TypedDict):
     # Optional per-request chat-model override (e.g. the UI model picker).
     # Falls back to the configured default (settings.ollama.chat_model).
     model: NotRequired[str]
+    # ADR 0031 — per-turn sampling resolved at the routing seam from the
+    # agent's effective configuration (only the SET parameters; temperature is
+    # always present). The reporter passes it to the backend call, so the
+    # slider value and the served value are the same read. Absent on paths
+    # that never speak (escalation, injection block).
+    sampling: NotRequired[dict[str, float]]
     # --- Sandbox overrides (console playground) ---------------------------
     # Optional per-request system-prompt override; replaces the language
     # bundle's ``system`` prompt for this turn only (never persisted).

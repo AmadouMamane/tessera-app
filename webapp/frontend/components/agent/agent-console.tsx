@@ -1721,6 +1721,17 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
           />
           <DebugKV k="Latence" v={fmtMs(usage.latency_ms)} />
           <DebugKV k="Coût estimé" v={`${usage.estimated_cost_eur.toFixed(6)} €`} />
+          {usage.sampling && Object.keys(usage.sampling).length > 0 ? (
+            // ADR 0031 — the sampling that actually served this turn (only the
+            // SET parameters; an absent one means the backend default served).
+            <DebugKV
+              k="Sampling"
+              v={Object.entries(usage.sampling)
+                .map(([key, value]) => `${key}=${value}`)
+                .join(" · ")}
+              mono
+            />
+          ) : null}
         </DebugSection>
       ) : null}
 

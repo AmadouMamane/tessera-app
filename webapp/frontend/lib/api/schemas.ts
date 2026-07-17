@@ -126,6 +126,9 @@ export const ChatDebugSchema = z.object({
       estimated_cost_eur: z.number(),
       model: z.string(),
       provider: z.string(),
+      // ADR 0031 — the sampling that actually served this turn (seam-resolved;
+      // only SET parameters appear). Optional → older payloads stay valid.
+      sampling: z.record(z.string(), z.number()).optional(),
     })
     .optional(),
   // #5 — the reviewer's grounding/coverage/guard split behind the composite.
@@ -4531,6 +4534,23 @@ const AgentConfigSliderSchema = z.object({
   max: z.number().optional(),
   step: z.number().optional(),
   editable: z.boolean().optional(),
+  // ADR 0031 — provenance and effectiveness: `unset` means the parameter is
+  // not sent (the backend default serves), `overridden` means a durable
+  // override produced the value, `applied` says the serving backend forwards it.
+  unset: z.boolean().optional(),
+  overridden: z.boolean().optional(),
+  applied: z.boolean().optional(),
+});
+
+// ADR 0031 — which backend serves this agent (from its effective model) and
+// which sampling sliders that backend actually applies.
+const AgentConfigRuntimeSchema = z.object({
+  label: z.string(),
+  model: z.string(),
+  backend: z.string(),
+  applied: z.array(z.string()),
+  not_applied: z.array(z.string()),
+  note: z.string(),
 });
 
 export const AgentConfigurationsSchema = z.object({
@@ -4576,6 +4596,7 @@ export const AgentConfigurationsSchema = z.object({
       title: z.string(),
       selects: z.array(AgentConfigFieldSchema),
       sliders: z.array(AgentConfigSliderSchema),
+      runtime: AgentConfigRuntimeSchema.optional(),
       tools: z.object({
         label: z.string(),
         value: z.string(),

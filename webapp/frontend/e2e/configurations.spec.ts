@@ -190,3 +190,42 @@ test("the Modèle section links to the model registry (define = CONFIGURER)", as
   await page.waitForURL(/\/configurer\/modeles/, { timeout: 15_000 });
   expect(page.url()).toContain("/configurer/modeles");
 });
+
+// --- ADR 0031 — the sampling sliders are effective by construction -----------
+
+test("the runtime-effectiveness block names the serving backend and its model", async ({
+  page,
+}) => {
+  const runtime = page.getByTestId("behavior-runtime");
+  await expect(runtime).toBeVisible();
+  // The backend chip is one of the three real backend names, never a blank.
+  await expect(runtime.getByText(/^(ollama|vertex-ai|openai)$/).first()).toBeVisible();
+  await expect(runtime.getByText(/Résolus à chaque tour/)).toBeVisible();
+});
+
+test("a temperature edit persists, the history names its author, and reset restores the runtime default", async ({
+  page,
+}) => {
+  // The store is shared with the running stack: the journey ends UNSET, i.e.
+  // the runtime default (0.2) serves — the safe end state (ADR 0031 e2e rule).
+  const slider = () => page.getByRole("slider", { name: "Température" });
+  await expect(slider()).toBeVisible();
+  await slider().fill("0.4");
+  await expect(save(page)).toBeEnabled();
+  await saveAndSettle(page);
+  await page.reload();
+  await expect(slider()).toHaveValue("0.4");
+
+  // The governed save named its author in the durable history (ADR 0024/0031).
+  const panel = page.locator("section", { hasText: "Historique des modifications" });
+  await expect(panel.getByText(/par admin/).first()).toBeVisible();
+
+  // Reset → "défaut backend" (unset). Saving it restores the runtime default.
+  await page
+    .getByRole("button", { name: /Réinitialiser \(défaut backend\) — Température/ })
+    .click();
+  await expect(save(page)).toBeEnabled();
+  await saveAndSettle(page);
+  await page.reload();
+  await expect(slider()).toHaveValue("0.2");
+});

@@ -26,6 +26,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from opentelemetry.trace import Span
 
 __all__ = [
@@ -34,8 +36,11 @@ __all__ = [
     "GEN_AI_AGENT_NAME",
     "GEN_AI_CONVERSATION_ID",
     "GEN_AI_OPERATION_NAME",
+    "GEN_AI_REQUEST_FREQUENCY_PENALTY",
     "GEN_AI_REQUEST_MODEL",
+    "GEN_AI_REQUEST_PRESENCE_PENALTY",
     "GEN_AI_REQUEST_TEMPERATURE",
+    "GEN_AI_REQUEST_TOP_P",
     "GEN_AI_RESPONSE_MODEL",
     "GEN_AI_SYSTEM",
     "GEN_AI_TOOL_NAME",
@@ -71,6 +76,7 @@ __all__ = [
     "set_gen_ai_request",
     "set_gen_ai_usage",
     "stamp_turn_dimensions",
+    "stamp_turn_sampling",
     "tool_span_name",
 ]
 
@@ -79,6 +85,9 @@ GEN_AI_SYSTEM: Final = "gen_ai.system"
 GEN_AI_OPERATION_NAME: Final = "gen_ai.operation.name"
 GEN_AI_REQUEST_MODEL: Final = "gen_ai.request.model"
 GEN_AI_REQUEST_TEMPERATURE: Final = "gen_ai.request.temperature"
+GEN_AI_REQUEST_TOP_P: Final = "gen_ai.request.top_p"
+GEN_AI_REQUEST_FREQUENCY_PENALTY: Final = "gen_ai.request.frequency_penalty"
+GEN_AI_REQUEST_PRESENCE_PENALTY: Final = "gen_ai.request.presence_penalty"
 GEN_AI_RESPONSE_MODEL: Final = "gen_ai.response.model"
 GEN_AI_USAGE_INPUT_TOKENS: Final = "gen_ai.usage.input_tokens"
 GEN_AI_USAGE_OUTPUT_TOKENS: Final = "gen_ai.usage.output_tokens"
@@ -279,6 +288,31 @@ def set_gen_ai_request(
     span.set_attribute(GEN_AI_REQUEST_MODEL, model)
     if temperature is not None:
         span.set_attribute(GEN_AI_REQUEST_TEMPERATURE, temperature)
+
+
+#: gen_ai.request.* key per sampling parameter (ADR 0031 — what serves is
+#: what is recorded: only the parameters actually resolved for the turn are
+#: stamped; an unset parameter is honest-absent, never a fabricated default).
+_SAMPLING_ATTRIBUTE_KEYS: Final[dict[str, str]] = {
+    "temperature": GEN_AI_REQUEST_TEMPERATURE,
+    "top_p": GEN_AI_REQUEST_TOP_P,
+    "frequency_penalty": GEN_AI_REQUEST_FREQUENCY_PENALTY,
+    "presence_penalty": GEN_AI_REQUEST_PRESENCE_PENALTY,
+}
+
+
+def stamp_turn_sampling(span: Span, sampling: Mapping[str, float]) -> None:
+    """Stamp the turn's resolved sampling parameters on its root span.
+
+    Args:
+        span: The turn's root span.
+        sampling: The seam-resolved sampling (ADR 0031) — only SET parameters
+            are present, and only those are stamped.
+    """
+    for key, value in sampling.items():
+        attribute = _SAMPLING_ATTRIBUTE_KEYS.get(key)
+        if attribute is not None:
+            span.set_attribute(attribute, value)
 
 
 def set_gen_ai_usage(

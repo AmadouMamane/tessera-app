@@ -7496,7 +7496,10 @@
     "subtitle": "Settings for this agent: identity, model, behaviour and status.",
     "loading": "Loading configurations…",
     "unavailable": "Configurations unavailable.",
-    "saveError": "Save failed. Try again."
+    "saveError": "Save failed. Try again.",
+    "backendDefault": "Backend default",
+    "resetToDefault": "Reset (backend default)",
+    "notApplied": "Not applied by {backend}"
   },
   "agentConsole": {
     "title": "Console (Debug)",

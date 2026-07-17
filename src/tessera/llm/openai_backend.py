@@ -51,6 +51,9 @@ class OpenAIBackend:
         messages: Sequence[ChatMessage],
         *,
         temperature: float = 0.2,  # noqa: ARG002 — OpenAI reasoning models reject non-default
+        top_p: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
+        frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
+        presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,
         model: str | None = None,
         usage: dict[str, int] | None = None,
@@ -89,6 +92,9 @@ class OpenAIBackend:
         messages: Sequence[ChatMessage],
         *,
         temperature: float = 0.2,  # noqa: ARG002 — OpenAI reasoning models reject non-default
+        top_p: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
+        frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
+        presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,
         model: str | None = None,
     ) -> ChatResponse:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Final, Literal, Protocol, runtime_checkable
 
 from tessera.settings import LLMProfile, get_settings
 
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
 
 __all__ = [
+    "SAMPLING_APPLIED",
     "ChatBackend",
     "ChatMessage",
     "ChatResponse",
@@ -25,6 +26,18 @@ __all__ = [
     "get_chat_backend",
     "get_summary_backend",
 ]
+
+#: ADR 0031 — which sampling parameters each backend actually forwards to its
+#: client, keyed by ``ChatBackend.name``. This is a declaration the unit tests
+#: verify against the calls themselves (ADR 0026: a witness interrogates the
+#: thing): a slider the serving backend does not apply must be said not to
+#: apply, never silently swallowed. The OpenAI backend forwards none — its
+#: reasoning models reject non-default sampling (see the call-site comments).
+SAMPLING_APPLIED: Final[dict[str, tuple[str, ...]]] = {
+    "ollama": ("temperature", "top_p", "frequency_penalty", "presence_penalty"),
+    "vertex-ai": ("temperature", "top_p"),
+    "openai": (),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +72,9 @@ class ChatBackend(Protocol):
         messages: Sequence[ChatMessage],
         *,
         temperature: float = 0.2,
+        top_p: float | None = None,
+        frequency_penalty: float | None = None,
+        presence_penalty: float | None = None,
         max_output_tokens: int | None = None,
         model: str | None = None,
     ) -> ChatResponse:
@@ -66,6 +82,9 @@ class ChatBackend(Protocol):
 
         ``model`` optionally overrides the backend's default model for this
         call (used by the UI model picker); ``None`` keeps the configured one.
+        ``top_p`` / ``frequency_penalty`` / ``presence_penalty`` are only sent
+        when set AND the backend applies them (:data:`SAMPLING_APPLIED`);
+        ``None`` means the backend's own default serves (ADR 0031).
         """
         ...
 
@@ -74,6 +93,9 @@ class ChatBackend(Protocol):
         messages: Sequence[ChatMessage],
         *,
         temperature: float = 0.2,
+        top_p: float | None = None,
+        frequency_penalty: float | None = None,
+        presence_penalty: float | None = None,
         max_output_tokens: int | None = None,
         model: str | None = None,
         usage: dict[str, int] | None = None,

@@ -23,6 +23,7 @@ Free-text is verbatim French with ASCII-only punctuation.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -36,8 +37,10 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 __all__ = [
+    "RUNTIME_TEMPERATURE_DEFAULT",
     "available_config_keys",
     "compute_agent_configurations",
+    "resolve_sampling",
     "set_agent_config",
 ]
 
@@ -69,10 +72,14 @@ _DEFAULTS: dict[str, Any] = {
     "tone": "Professionnel",
     "detail": "Équilibré",
     "max_length": "Moyenne",
-    "temperature": 0.3,
-    "top_p": 0.7,
-    "frequency_penalty": 0.2,
-    "presence_penalty": 0.1,
+    # ADR 0031 — the slider defaults are the RUNTIME truth, never a plausible
+    # number: temperature 0.2 is what the reporter has always sent; the other
+    # three default to unset (None = not sent, the backend's own default
+    # serves). The former 0.3/0.7/0.2/0.1 were fabricated display values.
+    "temperature": 0.2,
+    "top_p": None,
+    "frequency_penalty": None,
+    "presence_penalty": None,
     "routing_strategy": "Par défaut (Recommandé)",
     "parallel_tools": True,
     "tags": ["support", "client"],
@@ -289,12 +296,25 @@ def _load_change_log() -> list[dict[str, Any]]:
     return data if isinstance(data, list) else []
 
 
-def _record_change(keys: list[str], agent_id: str = DEFAULT_AGENT_ID) -> None:
-    """Append a real, timestamped entry for a config save (most recent first)."""
+def _record_change(
+    keys: list[str], agent_id: str = DEFAULT_AGENT_ID, *, author: str | None = None
+) -> None:
+    """Append a real, timestamped entry for a config save (most recent first).
+
+    ``author`` names the verified principal who saved (ADR 0024); ``None`` is
+    honest absence, never a default that names somebody.
+    """
     if not keys:
         return
     entries = _load_change_log()
-    entries.insert(0, {"at": datetime.now(_PARIS).isoformat(), "agent_id": agent_id, "keys": keys})
+    entry: dict[str, Any] = {
+        "at": datetime.now(_PARIS).isoformat(),
+        "agent_id": agent_id,
+        "keys": keys,
+    }
+    if author is not None:
+        entry["author"] = author
+    entries.insert(0, entry)
     path = _history_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -311,6 +331,21 @@ def available_config_keys() -> set[str]:
     return set(_DEFAULTS) | {_LANG_KEY}
 
 
+def _coerce_slider(key: str, value: Any) -> float | None:
+    """Coerce one sampling slider value (ADR 0031).
+
+    ``None`` means "unset": the parameter is not sent to the LLM and the
+    backend default serves. A number is clamped to the slider range.
+    """
+    if value is None:
+        return None
+    try:
+        return max(0.0, min(_SLIDER_MAX.get(key, 1.0), float(value)))
+    except (TypeError, ValueError):
+        default = _DEFAULTS[key]
+        return float(default) if isinstance(default, int | float) else None
+
+
 def _coerce(key: str, value: Any) -> Any:
     """Coerce an incoming value to the type of its default.
 
@@ -319,21 +354,27 @@ def _coerce(key: str, value: Any) -> Any:
     """
     if key == _LANG_KEY:
         return _canonical_value(key, str(value))
+    if key in _SLIDERS:
+        return _coerce_slider(key, value)
     default = _DEFAULTS[key]
     if isinstance(default, bool):
         return bool(value)
-    if isinstance(default, float):
-        try:
-            return max(0.0, min(_SLIDER_MAX.get(key, 1.0), float(value)))
-        except (TypeError, ValueError):
-            return default
     if isinstance(default, list):
         return [str(v) for v in value] if isinstance(value, list) else default
     return _canonical_value(key, str(value))
 
 
-def set_agent_config(changes: Mapping[str, Any], agent_id: str = DEFAULT_AGENT_ID) -> None:
-    """Persist agent-profile overrides for one agent and record the change durably."""
+def set_agent_config(
+    changes: Mapping[str, Any], agent_id: str = DEFAULT_AGENT_ID, *, author: str | None = None
+) -> list[str]:
+    """Persist agent-profile overrides for one agent and record the change durably.
+
+    ``author`` is the verified session principal (ADR 0024) — the route passes
+    it, and the durable change-log names them. ``None`` is honest absence (an
+    internal caller with no session), never a name. Returns the keys that
+    actually changed, so the route can emit the governance act for real changes
+    only.
+    """
     state = _load_overrides(agent_id)
     allowed = available_config_keys()
     changed: list[str] = []
@@ -345,7 +386,8 @@ def set_agent_config(changes: Mapping[str, Any], agent_id: str = DEFAULT_AGENT_I
             changed.append(key)
         state[key] = coerced
     _save_overrides(state, agent_id)
-    _record_change(changed, agent_id)
+    _record_change(changed, agent_id, author=author)
+    return changed
 
 
 def _registry_base(agent_id: str) -> dict[str, Any]:
@@ -389,6 +431,35 @@ def _effective(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, Any]:
         if key in merged:
             merged[key] = _coerce(key, value)
     return merged
+
+
+#: The temperature the reporter has always sent when nothing overrides it —
+#: the runtime truth the sliders now display and resolve to (ADR 0031).
+RUNTIME_TEMPERATURE_DEFAULT: float = 0.2
+
+
+def resolve_sampling(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, float]:
+    """The per-turn sampling the reporter passes to the backend (ADR 0031).
+
+    Resolved once per turn at the routing seam, from the agent's effective
+    configuration — the same read the Configurations page displays, so the
+    slider value and the served value cannot diverge. Returns only the SET
+    parameters; ``temperature`` is always present (default 0.2). Fail-open:
+    a corrupt store yields the runtime defaults, loudly — the chat path never
+    goes down for a knob.
+    """
+    try:
+        cfg = _effective(agent_id)
+    except Exception as exc:
+        sys.stderr.write(f"tessera.observability.agent_configurations: resolve_sampling: {exc}\n")
+        return {"temperature": RUNTIME_TEMPERATURE_DEFAULT}
+    sampling: dict[str, float] = {}
+    for key in _SLIDERS:
+        value = cfg.get(key)
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            sampling[key] = float(value)
+    sampling.setdefault("temperature", RUNTIME_TEMPERATURE_DEFAULT)
+    return sampling
 
 
 # --- Read-only repository introspection ---------------------------------------
@@ -439,6 +510,11 @@ def _build_history(policy_path: Path, lang: str = "fr") -> list[dict[str, str]]:
         else:
             plural = "s" if n > 1 else ""
             summary = f"{n} champ{plural} modifié{plural} : {labels}"
+        # ADR 0024/0031 — a save that changes runtime behaviour names its author.
+        # Entries from before attribution have no author; honest absence stays silent.
+        author = entry.get("author")
+        if isinstance(author, str) and author:
+            summary += _loc(lang, f" — par {author}", f" - von {author}", f" - by {author}")
         events.append((when, console, summary))
     sources = [
         (
@@ -554,18 +630,51 @@ def _edit(
     }
 
 
-def _slider(key: str, label: str, value: float) -> dict[str, object]:
+def _slider(
+    key: str,
+    label: str,
+    value: float | None,
+    *,
+    overridden: bool = False,
+    applied: bool = True,
+    lang: str = "fr",
+) -> dict[str, object]:
+    """One sampling slider, honest about its value's provenance (ADR 0031).
+
+    ``value=None`` means UNSET: the parameter is not sent and the backend
+    default serves — displayed as such, never as an invented number.
+    ``overridden`` says whether a durable override produced the value;
+    ``applied`` says whether the serving backend forwards this parameter at all.
+    """
     max_v = _SLIDER_MAX[key]
+    if value is None:
+        display = _loc(lang, "Défaut backend", "Backend-Standard", "Backend default")
+        return {
+            "key": key,
+            "label": label,
+            "value": display,
+            "min": 0.0,
+            "max": max_v,
+            "step": 0.05,
+            "pct": 0,
+            "editable": True,
+            "unset": True,
+            "overridden": False,
+            "applied": applied,
+        }
     return {
         "key": key,
         "label": label,
-        "value": f"{value:.1f}".replace(".", ","),
+        "value": f"{value:.2f}".rstrip("0").rstrip(".").replace(".", ",") or "0",
         "num": value,
         "min": 0.0,
         "max": max_v,
         "step": 0.05,
         "pct": round(100 * value / max_v),
         "editable": True,
+        "unset": False,
+        "overridden": overridden,
+        "applied": applied,
     }
 
 
@@ -626,7 +735,24 @@ def _definition_block(agent_slug: str, lang: str = "fr") -> dict[str, object]:
     }
 
 
-def compute_agent_configurations(
+async def _serving_effectiveness(agent_slug: str) -> tuple[str, str, tuple[str, ...]]:
+    """``(effective_model, backend_name, applied slider keys)`` for one agent.
+
+    The effective model is the ADR 0030 resolution (per-agent override > org
+    override > frozen base); the serving backend and the sampling parameters it
+    applies follow from it (``SAMPLING_APPLIED`` — the declaration the unit
+    tests verify against the backends themselves). Imports are lazy to keep
+    this observability module import-light (the API layer imports us).
+    """
+    from tessera.api.config_overrides import resolve_chat_model_override
+    from tessera.llm.router import SAMPLING_APPLIED, backend_for_model
+
+    override = await resolve_chat_model_override(agent_slug)
+    backend = backend_for_model(override)
+    return override or backend.model, backend.name, SAMPLING_APPLIED.get(backend.name, ())
+
+
+async def compute_agent_configurations(
     agent_slug: str = DEFAULT_AGENT_ID, lang: str = "fr"
 ) -> dict[str, object]:
     """Return the active agent configuration payload (real + editable overrides).
@@ -636,9 +762,30 @@ def compute_agent_configurations(
     internal display id ``agent_id`` (``tessera-assistant-<env>``). ``lang``
     localizes the chrome and the editable option values for display; the durable
     store keeps the canonical French values.
+
+    Async since ADR 0031: the behaviour block derives which sliders the serving
+    backend applies from the agent's *effective* model (ADR 0030 override
+    resolution — a durable read).
     """
     settings = get_settings()
     cfg = _effective(agent_slug)
+    serving_model, serving_backend, applied_keys = await _serving_effectiveness(agent_slug)
+    overrides_now = _load_overrides(agent_slug)
+
+    def _sampling_slider(key: str, label: str) -> dict[str, object]:
+        raw = cfg.get(key)
+        num = float(raw) if isinstance(raw, int | float) and not isinstance(raw, bool) else None
+        if key == "temperature" and num is None:
+            num = RUNTIME_TEMPERATURE_DEFAULT
+        return _slider(
+            key,
+            label,
+            num,
+            overridden=overrides_now.get(key) is not None,
+            applied=key in applied_keys,
+            lang=lang,
+        )
+
     profile = settings.resolved_llm_profile()
     active_model = (
         settings.ollama.chat_model if profile is LLMProfile.ON_PREM else settings.vertex.chat_model
@@ -824,23 +971,42 @@ def compute_agent_configurations(
                 ),
             ],
             "sliders": [
-                _slider(
-                    "temperature",
-                    _loc(lang, "Température", "Temperatur", "Temperature"),
-                    float(cfg["temperature"]),
+                _sampling_slider(
+                    "temperature", _loc(lang, "Température", "Temperatur", "Temperature")
                 ),
-                _slider("top_p", "Top P", float(cfg["top_p"])),
-                _slider(
+                _sampling_slider("top_p", "Top P"),
+                _sampling_slider(
                     "frequency_penalty",
                     _loc(lang, "Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
-                    float(cfg["frequency_penalty"]),
                 ),
-                _slider(
+                _sampling_slider(
                     "presence_penalty",
                     _loc(lang, "Pénalité de présence", "Praesenzstrafe", "Presence penalty"),
-                    float(cfg["presence_penalty"]),
                 ),
             ],
+            # ADR 0031 — the sliders are effective by construction: resolved per
+            # turn at the routing seam and passed to the serving backend. This
+            # block says WHICH backend serves this agent (from its ADR 0030
+            # effective model) and which parameters that backend applies.
+            "runtime": {
+                "label": _loc(lang, "Effectivité runtime", "Laufzeitwirkung", "Runtime effect"),
+                "model": serving_model,
+                "backend": serving_backend,
+                "applied": [k for k in _SLIDERS if k in applied_keys],
+                "not_applied": [k for k in _SLIDERS if k not in applied_keys],
+                "note": _loc(
+                    lang,
+                    f"Résolus à chaque tour et envoyés au backend {serving_backend} "
+                    f"(modèle effectif : {serving_model}). Un curseur non appliqué "
+                    "par ce backend est indiqué — jamais envoyé en silence.",
+                    f"Pro Turn aufgeloest und an das Backend {serving_backend} gesendet "
+                    f"(effektives Modell: {serving_model}). Ein von diesem Backend nicht "
+                    "angewendeter Regler wird angezeigt - nie stillschweigend gesendet.",
+                    f"Resolved every turn and sent to the {serving_backend} backend "
+                    f"(effective model: {serving_model}). A slider this backend does not "
+                    "apply is flagged - never silently sent.",
+                ),
+            },
             "tools": {
                 "label": _loc(lang, "Outils autorisés", "Erlaubte Tools", "Allowed tools"),
                 "value": _loc(

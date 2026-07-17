@@ -312,7 +312,7 @@ async def observability_agent_configurations(
     try:
         return {
             "available": True,
-            **agent_configurations_mod.compute_agent_configurations(agent_id, lang),
+            **(await agent_configurations_mod.compute_agent_configurations(agent_id, lang)),
         }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_configurations: failed: {exc}\n")

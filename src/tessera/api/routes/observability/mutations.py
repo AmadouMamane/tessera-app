@@ -405,20 +405,36 @@ async def observability_agent_connaissances_mutate(
 
 @router.post("/observability/agent-configurations/config")
 async def observability_agent_configurations_save(
-    body: _AgentConfigBody, agent_id: str = DEFAULT_AGENT_ID
+    body: _AgentConfigBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+    agent_id: str = DEFAULT_AGENT_ID,
 ) -> dict[str, object]:
     """Persist editable agent-profile overrides and return the fresh payload.
 
     Incoming option values may be localized; ``set_agent_config`` re-canonicalizes
     them to French before persisting, so the durable store stays locale-stable.
+
+    ADR 0031 — a slider save changes production sampling, so it is a governed
+    act: the author is the verified session principal (ADR 0024), the durable
+    change-log names them, and a governance mutation lands on the audit trail
+    when something actually changed.
     """
     unknown = set(body.changes) - agent_configurations_mod.available_config_keys()
     if unknown:
         raise HTTPException(status_code=422, detail=f"unknown keys: {sorted(unknown)}")
-    agent_configurations_mod.set_agent_config(body.changes, agent_id)
+    actor = actor_of(session)
+    changed = agent_configurations_mod.set_agent_config(
+        body.changes, agent_id, author=actor.principal
+    )
+    if changed:
+        emit_governance_mutation(
+            target="agent_config.updated",
+            detail={"agent": agent_id, "keys": ",".join(sorted(changed))},
+            actor=actor,
+        )
     return {
         "available": True,
-        **agent_configurations_mod.compute_agent_configurations(agent_id, body.lang),
+        **(await agent_configurations_mod.compute_agent_configurations(agent_id, body.lang)),
     }
 
 

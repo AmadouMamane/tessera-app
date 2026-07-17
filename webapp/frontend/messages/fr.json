@@ -7498,7 +7498,10 @@
     "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",
     "loading": "Chargement des configurations…",
     "unavailable": "Configurations indisponibles.",
-    "saveError": "Échec de l'enregistrement. Réessayez."
+    "saveError": "Échec de l'enregistrement. Réessayez.",
+    "backendDefault": "Défaut backend",
+    "resetToDefault": "Réinitialiser (défaut backend)",
+    "notApplied": "Non appliqué par {backend}"
   },
   "agentConsole": {
     "title": "Console (Debug)",

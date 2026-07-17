@@ -241,9 +241,15 @@ async def _synthesise(state: AgentState) -> tuple[str, int, int]:
     prompts = load_prompts(language)
     system_prompt, current_user_content = _build_synthesis_input(state, prompts)
     backend = backend_for_model(state.get("model"))
+    # ADR 0031 — the sampling resolved at the routing seam serves; the 0.2
+    # fallback is the runtime default for paths that never went through it.
+    sampling = state.get("sampling") or {}
     response = await backend.chat(
         await _build_chat_messages(state, system_prompt, current_user_content, prompts),
-        temperature=0.2,
+        temperature=sampling.get("temperature", 0.2),
+        top_p=sampling.get("top_p"),
+        frequency_penalty=sampling.get("frequency_penalty"),
+        presence_penalty=sampling.get("presence_penalty"),
         model=state.get("model"),
     )
     return _strip_reasoning(response.content), response.input_tokens, response.output_tokens
@@ -262,9 +268,14 @@ async def astream_synthesise(state: AgentState) -> AsyncIterator[str]:
     # Exact per-call token usage, filled by the backend at stream end — attributed
     # to this turn without racing the process-wide budget tracker (Debug surface).
     usage: dict[str, int] = {}
+    # ADR 0031 — same read as the non-streaming path: the seam-resolved sampling.
+    sampling = state.get("sampling") or {}
     stream = backend.stream_chat(
         await _build_chat_messages(state, system_prompt, current_user_content, prompts),
-        temperature=0.2,
+        temperature=sampling.get("temperature", 0.2),
+        top_p=sampling.get("top_p"),
+        frequency_penalty=sampling.get("frequency_penalty"),
+        presence_penalty=sampling.get("presence_penalty"),
         model=state.get("model"),
         usage=usage,
     )

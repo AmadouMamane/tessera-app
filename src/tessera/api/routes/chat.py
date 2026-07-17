@@ -67,6 +67,7 @@ from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
 from tessera.observability import replay, semconv
+from tessera.observability.agent_configurations import resolve_sampling
 from tessera.observability.business_events import mark_synthetic_turn
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
@@ -551,6 +552,14 @@ def _debug_usage(
     provider, cost = estimate_turn_cost(
         model=model, input_tokens=input_tokens, output_tokens=output_tokens
     )
+    # ADR 0031 — the sampling that actually served this turn (seam-resolved;
+    # only SET parameters appear). Absent on paths that never spoke.
+    sampling_raw = state.get("sampling")
+    sampling = (
+        {str(k): float(v) for k, v in sampling_raw.items() if isinstance(v, int | float)}
+        if isinstance(sampling_raw, dict)
+        else {}
+    )
     return {
         "title": "Tokens, latence & coût",
         "input_tokens": input_tokens,
@@ -560,6 +569,7 @@ def _debug_usage(
         "estimated_cost_eur": float(cost),
         "model": model,
         "provider": provider,
+        "sampling": sampling,
     }
 
 
@@ -799,6 +809,12 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # Record the effective model on audit entries emitted during this turn
     # (memory governance, guard) — not just the server default.
     current_model.set(effective_model)
+    # ADR 0031 — sampling resolves at the same seam as the model: once per turn,
+    # after routing, from the agent's effective configuration. The reporter
+    # passes it to the backend call, so the slider value and the served value
+    # are the same read (fail-open to the runtime defaults inside).
+    sampling = resolve_sampling(agent_id)
+    initial["sampling"] = sampling
     synthetic = is_test_turn(surface)
     if synthetic:
         mark_synthetic_turn()
@@ -815,6 +831,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         environment=get_settings().environment.value,
         synthetic=synthetic,
     )
+    # ADR 0031 — what serves is what is recorded: the resolved sampling lands on
+    # the same root span (gen_ai.request.*; unset parameters honest-absent).
+    semconv.stamp_turn_sampling(trace.get_current_span(), sampling)
     # Audit EVERY routing decision (stay or switch) with its reason, so routing is
     # opposable end to end — you can prove why a turn went to a given agent from
     # the start, not just that it switched.

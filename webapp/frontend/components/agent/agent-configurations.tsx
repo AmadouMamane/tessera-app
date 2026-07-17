@@ -34,7 +34,10 @@ import { DefineInstanceBanner } from "./define-instance-banner";
 
 type Field = NonNullable<Data["identity"]>["left"][number];
 type Slider = NonNullable<Data["behavior"]>["sliders"][number];
-type Override = string | number | boolean | string[];
+type Runtime = NonNullable<Data["behavior"]>["runtime"];
+// `null` is a real value (ADR 0031): it UNSETS a sampling slider — the
+// parameter is no longer sent and the backend default serves.
+type Override = string | number | boolean | string[] | null;
 
 /** Pending edits keyed by field key; effective value = override ?? server value. */
 type Draft = Record<string, Override>;
@@ -465,16 +468,35 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
             <SelectRow key={item.key ?? item.label} field={item} ctx={ctx} />
           ))}
           {b.sliders.slice(0, 1).map((item) => (
-            <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} />
+            <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} runtime={b.runtime} />
           ))}
         </div>
         <div className="grid gap-2">
           {b.sliders.slice(1).map((item) => (
-            <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} />
+            <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} runtime={b.runtime} />
           ))}
           <ToolsRow tools={b.tools} />
         </div>
       </div>
+      {b.runtime ? (
+        <div
+          data-testid="behavior-runtime"
+          className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+              {b.runtime.label}
+            </span>
+            <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1.5 text-[0.62rem] text-cyan-300">
+              {b.runtime.backend}
+            </span>
+            <span className="text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+              {b.runtime.model}
+            </span>
+          </div>
+          <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">{b.runtime.note}</p>
+        </div>
+      ) : null}
       <p className="mt-2 flex items-center gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
         <Info className="h-3.5 w-3.5 text-cyan-300" />
         {b.note}
@@ -566,18 +588,41 @@ function SelectRow({ field, ctx }: { field: Field; ctx: Ctx }) {
   );
 }
 
-function SliderRow({ item, ctx }: { item: Slider; ctx: Ctx }) {
-  const num =
-    item.key && typeof ctx.draft[item.key] === "number"
-      ? (ctx.draft[item.key] as number)
-      : (item.num ?? 0);
+function SliderRow({ item, ctx, runtime }: { item: Slider; ctx: Ctx; runtime?: Runtime }) {
+  const t = useTranslations("agentConfigurations");
+  const draftVal = item.key ? ctx.draft[item.key] : undefined;
+  const isDraftNumber = typeof draftVal === "number";
+  const isDraftReset = draftVal === null;
+  // ADR 0031 — unset means NOT SENT: the backend default serves and no number
+  // is invented. The server value (item.num) may itself be unset.
+  const serverValue: number | null = item.unset ? null : (item.num ?? 0);
+  const unset = isDraftReset || (serverValue === null && !isDraftNumber);
+  const num = isDraftNumber ? draftVal : (serverValue ?? 0);
   const max = item.max ?? 1;
-  const display = num.toFixed(1).replace(".", ",");
-  const pct = Math.round((100 * num) / max);
+  const display = unset ? t("backendDefault") : Number(num.toFixed(2)).toString().replace(".", ",");
+  const pct = unset ? 0 : Math.round((100 * num) / max);
+  const applied = item.applied !== false;
   return (
-    <div className="grid grid-cols-[170px_44px_1fr] items-center gap-3">
-      <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{item.label}</span>
-      <span className="text-[0.76rem] tabular-nums text-[var(--tessera-text)]">{display}</span>
+    <div className="grid grid-cols-[170px_84px_1fr_auto] items-center gap-3">
+      <span className="flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+        {item.label}
+        {!applied && runtime ? (
+          <span
+            title={runtime.note}
+            className="rounded border border-amber-400/40 bg-amber-400/10 px-1 text-[0.58rem] text-amber-300"
+          >
+            {t("notApplied", { backend: runtime.backend })}
+          </span>
+        ) : null}
+      </span>
+      <span
+        className={cn(
+          "text-[0.76rem] tabular-nums",
+          unset ? "text-[var(--tessera-text-muted)] italic" : "text-[var(--tessera-text)]",
+        )}
+      >
+        {display}
+      </span>
       <input
         type="range"
         min={item.min ?? 0}
@@ -586,13 +631,29 @@ function SliderRow({ item, ctx }: { item: Slider; ctx: Ctx }) {
         value={num}
         aria-label={item.label}
         onChange={(e) =>
-          item.key && ctx.setField(item.key, item.num ?? 0, Number.parseFloat(e.target.value))
+          item.key && ctx.setField(item.key, serverValue, Number.parseFloat(e.target.value))
         }
-        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--tessera-border)] accent-cyan-300 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-300"
+        className={cn(
+          "h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--tessera-border)] accent-cyan-300 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-300",
+          unset && "opacity-50",
+        )}
         style={{
           background: `linear-gradient(90deg, #67e8f9 ${pct}%, var(--tessera-border) ${pct}%)`,
         }}
       />
+      {!unset && item.key ? (
+        <button
+          type="button"
+          aria-label={`${t("resetToDefault")} — ${item.label}`}
+          title={t("resetToDefault")}
+          onClick={() => item.key && ctx.setField(item.key, serverValue, null)}
+          className="text-[var(--tessera-text-muted)] transition-colors hover:text-[var(--tessera-text)]"
+        >
+          <RotateCcw className="h-3 w-3" />
+        </button>
+      ) : (
+        <span className="w-3" />
+      )}
     </div>
   );
 }

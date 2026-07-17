@@ -7496,7 +7496,10 @@
     "subtitle": "Einstellungen für diesen Agenten: Identität, Modell, Verhalten und Status.",
     "loading": "Konfigurationen werden geladen…",
     "unavailable": "Konfigurationen nicht verfügbar.",
-    "saveError": "Speichern fehlgeschlagen. Erneut versuchen."
+    "saveError": "Speichern fehlgeschlagen. Erneut versuchen.",
+    "backendDefault": "Backend-Standard",
+    "resetToDefault": "Zurücksetzen (Backend-Standard)",
+    "notApplied": "Von {backend} nicht angewendet"
   },
   "agentConsole": {
     "title": "Konsole (Debug)",
