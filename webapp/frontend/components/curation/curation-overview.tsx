@@ -28,11 +28,6 @@ import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { fetchCurationOverview, mutateCurationDecision } from "@/lib/api/client";
@@ -91,8 +86,6 @@ function ExplainInfo({ k, title }: { k: string; title: string }) {
 export function CurationOverview() {
   const t = useTranslations("curation");
   const locale = useLocale();
-  const temporal = useTemporalState();
-  const railTimeline = useRailTimeline();
   const { data } = useQuery({
     queryKey: ["curation-overview", locale],
     queryFn: ({ signal }) => fetchCurationOverview(locale, signal),
@@ -119,18 +112,9 @@ export function CurationOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={t("rail.realtime")}
-        timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        windowEnd={temporal.windowEnd}
-        onPickDate={temporal.pickDate}
-        onModeChange={temporal.changeMode}
-      />
+      {/* Registre des rails temporels §6/§8 — the SURVEILLER signal scrubber
+          (SR-01) does not belong on an AGIR page; removed in lot 5. The AGIR
+          As-of+Live rail arrives with this page's own as-of fold (lot 5b). */}
 
       <div id="curation-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
         {activeTab === "curate" ? (

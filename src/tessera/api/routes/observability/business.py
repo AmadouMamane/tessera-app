@@ -177,17 +177,18 @@ async def observability_inbox(lang: str = "fr", agent: str = "all") -> dict[str,
 
 
 @router.get("/observability/automations")
-async def observability_automations(lang: str = "fr") -> dict[str, object]:
+async def observability_automations(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Automations overview (page #13).
 
     Composes the automation posture, rule catalogue, execution pipeline, type /
     environment breakdowns, execution journal, pending approvals, most-used
     guardrails, performance / savings trends and governance context. ``lang``
-    localizes the free-text fixture fields. Degrades to ``available: false`` on
-    failure.
+    localizes the free-text fixture fields. ``at`` folds every projection to
+    instant T (registre §6 — AGIR reads As-of, acts Live; mutations stay
+    live-only). Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **automations_mod.compute_automations_overview(lang)}
+        return {"available": True, **automations_mod.compute_automations_overview(lang, at=at)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.automations: failed: {exc}\n")
         return {"available": False}

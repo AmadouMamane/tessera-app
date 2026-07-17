@@ -8572,5 +8572,14 @@
     "loginWelcome": "Dies ist eine Demonstration: treten Sie mit einem Klick in einer Testrolle ein.",
     "helpMenu": "Hilfe",
     "helpUnderstand": "Tessera verstehen"
+  },
+  "agirRail": {
+    "liveBadge": "Live",
+    "asofBadge": "Stand zum Zeitpunkt",
+    "asofReading": "Zustand rekonstruiert zum {t} — Aktionen sind deaktiviert.",
+    "backToLive": "Zurück zu Live",
+    "liveNote": "Sie handeln auf dem aktuellen Zustand.",
+    "pickLabel": "Stand zum Datum",
+    "frozenTitle": "Lesemodus — zurück zu Live, um zu handeln"
   }
 }

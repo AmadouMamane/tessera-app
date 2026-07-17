@@ -2922,6 +2922,8 @@ const AuSavingSchema = z.object({ key: z.string(), value: z.string(), delta: z.s
 export const AutomationsOverviewSchema = z.object({
   available: z.boolean(),
   generated_at: z.string(),
+  // The As-of instant every projection was folded to (registre §6); null in Live.
+  as_of: z.string().nullable().default(null),
   period_days: z.number().int(),
   updated_at: z.string(),
   kpis: z.array(AuKpiSchema),

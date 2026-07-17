@@ -8574,5 +8574,14 @@
     "loginWelcome": "Ceci est une démonstration : entrez en un clic avec un rôle d'essai.",
     "helpMenu": "Aide",
     "helpUnderstand": "Comprendre Tessera"
+  },
+  "agirRail": {
+    "liveBadge": "Live",
+    "asofBadge": "Lecture à date",
+    "asofReading": "État reconstitué au {t} — les actions sont désactivées.",
+    "backToLive": "Revenir au direct",
+    "liveNote": "Vous agissez sur l'état présent.",
+    "pickLabel": "Voir à date",
+    "frozenTitle": "Lecture à date — revenez au direct pour agir"
   }
 }

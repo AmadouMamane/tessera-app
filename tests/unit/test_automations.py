@@ -155,6 +155,100 @@ def test_decide_approval_is_attributed_and_single_shot(
     }
 
 
+def test_rule_states_fold_the_governance_journal_to_t(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """C1 as-of (registre §6): default enabled, then replay journalled acts ≤ T."""
+    _wire_paths(monkeypatch, tmp_path)
+    entries = [
+        {
+            "type": "tessera.guard.audit",
+            "target": "automation.rule_state",
+            "occurred_at": "2026-07-01T10:00:00+00:00",
+            "arguments": {"rule": "gate_freeze", "enabled": False},
+        },
+        {
+            "type": "tessera.guard.audit",
+            "target": "automation.rules_state",
+            "occurred_at": "2026-07-02T10:00:00+00:00",
+            "arguments": {"enabled": False, "rules": [r.id for r in astore.RULES]},
+        },
+        {
+            "type": "tessera.guard.audit",
+            "target": "automation.rule_state",
+            "occurred_at": "2026-07-03T10:00:00+00:00",
+            "arguments": {"rule": "gate_freeze", "enabled": True},
+        },
+        # Noise the fold must ignore: other targets, other types.
+        {
+            "type": "tessera.guard.audit",
+            "target": "guard.rule_state",
+            "occurred_at": "2026-07-01T00:00:00+00:00",
+            "arguments": {"enabled": False},
+        },
+        {"type": "tessera.routing", "occurred_at": "2026-07-01T00:00:00+00:00"},
+    ]
+    monkeypatch.setattr("tessera.guard.ledger_store.read_ledger_entries", lambda *_a, **_k: entries)
+
+    before_all = astore.rule_states_as_of("2026-06-30T00:00:00+00:00")
+    assert all(before_all.values())  # code default: everything enabled
+    between = astore.rule_states_as_of("2026-07-01T12:00:00+00:00")
+    assert between["gate_freeze"] is False
+    assert between["chain_alert"] is True
+    after_kill = astore.rule_states_as_of("2026-07-02T12:00:00+00:00")
+    assert not any(after_kill.values())  # the bulk suspend folded in
+    latest = astore.rule_states_as_of("2026-07-04T00:00:00+00:00")
+    assert latest["gate_freeze"] is True
+    assert latest["chain_alert"] is False
+
+
+def test_approvals_as_of_fold_status_from_timestamps(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A decided request was still PENDING at any T before its decision."""
+    _wire_paths(monkeypatch, tmp_path)
+    _stub_checks(monkeypatch)
+    astore.evaluate_rules()
+    target = astore.pending_approvals()[0]
+    astore.decide_approval(str(target["id"]), approved=True, decided_by="bob@bank.eu")
+    decided = {a["id"]: a for a in astore.load_approvals()}[target["id"]]
+    requested_at = str(decided["requested_at"])
+
+    # At an instant BEFORE the request existed: absent.
+    assert all(a["id"] != target["id"] for a in astore.approvals_as_of("2000-01-01T00:00:00+00:00"))
+    # At the request instant (decision is later): pending again, author hidden.
+    at_request = {a["id"]: a for a in astore.approvals_as_of(requested_at)}[target["id"]]
+    assert at_request["status"] == "pending"
+    assert at_request["decided_by"] is None
+    # Well after the decision: the stored decision, with its author.
+    later = {a["id"]: a for a in astore.approvals_as_of("2100-01-01T00:00:00+00:00")}[target["id"]]
+    assert later["status"] == "approved"
+    assert later["decided_by"] == "bob@bank.eu"
+
+
+def test_overview_as_of_folds_runs_states_and_echoes_t(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _wire_paths(monkeypatch, tmp_path)
+    _stub_checks(monkeypatch)
+    monkeypatch.setattr(automations, "_guardrail_counts", list)
+    monkeypatch.setattr(automations, "list_rule_states", astore.list_rule_states)
+    monkeypatch.setattr(automations, "load_runs", astore.load_runs)
+    monkeypatch.setattr("tessera.guard.ledger_store.read_ledger_entries", lambda *_a, **_k: [])
+    astore.evaluate_rules()
+
+    # T before any run: an honest empty past, and the payload says which T it is.
+    past = automations.compute_automations_overview("fr", at="2000-01-01T00:00:00+00:00")
+    assert past["as_of"] == "2000-01-01T00:00:00+00:00"
+    kpi = {k["key"]: k["value"] for k in past["kpis"]}
+    assert kpi["executions"] == "0"
+    assert past["approvals"] == []
+    # Live keeps as_of null and sees the run + the opened requests.
+    live = automations.compute_automations_overview("fr")
+    assert live["as_of"] is None
+    assert len(live["approvals"]) == 2
+
+
 def test_overview_without_any_run_is_honest(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

@@ -31,11 +31,6 @@ import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { fetchIncidentsOverview } from "@/lib/api/client";
@@ -90,8 +85,6 @@ export function IncidentsOverview() {
   const t = useTranslations("incidents");
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const temporal = useTemporalState();
-  const railTimeline = useRailTimeline();
   const { data } = useQuery({
     queryKey: ["incidents-overview", locale],
     queryFn: ({ signal }) => fetchIncidentsOverview(locale, signal),
@@ -117,18 +110,9 @@ export function IncidentsOverview() {
           downloadBlob("tessera-incidents.json", "application/json", JSON.stringify(data, null, 2))
         }
       />
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={t("rail.realtime")}
-        timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        windowEnd={temporal.windowEnd}
-        onPickDate={temporal.pickDate}
-        onModeChange={temporal.changeMode}
-      />
+      {/* Registre des rails temporels §6/§8 — the SURVEILLER signal scrubber
+          (SR-01) does not belong on an AGIR page; removed in lot 5. The AGIR
+          As-of+Live rail arrives with this page's own as-of fold (lot 5b). */}
 
       {activeTab !== "overview" && data.tabs?.[activeTab] ? (
         <div className="flex min-w-0 flex-col gap-2">

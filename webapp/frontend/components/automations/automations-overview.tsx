@@ -19,15 +19,11 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
@@ -61,35 +57,40 @@ type Data = AutomationsData;
 
 export function AutomationsOverview() {
   const t = useTranslations("automations");
+  const tr = useTranslations("agirRail");
   const locale = useLocale();
-  const temporal = useTemporalState();
-  const railTimeline = useRailTimeline();
+  // AGIR composition (registre §6): As-of reads the folded state at T, Live
+  // acts now. The instant derives from the URL — deep-linkable, never local.
+  const asof = useAsOf();
+  const frozen = asof !== null;
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["automations-overview", locale],
-    queryFn: ({ signal }) => fetchAutomationsOverview(locale, signal),
+    queryKey: ["automations-overview", locale, asof],
+    queryFn: ({ signal }) => fetchAutomationsOverview(locale, asof, signal),
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: asof ? false : 30_000,
   });
+  // Mutations are a LIVE-only affair (frozen while As-of), so their fresh
+  // payload always lands under the live key (asof = null).
   const evaluate = useMutation({
     mutationFn: () => mutateAutomationsEvaluate(locale),
-    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale, null], fresh),
   });
   const toggleRule = useMutation({
     mutationFn: mutateAutomationRuleState,
-    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale, null], fresh),
   });
   // One governed act over the whole rule set (the org-wide kill switch).
   const bulkRules = useMutation({
     mutationFn: (enabled: boolean) => mutateAutomationsRulesState({ enabled, lang: locale }),
-    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale, null], fresh),
   });
   // Decide one pending approval request (author = verified assertion, server-side).
   const decide = useMutation({
     mutationFn: (vars: { approval_id: string; approved: boolean }) =>
       mutateAutomationApprove({ ...vars, lang: locale }),
-    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale, null], fresh),
   });
 
   if (!data) {
@@ -108,20 +109,15 @@ export function AutomationsOverview() {
         onSelect={setActiveTab}
         onEvaluate={() => evaluate.mutate()}
         evaluating={evaluate.isPending}
+        frozen={frozen}
         data={data}
       />
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={t("rail.realtime")}
-        timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        windowEnd={temporal.windowEnd}
-        onPickDate={temporal.pickDate}
-        onModeChange={temporal.changeMode}
-      />
+      {/* Registre §6/§8 — AGIR carries As-of + Live, never the SURVEILLER
+          signal scrubber (SR-01) this page wrongly rendered before lot 5. */}
+      <AgirRail />
+      {frozen ? (
+        <output className="text-[0.66rem] text-amber-300">{tr("frozenTitle")}</output>
+      ) : null}
 
       <div id="automations-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
         {activeTab === "rules" ? (
@@ -133,7 +129,7 @@ export function AutomationsOverview() {
               t={t}
               data={data}
               onToggle={(id, enabled) => toggleRule.mutate({ rule_id: id, enabled, lang: locale })}
-              toggling={toggleRule.isPending}
+              toggling={toggleRule.isPending || frozen}
             />
           </Zone>
         ) : null}
@@ -165,7 +161,7 @@ export function AutomationsOverview() {
                 t={t}
                 data={data}
                 onDecide={(id, approved) => decide.mutate({ approval_id: id, approved })}
-                deciding={decide.isPending}
+                deciding={decide.isPending || frozen}
               />
               <Savings t={t} data={data} />
             </div>
@@ -261,7 +257,7 @@ export function AutomationsOverview() {
               data={data}
               onViewApprovals={() => setActiveTab("approvals")}
               onBulk={(enabled) => bulkRules.mutate(enabled)}
-              bulking={bulkRules.isPending}
+              bulking={bulkRules.isPending || frozen}
             />
           </div>
 
@@ -273,7 +269,7 @@ export function AutomationsOverview() {
               className="xl:col-span-3"
               onViewAll={() => setActiveTab("approvals")}
               onDecide={(id, approved) => decide.mutate({ approval_id: id, approved })}
-              deciding={decide.isPending}
+              deciding={decide.isPending || frozen}
             />
             <Guardrails t={t} data={data} className="xl:col-span-2" />
             <Performance
@@ -301,6 +297,7 @@ function CommandBar({
   onSelect,
   onEvaluate,
   evaluating,
+  frozen,
   data,
 }: {
   t: T;
@@ -308,6 +305,7 @@ function CommandBar({
   onSelect: (tab: Tab) => void;
   onEvaluate: () => void;
   evaluating: boolean;
+  frozen: boolean;
   data: Data;
 }) {
   const exportJson = () => {
@@ -349,7 +347,7 @@ function CommandBar({
         <Button
           size="sm"
           onClick={onEvaluate}
-          disabled={evaluating}
+          disabled={evaluating || frozen}
           className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
         >
           <FlaskConical className="h-4 w-4" />{" "}

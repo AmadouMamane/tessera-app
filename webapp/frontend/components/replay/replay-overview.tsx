@@ -23,11 +23,6 @@ import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { fetchReplayShadowOverview } from "@/lib/api/client";
@@ -80,8 +75,6 @@ function Info({ k, title }: { k: string; title: string }) {
 export function ReplayOverview() {
   const t = useTranslations("replay");
   const locale = useLocale();
-  const temporal = useTemporalState();
-  const railTimeline = useRailTimeline();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const { data } = useQuery({
     queryKey: ["replay-shadow-overview", locale],
@@ -104,19 +97,9 @@ export function ReplayOverview() {
       {/* AGIR / Replay is XT-01's home (registre): the rail keeps the legitimate
           execution-replay cassette (début · précédent · play/pause · suivant · fin).
           SURVEILLER surfaces stay on the default "signal" event navigation. */}
-      <TemporalRail
-        transport="execution"
-        mode={temporal.mode}
-        liveStatus={t("rail.realtime")}
-        timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        windowEnd={temporal.windowEnd}
-        onPickDate={temporal.pickDate}
-        onModeChange={temporal.changeMode}
-      />
+      {/* Registre des rails temporels §6/§8 — the SURVEILLER signal scrubber
+          (SR-01) does not belong on an AGIR page; removed in lot 5. The AGIR
+          As-of+Live rail arrives with this page's own as-of fold (lot 5b). */}
 
       <div id="replay-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
         {activeTab === "sessions" ? (

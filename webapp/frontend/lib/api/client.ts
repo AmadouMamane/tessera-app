@@ -999,9 +999,13 @@ export async function mutateAutomationApprove(body: {
 
 export async function fetchAutomationsOverview(
   lang: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<AutomationsOverview> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  if (at) params.set("at", at);
+  const q = params.size ? `?${params}` : "";
   return request(`/observability/automations${q}`, { signal }, AutomationsOverviewSchema);
 }
 

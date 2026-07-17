@@ -8572,5 +8572,14 @@
     "loginWelcome": "This is a demonstration: enter with one click using a trial role.",
     "helpMenu": "Help",
     "helpUnderstand": "Understand Tessera"
+  },
+  "agirRail": {
+    "liveBadge": "Live",
+    "asofBadge": "As-of reading",
+    "asofReading": "State reconstructed at {t} — actions are disabled.",
+    "backToLive": "Back to live",
+    "liveNote": "You are acting on the current state.",
+    "pickLabel": "View as of",
+    "frozenTitle": "As-of reading — return to live to act"
   }
 }

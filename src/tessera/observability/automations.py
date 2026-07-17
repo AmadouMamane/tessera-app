@@ -23,11 +23,14 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from tessera.observability._asof import occurred_before
 from tessera.observability.automation_store import (
     RULES,
+    approvals_as_of,
     list_rule_states,
     load_runs,
     pending_approvals,
+    rule_states_as_of,
 )
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
@@ -197,25 +200,29 @@ def _posture_kpis(
     return kpis, run_series
 
 
-def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
+def compute_automations_overview(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Return the Automations overview payload (real rule core + flagged demo).
 
     Args:
         lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
+        at: Optional ISO instant T (registre §6 — AGIR reads As-of + acts Live).
+            When given, every projection folds to T: rule states from the S1
+            governance journal, runs and approvals by their own timestamps.
+            Mutations are a LIVE-only affair — the reader is the only as-of.
 
     Returns:
         A JSON-serialisable mapping with the rule catalogue (real definitions +
         durable enabled state + journalled last runs), the execution journal,
         the posture KPIs, funnel, distributions and governance — plus the
-        flagged approval-queue / savings fixtures.
+        flagged savings fixture. ``as_of`` echoes T (``None`` in Live).
     """
     lang = _norm_lang(lang)
-    now = datetime.now(UTC)
+    now = (_parse_at(at) or datetime.now(UTC)) if at else datetime.now(UTC)
     settings = get_settings()
     env = settings.environment
 
-    states = list_rule_states()
-    runs = load_runs()
+    states = rule_states_as_of(at) if at else list_rule_states()
+    runs = [r for r in load_runs() if occurred_before(str(r.get("at", "")), at)]
     by_rule_runs: dict[str, list[dict[str, Any]]] = {}
     for run in runs:
         by_rule_runs.setdefault(str(run.get("rule_id", "")), []).append(run)
@@ -250,7 +257,7 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
         )
 
     # ── REAL approvals: fired approb-mode rules opened durable requests ──────
-    approvals = _pending_approval_rows(lang)
+    approvals = _pending_approval_rows(lang, at=at)
 
     n_ok = sum(1 for r in runs if r.get("result") != "error")
     day_keys = [(now - timedelta(days=d)).date().isoformat() for d in range(6, -1, -1)]
@@ -344,6 +351,7 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
 
     return {
         "generated_at": now.isoformat(),
+        "as_of": at,
         "period_days": 7,
         "updated_at": now.strftime("%H:%M:%S"),
         "kpis": kpis,
@@ -368,11 +376,16 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
     }
 
 
-def _pending_approval_rows(lang: str) -> list[dict[str, object]]:
-    """The REAL pending approval requests, shaped for the page (localized copy)."""
+def _pending_approval_rows(lang: str, at: str | None = None) -> list[dict[str, object]]:
+    """The pending approval requests, live or as they stood at T (localized copy)."""
     rule_by_id = {rule.id: rule for rule in RULES}
+    source = (
+        [a for a in approvals_as_of(at) if a.get("status") == "pending"]
+        if at
+        else pending_approvals()
+    )
     rows: list[dict[str, object]] = []
-    for req in pending_approvals():
+    for req in source:
         rid = str(req.get("rule_id", ""))
         req_copy = _RULE_COPY.get(rid)
         when = _parse_at(req.get("requested_at"))

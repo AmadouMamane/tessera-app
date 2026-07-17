@@ -35,6 +35,7 @@ __all__ = [
     "RULES",
     "ApprovalNotPendingError",
     "AutomationRule",
+    "approvals_as_of",
     "available_rule_ids",
     "decide_approval",
     "evaluate_rules",
@@ -42,6 +43,7 @@ __all__ = [
     "load_approvals",
     "load_runs",
     "pending_approvals",
+    "rule_states_as_of",
     "set_rule_enabled",
 ]
 
@@ -248,6 +250,69 @@ def load_approvals() -> list[dict[str, object]]:
     """Every approval request, oldest first (pending and decided alike)."""
     raw = _load_json(_approvals_path(), [])
     return [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
+
+
+def rule_states_as_of(at: str) -> dict[str, bool]:
+    """Fold the S1 governance journal to every rule's enabled flag at instant T.
+
+    C1 as-of projection (registre §3): start from the code default (enabled) and
+    replay, chronologically, every journalled ``automation.rule_state`` /
+    ``automation.rules_state`` mutation at or before T. Only journalled acts are
+    visible — which is the point: since ADR 0024 every toggle IS journalled, so
+    the fold reconstructs what an operator would have seen at T, provably.
+    """
+    from tessera.guard.ledger_store import read_ledger_entries
+    from tessera.observability._asof import occurred_before
+
+    states = {rule.id: True for rule in RULES}
+    events: list[tuple[str, str, dict[str, object]]] = []
+    for obj in read_ledger_entries():
+        if str(obj.get("type", "")) != "tessera.guard.audit":
+            continue
+        target = str(obj.get("target", ""))
+        if target not in {"automation.rule_state", "automation.rules_state"}:
+            continue
+        occurred = str(obj.get("occurred_at", ""))
+        if not occurred or not occurred_before(occurred, at):
+            continue
+        args = obj.get("arguments")
+        events.append((occurred, target, args if isinstance(args, dict) else {}))
+    events.sort(key=lambda e: e[0])
+    for _, target, args in events:
+        enabled = bool(args.get("enabled", True))
+        if target == "automation.rule_state":
+            rid = str(args.get("rule", ""))
+            if rid in states:
+                states[rid] = enabled
+        else:
+            rules = args.get("rules")
+            for rid in rules if isinstance(rules, list) else []:
+                if str(rid) in states:
+                    states[str(rid)] = enabled
+    return states
+
+
+def approvals_as_of(at: str) -> list[dict[str, object]]:
+    """Every approval request as it stood at T (status folded from timestamps).
+
+    A request exists at T once ``requested_at`` ≤ T; its status at T is the
+    stored decision only if ``decided_at`` ≤ T — otherwise it was still pending
+    at T, whatever happened later.
+    """
+    from tessera.observability._asof import occurred_before
+
+    out: list[dict[str, object]] = []
+    for req in load_approvals():
+        if not occurred_before(str(req.get("requested_at", "")), at):
+            continue
+        entry = dict(req)
+        decided_at = req.get("decided_at")
+        if not (isinstance(decided_at, str) and occurred_before(decided_at, at)):
+            entry["status"] = "pending"
+            entry["decided_at"] = None
+            entry["decided_by"] = None
+        out.append(entry)
+    return out
 
 
 def pending_approvals() -> list[dict[str, object]]:
