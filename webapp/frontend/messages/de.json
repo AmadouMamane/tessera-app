@@ -2552,7 +2552,8 @@
         "export": "Auswahl exportieren",
         "addDataset": "Zum Datensatz",
         "createCase": "Case erstellen",
-        "assignOwner": "Verantwortlicher zuweisen"
+        "assignOwner": "Verantwortlicher zuweisen",
+        "caseSoon": "Kommt mit dem echten Incident-Store (eigenes Los)"
       },
       "status": {
         "new": "Neu",
@@ -4552,7 +4553,15 @@
       "now": "Jetzt (live)",
       "custom": "Benutzerdefiniert",
       "activity": "Wiedergabe-Aktivität (live)",
-      "viewJournal": "Ganzes Protokoll anzeigen"
+      "viewJournal": "Ganzes Protokoll anzeigen",
+      "shadowTitle": "Im Shadow wiederholen",
+      "shadowNote": "Spielt die letzten erfassten Turns gegen ein Kandidatenmodell (2 Turns, echter Judge).",
+      "modelLabel": "Kandidatenmodell",
+      "run": "Shadow starten",
+      "running": "Shadow läuft…",
+      "resultLine": "{n} verglichen — {wins} gewonnen · {losses} verloren · {ties} unentschieden",
+      "noBundles": "Keine erfassten Turns zum Wiederholen.",
+      "openComparisons": "Vergleiche mit Referenzen ansehen"
     },
     "viewAll": {
       "all": "Alle anzeigen",

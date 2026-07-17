@@ -2552,7 +2552,8 @@
         "export": "Exporter sélection",
         "addDataset": "Ajouter au dataset",
         "createCase": "Créer case",
-        "assignOwner": "Assigner responsable"
+        "assignOwner": "Assigner responsable",
+        "caseSoon": "Arrive avec le vrai store d'incidents (lot dédié)"
       },
       "status": {
         "new": "Nouveau",
@@ -4552,7 +4553,15 @@
       "now": "Maintenant (live)",
       "custom": "Personnalisé",
       "activity": "Activité de rejeu (live)",
-      "viewJournal": "Voir tout le journal"
+      "viewJournal": "Voir tout le journal",
+      "shadowTitle": "Rejouer en shadow",
+      "shadowNote": "Rejoue les derniers tours capturés contre un modèle candidat (2 tours, juge réel).",
+      "modelLabel": "Modèle candidat",
+      "run": "Lancer le shadow",
+      "running": "Shadow en cours…",
+      "resultLine": "{n} comparés — {wins} gagnés · {losses} perdus · {ties} égalités",
+      "noBundles": "Aucun tour capturé à rejouer.",
+      "openComparisons": "Voir les comparaisons aux références"
     },
     "viewAll": {
       "all": "Voir tout",

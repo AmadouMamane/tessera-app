@@ -61,3 +61,19 @@ test("shadow and exports tabs are flagged demonstration", async ({ page }) => {
   await page.getByRole("tab", { name: "Exports & preuves" }).click();
   await expect(page.getByText(/démonstration/i).first()).toBeVisible();
 });
+
+// ── lot 8: the shadow replay is REAL ─────────────────────────────────────────
+
+test("the shadow rail mirrors captured turns against a candidate model, for real", async ({
+  page,
+}) => {
+  const rail = page.locator("aside").filter({ hasText: "Rejouer en shadow" });
+  await expect(rail.getByLabel("Modèle candidat")).toBeVisible({ timeout: 20_000 });
+  // The dead "compare to a baseline" selects and the fake time pills are gone
+  // from the rail (the comparisons TAB legitimately keeps its own title).
+  await expect(rail.getByText("Comparer à une référence")).toHaveCount(0);
+  await expect(rail.getByText("24h", { exact: true })).toHaveCount(0);
+  // Run it: a real mirror (2 turns, real judge) — slow, and honestly so.
+  await rail.getByRole("button", { name: "Lancer le shadow" }).click();
+  await expect(rail.getByText(/comparés|Aucun tour capturé/)).toBeVisible({ timeout: 150_000 });
+});

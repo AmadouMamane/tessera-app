@@ -223,3 +223,28 @@ test("prouver/audit-logs: the decorative Filtres button is gone, real filters re
   await expect(page.getByPlaceholder(/Rechercher/).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Filtres", exact: true })).toHaveCount(0);
 });
+
+test("qualite-ia failed board: bulk acts live where their stores live", async ({ page }) => {
+  await page.goto("/fr/surveiller/qualite-ia");
+  await page
+    .getByRole("button", { name: /Cas échoués/ })
+    .first()
+    .click({ timeout: 20_000 });
+  // Real links to the pages that own the acts (per-candidate curation, the
+  // operator queue); case creation waits for the real incident store.
+  await expect(page.getByRole("link", { name: "Ajouter au dataset" })).toHaveAttribute(
+    "href",
+    /\/agir\/curation-eval-set/,
+    { timeout: 20_000 },
+  );
+  await expect(page.getByRole("link", { name: "Assigner responsable" })).toHaveAttribute(
+    "href",
+    /\/a-traiter/,
+  );
+  const createCase = page.getByRole("button", { name: "Créer case" });
+  await expect(createCase).toBeDisabled();
+  await expect(createCase.locator("xpath=ancestor-or-self::*[@title]").first()).toHaveAttribute(
+    "title",
+    /store d'incidents/,
+  );
+});

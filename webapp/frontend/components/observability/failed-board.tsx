@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "@/i18n/navigation";
 import type { FailedRunCase, FailedRunsReport, ReleaseStatus } from "@/lib/api/schemas";
 
 const DASH = "—";
@@ -523,27 +524,34 @@ export function FailedBoard({
             <Download className="h-3 w-3" />
             {tq("failed.bulk.export")}
           </button>
-          <span className="inline-flex items-center gap-1 text-[var(--muted-foreground)]">
+          {/* The acts live where their stores live (per-candidate curation
+              decisions, the operator queue's assignments): real Links, not
+              fake bulk buttons. Case creation waits for the real incident
+              store — disabled and saying so. */}
+          <Link
+            href="/agir/curation-eval-set"
+            className="inline-flex items-center gap-1 text-[var(--primary)] hover:underline"
+          >
             <Layers className="h-3 w-3" />
             {tq("failed.bulk.addDataset")}
-            <Badge tone="neutral" className="text-[0.55rem]">
-              Admin+
-            </Badge>
+          </Link>
+          <span title={tq("failed.bulk.caseSoon")}>
+            <button
+              type="button"
+              disabled
+              className="inline-flex cursor-not-allowed items-center gap-1 text-[var(--muted-foreground)] opacity-60"
+            >
+              <FilePlus2 className="h-3 w-3" />
+              {tq("failed.bulk.createCase")}
+            </button>
           </span>
-          <span className="inline-flex items-center gap-1 text-[var(--muted-foreground)]">
-            <FilePlus2 className="h-3 w-3" />
-            {tq("failed.bulk.createCase")}
-            <Badge tone="neutral" className="text-[0.55rem]">
-              Admin+
-            </Badge>
-          </span>
-          <span className="inline-flex items-center gap-1 text-[var(--muted-foreground)]">
+          <Link
+            href="/a-traiter"
+            className="inline-flex items-center gap-1 text-[var(--primary)] hover:underline"
+          >
             <UserPlus className="h-3 w-3" />
             {tq("failed.bulk.assignOwner")}
-            <Badge tone="neutral" className="text-[0.55rem]">
-              Admin+
-            </Badge>
-          </span>
+          </Link>
         </div>
       </Card>
 

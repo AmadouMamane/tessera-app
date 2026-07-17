@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ChevronRight,
@@ -26,6 +26,7 @@ import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import { fetchSettingsOverrides, runShadow } from "@/lib/api/client";
 import { fetchReplayShadowOverview } from "@/lib/api/client";
 import type { ReplayShadowOverview } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -300,7 +301,7 @@ export function ReplayOverview() {
             </Zone>
           </div>
 
-          <ReplayRail t={t} data={data} />
+          <ReplayRail t={t} data={data} onOpenComparisons={() => setActiveTab("comparisons")} />
         </div>
       )}
 
@@ -760,46 +761,73 @@ function QuickActions({ t, data, className }: { t: T; data: Data; className?: st
 
 // ── right rail ───────────────────────────────────────────────────────────────
 
-function ReplayRail({ t, data }: { t: T; data: Data }) {
-  const tc = useTranslations("common");
+function ReplayRail({
+  t,
+  data,
+  onOpenComparisons,
+}: { t: T; data: Data; onOpenComparisons: () => void }) {
+  // REAL shadow replay (lot 8): mirror the latest captured turns to a candidate
+  // model via POST /observability/shadow, judged for real. The candidate list is
+  // the same closed catalogue the serving-model panel offers (ADR 0030).
+  const [model, setModel] = useState("");
+  const { data: overrides } = useQuery({
+    queryKey: ["settings-overrides"],
+    queryFn: ({ signal }) => fetchSettingsOverrides(signal),
+    staleTime: 60_000,
+  });
+  const models = overrides?.allowed_chat_models ?? [];
+  const candidate = model || models[0] || "";
+  const shadow = useMutation({ mutationFn: () => runShadow(candidate, 2) });
   return (
     <aside className="flex min-w-0 flex-col gap-3">
-      <Panel title={t("rail.compareBaseline")}>
+      <Panel title={t("rail.shadowTitle")}>
         <div className="flex flex-col gap-2">
-          <Select options={data.baselines.map((b) => b.label)} disabled title={tc("notWired")} />
-          <Select
-            options={[t("rail.allServices"), ...data.services]}
-            disabled
-            title={tc("notWired")}
-          />
-          <span title={tc("notWired")}>
-            <Button
-              size="sm"
-              disabled
-              className="h-9 w-full justify-center gap-2 border border-[#2e72d2] bg-[#1b4f8a] text-xs text-[#d8eaff] hover:bg-[#22609f]"
+          <p className="text-[0.62rem] leading-relaxed text-[var(--tessera-text-muted)]">
+            {t("rail.shadowNote")}
+          </p>
+          <div className="relative">
+            <select
+              aria-label={t("rail.modelLabel")}
+              value={candidate}
+              onChange={(e) => setModel(e.target.value)}
+              className="h-9 w-full appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 pr-8 font-mono text-xs text-[var(--tessera-text)] outline-none"
             >
-              <RefreshCcw className="h-4 w-4" /> {t("rail.replayNow")}
-            </Button>
-          </span>
-        </div>
-      </Panel>
-
-      <Panel title={t("rail.shortcuts")}>
-        <div className="flex flex-wrap gap-1.5">
-          {[t("rail.now"), "24h", "7j", "30j", t("rail.custom")].map((s, i) => (
-            <button
-              key={s}
-              type="button"
-              className={cn(
-                "h-7 rounded-md border px-2.5 text-[0.66rem] font-medium transition-colors",
-                i === 2
-                  ? "border-[#2e72d2] bg-[#0d3561] text-[#d8eaff]"
-                  : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
-              )}
-            >
-              {s}
-            </button>
-          ))}
+              {models.map((m) => (
+                <option key={m} value={m} className="bg-[var(--tessera-surface)]">
+                  {m}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-90 text-[var(--tessera-text-muted)]" />
+          </div>
+          <Button
+            size="sm"
+            disabled={shadow.isPending || candidate === ""}
+            onClick={() => shadow.mutate()}
+            className="h-9 w-full justify-center gap-2 border border-[#2e72d2] bg-[#1b4f8a] text-xs text-[#d8eaff] hover:bg-[#22609f]"
+          >
+            <RefreshCcw className={cn("h-4 w-4", shadow.isPending && "animate-spin")} />{" "}
+            {shadow.isPending ? t("rail.running") : t("rail.run")}
+          </Button>
+          {shadow.data ? (
+            <output className="text-[0.64rem] text-[var(--tessera-text)]">
+              {shadow.data.n_compared === 0
+                ? t("rail.noBundles")
+                : t("rail.resultLine", {
+                    n: shadow.data.n_compared,
+                    wins: shadow.data.wins,
+                    losses: shadow.data.losses,
+                    ties: shadow.data.ties,
+                  })}
+            </output>
+          ) : null}
+          <button
+            type="button"
+            onClick={onOpenComparisons}
+            className="self-start text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+          >
+            {t("rail.openComparisons")} →
+          </button>
         </div>
       </Panel>
 
@@ -1030,31 +1058,6 @@ function StatusBadge({ status, t }: { status: string; t: T }) {
     >
       {t(`status.${status}`)}
     </span>
-  );
-}
-
-function Select({
-  options,
-  disabled,
-  title,
-}: { options: string[]; disabled?: boolean; title?: string }) {
-  return (
-    <div className="relative" title={title}>
-      <select
-        disabled={disabled}
-        className={cn(
-          "h-9 w-full appearance-none rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 pr-8 text-xs text-[var(--tessera-text)] outline-none",
-          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-        )}
-      >
-        {options.map((o) => (
-          <option key={o} className="bg-[var(--tessera-surface)]">
-            {o}
-          </option>
-        ))}
-      </select>
-      <ChevronRight className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-90 text-[var(--tessera-text-muted)]" />
-    </div>
   );
 }
 

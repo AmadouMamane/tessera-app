@@ -2552,7 +2552,8 @@
         "export": "Export selection",
         "addDataset": "Add to dataset",
         "createCase": "Create case",
-        "assignOwner": "Assign owner"
+        "assignOwner": "Assign owner",
+        "caseSoon": "Arrives with the real incident store (dedicated lot)"
       },
       "status": {
         "new": "New",
@@ -4552,7 +4553,15 @@
       "now": "Now (live)",
       "custom": "Custom",
       "activity": "Replay activity (live)",
-      "viewJournal": "View whole log"
+      "viewJournal": "View whole log",
+      "shadowTitle": "Replay in shadow",
+      "shadowNote": "Replays the latest captured turns against a candidate model (2 turns, real judge).",
+      "modelLabel": "Candidate model",
+      "run": "Run shadow",
+      "running": "Shadow running…",
+      "resultLine": "{n} compared — {wins} won · {losses} lost · {ties} tied",
+      "noBundles": "No captured turns to replay.",
+      "openComparisons": "See the baseline comparisons"
     },
     "viewAll": {
       "all": "View all",
