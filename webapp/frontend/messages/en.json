@@ -6708,9 +6708,6 @@
     "subtitle": "Configure the behaviour, policies and preferences of the Tessera platform.",
     "actions": {
       "export": "Export configuration",
-      "import": "Import configuration",
-      "save": "Save changes",
-      "notWired": "Not wired — configuration persistence is not connected yet",
       "viewAtDate": "View config at date",
       "compareTo": "Compare to",
       "history": "History & versions"
@@ -6770,7 +6767,8 @@
     "paramStatus": {
       "active": "Active",
       "draft": "Draft",
-      "deprecated": "Deprecated"
+      "deprecated": "Deprecated",
+      "override": "Override"
     },
     "state": {
       "title": "Configuration state",
@@ -8384,7 +8382,26 @@
     },
     "loading": "Loading model catalogue...",
     "empty": "No models in the catalogue.",
-    "close": "Close"
+    "close": "Close",
+    "serving": {
+      "title": "Serving model — org and per agent",
+      "note": "Real precedence: per-turn picker > agent override > org override > git/env base. Every override names its author and reason, and reverting to base is always possible (ADR 0030).",
+      "org": "Organisation (fleet default)",
+      "overrideBadge": "override",
+      "baseBadge": "base",
+      "provenance": "by {author} · {date} — “{reason}”",
+      "baseIs": "base: {base}",
+      "change": "Change",
+      "revert": "Revert to base",
+      "apply": "Apply",
+      "confirmRevert": "Confirm revert",
+      "cancel": "Cancel",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Reason (required, journalled)",
+      "modelLabel": "Model",
+      "revertTo": "Reverts to base: {base}",
+      "superadminOnly": "Superadmin only"
+    }
   },
   "guardrailCatalogue": {
     "explain": {

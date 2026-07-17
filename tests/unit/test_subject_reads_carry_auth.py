@@ -339,7 +339,10 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
         "them really started returning subject content, move it to the pii router and add it "
         "to SUBJECT_SCOPED_READS instead of gating it in place"
     )
-    assert len(public) == 122
+    # 123rd (ADR 0030): GET /settings/overrides — the operable-knob panel. Model ids,
+    # bases and override attributions (operator principals), the same governed-act
+    # attribution the public governance feed already shows; no customer subject data.
+    assert len(public) == 123
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

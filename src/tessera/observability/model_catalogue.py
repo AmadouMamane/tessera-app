@@ -189,22 +189,29 @@ def _catalogue_models() -> list[_Model]:
     return sorted(models.values(), key=lambda m: (m.role, m.provider, m.model_id))
 
 
-def _active_ids() -> tuple[str, str]:
-    """The (chat, embedding) model ids that actually serve under the active profile."""
+def _active_ids(chat_override: str | None = None) -> tuple[str, str]:
+    """The (chat, embedding) model ids that actually serve under the active profile.
+
+    ``chat_override`` is the durable governed org-wide override (ADR 0030) when one
+    is stored — resolved by the caller, since the store read is async and this
+    module stays sync. The embedding model has no override knob.
+    """
     settings = get_settings()
     frontier = settings.resolved_llm_profile() is LLMProfile.FRONTIER
-    chat = settings.vertex.chat_model if frontier else settings.ollama.chat_model
+    chat = chat_override or (settings.vertex.chat_model if frontier else settings.ollama.chat_model)
     embed = settings.vertex.embedding_model if frontier else settings.ollama.embedding_model
     return chat, embed
 
 
-def build_model_catalogue(lang: str = "fr", *, agent_scope: str = "all") -> dict[str, object]:
+def build_model_catalogue(
+    lang: str = "fr", *, agent_scope: str = "all", chat_override: str | None = None
+) -> dict[str, object]:
     """Assemble the model-catalogue payload from the real config + price table."""
     lang = _norm_lang(lang)
     settings = get_settings()
     snap = get_budget_tracker().snapshot()
     consumers = _consumers_index(agent_scope)
-    active_chat, active_embed = _active_ids()
+    active_chat, active_embed = _active_ids(chat_override)
     profile = settings.resolved_llm_profile().value
 
     models = _catalogue_models()

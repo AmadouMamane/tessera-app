@@ -3732,7 +3732,7 @@ export const ParametersOverviewSchema = z.object({
       value: z.string(),
       modified_by: z.string(),
       date: z.string(),
-      status: z.enum(["active", "draft", "deprecated"]),
+      status: z.enum(["active", "draft", "deprecated", "override"]),
     }),
   ),
   config_state: z.object({
@@ -3762,6 +3762,30 @@ export const ParametersOverviewSchema = z.object({
   footer: z.object({ version: z.string(), source: z.string() }),
 });
 export type ParametersOverview = z.infer<typeof ParametersOverviewSchema>;
+
+// Governed operable-knob overrides (ADR 0030): the closed registry the agent
+// enumerates — org-wide + per-agent chat model — with base, override and
+// attribution. Served by /settings/overrides through the dedicated BFF.
+export const OverrideKnobSchema = z.object({
+  key: z.string(),
+  agent_id: z.string().nullable(),
+  base: z.string(),
+  override: z
+    .object({
+      value: z.string(),
+      author: z.string(),
+      reason: z.string(),
+      updated_at: z.string(),
+    })
+    .nullable(),
+});
+export type OverrideKnob = z.infer<typeof OverrideKnobSchema>;
+
+export const SettingsOverridesSchema = z.object({
+  allowed_chat_models: z.array(z.string()),
+  knobs: z.array(OverrideKnobSchema),
+});
+export type SettingsOverrides = z.infer<typeof SettingsOverridesSchema>;
 
 // ---------------------------------------------------------------------------
 // Inbox / À traiter (page #24)

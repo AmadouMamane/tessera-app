@@ -24,6 +24,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from tessera import __version__
 from tessera.agent.telemetry import install_runtime_provider
+from tessera.api.config_overrides import ensure_overrides_schema
 from tessera.api.limits import RequestSizeLimitMiddleware
 from tessera.api.middleware import AuthMiddleware, RequestIdMiddleware
 from tessera.api.operator import validate_operator_assertion_key
@@ -333,6 +334,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await ensure_consent_schema()  # ADR 0007, governance
         await ensure_citation_schema()  # retrieval citation counters
         await ensure_settings_schema()  # persisted runtime flags
+        await ensure_overrides_schema()  # ADR 0030 — governed operable-knob overrides
         await ensure_eval_gating_schema()  # ADR 0015 §Amendment 2 — gating socle (porteur)
         await _ensure_online_score_store()  # ADR 0015 §Correction 2b — best-effort
         await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep

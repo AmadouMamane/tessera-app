@@ -754,6 +754,18 @@ GOVERNANCE_ACTS: dict[str, _Act] = {
     "grant an admin sight of the synthesis": _Act(
         "PUT", "/settings/synthesis-admin", "superadmin", {"enabled": True}
     ),
+    "set a governed config override": _Act(
+        "PUT",
+        "/settings/overrides",
+        "superadmin",
+        {"key": "llm.chat_model", "value": "llama3.2:3b", "reason": "ratchet probe"},
+    ),
+    "revert a governed config override": _Act(
+        "POST",
+        "/settings/overrides/revert",
+        "superadmin",
+        {"key": "llm.chat_model", "reason": "ratchet probe"},
+    ),
 }
 
 
@@ -776,6 +788,23 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "tessera.observability.automation_store.set_rule_enabled", lambda *_a, **_k: None
     )
+
+    # The override store wants Postgres; stub the store (patching the copies the
+    # route imported), keep the route + emitter + chain real (ADR 0030 / 0024).
+    from datetime import UTC, datetime
+
+    from tessera.api.config_overrides import Override
+
+    async def _set_override(key: str, value: str, *, author: str, reason: str) -> Override:
+        return Override(
+            key=key, value=value, author=author, reason=reason, updated_at=datetime.now(UTC)
+        )
+
+    async def _delete_override(key: str) -> None:
+        return None
+
+    monkeypatch.setattr("tessera.api.routes.settings.set_override", _set_override)
+    monkeypatch.setattr("tessera.api.routes.settings.delete_override", _delete_override)
 
 
 def _resolve(act: _Act) -> _Act:

@@ -1,15 +1,22 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Cpu, GitBranch, Users, X } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
-import { fetchModelCatalogue } from "@/lib/api/client";
+import {
+  fetchModelCatalogue,
+  fetchSettingsOverrides,
+  mutateSettingsOverride,
+  mutateSettingsOverrideRevert,
+} from "@/lib/api/client";
 import type { ModelCatalogue as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
@@ -98,6 +105,8 @@ export function ModelCatalogue() {
         </div>
       ) : null}
 
+      <ServingModels />
+
       <div className={cn("grid gap-3", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
         <div className="overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           <table
@@ -171,6 +180,209 @@ export function ModelCatalogue() {
         <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{data.note}</p>
       ) : null}
     </div>
+  );
+}
+
+/** The governed serving-model panel (ADR 0030): org + per-agent chat model.
+ *  Every effective value is base-or-override with visible provenance; the set /
+ *  revert mutations are superadmin-only (verified assertion, mandatory reason)
+ *  and land in the governance journal. Non-superadmins see honest disabled
+ *  controls, never a button that pretends. */
+function ServingModels() {
+  const t = useTranslations("models.serving");
+  const locale = useLocale();
+  const isSuper = useSession().data?.user?.role === "superadmin";
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ["settings-overrides"],
+    queryFn: ({ signal }) => fetchSettingsOverrides(signal),
+    staleTime: 30_000,
+  });
+  const [editing, setEditing] = useState<{ key: string; mode: "set" | "revert" } | null>(null);
+  const [value, setValue] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Unreadable panel (e.g. anonymous session) → render nothing rather than a
+  // fabricated empty registry; the page's model table stays fully usable.
+  if (!data) return null;
+
+  const submit = async () => {
+    if (!editing) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (editing.mode === "set") {
+        await mutateSettingsOverride(editing.key, { value, reason });
+      } else {
+        await mutateSettingsOverrideRevert(editing.key, { reason });
+      }
+      // Close the form as soon as the mutation lands — before any refetch.
+      // Awaiting the (slow) sibling refetches here used to run these setters
+      // seconds later, silently closing and blanking a form the operator had
+      // already reopened for the next act.
+      setEditing(null);
+      setReason("");
+      await qc.invalidateQueries({ queryKey: ["settings-overrides"] });
+      // Mark the sibling surfaces stale without blocking on their refetch.
+      void qc.invalidateQueries({ queryKey: ["model-catalogue"] });
+      void qc.invalidateQueries({ queryKey: ["parameters-overview"] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEdit = (key: string, mode: "set" | "revert", effective: string) => {
+    setEditing({ key, mode });
+    setValue(effective);
+    setReason("");
+    setError(null);
+  };
+
+  return (
+    <section
+      data-testid="serving-models"
+      className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
+      <h3 className="text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+        {t("title")}
+      </h3>
+      <p className="mt-0.5 text-[0.6rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        {t("note")}
+      </p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {data.knobs.map((k) => {
+          const effective = k.override?.value ?? k.base;
+          const isEditing = editing?.key === k.key;
+          return (
+            <li
+              key={k.key}
+              className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="min-w-[180px] text-[0.7rem] font-medium text-[var(--tessera-text)]">
+                  {k.agent_id ?? t("org")}
+                </span>
+                <span className="font-mono text-[0.68rem] text-[#87bfff]">{effective}</span>
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+                    k.override
+                      ? "border-sky-500/30 bg-sky-500/15 text-sky-300"
+                      : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
+                  )}
+                >
+                  {k.override ? t("overrideBadge") : t("baseBadge")}
+                </span>
+                <span className="ml-auto flex items-center gap-2">
+                  {isSuper ? (
+                    <>
+                      {/* While a mutation is in flight (busy covers the awaited panel
+                          refetch too), opening another editing session would race the
+                          in-flight submit's close — so the affordances wait. */}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => startEdit(k.key, "set", effective)}
+                        className="text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff] disabled:opacity-50"
+                      >
+                        {t("change")}
+                      </button>
+                      {k.override ? (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => startEdit(k.key, "revert", effective)}
+                          className="text-[0.62rem] font-medium text-amber-300 hover:text-amber-200 disabled:opacity-50"
+                        >
+                          {t("revert")}
+                        </button>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span title={t("superadminOnly")}>
+                      <button
+                        type="button"
+                        disabled
+                        className="cursor-not-allowed text-[0.62rem] font-medium text-[var(--tessera-text-muted)] opacity-60"
+                      >
+                        {t("change")}
+                      </button>
+                    </span>
+                  )}
+                </span>
+              </div>
+              {k.override ? (
+                <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+                  {t("provenance", {
+                    author: k.override.author,
+                    date: new Date(k.override.updated_at).toLocaleString(locale, {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    }),
+                    reason: k.override.reason,
+                  })}
+                  {" · "}
+                  {t("baseIs", { base: k.base })}
+                </p>
+              ) : null}
+              {isEditing && editing ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {editing.mode === "set" ? (
+                    <select
+                      aria-label={t("modelLabel")}
+                      value={value}
+                      onChange={(e) => setValue(e.target.value)}
+                      className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                    >
+                      {data.allowed_chat_models.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-[0.64rem] text-[var(--tessera-text)]">
+                      {t("revertTo", { base: k.base })}
+                    </span>
+                  )}
+                  <input
+                    aria-label={t("reasonLabel")}
+                    placeholder={t("reasonPlaceholder")}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="h-7 w-64 min-w-0 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 text-[0.64rem] text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)]"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={busy || !reason.trim()}
+                    onClick={submit}
+                    className="h-7 border border-[#2e72d2] bg-[#1b4f8a] px-2.5 text-[0.64rem] text-[#d8eaff] hover:bg-[#22609f]"
+                  >
+                    {editing.mode === "set" ? t("apply") : t("confirmRevert")}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(null)}
+                    className="text-[0.62rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+                  >
+                    {t("cancel")}
+                  </button>
+                  {error ? (
+                    <p role="alert" className="text-[0.62rem] text-red-300">
+                      {error}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

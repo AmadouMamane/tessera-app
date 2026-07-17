@@ -109,7 +109,30 @@ async def observability_parameters(lang: str = "fr") -> dict[str, object]:
     Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **parameters_mod.compute_parameters_overview(lang)}
+        # ADR 0030 — the stored governed overrides are the only parameters with a
+        # real per-row author; the store read is async so it happens here, and the
+        # sync composer receives plain rows. Fail open to base: an unreadable
+        # store must not blank the whole page.
+        try:
+            from tessera.api.config_overrides import list_overrides
+
+            override_rows = [
+                parameters_mod.OverrideRow(
+                    key=o.key,
+                    value=o.value,
+                    author=o.author,
+                    reason=o.reason,
+                    updated_at=o.updated_at,
+                )
+                for o in await list_overrides()
+            ]
+        except Exception as exc:
+            sys.stderr.write(f"tessera.observability.parameters: overrides read failed: {exc}\n")
+            override_rows = []
+        return {
+            "available": True,
+            **parameters_mod.compute_parameters_overview(lang, override_rows=override_rows),
+        }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.parameters: failed: {exc}\n")
         return {"available": False}

@@ -15,8 +15,10 @@ to the config source (git-versioned files), not to invented users.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tessera.guard.decisions import load_policy
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
@@ -27,7 +29,26 @@ from tessera.observability.model_catalogue import (
 )
 from tessera.settings import Settings, get_settings
 
-__all__ = ["compute_parameters_overview"]
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+__all__ = ["OverrideRow", "compute_parameters_overview"]
+
+
+@dataclass(frozen=True, slots=True)
+class OverrideRow:
+    """One stored governed override (ADR 0030), handed in by the route.
+
+    The store read is async and lives in the api layer; this module stays sync
+    and import-free of it, so the route converts and passes plain rows.
+    """
+
+    key: str
+    value: str
+    author: str
+    reason: str
+    updated_at: datetime
+
 
 # Localized free-text (fr, de, en). IDs/versions/dates/names/values stay verbatim.
 _TR: dict[str, tuple[str, str, str]] = {
@@ -152,11 +173,15 @@ _STATE_COLORS = {
 }
 
 
-def compute_parameters_overview(lang: str = "fr") -> dict[str, object]:
+def compute_parameters_overview(
+    lang: str = "fr", *, override_rows: Sequence[OverrideRow] | None = None
+) -> dict[str, object]:
     """Return the full Parameters overview payload, derived from live config.
 
     Args:
         lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
+        override_rows: The stored governed overrides (ADR 0030), read by the
+            route. They are the only parameters with a real per-row author.
 
     Returns:
         A JSON-serialisable mapping (same shape as the page consumes) with the
@@ -167,6 +192,8 @@ def compute_parameters_overview(lang: str = "fr") -> dict[str, object]:
     now = datetime.now(UTC)
     settings = get_settings()
     policy = load_policy()
+    overrides = list(override_rows or [])
+    org_chat_override = next((o.value for o in overrides if o.key == "llm.chat_model"), None)
 
     # --- Real counts ------------------------------------------------------
     n_deny = len(policy.prompt_injection_deny)
@@ -285,6 +312,19 @@ def compute_parameters_overview(lang: str = "fr") -> dict[str, object]:
         _row("observability.data_residency", "system", st.observability.data_residency, cfg_day),
         _row("observability.profile", "system", st.observability.profile, cfg_day),
     ]
+    # ADR 0030 — stored governed overrides are the only parameters with a real
+    # per-row author. Shown first, attributed to the operator who set them.
+    recent_params = [
+        {
+            "name": o.key,
+            "category": "models",
+            "value": o.value,
+            "modified_by": o.author,
+            "date": _fmt_day(o.updated_at.timestamp()),
+            "status": "override",
+        }
+        for o in overrides
+    ] + recent_params
 
     config_state = {
         "total": configured,
@@ -346,9 +386,10 @@ def compute_parameters_overview(lang: str = "fr") -> dict[str, object]:
     }
 
     # Real model layer: the configured catalogue models, flagging the chat /
-    # embedding models that actually serve under the current profile. Same source
+    # embedding models that actually serve under the current profile — including
+    # the governed org-wide override when one is stored (ADR 0030). Same source
     # the /configurer/modeles page uses — never a fabricated model list.
-    active_chat, active_embed = _active_ids()
+    active_chat, active_embed = _active_ids(org_chat_override)
     active_model_ids = {active_chat, active_embed}
     models_configured = [
         {

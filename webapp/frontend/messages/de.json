@@ -6708,9 +6708,6 @@
     "subtitle": "Konfigurieren Sie Verhalten, Richtlinien und Präferenzen der Tessera-Plattform.",
     "actions": {
       "export": "Konfiguration exportieren",
-      "import": "Konfiguration importieren",
-      "save": "Änderungen speichern",
-      "notWired": "Nicht angebunden — die Konfigurations-Persistenz ist noch nicht verfügbar",
       "viewAtDate": "Konfiguration zum Datum",
       "compareTo": "Vergleichen mit",
       "history": "Verlauf & Versionen"
@@ -6770,7 +6767,8 @@
     "paramStatus": {
       "active": "Aktiv",
       "draft": "Entwurf",
-      "deprecated": "Veraltet"
+      "deprecated": "Veraltet",
+      "override": "Übersteuerung"
     },
     "state": {
       "title": "Konfigurationsstatus",
@@ -8384,7 +8382,26 @@
     },
     "loading": "Modellkatalog wird geladen...",
     "empty": "Keine Modelle im Katalog.",
-    "close": "Schließen"
+    "close": "Schließen",
+    "serving": {
+      "title": "Bedientes Modell — Organisation und pro Agent",
+      "note": "Reale Präzedenz: pro Turn gewähltes Modell (Picker) > Agent-Übersteuerung > Org-Übersteuerung > Git/Env-Basis. Jede Übersteuerung nennt Autor und Grund; die Rückkehr zur Basis bleibt immer möglich (ADR 0030).",
+      "org": "Organisation (Flotten-Standard)",
+      "overrideBadge": "Übersteuerung",
+      "baseBadge": "Basis",
+      "provenance": "von {author} · {date} — „{reason}“",
+      "baseIs": "Basis: {base}",
+      "change": "Ändern",
+      "revert": "Zur Basis zurückkehren",
+      "apply": "Anwenden",
+      "confirmRevert": "Rückkehr bestätigen",
+      "cancel": "Abbrechen",
+      "reasonLabel": "Grund",
+      "reasonPlaceholder": "Grund (Pflicht, protokolliert)",
+      "modelLabel": "Modell",
+      "revertTo": "Kehrt zur Basis zurück: {base}",
+      "superadminOnly": "Nur Superadmin"
+    }
   },
   "guardrailCatalogue": {
     "explain": {

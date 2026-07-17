@@ -65,15 +65,17 @@ test("configurer/modeles: the detail panel really closes, and reopens on row cli
   await expect(page.locator('[data-testid="model-detail"]')).toBeVisible();
 });
 
-test("configurer/parametres: export downloads, Save/Import honestly disabled, quick-config switches tabs", async ({
+test("configurer/parametres: export downloads, no global Save/Import, quick-config switches tabs", async ({
   page,
 }) => {
   await page.goto("/fr/configurer/parametres");
   await expect(page.getByRole("tab", { name: "Vue d’ensemble" })).toBeVisible({ timeout: 20_000 });
 
-  // Save/Import pretend nothing: they are disabled until the mutation endpoint exists.
-  await expect(page.getByRole("button", { name: "Enregistrer les modifications" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Importer la configuration" })).toBeDisabled();
+  // ADR 0030 §5 — this page has no editable field, so the global Save/Import are
+  // GONE (not disabled): the governed mutations live where the knobs live
+  // (/configurer/modeles). The real export stays.
+  await expect(page.getByRole("button", { name: "Enregistrer les modifications" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Importer la configuration" })).toHaveCount(0);
 
   // Export is a real client-side download of the live payload.
   const download = page.waitForEvent("download");

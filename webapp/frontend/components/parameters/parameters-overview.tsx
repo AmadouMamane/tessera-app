@@ -9,10 +9,8 @@ import {
   Download,
   KeyRound,
   Plug,
-  Save,
   ShieldCheck,
   Sparkles,
-  UploadCloud,
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
@@ -31,6 +29,7 @@ const PARAM_STATUS: Record<string, string> = {
   active: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
   draft: "border-amber-500/30 bg-amber-500/15 text-amber-300",
   deprecated: "border-red-500/30 bg-red-500/15 text-red-300",
+  override: "border-sky-500/30 bg-sky-500/15 text-sky-300",
 };
 const CAT_ICON: Record<string, typeof ShieldCheck> = {
   security_policies: ShieldCheck,
@@ -237,27 +236,9 @@ function CommandBar({
         >
           <Download className="h-4 w-4" /> {t("actions.export")}
         </Button>
-        {/* Import/Save need a config-mutation endpoint (not built yet) — disabled and
-            saying so beats a button that pretends to persist. */}
-        <span title={t("actions.notWired")}>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled
-            className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-          >
-            <UploadCloud className="h-4 w-4" /> {t("actions.import")}
-          </Button>
-        </span>
-        <span title={t("actions.notWired")}>
-          <Button
-            size="sm"
-            disabled
-            className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
-          >
-            <Save className="h-4 w-4" /> {t("actions.save")}
-          </Button>
-        </span>
+        {/* No global Save/Import (ADR 0030 §5): this page has no editable field —
+            config truth is git/env, and the governed mutations live where the knobs
+            live (/configurer/modeles). A Save with nothing to save is a fiction. */}
       </div>
     </section>
   );

@@ -24,11 +24,24 @@ The read stays on the bearer floor: it returns one boolean, no subject data.
 
 from __future__ import annotations
 
+from datetime import datetime  # noqa: TCH003  — pydantic resolves field annotations at runtime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 
+from tessera.api.config_overrides import (
+    KnobError,
+    Override,
+    OverrideNotStoredError,
+    agent_of_key,
+    allowed_chat_models,
+    base_chat_model,
+    delete_override,
+    knob_keys,
+    list_overrides,
+    set_override,
+)
 from tessera.api.security import actor_of, require_superadmin
 from tessera.api.session import (  # noqa: TCH001  — FastAPI resolves Depends annotations at runtime
     SessionContext,
@@ -85,3 +98,149 @@ async def write_synthesis_admin(
         actor=actor_of(session),
     )
     return SynthesisAdminFlag(enabled=await set_synthesis_admin(enabled=flag.enabled))
+
+
+# ── operable knobs (ADR 0030) ────────────────────────────────────────────────
+
+
+class OverrideOut(BaseModel):
+    """One stored override, with the attribution the write recorded."""
+
+    value: str
+    author: str
+    reason: str
+    updated_at: datetime
+
+
+class KnobOut(BaseModel):
+    """One registry knob: its frozen base and its override, if any."""
+
+    key: str
+    agent_id: str | None
+    base: str
+    override: OverrideOut | None
+
+
+class OverridesPanel(BaseModel):
+    """The whole closed registry, ready for the cockpit to render."""
+
+    allowed_chat_models: list[str]
+    knobs: list[KnobOut]
+
+
+class OverrideBody(BaseModel):
+    """The write body. ``extra="forbid"``: an author-naming field is a loud 422 (ADR 0024)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    value: str
+    reason: str
+
+
+class RevertBody(BaseModel):
+    """The revert body — a revert is a governed act too, so it carries its reason."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    reason: str
+
+
+def _knob_out(key: str, override: Override | None) -> KnobOut:
+    return KnobOut(
+        key=key,
+        agent_id=agent_of_key(key),
+        base=base_chat_model(),
+        override=(
+            OverrideOut(
+                value=override.value,
+                author=override.author,
+                reason=override.reason,
+                updated_at=override.updated_at,
+            )
+            if override is not None
+            else None
+        ),
+    )
+
+
+@router.get("/overrides", response_model=OverridesPanel)
+async def read_overrides() -> OverridesPanel:
+    """Return every operable knob with its base, override and allowed values.
+
+    Read stays on the bearer floor: model ids and operator principals, no
+    subject data. The registry is enumerated server-side so the UI can never
+    invent a key.
+    """
+    stored = {o.key: o for o in await list_overrides()}
+    return OverridesPanel(
+        allowed_chat_models=sorted(allowed_chat_models()),
+        knobs=[_knob_out(key, stored.get(key)) for key in knob_keys()],
+    )
+
+
+@router.put("/overrides", response_model=KnobOut)
+async def write_override(
+    body: OverrideBody,
+    session: Annotated[SessionContext, Depends(require_superadmin)],
+) -> KnobOut:
+    """Set one governed override (superadmin action, ADR 0030).
+
+    The key travels in the body, like the rule-state toggles — a fixed path, so
+    the governance ratchet can drive it verbatim. The store validates against
+    the closed registry (unknown knob / uncatalogued model → 422, never stored).
+    The author is the verified assertion principal; the mandatory reason is
+    recorded on the row *and* in the governance journal.
+    """
+    actor = actor_of(session)
+    try:
+        override = await set_override(
+            body.key, body.value, author=actor.principal, reason=body.reason
+        )
+    except KnobError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    emit_governance_mutation(
+        target=f"config_overrides.{body.key}",
+        detail={"value": body.value, "base": base_chat_model(), "reason": override.reason},
+        actor=actor,
+    )
+    return _knob_out(body.key, override)
+
+
+@router.post("/overrides/revert", response_model=KnobOut)
+async def revert_override(
+    body: RevertBody,
+    session: Annotated[SessionContext, Depends(require_superadmin)],
+) -> KnobOut:
+    """Remove one override so the frozen base serves again (superadmin action).
+
+    A revert is a governed act: it changes what the fleet serves, so it carries
+    its reason and lands in the journal like the write did. Reverting a knob
+    that holds no override is a 404 — "nothing changed" must never read as
+    "change recorded".
+    """
+    if body.key not in knob_keys():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"unknown knob {body.key!r} — the registry is closed (ADR 0030)",
+        )
+    if not body.reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="a governed revert carries its reason (ADR 0024) — blank refused",
+        )
+    try:
+        await delete_override(body.key)
+    except OverrideNotStoredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"no override stored for {body.key!r}"
+        ) from exc
+    emit_governance_mutation(
+        target=f"config_overrides.{body.key}",
+        detail={"reverted": True, "base": base_chat_model(), "reason": body.reason.strip()},
+        actor=actor_of(session),
+    )
+    return _knob_out(body.key, None)

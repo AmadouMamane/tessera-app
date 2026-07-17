@@ -42,6 +42,7 @@ from tessera.agent.state import (
     new_state,
 )
 from tessera.agent.supervisor import RoutingDecision, route_turn
+from tessera.api.config_overrides import resolve_chat_model_override
 from tessera.api.operator import resolve_request_context
 from tessera.api.session import issue_resume_token
 from tessera.authz import AuthState
@@ -770,9 +771,6 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         system_prompt_override=system_prompt_override,
         guard_overrides=guard_overrides,
     )
-    # Record the effective model on audit entries emitted during this turn
-    # (memory governance, guard) — not just the server default.
-    current_model.set(request.model)
     # Propagate sandbox guard toggles to the guard layer for this turn only.
     guard_disabled.set(frozenset(guard_overrides or ()))
     # Publish the server-derived auth-state so the guard's tool allowlist gates
@@ -790,6 +788,17 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     decision = route_turn(prev_agent, request.message, surface=surface, auth_state=auth_state)
     agent_id = decision.agent_id
     current_agent_id.set(agent_id)
+    # ADR 0030 — the durable governed default sits between the per-turn picker and
+    # the frozen base: picker > per-agent override > org override > base. Resolved
+    # once per turn, after routing (the agent decides which override applies), and
+    # written into the state + every attribution surface (audit context, trace
+    # dimensions, eval lineage) — what serves is what is recorded.
+    effective_model = request.model or await resolve_chat_model_override(agent_id)
+    if effective_model is not None:  # NotRequired: absent means "the base serves"
+        initial["model"] = effective_model
+    # Record the effective model on audit entries emitted during this turn
+    # (memory governance, guard) — not just the server default.
+    current_model.set(effective_model)
     synthetic = is_test_turn(surface)
     if synthetic:
         mark_synthetic_turn()
@@ -800,7 +809,7 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         trace.get_current_span(),
         agent_id=agent_id,
         language=language.value,
-        model=request.model,
+        model=effective_model,
         conversation_id=str(conversation_id),
         turn_id=str(turn_id),
         environment=get_settings().environment.value,
@@ -1027,7 +1036,12 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     docs_for_eval = state.get("retrieved_documents", [])
     if docs_for_eval and final_response:
         context_text = "\n\n".join(getattr(doc, "text", "") for doc in docs_for_eval)
-        effective_model = request.model or get_settings().ollama.chat_model
+        # The state's model is the turn's effective one (picker > override > base,
+        # ADR 0030) — the lineage must attribute what actually served.
+        eval_model_raw = state.get("model")
+        effective_model = (
+            str(eval_model_raw) if eval_model_raw else get_settings().ollama.chat_model
+        )
         # Sink 6 of the design note: the judge and the durable replay bundle
         # receive the masked question — faithful to what the model itself saw.
         _spawn_background(

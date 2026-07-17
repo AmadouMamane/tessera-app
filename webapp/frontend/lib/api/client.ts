@@ -179,6 +179,8 @@ import {
   ObsCostReportSchema,
   type OverflowReport,
   OverflowReportSchema,
+  type OverrideKnob,
+  OverrideKnobSchema,
   type OverviewSnapshotEnvelope,
   OverviewSnapshotSchema,
   type OwnTranscript,
@@ -252,6 +254,8 @@ import {
   SessionDetailSchema,
   type SessionReport,
   SessionReportSchema,
+  type SettingsOverrides,
+  SettingsOverridesSchema,
   type ShadowReport,
   ShadowReportSchema,
   type SiemExport,
@@ -1038,6 +1042,43 @@ export async function fetchParametersOverview(
 ): Promise<ParametersOverview> {
   const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
   return request(`/observability/parameters${q}`, { signal }, ParametersOverviewSchema);
+}
+
+/** The governed operable-knob panel (ADR 0030): org + per-agent chat model. */
+export async function fetchSettingsOverrides(signal?: AbortSignal): Promise<SettingsOverrides> {
+  return request("/settings/overrides", { signal }, SettingsOverridesSchema);
+}
+
+/** Set one governed override (superadmin; author = verified assertion, reason mandatory). */
+export async function mutateSettingsOverride(
+  key: string,
+  body: { value: string; reason: string },
+): Promise<OverrideKnob> {
+  return request(
+    "/settings/overrides",
+    {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key, ...body }),
+    },
+    OverrideKnobSchema,
+  );
+}
+
+/** Revert one governed override to its frozen base (superadmin; reason mandatory). */
+export async function mutateSettingsOverrideRevert(
+  key: string,
+  body: { reason: string },
+): Promise<OverrideKnob> {
+  return request(
+    "/settings/overrides/revert",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ key, ...body }),
+    },
+    OverrideKnobSchema,
+  );
 }
 
 /** The cockpit chrome's badges and bell. Cheap, composed of reads the pages already do. */

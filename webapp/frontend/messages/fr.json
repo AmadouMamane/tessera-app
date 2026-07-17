@@ -6708,9 +6708,6 @@
     "subtitle": "Configurez le comportement, les politiques et les préférences de la plateforme Tessera.",
     "actions": {
       "export": "Exporter la configuration",
-      "import": "Importer la configuration",
-      "save": "Enregistrer les modifications",
-      "notWired": "Non câblé — la persistance de configuration n'est pas encore branchée",
       "viewAtDate": "Voir configuration à date",
       "compareTo": "Comparer à",
       "history": "Historique & versions"
@@ -6770,7 +6767,8 @@
     "paramStatus": {
       "active": "Actif",
       "draft": "Brouillon",
-      "deprecated": "Déprécié"
+      "deprecated": "Déprécié",
+      "override": "Dérogation"
     },
     "state": {
       "title": "État des configurations",
@@ -8386,7 +8384,26 @@
     },
     "loading": "Chargement du catalogue de modèles...",
     "empty": "Aucun modèle au catalogue.",
-    "close": "Fermer"
+    "close": "Fermer",
+    "serving": {
+      "title": "Modèle servi — organisation et par agent",
+      "note": "Précédence réelle : modèle choisi pour le tour (picker) > dérogation agent > dérogation organisation > base git/env. Chaque dérogation nomme son auteur et sa raison, et le retour à la base reste toujours possible (ADR 0030).",
+      "org": "Organisation (défaut flotte)",
+      "overrideBadge": "dérogation",
+      "baseBadge": "base",
+      "provenance": "par {author} · {date} — « {reason} »",
+      "baseIs": "base : {base}",
+      "change": "Modifier",
+      "revert": "Revenir à la base",
+      "apply": "Appliquer",
+      "confirmRevert": "Confirmer le retour",
+      "cancel": "Annuler",
+      "reasonLabel": "Raison",
+      "reasonPlaceholder": "Raison (obligatoire, journalisée)",
+      "modelLabel": "Modèle",
+      "revertTo": "Revient à la base : {base}",
+      "superadminOnly": "Réservé au superadmin"
+    }
   },
   "guardrailCatalogue": {
     "explain": {
