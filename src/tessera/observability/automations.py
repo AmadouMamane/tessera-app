@@ -9,11 +9,13 @@ The page has a REAL rule/execution core and a demonstration workflow chrome:
   enabled flag; the execution journal, posture KPIs, pipeline funnel and
   per-day performance derive from the journalled evaluations actually executed
   via ``POST /observability/automations/evaluate``; the guardrail-solicitation
-  counts read the audit ledger. Storeless figures (MTTR auto, blocked-by-
-  guardrail) render ``—``.
-* **DEMONSTRATION (``automation_workflow`` synthetic signal):** the approval
-  queue and the savings/impact tallies describe a ticketing/ROI subsystem this
-  build does not implement; those zones stay flagged with honest dashes.
+  counts read the audit ledger; the **approval queue** lists the durable
+  requests opened by fired ``approb``-mode rules, decided by the governed
+  approve endpoint (author = verified assertion). Storeless figures (MTTR
+  auto, blocked-by-guardrail) render ``—``.
+* **DEMONSTRATION (``automation_workflow`` synthetic signal):** the
+  savings/impact tallies describe a ticketing/ROI subsystem this build does
+  not implement; that zone stays flagged with honest dashes.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from tessera.observability.automation_store import (
     RULES,
     list_rule_states,
     load_runs,
+    pending_approvals,
 )
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
@@ -246,10 +249,12 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
             }
         )
 
+    # ── REAL approvals: fired approb-mode rules opened durable requests ──────
+    approvals = _pending_approval_rows(lang)
+
     n_ok = sum(1 for r in runs if r.get("result") != "error")
-    n_approb = sum(1 for rule in RULES if rule.mode == "approb")
     day_keys = [(now - timedelta(days=d)).date().isoformat() for d in range(6, -1, -1)]
-    kpis, run_series = _posture_kpis(now, runs, states, day_keys, n_ok, n_approb)
+    kpis, run_series = _posture_kpis(now, runs, states, day_keys, n_ok, len(approvals))
 
     # ── REAL feed: the latest fired evaluations ──────────────────────────────
     sev_by_rule = {rule.id: rule.severity for rule in RULES}
@@ -311,8 +316,7 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
 
     journal = _journal_rows(runs, lang)
 
-    # ── DEMONSTRATION: approval queue + savings (automation_workflow) ────────
-    approvals: list[dict[str, object]] = []
+    # ── DEMONSTRATION: savings/ROI tallies (automation_workflow) ─────────────
     savings = [
         {"key": "tickets", "value": "—", "delta": "—"},
         {"key": "minutes", "value": "—", "delta": "—"},
@@ -331,7 +335,7 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
     context = _context_block(lang, env)
 
     governance = {
-        "dual_control": n_approb > 0,
+        "dual_control": any(rule.mode == "approb" for rule in RULES),
         "roles": [
             {"mode": rule.role, "scope": _loc(lang, *_RULE_COPY[rule.id][0])} for rule in RULES
         ],
@@ -362,6 +366,27 @@ def compute_automations_overview(lang: str = "fr") -> dict[str, object]:
             "certified": "—",
         },
     }
+
+
+def _pending_approval_rows(lang: str) -> list[dict[str, object]]:
+    """The REAL pending approval requests, shaped for the page (localized copy)."""
+    rule_by_id = {rule.id: rule for rule in RULES}
+    rows: list[dict[str, object]] = []
+    for req in pending_approvals():
+        rid = str(req.get("rule_id", ""))
+        req_copy = _RULE_COPY.get(rid)
+        when = _parse_at(req.get("requested_at"))
+        rows.append(
+            {
+                "id": str(req.get("id", "")),
+                "rule_id": rid,
+                "name": _loc(lang, *req_copy[0]) if req_copy else rid,
+                "since": when.strftime("%d/%m %H:%M") if when else "—",
+                "observed": str(req.get("observed", "")),
+                "role": rule_by_id[rid].role if rid in rule_by_id else "—",
+            }
+        )
+    return rows
 
 
 def _journal_rows(runs: list[dict[str, object]], lang: str) -> list[dict[str, object]]:

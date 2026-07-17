@@ -33,15 +33,20 @@ if TYPE_CHECKING:
 
 __all__ = [
     "RULES",
+    "ApprovalNotPendingError",
     "AutomationRule",
     "available_rule_ids",
+    "decide_approval",
     "evaluate_rules",
     "list_rule_states",
+    "load_approvals",
     "load_runs",
+    "pending_approvals",
     "set_rule_enabled",
 ]
 
 _MAX_RUNS = 400
+_MAX_APPROVALS = 200
 _LOW_FAITH_THRESHOLD = 0.80
 _LOW_FAITH_MIN = 3
 _DENY_SPIKE_MIN = 50
@@ -173,12 +178,25 @@ RULES: tuple[AutomationRule, ...] = (
 )
 
 
+class ApprovalNotPendingError(KeyError):
+    """Deciding an approval that is unknown or already decided — said loudly.
+
+    Raised instead of returning a bare ``bool`` (the verdict-debt freeze): the
+    refusal names the approval it is about, and a decision that changed nothing
+    can never be recorded as if it had.
+    """
+
+
 def _rules_path() -> Path:
     return get_settings().guard.audit_file.parent / "automation_rules.json"
 
 
 def _runs_path() -> Path:
     return get_settings().guard.audit_file.parent / "automation_runs.json"
+
+
+def _approvals_path() -> Path:
+    return get_settings().guard.audit_file.parent / "automation_approvals.json"
 
 
 def _load_json(path: Path, fallback: Any) -> Any:
@@ -226,6 +244,79 @@ def load_runs() -> list[dict[str, object]]:
     return [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
 
 
+def load_approvals() -> list[dict[str, object]]:
+    """Every approval request, oldest first (pending and decided alike)."""
+    raw = _load_json(_approvals_path(), [])
+    return [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
+
+
+def pending_approvals() -> list[dict[str, object]]:
+    """The approval requests still awaiting an operator decision."""
+    return [a for a in load_approvals() if a.get("status") == "pending"]
+
+
+def _record_approval_requests(entries: list[dict[str, object]]) -> None:
+    """Open one pending approval per fired ``approb`` rule (idempotent).
+
+    A rule in ``approb`` mode does not act on its own: firing means it
+    RECOMMENDS an action and asks an operator. That request is durable — one
+    open request per rule at a time, so re-evaluating an unresolved condition
+    refreshes nothing and invents nothing.
+    """
+    approb_rules = {rule.id for rule in RULES if rule.mode == "approb"}
+    fired = [e for e in entries if e.get("fired") and str(e.get("rule_id", "")) in approb_rules]
+    if not fired:
+        return
+    approvals = load_approvals()
+    open_rules = {str(a.get("rule_id", "")) for a in approvals if a.get("status") == "pending"}
+    added = False
+    for entry in fired:
+        rule_id = str(entry.get("rule_id", ""))
+        if rule_id in open_rules:
+            continue
+        approvals.append(
+            {
+                "id": f"{rule_id}@{entry.get('at', '')}",
+                "rule_id": rule_id,
+                "observed": str(entry.get("observed", "")),
+                "requested_at": str(entry.get("at", "")),
+                "status": "pending",
+                "decided_at": None,
+                "decided_by": None,
+            }
+        )
+        open_rules.add(rule_id)
+        added = True
+    if added:
+        _save_json(_approvals_path(), approvals[-_MAX_APPROVALS:])
+
+
+def decide_approval(approval_id: str, *, approved: bool, decided_by: str) -> dict[str, object]:
+    """Decide one PENDING approval request, attributed (ADR 0024).
+
+    Args:
+        approval_id: The request id, as listed by :func:`pending_approvals`.
+        approved: ``True`` approves the recommended action; ``False`` rejects it.
+        decided_by: The verified operator principal — no default, ever.
+
+    Returns:
+        The decided entry, as stored.
+
+    Raises:
+        ApprovalNotPendingError: Unknown id, or a request already decided —
+            a second decision must never silently overwrite the first author.
+    """
+    approvals = load_approvals()
+    for entry in approvals:
+        if str(entry.get("id")) == approval_id and entry.get("status") == "pending":
+            entry["status"] = "approved" if approved else "rejected"
+            entry["decided_at"] = datetime.now(UTC).isoformat()
+            entry["decided_by"] = decided_by
+            _save_json(_approvals_path(), approvals)
+            return entry
+    raise ApprovalNotPendingError(approval_id)
+
+
 def evaluate_rules() -> list[dict[str, object]]:
     """Evaluate every ENABLED rule against its real store and journal the runs.
 
@@ -259,4 +350,6 @@ def evaluate_rules() -> list[dict[str, object]]:
     runs = load_runs()
     runs.extend(entries)
     _save_json(_runs_path(), runs[-_MAX_RUNS:])
+    # A fired approb-mode rule asks a human: open its durable approval request.
+    _record_approval_requests(entries)
     return entries

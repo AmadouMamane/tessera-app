@@ -32,10 +32,16 @@ test("agir/automations: the rail's viewApprovals quick action switches to the ap
     "aria-selected",
     "true",
   );
-  await expect(page.getByText(/Aucune approbation en attente/).first()).toBeVisible();
+  // The queue is real since lot 4: honest empty state OR actionable rows.
+  const approve = page.locator("#automations-tabpanel").getByRole("button", { name: "Approuver" });
+  if ((await approve.count()) === 0) {
+    await expect(page.getByText(/Aucune approbation en attente/).first()).toBeVisible();
+  } else {
+    await expect(approve.first()).toBeEnabled();
+  }
 });
 
-test("agir/automations: journal quick action is a real link, activate/suspend honestly disabled", async ({
+test("agir/automations: journal quick action is a real link, activate/suspend are real bulk acts", async ({
   page,
 }) => {
   await page.goto("/fr/agir/automations");
@@ -44,9 +50,10 @@ test("agir/automations: journal quick action is a real link, activate/suspend ho
     "href",
     "/fr/prouver/audit-logs",
   );
-  for (const name of ["Activer une règle", "Suspendre"]) {
-    const btn = page.getByRole("button", { name, exact: true }).first();
-    await expect(btn).toBeDisabled();
+  // Lot 4 wired them to the governed rules-state endpoint: enabled, real buttons
+  // (the bulk round-trip itself is covered by automations.spec.ts).
+  for (const name of ["Activer toutes les règles", "Suspendre toutes les règles"]) {
+    await expect(page.getByRole("button", { name, exact: true }).first()).toBeEnabled();
   }
 });
 

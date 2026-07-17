@@ -5135,7 +5135,6 @@
       "overview": "Overview",
       "rules": "Rules",
       "executions": "Executions",
-      "queue": "Queue",
       "approvals": "Approvals",
       "audit": "Audit & log"
     },
@@ -5244,7 +5243,8 @@
     },
     "approve": {
       "cta": "Approve",
-      "since": "Since {t}"
+      "since": "Since {t}",
+      "reject": "Reject"
     },
     "gr": {
       "pii_guard": "PII guard",
@@ -5278,8 +5278,8 @@
       "chain": "Audit chain intact"
     },
     "quick": {
-      "activate": "Activate a rule",
-      "suspend": "Suspend",
+      "activate": "Activate all rules",
+      "suspend": "Suspend all rules",
       "openJournal": "Open log",
       "viewApprovals": "View approvals"
     },
@@ -5297,7 +5297,7 @@
       "evaluateNow": "Evaluate rules now",
       "evaluating": "Evaluating…",
       "auditLink": "Open the audit journal (chain)",
-      "noApprovals": "No pending approvals — the approval queue is a demonstration subsystem."
+      "noApprovals": "No pending approval — a fired approval-mode rule opens its request here."
     }
   },
   "proofs": {

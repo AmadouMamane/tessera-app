@@ -32,8 +32,10 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
   fetchAutomationsOverview,
+  mutateAutomationApprove,
   mutateAutomationRuleState,
   mutateAutomationsEvaluate,
+  mutateAutomationsRulesState,
 } from "@/lib/api/client";
 import type { AutomationsOverview as AutomationsData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -76,6 +78,17 @@ export function AutomationsOverview() {
   });
   const toggleRule = useMutation({
     mutationFn: mutateAutomationRuleState,
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
+  });
+  // One governed act over the whole rule set (the org-wide kill switch).
+  const bulkRules = useMutation({
+    mutationFn: (enabled: boolean) => mutateAutomationsRulesState({ enabled, lang: locale }),
+    onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
+  });
+  // Decide one pending approval request (author = verified assertion, server-side).
+  const decide = useMutation({
+    mutationFn: (vars: { approval_id: string; approved: boolean }) =>
+      mutateAutomationApprove({ ...vars, lang: locale }),
     onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale], fresh),
   });
 
@@ -145,9 +158,15 @@ export function AutomationsOverview() {
         ) : null}
         {activeTab === "approvals" ? (
           <div className="flex min-w-0 flex-col gap-2">
-            <SyntheticNotice signalId="automation_workflow" compact />
+            {/* The approval queue is REAL now (fired approb rules, governed decisions);
+                only Savings keeps its own demonstration notice. */}
             <div className="grid gap-3 xl:grid-cols-2">
-              <Approvals t={t} data={data} />
+              <Approvals
+                t={t}
+                data={data}
+                onDecide={(id, approved) => decide.mutate({ approval_id: id, approved })}
+                deciding={decide.isPending}
+              />
               <Savings t={t} data={data} />
             </div>
           </div>
@@ -237,7 +256,13 @@ export function AutomationsOverview() {
               </Zone>
             </div>
 
-            <AutomationsRail t={t} data={data} onViewApprovals={() => setActiveTab("approvals")} />
+            <AutomationsRail
+              t={t}
+              data={data}
+              onViewApprovals={() => setActiveTab("approvals")}
+              onBulk={(enabled) => bulkRules.mutate(enabled)}
+              bulking={bulkRules.isPending}
+            />
           </div>
 
           {/* Bottom band: approvals · guardrails · performance · savings · context */}
@@ -247,6 +272,8 @@ export function AutomationsOverview() {
               data={data}
               className="xl:col-span-3"
               onViewAll={() => setActiveTab("approvals")}
+              onDecide={(id, approved) => decide.mutate({ approval_id: id, approved })}
+              deciding={decide.isPending}
             />
             <Guardrails t={t} data={data} className="xl:col-span-2" />
             <Performance
@@ -553,8 +580,15 @@ function AutomationsRail({
   t,
   data,
   onViewApprovals,
-}: { t: T; data: Data; onViewApprovals: () => void }) {
-  const tc = useTranslations("common");
+  onBulk,
+  bulking,
+}: {
+  t: T;
+  data: Data;
+  onViewApprovals: () => void;
+  onBulk: (enabled: boolean) => void;
+  bulking: boolean;
+}) {
   const g = data.governance;
   return (
     <aside className="flex min-w-0 flex-col gap-3">
@@ -581,12 +615,12 @@ function AutomationsRail({
 
       <Panel title={t("panel.quickActions")}>
         <div className="grid grid-cols-2 gap-1.5">
-          {/* activate/suspend need the rule-state mutation wired per-rule (a later
-              lot) — disabled with the reason; the two others navigate for real. */}
+          {/* activate/suspend are ONE governed act over the whole rule set
+              (rules-state, journalled with the rule list); the others navigate. */}
           {(
             [
-              { key: "activate", icon: PlayCircle },
-              { key: "suspend", icon: PauseCircle },
+              { key: "activate", icon: PlayCircle, onClick: () => onBulk(true), busy: bulking },
+              { key: "suspend", icon: PauseCircle, onClick: () => onBulk(false), busy: bulking },
               { key: "openJournal", icon: ScrollText, href: "/prouver/audit-logs" },
               { key: "viewApprovals", icon: CheckCircle2, onClick: onViewApprovals },
             ] as {
@@ -594,10 +628,11 @@ function AutomationsRail({
               icon: typeof PlayCircle;
               href?: Route;
               onClick?: () => void;
+              busy?: boolean;
             }[]
           ).map((q) => {
             const cls =
-              "flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.66rem] transition-colors hover:bg-[var(--tessera-muted)]";
+              "flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.66rem] transition-colors hover:bg-[var(--tessera-muted)] disabled:opacity-60";
             const body = (
               <>
                 <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
@@ -613,25 +648,15 @@ function AutomationsRail({
                 </Link>
               );
             }
-            if (q.onClick) {
-              return (
-                <button key={q.key} type="button" onClick={q.onClick} className={cls}>
-                  {body}
-                </button>
-              );
-            }
             return (
               <button
                 key={q.key}
                 type="button"
-                disabled
-                title={tc("notWired")}
-                className="flex cursor-not-allowed items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.66rem] opacity-60"
+                onClick={q.onClick}
+                disabled={q.busy === true}
+                className={cls}
               >
-                <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
-                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
-                  {t(`quick.${q.key}`)}
-                </span>
+                {body}
               </button>
             );
           })}
@@ -688,9 +713,18 @@ function Approvals({
   data,
   className,
   onViewAll,
-}: { t: T; data: Data; className?: string; onViewAll?: () => void }) {
-  const tc = useTranslations("common");
-  // Approval queue — flagged demonstration (automation_workflow subsystem).
+  onDecide,
+  deciding,
+}: {
+  t: T;
+  data: Data;
+  className?: string;
+  onViewAll?: () => void;
+  onDecide: (id: string, approved: boolean) => void;
+  deciding: boolean;
+}) {
+  // REAL approval queue: durable requests opened by fired approb-mode rules.
+  // Approve/reject are governed acts — the server records the verified author.
   return (
     <Panel
       title={t("zone.approvals").replace(/^H · /, "")}
@@ -698,7 +732,6 @@ function Approvals({
       info={<KpiInfo k="zone.approvals" title={t("zone.approvals").replace(/^H · /, "")} />}
       action={<ViewAll label={t("viewAll.all")} onClick={onViewAll} />}
     >
-      <SyntheticNotice signalId="automation_workflow" compact />
       {data.approvals.length === 0 ? (
         <p className="py-4 text-center text-[0.68rem] text-[var(--tessera-text-muted)]">
           {t("tabx.noApprovals")}
@@ -706,24 +739,29 @@ function Approvals({
       ) : (
         <ul className="flex flex-col gap-2">
           {data.approvals.map((a) => (
-            <li key={a.name} className="flex items-center gap-2 text-[0.7rem]">
+            <li key={a.id} className="flex items-center gap-2 text-[0.7rem]">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[var(--tessera-text)]">{a.name}</p>
-                <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
-                  {t("approve.since", { t: a.since })}
+                <p className="truncate text-[0.6rem] text-[var(--tessera-text-muted)]">
+                  {t("approve.since", { t: a.since })} · {a.observed}
                 </p>
               </div>
-              {/* Approving needs a governed endpoint (not built yet) — disabled and
-                  saying so beats a button that pretends to approve. */}
-              <span title={tc("notWired")} className="shrink-0">
-                <Button
-                  size="sm"
-                  disabled
-                  className="h-7 border border-[#007a55] bg-[#005c42] px-2.5 text-[0.66rem] text-[#d6f0e3] hover:bg-[#006d4e]"
-                >
-                  {t("approve.cta")}
-                </Button>
-              </span>
+              <Button
+                size="sm"
+                disabled={deciding}
+                onClick={() => onDecide(a.id, true)}
+                className="h-7 shrink-0 border border-[#007a55] bg-[#005c42] px-2.5 text-[0.66rem] text-[#d6f0e3] hover:bg-[#006d4e]"
+              >
+                {t("approve.cta")}
+              </Button>
+              <button
+                type="button"
+                disabled={deciding}
+                onClick={() => onDecide(a.id, false)}
+                className="shrink-0 text-[0.62rem] font-medium text-red-300 hover:text-red-200 disabled:opacity-50"
+              >
+                {t("approve.reject")}
+              </button>
             </li>
           ))}
         </ul>

@@ -5135,7 +5135,6 @@
       "overview": "Vue d’ensemble",
       "rules": "Règles",
       "executions": "Exécutions",
-      "queue": "File d’attente",
       "approvals": "Approbations",
       "audit": "Audit & journal"
     },
@@ -5244,7 +5243,8 @@
     },
     "approve": {
       "cta": "Approuver",
-      "since": "Depuis {t}"
+      "since": "Depuis {t}",
+      "reject": "Rejeter"
     },
     "gr": {
       "pii_guard": "PII guard",
@@ -5278,8 +5278,8 @@
       "chain": "Chaîne d’audit intacte"
     },
     "quick": {
-      "activate": "Activer une règle",
-      "suspend": "Suspendre",
+      "activate": "Activer toutes les règles",
+      "suspend": "Suspendre toutes les règles",
       "openJournal": "Ouvrir journal",
       "viewApprovals": "Voir approbations"
     },
@@ -5297,7 +5297,7 @@
       "evaluateNow": "Évaluer les règles maintenant",
       "evaluating": "Évaluation…",
       "auditLink": "Ouvrir le journal d’audit (chaîne)",
-      "noApprovals": "Aucune approbation en attente — la file d’approbation est un sous-système de démonstration."
+      "noApprovals": "Aucune approbation en attente — une règle en mode approbation qui se déclenche ouvre ici sa demande."
     }
   },
   "proofs": {

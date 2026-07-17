@@ -192,6 +192,34 @@ class _AutomationRuleStateBody(BaseModel):
     lang: str = "fr"
 
 
+class _AutomationRulesStateBody(BaseModel):
+    """Bulk enable/suspend for EVERY code-defined automation rule.
+
+    ``extra="forbid"``: a field this body tolerates is a field a caller can
+    send — an author-naming one gets a loud 422, never a silent forgery.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+    lang: str = "fr"
+
+
+class _AutomationApproveBody(BaseModel):
+    """A decision on one pending approval request (approve or reject).
+
+    No ``decided_by`` field on purpose — the author is the verified assertion
+    principal, and ``extra="forbid"`` turns any attempt to name one into a 422
+    (ADR 0024).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    approval_id: str
+    approved: bool
+    lang: str = "fr"
+
+
 class _CurationDecisionBody(BaseModel):
     """A durable curation decision (promote/review/reject) for one candidate.
 
@@ -426,6 +454,66 @@ async def observability_automations_rule_state(
         actor=actor_of(session),
     )
     automation_store.set_rule_enabled(body.rule_id, enabled=body.enabled)
+    return {"available": True, **automations_mod.compute_automations_overview(body.lang)}
+
+
+@router.post("/observability/automations/rules-state")
+async def observability_automations_rules_state(
+    body: _AutomationRulesStateBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Enable or suspend EVERY automation rule in one governed act.
+
+    The cockpit's "activate / suspend the automations" quick actions: an
+    org-wide kill switch is a real operational act, so it is journalled once
+    with the full rule list it touched — five per-rule entries would hide that
+    ONE decision was taken. Returns the fresh payload.
+    """
+    from tessera.observability import automation_store
+
+    rule_ids = sorted(automation_store.available_rule_ids())
+    emit_governance_mutation(
+        target="automation.rules_state",
+        detail={"enabled": body.enabled, "rules": rule_ids},
+        actor=actor_of(session),
+    )
+    for rule_id in rule_ids:
+        automation_store.set_rule_enabled(rule_id, enabled=body.enabled)
+    return {"available": True, **automations_mod.compute_automations_overview(body.lang)}
+
+
+@router.post("/observability/automations/approve")
+async def observability_automations_approve(
+    body: _AutomationApproveBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Decide one pending approval request opened by a fired approb-mode rule.
+
+    The decision is durable and attributed: the store records the verified
+    principal, the journal carries the same author, and a request already
+    decided (or unknown) is a 404 — a second decision must never silently
+    overwrite the first author. Returns the fresh payload.
+    """
+    from tessera.observability import automation_store
+
+    actor = actor_of(session)
+    try:
+        entry = automation_store.decide_approval(
+            body.approval_id, approved=body.approved, decided_by=actor.principal
+        )
+    except automation_store.ApprovalNotPendingError as exc:
+        raise HTTPException(
+            status_code=404, detail="unknown or already-decided approval request"
+        ) from exc
+    emit_governance_mutation(
+        target="automation.approval",
+        detail={
+            "approval": body.approval_id,
+            "rule": str(entry.get("rule_id", "")),
+            "approved": body.approved,
+        },
+        actor=actor,
+    )
     return {"available": True, **automations_mod.compute_automations_overview(body.lang)}
 
 

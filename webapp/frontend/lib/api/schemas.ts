@@ -2905,7 +2905,17 @@ const AuJournalSchema = z.object({
   duration: z.string(),
   result: z.enum(["success", "fail", "blocked", "approb"]),
 });
-const AuApprovalSchema = z.object({ name: z.string(), since: z.string(), role: z.string() });
+// Real pending approval requests (lot 4): opened by fired approb-mode rules,
+// decided by the governed approve endpoint. id/rule_id drive the mutation;
+// observed is the real store value that made the rule fire.
+const AuApprovalSchema = z.object({
+  id: z.string(),
+  rule_id: z.string(),
+  name: z.string(),
+  since: z.string(),
+  observed: z.string(),
+  role: z.string(),
+});
 const AuGuardrailSchema = z.object({ key: z.string(), count: z.number().int(), pct: z.number() });
 const AuSavingSchema = z.object({ key: z.string(), value: z.string(), delta: z.string() });
 

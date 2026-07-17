@@ -64,12 +64,51 @@ test("a rule toggle mutates the durable state and flips the badge", async ({ pag
   });
 });
 
-test("the approvals tab is flagged demonstration and the redundant queue tab is gone", async ({
+test("the approvals queue is real: empty state or actionable rows; savings stays flagged demo", async ({
   page,
 }) => {
   // The old "File d’attente" tab duplicated the approvals content; lot 1b removed it.
   await expect(page.getByRole("tab", { name: "File d’attente" })).toHaveCount(0);
   await page.getByRole("tab", { name: "Approbations" }).click();
+  // Savings keeps its demonstration notice; the queue itself is REAL now (lot 4):
+  // durable requests opened by fired approb-mode rules, with governed decisions.
   await expect(page.getByText(/démonstration/i).first()).toBeVisible();
-  await expect(page.getByText(/Aucune approbation en attente/).first()).toBeVisible();
+  const approve = page.locator("#automations-tabpanel").getByRole("button", { name: "Approuver" });
+  if ((await approve.count()) === 0) {
+    // Honest empty state — and it no longer claims the queue is a demo subsystem.
+    await expect(page.getByText(/Aucune approbation en attente/).first()).toBeVisible();
+    await expect(page.getByText(/mode approbation/).first()).toBeVisible();
+  } else {
+    // Real pending requests carry ENABLED decisions (the dead disabled button is gone).
+    await expect(approve.first()).toBeEnabled();
+    await expect(
+      page.locator("#automations-tabpanel").getByRole("button", { name: "Rejeter" }).first(),
+    ).toBeEnabled();
+  }
+});
+
+test("bulk suspend/activate: one governed act flips every rule switch, then restores", async ({
+  page,
+}) => {
+  // Suspend ALL rules from the overview rail quick actions.
+  await page.getByRole("button", { name: "Suspendre toutes les règles" }).click();
+  await page.getByRole("tab", { name: "Règles" }).click();
+  const switches = page.locator("#automations-tabpanel").getByRole("switch");
+  await expect(switches.first()).toBeVisible();
+  const n = await switches.count();
+  expect(n).toBeGreaterThan(0);
+  for (let i = 0; i < n; i++) {
+    await expect(switches.nth(i)).toHaveAttribute("aria-checked", "false", { timeout: 15_000 });
+  }
+  // Restore the canonical durable state: every rule enabled.
+  await page.getByRole("tab", { name: "Vue d’ensemble" }).click();
+  await page.getByRole("button", { name: "Activer toutes les règles" }).click();
+  await page.getByRole("tab", { name: "Règles" }).click();
+  for (let i = 0; i < n; i++) {
+    await expect(page.locator("#automations-tabpanel").getByRole("switch").nth(i)).toHaveAttribute(
+      "aria-checked",
+      "true",
+      { timeout: 15_000 },
+    );
+  }
 });

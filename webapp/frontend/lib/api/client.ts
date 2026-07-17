@@ -964,6 +964,39 @@ export async function mutateAutomationRuleState(body: {
   );
 }
 
+/** Enable or suspend EVERY automation rule in one governed, journalled act. */
+export async function mutateAutomationsRulesState(body: {
+  enabled: boolean;
+  lang?: string;
+}): Promise<AutomationsOverview> {
+  return request(
+    "/observability/automations/rules-state",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    AutomationsOverviewSchema,
+  );
+}
+
+/** Decide one pending approval request (approve/reject); author = verified assertion. */
+export async function mutateAutomationApprove(body: {
+  approval_id: string;
+  approved: boolean;
+  lang?: string;
+}): Promise<AutomationsOverview> {
+  return request(
+    "/observability/automations/approve",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    AutomationsOverviewSchema,
+  );
+}
+
 export async function fetchAutomationsOverview(
   lang: string,
   signal?: AbortSignal,

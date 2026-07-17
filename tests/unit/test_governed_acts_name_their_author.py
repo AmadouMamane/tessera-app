@@ -745,6 +745,18 @@ GOVERNANCE_ACTS: dict[str, _Act] = {
         "admin",
         {"rule_id": "__AUTOMATION__", "enabled": False},
     ),
+    "suspend every automation rule": _Act(
+        "POST",
+        "/observability/automations/rules-state",
+        "admin",
+        {"enabled": False},
+    ),
+    "decide an automation approval": _Act(
+        "POST",
+        "/observability/automations/approve",
+        "admin",
+        {"approval_id": "probe-approval", "approved": True},
+    ),
     "promote an agent to production": _Act(
         "POST", "/observability/agents/release", "admin", {"agent_id": "support-client"}
     ),
@@ -788,6 +800,16 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "tessera.observability.automation_store.set_rule_enabled", lambda *_a, **_k: None
     )
+
+    def _decide_approval(approval_id: str, *, approved: bool, decided_by: str) -> dict[str, object]:
+        return {
+            "id": approval_id,
+            "rule_id": "low_faith_review",
+            "status": "approved" if approved else "rejected",
+            "decided_by": decided_by,
+        }
+
+    monkeypatch.setattr("tessera.observability.automation_store.decide_approval", _decide_approval)
 
     # The override store wants Postgres; stub the store (patching the copies the
     # route imported), keep the route + emitter + chain real (ADR 0030 / 0024).
@@ -888,6 +910,8 @@ def _is_governance_mutation(route: APIRoute, method: str) -> bool:
     governed_prefixes = (
         "/observability/agent-garde-fous/",
         "/observability/automations/rule-state",
+        "/observability/automations/rules-state",
+        "/observability/automations/approve",
         "/observability/agents/",
         "/settings/",
     )

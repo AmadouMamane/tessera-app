@@ -5135,7 +5135,6 @@
       "overview": "Übersicht",
       "rules": "Regeln",
       "executions": "Ausführungen",
-      "queue": "Warteschlange",
       "approvals": "Freigaben",
       "audit": "Audit & Protokoll"
     },
@@ -5244,7 +5243,8 @@
     },
     "approve": {
       "cta": "Freigeben",
-      "since": "Seit {t}"
+      "since": "Seit {t}",
+      "reject": "Ablehnen"
     },
     "gr": {
       "pii_guard": "PII Guard",
@@ -5278,8 +5278,8 @@
       "chain": "Audit-Kette intakt"
     },
     "quick": {
-      "activate": "Regel aktivieren",
-      "suspend": "Aussetzen",
+      "activate": "Alle Regeln aktivieren",
+      "suspend": "Alle Regeln aussetzen",
       "openJournal": "Protokoll öffnen",
       "viewApprovals": "Freigaben anzeigen"
     },
@@ -5297,7 +5297,7 @@
       "evaluateNow": "Regeln jetzt auswerten",
       "evaluating": "Auswertung…",
       "auditLink": "Audit-Journal oeffnen (Kette)",
-      "noApprovals": "Keine wartenden Freigaben — die Freigabe-Queue ist ein Demo-Subsystem."
+      "noApprovals": "Keine ausstehende Genehmigung — eine ausgelöste Regel im Genehmigungsmodus öffnet hier ihre Anfrage."
     }
   },
   "proofs": {

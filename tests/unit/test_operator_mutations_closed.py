@@ -32,7 +32,10 @@ from tessera.api.routes.observability import mutations, router as observability_
 from tessera.api.security import require_operator
 from tessera.settings import get_settings
 
-EXPECTED_MUTATION_COUNT = 26
+# 26 at the 2026-07-10 audit; +2 on 2026-07-17 (lot 4): automations bulk
+# rules-state and the approval decision — both governed, both driven by the
+# attribution ratchet (test_governed_acts_name_their_author.py).
+EXPECTED_MUTATION_COUNT = 28
 
 #: One representative mutation, named for what it does: it puts an agent into production.
 #: If any single endpoint in this router deserves an authorization test, it is this one.
@@ -77,8 +80,8 @@ def _client_as(role: str) -> TestClient:
     )
 
 
-def test_all_twenty_six_mutations_are_accounted_for() -> None:
-    """The audit counted 26. If a 27th appears it must not slip in ungated."""
+def test_every_operator_mutation_is_accounted_for() -> None:
+    """The audit counted 26; the count is frozen. A new one must not slip in ungated."""
     assert len(mutations.router.routes) == EXPECTED_MUTATION_COUNT
     methods = {m for route in mutations.router.routes for m in route.methods}  # type: ignore[attr-defined]
     assert methods == {"POST"}
