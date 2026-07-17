@@ -906,17 +906,25 @@ export async function fetchIncidentsOverview(
 
 export async function fetchReplayShadowOverview(
   lang: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<ReplayShadowOverview> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  if (at) params.set("at", at);
+  const q = params.size ? `?${params}` : "";
   return request(`/observability/replay-shadow${q}`, { signal }, ReplayShadowOverviewSchema);
 }
 
 export async function fetchCurationOverview(
   lang: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<CurationOverview> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  if (at) params.set("at", at);
+  const q = params.size ? `?${params}` : "";
   return request(`/observability/curation${q}`, { signal }, CurationOverviewSchema);
 }
 

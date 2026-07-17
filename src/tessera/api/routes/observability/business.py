@@ -195,7 +195,7 @@ async def observability_automations(lang: str = "fr", at: str | None = None) -> 
 
 
 @router.get("/observability/curation")
-async def observability_curation(lang: str = "fr") -> dict[str, object]:
+async def observability_curation(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Curation eval-set overview (page #12).
 
     Composes the backlog posture, priority curation lots, workflow stages,
@@ -204,7 +204,7 @@ async def observability_curation(lang: str = "fr") -> dict[str, object]:
     ``available: false`` on failure.
     """
     try:
-        return {"available": True, **curation_mod.compute_curation_overview(lang)}
+        return {"available": True, **curation_mod.compute_curation_overview(lang, at=at)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.curation: failed: {exc}\n")
         return {"available": False}

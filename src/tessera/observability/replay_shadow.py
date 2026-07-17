@@ -23,6 +23,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from tessera.observability._asof import occurred_before
 from tessera.observability.eval.report_paths import iter_report_files
 from tessera.observability.eval_data import SMALLEST_MODEL
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
@@ -234,11 +235,24 @@ def _posture(
     return day_keys, list(day_captured.values()), critical_replays
 
 
-def compute_replay_shadow_overview(lang: str = "fr") -> dict[str, object]:
+def _now_or_t(at: str | None) -> datetime:
+    """The day-bucket anchor: T when folding as-of, else now (bad T fails open)."""
+    if at:
+        try:
+            parsed = datetime.fromisoformat(at)
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+        except ValueError:
+            pass  # fail open: a bad T reads as live "now"
+    return datetime.now(UTC)
+
+
+def compute_replay_shadow_overview(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Return the Replay & shadow overview payload (real core + flagged demo).
 
     Args:
         lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
+        at: Optional ISO instant T (registre §6): bundles, replay executions and
+            run diffs fold to their own timestamps; mutations stay live-only.
 
     Returns:
         A JSON-serialisable mapping with the replay posture KPIs, the captured
@@ -247,11 +261,11 @@ def compute_replay_shadow_overview(lang: str = "fr") -> dict[str, object]:
         the flagged shadow/export fixtures.
     """
     lang = _norm_lang(lang)
-    now = datetime.now(UTC)
+    now = _now_or_t(at)
 
-    bundles = recent_bundles()
-    runs = load_replay_runs()
-    diffs = _load_run_diffs()
+    bundles = [b for b in recent_bundles() if occurred_before(b.captured_at, at)]
+    runs = [r for r in load_replay_runs() if occurred_before(str(r.get("at", "")), at)]
+    diffs = [d for d in _load_run_diffs() if occurred_before(d.run_at, at)]
 
     day_keys, captured_series, critical_replays = _posture(now, bundles, runs)
     newly_failed_total = sum(len(d.newly_failed) for d in diffs)
@@ -422,6 +436,7 @@ def compute_replay_shadow_overview(lang: str = "fr") -> dict[str, object]:
     services = sorted({str(b.agent_id or "") for b in bundles})
     return {
         "generated_at": now.isoformat(),
+        "as_of": at,
         "period_days": 7,
         "updated_at": now.strftime("%H:%M:%S"),
         "kpis": kpis,

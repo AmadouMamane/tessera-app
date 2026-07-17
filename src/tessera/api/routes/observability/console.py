@@ -224,7 +224,7 @@ async def observability_traces_obs(at: str | None = None) -> dict[str, object]:
 
 
 @router.get("/observability/replay-shadow")
-async def observability_replay_shadow(lang: str = "fr") -> dict[str, object]:
+async def observability_replay_shadow(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Replay & shadow overview (page #11).
 
     Composes the replay posture, traffic and deviation series, recent / top
@@ -232,7 +232,7 @@ async def observability_replay_shadow(lang: str = "fr") -> dict[str, object]:
     evals and the live activity feed. Degrades to ``available: false``.
     """
     try:
-        return {"available": True, **replay_shadow_mod.compute_replay_shadow_overview(lang)}
+        return {"available": True, **replay_shadow_mod.compute_replay_shadow_overview(lang, at=at)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.replay_shadow: failed: {exc}\n")
         return {"available": False}

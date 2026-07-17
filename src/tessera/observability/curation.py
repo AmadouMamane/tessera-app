@@ -19,7 +19,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from tessera.observability.curation_store import decision_counts, load_candidates
+from tessera.observability.curation_store import (
+    candidates_as_of,
+    decision_counts,
+    load_candidates,
+)
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 
 __all__ = ["compute_curation_overview"]
@@ -98,11 +102,13 @@ def _kpi(
     }
 
 
-def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
+def compute_curation_overview(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Return the full Curation eval-set overview payload.
 
     Args:
         lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
+        at: Optional ISO instant T (registre §6): candidates and their decisions
+            fold to what an operator saw at T; mutations stay live-only.
 
     Returns:
         A JSON-serialisable mapping with the backlog posture KPIs, the priority
@@ -115,8 +121,14 @@ def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
     now = datetime.now(UTC)
 
     # ── REAL decision core (curation_store over failed eval cases) ──────────
-    candidates = load_candidates()
-    counts = decision_counts()
+    candidates = candidates_as_of(at) if at else load_candidates()
+    if at:
+        counts = {d: 0 for d in ("pending", "promote", "review", "reject")}
+        for cand in candidates:
+            counts[cand.decision] = counts.get(cand.decision, 0) + 1
+        counts["total"] = len(candidates)
+    else:
+        counts = decision_counts()
     n_escalations = sum(1 for c in candidates if c.needs_escalation)
     n_critical = sum(1 for c in candidates if c.priority == "crit")
     n_decided = counts["promote"] + counts["review"] + counts["reject"]
@@ -310,6 +322,7 @@ def compute_curation_overview(lang: str = "fr") -> dict[str, object]:
 
     return {
         "generated_at": now.isoformat(),
+        "as_of": at,
         "period_days": 7,
         "updated_at": "11:54:01",
         "kpis": kpis,

@@ -61,13 +61,33 @@ test("the SURVEILLER signal scrubber is gone from every AGIR page", async ({ pag
     });
     await expect(page.getByRole("button", { name: "Voir l’historique" })).toHaveCount(0);
   }
-  // Automations carries the AGIR rail (Live badge visible); the three others
-  // honestly carry none until their as-of folds land (lot 5b).
-  await page.goto("/fr/agir/automations");
-  await expect(page.getByTestId("agir-rail")).toBeVisible({ timeout: 20_000 });
-  await page.goto("/fr/agir/curation-eval-set");
+  // Automations, curation and replay carry the AGIR rail (each with a real
+  // server-side fold); incidents alone stays bare until its real store lands
+  // (lot 10) — a rail over a fixture would be a lie.
+  for (const target of [
+    "/fr/agir/automations",
+    "/fr/agir/curation-eval-set",
+    "/fr/agir/replay-shadow",
+  ]) {
+    await page.goto(target);
+    await expect(page.getByTestId("agir-rail")).toBeVisible({ timeout: 20_000 });
+  }
+  await page.goto("/fr/agir/incidents-playbooks");
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible({
     timeout: 20_000,
   });
   await expect(page.getByTestId("agir-rail")).toHaveCount(0);
+});
+
+test("curation and replay deep-link their As-of and come back to live", async ({ page }) => {
+  await page.goto("/fr/agir/curation-eval-set?asof=2000-01-01T00:00:00.000Z");
+  const rail = page.getByTestId("agir-rail");
+  await expect(rail.getByText("Lecture à date")).toBeVisible({ timeout: 20_000 });
+  await rail.getByRole("button", { name: "Revenir au direct" }).click();
+  await expect(rail.getByText("Live", { exact: true })).toBeVisible();
+
+  await page.goto("/fr/agir/replay-shadow?asof=2000-01-01T00:00:00.000Z");
+  await expect(page.getByTestId("agir-rail").getByText("Lecture à date")).toBeVisible({
+    timeout: 20_000,
+  });
 });

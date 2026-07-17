@@ -184,3 +184,32 @@ def test_candidate_lots_expose_the_full_real_queue(monkeypatch: pytest.MonkeyPat
     assert promoted["title"] == "01 title"
     # Undecided rows carry an empty decided_at, never a fabricated time.
     assert by_id["support-client.03.fr"]["decided_at"] == ""
+
+
+def test_candidates_as_of_fold_decisions_from_timestamps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """C1 fold (registre §6): a decided candidate reads PENDING at any T before
+    its decision, with the author hidden; before creation it does not exist."""
+    _wire(
+        monkeypatch,
+        [_session("01", "pii_leak", passed=False), _session("02", "hallucination", passed=False)],
+        {
+            "support-client.01.fr": {
+                "decision": "reject",
+                "decided_by": "claire",
+                "decided_at": "2026-07-10T10:00:00+00:00",
+            }
+        },
+    )
+    # Before any capture existed: empty past, honestly.
+    assert cstore.candidates_as_of("2000-01-01T00:00:00+00:00") == []
+    # After capture but before the decision: pending, no author.
+    before = {c.case_id: c for c in cstore.candidates_as_of("2026-07-10T09:00:00+00:00")}
+    assert before["01"].decision == "pending"
+    assert before["01"].decided_by == ""
+    # After the decision: the stored verdict with its author.
+    after = {c.case_id: c for c in cstore.candidates_as_of("2100-01-01T00:00:00+00:00")}
+    assert after["01"].decision == "reject"
+    assert after["01"].decided_by == "claire"
+    assert after["02"].decision == "pending"

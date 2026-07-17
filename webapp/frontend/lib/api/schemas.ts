@@ -2692,6 +2692,8 @@ const RsActivitySchema = z.object({
 export const ReplayShadowOverviewSchema = z.object({
   available: z.boolean(),
   generated_at: z.string(),
+  // The As-of instant every projection was folded to (registre §6); null in Live.
+  as_of: z.string().nullable().default(null),
   period_days: z.number().int(),
   updated_at: z.string(),
   kpis: z.array(RsKpiSchema),
@@ -2814,6 +2816,8 @@ const CurActivitySchema = z.object({
 export const CurationOverviewSchema = z.object({
   available: z.boolean(),
   generated_at: z.string(),
+  // The As-of instant every projection was folded to (registre §6); null in Live.
+  as_of: z.string().nullable().default(null),
   period_days: z.number().int(),
   updated_at: z.string(),
   kpis: z.array(CurKpiSchema),

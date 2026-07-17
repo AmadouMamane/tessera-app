@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
+import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -76,11 +77,13 @@ export function ReplayOverview() {
   const t = useTranslations("replay");
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  // AGIR composition (registre §6): As-of reads the folded captures/diffs at T.
+  const asof = useAsOf();
   const { data } = useQuery({
-    queryKey: ["replay-shadow-overview", locale],
-    queryFn: ({ signal }) => fetchReplayShadowOverview(locale, signal),
+    queryKey: ["replay-shadow-overview", locale, asof],
+    queryFn: ({ signal }) => fetchReplayShadowOverview(locale, asof, signal),
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: asof ? false : 30_000,
   });
 
   if (!data) {
@@ -97,9 +100,9 @@ export function ReplayOverview() {
       {/* AGIR / Replay is XT-01's home (registre): the rail keeps the legitimate
           execution-replay cassette (début · précédent · play/pause · suivant · fin).
           SURVEILLER surfaces stay on the default "signal" event navigation. */}
-      {/* Registre des rails temporels §6/§8 — the SURVEILLER signal scrubber
-          (SR-01) does not belong on an AGIR page; removed in lot 5. The AGIR
-          As-of+Live rail arrives with this page's own as-of fold (lot 5b). */}
+      {/* Registre §6/§8 — AGIR composes As-of + Live: captures, executions and
+          run diffs fold to T server-side. */}
+      <AgirRail />
 
       <div id="replay-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
         {activeTab === "sessions" ? (

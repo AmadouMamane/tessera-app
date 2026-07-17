@@ -24,6 +24,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ComponentType, ReactNode } from "react";
 import { useState } from "react";
 
+import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
@@ -86,17 +87,20 @@ function ExplainInfo({ k, title }: { k: string; title: string }) {
 export function CurationOverview() {
   const t = useTranslations("curation");
   const locale = useLocale();
+  // AGIR composition (registre §6): As-of reads the folded state at T (URL-derived).
+  const asof = useAsOf();
+  const frozen = asof !== null;
   const { data } = useQuery({
-    queryKey: ["curation-overview", locale],
-    queryFn: ({ signal }) => fetchCurationOverview(locale, signal),
+    queryKey: ["curation-overview", locale, asof],
+    queryFn: ({ signal }) => fetchCurationOverview(locale, asof, signal),
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: asof ? false : 30_000,
   });
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const decide = useMutation({
     mutationFn: mutateCurationDecision,
-    onSuccess: (fresh) => qc.setQueryData(["curation-overview", locale], fresh),
+    onSuccess: (fresh) => qc.setQueryData(["curation-overview", locale, null], fresh),
   });
   const onDecide = (candidateId: string, decision: "promote" | "review" | "reject") =>
     decide.mutate({ candidate_id: candidateId, decision, lang: locale });
@@ -112,13 +116,18 @@ export function CurationOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
-      {/* Registre des rails temporels §6/§8 — the SURVEILLER signal scrubber
-          (SR-01) does not belong on an AGIR page; removed in lot 5. The AGIR
-          As-of+Live rail arrives with this page's own as-of fold (lot 5b). */}
+      {/* Registre §6/§8 — AGIR composes As-of + Live; the candidates and their
+          decisions fold to T server-side, and deciding freezes while As-of. */}
+      <AgirRail />
 
       <div id="curation-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
         {activeTab === "curate" ? (
-          <CurateQueue t={t} data={data} onDecide={onDecide} deciding={decide.isPending} />
+          <CurateQueue
+            t={t}
+            data={data}
+            onDecide={onDecide}
+            deciding={decide.isPending || frozen}
+          />
         ) : null}
         {activeTab === "coverage" ? <CoverageTab t={t} data={data} /> : null}
         {activeTab === "promotions" ? (
@@ -127,7 +136,7 @@ export function CurationOverview() {
             data={data}
             decision="promote"
             onDecide={onDecide}
-            deciding={decide.isPending}
+            deciding={decide.isPending || frozen}
           />
         ) : null}
         {activeTab === "rejections" ? (
@@ -136,7 +145,7 @@ export function CurationOverview() {
             data={data}
             decision="reject"
             onDecide={onDecide}
-            deciding={decide.isPending}
+            deciding={decide.isPending || frozen}
           />
         ) : null}
         {activeTab === "history" ? <HistoryTab t={t} data={data} /> : null}
@@ -174,7 +183,7 @@ export function CurationOverview() {
                     t={t}
                     data={data}
                     onDecide={onDecide}
-                    deciding={decide.isPending}
+                    deciding={decide.isPending || frozen}
                     className="xl:col-span-7"
                   />
                   <WhyTours t={t} data={data} className="xl:col-span-5" />

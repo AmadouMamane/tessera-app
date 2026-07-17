@@ -36,6 +36,7 @@ __all__ = [
     "CurationCandidate",
     "DECISIONS",
     "available_candidate_ids",
+    "candidates_as_of",
     "decision_counts",
     "load_candidates",
     "set_decision",
@@ -234,6 +235,28 @@ def decision_counts(agent_id: str | None = None) -> dict[str, int]:
         counts[c.decision] = counts.get(c.decision, 0) + 1
     counts["total"] = len(candidates)
     return counts
+
+
+def candidates_as_of(at: str) -> list[CurationCandidate]:
+    """Every candidate as it stood at instant T (C1 fold over the durable state).
+
+    A candidate exists at T once ``created_at`` ≤ T; its decision at T is the
+    stored one only if ``decided_at`` ≤ T — otherwise it was still pending at
+    T, whoever decided it later. Order (priority, score, age) is preserved.
+    """
+    from dataclasses import replace
+
+    from tessera.observability._asof import occurred_before
+
+    out: list[CurationCandidate] = []
+    for c in load_candidates():
+        if not occurred_before(c.created_at.isoformat(), at):
+            continue
+        if c.decided_at and occurred_before(c.decided_at, at):
+            out.append(c)
+        else:
+            out.append(replace(c, decision="pending", decided_by="", decided_at=""))
+    return out
 
 
 def available_candidate_ids() -> set[str]:
