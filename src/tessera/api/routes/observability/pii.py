@@ -84,6 +84,37 @@ from tessera.observability.spine.capabilities import capability_for
 router = APIRouter(dependencies=[Depends(require_subject_reader)])
 
 
+@router.get("/observability/recouvrement-queue")
+async def observability_recouvrement_queue() -> dict[str, object]:
+    """The REAL collection-case queue + per-status counters (RC product, lot 9).
+
+    Subject-scoped by nature: a dossier names a client and a debt. The router's
+    ``require_subject_reader`` guards it (``collections`` is in the read roles —
+    ADR 0025); the seeded demo book carries ``seed: true`` on every case so no
+    surface can present it as production data.
+    """
+    from tessera.observability import recouvrement_case_store as case_store
+
+    return {
+        "available": True,
+        "counters": case_store.queue_counters(),
+        "cases": case_store.load_cases(),
+    }
+
+
+@router.get("/observability/recouvrement-case/{case_id}")
+async def observability_recouvrement_case(case_id: str) -> dict[str, object]:
+    """One collection dossier by id — 404 loudly on an id nobody holds."""
+    from fastapi import HTTPException
+
+    from tessera.observability import recouvrement_case_store as case_store
+
+    try:
+        return {"available": True, "case": case_store.get_case(case_id)}
+    except case_store.CaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown case {case_id!r}") from exc
+
+
 @router.get("/observability/conversations")
 async def observability_conversations(
     agent_id: str = DEFAULT_AGENT_ID,

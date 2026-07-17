@@ -121,14 +121,17 @@ def test_the_public_reads_are_untouched() -> None:
     Guards against over-correcting: locking the public GETs would 404 the whole cockpit
     for the operators this change is meant to protect. 126 at the audit; +2 on
     2026-07-17 (lot 7): the evidence-pack manifest and verify reads (counts,
-    digests, integrity verdicts — no subject data).
+    digests, integrity verdicts — no subject data). +2 on 2026-07-17 (lot 9):
+    the recouvrement queue/case reads — subject-scoped, guarded by the pii
+    router's require_subject_reader (NOT public; counted here because the
+    freeze spans every GET on the observability router).
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 128
+    assert len(read_routes) == 130
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

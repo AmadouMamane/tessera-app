@@ -59,24 +59,25 @@ import {
   sendRecouvrementAssistantAction,
   sendRecouvrementAssistantMessage,
 } from "@/lib/api/recouvrement-assistant";
+import { useQuery } from "@tanstack/react-query";
+
+import { fetchRecouvrementQueue } from "@/lib/api/client";
 import { streamChat } from "@/lib/api/sse";
 import { cn } from "@/lib/cn";
 import { type ArtifactStatusTone, artifactStatusMeta } from "@/lib/recouvrement/artifact-status";
 
+// The counters derive from the REAL queue store (lot 9) — never invented.
 const navigation = [
   { label: "Ma journée", Icon: Home, active: true },
   { label: "Dossiers", Icon: Folder },
-  { label: "Relances", Icon: Send, count: 14 },
-  { label: "Échéanciers", Icon: CalendarDays, count: 8 },
-  { label: "Situations à vérifier", Icon: ShieldCheck, count: 5 },
+  { label: "Relances", Icon: Send, counterKey: "relance_a_valider" as const },
+  { label: "Échéanciers", Icon: CalendarDays, counterKey: "echeancier_a_confirmer" as const },
+  {
+    label: "Situations à vérifier",
+    Icon: ShieldCheck,
+    counterKey: "situation_a_verifier" as const,
+  },
   { label: "Historique", Icon: Clock3 },
-];
-
-const reasons = [
-  "Promesse de paiement non tenue le 12 juin.",
-  "Retard significatif : 32 jours",
-  "Échéancier envisageable",
-  "Contact autorisé aujourd'hui de 8h à 20h",
 ];
 
 const assistantActions = [
@@ -113,9 +114,27 @@ const assistantActions = [
 ];
 
 const nextItems = [
-  { value: "4", label: "Relances", detail: "à valider", Icon: Send, accent: "orange" },
-  { value: "3", label: "Échéanciers", detail: "à confirmer", Icon: CalendarDays, accent: "violet" },
-  { value: "5", label: "Situations", detail: "à vérifier", Icon: ShieldCheck, accent: "violet" },
+  {
+    counterKey: "relance_a_valider" as const,
+    label: "Relances",
+    detail: "à valider",
+    Icon: Send,
+    accent: "orange",
+  },
+  {
+    counterKey: "echeancier_a_confirmer" as const,
+    label: "Échéanciers",
+    detail: "à confirmer",
+    Icon: CalendarDays,
+    accent: "violet",
+  },
+  {
+    counterKey: "situation_a_verifier" as const,
+    label: "Situations",
+    detail: "à vérifier",
+    Icon: ShieldCheck,
+    accent: "violet",
+  },
 ];
 
 const quickActions = [
@@ -1598,6 +1617,30 @@ function AssistantDrawer({
 
 export function RecouvrementProductExperience() {
   const locale = useLocale() as Locale;
+  // The REAL case queue (lot 9): counters, the notification badge and the
+  // priority dossier all derive from the durable store — never invented.
+  const { data: queue } = useQuery({
+    queryKey: ["recouvrement-queue"],
+    queryFn: ({ signal }) => fetchRecouvrementQueue(signal),
+    staleTime: 30_000,
+  });
+  const counters = queue?.counters ?? null;
+  const priorityCase =
+    queue?.cases.find((c) => c.status === "relance_a_valider") ?? queue?.cases[0] ?? null;
+  const reasons = priorityCase
+    ? [
+        ...(priorityCase.missed_promise_date
+          ? [
+              `Promesse de paiement non tenue le ${new Date(
+                priorityCase.missed_promise_date,
+              ).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}.`,
+            ]
+          : []),
+        `Retard significatif : ${priorityCase.days_late} jours`,
+        "Échéancier envisageable",
+        `Contact autorisé aujourd'hui de ${priorityCase.contact_window_start.replace(":00", "h")} à ${priorityCase.contact_window_end.replace(":00", "h")}`,
+      ]
+    : [];
   const [assistantMode, setAssistantMode] = useState<AssistantMode>("closed");
   const [activeAssistantTab, setActiveAssistantTab] = useState(defaultAssistantTab);
   const [assistantContent, setAssistantContent] =
@@ -2277,13 +2320,15 @@ export function RecouvrementProductExperience() {
               </button>
               <button
                 type="button"
-                aria-label="Notifications, 3 nouvelles"
+                aria-label={`Notifications, ${counters?.open ?? 0} dossiers ouverts`}
                 className="relative flex flex-col items-center gap-1 rounded-[4px] text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <Bell className="h-[22px] w-[22px]" />
-                <span className="-top-1 absolute right-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#b99245] px-1 text-[#050816] text-[9px]">
-                  3
-                </span>
+                {counters && counters.open > 0 ? (
+                  <span className="-top-1 absolute right-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#b99245] px-1 text-[#050816] text-[9px]">
+                    {counters.open}
+                  </span>
+                ) : null}
                 Notifications
               </button>
               <button
@@ -2314,7 +2359,7 @@ export function RecouvrementProductExperience() {
                 </p>
               </div>
               <nav className="flex flex-col gap-1 px-4 py-6" aria-label="Navigation recouvrement">
-                {navigation.map(({ label, Icon, count, active }) => (
+                {navigation.map(({ label, Icon, counterKey, active }) => (
                   <button
                     key={label}
                     type="button"
@@ -2332,7 +2377,9 @@ export function RecouvrementProductExperience() {
                       )}
                     />
                     <span>{label}</span>
-                    {count ? <CountBadge count={count} className="ml-auto" /> : null}
+                    {counterKey && counters ? (
+                      <CountBadge count={counters[counterKey]} className="ml-auto" />
+                    ) : null}
                   </button>
                 ))}
               </nav>
@@ -2397,14 +2444,17 @@ export function RecouvrementProductExperience() {
                               <div className="mt-3 flex items-center gap-5 font-semibold text-[0.94rem] leading-5">
                                 <span>840,00 €</span>
                                 <span className="h-1 w-1 rounded-full bg-[#071044]" />
-                                <span className="font-medium">Retard 32 jours</span>
+                                <span className="font-medium">
+                                  Retard {priorityCase?.days_late ?? "—"} jours
+                                </span>
                               </div>
                               <div className="mt-4 inline-flex items-center gap-3 rounded-[5px] bg-[#e9f7e9] px-4 py-2 text-[#145b2b] text-[0.86rem] leading-[1.15rem]">
                                 <CircleCheck className="h-4 w-4 shrink-0" />
                                 <span>
                                   Contact autorisé aujourd'hui
                                   <br />
-                                  de 8h à 20h
+                                  de {priorityCase?.contact_window_start.replace(":00", "h") ?? "—"}{" "}
+                                  à {priorityCase?.contact_window_end.replace(":00", "h") ?? "—"}
                                 </span>
                               </div>
                             </div>
@@ -2521,7 +2571,7 @@ export function RecouvrementProductExperience() {
                           À faire ensuite
                         </h2>
                         <div className="grid gap-6 md:grid-cols-3">
-                          {nextItems.map(({ value, label, detail, Icon, accent }) => (
+                          {nextItems.map(({ counterKey, label, detail, Icon, accent }) => (
                             <button
                               key={label}
                               type="button"
@@ -2539,7 +2589,7 @@ export function RecouvrementProductExperience() {
                                   <Icon className="h-6 w-6" />
                                 </span>
                                 <span className="font-bold text-[2.2rem] leading-none">
-                                  {value}
+                                  {counters ? counters[counterKey] : "—"}
                                 </span>
                                 <span className="font-bold text-sm">
                                   {label}

@@ -42,6 +42,9 @@ const SUBJECT_SCOPED_PREFIXES: readonly string[] = [
   "observability/handoffs",
   "observability/context-overflow",
   "observability/agent-historique",
+  // Lot 9 — the collection-case queue/dossier: a case names a client and a debt.
+  "observability/recouvrement-queue",
+  "observability/recouvrement-case",
   "memory/",
 ];
 

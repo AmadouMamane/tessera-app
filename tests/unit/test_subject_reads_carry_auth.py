@@ -103,6 +103,8 @@ SUBJECT_SCOPED_READS: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/observability/handoffs"),
         ("GET", "/observability/context-overflow"),
         ("GET", "/observability/agent-historique"),
+        ("GET", "/observability/recouvrement-queue"),
+        ("GET", "/observability/recouvrement-case/{case_id}"),
     }
 )
 
@@ -250,6 +252,7 @@ def _concrete(path: str) -> str:
         path.replace("{conversation_id}", CANARY_CONVERSATION)
         .replace("{bundle_id}", CANARY_BUNDLE)
         .replace("{agent_id}", "support-client")
+        .replace("{case_id}", "RC-2048")
     )
 
 

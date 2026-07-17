@@ -292,11 +292,50 @@ class RecouvrementWorkflowState(TypedDict):
     output: NotRequired[RecouvrementOutput]
 
 
+_THOUSANDS_GROUPING_MIN = 1000.0
+
+
+def _amount_label(amount: float) -> str:
+    """Historical FR label format: ``840,00 €`` / ``1 260,50 €`` (comma decimals)."""
+    int_part, dec_part = f"{amount:.2f}".split(".")
+    if amount >= _THOUSANDS_GROUPING_MIN:
+        int_part = f"{int(int_part):,}".replace(",", " ")
+    return f"{int_part},{dec_part} €"
+
+
 def _case_for(case_id: str) -> RecouvrementCaseSnapshot:
-    """Return the supported mock case snapshot for this first workflow slice."""
-    if case_id != _RC_2048.case_id:
-        return _RC_2048
-    return _RC_2048
+    """Return the case snapshot from the DURABLE queue store (lot 9).
+
+    The historical single-mock slice is gone: the snapshot derives from
+    :mod:`tessera.agent.recouvrement_case_store`. An unknown id keeps the
+    historical graph behaviour (fall back to RC-2048) so an in-flight
+    conversation never crashes on a stale id — the API surface, by contrast,
+    404s loudly on unknown cases.
+    """
+    from datetime import date as _date
+
+    from tessera.observability import recouvrement_case_store as case_store
+
+    try:
+        raw = case_store.get_case(case_id)
+    except case_store.CaseNotFoundError:
+        raw = case_store.get_case(_RC_2048.case_id)
+    promise = raw.get("missed_promise_date")
+    amount = float(raw.get("amount_due", 0.0))
+    return RecouvrementCaseSnapshot(
+        case_id=str(raw.get("case_id", _RC_2048.case_id)),
+        client=str(raw.get("client", "")),
+        amount_due_label=_amount_label(amount),
+        amount_due=amount,
+        days_late=int(raw.get("days_late", 0)),
+        missed_promise_date=(
+            _date.fromisoformat(str(promise)) if isinstance(promise, str) and promise else None
+        ),
+        contact_window_start=str(raw.get("contact_window_start", "08:00")),
+        contact_window_end=str(raw.get("contact_window_end", "20:00")),
+        recommended_channel=str(raw.get("recommended_channel", "appel sortant")),
+        alternative_channel=str(raw.get("alternative_channel", "email de confirmation")),
+    )
 
 
 def _event_common(

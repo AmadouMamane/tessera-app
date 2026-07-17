@@ -145,7 +145,11 @@ describe("H4 product-surface header contract", () => {
     expect(recouvrementProductExperience).not.toContain("dossierSearchRef");
     expect(recouvrementProductExperience).not.toContain('aria-keyshortcuts="Meta+K Control+K"');
     expect(recouvrementProductExperience).not.toContain("⌘K");
-    expect(recouvrementProductExperience).toContain('aria-label="Notifications, 3 nouvelles"');
+    // Lot 9: the notification badge derives from the REAL open-case counter —
+    // the contract pins the derived template, never a hardcoded count.
+    expect(recouvrementProductExperience).toContain(
+      "aria-label={`Notifications, ${counters?.open ?? 0} dossiers ouverts`}",
+    );
     expect(recouvrementProductExperience).toContain("min-h-[69px]");
   });
 });

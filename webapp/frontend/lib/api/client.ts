@@ -212,6 +212,8 @@ import {
   QualityDatasetsReportSchema,
   type RbacMatrix,
   RbacMatrixSchema,
+  type RecouvrementQueue,
+  RecouvrementQueueSchema,
   type RecouvrementRunsResponse,
   RecouvrementRunsResponseSchema,
   type RedTeamResponse,
@@ -1027,6 +1029,11 @@ export async function fetchProofsOverview(
 ): Promise<ProofsOverview> {
   const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
   return request(`/observability/proofs${q}`, { signal }, ProofsOverviewSchema);
+}
+
+/** The real collection-case queue + counters (subject-scoped; BFF attaches the assertion). */
+export async function fetchRecouvrementQueue(signal?: AbortSignal): Promise<RecouvrementQueue> {
+  return request("/observability/recouvrement-queue", { signal }, RecouvrementQueueSchema);
 }
 
 /** Freeze one evidence-pack manifest (governed act; author = verified assertion). */

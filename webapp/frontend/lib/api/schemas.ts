@@ -3077,6 +3077,40 @@ export const EvidencePackVerifySchema = z.object({
 });
 export type EvidencePackVerify = z.infer<typeof EvidencePackVerifySchema>;
 
+// The REAL collection-case queue (lot 9, pii router — this hand-written zod is
+// the only wire contract; undeclared fields are stripped). Every seeded demo
+// case carries seed: true, so the UI can say what is demo book vs live work.
+export const RecouvrementCaseRowSchema = z.object({
+  case_id: z.string(),
+  client: z.string(),
+  amount_due: z.number(),
+  days_late: z.number().int(),
+  missed_promise_date: z.string().nullable(),
+  contact_window_start: z.string(),
+  contact_window_end: z.string(),
+  recommended_channel: z.string(),
+  alternative_channel: z.string(),
+  status: z.string(),
+  seed: z.boolean().optional(),
+  updated_at: z.string().optional(),
+  updated_by: z.string().optional(),
+});
+export type RecouvrementCaseRow = z.infer<typeof RecouvrementCaseRowSchema>;
+
+export const RecouvrementQueueSchema = z.object({
+  available: z.boolean(),
+  counters: z.object({
+    relance_a_valider: z.number().int(),
+    echeancier_a_confirmer: z.number().int(),
+    situation_a_verifier: z.number().int(),
+    traite: z.number().int(),
+    total: z.number().int(),
+    open: z.number().int(),
+  }),
+  cases: z.array(RecouvrementCaseRowSchema),
+});
+export type RecouvrementQueue = z.infer<typeof RecouvrementQueueSchema>;
+
 // ---------------------------------------------------------------------------
 // Signal catalogue (page #16)
 // ---------------------------------------------------------------------------

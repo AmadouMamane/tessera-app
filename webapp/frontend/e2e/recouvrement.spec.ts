@@ -67,3 +67,22 @@ test("the case search is a real, labelled control", async ({ page }) => {
   await expect(search).toBeVisible();
   await expect(search).toHaveAttribute("placeholder", /Rechercher un dossier, un client/);
 });
+
+// ── lot 9: the case queue is REAL (durable store, derived counters) ──────────
+
+test("nav counters, notifications and the priority dossier derive from the real queue", async ({
+  page,
+}) => {
+  // The notification badge is the real open-case count (no hardcoded "3").
+  const bell = page.getByRole("button", { name: /Notifications, \d+ dossiers ouverts/ });
+  await expect(bell).toBeVisible({ timeout: 20_000 });
+  // Internal consistency: the nav "Relances" badge equals the "Relances" tile —
+  // both derive from the same real counter, so they can never diverge.
+  const navRelances = page.getByRole("button", { name: /^Relances/ }).first();
+  const navCount = (await navRelances.innerText()).replace(/\D/g, "");
+  const tile = page.getByRole("button", { name: /Relances\s+à valider/s }).first();
+  const tileCount = (await tile.innerText()).match(/\d+/)?.[0] ?? "";
+  expect(navCount).toBe(tileCount);
+  // The "Pourquoi ce dossier ?" reasons carry the REAL case facts (days late).
+  await expect(page.getByText(/Retard significatif : \d+ jours/)).toBeVisible();
+});
