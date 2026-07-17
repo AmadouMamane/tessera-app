@@ -27,7 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
@@ -209,11 +209,26 @@ export function EtatADate() {
   const qc = useQueryClient();
   // Per-source scope carried in the URL (`?sources=`), set from the Sources
   // drawer's "Voir à date" link. Empty = no scope (all sources).
-  const sources = useSearchParams().get("sources") || null;
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const sources = searchParams.get("sources") || null;
+  // Per-agent scope (TE-01 owed param, closed): URL-derived like ?sources=,
+  // so a per-agent reconstruction is deep-linkable and shareable.
+  const agentScope = searchParams.get("agent") || null;
+  const setAgentScope = (value: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("agent", value);
+    } else {
+      params.delete("agent");
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  };
   // Draft instant (date + time) from the premium picker; empty = none picked.
   const [draft, setDraft] = useState("");
   const [refInput, setRefInput] = useState("");
-  const [ctxSource, setCtxSource] = useState("Réponse");
   const [asOf, setAsOf] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState("all");
@@ -221,14 +236,15 @@ export function EtatADate() {
   const [selected, setSelected] = useState<string | null>(null);
 
   const { data } = useQuery({
-    queryKey: ["etat-a-date", asOf, sources, locale],
-    queryFn: ({ signal }) => fetchEtatADate(asOf, sources, locale, signal),
+    queryKey: ["etat-a-date", asOf, sources, agentScope, locale],
+    queryFn: ({ signal }) => fetchEtatADate(asOf, sources, agentScope, locale, signal),
     staleTime: 30_000,
   });
 
   const saveSnapshot = useMutation({
-    mutationFn: () => saveEtatSnapshot(asOf, sources, locale),
-    onSuccess: (fresh) => qc.setQueryData(["etat-a-date", asOf, sources, locale], fresh),
+    mutationFn: () => saveEtatSnapshot(asOf, sources, agentScope, locale),
+    onSuccess: (fresh) =>
+      qc.setQueryData(["etat-a-date", asOf, sources, agentScope, locale], fresh),
   });
 
   function reconstruct() {
@@ -315,8 +331,8 @@ export function EtatADate() {
         isLive={asOf === null}
         refInput={refInput}
         onRefInput={setRefInput}
-        ctxSource={ctxSource}
-        onCtxSource={setCtxSource}
+        agentScope={agentScope}
+        onAgentScope={setAgentScope}
         onReconstruct={reconstruct}
         meta={data?.meta}
       />
@@ -421,7 +437,8 @@ function ScopeBar({ t, scope }: { t: T; scope: Scope }) {
   );
 }
 
-const CONTEXT_SOURCES = ["Réponse", "Session", "Trace", "Incident"];
+// The selector folds to a real fleet id; this sentinel keeps the historical default.
+const DEFAULT_AGENT_OPTION = "— défaut —";
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -607,8 +624,8 @@ function ControlBar({
   isLive,
   refInput,
   onRefInput,
-  ctxSource,
-  onCtxSource,
+  agentScope,
+  onAgentScope,
   onReconstruct,
   meta,
 }: {
@@ -619,24 +636,24 @@ function ControlBar({
   isLive: boolean;
   refInput: string;
   onRefInput: (v: string) => void;
-  ctxSource: string;
-  onCtxSource: (v: string) => void;
+  agentScope: string | null;
+  onAgentScope: (v: string | null) => void;
   onReconstruct: () => void;
   meta: Data["meta"];
 }) {
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <SelectField
-        label={t("tenant")}
-        value={meta?.tenant ?? ""}
-        options={[meta?.tenant ?? "-"]}
-        onChange={() => undefined}
-      />
+      {/* Single-tenant build: the tenant is a fact to read, never a fake select. */}
+      <Field label={t("tenant")}>
+        <span className="flex h-9 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)]">
+          {meta?.tenant ?? "-"}
+        </span>
+      </Field>
       <SelectField
         label={t("agent")}
-        value={meta?.agent ?? ""}
-        options={[meta?.agent ?? "-"]}
-        onChange={() => undefined}
+        value={agentScope ?? DEFAULT_AGENT_OPTION}
+        options={[DEFAULT_AGENT_OPTION, ...(meta?.agents ?? [])]}
+        onChange={(v) => onAgentScope(v === DEFAULT_AGENT_OPTION ? null : v)}
       />
       <Field label={t("dateTime")}>
         <DateTimePicker t={t} value={draft} onChange={onDraft} onLive={onLive} isLive={isLive} />
@@ -653,12 +670,11 @@ function ControlBar({
           className="h-9 w-56 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#7c5cf5]"
         />
       </Field>
-      <SelectField
-        label={t("contextSource")}
-        value={ctxSource}
-        options={CONTEXT_SOURCES}
-        onChange={onCtxSource}
-      />
+      <Field label={t("contextSource")}>
+        <span className="flex h-9 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)]">
+          {meta?.context_source ?? "-"}
+        </span>
+      </Field>
       <button
         type="button"
         onClick={onReconstruct}

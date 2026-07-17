@@ -4141,6 +4141,10 @@ export const EtatADateSchema = z.object({
       ref_code: z.string(),
       tenant: z.string(),
       agent: z.string(),
+      // TE-01 owed param, closed: the folded agent id (null = historical default)
+      // and the real fleet ids the selector may fold to.
+      agent_id: z.string().nullable().default(null),
+      agents: z.array(z.string()).default([]),
       context_source: z.string(),
       timezone: z.string(),
       scope: z

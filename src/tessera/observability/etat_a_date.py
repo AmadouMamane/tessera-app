@@ -215,11 +215,15 @@ def _scan_documents(rows: Sequence[dict[str, Any]], at: datetime | None) -> dict
     return states
 
 
-def _scan_audit(path: Path, at: datetime | None) -> _AuditAsOf:
+def _scan_audit(path: Path, at: datetime | None, agent: str | None = None) -> _AuditAsOf:
     scan = _AuditAsOf()
     for entry in read_ledger_entries(path):
         occurred = entry.get("occurred_at")
         if not occurred_before(occurred, at.isoformat() if at else None):
+            continue
+        # Per-agent scope (TE-01 owed param): only the turns STAMPED with this
+        # agent count; unstamped entries (governance, system) are not its turns.
+        if agent is not None and entry.get("agent_id") != agent:
             continue
         scan.decisions += 1
         if entry.get("outcome") == "denied":
@@ -237,7 +241,9 @@ def _scan_audit(path: Path, at: datetime | None) -> _AuditAsOf:
     return scan
 
 
-def _scan_handoffs(path: Path, at: datetime | None) -> list[dict[str, Any]]:
+def _scan_handoffs(
+    path: Path, at: datetime | None, agent: str | None = None
+) -> list[dict[str, Any]]:
     """Agent->agent handoff events at or before T, newest first (closes as-of loop).
 
     The same S1 journal that proves config also proves routing: the handoffs that
@@ -249,6 +255,8 @@ def _scan_handoffs(path: Path, at: datetime | None) -> list[dict[str, Any]]:
             continue
         occurred = entry.get("occurred_at")
         if not occurred_before(occurred, at.isoformat() if at else None):
+            continue
+        if agent is not None and agent not in (entry.get("from_agent"), entry.get("to_agent")):
             continue
         found.append(
             (
@@ -741,6 +749,7 @@ def _assemble(
     scope: set[str] | None = None,
     lang: str = "fr",
     opposability: dict[str, object] | None = None,
+    agent: str | None = None,
 ) -> dict[str, object]:
     """Assemble the reconstruction payload. Pure and I/O-free for unit testing.
 
@@ -780,37 +789,25 @@ def _assemble(
             else _loc(lang, "Maintenant (live)", "Jetzt (live)", "Now (live)"),
             "ref_code": _ref_code(at),
             "tenant": "Crédit Aurore",
-            # The reconstructed agent is DEFAULT_AGENT_ID, hardcoded — the screen must SAY
-            # so (product decision 2026-07-15): a phantom default must never silently
-            # decide what the opposable-proof page proves. Per-agent param: future lot.
-            "agent": _loc(
-                lang,
-                "Support client (agent par défaut)",
-                "Kundensupport (Standard-Agent)",
-                "Customer support (default agent)",
+            # No phantom default: without a ?agent= param the reconstruction keeps
+            # the historical default AND the screen says so; with one, it names the
+            # agent the guard/handoff dimensions were folded to (TE-01 owed, closed).
+            "agent": (
+                agent
+                if agent is not None
+                else _loc(
+                    lang,
+                    "Support client (agent par défaut)",
+                    "Kundensupport (Standard-Agent)",
+                    "Customer support (default agent)",
+                )
             ),
+            "agent_id": agent,
+            "agents": _fleet_agent_ids(),
             "context_source": _loc(lang, "Réponse", "Antwort", "Answer"),
             "timezone": "Europe/Paris",
             "scope": _scope_meta(scope, lang) if scope else None,
-            "banner": _loc(
-                lang,
-                "Reconstitué (accessibilité) n'est pas rejoué (sortie du modèle). Cette vue "
-                "reconstitue l'état accessible et applicable à T ; elle ne rejoue pas la réponse "
-                "exacte. Pour rejouer une exécution, utiliser AGIR - Replay. Portée : le package "
-                "de l'agent Support client (agent par défaut - seul agent reconstruit à ce "
-                "jour) ; les flux de gouvernance (ledger, passations) sont org-wide.",
-                "Rekonstruiert (Zugaenglichkeit) ist nicht Wiederholt (Modellausgabe). Diese "
-                "Ansicht rekonstruiert den zu T zugaenglichen und anwendbaren Zustand; sie "
-                "wiederholt nicht die exakte Antwort. Zum Wiederholen einer Ausfuehrung AGIR - "
-                "Replay verwenden. Umfang: das Paket des Agenten Kundensupport (Standard-Agent "
-                "- derzeit einziger rekonstruierter Agent); die Governance-Stroeme (Ledger, "
-                "Uebergaben) sind org-weit.",
-                "Reconstructed (accessibility) is not Replayed (model output). This view "
-                "reconstructs the state accessible and applicable at T; it does not replay the "
-                "exact answer. To replay an execution, use AGIR - Replay. Scope: the Customer "
-                "support agent's package (default agent - the only agent reconstructed today); "
-                "the governance streams (ledger, handoffs) are org-wide.",
-            ),
+            "banner": _banner(lang, agent),
         },
         "reconstructed": {
             "title": _loc(
@@ -1013,8 +1010,54 @@ def _build_context() -> _Context:
     )
 
 
+def _banner(lang: str, agent: str | None) -> str:
+    """The scope banner: which dimensions folded to which agent, in the UI language."""
+    head = _loc(
+        lang,
+        "Reconstitué (accessibilité) n'est pas rejoué (sortie du modèle). Cette vue "
+        "reconstitue l'état accessible et applicable à T ; elle ne rejoue pas la réponse "
+        "exacte. Pour rejouer une exécution, utiliser AGIR - Replay. ",
+        "Rekonstruiert (Zugaenglichkeit) ist nicht Wiederholt (Modellausgabe). Diese "
+        "Ansicht rekonstruiert den zu T zugaenglichen und anwendbaren Zustand; sie "
+        "wiederholt nicht die exakte Antwort. Zum Wiederholen einer Ausfuehrung AGIR - "
+        "Replay verwenden. ",
+        "Reconstructed (accessibility) is not Replayed (model output). This view "
+        "reconstructs the state accessible and applicable at T; it does not replay the "
+        "exact answer. To replay an execution, use AGIR - Replay. ",
+    )
+    if agent is not None:
+        return head + _loc(
+            lang,
+            f"Portée : décisions de garde et passations repliées sur l'agent {agent} ; "
+            "le corpus de connaissances reste partagé (org-wide).",
+            f"Umfang: Guard-Entscheidungen und Uebergaben auf den Agenten {agent} gefaltet; "
+            "der Wissenskorpus bleibt geteilt (org-weit).",
+            f"Scope: guard decisions and handoffs folded to agent {agent}; "
+            "the knowledge corpus stays shared (org-wide).",
+        )
+    return head + _loc(
+        lang,
+        "Portée : le package de l'agent Support client (agent par défaut) ; "
+        "les flux de gouvernance (ledger, passations) sont org-wide.",
+        "Umfang: das Paket des Agenten Kundensupport (Standard-Agent); die "
+        "Governance-Stroeme (Ledger, Uebergaben) sind org-weit.",
+        "Scope: the Customer support agent's package (default agent); "
+        "the governance streams (ledger, handoffs) are org-wide.",
+    )
+
+
+def _fleet_agent_ids() -> list[str]:
+    """The real fleet ids the per-agent selector may fold to (never free-typed)."""
+    from tessera.agent.registry import list_agents
+
+    return [a.id for a in list_agents()]
+
+
 async def build_etat_a_date(
-    as_of: str | None = None, sources: str | None = None, lang: str = "fr"
+    as_of: str | None = None,
+    sources: str | None = None,
+    lang: str = "fr",
+    agent: str | None = None,
 ) -> dict[str, object]:
     """Reconstruct the agent's accessible state + governing context as of ``as_of``.
 
@@ -1025,13 +1068,18 @@ async def build_etat_a_date(
             per-source scope). When given, the knowledge dimension is restricted to
             those sources; everything agent-wide stays global.
         lang: UI language (fr / de / en) for the reconstruction's labels.
+        agent: optional fleet agent id (validated by the route). ``None`` keeps the
+            historical default (DEFAULT_AGENT_ID) and the screen SAYS so; when
+            given, the guard decisions and handoffs fold to that agent's own
+            turns, the shared knowledge corpus staying global (the banner says
+            which is which).
     """
     at = _parse_at(as_of)
     scope = _normalize_scope(sources)
     rows = await _fetch_documents()
     original = await _fetch_original(at)
-    audit = _scan_audit(get_settings().guard.audit_file, at)
-    handoffs = _scan_handoffs(get_settings().guard.audit_file, at)
+    audit = _scan_audit(get_settings().guard.audit_file, at, agent)
+    handoffs = _scan_handoffs(get_settings().guard.audit_file, at, agent)
     policy = load_policy()
     ctx = _build_context()
     opposability = _read_opposability(at)
@@ -1047,6 +1095,7 @@ async def build_etat_a_date(
         scope=scope,
         lang=lang,
         opposability=opposability,
+        agent=agent,
     )
 
 
@@ -1087,23 +1136,26 @@ def _snapshot_record(
 
 
 async def save_etat_snapshot(
-    as_of: str | None = None, sources: str | None = None, lang: str = "fr"
+    as_of: str | None = None,
+    sources: str | None = None,
+    lang: str = "fr",
+    agent: str | None = None,
 ) -> dict[str, object]:
     """Persist a snapshot of the reconstruction at ``as_of``.
 
     The saved snapshot record is the full (unscoped) opposable state at T; the
-    ``sources`` scope only shapes the refreshed payload returned to the caller so
-    the UI stays consistent with the source filter it is viewing. ``lang``
-    localizes that refreshed payload (the durable record stays verbatim).
+    ``sources`` / ``agent`` scopes only shape the refreshed payload returned to
+    the caller so the UI stays consistent with the filters it is viewing.
+    ``lang`` localizes that refreshed payload (the durable record stays verbatim).
     """
     at = _parse_at(as_of)
     scope = _normalize_scope(sources)
     rows = await _fetch_documents()
     original = await _fetch_original(at)
-    audit = _scan_audit(get_settings().guard.audit_file, at)
+    audit = _scan_audit(get_settings().guard.audit_file, at, agent)
     policy = load_policy()
     ctx = _build_context()
-    handoffs = _scan_handoffs(get_settings().guard.audit_file, at)
+    handoffs = _scan_handoffs(get_settings().guard.audit_file, at, agent)
     snapshots = _load_snapshots()
     snapshots.insert(0, _snapshot_record(rows, audit, as_of, datetime.now(UTC)))
     _save_snapshots(snapshots)
@@ -1118,4 +1170,5 @@ async def save_etat_snapshot(
         handoffs=handoffs,
         scope=scope,
         lang=lang,
+        agent=agent,
     )

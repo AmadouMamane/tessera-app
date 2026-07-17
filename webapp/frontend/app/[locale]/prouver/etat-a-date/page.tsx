@@ -19,7 +19,9 @@ export async function generateMetadata({ params }: PageProps) {
 
 async function prefetch(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["etat-a-date", null, null, locale],
+    // Must mirror the CLIENT key exactly ([base, asOf, sources, agentScope, locale])
+    // or the hydration hit silently misses and every visit pays a slow client fetch.
+    queryKey: ["etat-a-date", null, null, null, locale],
     queryFn: async () => {
       const response = await fetch(
         `${backendUrl()}/observability/etat-a-date?lang=${encodeURIComponent(locale)}`,

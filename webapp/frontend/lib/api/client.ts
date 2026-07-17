@@ -1561,12 +1561,14 @@ export async function fetchBudget(signal?: AbortSignal): Promise<BudgetSnapshot>
 export async function fetchEtatADate(
   asOf: string | null,
   sources?: string | null,
+  agent?: string | null,
   lang?: string,
   signal?: AbortSignal,
 ): Promise<EtatADate> {
   const params = new URLSearchParams();
   if (asOf) params.set("as_of", asOf);
   if (sources) params.set("sources", sources);
+  if (agent) params.set("agent", agent);
   if (lang) params.set("lang", lang);
   const query = params.toString();
   return request(
@@ -1580,6 +1582,7 @@ export async function fetchEtatADate(
 export async function saveEtatSnapshot(
   asOf: string | null,
   sources?: string | null,
+  agent?: string | null,
   lang?: string,
 ): Promise<EtatADate> {
   return request(
@@ -1587,7 +1590,12 @@ export async function saveEtatSnapshot(
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ as_of: asOf, sources: sources ?? null, lang: lang ?? "fr" }),
+      body: JSON.stringify({
+        as_of: asOf,
+        sources: sources ?? null,
+        agent: agent ?? null,
+        lang: lang ?? "fr",
+      }),
     },
     EtatADateSchema,
   );

@@ -114,3 +114,32 @@ test("downloading the report opens a printable opposable evidence document", asy
   await expect(popup.getByRole("heading", { name: /Rapport d'etat opposable/ })).toBeVisible();
   await popup.close();
 });
+
+// ── lot 6: the TE-01 owed params are honoured ────────────────────────────────
+
+test("the agent selector folds the reconstruction and writes the URL (TE-01)", async ({ page }) => {
+  await page.goto("/fr/prouver/etat-a-date");
+  const select = page.getByLabel("Agent", { exact: true });
+  await expect(select).toBeVisible({ timeout: 20_000 });
+  // The selector is REAL: the whole fleet is offered, not a single echo option.
+  const options = select.locator("option");
+  await expect(options.nth(2)).toBeAttached();
+  await select.selectOption("recouvrement");
+  // The scope is URL-derived (deep-linkable) and the payload names the agent.
+  await page.waitForURL(/agent=recouvrement/);
+  await expect(page.getByText(/repliées sur l'agent recouvrement/)).toBeVisible({
+    timeout: 15_000,
+  });
+  // Back to the historical default: the URL param goes away.
+  await select.selectOption("— défaut —");
+  await page.waitForURL((url) => !url.search.includes("agent="));
+  await expect(page.getByText(/agent par défaut/).first()).toBeVisible({ timeout: 15_000 });
+});
+
+test("tenant and context source are read facts now, not fake selects", async ({ page }) => {
+  await page.goto("/fr/prouver/etat-a-date");
+  await expect(page.getByLabel("Agent", { exact: true })).toBeVisible({ timeout: 20_000 });
+  // Single-tenant build: exactly one select remains in the control bar (the agent).
+  await expect(page.getByLabel("Tenant")).toHaveCount(0);
+  await expect(page.getByText("Crédit Aurore").first()).toBeVisible();
+});

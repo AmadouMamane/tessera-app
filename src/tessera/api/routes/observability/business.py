@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from tessera.api.routes.observability._common import (
     _agent_or_none,
@@ -141,19 +141,29 @@ async def observability_improvement(lang: str = "fr") -> dict[str, object]:
 
 @router.get("/observability/etat-a-date")
 async def observability_etat_a_date(
-    as_of: str | None = None, sources: str | None = None, lang: str = "fr"
+    as_of: str | None = None,
+    sources: str | None = None,
+    lang: str = "fr",
+    agent: str | None = None,
 ) -> dict[str, object]:
     """Point-in-time reconstruction ("Etat a date", prouver/etat-a-date).
 
     Reconstructs, as of instant ``as_of`` (ISO; absent means live), the knowledge
     sources accessible to the agent, the guard decisions/blocks logged by then,
     the rules that had fired, and the policies in force. ``sources`` is an optional
-    comma-separated per-source scope (corpus-category keys); ``lang`` localizes the
-    labels. Sourced from pgvector ``documents`` + the guard audit log + the guard
-    policy; degrades to ``available: false``.
+    comma-separated per-source scope (corpus-category keys); ``agent`` folds the
+    guard/handoff dimensions to one fleet agent's own turns (unknown id → 422,
+    loudly — never a silently ignored scope); ``lang`` localizes the labels.
+    Sourced from pgvector ``documents`` + the guard audit log + the guard policy;
+    degrades to ``available: false``.
     """
+    if agent is not None:
+        from tessera.agent.registry import list_agents
+
+        if agent not in {a.id for a in list_agents()}:
+            raise HTTPException(status_code=422, detail=f"unknown fleet agent {agent!r}")
     try:
-        return await etat_a_date_mod.build_etat_a_date(as_of, sources, lang)
+        return await etat_a_date_mod.build_etat_a_date(as_of, sources, lang, agent=agent)
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.etat_a_date: failed: {exc}\n")
         return {"available": False}

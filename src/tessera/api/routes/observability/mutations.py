@@ -173,6 +173,7 @@ class _EtatSnapshotBody(BaseModel):
     as_of: str | None = None
     sources: str | None = None
     lang: str = "fr"
+    agent: str | None = None
 
 
 class _ItemStateBody(BaseModel):
@@ -394,7 +395,14 @@ async def observability_etat_a_date_snapshot(body: _EtatSnapshotBody) -> dict[st
     the new snapshot at the head of the list, shaped by the optional per-source
     ``body.sources`` scope and localized by ``body.lang``.
     """
-    return await etat_a_date_mod.save_etat_snapshot(body.as_of, body.sources, body.lang)
+    if body.agent is not None:
+        from tessera.agent.registry import list_agents
+
+        if body.agent not in {a.id for a in list_agents()}:
+            raise HTTPException(status_code=422, detail=f"unknown fleet agent {body.agent!r}")
+    return await etat_a_date_mod.save_etat_snapshot(
+        body.as_of, body.sources, body.lang, agent=body.agent
+    )
 
 
 @router.post("/observability/inbox/item-state")
