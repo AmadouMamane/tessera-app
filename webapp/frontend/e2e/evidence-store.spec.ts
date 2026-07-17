@@ -62,3 +62,39 @@ test("exporters tab links to the real integrations page", async ({ page }) => {
   const link = page.getByRole("link", { name: /exporteurs/i }).first();
   await expect(link).toBeVisible();
 });
+
+// ── lot 7: the evidence packs are REAL (durable manifests, governed freeze) ──
+
+test("freeze → verify → download: the evidence-pack lifecycle is real", async ({ page }) => {
+  // Freeze one pack from the rail quick action (a governed, journalled act).
+  await page.getByRole("button", { name: "Créer dossier de preuves" }).click();
+  // The fresh payload lands: the current pack shows a real PK- id and its digest.
+  const packId = page.locator("span.font-mono", { hasText: /^PK-/ }).first();
+  await expect(packId).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/sha256: /).first()).toBeVisible();
+
+  // Verify: two independent facts, displayed as such (digest + live chain).
+  await page.getByRole("button", { name: "Vérifier", exact: false }).first().click();
+  await expect(page.getByText(/Manifeste intègre/)).toBeVisible({ timeout: 15_000 });
+
+  // Download: the manifest itself, verbatim.
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Télécharger", exact: false }).first().click();
+  expect((await dl).suggestedFilename()).toMatch(/^PK-.*\.json$/);
+});
+
+test("the SIEM export downloads the real normalised events", async ({ page }) => {
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exporter vers SIEM" }).click();
+  expect((await dl).suggestedFilename()).toBe("tessera-siem-events.json");
+});
+
+test("the assembly pipeline shows only the real stages, with derived badges", async ({ page }) => {
+  const pipeline = page.locator("ol").filter({ hasText: "Collecte" }).first();
+  await expect(pipeline).toBeVisible();
+  // The export stage is GONE (no external export exists in this build)…
+  await expect(pipeline.getByText("Export", { exact: true })).toHaveCount(0);
+  await expect(pipeline.getByText("Normalisation", { exact: true })).toHaveCount(0);
+  // …and the per-stage badge derives from the real status (OK on a green chain).
+  await expect(pipeline.getByText("OK").first()).toBeVisible();
+});

@@ -5480,14 +5480,24 @@
       "download": "Télécharger",
       "verify": "Vérifier signature",
       "hash": "Hash",
-      "signer": "Signataire"
+      "signer": "Signataire",
+      "none": "Aucun pack créé — gelez le premier manifeste d'évidence.",
+      "create": "Créer un pack",
+      "manifestOk": "Manifeste intègre (empreinte re-dérivée)",
+      "manifestBad": "Manifeste ALTÉRÉ — l'empreinte ne re-dérive pas",
+      "chainOkNow": "chaîne d'audit vérifiée à l'instant",
+      "chainBadNow": "chaîne d'audit ROMPUE à l'instant"
     },
     "content": {
       "audit_logs": "logs d’audit",
       "eval_cases": "cas d’éval",
       "incidents": "incidents",
       "release_manifests": "manifests release",
-      "policy_snapshots": "snapshots de politiques"
+      "policy_snapshots": "snapshots de politiques",
+      "audit_entries": "entrées d'audit",
+      "eval_scores": "scores d'éval",
+      "replay_bundles": "bundles replay",
+      "eval_reports": "rapports d'éval"
     },
     "packCol": {
       "id": "Pack ID",

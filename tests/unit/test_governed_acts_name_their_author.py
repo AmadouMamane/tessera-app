@@ -751,6 +751,12 @@ GOVERNANCE_ACTS: dict[str, _Act] = {
         "admin",
         {"enabled": False},
     ),
+    "freeze an evidence-pack manifest": _Act(
+        "POST",
+        "/observability/evidence-packs",
+        "admin",
+        {},
+    ),
     "decide an automation approval": _Act(
         "POST",
         "/observability/automations/approve",
@@ -913,6 +919,7 @@ def _is_governance_mutation(route: APIRoute, method: str) -> bool:
         "/observability/automations/rules-state",
         "/observability/automations/approve",
         "/observability/agents/",
+        "/observability/evidence-packs",
         "/settings/",
     )
     return route.path.startswith(governed_prefixes)

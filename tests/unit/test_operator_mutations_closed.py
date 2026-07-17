@@ -32,10 +32,11 @@ from tessera.api.routes.observability import mutations, router as observability_
 from tessera.api.security import require_operator
 from tessera.settings import get_settings
 
-# 26 at the 2026-07-10 audit; +2 on 2026-07-17 (lot 4): automations bulk
+# 26 at the 2026-07-10 audit; +1 on 2026-07-17 (lot 7): the evidence-pack
+# freeze (governed, ratchet-driven). +2 on 2026-07-17 (lot 4): automations bulk
 # rules-state and the approval decision — both governed, both driven by the
 # attribution ratchet (test_governed_acts_name_their_author.py).
-EXPECTED_MUTATION_COUNT = 28
+EXPECTED_MUTATION_COUNT = 29
 
 #: One representative mutation, named for what it does: it puts an agent into production.
 #: If any single endpoint in this router deserves an authorization test, it is this one.
@@ -117,15 +118,17 @@ def test_an_anonymous_caller_cannot_reach_a_mutation(
 def test_the_public_reads_are_untouched() -> None:
     """Reads stay public — the cockpit's declared posture. Only the mutation plane is gated.
 
-    Guards against over-correcting: locking the 126 GETs would 404 the whole cockpit for
-    the operators this change is meant to protect.
+    Guards against over-correcting: locking the public GETs would 404 the whole cockpit
+    for the operators this change is meant to protect. 126 at the audit; +2 on
+    2026-07-17 (lot 7): the evidence-pack manifest and verify reads (counts,
+    digests, integrity verdicts — no subject data).
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 126
+    assert len(read_routes) == 128
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

@@ -5480,14 +5480,24 @@
       "download": "Download",
       "verify": "Verify signature",
       "hash": "Hash",
-      "signer": "Signer"
+      "signer": "Signer",
+      "none": "No pack created — freeze the first evidence manifest.",
+      "create": "Create a pack",
+      "manifestOk": "Manifest intact (digest re-derives)",
+      "manifestBad": "Manifest TAMPERED — the digest does not re-derive",
+      "chainOkNow": "audit chain verified right now",
+      "chainBadNow": "audit chain BROKEN right now"
     },
     "content": {
       "audit_logs": "audit logs",
       "eval_cases": "eval cases",
       "incidents": "incidents",
       "release_manifests": "release manifests",
-      "policy_snapshots": "policy snapshots"
+      "policy_snapshots": "policy snapshots",
+      "audit_entries": "audit entries",
+      "eval_scores": "eval scores",
+      "replay_bundles": "replay bundles",
+      "eval_reports": "eval reports"
     },
     "packCol": {
       "id": "Pack ID",

@@ -15,12 +15,15 @@ Composes the "Preuves & exporteurs" overview. The page has two halves:
   the real one went unread (ADR 0023; the ban is asserted in
   ``test_audit_chain_independent_of_sink.py``).
 
-* **The export / SIEM subsystem is a demonstration.** Evidence-pack assembly,
-  signing and export, the exporters & destinations, control-case linkage, the
-  retention obligations and the export journal describe a full enterprise
-  subsystem that does not exist in this build. Those fields stay a deterministic
-  reference fixture, and the frontend marks their zones with the registry-driven
-  ``evidence_export`` synthetic notice — never presenting them as live.
+* **Evidence packs are REAL** (lot 7): durable manifests frozen by the governed
+  create endpoint (:mod:`tessera.observability.evidence_pack_store`) — real
+  artifact counts, the chain verdict at freeze time, the verified creator and a
+  SHA-256 digest any reader can re-derive. No pack yet → honest empty.
+
+* **The external export / SIEM subsystem stays a demonstration.** Exporters &
+  destinations, control-case linkage, retention obligations and the export
+  journal describe an enterprise subsystem this build does not implement; those
+  zones keep the registry-driven ``evidence_export`` synthetic notice.
 """
 
 from __future__ import annotations
@@ -29,9 +32,11 @@ from datetime import UTC, datetime
 
 from tessera.guard.ledger_store import verify_active_ledger
 from tessera.observability.eval.report_paths import iter_report_files
+from tessera.observability.evidence_pack_store import load_packs
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.replay import persisted_bundles
 from tessera.observability.spine.adapters import read_scores
+from tessera.settings import get_settings
 
 __all__ = ["compute_proofs_overview"]
 
@@ -215,85 +220,67 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
         else _t("footer_chain_broken", lang).format(n=chain.broken_at)
     )
 
-    # ── SIEM / export subsystem — demonstration (flagged evidence_export) ───
-    # These describe evidence-pack assembly, signing, export, destinations,
-    # control-case linkage, retention and the export journal: a subsystem this
-    # build does not implement. Kept as a deterministic reference fixture; the
-    # frontend marks each zone with the registry-driven synthetic notice.
-    pipeline = [
-        {"key": "collecte", "count": "1 248", "status": "ok"},
-        {"key": "normalisation", "count": "1 248", "status": "ok"},
-        {"key": "signature", "count": "1 248", "status": "ok"},
-        {"key": "pack", "count": "42", "status": "ok"},
-        {"key": "export", "count": "41 / 42", "status": "ok"},
-    ]
+    # ── REAL evidence packs (lot 7): durable manifests, attributed + digested ─
+    env_label = get_settings().environment.value.capitalize()
+    scope_label = f"{env_label} · Crédit Aurore"
+    packs = load_packs()
+    n_packs = len(packs)
 
-    current_pack = {
-        "id": "PK-2026-06-11-042",
-        "period": "04/06/2026 → 11/06/2026",
-        "scope": "Prod · Crédit Aurore · FR",
-        "hash": "sha256: 83fa…9c1e",
-        "signer": "Admin / Claire L.",
-        "contents": [
-            {"key": "audit_logs", "n": 86},
-            {"key": "eval_cases", "n": 63},
-            {"key": "incidents", "n": 14},
-            {"key": "release_manifests", "n": 6},
-            {"key": "policy_snapshots", "n": 3},
-        ],
-    }
+    def _pack_time(iso: object) -> str:
+        try:
+            return datetime.fromisoformat(str(iso)).strftime("%d/%m %H:%M")
+        except ValueError:
+            return "—"
+
+    def _pack_total(pack: dict[str, object]) -> int:
+        arts = pack.get("artifacts")
+        return sum(int(v) for v in arts.values()) if isinstance(arts, dict) else 0
 
     recent_packs = [
         {
-            "id": "PK-2026-06-11-042",
-            "scope": "Prod · Crédit Aurore · FR",
-            "artifacts": "172",
-            "signature": "ok",
-            "destinations": "6 / 6",
-            "by": "Claire L.",
-            "time": "11:54",
+            "id": str(pack.get("pack_id", "")),
+            "scope": scope_label,
+            "artifacts": _fmt_int(_pack_total(pack)),
+            # The digest is an integrity fingerprint (re-derivable), not a PKI
+            # signature; "ok" states its presence, the verify endpoint re-derives.
+            "signature": "ok" if pack.get("sha256") else "—",
+            "destinations": "—",  # no external export exists in this build
+            "by": str(pack.get("created_by", "")),
+            "time": _pack_time(pack.get("created_at")),
             "status": "signe",
-        },
+        }
+        for pack in reversed(packs[-5:])
+    ]
+
+    latest = packs[-1] if packs else None
+    if latest is not None:
+        arts = latest.get("artifacts")
+        arts = arts if isinstance(arts, dict) else {}
+        start = latest.get("period_start")
+        current_pack: dict[str, object] | None = {
+            "id": str(latest.get("pack_id", "")),
+            "period": (
+                f"{_pack_time(start) if start else '…'} → "
+                f"{_pack_time(latest.get('period_end'))}"
+            ),
+            "scope": scope_label,
+            "hash": f"sha256: {str(latest.get('sha256', ''))[:12]}…",
+            "signer": str(latest.get("created_by", "")),
+            "contents": [{"key": key, "n": int(n)} for key, n in arts.items()],
+        }
+    else:
+        current_pack = None  # honest: nobody froze a pack yet
+
+    # REAL assembly pipeline: only the stages this build performs. There is no
+    # external export stage — the SIEM/exporter chrome below stays demonstration.
+    pipeline = [
+        {"key": "collecte", "count": _fmt_int(total), "status": "ok"},
         {
-            "id": "PK-2026-06-11-041",
-            "scope": "Prod · Crédit Aurore · FR",
-            "artifacts": "168",
-            "signature": "ok",
-            "destinations": "6 / 6",
-            "by": "Amadou D.",
-            "time": "10:38",
-            "status": "exporte",
+            "key": "signature",
+            "count": f"{intact_pct}%",
+            "status": "ok" if chain.verified else "bad",
         },
-        {
-            "id": "PK-2026-06-11-040",
-            "scope": "Prod · Crédit Aurore · FR",
-            "artifacts": "165",
-            "signature": "ok",
-            "destinations": "5 / 6",
-            "by": "Amadou D.",
-            "time": "09:12",
-            "status": "exporte",
-        },
-        {
-            "id": "PK-2026-06-10-039",
-            "scope": "Preprod · Crédit Aurore · FR",
-            "artifacts": "158",
-            "signature": "ok",
-            "destinations": "6 / 6",
-            "by": _t("actor_system", lang),
-            "time": "18:47",
-            "status": "attente",
-        },
-        {
-            "id": "PK-2026-06-10-038",
-            "scope": "Prod · Crédit Aurore · FR",
-            "artifacts": "154",
-            "signature": "ok",
-            "destinations": "5 / 6",
-            "by": _t("actor_system", lang),
-            "time": "16:03",
-            "status": "echec",
-        },
+        {"key": "pack", "count": str(n_packs), "status": "ok"},
     ]
 
     exporters = [

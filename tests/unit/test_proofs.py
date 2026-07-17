@@ -10,12 +10,19 @@ assert its shape is present, never that its numbers are real.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+import pytest
+
 from tessera.guard.audit import verify_audit_chain
 from tessera.observability.eval.report_paths import iter_report_files
 from tessera.observability.eval.scores import persisted_scores
 from tessera.observability.proofs import compute_proofs_overview
 from tessera.observability.replay import persisted_bundles
 from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _kpi(payload: dict[str, object], key: str) -> str:
@@ -105,3 +112,52 @@ def test_localization_is_honest_across_languages() -> None:
         # The chain footer is honest: it never claims "intact" when broken.
         chain_txt = str(payload["footer"]["chain"])  # type: ignore[index]
         assert chain_txt  # non-empty localized string
+
+
+def test_evidence_pack_lifecycle_is_attributed_and_digest_verifiable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Create → the manifest freezes real counts with its author; verify re-derives.
+
+    The digest is the witness: edit one stored field and ``manifest_ok`` goes
+    False while the chain verdict stays independent — two facts, never one green.
+    """
+    from tessera.observability import evidence_pack_store as eps
+
+    monkeypatch.setattr(eps, "_packs_path", lambda: tmp_path / "evidence_packs.json")
+    monkeypatch.setattr(
+        eps,
+        "_artifact_counts",
+        lambda: {"audit_entries": 7, "eval_scores": 3, "replay_bundles": 2, "eval_reports": 1},
+    )
+
+    class _Chain:
+        verified = True
+        length = 7
+        broken_at = None
+
+    monkeypatch.setattr(
+        "tessera.guard.ledger_store.verify_active_ledger", lambda *_a, **_k: _Chain()
+    )
+
+    pack = eps.create_pack(created_by="bob@bank.eu")
+    assert str(pack["pack_id"]).startswith("PK-")
+    assert pack["created_by"] == "bob@bank.eu"
+    assert pack["period_start"] is None  # first pack covers from the beginning
+
+    verdict = eps.verify_pack(str(pack["pack_id"]))
+    assert verdict["manifest_ok"] is True
+    assert verdict["chain_verified_now"] is True
+
+    # Tamper with the stored manifest: the digest refuses it, loudly and precisely.
+    stored = eps.load_packs()
+    stored[0]["created_by"] = "eve@bank.eu"
+    eps._save_json(eps._packs_path(), stored)
+    assert eps.verify_pack(str(pack["pack_id"]))["manifest_ok"] is False
+
+    with pytest.raises(eps.PackNotFoundError):
+        eps.verify_pack("PK-ghost-999")
+
+    # A second pack's window starts where the first ended.
+    second = eps.create_pack(created_by="bob@bank.eu")
+    assert second["period_start"] == pack["created_at"]

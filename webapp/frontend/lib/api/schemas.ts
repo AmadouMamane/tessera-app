@@ -2991,14 +2991,17 @@ export const ProofsOverviewSchema = z.object({
   alerts: z.array(z.object({ level: z.enum(["ok", "warn", "bad"]), label: z.string() })),
   alert_count: z.number().int(),
   pipeline: z.array(z.object({ key: z.string(), count: z.string(), status: z.string() })),
-  current_pack: z.object({
-    id: z.string(),
-    period: z.string(),
-    scope: z.string(),
-    hash: z.string(),
-    signer: z.string(),
-    contents: z.array(z.object({ key: z.string(), n: z.number().int() })),
-  }),
+  // null until an operator freezes the first pack (lot 7) — honest empty state.
+  current_pack: z
+    .object({
+      id: z.string(),
+      period: z.string(),
+      scope: z.string(),
+      hash: z.string(),
+      signer: z.string(),
+      contents: z.array(z.object({ key: z.string(), n: z.number().int() })),
+    })
+    .nullable(),
   recent_packs: z.array(
     z.object({
       id: z.string(),
@@ -3059,6 +3062,20 @@ export const ProofsOverviewSchema = z.object({
   footer: z.object({ chain: z.string(), source: z.string() }),
 });
 export type ProofsOverview = z.infer<typeof ProofsOverviewSchema>;
+
+// One stored evidence-pack manifest (lot 7): passthrough keeps every manifest
+// field for the verbatim download; pack_id is the only shape we rely on.
+export const EvidencePackManifestSchema = z.object({ pack_id: z.string() }).passthrough();
+export type EvidencePackManifest = z.infer<typeof EvidencePackManifestSchema>;
+
+export const EvidencePackVerifySchema = z.object({
+  pack_id: z.string(),
+  manifest_ok: z.boolean(),
+  chain_verified_now: z.boolean(),
+  chain_length_now: z.number().int(),
+  verified_at: z.string(),
+});
+export type EvidencePackVerify = z.infer<typeof EvidencePackVerifySchema>;
 
 // ---------------------------------------------------------------------------
 // Signal catalogue (page #16)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   ChevronRight,
@@ -17,6 +17,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -27,8 +28,14 @@ import {
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { fetchProofsOverview } from "@/lib/api/client";
-import type { ProofsOverview as ProofsData } from "@/lib/api/schemas";
+import {
+  fetchEvidencePackManifest,
+  fetchEvidencePackVerify,
+  fetchProofsOverview,
+  fetchSiem,
+  mutateEvidencePackCreate,
+} from "@/lib/api/client";
+import type { EvidencePackVerify, ProofsOverview as ProofsData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 const PACK_BADGE: Record<string, string> = {
@@ -67,12 +74,33 @@ export function ProofsOverview() {
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["proofs-overview", locale],
     queryFn: ({ signal }) => fetchProofsOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+  // Freeze one evidence-pack manifest (governed act; fresh payload swaps in).
+  const createPack = useMutation({
+    mutationFn: () => mutateEvidencePackCreate(locale),
+    onSuccess: (fresh) => qc.setQueryData(["proofs-overview", locale], fresh),
+  });
+  // Real verification verdict for the displayed pack (two facts, shown as such).
+  const [verdict, setVerdict] = useState<EvidencePackVerify | null>(null);
+  const verify = useMutation({
+    mutationFn: (packId: string) => fetchEvidencePackVerify(packId),
+    onSuccess: setVerdict,
+  });
+  const downloadManifest = async (packId: string) => {
+    const manifest = await fetchEvidencePackManifest(packId);
+    downloadBlob(`${packId}.json`, "application/json", JSON.stringify(manifest, null, 2));
+  };
+  // The SIEM export is REAL: the normalised ECS events the SOC would ingest.
+  const exportSiem = async () => {
+    const events = await fetchSiem();
+    downloadBlob("tessera-siem-events.json", "application/json", JSON.stringify(events, null, 2));
+  };
 
   if (!data) {
     return (
@@ -88,10 +116,21 @@ export function ProofsOverview() {
       label={t("zone.pipeline")}
       info={<ExplainInfo k="zone.pipeline" title={t("zone.pipeline")} />}
     >
-      <SyntheticNotice signalId="evidence_export" compact />
+      {/* The assembly pipeline + packs are REAL since lot 7 (durable manifests,
+          governed create, re-derivable digests) — no synthetic notice here. */}
       <div className="grid gap-3 xl:grid-cols-12">
         <Pipeline t={t} data={data} className="xl:col-span-7" />
-        <CurrentPack t={t} data={data} className="xl:col-span-5" />
+        <CurrentPack
+          t={t}
+          data={data}
+          className="xl:col-span-5"
+          onCreate={() => createPack.mutate()}
+          creating={createPack.isPending}
+          onVerify={(id) => verify.mutate(id)}
+          verifying={verify.isPending}
+          verdict={verdict}
+          onDownload={downloadManifest}
+        />
       </div>
     </Zone>
   );
@@ -249,7 +288,16 @@ export function ProofsOverview() {
               {retentionZone}
             </div>
 
-            <ProofsRail t={t} data={data} />
+            <ProofsRail
+              t={t}
+              data={data}
+              onCreatePack={() => createPack.mutate()}
+              creating={createPack.isPending}
+              onExportSiem={exportSiem}
+              onDownloadManifest={
+                data.current_pack ? () => downloadManifest(data.current_pack?.id ?? "") : null
+              }
+            />
           </div>
         </>
       )}
@@ -346,8 +394,13 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
                 <span className="text-[0.9rem] font-semibold tabular-nums text-white">
                   {step.count}
                 </span>
-                <span className="inline-flex items-center gap-0.5 text-[0.58rem] text-emerald-300">
-                  <ShieldCheck className="h-2.5 w-2.5" /> OK
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-0.5 text-[0.58rem]",
+                    step.status === "ok" ? "text-emerald-300" : "text-red-300",
+                  )}
+                >
+                  <ShieldCheck className="h-2.5 w-2.5" /> {step.status === "ok" ? "OK" : "KO"}
                 </span>
               </div>
               {i < data.pipeline.length - 1 ? (
@@ -370,8 +423,50 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
   );
 }
 
-function CurrentPack({ t, data, className }: { t: T; data: Data; className?: string }) {
+function CurrentPack({
+  t,
+  data,
+  className,
+  onCreate,
+  creating,
+  onVerify,
+  verifying,
+  verdict,
+  onDownload,
+}: {
+  t: T;
+  data: Data;
+  className?: string;
+  onCreate: () => void;
+  creating: boolean;
+  onVerify: (id: string) => void;
+  verifying: boolean;
+  verdict: EvidencePackVerify | null;
+  onDownload: (id: string) => void;
+}) {
   const p = data.current_pack;
+  if (p === null) {
+    // Honest empty: nobody froze a pack yet — the create act is right here.
+    return (
+      <Panel
+        title={t("zone.currentPack")}
+        info={<ExplainInfo k="zone.currentPack" title={t("zone.currentPack")} />}
+        className={className}
+      >
+        <div className="flex flex-col items-start gap-2 py-3">
+          <p className="text-[0.7rem] text-[var(--tessera-text-muted)]">{t("pack.none")}</p>
+          <Button
+            size="sm"
+            disabled={creating}
+            onClick={onCreate}
+            className="h-8 gap-1.5 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-[0.7rem] text-[#d8eaff] hover:bg-[#22609f]"
+          >
+            <PackageCheck className="h-3.5 w-3.5" /> {t("pack.create")}
+          </Button>
+        </div>
+      </Panel>
+    );
+  }
   return (
     <Panel
       title={t("zone.currentPack")}
@@ -397,6 +492,7 @@ function CurrentPack({ t, data, className }: { t: T; data: Data; className?: str
         <div className="mt-1 flex gap-2">
           <Button
             size="sm"
+            onClick={() => onDownload(p.id)}
             className="h-8 flex-1 justify-center gap-1.5 border border-[#2e72d2] bg-[#1b4f8a] text-[0.7rem] text-[#d8eaff] hover:bg-[#22609f]"
           >
             <Download className="h-3.5 w-3.5" /> {t("pack.download")}
@@ -404,11 +500,24 @@ function CurrentPack({ t, data, className }: { t: T; data: Data; className?: str
           <Button
             size="sm"
             variant="outline"
+            disabled={verifying}
+            onClick={() => onVerify(p.id)}
             className="h-8 flex-1 justify-center gap-1.5 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[0.7rem]"
           >
             <ShieldCheck className="h-3.5 w-3.5" /> {t("pack.verify")}
           </Button>
         </div>
+        {verdict && verdict.pack_id === p.id ? (
+          <output className="flex flex-col gap-0.5 text-[0.64rem]">
+            <span className={verdict.manifest_ok ? "text-emerald-300" : "text-red-300"}>
+              {verdict.manifest_ok ? t("pack.manifestOk") : t("pack.manifestBad")}
+            </span>
+            <span className={verdict.chain_verified_now ? "text-emerald-300" : "text-red-300"}>
+              {verdict.chain_verified_now ? t("pack.chainOkNow") : t("pack.chainBadNow")} (
+              {verdict.chain_length_now})
+            </span>
+          </output>
+        ) : null}
       </div>
     </Panel>
   );
@@ -421,7 +530,7 @@ function RecentPacks({ t, data, className }: { t: T; data: Data; className?: str
       className={className}
       action={<ViewAll label={t("viewAll.packs")} href="/prouver/etat-a-date" />}
     >
-      <SyntheticNotice signalId="evidence_export" compact />
+      {/* Real durable packs since lot 7 — no synthetic notice. */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.7rem]">
           <thead>
@@ -646,7 +755,21 @@ function Retention({ t, data }: { t: T; data: Data }) {
 
 // ── right rail ───────────────────────────────────────────────────────────────
 
-function ProofsRail({ t, data }: { t: T; data: Data }) {
+function ProofsRail({
+  t,
+  data,
+  onCreatePack,
+  creating,
+  onExportSiem,
+  onDownloadManifest,
+}: {
+  t: T;
+  data: Data;
+  onCreatePack: () => void;
+  creating: boolean;
+  onExportSiem: () => void;
+  onDownloadManifest: (() => void) | null;
+}) {
   return (
     <aside className="flex min-w-0 flex-col gap-3">
       <Panel
@@ -676,30 +799,68 @@ function ProofsRail({ t, data }: { t: T; data: Data }) {
         </div>
       </Panel>
 
-      <SyntheticNotice signalId="evidence_export" compact />
-
       <Panel title={t("zone.quickActions")}>
+        {/* All four are REAL: governed pack freeze, the ECS events a SOC would
+            ingest, the latest manifest verbatim, and the exporters catalogue. */}
         <ul className="flex flex-col gap-1">
-          {[
-            { key: "createPack", icon: PackageCheck },
-            { key: "exportSiem", icon: UploadCloud },
-            { key: "downloadManifest", icon: Download },
-            { key: "manageExporters", icon: FileSearch },
-          ].map((q) => (
-            <li key={q.key}>
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
-              >
+          {(
+            [
+              {
+                key: "createPack",
+                icon: PackageCheck,
+                onClick: onCreatePack,
+                disabled: creating,
+              },
+              { key: "exportSiem", icon: UploadCloud, onClick: onExportSiem },
+              {
+                key: "downloadManifest",
+                icon: Download,
+                onClick: onDownloadManifest ?? undefined,
+                disabled: onDownloadManifest === null,
+              },
+              { key: "manageExporters", icon: FileSearch, href: "/configurer/integrations" },
+            ] as {
+              key: string;
+              icon: typeof PackageCheck;
+              onClick?: () => void;
+              disabled?: boolean;
+              href?: Route;
+            }[]
+          ).map((q) => {
+            const cls =
+              "flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)] disabled:opacity-60";
+            const body = (
+              <>
                 <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
                 <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
                   {t(`quick.${q.key}`)}
                 </span>
-              </button>
-            </li>
-          ))}
+              </>
+            );
+            return (
+              <li key={q.key}>
+                {q.href ? (
+                  <Link href={q.href} className={cls}>
+                    {body}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={q.onClick}
+                    disabled={q.disabled === true}
+                    className={cls}
+                  >
+                    {body}
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </Panel>
+
+      {/* The journal / queue below stay demonstration (no external export). */}
+      <SyntheticNotice signalId="evidence_export" compact />
 
       <Panel
         title={t("zone.journal")}
@@ -753,7 +914,7 @@ function Footer({ t, data }: { t: T; data: Data }) {
         label={t("footer.chain", { txt: f.chain })}
       />
       <Chip icon={Database} label={t("footer.source", { src: f.source })} />
-      <Chip icon={Activity} label={t("integrity.lastCheck")} />
+      <Chip icon={Activity} label={`${t("integrity.lastCheck")} ${data.updated_at}`} />
     </footer>
   );
 }

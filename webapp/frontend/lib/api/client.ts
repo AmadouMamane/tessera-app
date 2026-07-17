@@ -119,6 +119,10 @@ import {
   EtatADateSchema,
   type EvalScoresResponse,
   EvalScoresResponseSchema,
+  type EvidencePackManifest,
+  EvidencePackManifestSchema,
+  type EvidencePackVerify,
+  EvidencePackVerifySchema,
   type FailedCasesReport,
   FailedCasesReportSchema,
   type FailedRunsReport,
@@ -1023,6 +1027,43 @@ export async function fetchProofsOverview(
 ): Promise<ProofsOverview> {
   const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
   return request(`/observability/proofs${q}`, { signal }, ProofsOverviewSchema);
+}
+
+/** Freeze one evidence-pack manifest (governed act; author = verified assertion). */
+export async function mutateEvidencePackCreate(lang: string): Promise<ProofsOverview> {
+  return request(
+    "/observability/evidence-packs",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ lang }),
+    },
+    ProofsOverviewSchema,
+  );
+}
+
+/** One stored pack manifest, verbatim (the downloadable artifact). */
+export async function fetchEvidencePackManifest(
+  packId: string,
+  signal?: AbortSignal,
+): Promise<EvidencePackManifest> {
+  return request(
+    `/observability/evidence-packs/${encodeURIComponent(packId)}/manifest`,
+    { signal },
+    EvidencePackManifestSchema,
+  );
+}
+
+/** Re-derive the pack digest + re-verify the live chain — a real verdict. */
+export async function fetchEvidencePackVerify(
+  packId: string,
+  signal?: AbortSignal,
+): Promise<EvidencePackVerify> {
+  return request(
+    `/observability/evidence-packs/${encodeURIComponent(packId)}/verify`,
+    { signal },
+    EvidencePackVerifySchema,
+  );
 }
 
 export async function fetchSignalCatalogue(

@@ -342,7 +342,9 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # 123rd (ADR 0030): GET /settings/overrides — the operable-knob panel. Model ids,
     # bases and override attributions (operator principals), the same governed-act
     # attribution the public governance feed already shows; no customer subject data.
-    assert len(public) == 123
+    # 124-125 (lot 7): GET /observability/evidence-packs/{id}/{manifest,verify} —
+    # artifact counts, digests and integrity verdicts; no customer subject data.
+    assert len(public) == 125
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

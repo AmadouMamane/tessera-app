@@ -184,6 +184,39 @@ async def observability_sources(lang: str = "fr") -> dict[str, object]:
         return {"available": False}
 
 
+@router.get("/observability/evidence-packs/{pack_id}/manifest")
+async def observability_evidence_pack_manifest(pack_id: str) -> dict[str, object]:
+    """One stored evidence-pack manifest, verbatim (the downloadable artifact).
+
+    404 on an id nobody created — never an empty manifest that looks real.
+    """
+    from fastapi import HTTPException
+
+    from tessera.observability import evidence_pack_store
+
+    try:
+        return evidence_pack_store.get_pack(pack_id)
+    except evidence_pack_store.PackNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown evidence pack {pack_id!r}") from exc
+
+
+@router.get("/observability/evidence-packs/{pack_id}/verify")
+async def observability_evidence_pack_verify(pack_id: str) -> dict[str, object]:
+    """Re-derive the pack digest + re-verify the live chain — a real verdict.
+
+    Two independent facts (manifest_ok, chain_verified_now), never folded into
+    one green. 404 on an unknown id.
+    """
+    from fastapi import HTTPException
+
+    from tessera.observability import evidence_pack_store
+
+    try:
+        return evidence_pack_store.verify_pack(pack_id)
+    except evidence_pack_store.PackNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown evidence pack {pack_id!r}") from exc
+
+
 @router.get("/observability/proofs")
 async def observability_proofs(lang: str = "fr") -> dict[str, object]:
     """Proofs & exporter overview (page #15).

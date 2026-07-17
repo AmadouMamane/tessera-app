@@ -221,6 +221,19 @@ class _AutomationApproveBody(BaseModel):
     lang: str = "fr"
 
 
+class _EvidencePackCreateBody(BaseModel):
+    """Create (freeze) one evidence-pack manifest.
+
+    No author field on purpose — the creator is the verified assertion
+    principal, and ``extra="forbid"`` turns any attempt to name one into a
+    loud 422 (ADR 0024).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    lang: str = "fr"
+
+
 class _CurationDecisionBody(BaseModel):
     """A durable curation decision (promote/review/reject) for one candidate.
 
@@ -403,6 +416,32 @@ async def observability_etat_a_date_snapshot(body: _EtatSnapshotBody) -> dict[st
     return await etat_a_date_mod.save_etat_snapshot(
         body.as_of, body.sources, body.lang, agent=body.agent
     )
+
+
+@router.post("/observability/evidence-packs")
+async def observability_evidence_pack_create(
+    body: _EvidencePackCreateBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Freeze one evidence-pack manifest — a governed, attributed act (ADR 0024).
+
+    The pack records the verified principal as its creator AND the journal
+    carries the same author; the manifest's SHA-256 digest makes any later
+    edit provable. Returns the fresh Proofs payload.
+    """
+    from tessera.observability import evidence_pack_store, proofs as proofs_mod
+
+    actor = actor_of(session)
+    pack = evidence_pack_store.create_pack(created_by=actor.principal)
+    emit_governance_mutation(
+        target="evidence.pack_created",
+        detail={
+            "pack": str(pack.get("pack_id", "")),
+            "sha256": str(pack.get("sha256", ""))[:16],
+        },
+        actor=actor,
+    )
+    return {"available": True, **proofs_mod.compute_proofs_overview(body.lang)}
 
 
 @router.post("/observability/inbox/item-state")

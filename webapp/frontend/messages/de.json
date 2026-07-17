@@ -5480,14 +5480,24 @@
       "download": "Herunterladen",
       "verify": "Signatur prüfen",
       "hash": "Hash",
-      "signer": "Unterzeichner"
+      "signer": "Unterzeichner",
+      "none": "Kein Pack erstellt — frieren Sie das erste Evidenz-Manifest ein.",
+      "create": "Pack erstellen",
+      "manifestOk": "Manifest intakt (Prüfsumme re-deriviert)",
+      "manifestBad": "Manifest VERÄNDERT — Prüfsumme re-deriviert nicht",
+      "chainOkNow": "Audit-Kette jetzt verifiziert",
+      "chainBadNow": "Audit-Kette jetzt GEBROCHEN"
     },
     "content": {
       "audit_logs": "Audit-Logs",
       "eval_cases": "Eval-Fälle",
       "incidents": "Incidents",
       "release_manifests": "Release-Manifeste",
-      "policy_snapshots": "Policy-Snapshots"
+      "policy_snapshots": "Policy-Snapshots",
+      "audit_entries": "Audit-Einträge",
+      "eval_scores": "Eval-Scores",
+      "replay_bundles": "Replay-Bundles",
+      "eval_reports": "Eval-Berichte"
     },
     "packCol": {
       "id": "Pack-ID",
