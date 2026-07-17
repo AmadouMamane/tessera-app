@@ -210,10 +210,22 @@ def open_incidents(now: datetime | None = None) -> tuple[int, int]:
     incident core rather than re-deriving "open" from the ledger on its own. Both numbers
     are the exact expressions ``compute_incidents_overview`` puts in its KPI strip.
     """
+    from tessera.observability.incident_store import open_durable_counts
+
     core = _RealIncidents(now or datetime.now(UTC))
     n_open = len(core.clusters) + (1 if core.low_score else 0)
     n_critical = sum(1 for cluster in core.clusters if cluster.severity == "critique")
-    return n_open, n_critical
+    # Lot 10 — the durable incidents an operator actually opened count too;
+    # the sidebar badge stays the ONE source both surfaces ask.
+    durable_open, durable_critical = open_durable_counts()
+    return n_open + durable_open, n_critical + durable_critical
+
+
+def _durable_incident_rows() -> list[dict[str, object]]:
+    """The durable incidents, newest first, shaped for the page (verbatim facts)."""
+    from tessera.observability.incident_store import load_incidents
+
+    return list(reversed(load_incidents()))
 
 
 def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
@@ -650,6 +662,9 @@ def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
 
     return {
         "generated_at": now.isoformat(),
+        # Lot 10 — the DURABLE incidents an operator opened (empty until someone
+        # does; the journal carries every attributed act).
+        "durable_incidents": _durable_incident_rows(),
         "period_days": 7,
         "updated_at": now.strftime("%H:%M:%S"),
         "kpis": kpis,

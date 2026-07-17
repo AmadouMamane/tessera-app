@@ -100,10 +100,13 @@ def test_alerts_track_the_chain_status() -> None:
 def test_siem_demonstration_shape_is_present() -> None:
     # The export half stays a deterministic fixture (flagged evidence_export in
     # the UI). We only assert the shape survives, not that its numbers are real.
+    # `current_pack` is REAL since lot 7: dict when a pack was frozen, None
+    # honestly before the first freeze — this test used to demand a dict, and
+    # only stayed green on residue a mis-stubbed ratchet had left on disk.
     payload = compute_proofs_overview("fr")
     for key in ("pipeline", "exporters", "retention", "export_journal", "control_case_proofs"):
         assert isinstance(payload[key], list) and payload[key]  # type: ignore[arg-type]
-    assert isinstance(payload["current_pack"], dict)
+    assert payload["current_pack"] is None or isinstance(payload["current_pack"], dict)
 
 
 def test_localization_is_honest_across_languages() -> None:

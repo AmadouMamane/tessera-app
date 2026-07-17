@@ -4296,6 +4296,37 @@
       "proofs": "{n} proofs generated (7d)",
       "source": "Source of truth: {src}",
       "sync": "Last sync: {ago}"
+    },
+    "durable": {
+      "title": "Declared incidents",
+      "empty": "No declared incident — open the first one via “Create incident”.",
+      "colId": "ID",
+      "colTitle": "Title",
+      "colSeverity": "Severity",
+      "colStatus": "Status",
+      "colOpenedBy": "Opened by",
+      "colPlaybook": "Playbook",
+      "colActions": "Actions",
+      "takeCharge": "Take charge",
+      "resolve": "Resolve",
+      "reopen": "Reopen",
+      "formTitle": "Incident title",
+      "formSeverity": "Severity",
+      "formDomain": "Domain",
+      "formSubmit": "Open the incident",
+      "formCancel": "Cancel",
+      "playbookNone": "— none —",
+      "status": {
+        "ouvert": "Open",
+        "en_cours": "In progress",
+        "resolu": "Resolved"
+      },
+      "pb": {
+        "pb-injection": "Injection containment",
+        "pb-pii-purge": "PII memory purge",
+        "pb-quality-review": "Quality review",
+        "pb-degradation": "Service degradation"
+      }
     }
   },
   "replay": {

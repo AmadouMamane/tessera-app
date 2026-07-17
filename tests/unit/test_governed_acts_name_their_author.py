@@ -751,6 +751,24 @@ GOVERNANCE_ACTS: dict[str, _Act] = {
         "admin",
         {"enabled": False},
     ),
+    "open a durable incident": _Act(
+        "POST",
+        "/observability/incidents",
+        "admin",
+        {"title": "probe incident", "severity": "moyen"},
+    ),
+    "transition an incident": _Act(
+        "POST",
+        "/observability/incidents/transition",
+        "admin",
+        {"incident_id": "INC-probe-001", "status": "en_cours"},
+    ),
+    "attach a playbook to an incident": _Act(
+        "POST",
+        "/observability/incidents/playbook",
+        "admin",
+        {"incident_id": "INC-probe-001", "playbook_id": "pb-injection"},
+    ),
     "freeze an evidence-pack manifest": _Act(
         "POST",
         "/observability/evidence-packs",
@@ -833,6 +851,30 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("tessera.api.routes.settings.set_override", _set_override)
     monkeypatch.setattr("tessera.api.routes.settings.delete_override", _delete_override)
+
+    # Evidence packs + incidents (lots 7/10): stub the STORES, keep the routes,
+    # emitters and chain real — the same discipline as every stub above.
+    def _create_pack(*, created_by: str) -> dict[str, object]:
+        return {"pack_id": "PK-probe-001", "created_by": created_by, "sha256": "0" * 64}
+
+    monkeypatch.setattr("tessera.observability.evidence_pack_store.create_pack", _create_pack)
+
+    def _create_incident(
+        *, title: str, severity: str, domain: str, opened_by: str, source: str = "manual"
+    ) -> dict[str, object]:
+        return {"incident_id": "INC-probe-001", "opened_by": opened_by, "severity": severity}
+
+    def _transition_incident(incident_id: str, status: str, *, by: str) -> dict[str, object]:
+        return {"incident_id": incident_id, "status": status, "closed_by": by}
+
+    def _attach_playbook(incident_id: str, playbook_id: str, *, by: str) -> dict[str, object]:
+        return {"incident_id": incident_id, "playbook_id": playbook_id}
+
+    monkeypatch.setattr("tessera.observability.incident_store.create_incident", _create_incident)
+    monkeypatch.setattr(
+        "tessera.observability.incident_store.transition_incident", _transition_incident
+    )
+    monkeypatch.setattr("tessera.observability.incident_store.attach_playbook", _attach_playbook)
 
 
 def _resolve(act: _Act) -> _Act:
@@ -920,6 +962,7 @@ def _is_governance_mutation(route: APIRoute, method: str) -> bool:
         "/observability/automations/approve",
         "/observability/agents/",
         "/observability/evidence-packs",
+        "/observability/incidents",
         "/settings/",
     )
     return route.path.startswith(governed_prefixes)

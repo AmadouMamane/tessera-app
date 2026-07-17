@@ -221,6 +221,41 @@ class _AutomationApproveBody(BaseModel):
     lang: str = "fr"
 
 
+class _IncidentCreateBody(BaseModel):
+    """Open one durable incident.
+
+    No author field — the opener is the verified assertion principal;
+    ``extra="forbid"`` turns a forgery into a 422 (ADR 0024).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    severity: str
+    domain: str = "autres"
+    lang: str = "fr"
+
+
+class _IncidentTransitionBody(BaseModel):
+    """Move one incident along its lifecycle (ouvert/en_cours/resolu)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    incident_id: str
+    status: str
+    lang: str = "fr"
+
+
+class _IncidentPlaybookBody(BaseModel):
+    """Attach one declared playbook to an incident — a journalled act."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    incident_id: str
+    playbook_id: str
+    lang: str = "fr"
+
+
 class _EvidencePackCreateBody(BaseModel):
     """Create (freeze) one evidence-pack manifest.
 
@@ -416,6 +451,75 @@ async def observability_etat_a_date_snapshot(body: _EtatSnapshotBody) -> dict[st
     return await etat_a_date_mod.save_etat_snapshot(
         body.as_of, body.sources, body.lang, agent=body.agent
     )
+
+
+@router.post("/observability/incidents")
+async def observability_incident_create(
+    body: _IncidentCreateBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Open one durable incident — governed, attributed, journalled (lot 10)."""
+    from tessera.observability import incident_store, incidents as incidents_mod2
+
+    actor = actor_of(session)
+    try:
+        incident = incident_store.create_incident(
+            title=body.title, severity=body.severity, domain=body.domain, opened_by=actor.principal
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    emit_governance_mutation(
+        target="incident.opened",
+        detail={"incident": str(incident.get("incident_id", "")), "severity": body.severity},
+        actor=actor,
+    )
+    return {"available": True, **incidents_mod2.compute_incidents_overview(body.lang)}
+
+
+@router.post("/observability/incidents/transition")
+async def observability_incident_transition(
+    body: _IncidentTransitionBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Move one incident along its lifecycle — governed, attributed, journalled."""
+    from tessera.observability import incident_store, incidents as incidents_mod2
+
+    actor = actor_of(session)
+    try:
+        incident_store.transition_incident(body.incident_id, body.status, by=actor.principal)
+    except incident_store.IncidentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="unknown incident") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    emit_governance_mutation(
+        target="incident.transition",
+        detail={"incident": body.incident_id, "status": body.status},
+        actor=actor,
+    )
+    return {"available": True, **incidents_mod2.compute_incidents_overview(body.lang)}
+
+
+@router.post("/observability/incidents/playbook")
+async def observability_incident_playbook(
+    body: _IncidentPlaybookBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Attach one declared playbook to an incident — governed and journalled."""
+    from tessera.observability import incident_store, incidents as incidents_mod2
+
+    actor = actor_of(session)
+    try:
+        incident_store.attach_playbook(body.incident_id, body.playbook_id, by=actor.principal)
+    except incident_store.IncidentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="unknown incident") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    emit_governance_mutation(
+        target="incident.playbook",
+        detail={"incident": body.incident_id, "playbook": body.playbook_id},
+        actor=actor,
+    )
+    return {"available": True, **incidents_mod2.compute_incidents_overview(body.lang)}
 
 
 @router.post("/observability/evidence-packs")

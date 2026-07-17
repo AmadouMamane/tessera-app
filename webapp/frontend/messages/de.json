@@ -4296,6 +4296,37 @@
       "proofs": "{n} erzeugte Nachweise (7T)",
       "source": "Quelle der Wahrheit: {src}",
       "sync": "Letzte Sync: {ago}"
+    },
+    "durable": {
+      "title": "Gemeldete Vorfälle",
+      "empty": "Kein gemeldeter Vorfall — öffnen Sie den ersten über « Vorfall erstellen ».",
+      "colId": "ID",
+      "colTitle": "Titel",
+      "colSeverity": "Schweregrad",
+      "colStatus": "Status",
+      "colOpenedBy": "Geöffnet von",
+      "colPlaybook": "Playbook",
+      "colActions": "Aktionen",
+      "takeCharge": "Übernehmen",
+      "resolve": "Lösen",
+      "reopen": "Wieder öffnen",
+      "formTitle": "Titel des Vorfalls",
+      "formSeverity": "Schweregrad",
+      "formDomain": "Bereich",
+      "formSubmit": "Vorfall öffnen",
+      "formCancel": "Abbrechen",
+      "playbookNone": "— keins —",
+      "status": {
+        "ouvert": "Offen",
+        "en_cours": "In Arbeit",
+        "resolu": "Gelöst"
+      },
+      "pb": {
+        "pb-injection": "Injection-Eindämmung",
+        "pb-pii-purge": "PII-Speicher leeren",
+        "pb-quality-review": "Qualitäts-Review",
+        "pb-degradation": "Service-Degradation"
+      }
     }
   },
   "replay": {

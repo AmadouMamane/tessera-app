@@ -32,11 +32,12 @@ from tessera.api.routes.observability import mutations, router as observability_
 from tessera.api.security import require_operator
 from tessera.settings import get_settings
 
-# 26 at the 2026-07-10 audit; +1 on 2026-07-17 (lot 7): the evidence-pack
+# 26 at the 2026-07-10 audit; +3 on 2026-07-17 (lot 10): the durable-incident
+# open/transition/playbook acts. +1 on 2026-07-17 (lot 7): the evidence-pack
 # freeze (governed, ratchet-driven). +2 on 2026-07-17 (lot 4): automations bulk
 # rules-state and the approval decision — both governed, both driven by the
 # attribution ratchet (test_governed_acts_name_their_author.py).
-EXPECTED_MUTATION_COUNT = 29
+EXPECTED_MUTATION_COUNT = 32
 
 #: One representative mutation, named for what it does: it puts an agent into production.
 #: If any single endpoint in this router deserves an authorization test, it is this one.

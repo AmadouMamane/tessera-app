@@ -49,3 +49,29 @@ test("focused tabs remain flagged fixture views and switch correctly", async ({ 
   // The overview triage zone is dropped on a focused tab (proves switching).
   await expect(page.getByText("B · Diagnostic / triage")).toHaveCount(0);
 });
+
+// ── lot 10: the durable incident lifecycle is REAL ───────────────────────────
+
+test("create → take charge → resolve: the declared-incident lifecycle is real", async ({
+  page,
+}) => {
+  // Open the create form from the (previously dead) CommandBar button.
+  await page.getByRole("button", { name: "Créer ticket", exact: true }).click();
+  const title = `Incident e2e ${Date.now()}`;
+  await page.getByLabel("Titre de l'incident").fill(title);
+  await page.getByRole("button", { name: "Ouvrir l'incident" }).click();
+  // The durable table lists it with a real INC- id and the OPEN status.
+  const row = page.locator('[data-testid="durable-incidents"] tbody tr', { hasText: title });
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await expect(row.locator("td").first()).toContainText(/^INC-/);
+  await expect(row.getByText("Ouvert", { exact: true })).toBeVisible();
+
+  // Lifecycle: take charge, attach a playbook, resolve — all journalled acts.
+  await row.getByRole("button", { name: "Prendre en charge" }).click();
+  await expect(row.getByText("En cours", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await row.getByLabel("Playbook").selectOption("pb-quality-review");
+  await expect(row.getByLabel("Playbook")).toHaveValue("pb-quality-review", { timeout: 15_000 });
+  await row.getByRole("button", { name: "Résoudre" }).click();
+  await expect(row.getByText("Résolu", { exact: true })).toBeVisible({ timeout: 15_000 });
+  // Leave the incident RESOLVED — an honest, closed residue on the shared store.
+});

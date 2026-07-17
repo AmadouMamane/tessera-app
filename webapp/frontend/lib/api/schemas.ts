@@ -2604,6 +2604,25 @@ const PostmortemSchema = z.object({
 export const IncidentsOverviewSchema = z.object({
   available: z.boolean(),
   generated_at: z.string(),
+  // Lot 10 — the DURABLE incidents an operator opened (attributed journal).
+  durable_incidents: z
+    .array(
+      z.object({
+        incident_id: z.string(),
+        title: z.string(),
+        severity: z.string(),
+        domain: z.string(),
+        status: z.string(),
+        source: z.string(),
+        opened_at: z.string(),
+        opened_by: z.string(),
+        closed_at: z.string().nullable(),
+        closed_by: z.string().nullable(),
+        playbook_id: z.string().nullable(),
+        journal: z.array(z.object({ at: z.string(), actor: z.string(), action: z.string() })),
+      }),
+    )
+    .default([]),
   period_days: z.number().int(),
   updated_at: z.string(),
   kpis: z.array(IncidentKpiSchema),

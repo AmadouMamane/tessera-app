@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   AlertCircle,
@@ -33,7 +33,12 @@ import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { fetchIncidentsOverview } from "@/lib/api/client";
+import {
+  fetchIncidentsOverview,
+  mutateIncidentCreate,
+  mutateIncidentPlaybook,
+  mutateIncidentTransition,
+} from "@/lib/api/client";
 import type { IncidentsOverview as IncidentsOverviewData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
@@ -85,11 +90,34 @@ export function IncidentsOverview() {
   const t = useTranslations("incidents");
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["incidents-overview", locale],
     queryFn: ({ signal }) => fetchIncidentsOverview(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
+  });
+  // Lot 10 — the durable incident lifecycle: every act is governed and
+  // journalled server-side; the fresh payload swaps in on success.
+  const swap = (fresh: Data) => qc.setQueryData(["incidents-overview", locale], fresh);
+  const [showCreate, setShowCreate] = useState(false);
+  const create = useMutation({
+    mutationFn: (vars: { title: string; severity: string; domain: string }) =>
+      mutateIncidentCreate({ ...vars, lang: locale }),
+    onSuccess: (fresh) => {
+      swap(fresh);
+      setShowCreate(false);
+    },
+  });
+  const transition = useMutation({
+    mutationFn: (vars: { incident_id: string; status: string }) =>
+      mutateIncidentTransition({ ...vars, lang: locale }),
+    onSuccess: swap,
+  });
+  const playbook = useMutation({
+    mutationFn: (vars: { incident_id: string; playbook_id: string }) =>
+      mutateIncidentPlaybook({ ...vars, lang: locale }),
+    onSuccess: swap,
   });
 
   if (!data) {
@@ -106,9 +134,25 @@ export function IncidentsOverview() {
         t={t}
         activeTab={activeTab}
         onSelect={setActiveTab}
+        onCreate={() => setShowCreate((v) => !v)}
         onExport={() =>
           downloadBlob("tessera-incidents.json", "application/json", JSON.stringify(data, null, 2))
         }
+      />
+      {showCreate ? (
+        <CreateIncidentForm
+          t={t}
+          busy={create.isPending}
+          onSubmit={(vars) => create.mutate(vars)}
+          onCancel={() => setShowCreate(false)}
+        />
+      ) : null}
+      <DurableIncidents
+        t={t}
+        data={data}
+        onTransition={(id, status) => transition.mutate({ incident_id: id, status })}
+        onPlaybook={(id, pb) => playbook.mutate({ incident_id: id, playbook_id: pb })}
+        busy={transition.isPending || playbook.isPending}
       />
       {/* Registre des rails temporels §6/§8 — the SURVEILLER signal scrubber
           (SR-01) does not belong on an AGIR page; removed in lot 5. The AGIR
@@ -214,13 +258,241 @@ function KpiInfo({ k, title }: { k: string; title: string }) {
 
 // ── chrome ───────────────────────────────────────────────────────────────────
 
+/** Lot 10 — the create form: title + closed severity vocabulary + domain. */
+function CreateIncidentForm({
+  t,
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  t: T;
+  busy: boolean;
+  onSubmit: (vars: { title: string; severity: string; domain: string }) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [severity, setSeverity] = useState("moyen");
+  const [domain, setDomain] = useState("securite");
+  return (
+    <section className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <label className="flex min-w-[16rem] flex-1 flex-col gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+        {t("durable.formTitle")}
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          aria-label={t("durable.formTitle")}
+          className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#2e72d2]"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+        {t("durable.formSeverity")}
+        <select
+          value={severity}
+          onChange={(e) => setSeverity(e.target.value)}
+          aria-label={t("durable.formSeverity")}
+          className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 text-sm text-[var(--tessera-text)]"
+        >
+          {["critique", "eleve", "moyen", "faible"].map((sev) => (
+            <option key={sev} value={sev}>
+              {t(`sev.${sev}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+        {t("durable.formDomain")}
+        <select
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          aria-label={t("durable.formDomain")}
+          className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 text-sm text-[var(--tessera-text)]"
+        >
+          {["securite", "qualite", "conformite", "fiabilite", "autres"].map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Button
+        size="sm"
+        disabled={busy || title.trim() === ""}
+        onClick={() => onSubmit({ title, severity, domain })}
+        className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
+      >
+        {t("durable.formSubmit")}
+      </Button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="h-9 px-2 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+      >
+        {t("durable.formCancel")}
+      </button>
+    </section>
+  );
+}
+
+const DUR_STATUS_BADGE: Record<string, string> = {
+  ouvert: "border-red-500/30 bg-red-500/15 text-red-300",
+  en_cours: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  resolu: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+};
+
+/** Lot 10 — the declared incidents: durable rows, attributed lifecycle acts. */
+function DurableIncidents({
+  t,
+  data,
+  onTransition,
+  onPlaybook,
+  busy,
+}: {
+  t: T;
+  data: Data;
+  onTransition: (id: string, status: string) => void;
+  onPlaybook: (id: string, playbookId: string) => void;
+  busy: boolean;
+}) {
+  const rows = data.durable_incidents;
+  return (
+    <section
+      data-testid="durable-incidents"
+      className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
+      <h3 className="mb-2 text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+        {t("durable.title")}
+      </h3>
+      {rows.length === 0 ? (
+        <p className="py-3 text-[0.7rem] text-[var(--tessera-text-muted)]">{t("durable.empty")}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-[0.72rem]">
+            <thead>
+              <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {[
+                  "colId",
+                  "colTitle",
+                  "colSeverity",
+                  "colStatus",
+                  "colOpenedBy",
+                  "colPlaybook",
+                  "colActions",
+                ].map((c) => (
+                  <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
+                    {t(`durable.${c}`)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((inc) => (
+                <tr
+                  key={inc.incident_id}
+                  className="border-b border-[var(--tessera-border)]/60 last:border-0"
+                >
+                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[#87bfff]">
+                    {inc.incident_id}
+                  </td>
+                  <td className="max-w-[22rem] truncate px-2 py-1.5 text-[var(--tessera-text)]">
+                    {inc.title}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+                        SEV_BADGE[inc.severity] ?? "border-[var(--tessera-border)]",
+                      )}
+                    >
+                      {t(`sev.${inc.severity}`)}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+                        DUR_STATUS_BADGE[inc.status] ?? "border-[var(--tessera-border)]",
+                      )}
+                    >
+                      {t(`durable.status.${inc.status}`)}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{inc.opened_by}</td>
+                  <td className="px-2 py-1.5">
+                    <select
+                      aria-label={t("durable.colPlaybook")}
+                      value={inc.playbook_id ?? ""}
+                      disabled={busy}
+                      onChange={(e) => {
+                        if (e.target.value) onPlaybook(inc.incident_id, e.target.value);
+                      }}
+                      className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.62rem] text-[var(--tessera-text)]"
+                    >
+                      <option value="">{t("durable.playbookNone")}</option>
+                      {["pb-injection", "pb-pii-purge", "pb-quality-review", "pb-degradation"].map(
+                        (pb) => (
+                          <option key={pb} value={pb}>
+                            {t(`durable.pb.${pb}`)}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className="flex items-center gap-2">
+                      {inc.status === "ouvert" ? (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onTransition(inc.incident_id, "en_cours")}
+                          className="text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff] disabled:opacity-50"
+                        >
+                          {t("durable.takeCharge")}
+                        </button>
+                      ) : null}
+                      {inc.status !== "resolu" ? (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onTransition(inc.incident_id, "resolu")}
+                          className="text-[0.62rem] font-medium text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                        >
+                          {t("durable.resolve")}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onTransition(inc.incident_id, "ouvert")}
+                          className="text-[0.62rem] font-medium text-amber-300 hover:text-amber-200 disabled:opacity-50"
+                        >
+                          {t("durable.reopen")}
+                        </button>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CommandBar({
   t,
   activeTab,
   onSelect,
+  onCreate,
   onExport,
-}: { t: T; activeTab: TabKey; onSelect: (tab: TabKey) => void; onExport: () => void }) {
-  const tc = useTranslations("common");
+}: {
+  t: T;
+  activeTab: TabKey;
+  onSelect: (tab: TabKey) => void;
+  onCreate: () => void;
+  onExport: () => void;
+}) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <TabStrip
@@ -235,27 +507,16 @@ function CommandBar({
         }))}
       />
       <div className="flex shrink-0 items-center gap-2">
-        {/* Create/launch need the incidents store (a later lot) — disabled and
-            saying so beats buttons that pretend to act. */}
-        <span title={tc("notWired")}>
-          <Button
-            size="sm"
-            disabled
-            className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
-          >
-            <Plus className="h-4 w-4" /> {t("actions.createTicket")}
-          </Button>
-        </span>
-        <span title={tc("notWired")}>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled
-            className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs"
-          >
-            <PlayCircle className="h-4 w-4" /> {t("actions.launchPlaybook")}
-          </Button>
-        </span>
+        {/* Lot 10 — the durable incident store exists: creation is a real
+            governed act. Playbooks attach PER incident (on each declared row),
+            so the free-floating launch button is gone, not disabled. */}
+        <Button
+          size="sm"
+          onClick={onCreate}
+          className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
+        >
+          <Plus className="h-4 w-4" /> {t("actions.createTicket")}
+        </Button>
         <Link
           href="/prouver/evidence-store"
           className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs transition-colors hover:bg-[var(--tessera-muted)]"

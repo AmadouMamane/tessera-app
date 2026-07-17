@@ -4296,6 +4296,37 @@
       "proofs": "{n} preuves générées (7j)",
       "source": "Source de vérité : {src}",
       "sync": "Dernière sync : {ago}"
+    },
+    "durable": {
+      "title": "Incidents déclarés",
+      "empty": "Aucun incident déclaré — ouvrez le premier depuis « Créer un incident ».",
+      "colId": "ID",
+      "colTitle": "Titre",
+      "colSeverity": "Sévérité",
+      "colStatus": "Statut",
+      "colOpenedBy": "Ouvert par",
+      "colPlaybook": "Playbook",
+      "colActions": "Actions",
+      "takeCharge": "Prendre en charge",
+      "resolve": "Résoudre",
+      "reopen": "Rouvrir",
+      "formTitle": "Titre de l'incident",
+      "formSeverity": "Sévérité",
+      "formDomain": "Domaine",
+      "formSubmit": "Ouvrir l'incident",
+      "formCancel": "Annuler",
+      "playbookNone": "— aucun —",
+      "status": {
+        "ouvert": "Ouvert",
+        "en_cours": "En cours",
+        "resolu": "Résolu"
+      },
+      "pb": {
+        "pb-injection": "Confinement injection",
+        "pb-pii-purge": "Purge mémoire PII",
+        "pb-quality-review": "Revue qualité",
+        "pb-degradation": "Dégradation service"
+      }
     }
   },
   "replay": {

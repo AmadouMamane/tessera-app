@@ -902,6 +902,58 @@ export async function fetchImprovement(
   return request(`/observability/improvement${q}`, { signal }, ImprovementReportSchema);
 }
 
+/** Open one durable incident (governed act; opener = verified assertion). */
+export async function mutateIncidentCreate(body: {
+  title: string;
+  severity: string;
+  domain?: string;
+  lang?: string;
+}): Promise<IncidentsOverview> {
+  return request(
+    "/observability/incidents",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    IncidentsOverviewSchema,
+  );
+}
+
+/** Move one incident along its lifecycle (governed, journalled). */
+export async function mutateIncidentTransition(body: {
+  incident_id: string;
+  status: string;
+  lang?: string;
+}): Promise<IncidentsOverview> {
+  return request(
+    "/observability/incidents/transition",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    IncidentsOverviewSchema,
+  );
+}
+
+/** Attach one declared playbook to an incident (governed, journalled). */
+export async function mutateIncidentPlaybook(body: {
+  incident_id: string;
+  playbook_id: string;
+  lang?: string;
+}): Promise<IncidentsOverview> {
+  return request(
+    "/observability/incidents/playbook",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    IncidentsOverviewSchema,
+  );
+}
+
 export async function fetchIncidentsOverview(
   lang: string,
   signal?: AbortSignal,
