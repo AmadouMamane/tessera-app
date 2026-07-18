@@ -41,6 +41,7 @@ __all__ = [
     "available_config_keys",
     "compute_agent_configurations",
     "resolve_escalation_threshold",
+    "resolve_retrieval",
     "resolve_sampling",
     "resolve_style",
     "set_agent_config",
@@ -86,6 +87,10 @@ _DEFAULTS: dict[str, Any] = {
     # ADR 0033 — unset means the org-wide settings value serves
     # (GuardSettings.escalation_confidence_threshold), never a copied number.
     "escalation_threshold": None,
+    # ADR 0035 — unset means each lookup worker's historical default serves
+    # (4 product / 6 regulation); reranking ON is the historical truth.
+    "retrieval_top_k": None,
+    "retrieval_rerank": True,
     "routing_strategy": "Par défaut (Recommandé)",
     "parallel_tools": True,
     "tags": ["support", "client"],
@@ -204,9 +209,10 @@ def _tool_label(name: str, lang: str) -> str:
 
 
 _SLIDERS = ("temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty")
-# ADR 0033 — float knobs beyond the sampling family (same coercion, own home:
-# the escalation threshold never rides a backend call, it drives the reviewer).
-_FLOAT_KNOBS = (*_SLIDERS, "escalation_threshold")
+# ADR 0033/0035 — float knobs beyond the sampling family (same coercion, own
+# homes: the escalation threshold drives the reviewer, the retrieval depth
+# drives the lookup workers — neither rides a backend sampling call).
+_FLOAT_KNOBS = (*_SLIDERS, "escalation_threshold", "retrieval_top_k")
 _SLIDER_MAX: dict[str, float] = {
     "temperature": 1.0,
     "top_p": 1.0,
@@ -214,9 +220,12 @@ _SLIDER_MAX: dict[str, float] = {
     "frequency_penalty": 2.0,
     "presence_penalty": 2.0,
     "escalation_threshold": 1.0,
+    "retrieval_top_k": 10.0,
 }
-# ADR 0032 — top-k is integer-valued: whole-number steps, coerced on save.
-_SLIDER_STEP: dict[str, float] = {"top_k": 1.0}
+_SLIDER_MIN: dict[str, float] = {"retrieval_top_k": 1.0}
+# ADR 0032/0035 — integer-valued knobs: whole-number steps, coerced on save.
+_INT_KNOBS = ("top_k", "retrieval_top_k")
+_SLIDER_STEP: dict[str, float] = {"top_k": 1.0, "retrieval_top_k": 1.0}
 _SLIDER_STEP_DEFAULT = 0.05
 
 
@@ -278,6 +287,8 @@ _KEY_LABEL: dict[str, tuple[str, str, str]] = {
     "top_p": ("Top P", "Top P", "Top P"),
     "top_k": ("Top K", "Top K", "Top K"),
     "escalation_threshold": ("Seuil d'escalade", "Eskalationsschwelle", "Escalation threshold"),
+    "retrieval_top_k": ("Profondeur de recherche", "Suchtiefe", "Search depth"),
+    "retrieval_rerank": ("Reranking (RRF)", "Reranking (RRF)", "Reranking (RRF)"),
     "frequency_penalty": ("Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
     "presence_penalty": ("Pénalité de présence", "Praesenzstrafe", "Presence penalty"),
     "routing_strategy": ("Stratégie de routage", "Routing-Strategie", "Routing strategy"),
@@ -356,12 +367,12 @@ def _coerce_slider(key: str, value: Any) -> float | None:
     if value is None:
         return None
     try:
-        clamped = max(0.0, min(_SLIDER_MAX.get(key, 1.0), float(value)))
+        clamped = max(_SLIDER_MIN.get(key, 0.0), min(_SLIDER_MAX.get(key, 1.0), float(value)))
     except (TypeError, ValueError):
         default = _DEFAULTS[key]
         return float(default) if isinstance(default, int | float) else None
-    # ADR 0032 — top-k is integer-valued: the store keeps a whole number.
-    return float(round(clamped)) if key == "top_k" else clamped
+    # ADR 0032/0035 — integer knobs: the store keeps a whole number.
+    return float(round(clamped)) if key in _INT_KNOBS else clamped
 
 
 def _coerce(key: str, value: Any) -> Any:
@@ -507,6 +518,26 @@ def resolve_style(agent_id: str = DEFAULT_AGENT_ID) -> tuple[dict[str, str], int
     length = _STYLE_SLUGS.get(length_canonical, _LENGTH_DEFAULT)
     budget = _LENGTH_BUDGET_TOKENS.get(length_canonical, _LENGTH_BUDGET_TOKENS["Moyenne"])
     return {"tone": tone, "detail": detail, "length": length}, budget
+
+
+def resolve_retrieval(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
+    """The per-turn retrieval knobs for the lookup workers (ADR 0035).
+
+    ``rerank`` is always present (True is the historical truth); ``top_k`` is
+    present only when SET — an absent depth means each worker's own historical
+    default serves (4 product / 6 regulation), never one invented number for
+    both. Fail-open to the historical behaviour, loudly.
+    """
+    try:
+        cfg = _effective(agent_id)
+    except Exception as exc:
+        sys.stderr.write(f"tessera.observability.agent_configurations: resolve_retrieval: {exc}\n")
+        return {"rerank": True}
+    resolved: dict[str, object] = {"rerank": bool(cfg.get("retrieval_rerank", True))}
+    raw = cfg.get("retrieval_top_k")
+    if isinstance(raw, int | float) and not isinstance(raw, bool):
+        resolved["top_k"] = int(raw)
+    return resolved
 
 
 def resolve_escalation_threshold(agent_id: str = DEFAULT_AGENT_ID) -> float:
@@ -740,6 +771,7 @@ def _slider(
     ``applied`` says whether the serving backend forwards this parameter at all.
     """
     max_v = _SLIDER_MAX[key]
+    min_v = _SLIDER_MIN.get(key, 0.0)
     step = _SLIDER_STEP.get(key, _SLIDER_STEP_DEFAULT)
     if value is None:
         display = _loc(lang, "Défaut backend", "Backend-Standard", "Backend default")
@@ -747,7 +779,7 @@ def _slider(
             "key": key,
             "label": label,
             "value": display,
-            "min": 0.0,
+            "min": min_v,
             "max": max_v,
             "step": step,
             "pct": 0,
@@ -761,7 +793,7 @@ def _slider(
         "label": label,
         "value": f"{value:.2f}".rstrip("0").rstrip(".").replace(".", ",") or "0",
         "num": value,
-        "min": 0.0,
+        "min": min_v,
         "max": max_v,
         "step": step,
         "pct": round(100 * value / max_v),
@@ -826,6 +858,61 @@ def _definition_block(agent_slug: str, lang: str = "fr") -> dict[str, object]:
                 "value": agent.eval_set,
             },
         ],
+    }
+
+
+def _retrieval_block(
+    cfg: dict[str, Any], overrides_now: dict[str, Any], lang: str
+) -> dict[str, object]:
+    """The "Recherche documentaire" panel (ADR 0035): depth slider + rerank toggle."""
+    raw = cfg.get("retrieval_top_k")
+    num = float(raw) if isinstance(raw, int | float) and not isinstance(raw, bool) else None
+    slider = _slider(
+        "retrieval_top_k",
+        _loc(lang, "Profondeur de recherche", "Suchtiefe", "Search depth"),
+        num,
+        overridden=overrides_now.get("retrieval_top_k") is not None,
+        applied=True,
+        lang=lang,
+    )
+    if num is None:
+        slider["unset_label"] = _loc(
+            lang,
+            "Défaut par recherche (4 produit / 6 réglementaire)",
+            "Standard je Suche (4 Produkt / 6 Regulierung)",
+            "Per-lookup default (4 product / 6 regulation)",
+        )
+    rerank_on = bool(cfg.get("retrieval_rerank", True))
+    return {
+        "title": _loc(lang, "Recherche documentaire", "Dokumentensuche", "Document retrieval"),
+        "slider": slider,
+        "toggle": {
+            "key": "retrieval_rerank",
+            "label": _loc(lang, "Reranking (RRF)", "Reranking (RRF)", "Reranking (RRF)"),
+            "value": _loc(lang, "Activé", "Aktiviert", "Enabled")
+            if rerank_on
+            else _loc(lang, "Désactivé", "Deaktiviert", "Disabled"),
+            "on": rerank_on,
+            "kind": "toggle",
+            "badge": None,
+            "editable": True,
+            "options": [],
+        },
+        "note": _loc(
+            lang,
+            "Nombre de documents remis à la synthèse par recherche, et reranking RRF "
+            "(fusion lexicale + vectorielle, actif par défaut — vérité historique). "
+            "Non défini = défaut historique par recherche. Résolu à chaque tour au "
+            "même seam que le modèle — ADR 0035.",
+            "Anzahl der pro Suche an die Synthese uebergebenen Dokumente und "
+            "RRF-Reranking (lexikalische + vektorielle Fusion, standardmaessig aktiv "
+            "- historische Wahrheit). Nicht gesetzt = historischer Standard je Suche. "
+            "Pro Turn am selben Seam aufgeloest - ADR 0035.",
+            "Documents handed to synthesis per lookup, and RRF reranking (lexical + "
+            "vector fusion, on by default - the historical truth). Unset = the "
+            "historical per-lookup default. Resolved every turn at the same seam - "
+            "ADR 0035.",
+        ),
     }
 
 
@@ -1189,6 +1276,8 @@ async def compute_agent_configurations(
             # this agent's own bar, resolved per turn at the routing seam and
             # read by the reviewer from the state.
             "escalation": _escalation_block(cfg, overrides_now, settings, lang),
+            # ADR 0035 — retrieval depth + reranking, per agent, same seam.
+            "retrieval": _retrieval_block(cfg, overrides_now, lang),
             "tools": {
                 "label": _loc(lang, "Outils autorisés", "Erlaubte Tools", "Allowed tools"),
                 "value": _loc(

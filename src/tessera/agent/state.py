@@ -202,6 +202,10 @@ class AgentState(TypedDict):
     # turn's paid model and the overrun behaviour is "block": the router
     # short-circuits the graph with the localized budget_exceeded message.
     budget_blocked: NotRequired[bool]
+    # ADR 0035 — per-turn retrieval knobs resolved at the seam: "rerank"
+    # (always present) and "top_k" (present only when set — absent means each
+    # lookup worker's historical default serves). The lookup workers read THIS.
+    retrieval: NotRequired[dict[str, object]]
     # --- Sandbox overrides (console playground) ---------------------------
     # Optional per-request system-prompt override; replaces the language
     # bundle's ``system`` prompt for this turn only (never persisted).

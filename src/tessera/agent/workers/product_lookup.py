@@ -21,12 +21,20 @@ _CORPUS = "credit_aurore"
 
 
 async def _search(state: AgentState) -> list[RetrievedDocument]:
-    """Wrap :func:`tessera.retrieval.hybrid_search.search` with worker defaults."""
+    """Wrap :func:`tessera.retrieval.hybrid_search.search` with worker defaults.
+
+    ADR 0035 — the seam-resolved retrieval knobs in ``state["retrieval"]``
+    override the worker's historical constants; a state that never crossed the
+    seam (eval harness) keeps them.
+    """
+    knobs = state.get("retrieval") or {}
+    top_k_raw = knobs.get("top_k")
     return await hybrid_search.search(
         query=state["user_input"],
         language=state["language"],
         corpus=_CORPUS,
-        top_k=_TOP_K,
+        top_k=int(top_k_raw) if isinstance(top_k_raw, int | float) else _TOP_K,
+        rerank=bool(knobs.get("rerank", True)),
     )
 
 

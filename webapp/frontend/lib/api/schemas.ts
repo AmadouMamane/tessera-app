@@ -4618,6 +4618,15 @@ export const AgentConfigurationsSchema = z.object({
           note: z.string(),
         })
         .optional(),
+      // ADR 0035 — per-agent retrieval depth + reranking.
+      retrieval: z
+        .object({
+          title: z.string(),
+          slider: AgentConfigSliderSchema,
+          toggle: AgentConfigFieldSchema,
+          note: z.string(),
+        })
+        .optional(),
       tools: z.object({
         label: z.string(),
         value: z.string(),

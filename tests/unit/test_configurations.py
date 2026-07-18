@@ -188,6 +188,25 @@ async def test_escalation_block_shows_the_agent_override(
     assert "unset_label" not in slider
 
 
+async def test_retrieval_block_says_the_per_lookup_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ADR 0035 — unset depth names BOTH historical defaults, never one number."""
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
+    payload = await c.compute_agent_configurations()
+    block = payload["behavior"]["retrieval"]
+    slider = block["slider"]
+    assert slider["key"] == "retrieval_top_k"
+    assert slider["unset"] is True
+    assert slider["unset_label"] == "Défaut par recherche (4 produit / 6 réglementaire)"
+    assert slider["min"] == 1.0
+    assert slider["step"] == 1.0
+    toggle = block["toggle"]
+    assert toggle["key"] == "retrieval_rerank"
+    assert toggle["on"] is True  # reranking ON is the historical truth
+    assert "ADR 0035" in block["note"]
+
+
 async def test_model_rows_show_the_effective_model_with_provenance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

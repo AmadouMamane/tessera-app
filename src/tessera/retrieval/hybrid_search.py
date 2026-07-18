@@ -52,13 +52,17 @@ async def search(
     language: LanguageCode | None,
     corpus: str,
     top_k: int = 4,
+    rerank: bool = True,
 ) -> list[RetrievedDocument]:
     """Search ``corpus`` for ``query`` and return top-k hits.
 
     When ``language`` is ``None`` the search spans all languages — useful for
     regulatory corpora stored in their source language regardless of the active
-    conversation locale. Over-fetches by :data:`_VECTOR_OVERFETCH` so the
-    reranker has enough candidates to meaningfully reorder.
+    conversation locale. With ``rerank`` (the default, the historical truth)
+    the query over-fetches by :data:`_VECTOR_OVERFETCH` so the RRF reranker has
+    enough candidates to meaningfully reorder; ``rerank=False`` (ADR 0035, a
+    declared per-agent decision) serves the raw vector order and skips the
+    over-fetch — it exists only to feed the reranker.
     """
     if not query.strip():
         return []
@@ -69,7 +73,7 @@ async def search(
             query_embedding=query_vec,
             corpus=corpus,
             language=language,
-            top_k=top_k * _VECTOR_OVERFETCH,
+            top_k=top_k * _VECTOR_OVERFETCH if rerank else top_k,
         )
         categories, top_score = _cited_categories(raw_hits)
         cited_count = sum(1 for hit in raw_hits if hit.score >= _CITATION_THRESHOLD)
@@ -82,6 +86,18 @@ async def search(
         if not raw_hits:
             return []
 
+        if not rerank:
+            return [
+                RetrievedDocument(
+                    source=hit.source,
+                    chunk_id=hit.chunk_id,
+                    language=hit.language,
+                    text=hit.text,
+                    score=hit.score,
+                    metadata=hit.metadata,
+                )
+                for hit in raw_hits[:top_k]
+            ]
         reranked = reranking.rerank(query=query, hits=raw_hits, top_k=top_k)
         return [
             RetrievedDocument(

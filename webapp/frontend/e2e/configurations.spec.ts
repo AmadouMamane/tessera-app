@@ -236,6 +236,23 @@ test("the escalation-threshold block is real: slider, formula, honest default (A
   await expect(block.getByRole("slider", { name: "Seuil d'escalade" })).toBeVisible();
 });
 
+test("the retrieval block is real: depth slider with honest per-lookup default, rerank toggle ON (ADR 0035)", async ({
+  page,
+}) => {
+  const block = page.getByTestId("behavior-retrieval");
+  await expect(block).toBeVisible();
+  await expect(block.getByRole("slider", { name: "Profondeur de recherche" })).toBeVisible();
+  // The shared store may hold an override; when unset the label names BOTH
+  // historical defaults instead of inventing one number.
+  const toggle = block.getByRole("switch", { name: "Reranking (RRF)" });
+  await expect(toggle).toBeVisible();
+  // Flip the toggle to prove it is operable, then cancel — no persistence.
+  const before = await toggle.getAttribute("aria-checked");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", before === "true" ? "false" : "true");
+  await page.getByRole("button", { name: "Annuler" }).click();
+});
+
 test("a temperature edit persists, the history names its author, and reset restores the runtime default", async ({
   page,
 }) => {

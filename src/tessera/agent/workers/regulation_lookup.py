@@ -69,13 +69,20 @@ def _select_citations(documents: list[RetrievedDocument]) -> list[Citation]:
 
 
 async def run(state: AgentState) -> dict[str, object]:
-    """Worker entry point."""
+    """Worker entry point.
+
+    ADR 0035 — the seam-resolved retrieval knobs in ``state["retrieval"]``
+    override the worker's historical constants; off-seam states keep them.
+    """
+    knobs = state.get("retrieval") or {}
+    top_k_raw = knobs.get("top_k")
     try:
         documents = await hybrid_search.search(
             query=state["user_input"],
             language=None,  # regulations are stored in their source language; search cross-lingual
             corpus=_CORPUS,
-            top_k=_TOP_K,
+            top_k=int(top_k_raw) if isinstance(top_k_raw, int | float) else _TOP_K,
+            rerank=bool(knobs.get("rerank", True)),
         )
     except Exception as exc:
         return {"errors": [f"regulation_lookup failed: {exc}"]}
