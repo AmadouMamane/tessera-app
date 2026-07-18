@@ -41,6 +41,7 @@ __all__ = [
     "available_config_keys",
     "compute_agent_configurations",
     "resolve_escalation_threshold",
+    "resolve_memory",
     "resolve_retrieval",
     "resolve_sampling",
     "resolve_style",
@@ -91,6 +92,10 @@ _DEFAULTS: dict[str, Any] = {
     # (4 product / 6 regulation); reranking ON is the historical truth.
     "retrieval_top_k": None,
     "retrieval_rerank": True,
+    # ADR 0036 — "Défaut org" = the settings-selected tier serves; the window
+    # unset = the org history_window (never a copied number).
+    "memory_backend": "Défaut org",
+    "memory_window": None,
     "routing_strategy": "Par défaut (Recommandé)",
     "parallel_tools": True,
     "tags": ["support", "client"],
@@ -111,6 +116,14 @@ _OPTIONS: dict[str, list[str]] = {
         "Coût minimal",
     ],
     "default_language": ["Français", "Allemand", "Anglais"],
+    # ADR 0036 — the three first-party tiers (ADR 0007); external adapters are
+    # deliberately not offered (they may not be installed).
+    "memory_backend": [
+        "Défaut org",
+        "Fenêtre (Tier 0)",
+        "Résumé (Tier 1)",
+        "Persistante (Tier 2)",
+    ],
 }
 
 # Per-key translation of the editable option *values*. The canonical French
@@ -161,6 +174,23 @@ _VALUE_TR: dict[str, dict[str, tuple[str, str, str]]] = {
         "Allemand": ("Allemand", "Deutsch", "German"),
         "Anglais": ("Anglais", "Englisch", "English"),
     },
+    "memory_backend": {
+        "Défaut org": ("Défaut org", "Org-Standard", "Org default"),
+        "Fenêtre (Tier 0)": ("Fenêtre (Tier 0)", "Fenster (Tier 0)", "Window (Tier 0)"),
+        "Résumé (Tier 1)": ("Résumé (Tier 1)", "Zusammenfassung (Tier 1)", "Summary (Tier 1)"),
+        "Persistante (Tier 2)": (
+            "Persistante (Tier 2)",
+            "Persistent (Tier 2)",
+            "Persistent (Tier 2)",
+        ),
+    },
+}
+
+# ADR 0036 — canonical French tier value -> the memory factory's tier slug.
+_MEMORY_TIER_SLUGS: dict[str, str] = {
+    "Fenêtre (Tier 0)": "window",
+    "Résumé (Tier 1)": "summary",
+    "Persistante (Tier 2)": "persistent",
 }
 
 
@@ -212,7 +242,7 @@ _SLIDERS = ("temperature", "top_p", "top_k", "frequency_penalty", "presence_pena
 # ADR 0033/0035 — float knobs beyond the sampling family (same coercion, own
 # homes: the escalation threshold drives the reviewer, the retrieval depth
 # drives the lookup workers — neither rides a backend sampling call).
-_FLOAT_KNOBS = (*_SLIDERS, "escalation_threshold", "retrieval_top_k")
+_FLOAT_KNOBS = (*_SLIDERS, "escalation_threshold", "retrieval_top_k", "memory_window")
 _SLIDER_MAX: dict[str, float] = {
     "temperature": 1.0,
     "top_p": 1.0,
@@ -221,11 +251,12 @@ _SLIDER_MAX: dict[str, float] = {
     "presence_penalty": 2.0,
     "escalation_threshold": 1.0,
     "retrieval_top_k": 10.0,
+    "memory_window": 20.0,
 }
-_SLIDER_MIN: dict[str, float] = {"retrieval_top_k": 1.0}
-# ADR 0032/0035 — integer-valued knobs: whole-number steps, coerced on save.
-_INT_KNOBS = ("top_k", "retrieval_top_k")
-_SLIDER_STEP: dict[str, float] = {"top_k": 1.0, "retrieval_top_k": 1.0}
+_SLIDER_MIN: dict[str, float] = {"retrieval_top_k": 1.0, "memory_window": 2.0}
+# ADR 0032/0035/0036 — integer-valued knobs: whole-number steps, coerced on save.
+_INT_KNOBS = ("top_k", "retrieval_top_k", "memory_window")
+_SLIDER_STEP: dict[str, float] = {"top_k": 1.0, "retrieval_top_k": 1.0, "memory_window": 1.0}
 _SLIDER_STEP_DEFAULT = 0.05
 
 
@@ -289,6 +320,8 @@ _KEY_LABEL: dict[str, tuple[str, str, str]] = {
     "escalation_threshold": ("Seuil d'escalade", "Eskalationsschwelle", "Escalation threshold"),
     "retrieval_top_k": ("Profondeur de recherche", "Suchtiefe", "Search depth"),
     "retrieval_rerank": ("Reranking (RRF)", "Reranking (RRF)", "Reranking (RRF)"),
+    "memory_backend": ("Mémoire (tier)", "Speicher (Tier)", "Memory (tier)"),
+    "memory_window": ("Fenêtre de mémoire", "Speicherfenster", "Memory window"),
     "frequency_penalty": ("Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
     "presence_penalty": ("Pénalité de présence", "Praesenzstrafe", "Presence penalty"),
     "routing_strategy": ("Stratégie de routage", "Routing-Strategie", "Routing strategy"),
@@ -537,6 +570,29 @@ def resolve_retrieval(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
     raw = cfg.get("retrieval_top_k")
     if isinstance(raw, int | float) and not isinstance(raw, bool):
         resolved["top_k"] = int(raw)
+    return resolved
+
+
+def resolve_memory(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, object]:
+    """The per-turn memory knobs for the reporter (ADR 0036).
+
+    ``tier`` is present only when the agent picked a first-party tier
+    ("Défaut org" is honest absence — the settings-selected backend serves);
+    ``window`` only when set. An empty dict means the org singleton serves,
+    exactly the historical behaviour. Fail-open to it, loudly.
+    """
+    try:
+        cfg = _effective(agent_id)
+    except Exception as exc:
+        sys.stderr.write(f"tessera.observability.agent_configurations: resolve_memory: {exc}\n")
+        return {}
+    resolved: dict[str, object] = {}
+    tier = _MEMORY_TIER_SLUGS.get(str(cfg.get("memory_backend")))
+    if tier is not None:
+        resolved["tier"] = tier
+    raw = cfg.get("memory_window")
+    if isinstance(raw, int | float) and not isinstance(raw, bool):
+        resolved["window"] = int(raw)
     return resolved
 
 
@@ -916,6 +972,62 @@ def _retrieval_block(
     }
 
 
+def _memory_block(
+    cfg: dict[str, Any], overrides_now: dict[str, Any], settings: Any, lang: str
+) -> dict[str, object]:
+    """The "Mémoire" panel (ADR 0036): tier select + window slider."""
+    org_tier = str(settings.memory.backend)
+    org_window = int(settings.memory.history_window)
+    select = _edit(
+        "memory_backend",
+        _loc(lang, "Mémoire (tier)", "Speicher (Tier)", "Memory (tier)"),
+        str(cfg.get("memory_backend", "Défaut org")),
+        "select",
+        lang,
+        badge=_loc(lang, f"org : {org_tier}", f"Org: {org_tier}", f"org: {org_tier}"),
+    )
+    raw = cfg.get("memory_window")
+    num = float(raw) if isinstance(raw, int | float) and not isinstance(raw, bool) else None
+    slider = _slider(
+        "memory_window",
+        _loc(lang, "Fenêtre de mémoire", "Speicherfenster", "Memory window"),
+        num,
+        overridden=overrides_now.get("memory_window") is not None,
+        applied=True,
+        lang=lang,
+    )
+    if num is None:
+        slider["unset_label"] = _loc(
+            lang,
+            f"Défaut org ({org_window})",
+            f"Org-Standard ({org_window})",
+            f"Org default ({org_window})",
+        )
+    return {
+        "title": _loc(lang, "Mémoire", "Speicher", "Memory"),
+        "select": select,
+        "slider": slider,
+        "note": _loc(
+            lang,
+            "Tier de mémoire (ADR 0007 : fenêtre verbatim / résumé compacté / "
+            "persistante inter-sessions) et taille de la fenêtre verbatim, par "
+            "agent. Non défini = défaut org (settings). La transcription durable "
+            "enregistre tout indépendamment de la fenêtre. Résolu à chaque tour "
+            "au même seam — ADR 0036.",
+            "Speicher-Tier (ADR 0007: Verbatim-Fenster / kompaktierte "
+            "Zusammenfassung / sitzungsuebergreifend persistent) und Groesse des "
+            "Verbatim-Fensters, pro Agent. Nicht gesetzt = Org-Standard "
+            "(Settings). Das dauerhafte Transkript zeichnet unabhaengig vom "
+            "Fenster alles auf. Pro Turn am selben Seam aufgeloest - ADR 0036.",
+            "Memory tier (ADR 0007: verbatim window / compacted summary / "
+            "cross-session persistent) and verbatim window size, per agent. "
+            "Unset = the org default (settings). The durable transcript records "
+            "everything regardless of the window. Resolved every turn at the "
+            "same seam - ADR 0036.",
+        ),
+    }
+
+
 def _escalation_block(
     cfg: dict[str, Any], overrides_now: dict[str, Any], settings: Any, lang: str
 ) -> dict[str, object]:
@@ -1278,6 +1390,8 @@ async def compute_agent_configurations(
             "escalation": _escalation_block(cfg, overrides_now, settings, lang),
             # ADR 0035 — retrieval depth + reranking, per agent, same seam.
             "retrieval": _retrieval_block(cfg, overrides_now, lang),
+            # ADR 0036 — memory tier + window, per agent, same seam.
+            "memory": _memory_block(cfg, overrides_now, settings, lang),
             "tools": {
                 "label": _loc(lang, "Outils autorisés", "Erlaubte Tools", "Allowed tools"),
                 "value": _loc(

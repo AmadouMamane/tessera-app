@@ -37,8 +37,14 @@ __all__ = [
     "MemoryScope",
     "TurnRecord",
     "get_memory_backend",
+    "memory_backend_for",
     "scope_for",
 ]
+
+#: The first-party tiers a per-agent knob may select (ADR 0036). The external
+#: adapters are deliberately absent: they are optional extras that may not be
+#: installed, and a knob that can select an uninstalled backend would be a lie.
+_FIRST_PARTY_TIERS = ("window", "summary", "persistent")
 
 
 def scope_for(
@@ -94,3 +100,47 @@ def get_memory_backend() -> MemoryBackend:
     from tessera.memory.adapters.zep import ZepBackend
 
     return ZepBackend()
+
+
+@lru_cache(maxsize=16)
+def _tier_backend(tier: str, history_window: int | None) -> MemoryBackend:
+    """One cached instance per (first-party tier, window) pair (ADR 0036)."""
+    if tier == "window":
+        from tessera.memory.window import WindowBackend
+
+        return WindowBackend(history_window=history_window)
+    if tier == "summary":
+        from tessera.memory.summary import SummaryBackend
+
+        return SummaryBackend(history_window=history_window)
+    from tessera.memory.persistent import PersistentBackend
+
+    return PersistentBackend(history_window=history_window)
+
+
+def memory_backend_for(tier: str | None = None, history_window: int | None = None) -> MemoryBackend:
+    """The backend serving one agent's turn (ADR 0036) — org singleton by default.
+
+    ``tier`` names a first-party tier (``window`` / ``summary`` /
+    ``persistent``); ``history_window`` overrides the verbatim recency window.
+    Both unset → the process-wide singleton, exactly the historical behaviour.
+    A window override with no tier applies to the ORG tier — unless the org
+    runs an external adapter, whose constructor takes no window: the singleton
+    serves and the gap is logged, never silently absorbed.
+    """
+    if tier is None and history_window is None:
+        return get_memory_backend()
+    if tier is None:
+        org_tier = get_settings().memory.backend
+        if org_tier not in _FIRST_PARTY_TIERS:
+            import sys
+
+            sys.stderr.write(
+                f"tessera.memory: per-agent window ignored — org backend {org_tier!r} "
+                "is an external adapter (ADR 0036)\n"
+            )
+            return get_memory_backend()
+        tier = org_tier
+    if tier not in _FIRST_PARTY_TIERS:
+        return get_memory_backend()
+    return _tier_backend(tier, history_window)

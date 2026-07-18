@@ -4627,6 +4627,15 @@ export const AgentConfigurationsSchema = z.object({
           note: z.string(),
         })
         .optional(),
+      // ADR 0036 — per-agent memory tier + window.
+      memory: z
+        .object({
+          title: z.string(),
+          select: AgentConfigFieldSchema,
+          slider: AgentConfigSliderSchema,
+          note: z.string(),
+        })
+        .optional(),
       tools: z.object({
         label: z.string(),
         value: z.string(),

@@ -531,6 +531,22 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">{b.retrieval.note}</p>
         </div>
       ) : null}
+      {b.memory ? (
+        // ADR 0036 — memory tier + window, per agent, same seam.
+        <div
+          data-testid="behavior-memory"
+          className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
+        >
+          <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+            {b.memory.title}
+          </span>
+          <div className="mt-1.5 grid gap-2">
+            <SelectRow field={b.memory.select} ctx={ctx} />
+            <SliderRow item={b.memory.slider} ctx={ctx} runtime={b.runtime} />
+          </div>
+          <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">{b.memory.note}</p>
+        </div>
+      ) : null}
       <p className="mt-2 flex items-center gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
         <Info className="h-3.5 w-3.5 text-cyan-300" />
         {b.note}

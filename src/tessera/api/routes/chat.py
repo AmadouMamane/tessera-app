@@ -73,6 +73,7 @@ from tessera.memory.transcript import append_messages, last_agent_for, load_tran
 from tessera.observability import replay, semconv
 from tessera.observability.agent_configurations import (
     resolve_escalation_threshold,
+    resolve_memory,
     resolve_retrieval,
     resolve_sampling,
     resolve_style,
@@ -867,6 +868,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # ADR 0035 — the retrieval knobs resolve at the same seam; the lookup
     # workers read the state (off-seam paths keep their historical constants).
     initial["retrieval"] = resolve_retrieval(agent_id)
+    # ADR 0036 — the memory knobs resolve at the same seam; the reporter's
+    # message assembly reads the state (off-seam paths keep the org singleton).
+    initial["memory"] = resolve_memory(agent_id)
     synthetic = is_test_turn(surface)
     if synthetic:
         mark_synthetic_turn()

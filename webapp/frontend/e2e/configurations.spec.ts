@@ -253,6 +253,22 @@ test("the retrieval block is real: depth slider with honest per-lookup default, 
   await page.getByRole("button", { name: "Annuler" }).click();
 });
 
+test("the memory block is real: tier select with honest org default, window slider (ADR 0036)", async ({
+  page,
+}) => {
+  const block = page.getByTestId("behavior-memory");
+  await expect(block).toBeVisible();
+  const tier = block.getByLabel("Mémoire (tier)");
+  await expect(tier).toBeVisible();
+  // The org-default option is offered explicitly — honest absence, not a copy.
+  await expect(tier.locator("option", { hasText: "Défaut org" })).toHaveCount(1);
+  await expect(block.getByRole("slider", { name: "Fenêtre de mémoire" })).toBeVisible();
+  // Changing the tier dirties the form; cancel leaves the store untouched.
+  await tier.selectOption("Fenêtre (Tier 0)");
+  await expect(page.getByRole("button", { name: "Enregistrer les modifications" })).toBeEnabled();
+  await page.getByRole("button", { name: "Annuler" }).click();
+});
+
 test("a temperature edit persists, the history names its author, and reset restores the runtime default", async ({
   page,
 }) => {

@@ -188,6 +188,24 @@ async def test_escalation_block_shows_the_agent_override(
     assert "unset_label" not in slider
 
 
+async def test_memory_block_says_the_org_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADR 0036 — unset tier/window name the ORG defaults, never copied values."""
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
+    payload = await c.compute_agent_configurations()
+    block = payload["behavior"]["memory"]
+    select = block["select"]
+    assert select["key"] == "memory_backend"
+    assert select["value"] == "Défaut org"
+    assert str(select["badge"]).startswith("org : ")
+    assert "Fenêtre (Tier 0)" in select["options"]
+    slider = block["slider"]
+    assert slider["key"] == "memory_window"
+    assert slider["unset"] is True
+    assert str(slider["unset_label"]).startswith("Défaut org (")
+    assert slider["min"] == 2.0
+    assert "ADR 0036" in block["note"]
+
+
 async def test_retrieval_block_says_the_per_lookup_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

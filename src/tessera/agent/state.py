@@ -206,6 +206,10 @@ class AgentState(TypedDict):
     # (always present) and "top_k" (present only when set — absent means each
     # lookup worker's historical default serves). The lookup workers read THIS.
     retrieval: NotRequired[dict[str, object]]
+    # ADR 0036 — per-turn memory knobs resolved at the seam: "tier" and
+    # "window", each present only when the agent set them. An empty/absent
+    # dict means the org singleton serves (the historical behaviour).
+    memory: NotRequired[dict[str, object]]
     # --- Sandbox overrides (console playground) ---------------------------
     # Optional per-request system-prompt override; replaces the language
     # bundle's ``system`` prompt for this turn only (never persisted).
