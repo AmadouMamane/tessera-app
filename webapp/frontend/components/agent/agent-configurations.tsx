@@ -98,7 +98,7 @@ export function AgentConfigurations() {
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <AgentCrossLinks page="configurations" />
       <Header
         data={data}
@@ -114,7 +114,7 @@ export function AgentConfigurations() {
         instanceLabel="Configuration pour cet agent (instance)"
         instanceHint="éditable · gouvernée en production"
       />
-      <div className="grid min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="min-w-0 overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[linear-gradient(180deg,rgba(8,28,48,0.94),rgba(5,20,35,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
           <FieldSection block={data.identity} ctx={ctx} />
           <FieldSection block={data.model} ctx={ctx} />

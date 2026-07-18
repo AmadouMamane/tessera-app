@@ -269,6 +269,26 @@ test("the memory block is real: tier select with honest org default, window slid
   await page.getByRole("button", { name: "Annuler" }).click();
 });
 
+// --- the page scrolls to its end with a WHEEL, like a human ------------------
+//
+// The root and its grid carried `min-h-0`: inside the shell's `h-full` chain the
+// flex column squeezed the page, and `<main>`'s scroll range stopped ~370px short
+// of the left column's end — the Tags/archive block was unreachable by mouse
+// wheel at EVERY window size (measured live: fully scrolled, the archive button
+// sat at y=1361 in a 1000px viewport). No other agent page constrains its root.
+//
+// The witness must scroll the way a human does: `scrollIntoViewIfNeeded` (and
+// any programmatic scroll) can scroll the `overflow-hidden` body and reach the
+// element even on the broken page — it asks the neighbourhood, not the thing.
+// Wheel + IntersectionObserver-backed `toBeInViewport` sees what the user sees.
+// Red before the fix, green after.
+test("the bottom of both columns is reachable by wheel scrolling", async ({ page }) => {
+  await page.mouse.move(836, 500); // over <main>, so the wheel scrolls the page
+  for (let i = 0; i < 30; i++) await page.mouse.wheel(0, 800);
+  await expect(page.getByRole("button", { name: /rchiver cet agent/ })).toBeInViewport();
+  await expect(page.locator("main aside > *:last-child")).toBeInViewport();
+});
+
 test("a temperature edit persists, the history names its author, and reset restores the runtime default", async ({
   page,
 }) => {
