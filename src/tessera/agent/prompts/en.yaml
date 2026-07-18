@@ -112,6 +112,11 @@ decline: |
   I'm unable to answer this request in this channel. Please reach out to
   your personal advisor directly.
 
+# ADR 0034 — response for a turn blocked by the daily budget ceiling.
+budget_exceeded: |
+  Due to a daily usage limit, I cannot process your request at the moment.
+  Please try again later, or contact your Crédit Aurore advisor directly.
+
 # --- Memory summarisation (ADR 0007, Tier 1) -----------------------------
 # Cold-path instruction for compacting older turns. Entities (amounts, IBANs,
 # dates, citations) are preserved separately and must NOT be restated verbatim.

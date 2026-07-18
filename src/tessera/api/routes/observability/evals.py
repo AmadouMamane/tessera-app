@@ -143,16 +143,23 @@ async def observability_model_catalogue(lang: str = "fr", agent: str = "all") ->
     real cumulative usage + the consuming agents (re-gate blast radius). Filterable
     by agent. Degrades to ``available: false`` on failure.
     """
-    from tessera.api.config_overrides import resolve_chat_model_override
+    from tessera.api.config_overrides import resolve_budget_policy, resolve_chat_model_override
     from tessera.observability import model_catalogue as mc_mod
 
     try:
         # ADR 0030 — the active chat model the page flags must be the one that
         # actually serves: the durable org-wide override when stored, else base.
         chat_override = await resolve_chat_model_override(None)
+        # ADR 0034 — the governed daily ceiling (or its honest absence).
+        budget_policy = await resolve_budget_policy()
         return {
             "available": True,
-            **mc_mod.build_model_catalogue(lang, agent_scope=agent, chat_override=chat_override),
+            **mc_mod.build_model_catalogue(
+                lang,
+                agent_scope=agent,
+                chat_override=chat_override,
+                budget_policy=budget_policy,
+            ),
         }
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.model_catalogue: failed: {exc}\n")

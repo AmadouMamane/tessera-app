@@ -198,6 +198,10 @@ class AgentState(TypedDict):
     # (agent override, else the org settings value). The reviewer reads THIS;
     # paths that never cross the seam fall back to the settings.
     escalation_threshold: NotRequired[float]
+    # ADR 0034 — set at the seam when the daily budget ceiling gates this
+    # turn's paid model and the overrun behaviour is "block": the router
+    # short-circuits the graph with the localized budget_exceeded message.
+    budget_blocked: NotRequired[bool]
     # --- Sandbox overrides (console playground) ---------------------------
     # Optional per-request system-prompt override; replaces the language
     # bundle's ``system`` prompt for this turn only (never persisted).

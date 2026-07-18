@@ -257,6 +257,14 @@ function ServingModels() {
         {data.knobs.map((k) => {
           const effective = k.override?.value ?? k.base;
           const isEditing = editing?.key === k.key;
+          // ADR 0034 — the knob family binds the row label and the control.
+          const kind = k.kind ?? "model";
+          const rowLabel =
+            kind === "budget_eur"
+              ? t("budgetDaily")
+              : kind === "overrun"
+                ? t("budgetOverrun")
+                : (k.agent_id ?? t("org"));
           return (
             <li
               key={k.key}
@@ -264,7 +272,7 @@ function ServingModels() {
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="min-w-[180px] text-[0.7rem] font-medium text-[var(--tessera-text)]">
-                  {k.agent_id ?? t("org")}
+                  {rowLabel}
                 </span>
                 <span className="font-mono text-[0.68rem] text-[#87bfff]">{effective}</span>
                 <span
@@ -286,7 +294,20 @@ function ServingModels() {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => startEdit(k.key, "set", effective)}
+                        onClick={() =>
+                          // Budget knobs with no override start from a usable
+                          // value, not the "—" / "block" base token.
+                          startEdit(
+                            k.key,
+                            "set",
+                            k.override?.value ??
+                              (kind === "budget_eur"
+                                ? "10"
+                                : kind === "overrun"
+                                  ? "block"
+                                  : effective),
+                          )
+                        }
                         className="text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff] disabled:opacity-50"
                       >
                         {t("change")}
@@ -332,18 +353,46 @@ function ServingModels() {
               {isEditing && editing ? (
                 <div className="flex flex-wrap items-center gap-2">
                   {editing.mode === "set" ? (
-                    <select
-                      aria-label={t("modelLabel")}
-                      value={value}
-                      onChange={(e) => setValue(e.target.value)}
-                      className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
-                    >
-                      {data.allowed_chat_models.map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ))}
-                    </select>
+                    kind === "budget_eur" ? (
+                      // ADR 0034 — a numeric EUR amount, validated server-side
+                      // (positive decimal, refused-not-stored).
+                      <input
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        aria-label={t("budgetDaily")}
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="h-7 w-28 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                      />
+                    ) : kind === "overrun" ? (
+                      // ADR 0034 — a closed behaviour list, never free text.
+                      <select
+                        aria-label={t("budgetOverrun")}
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                      >
+                        {(k.options ?? []).map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <select
+                        aria-label={t("modelLabel")}
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                      >
+                        {data.allowed_chat_models.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    )
                   ) : (
                     <span className="text-[0.64rem] text-[var(--tessera-text)]">
                       {t("revertTo", { base: k.base })}

@@ -3865,6 +3865,10 @@ export const OverrideKnobSchema = z.object({
   key: z.string(),
   agent_id: z.string().nullable(),
   base: z.string(),
+  // ADR 0034 — the knob family binds the control (model select / EUR input /
+  // closed behaviour select); `options` is the closed list for enum knobs.
+  kind: z.enum(["model", "budget_eur", "overrun"]).optional(),
+  options: z.array(z.string()).nullable().optional(),
   override: z
     .object({
       value: z.string(),

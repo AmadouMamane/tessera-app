@@ -25,12 +25,15 @@ The read stays on the bearer floor: it returns one boolean, no subject data.
 from __future__ import annotations
 
 from datetime import datetime  # noqa: TCH003  — pydantic resolves field annotations at runtime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 
 from tessera.api.config_overrides import (
+    BUDGET_OVERRUN_BEHAVIOURS,
+    BUDGET_OVERRUN_KEY,
+    DAILY_BUDGET_KEY,
     KnobError,
     Override,
     OverrideNotStoredError,
@@ -113,11 +116,18 @@ class OverrideOut(BaseModel):
 
 
 class KnobOut(BaseModel):
-    """One registry knob: its frozen base and its override, if any."""
+    """One registry knob: its frozen base and its override, if any.
+
+    ``kind`` names the knob family so the UI binds the right control (a model
+    select, a numeric EUR input, a closed behaviour select — never free text);
+    ``options`` is the closed value list for enum knobs (ADR 0034).
+    """
 
     key: str
     agent_id: str | None
     base: str
+    kind: Literal["model", "budget_eur", "overrun"] = "model"
+    options: list[str] | None = None
     override: OverrideOut | None
 
 
@@ -147,11 +157,34 @@ class RevertBody(BaseModel):
     reason: str
 
 
+def _base_of(key: str) -> str:
+    """The knob's frozen base, per family (ADR 0034) — the value a revert restores.
+
+    Locale-neutral tokens for the budget knobs: "—" = no ceiling (the
+    historical truth), "block" = the default overrun behaviour.
+    """
+    if key == DAILY_BUDGET_KEY:
+        return "—"
+    if key == BUDGET_OVERRUN_KEY:
+        return "block"
+    return base_chat_model()
+
+
 def _knob_out(key: str, override: Override | None) -> KnobOut:
+    # ADR 0034 — each knob family carries its own kind, base and value space.
+    kind: Literal["model", "budget_eur", "overrun"] = "model"
+    base = _base_of(key)
+    options: list[str] | None = None
+    if key == DAILY_BUDGET_KEY:
+        kind = "budget_eur"
+    elif key == BUDGET_OVERRUN_KEY:
+        kind, options = "overrun", list(BUDGET_OVERRUN_BEHAVIOURS)
     return KnobOut(
         key=key,
         agent_id=agent_of_key(key),
-        base=base_chat_model(),
+        base=base,
+        kind=kind,
+        options=options,
         override=(
             OverrideOut(
                 value=override.value,
@@ -204,7 +237,7 @@ async def write_override(
         ) from exc
     emit_governance_mutation(
         target=f"config_overrides.{body.key}",
-        detail={"value": body.value, "base": base_chat_model(), "reason": override.reason},
+        detail={"value": body.value, "base": _base_of(body.key), "reason": override.reason},
         actor=actor,
     )
     return _knob_out(body.key, override)
@@ -240,7 +273,7 @@ async def revert_override(
         ) from exc
     emit_governance_mutation(
         target=f"config_overrides.{body.key}",
-        detail={"reverted": True, "base": base_chat_model(), "reason": body.reason.strip()},
+        detail={"reverted": True, "base": _base_of(body.key), "reason": body.reason.strip()},
         actor=actor_of(session),
     )
     return _knob_out(body.key, None)

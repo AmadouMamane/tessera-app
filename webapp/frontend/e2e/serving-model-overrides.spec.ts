@@ -120,3 +120,45 @@ test("superadmin sets and reverts a per-agent override (recouvrement, base-value
     timeout: 15_000,
   });
 });
+
+test("the budget knobs are real: honest bases, governed set+revert, closed overrun select (ADR 0034)", async ({
+  page,
+}) => {
+  await login(page, "superadmin", superadminPassword());
+  await page.goto(PAGE);
+  const budgetRow = row(page, "Plafond budget (€/jour)");
+  await expect(budgetRow).toBeVisible({ timeout: 20_000 });
+  // The catalogue KPIs carry the day's real spend and the ceiling state.
+  await expect(page.getByText("Dépense du jour")).toBeVisible();
+  await expect(page.getByText("Plafond quotidien")).toBeVisible();
+
+  // SAFETY: a huge ceiling is behaviour-neutral on this stack — the dev base
+  // model is zero-cost and the breaker gates PAID models only (ADR 0034); the
+  // observable is the provenance, and the revert restores "no ceiling".
+  await budgetRow.getByRole("button", { name: "Modifier" }).click();
+  await budgetRow.getByLabel("Plafond budget (€/jour)").fill("9999.5");
+  await budgetRow
+    .getByLabel("Raison")
+    .fill("e2e ADR 0034 — plafond neutre (base gratuite jamais gatée)");
+  await budgetRow.getByRole("button", { name: "Appliquer" }).click();
+  await expect(budgetRow.getByText("dérogation", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(budgetRow.getByText(/par superadmin/)).toBeVisible();
+
+  await budgetRow.getByRole("button", { name: "Revenir à la base" }).click();
+  await budgetRow.getByLabel("Raison").fill("e2e ADR 0034 — retrait du plafond");
+  await budgetRow.getByRole("button", { name: "Confirmer le retour" }).click();
+  await expect(budgetRow.getByText("dérogation", { exact: true })).toHaveCount(0, {
+    timeout: 15_000,
+  });
+
+  // The overrun knob edits through a CLOSED select of the declared behaviours —
+  // never free text.
+  const overrunRow = row(page, "Dépassement budget (comportement)");
+  await expect(overrunRow).toBeVisible();
+  await overrunRow.getByRole("button", { name: "Modifier" }).click();
+  const select = overrunRow.getByLabel("Dépassement budget (comportement)");
+  await expect(select.locator("option")).toHaveCount(2);
+  await overrunRow.getByRole("button", { name: "Annuler" }).click();
+});

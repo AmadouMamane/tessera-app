@@ -8453,7 +8453,9 @@
       "reasonPlaceholder": "Reason (required, journalled)",
       "modelLabel": "Model",
       "revertTo": "Reverts to base: {base}",
-      "superadminOnly": "Superadmin only"
+      "superadminOnly": "Superadmin only",
+      "budgetDaily": "Budget ceiling (€/day)",
+      "budgetOverrun": "Budget overrun (behaviour)"
     }
   },
   "guardrailCatalogue": {

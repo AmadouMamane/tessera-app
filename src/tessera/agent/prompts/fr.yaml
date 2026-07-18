@@ -126,6 +126,12 @@ decline: |
   Je ne peux malheureusement pas répondre à cette demande dans ce canal.
   Je vous invite à contacter directement votre conseiller.
 
+# ADR 0034 — réponse d'un tour bloqué par le plafond de budget quotidien.
+budget_exceeded: |
+  En raison d'une limite d'utilisation quotidienne, je ne peux pas traiter
+  votre demande pour le moment. Veuillez réessayer plus tard, ou contacter
+  directement votre conseiller Crédit Aurore.
+
 # --- Résumé mémoire (ADR 0007, Tier 1) -----------------------------------
 # Instruction cold-path pour compacter les tours anciens. Les entités (montants,
 # IBAN, dates, citations) sont préservées à part et ne doivent PAS être réécrites.

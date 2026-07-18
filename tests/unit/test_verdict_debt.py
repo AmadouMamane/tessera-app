@@ -171,6 +171,10 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/guard/grounding.py::_same_name": "text",
     "src/tessera/guard/ledger_store.py::drain_spool": "write",
     "src/tessera/guard/ledger_store.py::dual_write_enabled": "config",
+    # 2026-07-18 (ADR 0034): a property OF a model — does the real price table
+    # carry a nonzero tariff for it. Feeds the budget breaker's gate; the gate's
+    # own decision is recorded on the span, never reduced to this bit.
+    "src/tessera/llm/budget.py::model_is_paid": "data",
     "src/tessera/guard/redaction.py::RedactedText.changed": "data",
     "src/tessera/guard/redaction.py::_iban_context": "text",
     "src/tessera/memory/persistent.py::delete_memory": "write",

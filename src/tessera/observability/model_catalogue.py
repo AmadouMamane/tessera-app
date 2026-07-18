@@ -41,6 +41,10 @@ _TR: dict[str, tuple[str, str, str]] = {
     "kpi_profile": ("Profil actif", "Aktives Profil", "Active profile"),
     "kpi_tokens": ("Tokens cumulés", "Kumulierte Tokens", "Cumulative tokens"),
     "kpi_cost": ("Coût cumulé", "Kumulierte Kosten", "Cumulative cost"),
+    # ADR 0034 — the day's real spend and the governed ceiling.
+    "kpi_day_cost": ("Dépense du jour", "Tagesausgaben", "Today's spend"),
+    "kpi_ceiling": ("Plafond quotidien", "Tageslimit", "Daily ceiling"),
+    "ceiling_none": ("aucun plafond", "kein Limit", "no ceiling"),
     "col_model": ("Modèle", "Modell", "Model"),
     "col_provider": ("Fournisseur", "Anbieter", "Provider"),
     "col_role": ("Rôle", "Rolle", "Role"),
@@ -204,9 +208,17 @@ def _active_ids(chat_override: str | None = None) -> tuple[str, str]:
 
 
 def build_model_catalogue(
-    lang: str = "fr", *, agent_scope: str = "all", chat_override: str | None = None
+    lang: str = "fr",
+    *,
+    agent_scope: str = "all",
+    chat_override: str | None = None,
+    budget_policy: object | None = None,
 ) -> dict[str, object]:
-    """Assemble the model-catalogue payload from the real config + price table."""
+    """Assemble the model-catalogue payload from the real config + price table.
+
+    ``budget_policy`` is the resolved ADR 0034 ceiling (or ``None`` — no
+    ceiling), passed in by the async route so this builder stays sync.
+    """
     lang = _norm_lang(lang)
     settings = get_settings()
     snap = get_budget_tracker().snapshot()
@@ -225,7 +237,7 @@ def build_model_catalogue(
 
     return {
         "subtitle": _t("subtitle", lang),
-        "kpis": _kpis(rows, active_chat, active_embed, profile, snap, lang),
+        "kpis": _kpis(rows, active_chat, active_embed, profile, snap, lang, budget_policy),
         "columns": [
             _t("col_model", lang),
             _t("col_provider", lang),
@@ -383,9 +395,20 @@ def _kpis(
     profile: str,
     snap: object,
     lang: str,
+    budget_policy: object | None = None,
 ) -> list[dict[str, object]]:
     tokens = getattr(snap, "input_tokens", 0) + getattr(snap, "output_tokens", 0)
     cost = getattr(snap, "estimated_cost_eur", Decimal(0))
+    # ADR 0034 — the day's real spend, and the governed ceiling (or its honest
+    # absence — never an invented limit).
+    day_cost = getattr(snap, "day_cost_eur", Decimal(0))
+    ceiling = getattr(budget_policy, "daily_eur", None)
+    overrun = getattr(budget_policy, "overrun", None)
+    ceiling_value = (
+        f"{_fmt_eur(ceiling)} · {overrun}"
+        if isinstance(ceiling, Decimal)
+        else _t("ceiling_none", lang)
+    )
     return [
         _kpi("models", _t("kpi_models", lang), str(len(rows))),
         _kpi("chat", _t("kpi_chat", lang), active_chat),
@@ -397,4 +420,10 @@ def _kpis(
             _t("kpi_cost", lang),
             _fmt_eur(cost if isinstance(cost, Decimal) else Decimal(0)),
         ),
+        _kpi(
+            "day_cost",
+            _t("kpi_day_cost", lang),
+            _fmt_eur(day_cost if isinstance(day_cost, Decimal) else Decimal(0)),
+        ),
+        _kpi("ceiling", _t("kpi_ceiling", lang), ceiling_value),
     ]

@@ -118,6 +118,12 @@ decline: |
   Ich kann diese Anfrage in diesem Kanal leider nicht beantworten. Bitte
   wenden Sie sich direkt an Ihren persönlichen Berater.
 
+# ADR 0034 — Antwort eines vom Tagesbudget-Limit blockierten Turns.
+budget_exceeded: |
+  Aufgrund eines täglichen Nutzungslimits kann ich Ihre Anfrage im Moment
+  nicht bearbeiten. Bitte versuchen Sie es später erneut oder wenden Sie
+  sich direkt an Ihren Crédit-Aurore-Berater.
+
 # --- Speicher-Zusammenfassung (ADR 0007, Tier 1) -------------------------
 # Cold-Path-Anweisung zum Verdichten älterer Gesprächsrunden. Entitäten (Beträge,
 # IBANs, Daten, Zitate) werden separat bewahrt und dürfen NICHT wörtlich wiederholt werden.

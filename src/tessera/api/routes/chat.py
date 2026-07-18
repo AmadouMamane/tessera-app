@@ -42,7 +42,11 @@ from tessera.agent.state import (
     new_state,
 )
 from tessera.agent.supervisor import RoutingDecision, route_turn
-from tessera.api.config_overrides import resolve_chat_model_override
+from tessera.api.config_overrides import (
+    base_chat_model,
+    resolve_budget_policy,
+    resolve_chat_model_override,
+)
 from tessera.api.operator import resolve_request_context
 from tessera.api.session import issue_resume_token
 from tessera.authz import AuthState
@@ -62,7 +66,7 @@ from tessera.guard.redaction import (
     redact_text,
     redaction_notice,
 )
-from tessera.llm.budget import estimate_turn_cost
+from tessera.llm.budget import estimate_turn_cost, get_budget_tracker, model_is_paid
 from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
@@ -816,6 +820,28 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # written into the state + every attribution surface (audit context, trace
     # dimensions, eval lineage) — what serves is what is recorded.
     effective_model = request.model or await resolve_chat_model_override(agent_id)
+    # ADR 0034 — the daily budget breaker sits at the same seam and gates PAID
+    # models only. When the day's recorded spend has reached the ceiling:
+    # local_fallback serves the frozen base if it is zero-cost, otherwise the
+    # turn is blocked (the router short-circuits with the localized message).
+    # No ceiling stored (or store down, loudly) → no breaker: historical truth.
+    budget_overrun: str | None = None
+    budget_policy = await resolve_budget_policy()
+    if budget_policy is not None and model_is_paid(effective_model or base_chat_model()):
+        day_spend = get_budget_tracker().snapshot().day_cost_eur
+        if day_spend >= budget_policy.daily_eur:
+            base = base_chat_model()
+            if budget_policy.overrun == "local_fallback" and not model_is_paid(base):
+                effective_model = base
+                budget_overrun = "local_fallback"
+            else:
+                # A fallback onto a paid base is not a fallback — degrade to block.
+                initial["budget_blocked"] = True
+                budget_overrun = "block"
+            sys.stderr.write(
+                f"tessera.budget: daily ceiling {budget_policy.daily_eur} EUR reached "
+                f"(day spend {day_spend}) — overrun={budget_overrun}\n"
+            )
     if effective_model is not None:  # NotRequired: absent means "the base serves"
         initial["model"] = effective_model
     # Record the effective model on audit entries emitted during this turn
@@ -863,6 +889,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     trace.get_current_span().set_attribute(
         semconv.TESSERA_ESCALATION_THRESHOLD, escalation_threshold
     )
+    # ADR 0034 — the budget breaker's decision, when it fired, is recorded too.
+    if budget_overrun is not None:
+        trace.get_current_span().set_attribute(semconv.TESSERA_BUDGET_OVERRUN, budget_overrun)
     # Audit EVERY routing decision (stay or switch) with its reason, so routing is
     # opposable end to end — you can prove why a turn went to a given agent from
     # the start, not just that it switched.

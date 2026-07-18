@@ -1,9 +1,13 @@
 """Process-wide LLM cost / token budget tracker.
 
 The tracker is intentionally minimal: it accumulates token counts per
-``(backend, model)`` pair into thread-safe counters and converts them to an
-indicative EUR cost using a small in-memory price table. The API layer
-queries it once per request to enforce per-conversation caps.
+``(backend, model)`` pair into thread-safe counters — cumulative AND for the
+current Europe/Paris calendar day — and converts them to an indicative EUR
+cost using a small in-memory price table. The day counters feed the ONE
+enforcement that exists: the org-wide daily budget ceiling applied at the
+chat routing seam (ADR 0034). This module used to claim "per-conversation
+caps" that no caller enforced — a meter with no breaker; the claim is gone
+and the breaker is real.
 
 Prices are *indicative only* — the project's positioning makes no claim of
 production-grade FinOps. The table lives at the bottom of this file and is
@@ -16,9 +20,11 @@ import json
 import os
 import threading
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from tessera.settings import get_settings
 
@@ -27,16 +33,32 @@ __all__ = [
     "BudgetTracker",
     "estimate_turn_cost",
     "get_budget_tracker",
+    "model_is_paid",
 ]
+
+_PARIS = ZoneInfo("Europe/Paris")
+
+
+def _today() -> str:
+    """The current Europe/Paris calendar day (the ceiling's accounting window)."""
+    return datetime.now(_PARIS).date().isoformat()
 
 
 @dataclass(frozen=True, slots=True)
 class BudgetSnapshot:
-    """An immutable view of the tracker at a point in time."""
+    """An immutable view of the tracker at a point in time.
+
+    Cumulative counters since first start, plus the current Europe/Paris
+    day's counters (ADR 0034 — the daily ceiling reads ``day_cost_eur``).
+    """
 
     input_tokens: int
     output_tokens: int
     estimated_cost_eur: Decimal
+    day: str = ""
+    day_input_tokens: int = 0
+    day_output_tokens: int = 0
+    day_cost_eur: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +126,17 @@ def estimate_turn_cost(*, model: str, input_tokens: int, output_tokens: int) -> 
     return "ollama", Decimal(0)
 
 
+def model_is_paid(model: str) -> bool:
+    """Whether ``model`` carries a nonzero indicative price (ADR 0034).
+
+    The daily ceiling gates PAID models only: local zero-cost inference is
+    never blocked by a spend breaker. Derived from the same real price table
+    every other cost figure reads.
+    """
+    _, cost = estimate_turn_cost(model=model, input_tokens=1_000_000, output_tokens=1_000_000)
+    return cost > 0
+
+
 _BUDGET_FILE = Path("/tmp/tessera/budget.json")  # noqa: S108 — ephemeral local cache; the container mounts a dedicated volume here
 
 
@@ -120,6 +153,12 @@ class BudgetTracker:
         self._input_tokens: int = 0
         self._output_tokens: int = 0
         self._cost_eur: Decimal = Decimal("0")
+        # ADR 0034 — the current Europe/Paris day's counters, rolled on the
+        # first record or read of a new day. Yesterday is gone, said plainly.
+        self._day: str = _today()
+        self._day_input_tokens: int = 0
+        self._day_output_tokens: int = 0
+        self._day_cost_eur: Decimal = Decimal("0")
         self._persist_path: Path | None = persist_path  # None → no persistence
         self._load()
 
@@ -132,6 +171,12 @@ class BudgetTracker:
             self._input_tokens = int(data.get("input_tokens", 0))
             self._output_tokens = int(data.get("output_tokens", 0))
             self._cost_eur = Decimal(str(data.get("cost_eur", "0")))
+            # Restore the day counters only when the stored day is still today;
+            # a stale day starts a fresh window (the roll, applied at load).
+            if str(data.get("day", "")) == self._day:
+                self._day_input_tokens = int(data.get("day_input_tokens", 0))
+                self._day_output_tokens = int(data.get("day_output_tokens", 0))
+                self._day_cost_eur = Decimal(str(data.get("day_cost_eur", "0")))
         except (FileNotFoundError, KeyError, ValueError, json.JSONDecodeError):
             pass  # first start or corrupt file — start at zero
 
@@ -147,11 +192,24 @@ class BudgetTracker:
                         "input_tokens": self._input_tokens,
                         "output_tokens": self._output_tokens,
                         "cost_eur": str(self._cost_eur),
+                        "day": self._day,
+                        "day_input_tokens": self._day_input_tokens,
+                        "day_output_tokens": self._day_output_tokens,
+                        "day_cost_eur": str(self._day_cost_eur),
                     }
                 )
             )
         except OSError:
             pass  # read-only filesystem — degrade gracefully
+
+    def _roll_day(self) -> None:
+        """Start a fresh day window when the calendar day changed (lock held)."""
+        today = _today()
+        if today != self._day:
+            self._day = today
+            self._day_input_tokens = 0
+            self._day_output_tokens = 0
+            self._day_cost_eur = Decimal("0")
 
     def record(
         self,
@@ -173,18 +231,27 @@ class BudgetTracker:
             else Decimal(0)
         )
         with self._lock:
+            self._roll_day()
             self._input_tokens += input_tokens
             self._output_tokens += output_tokens
             self._cost_eur += cost
+            self._day_input_tokens += input_tokens
+            self._day_output_tokens += output_tokens
+            self._day_cost_eur += cost
             self._persist()
 
     def snapshot(self) -> BudgetSnapshot:
-        """Return the current totals."""
+        """Return the current totals (day counters rolled to the current day)."""
         with self._lock:
+            self._roll_day()
             return BudgetSnapshot(
                 input_tokens=self._input_tokens,
                 output_tokens=self._output_tokens,
                 estimated_cost_eur=self._cost_eur,
+                day=self._day,
+                day_input_tokens=self._day_input_tokens,
+                day_output_tokens=self._day_output_tokens,
+                day_cost_eur=self._day_cost_eur,
             )
 
     def reset(self) -> None:
@@ -193,6 +260,10 @@ class BudgetTracker:
             self._input_tokens = 0
             self._output_tokens = 0
             self._cost_eur = Decimal("0")
+            self._day = _today()
+            self._day_input_tokens = 0
+            self._day_output_tokens = 0
+            self._day_cost_eur = Decimal("0")
             self._persist()
 
 

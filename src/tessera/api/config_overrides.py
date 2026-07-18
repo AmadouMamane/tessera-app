@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING, Final, Literal
 
 from psycopg import sql
@@ -36,7 +37,11 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 __all__ = [
+    "BUDGET_OVERRUN_BEHAVIOURS",
+    "BUDGET_OVERRUN_KEY",
     "CHAT_MODEL_KEY",
+    "DAILY_BUDGET_KEY",
+    "BudgetPolicy",
     "KnobError",
     "Override",
     "OverrideNotStoredError",
@@ -47,6 +52,7 @@ __all__ = [
     "ensure_overrides_schema",
     "knob_keys",
     "list_overrides",
+    "resolve_budget_policy",
     "resolve_chat_model_override",
     "set_override",
 ]
@@ -57,6 +63,11 @@ _TABLE: Final = sql.Identifier("config_overrides")
 CHAT_MODEL_KEY: Final[str] = "llm.chat_model"
 #: Per-agent knobs are ``llm.chat_model.agent.<agent_id>`` for known fleet agents.
 _AGENT_KEY_PREFIX: Final[str] = "llm.chat_model.agent."
+#: ADR 0034 — the org-wide daily LLM budget ceiling (EUR, positive decimal).
+DAILY_BUDGET_KEY: Final[str] = "llm.budget.daily_eur"
+#: ADR 0034 — the declared behaviour at overrun.
+BUDGET_OVERRUN_KEY: Final[str] = "llm.budget.overrun"
+BUDGET_OVERRUN_BEHAVIOURS: Final[tuple[str, ...]] = ("block", "local_fallback")
 
 
 class KnobError(ValueError):
@@ -87,11 +98,17 @@ def knob_keys() -> list[str]:
     """The closed registry: every key an override may be written under.
 
     The org-wide chat model plus one per-agent key per registered fleet agent —
-    derived from the real agent registry, never free-typed.
+    derived from the real agent registry, never free-typed — plus the two
+    org-wide budget knobs (ADR 0034).
     """
     from tessera.agent.registry import list_agents
 
-    return [CHAT_MODEL_KEY, *(f"{_AGENT_KEY_PREFIX}{a.id}" for a in list_agents())]
+    return [
+        CHAT_MODEL_KEY,
+        *(f"{_AGENT_KEY_PREFIX}{a.id}" for a in list_agents()),
+        DAILY_BUDGET_KEY,
+        BUDGET_OVERRUN_KEY,
+    ]
 
 
 def agent_of_key(key: str) -> str | None:
@@ -169,12 +186,41 @@ async def list_overrides() -> list[Override]:
     return overrides
 
 
+def _validated_value(key: str, value: str) -> str:
+    """Validate ``value`` against ITS knob family's value space (ADR 0034).
+
+    Each family owns its value space — chat-model knobs take a catalogued
+    model id, the daily ceiling takes a positive decimal (normalised), the
+    overrun knob takes one of the declared behaviours. Anything else is
+    refused, never stored.
+    """
+    if key == DAILY_BUDGET_KEY:
+        try:
+            ceiling = Decimal(value)
+        except InvalidOperation as exc:
+            raise KnobError(f"{value!r} is not a decimal EUR amount — refused") from exc
+        if not ceiling.is_finite() or ceiling <= 0:
+            raise KnobError(f"the daily ceiling must be a positive EUR amount; got {value!r}")
+        return str(ceiling)
+    if key == BUDGET_OVERRUN_KEY:
+        if value not in BUDGET_OVERRUN_BEHAVIOURS:
+            raise KnobError(
+                f"overrun behaviour {value!r} is not one of {BUDGET_OVERRUN_BEHAVIOURS} — refused"
+            )
+        return value
+    if value not in allowed_chat_models():
+        raise KnobError(f"model {value!r} is not in the catalogue — refused, never stored")
+    return value
+
+
 async def set_override(key: str, value: str, *, author: str, reason: str) -> Override:
     """Validate against the closed registry and upsert one override, attributed.
 
     Args:
         key: A key from :func:`knob_keys` — anything else is refused.
-        value: A model id from :func:`allowed_chat_models` — anything else is refused.
+        value: A value from the KEY's own value space (catalogued model id,
+            positive decimal ceiling, declared overrun behaviour) — anything
+            else is refused.
         author: The verified principal (``actor_of(session).principal``), never
             caller-supplied text.
         reason: The operator's declared reason — mandatory, ADR 0024.
@@ -183,12 +229,12 @@ async def set_override(key: str, value: str, *, author: str, reason: str) -> Ove
         The stored override, timestamped by the database.
 
     Raises:
-        KnobError: On an unknown key, an uncatalogued value, or a blank reason.
+        KnobError: On an unknown key, a value outside its family's space, or a
+            blank reason.
     """
     if key not in knob_keys():
         raise KnobError(f"unknown knob {key!r} — the registry is closed (ADR 0030)")
-    if value not in allowed_chat_models():
-        raise KnobError(f"model {value!r} is not in the catalogue — refused, never stored")
+    value = _validated_value(key, value)
     if not reason.strip():
         raise KnobError("a governed override carries its reason (ADR 0024) — blank refused")
     await ensure_overrides_schema()
@@ -296,3 +342,50 @@ async def resolve_chat_model_with_provenance(
         return base_chat_model(), "base"
     key, value = winner
     return value, "org" if key == CHAT_MODEL_KEY else "agent"
+
+
+@dataclass(frozen=True, slots=True)
+class BudgetPolicy:
+    """The org's daily LLM budget ceiling and its declared overrun behaviour (ADR 0034)."""
+
+    daily_eur: Decimal
+    overrun: Literal["block", "local_fallback"]
+
+
+async def resolve_budget_policy() -> BudgetPolicy | None:
+    """The stored budget ceiling, or ``None`` when no ceiling is set (ADR 0034).
+
+    ``None`` is the historical truth — no breaker. **Fails open to no ceiling**
+    with a loud log: the frozen deploy without this feature is the known-good
+    state, and a turn is never blocked because the override store is down. An
+    unset or invalid overrun value resolves to ``block`` — a ceiling someone
+    set means *stop spending*.
+    """
+    try:
+        await ensure_overrides_schema()
+        pool = get_pool()
+        async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                sql.SQL("SELECT key, value FROM {table} WHERE key = ANY(%s);").format(table=_TABLE),
+                ([DAILY_BUDGET_KEY, BUDGET_OVERRUN_KEY],),
+            )
+            rows = await cur.fetchall()
+    except Exception as exc:  # fail open to "no ceiling" — never block a turn on this store
+        sys.stderr.write(f"tessera.config_overrides: budget read failed, no ceiling: {exc}\n")
+        return None
+    by_key = {str(r["key"]): str(r["value"]) for r in rows}
+    raw_ceiling = by_key.get(DAILY_BUDGET_KEY)
+    if raw_ceiling is None:
+        return None
+    try:
+        ceiling = Decimal(raw_ceiling)
+    except InvalidOperation:
+        sys.stderr.write(
+            f"tessera.config_overrides: stored ceiling {raw_ceiling!r} is not a decimal — ignored\n"
+        )
+        return None
+    overrun_raw = by_key.get(BUDGET_OVERRUN_KEY)
+    overrun: Literal["block", "local_fallback"] = (
+        "local_fallback" if overrun_raw == "local_fallback" else "block"
+    )
+    return BudgetPolicy(daily_eur=ceiling, overrun=overrun)

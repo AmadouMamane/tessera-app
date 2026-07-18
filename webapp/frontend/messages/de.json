@@ -8453,7 +8453,9 @@
       "reasonPlaceholder": "Grund (Pflicht, protokolliert)",
       "modelLabel": "Modell",
       "revertTo": "Kehrt zur Basis zurück: {base}",
-      "superadminOnly": "Nur Superadmin"
+      "superadminOnly": "Nur Superadmin",
+      "budgetDaily": "Budget-Limit (€/Tag)",
+      "budgetOverrun": "Budget-Überschreitung (Verhalten)"
     }
   },
   "guardrailCatalogue": {

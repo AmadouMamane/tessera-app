@@ -1215,6 +1215,24 @@ def run(state: AgentState) -> dict[str, object]:
             "plan_rationale": "input blocked by prompt-injection guard",
         }
 
+    # ADR 0034 — a turn the daily budget ceiling gated at the seam (overrun
+    # behaviour "block") never reaches a tool or an LLM: short-circuit with
+    # the localized message, the same mechanism as an injection block. The
+    # injection check above still ran — security decisions stay recorded.
+    if state.get("budget_blocked"):
+        from tessera.agent.reporter import load_prompts
+
+        lang = state.get("language") or get_settings().default_language
+        prompts = load_prompts(lang)
+        message = prompts.get("budget_exceeded") or prompts.get("decline") or ""
+        return {
+            "guard_decisions": guard_decisions,
+            "needs_escalation": False,
+            "final_response": message.strip(),
+            "plan": [],
+            "plan_rationale": "turn blocked by the daily LLM budget ceiling (ADR 0034)",
+        }
+
     # Resolve the working language: respect a pinned value, else detect.
     if state.get("language_confidence", 0.0) > _PINNED_CONFIDENCE:
         language = state.get("language") or get_settings().default_language

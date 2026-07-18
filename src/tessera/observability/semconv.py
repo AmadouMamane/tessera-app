@@ -54,6 +54,7 @@ __all__ = [
     "TESSERA_ARTIFACT_ID",
     "TESSERA_ARTIFACT_STATUS",
     "TESSERA_ARTIFACT_TYPE",
+    "TESSERA_BUDGET_OVERRUN",
     "TESSERA_CASE_ID",
     "TESSERA_DATA_RESIDENCY",
     "TESSERA_ESCALATION_THRESHOLD",
@@ -121,6 +122,8 @@ TESSERA_GUARD_DECISION: Final = "tessera.guard.decision"
 TESSERA_GUARD_RULE: Final = "tessera.guard.rule"
 # ADR 0033 — the escalation-confidence threshold that served the turn.
 TESSERA_ESCALATION_THRESHOLD: Final = "tessera.escalation.threshold"
+# ADR 0034 — the budget breaker's decision on this turn (block / local_fallback).
+TESSERA_BUDGET_OVERRUN: Final = "tessera.budget.overrun"
 # Retrieval spans (idea #4): which knowledge-source categories a real query
 # actually retrieved above the citation threshold, so the citation rate per
 # source can be read back from production telemetry rather than a synthetic probe.

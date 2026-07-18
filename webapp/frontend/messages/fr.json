@@ -8455,7 +8455,9 @@
       "reasonPlaceholder": "Raison (obligatoire, journalisée)",
       "modelLabel": "Modèle",
       "revertTo": "Revient à la base : {base}",
-      "superadminOnly": "Réservé au superadmin"
+      "superadminOnly": "Réservé au superadmin",
+      "budgetDaily": "Plafond budget (€/jour)",
+      "budgetOverrun": "Dépassement budget (comportement)"
     }
   },
   "guardrailCatalogue": {
