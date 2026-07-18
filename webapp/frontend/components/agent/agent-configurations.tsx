@@ -467,12 +467,12 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           {b.selects.map((item) => (
             <SelectRow key={item.key ?? item.label} field={item} ctx={ctx} />
           ))}
-          {b.sliders.slice(0, 1).map((item) => (
+          {b.sliders.slice(0, 2).map((item) => (
             <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} runtime={b.runtime} />
           ))}
         </div>
         <div className="grid gap-2">
-          {b.sliders.slice(1).map((item) => (
+          {b.sliders.slice(2).map((item) => (
             <SliderRow key={item.key ?? item.label} item={item} ctx={ctx} runtime={b.runtime} />
           ))}
           <ToolsRow tools={b.tools} />
@@ -568,7 +568,16 @@ function SelectRow({ field, ctx }: { field: Field; ctx: Ctx }) {
   const current = field.key ? String(ctx.draft[field.key] ?? field.value) : field.value;
   return (
     <div className="grid grid-cols-[140px_1fr] items-center gap-3">
-      <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{field.label}</span>
+      <span className="flex flex-wrap items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+        {field.label}
+        {field.badge ? (
+          // ADR 0032 — the select says HOW it takes effect (prompt injection /
+          // hard token cap), next to the control — never silently cosmetic.
+          <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1 text-[0.58rem] text-cyan-300">
+            {field.badge}
+          </span>
+        ) : null}
+      </span>
       <span className="relative flex h-7 items-center rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-3 text-[0.76rem] text-[var(--tessera-text)]">
         <select
           value={current}

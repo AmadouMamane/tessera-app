@@ -34,8 +34,8 @@ __all__ = [
 #: apply, never silently swallowed. The OpenAI backend forwards none — its
 #: reasoning models reject non-default sampling (see the call-site comments).
 SAMPLING_APPLIED: Final[dict[str, tuple[str, ...]]] = {
-    "ollama": ("temperature", "top_p", "frequency_penalty", "presence_penalty"),
-    "vertex-ai": ("temperature", "top_p"),
+    "ollama": ("temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty"),
+    "vertex-ai": ("temperature", "top_p", "top_k"),
     "openai": (),
 }
 
@@ -73,6 +73,7 @@ class ChatBackend(Protocol):
         *,
         temperature: float = 0.2,
         top_p: float | None = None,
+        top_k: float | None = None,
         frequency_penalty: float | None = None,
         presence_penalty: float | None = None,
         max_output_tokens: int | None = None,
@@ -82,9 +83,10 @@ class ChatBackend(Protocol):
 
         ``model`` optionally overrides the backend's default model for this
         call (used by the UI model picker); ``None`` keeps the configured one.
-        ``top_p`` / ``frequency_penalty`` / ``presence_penalty`` are only sent
-        when set AND the backend applies them (:data:`SAMPLING_APPLIED`);
-        ``None`` means the backend's own default serves (ADR 0031).
+        ``top_p`` / ``top_k`` / ``frequency_penalty`` / ``presence_penalty``
+        are only sent when set AND the backend applies them
+        (:data:`SAMPLING_APPLIED`); ``None`` means the backend's own default
+        serves (ADR 0031). ``top_k`` is integer-valued — backends cast it.
         """
         ...
 
@@ -94,6 +96,7 @@ class ChatBackend(Protocol):
         *,
         temperature: float = 0.2,
         top_p: float | None = None,
+        top_k: float | None = None,
         frequency_penalty: float | None = None,
         presence_penalty: float | None = None,
         max_output_tokens: int | None = None,

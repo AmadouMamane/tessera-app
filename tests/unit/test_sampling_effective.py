@@ -216,11 +216,18 @@ async def test_ollama_forwards_exactly_the_set_parameters() -> None:
     messages = [ChatMessage(role="user", content="hi")]
 
     await OllamaBackend.chat(
-        backend, messages, temperature=0.7, top_p=0.9, frequency_penalty=0.5, presence_penalty=0.1
+        backend,
+        messages,
+        temperature=0.7,
+        top_p=0.9,
+        top_k=40.0,
+        frequency_penalty=0.5,
+        presence_penalty=0.1,
     )
     assert captured["options"] == {
         "temperature": 0.7,
         "top_p": 0.9,
+        "top_k": 40,  # ADR 0032 — integer-cast for the daemon
         "frequency_penalty": 0.5,
         "presence_penalty": 0.1,
     }
@@ -231,15 +238,25 @@ async def test_ollama_forwards_exactly_the_set_parameters() -> None:
 
 
 def test_vertex_generation_config_sends_top_p_only_when_set() -> None:
-    """Vertex applies temperature + top-p; an unset top-p is not sent at all.
+    """Vertex applies temperature + top-p + top-k; an unset one is not sent at all.
 
     The penalties have no path into ``_generation_config`` by design — the
     signature marks them unused and ``SAMPLING_APPLIED`` declares it.
     """
-    assert _generation_config(0.2, None, 100) == {"temperature": 0.2, "max_output_tokens": 100}
-    assert _generation_config(0.4, 0.9, 100) == {
+    assert _generation_config(0.2, None, None, 100) == {
+        "temperature": 0.2,
+        "max_output_tokens": 100,
+    }
+    assert _generation_config(0.4, 0.9, None, 100) == {
         "temperature": 0.4,
         "top_p": 0.9,
+        "max_output_tokens": 100,
+    }
+    # ADR 0032 — top-k rides the same config, integer-cast.
+    assert _generation_config(0.4, 0.9, 40.0, 100) == {
+        "temperature": 0.4,
+        "top_p": 0.9,
+        "top_k": 40,
         "max_output_tokens": 100,
     }
 
@@ -272,10 +289,11 @@ async def test_openai_never_forwards_sampling() -> None:
         [ChatMessage(role="user", content="hi")],
         temperature=0.9,
         top_p=0.9,
+        top_k=40.0,
         frequency_penalty=1.0,
         presence_penalty=1.0,
     )
-    forbidden = {"temperature", "top_p", "frequency_penalty", "presence_penalty"}
+    forbidden = {"temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty"}
     assert forbidden.isdisjoint(captured), f"sampling leaked to OpenAI: {sorted(captured)}"
 
 
@@ -288,8 +306,9 @@ def test_the_declaration_matches_the_real_backend_names() -> None:
     assert set(SAMPLING_APPLIED["ollama"]) == {
         "temperature",
         "top_p",
+        "top_k",
         "frequency_penalty",
         "presence_penalty",
     }
-    assert set(SAMPLING_APPLIED["vertex-ai"]) == {"temperature", "top_p"}
+    assert set(SAMPLING_APPLIED["vertex-ai"]) == {"temperature", "top_p", "top_k"}
     assert SAMPLING_APPLIED["openai"] == ()

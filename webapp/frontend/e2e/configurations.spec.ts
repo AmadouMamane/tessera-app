@@ -211,6 +211,19 @@ test("the runtime-effectiveness block names the serving backend and its model", 
   await expect(runtime.getByText(/Résolus à chaque tour/)).toBeVisible();
 });
 
+test("the behaviour selects wear their effectiveness badges and top-k is the fifth slider (ADR 0032)", async ({
+  page,
+}) => {
+  // Tone/detail say they are injected into the system prompt; max length says
+  // its declared hard cap. The exact cap follows the shared store's value, so
+  // assert the shape, not one number.
+  await expect(page.getByText("Injecté au prompt").first()).toBeVisible();
+  await expect(page.getByText(/≤ \d+ tokens/)).toBeVisible();
+  const topK = page.getByRole("slider", { name: "Top K" });
+  await expect(topK).toBeVisible();
+  await expect(topK).toHaveAttribute("step", "1");
+});
+
 test("a temperature edit persists, the history names its author, and reset restores the runtime default", async ({
   page,
 }) => {

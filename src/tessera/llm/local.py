@@ -19,16 +19,20 @@ __all__ = ["OllamaBackend"]
 def _sampling_options(
     temperature: float,
     top_p: float | None,
+    top_k: float | None,
     frequency_penalty: float | None,
     presence_penalty: float | None,
 ) -> dict[str, object]:
-    """Ollama applies all four sampling parameters (ADR 0031, SAMPLING_APPLIED).
+    """Ollama applies all five sampling parameters (ADR 0031/0032, SAMPLING_APPLIED).
 
     Unset (``None``) parameters are NOT sent — the daemon's own default serves.
+    ``top_k`` is integer-valued for the daemon.
     """
     options: dict[str, object] = {"temperature": temperature}
     if top_p is not None:
         options["top_p"] = top_p
+    if top_k is not None:
+        options["top_k"] = int(top_k)
     if frequency_penalty is not None:
         options["frequency_penalty"] = frequency_penalty
     if presence_penalty is not None:
@@ -59,6 +63,7 @@ class OllamaBackend:
         *,
         temperature: float = 0.2,
         top_p: float | None = None,
+        top_k: float | None = None,
         frequency_penalty: float | None = None,
         presence_penalty: float | None = None,
         max_output_tokens: int | None = None,
@@ -67,7 +72,7 @@ class OllamaBackend:
     ) -> AsyncIterator[str]:
         """Yield tokens from Ollama as they arrive."""
         effective_model = model or self.model
-        options = _sampling_options(temperature, top_p, frequency_penalty, presence_penalty)
+        options = _sampling_options(temperature, top_p, top_k, frequency_penalty, presence_penalty)
         if max_output_tokens is not None:
             options["num_predict"] = max_output_tokens
         payload = [{"role": m.role, "content": m.content} for m in messages]
@@ -102,6 +107,7 @@ class OllamaBackend:
         *,
         temperature: float = 0.2,
         top_p: float | None = None,
+        top_k: float | None = None,
         frequency_penalty: float | None = None,
         presence_penalty: float | None = None,
         max_output_tokens: int | None = None,
@@ -109,7 +115,7 @@ class OllamaBackend:
     ) -> ChatResponse:
         """Stream-less chat completion."""
         effective_model = model or self.model
-        options = _sampling_options(temperature, top_p, frequency_penalty, presence_penalty)
+        options = _sampling_options(temperature, top_p, top_k, frequency_penalty, presence_penalty)
         if max_output_tokens is not None:
             options["num_predict"] = max_output_tokens
 

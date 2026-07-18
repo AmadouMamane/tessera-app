@@ -69,6 +69,7 @@ class VertexAIBackend:
         *,
         temperature: float = 0.2,
         top_p: float | None = None,
+        top_k: float | None = None,
         frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,
@@ -85,7 +86,7 @@ class VertexAIBackend:
         async with asyncio.timeout(self._timeout):
             stream = await gemini.generate_content_async(
                 self._convert(messages),
-                generation_config=_generation_config(temperature, top_p, max_tokens),
+                generation_config=_generation_config(temperature, top_p, top_k, max_tokens),
                 stream=True,
             )
         input_tokens = 0
@@ -117,6 +118,7 @@ class VertexAIBackend:
         *,
         temperature: float = 0.2,
         top_p: float | None = None,
+        top_k: float | None = None,
         frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,
@@ -128,7 +130,7 @@ class VertexAIBackend:
         async with asyncio.timeout(self._timeout):
             response = await gemini.generate_content_async(
                 self._convert(messages),
-                generation_config=_generation_config(temperature, top_p, max_tokens),
+                generation_config=_generation_config(temperature, top_p, top_k, max_tokens),
             )
         text = response.text if response.candidates else ""
         usage = getattr(response, "usage_metadata", None)
@@ -172,13 +174,16 @@ def _normalise_finish_reason(
 
 
 def _generation_config(
-    temperature: float, top_p: float | None, max_tokens: int
+    temperature: float, top_p: float | None, top_k: float | None, max_tokens: int
 ) -> dict[str, float | int]:
-    """Vertex applies temperature and top-p (ADR 0031, SAMPLING_APPLIED).
+    """Vertex applies temperature, top-p and top-k (ADR 0031/0032, SAMPLING_APPLIED).
 
-    An unset (``None``) top-p is NOT sent — the model's own default serves.
+    An unset (``None``) top-p / top-k is NOT sent — the model's own default
+    serves. ``top_k`` is integer-valued for the API.
     """
     config: dict[str, float | int] = {"temperature": temperature, "max_output_tokens": max_tokens}
     if top_p is not None:
         config["top_p"] = top_p
+    if top_k is not None:
+        config["top_k"] = int(top_k)
     return config

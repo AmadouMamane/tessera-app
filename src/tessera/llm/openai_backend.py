@@ -52,6 +52,7 @@ class OpenAIBackend:
         *,
         temperature: float = 0.2,  # noqa: ARG002 — OpenAI reasoning models reject non-default
         top_p: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
+        top_k: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,
@@ -93,6 +94,7 @@ class OpenAIBackend:
         *,
         temperature: float = 0.2,  # noqa: ARG002 — OpenAI reasoning models reject non-default
         top_p: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
+        top_k: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,

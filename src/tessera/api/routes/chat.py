@@ -67,7 +67,7 @@ from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
 from tessera.observability import replay, semconv
-from tessera.observability.agent_configurations import resolve_sampling
+from tessera.observability.agent_configurations import resolve_sampling, resolve_style
 from tessera.observability.business_events import mark_synthetic_turn
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
@@ -560,6 +560,10 @@ def _debug_usage(
         if isinstance(sampling_raw, dict)
         else {}
     )
+    # ADR 0032 — the behaviour style and hard cap that served this turn.
+    style_raw = state.get("style")
+    style = {str(k): str(v) for k, v in style_raw.items()} if isinstance(style_raw, dict) else {}
+    max_output_tokens = state.get("max_output_tokens")
     return {
         "title": "Tokens, latence & coût",
         "input_tokens": input_tokens,
@@ -570,6 +574,8 @@ def _debug_usage(
         "model": model,
         "provider": provider,
         "sampling": sampling,
+        "style": style,
+        "max_output_tokens": max_output_tokens if isinstance(max_output_tokens, int) else None,
     }
 
 
@@ -815,6 +821,12 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # are the same read (fail-open to the runtime defaults inside).
     sampling = resolve_sampling(agent_id)
     initial["sampling"] = sampling
+    # ADR 0032 — the behaviour selects resolve at the same seam: tone/detail/
+    # length become prompt directives in the reporter, and the length's declared
+    # token budget becomes the backend call's hard cap.
+    style, max_output_tokens = resolve_style(agent_id)
+    initial["style"] = style
+    initial["max_output_tokens"] = max_output_tokens
     synthetic = is_test_turn(surface)
     if synthetic:
         mark_synthetic_turn()
@@ -831,9 +843,12 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         environment=get_settings().environment.value,
         synthetic=synthetic,
     )
-    # ADR 0031 — what serves is what is recorded: the resolved sampling lands on
-    # the same root span (gen_ai.request.*; unset parameters honest-absent).
-    semconv.stamp_turn_sampling(trace.get_current_span(), sampling)
+    # ADR 0031/0032 — what serves is what is recorded: the resolved sampling and
+    # the hard cap land on the same root span (gen_ai.request.*; unset
+    # parameters honest-absent).
+    semconv.stamp_turn_sampling(
+        trace.get_current_span(), sampling, max_output_tokens=max_output_tokens
+    )
     # Audit EVERY routing decision (stay or switch) with its reason, so routing is
     # opposable end to end — you can prove why a turn went to a given agent from
     # the start, not just that it switched.

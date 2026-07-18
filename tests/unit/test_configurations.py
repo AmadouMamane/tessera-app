@@ -23,7 +23,7 @@ def _hermetic_serving(monkeypatch: pytest.MonkeyPatch) -> None:
         return (
             "llama3.2:3b",
             "ollama",
-            ("temperature", "top_p", "frequency_penalty", "presence_penalty"),
+            ("temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty"),
             "base",
         )
 
@@ -43,6 +43,9 @@ def test_coerce_clamps_sliders() -> None:
     assert c._coerce("temperature", -1.0) == 0.0
     assert c._coerce("frequency_penalty", 5.0) == 2.0  # max 2.0
     assert c._coerce("temperature", "bad") == c._DEFAULTS["temperature"]
+    # ADR 0032 — top-k is integer-valued: rounded on save, clamped to [0, 100].
+    assert c._coerce("top_k", 40.6) == 41.0
+    assert c._coerce("top_k", 500) == 100.0
 
 
 def test_coerce_none_means_unset() -> None:
@@ -115,19 +118,48 @@ async def test_runtime_block_names_backend_and_applied(monkeypatch: pytest.Monke
     monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
 
     async def _vertex(_slug: str) -> tuple[str, str, tuple[str, ...], str]:
-        return "gemini-2.0-flash", "vertex-ai", ("temperature", "top_p"), "org"
+        return "gemini-2.0-flash", "vertex-ai", ("temperature", "top_p", "top_k"), "org"
 
     monkeypatch.setattr(c, "_serving_effectiveness", _vertex)
     payload = await c.compute_agent_configurations()
     runtime = payload["behavior"]["runtime"]
     assert runtime["backend"] == "vertex-ai"
     assert runtime["model"] == "gemini-2.0-flash"
-    assert runtime["applied"] == ["temperature", "top_p"]
+    assert runtime["applied"] == ["temperature", "top_p", "top_k"]
     assert runtime["not_applied"] == ["frequency_penalty", "presence_penalty"]
     freq = next(s for s in payload["behavior"]["sliders"] if s["key"] == "frequency_penalty")
     assert freq["applied"] is False
     temp = next(s for s in payload["behavior"]["sliders"] if s["key"] == "temperature")
     assert temp["applied"] is True
+
+
+async def test_selects_say_how_they_take_effect(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADR 0032 — every behaviour control is honest about its effectiveness.
+
+    Tone/detail wear the prompt-injection badge, max length wears its declared
+    hard cap, and top-k is the fifth slider (integer steps, unset by default).
+    """
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
+    payload = await c.compute_agent_configurations()
+    selects = {s["key"]: s for s in payload["behavior"]["selects"]}
+    assert selects["tone"]["badge"] == "Injecté au prompt"
+    assert selects["detail"]["badge"] == "Injecté au prompt"
+    assert selects["max_length"]["badge"] == "≤ 2048 tokens"  # Moyenne, the default
+    sliders = [s["key"] for s in payload["behavior"]["sliders"]]
+    assert sliders == ["temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty"]
+    top_k = next(s for s in payload["behavior"]["sliders"] if s["key"] == "top_k")
+    assert top_k["unset"] is True
+    assert top_k["step"] == 1.0
+    assert top_k["max"] == 100.0
+    # The runtime note covers the selects too — the page says the whole story.
+    assert "max_output_tokens" in payload["behavior"]["runtime"]["note"]
+
+
+async def test_max_length_badge_follows_the_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {"max_length": "Courte"})
+    payload = await c.compute_agent_configurations()
+    max_length = next(s for s in payload["behavior"]["selects"] if s["key"] == "max_length")
+    assert max_length["badge"] == "≤ 512 tokens"
 
 
 async def test_model_rows_show_the_effective_model_with_provenance(

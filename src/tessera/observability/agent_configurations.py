@@ -41,6 +41,7 @@ __all__ = [
     "available_config_keys",
     "compute_agent_configurations",
     "resolve_sampling",
+    "resolve_style",
     "set_agent_config",
 ]
 
@@ -74,10 +75,11 @@ _DEFAULTS: dict[str, Any] = {
     "max_length": "Moyenne",
     # ADR 0031 — the slider defaults are the RUNTIME truth, never a plausible
     # number: temperature 0.2 is what the reporter has always sent; the other
-    # three default to unset (None = not sent, the backend's own default
+    # four default to unset (None = not sent, the backend's own default
     # serves). The former 0.3/0.7/0.2/0.1 were fabricated display values.
     "temperature": 0.2,
     "top_p": None,
+    "top_k": None,
     "frequency_penalty": None,
     "presence_penalty": None,
     "routing_strategy": "Par défaut (Recommandé)",
@@ -197,13 +199,17 @@ def _tool_label(name: str, lang: str) -> str:
     return variants[_LANG_IDX.get(lang, 0)] if variants else name.replace("_", " ").title()
 
 
-_SLIDERS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
+_SLIDERS = ("temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty")
 _SLIDER_MAX: dict[str, float] = {
     "temperature": 1.0,
     "top_p": 1.0,
+    "top_k": 100.0,
     "frequency_penalty": 2.0,
     "presence_penalty": 2.0,
 }
+# ADR 0032 — top-k is integer-valued: whole-number steps, coerced on save.
+_SLIDER_STEP: dict[str, float] = {"top_k": 1.0}
+_SLIDER_STEP_DEFAULT = 0.05
 
 
 def _state_path() -> Path:
@@ -262,6 +268,7 @@ _KEY_LABEL: dict[str, tuple[str, str, str]] = {
     "max_length": ("Longueur max", "Maximale Laenge", "Max length"),
     "temperature": ("Température", "Temperatur", "Temperature"),
     "top_p": ("Top P", "Top P", "Top P"),
+    "top_k": ("Top K", "Top K", "Top K"),
     "frequency_penalty": ("Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
     "presence_penalty": ("Pénalité de présence", "Praesenzstrafe", "Presence penalty"),
     "routing_strategy": ("Stratégie de routage", "Routing-Strategie", "Routing strategy"),
@@ -340,10 +347,12 @@ def _coerce_slider(key: str, value: Any) -> float | None:
     if value is None:
         return None
     try:
-        return max(0.0, min(_SLIDER_MAX.get(key, 1.0), float(value)))
+        clamped = max(0.0, min(_SLIDER_MAX.get(key, 1.0), float(value)))
     except (TypeError, ValueError):
         default = _DEFAULTS[key]
         return float(default) if isinstance(default, int | float) else None
+    # ADR 0032 — top-k is integer-valued: the store keeps a whole number.
+    return float(round(clamped)) if key == "top_k" else clamped
 
 
 def _coerce(key: str, value: Any) -> Any:
@@ -436,6 +445,59 @@ def _effective(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, Any]:
 #: The temperature the reporter has always sent when nothing overrides it —
 #: the runtime truth the sliders now display and resolve to (ADR 0031).
 RUNTIME_TEMPERATURE_DEFAULT: float = 0.2
+
+# --- ADR 0032 — the behaviour selects are effective by construction ------------
+
+#: Canonical French option value -> ASCII slug, the locale-stable key suffix of
+#: the style directives in the prompt bundles (``tone_directive_<slug>`` …).
+_STYLE_SLUGS: dict[str, str] = {
+    "Professionnel": "professionnel",
+    "Amical": "amical",
+    "Direct": "direct",
+    "Pédagogique": "pedagogique",
+    "Concis": "concis",
+    "Équilibré": "equilibre",
+    "Détaillé": "detaille",
+    "Courte": "courte",
+    "Moyenne": "moyenne",
+    "Longue": "longue",
+}
+
+#: Declared hard cap per max-length option (ADR 0032 §3): passed to the backend
+#: as ``max_output_tokens`` — all three backends apply it. ``Moyenne`` is the
+#: number the Vertex settings default has always sent (the historical runtime
+#: truth on the frontier path); the directive in the prompt does the styling,
+#: the cap is the backstop.
+_LENGTH_BUDGET_TOKENS: dict[str, int] = {"Courte": 512, "Moyenne": 2048, "Longue": 8192}
+
+_STYLE_DEFAULTS: dict[str, str] = {"tone": "professionnel", "detail": "equilibre"}
+_LENGTH_DEFAULT = "moyenne"
+
+
+def resolve_style(agent_id: str = DEFAULT_AGENT_ID) -> tuple[dict[str, str], int]:
+    """``(style slugs, max_output_tokens)`` for one turn (ADR 0032).
+
+    Resolved once per turn at the routing seam, from the same effective
+    configuration the Configurations page displays. ``style`` maps
+    ``tone`` / ``detail`` / ``length`` to the ASCII slug of the prompt-bundle
+    directive; the int is the declared hard cap for the backend call.
+    Fail-open: a corrupt store yields the defaults, loudly — the chat path
+    never goes down for a knob.
+    """
+    try:
+        cfg = _effective(agent_id)
+    except Exception as exc:
+        sys.stderr.write(f"tessera.observability.agent_configurations: resolve_style: {exc}\n")
+        return (
+            {**_STYLE_DEFAULTS, "length": _LENGTH_DEFAULT},
+            _LENGTH_BUDGET_TOKENS["Moyenne"],
+        )
+    tone = _STYLE_SLUGS.get(str(cfg.get("tone")), _STYLE_DEFAULTS["tone"])
+    detail = _STYLE_SLUGS.get(str(cfg.get("detail")), _STYLE_DEFAULTS["detail"])
+    length_canonical = str(cfg.get("max_length"))
+    length = _STYLE_SLUGS.get(length_canonical, _LENGTH_DEFAULT)
+    budget = _LENGTH_BUDGET_TOKENS.get(length_canonical, _LENGTH_BUDGET_TOKENS["Moyenne"])
+    return {"tone": tone, "detail": detail, "length": length}, budget
 
 
 def resolve_sampling(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, float]:
@@ -647,6 +709,7 @@ def _slider(
     ``applied`` says whether the serving backend forwards this parameter at all.
     """
     max_v = _SLIDER_MAX[key]
+    step = _SLIDER_STEP.get(key, _SLIDER_STEP_DEFAULT)
     if value is None:
         display = _loc(lang, "Défaut backend", "Backend-Standard", "Backend default")
         return {
@@ -655,7 +718,7 @@ def _slider(
             "value": display,
             "min": 0.0,
             "max": max_v,
-            "step": 0.05,
+            "step": step,
             "pct": 0,
             "editable": True,
             "unset": True,
@@ -669,7 +732,7 @@ def _slider(
         "num": value,
         "min": 0.0,
         "max": max_v,
-        "step": 0.05,
+        "step": step,
         "pct": round(100 * value / max_v),
         "editable": True,
         "unset": False,
@@ -958,14 +1021,29 @@ async def compute_agent_configurations(
         },
         "behavior": {
             "title": _loc(lang, "Comportement", "Verhalten", "Behaviour"),
+            # ADR 0032 — each select says HOW it takes effect, next to the
+            # control: tone/detail are injected into the system prompt every
+            # turn; max length is also a hard cap on the backend call.
             "selects": [
-                _edit("tone", _loc(lang, "Ton", "Ton", "Tone"), str(cfg["tone"]), "select", lang),
+                _edit(
+                    "tone",
+                    _loc(lang, "Ton", "Ton", "Tone"),
+                    str(cfg["tone"]),
+                    "select",
+                    lang,
+                    badge=_loc(
+                        lang, "Injecté au prompt", "In den Prompt injiziert", "Injected into prompt"
+                    ),
+                ),
                 _edit(
                     "detail",
                     _loc(lang, "Détail des réponses", "Antwortdetailgrad", "Answer detail"),
                     str(cfg["detail"]),
                     "select",
                     lang,
+                    badge=_loc(
+                        lang, "Injecté au prompt", "In den Prompt injiziert", "Injected into prompt"
+                    ),
                 ),
                 _edit(
                     "max_length",
@@ -978,6 +1056,11 @@ async def compute_agent_configurations(
                     str(cfg["max_length"]),
                     "select",
                     lang,
+                    badge="≤ {n} tokens".format(
+                        n=_LENGTH_BUDGET_TOKENS.get(
+                            str(cfg["max_length"]), _LENGTH_BUDGET_TOKENS["Moyenne"]
+                        )
+                    ),
                 ),
             ],
             "sliders": [
@@ -985,6 +1068,7 @@ async def compute_agent_configurations(
                     "temperature", _loc(lang, "Température", "Temperatur", "Temperature")
                 ),
                 _sampling_slider("top_p", "Top P"),
+                _sampling_slider("top_k", "Top K"),
                 _sampling_slider(
                     "frequency_penalty",
                     _loc(lang, "Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
@@ -1008,13 +1092,19 @@ async def compute_agent_configurations(
                     lang,
                     f"Résolus à chaque tour et envoyés au backend {serving_backend} "
                     f"(modèle effectif : {serving_model}). Un curseur non appliqué "
-                    "par ce backend est indiqué — jamais envoyé en silence.",
+                    "par ce backend est indiqué — jamais envoyé en silence. "
+                    "Ton et détail sont injectés dans le prompt système ; la longueur "
+                    "max est aussi appliquée en dur (max_output_tokens) — ADR 0032.",
                     f"Pro Turn aufgeloest und an das Backend {serving_backend} gesendet "
                     f"(effektives Modell: {serving_model}). Ein von diesem Backend nicht "
-                    "angewendeter Regler wird angezeigt - nie stillschweigend gesendet.",
+                    "angewendeter Regler wird angezeigt - nie stillschweigend gesendet. "
+                    "Ton und Detail werden in den System-Prompt injiziert; die maximale "
+                    "Laenge gilt zusaetzlich hart (max_output_tokens) - ADR 0032.",
                     f"Resolved every turn and sent to the {serving_backend} backend "
                     f"(effective model: {serving_model}). A slider this backend does not "
-                    "apply is flagged - never silently sent.",
+                    "apply is flagged - never silently sent. Tone and detail are injected "
+                    "into the system prompt; max length is also enforced hard "
+                    "(max_output_tokens) - ADR 0032.",
                 ),
             },
             "tools": {

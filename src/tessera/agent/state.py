@@ -186,6 +186,14 @@ class AgentState(TypedDict):
     # slider value and the served value are the same read. Absent on paths
     # that never speak (escalation, injection block).
     sampling: NotRequired[dict[str, float]]
+    # ADR 0032 — per-turn behaviour style resolved at the same seam
+    # (tone/detail/length as ASCII directive slugs). The reporter appends the
+    # matching prompt-bundle directives to the system prompt — unless a
+    # system_prompt_override replaces the prompt verbatim.
+    style: NotRequired[dict[str, str]]
+    # ADR 0032 — the declared hard cap for the backend call (all three
+    # backends apply it). Absent on paths that never cross the seam.
+    max_output_tokens: NotRequired[int]
     # --- Sandbox overrides (console playground) ---------------------------
     # Optional per-request system-prompt override; replaces the language
     # bundle's ``system`` prompt for this turn only (never persisted).

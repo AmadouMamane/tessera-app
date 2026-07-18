@@ -129,6 +129,10 @@ export const ChatDebugSchema = z.object({
       // ADR 0031 — the sampling that actually served this turn (seam-resolved;
       // only SET parameters appear). Optional → older payloads stay valid.
       sampling: z.record(z.string(), z.number()).optional(),
+      // ADR 0032 — the behaviour style (directive slugs) and hard cap that
+      // served this turn. Optional → older payloads stay valid.
+      style: z.record(z.string(), z.string()).optional(),
+      max_output_tokens: z.number().int().nullable().optional(),
     })
     .optional(),
   // #5 — the reviewer's grounding/coverage/guard split behind the composite.

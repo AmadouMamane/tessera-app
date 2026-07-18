@@ -196,9 +196,26 @@ def _build_synthesis_input(state: AgentState, prompts: dict[str, str]) -> tuple[
     """
     # Sandbox override (console playground) replaces the bundle's system prompt
     # for this turn only; falls back to the language-specific default.
-    system_prompt = state.get("system_prompt_override") or prompts.get(
-        "system", "You are a helpful banking assistant."
-    )
+    override = state.get("system_prompt_override")
+    system_prompt = override or prompts.get("system", "You are a helpful banking assistant.")
+    # ADR 0032 — the seam-resolved behaviour style becomes prompt directives,
+    # read exclusively from the language bundle (no prompt text in Python).
+    # An override is verbatim: no style block is appended to it.
+    style = state.get("style") or {}
+    if style and not override:
+        directives = [
+            prompts[key]
+            for key in (
+                f"tone_directive_{style.get('tone', '')}",
+                f"detail_directive_{style.get('detail', '')}",
+                f"length_directive_{style.get('length', '')}",
+            )
+            if key in prompts
+        ]
+        if directives:
+            header = prompts.get("style_header", "Requested response style for this agent:")
+            block = "\n".join(f"- {directive.strip()}" for directive in directives)
+            system_prompt = f"{system_prompt}\n\n{header}\n{block}"
     docs = state.get("retrieved_documents", [])
     context = "\n\n".join(f"[{doc.source}]\n{doc.text}" for doc in docs[:6])
     draft = state.get("draft_response", "")
@@ -243,13 +260,16 @@ async def _synthesise(state: AgentState) -> tuple[str, int, int]:
     backend = backend_for_model(state.get("model"))
     # ADR 0031 — the sampling resolved at the routing seam serves; the 0.2
     # fallback is the runtime default for paths that never went through it.
+    # ADR 0032 — the seam-resolved hard cap rides the same call.
     sampling = state.get("sampling") or {}
     response = await backend.chat(
         await _build_chat_messages(state, system_prompt, current_user_content, prompts),
         temperature=sampling.get("temperature", 0.2),
         top_p=sampling.get("top_p"),
+        top_k=sampling.get("top_k"),
         frequency_penalty=sampling.get("frequency_penalty"),
         presence_penalty=sampling.get("presence_penalty"),
+        max_output_tokens=state.get("max_output_tokens"),
         model=state.get("model"),
     )
     return _strip_reasoning(response.content), response.input_tokens, response.output_tokens
@@ -268,14 +288,17 @@ async def astream_synthesise(state: AgentState) -> AsyncIterator[str]:
     # Exact per-call token usage, filled by the backend at stream end — attributed
     # to this turn without racing the process-wide budget tracker (Debug surface).
     usage: dict[str, int] = {}
-    # ADR 0031 — same read as the non-streaming path: the seam-resolved sampling.
+    # ADR 0031/0032 — same read as the non-streaming path: the seam-resolved
+    # sampling and hard cap.
     sampling = state.get("sampling") or {}
     stream = backend.stream_chat(
         await _build_chat_messages(state, system_prompt, current_user_content, prompts),
         temperature=sampling.get("temperature", 0.2),
         top_p=sampling.get("top_p"),
+        top_k=sampling.get("top_k"),
         frequency_penalty=sampling.get("frequency_penalty"),
         presence_penalty=sampling.get("presence_penalty"),
+        max_output_tokens=state.get("max_output_tokens"),
         model=state.get("model"),
         usage=usage,
     )

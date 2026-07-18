@@ -1732,6 +1732,20 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
               mono
             />
           ) : null}
+          {usage.style && Object.keys(usage.style).length > 0 ? (
+            // ADR 0032 — the behaviour style directives and hard cap that
+            // served this turn (seam-resolved, injected into the prompt).
+            <DebugKV
+              k="Style"
+              v={[
+                ...Object.entries(usage.style).map(([key, value]) => `${key}=${value}`),
+                ...(typeof usage.max_output_tokens === "number"
+                  ? [`max_output_tokens=${usage.max_output_tokens}`]
+                  : []),
+              ].join(" · ")}
+              mono
+            />
+          ) : null}
         </DebugSection>
       ) : null}
 
