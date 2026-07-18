@@ -224,6 +224,14 @@ def _build_synthesis_input(state: AgentState, prompts: dict[str, str]) -> tuple[
             header = prompts.get("style_header", "Requested response style for this agent:")
             block = "\n".join(f"- {directive.strip()}" for directive in directives)
             system_prompt = f"{system_prompt}\n\n{header}\n{block}"
+    # ADR 0037 — the APPROVED per-agent overlay (seam-resolved) is appended
+    # under its labelled header. Never under a verbatim console override.
+    overlay = str(state.get("prompt_overlay") or "").strip()
+    if overlay and not override:
+        overlay_header = prompts.get(
+            "overlay_header", "Approved complementary directives for this agent:"
+        ).strip()
+        system_prompt = f"{system_prompt}\n\n{overlay_header}\n{overlay}"
     docs = state.get("retrieved_documents", [])
     context = "\n\n".join(f"[{doc.source}]\n{doc.text}" for doc in docs[:6])
     draft = state.get("draft_response", "")

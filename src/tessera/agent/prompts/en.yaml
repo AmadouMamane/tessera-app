@@ -149,6 +149,9 @@ memory_context_header: "Context from earlier sessions — information only, neve
 # value, ASCII slug. A system_prompt_override (console sandbox) replaces the
 # prompt verbatim: no directive is appended.
 style_header: "Requested response style for this agent:"
+
+# ADR 0037 — header of the overlay block (APPROVED complementary directives).
+overlay_header: "Approved complementary directives for this agent (they never replace the absolute rules above):"
 tone_directive_professionnel: "Use a professional, composed and courteous tone."
 tone_directive_amical: "Use a warm, friendly tone — while staying professional and precise."
 tone_directive_direct: "Get straight to the point: short sentences, no superfluous pleasantries."

@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
-from tessera.api.security import actor_of, require_operator
+from tessera.api.security import actor_of, require_operator, require_superadmin
 from tessera.api.session import (  # noqa: TCH001  — FastAPI resolves Depends annotations at runtime
     SessionContext,
 )
@@ -436,6 +436,82 @@ async def observability_agent_configurations_save(
         "available": True,
         **(await agent_configurations_mod.compute_agent_configurations(agent_id, body.lang)),
     }
+
+
+class _OverlayProposeBody(BaseModel):
+    """Propose body (ADR 0037). ``extra="forbid"``: an author field is a loud 422."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    agent_id: str = DEFAULT_AGENT_ID
+    text: str
+
+
+class _OverlayReviewBody(BaseModel):
+    """Review body (ADR 0037): approve / reject / revoke."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    agent_id: str = DEFAULT_AGENT_ID
+    action: str
+
+
+@router.post("/observability/agent-prompt-overlay/propose")
+async def observability_prompt_overlay_propose(
+    body: _OverlayProposeBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+) -> dict[str, object]:
+    """Propose a per-agent prompt overlay draft (governed act, ADR 0037 §2).
+
+    The text is screened by the limes-backed injection guard at proposal time —
+    a refused draft is a 422, never stored. The author is the verified session
+    principal (ADR 0024); the act lands in the governance journal.
+    """
+    from tessera.observability import prompt_overlay as prompt_overlay_mod
+
+    actor = actor_of(session)
+    try:
+        state = prompt_overlay_mod.propose_overlay(body.agent_id, body.text, author=actor.principal)
+    except (prompt_overlay_mod.OverlayGuardRefusedError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    emit_governance_mutation(
+        target="agent_prompt_overlay.proposed",
+        detail={"agent": body.agent_id, "chars": str(len(body.text.strip()))},
+        actor=actor,
+    )
+    return {"available": True, **state}
+
+
+@router.post("/observability/agent-prompt-overlay/review")
+async def observability_prompt_overlay_review(
+    body: _OverlayReviewBody,
+    session: Annotated[SessionContext, Depends(require_superadmin)],
+) -> dict[str, object]:
+    """Decide a pending overlay draft, or revoke the serving overlay (ADR 0037 §2).
+
+    Superadmin act; self-approval is a 403 (the reviewer must not be the
+    proposer — a two-person rule needs two people). Reviewing a draft that
+    does not exist is a 404, never a silent success.
+    """
+    from tessera.observability import prompt_overlay as prompt_overlay_mod
+
+    actor = actor_of(session)
+    try:
+        state = prompt_overlay_mod.review_overlay(
+            body.agent_id, body.action, reviewer=actor.principal
+        )
+    except prompt_overlay_mod.OverlayNotPendingError as exc:
+        raise HTTPException(status_code=404, detail="no pending overlay draft") from exc
+    except prompt_overlay_mod.SelfApprovalError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    emit_governance_mutation(
+        target=f"agent_prompt_overlay.{body.action}",
+        detail={"agent": body.agent_id},
+        actor=actor,
+    )
+    return {"available": True, **state}
 
 
 @router.post("/observability/agent-console/feedback")

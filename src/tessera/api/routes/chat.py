@@ -82,6 +82,7 @@ from tessera.observability.business_events import mark_synthetic_turn
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
 from tessera.observability.metrics import AGENT_TURN_DURATION, AGENT_TURNS_TOTAL
+from tessera.observability.prompt_overlay import resolve_prompt_overlay
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
@@ -871,6 +872,10 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # ADR 0036 — the memory knobs resolve at the same seam; the reporter's
     # message assembly reads the state (off-seam paths keep the org singleton).
     initial["memory"] = resolve_memory(agent_id)
+    # ADR 0037 — only the APPROVED prompt overlay serves, resolved at the seam.
+    overlay = resolve_prompt_overlay(agent_id)
+    if overlay is not None:
+        initial["prompt_overlay"] = overlay
     synthetic = is_test_turn(surface)
     if synthetic:
         mark_synthetic_turn()

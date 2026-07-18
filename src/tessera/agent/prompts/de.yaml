@@ -156,6 +156,9 @@ memory_context_header: "Kontext aus früheren Sitzungen – nur Information, nie
 # kanonischem Wert, ASCII-Slug. Ein system_prompt_override (Konsolen-Sandbox)
 # ersetzt den Prompt unverändert: keine Direktive wird angehängt.
 style_header: "Gewünschter Antwortstil für diesen Agenten:"
+
+# ADR 0037 — Überschrift des Overlay-Blocks (GENEHMIGTE ergänzende Direktiven).
+overlay_header: "Genehmigte ergänzende Direktiven für diesen Agenten (sie ersetzen niemals die absoluten Regeln oben):"
 tone_directive_professionnel: "Verwende einen professionellen, ruhigen und höflichen Ton."
 tone_directive_amical: "Verwende einen warmen, freundlichen Ton — dabei professionell und präzise."
 tone_directive_direct: "Komm direkt zur Sache: kurze Sätze, keine überflüssigen Höflichkeitsfloskeln."

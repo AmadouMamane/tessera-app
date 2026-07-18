@@ -201,6 +201,8 @@ import {
   PredictorEvaluationSchema,
   type PrivilegeReport,
   PrivilegeReportSchema,
+  type PromptOverlayState,
+  PromptOverlayStateSchema,
   type ProofsOverview,
   ProofsOverviewSchema,
   type PropagationReport,
@@ -1907,6 +1909,37 @@ export async function fetchAgentPrompts(
   const params = new URLSearchParams({ agent_id: agentId });
   if (lang) params.set("lang", lang);
   return request(`/observability/agent-prompts?${params}`, { signal }, AgentPromptsSchema);
+}
+
+// ADR 0037 — the governed overlay lifecycle (propose: operator; review: superadmin).
+export async function proposePromptOverlay(
+  agentId: string,
+  text: string,
+): Promise<PromptOverlayState> {
+  return request(
+    "/observability/agent-prompt-overlay/propose",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: agentId, text }),
+    },
+    PromptOverlayStateSchema,
+  );
+}
+
+export async function reviewPromptOverlay(
+  agentId: string,
+  action: "approve" | "reject" | "revoke",
+): Promise<PromptOverlayState> {
+  return request(
+    "/observability/agent-prompt-overlay/review",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ agent_id: agentId, action }),
+    },
+    PromptOverlayStateSchema,
+  );
 }
 
 export async function fetchAgentEvaluations(

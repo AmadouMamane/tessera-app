@@ -812,6 +812,22 @@ GOVERNANCE_ACTS: dict[str, _Act] = {
         "admin",
         {"changes": {"temperature": 0.35}, "lang": "fr"},
     ),
+    # 13th/14th acts, 2026-07-18 (ADR 0037): the prompt-overlay lifecycle — an
+    # operator proposes, a superadmin reviews; both change what production
+    # serves, both name their author. The registry's scope was widened to see
+    # their routes at the same time (Insight 177 protocol).
+    "propose an agent prompt overlay": _Act(
+        "POST",
+        "/observability/agent-prompt-overlay/propose",
+        "admin",
+        {"agent_id": "support-client", "text": "probe overlay"},
+    ),
+    "review an agent prompt overlay": _Act(
+        "POST",
+        "/observability/agent-prompt-overlay/review",
+        "superadmin",
+        {"agent_id": "support-client", "action": "revoke"},
+    ),
 }
 
 
@@ -906,6 +922,24 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
         "tessera.observability.agent_configurations._serving_effectiveness", _serving
     )
 
+    # Prompt-overlay lifecycle (13th/14th acts, ADR 0037): stub the STORE (it
+    # wants a JSON file on disk and the limes guard); route, emitter and chain
+    # stay real. The stubs assert the routes pass the verified principal.
+    def _propose_overlay(agent_id: str, text: str, *, author: str) -> dict[str, object]:
+        assert author, "the propose route must pass the verified principal"
+        return {
+            "draft": {"text": text, "author": author, "at": "probe"},
+            "approved": None,
+            "history": [],
+        }
+
+    def _review_overlay(agent_id: str, action: str, *, reviewer: str) -> dict[str, object]:
+        assert reviewer, "the review route must pass the verified principal"
+        return {"draft": None, "approved": None, "history": []}
+
+    monkeypatch.setattr("tessera.observability.prompt_overlay.propose_overlay", _propose_overlay)
+    monkeypatch.setattr("tessera.observability.prompt_overlay.review_overlay", _review_overlay)
+
 
 def _resolve(act: _Act) -> _Act:
     """Fill the placeholders from the live stores — a driver must use a REAL rule id."""
@@ -995,6 +1029,8 @@ def _is_governance_mutation(route: APIRoute, method: str) -> bool:
         "/observability/incidents",
         # 2026-07-17 (ADR 0031): the sampling-slider save became a governed act.
         "/observability/agent-configurations/config",
+        # 2026-07-18 (ADR 0037): the prompt-overlay lifecycle joined (2 acts).
+        "/observability/agent-prompt-overlay/",
         "/settings/",
     )
     return route.path.startswith(governed_prefixes)

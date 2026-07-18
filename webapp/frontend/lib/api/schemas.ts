@@ -5099,6 +5099,46 @@ export const AgentGardeFousSchema = z.object({
 });
 export type AgentGardeFous = z.infer<typeof AgentGardeFousSchema>;
 
+// ADR 0037 — the governed prompt-overlay lifecycle state.
+export const PromptOverlaySchema = z.object({
+  title: z.string(),
+  note: z.string(),
+  approved: z
+    .object({
+      text: z.string(),
+      author: z.string(),
+      approved_by: z.string(),
+      at: z.string(),
+    })
+    .nullable(),
+  draft: z.object({ text: z.string(), author: z.string(), at: z.string() }).nullable(),
+  history: z.array(
+    z.object({ at: z.string(), event: z.string(), author: z.string(), chars: z.number() }),
+  ),
+  max_chars: z.number().int(),
+  agent_id: z.string(),
+  labels: z.record(z.string(), z.string()),
+});
+export type PromptOverlay = z.infer<typeof PromptOverlaySchema>;
+
+// The mutation routes return the bare lifecycle state.
+export const PromptOverlayStateSchema = z.object({
+  available: z.boolean(),
+  draft: z.object({ text: z.string(), author: z.string(), at: z.string() }).nullable(),
+  approved: z
+    .object({
+      text: z.string(),
+      author: z.string(),
+      approved_by: z.string(),
+      at: z.string(),
+    })
+    .nullable(),
+  history: z.array(
+    z.object({ at: z.string(), event: z.string(), author: z.string(), chars: z.number() }),
+  ),
+});
+export type PromptOverlayState = z.infer<typeof PromptOverlayStateSchema>;
+
 export const AgentPromptsSchema = z.object({
   available: z.boolean(),
   title: z.string().optional(),
@@ -5229,6 +5269,9 @@ export const AgentPromptsSchema = z.object({
       }),
     )
     .optional(),
+  // ADR 0037 — the one governed exception to this page's read-only rule:
+  // the per-agent overlay lifecycle (propose → approve/reject/revoke).
+  overlay: PromptOverlaySchema.optional(),
   footer: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
 });
 export type AgentPrompts = z.infer<typeof AgentPromptsSchema>;

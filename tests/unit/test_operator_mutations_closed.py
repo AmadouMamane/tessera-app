@@ -37,7 +37,10 @@ from tessera.settings import get_settings
 # freeze (governed, ratchet-driven). +2 on 2026-07-17 (lot 4): automations bulk
 # rules-state and the approval decision — both governed, both driven by the
 # attribution ratchet (test_governed_acts_name_their_author.py).
-EXPECTED_MUTATION_COUNT = 32
+# +2 on 2026-07-18 (ADR 0037): the prompt-overlay propose/review lifecycle —
+# governed acts 13/14, driven by the attribution ratchet; review additionally
+# sits behind require_superadmin.
+EXPECTED_MUTATION_COUNT = 34
 
 #: One representative mutation, named for what it does: it puts an agent into production.
 #: If any single endpoint in this router deserves an authorization test, it is this one.

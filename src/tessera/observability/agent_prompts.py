@@ -382,9 +382,88 @@ async def build_agent_prompts(
     """Assemble the Prompts payload from the live YAML source of truth.
 
     ``agent_id`` scopes the in-page navigation links (``/agents/<agent_id>/...``).
+    The payload also carries the ONE governed exception to this page's
+    read-only rule: the per-agent overlay lifecycle (ADR 0037).
     """
     per_lang, newest = _load_all()
-    return _assemble(per_lang, newest, lang, agent_id, now=datetime.now(UTC))
+    payload = _assemble(per_lang, newest, lang, agent_id, now=datetime.now(UTC))
+    payload["overlay"] = _overlay_section(agent_id, lang)
+    return payload
+
+
+def _overlay_section(agent_id: str, lang: str) -> dict[str, object]:
+    """The governed overlay lifecycle state for this agent (ADR 0037)."""
+    from tessera.observability.prompt_overlay import MAX_OVERLAY_CHARS, load_overlay_state
+
+    state = load_overlay_state(agent_id)
+    return {
+        "title": _t(("Overlay gouverné", "Governter Overlay", "Governed overlay"), lang),
+        "note": _t(
+            (
+                "La seule exception gouvernée à la règle lecture-seule de cette page : "
+                "des directives complémentaires par agent, proposées par un opérateur, "
+                "approuvées par un superadmin (jamais l'auteur de la proposition). Seul "
+                "le texte APPROUVÉ est servi, ajouté au prompt système sous un en-tête "
+                "dédié — la base YAML (Git) reste la seule source des règles absolues. "
+                "Chaque proposition est filtrée par le garde-fou injection — ADR 0037.",
+                "Die einzige governierte Ausnahme der Nur-Lesen-Regel dieser Seite: "
+                "ergaenzende Direktiven pro Agent, von einem Operator vorgeschlagen, "
+                "von einem Superadmin genehmigt (nie vom Autor des Entwurfs). Nur der "
+                "GENEHMIGTE Text wird bedient - die YAML-Basis (Git) bleibt die einzige "
+                "Quelle der absoluten Regeln. Jeder Vorschlag durchlaeuft den "
+                "Injektions-Schutz - ADR 0037.",
+                "The one governed exception to this page's read-only rule: per-agent "
+                "complementary directives, proposed by an operator, approved by a "
+                "superadmin (never the draft's author). Only the APPROVED text serves, "
+                "appended to the system prompt under a dedicated header - the YAML base "
+                "(Git) remains the only source of the absolute rules. Every proposal is "
+                "screened by the injection guard - ADR 0037.",
+            ),
+            lang,
+        ),
+        "approved": state["approved"],
+        "draft": state["draft"],
+        "history": state["history"][:6],
+        "max_chars": MAX_OVERLAY_CHARS,
+        "agent_id": agent_id,
+        "labels": {
+            "serving": _t(("Overlay servi", "Bedienter Overlay", "Serving overlay"), lang),
+            "none": _t(
+                (
+                    "Aucun overlay servi — le prompt de base (YAML) sert seul.",
+                    "Kein Overlay bedient - der Basis-Prompt (YAML) dient allein.",
+                    "No overlay serving - the base (YAML) prompt serves alone.",
+                ),
+                lang,
+            ),
+            "pending": _t(
+                ("Proposition en attente", "Ausstehender Vorschlag", "Pending proposal"), lang
+            ),
+            "propose": _t(("Proposer", "Vorschlagen", "Propose"), lang),
+            "placeholder": _t(
+                (
+                    "Directives complémentaires proposées (filtrées par le garde-fou "
+                    "injection ; vide = proposer le retrait)",
+                    "Vorgeschlagene ergaenzende Direktiven (durch den Injektionsschutz "
+                    "gefiltert; leer = Ruecknahme vorschlagen)",
+                    "Proposed complementary directives (screened by the injection "
+                    "guard; empty = propose retirement)",
+                ),
+                lang,
+            ),
+            "approve": _t(("Approuver", "Genehmigen", "Approve"), lang),
+            "reject": _t(("Rejeter", "Ablehnen", "Reject"), lang),
+            "revoke": _t(("Révoquer l'overlay", "Overlay widerrufen", "Revoke overlay"), lang),
+            "superadmin_only": _t(
+                ("Réservé au superadmin", "Nur Superadmin", "Superadmin only"), lang
+            ),
+            "provenance": _t(
+                ("proposé par", "vorgeschlagen von", "proposed by"),
+                lang,
+            ),
+            "approved_by": _t(("approuvé par", "genehmigt von", "approved by"), lang),
+        },
+    }
 
 
 def _present_langs(per_lang: dict[str, dict[str, str]], key: str) -> list[str]:

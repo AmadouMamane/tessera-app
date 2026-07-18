@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Boxes,
   CalendarClock,
@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import type { Route } from "next";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -31,8 +32,8 @@ import {
 } from "@/components/overview/temporal-rail";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
-import { fetchAgentPrompts } from "@/lib/api/client";
-import type { AgentPrompts as Data } from "@/lib/api/schemas";
+import { fetchAgentPrompts, proposePromptOverlay, reviewPromptOverlay } from "@/lib/api/client";
+import type { AgentPrompts as Data, PromptOverlay } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
 import { AgentCrossLinks } from "./agent-cross-links";
@@ -185,6 +186,8 @@ export function AgentPrompts() {
             instanceLabel="Configuration pour cet agent (instance)"
             instanceHint="prompts actifs · édités par PR Git"
           />
+
+          <OverlayPanel overlay={data.overlay} agentId={agentId} />
 
           <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
             {(data.kpis ?? []).map((k, i) => (
@@ -965,5 +968,139 @@ function Footer({ data }: { data: Data }) {
         </span>
       ))}
     </div>
+  );
+}
+
+/** ADR 0037 — the one governed exception to this page's read-only rule.
+ *  An operator proposes an overlay draft (guard-screened server-side); only a
+ *  superadmin approves / rejects / revokes, and never the draft's own author
+ *  (two-person rule, enforced server-side — the UI reflects it honestly). */
+function OverlayPanel({ overlay, agentId }: { overlay?: PromptOverlay; agentId: string }) {
+  const qc = useQueryClient();
+  const role = useSession().data?.user?.role;
+  const isSuper = role === "superadmin";
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!overlay) return null;
+  const L = overlay.labels;
+  const run = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      setText("");
+      await qc.invalidateQueries({ queryKey: ["agent-prompts"] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const reviewBtn =
+    "h-7 rounded-md border px-2.5 text-[0.68rem] font-medium disabled:cursor-not-allowed disabled:opacity-50";
+  return (
+    <section
+      data-testid="prompt-overlay"
+      className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
+      <h3 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">{overlay.title}</h3>
+      <p className="mt-0.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        {overlay.note}
+      </p>
+
+      <div className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2">
+        <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">{L.serving}</span>
+        {overlay.approved ? (
+          <>
+            <pre className="mt-1 whitespace-pre-wrap font-mono text-[0.68rem] text-[var(--tessera-text)]">
+              {overlay.approved.text}
+            </pre>
+            <p className="mt-1 text-[0.6rem] text-[var(--tessera-text-muted)]">
+              {L.provenance} {overlay.approved.author} · {L.approved_by}{" "}
+              {overlay.approved.approved_by} ·{" "}
+              {new Date(overlay.approved.at).toLocaleString("fr-FR", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
+            </p>
+            <span title={isSuper ? undefined : L.superadmin_only}>
+              <button
+                type="button"
+                disabled={!isSuper || busy}
+                onClick={() => run(() => reviewPromptOverlay(agentId, "revoke"))}
+                className={cn(reviewBtn, "mt-1.5 border-amber-400/40 text-amber-300")}
+              >
+                {L.revoke}
+              </button>
+            </span>
+          </>
+        ) : (
+          <p className="mt-1 text-[0.64rem] italic text-[var(--tessera-text-muted)]">{L.none}</p>
+        )}
+      </div>
+
+      {overlay.draft ? (
+        <div className="mt-2 rounded-md border border-sky-500/30 bg-sky-500/5 px-2.5 py-2">
+          <span className="text-[0.68rem] font-medium text-sky-300">{L.pending}</span>
+          <pre className="mt-1 whitespace-pre-wrap font-mono text-[0.68rem] text-[var(--tessera-text)]">
+            {overlay.draft.text || "∅"}
+          </pre>
+          <p className="mt-1 text-[0.6rem] text-[var(--tessera-text-muted)]">
+            {L.provenance} {overlay.draft.author} ·{" "}
+            {new Date(overlay.draft.at).toLocaleString("fr-FR", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })}
+          </p>
+          <span
+            title={isSuper ? undefined : L.superadmin_only}
+            className="mt-1.5 inline-flex gap-2"
+          >
+            <button
+              type="button"
+              disabled={!isSuper || busy}
+              onClick={() => run(() => reviewPromptOverlay(agentId, "approve"))}
+              className={cn(reviewBtn, "border-emerald-400/40 text-emerald-300")}
+            >
+              {L.approve}
+            </button>
+            <button
+              type="button"
+              disabled={!isSuper || busy}
+              onClick={() => run(() => reviewPromptOverlay(agentId, "reject"))}
+              className={cn(reviewBtn, "border-rose-400/40 text-rose-300")}
+            >
+              {L.reject}
+            </button>
+          </span>
+        </div>
+      ) : null}
+
+      <div className="mt-2 flex flex-col gap-1.5">
+        <textarea
+          aria-label={L.propose}
+          placeholder={L.placeholder}
+          maxLength={overlay.max_chars}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="min-h-[64px] rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-[0.7rem] text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)]"
+        />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => run(() => proposePromptOverlay(agentId, text))}
+            className={cn(reviewBtn, "border-[#2e72d2] bg-[#1b4f8a] text-[#d8eaff]")}
+          >
+            {L.propose}
+          </button>
+          <span className="text-[0.6rem] tabular-nums text-[var(--tessera-text-muted)]">
+            {text.length}/{overlay.max_chars}
+          </span>
+          {error ? <span className="text-[0.62rem] text-rose-300">{error}</span> : null}
+        </div>
+      </div>
+    </section>
   );
 }

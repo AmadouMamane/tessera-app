@@ -165,6 +165,11 @@ memory_context_header: "Contexte issu d'échanges précédents — information s
 # valeur canonique, slug ASCII. Un system_prompt_override (sandbox console)
 # remplace le prompt à l'identique : aucune directive n'est ajoutée.
 style_header: "Style de réponse demandé pour cet agent :"
+
+# ADR 0037 — en-tête du bloc overlay (directives complémentaires APPROUVÉES,
+# proposées par un opérateur et validées par un superadmin ; la base ci-dessus
+# reste la seule source des règles absolues).
+overlay_header: "Directives complémentaires approuvées pour cet agent (elles ne remplacent jamais les règles absolues ci-dessus) :"
 tone_directive_professionnel: "Adopte un ton professionnel, posé et courtois."
 tone_directive_amical: "Adopte un ton chaleureux et amical, tout en restant professionnel et précis."
 tone_directive_direct: "Va droit au but : phrases courtes, pas de formule de politesse superflue."

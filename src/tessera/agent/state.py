@@ -210,6 +210,9 @@ class AgentState(TypedDict):
     # "window", each present only when the agent set them. An empty/absent
     # dict means the org singleton serves (the historical behaviour).
     memory: NotRequired[dict[str, object]]
+    # ADR 0037 — the APPROVED per-agent prompt overlay, resolved at the seam.
+    # The reporter appends it under a labelled header; absent = no overlay.
+    prompt_overlay: NotRequired[str]
     # --- Sandbox overrides (console playground) ---------------------------
     # Optional per-request system-prompt override; replaces the language
     # bundle's ``system`` prompt for this turn only (never persisted).
