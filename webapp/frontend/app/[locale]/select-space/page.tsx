@@ -6,6 +6,7 @@ import {
   LandingLauncher,
 } from "@/components/landing/landing-launcher";
 import { demoCredentials } from "@/lib/auth/accounts";
+import { currentRole } from "@/lib/auth/session";
 import { isDemoMode } from "@/lib/server/demo-mode";
 import { loadLauncherSignal } from "@/lib/server/launcher-signal";
 
@@ -47,5 +48,10 @@ export default async function DemoLauncherPage({ params }: PageProps) {
     demoLogin = { operator: pick("admin") ?? pick("auditor"), collections: pick("collections") };
   }
 
-  return <LandingLauncher signal={signal} demoLogin={demoLogin} />;
+  // The server-verified role of the visitor's CURRENT session: the demo cards
+  // must navigate an already-authorized session, never re-log it as the seeded
+  // demo account (a silent privilege downgrade — bug of 2026-07-18).
+  const sessionRole = await currentRole();
+
+  return <LandingLauncher signal={signal} demoLogin={demoLogin} sessionRole={sessionRole} />;
 }

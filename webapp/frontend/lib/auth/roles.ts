@@ -96,6 +96,26 @@ export function canActOnCollections(role: Role | null): boolean {
   return role === "collections" || isAdmin(role);
 }
 
+/**
+ * Whether the 1-click DEMO login may run for a session of `role` entering
+ * `target`. The demo shortcut exists for the ANONYMOUS visitor; a session that
+ * can already enter the target must be NAVIGATED, never re-authenticated —
+ * silently replacing a real session (e.g. the superadmin's) with the seeded
+ * demo account is a privilege downgrade the operator never asked for (bug
+ * reported 2026-07-18: superadmin → « Entrer dans le cockpit » → admin).
+ * A session the target rejects still takes the demo login: that is the demo
+ * launcher's whole point (one click into either plane, no account juggling).
+ */
+export function demoLoginNeeded(
+  role: Role | null,
+  target: "/produit" | "/recouvrement" | "/surveiller/vue-ensemble",
+): boolean {
+  if (role === null) return true;
+  if (target === "/surveiller/vue-ensemble") return !hasCockpitAccess(role);
+  if (target === "/recouvrement") return !hasCollectionsAccess(role);
+  return !hasProductAccess(role);
+}
+
 /** The operator surfaces an assertion may carry (mirrors tessera.api.operator). */
 export type OperatorSurface = "cockpit-embedded" | "dedicated-ui";
 

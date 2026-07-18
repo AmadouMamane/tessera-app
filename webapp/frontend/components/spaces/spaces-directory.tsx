@@ -42,6 +42,11 @@ export interface SurfaceView {
   // instead of a link that would bounce to the role's own landing (ADR 0013). For
   // an anonymous session this is always true — the auth/demo affordance handles it.
   accessible: boolean;
+  // True when entering this surface requires the demo 1-click login (anonymous
+  // visitor, or a session the surface rejects). False for a session that can
+  // already enter: the card then NAVIGATES — it never re-logs a real session
+  // as the seeded demo account (a silent privilege downgrade, bug 2026-07-18).
+  demoNeeded: boolean;
 }
 
 export interface SurfaceGroup {
@@ -155,6 +160,13 @@ function SurfaceCard({
   const enter = async () => {
     if (!demo) return;
     setPending(true);
+    // A session that can already enter is navigated as-is — the demo login is
+    // for the visitor who cannot, never a downgrade of a real session.
+    if (!surface.demoNeeded) {
+      router.push(surface.href);
+      router.refresh();
+      return;
+    }
     const res = await signIn("credentials", {
       username: demo.username,
       password: demo.password,
@@ -281,6 +293,12 @@ function SurfaceRow({
   const enter = async () => {
     if (!demo) return;
     setPending(true);
+    // Same rule as the card variant: never re-log an already-authorized session.
+    if (!surface.demoNeeded) {
+      router.push(surface.href);
+      router.refresh();
+      return;
+    }
     const res = await signIn("credentials", {
       username: demo.username,
       password: demo.password,

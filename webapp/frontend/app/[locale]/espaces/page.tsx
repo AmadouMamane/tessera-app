@@ -91,6 +91,10 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
     authNote: s.authRequired ? tl(`${s.key}.authNote`) : "",
     demo: s.demoRole ? demoCred(s.demoRole) : null,
     accessible: accessibleForRole(s),
+    // The demo 1-click login is for the visitor who cannot enter yet; a session
+    // that already can is navigated as-is, never re-logged as the seeded demo
+    // account (silent privilege downgrade — bug 2026-07-18).
+    demoNeeded: role === null || !accessibleForRole(s),
   });
 
   const groups: SurfaceGroup[] = (["external", "internal"] as const).map((key) => ({

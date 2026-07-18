@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/auth/accounts";
 import {
   canMutateCockpit,
+  demoLoginNeeded,
   hasCockpitAccess,
   hasCollectionsAccess,
   hasProductAccess,
@@ -135,5 +136,40 @@ describe("canMutateCockpit — the auditor reads and does not write (ADR 0009)",
 
     expect(writers.every((role) => cockpit.includes(role))).toBe(true);
     expect(cockpit.filter((role) => !writers.includes(role))).toEqual(["auditor"]);
+  });
+});
+
+// Bug of 2026-07-18: superadmin logs in, clicks « Entrer dans le cockpit » on the
+// demo launcher, and the 1-click demo login silently replaces the session with the
+// seeded admin account. The rule: the demo login runs ONLY for a session that
+// cannot already enter the target — an authorized session is navigated, never
+// re-authenticated (a privilege downgrade nobody asked for).
+describe("demoLoginNeeded — the demo 1-click never clobbers an authorized session", () => {
+  it("always runs for the anonymous visitor (the demo shortcut's whole audience)", () => {
+    expect(demoLoginNeeded(null, "/surveiller/vue-ensemble")).toBe(true);
+    expect(demoLoginNeeded(null, "/recouvrement")).toBe(true);
+    expect(demoLoginNeeded(null, "/produit")).toBe(true);
+  });
+
+  it("never runs for a session that can already enter the target", () => {
+    for (const role of OPERATOR_ROLES) {
+      expect(demoLoginNeeded(role, "/surveiller/vue-ensemble")).toBe(false);
+      expect(demoLoginNeeded(role, "/recouvrement")).toBe(false);
+      expect(demoLoginNeeded(role, "/produit")).toBe(false);
+    }
+    expect(demoLoginNeeded("collections", "/recouvrement")).toBe(false);
+  });
+
+  it("still runs for a session the target rejects (one click into the other plane)", () => {
+    expect(demoLoginNeeded("collections", "/surveiller/vue-ensemble")).toBe(true);
+    expect(demoLoginNeeded("collections", "/produit")).toBe(true);
+  });
+
+  it("mirrors the access predicates over the whole role space — no drift", () => {
+    for (const role of ROLES) {
+      expect(demoLoginNeeded(role, "/surveiller/vue-ensemble")).toBe(!hasCockpitAccess(role));
+      expect(demoLoginNeeded(role, "/recouvrement")).toBe(!hasCollectionsAccess(role));
+      expect(demoLoginNeeded(role, "/produit")).toBe(!hasProductAccess(role));
+    }
   });
 });

@@ -18,6 +18,8 @@ import { useState } from "react";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link, useRouter } from "@/i18n/navigation";
+import type { Role } from "@/lib/auth/accounts";
+import { demoLoginNeeded } from "@/lib/auth/roles";
 import { cn } from "@/lib/cn";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
 
@@ -154,9 +156,13 @@ function Orientation() {
 export function LandingLauncher({
   signal,
   demoLogin,
+  sessionRole = null,
 }: {
   signal: LauncherSignal | null;
   demoLogin: DemoLogin | null;
+  // The server-verified role of the CURRENT session (null = anonymous). The
+  // demo 1-click login must never clobber a session that can already enter.
+  sessionRole?: Role | null;
 }) {
   const t = useTranslations("landing");
 
@@ -216,7 +222,7 @@ export function LandingLauncher({
             {/* Cockpit FIRST = the thesis (control plane is the value; business
                 apps are deliberately thin). Primary card; the métier card is
                 secondary (outline CTA), so the hierarchy matches the order. */}
-            <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} />
+            <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} sessionRole={sessionRole} />
             <BusinessPlaneCard t={t} />
           </section>
 
@@ -233,23 +239,32 @@ export function LandingLauncher({
 // 1-click seeded-account login (demo mode only). It opens a REAL next-auth session
 // on the seeded Credentials account (ADR 0009) then navigates to the surface — it
 // satisfies the guard by logging in, never a bypass. Rendered only when the server
-// passed demo credentials (off in production).
+// passed demo credentials (off in production). A session that can ALREADY enter
+// the target is navigated as-is: the demo login is for the anonymous visitor,
+// never a silent downgrade of a real session (e.g. superadmin → seeded admin).
 function DemoEnterButton({
   label,
   cred,
   target,
   accent,
+  sessionRole,
 }: {
   label: string;
   cred: DemoCred;
   target: "/recouvrement" | "/surveiller/vue-ensemble";
   accent: Accent;
+  sessionRole: Role | null;
 }) {
   const a = ACCENT[accent];
   const router = useRouter();
   const [pending, setPending] = useState(false);
   async function enter() {
     setPending(true);
+    if (!demoLoginNeeded(sessionRole, target)) {
+      router.push(target);
+      router.refresh();
+      return;
+    }
     const res = await signIn("credentials", {
       username: cred.username,
       password: cred.password,
@@ -508,7 +523,11 @@ function BusinessPlaneCard({ t }: { t: T }) {
 
 // Control plane (ADR 0013): the cockpit — govern the platform. Guarded to the
 // platform roles; the card surfaces the "sign-in required" note and links.
-function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }) {
+function ControlPlaneCard({
+  t,
+  demoOperator,
+  sessionRole,
+}: { t: T; demoOperator?: DemoCred; sessionRole: Role | null }) {
   const a = ACCENT.cyan;
   return (
     <section
@@ -550,6 +569,7 @@ function ControlPlaneCard({ t, demoOperator }: { t: T; demoOperator?: DemoCred }
               cred={demoOperator}
               target="/surveiller/vue-ensemble"
               accent="cyan"
+              sessionRole={sessionRole}
             />
           </div>
         ) : (
