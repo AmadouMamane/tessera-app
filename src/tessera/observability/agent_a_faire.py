@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from tessera.observability.operator_items import load_items
+from tessera.observability.operator_items import NATURE_A_FAIRE, load_items_for
 
 if TYPE_CHECKING:
     from tessera.observability.operator_items import OperatorItem
@@ -350,7 +350,9 @@ def compute_agent_a_faire(lang: str = "fr", now: datetime | None = None) -> dict
     to the current time and is injectable so tests are deterministic.
     """
     now = now or datetime.now(UTC)
-    items = load_items()
+    # ADR 0038 — this page serves the eval/governance half of the backlog, and
+    # only it; the business half belongs to "A traiter" (compute_inbox_overview).
+    items = load_items_for(NATURE_A_FAIRE)
     open_items = [i for i in items if i.status != "done"]
 
     urgent = sum(1 for i in open_items if i.priority == "crit")

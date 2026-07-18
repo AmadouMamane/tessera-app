@@ -1,7 +1,9 @@
 """Shared real source for the operator work queues ("A faire" / "A traiter").
 
 Both queue pages were deterministic fixtures. This module derives a real backlog
-from artifacts that already exist:
+and partitions it by NATURE (ADR 0038) — "A faire" serves the eval/governance
+half, "A traiter" the business half (``load_items_for``); ``load_items`` remains
+the unfiltered union. The backlog is derived from artifacts that already exist:
 
 * **failed evaluation cases** from the latest catalogue run
   (:func:`tessera.observability.eval_data.load_eval_snapshot`) - every failing
@@ -36,9 +38,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 __all__ = [
+    "NATURE_A_FAIRE",
+    "NATURE_A_TRAITER",
     "OperatorItem",
+    "UnknownSourceKindError",
     "available_item_ids",
     "load_items",
+    "load_items_for",
+    "nature_of",
+    "partition_items",
     "set_item_state",
 ]
 
@@ -77,6 +85,73 @@ _WARN_SECONDS = 2 * 3600  # under 2h remaining -> warn
 
 _DEFAULT_STATUS = "todo"
 _VALID_STATUS = {"todo", "progress", "done"}
+
+# --- The nature partition (ADR 0038) -----------------------------------------
+#
+# The backlog is ONE union with exactly two natures, and each queue page serves
+# exactly one of them:
+#
+#   "a_faire"   (governance plane, routes/observability/fleet.py)    = eval_failure
+#   "a_traiter" (business plane,   routes/observability/business.py) = business_event
+#
+# ``load_items()`` stays the unfiltered union — it is the reference the partition
+# ratchet measures both halves against. Every consumer that wants one page's half
+# goes through ``nature_of`` (via ``partition_items``/``load_items_for``); there
+# is no second copy of the rule anywhere. A ``source_kind`` that belongs to no
+# page must never vanish in silence: ``nature_of`` raises on it, the same spirit
+# as an exhaustive ``Verdict`` match.
+
+NATURE_A_FAIRE = "a_faire"
+NATURE_A_TRAITER = "a_traiter"
+
+_NATURE_KINDS: dict[str, frozenset[str]] = {
+    NATURE_A_FAIRE: frozenset({"eval_failure"}),
+    NATURE_A_TRAITER: frozenset({"business_event"}),
+}
+
+
+class UnknownSourceKindError(ValueError):
+    """A ``source_kind`` no page owns — refused loudly, never dropped in silence."""
+
+
+def nature_of(source_kind: str) -> str:
+    """The page (``a_faire`` | ``a_traiter``) that owns this ``source_kind``.
+
+    Raises:
+        UnknownSourceKindError: The kind belongs to no declared nature.
+    """
+    for nature, kinds in _NATURE_KINDS.items():
+        if source_kind in kinds:
+            return nature
+    raise UnknownSourceKindError(
+        f"source_kind {source_kind!r} belongs to no queue page - declare its nature "
+        f"in _NATURE_KINDS (known: {sorted(k for ks in _NATURE_KINDS.values() for k in ks)})"
+    )
+
+
+def partition_items(items: list[OperatorItem]) -> dict[str, list[OperatorItem]]:
+    """Split a backlog into its two natures - exhaustive and loud on strangers.
+
+    A partition by construction: every item lands in exactly one half, so
+    union == input and the halves are disjoint. An unknown ``source_kind``
+    raises instead of disappearing.
+    """
+    halves: dict[str, list[OperatorItem]] = {nature: [] for nature in _NATURE_KINDS}
+    for item in items:
+        halves[nature_of(item.source_kind)].append(item)
+    return halves
+
+
+def load_items_for(nature: str, agent_id: str | None = None) -> list[OperatorItem]:
+    """One page's half of the backlog (``load_items`` stays the total union).
+
+    Raises:
+        ValueError: ``nature`` is not a declared page.
+        UnknownSourceKindError: The backlog emitted a kind no page owns.
+    """
+    if nature not in _NATURE_KINDS:
+        raise ValueError(f"unknown queue nature {nature!r} - one of {sorted(_NATURE_KINDS)}")
+    return partition_items(load_items(agent_id))[nature]
 
 
 @dataclass(frozen=True, slots=True)
@@ -352,6 +427,12 @@ def _load_items_uninstrumented(agent_id: str | None = None) -> list[OperatorItem
     return items
 
 
-def available_item_ids() -> set[str]:
-    """The set of known item ids across the whole fleet (for endpoint validation)."""
-    return {i.item_id for i in load_items()}
+def available_item_ids(nature: str | None = None) -> set[str]:
+    """Known item ids for endpoint validation - the whole union, or one page's half.
+
+    The item-state endpoints are per-page, so each validates against its own
+    nature (ADR 0038): a mutation arriving from "A traiter" for an item that
+    page cannot show is refused, not honoured across the partition.
+    """
+    items = load_items() if nature is None else load_items_for(nature)
+    return {i.item_id for i in items}

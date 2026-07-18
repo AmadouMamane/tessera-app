@@ -36,7 +36,7 @@ from tessera.observability.agentspec_projection import (
     observability_level,
 )
 from tessera.observability.business_capabilities import business_capability_aggregate
-from tessera.observability.operator_items import load_items
+from tessera.observability.operator_items import NATURE_A_TRAITER, load_items_for
 from tessera.observability.store_spans import store_read
 from tessera.retrieval.store import _connection
 from tessera.settings import get_settings
@@ -258,11 +258,9 @@ def _business_card_facts(aid: str, record: Agent | None) -> BusinessCardFacts:
         None,
     )
     try:
-        pending = sum(
-            1
-            for item in load_items(aid)
-            if item.source_kind == "business_event" and item.status != "done"
-        )
+        # ADR 0038 — the business half through the ONE declared partition rule,
+        # never a hand-rolled source_kind filter (a second copy of the rule).
+        pending = sum(1 for item in load_items_for(NATURE_A_TRAITER, aid) if item.status != "done")
     except Exception:
         pending = 0
     return {"north_star": north_star, "pending_business_items": pending}

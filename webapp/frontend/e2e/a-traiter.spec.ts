@@ -1,8 +1,11 @@
 import { type Page, expect, test } from "@playwright/test";
 
-// Covers the "A traiter" inbox backed by the real operator backlog (failed eval
-// cases): the table lists real items, search + the priority filter narrow it,
-// and cycling an item's status from its drawer persists durably.
+// Covers the "A traiter" inbox backed by the real operator backlog: the table
+// lists real items, search + the priority filter narrow it, and cycling an
+// item's status from its drawer persists durably.
+//
+// ADR 0038 — this page serves the BUSINESS half of the backlog only (pending
+// validations, blocked actions); the eval half belongs to /a-faire.
 //
 // Repaired 2026-07-10 against the contract `8f3447d9` ("per-agent scope
 // end-to-end + ADR 0015 telemetry spine") actually shipped: that commit
@@ -40,6 +43,17 @@ test("lists real backlog items, one page at a time", async ({ page }) => {
   await expect(summary).toBeVisible();
   const total = Number(((await summary.textContent()) ?? "").match(/sur (\d+)/)?.[1]);
   expect(total).toBeGreaterThan(10);
+});
+
+test("every row is business-nature — the eval half never leaks in (ADR 0038)", async ({ page }) => {
+  // Business items all carry source "Métier"; before the partition the eval
+  // rows (Garde-fous, Confidentialite, RAG, …) sat in this very table and a
+  // non-Métier row on page 1 turned this red.
+  const rows = page.locator("table tbody tr");
+  expect(await rows.count()).toBeGreaterThan(0);
+  await expect(rows.filter({ hasNotText: "Métier" })).toHaveCount(0);
+  // The footer names the page's real source: the business grammar.
+  await expect(page.getByText(/grammaire métier/)).toBeVisible();
 });
 
 test("search filters the queue client-side", async ({ page }) => {

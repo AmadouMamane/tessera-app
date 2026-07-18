@@ -4,6 +4,9 @@ import { type Page, expect, test } from "@playwright/test";
 // lists real items, the rail search filters them, a row click drives the detail
 // drawer, and "Prendre en charge" persists the durable workflow status.
 //
+// ADR 0038 — this page serves the EVAL/governance half of the backlog only;
+// the business half (validations, blocked actions) belongs to /a-traiter.
+//
 // Repaired 2026-07-10 against the contract `8f3447d9` ("per-agent scope
 // end-to-end + ADR 0015 telemetry spine") actually shipped: that commit
 // paginated the table at ten rows and turned the inline detail `<section>` into
@@ -42,6 +45,15 @@ test("lists real backlog items, one page at a time", async ({ page }) => {
   await expect(summary).toBeVisible();
   const total = Number(((await summary.textContent()) ?? "").match(/sur (\d+)/)?.[1]);
   expect(total).toBeGreaterThan(10);
+});
+
+test("every row is eval-nature — the business half never leaks in (ADR 0038)", async ({ page }) => {
+  // Business items all carry source "Métier"; before the partition they sat in
+  // this very table (a "Métier" row on page 1 turned this red). An eval row's
+  // source is a governance domain (Garde-fous, Confidentialite, RAG, …).
+  const rows = page.locator("table tbody tr");
+  expect(await rows.count()).toBeGreaterThan(0);
+  await expect(rows.filter({ hasText: "Métier" })).toHaveCount(0);
 });
 
 test("rail search filters the task list", async ({ page }) => {

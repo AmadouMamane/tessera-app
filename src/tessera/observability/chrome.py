@@ -63,6 +63,16 @@ _STRINGS: dict[str, tuple[str, str, str]] = {
         "{n} Element(e) über der Frist",
         "{n} item(s) past their deadline",
     ),
+    "n_pending_eval": (
+        "{n} cas d'évaluation en échec à revoir",
+        "{n} fehlgeschlagene Evaluierungsfälle zu prüfen",
+        "{n} failed evaluation case(s) to review",
+    ),
+    "n_overdue_eval": (
+        "{n} cas d'évaluation hors délai",
+        "{n} Evaluierungsfälle über der Frist",
+        "{n} evaluation case(s) past their deadline",
+    ),
     "canary_red": (
         "Canary en échec : {agent}",
         "Canary fehlgeschlagen: {agent}",
@@ -86,37 +96,51 @@ _STRINGS: dict[str, tuple[str, str, str]] = {
 _DEGRADED_SEAL_STATES = frozenset({"stale", "divergent", "unverifiable"})
 
 
-def _operator_items() -> Sequence[Any]:
-    """The queue behind both À traiter and À faire — read once, counted twice."""
-    from tessera.observability.operator_items import load_items
+def _queue_halves() -> dict[str, list[Any]]:
+    """The queue behind À traiter and À faire — read once, partitioned by nature.
 
-    return load_items()
+    ADR 0038: the two pages serve disjoint halves of the backlog, so every
+    chrome number derived from it must count ONE half — the one its page lists.
+    """
+    from tessera.observability.operator_items import load_items, partition_items
+
+    return partition_items(load_items())
+
+
+def _half_tone(items: Sequence[Any], now: datetime) -> Tone:
+    """One half's SLA verdict: red past due, amber inside the warning window."""
+    open_items = [item for item in items if item.status != "done"]
+    if any(item.overdue(now) for item in open_items):
+        return "danger"
+    if any(item.sla_tone(now) == "warn" for item in open_items):
+        return "warning"
+    return "neutral"
 
 
 def _queue_badges(now: datetime) -> dict[str, dict[str, object]]:
-    """À traiter and À faire, counted from the queue their pages list.
+    """À traiter and À faire, each counted from the half its page lists (ADR 0038).
 
-    ``a_traiter`` mirrors the inbox page's ``total_items`` (every item); ``a_faire``
-    mirrors its own page's open items. The tone is the queue's SLA verdict, not a
-    number-size heuristic: red once an open item is past its declared due time, amber
-    while one is inside the warning window the domain itself defines.
+    ``a_traiter`` mirrors the inbox page's ``total_items`` (its business items);
+    ``a_faire`` mirrors its own page's open eval items. The tone is each half's
+    own SLA verdict, not a number-size heuristic: red once one of ITS open items
+    is past its declared due time, amber while one is inside the warning window
+    the domain itself defines.
     """
+    from tessera.observability.operator_items import NATURE_A_FAIRE, NATURE_A_TRAITER
+
     try:
-        items = _operator_items()
+        halves = _queue_halves()
     except Exception:  # a cockpit chrome never crashes the page it decorates
         LOG.warning("chrome.operator_items_unreadable")
         return {}
 
-    open_items = [item for item in items if item.status != "done"]
-    overdue = [item for item in open_items if item.overdue(now)]
-    warning = [item for item in open_items if item.sla_tone(now) == "warn"]
-
-    tone: Tone = "danger" if overdue else ("warning" if warning else "neutral")
     badges: dict[str, dict[str, object]] = {}
-    if items:
-        badges["a_traiter"] = {"count": len(items), "tone": tone}
-    if open_items:
-        badges["a_faire"] = {"count": len(open_items), "tone": tone}
+    a_traiter = halves[NATURE_A_TRAITER]
+    if a_traiter:
+        badges["a_traiter"] = {"count": len(a_traiter), "tone": _half_tone(a_traiter, now)}
+    a_faire_open = [item for item in halves[NATURE_A_FAIRE] if item.status != "done"]
+    if a_faire_open:
+        badges["a_faire"] = {"count": len(a_faire_open), "tone": _half_tone(a_faire_open, now)}
     return badges
 
 
@@ -242,33 +266,46 @@ def _ledger_notifications(lang: str) -> list[dict[str, object]]:
 
 
 def _queue_notifications(lang: str, now: datetime) -> list[dict[str, object]]:
-    """Work waiting on a human: what is open, and what has already blown its SLA."""
+    """Work waiting on a human — each row counted from the page it links to.
+
+    ADR 0038: the pending/overdue rows that deep-link to ``/a-traiter`` count
+    the business half only; the eval half gets its own rows towards ``/a-faire``.
+    A row counting the union while linking to one page would be a number whose
+    page cannot make it true — the exact lie this module exists to prevent.
+    """
+    from tessera.observability.operator_items import NATURE_A_FAIRE, NATURE_A_TRAITER
+
     try:
-        items = _operator_items()
+        halves = _queue_halves()
     except Exception:
         return []
-    open_items = [item for item in items if item.status != "done"]
-    if not open_items:
-        return []
 
-    notifications: list[dict[str, object]] = [
-        {
-            "id": "queue:pending",
-            "label": _t("n_pending", lang).format(n=len(open_items)),
-            "href": "/a-traiter",
-            "tone": "warning",
-        }
-    ]
-    overdue = [item for item in open_items if item.overdue(now)]
-    if overdue:
+    notifications: list[dict[str, object]] = []
+    for nature, href, pending_key, overdue_key in (
+        (NATURE_A_TRAITER, "/a-traiter", "n_pending", "n_overdue"),
+        (NATURE_A_FAIRE, "/a-faire", "n_pending_eval", "n_overdue_eval"),
+    ):
+        open_items = [item for item in halves[nature] if item.status != "done"]
+        if not open_items:
+            continue
         notifications.append(
             {
-                "id": "queue:overdue",
-                "label": _t("n_overdue", lang).format(n=len(overdue)),
-                "href": "/a-traiter",
-                "tone": "danger",
+                "id": f"queue:pending:{nature}",
+                "label": _t(pending_key, lang).format(n=len(open_items)),
+                "href": href,
+                "tone": "warning",
             }
         )
+        overdue = [item for item in open_items if item.overdue(now)]
+        if overdue:
+            notifications.append(
+                {
+                    "id": f"queue:overdue:{nature}",
+                    "label": _t(overdue_key, lang).format(n=len(overdue)),
+                    "href": href,
+                    "tone": "danger",
+                }
+            )
     return notifications
 
 

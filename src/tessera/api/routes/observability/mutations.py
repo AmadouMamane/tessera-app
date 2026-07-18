@@ -642,22 +642,33 @@ async def observability_evidence_pack_create(
 
 @router.post("/observability/inbox/item-state")
 async def observability_inbox_mutate(body: _ItemStateBody) -> dict[str, object]:
-    """Persist a status/assignee change for one queue item; return fresh payload."""
+    """Persist a status/assignee change for one queue item; return fresh payload.
+
+    ADR 0038 — validated against the BUSINESS half only: this endpoint serves
+    the "A traiter" page, and an id that page cannot show is refused, never
+    honoured across the partition.
+    """
     from tessera.observability import operator_items as operator_items_mod
 
-    if body.item_id not in operator_items_mod.available_item_ids():
-        raise HTTPException(status_code=404, detail="unknown item")
+    if body.item_id not in operator_items_mod.available_item_ids(
+        operator_items_mod.NATURE_A_TRAITER
+    ):
+        raise HTTPException(status_code=404, detail="unknown item for this queue")
     operator_items_mod.set_item_state(body.item_id, status=body.status, assignee=body.assignee)
     return {"available": True, **inbox_mod.compute_inbox_overview(lang=body.lang)}
 
 
 @router.post("/observability/agent-a-faire/item-state")
 async def observability_agent_a_faire_mutate(body: _ItemStateBody) -> dict[str, object]:
-    """Persist a status/assignee change for one A-faire item; return fresh payload."""
+    """Persist a status/assignee change for one A-faire item; return fresh payload.
+
+    ADR 0038 — validated against the EVAL half only (the "A faire" page's own
+    items), the mirror of the inbox endpoint's rule.
+    """
     from tessera.observability import operator_items as operator_items_mod
 
-    if body.item_id not in operator_items_mod.available_item_ids():
-        raise HTTPException(status_code=404, detail="unknown item")
+    if body.item_id not in operator_items_mod.available_item_ids(operator_items_mod.NATURE_A_FAIRE):
+        raise HTTPException(status_code=404, detail="unknown item for this queue")
     operator_items_mod.set_item_state(body.item_id, status=body.status, assignee=body.assignee)
     return {"available": True, **agent_a_faire_mod.compute_agent_a_faire(body.lang)}
 

@@ -1,11 +1,13 @@
 """Inbox / "A traiter" cockpit overview (page #24).
 
-Composes the "A traiter" overview from the real operator backlog
-(:mod:`tessera.observability.operator_items` - failed evaluation cases with a
-durable per-item status/assignee): the queue posture KPIs (open, urgent,
-SLA-at-risk, overdue, assigned-to-me, resolved, resolution rate), the task
-queue, the by-type distribution, the SLA buckets and the recent activity. Status
-is mutated by the item-state endpoint, so the page is functional, not a fixture.
+Composes the "A traiter" overview from the BUSINESS half of the real operator
+backlog (:mod:`tessera.observability.operator_items`, ADR 0038 - pending
+validations and blocked actions from the business grammar, with a durable
+per-item status/assignee): the queue posture KPIs (open, urgent, SLA-at-risk,
+overdue, assigned-to-me, resolved, resolution rate), the task queue, the
+by-type distribution, the SLA buckets and the recent activity. Status is
+mutated by the item-state endpoint, so the page is functional, not a fixture.
+The eval/governance half belongs to "A faire" (:mod:`agent_a_faire`).
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
-from tessera.observability.operator_items import load_items
+from tessera.observability.operator_items import NATURE_A_TRAITER, load_items_for
 
 if TYPE_CHECKING:
     from tessera.observability.operator_items import OperatorItem
@@ -23,13 +25,13 @@ __all__ = ["compute_inbox_overview"]
 
 # Localized free-text (fr, de, en).
 _TR: dict[str, tuple[str, str, str]] = {
-    "rail_period": ("Run d'évaluation", "Bewertungslauf", "Evaluation run"),
+    "rail_period": ("Événements métier", "Fachliche Ereignisse", "Business events"),
     "rail_sla": ("Temps réel", "Echtzeit", "Real time"),
-    "rail_compare": ("Cas en échec", "Fehlgeschlagene Faelle", "Failed cases"),
+    "rail_compare": ("Validations & blocages", "Freigaben & Sperren", "Validations & blocks"),
     "footer_src": (
-        "Cas d'évaluation en échec + validations/actions métier réelles",
-        "Fehlgeschlagene Bewertungsfaelle + echte fachliche Freigaben/Aktionen",
-        "Failed evaluation cases + real business validations/actions",
+        "Validations en attente et actions bloquées (grammaire métier)",
+        "Ausstehende Freigaben und blockierte Aktionen (fachliche Grammatik)",
+        "Pending validations and blocked actions (business grammar)",
     ),
     "v_todo": ("a signalé", "hat gemeldet", "reported"),
     "v_progress": ("traite", "bearbeitet", "handling"),
@@ -122,7 +124,9 @@ def compute_inbox_overview(
     """
     lang = _norm_lang(lang)
     now = now or datetime.now(UTC)
-    items = load_items(agent_id)
+    # ADR 0038 — this page serves the business half of the backlog, and only
+    # it; the eval/governance half belongs to "A faire" (compute_agent_a_faire).
+    items = load_items_for(NATURE_A_TRAITER, agent_id)
     agent_names = _agent_names()
     open_items = [i for i in items if i.status != "done"]
     done_items = [i for i in items if i.status == "done"]
