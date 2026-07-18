@@ -735,21 +735,23 @@ def _definition_block(agent_slug: str, lang: str = "fr") -> dict[str, object]:
     }
 
 
-async def _serving_effectiveness(agent_slug: str) -> tuple[str, str, tuple[str, ...]]:
-    """``(effective_model, backend_name, applied slider keys)`` for one agent.
+async def _serving_effectiveness(agent_slug: str) -> tuple[str, str, tuple[str, ...], str]:
+    """``(effective_model, backend_name, applied slider keys, provenance)`` for one agent.
 
     The effective model is the ADR 0030 resolution (per-agent override > org
-    override > frozen base); the serving backend and the sampling parameters it
-    applies follow from it (``SAMPLING_APPLIED`` — the declaration the unit
-    tests verify against the backends themselves). Imports are lazy to keep
-    this observability module import-light (the API layer imports us).
+    override > frozen base) and ``provenance`` says which level produced it
+    (``"agent"`` / ``"org"`` / ``"base"``); the serving backend and the sampling
+    parameters it applies follow from the model (``SAMPLING_APPLIED`` — the
+    declaration the unit tests verify against the backends themselves). Imports
+    are lazy to keep this observability module import-light (the API layer
+    imports us).
     """
-    from tessera.api.config_overrides import resolve_chat_model_override
+    from tessera.api.config_overrides import resolve_chat_model_with_provenance
     from tessera.llm.router import SAMPLING_APPLIED, backend_for_model
 
-    override = await resolve_chat_model_override(agent_slug)
-    backend = backend_for_model(override)
-    return override or backend.model, backend.name, SAMPLING_APPLIED.get(backend.name, ())
+    model, provenance = await resolve_chat_model_with_provenance(agent_slug)
+    backend = backend_for_model(model if provenance != "base" else None)
+    return model, backend.name, SAMPLING_APPLIED.get(backend.name, ()), provenance
 
 
 async def compute_agent_configurations(
@@ -769,8 +771,16 @@ async def compute_agent_configurations(
     """
     settings = get_settings()
     cfg = _effective(agent_slug)
-    serving_model, serving_backend, applied_keys = await _serving_effectiveness(agent_slug)
+    serving_model, serving_backend, applied_keys, serving_prov = await _serving_effectiveness(
+        agent_slug
+    )
     overrides_now = _load_overrides(agent_slug)
+    # Provenance of the effective model (ADR 0030 §3), said next to the value —
+    # the base row and the runtime block must never show two different models.
+    prov_label = {
+        "agent": _loc(lang, "Override agent", "Agent-Override", "Agent override"),
+        "org": _loc(lang, "Override org", "Org-Override", "Org override"),
+    }.get(serving_prov, _loc(lang, "Base (config gelée)", "Basis (Konfig)", "Base (frozen config)"))
 
     def _sampling_slider(key: str, label: str) -> dict[str, object]:
         raw = cfg.get(key)
@@ -787,9 +797,6 @@ async def compute_agent_configurations(
         )
 
     profile = settings.resolved_llm_profile()
-    active_model = (
-        settings.ollama.chat_model if profile is LLMProfile.ON_PREM else settings.vertex.chat_model
-    )
     fallback_model = (
         settings.openai.models[0] if settings.openai.models else settings.openai.chat_model
     )
@@ -902,15 +909,18 @@ async def compute_agent_configurations(
         "model": {
             "title": _loc(lang, "Modèle", "Modell", "Model"),
             "left": [
+                # ADR 0030 — the row shows the EFFECTIVE serving model (override
+                # resolution included) with its provenance, never the frozen base
+                # alone: the base and the runtime block must tell one story.
                 _ro(
-                    _loc(lang, "Modèle principal", "Hauptmodell", "Primary model"),
-                    active_model,
+                    _loc(lang, "Modèle servi (effectif)", "Bedientes Modell", "Serving model"),
+                    serving_model,
                     "model",
-                    _model_provider(active_model, profile),
+                    f"{_model_provider(serving_model, profile)} · {prov_label}",
                 ),
                 _ro(
                     _loc(lang, "Version / Snapshot", "Version / Snapshot", "Version / Snapshot"),
-                    _model_snapshot(active_model),
+                    _model_snapshot(serving_model),
                     "info",
                 ),
             ],
@@ -1151,16 +1161,18 @@ async def compute_agent_configurations(
         },
         "active_model": {
             "title": _loc(lang, "Modèle actif", "Aktives Modell", "Active model"),
-            "name": active_model,
-            "provider": _model_provider(active_model, profile),
+            # Same rule as the Modèle section: the EFFECTIVE serving model with
+            # its provenance — one story across every surface of this page.
+            "name": serving_model,
+            "provider": f"{_model_provider(serving_model, profile)} · {prov_label}",
             "rows": [
                 {
                     "label": _loc(lang, "Snapshot", "Snapshot", "Snapshot"),
-                    "value": _model_snapshot(active_model),
+                    "value": _model_snapshot(serving_model),
                 },
                 {
                     "label": _loc(lang, "Contexte max", "Max. Kontext", "Max context"),
-                    "value": _context_window(active_model),
+                    "value": _context_window(serving_model),
                 },
             ],
         },

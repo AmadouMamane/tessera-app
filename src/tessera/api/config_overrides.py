@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal
 
 from psycopg import sql
 from psycopg.rows import dict_row
@@ -242,13 +242,12 @@ def _precedence_keys(agent_id: str | None) -> list[str]:
     return keys
 
 
-async def resolve_chat_model_override(agent_id: str | None) -> str | None:
-    """The durable override for this turn's agent, or ``None`` to serve the base.
+async def _winning_override(agent_id: str | None) -> tuple[str, str] | None:
+    """``(key, value)`` of the most-specific stored override, or ``None`` (base).
 
-    Precedence below the per-turn picker (ADR 0030 §3): per-agent override, then
-    the org-wide override, then ``None`` (the frozen base serves). **Fails open
-    to base**: a store error logs loudly and returns ``None`` — a turn is never
-    blocked by the override store.
+    Shared read for the two resolvers below. **Fails open to base**: a store
+    error logs loudly and returns ``None`` — a read is never blocked on this
+    store.
     """
     keys = _precedence_keys(agent_id)
     try:
@@ -266,5 +265,34 @@ async def resolve_chat_model_override(agent_id: str | None) -> str | None:
     by_key = {str(r["key"]): str(r["value"]) for r in rows}
     for key in keys:
         if key in by_key:
-            return by_key[key]
+            return key, by_key[key]
     return None
+
+
+async def resolve_chat_model_override(agent_id: str | None) -> str | None:
+    """The durable override for this turn's agent, or ``None`` to serve the base.
+
+    Precedence below the per-turn picker (ADR 0030 §3): per-agent override, then
+    the org-wide override, then ``None`` (the frozen base serves). Fails open to
+    base (see :func:`_winning_override`).
+    """
+    winner = await _winning_override(agent_id)
+    return winner[1] if winner else None
+
+
+async def resolve_chat_model_with_provenance(
+    agent_id: str | None,
+) -> tuple[str, Literal["agent", "org", "base"]]:
+    """The model that would serve ``agent_id`` and WHERE it comes from.
+
+    ``(model, "agent")`` for a per-agent override, ``(model, "org")`` for the
+    org-wide one, ``(base, "base")`` otherwise — the same precedence the chat
+    seam applies (ADR 0030 §3), exposed so read surfaces (e.g. the agent's
+    Configurations page) can display the effective model WITH its provenance
+    instead of the frozen base. Fails open to ``(base, "base")``.
+    """
+    winner = await _winning_override(agent_id)
+    if winner is None:
+        return base_chat_model(), "base"
+    key, value = winner
+    return value, "org" if key == CHAT_MODEL_KEY else "agent"

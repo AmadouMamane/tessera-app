@@ -19,11 +19,12 @@ from tessera.observability import agent_configurations as c
 def _hermetic_serving(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep compute() off the real override store (ADR 0030 read is a DB read)."""
 
-    async def _stub(_slug: str) -> tuple[str, str, tuple[str, ...]]:
+    async def _stub(_slug: str) -> tuple[str, str, tuple[str, ...], str]:
         return (
             "llama3.2:3b",
             "ollama",
             ("temperature", "top_p", "frequency_penalty", "presence_penalty"),
+            "base",
         )
 
     monkeypatch.setattr(c, "_serving_effectiveness", _stub)
@@ -113,8 +114,8 @@ async def test_runtime_block_names_backend_and_applied(monkeypatch: pytest.Monke
     # and says which do not, instead of letting a slider pretend.
     monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
 
-    async def _vertex(_slug: str) -> tuple[str, str, tuple[str, ...]]:
-        return "gemini-2.0-flash", "vertex-ai", ("temperature", "top_p")
+    async def _vertex(_slug: str) -> tuple[str, str, tuple[str, ...], str]:
+        return "gemini-2.0-flash", "vertex-ai", ("temperature", "top_p"), "org"
 
     monkeypatch.setattr(c, "_serving_effectiveness", _vertex)
     payload = await c.compute_agent_configurations()
@@ -127,6 +128,38 @@ async def test_runtime_block_names_backend_and_applied(monkeypatch: pytest.Monke
     assert freq["applied"] is False
     temp = next(s for s in payload["behavior"]["sliders"] if s["key"] == "temperature")
     assert temp["applied"] is True
+
+
+async def test_model_rows_show_the_effective_model_with_provenance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # ADR 0030 — the Modèle section and the Modèle actif card show the EFFECTIVE
+    # serving model with its provenance, never the frozen base alone: an active
+    # override must be visible on the agent's own page.
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
+
+    async def _overridden(_slug: str) -> tuple[str, str, tuple[str, ...], str]:
+        return "gpt-5.5", "openai", (), "agent"
+
+    monkeypatch.setattr(c, "_serving_effectiveness", _overridden)
+    payload = await c.compute_agent_configurations()
+    main_row = payload["model"]["left"][0]
+    assert main_row["value"] == "gpt-5.5"
+    assert main_row["badge"] == "OpenAI · Override agent"
+    assert main_row["editable"] is False  # still read-only: the knob lives in the registry
+    card = payload["active_model"]
+    assert card["name"] == "gpt-5.5"
+    assert "Override agent" in card["provider"]
+
+
+async def test_model_rows_say_base_when_nothing_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
+    payload = await c.compute_agent_configurations()  # hermetic stub: base provenance
+    main_row = payload["model"]["left"][0]
+    assert main_row["value"] == "llama3.2:3b"
+    assert "Base" in str(main_row["badge"])
 
 
 async def test_editable_flag_separates_real_from_readonly(

@@ -896,8 +896,8 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
         assert author, "the route must pass the verified principal, never None"
         return sorted(changes)
 
-    async def _serving(_slug: str) -> tuple[str, str, tuple[str, ...]]:
-        return "llama3.2:3b", "ollama", ("temperature",)
+    async def _serving(_slug: str) -> tuple[str, str, tuple[str, ...], str]:
+        return "llama3.2:3b", "ollama", ("temperature",), "base"
 
     monkeypatch.setattr(
         "tessera.observability.agent_configurations.set_agent_config", _set_agent_config

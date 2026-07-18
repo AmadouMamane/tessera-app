@@ -183,9 +183,17 @@ test("the 'Outils autorisés' control opens the real allowed-tools list", async 
   await page.waitForURL(/\/agents\/support-client\/garde-fous/, { timeout: 15_000 });
 });
 
-test("the Modèle section links to the model registry (define = CONFIGURER)", async ({ page }) => {
-  const model = page.locator("div", { hasText: "Modèle principal" }).first();
+test("the Modèle section shows the EFFECTIVE model with its provenance and links to the registry", async ({
+  page,
+}) => {
+  const model = page.locator("div", { hasText: "Modèle servi (effectif)" }).first();
   await expect(model).toBeVisible();
+  // ADR 0030 — the row carries the provenance of the effective model. The shared
+  // stack may or may not hold an override right now: any of the three honest
+  // labels is valid; a missing label is not.
+  await expect(
+    page.getByText(/Base \(config gelée\)|Override org|Override agent/).first(),
+  ).toBeVisible();
   await page.getByRole("link", { name: /Gérer dans le registre des modèles/ }).click();
   await page.waitForURL(/\/configurer\/modeles/, { timeout: 15_000 });
   expect(page.url()).toContain("/configurer/modeles");
