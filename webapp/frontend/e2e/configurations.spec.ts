@@ -224,6 +224,18 @@ test("the behaviour selects wear their effectiveness badges and top-k is the fif
   await expect(topK).toHaveAttribute("step", "1");
 });
 
+test("the escalation-threshold block is real: slider, formula, honest default (ADR 0033)", async ({
+  page,
+}) => {
+  const block = page.getByTestId("behavior-escalation");
+  await expect(block).toBeVisible();
+  // The note carries the REAL reviewer formula, not prose approximations.
+  await expect(block.getByText(/fondement x 0,5/)).toBeVisible();
+  // The shared store may or may not hold an override: the slider is present
+  // either way; when unset it names the org default instead of inventing one.
+  await expect(block.getByRole("slider", { name: "Seuil d'escalade" })).toBeVisible();
+});
+
 test("a temperature edit persists, the history names its author, and reset restores the runtime default", async ({
   page,
 }) => {

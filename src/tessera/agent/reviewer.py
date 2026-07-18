@@ -127,7 +127,16 @@ def review(state: AgentState) -> ReviewOutcome:
     # Weighted geometric-style fuse: a near-zero on any axis tanks the total.
     confidence = (grounding * 0.5) + (coverage * 0.3) + (guard * 0.2)
 
-    threshold = get_settings().guard.escalation_confidence_threshold
+    # ADR 0033 — the seam-resolved threshold serves (agent override, else the
+    # org settings value written into the state by the chat route). A state
+    # that never crossed the seam — eval harness, direct graph runs — keeps
+    # the historical settings read, so harness verdicts stay deterministic.
+    raw_threshold = state.get("escalation_threshold")
+    threshold = (
+        float(raw_threshold)
+        if isinstance(raw_threshold, int | float) and not isinstance(raw_threshold, bool)
+        else get_settings().guard.escalation_confidence_threshold
+    )
     needs_escalation = confidence < threshold
     reason: str | None = None
     if needs_escalation:

@@ -162,6 +162,32 @@ async def test_max_length_badge_follows_the_override(monkeypatch: pytest.MonkeyP
     assert max_length["badge"] == "≤ 512 tokens"
 
 
+async def test_escalation_block_says_where_the_default_comes_from(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ADR 0033 — unset shows the ORG default (settings), never an invented bar."""
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {})
+    payload = await c.compute_agent_configurations()
+    block = payload["behavior"]["escalation"]
+    slider = block["slider"]
+    assert slider["key"] == "escalation_threshold"
+    assert slider["unset"] is True
+    assert slider["unset_label"].startswith("Défaut org (")
+    assert "ADR 0033" in block["note"]
+
+
+async def test_escalation_block_shows_the_agent_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(c, "_load_overrides", lambda *_a: {"escalation_threshold": 0.85})
+    payload = await c.compute_agent_configurations()
+    slider = payload["behavior"]["escalation"]["slider"]
+    assert slider["unset"] is False
+    assert slider["num"] == 0.85
+    assert slider["overridden"] is True
+    assert "unset_label" not in slider
+
+
 async def test_model_rows_show_the_effective_model_with_provenance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

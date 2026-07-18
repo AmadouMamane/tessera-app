@@ -67,7 +67,11 @@ from tessera.memory import get_memory_backend, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
 from tessera.observability import replay, semconv
-from tessera.observability.agent_configurations import resolve_sampling, resolve_style
+from tessera.observability.agent_configurations import (
+    resolve_escalation_threshold,
+    resolve_sampling,
+    resolve_style,
+)
 from tessera.observability.business_events import mark_synthetic_turn
 from tessera.observability.eval import online as online_eval
 from tessera.observability.lineage import build_lineage
@@ -590,6 +594,8 @@ def _debug_reviewer(state: Mapping[str, object]) -> dict[str, object]:
         "guard": _opt_float(state.get("guard_score")),
         "needs_escalation": bool(state.get("needs_escalation", False)),
         "reason": str(reason) if reason is not None else None,
+        # ADR 0033 — the escalation bar this turn was judged against.
+        "threshold": _opt_float(state.get("escalation_threshold")),
     }
 
 
@@ -827,6 +833,10 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     style, max_output_tokens = resolve_style(agent_id)
     initial["style"] = style
     initial["max_output_tokens"] = max_output_tokens
+    # ADR 0033 — the escalation threshold resolves at the same seam; the
+    # reviewer reads the state, so the knob and the served bar are one read.
+    escalation_threshold = resolve_escalation_threshold(agent_id)
+    initial["escalation_threshold"] = escalation_threshold
     synthetic = is_test_turn(surface)
     if synthetic:
         mark_synthetic_turn()
@@ -848,6 +858,10 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # parameters honest-absent).
     semconv.stamp_turn_sampling(
         trace.get_current_span(), sampling, max_output_tokens=max_output_tokens
+    )
+    # ADR 0033 — the served escalation bar is recorded beside the sampling.
+    trace.get_current_span().set_attribute(
+        semconv.TESSERA_ESCALATION_THRESHOLD, escalation_threshold
     )
     # Audit EVERY routing decision (stay or switch) with its reason, so routing is
     # opposable end to end — you can prove why a turn went to a given agent from

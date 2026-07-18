@@ -145,6 +145,8 @@ export const ChatDebugSchema = z.object({
       guard: z.number().nullable(),
       needs_escalation: z.boolean(),
       reason: z.string().nullable(),
+      // ADR 0033 — the escalation bar this turn was judged against.
+      threshold: z.number().nullable().optional(),
     })
     .optional(),
   // #6 — detected language and its confidence.
@@ -4544,6 +4546,9 @@ const AgentConfigSliderSchema = z.object({
   unset: z.boolean().optional(),
   overridden: z.boolean().optional(),
   applied: z.boolean().optional(),
+  // ADR 0033 — what "unset" means for THIS knob when it is not the backend
+  // default (e.g. "Défaut org (0,60)" for the escalation threshold).
+  unset_label: z.string().optional(),
 });
 
 // ADR 0031 — which backend serves this agent (from its effective model) and
@@ -4601,6 +4606,14 @@ export const AgentConfigurationsSchema = z.object({
       selects: z.array(AgentConfigFieldSchema),
       sliders: z.array(AgentConfigSliderSchema),
       runtime: AgentConfigRuntimeSchema.optional(),
+      // ADR 0033 — the operable, governed escalation threshold.
+      escalation: z
+        .object({
+          title: z.string(),
+          slider: AgentConfigSliderSchema,
+          note: z.string(),
+        })
+        .optional(),
       tools: z.object({
         label: z.string(),
         value: z.string(),

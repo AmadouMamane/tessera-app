@@ -40,6 +40,7 @@ __all__ = [
     "RUNTIME_TEMPERATURE_DEFAULT",
     "available_config_keys",
     "compute_agent_configurations",
+    "resolve_escalation_threshold",
     "resolve_sampling",
     "resolve_style",
     "set_agent_config",
@@ -82,6 +83,9 @@ _DEFAULTS: dict[str, Any] = {
     "top_k": None,
     "frequency_penalty": None,
     "presence_penalty": None,
+    # ADR 0033 — unset means the org-wide settings value serves
+    # (GuardSettings.escalation_confidence_threshold), never a copied number.
+    "escalation_threshold": None,
     "routing_strategy": "Par défaut (Recommandé)",
     "parallel_tools": True,
     "tags": ["support", "client"],
@@ -200,12 +204,16 @@ def _tool_label(name: str, lang: str) -> str:
 
 
 _SLIDERS = ("temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty")
+# ADR 0033 — float knobs beyond the sampling family (same coercion, own home:
+# the escalation threshold never rides a backend call, it drives the reviewer).
+_FLOAT_KNOBS = (*_SLIDERS, "escalation_threshold")
 _SLIDER_MAX: dict[str, float] = {
     "temperature": 1.0,
     "top_p": 1.0,
     "top_k": 100.0,
     "frequency_penalty": 2.0,
     "presence_penalty": 2.0,
+    "escalation_threshold": 1.0,
 }
 # ADR 0032 — top-k is integer-valued: whole-number steps, coerced on save.
 _SLIDER_STEP: dict[str, float] = {"top_k": 1.0}
@@ -269,6 +277,7 @@ _KEY_LABEL: dict[str, tuple[str, str, str]] = {
     "temperature": ("Température", "Temperatur", "Temperature"),
     "top_p": ("Top P", "Top P", "Top P"),
     "top_k": ("Top K", "Top K", "Top K"),
+    "escalation_threshold": ("Seuil d'escalade", "Eskalationsschwelle", "Escalation threshold"),
     "frequency_penalty": ("Pénalité de fréquence", "Frequenzstrafe", "Frequency penalty"),
     "presence_penalty": ("Pénalité de présence", "Praesenzstrafe", "Presence penalty"),
     "routing_strategy": ("Stratégie de routage", "Routing-Strategie", "Routing strategy"),
@@ -363,7 +372,7 @@ def _coerce(key: str, value: Any) -> Any:
     """
     if key == _LANG_KEY:
         return _canonical_value(key, str(value))
-    if key in _SLIDERS:
+    if key in _FLOAT_KNOBS:
         return _coerce_slider(key, value)
     default = _DEFAULTS[key]
     if isinstance(default, bool):
@@ -498,6 +507,28 @@ def resolve_style(agent_id: str = DEFAULT_AGENT_ID) -> tuple[dict[str, str], int
     length = _STYLE_SLUGS.get(length_canonical, _LENGTH_DEFAULT)
     budget = _LENGTH_BUDGET_TOKENS.get(length_canonical, _LENGTH_BUDGET_TOKENS["Moyenne"])
     return {"tone": tone, "detail": detail, "length": length}, budget
+
+
+def resolve_escalation_threshold(agent_id: str = DEFAULT_AGENT_ID) -> float:
+    """The per-turn escalation-confidence threshold (ADR 0033).
+
+    Resolved once per turn at the routing seam, from the same effective
+    configuration the Configurations page displays. Unset means the org-wide
+    settings value serves (``GuardSettings.escalation_confidence_threshold``);
+    a stored override is this agent's own bar. Fail-open to the org default,
+    loudly — the chat path never goes down for a knob.
+    """
+    org_default = float(get_settings().guard.escalation_confidence_threshold)
+    try:
+        raw = _effective(agent_id).get("escalation_threshold")
+    except Exception as exc:
+        sys.stderr.write(
+            f"tessera.observability.agent_configurations: resolve_escalation_threshold: {exc}\n"
+        )
+        return org_default
+    if isinstance(raw, int | float) and not isinstance(raw, bool):
+        return float(raw)
+    return org_default
 
 
 def resolve_sampling(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, float]:
@@ -795,6 +826,52 @@ def _definition_block(agent_slug: str, lang: str = "fr") -> dict[str, object]:
                 "value": agent.eval_set,
             },
         ],
+    }
+
+
+def _escalation_block(
+    cfg: dict[str, Any], overrides_now: dict[str, Any], settings: Any, lang: str
+) -> dict[str, object]:
+    """The "Escalade humaine" panel (ADR 0033): slider + the real formula."""
+    org_default = float(settings.guard.escalation_confidence_threshold)
+    raw = cfg.get("escalation_threshold")
+    num = float(raw) if isinstance(raw, int | float) and not isinstance(raw, bool) else None
+    slider = _slider(
+        "escalation_threshold",
+        _loc(lang, "Seuil d'escalade", "Eskalationsschwelle", "Escalation threshold"),
+        num,
+        overridden=overrides_now.get("escalation_threshold") is not None,
+        applied=True,
+        lang=lang,
+    )
+    if num is None:
+        org_display = f"{org_default:.2f}"
+        slider["unset_label"] = _loc(
+            lang,
+            f"Défaut org ({org_display.replace('.', ',')})",
+            f"Org-Standard ({org_display.replace('.', ',')})",
+            f"Org default ({org_display})",
+        )
+    return {
+        "title": _loc(lang, "Escalade humaine", "Menschliche Eskalation", "Human escalation"),
+        "slider": slider,
+        "note": _loc(
+            lang,
+            "Sous ce seuil de confiance, l'agent transmet le tour à un conseiller "
+            "humain. Confiance = fondement x 0,5 + couverture x 0,3 + garde-fous x 0,2 "
+            "(reviewer déterministe). Non défini = défaut org "
+            f"({f'{org_default:.2f}'.replace('.', ',')}, settings). Résolu à chaque "
+            "tour au même seam que le modèle — ADR 0033.",
+            "Unter dieser Konfidenzschwelle uebergibt der Agent den Turn an einen "
+            "menschlichen Berater. Konfidenz = Fundierung x 0,5 + Abdeckung x 0,3 + "
+            "Schutzregeln x 0,2 (deterministischer Reviewer). Nicht gesetzt = "
+            f"Org-Standard ({f'{org_default:.2f}'.replace('.', ',')}, Settings). Pro "
+            "Turn am selben Seam wie das Modell aufgeloest - ADR 0033.",
+            "Below this confidence threshold the agent hands the turn to a human "
+            "advisor. Confidence = grounding x 0.5 + coverage x 0.3 + guard x 0.2 "
+            f"(deterministic reviewer). Unset = org default ({org_default:.2f}, "
+            "settings). Resolved every turn at the same seam as the model - ADR 0033.",
+        ),
     }
 
 
@@ -1107,6 +1184,11 @@ async def compute_agent_configurations(
                     "(max_output_tokens) - ADR 0032.",
                 ),
             },
+            # ADR 0033 — the escalation threshold is an operable, governed
+            # knob: unset serves the org settings value (said as such), set is
+            # this agent's own bar, resolved per turn at the routing seam and
+            # read by the reviewer from the state.
+            "escalation": _escalation_block(cfg, overrides_now, settings, lang),
             "tools": {
                 "label": _loc(lang, "Outils autorisés", "Erlaubte Tools", "Allowed tools"),
                 "value": _loc(

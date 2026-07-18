@@ -1693,6 +1693,10 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
           <ScoreRow label="Ancrage" score={reviewer.grounding} />
           <ScoreRow label="Couverture" score={reviewer.coverage} />
           <ScoreRow label="Garde-fous" score={reviewer.guard} />
+          {typeof reviewer.threshold === "number" ? (
+            // ADR 0033 — the escalation bar this turn was judged against.
+            <DebugKV k="Seuil d'escalade" v={reviewer.threshold.toFixed(2)} mono />
+          ) : null}
           <div className="mt-1.5">
             <DebugKV
               k="Escalade"

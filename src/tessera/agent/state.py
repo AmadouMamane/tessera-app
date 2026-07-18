@@ -194,6 +194,10 @@ class AgentState(TypedDict):
     # ADR 0032 — the declared hard cap for the backend call (all three
     # backends apply it). Absent on paths that never cross the seam.
     max_output_tokens: NotRequired[int]
+    # ADR 0033 — the escalation-confidence threshold resolved at the seam
+    # (agent override, else the org settings value). The reviewer reads THIS;
+    # paths that never cross the seam fall back to the settings.
+    escalation_threshold: NotRequired[float]
     # --- Sandbox overrides (console playground) ---------------------------
     # Optional per-request system-prompt override; replaces the language
     # bundle's ``system`` prompt for this turn only (never persisted).
