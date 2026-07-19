@@ -6868,7 +6868,7 @@
   },
   "inbox": {
     "title": "À traiter",
-    "subtitle": "Traitez les demandes, incidents et actions nécessitant votre attention.",
+    "subtitle": "Validations en attente et actions bloquées du métier, à décider.",
     "cycleStatus": "Changer le statut",
     "noResults": "Aucun élément ne correspond aux filtres.",
     "rail": {
@@ -7696,7 +7696,7 @@
   },
   "agentAFaire": {
     "title": "À faire",
-    "subtitle": "Vos tâches, revues et validations en attente de traitement.",
+    "subtitle": "Les cas d'évaluation en échec de vos agents, à revoir et résoudre.",
     "loading": "Chargement des tâches…",
     "unavailable": "Tâches indisponibles.",
     "rowOpen": "Voir le détail",

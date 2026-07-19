@@ -49,10 +49,11 @@ _TR: dict[str, tuple[str, str, str]] = {
     "sla_ontime": ("Dans les delais", "Im Zeitrahmen", "On time"),
     # header
     "title": ("A faire", "Aufgaben", "To do"),
+    # ADR 0038 — this page's half is the EVAL one; "validations" belong to A traiter.
     "subtitle": (
-        "Vos taches, revues et validations en attente de traitement.",
-        "Ihre Aufgaben, Pruefungen und Validierungen, die auf Bearbeitung warten.",
-        "Your tasks, reviews and validations awaiting processing.",
+        "Les cas d'evaluation en echec de vos agents, a revoir et resoudre.",
+        "Die fehlgeschlagenen Evaluierungsfaelle Ihrer Agenten, zu pruefen und zu loesen.",
+        "Your agents' failed evaluation cases, to review and resolve.",
     ),
     # rail
     "live": ("Live", "Live", "Live"),
@@ -75,9 +76,11 @@ _TR: dict[str, tuple[str, str, str]] = {
         "View full timeline",
     ),
     # KPI labels
-    "kpi_total": ("A traiter (total)", "Zu bearbeiten (gesamt)", "To do (total)"),
+    # "A revoir", not "A traiter": on the A-faire page a KPI named after the
+    # OTHER queue page read as a cross-reference it never was (ADR 0038).
+    "kpi_total": ("A revoir (total)", "Zu pruefen (gesamt)", "To review (total)"),
     "kpi_total_d": ("file reelle", "echte Warteschlange", "real queue"),
-    "kpi_urgent": ("A traiter (urgents)", "Zu bearbeiten (dringend)", "To do (urgent)"),
+    "kpi_urgent": ("A revoir (urgents)", "Zu pruefen (dringend)", "To review (urgent)"),
     "kpi_urgent_d": ("priorite crit.", "Prio. kritisch", "crit. priority"),
     "kpi_sla2h": ("SLA < 2h", "SLA < 2h", "SLA < 2h"),
     "kpi_sla2h_d": ("echeance proche", "Frist nah", "deadline near"),

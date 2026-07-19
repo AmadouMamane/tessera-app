@@ -6868,7 +6868,7 @@
   },
   "inbox": {
     "title": "To process",
-    "subtitle": "Handle the requests, incidents and actions that need your attention.",
+    "subtitle": "Pending validations and blocked business actions, awaiting your decision.",
     "cycleStatus": "Change status",
     "noResults": "No item matches the filters.",
     "rail": {
@@ -7694,7 +7694,7 @@
   },
   "agentAFaire": {
     "title": "To do",
-    "subtitle": "Your pending tasks, reviews and approvals.",
+    "subtitle": "Your agents' failed evaluation cases, to review and resolve.",
     "loading": "Loading tasks…",
     "unavailable": "Tasks unavailable.",
     "rowOpen": "View detail",

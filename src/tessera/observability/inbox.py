@@ -52,20 +52,14 @@ _TYPE_COLOR = {
     "other": "#64748b",
 }
 
-# category -> the inbox "type" bucket (keeps the existing i18n labels/colours).
+# category -> the inbox "type" bucket. Only the BUSINESS categories remain:
+# since ADR 0038 this page serves the business half only, and the eval-category
+# entries that used to live here were dead the moment the partition landed —
+# a map that still claimed them would read as "this page can show them".
+# Anything unknown falls back to "other" explicitly.
 _TYPE_BUCKET: dict[str, str] = {
-    "prompt_injection": "incident",
-    "policy_violation": "incident",
-    "regulatory_misstatement": "incident",
-    "pii_leak": "alert",
-    "tool_misuse": "alert",
     "action_blocked": "incident",
-    "hallucination": "conversation",
-    "citation_fabrication": "conversation",
-    "language_mixing": "conversation",
-    "escalation_failure": "approval",
     "validation_requested": "approval",
-    "overconfidence": "other",
 }
 
 _PRIORITY_KEY = {"crit": "urgent", "high": "high", "mod": "medium", "low": "low"}

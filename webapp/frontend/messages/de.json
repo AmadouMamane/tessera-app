@@ -6868,7 +6868,7 @@
   },
   "inbox": {
     "title": "Zu bearbeiten",
-    "subtitle": "Bearbeiten Sie Anfragen, Incidents und Aktionen, die Ihre Aufmerksamkeit erfordern.",
+    "subtitle": "Ausstehende Freigaben und blockierte Aktionen aus dem Fachbereich, zu entscheiden.",
     "cycleStatus": "Status ändern",
     "noResults": "Kein Element entspricht den Filtern.",
     "rail": {
@@ -7694,7 +7694,7 @@
   },
   "agentAFaire": {
     "title": "Zu erledigen",
-    "subtitle": "Ihre offenen Aufgaben, Prüfungen und Freigaben.",
+    "subtitle": "Die fehlgeschlagenen Evaluierungsfälle Ihrer Agenten, zu prüfen und zu lösen.",
     "loading": "Aufgaben werden geladen…",
     "unavailable": "Aufgaben nicht verfügbar.",
     "rowOpen": "Details ansehen",
