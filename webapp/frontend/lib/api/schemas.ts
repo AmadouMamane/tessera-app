@@ -4071,6 +4071,9 @@ const SynKpiSchema = z.object({
   delta: z.string(),
   good: z.boolean(),
   series: z.array(z.number()),
+  // Optional MetricInfo tooltip (what/how/source) — attached to cells whose honest
+  // small number would otherwise read as a bug (Utilisateurs servis, Satisfaction).
+  explain: TabExplainSchema.nullable().optional(),
 });
 const SynLabelValueSchema = z.object({ label: z.string(), value: z.string() });
 const SynBarSchema = z.object({ label: z.string(), pct: z.number(), tone: z.string() });
@@ -4834,6 +4837,15 @@ export const ConsoleFeedbackSchema = z.object({
   ratings: z.record(z.string(), z.string()),
 });
 export type ConsoleFeedback = z.infer<typeof ConsoleFeedbackSchema>;
+
+// ADR 0041 — the customer's 👍/👎 on an assistant reply. The backend echoes the recorded
+// rating; the real signal lives in the durable `customer_feedback` store, read per-agent
+// by the Synthèse CSAT KPI.
+export const CustomerFeedbackResponseSchema = z.object({
+  ok: z.boolean(),
+  rating: z.string(),
+});
+export type CustomerFeedbackResponse = z.infer<typeof CustomerFeedbackResponseSchema>;
 
 // ADR 0019 §I3 — the outcome of one http invocation (POST /agents/{id}/invoke). A red
 // verdict is a successful invocation with a failure result (returned as data, HTTP 200);

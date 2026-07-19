@@ -53,6 +53,7 @@ from tessera.memory.persistent import ensure_longterm_schema
 from tessera.memory.summary import ensure_summary_schema
 from tessera.memory.transcript import ensure_transcript_schema
 from tessera.observability import logging as obs_logging, metrics, traces
+from tessera.observability.customer_feedback import ensure_customer_feedback_schema
 from tessera.observability.eval.gating_scores import ensure_eval_gating_schema
 from tessera.retrieval.citations import ensure_citation_schema
 from tessera.retrieval.store import ensure_schema, get_pool
@@ -329,6 +330,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # read never falls through search_path to public (ADR 0014 invariant).
         await ensure_schema()  # documents (pgvector)
         await ensure_transcript_schema()  # ADR 0007, Mechanism A
+        await ensure_customer_feedback_schema()  # ADR 0041, customer CSAT store
         await ensure_summary_schema()  # ADR 0007, Tier 1
         await ensure_longterm_schema()  # ADR 0007, Tier 2
         await ensure_consent_schema()  # ADR 0007, governance

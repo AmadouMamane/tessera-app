@@ -48,6 +48,7 @@ __all__ = [
     "last_agent_for",
     "list_conversations",
     "load_transcript",
+    "turn_agent_and_synthetic",
 ]
 
 
@@ -340,6 +341,27 @@ async def last_agent_for(conversation_id: UUID) -> str | None:
         await cur.execute(query, (conversation_id,))
         row = await cur.fetchone()
     return str(row["agent_id"]) if row else None
+
+
+async def turn_agent_and_synthetic(turn_id: UUID) -> tuple[str, bool] | None:
+    """Return the ``(agent_id, synthetic)`` of a persisted turn, or ``None`` if unknown.
+
+    Used to attribute a customer's feedback to the agent that actually handled the turn
+    and to inherit the turn's test-marker (ADR 0040/0041): you can only rate a turn the
+    transcript has really recorded, and a vote on a test turn is itself a test.
+    """
+    query = sql.SQL("SELECT agent_id, synthetic FROM {table} WHERE turn_id = %s LIMIT 1;").format(
+        table=_TABLE
+    )
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, (turn_id,))
+        row = await cur.fetchone()
+    if row is None:
+        return None
+    return str(row["agent_id"]), bool(row["synthetic"])
 
 
 async def delete_transcript(conversation_id: UUID) -> None:

@@ -24,12 +24,13 @@ Every panel is backed by a real artifact:
   agent **registry** (``agents.yaml``), layered with the editable Configurations
   overrides; alerts include the live guard audit-chain integrity status.
 
-Two KPIs have **no real source** and render an honest empty state rather than an
-invented number (logged as deviations in ``ui-contract.md``):
+Both formerly-empty KPIs now have a real source, and still render an honest empty
+state (never an invented number) until that source has data:
 
-- **Utilisateurs servis** — there is no per-client identity on a transcript turn
-  (no ``user_id`` column yet); seeding distinct client ids is a follow-up.
-- **Satisfaction (CSAT)** — no satisfaction signal is instrumented anywhere.
+- **Utilisateurs servis** — ``count(DISTINCT subject_id)`` over real turns (ADR 0040);
+  "—" when no turn carried a captured identity.
+- **Satisfaction (CSAT)** — the share of positive customer votes from the durable
+  ``customer_feedback`` store (ADR 0041); "—" until a customer has voted.
 
 The page is FR-only (it never had a ``lang`` parameter); free-text data is
 verbatim French.
@@ -37,6 +38,7 @@ verbatim French.
 
 from __future__ import annotations
 
+import sys
 from collections import Counter, deque
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -62,6 +64,7 @@ _PARIS = ZoneInfo("Europe/Paris")
 
 _GOOD_MEAN_MS = 4000
 _GOOD_RESOLUTION_PCT = 70.0
+_GOOD_CSAT_PCT = 70  # a real customer-satisfaction rate at or above this reads "good"
 _ESCAL_WARN_PCT = 20.0
 _HANDOFF_OUT_WARN = 40  # outgoing handoffs over the window above which we warn
 _SPARK_DAYS = 7
@@ -232,6 +235,35 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
     }
 
 
+async def _fetch_csat(agent_id: str, period_days: int | None) -> dict[str, int]:
+    """Real customer-satisfaction counts for one agent (ADR 0041).
+
+    Reads the durable ``customer_feedback`` store — a 👍/👎 the customer left on an
+    assistant reply — scoped to ``agent_id`` and, like the transcript reads, to real
+    traffic (``NOT synthetic``) and the trailing window. Returns ``{up, total}``; the
+    Synthèse renders an honest "—" when ``total`` is 0.
+
+    Degrades to zeros (never raises) so a missing store or an unreachable Postgres reads
+    as "no votes yet", never as a broken dashboard.
+    """
+    window = f"created_at >= now() - interval '{int(period_days)} days'" if period_days else "TRUE"
+    where = f"agent_id = %s AND NOT synthetic AND ({window})"
+    try:
+        async with _connection() as conn:
+            conn.row_factory = dict_row
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT count(*) FILTER (WHERE rating = 'up') AS up, "  # noqa: S608
+                    f"count(*) AS total FROM customer_feedback WHERE {where}",
+                    (agent_id,),
+                )
+                row = await cur.fetchone() or {}
+    except Exception as exc:  # never break the Synthèse over a feedback read
+        sys.stderr.write(f"tessera.observability.agent_synthese: csat read failed: {exc}\n")
+        return {"up": 0, "total": 0}
+    return {"up": int(row.get("up") or 0), "total": int(row.get("total") or 0)}
+
+
 # --- S1 journal scan -----------------------------------------------------------
 
 
@@ -352,9 +384,15 @@ def _capabilities_for(agent: Agent) -> list[str]:
 
 
 def _kpi(
-    key: str, label: str, value: str, delta: str, good: bool, series: Sequence[int]
+    key: str,
+    label: str,
+    value: str,
+    delta: str,
+    good: bool,
+    series: Sequence[int],
+    explain: dict[str, str] | None = None,
 ) -> dict[str, object]:
-    return {
+    kpi: dict[str, object] = {
         "key": key,
         "label": label,
         "value": value,
@@ -362,6 +400,11 @@ def _kpi(
         "good": good,
         "series": list(series),
     }
+    # A MetricInfo tooltip (what/how/source) — attached only when a cell has a story
+    # worth explaining, so an honest-but-small number is not mistaken for a bug.
+    if explain is not None:
+        kpi["explain"] = explain
+    return kpi
 
 
 def _delta_vs_yesterday(series: Sequence[float]) -> str:
@@ -395,6 +438,13 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
     n_subjects = int(totals.get("subjects") or 0)
     escal_convs = int(totals.get("escal_convs") or 0)
     obs_lat_ms = totals.get("lat_ms")
+
+    # Real customer CSAT (ADR 0041): the share of positive votes over real votes. ``None``
+    # total ⇒ honest "—" (nobody has voted yet), never a fabricated satisfaction.
+    csat = tx.get("csat") or {}
+    csat_up = int(csat.get("up") or 0)
+    csat_total = int(csat.get("total") or 0)
+    csat_pct = round(100 * csat_up / csat_total) if csat_total else None
 
     conv_series = [int(d["convs"]) for d in daily][-_SPARK_DAYS:]
     turn_series = [int(d["turns"]) for d in daily][-_SPARK_DAYS:]
@@ -439,6 +489,18 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
             ("clients distincts servis" if n_subjects else "aucune identité client sur la période"),
             True,
             [],
+            explain={
+                "what": "Le nombre de clients DISTINCTS servis par l'agent sur la période.",
+                "how": (
+                    "count(DISTINCT subject_id) sur les tours réels ; un tour anonyme (sans "
+                    "identité captée) n'est pas compté et les tours de test sont exclus."
+                ),
+                "source": (
+                    "conversation_messages.subject_id (ADR 0040). Le plan client partage une "
+                    "identité de démo unique aujourd'hui, d'où un nombre faible ; le recouvrement "
+                    "compte des dossiers distincts. Un « 1 » ici est honnête, pas un bug."
+                ),
+            },
         ),
         _kpi(
             "resolution",
@@ -448,14 +510,30 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
             resolution_pct >= _GOOD_RESOLUTION_PCT,
             res_series,
         ),
-        # No satisfaction signal instrumented anywhere -> honest empty.
+        # Real customer CSAT from captured 👍/👎 votes (ADR 0041). Honest "—" until a
+        # customer has actually voted — a satisfaction rate is never fabricated.
         _kpi(
             "satisfaction",
             "Satisfaction moyenne",
-            "—",
-            "CSAT non instrumenté",
-            True,
+            f"{csat_pct}%" if csat_pct is not None else "—",
+            (
+                f"{csat_up} / {csat_total} avis positifs"
+                if csat_total
+                else "aucun avis client sur la période"
+            ),
+            csat_pct is None or csat_pct >= _GOOD_CSAT_PCT,
             [],
+            explain={
+                "what": "La part d'avis clients positifs sur les réponses de l'agent.",
+                "how": (
+                    "count(pouce positif) / count(avis) sur les avis réels de la période ; "
+                    "les avis laissés sur des tours de test sont exclus."
+                ),
+                "source": (
+                    "customer_feedback — le pouce que le client laisse sous une réponse dans le "
+                    "chat client (ADR 0041). « — » tant qu'aucun avis n'a été laissé."
+                ),
+            },
         ),
         _kpi(
             "latency",
@@ -794,6 +872,9 @@ async def compute_agent_synthese(
         agent = get_agent(DEFAULT_AGENT_ID)
     cfg = _effective(agent.id)
     tx = await _fetch_transcript(agent.id, period_days)
+    # Carry the real CSAT counts alongside the transcript aggregates (ADR 0041); the KPI
+    # assembler reads ``tx["csat"]`` and renders an honest "—" when nobody has voted.
+    tx["csat"] = await _fetch_csat(agent.id, period_days)
     since = datetime.now(UTC) - timedelta(days=period_days) if period_days else None
     journal = _scan_journal(agent.id, since)
     try:

@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import type { ReactNode } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { useTemporalState } from "@/components/overview/temporal-rail";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -292,7 +293,17 @@ function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
   const tone: OverviewTone = kpi.good ? "success" : "danger";
   return (
     <div className="flex h-[112px] flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{kpi.label}</p>
+      <div className="flex items-center gap-1">
+        <p className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{kpi.label}</p>
+        {kpi.explain ? (
+          <MetricInfo
+            title={kpi.label}
+            what={kpi.explain.what}
+            how={kpi.explain.how ?? undefined}
+            source={kpi.explain.source ?? undefined}
+          />
+        ) : null}
+      </div>
       <p className="mt-0.5 text-[1.35rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
         {kpi.value}
       </p>

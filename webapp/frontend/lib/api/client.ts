@@ -107,6 +107,8 @@ import {
   CrossTenantReportSchema,
   type CurationOverview,
   CurationOverviewSchema,
+  type CustomerFeedbackResponse,
+  CustomerFeedbackResponseSchema,
   type DataRange,
   DataRangeSchema,
   type DisclosureReport,
@@ -1793,6 +1795,35 @@ export async function saveConsoleFeedback(
       body: JSON.stringify({ conversation_id: conversationId, turn, rating }),
     },
     ConsoleFeedbackSchema,
+  );
+}
+
+/**
+ * A customer's 👍/👎 on an assistant reply (ADR 0041). Requires the conversation's signed
+ * resume capability — the same token the widget holds from turn.start — forwarded as the
+ * `X-Tessera-Resume-Token` header so the agent can bind the vote to this conversation.
+ */
+export async function submitCustomerFeedback(args: {
+  conversationId: string;
+  turnId: string;
+  rating: "up" | "down";
+  resumeToken: string;
+}): Promise<CustomerFeedbackResponse> {
+  return request(
+    "/observability/customer-feedback",
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "X-Tessera-Resume-Token": args.resumeToken,
+      },
+      body: JSON.stringify({
+        conversation_id: args.conversationId,
+        turn_id: args.turnId,
+        rating: args.rating,
+      }),
+    },
+    CustomerFeedbackResponseSchema,
   );
 }
 

@@ -28,6 +28,7 @@ from tessera.api.routes.observability import (
     compliance,
     console,
     evals,
+    feedback,
     fleet,
     memory,
     mutations,
@@ -239,3 +240,8 @@ router.include_router(pii.router)
 
 # Mutations: the 26 operator POSTs. Mounted as one router so a guard has a single seam.
 router.include_router(mutations.router)
+
+# Customer-plane write: the 👍/👎 on an assistant reply (ADR 0041). NOT an operator mutation —
+# bearer-less, self-authenticating on the signed resume capability (like /chat), so it stays
+# off the ``mutations`` router and its ``require_operator`` guard.
+router.include_router(feedback.router)

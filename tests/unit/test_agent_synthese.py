@@ -108,11 +108,11 @@ def test_kpis_are_operational_with_honest_empty_states() -> None:
     # French-grouped integer counts.
     assert kpis["conversations"]["value"] == "1 008"
     assert kpis["turns"]["value"] == "1 054"
-    # Satisfaction has no real source -> honest empty. Users is subject-derived now
-    # (ADR 0040) and reads "—" here only because this fixture carries no subject_id.
+    # Both are real-source KPIs now (users via ADR 0040, CSAT via ADR 0041) and read "—"
+    # here only because this fixture carries no subject_id and no votes.
     assert kpis["users"]["value"] == "—"
     assert kpis["satisfaction"]["value"] == "—"
-    assert "CSAT" in kpis["satisfaction"]["delta"]
+    assert "aucun avis" in kpis["satisfaction"]["delta"]
     # Operational resolution = (1008-134)/1008 = 86,7%.
     assert kpis["resolution"]["value"] == "86,7%"
     # Latency from the transcript's measured latency_ms.
@@ -202,6 +202,37 @@ def test_users_kpi_is_honestly_empty_without_a_captured_identity() -> None:
     kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
     assert kpis["users"]["value"] == "—"
     assert "aucune identité" in kpis["users"]["delta"]
+
+
+def test_csat_kpi_is_a_real_rate_from_captured_votes() -> None:
+    # ADR 0041: satisfaction = count(up)/count(*) over real customer votes.
+    tx = _tx()
+    tx["csat"] = {"up": 8, "total": 10}  # type: ignore[index]
+    payload = syn._assemble(AGENT, _cfg(), tx, _journal(), chain_ok=True, now=NOW)
+    kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
+    assert kpis["satisfaction"]["value"] == "80%"
+    assert "8 / 10" in kpis["satisfaction"]["delta"]
+
+
+def test_csat_kpi_is_honestly_empty_until_a_customer_votes() -> None:
+    # No votes ⇒ honest "—", never assumed satisfaction.
+    payload = syn._assemble(AGENT, _cfg(), _tx(), _journal(), chain_ok=True, now=NOW)
+    kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
+    assert kpis["satisfaction"]["value"] == "—"
+    assert "aucun avis" in kpis["satisfaction"]["delta"]
+
+
+def test_users_and_satisfaction_carry_a_metricinfo_explain() -> None:
+    # A small-but-real number gets a MetricInfo so it is not read as a bug; a plain
+    # count (conversations) carries none.
+    tx = _tx()
+    tx["totals"]["subjects"] = 3  # type: ignore[index]
+    tx["csat"] = {"up": 1, "total": 1}  # type: ignore[index]
+    payload = syn._assemble(AGENT, _cfg(), tx, _journal(), chain_ok=True, now=NOW)
+    kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
+    assert "subject_id" in kpis["users"]["explain"]["how"]  # type: ignore[index]
+    assert kpis["satisfaction"]["explain"]["source"]  # type: ignore[index]
+    assert "explain" not in kpis["conversations"]
 
 
 class _RecordingSynCursor:

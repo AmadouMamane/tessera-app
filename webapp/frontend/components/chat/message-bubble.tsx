@@ -1,12 +1,13 @@
 "use client";
 
-import { Check, Copy, Pencil, Sparkles, User2 } from "lucide-react";
+import { Check, Copy, Pencil, Sparkles, ThumbsDown, ThumbsUp, User2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { RecouvrementMark } from "@/components/recouvrement/recouvrement-logo";
+import { submitCustomerFeedback } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
-import type { ChatMessage } from "@/lib/stores/chat-store";
+import { type ChatMessage, useChatStore } from "@/lib/stores/chat-store";
 import { CitationList, MessageContent } from "./message-content";
 
 interface MessageBubbleProps {
@@ -255,12 +256,79 @@ export function MessageBubble({
           </button>
         )}
 
+        {/* Customer CSAT (ADR 0041) — a real 👍/👎 on a COMPLETED reply, customer plane only
+            (never the recouvrement operator surface). message.id is the turn_id after finalize. */}
+        {!isUser && message.content && !isStreaming && assistantSurface === undefined && (
+          <AssistantFeedback turnId={message.id} />
+        )}
+
         {/* Citations */}
         {message.citations && message.citations.length > 0 && (
           <CitationList citations={message.citations} sourcesLabel={t("sources")} />
         )}
       </div>
     </article>
+  );
+}
+
+/**
+ * The customer's 👍/👎 on one assistant reply (ADR 0041). Renders only once the store holds
+ * the conversation id AND the signed resume capability — the vote cannot be bound without
+ * them, so the widget stays hidden rather than posting something the agent would reject. The
+ * vote is best-effort telemetry: a failure is swallowed, never surfaced to the customer.
+ */
+function AssistantFeedback({ turnId }: { turnId: string }) {
+  const t = useTranslations("chat");
+  const conversationId = useChatStore((s) => s.conversationId);
+  const resumeToken = useChatStore((s) => s.resumeToken);
+  const [rating, setRating] = useState<"up" | "down" | null>(null);
+  const [pending, setPending] = useState(false);
+
+  if (!conversationId || !resumeToken) return null;
+
+  const vote = (next: "up" | "down") => {
+    if (pending || rating === next) return;
+    setPending(true);
+    submitCustomerFeedback({ conversationId, turnId, rating: next, resumeToken })
+      .then(() => setRating(next))
+      .catch(() => {
+        /* best-effort telemetry — never break the chat over a feedback POST */
+      })
+      .finally(() => setPending(false));
+  };
+
+  return (
+    <div className="self-start flex items-center gap-2 px-1 opacity-60 group-hover:opacity-100 transition-opacity duration-150">
+      <span className="text-[0.62rem] text-slate-500 select-none">
+        {rating ? t("feedbackThanks") : t("feedbackPrompt")}
+      </span>
+      <button
+        type="button"
+        onClick={() => vote("up")}
+        disabled={pending}
+        aria-label={t("feedbackUp")}
+        aria-pressed={rating === "up"}
+        className={cn(
+          "flex items-center transition-colors duration-150 disabled:cursor-not-allowed",
+          rating === "up" ? "text-green-600" : "text-slate-500 hover:text-slate-800",
+        )}
+      >
+        <ThumbsUp className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => vote("down")}
+        disabled={pending}
+        aria-label={t("feedbackDown")}
+        aria-pressed={rating === "down"}
+        className={cn(
+          "flex items-center transition-colors duration-150 disabled:cursor-not-allowed",
+          rating === "down" ? "text-red-600" : "text-slate-500 hover:text-slate-800",
+        )}
+      >
+        <ThumbsDown className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }
 

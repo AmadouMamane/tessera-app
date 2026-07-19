@@ -91,12 +91,18 @@ IDENTITY_GUARDS: frozenset[Callable[..., object]] = KNOWN_AUTH_GUARDS | {require
 #: * ``/session/login`` + ``/session/logout`` — the session bootstrap itself: login is
 #:   what CREATES the credential (demanding one first is a paradox), logout only clears
 #:   the caller's own signed cookie.
+#: * ``/observability/customer-feedback`` — the customer's 👍/👎 on a reply (ADR 0041).
+#:   ANONYMOUS is a legitimate auth state (customer plane, like ``/chat``); the handler
+#:   binds the write to a conversation via the signed resume capability
+#:   (``verify_resume_token``, the same gate as ``GET /session/transcript``), and it is
+#:   customer telemetry — it names no author and writes no governance ledger entry.
 SELF_AUTHENTICATING: frozenset[tuple[str, str]] = frozenset(
     {
         ("POST", "/chat"),
         ("POST", "/agents/{agent_id}/invoke"),
         ("POST", "/session/login"),
         ("POST", "/session/logout"),
+        ("POST", "/observability/customer-feedback"),
     }
 )
 
