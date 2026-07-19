@@ -67,6 +67,49 @@ class TestTranscriptRoundTrip:
         assert loaded[0].content == "Bonjour, mon solde ?"
         assert loaded[-1].content == "Voici vos transactions."
 
+    async def test_persists_subject_id_and_synthetic_marker(self) -> None:
+        # ADR 0040: the transcript records who the turn served (``subject_id``) and
+        # whether it was an operator TEST (``synthetic``), so real-traffic reads can
+        # count clients and exclude tests. Read the columns back raw — ``load_transcript``
+        # intentionally returns only the conversational record.
+        from tessera.settings import get_settings
+
+        conv = uuid.uuid4()
+        turn_real = uuid.uuid4()
+        turn_test = uuid.uuid4()
+        await append_messages(
+            conv,
+            turn_real,
+            [
+                ConversationMessage(role="user", content="Bonjour"),
+                ConversationMessage(role="assistant", content="Bonjour, comment aider ?"),
+            ],
+            agent_id="recouvrement",
+            subject_id="client-x",
+            synthetic=False,
+        )
+        await append_messages(
+            conv,
+            turn_test,
+            [
+                ConversationMessage(role="user", content="test"),
+                ConversationMessage(role="assistant", content="réponse de test"),
+            ],
+            agent_id="recouvrement",
+            subject_id="tester",
+            synthetic=True,
+        )
+        dsn = str(get_settings().postgres.dsn)
+        async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=2) as conn:
+            cur = await conn.execute(
+                "SELECT turn_id, synthetic, subject_id FROM conversation_messages "
+                "WHERE conversation_id = %s AND role = 'user'",
+                (conv,),
+            )
+            rows = {str(r[0]): (r[1], r[2]) for r in await cur.fetchall()}
+        assert rows[str(turn_real)] == (False, "client-x")
+        assert rows[str(turn_test)] == (True, "tester")
+
     async def test_load_limit_returns_most_recent_in_order(self) -> None:
         conv = uuid.uuid4()
         for i in range(5):

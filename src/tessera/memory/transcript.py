@@ -85,9 +85,11 @@ async def ensure_transcript_schema() -> None:
             turn_id         uuid        NOT NULL,
             seq             int         NOT NULL,
             agent_id        text        NOT NULL DEFAULT {default_agent},
+            subject_id      text,
             role            text        NOT NULL,
             content         text        NOT NULL,
             name            text,
+            synthetic       boolean     NOT NULL DEFAULT false,
             created_at      timestamptz NOT NULL DEFAULT now()
         );
         """
@@ -105,6 +107,20 @@ async def ensure_transcript_schema() -> None:
     add_latency_col = sql.SQL(
         "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS latency_ms double precision;"
     ).format(table=_TABLE)
+    # Test-turn marker (ADR 0040): a turn entering on an operator TEST surface
+    # (Console, COCKPIT_EMBEDDED) is still written — the transcript stays the single
+    # witness of every turn — but marked so every "real traffic" read (Synthèse,
+    # Flotte) can exclude it. Default false backfills existing rows as real: the
+    # honest prior behaviour, since pre-marker rows cannot be re-distinguished.
+    add_synthetic_col = sql.SQL(
+        "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS synthetic boolean " "NOT NULL DEFAULT false;"
+    ).format(table=_TABLE)
+    # The client/subject the turn served, so "Utilisateurs servis" can count
+    # distinct clients per agent from real traffic. Nullable: an anonymous session
+    # carries no subject, and an honest "-" is better than a fabricated one.
+    add_subject_col = sql.SQL(
+        "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS subject_id text;"
+    ).format(table=_TABLE)
     create_index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} (conversation_id, id);"
     ).format(idx=sql.Identifier("conversation_messages_conversation"), table=_TABLE)
@@ -115,6 +131,8 @@ async def ensure_transcript_schema() -> None:
         await cur.execute(create_table)
         await cur.execute(add_agent_col)
         await cur.execute(add_latency_col)
+        await cur.execute(add_synthetic_col)
+        await cur.execute(add_subject_col)
         await cur.execute(create_index)
         await cur.execute(create_agent_index)
         await conn.commit()
@@ -237,6 +255,8 @@ async def append_messages(
     *,
     agent_id: str = DEFAULT_AGENT_ID,
     latency_ms: float | None = None,
+    subject_id: str | None = None,
+    synthetic: bool = False,
 ) -> None:
     """Append a finished turn's user/assistant messages to the transcript.
 
@@ -248,6 +268,11 @@ async def append_messages(
     defaults to the single agent until the supervisor (Phase 2) routes.
     ``latency_ms`` is the measured end-to-end turn latency; it is stored on the
     assistant row so the Synthèse latency KPI can be derived per agent.
+    ``subject_id`` is the client the turn served (``None`` for anonymous), so the
+    "Utilisateurs servis" KPI can count distinct clients per agent.
+    ``synthetic`` marks an operator TEST turn (ADR 0040): the turn is still
+    written — the transcript is the single witness — but every "real traffic"
+    read excludes it, so operator tests never inflate an agent's Synthèse.
 
     Defence-in-depth backstop (docs/design/pii-input-redaction.md §4.2): the
     durable transcript structurally never holds a Luhn-valid card number.
@@ -270,8 +295,9 @@ async def append_messages(
     insert = sql.SQL(
         """
         INSERT INTO {table}
-            (conversation_id, turn_id, seq, agent_id, role, content, name, latency_ms)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+            (conversation_id, turn_id, seq, agent_id, subject_id, role, content,
+             name, latency_ms, synthetic)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
     ).format(table=_TABLE)
     rows = [
@@ -280,10 +306,12 @@ async def append_messages(
             turn_id,
             seq,
             agent_id,
+            subject_id,
             m.role,
             content,
             m.name,
             latency_ms if m.role == "assistant" else None,
+            synthetic,
         )
         for seq, (m, content) in enumerate(zip(persisted, contents, strict=True))
     ]

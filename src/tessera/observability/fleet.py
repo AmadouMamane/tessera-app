@@ -294,20 +294,25 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
                     "AS escal, "
                     "count(*) FILTER (WHERE role = 'assistant') AS answers, "
                     "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat "
-                    "FROM conversation_messages GROUP BY agent_id"
+                    # ADR 0040: real traffic only — operator TEST turns (synthetic) never
+                    # inflate the Flotte, matching the business-event surfaces and the Synthèse.
+                    "FROM conversation_messages WHERE NOT synthetic GROUP BY agent_id"
                 )
                 by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
 
                 await cur.execute(
                     "SELECT count(*) FILTER (WHERE role = 'user') AS turns "
-                    "FROM conversation_messages"
+                    "FROM conversation_messages WHERE NOT synthetic"
                 )
                 org_turns = int((await cur.fetchone() or {}).get("turns") or 0)
 
                 # Deduplicated conversation rollup via the shared helper — a handoff
                 # conversation counts ONCE for the org, never the per-agent sum.
                 rollup = await dedup_org_total(
-                    cur, table="conversation_messages", entity_col="conversation_id"
+                    cur,
+                    table="conversation_messages",
+                    entity_col="conversation_id",
+                    synthetic_col="synthetic",
                 )
                 # Reconciliation: `rollup.shared` answers about this table's own neighbourhood
                 # and reads 0 with composure when handed-off journeys never share an id here.
@@ -319,6 +324,7 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
                     table="conversation_messages",
                     entity_col="conversation_id",
                     entities=handoff_convs,
+                    synthetic_col="synthetic",
                 )
         read.rows_read(len(by_agent))
 

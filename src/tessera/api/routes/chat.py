@@ -1102,6 +1102,8 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
             [user_msg, assistant_msg],
             agent_id=agent_id,
             latency_ms=duration * _MS_PER_SECOND,
+            subject_id=effective_subject,
+            synthetic=synthetic,
         )
     except Exception as exc:  # audit/persistence must not block a turn
         sys.stderr.write(f"tessera.memory.transcript: append failed: {exc}\n")

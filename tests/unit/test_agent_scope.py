@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tessera.observability.agent_scope import dedup_org_total
+from tessera.observability.agent_scope import dedup_org_total, shared_entities_among
 
 
 class _FakeCursor:
@@ -59,3 +59,70 @@ async def test_dedup_org_total_rejects_unsafe_identifiers() -> None:
             table="conversation_messages",
             entity_col="conversation_id) FROM t --",
         )
+
+
+class _RecordingCursor:
+    """Records every executed SQL string, so a test can assert the predicate shape."""
+
+    def __init__(self) -> None:
+        self.sqls: list[str] = []
+
+    async def execute(self, sql: str, *_params: object) -> None:
+        self.sqls.append(sql)
+
+    async def fetchall(self) -> list[dict[str, object]]:
+        return [{"agent": "a", "n": 1}]
+
+    async def fetchone(self) -> dict[str, object]:
+        return {"n": 1}
+
+
+@pytest.mark.asyncio
+async def test_dedup_org_total_excludes_synthetic_turns_when_asked() -> None:
+    # ADR 0040: the Flotte rollup counts REAL traffic — a validated ``synthetic_col``
+    # injects a fixed ``NOT <ident>`` predicate into every sub-query (never raw SQL).
+    cur = _RecordingCursor()
+    await dedup_org_total(
+        cur,  # type: ignore[arg-type]
+        table="conversation_messages",
+        entity_col="conversation_id",
+        synthetic_col="synthetic",
+    )
+    assert cur.sqls  # per-agent + org + shared
+    assert all("NOT synthetic" in s for s in cur.sqls)
+
+
+@pytest.mark.asyncio
+async def test_dedup_org_total_has_no_synthetic_predicate_by_default() -> None:
+    cur = _RecordingCursor()
+    await dedup_org_total(
+        cur,  # type: ignore[arg-type]
+        table="conversation_messages",
+        entity_col="conversation_id",
+    )
+    assert cur.sqls
+    assert all("synthetic" not in s for s in cur.sqls)
+
+
+@pytest.mark.asyncio
+async def test_dedup_org_total_rejects_an_unsafe_synthetic_identifier() -> None:
+    with pytest.raises(ValueError, match="unsafe SQL identifier"):
+        await dedup_org_total(
+            _RecordingCursor(),  # type: ignore[arg-type]
+            table="conversation_messages",
+            entity_col="conversation_id",
+            synthetic_col="synthetic OR true --",
+        )
+
+
+@pytest.mark.asyncio
+async def test_shared_entities_among_excludes_synthetic_turns_when_asked() -> None:
+    cur = _RecordingCursor()
+    await shared_entities_among(
+        cur,  # type: ignore[arg-type]
+        table="conversation_messages",
+        entity_col="conversation_id",
+        entities={"c1", "c2"},
+        synthetic_col="synthetic",
+    )
+    assert any("AND NOT synthetic" in s for s in cur.sqls)

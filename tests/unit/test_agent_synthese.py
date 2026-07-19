@@ -14,6 +14,8 @@ from __future__ import annotations
 from collections import Counter
 from datetime import UTC, datetime
 
+import pytest
+
 from tessera.agent.registry import get_agent
 from tessera.observability import agent_synthese as syn
 
@@ -106,7 +108,8 @@ def test_kpis_are_operational_with_honest_empty_states() -> None:
     # French-grouped integer counts.
     assert kpis["conversations"]["value"] == "1 008"
     assert kpis["turns"]["value"] == "1 054"
-    # Users + satisfaction have no real source -> honest empty.
+    # Satisfaction has no real source -> honest empty. Users is subject-derived now
+    # (ADR 0040) and reads "—" here only because this fixture carries no subject_id.
     assert kpis["users"]["value"] == "—"
     assert kpis["satisfaction"]["value"] == "—"
     assert "CSAT" in kpis["satisfaction"]["delta"]
@@ -181,3 +184,76 @@ def test_period_label_reflects_the_window() -> None:
             AGENT, _cfg(), _tx(), _journal(), chain_ok=True, period_days=days, now=NOW
         )
         assert payload["meta"]["period"] == label  # type: ignore[index]
+
+
+def test_users_kpi_counts_distinct_subjects_from_real_traffic() -> None:
+    # ADR 0040: "Utilisateurs servis" is a real count(DISTINCT subject_id), not a stub.
+    tx = _tx()
+    tx["totals"]["subjects"] = 7  # type: ignore[index]
+    payload = syn._assemble(AGENT, _cfg(), tx, _journal(), chain_ok=True, now=NOW)
+    kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
+    assert kpis["users"]["value"] == "7"
+    assert "clients distincts" in kpis["users"]["delta"]
+
+
+def test_users_kpi_is_honestly_empty_without_a_captured_identity() -> None:
+    # An anonymous turn carries no subject ⇒ honest "—", never a fabricated count.
+    payload = syn._assemble(AGENT, _cfg(), _tx(), _journal(), chain_ok=True, now=NOW)
+    kpis = {k["key"]: k for k in payload["kpis"]}  # type: ignore[union-attr]
+    assert kpis["users"]["value"] == "—"
+    assert "aucune identité" in kpis["users"]["delta"]
+
+
+class _RecordingSynCursor:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def __aenter__(self) -> _RecordingSynCursor:
+        return self
+
+    async def __aexit__(self, *_a: object) -> bool:
+        return False
+
+    async def execute(self, sql: str, *_params: object) -> None:
+        self._log.append(sql)
+
+    async def fetchone(self) -> dict[str, object]:
+        return {}
+
+    async def fetchall(self) -> list[dict[str, object]]:
+        return []
+
+
+class _RecordingSynConn:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+        self.row_factory: object = None
+
+    def cursor(self) -> _RecordingSynCursor:
+        return _RecordingSynCursor(self._log)
+
+
+class _RecordingSynConnCM:
+    def __init__(self, log: list[str]) -> None:
+        self._log = log
+
+    async def __aenter__(self) -> _RecordingSynConn:
+        return _RecordingSynConn(self._log)
+
+    async def __aexit__(self, *_a: object) -> bool:
+        return False
+
+
+@pytest.mark.asyncio
+async def test_fetch_transcript_reads_real_traffic_only_and_the_subject(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The Synthèse's transcript reads (conversations / tours / résolution / latence /
+    # utilisateurs) must exclude operator TEST turns and count distinct clients (ADR 0040).
+    log: list[str] = []
+    monkeypatch.setattr(syn, "_connection", lambda: _RecordingSynConnCM(log))
+    await syn._fetch_transcript("recouvrement", 1)
+    tx_queries = [q for q in log if "conversation_messages" in q]
+    assert tx_queries  # totals + daily + recent_convs + recent_msgs
+    assert all("NOT synthetic" in q for q in tx_queries)
+    assert any("count(DISTINCT subject_id)" in q for q in tx_queries)

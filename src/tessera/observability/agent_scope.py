@@ -63,6 +63,7 @@ async def dedup_org_total(
     table: str,
     entity_col: str,
     agent_col: str = "agent_id",
+    synthetic_col: str | None = None,
 ) -> OrgRollup:
     """Compute the deduplicated org rollup for an ``(entity, agent)`` table.
 
@@ -77,6 +78,9 @@ async def dedup_org_total(
         table: the entity table (validated identifier).
         entity_col: the distinct entity column, e.g. ``conversation_id`` (validated).
         agent_col: the agent column, default ``agent_id`` (validated).
+        synthetic_col: when set, a boolean column (validated) whose truthy rows are
+            EXCLUDED — real-traffic rollups drop operator TEST turns (ADR 0040). It is
+            an identifier, never a raw predicate, so the P0.3 closure below still holds.
 
     Returns:
         An :class:`OrgRollup`.
@@ -84,18 +88,21 @@ async def dedup_org_total(
     table_id = safe_identifier(table)
     entity_id = safe_identifier(entity_col)
     agent_id = safe_identifier(agent_col)
+    # A FIXED ``NOT <ident>`` predicate over a validated identifier — not the removed raw
+    # ``where`` string. Empty when no synthetic column is named.
+    synth_where = f" WHERE NOT {safe_identifier(synthetic_col)}" if synthetic_col else ""
 
     # Every interpolation is an identifier validated above. The unused, injection-prone `where`
     # predicate parameter was removed (P0.3 class closure): no raw SQL text is accepted here,
     # so these f-strings are safe by construction, not by caller convention.
     per_agent_sql = (
         f"SELECT {agent_id} AS agent, count(DISTINCT {entity_id}) AS n "  # noqa: S608
-        f"FROM {table_id} GROUP BY {agent_id}"
+        f"FROM {table_id}{synth_where} GROUP BY {agent_id}"
     )
-    org_sql = f"SELECT count(DISTINCT {entity_id}) AS n FROM {table_id}"  # noqa: S608
+    org_sql = f"SELECT count(DISTINCT {entity_id}) AS n FROM {table_id}{synth_where}"  # noqa: S608
     shared_sql = (
         f"SELECT count(*) AS n FROM ("  # noqa: S608
-        f"  SELECT {entity_id} FROM {table_id} "
+        f"  SELECT {entity_id} FROM {table_id}{synth_where} "
         f"  GROUP BY {entity_id} HAVING count(DISTINCT {agent_id}) > 1"
         f") s"
     )
@@ -126,6 +133,7 @@ async def shared_entities_among(
     entity_col: str,
     entities: Collection[str],
     agent_col: str = "agent_id",
+    synthetic_col: str | None = None,
 ) -> int:
     """How many of ``entities`` this table has seen under MORE THAN ONE agent.
 
@@ -144,6 +152,8 @@ async def shared_entities_among(
         entity_col: the distinct entity column (validated).
         entities: the entity ids the journal attests; empty ⇒ 0 without a query.
         agent_col: the agent column, default ``agent_id`` (validated).
+        synthetic_col: when set, a boolean column (validated) whose truthy rows are
+            EXCLUDED, so the reconciliation counts real traffic only (ADR 0040).
 
     Returns:
         The count of ``entities`` present in ``table`` under >1 distinct agent.
@@ -153,11 +163,13 @@ async def shared_entities_among(
     table_id = safe_identifier(table)
     entity_id = safe_identifier(entity_col)
     agent_id = safe_identifier(agent_col)
+    # A FIXED ``AND NOT <ident>`` over a validated identifier (ADR 0040), never raw text.
+    synth_and = f" AND NOT {safe_identifier(synthetic_col)}" if synthetic_col else ""
     # Identifiers validated above; the id list travels as a bound parameter, never as text.
     sql = (
         f"SELECT count(*) AS n FROM ("  # noqa: S608
         f"  SELECT {entity_id} FROM {table_id} "
-        f"  WHERE {entity_id} = ANY(%s) "
+        f"  WHERE {entity_id} = ANY(%s){synth_and} "
         f"  GROUP BY {entity_id} HAVING count(DISTINCT {agent_id}) > 1"
         f") s"
     )

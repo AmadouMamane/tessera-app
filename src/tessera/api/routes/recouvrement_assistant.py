@@ -19,7 +19,10 @@ verified operator assertion (the guard returns it), never from the body.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+import sys
+import time
+import uuid
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends
 from fastapi.concurrency import run_in_threadpool
@@ -27,14 +30,25 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.recouvrement import (
     DEFAULT_SURFACE,
+    RECOUVREMENT_AGENT_ID,
     RecouvrementArtifact,
     run_recouvrement_action_workflow_v1,
     run_recouvrement_graph_v1,
 )
+from tessera.agent.state import ConversationMessage
 from tessera.api.security import actor_of, require_collections_operator
 from tessera.api.session import (
     SessionContext,  # noqa: TCH001  — FastAPI resolves Annotated at runtime
 )
+from tessera.authz import Surface
+from tessera.guard.redaction import mask_pan
+from tessera.memory.transcript import append_messages
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+#: Milliseconds per second — the transcript stores turn latency in ms (as ``/chat`` does).
+_MS_PER_SECOND = 1000.0
 
 #: Every route in this module writes (ledger events, governed transitions), so every
 #: route requires a verified business-plane operator. Declared on the router, not
@@ -88,6 +102,49 @@ def _artifact_from_request(raw: dict[str, Any]) -> RecouvrementArtifact:
     }
 
 
+async def _persist_recouvrement_turn(
+    payload: RecouvrementAssistantRequest,
+    result: Mapping[str, object],
+    latency_ms: float,
+) -> None:
+    """Write the recouvrement turn to the durable transcript (ADR 0040).
+
+    The transcript is the single witness of agent turns, but this graph — unlike
+    ``/chat`` — never wrote ``conversation_messages``, so recouvrement's Synthèse KPIs
+    (conversations / tours / résolution / temps de réponse / utilisateurs servis) read a
+    false zero. We mirror the ``/chat`` seam: mask the user text, attribute the turn to
+    the recouvrement agent and the served case, and store the measured latency. A COCKPIT
+    (operator test) surface is marked ``synthetic`` so it never inflates the Synthèse.
+    Any failure degrades to stderr — a transcript write must never break the turn.
+    """
+    visible_reply = str(result.get("visibleReply") or "")
+    if not visible_reply:
+        return
+    try:
+        conv_uuid = uuid.UUID(payload.conversation_id) if payload.conversation_id else uuid.uuid4()
+        turn_uuid = uuid.UUID(payload.turn_id) if payload.turn_id else uuid.uuid4()
+    except ValueError:
+        # A non-UUID client id would break the ``uuid`` column; mint fresh ones so the
+        # turn still remonte rather than being lost to a malformed identifier.
+        conv_uuid = uuid.uuid4()
+        turn_uuid = uuid.uuid4()
+    user_msg = ConversationMessage(role="user", content=mask_pan(payload.message).text)
+    assistant_msg = ConversationMessage(role="assistant", content=visible_reply)
+    synthetic = payload.surface == Surface.COCKPIT_EMBEDDED.value
+    try:
+        await append_messages(
+            conv_uuid,
+            turn_uuid,
+            [user_msg, assistant_msg],
+            agent_id=RECOUVREMENT_AGENT_ID,
+            latency_ms=latency_ms,
+            subject_id=payload.case_id,
+            synthetic=synthetic,
+        )
+    except Exception as exc:  # persistence must never break the operator's turn
+        sys.stderr.write(f"tessera.memory.transcript: recouvrement append failed: {exc}\n")
+
+
 @router.post("/recouvrement-assistant/message")
 @router.post("/api/recouvrement-assistant/message")
 async def recouvrement_assistant_message(
@@ -99,18 +156,24 @@ async def recouvrement_assistant_message(
     emits ~30 business events per turn. Called directly from this async route it would
     block the event loop for the whole turn — starving every other in-flight request,
     including the SSE streams. Offloaded to the threadpool instead.
+
+    The finished turn is then written to the durable transcript (ADR 0040) so
+    recouvrement's Synthèse and the Flotte reflect real traffic; the latency is measured
+    here because the graph does not return it.
     """
-    return dict(
-        await run_in_threadpool(
-            run_recouvrement_graph_v1,
-            case_id=payload.case_id,
-            message=payload.message,
-            assistant_state=payload.assistant_state,
-            conversation_id=payload.conversation_id,
-            turn_id=payload.turn_id,
-            surface=payload.surface,
-        )
+    started = time.perf_counter()
+    result = await run_in_threadpool(
+        run_recouvrement_graph_v1,
+        case_id=payload.case_id,
+        message=payload.message,
+        assistant_state=payload.assistant_state,
+        conversation_id=payload.conversation_id,
+        turn_id=payload.turn_id,
+        surface=payload.surface,
     )
+    latency_ms = (time.perf_counter() - started) * _MS_PER_SECOND
+    await _persist_recouvrement_turn(payload, result, latency_ms)
+    return dict(result)
 
 
 @router.post("/recouvrement-assistant/action")

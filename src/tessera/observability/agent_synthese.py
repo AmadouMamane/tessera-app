@@ -11,9 +11,10 @@ access).
 
 Every panel is backed by a real artifact:
 
-- conversations / turns / messages / resolution / latency / recent conversations /
-  activity come from the durable transcript (``conversation_messages``) and the
-  per-turn ``latency_ms`` / escalation heuristic, scoped to ``agent_id``;
+- conversations / turns / messages / users / resolution / latency / recent
+  conversations / activity come from the durable transcript (``conversation_messages``)
+  and the per-turn ``latency_ms`` / ``subject_id`` / escalation heuristic, scoped to
+  ``agent_id`` and to real traffic (``synthetic`` test turns excluded, ADR 0040);
 - handoffs (incoming/outgoing), the routing-motive distribution and the
   garde-fou / outil activity items come from the S1 hash-chained journal
   (``tessera.agent.handoff`` / ``tessera.agent.routing`` / ``tessera.guard.audit``);
@@ -166,7 +167,10 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
     """
     # An interval literal cannot be a placeholder; period_days is a validated int.
     window = f"created_at >= now() - interval '{int(period_days)} days'" if period_days else "TRUE"
-    where = f"agent_id = %s AND ({window})"
+    # ADR 0040: the Synthèse reflects REAL traffic — operator TEST turns (Console,
+    # marked ``synthetic``) are written to the transcript but excluded here, so they
+    # never inflate this agent's conversations / tours / résolution / latence.
+    where = f"agent_id = %s AND NOT synthetic AND ({window})"
     async with _connection() as conn:
         conn.row_factory = dict_row
         async with conn.cursor() as cur:
@@ -174,6 +178,7 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
                 "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "  # noqa: S608
                 "count(*) FILTER (WHERE role = 'user') AS turns, "
                 "count(*) FILTER (WHERE role = 'assistant') AS answers, "
+                "count(DISTINCT subject_id) FILTER (WHERE subject_id IS NOT NULL) AS subjects, "
                 f"count(DISTINCT conversation_id) FILTER (WHERE {_ESCAL_SQL}) AS escal_convs, "
                 "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms, "
                 f"max(created_at) AS last_at FROM conversation_messages WHERE {where}",
@@ -387,6 +392,7 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
     daily = tx["daily"]
     n_convs = int(totals.get("convs") or 0)
     n_turns = int(totals.get("turns") or 0)
+    n_subjects = int(totals.get("subjects") or 0)
     escal_convs = int(totals.get("escal_convs") or 0)
     obs_lat_ms = totals.get("lat_ms")
 
@@ -421,12 +427,16 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
             True,
             turn_series,
         ),
-        # No per-client identity on a turn yet (no user_id column) -> honest empty.
+        # Distinct clients the agent served, from the turn's ``subject_id`` (ADR 0040).
+        # Honest, not fabricated: a turn with no captured identity (anonymous) is not
+        # counted, so the value is the real distinct-identity count or an honest "—".
+        # The customer plane shares one seeded demo identity today, so this reads small
+        # there; recouvrement counts distinct cases, where it is already meaningful.
         _kpi(
             "users",
             "Utilisateurs servis (24h)",
-            "—",
-            "identité client non instrumentée",
+            _fmt_int(n_subjects) if n_subjects else "—",
+            ("clients distincts servis" if n_subjects else "aucune identité client sur la période"),
             True,
             [],
         ),
