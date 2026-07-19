@@ -972,8 +972,22 @@ function TaskDrawer({
             <h4 className="mb-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
               {d.sla_title}
             </h4>
-            <p className="text-[1.1rem] font-semibold tabular-nums text-red-300">{d.sla_value}</p>
-            <p className="mb-2 text-[0.58rem] text-red-300">{d.sla_note}</p>
+            <p
+              className={cn(
+                "text-[1.1rem] font-semibold tabular-nums",
+                SLA_TONE[d.sla_tone] ?? "text-[var(--tessera-text)]",
+              )}
+            >
+              {d.sla_value}
+            </p>
+            <p
+              className={cn(
+                "mb-2 text-[0.58rem]",
+                SLA_TONE[d.sla_tone] ?? "text-[var(--tessera-text-muted)]",
+              )}
+            >
+              {d.sla_note}
+            </p>
             <dl className="flex flex-col gap-1.5 text-[0.7rem]">
               {d.sla_rows.map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-2">

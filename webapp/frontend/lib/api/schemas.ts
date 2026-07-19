@@ -4388,6 +4388,7 @@ const AgentAFaireDetailSchema = z.object({
   sla_title: z.string(),
   sla_value: z.string(),
   sla_note: z.string(),
+  sla_tone: z.string(),
   sla_rows: z.array(z.object({ label: z.string(), value: z.string() })),
   assign_title: z.string(),
   assign_label: z.string(),

@@ -175,8 +175,11 @@ _TR: dict[str, tuple[str, str, str]] = {
     ),
     "sla_drawer_title": ("Echeance & SLA", "Frist & SLA", "Deadline & SLA"),
     "row_due": ("Echeance", "Frist", "Due"),
-    "row_created": ("Cree le", "Erstellt am", "Created"),
-    "row_age": ("Age", "Alter", "Age"),
+    # ADR 0039 — the honest dual timestamp: when it entered the queue (the SLA
+    # clock) vs the underlying case's own date (provenance), never conflated.
+    "row_queued": ("En file depuis", "In Warteschlange seit", "In queue since"),
+    "row_created": ("Cas date du", "Fall vom", "Case dated"),
+    "row_wait": ("Attente en file", "Wartezeit", "Time in queue"),
     "assign_title": ("Assignation", "Zuweisung", "Assignment"),
     "assign_label": ("Assigne a", "Zugewiesen an", "Assigned to"),
     "team_label": ("Equipe", "Team", "Team"),
@@ -328,10 +331,12 @@ def _detail(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
         "sla_title": _t("sla_drawer_title", lang),
         "sla_value": sla_value,
         "sla_note": sla_note,
+        "sla_tone": item.sla_tone(now),
         "sla_rows": [
             {"label": _t("row_due", lang), "value": _fmt_dt(item.due_at())},
+            {"label": _t("row_queued", lang), "value": _fmt_dt(item.sla_anchor())},
+            {"label": _t("row_wait", lang), "value": _fmt_age(item.queued_seconds(now))},
             {"label": _t("row_created", lang), "value": _fmt_dt(item.created_at)},
-            {"label": _t("row_age", lang), "value": _fmt_age(item.age_seconds(now))},
         ],
         "assign_title": _t("assign_title", lang),
         "assign_label": _t("assign_label", lang),

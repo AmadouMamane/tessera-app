@@ -14,11 +14,16 @@ the unfiltered union. The backlog is derived from artifacts that already exist:
   becomes a real item with a deep-link back to the agent's Métier run;
 * per-item **status / assignee** is persisted to a durable JSON next to the
   guard audit log and mutated by the queue endpoints, so "Prendre en charge",
-  "Marquer resolu" and assignment actually change state.
+  "Marquer resolu" and assignment actually change state;
+* per-item **first_seen** is recorded in the same store the first time the queue
+  observes the item — the honest SLA clock (ADR 0039). The SLA is anchored there,
+  not on ``created_at`` (the underlying case's own time): a seeded eval run from
+  days ago is not "overdue for triage" the instant the queue first shows it.
 
-Priorities, SLA targets and the source domain are derived deterministically from
-the case category. ``now``-relative SLA/age are computed on read. Free-text is
-ASCII-only (accents allowed).
+Priorities and SLA targets are derived deterministically from the case category.
+The SLA clock runs from queue-entry (``queued_at``); ``created_at`` stays the
+case's own timestamp, shown as provenance. ``now``-relative SLA/age are computed
+on read. Free-text is ASCII-only (accents allowed).
 """
 
 from __future__ import annotations
@@ -177,16 +182,35 @@ class OperatorItem:
     assignee: str  # durable; "" when unassigned
     source_kind: str = "eval_failure"
     detail_href: str = ""
+    # When this item first entered the operator's queue — the honest SLA start
+    # (ADR 0039). ``None`` on items built outside the load path; the SLA clock
+    # then falls back to ``created_at`` (the pre-0039 behaviour).
+    queued_at: datetime | None = None
+
+    def sla_anchor(self) -> datetime:
+        """The instant the SLA clock starts: when it entered the queue (ADR 0039).
+
+        ``created_at`` is the underlying case's own time (an eval run days ago, a
+        business event) — anchoring the SLA there made every seeded item overdue
+        by construction. The clock starts when the item became *actionable* by an
+        operator, i.e. when the queue first saw it. Falls back to ``created_at``
+        when no queue time is known (an item built off the load path).
+        """
+        return self.queued_at or self.created_at
 
     def age_seconds(self, now: datetime) -> float:
-        """Seconds since the case ran (non-negative)."""
+        """Seconds since the case ran (non-negative) — the case's own age."""
         return max(0.0, (now - self.created_at).total_seconds())
 
+    def queued_seconds(self, now: datetime) -> float:
+        """Seconds this item has waited in the operator's queue (non-negative)."""
+        return max(0.0, (now - self.sla_anchor()).total_seconds())
+
     def due_at(self) -> datetime:
-        """SLA due time = created + the per-priority target."""
+        """SLA due time = queue-entry + the per-priority target (ADR 0039)."""
         from datetime import timedelta
 
-        return self.created_at + timedelta(hours=_SLA_HOURS.get(self.priority, 8.0))
+        return self.sla_anchor() + timedelta(hours=_SLA_HOURS.get(self.priority, 8.0))
 
     def remaining_seconds(self, now: datetime) -> float:
         """Seconds left before the SLA due time (negative when overdue)."""
@@ -251,6 +275,53 @@ def _parse_dt(value: str) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
+def _now() -> datetime:
+    """Current instant (UTC). Indirected so tests can freeze first-seen stamping."""
+    return datetime.now(UTC)
+
+
+def _resolve_queued_at(
+    state: dict[str, dict[str, str]],
+    item_id: str,
+    now: datetime,
+    new_stamps: dict[str, str],
+) -> datetime:
+    """When this item entered the queue: the durable ``first_seen``, or ``now``.
+
+    First observation wins and is recorded once (ADR 0039). A stamp already in
+    ``state`` is authoritative; a brand-new item is stamped ``now`` and queued
+    into ``new_stamps`` for the caller to persist in one write.
+    """
+    stamped = state.get(item_id, {}).get("first_seen")
+    if isinstance(stamped, str) and stamped:
+        return _parse_dt(stamped)
+    new_stamps[item_id] = now.isoformat()
+    return now
+
+
+def _persist_first_seen(new_stamps: dict[str, str]) -> None:
+    """Durably record first-seen stamps, best-effort (never breaks a read).
+
+    Re-reads the store so a concurrent status/assignee write is not clobbered,
+    and ``setdefault`` so a racing observer that stamped first keeps its instant.
+    """
+    if not new_stamps:
+        return
+    try:
+        fresh = _load_state()
+        for item_id, ts in new_stamps.items():
+            entry = fresh.get(item_id)
+            if not isinstance(entry, dict):
+                entry = {}
+            entry.setdefault("first_seen", ts)
+            fresh[item_id] = entry
+        _save_state(fresh)
+    except Exception as exc:  # a read must never fail because an observation could not be saved
+        sys.stderr.write(
+            f"tessera.observability.operator_items: first_seen persist failed: {exc}\n"
+        )
+
+
 def _agent_targets(agent_id: str | None) -> list[str]:
     """Which agents to source the backlog from: one, or the whole registered fleet."""
     from tessera.agent.registry import list_agents
@@ -302,7 +373,11 @@ def _business_event_href(row: dict[str, object]) -> str:
 
 
 def _business_event_items(
-    *, state: dict[str, dict[str, str]], agent_id: str | None = None
+    *,
+    state: dict[str, dict[str, str]],
+    now: datetime,
+    new_stamps: dict[str, str],
+    agent_id: str | None = None,
 ) -> list[OperatorItem]:
     """Derive real operator items from pending/blocked business grammar events."""
     rows: list[dict[str, object]] = []
@@ -351,6 +426,7 @@ def _business_event_items(
                 assignee=st.get("assignee", ""),
                 source_kind="business_event",
                 detail_href=_business_event_href(row),
+                queued_at=_resolve_queued_at(state, item_id, now, new_stamps),
             )
         )
     return items
@@ -387,6 +463,8 @@ def load_items(agent_id: str | None = None) -> list[OperatorItem]:
 def _load_items_uninstrumented(agent_id: str | None = None) -> list[OperatorItem]:
     """The real work of :func:`load_items` — the eval snapshots, read from disk."""
     state = _load_state()
+    now = _now()
+    new_stamps: dict[str, str] = {}
     items: list[OperatorItem] = []
     for aid in _agent_targets(agent_id):
         try:
@@ -417,10 +495,15 @@ def _load_items_uninstrumented(agent_id: str | None = None) -> list[OperatorItem
                     needs_escalation=s.needs_escalation,
                     status=st.get("status", _DEFAULT_STATUS),
                     assignee=st.get("assignee", ""),
+                    queued_at=_resolve_queued_at(state, item_id, now, new_stamps),
                 )
             )
-    items.extend(_business_event_items(state=state, agent_id=agent_id))
+    items.extend(
+        _business_event_items(state=state, now=now, new_stamps=new_stamps, agent_id=agent_id)
+    )
     items = _dedupe_items(items)
+    # First observation is recorded once, in a single best-effort write per pass.
+    _persist_first_seen(new_stamps)
     # Most urgent first: crit < high < mod < low, then oldest first.
     order = {"crit": 0, "high": 1, "mod": 2, "low": 3}
     items.sort(key=lambda i: (order.get(i.priority, 9), i.created_at))

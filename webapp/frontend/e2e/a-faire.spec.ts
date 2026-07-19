@@ -71,6 +71,28 @@ test("row click drives the detail drawer", async ({ page }) => {
   await expect(detail.getByText(title, { exact: false }).first()).toBeVisible();
 });
 
+test("the SLA clock is real: not every row is overdue (ADR 0039)", async ({ page }) => {
+  // Pre-0039 the SLA was anchored on the eval-run date (weeks old), so EVERY
+  // row read "En retard" — red carried no signal. Anchored on queue-entry, a
+  // freshly-seen backlog shows real countdowns. At least one row is not overdue.
+  const slaCells = page.locator("table tbody tr td:nth-child(6)");
+  const n = await slaCells.count();
+  expect(n).toBeGreaterThan(0);
+  const texts = await slaCells.allTextContents();
+  expect(texts.some((s) => !/retard/i.test(s))).toBe(true);
+});
+
+test("the drawer shows the honest dual timestamp: in-queue vs case date (ADR 0039)", async ({
+  page,
+}) => {
+  await page.locator("table tbody tr").first().click();
+  const detail = page.getByRole("dialog");
+  // Both facts, named and distinct: the SLA clock and the case's own provenance.
+  await expect(detail.getByText("En file depuis")).toBeVisible();
+  await expect(detail.getByText("Cas date du")).toBeVisible();
+  await expect(detail.getByText("Attente en file")).toBeVisible();
+});
+
 test("'Prendre en charge' persists the workflow status", async ({ page }) => {
   // Select the first row, then take charge.
   await page.locator("table tbody tr").first().click();

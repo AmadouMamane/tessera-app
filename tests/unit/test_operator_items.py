@@ -25,6 +25,17 @@ from tessera.observability.eval_data import SessionRow
 NOW = datetime(2026, 6, 16, 12, 0, tzinfo=UTC)
 
 
+@pytest.fixture(autouse=True)
+def _never_write_the_real_store(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unit tests must never touch the durable operator store.
+
+    The load path records ``first_seen`` on observation (ADR 0039), so a read now
+    writes. Default that write to a no-op; a test that asserts on persistence
+    overrides ``_save_state``/``_load_state`` with its own controlled store.
+    """
+    monkeypatch.setattr(oi, "_save_state", lambda _state: None)
+
+
 def _session(
     case_id: str, category: str, *, passed: bool, lang: str = "fr", hours_ago: float = 0.5
 ) -> SessionRow:
@@ -238,6 +249,98 @@ def test_sla_tone_reflects_remaining_time() -> None:
         assignee="",
     )
     assert done.sla_tone(NOW) == "ok"  # resolved is never crit
+
+
+# --- ADR 0039 — the SLA clock runs from queue-entry, not the case date -------
+
+
+def test_the_sla_clock_runs_from_queue_entry_not_the_case_date() -> None:
+    """A two-week-old case, just seen, is fresh — not overdue by construction."""
+    from dataclasses import replace
+
+    two_weeks_h = 24 * 14
+    stale = oi.OperatorItem(
+        item_id="x",
+        agent_id="support-client",
+        case_id="x",
+        category="pii_leak",
+        type_label="",
+        title="",
+        language="fr",
+        source="",
+        priority="low",  # 24h SLA
+        created_at=NOW - timedelta(hours=two_weeks_h),
+        needs_escalation=False,
+        status="todo",
+        assignee="",
+    )
+    # No queue time known -> anchor falls back to created_at (the pre-0039 lie):
+    # a case from two weeks ago reads as long overdue the instant it is shown.
+    assert stale.queued_at is None
+    assert stale.sla_anchor() == stale.created_at
+    assert stale.overdue(NOW) is True
+
+    # Given a real queue-entry 30 min ago, the SAME old case is within its SLA.
+    fresh = replace(stale, queued_at=NOW - timedelta(minutes=30))
+    assert fresh.sla_anchor() == fresh.queued_at
+    assert fresh.overdue(NOW) is False
+    assert fresh.sla_tone(NOW) == "ok"
+    assert fresh.queued_seconds(NOW) == 30 * 60
+    # created_at is untouched: the case's own age (provenance) is still ~2 weeks.
+    assert fresh.age_seconds(NOW) > (two_weeks_h - 1) * 3600
+
+
+def test_first_seen_is_stamped_once_on_observation_and_reused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """queued_at is recorded on first load and never restarts on later loads."""
+    snap = _Snap([_session("01", "pii_leak", passed=False, hours_ago=24 * 14)])
+    monkeypatch.setattr(oi, "_agent_targets", lambda _agent_id=None: ["support-client"])
+    monkeypatch.setattr(oi, "load_eval_snapshot", lambda _aid: snap)
+    store: dict[str, dict[str, str]] = {}
+    monkeypatch.setattr(oi, "_load_state", lambda: {k: dict(v) for k, v in store.items()})
+    monkeypatch.setattr(
+        oi, "_save_state", lambda s: store.update({k: dict(v) for k, v in s.items()})
+    )
+
+    first_instant = datetime(2026, 7, 1, 9, 0, tzinfo=UTC)
+    monkeypatch.setattr(oi, "_now", lambda: first_instant)
+    item1 = oi.load_items()[0]
+    assert item1.queued_at == first_instant
+    assert store["support-client.01.fr"]["first_seen"] == first_instant.isoformat()
+
+    # A later load must REUSE the recorded instant — the clock does not restart.
+    monkeypatch.setattr(oi, "_now", lambda: datetime(2026, 7, 20, 9, 0, tzinfo=UTC))
+    item2 = oi.load_items()[0]
+    assert item2.queued_at == first_instant
+
+
+def test_first_seen_persist_preserves_a_concurrent_status_write(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Stamping first_seen must not clobber a status/assignee already in the store."""
+    snap = _Snap([_session("01", "pii_leak", passed=False)])
+    monkeypatch.setattr(oi, "_agent_targets", lambda _agent_id=None: ["support-client"])
+    monkeypatch.setattr(oi, "load_eval_snapshot", lambda _aid: snap)
+    store: dict[str, dict[str, str]] = {
+        "support-client.01.fr": {"status": "progress", "assignee": "Amadou"}
+    }
+    monkeypatch.setattr(oi, "_load_state", lambda: {k: dict(v) for k, v in store.items()})
+    monkeypatch.setattr(
+        oi, "_save_state", lambda s: store.update({k: dict(v) for k, v in s.items()})
+    )
+    instant = datetime(2026, 7, 2, 9, 0, tzinfo=UTC)
+    monkeypatch.setattr(oi, "_now", lambda: instant)
+
+    item = oi.load_items()[0]
+
+    # first_seen was added; the pre-existing status/assignee survive intact.
+    entry = store["support-client.01.fr"]
+    assert entry["first_seen"] == instant.isoformat()
+    assert entry["status"] == "progress"
+    assert entry["assignee"] == "Amadou"
+    assert item.status == "progress"
+    assert item.queued_at == instant
 
 
 def _item(
@@ -531,8 +634,11 @@ class TestTheItemStateEndpointsHonourThePartition:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         eval_ids, business_ids = _wire_mixed_backlog(monkeypatch)
-        writes: list[dict[str, dict[str, str]]] = []
-        monkeypatch.setattr(oi, "_save_state", writes.append)
+        # Capture the MUTATION (set_item_state), not any store write: since ADR
+        # 0039 a read also writes (first_seen), so _save_state no longer isolates
+        # "was the item's state changed?". The mutation is what must be refused.
+        mutated: list[str] = []
+        monkeypatch.setattr(oi, "set_item_state", lambda item_id, **_kw: mutated.append(item_id))
         client = _operator_client(monkeypatch)
         business_id = "support-client.action.blocked.conv-p.turn-b.RC-1"
         assert business_id in business_ids
@@ -542,14 +648,14 @@ class TestTheItemStateEndpointsHonourThePartition:
             json={"item_id": business_id, "status": "progress"},
         )
         assert refused.status_code == 404
-        assert not writes  # refused BEFORE the durable write, not after
+        assert not mutated  # refused BEFORE any state mutation, not after
 
         served = client.post(  # type: ignore[attr-defined]
             "/observability/inbox/item-state",
             json={"item_id": business_id, "status": "progress"},
         )
         assert served.status_code == 200
-        assert writes  # the owning page's endpoint DID persist
+        assert mutated == [business_id]  # the owning page's endpoint DID mutate
         # The returned view is the FILTERED one: no eval item re-appears.
         ids = {r["id"] for r in served.json()["items"]}
         assert ids == business_ids
@@ -559,7 +665,8 @@ class TestTheItemStateEndpointsHonourThePartition:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         eval_ids, business_ids = _wire_mixed_backlog(monkeypatch)
-        monkeypatch.setattr(oi, "_save_state", lambda _state: None)
+        mutated: list[str] = []
+        monkeypatch.setattr(oi, "set_item_state", lambda item_id, **_kw: mutated.append(item_id))
         client = _operator_client(monkeypatch)
         eval_id = "support-client.01.fr"
         assert eval_id in eval_ids
@@ -568,12 +675,14 @@ class TestTheItemStateEndpointsHonourThePartition:
             "/observability/inbox/item-state", json={"item_id": eval_id, "status": "progress"}
         )
         assert refused.status_code == 404
+        assert not mutated  # refused BEFORE any state mutation
 
         served = client.post(  # type: ignore[attr-defined]
             "/observability/agent-a-faire/item-state",
             json={"item_id": eval_id, "status": "progress"},
         )
         assert served.status_code == 200
+        assert mutated == [eval_id]  # the owning page mutated exactly this item
         task_ids = {t["key"] for t in served.json()["table"]["tasks"]}
         assert task_ids == eval_ids
         assert not (task_ids & business_ids)
