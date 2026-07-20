@@ -49,9 +49,9 @@ jobs:
     name: gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: "3.12"
@@ -68,7 +68,7 @@ jobs:
       # node:sqlite`). So: never invoke pnpm at the root. That rules out
       # setup-node's `cache: pnpm`, whose store probe runs there; the store is
       # cached explicitly instead, resolved from the directory that holds the pin.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: corepack enable
@@ -79,7 +79,7 @@ jobs:
         run: |
           corepack pnpm --version
           echo "path=$(corepack pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: pnpm-${{ runner.os }}-${{ hashFiles('webapp/frontend/pnpm-lock.yaml') }}
@@ -155,9 +155,9 @@ jobs:
       # backend's own integration tests, not here.
       TESSERA_SPINE_SOURCE: local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: "3.12"
@@ -166,7 +166,7 @@ jobs:
             pyproject.toml
             uv.lock
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: corepack enable
@@ -177,7 +177,7 @@ jobs:
         id: pnpm-store
         working-directory: webapp/frontend
         run: echo "path=$(corepack pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: pnpm-${{ runner.os }}-${{ hashFiles('webapp/frontend/pnpm-lock.yaml') }}
@@ -272,7 +272,7 @@ jobs:
         if: failure()
         run: tail -n 200 /tmp/tessera-backend.log /tmp/tessera-front.log
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
@@ -283,11 +283,11 @@ jobs:
     name: pre-commit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
