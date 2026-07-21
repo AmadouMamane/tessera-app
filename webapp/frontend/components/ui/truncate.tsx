@@ -22,6 +22,13 @@ type TruncateProps = {
   /** Lines before clamping. 1 (default) → single-line ellipsis. */
   lines?: number;
   className?: string;
+  /**
+   * Element to render (default `"span"`). Use `"dd"`/`"dt"`/`"p"` to preserve
+   * semantics — e.g. a value cell inside a `<dl>`. Radix `asChild` and
+   * `Tooltip.Root` add no DOM wrapper, so the tag stays a real child of its
+   * parent.
+   */
+  as?: "span" | "p" | "div" | "dd" | "dt";
 };
 
 /**
@@ -37,19 +44,25 @@ type TruncateProps = {
  * reveal silently disappears), and reliability of the reveal matters more than
  * suppressing the tooltip on the occasional short string.
  */
-export function Truncate({ children, full, lines = 1, className }: TruncateProps) {
+export function Truncate({
+  children,
+  full,
+  lines = 1,
+  className,
+  as: Tag = "span",
+}: TruncateProps) {
   const reveal = full ?? (typeof children === "string" ? children : "");
   const clip = lines > 1 ? (CLAMP[lines] ?? "line-clamp-2") : "block truncate";
 
   // Nothing to reveal (composite children with no `full`) → plain clipped span.
   if (!reveal) {
-    return <span className={cn(clip, className)}>{children}</span>;
+    return <Tag className={cn(clip, className)}>{children}</Tag>;
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn(clip, className)}>{children}</span>
+        <Tag className={cn(clip, className)}>{children}</Tag>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-xs break-words">
         {reveal}

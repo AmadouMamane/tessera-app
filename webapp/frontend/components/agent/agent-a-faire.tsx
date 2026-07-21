@@ -912,12 +912,13 @@ function TaskDrawer({
                   {d.context.map((c) => (
                     <div key={c.label} className="flex items-center justify-between gap-2">
                       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
-                      <dd
-                        title={c.value}
-                        className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]"
+                      <Truncate
+                        as="dd"
+                        full={c.value}
+                        className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
                       >
                         {c.value}
-                      </dd>
+                      </Truncate>
                     </div>
                   ))}
                 </dl>
@@ -933,12 +934,13 @@ function TaskDrawer({
                   {d.sla_rows.map((r) => (
                     <div key={r.label} className="flex items-center justify-between gap-2">
                       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{r.label}</dt>
-                      <dd
-                        title={r.value}
-                        className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]"
+                      <Truncate
+                        as="dd"
+                        full={r.value}
+                        className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
                       >
                         {r.value}
-                      </dd>
+                      </Truncate>
                     </div>
                   ))}
                 </dl>
@@ -953,12 +955,13 @@ function TaskDrawer({
                   {d.context.slice(0, 1).map((c) => (
                     <div key={c.label} className="flex items-center justify-between gap-2">
                       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
-                      <dd
-                        title={c.value}
-                        className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]"
+                      <Truncate
+                        as="dd"
+                        full={c.value}
+                        className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
                       >
                         {c.value}
-                      </dd>
+                      </Truncate>
                     </div>
                   ))}
                 </dl>
