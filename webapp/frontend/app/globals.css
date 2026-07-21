@@ -124,6 +124,14 @@
   --tessera-text: #e1e3e3;
   --tessera-text-muted: #9a9fa1;
   --tessera-text-subtle: #595f65;
+  /* Tooltips / ⓘ popovers — a neutral dark-charcoal box with near-white text,
+     matching the native macOS/Chrome tooltip in dark mode (the roles/access
+     Description reference). Deliberately OFF the navy scale — a real grey, not
+     navy. The light theme flips to a light box (see .light). */
+  --tessera-tooltip-bg: #2e2e31;
+  --tessera-tooltip-fg: #ffffff;
+  --tessera-tooltip-fg-muted: #dadce0;
+  --tessera-tooltip-border: rgba(255, 255, 255, 0.08);
   --tessera-green: #00c878;
   --tessera-green-soft: #003f30;
   --tessera-green-muted: #0c261f;
@@ -220,6 +228,11 @@
   --tessera-text: #0f172a;
   --tessera-text-muted: #475569;
   --tessera-text-subtle: #6b7689;
+  /* Light theme: the native tooltip is a light box with dark text. */
+  --tessera-tooltip-bg: #f4f4f6;
+  --tessera-tooltip-fg: #1f242b;
+  --tessera-tooltip-fg-muted: #565c66;
+  --tessera-tooltip-border: rgba(0, 0, 0, 0.14);
   --popover: var(--tessera-surface);
   --input: var(--tessera-border-strong);
   --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.05);

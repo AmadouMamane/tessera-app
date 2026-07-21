@@ -54,35 +54,35 @@ export function MetricInfo({ title, what, how, source, className }: MetricInfoPr
           collisionPadding={12}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            "z-50 w-72 rounded-lg border border-[var(--tessera-border)] bg-[var(--popover)] p-3 text-left shadow-[var(--shadow-card)]",
+            "z-50 w-72 rounded-[3px] border border-[var(--tessera-tooltip-border)] bg-[var(--tessera-tooltip-bg)] p-3 text-left shadow-[0_2px_6px_rgba(0,0,0,0.4)]",
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           )}
         >
-          <p className="font-semibold text-[var(--tessera-text)] text-xs">{title}</p>
-          <p className="mt-1 text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          <p className="font-semibold text-[var(--tessera-tooltip-fg)] text-xs">{title}</p>
+          <p className="mt-1 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
             {what}
           </p>
           {how ? (
-            <div className="mt-2 border-[var(--tessera-border)] border-t pt-2">
-              <p className="font-medium text-[0.58rem] text-[var(--tessera-text-muted)] uppercase tracking-wide">
+            <div className="mt-2 border-[var(--tessera-tooltip-border)] border-t pt-2">
+              <p className="font-medium text-[0.58rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
                 {t("calcul")}
               </p>
-              <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+              <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
                 {how}
               </p>
             </div>
           ) : null}
           {source ? (
-            <div className="mt-2 border-[var(--tessera-border)] border-t pt-2">
-              <p className="font-medium text-[0.58rem] text-[var(--tessera-text-muted)] uppercase tracking-wide">
+            <div className="mt-2 border-[var(--tessera-tooltip-border)] border-t pt-2">
+              <p className="font-medium text-[0.58rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
                 {t("source")}
               </p>
-              <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+              <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
                 {source}
               </p>
             </div>
           ) : null}
-          <Popover.Arrow className="fill-[var(--tessera-border)]" />
+          <Popover.Arrow className="fill-[var(--tessera-tooltip-border)]" />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
