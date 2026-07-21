@@ -14,7 +14,7 @@ import {
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { AppHeader } from "@/components/layout/app-header";
@@ -73,6 +73,7 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--success": "#22C55E",
   "--danger": "#F87171",
   "--steel": "#93C5FD",
+  "--periwinkle": "#A78BFA",
   "--radius-lg": "24px",
   "--radius-md": "16px",
   "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -327,7 +328,7 @@ const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
 // recolour by the real verification verdict. Status colours stay reserved for
 // real states — a gate holding an agent back is NOT red.
 const TONE_COLOR: Record<PillarTone, string> = {
-  live: "var(--cyan)",
+  live: "var(--periwinkle)",
   guard: "var(--steel)",
   govern: "var(--champagne)",
   stale: "var(--amber)",
@@ -406,7 +407,12 @@ function PillarColumn({
       >
         {state}
         {freshness ? (
-          <span className={cn("text-[var(--text-secondary)]", dimmed && "opacity-70")}>
+          <span
+            className={cn(
+              "text-[11px] text-[var(--text-secondary)] tracking-[0.01em]",
+              dimmed ? "opacity-60" : "opacity-75",
+            )}
+          >
             {` · ${freshness}`}
           </span>
         ) : null}
@@ -478,16 +484,28 @@ export function SignalBand({
     <div className="mt-8 flex w-full max-w-[1120px] flex-col items-center gap-[16px]">
       {/* One bounded band, four capability columns — compact, stacks on mobile,
           never four big cards. The freshness stamp rides on the two columns whose
-          claim is temporal (supervise: "temps réel"; prove: "à tout instant"). */}
-      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-x sm:divide-y-0">
-        {pillars.map((pillar) => (
-          <PillarColumn
-            key={pillar.key}
-            t={t}
-            pillar={pillar}
-            freshness={pillar.key === "supervise" || pillar.key === "prove" ? freshness : undefined}
-            dimmed={dimmed}
-          />
+          claim is temporal (supervise: "temps réel"; prove: "à tout instant").
+          Desktop separators are inset gradient hairlines (fading at both ends) —
+          a full-height rule cuts the band into boxes; a faded filet reads as one
+          surface. Mobile keeps the plain stacked divide. */}
+      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-y-0">
+        {pillars.map((pillar, index) => (
+          <Fragment key={pillar.key}>
+            {index > 0 ? (
+              <span
+                aria-hidden="true"
+                className="my-[9px] hidden w-px shrink-0 self-stretch bg-gradient-to-b from-transparent via-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] to-transparent sm:block"
+              />
+            ) : null}
+            <PillarColumn
+              t={t}
+              pillar={pillar}
+              freshness={
+                pillar.key === "supervise" || pillar.key === "prove" ? freshness : undefined
+              }
+              dimmed={dimmed}
+            />
+          </Fragment>
         ))}
       </div>
       {showSocle ? (
