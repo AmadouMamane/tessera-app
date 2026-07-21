@@ -147,10 +147,17 @@ export default async function SessionDetailPage({ params }: PageProps) {
       ))}
 
       {/* CT-01 Conversation Timeline Rail (internal code): turns in order, each
-          attributed to the agent that handled it (per-turn agent_id). */}
-      <p className="mt-1 text-[0.66rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        Chronologie de la session
-      </p>
+          attributed to the agent that handled it (per-turn agent_id). The mode
+          chip is always visible: this page is by construction the "selected
+          conversation" reading — the latest one lives on the Historique tab. */}
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[0.66rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          {t("sessionDetail.timeline")}
+        </p>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
+          {t("sessionDetail.modeHistory")}
+        </span>
+      </div>
       {/* Turns, each attributed to the agent that handled it */}
       <ol className="flex flex-col gap-2.5">
         {data.turns.map((turn) => (

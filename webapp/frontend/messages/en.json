@@ -7123,6 +7123,8 @@
       "subtitle": "Session detail (read-only).",
       "empty": "No conversation for this id.",
       "spansAgents": "Shared conversation (handoff)",
+      "timeline": "Session timeline",
+      "modeHistory": "History · selected conversation",
       "handoff": "Agent-to-agent handoff",
       "turn": "Turn",
       "routedBy": "Routing",
@@ -8226,6 +8228,7 @@
       "subtitle": "Your real exchanges with the agent (transcript) — not evaluated.",
       "empty": "No live conversation yet.",
       "untitled": "Untitled",
+      "latest": "Latest",
       "messages": "{n, plural, one {# message} other {# messages}}",
       "turns": "{n, plural, one {# turn} other {# turns}}"
     },

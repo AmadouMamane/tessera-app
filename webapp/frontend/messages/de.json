@@ -7123,6 +7123,8 @@
       "subtitle": "Sitzungsdetail (schreibgeschützt).",
       "empty": "Keine Konversation für diese Kennung.",
       "spansAgents": "Geteilte Konversation (Übergabe)",
+      "timeline": "Chronologie der Sitzung",
+      "modeHistory": "Verlauf · ausgewaehlte Unterhaltung",
       "handoff": "Agent-zu-Agent-Übergabe",
       "turn": "Runde",
       "routedBy": "Routing",
@@ -8226,6 +8228,7 @@
       "subtitle": "Ihre echten Gespräche mit dem Agenten (Transcript) — nicht bewertet.",
       "empty": "Noch keine Live-Unterhaltung.",
       "untitled": "Ohne Titel",
+      "latest": "Neueste",
       "messages": "{n, plural, one {# Nachricht} other {# Nachrichten}}",
       "turns": "{n, plural, one {# Runde} other {# Runden}}"
     },

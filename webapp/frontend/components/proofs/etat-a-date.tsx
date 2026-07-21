@@ -227,10 +227,24 @@ export function EtatADate() {
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   };
+  // The instant T is URL-derived (`?asof=`), like `?sources=` and `?agent=`:
+  // a reconstruction at T is deep-linkable and shareable, and the rail never
+  // holds it in local state (registre §5 — the TE-01 owed param, closed).
+  const asOf = searchParams.get("asof") || null;
+  const setAsOf = (value: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("asof", value);
+    } else {
+      params.delete("asof");
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  };
   // Draft instant (date + time) from the premium picker; empty = none picked.
-  const [draft, setDraft] = useState("");
+  // Seeded from a deep-linked `?asof=` so the picker shows the instant it serves.
+  const [draft, setDraft] = useState(() => (asOf ? toLocalInput(asOf) : ""));
   const [refInput, setRefInput] = useState("");
-  const [asOf, setAsOf] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState("all");
   const [statusF, setStatusF] = useState("all");
@@ -299,6 +313,26 @@ export function EtatADate() {
           <div className="flex-1" />
         )}
         <div className="flex shrink-0 items-center gap-2">
+          {/* The active time-mode, always visible (registre §5): Live or the
+              reconstruction instant, worded by the backend (`meta.as_of_label`). */}
+          {data?.meta?.as_of_label ? (
+            <span
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs",
+                asOf === null
+                  ? "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)]"
+                  : "border-[#7c5cf5]/60 bg-[#7c5cf5]/10 text-[#c9b8ff]",
+              )}
+            >
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  asOf === null ? "bg-emerald-400" : "bg-[#b9a6ff]",
+                )}
+              />
+              {data.meta.as_of_label}
+            </span>
+          ) : null}
           <OpposabilityBadge opp={data?.opposability} t={t} />
           <button
             type="button"

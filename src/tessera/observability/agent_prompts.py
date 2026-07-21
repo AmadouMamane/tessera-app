@@ -462,6 +462,16 @@ def _overlay_section(agent_id: str, lang: str) -> dict[str, object]:
                 lang,
             ),
             "approved_by": _t(("approuvé par", "genehmigt von", "approved by"), lang),
+            # OT-01 (per-object trace): the overlay lifecycle history, served
+            # since ADR 0037 and now rendered — every event names its author.
+            "history": _t(
+                ("Historique des décisions", "Entscheidungsverlauf", "Decision history"), lang
+            ),
+            "chars": _t(("car.", "Zeichen", "chars"), lang),
+            "event_proposed": _t(("Proposé", "Vorgeschlagen", "Proposed"), lang),
+            "event_approved": _t(("Approuvé", "Genehmigt", "Approved"), lang),
+            "event_rejected": _t(("Rejeté", "Abgelehnt", "Rejected"), lang),
+            "event_revoked": _t(("Révoqué", "Widerrufen", "Revoked"), lang),
         },
     }
 

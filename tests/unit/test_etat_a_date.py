@@ -190,3 +190,42 @@ def test_snapshot_record_captures_headline_figures() -> None:
     assert "2 sources" in rec["summary"]
     assert "15 484 decisions guard" in rec["summary"]
     assert len(rec["id"]) == 12
+
+
+def test_parse_at_reads_a_bare_instant_as_utc() -> None:
+    # A hand-edited `?asof=` deep-link has no offset. It must come back AWARE
+    # (UTC), because the builder compares T against aware timestamps — a naive
+    # value crashed the whole reconstruction ("can't compare offset-naive and
+    # offset-aware datetimes") and the page degraded to "indisponible".
+    parsed = ead._parse_at("2026-07-15T12:00:00")
+    assert parsed is not None
+    assert parsed.tzinfo is not None
+    assert parsed == datetime(2026, 7, 15, 12, 0, tzinfo=UTC)
+    # An explicit offset is preserved, Z included.
+    zulu = ead._parse_at("2026-07-15T12:00:00Z")
+    assert zulu == datetime(2026, 7, 15, 12, 0, tzinfo=UTC)
+    assert ead._parse_at("not-a-date") is None
+
+
+def test_build_context_survives_a_none_temperature_override(
+    monkeypatch: Any,
+) -> None:
+    # A knob saved empty stores an explicit None; float(None) took the whole
+    # PROUVER page down (available:false on live data). The default steps in —
+    # and a legitimate 0.0 is NOT overwritten.
+    monkeypatch.setattr(ead, "_effective", lambda: {"temperature": None})
+    monkeypatch.setattr(ead, "load_eval_snapshot", _raise_oserror)
+    monkeypatch.setattr(ead, "_scan_audit", lambda *_a, **_k: _StubAudit())
+    ctx = ead._build_context()
+    assert ctx.temperature == 0.3
+
+    monkeypatch.setattr(ead, "_effective", lambda: {"temperature": 0.0})
+    assert ead._build_context().temperature == 0.0
+
+
+class _StubAudit:
+    decisions = 0
+
+
+def _raise_oserror() -> Any:
+    raise OSError("no eval snapshot in this environment")

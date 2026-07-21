@@ -7123,6 +7123,8 @@
       "subtitle": "Détail de la session (lecture seule).",
       "empty": "Aucune conversation pour cet identifiant.",
       "spansAgents": "Conversation partagée (handoff)",
+      "timeline": "Chronologie de la session",
+      "modeHistory": "Historique · conversation sélectionnée",
       "handoff": "Transfert agent → agent",
       "turn": "Tour",
       "routedBy": "Routage",
@@ -8228,6 +8230,7 @@
       "subtitle": "Vos échanges réels avec l’agent (transcript) — non évalués.",
       "empty": "Aucune conversation en direct pour l’instant.",
       "untitled": "Sans titre",
+      "latest": "Dernière",
       "messages": "{n, plural, one {# message} other {# messages}}",
       "turns": "{n, plural, one {# tour} other {# tours}}"
     },

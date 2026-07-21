@@ -97,7 +97,10 @@ def _parse_at(at: str | None) -> datetime | None:
     if not at:
         return None
     try:
-        return datetime.fromisoformat(at.replace("Z", "+00:00"))
+        # A bare instant (no offset) reads as UTC: the builder compares T against
+        # aware timestamps throughout, and a hand-edited `?asof=` deep-link must
+        # yield a valid reading — never crash the whole reconstruction.
+        return _aware(datetime.fromisoformat(at.replace("Z", "+00:00")))
     except ValueError:
         return None
 
@@ -1004,9 +1007,12 @@ def _build_context() -> _Context:
     except (OSError, ValueError, KeyError):
         model, run_dt, catalogue = "llama3.2:3b", None, "-"
     audit_total = _scan_audit(get_settings().guard.audit_file, None).decisions
+    # A stored override may carry an explicit None (knob saved empty): fall back
+    # without eating a legitimate 0.0 — float(None) took the whole page down.
+    raw_temperature = cfg.get("temperature")
     return _Context(
         model=model,
-        temperature=float(cfg.get("temperature", 0.3)),
+        temperature=float(0.3 if raw_temperature is None else raw_temperature),
         profile=str(cfg.get("routing_strategy", "Standard souverain")),
         prompt_mtime=_newest_mtime(_PROMPTS_DIR, "*.yaml"),
         policy_mtime=_mtime(_POLICY_FILE),

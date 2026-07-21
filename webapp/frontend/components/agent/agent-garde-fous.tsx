@@ -360,20 +360,10 @@ function Snapshot({ data }: { data: Data }) {
           </span>
         </Field>
       </div>
-      <div className="flex flex-col items-start gap-1 text-[0.68rem]">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-[#b9a6ff] hover:text-white"
-        >
-          <CalendarClock className="h-3.5 w-3.5" /> {s.asof}
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <ChevronRight className="h-3.5 w-3.5" /> {s.compare}
-        </button>
-      </div>
+      {/* No as-of / compare controls here: this snapshot is the CURRENT policy
+          only. The two buttons that used to sit here had no onClick — a control
+          that promises an as-of the page cannot serve is a lie (registre §1);
+          per-object history is OT-01, still to build. */}
     </div>
   );
 }

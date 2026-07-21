@@ -2,13 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeftRight,
   Bot,
   CalendarClock,
   CheckCircle2,
   ChevronRight,
   Clock3,
-  Flag,
   Info,
   Radio,
   Settings2,
@@ -127,7 +125,12 @@ export function AgentSynthese() {
   );
 }
 
-// ── AT-01 rail (4 labelled segments + mode banner) ───────────────────────────
+// ── AT-01 rail (Live + Période) ──────────────────────────────────────────────
+// The page's data is always live over a trailing window: the backend takes no
+// as-of instant, so this rail offers none. A "Voir à date" segment used to sit
+// here with a banner claiming "données reconstituées au point sélectionné"
+// while the data stayed live — a displayed mode the page cannot honour is a
+// lie, so it was removed (registre §1: no mode without its content).
 
 const PERIOD_OPTIONS: { key: string; label: string }[] = [
   { key: "h24", label: "24h" },
@@ -142,40 +145,20 @@ function AgentRail({
   temporal: ReturnType<typeof useTemporalState>;
   agentName: string;
 }) {
-  const live = temporal.mode === "live";
-  const selectedIso =
-    temporal.selectedAt != null
-      ? new Date(temporal.selectedAt - new Date().getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16)
-      : "";
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <Segment icon={Radio} label="Mode">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 font-semibold",
-              live ? "text-emerald-300" : "text-[#f0a23a]",
-            )}
-          >
-            <span
-              className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                live ? "bg-emerald-400 shadow-[0_0_8px_rgba(0,200,120,0.85)]" : "bg-[#f0a23a]",
-              )}
-            />
-            {live ? "Live · En direct" : "État à date"}
+          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(0,200,120,0.85)]" />
+            Live · En direct
           </span>
         </Segment>
 
         <Segment icon={Clock3} label="Période">
           <select
             value={temporal.periodKey}
-            onChange={(e) => {
-              temporal.setPeriodKey(e.target.value);
-              temporal.setSelectedAt(null);
-            }}
+            onChange={(e) => temporal.setPeriodKey(e.target.value)}
             className="cursor-pointer rounded bg-transparent font-semibold text-[var(--tessera-text)] outline-none"
           >
             {PERIOD_OPTIONS.map((p) => (
@@ -185,64 +168,13 @@ function AgentRail({
             ))}
           </select>
         </Segment>
-
-        <Segment icon={Flag} label="Voir à date">
-          <input
-            type="datetime-local"
-            value={selectedIso}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (!v) {
-                temporal.changeMode("live");
-                return;
-              }
-              temporal.changeMode("history");
-              temporal.setSelectedAt(new Date(v).getTime());
-            }}
-            aria-label="Voir à date"
-            className="cursor-pointer rounded bg-transparent font-semibold text-[var(--tessera-text)] outline-none [color-scheme:dark]"
-          />
-        </Segment>
-
-        <Segment icon={ArrowLeftRight} label="Comparaison">
-          <span className="font-semibold text-[var(--tessera-text-muted)]">Aucune comparaison</span>
-        </Segment>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2">
         <span className="text-xs text-[var(--tessera-text-muted)]">
-          {live ? (
-            <>
-              <b className="font-semibold text-sky-300">Mode : Live</b> — Vous consultez les données
-              en direct de {agentName}.
-            </>
-          ) : (
-            <>
-              <b className="font-semibold text-[#f0a23a]">Mode : État à date</b> — données
-              reconstituées au point sélectionné.
-            </>
-          )}
+          <b className="font-semibold text-sky-300">Mode : Live</b> — Vous consultez les données en
+          direct de {agentName}.
         </span>
-        <button
-          type="button"
-          onClick={() => temporal.changeMode(live ? "history" : "live")}
-          className={cn(
-            "flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs",
-            live
-              ? "border-[#9a5f18] text-[#f0a23a] hover:bg-[#3e260c]/35"
-              : "border-emerald-600/60 text-emerald-300 hover:bg-emerald-900/20",
-          )}
-        >
-          {live ? (
-            <>
-              <CalendarClock className="h-4 w-4" /> État à date
-            </>
-          ) : (
-            <>
-              <Radio className="h-4 w-4" /> Revenir au direct
-            </>
-          )}
-        </button>
       </div>
     </section>
   );

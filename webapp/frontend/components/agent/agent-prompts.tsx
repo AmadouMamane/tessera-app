@@ -327,11 +327,10 @@ function Snapshot({ data }: { data: Data }) {
           </span>
         </Field>
       </div>
-      <div className="flex flex-col items-start gap-1 text-[0.68rem]">
-        <span className="inline-flex items-center gap-1 text-[var(--tessera-text-muted)]">
-          <CalendarClock className="h-3.5 w-3.5" /> {s.asof}
-        </span>
-      </div>
+      {/* No as-of control here: this snapshot is the CURRENT prompt base only.
+          The inert "as-of" span that used to sit here looked like a control for
+          a time-travel the page cannot serve (registre §1); per-object history
+          is OT-01, still to build. */}
     </div>
   );
 }
@@ -1106,6 +1105,39 @@ function OverlayPanel({ overlay, agentId }: { overlay?: PromptOverlay; agentId: 
               {L.reject}
             </button>
           </span>
+        </div>
+      ) : null}
+
+      {/* OT-01 per-object trace: the lifecycle history the backend has served
+          since ADR 0037 — proposed / approved / rejected / revoked, each event
+          naming its author (ADR 0024). */}
+      {overlay.history.length > 0 ? (
+        <div className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2">
+          <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">{L.history}</span>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {overlay.history.map((h) => (
+              <li
+                key={`${h.at}-${h.event}-${h.author}`}
+                className="flex flex-wrap items-center gap-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]"
+              >
+                <span className="tabular-nums">
+                  {new Date(h.at).toLocaleString("fr-FR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </span>
+                <span className="font-medium text-[var(--tessera-text)]">
+                  {L[`event_${h.event}`] ?? h.event}
+                </span>
+                <span>· {h.author}</span>
+                {h.chars > 0 ? (
+                  <span className="tabular-nums">
+                    · {h.chars} {L.chars}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 

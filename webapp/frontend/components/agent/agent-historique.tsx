@@ -358,9 +358,11 @@ export function AgentHistorique() {
 // Real live conversations from the transcript (the operator's actual turns),
 // surfaced alongside the eval sessions. These are NOT scored runs, so they get
 // their own honest block (title, time, message/turn counts) rather than a
-// fabricated eval score.
+// fabricated eval score. Each row links to the CT-01 turn-by-turn timeline
+// (`historique/<conversationId>`) so the selection is carried by the URL.
 function LiveConversations({ data, locale }: { data: Data; locale: string }) {
   const t = useTranslations("agentHistorique");
+  const agentId = useAgentId();
   const convos = data.live_conversations ?? [];
   return (
     <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
@@ -376,31 +378,44 @@ function LiveConversations({ data, locale }: { data: Data; locale: string }) {
         <p className="mt-2 text-xs text-[var(--tessera-text-muted)]">{t("live.empty")}</p>
       ) : (
         <ul className="mt-2 flex flex-col divide-y divide-[var(--tessera-border)]">
-          {convos.slice(0, 8).map((c) => (
-            <li key={c.conversation_id} className="flex items-center gap-3 py-2">
-              <div className="min-w-0 flex-1">
-                <Truncate
-                  full={c.title || t("live.untitled")}
-                  className="text-[0.82rem] text-[var(--tessera-text)]"
-                >
-                  {c.title || t("live.untitled")}
-                </Truncate>
-                <div className="mt-0.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
-                  <Clock className="h-3 w-3" />
-                  {new Date(c.last_at).toLocaleString(locale, {
-                    day: "2-digit",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+          {convos.slice(0, 8).map((c, i) => (
+            <li key={c.conversation_id}>
+              <Link
+                href={`${agentPath(agentId, "historique")}/${c.conversation_id}` as Route}
+                className="group flex items-center gap-3 py-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <Truncate
+                      full={c.title || t("live.untitled")}
+                      className="text-[0.82rem] text-[var(--tessera-text)] group-hover:underline"
+                    >
+                      {c.title || t("live.untitled")}
+                    </Truncate>
+                    {i === 0 ? (
+                      <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-px text-[0.6rem] text-emerald-300">
+                        {t("live.latest")}
+                      </span>
+                    ) : null}
+                  </span>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+                    <Clock className="h-3 w-3" />
+                    {new Date(c.last_at).toLocaleString(locale, {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
                 </div>
-              </div>
-              <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
-                {t("live.messages", { n: c.message_count })}
-              </span>
-              <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
-                {t("live.turns", { n: c.turn_count })}
-              </span>
+                <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                  {t("live.messages", { n: c.message_count })}
+                </span>
+                <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                  {t("live.turns", { n: c.turn_count })}
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]" />
+              </Link>
             </li>
           ))}
         </ul>

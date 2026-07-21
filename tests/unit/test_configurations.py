@@ -311,9 +311,13 @@ def test_change_log_entry_names_its_author(
     entries = c._load_change_log()
     assert entries[1]["author"] == "superadmin"
     assert "author" not in entries[0]
-    rows = c._build_history(get_settings().guard.policy_path)
+    # OT-01: the history is a PER-OBJECT trace — read it for the agent that
+    # was written, and check another agent does not inherit its saves.
+    rows = c._build_history(get_settings().guard.policy_path, agent_id="recouvrement")
     saved = [r for r in rows if r["actor"] == "Console"]
     assert any("par superadmin" in r["label"] for r in saved)
+    other = c._build_history(get_settings().guard.policy_path, agent_id="support-client")
+    assert not [r for r in other if r["actor"] == "Console"]
 
 
 def test_build_history_is_real_sources_only() -> None:

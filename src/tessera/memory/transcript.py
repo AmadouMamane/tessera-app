@@ -203,7 +203,9 @@ async def list_conversations(
     Powers the business console's "Récents" list and the agent's cockpit
     Historique. A conversation belongs to ``agent_id`` when its persisted messages
     are stamped with it (per-turn attribution). ``title`` is the first user
-    message; the counts cover persisted ``user``/``assistant`` messages.
+    message; the counts cover persisted ``user``/``assistant`` messages. This is
+    a real-traffic read: synthetic turns (operator/canary trials, ADR 0040) are
+    excluded, so a trial never shows up as a customer conversation.
 
     Args:
         agent_id: The acting agent whose conversations to list.
@@ -220,11 +222,12 @@ async def list_conversations(
             (
                 SELECT u.content FROM {table} u
                 WHERE u.conversation_id = m.conversation_id AND u.role = 'user'
+                      AND NOT u.synthetic
                 ORDER BY u.id ASC
                 LIMIT 1
             )                                                       AS title
         FROM {table} m
-        WHERE m.agent_id = %s
+        WHERE m.agent_id = %s AND NOT m.synthetic
         GROUP BY m.conversation_id
         ORDER BY last_at DESC
         LIMIT %s;

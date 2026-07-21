@@ -662,17 +662,25 @@ def _fmt_mtime(path: Path) -> str:
     return _mtime_dt(path).strftime("%d/%m/%Y %H:%M")
 
 
-def _build_history(policy_path: Path, lang: str = "fr") -> list[dict[str, str]]:
+def _build_history(
+    policy_path: Path, lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID
+) -> list[dict[str, str]]:
     """Real change history: durable form-save log + real config-file mtimes.
 
     No invented events - each row is either a real persisted override save
     (timestamp + the fields that actually changed) or a real file modification
-    (the source's actual mtime), newest first.
+    (the source's actual mtime), newest first. Form saves are scoped to
+    ``agent_id`` (OT-01 is a per-object trace); the repo-file mtimes stay,
+    because settings/policy/prompts/corpus are provenance for every agent.
     """
     console = _loc(lang, "Console", "Konsole", "Console")
     repo = _loc(lang, "Dépôt (Git)", "Repository (Git)", "Repository (Git)")
     events: list[tuple[datetime, str, str]] = []
     for entry in _load_change_log():
+        # Pre-attribution entries carry no agent_id; they were all saves of the
+        # single default agent, so they stay visible on it and on it only.
+        if str(entry.get("agent_id") or DEFAULT_AGENT_ID) != agent_id:
+            continue
         try:
             when = datetime.fromisoformat(str(entry.get("at")))
         except (TypeError, ValueError):
@@ -1598,7 +1606,7 @@ async def compute_agent_configurations(
                 lang, "Historique des modifications", "Aenderungsverlauf", "Change history"
             ),
             "cta": _loc(lang, "Voir tout", "Alle anzeigen", "View all"),
-            "items": _build_history(settings.guard.policy_path, lang),
+            "items": _build_history(settings.guard.policy_path, lang, agent_slug),
         },
         "links": {
             "title": _loc(lang, "Liens utiles", "Nuetzliche Links", "Useful links"),
