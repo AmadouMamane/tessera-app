@@ -731,22 +731,29 @@ function MiniBars({
   if (items.length === 0) return <ChartEmpty />;
   const max = Math.max(...items.map((i) => i.value), 1);
   return (
-    <div className="flex h-14 items-end gap-1">
-      {items.map((it) => (
-        <div key={it.label} className="flex flex-1 flex-col items-center gap-0.5">
+    <div className="flex flex-col gap-1">
+      <div className="flex h-14 items-end gap-1">
+        {items.map((it) => (
           <div
-            className="w-full rounded-sm"
+            key={it.label}
+            className="min-w-0 flex-1 rounded-sm"
             style={{
               height: `${Math.max(4, (it.value / max) * 44)}px`,
               backgroundColor: band ? BAND_FILL[coverageBand(it.value / 100)] : color,
             }}
             title={`${it.label}: ${it.value}`}
           />
-          <span className="max-w-full truncate text-[0.52rem] text-[var(--muted-foreground)]">
-            {it.label}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
+      <div className="flex h-11 gap-1">
+        {items.map((it) => (
+          <div key={it.label} className="relative min-w-0 flex-1">
+            <span className="absolute top-0.5 right-1/2 origin-top-right -rotate-45 whitespace-nowrap text-[0.55rem] leading-none text-[var(--muted-foreground)]">
+              {it.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -794,21 +801,21 @@ function DriftBars({ items }: { items: { label: string; value: number }[] }) {
   if (items.length === 0) return <ChartEmpty />;
   const max = Math.max(...items.map((i) => Math.abs(i.value)), 0.1);
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-0.5">
       {items.map((it) => {
         const abs = Math.abs(it.value);
         return (
-          <div key={it.label} className="flex items-center gap-1.5 text-[0.6rem]">
-            <span className="w-16 shrink-0 truncate text-[var(--muted-foreground)]">
+          <div key={it.label} className="flex items-center gap-1.5 text-[0.6rem] leading-tight">
+            <Truncate className="min-w-0 flex-1 text-[var(--muted-foreground)]" full={it.label}>
               {it.label}
-            </span>
-            <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
+            </Truncate>
+            <div className="h-[4px] w-10 shrink-0 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-sm"
                 style={{ width: `${(abs / max) * 100}%`, backgroundColor: driftFill(abs) }}
               />
             </div>
-            <span className="w-8 shrink-0 text-right tabular-nums text-[var(--foreground)]">
+            <span className="w-9 shrink-0 text-right tabular-nums text-[var(--foreground)]">
               {abs.toFixed(2)}
             </span>
           </div>
@@ -890,7 +897,18 @@ function DualLine({
   );
 }
 
-const DONUT_COLORS = ["#34d399", "#60a5fa", "#f59e0b", "#a78bfa", "#f87171", "#22d3ee"];
+const DONUT_COLORS = [
+  "#34d399", // emerald
+  "#60a5fa", // blue
+  "#f59e0b", // amber
+  "#a78bfa", // violet
+  "#f87171", // red
+  "#22d3ee", // cyan
+  "#a3e635", // lime
+  "#e879f9", // fuchsia
+  "#f472b6", // pink
+  "#fb923c", // orange
+];
 
 /** Donut of category shares with a center total and a compact legend. */
 function MiniDonut({
@@ -938,15 +956,20 @@ function MiniDonut({
           {center}
         </text>
       </svg>
-      <ul className="flex flex-col gap-0.5 text-[0.6rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.6rem] leading-none">
         {items.map((it, i) => (
           <li key={it.label} className="flex items-center gap-1">
             <span
-              className="h-1.5 w-1.5 rounded-full"
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
               style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
             />
-            <span className="uppercase text-[var(--muted-foreground)]">{it.label}</span>
-            <span className="tabular-nums text-[var(--foreground)]">
+            <Truncate
+              className="min-w-0 flex-1 uppercase text-[var(--muted-foreground)]"
+              full={it.label}
+            >
+              {it.label}
+            </Truncate>
+            <span className="shrink-0 tabular-nums text-[var(--foreground)]">
               {Math.round((it.value / total) * 100)}%
             </span>
           </li>
