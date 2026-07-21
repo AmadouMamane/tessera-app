@@ -327,7 +327,7 @@ const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
 // real states — a gate holding an agent back is NOT red.
 const TONE_COLOR: Record<PillarTone, string> = {
   live: "var(--cyan)",
-  guard: "var(--cyan)",
+  guard: "var(--rose)",
   govern: "var(--champagne)",
   stale: "var(--amber)",
   verified: "var(--success)",
@@ -364,13 +364,17 @@ function PillarColumn({
   // lines stay in primary text so a held-back agent is never painted red.
   const stateColor = pillar.key === "prove" ? accent : "var(--text-primary)";
   return (
-    <div className="flex flex-1 flex-col items-center gap-[7px] px-[14px] py-[15px] text-center">
+    <div className="flex flex-1 flex-col items-center gap-[7px] px-[12px] py-[15px] text-center">
       {/* One complete accessible label — the SR hears "name : state" as a unit
           (§8); the visible title/state are decorative duplicates, so the meaning
           never rides on colour or icon alone. The ⓘ button stays OUTSIDE the
           aria-hidden spans: it is interactive, not decoration. */}
       <span className="sr-only">{`${title} : ${state}${freshness ? ` · ${freshness}` : ""}`}</span>
-      <span className="flex items-center justify-center gap-[6px]">
+      {/* items-start + a 1px nudge keep the ⓘ hugging the FIRST line of the
+          kicker: centred against a wrapped two-line title it floats mid-air,
+          visually detached from the words it explains. Softened at rest
+          (opacity) so the kicker row stays calm; full presence on hover/focus. */}
+      <span className="flex items-start justify-center gap-[5px]">
         <span
           aria-hidden="true"
           className={cn(
@@ -383,6 +387,7 @@ function PillarColumn({
           {title}
         </span>
         <MetricInfo
+          className="mt-[-1px] opacity-55 hover:opacity-100 focus-visible:opacity-100"
           title={title}
           what={tr(`signal.info.${pillar.key}.what`)}
           how={tr(`signal.info.${pillar.key}.how`)}
@@ -469,7 +474,7 @@ export function SignalBand({
   // (real blocked count) — it explains why "prêts < total", never a blanket claim.
   const showSocle = live.agentsWithRelease > 0 && live.passedAgents < live.agentsWithRelease;
   return (
-    <div className="mt-8 flex w-full max-w-[1060px] flex-col items-center gap-[16px]">
+    <div className="mt-8 flex w-full max-w-[1120px] flex-col items-center gap-[16px]">
       {/* One bounded band, four capability columns — compact, stacks on mobile,
           never four big cards. The freshness stamp rides on the two columns whose
           claim is temporal (supervise: "temps réel"; prove: "à tout instant"). */}
