@@ -364,6 +364,29 @@ async def turn_agent_and_synthetic(turn_id: UUID) -> tuple[str, bool] | None:
     return str(row["agent_id"]), bool(row["synthetic"])
 
 
+async def count_user_turns_since(since: datetime) -> int:
+    """Count user turns recorded at or after ``since`` — test turns included.
+
+    The transcript is the single witness of turns (ADR 0040), and every persisted
+    user turn entered through the input guard, so this is the honest numerator for
+    the launcher's "messages checked" counter. Synthetic turns are deliberately
+    **included**: the guard checks a canary or an operator trial exactly like a
+    customer message, and the counter measures the guard's activity, not business
+    traffic. The read that displays it states that scope in its own words.
+    """
+    query = sql.SQL(
+        "SELECT count(DISTINCT turn_id) AS turns FROM {table} "
+        "WHERE role = 'user' AND created_at >= %s;"
+    ).format(table=_TABLE)
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, (since,))
+        row = await cur.fetchone()
+    return int(row["turns"]) if row is not None else 0
+
+
 async def delete_transcript(conversation_id: UUID) -> None:
     """Delete the entire transcript for a conversation (GDPR Art. 17)."""
     query = sql.SQL("DELETE FROM {table} WHERE conversation_id = %s;").format(table=_TABLE)

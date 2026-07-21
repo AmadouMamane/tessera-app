@@ -1,24 +1,47 @@
-import type { LauncherSignal } from "@/lib/server/launcher-signal";
-
 /**
- * The launcher's three product pillars — Supervise · Evaluate & secure · Prove —
+ * The launcher's four product pillars — Supervise · Secure · Evaluate · Prove —
  * each paired with the REAL system state carried by the public-safe signal.
  *
- * Pure and client-safe (it imports only the TYPE of the server-only signal, which
- * erases at compile time): it maps the signal to i18n keys + a display tone; the
- * component does the translation and rendering. No value is ever invented — a
- * missing or uncertain source yields an HONEST state key ("évaluations actives",
- * "vérification indisponible"), never a fabricated "prêt"/"vérifiée".
+ * Four columns because the two gates are different things and fusing them made
+ * one dishonest line: the ONLINE gate (the input chokepoint every message
+ * crosses, counted per message) and the RELEASE gate (exercised before
+ * production, judged per agent). One column, one fact, one witness.
+ *
+ * Pure and client-safe: it consumes the structural `PillarSignal` subset (the
+ * server's `LauncherSignal` is assignable to it, and so is the polled wire
+ * payload), maps it to i18n keys + a display tone, and never invents a value —
+ * a missing or uncertain source yields an HONEST state key ("évaluations
+ * actives", "compteurs indisponibles", "vérification indisponible"), never a
+ * fabricated "prêt"/"vérifiée".
  */
-export type PillarKey = "supervise" | "evaluate" | "prove";
+
+/** The structural subset of the launcher signal the pillars actually read. */
+export interface PillarSignal {
+  agentsCount: number;
+  passedAgents: number;
+  agentsWithRelease: number;
+  agents: readonly { verdictStale: boolean }[];
+  integrityVerified: boolean | null;
+  guardActivity: { checkedToday: number; blockedToday: number } | null;
+}
+
+export type PillarKey = "supervise" | "secure" | "evaluate" | "prove";
 
 /**
- * Display tone, NOT a raw status. `live`/`govern` are the neutral capability
- * accents (cyan / champagne); `verified`/`unverified`/`neutral` recolour the
- * PROOFS state by the real verification verdict (§5: status colours are reserved
- * for real states — a gate holding an agent back is not painted red here).
+ * Display tone, NOT a raw status. `live`/`guard`/`govern` are the neutral
+ * capability accents; `stale` marks a release verdict put back in play;
+ * `verified`/`unverified`/`neutral` recolour the PROOFS state by the real
+ * verification verdict (§5: status colours are reserved for real states — a
+ * gate holding an agent back is not painted red here).
  */
-export type PillarTone = "live" | "govern" | "verified" | "unverified" | "neutral";
+export type PillarTone =
+  | "live"
+  | "guard"
+  | "govern"
+  | "stale"
+  | "verified"
+  | "unverified"
+  | "neutral";
 
 export interface Pillar {
   key: PillarKey;
@@ -26,21 +49,21 @@ export interface Pillar {
   titleKey: string;
   /** i18n key of the real system STATE shown under the name. */
   stateKey: string;
-  /** ICU variables for `stateKey` (agent count, ready/total) — real numbers only. */
+  /** ICU variables for `stateKey` — real numbers only. */
   stateVars?: Record<string, number>;
   tone: PillarTone;
 }
 
 /**
- * Build the three pillars from the signal, or `null` when there is no signal at
+ * Build the four pillars from the signal, or `null` when there is no signal at
  * all (the band then renders a single honest "indisponible").
  */
-export function launcherPillars(signal: LauncherSignal | null): Pillar[] | null {
+export function launcherPillars(signal: PillarSignal | null): Pillar[] | null {
   if (!signal) return null;
 
-  // 1 · Supervise — the real fleet size under observation. Singular/plural is
-  // handled by the ICU `plural` in `agentsSupervised`; `agentsCount` is always
-  // ≥ 1 here (a zero-agent fleet yields a null signal upstream).
+  // 1 · Supervise — the real fleet size under observation (passive: watching,
+  // never touching). Singular/plural via ICU; `agentsCount` is always ≥ 1 here
+  // (a zero-agent fleet yields a null signal upstream).
   const supervise: Pillar = {
     key: "supervise",
     titleKey: "signal.pillarSupervise",
@@ -49,26 +72,59 @@ export function launcherPillars(signal: LauncherSignal | null): Pillar[] | null 
     tone: "live",
   };
 
-  // 2 · Evaluate & secure — "release gates actifs · {ready}/{total} prêts" ONLY
-  // when the gate really produces verdicts (≥ 1 agent has a real release verdict);
-  // the ready count is the gate's OWN verdict, never inferred from a blended score.
-  // With no verdict yet, the honest "évaluations actives" — the capability is on,
-  // the gate simply has nothing to clear.
+  // 2 · Secure — the ONLINE gate, counted per message from its two witnesses
+  // (transcript turns + audited denials, today). `null` activity → an honest
+  // "compteurs indisponibles"; a quiet day → a real "aucun message", never a
+  // fabricated count.
+  const activity = signal.guardActivity;
+  const secure: Pillar =
+    activity === null
+      ? {
+          key: "secure",
+          titleKey: "signal.pillarSecure",
+          stateKey: "signal.activityUnavailable",
+          tone: "neutral",
+        }
+      : activity.checkedToday === 0
+        ? {
+            key: "secure",
+            titleKey: "signal.pillarSecure",
+            stateKey: "signal.noMessagesToday",
+            tone: "guard",
+          }
+        : {
+            key: "secure",
+            titleKey: "signal.pillarSecure",
+            stateKey: "signal.messagesChecked",
+            stateVars: { checked: activity.checkedToday, blocked: activity.blockedToday },
+            tone: "guard",
+          };
+
+  // 3 · Evaluate — the RELEASE gate, judged per agent BEFORE production. The
+  // ready count is the gate's OWN verdict over the agents it has actually
+  // judged (an unevaluated agent is not "not ready" — it is out of the
+  // denominator). A stale verdict (superseded catalogue) puts the column in
+  // amber "re-éval requise": the gate demands again, it does not pretend.
   const gatesActive = signal.agentsWithRelease > 0;
+  const staleCount = signal.agents.filter((a) => a.verdictStale).length;
   const evaluate: Pillar = {
     key: "evaluate",
     titleKey: "signal.pillarEvaluate",
-    stateKey: gatesActive ? "signal.releaseGatesReady" : "signal.evaluationsActive",
+    stateKey: gatesActive
+      ? staleCount > 0
+        ? "signal.evaluateReadyStale"
+        : "signal.evaluateReady"
+      : "signal.evaluationsActive",
     stateVars: gatesActive
       ? { ready: signal.passedAgents, total: signal.agentsWithRelease }
       : undefined,
-    tone: "govern",
+    tone: gatesActive && staleCount > 0 ? "stale" : "govern",
   };
 
-  // 3 · Prove — "chaîne d'intégrité vérifiée" ONLY when the audit chain actually
+  // 4 · Prove — "chaîne d'audit vérifiée" ONLY when the audit chain actually
   // re-derives (content_integrity == true). A proven break → "non vérifiée"; an
-  // unreachable check → "vérification indisponible". Never verified from the mere
-  // existence of audit entries.
+  // unreachable check → "vérification indisponible". Never verified from the
+  // mere existence of audit entries.
   const verified = signal.integrityVerified;
   const prove: Pillar = {
     key: "prove",
@@ -82,5 +138,5 @@ export function launcherPillars(signal: LauncherSignal | null): Pillar[] | null 
     tone: verified === true ? "verified" : verified === false ? "unverified" : "neutral",
   };
 
-  return [supervise, evaluate, prove];
+  return [supervise, secure, evaluate, prove];
 }

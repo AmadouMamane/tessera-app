@@ -24,7 +24,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -41,6 +41,7 @@ from tessera.api.session import (
     SessionContext,  # noqa: TCH001  — FastAPI resolves Annotated at runtime
 )
 from tessera.authz import Surface
+from tessera.guard.adapter import check_user_input
 from tessera.guard.redaction import mask_pan
 from tessera.memory.transcript import append_messages
 
@@ -160,12 +161,25 @@ async def recouvrement_assistant_message(
     The finished turn is then written to the durable transcript (ADR 0040) so
     recouvrement's Synthèse and the Flotte reflect real traffic; the latency is measured
     here because the graph does not return it.
+
+    The message passes the SAME input guard as every other plane before the graph sees
+    it (2026-07-21 audit: this workflow was the one turn path outside the chokepoint —
+    "sécurité à chaque message" must hold here too, operator-only or not). A denial is
+    already audited inside :func:`check_user_input`; the refusal is an explicit 400, not
+    a fabricated drawer payload — the contract's ``artifact`` cannot be honestly built
+    for a turn that never ran.
     """
+    check = check_user_input(payload.message)
+    if not check.allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="message refused by the input guard",
+        )
     started = time.perf_counter()
     result = await run_in_threadpool(
         run_recouvrement_graph_v1,
         case_id=payload.case_id,
-        message=payload.message,
+        message=check.sanitised_text,
         assistant_state=payload.assistant_state,
         conversation_id=payload.conversation_id,
         turn_id=payload.turn_id,

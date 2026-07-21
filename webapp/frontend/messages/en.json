@@ -7328,14 +7328,40 @@
       "agentSecurity": "security {passed}/{total} cases compliant",
       "agentEvaluatedOn": "Evaluated on {date}",
       "pillarSupervise": "Real-time supervision",
-      "agentsSupervised": "{count, plural, one {# supervised agent} other {# supervised agents}}",
-      "pillarEvaluate": "Continuous evaluation and security",
-      "releaseGatesReady": "Release gates active · {ready} of {total} ready",
+      "agentsSupervised": "{count, plural, one {# agent observed} other {# agents observed}}",
+      "pillarSecure": "Security on every message",
+      "messagesChecked": "{checked, plural, one {# message checked} other {# messages checked}} · {blocked, plural, =0 {none blocked today} one {# blocked today} other {# blocked today}}",
+      "noMessagesToday": "No messages today",
+      "activityUnavailable": "Counters unavailable",
+      "pillarEvaluate": "Evaluation before production",
+      "evaluateReady": "{ready, plural, one {# agent of {total} ready} other {# agents of {total} ready}}",
+      "evaluateReadyStale": "{ready, plural, one {# agent of {total} ready} other {# agents of {total} ready}} · re-eval required",
       "evaluationsActive": "Evaluations active",
       "pillarProve": "Evidence at any point in time",
-      "integrityVerified": "Integrity chain verified",
-      "integrityUnverified": "Integrity chain not verified",
-      "integrityUnavailable": "Verification unavailable"
+      "integrityVerified": "Audit chain verified",
+      "integrityUnverified": "Chain not verified",
+      "integrityUnavailable": "Verification unavailable",
+      "justNow": "just now",
+      "minutesAgo": "{m} min ago",
+      "info": {
+        "seeForYourself": "See for yourself",
+        "supervise": {
+          "what": "Tessera listens to the telemetry every agent publishes — health, activity, measurements — without ever stepping into its conversations.",
+          "how": "The count and timestamp reflect data actually received, refreshed continuously: if the signal drops, this tile says so — it never invents a number."
+        },
+        "secure": {
+          "what": "Every message passes through a single checkpoint that can block an attack, mask sensitive data, or call in a human.",
+          "how": "Counters read from the audit journal, where every refusal is recorded; trial messages (canaries, operator tests) are included — the checkpoint runs on each of them."
+        },
+        "evaluate": {
+          "what": "Before serving customers, every agent must pass a test set, including a security baseline shared by all.",
+          "how": "The verdict comes from the agent's latest run; any change — model, instructions, rules — puts it back in play: the agent must prove itself ready again."
+        },
+        "prove": {
+          "what": "Every decision is written to a journal where each entry is sealed to the previous one: nothing can be altered without it showing.",
+          "how": "Verification is re-run automatically on every read; what you see is the verdict of the last successful check."
+        }
+      }
     },
     "demoLogin": {
       "note": "Demo account",

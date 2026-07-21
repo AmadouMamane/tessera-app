@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AuditIntegritySchema } from "@/lib/api/schemas";
+import { AuditIntegritySchema, GuardActivitySchema } from "@/lib/api/schemas";
 
 import { backendHeaders, backendUrl } from "./backend";
 import { loadFleet } from "./fleet";
@@ -57,6 +57,13 @@ export interface LauncherSignal {
   // indisponible", never a fabricated "vérifiée"). NEVER inferred from the mere
   // existence of audit entries.
   integrityVerified: boolean | null;
+  // Guard activity since local midnight — messages checked (transcript turns,
+  // ADR 0040) and denials recorded (audit trail), each from its own witness.
+  // `null` → the band's SECURE column renders "compteurs indisponibles".
+  guardActivity: { checkedToday: number; blockedToday: number } | null;
+  // Server instant this aggregate was assembled — the freshness the band's
+  // "temps réel" claim rests on (the client re-fetches and shows the age).
+  generatedAt: string;
 }
 
 function asHealth(value: string): AgentHealth {
@@ -81,8 +88,35 @@ async function loadIntegrityVerified(): Promise<boolean | null> {
   }
 }
 
+/**
+ * Guard activity since local midnight (checked / blocked message counts), or
+ * `null` when the read is unreachable or a witness is down — never a fabricated
+ * zero. Aggregate-only, like everything else on this public surface.
+ */
+async function loadGuardActivity(): Promise<LauncherSignal["guardActivity"]> {
+  try {
+    const res = await fetch(`${backendUrl()}/observability/guard-activity`, {
+      cache: "no-store",
+      headers: backendHeaders({ Accept: "application/json" }),
+    });
+    if (!res.ok) return null;
+    const parsed = GuardActivitySchema.parse(await res.json());
+    if (!parsed.available || parsed.checked_today === undefined) return null;
+    return {
+      checkedToday: parsed.checked_today,
+      blockedToday: parsed.blocked_today ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
-  const [fleet, integrityVerified] = await Promise.all([loadFleet(), loadIntegrityVerified()]);
+  const [fleet, integrityVerified, guardActivity] = await Promise.all([
+    loadFleet(),
+    loadIntegrityVerified(),
+    loadGuardActivity(),
+  ]);
   if (!fleet?.available || !fleet.agents || fleet.agents.length === 0) return null;
 
   const agents: LauncherAgentSignal[] = fleet.agents.map((a) => {
@@ -121,5 +155,7 @@ export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
     gateVerdict,
     agents,
     integrityVerified,
+    guardActivity,
+    generatedAt: new Date().toISOString(),
   };
 }

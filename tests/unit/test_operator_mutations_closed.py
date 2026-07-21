@@ -128,14 +128,16 @@ def test_the_public_reads_are_untouched() -> None:
     digests, integrity verdicts — no subject data). +2 on 2026-07-17 (lot 9):
     the recouvrement queue/case reads — subject-scoped, guarded by the pii
     router's require_subject_reader (NOT public; counted here because the
-    freeze spans every GET on the observability router).
+    freeze spans every GET on the observability router). +1 on 2026-07-21:
+    the launcher's guard-activity aggregate (messages checked/blocked since
+    midnight — ADR 0009 showcase-safe day counters, no subject data).
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 130
+    assert len(read_routes) == 131
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

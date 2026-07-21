@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Boxes,
   Fingerprint,
+  ListChecks,
   Lock,
   LockOpen,
   ShieldBan,
@@ -13,8 +14,9 @@ import {
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -24,9 +26,11 @@ import { cn } from "@/lib/cn";
 import {
   type Pillar,
   type PillarKey,
+  type PillarSignal,
   type PillarTone,
   launcherPillars,
 } from "@/lib/launcher-pillars";
+import { fetchLauncherSignal } from "@/lib/launcher-signal-client";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
 
 export interface DemoCred {
@@ -67,6 +71,7 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--amber": "#F59E0B",
   "--amber-soft": "#FBBF24",
   "--success": "#22C55E",
+  "--danger": "#F87171",
   "--radius-lg": "24px",
   "--radius-md": "16px",
   "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -301,30 +306,52 @@ function DemoEnterButton({
   );
 }
 
-// Real public-safe signal band (ADR 0009). It presents Tessera's three product
-// pillars — Supervise · Evaluate & secure · Prove — each under its REAL system
+// Real public-safe signal band (ADR 0009). It presents Tessera's four product
+// pillars — Supervise · Secure · Evaluate · Prove — each under its REAL system
 // state (or a single honest "indisponible" when there is no signal at all). Every
-// value is the live signal: the real agent count, the gate's OWN ready verdict,
-// and the audit chain's OWN integrity verdict. Nothing is hardcoded and nothing
-// claims a "prêt"/"vérifiée" the source did not actually produce.
+// value is the live signal: the real agent count, the guard's OWN activity
+// counters, the release gate's OWN ready verdict, and the audit chain's OWN
+// integrity verdict. Nothing is hardcoded, nothing claims a "prêt"/"vérifiée"
+// the source did not actually produce, and the "temps réel" claim is witnessed
+// by client polling + a visible freshness stamp, not asserted.
 const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
   supervise: Activity,
-  evaluate: ShieldCheck,
+  secure: ShieldCheck,
+  evaluate: ListChecks,
   prove: Fingerprint,
 };
 
-// Tone → accent. `live`/`govern` are the neutral capability accents (cyan /
-// champagne); the PROOFS tones recolour by the real verification verdict. Status
-// colours stay reserved for real states — a gate holding an agent back is NOT red.
+// Tone → accent. `live`/`guard`/`govern` are the neutral capability accents;
+// `stale` (amber) marks a release verdict put back in play; the PROOFS tones
+// recolour by the real verification verdict. Status colours stay reserved for
+// real states — a gate holding an agent back is NOT red.
 const TONE_COLOR: Record<PillarTone, string> = {
   live: "var(--cyan)",
+  guard: "var(--cyan)",
   govern: "var(--champagne)",
+  stale: "var(--amber)",
   verified: "var(--success)",
-  unverified: "#F87171",
+  unverified: "var(--danger)",
   neutral: "var(--text-secondary)",
 };
 
-function PillarColumn({ t, pillar }: { t: T; pillar: Pillar }) {
+//: Freshness after which the "temps réel" claim visibly ages (dot dims, stamp
+//: switches to minutes) — three missed polls, not a guess.
+const STALE_AFTER_MS = 90_000;
+
+function PillarColumn({
+  t,
+  pillar,
+  freshness,
+  dimmed = false,
+}: {
+  t: T;
+  pillar: Pillar;
+  /** Relative age of the data ("à l'instant", "il y a 2 min") — supervise/prove. */
+  freshness?: string;
+  /** True when the last successful fetch is older than STALE_AFTER_MS. */
+  dimmed?: boolean;
+}) {
   // next-intl types t() against literal keys; the pillar keys are computed, so we
   // read through a loosened call. The keys are real — the render test proves no
   // raw "signal.*" leaks to the screen.
@@ -333,22 +360,38 @@ function PillarColumn({ t, pillar }: { t: T; pillar: Pillar }) {
   const accent = TONE_COLOR[pillar.tone];
   const title = tr(pillar.titleKey);
   const state = tr(pillar.stateKey, pillar.stateVars);
-  // Only the PROOFS state is recoloured by its verdict (§5); the count and the
-  // gate line stay in primary text so a held-back agent is never painted red.
+  // Only the PROOFS state is recoloured by its verdict (§5); counts and gate
+  // lines stay in primary text so a held-back agent is never painted red.
   const stateColor = pillar.key === "prove" ? accent : "var(--text-primary)";
   return (
-    <div className="flex flex-1 flex-col items-center gap-[7px] px-[16px] py-[15px] text-center">
+    <div className="flex flex-1 flex-col items-center gap-[7px] px-[14px] py-[15px] text-center">
       {/* One complete accessible label — the SR hears "name : state" as a unit
           (§8); the visible title/state are decorative duplicates, so the meaning
-          never rides on colour or icon alone. */}
-      <span className="sr-only">{`${title} : ${state}`}</span>
-      <span
-        aria-hidden="true"
-        className="flex items-center justify-center gap-[7px] font-semibold text-[10.5px] uppercase leading-[1.25] tracking-[0.11em]"
-        style={{ color: accent }}
-      >
-        <Icon className="h-[14px] w-[14px] shrink-0 stroke-[1.9]" />
-        {title}
+          never rides on colour or icon alone. The ⓘ button stays OUTSIDE the
+          aria-hidden spans: it is interactive, not decoration. */}
+      <span className="sr-only">{`${title} : ${state}${freshness ? ` · ${freshness}` : ""}`}</span>
+      <span className="flex items-center justify-center gap-[6px]">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex items-center justify-center gap-[7px] font-semibold text-[10.5px] uppercase leading-[1.25] tracking-[0.11em]",
+            dimmed && "opacity-60",
+          )}
+          style={{ color: accent }}
+        >
+          <Icon className="h-[14px] w-[14px] shrink-0 stroke-[1.9]" />
+          {title}
+        </span>
+        <MetricInfo
+          title={title}
+          what={tr(`signal.info.${pillar.key}.what`)}
+          how={tr(`signal.info.${pillar.key}.how`)}
+          source={
+            <Link className="underline underline-offset-2" href="/comprendre">
+              {tr("signal.info.seeForYourself")}
+            </Link>
+          }
+        />
       </span>
       <span
         aria-hidden="true"
@@ -356,14 +399,57 @@ function PillarColumn({ t, pillar }: { t: T; pillar: Pillar }) {
         style={{ color: stateColor }}
       >
         {state}
+        {freshness ? (
+          <span className={cn("text-[var(--text-secondary)]", dimmed && "opacity-70")}>
+            {` · ${freshness}`}
+          </span>
+        ) : null}
       </span>
     </div>
   );
 }
 
-export function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
-  const pillars = launcherPillars(signal);
-  if (!pillars || !signal) {
+export function SignalBand({
+  t,
+  signal,
+  pollMs = 30_000,
+}: {
+  t: T;
+  signal: LauncherSignal | null;
+  /** Client polling interval; 0 disables (tests, static rendering). */
+  pollMs?: number;
+}) {
+  // The SSR signal seeds the band; polling keeps it real afterwards. On a failed
+  // poll the last honest state stays and the freshness stamp ages visibly —
+  // "temps réel" degrades in the open instead of silently lying.
+  const [live, setLive] = useState<PillarSignal | null>(signal);
+  const [fetchedAt, setFetchedAt] = useState<number>(() => Date.now());
+  const [now, setNow] = useState<number>(() => Date.now());
+  // A NEW server prop reseeds the band (client navigation, rerender with fresh
+  // data) — without this, the state initializer would pin the first signal
+  // forever and a later prop would be silently ignored.
+  useEffect(() => {
+    setLive(signal);
+    setFetchedAt(Date.now());
+  }, [signal]);
+  useEffect(() => {
+    if (pollMs <= 0) return;
+    const poll = setInterval(() => {
+      void fetchLauncherSignal().then((next) => {
+        if (next) {
+          setLive(next);
+          setFetchedAt(Date.now());
+        }
+      });
+    }, pollMs);
+    const tick = setInterval(() => setNow(Date.now()), 10_000);
+    return () => {
+      clearInterval(poll);
+      clearInterval(tick);
+    };
+  }, [pollMs]);
+  const pillars = launcherPillars(live);
+  if (!pillars || !live) {
     return (
       <div className="mt-7 inline-flex items-center gap-[7px] rounded-full border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_70%,transparent)] px-[12px] py-[6px] text-[12px] leading-none text-[var(--text-secondary)]">
         <span
@@ -374,16 +460,28 @@ export function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null 
       </div>
     );
   }
+  const ageMs = Math.max(0, now - fetchedAt);
+  const dimmed = ageMs > STALE_AFTER_MS;
+  const freshness = dimmed
+    ? t("signal.minutesAgo", { m: Math.max(1, Math.round(ageMs / 60_000)) })
+    : t("signal.justNow");
   // The socle line appears ONLY when the gate is really holding some agents back
   // (real blocked count) — it explains why "prêts < total", never a blanket claim.
-  const showSocle = signal.agentsWithRelease > 0 && signal.passedAgents < signal.agentsWithRelease;
+  const showSocle = live.agentsWithRelease > 0 && live.passedAgents < live.agentsWithRelease;
   return (
-    <div className="mt-8 flex w-full max-w-[940px] flex-col items-center gap-[16px]">
-      {/* One bounded band, three capability columns — compact, stacks on mobile,
-          never three big cards. */}
+    <div className="mt-8 flex w-full max-w-[1060px] flex-col items-center gap-[16px]">
+      {/* One bounded band, four capability columns — compact, stacks on mobile,
+          never four big cards. The freshness stamp rides on the two columns whose
+          claim is temporal (supervise: "temps réel"; prove: "à tout instant"). */}
       <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-x sm:divide-y-0">
         {pillars.map((pillar) => (
-          <PillarColumn key={pillar.key} t={t} pillar={pillar} />
+          <PillarColumn
+            key={pillar.key}
+            t={t}
+            pillar={pillar}
+            freshness={pillar.key === "supervise" || pillar.key === "prove" ? freshness : undefined}
+            dimmed={dimmed}
+          />
         ))}
       </div>
       {showSocle ? (

@@ -331,6 +331,18 @@ export const AuditIntegritySchema = z.object({
 });
 export type AuditIntegrity = z.infer<typeof AuditIntegritySchema>;
 
+// Guard-activity aggregate for the public launcher band (ADR 0009): user turns
+// checked and denials recorded since local midnight, each from its own witness
+// (transcript / audit trail). `available: false` carries no counters — the band
+// renders "compteurs indisponibles", never a fabricated zero.
+export const GuardActivitySchema = z.object({
+  available: z.boolean(),
+  checked_today: z.number().int().nonnegative().optional(),
+  blocked_today: z.number().int().nonnegative().optional(),
+  since: z.string().optional(),
+});
+export type GuardActivity = z.infer<typeof GuardActivitySchema>;
+
 export const AuditCountSchema = z.object({
   key: z.string(),
   count: z.number().int(),
