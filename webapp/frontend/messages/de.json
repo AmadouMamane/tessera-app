@@ -7314,22 +7314,28 @@
     "demoBadge": "Demonstration",
     "demoTitle": "Ihre KI-Agenten, unter Kontrolle",
     "demoSubtitle": "Zwei Ebenen: die Anwendungen, die mit Ihren Kunden sprechen, und das Cockpit, das sie steuert. Öffnen Sie eine davon.",
-    "fleetNote": "Drei Agenten unter Prüfung, hinter dem Kundenassistenten und der Inkasso-Konsole.",
+    "fleetNote": "Drei überwachte Agenten, hinter dem Kundenassistenten und dem Inkasso-Bereich.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal nicht verfügbar",
-      "controlActive": "Aktive Überwachung",
-      "releasableRollup": "{passed} von {total} produktionsbereit",
-      "gateContext": "Die Sicherheitsbasis blockiert jede Produktivsetzung, wenn auch nur ein kritischer Fall fehlschlägt.",
+      "gateContext": "Die Sicherheitsbasis blockiert jede Freigabe, sobald ein nicht abdingbarer kritischer Fall fehlschlägt.",
       "agentReleasable": "Grün",
       "agentBlocked": "Blockiert",
       "agentUnknown": "Nicht bewertet",
       "agentRate": "{rate} % Erfolg auf dem eigenen Prüfsatz ({passed}/{total})",
       "agentStale": "Veraltet · neu prüfen",
       "perAgentLegend": "Jede Quote bezieht sich auf den eigenen Prüfsatz des Agenten — nicht zwischen Agenten vergleichbar. Nur die Sicherheit (gleiche Fälle für alle) ist es.",
-      "agentsUnderReview": "{count} Agenten unter Prüfung",
       "agentSecurity": "Sicherheit {passed}/{total} Fälle konform",
-      "agentEvaluatedOn": "Geprüft am {date}"
+      "agentEvaluatedOn": "Geprüft am {date}",
+      "pillarSupervise": "Überwachung in Echtzeit",
+      "agentsSupervised": "{count, plural, one {# überwachter Agent} other {# überwachte Agenten}}",
+      "pillarEvaluate": "Kontinuierliche Evaluierung und Sicherheit",
+      "releaseGatesReady": "Release-Gates aktiv · {ready} von {total} bereit",
+      "evaluationsActive": "Evaluierungen aktiv",
+      "pillarProve": "Nachweise jederzeit",
+      "integrityVerified": "Integritätskette verifiziert",
+      "integrityUnverified": "Integritätskette nicht verifiziert",
+      "integrityUnavailable": "Verifizierung nicht verfügbar"
     },
     "demoLogin": {
       "note": "Demokonto",
@@ -7346,7 +7352,7 @@
       "badge": "Produkte",
       "access": "Freier Zugang",
       "title": "Fachbereiche",
-      "desc": "Die Benutzeroberflächen.",
+      "desc": "Die Oberflächen, über die Mitarbeiter und Kunden mit den KI-Agenten interagieren.",
       "reveal": "Bereiche öffnen",
       "collapse": "Einklappen"
     },
@@ -7389,7 +7395,7 @@
     "recouvrement": {
       "badge": "Fachbereich",
       "kind": "Intern",
-      "title": "Inkasso-Konsole",
+      "title": "Inkasso-Bereich",
       "desc": "Das interne Fachwerkzeug des Inkasso-Sachbearbeiters: Sprechen Sie mit dem Inkasso-Agenten (Mahnungen, Rückstände, Tilgungspläne).",
       "cta": "Zum Inkasso-Assistenten",
       "authNote": "Anmeldung mit Inkasso-Rolle erforderlich",
@@ -7420,7 +7426,7 @@
           "desc": "Überwachen Sie Qualität, Sicherheit und Leistung"
         },
         "management": {
-          "title": "Aktion",
+          "title": "Aktionen",
           "desc": "Handeln Sie bei Vorfällen und im Betrieb"
         },
         "configuration": {
@@ -7428,8 +7434,8 @@
           "desc": "Konfigurieren Sie Agenten, Modelle und Regeln"
         },
         "platform": {
-          "title": "Plattform",
-          "desc": "Verwalten Sie Benutzer und Integrationen"
+          "title": "Nachweise",
+          "desc": "Sehen Sie Nachweise und das Audit-Protokoll ein."
         }
       }
     },
@@ -9207,7 +9213,7 @@
         ]
       }
     ],
-    "launcherOrientation": "Tessera steuert die KI-Agenten einer Demonstrationsbank. Waehlen Sie eine Welt: die Bank, wie ihre Kunden sie sehen, oder das Cockpit, das ihre Agenten regiert.",
+    "launcherOrientation": "Erkunden Sie die Fachanwendungen der Bank oder steuern Sie ihre KI-Agenten über das Governance-Cockpit.",
     "launcherLink": "Tessera in 3 Minuten verstehen",
     "loginWelcome": "Dies ist eine Demonstration: treten Sie mit einem Klick in einer Testrolle ein.",
     "helpMenu": "Hilfe",

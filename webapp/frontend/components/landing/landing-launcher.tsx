@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  AlertTriangle,
+  Activity,
   ArrowRight,
   Boxes,
+  Fingerprint,
   Lock,
   LockOpen,
   ShieldBan,
   ShieldCheck,
-  Users,
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -21,6 +21,12 @@ import { Link, useRouter } from "@/i18n/navigation";
 import type { Role } from "@/lib/auth/accounts";
 import { demoLoginNeeded } from "@/lib/auth/roles";
 import { cn } from "@/lib/cn";
+import {
+  type Pillar,
+  type PillarKey,
+  type PillarTone,
+  launcherPillars,
+} from "@/lib/launcher-pillars";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
 
 export interface DemoCred {
@@ -218,7 +224,7 @@ export function LandingLauncher({
               flat surface list. The business card links to the /espaces directory
               (symmetric to the Flotte list→détail); the control card enters the
               cockpit. Individual business surfaces live in /espaces, never inline. */}
-          <section className="mt-14 grid w-full max-w-[1040px] grid-cols-1 gap-7 lg:grid-cols-2">
+          <section className="mt-14 grid w-full max-w-[1220px] grid-cols-1 gap-7 lg:grid-cols-2">
             {/* Cockpit FIRST = the thesis (control plane is the value; business
                 apps are deliberately thin). Primary card; the métier card is
                 secondary (outline CTA), so the hierarchy matches the order. */}
@@ -295,22 +301,71 @@ function DemoEnterButton({
   );
 }
 
-// Real public-safe signal band (ADR 0009). Renders a "live" pulse ONLY when real
-// data is present; honest "indisponible" otherwise.
-//
-// HONESTY OF SCOPE: a release verdict and a pass rate belong to ONE agent, never
-// to the fleet. The only legitimate fleet-level number is the verdict rollup —
-// how many agents are releasable. So the headline is "Contrôle actif ·
-// {passed}/{total} agents libérables" (the gate is doing its job — positive —
-// AND the count it currently clears). The per-agent verdict + strict pass rate
-// live in the footer below; WHICH case failed (the failure category) is never
-// shown publicly — it lives behind the operator gate.
-function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
-  const neutral =
-    "inline-flex items-center gap-[7px] rounded-full border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_70%,transparent)] px-[12px] py-[6px] text-[12px] leading-none text-[var(--text-secondary)]";
-  if (!signal) {
+// Real public-safe signal band (ADR 0009). It presents Tessera's three product
+// pillars — Supervise · Evaluate & secure · Prove — each under its REAL system
+// state (or a single honest "indisponible" when there is no signal at all). Every
+// value is the live signal: the real agent count, the gate's OWN ready verdict,
+// and the audit chain's OWN integrity verdict. Nothing is hardcoded and nothing
+// claims a "prêt"/"vérifiée" the source did not actually produce.
+const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
+  supervise: Activity,
+  evaluate: ShieldCheck,
+  prove: Fingerprint,
+};
+
+// Tone → accent. `live`/`govern` are the neutral capability accents (cyan /
+// champagne); the PROOFS tones recolour by the real verification verdict. Status
+// colours stay reserved for real states — a gate holding an agent back is NOT red.
+const TONE_COLOR: Record<PillarTone, string> = {
+  live: "var(--cyan)",
+  govern: "var(--champagne)",
+  verified: "var(--success)",
+  unverified: "#F87171",
+  neutral: "var(--text-secondary)",
+};
+
+function PillarColumn({ t, pillar }: { t: T; pillar: Pillar }) {
+  // next-intl types t() against literal keys; the pillar keys are computed, so we
+  // read through a loosened call. The keys are real — the render test proves no
+  // raw "signal.*" leaks to the screen.
+  const tr = t as unknown as (key: string, values?: Record<string, number>) => string;
+  const Icon = PILLAR_ICON[pillar.key];
+  const accent = TONE_COLOR[pillar.tone];
+  const title = tr(pillar.titleKey);
+  const state = tr(pillar.stateKey, pillar.stateVars);
+  // Only the PROOFS state is recoloured by its verdict (§5); the count and the
+  // gate line stay in primary text so a held-back agent is never painted red.
+  const stateColor = pillar.key === "prove" ? accent : "var(--text-primary)";
+  return (
+    <div className="flex flex-1 flex-col items-center gap-[7px] px-[16px] py-[15px] text-center">
+      {/* One complete accessible label — the SR hears "name : state" as a unit
+          (§8); the visible title/state are decorative duplicates, so the meaning
+          never rides on colour or icon alone. */}
+      <span className="sr-only">{`${title} : ${state}`}</span>
+      <span
+        aria-hidden="true"
+        className="flex items-center justify-center gap-[7px] font-semibold text-[10.5px] uppercase leading-[1.25] tracking-[0.11em]"
+        style={{ color: accent }}
+      >
+        <Icon className="h-[14px] w-[14px] shrink-0 stroke-[1.9]" />
+        {title}
+      </span>
+      <span
+        aria-hidden="true"
+        className="font-medium text-[13px] leading-[1.35]"
+        style={{ color: stateColor }}
+      >
+        {state}
+      </span>
+    </div>
+  );
+}
+
+export function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
+  const pillars = launcherPillars(signal);
+  if (!pillars || !signal) {
     return (
-      <div className={cn("mt-7", neutral)}>
+      <div className="mt-7 inline-flex items-center gap-[7px] rounded-full border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_70%,transparent)] px-[12px] py-[6px] text-[12px] leading-none text-[var(--text-secondary)]">
         <span
           className="h-[7px] w-[7px] rounded-full bg-[var(--text-secondary)] opacity-50"
           aria-hidden="true"
@@ -319,59 +374,19 @@ function SignalBand({ t, signal }: { t: T; signal: LauncherSignal | null }) {
       </div>
     );
   }
-  // The verdict rollup is the only fleet number. Its tone is the honest verdict:
-  // green when every agent clears the gate, red while none do, amber in between.
-  const allReleasable =
-    signal.agentsWithRelease > 0 && signal.passedAgents === signal.agentsWithRelease;
-  const noneReleasable = signal.agentsWithRelease > 0 && signal.passedAgents === 0;
-  const rollupColor = allReleasable
-    ? "var(--success)"
-    : noneReleasable
-      ? "#F87171"
-      : "var(--amber)";
+  // The socle line appears ONLY when the gate is really holding some agents back
+  // (real blocked count) — it explains why "prêts < total", never a blanket claim.
+  const showSocle = signal.agentsWithRelease > 0 && signal.passedAgents < signal.agentsWithRelease;
   return (
-    <div className="mt-8 flex w-full max-w-[840px] flex-col items-center gap-[18px]">
-      {/* One bounded status band — three segments, one fact each: control is
-          active (the green dot is the live indicator), how many agents it holds
-          under review, and the only fleet-level verdict number (how many are
-          cleared for production). */}
+    <div className="mt-8 flex w-full max-w-[940px] flex-col items-center gap-[16px]">
+      {/* One bounded band, three capability columns — compact, stacks on mobile,
+          never three big cards. */}
       <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-x sm:divide-y-0">
-        <span
-          className="flex flex-1 items-center justify-center gap-[8px] px-[16px] py-[14px] text-center text-[13px] font-semibold leading-[1.3]"
-          style={{ color: "var(--success)" }}
-        >
-          <span
-            className="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--success)]"
-            aria-hidden="true"
-          />
-          {t("signal.controlActive")}
-        </span>
-        <span className="flex flex-1 items-center justify-center gap-[8px] px-[16px] py-[14px] text-center text-[13px] leading-[1.3] text-[var(--text-secondary)]">
-          <Users className="h-[15px] w-[15px] shrink-0 stroke-[1.7]" aria-hidden="true" />
-          {t("signal.agentsUnderReview", { count: signal.agentsCount })}
-        </span>
-        {signal.agentsWithRelease > 0 ? (
-          <span
-            className="flex flex-1 items-center justify-center gap-[8px] px-[16px] py-[14px] text-center text-[13px] font-semibold leading-[1.3]"
-            style={{ color: rollupColor }}
-          >
-            {allReleasable ? (
-              <ShieldCheck className="h-[15px] w-[15px] shrink-0 stroke-[1.8]" aria-hidden="true" />
-            ) : (
-              <AlertTriangle
-                className="h-[15px] w-[15px] shrink-0 stroke-[1.8]"
-                aria-hidden="true"
-              />
-            )}
-            {t("signal.releasableRollup", {
-              passed: signal.passedAgents,
-              total: signal.agentsWithRelease,
-            })}
-          </span>
-        ) : null}
+        {pillars.map((pillar) => (
+          <PillarColumn key={pillar.key} t={t} pillar={pillar} />
+        ))}
       </div>
-      {/* The socle line, under the band: why a "0" is not a failure of control. */}
-      {!allReleasable && signal.agentsWithRelease > 0 ? (
+      {showSocle ? (
         <p className="flex items-center gap-[7px] text-center text-[12px] leading-[1.5] text-[var(--text-secondary)]">
           <ShieldBan className="h-[13px] w-[13px] shrink-0" aria-hidden="true" />
           {t("signal.gateContext")}
@@ -413,7 +428,7 @@ function PlaneHeader({
   gated?: boolean;
 }) {
   return (
-    <div className="max-w-[440px]">
+    <div className="max-w-[540px]">
       <div className="flex items-center gap-[14px]">
         <HexBadge className={cn(a.icon, a.soft)}>{icon}</HexBadge>
         <span className={cn("text-[12px] font-semibold uppercase tracking-[0.16em]", a.tone)}>

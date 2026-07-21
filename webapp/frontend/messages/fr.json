@@ -7316,22 +7316,28 @@
     "demoBadge": "Démonstration",
     "demoTitle": "Vos agents IA, sous contrôle",
     "demoSubtitle": "Deux plans : les applications qui parlent à vos clients, et le cockpit qui les gouverne. Ouvrez l’un ou l’autre.",
-    "fleetNote": "Trois agents sous revue, derrière l’assistant client et la console recouvrement.",
+    "fleetNote": "Trois agents supervisés, derrière l’assistant client et l’espace recouvrement.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal indisponible",
-      "controlActive": "Supervision active",
-      "releasableRollup": "{passed} sur {total} prêts pour la production",
-      "gateContext": "Le socle de sécurité bloque toute mise en production si un seul cas critique échoue.",
+      "gateContext": "Le socle de sécurité bloque toute promotion dès qu’un cas critique non dérogeable échoue.",
       "agentReleasable": "Au vert",
       "agentBlocked": "Bloqué",
       "agentUnknown": "Non évalué",
       "agentRate": "{rate} % de réussite sur son jeu d’évaluation ({passed}/{total})",
       "agentStale": "Périmé · re-éval",
       "perAgentLegend": "Chaque taux porte sur le jeu propre de l’agent — non comparable d’un agent à l’autre. Seule la sécurité (mêmes cas pour tous) l’est.",
-      "agentsUnderReview": "{count} agents sous revue",
       "agentSecurity": "sécurité {passed}/{total} cas conformes",
-      "agentEvaluatedOn": "Évalué le {date}"
+      "agentEvaluatedOn": "Évalué le {date}",
+      "pillarSupervise": "Supervision en temps réel",
+      "agentsSupervised": "{count, plural, one {# agent supervisé} other {# agents supervisés}}",
+      "pillarEvaluate": "Évaluation et sécurité continues",
+      "releaseGatesReady": "Release gates actifs · {ready} sur {total} prêts",
+      "evaluationsActive": "Évaluations actives",
+      "pillarProve": "Preuves à tout instant",
+      "integrityVerified": "Chaîne d’intégrité vérifiée",
+      "integrityUnverified": "Chaîne non vérifiée",
+      "integrityUnavailable": "Vérification indisponible"
     },
     "demoLogin": {
       "note": "Compte de démonstration",
@@ -7348,7 +7354,7 @@
       "badge": "Produits",
       "access": "Accès libre",
       "title": "Espaces métier",
-      "desc": "Les interfaces utilisateurs.",
+      "desc": "Les interfaces où collaborateurs et clients interagissent avec les agents IA.",
       "reveal": "Ouvrir les espaces",
       "collapse": "Réduire"
     },
@@ -7391,7 +7397,7 @@
     "recouvrement": {
       "badge": "Métier",
       "kind": "Interne",
-      "title": "Console recouvrement",
+      "title": "Espace recouvrement",
       "desc": "L’outil métier interne du chargé de recouvrement : échangez avec l’agent recouvrement (relances, impayés, échéanciers).",
       "cta": "Accéder à l’assistant de recouvrement",
       "authNote": "Connexion rôle recouvrement requise",
@@ -7422,7 +7428,7 @@
           "desc": "Surveillez la qualité, la sécurité et la performance"
         },
         "management": {
-          "title": "Action",
+          "title": "Actions",
           "desc": "Agissez sur les incidents et les opérations"
         },
         "configuration": {
@@ -7430,8 +7436,8 @@
           "desc": "Configurez agents, modèles et règles"
         },
         "platform": {
-          "title": "Plateforme",
-          "desc": "Administrez les utilisateurs et les intégrations"
+          "title": "Preuves",
+          "desc": "Consultez les preuves et le journal d’audit."
         }
       }
     },
@@ -9209,7 +9215,7 @@
         ]
       }
     ],
-    "launcherOrientation": "Tessera pilote les agents IA d'une banque de démonstration. Choisissez un monde : la banque telle que ses clients la voient, ou le cockpit qui gouverne ses agents.",
+    "launcherOrientation": "Explorez les expériences métier de la banque ou pilotez ses agents IA depuis le cockpit de gouvernance.",
     "launcherLink": "Comprendre Tessera en 3 minutes",
     "loginWelcome": "Ceci est une démonstration : entrez en un clic avec un rôle d'essai.",
     "helpMenu": "Aide",

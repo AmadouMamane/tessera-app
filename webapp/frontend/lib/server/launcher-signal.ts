@@ -1,5 +1,8 @@
 import "server-only";
 
+import { AuditIntegritySchema } from "@/lib/api/schemas";
+
+import { backendHeaders, backendUrl } from "./backend";
 import { loadFleet } from "./fleet";
 
 /**
@@ -47,14 +50,39 @@ export interface LauncherSignal {
   agentsWithRelease: number;
   gateVerdict: "pass" | "blocked" | "unknown";
   agents: LauncherAgentSignal[];
+  // Real, fleet-wide audit-chain content-integrity verdict (tamper-evidence),
+  // read from /audit/integrity and surfaced ONLY as an aggregate boolean
+  // (ADR 0009 showcase-safe): the chain re-derives (true), a proven break
+  // (false), or unavailable (null → the launcher shows an honest "vérification
+  // indisponible", never a fabricated "vérifiée"). NEVER inferred from the mere
+  // existence of audit entries.
+  integrityVerified: boolean | null;
 }
 
 function asHealth(value: string): AgentHealth {
   return value === "good" || value === "warn" || value === "crit" ? value : "unknown";
 }
 
+/**
+ * Fleet-wide audit-chain content-integrity verdict (tamper-evidence), or `null`
+ * when the check is unreachable — never a fabricated "verified". The launcher
+ * surfaces ONLY this aggregate boolean (ADR 0009), never the audit trail itself.
+ */
+async function loadIntegrityVerified(): Promise<boolean | null> {
+  try {
+    const res = await fetch(`${backendUrl()}/audit/integrity`, {
+      cache: "no-store",
+      headers: backendHeaders({ Accept: "application/json" }),
+    });
+    if (!res.ok) return null;
+    return AuditIntegritySchema.parse(await res.json()).verified;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
-  const fleet = await loadFleet();
+  const [fleet, integrityVerified] = await Promise.all([loadFleet(), loadIntegrityVerified()]);
   if (!fleet?.available || !fleet.agents || fleet.agents.length === 0) return null;
 
   const agents: LauncherAgentSignal[] = fleet.agents.map((a) => {
@@ -92,5 +120,6 @@ export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
     agentsWithRelease: withRelease.length,
     gateVerdict,
     agents,
+    integrityVerified,
   };
 }

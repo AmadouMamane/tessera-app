@@ -7314,22 +7314,28 @@
     "demoBadge": "Demonstration",
     "demoTitle": "Your AI agents, under control",
     "demoSubtitle": "Two planes: the applications that talk to your customers, and the cockpit that governs them. Open either one.",
-    "fleetNote": "Three agents under review, behind the customer assistant and the collections console.",
+    "fleetNote": "Three supervised agents, behind the customer assistant and the collections space.",
     "signal": {
       "live": "Live",
       "unavailable": "Signal unavailable",
-      "controlActive": "Active supervision",
-      "releasableRollup": "{passed} of {total} ready for production",
-      "gateContext": "The security baseline blocks any production release if a single critical case fails.",
+      "gateContext": "The security baseline blocks any promotion as soon as a non-waivable critical case fails.",
       "agentReleasable": "Green",
       "agentBlocked": "Blocked",
       "agentUnknown": "Not evaluated",
       "agentRate": "{rate}% pass rate on its own evaluation set ({passed}/{total})",
       "agentStale": "Stale · re-eval",
       "perAgentLegend": "Each rate is on the agent's own set — not comparable across agents. Only security (the same cases for all) is.",
-      "agentsUnderReview": "{count} agents under review",
       "agentSecurity": "security {passed}/{total} cases compliant",
-      "agentEvaluatedOn": "Evaluated on {date}"
+      "agentEvaluatedOn": "Evaluated on {date}",
+      "pillarSupervise": "Real-time supervision",
+      "agentsSupervised": "{count, plural, one {# supervised agent} other {# supervised agents}}",
+      "pillarEvaluate": "Continuous evaluation and security",
+      "releaseGatesReady": "Release gates active · {ready} of {total} ready",
+      "evaluationsActive": "Evaluations active",
+      "pillarProve": "Evidence at any point in time",
+      "integrityVerified": "Integrity chain verified",
+      "integrityUnverified": "Integrity chain not verified",
+      "integrityUnavailable": "Verification unavailable"
     },
     "demoLogin": {
       "note": "Demo account",
@@ -7346,7 +7352,7 @@
       "badge": "Products",
       "access": "Open access",
       "title": "Business spaces",
-      "desc": "The user interfaces.",
+      "desc": "The interfaces where staff and customers interact with the AI agents.",
       "reveal": "Open the spaces",
       "collapse": "Collapse"
     },
@@ -7389,7 +7395,7 @@
     "recouvrement": {
       "badge": "Business",
       "kind": "Internal",
-      "title": "Collections console",
+      "title": "Collections space",
       "desc": "The collections officer’s internal business tool: talk to the recouvrement agent (dunning, arrears, repayment schedules).",
       "cta": "Open the collections assistant",
       "authNote": "Collections role sign-in required",
@@ -7420,7 +7426,7 @@
           "desc": "Monitor quality, security and performance"
         },
         "management": {
-          "title": "Action",
+          "title": "Actions",
           "desc": "Act on incidents and operations"
         },
         "configuration": {
@@ -7428,8 +7434,8 @@
           "desc": "Configure agents, models and rules"
         },
         "platform": {
-          "title": "Platform",
-          "desc": "Administer users and integrations"
+          "title": "Proofs",
+          "desc": "Review the proofs and the audit log."
         }
       }
     },
@@ -9207,7 +9213,7 @@
         ]
       }
     ],
-    "launcherOrientation": "Tessera pilots the AI agents of a demonstration bank. Choose a world: the bank as its customers see it, or the cockpit that governs its agents.",
+    "launcherOrientation": "Explore the bank’s business experiences, or steer its AI agents from the governance cockpit.",
     "launcherLink": "Understand Tessera in 3 minutes",
     "loginWelcome": "This is a demonstration: enter with one click using a trial role.",
     "helpMenu": "Help",
