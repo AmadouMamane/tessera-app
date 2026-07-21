@@ -29,9 +29,9 @@ updates this file after every step. A resuming session reads this first, then co
 
 ## Audit 360 remediation — 2026-07-21
 
-**Worktree / branch :** `agents/codex-audit`, `codex/audit-360-2026-07-21`, HEAD de travail
-`73127284` (lignée `main` auditée à `6da88d9f` + lot Fable) — tranche encore non fusionnée et non
-publiée. Le checkout `main` a avancé séparément à `cf405f94` et doit être réconcilié avant fusion.
+**Worktree / branch :** `agents/codex-audit`, `codex/audit-360-2026-07-21`. Remédiation
+`5a8a1d8c`, puis `main` à `cf405f94` réconcilié par le merge `accfd771` — tranche encore non
+fusionnée dans `main` et non publiée.
 
 - **Vérité mécanique fermée :** aucune mutation de `conn.row_factory`; intégration
   `40 pass / 13 skips explicites ClickHouse-Langfuse / 0 fail`; budget Vertex streaming
@@ -47,9 +47,9 @@ publiée. Le checkout `main` a avancé séparément à `cf405f94` et doit être 
 - **Déploiement :** workflow de deux images Cloud Run avec provenance/SBOM, secrets frontend,
   IAM borné, smokes et job Terraform bloquant ; `terraform fmt/init/validate` verts. Limes dispose
   d'une chaîne wheel/sdist + OIDC PyPI + attestations PEP 740/Sigstore ; gate Limes `48` tests vert.
-- **Gate de la tranche :** deux passes vertes sur le même arbre `196e5ab0b17e` avant clôture
-  documentaire : `2 515` tests Python, `425` frontend, Ruff, format, mypy strict, TypeScript et
-  Biome sans erreur ; couverture `83,5 %`.
+- **Gate de la tranche :** deux passes vertes avant réconciliation, puis gate de livraison relancé
+  deux fois sur l'arbre réconcilié : `2 517` tests Python, `425` frontend, Ruff, format, mypy
+  strict, TypeScript et Biome sans erreur ; couverture `83,5 %`.
 - **Bascule restante, volontairement non simulée :** fusionner la branche puis redémarrer les
   serveurs de référence depuis `main` ; appliquer Terraform avec certificat d'un TSA réellement
   qualifié ; configurer le trusted publisher PyPI puis fusionner/taguer Limes.
