@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchSystemProfile } from "@/lib/api/client";
 import type { SystemProfile as SystemData } from "@/lib/api/schemas";
@@ -169,7 +170,9 @@ function SystemKpi({
           ) : null}
         </div>
       )}
-      <p className="mt-0.5 truncate text-[0.58rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
+      <Truncate as="p" className="mt-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]">
+        {kpi.sub}
+      </Truncate>
       {kpi.kind === "chart" ? (
         <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
       ) : (

@@ -32,6 +32,7 @@ import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import {
   fetchIncidentsOverview,
@@ -614,9 +615,12 @@ function Catalog({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: () => v
           >
             <div className="flex items-center gap-1.5">
               <PlayCircle className="h-3.5 w-3.5 shrink-0 text-[#87bfff]" />
-              <span className="truncate text-[0.72rem] font-medium text-[var(--tessera-text)]">
+              <Truncate
+                full={pb.name}
+                className="text-[0.72rem] font-medium text-[var(--tessera-text)]"
+              >
                 {pb.name}
-              </span>
+              </Truncate>
             </div>
             <p className="line-clamp-2 text-[0.62rem] leading-tight text-[var(--tessera-text-muted)]">
               {pb.desc}
@@ -642,7 +646,9 @@ function RecentIncidents({ t, data }: { t: T; data: Data }) {
           <li key={inc.id} className="flex items-center gap-2 text-[0.72rem]">
             <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", SEV_DOT[inc.severity])} />
             <span className="font-mono text-[0.66rem] text-[#87bfff]">{inc.id}</span>
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{inc.label}</span>
+            <Truncate full={inc.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+              {inc.label}
+            </Truncate>
             <SevBadge severity={inc.severity} t={t} />
             <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
               {inc.time}
@@ -697,7 +703,9 @@ function ControlCases({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: ()
         {data.control_cases.map((c) => (
           <li key={c.id} className="flex items-center gap-2 text-[0.72rem]">
             <span className="font-mono text-[0.66rem] text-[var(--tessera-green)]">{c.id}</span>
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{c.label}</span>
+            <Truncate full={c.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+              {c.label}
+            </Truncate>
             <span className="shrink-0 text-[0.66rem] text-[var(--tessera-text-muted)]">
               {t("triage.assoc", { n: c.assoc })}
             </span>
@@ -747,9 +755,12 @@ function RunningPlaybook({ t, data, className }: { t: T; data: Data; className?:
                   )}
                 />
               </div>
-              <span className="w-full truncate text-[0.6rem] text-[var(--tessera-text)]">
+              <Truncate
+                full={step.label}
+                className="w-full text-[0.6rem] text-[var(--tessera-text)]"
+              >
                 {step.label}
-              </span>
+              </Truncate>
               <span className="w-full truncate text-[0.55rem] tabular-nums text-[var(--tessera-text-muted)]">
                 {step.time || "—"}
               </span>
@@ -822,9 +833,12 @@ function Automations({ t, data, className }: { t: T; data: Data; className?: str
             className="flex flex-col gap-0.5 border-b border-[var(--tessera-border)]/60 pb-1.5 last:border-0 last:pb-0"
           >
             <div className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-[0.68rem] text-[var(--tessera-text)]">
+              <Truncate
+                full={a.rule}
+                className="min-w-0 flex-1 text-[0.68rem] text-[var(--tessera-text)]"
+              >
                 {a.rule}
-              </span>
+              </Truncate>
               <AutoStatus status={a.status} t={t} />
             </div>
             <div className="flex items-center gap-2 text-[0.6rem] text-[var(--tessera-text-muted)]">
@@ -926,7 +940,9 @@ function ResolutionBars({ t, data, className }: { t: T; data: Data; className?: 
         {data.resolution_by_playbook.map((b) => (
           <li key={b.name} className="flex flex-col gap-1 text-[0.68rem]">
             <div className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">{b.name}</span>
+              <Truncate full={b.name} className="min-w-0 text-[var(--tessera-text)]">
+                {b.name}
+              </Truncate>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
                 {b.pct}% · {b.ratio}
               </span>
@@ -990,10 +1006,18 @@ function Postmortems({
           >
             <div className="flex items-center gap-2 text-[0.7rem]">
               <span className="font-mono text-[0.64rem] text-[#87bfff]">{p.id}</span>
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{p.label}</span>
+              <Truncate full={p.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+                {p.label}
+              </Truncate>
               <span className="shrink-0 text-[0.6rem] text-emerald-300">{p.resolved}</span>
             </div>
-            <p className="truncate text-[0.62rem] text-[var(--tessera-text-muted)]">{p.rca}</p>
+            <Truncate
+              as="p"
+              full={p.rca}
+              className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+            >
+              {p.rca}
+            </Truncate>
           </li>
         ))}
       </ul>

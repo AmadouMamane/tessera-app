@@ -30,6 +30,7 @@ import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchCurationOverview, mutateCurationDecision } from "@/lib/api/client";
 import type { CurationOverview as CurationData } from "@/lib/api/schemas";
@@ -816,9 +817,9 @@ function QualitySignals({ t, data, className }: { t: T; data: Data; className?: 
         {data.quality_signals.map((s) => (
           <li key={s.key} className="flex flex-col gap-1 text-[0.66rem]">
             <div className="flex items-center justify-between gap-1.5">
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">
+              <Truncate full={t(`signal.${s.key}`)} className="min-w-0 text-[var(--tessera-text)]">
                 {t(`signal.${s.key}`)}
-              </span>
+              </Truncate>
               <Badge className={LEVEL_BADGE[s.level]}>{t(`level.${s.level}`)}</Badge>
             </div>
             <div className="flex items-center gap-1.5">
@@ -896,7 +897,9 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         <ul className="flex flex-col gap-1.5">
           {data.workflow.map((w) => (
             <li key={w.step} className="flex items-center gap-2 text-[0.7rem]">
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{w.step}</span>
+              <Truncate full={w.step} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+                {w.step}
+              </Truncate>
               <span className="font-mono tabular-nums text-[var(--tessera-text-muted)]">
                 {w.qty}
               </span>
@@ -1009,9 +1012,12 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
                   className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
                 >
                   <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-                  <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+                  <Truncate
+                    full={t(`quick.${q.key}`)}
+                    className="min-w-0 flex-1 text-[var(--tessera-text)]"
+                  >
                     {t(`quick.${q.key}`)}
-                  </span>
+                  </Truncate>
                 </Link>
               ) : (
                 <button
@@ -1263,7 +1269,9 @@ function Panel({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="flex min-w-0 items-center gap-1 text-[0.8rem] font-semibold text-[var(--tessera-text)]">
-          <span className="min-w-0 truncate">{title}</span>
+          <Truncate full={title} className="min-w-0">
+            {title}
+          </Truncate>
           {info}
         </h3>
         {action}
@@ -1285,7 +1293,9 @@ function KpiTile({
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
-        <span className="min-w-0 truncate">{label}</span>
+        <Truncate full={label} className="min-w-0">
+          {label}
+        </Truncate>
         {info}
       </p>
       <div className="mt-1 flex items-center gap-2">
@@ -1370,7 +1380,9 @@ function Donut({
           <li key={s.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.color }} />
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">{labelOf(s.key)}</span>
+              <Truncate full={labelOf(s.key)} className="min-w-0 text-[var(--tessera-text)]">
+                {labelOf(s.key)}
+              </Truncate>
             </span>
             <span className="pl-2.5 tabular-nums text-[var(--tessera-text-muted)]">
               {showCount ? `${s.count} · ` : ""}
@@ -1492,7 +1504,7 @@ function Chip({
   return (
     <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
       <Icon className={cn("h-3.5 w-3.5 shrink-0", tone)} />
-      <span className="truncate">{label}</span>
+      <Truncate full={label}>{label}</Truncate>
     </span>
   );
 }

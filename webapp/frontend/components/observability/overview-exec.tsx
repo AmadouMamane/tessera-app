@@ -18,6 +18,7 @@ import type { SignalRow } from "@/components/observability/signals-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Truncate } from "@/components/ui/truncate";
 import type {
   Calibration,
   FailedCasesReport,
@@ -1128,7 +1129,7 @@ function MiniBarRow({
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex items-center justify-between gap-2 text-[0.65rem]">
-        <span className="min-w-0 truncate">{label}</span>
+        <Truncate className="min-w-0">{label}</Truncate>
         <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{value}</span>
       </div>
       <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
@@ -1367,7 +1368,7 @@ export function RegressionsByRelease({
             {regs.map((r) => (
               <li key={r.model} className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-medium">{r.model}</span>
+                  <Truncate className="font-medium">{r.model}</Truncate>
                   <span className="shrink-0 tabular-nums text-red-500">
                     {Math.round(r.delta * 100)} pts
                   </span>

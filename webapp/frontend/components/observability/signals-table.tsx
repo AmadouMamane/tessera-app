@@ -7,6 +7,7 @@ import { Fragment, useMemo, useState } from "react";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import type {
   AnomalyReport,
   Calibration,
@@ -741,24 +742,22 @@ export function SignalsTable({
                             }`}
                           >
                             <td className="py-2 pr-2 pl-5 font-mono text-[var(--muted-foreground)]">
-                              <span className="block truncate" title={r.id}>
-                                {r.id}
-                              </span>
+                              <Truncate full={r.id}>{r.id}</Truncate>
                             </td>
                             <td className="px-2 py-2">
                               <div className="flex min-w-0 flex-col">
-                                <span
-                                  className="truncate font-medium text-[var(--foreground)]"
-                                  title={r.name}
+                                <Truncate
+                                  full={r.name}
+                                  className="font-medium text-[var(--foreground)]"
                                 >
                                   {r.name}
-                                </span>
-                                <span
-                                  className="truncate font-mono text-[0.65rem] text-[var(--muted-foreground)]"
-                                  title={r.metric}
+                                </Truncate>
+                                <Truncate
+                                  full={r.metric}
+                                  className="font-mono text-[0.65rem] text-[var(--muted-foreground)]"
                                 >
                                   {r.metric}
-                                </span>
+                                </Truncate>
                               </div>
                             </td>
                             <td className="px-2 py-2 text-[var(--muted-foreground)]">
@@ -1326,9 +1325,9 @@ export function SignalsRail({
                   <span className="shrink-0 font-mono text-[var(--tessera-green)]">
                     {c.case_id}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+                  <Truncate className="min-w-0 flex-1 text-[var(--muted-foreground)]">
                     {c.title}
-                  </span>
+                  </Truncate>
                   <Badge tone={SEV_BADGE[c.severity] ?? "neutral"}>{c.severity}</Badge>
                 </div>
               ))
@@ -1385,7 +1384,7 @@ export function SignalsRail({
               activity.slice(0, 3).map((a) => (
                 <div key={a.key} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
-                  <span className="min-w-0 flex-1 truncate text-[0.7rem]">{a.label}</span>
+                  <Truncate className="min-w-0 flex-1 text-[0.7rem]">{a.label}</Truncate>
                   <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
                     {a.detail}
                   </span>
@@ -1425,11 +1424,11 @@ function RailKV({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-[var(--muted-foreground)]">{k}</span>
-      {/* The rail is narrow and the value truncates; the title keeps it READABLE. A reason an
+      {/* The rail is narrow and the value truncates; the reveal keeps it READABLE. A reason an
           operator cannot finish reading ("org-wide par construc…") explains nothing. */}
-      <span className="truncate text-right" title={v}>
+      <Truncate full={v} className="text-right">
         {v}
-      </span>
+      </Truncate>
     </div>
   );
 }

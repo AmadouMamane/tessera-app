@@ -29,6 +29,7 @@ import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchCompliance } from "@/lib/api/client";
 import type {
@@ -544,7 +545,9 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     <ul className="flex flex-col gap-1 text-[0.72rem]">
                       {(d.controls ?? []).slice(0, 6).map((c) => (
                         <li key={c.id} className="flex items-center gap-2">
-                          <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                          <Truncate full={c.name} className="min-w-0 flex-1">
+                            {c.name}
+                          </Truncate>
                           <Badge tone={STATUS_BADGE[c.status] ?? "neutral"}>
                             {tc(`status.${c.status}`)}
                           </Badge>
@@ -560,9 +563,12 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                         .slice(0, 7)
                         .map((c) => (
                           <li key={c.id} className="flex items-center justify-between gap-2">
-                            <span className="min-w-0 flex-1 truncate font-mono text-[0.65rem]">
+                            <Truncate
+                              full={c.evidence_id}
+                              className="min-w-0 flex-1 font-mono text-[0.65rem]"
+                            >
                               {c.evidence_id}
-                            </span>
+                            </Truncate>
                             <span className="shrink-0 text-[var(--muted-foreground)]">
                               {fwLabel(c.framework)}
                             </span>
@@ -654,7 +660,9 @@ function ObligationRow({
   return (
     <tr className="border-b border-[var(--border)]/50">
       <td className="py-1 pr-2">
-        <span className="line-clamp-1 max-w-[12rem]">{o.name}</span>
+        <Truncate full={o.name} className="max-w-[12rem]">
+          {o.name}
+        </Truncate>
         <span className="text-[0.6rem] text-[var(--muted-foreground)]">{fwLabel(o.framework)}</span>
       </td>
       <td className="py-1 pr-2">
@@ -713,9 +721,7 @@ function BusinessLegalSignalsPanel({ rows }: { rows: BusinessLegalSignal[] }) {
                       </Link>
                     </td>
                     <td className="py-1 pr-2">
-                      <span className="block truncate" title={label}>
-                        {label}
-                      </span>
+                      <Truncate full={label}>{label}</Truncate>
                     </td>
                     <td className="py-1 pr-2 tabular-nums">{value}</td>
                     <td className="py-1 pr-2">
@@ -724,9 +730,7 @@ function BusinessLegalSignalsPanel({ rows }: { rows: BusinessLegalSignal[] }) {
                       </Badge>
                     </td>
                     <td className="py-1 text-[var(--muted-foreground)]">
-                      <span className="block truncate" title={row.source}>
-                        {row.source}
-                      </span>
+                      <Truncate full={row.source}>{row.source}</Truncate>
                     </td>
                   </tr>
                 );
@@ -796,7 +800,9 @@ function ComplianceRail({
           <CardContent className="flex flex-col gap-1.5">
             {obligations.slice(0, 4).map((o) => (
               <div key={o.name} className="flex items-center gap-2 text-[0.72rem]">
-                <span className="min-w-0 flex-1 truncate">{o.name}</span>
+                <Truncate full={o.name} className="min-w-0 flex-1">
+                  {o.name}
+                </Truncate>
                 <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
                   {o.due}
                 </span>
@@ -816,9 +822,12 @@ function ComplianceRail({
               criticalNc.slice(0, 4).map((n) => (
                 <div key={n.id} className="flex items-center gap-2 text-[0.72rem]">
                   <span className="font-mono text-[var(--tessera-green)]">{n.id}</span>
-                  <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+                  <Truncate
+                    full={n.title}
+                    className="min-w-0 flex-1 text-[var(--muted-foreground)]"
+                  >
                     {n.title}
-                  </span>
+                  </Truncate>
                   <Badge tone={SEV_BADGE[n.severity] ?? "neutral"}>{tc(`sev.${n.severity}`)}</Badge>
                 </div>
               ))
@@ -837,7 +846,9 @@ function ComplianceRail({
                 className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-[0.72rem]"
               >
                 <CalendarClock className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
-                <span className="min-w-0 flex-1 truncate">{o.name}</span>
+                <Truncate full={o.name} className="min-w-0 flex-1">
+                  {o.name}
+                </Truncate>
                 <Badge tone={o.status === "non_conformant" ? "danger" : "warning"}>
                   {fwLabel(o.framework)}
                 </Badge>

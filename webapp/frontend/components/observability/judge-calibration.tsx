@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import type {
   Calibration,
@@ -301,7 +302,7 @@ function DisagreementDonut({
             <li key={d.label} className="flex flex-col gap-0.5 text-[0.66rem]">
               <span className="flex min-w-0 items-center gap-1">
                 <span className="h-1 w-1 shrink-0 rounded-full" style={{ background: d.color }} />
-                <span className="min-w-0 truncate">{tq(`judge.cat.${d.label}`)}</span>
+                <Truncate className="min-w-0">{tq(`judge.cat.${d.label}`)}</Truncate>
               </span>
               <span className="pl-2.5 tabular-nums text-[var(--muted-foreground)]">
                 {d.count} · {total > 0 ? Math.round((d.count / total) * 100) : 0}%
@@ -330,7 +331,7 @@ function GroupRows({
         const tone = g.agreement >= 0.95 ? MATCH : g.agreement >= 0.8 ? "#f59e0b" : MISS;
         return (
           <li key={g.label} className="flex items-center gap-2 text-[0.72rem]">
-            <span className="w-24 shrink-0 truncate">{labelKey ? labelKey(g.label) : g.label}</span>
+            <Truncate className="w-24 shrink-0">{labelKey ? labelKey(g.label) : g.label}</Truncate>
             <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-sm"
@@ -630,7 +631,7 @@ export function JudgeCalibration({
                 .slice(0, 4)
                 .map((s) => (
                   <li key={s.label} className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 truncate">{s.label}</span>
+                    <Truncate className="min-w-0">{s.label}</Truncate>
                     <Badge tone="warning">
                       {s.n_disagree}/{s.n}
                     </Badge>
@@ -969,7 +970,7 @@ export function JudgeRail({
             ) : (
               topCats.map((c) => (
                 <div key={c.label} className="flex items-center gap-2 text-[0.72rem]">
-                  <span className="w-20 shrink-0 truncate">{tq(`judge.cat.${c.label}`)}</span>
+                  <Truncate className="w-20 shrink-0">{tq(`judge.cat.${c.label}`)}</Truncate>
                   <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
                     <div
                       className="h-full rounded-sm"

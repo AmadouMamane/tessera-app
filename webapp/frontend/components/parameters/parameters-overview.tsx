@@ -20,6 +20,7 @@ import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchParametersOverview } from "@/lib/api/client";
 import type { ParametersOverview as ParametersData } from "@/lib/api/schemas";
@@ -283,7 +284,13 @@ function CompactKpi({
         {info}
       </p>
       <p className="mt-0.5 text-[1.4rem] font-semibold leading-none text-white">{kpi.value}</p>
-      <p className="mt-0.5 truncate text-[0.58rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
+      <Truncate
+        as="p"
+        full={kpi.sub}
+        className="mt-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]"
+      >
+        {kpi.sub}
+      </Truncate>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
     </div>
   );
@@ -406,7 +413,9 @@ function UsagePolicies({ t, data }: { t: T; data: Data }) {
             key={p.name}
             className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.68rem]"
           >
-            <span className="min-w-0 truncate text-[var(--tessera-text)]">{p.name}</span>
+            <Truncate full={p.name} className="min-w-0 text-[var(--tessera-text)]">
+              {p.name}
+            </Truncate>
             <span className="shrink-0 font-mono text-[0.62rem] text-[#87bfff]">{p.value}</span>
           </li>
         ))}
@@ -625,7 +634,9 @@ function KV({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-[var(--tessera-text)]">{value}</dd>
+      <Truncate as="dd" full={value} className="min-w-0 text-right text-[var(--tessera-text)]">
+        {value}
+      </Truncate>
     </div>
   );
 }

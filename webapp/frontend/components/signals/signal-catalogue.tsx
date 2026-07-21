@@ -24,6 +24,7 @@ import {
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { fetchSignalCatalogue } from "@/lib/api/client";
 import type { ScSignal, SignalCatalogue as SignalData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -212,11 +213,19 @@ function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }
   return (
     <div className="flex h-[88px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
       <p className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
-        <span className="min-w-0 truncate">{label}</span>
+        <Truncate full={label} className="min-w-0">
+          {label}
+        </Truncate>
         <ExplainInfo k={kpi.key} title={label} />
       </p>
       <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
-      <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
+      <Truncate
+        as="p"
+        full={kpi.sub}
+        className="mt-0.5 text-[0.56rem] text-[var(--tessera-text-muted)]"
+      >
+        {kpi.sub}
+      </Truncate>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
     </div>
   );
@@ -442,21 +451,26 @@ function SignalTable({
                   )}
                 >
                   <td className="py-1.5 pl-5 pr-2">
-                    <span
-                      className="block truncate font-mono text-[0.7rem] text-[var(--tessera-text)]"
-                      title={s.name}
+                    <Truncate
+                      full={s.name}
+                      className="font-mono text-[0.7rem] text-[var(--tessera-text)]"
                     >
                       {s.name}
-                    </span>
-                    <span className="block truncate font-mono text-[0.56rem] text-[var(--tessera-text-muted)]">
+                    </Truncate>
+                    <Truncate
+                      full={s.id}
+                      className="font-mono text-[0.56rem] text-[var(--tessera-text-muted)]"
+                    >
                       {s.id}
-                    </span>
+                    </Truncate>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{t(`category.${s.category}`)}</span>
+                    <Truncate full={t(`category.${s.category}`)}>
+                      {t(`category.${s.category}`)}
+                    </Truncate>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{s.source}</span>
+                    <Truncate full={s.source}>{s.source}</Truncate>
                   </td>
                   <td className="px-2 py-1.5">
                     <Badge className={SEV_BADGE[s.severity]}>{t(`severity.${s.severity}`)}</Badge>
@@ -478,15 +492,13 @@ function SignalTable({
                     </div>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{s.last_activity}</span>
+                    <Truncate full={s.last_activity}>{s.last_activity}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={s.owner}>
-                      {s.owner}
-                    </span>
+                    <Truncate full={s.owner}>{s.owner}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{s.modified}</span>
+                    <Truncate full={s.modified}>{s.modified}</Truncate>
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
@@ -704,7 +716,9 @@ function SignalDrawer({ t, signal, onClose }: { t: T; signal: ScSignal; onClose:
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate font-mono text-sm font-semibold text-white">{d.name}</p>
+              <Truncate as="p" full={d.name} className="font-mono text-sm font-semibold text-white">
+                {d.name}
+              </Truncate>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {d.id}
@@ -796,14 +810,16 @@ function RowList({ rows, mono }: { rows: { label: string; value: string }[]; mon
       {rows.map((r) => (
         <div key={r.label} className="flex items-center justify-between gap-2">
           <dt className="shrink-0 text-[var(--tessera-text-muted)]">{r.label}</dt>
-          <dd
+          <Truncate
+            as="dd"
+            full={r.value}
             className={cn(
-              "min-w-0 truncate text-right text-[var(--tessera-text)]",
+              "min-w-0 text-right text-[var(--tessera-text)]",
               mono && "font-mono text-[0.62rem]",
             )}
           >
             {r.value}
-          </dd>
+          </Truncate>
         </div>
       ))}
     </dl>

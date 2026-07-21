@@ -26,6 +26,7 @@ import {
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchIntegrationsOverview } from "@/lib/api/client";
 import type { IntegrationsOverview as IntegrationsData } from "@/lib/api/schemas";
@@ -243,7 +244,9 @@ function CompactKpi({
         {info}
       </p>
       <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
-      <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
+      <Truncate as="p" className="mt-0.5 text-[0.56rem] text-[var(--tessera-text-muted)]">
+        {kpi.sub}
+      </Truncate>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
     </div>
   );
@@ -419,12 +422,9 @@ function IntegrationTable({
                   )}
                 >
                   <td className="py-1.5 pl-5 pr-2">
-                    <span
-                      className="flex items-center gap-1.5 text-[var(--tessera-text)]"
-                      title={i.name}
-                    >
+                    <span className="flex items-center gap-1.5 text-[var(--tessera-text)]">
                       <Plug className="h-3 w-3 shrink-0 text-[#87bfff]" />
-                      <span className="truncate">{i.name}</span>
+                      <Truncate>{i.name}</Truncate>
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
@@ -437,12 +437,10 @@ function IntegrationTable({
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{i.environment}</span>
+                    <Truncate>{i.environment}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={i.owner}>
-                      {i.owner}
-                    </span>
+                    <Truncate>{i.owner}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text)]">{i.calls}</td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
@@ -604,7 +602,7 @@ function ByEnv({ t, data }: { t: T; data: Data }) {
         {data.by_env.map((e) => (
           <li key={e.key} className="flex flex-col gap-0.5 text-[0.66rem]">
             <div className="flex items-center justify-between gap-1.5">
-              <span className="truncate text-[var(--tessera-text)]">{e.label}</span>
+              <Truncate className="text-[var(--tessera-text)]">{e.label}</Truncate>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">
                 {e.value} / {e.pct}%
               </span>
@@ -629,7 +627,7 @@ function Top({ t, data }: { t: T; data: Data }) {
       <ul className="flex flex-col gap-2">
         {data.top_integrations.map((i) => (
           <li key={i.name} className="flex items-center gap-2 text-[0.66rem]">
-            <span className="w-28 shrink-0 truncate text-[var(--tessera-text)]">{i.name}</span>
+            <Truncate className="w-28 shrink-0 text-[var(--tessera-text)]">{i.name}</Truncate>
             <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
               <div
                 className="h-full rounded-full bg-[#2e72d2]"
@@ -739,7 +737,9 @@ function IntegrationsDrawer({
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{detail.name}</p>
+              <Truncate as="p" className="text-sm font-semibold text-white">
+                {detail.name}
+              </Truncate>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {detail.id}

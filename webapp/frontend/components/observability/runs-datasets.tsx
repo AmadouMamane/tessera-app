@@ -17,6 +17,7 @@ import { useTranslations } from "next-intl";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import type {
   FreshnessReport,
   ModelComparison,
@@ -373,9 +374,7 @@ export function RunsEvalTable({
                     }`}
                   >
                     <td className="py-1.5 pr-2 pl-5 font-medium text-[var(--foreground)]">
-                      <span className="block truncate" title={r.model}>
-                        {r.model}
-                      </span>
+                      <Truncate full={r.model}>{r.model}</Truncate>
                     </td>
                     <td className="px-2 py-1.5 tabular-nums text-[var(--muted-foreground)]">
                       {r.catalogue_version ? `v${r.catalogue_version.split("-")[0]}` : DASH}
@@ -607,14 +606,14 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
                 return (
                   <tr key={d.key} className="border-b border-[var(--border)]/60">
                     <td className="py-1.5 pr-2 pl-5 font-medium text-[var(--foreground)]">
-                      <span className="block truncate" title={tq(`runs.theme.${d.key}`)}>
+                      <Truncate full={tq(`runs.theme.${d.key}`)}>
                         {tq(`runs.theme.${d.key}`)}
-                      </span>
+                      </Truncate>
                     </td>
                     <td className="px-2 py-1.5 text-[var(--muted-foreground)]">
-                      <span className="block truncate" title={tq(`runs.themeDesc.${d.key}`)}>
+                      <Truncate full={tq(`runs.themeDesc.${d.key}`)}>
                         {tq(`runs.themeDesc.${d.key}`)}
-                      </span>
+                      </Truncate>
                     </td>
                     <td className="px-2 py-1.5 uppercase text-[var(--muted-foreground)]">
                       {langBadges(d.languages)}
@@ -633,9 +632,7 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
                       <CoverageCell coverage={d.coverage} />
                     </td>
                     <td className="px-2 py-1.5 text-[var(--muted-foreground)]">
-                      <span className="block truncate" title={d.owner}>
-                        {d.owner}
-                      </span>
+                      <Truncate full={d.owner}>{d.owner}</Truncate>
                     </td>
                     <td className="px-2 py-1.5">
                       <span className="inline-flex items-center gap-1">
@@ -1187,9 +1184,9 @@ export function RunsRail({
                 <li key={r.run_id} className="flex items-start gap-1.5 text-[0.68rem]">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
                   <div className="min-w-0">
-                    <p className="truncate text-[var(--foreground)]">
+                    <Truncate as="p" className="text-[var(--foreground)]">
                       {tq("runs.rail.runDone", { model: r.model, rate: fmtPct(r.pass_rate) })}
-                    </p>
+                    </Truncate>
                     <p className="text-[0.6rem] text-[var(--muted-foreground)]">
                       {fmtDate(r.run_at)}
                     </p>

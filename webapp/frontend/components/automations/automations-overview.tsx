@@ -25,6 +25,7 @@ import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import {
   fetchAutomationsOverview,
@@ -418,7 +419,9 @@ function Catalogue({
               <tr key={row.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
                 <td className="max-w-[240px] px-2 py-1.5 font-medium text-[var(--tessera-text)]">
                   <span className="flex min-w-0 items-center gap-1">
-                    <span className="min-w-0 truncate">{row.name}</span>
+                    <Truncate full={row.name} className="min-w-0">
+                      {row.name}
+                    </Truncate>
                     <KpiInfo k={`rule.${row.id}`} title={row.name} />
                   </span>
                 </td>
@@ -600,9 +603,9 @@ function AutomationsRail({
             <li key={`${inc.id}-${i}`} className="flex items-center gap-2 text-[0.72rem]">
               <Badge className={SEV_BADGE[inc.severity]}>{t(`severity.${inc.severity}`)}</Badge>
               <span className="font-mono text-[0.64rem] text-[#87bfff]">{inc.id}</span>
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+              <Truncate full={inc.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {inc.label}
-              </span>
+              </Truncate>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
                 {inc.time}
               </span>
@@ -739,7 +742,9 @@ function Approvals({
           {data.approvals.map((a) => (
             <li key={a.id} className="flex items-center gap-2 text-[0.7rem]">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[var(--tessera-text)]">{a.name}</p>
+                <Truncate as="p" full={a.name} className="text-[var(--tessera-text)]">
+                  {a.name}
+                </Truncate>
                 <p className="truncate text-[0.6rem] text-[var(--tessera-text-muted)]">
                   {t("approve.since", { t: a.since })} · {a.observed}
                 </p>
@@ -882,7 +887,13 @@ function ContextPanel({ t, data, className }: { t: T; data: Data; className?: st
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-center justify-between gap-2">
             <dt className="text-[var(--tessera-text-muted)]">{k}</dt>
-            <dd className="truncate font-mono text-[0.64rem] text-[var(--tessera-text)]">{v}</dd>
+            <Truncate
+              as="dd"
+              full={v}
+              className="font-mono text-[0.64rem] text-[var(--tessera-text)]"
+            >
+              {v}
+            </Truncate>
           </div>
         ))}
       </dl>

@@ -25,6 +25,7 @@ import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchSettingsOverrides, runShadow } from "@/lib/api/client";
 import { fetchReplayShadowOverview } from "@/lib/api/client";
@@ -377,7 +378,9 @@ function BaselinesPanel({ t, data }: { t: T; data: Data }) {
               className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs"
             >
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{b.label}</span>
+              <Truncate full={b.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+                {b.label}
+              </Truncate>
               <span className="shrink-0 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
                 {b.value}
               </span>
@@ -635,7 +638,9 @@ function Regressions({ t, data, className }: { t: T; data: Data; className?: str
       <ul className="flex flex-col gap-1.5">
         {data.top_regressions.map((r) => (
           <li key={r.service} className="flex items-center gap-2 text-[0.7rem]">
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{r.service}</span>
+            <Truncate full={r.service} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+              {r.service}
+            </Truncate>
             <span className="font-mono tabular-nums text-red-300">{r.delta}</span>
             <MetricSparkline className="h-4 w-12" values={r.spark} tone="danger" />
             <span className="w-7 text-right tabular-nums text-[var(--tessera-text-muted)]">
@@ -667,9 +672,12 @@ function EvalsByCategory({
       <ul className="flex flex-col gap-2">
         {data.evals_by_category.map((c) => (
           <li key={c.key} className="flex items-center gap-2 text-[0.68rem]">
-            <span className="w-24 shrink-0 truncate text-[var(--tessera-text)]">
+            <Truncate
+              full={t(`type.${c.key}`)}
+              className="w-24 shrink-0 text-[var(--tessera-text)]"
+            >
               {t(`type.${c.key}`)}
-            </span>
+            </Truncate>
             <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
               <div
                 className="h-full rounded-full"
@@ -923,7 +931,9 @@ function Panel({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="flex min-w-0 items-center gap-1 text-[0.8rem] font-semibold text-[var(--tessera-text)]">
-          <span className="min-w-0 truncate">{title}</span>
+          <Truncate full={title} className="min-w-0">
+            {title}
+          </Truncate>
           {info}
         </h3>
         {action}
@@ -950,7 +960,9 @@ function KpiTile({
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
-        <span className="min-w-0 truncate">{label}</span>
+        <Truncate full={label} className="min-w-0">
+          {label}
+        </Truncate>
         {info}
       </p>
       <div className="mt-1 flex items-center gap-2">
@@ -1035,7 +1047,9 @@ function Donut({
           <li key={s.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.color }} />
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">{labelOf(s.key)}</span>
+              <Truncate full={labelOf(s.key)} className="min-w-0 text-[var(--tessera-text)]">
+                {labelOf(s.key)}
+              </Truncate>
             </span>
             <span className="pl-2.5 tabular-nums text-[var(--tessera-text-muted)]">
               {showCount ? `${s.count.toLocaleString("fr-FR")} · ` : ""}
@@ -1079,7 +1093,9 @@ function RailButton({
   const inner = (
     <>
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-      <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{label}</span>
+      <Truncate full={label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+        {label}
+      </Truncate>
     </>
   );
   if (href) {
@@ -1148,7 +1164,7 @@ function Chip({
   return (
     <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
       <Icon className={cn("h-3.5 w-3.5 shrink-0", tone)} />
-      <span className="truncate">{label}</span>
+      <Truncate full={label}>{label}</Truncate>
     </span>
   );
 }

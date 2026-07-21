@@ -27,6 +27,7 @@ import {
   useTemporalState,
 } from "@/components/overview/temporal-rail";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import {
   fetchEvidencePackManifest,
@@ -369,7 +370,9 @@ function AlertsPanel({ t, data, className }: { t: T; data: Data; className?: str
                     : "bg-emerald-400",
               )}
             />
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{a.label}</span>
+            <Truncate full={a.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+              {a.label}
+            </Truncate>
           </li>
         ))}
       </ul>
@@ -880,7 +883,9 @@ function ProofsRail({
                       : "bg-red-400",
                 )}
               />
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">{j.label}</span>
+              <Truncate full={j.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
+                {j.label}
+              </Truncate>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
                 {j.time}
               </span>
@@ -1122,15 +1127,16 @@ function KV({
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="shrink-0 text-[var(--tessera-text-muted)]">{label}</span>
-      <span
+      <Truncate
+        full={value}
         className={cn(
-          "min-w-0 truncate text-right text-[var(--tessera-text)]",
+          "min-w-0 text-right text-[var(--tessera-text)]",
           mono && "font-mono text-[0.64rem]",
           tone,
         )}
       >
         {value}
-      </span>
+      </Truncate>
     </div>
   );
 }

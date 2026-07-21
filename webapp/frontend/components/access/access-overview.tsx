@@ -27,6 +27,7 @@ import {
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchAccessOverview } from "@/lib/api/client";
 import type { AccessOverviewPayload as AccessData } from "@/lib/api/schemas";
@@ -263,7 +264,13 @@ function CompactKpi({
         {info}
       </p>
       <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
-      <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">{kpi.sub}</p>
+      <Truncate
+        as="p"
+        full={kpi.sub}
+        className="mt-0.5 text-[0.56rem] text-[var(--tessera-text-muted)]"
+      >
+        {kpi.sub}
+      </Truncate>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
     </div>
   );
@@ -435,17 +442,13 @@ function RoleTable({
                   )}
                 >
                   <td className="py-1.5 pl-5 pr-2 font-medium text-[var(--tessera-text)]">
-                    <span className="block truncate" title={r.name}>
-                      {r.name}
-                    </span>
+                    <Truncate full={r.name}>{r.name}</Truncate>
                   </td>
                   <td className="px-2 py-1.5">
                     <Badge className={TYPE_BADGE[r.type]}>{t(`type.${r.type}`)}</Badge>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={r.description}>
-                      {r.description}
-                    </span>
+                    <Truncate full={r.description}>{r.description}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text)]">{r.users}</td>
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
@@ -455,15 +458,13 @@ function RoleTable({
                     {r.permissions}
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={r.scope}>
-                      {r.scope}
-                    </span>
+                    <Truncate full={r.scope}>{r.scope}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{r.environment}</span>
+                    <Truncate full={r.environment}>{r.environment}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{r.modified}</span>
+                    <Truncate full={r.modified}>{r.modified}</Truncate>
                   </td>
                   <td className="px-2 py-1.5">
                     <span className={cn("inline-flex items-center gap-1", STATUS_TEXT[r.status])}>
@@ -615,7 +616,9 @@ function TopRoles({ t, data }: { t: T; data: Data }) {
       <ul className="flex flex-col gap-2">
         {data.top_roles.map((r) => (
           <li key={r.name} className="flex items-center gap-2 text-[0.66rem]">
-            <span className="w-24 shrink-0 truncate text-[var(--tessera-text)]">{r.name}</span>
+            <Truncate full={r.name} className="w-24 shrink-0 text-[var(--tessera-text)]">
+              {r.name}
+            </Truncate>
             <div className="h-[4px] overflow-hidden flex-1 rounded-full bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-full bg-[#2e72d2]"
@@ -683,9 +686,9 @@ function Pending({ t, data }: { t: T; data: Data }) {
           {data.pending_requests.map((p) => (
             <li key={p.user} className="flex items-center gap-2 text-[0.66rem]">
               <span className="font-medium text-[var(--tessera-text)]">{p.user}</span>
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+              <Truncate full={p.role} className="min-w-0 flex-1 text-[var(--tessera-text-muted)]">
                 {p.role}
-              </span>
+              </Truncate>
               <span className="shrink-0 text-[var(--tessera-text-muted)]">{p.since}</span>
             </li>
           ))}
@@ -710,9 +713,12 @@ function SodViolations({ t, data }: { t: T; data: Data }) {
             <li key={v.user} className="flex items-center gap-2 text-[0.66rem]">
               <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-red-300" />
               <span className="font-medium text-[var(--tessera-text)]">{v.user}</span>
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+              <Truncate
+                full={v.conflict}
+                className="min-w-0 flex-1 text-[var(--tessera-text-muted)]"
+              >
                 {v.conflict}
-              </span>
+              </Truncate>
             </li>
           ))}
         </ul>
@@ -734,9 +740,9 @@ function Inactive({ t, data }: { t: T; data: Data }) {
           {data.inactive_accounts.map((a) => (
             <li key={a.user} className="flex items-center gap-2 text-[0.66rem]">
               <span className="font-medium text-[var(--tessera-text)]">{a.user}</span>
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+              <Truncate full={a.role} className="min-w-0 flex-1 text-[var(--tessera-text-muted)]">
                 {a.role}
-              </span>
+              </Truncate>
               <span className="shrink-0 text-[var(--tessera-text-muted)]">{a.last_seen}</span>
             </li>
           ))}
@@ -845,7 +851,9 @@ function RoleDrawer({
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{role.name}</p>
+              <Truncate as="p" full={role.name} className="text-sm font-semibold text-white">
+                {role.name}
+              </Truncate>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {role.id}
@@ -953,10 +961,16 @@ function RoleDrawer({
                         {m.name.charAt(0).toUpperCase()}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[var(--tessera-text)]">{m.name}</p>
-                        <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
+                        <Truncate as="p" full={m.name} className="text-[var(--tessera-text)]">
+                          {m.name}
+                        </Truncate>
+                        <Truncate
+                          as="p"
+                          full={m.team}
+                          className="text-[0.56rem] text-[var(--tessera-text-muted)]"
+                        >
                           {m.team}
-                        </p>
+                        </Truncate>
                       </div>
                       <span
                         className={cn(
@@ -1081,7 +1095,9 @@ function KV({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-[var(--tessera-text)]">{value}</dd>
+      <Truncate as="dd" full={value} className="min-w-0 text-right text-[var(--tessera-text)]">
+        {value}
+      </Truncate>
     </div>
   );
 }

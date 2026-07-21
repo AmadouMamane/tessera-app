@@ -16,12 +16,15 @@ const fetchAccessOverview = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api/client", () => ({ fetchAccessOverview }));
 
 import { AccessOverview } from "@/components/access/access-overview";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function wrap(node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
     <NextIntlClientProvider locale="fr" messages={messages as unknown as AbstractIntlMessages}>
-      <QueryClientProvider client={client}>{node}</QueryClientProvider>
+      <QueryClientProvider client={client}>
+        <TooltipProvider>{node}</TooltipProvider>
+      </QueryClientProvider>
     </NextIntlClientProvider>
   );
 }

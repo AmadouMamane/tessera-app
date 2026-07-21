@@ -40,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Truncate } from "@/components/ui/truncate";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchAudit, fetchAuditOverview } from "@/lib/api/client";
 import type {
@@ -748,15 +749,18 @@ function ProofList({
         <li key={proof.hash} className="flex items-start gap-1.5 text-[0.7rem] leading-tight">
           <FileJson className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
           <div className="min-w-0">
-            <p className="truncate font-mono text-[var(--tessera-text)]">
+            <Truncate as="p" full={proof.hash} className="font-mono text-[var(--tessera-text)]">
               {proof.hash.slice(0, 14)}
-            </p>
-            <p className="truncate text-[0.58rem] leading-tight text-[var(--tessera-text-muted)]">
+            </Truncate>
+            <Truncate
+              as="p"
+              className="text-[0.58rem] leading-tight text-[var(--tessera-text-muted)]"
+            >
               {formatter.dateTime(new Date(proof.occurred_at), {
                 dateStyle: "short",
                 timeStyle: "short",
               })}
-            </p>
+            </Truncate>
           </div>
         </li>
       ))}
@@ -933,7 +937,13 @@ function CausalityChain({ entry }: { entry: AuditEntry }) {
               {index + 1}
             </div>
             <p className="mt-1 truncate text-[0.65rem] text-[var(--tessera-text)]">{step.label}</p>
-            <p className="truncate text-[0.58rem] text-[var(--tessera-text-muted)]">{step.sub}</p>
+            <Truncate
+              as="p"
+              full={step.sub}
+              className="text-[0.58rem] text-[var(--tessera-text-muted)]"
+            >
+              {step.sub}
+            </Truncate>
           </div>
         ))}
       </div>
@@ -1009,11 +1019,10 @@ function DetailRow({
   return (
     <div className="grid grid-cols-[116px_minmax(0,1fr)] gap-3 text-xs">
       <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
-      <dd
-        className={cn(
-          "min-w-0 truncate text-[var(--tessera-text)]",
-          mono && "font-mono text-[0.68rem]",
-        )}
+      <Truncate
+        as="dd"
+        full={value}
+        className={cn("min-w-0 text-[var(--tessera-text)]", mono && "font-mono text-[0.68rem]")}
       >
         {value}
         {badge ? (
@@ -1021,7 +1030,7 @@ function DetailRow({
             {badge}
           </span>
         ) : null}
-      </dd>
+      </Truncate>
     </div>
   );
 }
@@ -1131,7 +1140,9 @@ function FooterItem({
       <span className="text-[var(--tessera-green)] [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
       <div className="min-w-0">
         <p className="truncate font-medium text-[var(--tessera-text)]">{label}</p>
-        <p className="truncate">{value}</p>
+        <Truncate as="p" full={value}>
+          {value}
+        </Truncate>
       </div>
     </div>
   );

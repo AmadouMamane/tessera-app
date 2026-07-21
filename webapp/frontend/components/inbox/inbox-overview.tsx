@@ -24,6 +24,7 @@ import {
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchInboxOverview, mutateInboxItem } from "@/lib/api/client";
 import type { InboxOverview as InboxData } from "@/lib/api/schemas";
@@ -511,24 +512,20 @@ function TaskTable({
                     </span>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text)]">
-                    <span className="block truncate" title={it.title}>
+                    <Truncate full={it.title}>
                       {it.title}
                       {it.agent ? (
                         <span className="ml-1.5 rounded bg-[var(--tessera-muted)] px-1 py-px text-[0.52rem] text-[var(--tessera-text-muted)]">
                           {it.agent}
                         </span>
                       ) : null}
-                    </span>
+                    </Truncate>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={it.source}>
-                      {it.source}
-                    </span>
+                    <Truncate>{it.source}</Truncate>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={it.assignee}>
-                      {it.assignee}
-                    </span>
+                    <Truncate>{it.assignee}</Truncate>
                   </td>
                   <td className={cn("px-2 py-2 font-medium tabular-nums", SLA_TONE[it.sla_tone])}>
                     {it.sla}
@@ -926,9 +923,9 @@ function Activity({ t, data }: { t: T; data: Data }) {
           <li key={`${a.time}-${a.action}-${i}`} className="flex items-center gap-2 text-[0.66rem]">
             <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
             <span className="font-medium text-[var(--tessera-text)]">{a.actor}</span>
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+            <Truncate className="min-w-0 flex-1 text-[var(--tessera-text-muted)]">
               {a.action}
-            </span>
+            </Truncate>
             <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">{a.time}</span>
           </li>
         ))}

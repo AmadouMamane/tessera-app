@@ -24,6 +24,7 @@ import {
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import { Truncate } from "@/components/ui/truncate";
 import { fetchUsers } from "@/lib/api/client";
 import type { UsersOverview as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -116,13 +117,17 @@ export function UsersOverview() {
             className="flex h-[92px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
           >
             <p className="flex items-center gap-1 truncate text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
-              <span className="truncate">{t(`kpi.${k.key}`)}</span>
+              <Truncate full={t(`kpi.${k.key}`)}>{t(`kpi.${k.key}`)}</Truncate>
               <ExplainInfo k={k.key} title={t(`kpi.${k.key}`)} />
             </p>
             <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{k.value}</p>
-            <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
+            <Truncate
+              as="p"
+              full={k.sub}
+              className="mt-0.5 text-[0.56rem] text-[var(--tessera-text-muted)]"
+            >
               {k.sub}
-            </p>
+            </Truncate>
             <MetricSparkline className="mt-auto h-4 w-full" values={k.series} tone="success" />
           </div>
         ))}
@@ -285,17 +290,23 @@ function UsersTable({
                   )}
                 >
                   <td className="py-1.5 pl-5 pr-2">
-                    <span className="flex items-center gap-2" title={u.display}>
+                    <span className="flex items-center gap-2">
                       <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-muted)] text-[0.62rem] font-semibold text-[#d6f0e3]">
                         {u.display.charAt(0).toUpperCase()}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate font-medium text-[var(--tessera-text)]">
+                        <Truncate
+                          full={u.display}
+                          className="font-medium text-[var(--tessera-text)]"
+                        >
                           {u.display}
-                        </span>
-                        <span className="block truncate font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
+                        </Truncate>
+                        <Truncate
+                          full={u.username}
+                          className="font-mono text-[0.6rem] text-[var(--tessera-text-muted)]"
+                        >
                           {u.username}
-                        </span>
+                        </Truncate>
                       </span>
                     </span>
                   </td>
@@ -303,9 +314,7 @@ function UsersTable({
                     <Badge className={BADGE[u.badge]}>{u.role_label}</Badge>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={u.team}>
-                      {u.team}
-                    </span>
+                    <Truncate full={u.team}>{u.team}</Truncate>
                   </td>
                   <td className="px-2 py-1.5">
                     <span
@@ -319,7 +328,7 @@ function UsersTable({
                     {u.mfa ? t("mfaOn") : t("mfaOff")}
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate">{u.last_login}</span>
+                    <Truncate full={u.last_login}>{u.last_login}</Truncate>
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
@@ -540,9 +549,13 @@ function UserDrawer({ t, user, onClose }: { t: T; user: User; onClose: () => voi
               </span>
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-semibold text-white">{user.display}</h2>
-                <p className="truncate font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <Truncate
+                  as="p"
+                  full={user.email}
+                  className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]"
+                >
                   {user.email}
-                </p>
+                </Truncate>
               </div>
             </div>
             <button
@@ -590,7 +603,9 @@ function KV({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-[var(--tessera-text)]">{children}</dd>
+      <Truncate as="dd" className="min-w-0 text-right text-[var(--tessera-text)]">
+        {children}
+      </Truncate>
     </div>
   );
 }

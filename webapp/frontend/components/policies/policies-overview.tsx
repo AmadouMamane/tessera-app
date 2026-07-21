@@ -21,6 +21,7 @@ import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchPoliciesOverview } from "@/lib/api/client";
 import type { PoliciesOverview as PoliciesData } from "@/lib/api/schemas";
@@ -464,9 +465,9 @@ function Guardrails({ t, data, className }: { t: T; data: Data; className?: stri
           <li key={g.key} className="flex flex-col gap-0.5 text-[0.66rem]">
             <div className="flex items-center justify-between gap-1.5">
               <span className="flex min-w-0 items-center gap-1">
-                <span className="min-w-0 truncate text-[var(--tessera-text)]">
+                <Truncate className="min-w-0 text-[var(--tessera-text)]">
                   {t(`gr.${g.key}`)}
-                </span>
+                </Truncate>
                 <PolInfo k={g.key} title={t(`gr.${g.key}`)} />
               </span>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
@@ -574,11 +575,11 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
                 className="flex w-full items-center gap-2 rounded-md border border-red-500/25 bg-red-500/5 px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-red-500/10"
               >
                 <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-red-300" />
-                <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+                <Truncate className="min-w-0 flex-1 text-[var(--tessera-text)]">
                   {t(`sensitive.${a.key}`, {
                     v: a.key === "rollback" ? data.compare_to : data.active_version,
                   })}
-                </span>
+                </Truncate>
                 <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
                   {a.role}
                 </Badge>
@@ -602,7 +603,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
                   className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.68rem] text-[#87bfff] transition-colors hover:bg-[var(--tessera-muted)]"
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">{t(`links.${link}`)}</span>
+                  <Truncate className="min-w-0 flex-1">{t(`links.${link}`)}</Truncate>
                 </Link>
               </li>
             );
@@ -711,9 +712,13 @@ function KpiTile({
         />
       ) : null}
       <div className={cn("flex items-center gap-1.5", href && "pointer-events-none relative z-20")}>
-        <p className="min-w-0 flex-1 truncate text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+        <Truncate
+          as="p"
+          full={label}
+          className="min-w-0 flex-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]"
+        >
           {label}
-        </p>
+        </Truncate>
         {info ? <span className={href ? "pointer-events-auto" : undefined}>{info}</span> : null}
       </div>
       <div className="mt-1 flex items-center gap-2">
@@ -798,7 +803,7 @@ function Chip({
   return (
     <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
       <Icon className={cn("h-3.5 w-3.5 shrink-0", tone)} />
-      <span className="truncate">{label}</span>
+      <Truncate full={label}>{label}</Truncate>
     </span>
   );
 }

@@ -32,6 +32,7 @@ import { CalendarPopover } from "@/components/cockpit/calendar-popover";
 import { endOfLocalDay } from "@/components/cockpit/window-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { fetchDataRange, fetchTimeline } from "@/lib/api/client";
 import type { TimelineReport } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
@@ -830,7 +831,9 @@ export function TemporalRail({
               <span
                 className={cn("h-2 w-2 shrink-0 rounded-full", dotBg[nearest.tone as OverviewTone])}
               />
-              <span className="truncate">
+              <Truncate
+                full={`${selectedAt != null ? `${t("selectedEvent")} · ` : ""}${nearest.label}${nearest.detail && nearest.kind !== "guard_denial" ? ` · ${nearest.detail}` : ""}`}
+              >
                 {selectedAt != null ? (
                   <span className="opacity-70">{t("selectedEvent")} · </span>
                 ) : null}
@@ -838,7 +841,7 @@ export function TemporalRail({
                 {nearest.detail && nearest.kind !== "guard_denial" ? (
                   <span className="opacity-70"> · {nearest.detail}</span>
                 ) : null}
-              </span>
+              </Truncate>
             </span>
           ) : (
             <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">

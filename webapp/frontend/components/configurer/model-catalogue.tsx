@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
@@ -94,7 +95,9 @@ export function ModelCatalogue() {
               className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
             >
               <p className="flex items-center gap-1 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                <span className="min-w-0 truncate">{kpi.label}</span>
+                <Truncate full={kpi.label} className="min-w-0">
+                  {kpi.label}
+                </Truncate>
                 <KpiInfo k={kpi.key} title={kpi.label} />
               </p>
               <p className="mt-1 truncate font-mono text-[0.82rem] font-semibold text-white">
@@ -451,7 +454,9 @@ function ModelDetail({
       className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="truncate font-mono text-sm font-semibold text-white">{d.name}</p>
+        <Truncate as="p" full={d.name} className="font-mono text-sm font-semibold text-white">
+          {d.name}
+        </Truncate>
         <button
           type="button"
           onClick={onClose}
@@ -470,7 +475,9 @@ function ModelDetail({
             {s.rows.map((r) => (
               <div key={r.label} className="flex items-center justify-between gap-3">
                 <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
-                <dd className="truncate text-right text-[var(--tessera-text)]">{r.value}</dd>
+                <Truncate as="dd" full={r.value} className="text-right text-[var(--tessera-text)]">
+                  {r.value}
+                </Truncate>
               </div>
             ))}
           </dl>

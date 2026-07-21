@@ -940,9 +940,13 @@ function GovCardView({
             <dt className="shrink-0 whitespace-nowrap text-[var(--tessera-text-muted)]">
               {r.label}
             </dt>
-            <dd className="truncate text-right font-medium text-[var(--tessera-text)]">
+            <Truncate
+              as="dd"
+              full={r.value}
+              className="text-right font-medium text-[var(--tessera-text)]"
+            >
               {r.value}
-            </dd>
+            </Truncate>
           </div>
         ))}
       </dl>
@@ -1650,9 +1654,12 @@ function Snapshots({ data, onReload }: { data: Data; onReload: (asOf: string | n
                     {r.ref_code}
                   </span>
                 </span>
-                <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <Truncate
+                  full={`${r.summary} - ${t("savedAt")} ${r.saved_label}`}
+                  className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+                >
                   {r.summary} - {t("savedAt")} {r.saved_label}
-                </span>
+                </Truncate>
               </span>
               <button
                 type="button"

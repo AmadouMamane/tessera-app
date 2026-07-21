@@ -77,6 +77,7 @@ import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
@@ -1062,7 +1063,7 @@ function RightRail({
               activity.slice(0, 3).map((a) => (
                 <div key={a.key} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
-                  <span className="min-w-0 flex-1 truncate text-[0.7rem]">{a.label}</span>
+                  <Truncate className="min-w-0 flex-1 text-[0.7rem]">{a.label}</Truncate>
                   <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
                     {a.detail}
                   </span>

@@ -19,6 +19,7 @@ import { MetricInfo } from "@/components/cockpit/metric-info";
 import { type Period, PeriodRail } from "@/components/observability/period-rail";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchReliability } from "@/lib/api/client";
 import type {
@@ -714,7 +715,9 @@ export function ReliabilityDashboard() {
       <div className="flex flex-col gap-1.5">
         {(d.providers ?? []).map((p) => (
           <div key={p.provider} className="flex items-center gap-2 text-[0.72rem]">
-            <span className="w-20 shrink-0 truncate">{p.provider}</span>
+            <Truncate full={p.provider} className="w-20 shrink-0">
+              {p.provider}
+            </Truncate>
             <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
               <div
                 className="h-full rounded-sm bg-[#60a5fa]"

@@ -25,6 +25,7 @@ import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { isAccessDenied } from "@/lib/api/access";
@@ -785,7 +786,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
                 />
-                <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                <Truncate className="min-w-0 flex-1">{c.title}</Truncate>
                 <span className="shrink-0 font-mono text-[0.6rem] uppercase text-[var(--muted-foreground)]">
                   {c.language}
                 </span>
@@ -1062,7 +1063,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 ) : (
                   (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
                     <li key={c.field} className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate">{c.field}</span>
+                      <Truncate className="min-w-0 flex-1">{c.field}</Truncate>
                       <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
                         {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
                       </span>
@@ -1156,7 +1157,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   const over = lp.data?.over_provisioned.includes(u.tool);
                   return (
                     <li key={u.tool} className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate font-mono">{u.tool}</span>
+                      <Truncate className="min-w-0 font-mono">{u.tool}</Truncate>
                       <Badge tone={over ? "warning" : "success"}>
                         {over ? ts("overProvisioned") : `${u.used}`}
                       </Badge>
@@ -1533,7 +1534,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     ) : (
                       (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
                         <li key={c.field} className="flex items-center gap-2">
-                          <span className="min-w-0 flex-1 truncate">{c.field}</span>
+                          <Truncate className="min-w-0 flex-1">{c.field}</Truncate>
                           <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
                             {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
                           </span>
@@ -1576,7 +1577,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                         <span
                           className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
                         />
-                        <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                        <Truncate className="min-w-0 flex-1">{c.title}</Truncate>
                         <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
                           {c.case_id}
                         </span>
@@ -1644,7 +1645,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                       const over = lp.data?.over_provisioned.includes(u.tool);
                       return (
                         <li key={u.tool} className="flex items-center justify-between gap-2">
-                          <span className="min-w-0 truncate font-mono">{u.tool}</span>
+                          <Truncate className="min-w-0 font-mono">{u.tool}</Truncate>
                           <Badge tone={over ? "warning" : "success"}>
                             {over ? ts("overProvisioned") : `${u.used}`}
                           </Badge>
@@ -1875,7 +1876,7 @@ function SecurityRail({
               incidents.map((c) => (
                 <div key={c.case_id} className="flex items-center gap-1.5 text-[0.72rem]">
                   <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${sevDot(c.severity)}`} />
-                  <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                  <Truncate className="min-w-0 flex-1">{c.title}</Truncate>
                   <Badge
                     tone={
                       c.severity === "critical"
@@ -2017,9 +2018,9 @@ function SecurityRail({
                 {/* Real case id + real severity (was a fabricated "CASE-02xx" id and a
                   hardcoded "High" badge — honest data only: never invent an id/severity). */}
                 <span className="shrink-0 font-mono text-[var(--tessera-green)]">{c.case_id}</span>
-                <span className="min-w-0 flex-1 truncate text-[var(--muted-foreground)]">
+                <Truncate className="min-w-0 flex-1 text-[var(--muted-foreground)]">
                   {c.title}
-                </span>
+                </Truncate>
                 <Badge
                   tone={
                     c.severity === "critical"

@@ -40,6 +40,7 @@ import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Truncate } from "@/components/ui/truncate";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, isScopedToAgent, parseAgentScope } from "@/lib/agent-scope";
 import {
@@ -1261,12 +1262,15 @@ function ControlCasesTriage({
                     )}
                   />
                   <span className="min-w-0">
-                    <span className="block truncate font-medium text-[var(--foreground)]">
+                    <Truncate full={it.title} className="font-medium text-[var(--foreground)]">
                       {it.title}
-                    </span>
-                    <span className="block truncate text-[var(--muted-foreground)]">
+                    </Truncate>
+                    <Truncate
+                      full={`${it.source} · ${it.assignee}`}
+                      className="text-[var(--muted-foreground)]"
+                    >
                       {it.source} · {it.assignee}
-                    </span>
+                    </Truncate>
                   </span>
                   <Badge
                     className={cn("shrink-0", toneBg[CASE_SLA_TONE[it.sla_tone] ?? "neutral"])}
@@ -1395,6 +1399,8 @@ function GovernedActivityCard({
             {events.map((ev, i) => {
               const Icon = GOV_ICON[ev.kind] ?? Activity;
               const tone = GOV_TONE[ev.kind] ?? "neutral";
+              const label = governanceLabel(ev, t);
+              const meta = `${fmtGovTime(ev.occurred_at)} · ${ev.actor}${ev.evidence ? ` · ${ev.evidence}` : ""}`;
               return (
                 <div
                   key={`${ev.occurred_at}-${ev.kind}-${i}`}
@@ -1409,16 +1415,21 @@ function GovernedActivityCard({
                     <Icon className="h-3.5 w-3.5" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[var(--foreground)]">
-                      {governanceLabel(ev, t)}
+                    <Truncate
+                      full={ev.count > 1 ? `${label} · ×${ev.count}` : label}
+                      className="text-[var(--foreground)]"
+                    >
+                      {label}
                       {ev.count > 1 ? (
                         <span className="text-[var(--muted-foreground)]"> · ×{ev.count}</span>
                       ) : null}
-                    </span>
-                    <span className="block truncate font-mono text-[0.6rem] text-[var(--muted-foreground)]">
-                      {fmtGovTime(ev.occurred_at)} · {ev.actor}
-                      {ev.evidence ? ` · ${ev.evidence}` : ""}
-                    </span>
+                    </Truncate>
+                    <Truncate
+                      full={meta}
+                      className="font-mono text-[0.6rem] text-[var(--muted-foreground)]"
+                    >
+                      {meta}
+                    </Truncate>
                   </span>
                 </div>
               );
@@ -1518,9 +1529,9 @@ function ObservabilityTracesCard({
                     key={o.name}
                     className="grid grid-cols-[1fr_auto] items-center gap-2 text-[0.68rem]"
                   >
-                    <span className="truncate font-mono text-[var(--muted-foreground)]">
+                    <Truncate full={o.name} className="font-mono text-[var(--muted-foreground)]">
                       {o.name}
-                    </span>
+                    </Truncate>
                     <span className="tabular-nums text-[var(--muted-foreground)]">{o.count}</span>
                   </li>
                 ))}
@@ -1687,7 +1698,7 @@ function IncidentsCard({
               className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs"
             >
               <span className={cn("h-2 w-2 rounded-full", dotBg[it.tone])} />
-              <span className="truncate">{it.label}</span>
+              <Truncate full={it.label}>{it.label}</Truncate>
               <Badge className={toneBg[it.tone]}>{it.meta}</Badge>
             </div>
           ))
@@ -1901,9 +1912,9 @@ function RecentActivitiesCard({
               className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs"
             >
               <span className={cn("h-2 w-2 rounded-full", dotBg[rateTone(s.score)])} />
-              <span className="truncate">
+              <Truncate full={`${s.metric} · ${s.language}`}>
                 {s.metric} · <span className="uppercase">{s.language}</span>
-              </span>
+              </Truncate>
               <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
                 {s.score.toFixed(2)}
               </span>

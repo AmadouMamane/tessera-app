@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Truncate } from "@/components/ui/truncate";
 import type {
   BusinessEvent,
   BusinessScore,
@@ -459,9 +460,9 @@ function TimelinePanel({ run }: { run: RecouvrementRun }) {
                   ) : (
                     <div className={cn("rounded-lg border px-2.5 py-2", eventTone(event))}>
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="truncate font-mono text-[0.68rem] font-semibold leading-snug">
+                        <Truncate className="font-mono text-[0.68rem] font-semibold leading-snug">
                           {event.event_name}
-                        </span>
+                        </Truncate>
                         <time className="shrink-0 text-[0.58rem] tabular-nums opacity-80">
                           {when}
                         </time>

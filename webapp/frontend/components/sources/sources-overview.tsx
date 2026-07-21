@@ -45,6 +45,7 @@ import { MetricInfo } from "@/components/cockpit/metric-info";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchSourcesOverview } from "@/lib/api/client";
@@ -359,7 +360,9 @@ function CompactKpi({ kpi }: { kpi: Data["kpis"][number] }) {
   return (
     <div className="flex h-[88px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
       <p className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
-        <span className="min-w-0 truncate">{kpi.label}</span>
+        <Truncate full={kpi.label} className="min-w-0">
+          {kpi.label}
+        </Truncate>
         <ExplainInfo k={kpi.key} title={kpi.label} />
       </p>
       <p className="mt-0.5 text-[1.25rem] font-semibold leading-none text-white">{kpi.value}</p>
@@ -756,17 +759,14 @@ function SourceTable({
                   )}
                 >
                   <td className="py-1.5 pl-5 pr-2">
-                    <span
-                      className="flex items-center gap-1.5 text-[var(--tessera-text)]"
-                      title={s.name}
-                    >
+                    <span className="flex items-center gap-1.5 text-[var(--tessera-text)]">
                       <Icon
                         className={cn(
                           "h-3 w-3 shrink-0",
                           TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]",
                         )}
                       />
-                      <span className="truncate">{s.name}</span>
+                      <Truncate full={s.name}>{s.name}</Truncate>
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
@@ -789,9 +789,9 @@ function SourceTable({
                     {s.citation}
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <span className="flex items-center gap-1.5" title={s.used_by}>
+                    <span className="flex items-center gap-1.5">
                       <Users className="h-3 w-3 shrink-0 text-[#87bfff]" />
-                      <span className="truncate">{s.used_by}</span>
+                      <Truncate full={s.used_by}>{s.used_by}</Truncate>
                     </span>
                   </td>
                   <td className="px-2 py-1.5">
@@ -892,7 +892,9 @@ function IndexationView({ t, data }: { t: T; data: Data }) {
         <ul className="flex flex-col gap-1.5">
           {corpus.map((s) => (
             <li key={s.id} className="flex items-center gap-2 text-[0.66rem]">
-              <span className="w-44 shrink-0 truncate text-[var(--tessera-text)]">{s.name}</span>
+              <Truncate full={s.name} className="w-44 shrink-0 text-[var(--tessera-text)]">
+                {s.name}
+              </Truncate>
               <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
                 <div
                   className="h-full rounded-full bg-[#2e72d2]"
@@ -944,7 +946,9 @@ function AccessView({
                 <Icon
                   className={cn("h-3 w-3 shrink-0", TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]")}
                 />
-                <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
+                <Truncate full={s.name} className="text-[var(--tessera-text)]">
+                  {s.name}
+                </Truncate>
               </span>
               <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                 {s.detail.consumers?.items.map((c) => (
@@ -1093,7 +1097,9 @@ function HistoryView({ t, data }: { t: T; data: Data }) {
         <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
           {corpus.map((s) => (
             <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
-              <span className="truncate text-[var(--tessera-text)]">{s.name}</span>
+              <Truncate full={s.name} className="text-[var(--tessera-text)]">
+                {s.name}
+              </Truncate>
               <span className="inline-flex shrink-0 items-center gap-1.5 text-[var(--tessera-text-muted)]">
                 <Clock className="h-3 w-3" /> {t("view.lastIndexed")}: {s.freshness}
               </span>
@@ -1114,7 +1120,7 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
           <Database className="h-3.5 w-3.5 shrink-0 text-[#87bfff]" />
-          <span className="truncate">{source.name}</span>
+          <Truncate full={source.name}>{source.name}</Truncate>
         </span>
         <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
           {t("view.total")}:{" "}
@@ -1269,7 +1275,9 @@ function ByVolume({ data }: { data: Data }) {
         {data.by_env.map((e) => (
           <li key={e.key} className="flex flex-col gap-0.5 text-[0.66rem]">
             <div className="flex items-center justify-between gap-1.5">
-              <span className="truncate text-[var(--tessera-text)]">{e.label}</span>
+              <Truncate full={e.label} className="text-[var(--tessera-text)]">
+                {e.label}
+              </Truncate>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">
                 {e.value} / {e.pct}%
               </span>
@@ -1303,7 +1311,9 @@ function ByCitation({ t, data }: { t: T; data: Data }) {
         {rows.map((r) => (
           <li key={r.name} className="flex flex-col gap-1 text-[0.66rem]">
             <div className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">{r.name}</span>
+              <Truncate full={r.name} className="min-w-0 text-[var(--tessera-text)]">
+                {r.name}
+              </Truncate>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
                 {Math.round(r.pct)}%
               </span>
@@ -1328,9 +1338,12 @@ function ByLanguage({ data }: { data: Data }) {
       <ul className="flex flex-col gap-2">
         {data.cost_by_source.map((c) => (
           <li key={c.name} className="flex items-center gap-2 text-[0.66rem]">
-            <span className="w-10 shrink-0 truncate font-medium text-[var(--tessera-text)]">
+            <Truncate
+              full={c.name}
+              className="w-10 shrink-0 font-medium text-[var(--tessera-text)]"
+            >
               {c.name}
-            </span>
+            </Truncate>
             <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
               <div
                 className="h-full rounded-full"
@@ -1537,17 +1550,14 @@ function QualityTable({
                   )}
                 >
                   <td className="py-1.5 pl-5 pr-2">
-                    <span
-                      className="flex items-center gap-1.5 text-[var(--tessera-text)]"
-                      title={s.name}
-                    >
+                    <span className="flex items-center gap-1.5 text-[var(--tessera-text)]">
                       <Icon
                         className={cn(
                           "h-3 w-3 shrink-0",
                           TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]",
                         )}
                       />
-                      <span className="truncate">{s.name}</span>
+                      <Truncate full={s.name}>{s.name}</Truncate>
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
@@ -1577,7 +1587,7 @@ function QualityTable({
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
                     <span className="inline-flex items-center gap-1.5">
                       <Tag className="h-3 w-3 shrink-0 text-[#87bfff]" />
-                      <span className="truncate">{s.version}</span>
+                      <Truncate full={s.version}>{s.version}</Truncate>
                     </span>
                   </td>
                   <td className="px-2 py-1.5">
@@ -1665,7 +1675,9 @@ function DetailPanel({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{detail.name}</p>
+          <Truncate as="p" full={detail.name} className="text-sm font-semibold text-white">
+            {detail.name}
+          </Truncate>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Badge className={CLASS_BADGE[detail.classification]}>
               {t(`classification.${detail.classification}`)}
@@ -2026,9 +2038,9 @@ function Donut({
         {slices.map((s) => (
           <li key={s.key} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
+            <Truncate full={labelOf(s.key)} className="min-w-0 flex-1 text-[var(--tessera-text)]">
               {labelOf(s.key)}
-            </span>
+            </Truncate>
             <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
               {s.count} / {s.pct}%
             </span>

@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import type { FailedRunCase, FailedRunsReport, ReleaseStatus } from "@/lib/api/schemas";
 
@@ -290,7 +291,7 @@ function MiniDonut({
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}
               />
-              <span className="min-w-0 truncate text-[var(--muted-foreground)]">{it.label}</span>
+              <Truncate className="min-w-0 text-[var(--muted-foreground)]">{it.label}</Truncate>
             </span>
             <span className="pl-2.5 tabular-nums">{Math.round((it.value / total) * 100)}%</span>
           </li>
@@ -614,9 +615,7 @@ export function FailedBoard({
                         />
                       </td>
                       <td className="px-2 py-2 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
-                        <span className="block truncate" title={c.id}>
-                          {c.id}
-                        </span>
+                        <Truncate>{c.id}</Truncate>
                       </td>
                       <td className="px-2 py-2">
                         <Badge tone={SEV_TONE[c.severity] ?? "neutral"} className="text-[0.6rem]">
@@ -624,14 +623,10 @@ export function FailedBoard({
                         </Badge>
                       </td>
                       <td className="px-2 py-2">
-                        <span className="block truncate" title={catLabel(c.category)}>
-                          {catLabel(c.category)}
-                        </span>
+                        <Truncate>{catLabel(c.category)}</Truncate>
                       </td>
                       <td className="px-2 py-2 text-[var(--muted-foreground)]">
-                        <span className="block truncate" title={c.prompt}>
-                          {c.prompt}
-                        </span>
+                        <Truncate>{c.prompt}</Truncate>
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-[var(--muted-foreground)]">
                         {DASH}
@@ -640,14 +635,10 @@ export function FailedBoard({
                         {c.catalogue_version ? `v${c.catalogue_version.split("-")[0]}` : DASH}
                       </td>
                       <td className="px-2 py-2">
-                        <span className="block truncate" title={c.model}>
-                          {shortModel(c.model)}
-                        </span>
+                        <Truncate full={c.model}>{shortModel(c.model)}</Truncate>
                       </td>
                       <td className="px-2 py-2 text-[var(--muted-foreground)]">
-                        <span className="block truncate" title={c.owner}>
-                          {c.owner}
-                        </span>
+                        <Truncate>{c.owner}</Truncate>
                       </td>
                       <td className="px-2 py-2">
                         <span

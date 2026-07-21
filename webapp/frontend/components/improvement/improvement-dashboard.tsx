@@ -22,6 +22,7 @@ import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchImprovement } from "@/lib/api/client";
 import type { Opportunity } from "@/lib/api/schemas";
@@ -186,7 +187,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
         {slices.map((s) => (
           <li key={s.label} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
-            <span className="min-w-0 flex-1 truncate">{s.label}</span>
+            <Truncate className="min-w-0 flex-1">{s.label}</Truncate>
             <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{s.count}</span>
           </li>
         ))}
@@ -533,7 +534,7 @@ function OpportunityRow({ o }: { o: Opportunity }) {
           <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-[var(--tessera-muted)] text-[0.55rem] font-semibold tabular-nums">
             {o.rank}
           </span>
-          <span className="min-w-0 truncate">{o.action}</span>
+          <Truncate className="min-w-0">{o.action}</Truncate>
         </span>
       </td>
       <td className="py-1 pr-2 text-[var(--muted-foreground)]">{o.cause}</td>
@@ -615,7 +616,7 @@ function TopProblemsCard({ topProblems }: { topProblems: Opportunity[] }) {
         ) : (
           topProblems.slice(0, 5).map((p) => (
             <div key={p.rank} className="flex items-center gap-2 text-[0.72rem]">
-              <span className="min-w-0 flex-1 truncate">{p.cause}</span>
+              <Truncate className="min-w-0 flex-1">{p.cause}</Truncate>
               <span className={`shrink-0 tabular-nums ${GOOD}`}>+{p.gain_pts} pts</span>
             </div>
           ))
