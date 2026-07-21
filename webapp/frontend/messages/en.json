@@ -7344,22 +7344,17 @@
       "justNow": "just now",
       "minutesAgo": "{m} min ago",
       "info": {
-        "seeForYourself": "See for yourself",
         "supervise": {
-          "what": "Tessera listens to the telemetry every agent publishes — health, activity, measurements — without ever stepping into its conversations.",
-          "how": "The count and timestamp reflect data actually received, refreshed continuously: if the signal drops, this tile says so — it never invents a number."
+          "what": "Tessera listens to the telemetry every agent publishes — health, activity, measurements — without ever stepping into its conversations."
         },
         "secure": {
-          "what": "Every message passes through a single checkpoint that can block an attack, mask sensitive data, or call in a human.",
-          "how": "Counters read from the audit journal, where every refusal is recorded; trial messages (canaries, operator tests) are included — the checkpoint runs on each of them."
+          "what": "Every message passes through a single checkpoint that can block an attack, mask sensitive data, or call in a human."
         },
         "evaluate": {
-          "what": "Before serving customers, every agent must pass a test set, including a security baseline shared by all.",
-          "how": "The verdict comes from the agent's latest run; any change — model, instructions, rules — puts it back in play: the agent must prove itself ready again."
+          "what": "Before serving customers, every agent must pass a test set, including a security baseline shared by all."
         },
         "prove": {
-          "what": "Every decision is written to a journal where each entry is sealed to the previous one: nothing can be altered without it showing.",
-          "how": "Verification is re-run automatically on every read; what you see is the verdict of the last successful check."
+          "what": "Every decision is written to a journal where each entry is sealed to the previous one: nothing can be altered without it showing."
         }
       }
     },

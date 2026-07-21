@@ -7346,22 +7346,17 @@
       "justNow": "à l’instant",
       "minutesAgo": "il y a {m} min",
       "info": {
-        "seeForYourself": "Voir par vous-même",
         "supervise": {
-          "what": "Tessera écoute la télémétrie que chaque agent publie — santé, activité, mesures — sans jamais intervenir dans ses échanges.",
-          "how": "Le compte et l’horodatage reflètent les données réellement reçues, rafraîchies en continu : si le signal se coupe, cette case le dit, elle n’invente pas un chiffre."
+          "what": "Tessera écoute la télémétrie que chaque agent publie — santé, activité, mesures — sans jamais intervenir dans ses échanges."
         },
         "secure": {
-          "what": "Chaque message traverse un point de contrôle unique qui peut bloquer une attaque, masquer une donnée sensible ou faire appel à un humain.",
-          "how": "Compteurs lus du journal d’audit, où chaque refus est inscrit ; les messages d’essai (canaris, tests opérateur) sont inclus — le contrôle s’exerce sur chacun d’eux."
+          "what": "Chaque message traverse un point de contrôle unique qui peut bloquer une attaque, masquer une donnée sensible ou faire appel à un humain."
         },
         "evaluate": {
-          "what": "Avant d’être exposé aux clients, chaque agent doit réussir un jeu d’épreuves, dont un socle de sécurité commun à tous.",
-          "how": "Le verdict vient du dernier passage de l’agent ; toute modification — modèle, consignes, règles — le remet en jeu : l’agent devra prouver à nouveau qu’il est prêt."
+          "what": "Avant d’être exposé aux clients, chaque agent doit réussir un jeu d’épreuves, dont un socle de sécurité commun à tous."
         },
         "prove": {
-          "what": "Chaque décision est inscrite dans un journal où chaque entrée est scellée à la précédente : rien ne peut être altéré sans que cela se voie.",
-          "how": "La vérification est refaite automatiquement à chaque lecture ; ce qui s’affiche est le verdict du dernier contrôle réussi."
+          "what": "Chaque décision est inscrite dans un journal où chaque entrée est scellée à la précédente : rien ne peut être altéré sans que cela se voie."
         }
       }
     },

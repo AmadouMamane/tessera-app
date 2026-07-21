@@ -411,16 +411,14 @@ function PillarColumn({
           />
           {title}
         </span>
+        {/* Public landing: the popover DESCRIBES the capability, nothing more.
+            "Calcul"/"Source" are cockpit vocabulary — an operator's questions,
+            not a visitor's (operator call, 2026-07-21). The provenance story
+            lives one click away on /comprendre. */}
         <MetricInfo
           className="mt-[-1px] opacity-55 hover:opacity-100 focus-visible:opacity-100"
           title={title}
           what={tr(`signal.info.${pillar.key}.what`)}
-          how={tr(`signal.info.${pillar.key}.how`)}
-          source={
-            <Link className="underline underline-offset-2" href="/comprendre">
-              {tr("signal.info.seeForYourself")}
-            </Link>
-          }
         />
       </span>
       <span

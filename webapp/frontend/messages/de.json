@@ -7344,22 +7344,17 @@
       "justNow": "gerade eben",
       "minutesAgo": "vor {m} Min.",
       "info": {
-        "seeForYourself": "Sehen Sie selbst",
         "supervise": {
-          "what": "Tessera hört auf die Telemetrie, die jeder Agent veröffentlicht — Gesundheit, Aktivität, Messwerte — ohne je in seine Gespräche einzugreifen.",
-          "how": "Zahl und Zeitstempel spiegeln die tatsächlich empfangenen Daten wider, laufend aktualisiert: Fällt das Signal aus, sagt dieses Feld es — es erfindet keine Zahl."
+          "what": "Tessera hört auf die Telemetrie, die jeder Agent veröffentlicht — Gesundheit, Aktivität, Messwerte — ohne je in seine Gespräche einzugreifen."
         },
         "secure": {
-          "what": "Jede Nachricht durchläuft eine einzige Kontrollstelle, die einen Angriff blockieren, sensible Daten maskieren oder einen Menschen hinzuziehen kann.",
-          "how": "Zähler aus dem Audit-Journal, in dem jede Ablehnung verzeichnet ist; Testnachrichten (Canaries, Operator-Tests) sind enthalten — die Kontrolle greift bei jeder von ihnen."
+          "what": "Jede Nachricht durchläuft eine einzige Kontrollstelle, die einen Angriff blockieren, sensible Daten maskieren oder einen Menschen hinzuziehen kann."
         },
         "evaluate": {
-          "what": "Bevor ein Agent Kundschaft bedient, muss er einen Prüfsatz bestehen, darunter eine für alle gemeinsame Sicherheitsbasis.",
-          "how": "Das Urteil stammt aus dem letzten Durchlauf des Agenten; jede Änderung — Modell, Anweisungen, Regeln — stellt es infrage: Der Agent muss erneut beweisen, dass er bereit ist."
+          "what": "Bevor ein Agent Kundschaft bedient, muss er einen Prüfsatz bestehen, darunter eine für alle gemeinsame Sicherheitsbasis."
         },
         "prove": {
-          "what": "Jede Entscheidung wird in ein Journal geschrieben, in dem jeder Eintrag mit dem vorherigen versiegelt ist: Nichts kann unbemerkt verändert werden.",
-          "how": "Die Prüfung wird bei jedem Lesen automatisch wiederholt; angezeigt wird das Urteil der letzten erfolgreichen Kontrolle."
+          "what": "Jede Entscheidung wird in ein Journal geschrieben, in dem jeder Eintrag mit dem vorherigen versiegelt ist: Nichts kann unbemerkt verändert werden."
         }
       }
     },
