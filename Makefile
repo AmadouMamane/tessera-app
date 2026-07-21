@@ -583,24 +583,31 @@ bootstrap: install
 	$(MAKE) eval-demo
 
 # ── Dev secrets ─────────────────────────────────────────────────────────────
-# Generate the shared operator-assertion HMAC secret and write it to BOTH dev
-# .env.local files (gitignored). Idempotent — skips if already present. The agent
-# loads it from dotenv via the nested delimiter (double underscore); Next reads
-# process.env verbatim (single underscore). Same VALUE, different name per side.
-# Without it the operator path is inert and the recouvrement console mis-attributes.
+# Generate the local Auth.js secret plus the shared operator-assertion HMAC secret in
+# gitignored .env.local files. The operator key is one trust boundary with two names: the
+# agent loads the nested delimiter (double underscore), while Next reads the single-underscore
+# name verbatim. A one-sided existing key is copied to the missing side; two different values
+# fail loudly instead of minting assertions the agent can never verify.
 dev-secrets:
-	@if grep -q '^TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=' .env.local 2>/dev/null \
-	   && grep -q '^TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=' webapp/frontend/.env.local 2>/dev/null; then \
-	  echo "operator key already set in both .env.local — nothing to do"; \
-	else \
-	  KEY=$$(openssl rand -hex 32); \
-	  touch .env.local webapp/frontend/.env.local; \
-	  grep -q '^TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=' .env.local 2>/dev/null \
-	    || printf '\nTESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=%s\n' "$$KEY" >> .env.local; \
-	  grep -q '^TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=' webapp/frontend/.env.local 2>/dev/null \
-	    || printf '\nTESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=%s\n' "$$KEY" >> webapp/frontend/.env.local; \
-	  echo "wrote operator key to .env.local + webapp/frontend/.env.local (restart agent + front)"; \
-	fi
+	@set -eu; \
+	  umask 077; \
+	  root_env=.env.local; front_env=webapp/frontend/.env.local; \
+	  touch "$$root_env" "$$front_env"; \
+	  agent_key=$$(sed -n 's/^TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=//p' "$$root_env" | tail -n 1); \
+	  front_key=$$(sed -n 's/^TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=//p' "$$front_env" | tail -n 1); \
+	  if [ -n "$$agent_key" ] && [ -n "$$front_key" ] && [ "$$agent_key" != "$$front_key" ]; then \
+	    echo "✗ operator assertion keys differ between root and frontend .env.local"; \
+	    exit 1; \
+	  fi; \
+	  shared_key="$$agent_key$$front_key"; \
+	  if [ -z "$$shared_key" ]; then shared_key=$$(openssl rand -hex 32); fi; \
+	  if [ -z "$$agent_key" ]; then printf '\nTESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY=%s\n' "$$shared_key" >> "$$root_env"; fi; \
+	  if [ -z "$$front_key" ]; then printf '\nTESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY=%s\n' "$$shared_key" >> "$$front_env"; fi; \
+	  auth_secret=$$(sed -n 's/^AUTH_SECRET=//p' "$$front_env" | tail -n 1); \
+	  if [ -z "$$auth_secret" ]; then \
+	    printf '\nAUTH_SECRET=%s\n' "$$(openssl rand -hex 32)" >> "$$front_env"; \
+	  fi; \
+	  echo "✓ local session + operator assertion secrets present and consistent"
 
 # ── Observability stack (OTel collector -> Phoenix + Langfuse + Grafana) ─────
 # The agent only feeds traces when TESSERA_OBSERVABILITY__OTEL_ENDPOINT points at the
@@ -743,7 +750,7 @@ _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 .PHONY: dev-up dev-down dev-status dev-preview
 
 # Start backend + frontend from THIS checkout, detached; wait for health.
-dev-up:
+dev-up: dev-secrets
 	@echo "▶ dev-up from $(CURDIR) (git $$(git rev-parse --short HEAD 2>/dev/null)) — front :$(DEV_FPORT) / back :$(DEV_BPORT) / metrics :$(DEV_MPORT)"
 	@for p in $(DEV_FPORT) $(DEV_BPORT) $(DEV_MPORT); do lsof -nP -iTCP:$$p -sTCP:LISTEN >/dev/null 2>&1 && { echo "✗ port $$p in use — 'make dev-down' first (never two servers on one port)"; exit 1; }; done; true
 	@# The app-side ClickHouse READER drinks from the same canonical file as the stack it reads.
@@ -752,8 +759,19 @@ dev-up:
 	@# read answered 403 (three postures "indisponible", five naked-500 routes). Absent file ⇒
 	@# defaults, unchanged (a fresh clone without an obs stack still boots).
 	@echo "  backend  → $(DEV_BACKEND_LOG)"; \
-	  if [ -f "$(OBS_ENV_FILE)" ]; then \
-	    obs_ch_pw=$$(. ./$(OBS_ENV_FILE) && printf %s "$$TESSERA_OBS_CLICKHOUSE_PASSWORD"); \
+	  obs_env="$(OBS_ENV_FILE)"; \
+	  if [ ! -f "$$obs_env" ]; then \
+	    case "$$obs_env" in \
+	      /*) ;; \
+	      *) common_dir=$$(git rev-parse --git-common-dir 2>/dev/null || true); \
+	         case "$$common_dir" in /*) ;; *) common_dir="$(CURDIR)/$$common_dir" ;; esac; \
+	         primary_obs_env="$$(dirname "$$common_dir")/$$obs_env"; \
+	         if [ -f "$$primary_obs_env" ]; then obs_env="$$primary_obs_env"; fi ;; \
+	    esac; \
+	  fi; \
+	  if [ -f "$$obs_env" ]; then \
+	    case "$$obs_env" in /*) ;; *) obs_env="$(CURDIR)/$$obs_env" ;; esac; \
+	    obs_ch_pw=$$(. "$$obs_env" && printf %s "$$TESSERA_OBS_CLICKHOUSE_PASSWORD"); \
 	    export TESSERA_CLICKHOUSE_PASSWORD="$${TESSERA_CLICKHOUSE_PASSWORD:-$$obs_ch_pw}"; \
 	  fi; \
 	  TESSERA_API__PORT=$(DEV_BPORT) TESSERA_OBS_METRICS_PORT=$(DEV_MPORT) nohup $(_SETSID) uv run python scripts/run_local.py >$(DEV_BACKEND_LOG) 2>&1 </dev/null &

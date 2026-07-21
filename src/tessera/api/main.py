@@ -48,6 +48,7 @@ from tessera.api.security import (
 from tessera.api.session import validate_session_signing_key
 from tessera.api.settings_store import ensure_settings_schema
 from tessera.guard.audit import validate_audit_chain_config
+from tessera.guard.seal import validate_exposed_seal_config
 from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema
 from tessera.memory.summary import ensure_summary_schema
@@ -163,7 +164,6 @@ async def _start_seal_scheduler() -> asyncio.Task[None] | None:
 
     async def _loop() -> None:
         while True:
-            await asyncio.sleep(interval)
             try:
                 result = await asyncio.to_thread(run_seal_cycle)
                 log.info(
@@ -176,6 +176,7 @@ async def _start_seal_scheduler() -> asyncio.Task[None] | None:
                 raise
             except Exception as exc:  # a cycle failure must never kill the loop
                 log.warning("seal.cycle_failed", error=str(exc))
+            await asyncio.sleep(interval)
 
     return asyncio.create_task(_loop())
 
@@ -376,6 +377,10 @@ def build_app() -> FastAPI:
     # ledger_source combination cannot PERSIST the hash chain refuses to boot, rather than
     # emitting to the sink while silently chaining nothing into the opposable ledger.
     validate_audit_chain_config()
+    # ADR 0042: staging/production are proof surfaces. They cannot boot with a cosmetic
+    # "infalsifiable" promise: a qualified RFC 3161 TSA + pinned trust root are mandatory.
+    # The live badge remains stricter and only greens after token verification succeeds.
+    validate_exposed_seal_config()
     # Docs/OpenAPI are on for local dev, off in production, and can be closed
     # explicitly (expose_docs=False) on an internet-reachable non-prod agent.
     docs_on = settings.api.expose_docs and not settings.is_production()

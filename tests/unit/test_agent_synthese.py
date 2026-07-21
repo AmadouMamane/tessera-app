@@ -260,7 +260,8 @@ class _RecordingSynConn:
         self._log = log
         self.row_factory: object = None
 
-    def cursor(self) -> _RecordingSynCursor:
+    def cursor(self, *, row_factory: object | None = None) -> _RecordingSynCursor:
+        assert row_factory is not None, "the reader must scope its row factory to the cursor"
         return _RecordingSynCursor(self._log)
 
 

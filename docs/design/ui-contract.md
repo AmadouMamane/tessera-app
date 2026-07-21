@@ -252,7 +252,8 @@ For any config surface (model, prompts, guardrails, knowledge):
 **P1 — global chrome (fix once in shell).** `AppShell` now renders `AppBreadcrumb`
 (SUPER › Section › Page from the route, presentation labels) atop `<main>` and
 `AppFooter` at the bottom: "Source de vérité : YAML · Git" + **real** hash-chain
-integrity (`/audit/integrity`, ✓/✗ honest) + env (on-prem · EU · SOC 2). Benefits
+integrity (`/audit/integrity`, ✓/✗ honest) + env (on-prem · EU · SOC 2 control mapping,
+no CPA attestation). Benefits
 every cockpit + AGENT page at once. No data invented.
 
 **Évaluations — Phase 1/2 finalisation.** Phase 1: audit chain re-sealed honestly

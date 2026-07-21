@@ -62,8 +62,10 @@ __all__ = [
     "build_ledger_attestation_entry",
     "build_ledger_seal_entry",
     "chain_persists_for",
+    "confirmed_tools",
     "current_auth_state",
     "current_model",
+    "current_tool_call_counts",
     "emit_agent_invocation",
     "emit_agent_lifecycle",
     "emit_agent_proposed",
@@ -255,6 +257,21 @@ guard_disabled: ContextVar[frozenset[str]] = ContextVar(
 # ANONYMOUS by default (safe), with the same task-isolation guarantees as above.
 current_auth_state: ContextVar[AuthState] = ContextVar(
     "tessera_auth_state", default=AuthState.ANONYMOUS
+)
+
+# Explicit action confirmations are a separate input channel from natural-language
+# text.  The chat UI sets this only after a human clicks the confirmation control;
+# the model cannot manufacture it in its own prompt or tool arguments.
+confirmed_tools: ContextVar[frozenset[str]] = ContextVar(
+    "tessera_confirmed_tools", default=frozenset()
+)
+
+# One mutable counter map is installed at the request boundary and inherited by
+# every concurrently-dispatched worker in that turn.  The check + increment in
+# the guard is synchronous (contains no await), so parallel tasks cannot cross
+# the configured maximum between two event-loop yields.
+current_tool_call_counts: ContextVar[dict[str, int] | None] = ContextVar(
+    "tessera_tool_call_counts", default=None
 )
 
 

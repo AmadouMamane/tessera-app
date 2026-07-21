@@ -179,23 +179,22 @@ async def load_citation_counts(*, window_days: int | None = None) -> CitationCou
         where = "WHERE day >= (CURRENT_DATE - %s::int)"
         params = (window_days,)
     try:
-        async with _connection() as conn:
-            # Pooled connections may carry dict_row from a prior knn_search; force
-            # positional rows so the index access below is correct.
-            conn.row_factory = tuple_row
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    f"SELECT COALESCE(SUM(queries), 0), COALESCE(SUM(queries_with_hit), 0) "  # noqa: S608
-                    f"FROM {_QUERY_TABLE} {where}",
-                    params,
-                )
-                qrow = await cur.fetchone()
-                await cur.execute(
-                    f"SELECT category, COALESCE(SUM(hits), 0) "  # noqa: S608
-                    f"FROM {_CATEGORY_TABLE} {where} GROUP BY category",
-                    params,
-                )
-                crows = await cur.fetchall()
+        # Positional rows are local to this cursor.  Mutating a pooled
+        # connection's row_factory leaks that representation to its next
+        # borrower and makes unrelated readers fail nondeterministically.
+        async with _connection() as conn, conn.cursor(row_factory=tuple_row) as cur:
+            await cur.execute(
+                f"SELECT COALESCE(SUM(queries), 0), COALESCE(SUM(queries_with_hit), 0) "  # noqa: S608
+                f"FROM {_QUERY_TABLE} {where}",
+                params,
+            )
+            qrow = await cur.fetchone()
+            await cur.execute(
+                f"SELECT category, COALESCE(SUM(hits), 0) "  # noqa: S608
+                f"FROM {_CATEGORY_TABLE} {where} GROUP BY category",
+                params,
+            )
+            crows = await cur.fetchall()
     except Exception as exc:  # degrade gracefully for the dashboard
         sys.stderr.write(f"tessera.retrieval.citations: read failed: {exc}\n")
         return None

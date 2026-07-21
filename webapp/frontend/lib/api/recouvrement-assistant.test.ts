@@ -39,6 +39,7 @@ describe("sendRecouvrementAssistantMessage", () => {
       message: "ok puis-je l'appeler à 22h ?",
       conversationId: "conversation-1",
       turnId: "turn-1",
+      language: "de",
       assistantState: { activeTask: "check_rule" },
     });
 
@@ -56,6 +57,7 @@ describe("sendRecouvrementAssistantMessage", () => {
       assistant_state: { activeTask: "check_rule" },
       conversation_id: "conversation-1",
       turn_id: "turn-1",
+      language: "de",
       surface: "dedicated-ui",
     });
     expect(result.artifact.type).toBe("contact_rule_v1");
@@ -113,6 +115,7 @@ describe("sendRecouvrementAssistantAction", () => {
       actionName: "insert_artifact_in_case",
       conversationId: "conversation-action",
       turnId: "turn-action",
+      language: "en",
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -129,6 +132,7 @@ describe("sendRecouvrementAssistantAction", () => {
       action_name: "insert_artifact_in_case",
       conversation_id: "conversation-action",
       turn_id: "turn-action",
+      language: "en",
       surface: "dedicated-ui",
     });
     expect(result.artifact.status).toBe("insertion_prepared");

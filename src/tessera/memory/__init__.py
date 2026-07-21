@@ -11,6 +11,7 @@ implementation detail behind that contract.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
@@ -38,6 +39,7 @@ __all__ = [
     "TurnRecord",
     "get_memory_backend",
     "memory_backend_for",
+    "memory_backend_for_state",
     "scope_for",
 ]
 
@@ -144,3 +146,24 @@ def memory_backend_for(tier: str | None = None, history_window: int | None = Non
     if tier not in _FIRST_PARTY_TIERS:
         return get_memory_backend()
     return _tier_backend(tier, history_window)
+
+
+def memory_backend_for_state(state: Mapping[str, object]) -> MemoryBackend:
+    """Resolve one turn's backend from its seam-stamped state.
+
+    Loading context before generation and recording the completed turn must
+    call this same resolver.  Otherwise a per-agent tier can read from one
+    store and write into the organisation default, making memory appear to
+    vanish on the next turn.
+    """
+    raw = state.get("memory")
+    memory = raw if isinstance(raw, Mapping) else {}
+    raw_tier = memory.get("tier")
+    raw_window = memory.get("window")
+    tier = raw_tier if isinstance(raw_tier, str) else None
+    window = (
+        int(raw_window)
+        if isinstance(raw_window, int | float) and not isinstance(raw_window, bool)
+        else None
+    )
+    return memory_backend_for(tier, window)

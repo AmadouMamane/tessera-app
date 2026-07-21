@@ -22,6 +22,12 @@ export interface PillarSignal {
   agentsWithRelease: number;
   agents: readonly { verdictStale: boolean }[];
   integrityVerified: boolean | null;
+  opposabilityBadge:
+    | "non_scelle"
+    | "scelle_opposable"
+    | "scelle_non_qualifie"
+    | "integrite_partielle"
+    | null;
   guardActivity: { checkedToday: number; blockedToday: number } | null;
 }
 
@@ -121,21 +127,28 @@ export function launcherPillars(signal: PillarSignal | null): Pillar[] | null {
     tone: gatesActive && staleCount > 0 ? "stale" : "govern",
   };
 
-  // 4 · Prove — "chaîne d'audit vérifiée" ONLY when the audit chain actually
-  // re-derives (content_integrity == true). A proven break → "non vérifiée"; an
-  // unreachable check → "vérification indisponible". Never verified from the
-  // mere existence of audit entries.
+  // 4 · Prove — ADR 0042 reserves “registre infalsifiable” for the composed live verdict:
+  // chain integrity + resolved order + fresh, verified qualified RFC 3161 seal. A chain that
+  // re-hashes but lacks that external witness says so plainly; it never borrows the stronger word.
   const verified = signal.integrityVerified;
+  const infalsifiable = signal.opposabilityBadge === "scelle_opposable";
   const prove: Pillar = {
     key: "prove",
     titleKey: "signal.pillarProve",
-    stateKey:
-      verified === true
-        ? "signal.integrityVerified"
+    stateKey: infalsifiable
+      ? "signal.ledgerInfalsifiable"
+      : verified === true
+        ? "signal.integrityVerifiedSealPending"
         : verified === false
           ? "signal.integrityUnverified"
           : "signal.integrityUnavailable",
-    tone: verified === true ? "verified" : verified === false ? "unverified" : "neutral",
+    tone: infalsifiable
+      ? "verified"
+      : verified === false
+        ? "unverified"
+        : verified === true
+          ? "stale"
+          : "neutral",
   };
 
   return [supervise, secure, evaluate, prove];

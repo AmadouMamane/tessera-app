@@ -33,7 +33,11 @@ function actionRequest(): Request {
   return new Request("http://localhost:3097/api/recouvrement-assistant/action", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ artifact: ARTIFACT, action_name: "insert_artifact_in_case" }),
+    body: JSON.stringify({
+      artifact: ARTIFACT,
+      action_name: "insert_artifact_in_case",
+      language: "en",
+    }),
   });
 }
 
@@ -114,6 +118,7 @@ describe("POST /api/recouvrement-assistant/action — the edge gate (P0 F-1)", (
     );
     const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
     const headers = requestInit.headers as Record<string, string>;
+    expect(JSON.parse(String(requestInit.body))).toMatchObject({ language: "en" });
     const token = headers["X-Tessera-Operator-Assertion"] ?? "";
     expect(token).toBeTruthy();
     // `requested_by` now travels HERE — as the assertion's verified principal, signed

@@ -102,7 +102,23 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
             ),
         ),
         (
-            re.compile(r"\b(bloquer|opposition|vol.*carte|carte.*vol)\b", re.IGNORECASE),
+            re.compile(
+                r"\b(derni[eè]res?\s+(transactions?|op[ée]rations?)"
+                r"|transactions?\s+r[ée]centes?|op[ée]rations?\s+r[ée]centes?"
+                r"|historique\s+(des?\s+)?(transactions?|op[ée]rations?))\b",
+                re.IGNORECASE,
+            ),
+            Intent(
+                name="transaction_search",
+                workers=(WorkerName.ACCOUNT_LOOKUP,),
+                rationale="French transaction-history query → ACCOUNT_LOOKUP",
+            ),
+        ),
+        (
+            re.compile(
+                r"\b(bloquer|bloquez|blocage|opposition|vol.*carte|carte.*vol)\b",
+                re.IGNORECASE,
+            ),
             Intent(
                 name="card_block",
                 workers=(WorkerName.ACCOUNT_LOOKUP,),
@@ -178,7 +194,23 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
             ),
         ),
         (
-            re.compile(r"\b(karte sperren|kartensperre|karte verloren)\b", re.IGNORECASE),
+            re.compile(
+                r"\b(letzte[nr]?\s+(transaktionen?|ums[aä]tze|buchungen?)"
+                r"|aktuelle[nr]?\s+(transaktionen?|ums[aä]tze|buchungen?)"
+                r"|transaktionsverlauf|umsatzhistorie)\b",
+                re.IGNORECASE,
+            ),
+            Intent(
+                name="transaction_search",
+                workers=(WorkerName.ACCOUNT_LOOKUP,),
+                rationale="German transaction-history query → ACCOUNT_LOOKUP",
+            ),
+        ),
+        (
+            re.compile(
+                r"\b(karte sperren|karte zu sperren|sperrung|kartensperre|karte verloren)\b",
+                re.IGNORECASE,
+            ),
             Intent(
                 name="card_block",
                 workers=(WorkerName.ACCOUNT_LOOKUP,),
@@ -249,7 +281,22 @@ _INTENT_RULES: dict[LanguageCode, list[tuple[re.Pattern[str], Intent]]] = {
             ),
         ),
         (
-            re.compile(r"\b(block.*card|card.*lost|card.*stolen|freeze.*card)\b", re.IGNORECASE),
+            re.compile(
+                r"\b(recent\s+(transactions?|payments?|activity)"
+                r"|latest\s+(transactions?|payments?)|transaction\s+history)\b",
+                re.IGNORECASE,
+            ),
+            Intent(
+                name="transaction_search",
+                workers=(WorkerName.ACCOUNT_LOOKUP,),
+                rationale="English transaction-history query → ACCOUNT_LOOKUP",
+            ),
+        ),
+        (
+            re.compile(
+                r"\b(block.*card|blocking.*card|card.*lost|card.*stolen|freeze.*card)\b",
+                re.IGNORECASE,
+            ),
             Intent(
                 name="card_block",
                 workers=(WorkerName.ACCOUNT_LOOKUP,),
@@ -327,5 +374,10 @@ def plan_for(text: str, language: LanguageCode) -> tuple[list[WorkerName], str]:
 
 def run(state: AgentState) -> dict[str, object]:
     """Planner node entry point."""
+    intents = classify_all_intents(state["user_input"], state["language"])
     plan, rationale = plan_for(state["user_input"], state["language"])
-    return {"plan": plan, "plan_rationale": rationale}
+    return {
+        "plan": plan,
+        "intents": [intent.name for intent in intents],
+        "plan_rationale": rationale,
+    }

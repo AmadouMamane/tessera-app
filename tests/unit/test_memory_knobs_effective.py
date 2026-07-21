@@ -24,7 +24,7 @@ import pytest
 from tessera.agent import reporter
 from tessera.agent.state import AgentState, new_state
 from tessera.llm.router import ChatMessage, ChatResponse
-from tessera.memory import get_memory_backend, memory_backend_for
+from tessera.memory import get_memory_backend, memory_backend_for, memory_backend_for_state
 from tessera.memory.summary import SummaryBackend
 from tessera.memory.window import WindowBackend
 from tessera.observability import agent_configurations as configurations
@@ -158,6 +158,13 @@ def test_factory_applies_a_bare_window_to_the_org_tier() -> None:
     assert backend._window == 4
 
 
+@pytest.mark.usefixtures("_window_org")
+def test_state_resolver_is_the_shared_load_and_record_contract() -> None:
+    state = _chat_state("Bonjour")
+    state["memory"] = {"tier": "summary", "window": 4}
+    assert memory_backend_for_state(state) is memory_backend_for("summary", 4)
+
+
 # --------------------------------------------------------------------------- #
 # The reporter — the state's knobs pick the backend
 # --------------------------------------------------------------------------- #
@@ -193,17 +200,17 @@ async def test_reporter_resolves_its_backend_from_the_state(
 ) -> None:
     captured: dict[str, Any] = {}
 
-    def _factory(tier: str | None = None, window: int | None = None) -> WindowBackend:
-        captured["args"] = (tier, window)
+    def _factory(state: object) -> WindowBackend:
+        captured["state"] = state
         return WindowBackend(history_window=2)
 
-    monkeypatch.setattr(reporter, "memory_backend_for", _factory)
+    monkeypatch.setattr(reporter, "memory_backend_for_state", _factory)
     llm = _CaptureBackend()
     monkeypatch.setattr(reporter, "backend_for_model", lambda _m: llm)
     state = _chat_state("Bonjour")
     state["memory"] = {"tier": "summary", "window": 4}
     await reporter._synthesise(cast("AgentState", state))
-    assert captured["args"] == ("summary", 4)
+    assert captured["state"] is state
 
 
 @pytest.mark.usefixtures("_window_org")
@@ -212,12 +219,13 @@ async def test_reporter_off_seam_uses_the_org_singleton(
 ) -> None:
     captured: dict[str, Any] = {}
 
-    def _factory(tier: str | None = None, window: int | None = None) -> WindowBackend:
-        captured["args"] = (tier, window)
+    def _factory(state: object) -> WindowBackend:
+        captured["state"] = state
         return WindowBackend(history_window=2)
 
-    monkeypatch.setattr(reporter, "memory_backend_for", _factory)
+    monkeypatch.setattr(reporter, "memory_backend_for_state", _factory)
     llm = _CaptureBackend()
     monkeypatch.setattr(reporter, "backend_for_model", lambda _m: llm)
-    await reporter._synthesise(cast("AgentState", _chat_state("Bonjour")))
-    assert captured["args"] == (None, None)
+    state = _chat_state("Bonjour")
+    await reporter._synthesise(cast("AgentState", state))
+    assert captured["state"] is state

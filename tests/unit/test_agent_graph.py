@@ -64,6 +64,20 @@ class TestPlanner:
         assert WorkerName.ACCOUNT_LOOKUP in plan
         assert WorkerName.ESCALATION not in plan
 
+    @pytest.mark.parametrize(
+        ("text", "language"),
+        [
+            ("Montrez mes dernières transactions", LanguageCode.FR),
+            ("Zeigen Sie meine letzten Buchungen", LanguageCode.DE),
+            ("Show my recent transactions", LanguageCode.EN),
+        ],
+    )
+    def test_transaction_search_routes_to_account_lookup(
+        self, text: str, language: LanguageCode
+    ) -> None:
+        plan, _ = plan_for(text, language)
+        assert WorkerName.ACCOUNT_LOOKUP in plan
+
     def test_multi_intent_activates_all_workers(self) -> None:
         # "vol de carte" matches card_block AND "rgpd" matches regulation —
         # both workers must appear in the plan.

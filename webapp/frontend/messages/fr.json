@@ -637,6 +637,8 @@
     "recouvrementDisclosure": "Recouvrement est un assistant IA. Vérifiez les informations importantes avant toute décision.",
     "recouvrementStreamingPlaceholder": "Recouvrement répond…",
     "regenerate": "Régénérer",
+    "confirmCardBlockAction": "Confirmer le blocage ·•••• {lastFour}",
+    "confirmCardBlockMessage": "Je confirme : bloquez ma carte se terminant par {lastFour}. Cette action est irréversible.",
     "edit": "Modifier",
     "confirm": "Envoyer",
     "cancel": "Annuler",
@@ -7340,7 +7342,8 @@
       "evaluateReadyStale": "{ready, plural, one {# agent sur {total} prêt} other {# agents sur {total} prêts}} · re-éval requise",
       "evaluationsActive": "Évaluations actives",
       "pillarProve": "Preuves à tout instant",
-      "integrityVerified": "Chaîne d’audit vérifiée",
+      "ledgerInfalsifiable": "Registre infalsifiable · sceau qualifié vérifié",
+      "integrityVerifiedSealPending": "Chaîne vérifiée · scellement qualifié attendu",
       "integrityUnverified": "Chaîne non vérifiée",
       "integrityUnavailable": "Vérification indisponible",
       "justNow": "à l’instant",
@@ -7360,8 +7363,8 @@
           "how": "Le verdict vient du dernier passage de l’agent ; toute modification — modèle, consignes, règles — le remet en jeu : l’agent devra prouver à nouveau qu’il est prêt."
         },
         "prove": {
-          "what": "Chaque décision est inscrite dans un journal où chaque entrée est scellée à la précédente : rien ne peut être altéré sans que cela se voie.",
-          "how": "La vérification est refaite automatiquement à chaque lecture ; ce qui s’affiche est le verdict du dernier contrôle réussi."
+          "what": "Chaque décision rejoint une chaîne de hachage dont le sommet est horodaté par un prestataire qualifié extérieur à Tessera : toute réécriture postérieure devient détectable hors de Tessera.",
+          "how": "« Registre infalsifiable » n’apparaît qu’après vérification de toute la chaîne et du jeton RFC 3161 contre la racine de confiance épinglée ; sinon l’état manquant est nommé."
         }
       }
     },
@@ -8651,7 +8654,7 @@
     "integrityBroken": "Intégrité : contenu altéré — à investiguer",
     "integrityForkedAttested": "Intégrité contenu vérifiée · ordre total : {forks, plural, one {# fourche historique} other {# fourches historiques}}{orphans, plural, =0 {} one {, # orpheline} other {, # orphelines}} (attestées)",
     "integrityForkedPending": "Intégrité contenu vérifiée · ordre total : {forks, plural, one {# fourche historique} other {# fourches historiques}}{orphans, plural, =0 {} one {, # orpheline} other {, # orphelines}} (attestation en attente)",
-    "env": "Sur site · résidence UE · SOC 2",
+    "env": "Sur site · résidence UE · SOC 2 : matrice de contrôles, sans attestation CPA",
     "sealSuffix": "scellé {t}",
     "note": "Statut attribué uniquement après vérification réussie.",
     "integrityFreshness": "· chaîne complète contrôlée {ago}",
@@ -9168,7 +9171,7 @@
         "body": [
           "Tessera est un poste de pilotage pour les agents d'intelligence artificielle d'une banque. Imaginez une banque qui emploie plusieurs assistants IA : l'un répond aux questions des clients, un autre accompagne les ouvertures de compte, un troisième s'occupe des impayés. Ils ont été construits par des équipes différentes, parfois avec des technologies différentes. Et pourtant, quelqu'un doit pouvoir répondre à trois questions simples : que font ces agents ? Le font-ils bien ? Et peut-on le prouver, preuves à l'appui, à un auditeur ?",
           "Tessera est l'endroit où ces trois questions trouvent leur réponse.",
-          "La banque que vous visitez, Crédit Aurore, est fictive — c'est une démonstration. Mais tout le reste fonctionne pour de vrai : les agents répondent vraiment, les chiffres sont vraiment mesurés, le registre de preuves est vraiment infalsifiable. Et quand quelque chose est simulé, l'écran vous le dit. C'est une règle de la maison, vous la verrez partout."
+          "La banque que vous visitez, Crédit Aurore, est fictive — c'est une démonstration. Mais tout le reste fonctionne pour de vrai : les agents répondent vraiment, les chiffres sont vraiment mesurés et Tessera construit un registre de preuves infalsifiable. Chaque sommet est scellé par un horodatage RFC 3161 qualifié, vérifiable hors de Tessera ; l'écran n'accorde ce statut qu'après contrôle cryptographique réussi. Et quand quelque chose est simulé, l'écran vous le dit. C'est une règle de la maison, vous la verrez partout."
         ]
       },
       {

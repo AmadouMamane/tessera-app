@@ -27,6 +27,35 @@ updates this file after every step. A resuming session reads this first, then co
 | 6 | 0017-E + A2.4 + 0018-C/D: SDK extraction (instrument/graph_topology), span-contract + grammar-conformance suites, canaries + coverage per agent, enum codegen from capabilities, testkit; L-level → release-gate condition | [auto] | ✅ done | 6a `baff0231`→`9126c3de` · 6b `301eee8a`→`a6633cf4` · 6c `7f80682d`→`a3d19604` | **6a+6b+6c shipped** (step 6 closed): ratchet 5→0 (SDK), testkit 103/104, enum codegen 0018-C; A2.4 L-level release gate (prod⇒L2, external⇒L3), canaries 94 + coverage 92 from the manifest. **6c**: `require_bearer` on the 4 business read routes (snapshot posture; `/security-review` clean — strict tightening); business_capabilities folded into the batched snapshot as a p95-safe probe (one-source parity); Point 1 (coverage names its source — no FE lie, no consumer) + Point 3 (honest block label: eval-gate vs observability level, level-aware summary) — see Log. Branch off main `40dadade`; pushed to origin (backup). **Not merged to main** — merge is a separate operator-gated action (twice-green-on-merged-tree + feu vert, per step 4). gate: recouvrement passes L1–L3 |
 | 7 | 0017-F: out-of-process demo agent (pure OTLP, no LangGraph) reaches L1 with a **zero-line cockpit diff**; TTO measured and recorded here | [auto] | ✅ done | Lot0 `1e71f9c6` · platform `58d8b720`→`639b6403` · hello-agent (this branch) | **ADR 0017 COMPLETE.** Branch `claude/step-7-tto` off merged main `b3273e20`. Off-chrono: Lot 0 (support-client/onboarding telemetry-only manifests → computed L2/L2) + platform completion (L1 evidence-backed via Prometheus turn-count read + collector prometheus-exporter). Chrono'd: `examples/hello-agent/` (pure OTLP, zero tessera import) → fleet card **L1 computed from real `tessera_agent_turns_total`**, span-contract testkit green, **zero AGENT-SPECIFIC cockpit diff** (webapp empty; observability generic). **TTO = 20m18s** (≪ ½-day target). ADR Status → accepted — implementation complete. **HALT: final Claude review before merge to main.** |
 
+## Audit 360 remediation — 2026-07-21
+
+**Worktree / branch :** `agents/codex-audit`, `codex/audit-360-2026-07-21`, HEAD de travail
+`73127284` (lignée `main` auditée à `6da88d9f` + lot Fable) — tranche encore non fusionnée et non
+publiée. Le checkout `main` a avancé séparément à `cf405f94` et doit être réconcilié avant fusion.
+
+- **Vérité mécanique fermée :** aucune mutation de `conn.row_factory`; intégration
+  `40 pass / 13 skips explicites ClickHouse-Langfuse / 0 fail`; budget Vertex streaming
+  comptabilisé ; mémoire `load/record` symétrique ; confirmation et plafonds d'appels appliqués ;
+  `card_block` et `transaction_search` branchés ; générateur de corpus atomique et non destructif.
+- **Promesses de confiance construites :** ADR 0042 rend « infalsifiable » conditionnel à une
+  chaîne intacte et à un scellement RFC 3161 frais par TSA qualifié ; staging/production échouent
+  au démarrage si la preuve ne peut pas être gagnée. SOC 2 reste visible comme mapping des cinq
+  Trust Services Categories, jamais comme attestation Type I/II acquise.
+- **Vitrine et démonstration :** README, badges, chiffres, tables, liens et sources primaires
+  corrigés ; parcours recouvrement FR/EN/DE complet, y compris backend et fallbacks ; build Next.js
+  de production vert (`133` pages) et smoke routes critiques `5/5` ; preview arrêtée après contrôle.
+- **Déploiement :** workflow de deux images Cloud Run avec provenance/SBOM, secrets frontend,
+  IAM borné, smokes et job Terraform bloquant ; `terraform fmt/init/validate` verts. Limes dispose
+  d'une chaîne wheel/sdist + OIDC PyPI + attestations PEP 740/Sigstore ; gate Limes `48` tests vert.
+- **Gate de la tranche :** deux passes vertes sur le même arbre `196e5ab0b17e` avant clôture
+  documentaire : `2 515` tests Python, `425` frontend, Ruff, format, mypy strict, TypeScript et
+  Biome sans erreur ; couverture `83,5 %`.
+- **Bascule restante, volontairement non simulée :** fusionner la branche puis redémarrer les
+  serveurs de référence depuis `main` ; appliquer Terraform avec certificat d'un TSA réellement
+  qualifié ; configurer le trusted publisher PyPI puis fusionner/taguer Limes.
+
+Rapport détaillé : [`audit-360-2026-07-21.md`](./audit-360-2026-07-21.md).
+
 ## Coordination register (parallel workstreams — sole-writer rule)
 
 - **antigravity** works the support-client / produit chat UI on worktree

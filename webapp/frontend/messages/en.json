@@ -637,6 +637,8 @@
     "recouvrementDisclosure": "Recouvrement is an AI assistant. Check important information before making any decision.",
     "recouvrementStreamingPlaceholder": "Recouvrement is responding…",
     "regenerate": "Regenerate",
+    "confirmCardBlockAction": "Confirm block ·•••• {lastFour}",
+    "confirmCardBlockMessage": "I confirm: block my card ending in {lastFour}. This action is irreversible.",
     "edit": "Edit",
     "confirm": "Send",
     "cancel": "Cancel",
@@ -7338,7 +7340,8 @@
       "evaluateReadyStale": "{ready, plural, one {# agent of {total} ready} other {# agents of {total} ready}} · re-eval required",
       "evaluationsActive": "Evaluations active",
       "pillarProve": "Evidence at any point in time",
-      "integrityVerified": "Audit chain verified",
+      "ledgerInfalsifiable": "Tamper-proof ledger · qualified seal verified",
+      "integrityVerifiedSealPending": "Chain verified · qualified seal pending",
       "integrityUnverified": "Chain not verified",
       "integrityUnavailable": "Verification unavailable",
       "justNow": "just now",
@@ -7358,8 +7361,8 @@
           "how": "The verdict comes from the agent's latest run; any change — model, instructions, rules — puts it back in play: the agent must prove itself ready again."
         },
         "prove": {
-          "what": "Every decision is written to a journal where each entry is sealed to the previous one: nothing can be altered without it showing.",
-          "how": "Verification is re-run automatically on every read; what you see is the verdict of the last successful check."
+          "what": "Every decision joins a hash chain whose head is timestamped by a qualified trust provider independent from Tessera: any later rewrite becomes independently detectable.",
+          "how": "“Tamper-proof ledger” appears only after the full chain and RFC 3161 token verify against the pinned trust root; otherwise the missing proof is named."
         }
       }
     },
@@ -8649,7 +8652,7 @@
     "integrityBroken": "Integrity: content tampered — investigate",
     "integrityForkedAttested": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} one {, # orphaned} other {, # orphaned}} (attested)",
     "integrityForkedPending": "Content integrity verified · total order: {forks, plural, one {# historical fork} other {# historical forks}}{orphans, plural, =0 {} one {, # orphaned} other {, # orphaned}} (attestation pending)",
-    "env": "on-prem · EU residency · SOC 2",
+    "env": "on-prem · EU residency · SOC 2 control mapping, no CPA attestation",
     "sealSuffix": "sealed {t}",
     "note": "Status assigned only after successful verification.",
     "integrityFreshness": "· full chain checked {ago}",
@@ -9166,7 +9169,7 @@
         "body": [
           "Tessera is a control tower for a bank's AI agents. Picture a bank that employs several AI assistants: one answers customer questions, another guides new customers through opening an account, a third handles overdue payments. They were built by different teams, sometimes on different technologies. Yet someone must be able to answer three simple questions: what are these agents doing? Are they doing it well? And can you prove it, evidence in hand, to an auditor?",
           "Tessera is where those three questions get their answers.",
-          "The bank you are visiting, Crédit Aurore, is fictional — this is a demonstration. Everything else works for real: the agents genuinely answer, the numbers are genuinely measured, the evidence ledger is genuinely tamper-evident. And whenever something is simulated, the screen tells you so. It is a house rule; you will see it everywhere."
+          "The bank you are visiting, Crédit Aurore, is fictional — this is a demonstration. Everything else works for real: the agents genuinely answer, the numbers are genuinely measured, and Tessera builds a tamper-proof evidence ledger. Every head is sealed by a qualified RFC 3161 timestamp that can be verified outside Tessera; the screen grants that status only after a successful cryptographic check. Whenever something is simulated, the screen tells you so. It is a house rule; you will see it everywhere."
         ]
       },
       {

@@ -1,4 +1,4 @@
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { RecouvrementProductExperience } from "@/components/recouvrement/recouvrement-product-experience";
 
@@ -8,8 +8,10 @@ interface PageProps {
 
 export const dynamic = "force-dynamic";
 
-export function generateMetadata() {
-  return { title: "Recouvrement" };
+export async function generateMetadata({ params }: PageProps) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "recouvrement" });
+  return { title: t("title") };
 }
 
 // The canonical collections surface. The product experience (formerly stranded on the

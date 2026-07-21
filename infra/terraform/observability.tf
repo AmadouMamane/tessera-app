@@ -131,10 +131,10 @@ resource "google_monitoring_dashboard" "tessera" {
                   timeSeriesFilter = {
                     filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/request_count\""
                     aggregation = {
-                      alignmentPeriod  = "60s"
-                      perSeriesAligner = "ALIGN_RATE"
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_RATE"
                       crossSeriesReducer = "REDUCE_SUM"
-                      groupByFields    = ["metric.labels.response_code_class"]
+                      groupByFields      = ["metric.labels.response_code_class"]
                     }
                   }
                 }
@@ -156,8 +156,8 @@ resource "google_monitoring_dashboard" "tessera" {
                   timeSeriesFilter = {
                     filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/request_latencies\""
                     aggregation = {
-                      alignmentPeriod  = "60s"
-                      perSeriesAligner = "ALIGN_DELTA"
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_DELTA"
                       crossSeriesReducer = "REDUCE_PERCENTILE_95"
                     }
                   }
@@ -180,8 +180,8 @@ resource "google_monitoring_dashboard" "tessera" {
                   timeSeriesFilter = {
                     filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/container/cpu/utilizations\""
                     aggregation = {
-                      alignmentPeriod  = "60s"
-                      perSeriesAligner = "ALIGN_MEAN"
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_MEAN"
                       crossSeriesReducer = "REDUCE_MEAN"
                     }
                   }
@@ -228,10 +228,10 @@ resource "google_monitoring_dashboard" "tessera" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.guard_denies.name}\""
                     aggregation = {
-                      alignmentPeriod  = "60s"
-                      perSeriesAligner = "ALIGN_DELTA"
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_DELTA"
                       crossSeriesReducer = "REDUCE_SUM"
-                      groupByFields    = ["metric.labels.target"]
+                      groupByFields      = ["metric.labels.target"]
                     }
                   }
                 }
@@ -254,8 +254,8 @@ resource "google_monitoring_dashboard" "tessera" {
                   timeSeriesFilter = {
                     filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/container/instance_count\""
                     aggregation = {
-                      alignmentPeriod  = "60s"
-                      perSeriesAligner = "ALIGN_MEAN"
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_MEAN"
                       crossSeriesReducer = "REDUCE_SUM"
                     }
                   }

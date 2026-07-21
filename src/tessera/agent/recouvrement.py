@@ -41,13 +41,12 @@ from tessera.recouvrement.capabilities import (
     capability_for_artifact_type,
     capability_for_task,
 )
+from tessera.recouvrement.i18n import localize_artifact, localize_text, localize_value
 from tessera.recouvrement.message_templates import (
-    RECOUVREMENT_REMINDER_EMPATHIC_V1,
-    RECOUVREMENT_REMINDER_SHORT_V1,
-    RECOUVREMENT_SCHEDULE_CARD_MESSAGE_V1,
-    RECOUVREMENT_SCHEDULE_MESSAGE_V1,
+    RecouvrementLanguage,
     RecouvrementMessageTemplate,
     format_promise_date,
+    recouvrement_template,
     render_missed_promise_clause,
     render_schedule_sentence,
 )
@@ -362,6 +361,12 @@ def _event_common(
     }
 
 
+def _language_of(state: RecouvrementWorkflowState) -> RecouvrementLanguage:
+    """Return a supported presentation language for direct graph callers too."""
+    language = state.get("language", "fr")
+    return language if language in {"fr", "en", "de"} else "fr"  # type: ignore[return-value]
+
+
 def _capability_for_state(state: RecouvrementWorkflowState) -> str | None:
     """Resolve the best known domain capability for the current Recouvrement state."""
     if state.get("capability_id"):
@@ -431,7 +436,7 @@ def _after_surface_authorization(state: RecouvrementWorkflowState) -> str:
 
 
 def _normalize_message(message: str) -> str:
-    """Normalize French free text for deterministic intent routing."""
+    """Normalize FR/EN/DE free text for deterministic intent routing."""
     return "".join(
         char
         for char in unicodedata.normalize("NFD", message.lower())
@@ -444,7 +449,8 @@ def _has_schedule_intent(normalized_message: str) -> bool:
     return (
         re.search(
             r"\b(echeancier|etalement|etaler|mensualite|mensualites|mois|paiement|payer|"
-            r"regler|regulariser|duree)\b",
+            r"regler|regulariser|duree|payment plan|instalments?|installments?|monthly payment|"
+            r"months?|repayment|zahlungsplan|ratenplan|rate|raten|monate|laufzeit|tilgung)\b",
             normalized_message,
         )
         is not None
@@ -456,7 +462,10 @@ def _has_draft_intent(normalized_message: str) -> bool:
     return (
         re.search(
             r"\b(relance|brouillon|courrier|email|mail|rediger|redige|prepare|preparer|"
-            r"message client|version courte|empathique|modifier|modifie|rends-le|rend le)\b",
+            r"message client|version courte|empathique|modifier|modifie|rends-le|rend le|"
+            r"reminder|customer message|client message|draft|write|prepare|short version|"
+            r"empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|vorbereiten|"
+            r"kurze version|einfuehlsam|aendern)\b",
             normalized_message,
         )
         is not None
@@ -468,7 +477,9 @@ def _has_summary_intent(normalized_message: str) -> bool:
     return (
         re.search(
             r"\b(resume|resumer|synthese|synthetise|points cles|prioritaire|priorite|"
-            r"situation du client|que dois je retenir|a retenir)\b",
+            r"situation du client|que dois je retenir|a retenir|summary|summarise|summarize|"
+            r"key points|priority|customer situation|fallzusammenfassung|zusammenfassen|"
+            r"kernpunkte|prioritaet|kundensituation)\b",
             normalized_message,
         )
         is not None
@@ -482,7 +493,9 @@ def _has_payment_options_intent(normalized_message: str) -> bool:
             r"\b(options? de paiement|moyens? de paiement|comment peut[- ]?il payer|"
             r"comment peut[- ]?il regler|paiement total|paiement partiel|"
             r"paiement en plusieurs fois|echeancier possible|alternatives? de reglement|"
-            r"solution de paiement|options? de reglement|moyens? de reglement)\b",
+            r"solution de paiement|options? de reglement|moyens? de reglement|payment options?|"
+            r"payment methods?|ways? to pay|full payment|partial payment|settlement options?|"
+            r"zahlungsoptionen?|zahlungsarten?|zahlungsmoeglichkeiten|vollzahlung|teilzahlung)\b",
             normalized_message,
         )
         is not None
@@ -493,7 +506,8 @@ def _has_contact_rule_intent(normalized_message: str) -> bool:
     """Whether the current Julie turn asks for contact-rule verification."""
     has_contact_action = (
         re.search(
-            r"\b(appel|appeler|telephone|telephoner|contacter|contact|joindre|email|mail)\b",
+            r"\b(appel|appeler|telephone|telephoner|contacter|contact|joindre|email|mail|"
+            r"call|phone|reach|anrufen|telefon|kontaktieren|erreichen)\b",
             normalized_message,
         )
         is not None
@@ -501,17 +515,25 @@ def _has_contact_rule_intent(normalized_message: str) -> bool:
     has_rule_signal = (
         re.search(
             r"\b(regle|regles|autorise|autorisation|interdit|peux|peut|puis|comment|quand|"
-            r"heure|plage|cadre|conforme|conformite)\b",
+            r"heure|plage|cadre|conforme|conformite|rule|rules|allowed|authorised|authorized|"
+            r"forbidden|may|can|when|time|window|compliant|regel|regeln|erlaubt|zulaessig|"
+            r"verboten|wann|uhrzeit|zeitfenster|konform)\b",
             normalized_message,
         )
         is not None
         or re.search(r"(?:[01]?\d|2[0-3])(?:h|:)", normalized_message) is not None
     )
-    return (
-        "regle de contact" in normalized_message
-        or "cadre de contact" in normalized_message
-        or (has_contact_action and has_rule_signal)
-    )
+    return any(
+        phrase in normalized_message
+        for phrase in (
+            "regle de contact",
+            "cadre de contact",
+            "contact rule",
+            "contact window",
+            "kontaktregel",
+            "kontaktzeitfenster",
+        )
+    ) or (has_contact_action and has_rule_signal)
 
 
 def _active_task(state: RecouvrementWorkflowState) -> str:
@@ -567,9 +589,13 @@ def _artifact_content_str(artifact: RecouvrementArtifact | None, key: str) -> st
 
 
 def _parse_duration_months(message: str) -> int | None:
-    """Extract a requested schedule duration from French free text."""
+    """Extract a requested schedule duration from FR/EN/DE free text."""
     normalized = _normalize_message(message)
-    match = re.search(r"\b(\d{1,3})\s*(?:mois|mensualite|mensualites)\b", normalized)
+    match = re.search(
+        r"\b(\d{1,3})\s*(?:mois|mensualite|mensualites|months?|instalments?|installments?|"
+        r"monate|monaten|raten)\b",
+        normalized,
+    )
     if match is None:
         return None
     months = int(match.group(1))
@@ -581,7 +607,7 @@ def _parse_time(message: str) -> str | None:
     normalized = message.lower().replace(" ", "")
     match = re.search(r"(?<!\d)([01]?\d|2[0-3])(?:[:h]([0-5]\d)?)", normalized)
     if match is None:
-        if "maintenant" not in normalized:
+        if not any(word in normalized for word in ("maintenant", "now", "jetzt")):
             return None
         now = datetime.now(ZoneInfo("Europe/Paris"))
         return f"{now.hour:02d}:{now.minute:02d}"
@@ -913,20 +939,24 @@ def _template_generation_metadata(
     }
 
 
-def _select_draft_template(slots: dict[str, object]) -> RecouvrementMessageTemplate:
+def _select_draft_template(
+    slots: dict[str, object],
+    language: RecouvrementLanguage,
+) -> RecouvrementMessageTemplate:
     """Select the approved template matching the current Recouvrement drafting task."""
     if bool(slots.get("mentions_schedule")):
-        return RECOUVREMENT_SCHEDULE_MESSAGE_V1
+        return recouvrement_template("schedule", language)
     if str(slots.get("tone", "")) == "empathique":
-        return RECOUVREMENT_REMINDER_EMPATHIC_V1
-    return RECOUVREMENT_REMINDER_SHORT_V1
+        return recouvrement_template("empathic", language)
+    return recouvrement_template("short", language)
 
 
 def draft_client_message(state: RecouvrementWorkflowState) -> dict[str, object]:
     """Select and render an approved template; replaceable by an LLM rewrite node later."""
     case = state["case"]
     slots = state["slots"]
-    template = _select_draft_template(slots)
+    language = _language_of(state)
+    template = _select_draft_template(slots, language)
     requested_months = slots.get("requested_months")
     monthly_amount_label = slots.get("monthly_amount_label")
     draft = template.render(
@@ -935,8 +965,12 @@ def draft_client_message(state: RecouvrementWorkflowState) -> dict[str, object]:
             "case_id": case.case_id,
             "amount_due_label": case.amount_due_label,
             "days_late": case.days_late,
-            "missed_promise_clause": render_missed_promise_clause(case.missed_promise_date),
-            "schedule_sentence": render_schedule_sentence(requested_months, monthly_amount_label),
+            "missed_promise_clause": render_missed_promise_clause(
+                case.missed_promise_date, language
+            ),
+            "schedule_sentence": render_schedule_sentence(
+                requested_months, monthly_amount_label, language
+            ),
         }
     )
     return {
@@ -1232,6 +1266,10 @@ def build_case_summary_artifact(state: RecouvrementWorkflowState) -> dict[str, o
         ],
         "nextActions": next_actions,
     }
+    language = _language_of(state)
+    artifact = localize_artifact(artifact, language)
+    card_updates = localize_value(card_updates, language)
+    next_actions = localize_value(next_actions, language)
     record_business_event(
         author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
@@ -1341,6 +1379,10 @@ def build_payment_options_artifact(state: RecouvrementWorkflowState) -> dict[str
         ],
         "nextActions": next_actions,
     }
+    language = _language_of(state)
+    artifact = localize_artifact(artifact, language)
+    card_updates = localize_value(card_updates, language)
+    next_actions = localize_value(next_actions, language)
     record_business_event(
         author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
@@ -1434,6 +1476,10 @@ def build_contact_rule_artifact(state: RecouvrementWorkflowState) -> dict[str, o
         "validationItems": [validation],
         "nextActions": next_actions,
     }
+    language = _language_of(state)
+    artifact = localize_artifact(artifact, language)
+    card_updates = localize_value(card_updates, language)
+    next_actions = localize_value(next_actions, language)
     record_business_event(
         author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
@@ -1463,8 +1509,9 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
     requested_months = policy["requested_months"]
     monthly_amount_label = policy["monthly_amount_label"]
     schedule_title = f"Échéancier indicatif — {requested_months} mois"
-    client_message = RECOUVREMENT_SCHEDULE_CARD_MESSAGE_V1.render({})
-    client_message_generation = _template_generation_metadata(RECOUVREMENT_SCHEDULE_CARD_MESSAGE_V1)
+    client_template = recouvrement_template("schedule_card", _language_of(state))
+    client_message = client_template.render({})
+    client_message_generation = _template_generation_metadata(client_template)
     artifact: RecouvrementArtifact = {
         "id": f"{case.case_id}-schedule-{requested_months}-months-v2",
         "type": "schedule_proposal_v2",
@@ -1529,6 +1576,10 @@ def build_schedule_proposal_artifact(state: RecouvrementWorkflowState) -> dict[s
         ],
         "nextActions": next_actions,
     }
+    language = _language_of(state)
+    artifact = localize_artifact(artifact, language)
+    card_updates = localize_value(card_updates, language)
+    next_actions = localize_value(next_actions, language)
     record_business_event(
         author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
@@ -1599,9 +1650,7 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
     current_artifact_type = current_artifact["type"] if current_artifact is not None else None
     from_schedule = current_artifact_type == "schedule_proposal_v2"
     artifact_type = "client_message_artifact" if from_schedule else "reminder_draft_v1"
-    version_number = (
-        "2" if generation["template_id"] == RECOUVREMENT_REMINDER_EMPATHIC_V1.template_id else "1"
-    )
+    version_number = "2" if "empathic" in (generation["template_id"] or "") else "1"
     version_label = f"Version {version_number} — {generation['template_label']}"
     title = (
         f"Message client préparé — {case.case_id}"
@@ -1694,6 +1743,10 @@ def build_reminder_draft_artifact(state: RecouvrementWorkflowState) -> dict[str,
             else "Mensualité indicative : à confirmer",
             "Échéancier non créé",
         ]
+    language = _language_of(state)
+    artifact = localize_artifact(artifact, language)
+    card_updates = localize_value(card_updates, language)
+    next_actions = localize_value(next_actions, language)
     record_business_event(
         author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.ARTIFACT_CREATED,
@@ -1885,6 +1938,7 @@ def generate_visible_reply(state: RecouvrementWorkflowState) -> dict[str, object
             "artifact_type": artifact["type"],
             "policy_review_status": policy["decision"],
         }
+    reply = localize_text(reply, _language_of(state))
     event_artifact = state["artifact"]
     record_business_event(
         author=AGENT_TURN_ACTOR,
@@ -1934,7 +1988,7 @@ def finalize_business_observability(state: RecouvrementWorkflowState) -> dict[st
     }
     replay.capture_bundle(
         question=state["message"],
-        context="\n".join(_context_items(state["case"])),
+        context="\n".join(localize_value(_context_items(state["case"]), _language_of(state))),
         original_answer=state["visible_reply"],
         language=state.get("language", "fr"),
         original_score=1.0,
@@ -1996,10 +2050,11 @@ def finalize_unauthorized_surface(state: RecouvrementWorkflowState) -> dict[str,
             }
         },
     }
+    output = localize_value(output, _language_of(state))
     replay.capture_bundle(
         question=state["message"],
-        context=f"Surface demandée : {surface}",
-        original_answer=reply,
+        context=localize_text(f"Surface demandée : {surface}", _language_of(state)),
+        original_answer=output["visibleReply"],
         language=state.get("language", "fr"),
         original_score=1.0,
         original_model=RECOUVREMENT_WORKFLOW_ID,
@@ -2335,7 +2390,7 @@ def _finalize_action_output(
     context_case = event_state.get("case", _case_for(event_state["case_id"]))
     replay.capture_bundle(
         question=event_state["message"],
-        context="\n".join(_context_items(context_case)),
+        context="\n".join(localize_value(_context_items(context_case), _language_of(event_state))),
         original_answer=visible_reply,
         language=event_state.get("language", "fr"),
         original_score=1.0,
@@ -2365,7 +2420,7 @@ def run_recouvrement_action_workflow_v1(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     surface: str = DEFAULT_SURFACE,
-    language: str = "fr",
+    language: RecouvrementLanguage = "fr",
     model: str = RECOUVREMENT_WORKFLOW_ID,
     environment: str = "dev",
 ) -> RecouvrementOutput:
@@ -2454,14 +2509,9 @@ def run_recouvrement_action_workflow_v1(
                 "no_external_effect": True,
             },
         }
-        return _finalize_action_output(
-            event_state=event_state,
-            artifact=denial_artifact,
-            visible_reply=(
-                "Cette surface n'est pas autorisée pour les actions Recouvrement. "
-                "Aucune action client n'a été exécutée."
-            ),
-            card_updates={
+        denial_artifact = localize_artifact(denial_artifact, language)
+        denial_cards = localize_value(
+            {
                 "summary": [
                     f"Dossier : {case_id}",
                     f"Surface demandée : {surface}",
@@ -2474,7 +2524,21 @@ def run_recouvrement_action_workflow_v1(
                 ],
                 "nextActions": ["Ouvrir l'espace Recouvrement", "Retourner au cockpit opérateur"],
             },
-            suggested_actions=["Ouvrir l'espace Recouvrement", "Retourner au cockpit opérateur"],
+            language,
+        )
+        denial_actions = localize_value(
+            ["Ouvrir l'espace Recouvrement", "Retourner au cockpit opérateur"], language
+        )
+        return _finalize_action_output(
+            event_state=event_state,
+            artifact=denial_artifact,
+            visible_reply=localize_text(
+                "Cette surface n'est pas autorisée pour les actions Recouvrement. "
+                "Aucune action client n'a été exécutée.",
+                language,
+            ),
+            card_updates=denial_cards,
+            suggested_actions=denial_actions,
             decisions={
                 "authorization": {
                     "decision": "blocked",
@@ -2532,8 +2596,10 @@ def run_recouvrement_action_workflow_v1(
             payload=action_payload,
             **_event_common(event_state, node_name="evaluate_artifact_action_policy"),
         )
-        visible_reply = _artifact_action_visible_reply(decision)
+        visible_reply = localize_text(_artifact_action_visible_reply(decision), language)
         card_updates, suggested_actions = _artifact_action_cards(decision)
+        card_updates = localize_value(card_updates, language)
+        suggested_actions = localize_value(suggested_actions, language)
         record_business_event(
             # The collections officer ordered this action. The ledger names them.
             author=actor,
@@ -2639,7 +2705,7 @@ def run_recouvrement_action_workflow_v1(
             payload=action_payload,
             **_event_common(event_state, node_name="prepare_artifact_action"),
         )
-    visible_reply = _artifact_action_visible_reply(decision)
+    visible_reply = localize_text(_artifact_action_visible_reply(decision), language)
     record_business_event(
         # The collections officer ordered this action. The ledger names them.
         author=actor,
@@ -2662,6 +2728,8 @@ def run_recouvrement_action_workflow_v1(
         **_event_common(event_state, node_name="generate_action_visible_reply"),
     )
     card_updates, suggested_actions = _artifact_action_cards(decision)
+    card_updates = localize_value(card_updates, language)
+    suggested_actions = localize_value(suggested_actions, language)
     return _finalize_action_output(
         event_state=event_state,
         artifact=updated_artifact,
@@ -2796,7 +2864,7 @@ def run_recouvrement_graph_v1(
     conversation_id: str | None = None,
     turn_id: str | None = None,
     surface: str = DEFAULT_SURFACE,
-    language: str = "fr",
+    language: RecouvrementLanguage = "fr",
     model: str = RECOUVREMENT_WORKFLOW_ID,
     environment: str = "dev",
 ) -> RecouvrementOutput:

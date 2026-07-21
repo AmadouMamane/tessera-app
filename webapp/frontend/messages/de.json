@@ -637,6 +637,8 @@
     "recouvrementDisclosure": "Recouvrement ist ein KI-Assistent. Prüfen Sie wichtige Informationen vor jeder Entscheidung.",
     "recouvrementStreamingPlaceholder": "Recouvrement antwortet…",
     "regenerate": "Neu generieren",
+    "confirmCardBlockAction": "Sperrung bestätigen ·•••• {lastFour}",
+    "confirmCardBlockMessage": "Ich bestätige: Meine Karte mit der Endnummer {lastFour} ist unumkehrbar zu sperren.",
     "edit": "Bearbeiten",
     "confirm": "Senden",
     "cancel": "Abbrechen",
@@ -7338,7 +7340,8 @@
       "evaluateReadyStale": "{ready, plural, one {# Agent von {total} bereit} other {# Agenten von {total} bereit}} · Neubewertung erforderlich",
       "evaluationsActive": "Evaluierungen aktiv",
       "pillarProve": "Nachweise jederzeit",
-      "integrityVerified": "Audit-Kette verifiziert",
+      "ledgerInfalsifiable": "Fälschungssicheres Register · qualifiziertes Siegel verifiziert",
+      "integrityVerifiedSealPending": "Kette verifiziert · qualifiziertes Siegel ausstehend",
       "integrityUnverified": "Kette nicht verifiziert",
       "integrityUnavailable": "Verifizierung nicht verfügbar",
       "justNow": "gerade eben",
@@ -7358,8 +7361,8 @@
           "how": "Das Urteil stammt aus dem letzten Durchlauf des Agenten; jede Änderung — Modell, Anweisungen, Regeln — stellt es infrage: Der Agent muss erneut beweisen, dass er bereit ist."
         },
         "prove": {
-          "what": "Jede Entscheidung wird in ein Journal geschrieben, in dem jeder Eintrag mit dem vorherigen versiegelt ist: Nichts kann unbemerkt verändert werden.",
-          "how": "Die Prüfung wird bei jedem Lesen automatisch wiederholt; angezeigt wird das Urteil der letzten erfolgreichen Kontrolle."
+          "what": "Jede Entscheidung wird Teil einer Hash-Kette, deren Kopf ein von Tessera unabhängiger qualifizierter Vertrauensdiensteanbieter zeitstempelt: jede spätere Neuschreibung wird extern erkennbar.",
+          "how": "„Fälschungssicheres Register“ erscheint erst, wenn die gesamte Kette und das RFC-3161-Token gegen die verankerte Vertrauenswurzel geprüft sind; sonst wird der fehlende Nachweis benannt."
         }
       }
     },
@@ -8649,7 +8652,7 @@
     "integrityBroken": "Integrität: Inhalt manipuliert — zu untersuchen",
     "integrityForkedAttested": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} one {, # verwaiste} other {, # verwaiste}} (attestiert)",
     "integrityForkedPending": "Inhaltsintegrität verifiziert · Gesamtordnung: {forks, plural, one {# historische Verzweigung} other {# historische Verzweigungen}}{orphans, plural, =0 {} one {, # verwaiste} other {, # verwaiste}} (Attestierung ausstehend)",
-    "env": "Vor Ort · EU-Residenz · SOC 2",
+    "env": "Vor Ort · EU-Residenz · SOC-2-Kontrollmatrix, kein CPA-Testat",
     "sealSuffix": "versiegelt {t}",
     "note": "Status erst nach erfolgreicher Prüfung vergeben.",
     "integrityFreshness": "· vollständige Kette geprüft {ago}",
@@ -9166,7 +9169,7 @@
         "body": [
           "Tessera ist ein Leitstand fuer die KI-Agenten einer Bank. Stellen Sie sich eine Bank vor, die mehrere KI-Assistenten beschaeftigt: einer beantwortet Kundenfragen, ein zweiter begleitet Kontoeroeffnungen, ein dritter kuemmert sich um offene Forderungen. Sie wurden von verschiedenen Teams gebaut, manchmal auf verschiedenen Technologien. Und dennoch muss jemand drei einfache Fragen beantworten koennen: Was tun diese Agenten? Tun sie es gut? Und laesst es sich einem Pruefer beweisen, mit Belegen in der Hand?",
           "Tessera ist der Ort, an dem diese drei Fragen ihre Antwort finden.",
-          "Die Bank, die Sie besuchen, Crédit Aurore, ist fiktiv — das hier ist eine Demonstration. Alles andere funktioniert wirklich: die Agenten antworten wirklich, die Zahlen sind wirklich gemessen, das Beweisregister ist wirklich faelschungssicher. Und wenn etwas simuliert ist, sagt der Bildschirm es Ihnen. Das ist eine Hausregel; Sie werden sie ueberall wiederfinden."
+          "Die Bank, die Sie besuchen, Crédit Aurore, ist fiktiv — das hier ist eine Demonstration. Alles andere funktioniert wirklich: die Agenten antworten wirklich, die Zahlen sind wirklich gemessen, und Tessera baut ein fälschungssicheres Beweisregister. Jeder Kopf wird durch einen qualifizierten RFC-3161-Zeitstempel versiegelt, der außerhalb von Tessera prüfbar ist; der Bildschirm vergibt diesen Status erst nach erfolgreicher kryptografischer Prüfung. Wenn etwas simuliert ist, sagt der Bildschirm es Ihnen. Das ist eine Hausregel; Sie werden sie überall wiederfinden."
         ]
       },
       {

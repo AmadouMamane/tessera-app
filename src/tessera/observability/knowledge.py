@@ -332,13 +332,11 @@ def _ago(iso: str, lang: str) -> str:
 async def _fetch_rows() -> list[dict[str, object]]:
     """Return every chunk's (corpus, source, language, category, locator, inserted_at)."""
     table = safe_identifier(get_settings().postgres.vector_table)
-    async with _connection() as conn:
-        conn.row_factory = dict_row
-        async with conn.cursor() as cur:
-            await cur.execute(
-                f"SELECT corpus, source, language, metadata, inserted_at FROM {table}"  # noqa: S608
-            )
-            return list(await cur.fetchall())
+    async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            f"SELECT corpus, source, language, metadata, inserted_at FROM {table}"  # noqa: S608
+        )
+        return list(await cur.fetchall())
 
 
 def set_source_state(

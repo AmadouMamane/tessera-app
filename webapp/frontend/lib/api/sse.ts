@@ -36,6 +36,8 @@ export interface ChatTurnRequest {
   system_prompt_override?: string;
   /** Sandbox console: guard categories disabled for this turn (e.g. ["prompt_injection"]). */
   guard_overrides?: string[];
+  /** Human action controls confirmed outside model-generated text. */
+  confirmed_tools?: Array<"card_block">;
 }
 
 export interface ChatTurnCallbacks {

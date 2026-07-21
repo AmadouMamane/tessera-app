@@ -519,14 +519,14 @@ def _tab_mapping() -> CatalogTab:
         TabRow(
             "soc2",
             {
-                "framework": "SOC 2 Type II",
+                "framework": "SOC 2 — matrice de contrôles",
                 "article": "CC1-CC9",
                 "obligations": _delta("18", "+0%", True),
                 "controls": _delta("96", "+4%", True),
                 "signals": _delta("54", "+5%", True),
                 "evidence": _bar(41, 55),
                 "owner": _THOMAS,
-                "status": _badge("Partiel", "warning"),
+                "status": _badge("Préparation partielle", "warning"),
             },
         ),
         TabRow(
@@ -1720,7 +1720,7 @@ def _tab_evidence() -> CatalogTab:
                 "id": "PRV-2026-06-0130",
                 "scope": "SOC 2 - CC7",
                 "control": "C-12.2 - Disponibilite",
-                "kind": _badge("Rapport", "info"),
+                "kind": _badge("Dossier de contrôle", "info"),
                 "owner": _THOMAS,
                 "date": "12 jun 2026",
                 "validity": "12 mois",

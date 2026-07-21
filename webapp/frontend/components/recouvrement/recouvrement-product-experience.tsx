@@ -28,7 +28,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreditAuroreLogo } from "@/components/brand/credit-aurore-logo";
@@ -52,6 +52,10 @@ import {
   routeRecouvrementDrawerMessage,
   routeRecouvrementTaskClick,
 } from "@/components/recouvrement/recouvrement-assistant-backend";
+import {
+  type RecouvrementProductCopy,
+  recouvrementProductCopy,
+} from "@/components/recouvrement/recouvrement-product-copy";
 import type { Locale } from "@/i18n/routing";
 import {
   type RecouvrementAssistantArtifact,
@@ -68,86 +72,41 @@ import { type ArtifactStatusTone, artifactStatusMeta } from "@/lib/recouvrement/
 
 // The counters derive from the REAL queue store (lot 9) — never invented.
 const navigation = [
-  { label: "Ma journée", Icon: Home, active: true },
-  { label: "Dossiers", Icon: Folder },
-  { label: "Relances", Icon: Send, counterKey: "relance_a_valider" as const },
-  { label: "Échéanciers", Icon: CalendarDays, counterKey: "echeancier_a_confirmer" as const },
-  {
-    label: "Situations à vérifier",
-    Icon: ShieldCheck,
-    counterKey: "situation_a_verifier" as const,
-  },
-  { label: "Historique", Icon: Clock3 },
+  { Icon: Home, active: true },
+  { Icon: Folder },
+  { Icon: Send, counterKey: "relance_a_valider" as const },
+  { Icon: CalendarDays, counterKey: "echeancier_a_confirmer" as const },
+  { Icon: ShieldCheck, counterKey: "situation_a_verifier" as const },
+  { Icon: Clock3 },
 ];
 
 const assistantActions = [
-  {
-    label: "Résumer ce dossier",
-    description: "Obtenir les points clés en quelques secondes",
-    prompt: "Résume ce dossier de recouvrement pour préparer l'action suivante.",
-    Icon: FileText,
-  },
-  {
-    label: "Rédiger une relance",
-    description: "Message personnalisé prêt à envoyer",
-    prompt: "Prépare une relance amiable et propose un échéancier adapté à la situation.",
-    Icon: PenLine,
-  },
-  {
-    label: "Vérifier une règle",
-    description: "Contrôler la conformité en un clic",
-    prompt: "Vérifie les règles applicables avant de contacter le client sur ce dossier.",
-    Icon: ShieldCheck,
-  },
-  {
-    label: "Proposer un échéancier",
-    description: "Simulation adaptée à la situation",
-    prompt: "Propose un échéancier adapté à la situation et indique les points à valider.",
-    Icon: CalendarDays,
-  },
-  {
-    label: "Options de paiement",
-    description: "Lister les alternatives sans actionner de paiement",
-    prompt: "Prépare les options de paiement possibles pour ce dossier sans initier de paiement.",
-    Icon: CircleHelp,
-  },
+  { tab: "Résumer", Icon: FileText },
+  { tab: "Préparer une relance", Icon: PenLine },
+  { tab: "Vérifier une règle", Icon: ShieldCheck },
+  { tab: "Proposer un échéancier", Icon: CalendarDays },
+  { tab: "Options de paiement", Icon: CircleHelp },
 ];
 
 const nextItems = [
   {
     counterKey: "relance_a_valider" as const,
-    label: "Relances",
-    detail: "à valider",
     Icon: Send,
     accent: "orange",
   },
   {
     counterKey: "echeancier_a_confirmer" as const,
-    label: "Échéanciers",
-    detail: "à confirmer",
     Icon: CalendarDays,
     accent: "violet",
   },
   {
     counterKey: "situation_a_verifier" as const,
-    label: "Situations",
-    detail: "à vérifier",
     Icon: ShieldCheck,
     accent: "violet",
   },
 ];
 
-const quickActions = [
-  { label: "Préparer une relance", detail: "Rédiger un message personnalisé", Icon: FileText },
-  {
-    label: "Préparer un échéancier",
-    detail: "Proposer un plan de remboursement",
-    Icon: CalendarDays,
-  },
-  { label: "Reporter un dossier", detail: "Choisir une nouvelle date", Icon: FileText },
-  { label: "Escalader à un responsable", detail: "Demander une validation", Icon: Users },
-  { label: "Consulter l'historique", detail: "Voir toutes les actions", Icon: Clock3 },
-];
+const quickActions = [FileText, CalendarDays, FileText, Users, Clock3];
 
 const cardClass =
   "rounded-[6px] border border-[#dcdee6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
@@ -160,21 +119,6 @@ const assistantTabs = [
   "Options de paiement",
   "Vérifier une règle",
   "Résumer",
-];
-
-const contextItems = [
-  "Promesse de paiement non tenue le 12 juin.",
-  "840,00 €",
-  "Retard de 32 jours",
-  "Contact autorisé aujourd'hui de 8h à 20h",
-];
-
-const verificationItems = [
-  "Ton professionnel et factuel",
-  "Absence de pression injustifiée",
-  "Informations exactes et à jour",
-  "Contact autorisé aujourd'hui",
-  "Conforme au cadre réglementaire",
 ];
 
 type AssistantMode = "closed" | "drawer" | "pinned";
@@ -236,8 +180,21 @@ const pendingContactRuleContent: GeneratedAssistantContent = {
   },
 };
 
-function pendingContentForTask(task: RecouvrementDrawerTask): GeneratedAssistantContent {
-  if (task === "check_contact_rule") return pendingContactRuleContent;
+function pendingContentForTask(
+  task: RecouvrementDrawerTask,
+  copy: RecouvrementProductCopy,
+): GeneratedAssistantContent {
+  if (task === "check_contact_rule") {
+    return {
+      ...pendingContactRuleContent,
+      artifact: pendingContactRuleContent.artifact
+        ? {
+            ...pendingContactRuleContent.artifact,
+            title: `${copy.ui.contactFrameworkShort} — RC-2048`,
+          }
+        : null,
+    };
+  }
   if (task === "explain_payment_options") {
     return {
       ...fallbackAssistantContent,
@@ -245,7 +202,7 @@ function pendingContentForTask(task: RecouvrementDrawerTask): GeneratedAssistant
         id: "RC-2048-payment-options-pending",
         type: "payment_options_v1",
         task: "explain_payment_options",
-        title: "Options de paiement — RC-2048",
+        title: `${copy.ui.paymentOptions} — RC-2048`,
         status: "loading",
         content: {},
       },
@@ -258,7 +215,7 @@ function pendingContentForTask(task: RecouvrementDrawerTask): GeneratedAssistant
         id: "RC-2048-schedule-pending",
         type: "schedule_proposal_v2",
         task: "propose_schedule",
-        title: "Proposition d'échéancier — RC-2048",
+        title: `${copy.ui.proposedSchedule} — RC-2048`,
         status: "loading",
         content: {},
       },
@@ -271,7 +228,7 @@ function pendingContentForTask(task: RecouvrementDrawerTask): GeneratedAssistant
         id: "RC-2048-summary-pending",
         type: "case_summary_v1",
         task: "summary",
-        title: "Résumé du dossier — RC-2048",
+        title: `${copy.tabs[4]} — RC-2048`,
         status: "loading",
         content: {},
       },
@@ -283,7 +240,7 @@ function pendingContentForTask(task: RecouvrementDrawerTask): GeneratedAssistant
       id: "RC-2048-reminder-pending",
       type: "reminder_draft_v1",
       task: "draft_reminder",
-      title: "Brouillon de relance — RC-2048",
+      title: `${copy.tabs[0]} — RC-2048`,
       status: "loading",
       content: {},
     },
@@ -325,47 +282,7 @@ const skeletonLineKeys = [
   "skeleton-line-6",
 ];
 
-const recouvrementThinkingSteps = [
-  "Recouvrement analyse le dossier RC-2048",
-  "Recouvrement prépare les variantes de réponse",
-  "Recouvrement vérifie les règles de contact",
-  "Recouvrement consolide les prochaines actions",
-];
 const MIN_ASSISTANT_THINKING_MS = 1800;
-
-const defaultAssistantPrompt =
-  "Prépare une relance amiable et propose un échéancier adapté à la situation.";
-
-const recouvrementDrawerSystemPrompt = [
-  "Tu es l'assistant interne Recouvrement de Crédit Aurore pour Julie Dubois, chargée de recouvrement.",
-  "Tu aides à préparer une action sur un dossier, tu ne promets jamais qu'elle est exécutée.",
-  "N'oriente jamais Julie vers un service client : tu formules directement l'aide opérationnelle pour le dossier.",
-  "N'invente pas de téléphone, d'adresse e-mail, de frais ou de sanction.",
-  "Base les brouillons sur le contexte dossier transmis, pas sur des conditions générales externes sauf si l'utilisateur demande explicitement une règle.",
-  "N'utilise pas les expressions manquement grave, résiliation, sanction, frais d'incident ou mise en demeure dans une relance amiable.",
-  "Le ton d'une réponse client doit rester amiable, factuel, sans menace et sans pression injustifiée.",
-  "Un échéancier est seulement préparé ou proposé, puis validé avec le client.",
-  "Réponds en français, sans JSON, avec exactement ces titres Markdown dans cet ordre :",
-  "## Résumé du dossier",
-  "## Réponse au client",
-  "### V1 — version courte et directe",
-  "### V2 — version plus empathique",
-  "### V3 — version avec proposition d'échéancier",
-  "## Règles et conformité",
-  "## Prochaines actions suggérées",
-  "Chaque version doit contenir un brouillon complet prêt à relire, pas une consigne.",
-  "Les règles et conformité doivent mentionner seulement les contrôles utiles au recouvrement de ce dossier.",
-].join("\n");
-
-const dossierContextForAssistant = [
-  "Contexte dossier RC-2048 transmis par l'espace Recouvrement.",
-  "Client : M. D.",
-  "Montant dû : 840,00 €.",
-  "Retard : 32 jours.",
-  "Promesse de paiement non tenue le 12 juin.",
-  "Contact autorisé aujourd'hui de 8h à 20h.",
-  "Échéancier envisageable, uniquement après validation client.",
-].join("\n");
 
 function getSubjectId(): string | undefined {
   if (typeof window === "undefined") return undefined;
@@ -406,6 +323,7 @@ function ArtifactStatusBadge({
   status?: string | null;
   className?: string;
 }) {
+  const t = useTranslations("artifactStatus");
   if (!status) return null;
   const meta = artifactStatusMeta(status);
   return (
@@ -416,7 +334,7 @@ function ArtifactStatusBadge({
         className,
       )}
     >
-      {meta.label}
+      {t(meta.messageKey)}
     </span>
   );
 }
@@ -481,9 +399,9 @@ function assistantTabForAction(action: string) {
   return "Préparer une relance";
 }
 
-function assistantPromptForTab(activeTab: string) {
-  const action = assistantActions.find((item) => assistantTabForAction(item.label) === activeTab);
-  return action?.prompt ?? defaultAssistantPrompt;
+function assistantPromptForTab(activeTab: string, copy: RecouvrementProductCopy) {
+  const index = assistantActions.findIndex((item) => item.tab === activeTab);
+  return copy.actions[index]?.[2] ?? copy.defaultPrompt;
 }
 
 function asString(value: unknown) {
@@ -531,6 +449,22 @@ function isAssistantSectionHeading(line: string) {
     "prochaines actions suggerees",
     "echeancier",
     "plan de paiement",
+    "case summary",
+    "summary",
+    "customer reply",
+    "rules and compliance",
+    "compliance",
+    "suggested next actions",
+    "next actions",
+    "payment plan",
+    "vorgangszusammenfassung",
+    "zusammenfassung",
+    "kundenantwort",
+    "regeln und konformitat",
+    "konformitat",
+    "vorgeschlagene nachste aktionen",
+    "nachste aktionen",
+    "ratenplan",
   ].some((heading) => normalized.startsWith(heading));
 }
 
@@ -569,7 +503,7 @@ function extractDraftVersions(lines: string[]): DraftVersion[] {
   const markers = lines.flatMap((line, index) => {
     const cleaned = cleanAssistantHeading(line);
     const match = cleaned.match(
-      /^(?:Réponse au client\s*[-–—:]?\s*)?(?:Version\s*)?V?\s*([123])\b\s*[-–—:]?\s*(.*)$/i,
+      /^(?:(?:Réponse au client|Customer reply|Kundenantwort)\s*[-–—:]?\s*)?(?:Version\s*)?V?\s*([123])\b\s*[-–—:]?\s*(.*)$/i,
     );
     if (!match) return [];
     return [
@@ -601,13 +535,20 @@ function extractDraftVersions(lines: string[]): DraftVersion[] {
     .slice(0, 3);
 }
 
-function parseGeneratedAssistantContent(raw: string): GeneratedAssistantContent {
+function parseGeneratedAssistantContent(
+  raw: string,
+  copy: RecouvrementProductCopy,
+): GeneratedAssistantContent {
   const text = asString(raw);
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-  const responseBlock = extractSectionBlock(lines, ["reponse au client"]);
+  const responseBlock = extractSectionBlock(lines, [
+    "reponse au client",
+    "customer reply",
+    "kundenantwort",
+  ]);
   const versions = extractDraftVersions(lines);
   const fallbackVersion =
     responseBlock && versions.length === 0
@@ -615,22 +556,50 @@ function parseGeneratedAssistantContent(raw: string): GeneratedAssistantContent 
           {
             id: "v1",
             label: "V1",
-            title: "Version proposée",
+            title: copy.ui.versionProposed,
             body: responseBlock,
           },
         ]
       : [];
 
   return {
-    summary: blockToItems(extractSectionBlock(lines, ["resume du dossier", "resume"])),
+    summary: blockToItems(
+      extractSectionBlock(lines, [
+        "resume du dossier",
+        "resume",
+        "case summary",
+        "summary",
+        "vorgangszusammenfassung",
+        "zusammenfassung",
+      ]),
+    ),
     versions: versions.length > 0 ? versions : fallbackVersion,
-    paymentPlan: extractSectionBlock(lines, ["echeancier", "plan de paiement"]),
+    paymentPlan: extractSectionBlock(lines, [
+      "echeancier",
+      "plan de paiement",
+      "payment plan",
+      "ratenplan",
+    ]),
     complianceChecks: blockToItems(
-      extractSectionBlock(lines, ["regles et conformite", "conformite"]),
+      extractSectionBlock(lines, [
+        "regles et conformite",
+        "conformite",
+        "rules and compliance",
+        "compliance",
+        "regeln und konformitat",
+        "konformitat",
+      ]),
       6,
     ),
     nextActions: blockToItems(
-      extractSectionBlock(lines, ["prochaines actions suggerees", "prochaines actions"]),
+      extractSectionBlock(lines, [
+        "prochaines actions suggerees",
+        "prochaines actions",
+        "suggested next actions",
+        "next actions",
+        "vorgeschlagene nachste aktionen",
+        "nachste aktionen",
+      ]),
       5,
     ),
     rawResponse: text,
@@ -642,8 +611,9 @@ function parseGeneratedAssistantContent(raw: string): GeneratedAssistantContent 
 
 function contentFromRecouvrementContactResponse(
   response: RecouvrementAssistantResponse,
+  locale: Locale,
 ): GeneratedAssistantContent {
-  const cards = contactRuleCards(response);
+  const cards = contactRuleCards(response, locale);
   return {
     summary: cards.contactFrame,
     versions: [],
@@ -659,6 +629,7 @@ function contentFromRecouvrementContactResponse(
 
 function contentFromScheduleProposal(
   proposal: ReturnType<typeof buildScheduleProposalDraft>,
+  copy: RecouvrementProductCopy,
 ): GeneratedAssistantContent {
   return {
     summary: proposal.cardUpdates.summary ?? proposal.cardUpdates.context ?? [],
@@ -666,12 +637,12 @@ function contentFromScheduleProposal(
       {
         id: "v1",
         label: "V1",
-        title: "Message prudent",
+        title: copy.ui.prudentMessage,
         body: [
-          "Bonjour M. D.,",
-          "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de validation et d'accord sur les modalités.",
-          "Nous vous invitons à nous recontacter afin d'échanger sur une solution adaptée à votre situation.",
-          "Cordialement,\nCrédit Aurore",
+          copy.ui.scheduleGreeting,
+          copy.ui.scheduleOffer,
+          copy.ui.scheduleInvite,
+          copy.ui.scheduleSignoff,
         ].join("\n\n"),
       },
     ],
@@ -687,15 +658,16 @@ function contentFromScheduleProposal(
 
 function contentFromRecouvrementScheduleResponse(
   response: RecouvrementAssistantResponse,
+  copy: RecouvrementProductCopy,
 ): GeneratedAssistantContent {
   const updates = response.cardUpdates ?? {};
   const clientMessage =
     (updates.clientMessage ?? []).join("\n\n") ||
     [
-      "Bonjour M. D.,",
-      "Une solution d'échelonnement peut être étudiée avec vous, sous réserve de validation et d'accord sur les modalités.",
-      "Nous vous invitons à nous recontacter afin d'échanger sur une solution adaptée à votre situation.",
-      "Cordialement,\nCrédit Aurore",
+      copy.ui.scheduleGreeting,
+      copy.ui.scheduleOffer,
+      copy.ui.scheduleInvite,
+      copy.ui.scheduleSignoff,
     ].join("\n\n");
 
   return {
@@ -704,7 +676,7 @@ function contentFromRecouvrementScheduleResponse(
       {
         id: "v1",
         label: "V1",
-        title: updates.scheduleVersionLabel?.[0] ?? "Message prudent",
+        title: updates.scheduleVersionLabel?.[0] ?? copy.ui.prudentMessage,
         body: clientMessage,
       },
     ],
@@ -720,6 +692,7 @@ function contentFromRecouvrementScheduleResponse(
 
 function contentFromRecouvrementDraftResponse(
   response: RecouvrementAssistantResponse,
+  copy: RecouvrementProductCopy,
 ): GeneratedAssistantContent {
   const updates = response.cardUpdates ?? {};
   const clientMessage = (updates.clientMessage ?? []).join("\n\n");
@@ -729,7 +702,7 @@ function contentFromRecouvrementDraftResponse(
       {
         id: "v1",
         label: "V1",
-        title: updates.draftVersionLabel?.[0] ?? "Message client",
+        title: updates.draftVersionLabel?.[0] ?? copy.ui.customerMessage,
         body: clientMessage,
       },
     ],
@@ -811,10 +784,10 @@ function artifactStringList(artifact: RecouvrementAssistantArtifact | null, key:
     : [];
 }
 
-function buildAssistantHistory(thread: AssistantThreadMessage[]) {
+function buildAssistantHistory(thread: AssistantThreadMessage[], copy: RecouvrementProductCopy) {
   const stableMessages = thread.filter((message) => message.content.trim() && !message.streaming);
   return [
-    { role: "user" as const, content: dossierContextForAssistant },
+    { role: "user" as const, content: copy.dossierContext },
     ...stableMessages.map((message) => ({
       role: message.role,
       content: message.content,
@@ -823,28 +796,21 @@ function buildAssistantHistory(thread: AssistantThreadMessage[]) {
 }
 
 function AssistantContextPanel({ compact = false }: { compact?: boolean }) {
-  const items = compact
-    ? [
-        "Promesse de paiement non tenue le 12 juin.",
-        "840,00 € · Retard de 32 jours",
-        "Contact autorisé aujourd'hui de 8h à 20h",
-      ]
-    : contextItems;
+  const copy = recouvrementProductCopy(useLocale() as Locale);
+  const items = compact ? copy.contextCompact : copy.context;
 
   return (
     <section
       className={cn("rounded-[6px] border border-[#dfe2ec] bg-white", compact ? "p-4" : "p-5")}
     >
       <div className="mb-3 flex items-center justify-between gap-4">
-        <h3 className="!font-sans !text-[#071044] font-bold text-sm">
-          Contexte retenu par l'assistant
-        </h3>
+        <h3 className="!font-sans !text-[#071044] font-bold text-sm">{copy.ui.retainedContext}</h3>
         <button
           type="button"
           className="inline-flex items-center gap-2 font-semibold text-[#6048ff] text-xs"
         >
           <PenLine className="h-4 w-4" />
-          Modifier le contexte
+          {copy.ui.editContext}
         </button>
       </div>
       <div className={cn("grid gap-2 text-[#071044] text-xs", compact ? "" : "sm:grid-cols-2")}>
@@ -888,6 +854,8 @@ function AssistantThinkingIndicator({
   compact?: boolean;
   label: string;
 }) {
+  const locale = useLocale() as Locale;
+  const copy = recouvrementProductCopy(locale);
   return (
     <div
       className={cn(
@@ -902,7 +870,7 @@ function AssistantThinkingIndicator({
           <Sparkles className="recouvrement-thinking-mark relative h-4 w-4" />
         </span>
         <div className="min-w-0">
-          <p className="font-extrabold text-sm">Recouvrement réfléchit</p>
+          <p className="font-extrabold text-sm">{copy.ui.thinking}</p>
           <p className="mt-0.5 text-[#071044]/68 text-xs">{label}</p>
         </div>
         <div className="ml-auto flex items-end gap-1.5">
@@ -932,6 +900,7 @@ function AssistantDraftPanel({
   status: AssistantStatus;
   onSelectVersion: (versionId: string) => void;
 }) {
+  const copy = recouvrementProductCopy(useLocale() as Locale);
   const paragraphClassName = compact ? "mt-3" : "mt-4";
   const selectedVersion =
     content.versions.find((version) => version.id === selectedVersionId) ?? content.versions[0];
@@ -944,7 +913,7 @@ function AssistantDraftPanel({
     <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="!font-sans !text-[#071044] font-bold text-sm">
-          Réponse au client
+          {copy.ui.customerReply}
           {selectedVersion ? (
             <span className="ml-2 font-semibold text-[#071044]/62 text-xs">
               {selectedVersion.title}
@@ -990,9 +959,7 @@ function AssistantDraftPanel({
             </p>
           ))
         ) : (
-          <p className="text-[#071044]/60">
-            Le chat Recouvrement n'a pas encore renvoyé de version exploitable.
-          </p>
+          <p className="text-[#071044]/60">{copy.ui.noDraft}</p>
         )}
       </div>
     </section>
@@ -1006,9 +973,10 @@ function AssistantVerificationPanel({
   checks: string[];
   status: AssistantStatus;
 }) {
+  const copy = recouvrementProductCopy(useLocale() as Locale);
   return (
     <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
-      <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">Règles et conformité</h3>
+      <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">{copy.ui.rules}</h3>
       <ul className="space-y-2.5 text-[#071044] text-xs">
         {status === "loading"
           ? loadingRows.map((row) => (
@@ -1036,6 +1004,7 @@ function AssistantContactRulePanel({
   content: GeneratedAssistantContent;
   status: AssistantStatus;
 }) {
+  const copy = recouvrementProductCopy(useLocale() as Locale);
   const cards = content.artifactCards;
   const decision = content.artifact?.content.decision;
   const reasonCodes = artifactStringList(content.artifact, "reason_codes");
@@ -1044,8 +1013,8 @@ function AssistantContactRulePanel({
   const allowedItems = cards.allowedItems ?? [];
   const validationItems = cards.validationItems ?? content.complianceChecks;
   const displayedContactFrame =
-    isBlocked && !contactFrame.includes("Aucun appel préparé")
-      ? [...contactFrame, "Aucun appel préparé"]
+    isBlocked && !contactFrame.includes(copy.ui.noCall)
+      ? [...contactFrame, copy.ui.noCall]
       : contactFrame;
   const sectionClassName = "rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4";
   const rows = compact ? loadingRows.slice(0, 2) : loadingRows;
@@ -1055,12 +1024,12 @@ function AssistantContactRulePanel({
       <section className={sectionClassName}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <h3 className="!font-sans !text-[#071044] font-bold text-sm">
-            Cadre de contact applicable
+            {copy.ui.contactFramework}
           </h3>
           {isBlocked ? (
             <>
               <span className="rounded-full bg-[#ffe8e5] px-2 py-0.5 font-bold text-[#c0362c] text-[0.64rem]">
-                Action bloquée
+                {copy.ui.blocked}
               </span>
               {reasonCodes[0] ? (
                 <span className="rounded-full border border-[#ffd2c9] bg-white px-2 py-0.5 font-bold text-[#a23b2a] text-[0.64rem]">
@@ -1081,7 +1050,7 @@ function AssistantContactRulePanel({
         </ul>
       </section>
       <section className={sectionClassName}>
-        <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">Ce qui est autorisé</h3>
+        <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">{copy.ui.allowed}</h3>
         <ul className="space-y-1.5 text-xs leading-5">
           {status === "loading"
             ? rows.map((row) => (
@@ -1094,7 +1063,7 @@ function AssistantContactRulePanel({
       </section>
       <section className={sectionClassName}>
         <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-          Ce qui nécessite validation ou action
+          {copy.ui.requiresApproval}
         </h3>
         <ul className="space-y-1.5 text-xs leading-5">
           {status === "loading"
@@ -1112,13 +1081,14 @@ function AssistantContactRulePanel({
 
 function footerIconForAction(action: string) {
   const normalized = normalizeAssistantText(action);
-  if (normalized.includes("rappel") || normalized.includes("duree")) return CalendarDays;
-  if (normalized.includes("email") || normalized.includes("message")) return Mail;
-  if (normalized.includes("reporter")) return Clock3;
-  if (normalized.includes("script") || normalized.includes("appel")) return Phone;
-  if (normalized.includes("inserer") || normalized.includes("note")) return Folder;
-  if (normalized.includes("copier")) return Copy;
-  if (normalized.includes("validation") || normalized.includes("soumettre")) return Send;
+  if (/rappel|duree|reminder|duration|callback|ruckruf|laufzeit/.test(normalized))
+    return CalendarDays;
+  if (/email|message|nachricht/.test(normalized)) return Mail;
+  if (/reporter|reschedule|postpone|verschieben/.test(normalized)) return Clock3;
+  if (/script|appel|call|anruf/.test(normalized)) return Phone;
+  if (/inserer|insert|einfugen|note|notiz/.test(normalized)) return Folder;
+  if (/copier|copy|kopieren/.test(normalized)) return Copy;
+  if (/validation|soumettre|submit|approval|freigabe|einreichen/.test(normalized)) return Send;
   return PenLine;
 }
 
@@ -1197,6 +1167,8 @@ function AssistantDrawer({
   onSelectTab: (tab: string) => void;
   onTogglePinned: () => void;
 }) {
+  const locale = useLocale() as Locale;
+  const copy = recouvrementProductCopy(locale);
   const isPinned = mode === "pinned";
   const artifactFamily = artifactFamilyForArtifact(content.artifact);
   const hasContactRuleArtifact = content.artifact?.type === "contact_rule_v1";
@@ -1210,29 +1182,29 @@ function AssistantDrawer({
     content.artifact?.type === "contact_rule_v1" && content.artifact.content.decision === "blocked";
   const contactStatus = artifactString(content.artifact, "contact_status");
   const contactReasonCode = artifactStringList(content.artifact, "reason_codes")[0];
-  const footerActions = footerActionsForRecouvrementArtifact(content.artifact);
+  const footerActions = footerActionsForRecouvrementArtifact(content.artifact, locale);
   const summary = content.summary.length > 0 ? content.summary : fallbackAssistantContent.summary;
   const checks =
-    content.complianceChecks.length > 0 ? content.complianceChecks : verificationItems.slice(0, 4);
+    content.complianceChecks.length > 0 ? content.complianceChecks : copy.verification.slice(0, 4);
   const nextActions =
     content.nextActions.length > 0
       ? content.nextActions
-      : ["Relire la proposition avant action.", "Insérer le brouillon après validation."];
+      : [copy.ui.fallbackAction1, copy.ui.fallbackAction2];
   const initialPrompt =
     messages.find((message) => message.role === "user")?.content ??
-    assistantPromptForTab(activeTab);
+    assistantPromptForTab(activeTab, copy);
   const resultTitle = hasContactRuleArtifact
     ? isBlockedContact
-      ? "Action de contact bloquée pour RC-2048."
-      : "Règle de contact vérifiée pour RC-2048."
-    : (content.artifact?.title ?? "Analyse du dossier RC-2048.");
-  const verifyButtonLabel = hasContactRuleArtifact ? "Revérifier" : "Régénérer";
+      ? copy.ui.blockedResult
+      : copy.ui.verifiedResult
+    : (content.artifact?.title ?? copy.ui.analysisResult);
+  const verifyButtonLabel = hasContactRuleArtifact ? copy.ui.recheck : copy.ui.regenerate;
   const paymentPlanTitle =
-    artifactFamily === "payment_options" ? "Options de paiement" : "Échéancier proposé";
+    artifactFamily === "payment_options" ? copy.ui.paymentOptions : copy.ui.proposedSchedule;
 
   return (
     <aside
-      aria-label="Assistant de traitement"
+      aria-label={copy.ui.assistant}
       aria-modal={isPinned ? undefined : true}
       role={isPinned ? "complementary" : "dialog"}
       className={cn(
@@ -1258,7 +1230,7 @@ function AssistantDrawer({
               )}
             >
               {!isPinned ? <Sparkles className="h-5 w-5 text-[#6048ff]" /> : null}
-              <span className="whitespace-nowrap">Assistant de traitement</span>
+              <span className="whitespace-nowrap">{copy.ui.assistant}</span>
               <span className="whitespace-nowrap font-semibold text-[#071044]/80">
                 {isPinned ? "- RC-2048" : "RC-2048"}
               </span>
@@ -1268,19 +1240,17 @@ function AssistantDrawer({
                   isPinned ? "px-1.5 py-0.5 text-[0.5rem]" : "px-2.5 py-1 text-[0.68rem]",
                 )}
               >
-                Contextualisé
+                {copy.ui.contextualized}
               </span>
             </h2>
             {!isPinned ? (
-              <p className="mt-1 text-[#071044]/70 text-sm">
-                Contextualisé sur le dossier prioritaire
-              </p>
+              <p className="mt-1 text-[#071044]/70 text-sm">{copy.ui.priorityContext}</p>
             ) : null}
           </div>
           <div className={cn("flex shrink-0 items-center", isPinned ? "gap-1.5" : "gap-2")}>
             <button
               type="button"
-              aria-label={isPinned ? "Détacher l'assistant" : "Épingler l'assistant"}
+              aria-label={isPinned ? copy.ui.detach : copy.ui.pin}
               onClick={onTogglePinned}
               className={cn(
                 "grid place-items-center rounded-[5px] border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
@@ -1291,7 +1261,7 @@ function AssistantDrawer({
             </button>
             <button
               type="button"
-              aria-label="Agrandir l'assistant"
+              aria-label={copy.ui.expand}
               onClick={onExpand}
               className={cn(
                 "grid place-items-center rounded-[5px] border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
@@ -1302,7 +1272,7 @@ function AssistantDrawer({
             </button>
             <button
               type="button"
-              aria-label="Fermer l'assistant"
+              aria-label={copy.ui.close}
               onClick={onClose}
               className={cn(
                 "grid place-items-center rounded-[5px] text-[#071044] transition hover:bg-[#f7f8fb]",
@@ -1315,7 +1285,7 @@ function AssistantDrawer({
         </div>
         {isPinned ? (
           <div className="mt-5 flex gap-4 overflow-x-auto border-[#eceef5] border-b">
-            {assistantTabs.map((tab) => (
+            {assistantTabs.map((tab, index) => (
               <button
                 key={tab}
                 type="button"
@@ -1325,7 +1295,7 @@ function AssistantDrawer({
                   activeTab === tab ? "text-[#6048ff]" : "text-[#071044]",
                 )}
               >
-                {tab}
+                {copy.tabs[index]}
                 <span
                   className={cn(
                     "absolute right-0 bottom-0 left-0 h-0.5 rounded-full bg-[#6048ff] transition-opacity",
@@ -1370,7 +1340,7 @@ function AssistantDrawer({
             )}
             <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
               <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">
-                Prochaines actions suggérées
+                {copy.ui.suggestedActions}
               </h3>
               <ul className="space-y-2 text-[#071044] text-xs">
                 {status === "loading"
@@ -1394,17 +1364,17 @@ function AssistantDrawer({
               <div>
                 <p className="font-bold text-sm">M. D.</p>
                 <p className="mt-1 rounded-[5px] bg-[#ffe8e5] px-2 py-1 font-semibold text-[#f23932] text-xs">
-                  Promesse non tenue
+                  {copy.ui.brokenPromise}
                 </p>
               </div>
             </div>
             <div>
               <p className="font-extrabold text-sm">840,00 €</p>
-              <p className="mt-1 text-xs">Montant dû</p>
+              <p className="mt-1 text-xs">{copy.ui.amountDue}</p>
             </div>
             <div>
-              <p className="font-extrabold text-sm">32 jours</p>
-              <p className="mt-1 text-xs">Retard</p>
+              <p className="font-extrabold text-sm">32 {copy.ui.days}</p>
+              <p className="mt-1 text-xs">{copy.ui.delay}</p>
             </div>
             <div
               className={cn(
@@ -1414,7 +1384,7 @@ function AssistantDrawer({
             >
               <p className="flex items-center gap-2 font-bold">
                 {isBlockedContact ? <X className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
-                {isBlockedContact ? "Action bloquée" : "Contact autorisé"}
+                {isBlockedContact ? copy.ui.blocked : copy.ui.contactAllowed}
               </p>
               <p className="mt-1">{isBlockedContact ? contactStatus : "8h - 20h"}</p>
               {isBlockedContact && contactReasonCode ? (
@@ -1424,11 +1394,11 @@ function AssistantDrawer({
           </section>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {assistantActions.map(({ label, Icon }) => {
-              const tab = assistantTabForAction(label);
+            {assistantActions.map(({ tab, Icon }, index) => {
+              const label = copy.actions[index]?.[0] ?? copy.tabs[0];
               return (
                 <button
-                  key={label}
+                  key={tab}
                   type="button"
                   onClick={() => onSelectTab(tab)}
                   className={cn(
@@ -1484,7 +1454,7 @@ function AssistantDrawer({
                 <>
                   <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                     <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                      Résumé du dossier
+                      {copy.tabs[4]}
                     </h3>
                     <ul className="space-y-1.5 text-xs leading-5">
                       {status === "loading"
@@ -1520,7 +1490,7 @@ function AssistantDrawer({
                   ) : null}
                   <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                     <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                      Règles et conformité
+                      {copy.ui.rules}
                     </h3>
                     <ul className="space-y-1.5 text-xs leading-5">
                       {status === "loading"
@@ -1536,7 +1506,7 @@ function AssistantDrawer({
               )}
               <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                 <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
-                  Prochaines actions suggérées
+                  {copy.ui.suggestedActions}
                 </h3>
                 <ul className="space-y-1.5 text-xs leading-5">
                   {status === "loading"
@@ -1564,20 +1534,18 @@ function AssistantDrawer({
                 className="inline-flex items-center gap-2 font-semibold text-[#071044]"
               >
                 <ChevronRight className="h-4 w-4 rotate-180" />
-                Réduire le panneau
+                {copy.ui.reducePanel}
               </button>
               <button
                 type="button"
                 onClick={onExpand}
                 className="inline-flex items-center gap-2 font-semibold text-[#071044]"
               >
-                Agrandir
+                {copy.ui.grow}
                 <Maximize2 className="h-4 w-4" />
               </button>
             </div>
-            <p className="mt-3 text-[#071044]/55 text-[0.64rem]">
-              L'assistant peut se tromper. Vérifiez toujours les informations avant action.
-            </p>
+            <p className="mt-3 text-[#071044]/55 text-[0.64rem]">{copy.ui.disclaimer}</p>
           </>
         ) : (
           <>
@@ -1590,24 +1558,22 @@ function AssistantDrawer({
               }}
             >
               <input
-                aria-label="Question assistant"
+                aria-label={copy.ui.assistantQuestion}
                 value={inputValue}
                 onChange={(event) => onInputChange(event.target.value)}
-                placeholder="Continuer avec le chat Recouvrement..."
+                placeholder={copy.ui.continueChat}
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#071044]/55"
               />
               <button
                 type="submit"
-                aria-label="Envoyer la question"
+                aria-label={copy.ui.sendQuestion}
                 disabled={status === "loading" || inputValue.trim().length === 0}
                 className="grid h-10 w-10 place-items-center rounded-[5px] bg-[#6048ff] text-white transition disabled:bg-[#c8bbff]"
               >
                 <Send className="h-5 w-5" />
               </button>
             </form>
-            <p className="mt-3 text-[#071044]/55 text-[0.68rem]">
-              L'assistant peut se tromper. Vérifiez toujours les informations avant action.
-            </p>
+            <p className="mt-3 text-[#071044]/55 text-[0.68rem]">{copy.ui.disclaimer}</p>
           </>
         )}
       </footer>
@@ -1617,6 +1583,8 @@ function AssistantDrawer({
 
 export function RecouvrementProductExperience() {
   const locale = useLocale() as Locale;
+  const copy = recouvrementProductCopy(locale);
+  const dateLocale = locale === "fr" ? "fr-FR" : locale === "de" ? "de-DE" : "en-GB";
   // The REAL case queue (lot 9): counters, the notification badge and the
   // priority dossier all derive from the durable store — never invented.
   const { data: queue } = useQuery({
@@ -1631,14 +1599,20 @@ export function RecouvrementProductExperience() {
     ? [
         ...(priorityCase.missed_promise_date
           ? [
-              `Promesse de paiement non tenue le ${new Date(
-                priorityCase.missed_promise_date,
-              ).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}.`,
+              copy.ui.missedPromise.replace(
+                "{date}",
+                new Date(priorityCase.missed_promise_date).toLocaleDateString(dateLocale, {
+                  day: "numeric",
+                  month: "long",
+                }),
+              ),
             ]
           : []),
-        `Retard significatif : ${priorityCase.days_late} jours`,
-        "Échéancier envisageable",
-        `Contact autorisé aujourd'hui de ${priorityCase.contact_window_start.replace(":00", "h")} à ${priorityCase.contact_window_end.replace(":00", "h")}`,
+        copy.ui.significantDelay.replace("{days}", String(priorityCase.days_late)),
+        copy.ui.schedulePossible,
+        copy.ui.contactWindow
+          .replace("{start}", priorityCase.contact_window_start)
+          .replace("{end}", priorityCase.contact_window_end),
       ]
     : [];
   const [assistantMode, setAssistantMode] = useState<AssistantMode>("closed");
@@ -1661,9 +1635,7 @@ export function RecouvrementProductExperience() {
   const skipNextAssistantAutoTurnRef = useRef(false);
   const conversationIdRef = useRef<string | null>(null);
   const isAssistantOpen = assistantMode !== "closed";
-  const thinkingLabel =
-    recouvrementThinkingSteps[thinkingStep % recouvrementThinkingSteps.length] ??
-    "Recouvrement réfléchit";
+  const thinkingLabel = copy.thinking[thinkingStep % copy.thinking.length] ?? copy.ui.thinking;
 
   useEffect(() => {
     assistantThreadRef.current = assistantThread;
@@ -1763,7 +1735,7 @@ export function RecouvrementProductExperience() {
 
       if (resetThread) {
         conversationIdRef.current = null;
-        setAssistantContent(pendingContentForTask(route.targetTask));
+        setAssistantContent(pendingContentForTask(route.targetTask, copy));
         setSelectedVersionId("v1");
       }
 
@@ -1788,7 +1760,7 @@ export function RecouvrementProductExperience() {
       };
 
       if (route.blockedReason === "requires_message_artifact") {
-        const response = buildInvalidDraftEditResponse(currentArtifact);
+        const response = buildInvalidDraftEditResponse(currentArtifact, locale);
         const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
         completeAfterThinkingMinimum(() => {
           setAssistantContent(parsed);
@@ -1814,8 +1786,8 @@ export function RecouvrementProductExperience() {
             language: locale,
             conversation_id: resetThread ? undefined : (conversationIdRef.current ?? undefined),
             subject_id: getSubjectId(),
-            history: buildAssistantHistory(priorThread),
-            system_prompt_override: recouvrementDrawerSystemPrompt,
+            history: buildAssistantHistory(priorThread, copy),
+            system_prompt_override: copy.systemPrompt,
           },
           {
             signal: controller.signal,
@@ -1835,7 +1807,7 @@ export function RecouvrementProductExperience() {
             },
             onEnd: (envelope) => {
               const finalResponse = asString(envelope.final_response || rawResponse);
-              const parsed = parseGeneratedAssistantContent(finalResponse);
+              const parsed = parseGeneratedAssistantContent(finalResponse, copy);
               setAssistantContent(parsed);
               setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
               setAssistantThread((current) =>
@@ -1867,8 +1839,9 @@ export function RecouvrementProductExperience() {
         const proposal = buildScheduleProposalDraft(
           trimmedMessage,
           route.extractedSlots.durationMonths,
+          locale,
         );
-        const parsed = contentFromScheduleProposal(proposal);
+        const parsed = contentFromScheduleProposal(proposal, copy);
         completeAfterThinkingMinimum(() => {
           setAssistantContent(parsed);
           setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -1885,7 +1858,7 @@ export function RecouvrementProductExperience() {
       }
 
       if (route.targetTask === "summary" && !usesStructuredBackend) {
-        const summary = buildCaseSummaryDraft();
+        const summary = buildCaseSummaryDraft(locale);
         const parsed = contentFromCaseSummaryResponse(summary);
         completeAfterThinkingMinimum(() => {
           setAssistantContent(parsed);
@@ -1914,6 +1887,7 @@ export function RecouvrementProductExperience() {
           message: trimmedMessage,
           conversationId,
           turnId,
+          language: locale,
           assistantState: {
             activeTask: route.targetTask,
             activeTab: activeAssistantTab,
@@ -1926,21 +1900,21 @@ export function RecouvrementProductExperience() {
                   artifactFamily: artifactFamilyForArtifact(currentArtifact),
                 }
               : null,
-            history: buildAssistantHistory(priorThread),
+            history: buildAssistantHistory(priorThread, copy),
           },
           signal: controller.signal,
         })
           .then((response) => {
             if (controller.signal.aborted) return;
             const parsed = usesStructuredScheduleBackend
-              ? contentFromRecouvrementScheduleResponse(response)
+              ? contentFromRecouvrementScheduleResponse(response, copy)
               : usesStructuredDraftBackend
-                ? contentFromRecouvrementDraftResponse(response)
+                ? contentFromRecouvrementDraftResponse(response, copy)
                 : usesStructuredSummaryBackend
                   ? contentFromCaseSummaryResponse(response)
                   : usesStructuredPaymentOptionsBackend
                     ? contentFromPaymentOptionsResponse(response)
-                    : contentFromRecouvrementContactResponse(response);
+                    : contentFromRecouvrementContactResponse(response, locale);
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
               setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -1964,8 +1938,11 @@ export function RecouvrementProductExperience() {
             if (controller.signal.aborted) return;
             console.warn("[recouvrement-assistant] structured backend unavailable", err);
             if (usesStructuredDraftBackend) {
-              const fallbackResponse = buildDraftBackendUnavailableFallback(currentArtifact);
-              const parsed = contentFromRecouvrementDraftResponse(fallbackResponse);
+              const fallbackResponse = buildDraftBackendUnavailableFallback(
+                currentArtifact,
+                locale,
+              );
+              const parsed = contentFromRecouvrementDraftResponse(fallbackResponse, copy);
               completeAfterThinkingMinimum(() => {
                 setAssistantContent(parsed);
                 setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -1984,8 +1961,9 @@ export function RecouvrementProductExperience() {
               const proposal = buildScheduleProposalDraft(
                 trimmedMessage,
                 route.extractedSlots.durationMonths,
+                locale,
               );
-              const parsed = contentFromScheduleProposal(proposal);
+              const parsed = contentFromScheduleProposal(proposal, copy);
               completeAfterThinkingMinimum(() => {
                 setAssistantContent(parsed);
                 setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
@@ -2001,7 +1979,7 @@ export function RecouvrementProductExperience() {
               return;
             }
             if (usesStructuredSummaryBackend) {
-              const summary = buildCaseSummaryDraft();
+              const summary = buildCaseSummaryDraft(locale);
               const parsed = contentFromCaseSummaryResponse(summary);
               completeAfterThinkingMinimum(() => {
                 setAssistantContent(parsed);
@@ -2018,7 +1996,7 @@ export function RecouvrementProductExperience() {
               return;
             }
             if (usesStructuredPaymentOptionsBackend) {
-              const fallbackResponse = buildPaymentOptionsBackendUnavailableFallback();
+              const fallbackResponse = buildPaymentOptionsBackendUnavailableFallback(locale);
               const parsed = contentFromPaymentOptionsResponse(fallbackResponse);
               completeAfterThinkingMinimum(() => {
                 setAssistantContent(parsed);
@@ -2034,8 +2012,8 @@ export function RecouvrementProductExperience() {
               });
               return;
             }
-            const fallbackResponse = buildContactRuleBackendUnavailableFallback();
-            const parsed = contentFromRecouvrementContactResponse(fallbackResponse);
+            const fallbackResponse = buildContactRuleBackendUnavailableFallback(locale);
+            const parsed = contentFromRecouvrementContactResponse(fallbackResponse, locale);
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
               setSelectedVersionId("v1");
@@ -2067,7 +2045,7 @@ export function RecouvrementProductExperience() {
         );
       });
     },
-    [activeAssistantTab, locale],
+    [activeAssistantTab, copy, locale],
   );
 
   const selectAssistantTab = useCallback(
@@ -2152,6 +2130,7 @@ export function RecouvrementProductExperience() {
           actionName,
           conversationId,
           turnId: crypto.randomUUID(),
+          language: locale,
           signal: controller.signal,
         })
           .then((response) => {
@@ -2165,38 +2144,39 @@ export function RecouvrementProductExperience() {
           });
       };
 
-      if (normalized.includes("inserer")) {
+      if (/inserer|insert|einfugen/.test(normalized)) {
         runBackendArtifactAction("insert_artifact_in_case", () =>
           buildArtifactInsertionPreparedResponse(
             currentArtifact as RecouvrementAssistantArtifact,
             action,
+            locale,
           ),
         );
         return;
       }
 
-      if (normalized.includes("soumettre") || normalized.includes("validation")) {
+      if (/soumettre|validation|submit|approval|einreichen|freigabe/.test(normalized)) {
         runBackendArtifactAction("submit_for_validation", () =>
           buildArtifactPendingValidationResponse(
             currentArtifact as RecouvrementAssistantArtifact,
             action,
+            locale,
           ),
         );
         return;
       }
 
-      if (normalized.includes("copier")) {
+      if (/copier|copy|kopieren/.test(normalized)) {
         if (!currentArtifact) return;
         const response: RecouvrementAssistantResponse = {
-          visibleReply:
-            "Contenu prêt à être copié depuis l'artefact courant. Aucun message envoyé.",
+          visibleReply: copy.ui.copyReady,
           artifact: currentArtifact,
           cardUpdates: {
             summary: assistantContentRef.current.summary,
             complianceChecks: [
-              "Artefact courant conservé",
-              "Aucun message envoyé",
-              "Aucune action irréversible exécutée",
+              copy.ui.artifactKept,
+              copy.ui.noMessage,
+              copy.ui.noIrreversibleAction,
             ],
             nextActions: assistantContentRef.current.nextActions,
           },
@@ -2224,32 +2204,34 @@ export function RecouvrementProductExperience() {
         return;
       }
 
-      if (normalized.includes("rappel") && currentArtifact?.type === "contact_rule_v1") {
+      if (
+        /rappel|reminder|callback|ruckruf/.test(normalized) &&
+        currentArtifact?.type === "contact_rule_v1"
+      ) {
         runBackendArtifactAction("prepare_reminder_tomorrow", () =>
-          buildReminderPreparedResponse(currentArtifact),
+          buildReminderPreparedResponse(currentArtifact, locale),
         );
         return;
       }
 
-      if (normalized.includes("message") || normalized.includes("email")) {
+      if (/message|email|nachricht/.test(normalized)) {
         sendAssistantTurn(action, false, { forcedTask: "draft_reminder", pendingAction: action });
         return;
       }
 
       if (
-        normalized.includes("echeancier") ||
-        normalized.includes("duree") ||
-        normalized.includes("comparer")
+        /echeancier|duree|comparer|payment plan|duration|compare|ratenplan|laufzeit|vergleichen/.test(
+          normalized,
+        )
       ) {
         sendAssistantTurn(action, false, { forcedTask: "propose_schedule", pendingAction: action });
         return;
       }
 
       if (
-        normalized.includes("regle") ||
-        normalized.includes("rappel") ||
-        normalized.includes("reporter") ||
-        normalized.includes("appel")
+        /regle|rappel|reporter|appel|rule|reminder|callback|reschedule|call|regel|ruckruf|verschieben|anruf/.test(
+          normalized,
+        )
       ) {
         sendAssistantTurn(action, false, {
           forcedTask: "check_contact_rule",
@@ -2258,11 +2240,11 @@ export function RecouvrementProductExperience() {
         return;
       }
 
-      if (normalized.includes("relance") || normalized.includes("modifier")) {
+      if (/relance|modifier|reminder|edit|mahnung|andern/.test(normalized)) {
         sendAssistantTurn(action, false, { forcedTask: "draft_reminder", pendingAction: action });
       }
     },
-    [sendAssistantTurn],
+    [copy, locale, sendAssistantTurn],
   );
 
   useEffect(() => {
@@ -2283,7 +2265,7 @@ export function RecouvrementProductExperience() {
       skipNextAssistantAutoTurnRef.current = false;
       return;
     }
-    sendAssistantTurn(assistantPromptForTab(activeAssistantTab), true, {
+    sendAssistantTurn(assistantPromptForTab(activeAssistantTab, copy), true, {
       forcedTask: assistantTaskForTab(activeAssistantTab),
     });
   }, [activeAssistantTab, generationNonce, isAssistantOpen, sendAssistantTurn]);
@@ -2303,8 +2285,8 @@ export function RecouvrementProductExperience() {
             <label className="relative order-last block w-full max-w-[430px] md:order-none lg:ml-auto">
               <Search className="-translate-y-1/2 absolute top-1/2 left-4 h-5 w-5 text-[#050816]" />
               <input
-                aria-label="Rechercher un dossier ou un client"
-                placeholder="Rechercher un dossier, un client…"
+                aria-label={copy.ui.searchAria}
+                placeholder={copy.ui.searchPlaceholder}
                 readOnly
                 className="h-11 w-full cursor-default rounded-[4px] border border-[#d7d9e1] bg-white pr-4 pl-12 text-[#050816] text-sm outline-none transition placeholder:text-[#5d6275] focus:border-[#b99245] focus:ring-2 focus:ring-[#b99245]/20"
               />
@@ -2312,15 +2294,18 @@ export function RecouvrementProductExperience() {
             <div className="flex items-center gap-4 sm:gap-6">
               <button
                 type="button"
-                aria-label="Aide"
+                aria-label={copy.ui.help}
                 className="hidden flex-col items-center gap-1 rounded-[4px] text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35 sm:flex"
               >
                 <CircleHelp className="h-[22px] w-[22px]" />
-                Aide
+                {copy.ui.help}
               </button>
               <button
                 type="button"
-                aria-label={`Notifications, ${counters?.open ?? 0} dossiers ouverts`}
+                aria-label={copy.ui.notificationsAria.replace(
+                  "{count}",
+                  String(counters?.open ?? 0),
+                )}
                 className="relative flex flex-col items-center gap-1 rounded-[4px] text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <Bell className="h-[22px] w-[22px]" />
@@ -2329,11 +2314,11 @@ export function RecouvrementProductExperience() {
                     {counters.open}
                   </span>
                 ) : null}
-                Notifications
+                {copy.ui.notifications}
               </button>
               <button
                 type="button"
-                aria-label="Compte Julie Dubois, chargée de recouvrement"
+                aria-label={copy.ui.accountAria}
                 className="flex items-center gap-3 rounded-[4px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-[#fbf0dd] font-bold text-[#050816]">
@@ -2341,7 +2326,7 @@ export function RecouvrementProductExperience() {
                 </span>
                 <span className="hidden text-left sm:block">
                   <span className="block font-bold text-sm">Julie Dubois</span>
-                  <span className="block text-[#050816]/65 text-xs">Chargée de recouvrement</span>
+                  <span className="block text-[#050816]/65 text-xs">{copy.ui.role}</span>
                 </span>
                 <ChevronDown className="h-5 w-5" />
               </button>
@@ -2352,16 +2337,14 @@ export function RecouvrementProductExperience() {
             <aside className="hidden min-h-0 flex-col border-[#d8d8d8] border-r bg-white lg:flex">
               <div className="border-[#e2e2e6] border-b px-6 py-8">
                 <p className="font-extrabold text-[#b99245] text-sm uppercase tracking-[0]">
-                  Recouvrement
+                  {copy.ui.area}
                 </p>
-                <p className="mt-2 text-[#565656] text-xs leading-5">
-                  File interne et actions dossiers
-                </p>
+                <p className="mt-2 text-[#565656] text-xs leading-5">{copy.ui.areaSubtitle}</p>
               </div>
-              <nav className="flex flex-col gap-1 px-4 py-6" aria-label="Navigation recouvrement">
-                {navigation.map(({ label, Icon, counterKey, active }) => (
+              <nav className="flex flex-col gap-1 px-4 py-6" aria-label={copy.ui.navAria}>
+                {navigation.map(({ Icon, counterKey, active }, index) => (
                   <button
-                    key={label}
+                    key={copy.nav[index]}
                     type="button"
                     className={cn(
                       "flex min-h-[52px] items-center gap-4 rounded-[5px] px-4 text-left font-bold text-[0.92rem] transition",
@@ -2376,7 +2359,7 @@ export function RecouvrementProductExperience() {
                         active ? "fill-current text-[#b99245]" : "text-[#1d2334]",
                       )}
                     />
-                    <span>{label}</span>
+                    <span>{copy.nav[index]}</span>
                     {counterKey && counters ? (
                       <CountBadge count={counters[counterKey]} className="ml-auto" />
                     ) : null}
@@ -2387,14 +2370,16 @@ export function RecouvrementProductExperience() {
                 <div className="flex items-start gap-3 text-[#050816] text-sm leading-5">
                   <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0" />
                   <p>
-                    Accès limité
-                    <br />
-                    aux dossiers assignés
+                    {copy.ui.limitedAccess.split("\n").map((line) => (
+                      <span className="block" key={line}>
+                        {line}
+                      </span>
+                    ))}
                   </p>
                 </div>
                 <div className="mt-7 flex items-center gap-3 text-sm">
                   <span className="h-3 w-3 rounded-full bg-[#139b45]" />
-                  En ligne
+                  {copy.ui.online}
                 </div>
               </div>
             </aside>
@@ -2404,11 +2389,9 @@ export function RecouvrementProductExperience() {
                 <div className="mx-auto max-w-[1274px]">
                   <div className="mb-8">
                     <h1 className="!font-sans !text-[#050816] font-extrabold text-[2rem] leading-tight tracking-[0]">
-                      Bonjour Julie,
+                      {copy.ui.greeting}
                     </h1>
-                    <p className="mt-2 text-[#071044] text-[1.12rem]">
-                      Votre file du jour est prête.
-                    </p>
+                    <p className="mt-2 text-[#071044] text-[1.12rem]">{copy.ui.queueReady}</p>
                   </div>
 
                   <div
@@ -2423,7 +2406,7 @@ export function RecouvrementProductExperience() {
                       <section className={cn(cardClass, "p-6 sm:p-8")}>
                         <div className="mb-5">
                           <span className="inline-flex rounded-[4px] bg-[#fff3e4] px-3 py-1.5 font-bold text-[#d97700] text-xs uppercase">
-                            À traiter maintenant
+                            {copy.ui.now}
                           </span>
                         </div>
                         <div className="grid items-center gap-8 lg:grid-cols-[360px_minmax(0,1fr)_96px]">
@@ -2437,7 +2420,7 @@ export function RecouvrementProductExperience() {
                                   RC-2048
                                 </h2>
                                 <span className="shrink-0 rounded-[6px] bg-[#ffe8e5] px-2.5 py-1 font-medium text-[#f23932] text-[0.68rem]">
-                                  Promesse non tenue
+                                  {copy.ui.brokenPromise}
                                 </span>
                               </div>
                               <p className="mt-2 text-[0.9rem] leading-[1.2rem]">M. D.</p>
@@ -2445,16 +2428,15 @@ export function RecouvrementProductExperience() {
                                 <span>840,00 €</span>
                                 <span className="h-1 w-1 rounded-full bg-[#071044]" />
                                 <span className="font-medium">
-                                  Retard {priorityCase?.days_late ?? "—"} jours
+                                  {copy.ui.delay} {priorityCase?.days_late ?? "—"} {copy.ui.days}
                                 </span>
                               </div>
                               <div className="mt-4 inline-flex items-center gap-3 rounded-[5px] bg-[#e9f7e9] px-4 py-2 text-[#145b2b] text-[0.86rem] leading-[1.15rem]">
                                 <CircleCheck className="h-4 w-4 shrink-0" />
                                 <span>
-                                  Contact autorisé aujourd'hui
-                                  <br />
-                                  de {priorityCase?.contact_window_start.replace(":00", "h") ?? "—"}{" "}
-                                  à {priorityCase?.contact_window_end.replace(":00", "h") ?? "—"}
+                                  {copy.ui.contactWindow
+                                    .replace("{start}", priorityCase?.contact_window_start ?? "—")
+                                    .replace("{end}", priorityCase?.contact_window_end ?? "—")}
                                 </span>
                               </div>
                             </div>
@@ -2462,7 +2444,7 @@ export function RecouvrementProductExperience() {
 
                           <div className="border-[#dfe2ec] border-t pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
                             <h3 className="mb-4 !font-sans !text-[#d97700] font-bold text-sm">
-                              Pourquoi ce dossier ?
+                              {copy.ui.why}
                             </h3>
                             <ul className="space-y-2.5 text-[0.78rem]">
                               {reasons.map((reason) => (
@@ -2485,24 +2467,22 @@ export function RecouvrementProductExperience() {
 
                         <div className="mt-10 flex flex-col gap-5 border-[#e4e6ee] border-t pt-6 lg:flex-row lg:items-center lg:justify-between">
                           <div>
-                            <p className="font-bold text-sm">Action recommandée</p>
-                            <p className="mt-1 text-[0.9rem]">
-                              Préparer un échéancier de remboursement.
-                            </p>
+                            <p className="font-bold text-sm">{copy.ui.recommendedAction}</p>
+                            <p className="mt-1 text-[0.9rem]">{copy.ui.prepareScheduleSentence}</p>
                           </div>
                           <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap">
                             <button
                               type="button"
                               className="inline-flex h-11 w-[196px] items-center justify-center gap-3 rounded-[8px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] font-bold text-sm text-white shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
                             >
-                              Préparer l'échéancier
+                              {copy.ui.prepareSchedule}
                               <ChevronRight className="h-5 w-5" />
                             </button>
                             <button
                               type="button"
                               className="inline-flex h-11 w-[122px] items-center justify-center gap-3 rounded-[8px] border border-[#cfd4e3] bg-white font-semibold text-sm transition hover:bg-[#f7f8fb]"
                             >
-                              Reporter
+                              {copy.ui.postpone}
                               <Clock3 className="h-5 w-5" />
                             </button>
                             <button
@@ -2511,7 +2491,7 @@ export function RecouvrementProductExperience() {
                               className="inline-flex h-11 w-[198px] items-center justify-center gap-2 rounded-lg px-1.5 font-semibold text-[#6048ff] text-[0.74rem] transition hover:bg-[#f4f1ff]"
                             >
                               <Sparkles className="h-4 w-4" />
-                              Préparer avec l'assistant
+                              {copy.ui.prepareWithAssistant}
                             </button>
                           </div>
                         </div>
@@ -2523,13 +2503,13 @@ export function RecouvrementProductExperience() {
                           <div>
                             <h2 className="flex flex-wrap items-center gap-3 !font-sans !text-[#6048ff] font-bold text-sm uppercase tracking-[0]">
                               <Sparkles className="h-5 w-5" />
-                              Assistant de traitement
+                              {copy.ui.assistant}
                               <span className="rounded-full border border-[#c8bbff] bg-white px-2.5 py-1 font-bold text-[#6048ff] text-[0.68rem]">
                                 RC-2048
                               </span>
                             </h2>
                             <p className="mt-2 max-w-[520px] text-[#071044] text-sm">
-                              Aide contextualisée sur ce dossier prioritaire.
+                              {copy.ui.assistantHelp}
                             </p>
                           </div>
                           <button
@@ -2537,16 +2517,16 @@ export function RecouvrementProductExperience() {
                             onClick={() => openAssistant()}
                             className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[7px] border border-[#9d8cff] bg-white px-4 font-bold text-[#6048ff] text-xs shadow-[0_8px_18px_rgba(96,72,255,0.12)] transition hover:bg-[#f4f1ff]"
                           >
-                            Ouvrir l'assistant complet
+                            {copy.ui.openAssistant}
                             <ChevronRight className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="relative z-10 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-                          {assistantActions.map(({ label, description, Icon }) => (
+                          {assistantActions.map(({ tab, Icon }, index) => (
                             <button
-                              key={label}
+                              key={tab}
                               type="button"
-                              onClick={() => openAssistant(label)}
+                              onClick={() => openAssistant(tab)}
                               className="flex h-[112px] items-center gap-3 overflow-hidden rounded-[5px] border border-[#e2defd] bg-white px-3.5 py-3 text-left shadow-[0_8px_18px_rgba(96,72,255,0.035)] transition hover:border-[#b7aaff] hover:bg-[#fbfaff]"
                             >
                               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f0edff] text-[#6048ff]">
@@ -2554,10 +2534,10 @@ export function RecouvrementProductExperience() {
                               </span>
                               <span className="min-w-0 flex-1">
                                 <span className="block font-bold text-[0.76rem] leading-[1rem]">
-                                  {label}
+                                  {copy.actions[index]?.[0]}
                                 </span>
                                 <span className="mt-1.5 block text-[0.66rem] leading-[0.98rem]">
-                                  {description}
+                                  {copy.actions[index]?.[1]}
                                 </span>
                               </span>
                               <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0" />
@@ -2568,12 +2548,12 @@ export function RecouvrementProductExperience() {
 
                       <section className="mt-10">
                         <h2 className="mb-5 !font-sans !text-[#050816] font-extrabold text-2xl leading-7">
-                          À faire ensuite
+                          {copy.ui.nextTitle}
                         </h2>
                         <div className="grid gap-6 md:grid-cols-3">
-                          {nextItems.map(({ counterKey, label, detail, Icon, accent }) => (
+                          {nextItems.map(({ counterKey, Icon, accent }, index) => (
                             <button
-                              key={label}
+                              key={counterKey}
                               type="button"
                               className="flex h-[154px] flex-col rounded-[6px] border border-[#dfe2ec] bg-white p-6 text-left shadow-[0_2px_8px_rgba(0,0,0,0.055)] transition hover:border-[#d97700]/40 hover:shadow-[0_8px_20px_rgba(7,16,68,0.07)]"
                             >
@@ -2592,13 +2572,13 @@ export function RecouvrementProductExperience() {
                                   {counters ? counters[counterKey] : "—"}
                                 </span>
                                 <span className="font-bold text-sm">
-                                  {label}
+                                  {copy.next[index]?.[0]}
                                   <br />
-                                  <span className="font-semibold">{detail}</span>
+                                  <span className="font-semibold">{copy.next[index]?.[1]}</span>
                                 </span>
                               </span>
                               <span className="mt-auto flex items-center justify-end border-[#e4e6ee] border-t pt-3 font-semibold text-[#0047ff] text-sm">
-                                Voir la liste
+                                {copy.ui.viewList}
                                 <ChevronRight className="ml-auto h-5 w-5 text-[#071044]" />
                               </span>
                             </button>
@@ -2608,16 +2588,16 @@ export function RecouvrementProductExperience() {
 
                       <section className="mt-10 flex min-h-[72px] flex-col items-start gap-3 rounded-[6px] border border-[#dfe2ec] bg-white px-6 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.055)] sm:flex-row sm:items-center">
                         <Info className="mr-4 h-5 w-5" />
-                        <span className="mr-6 font-bold">A noter aujourd'hui</span>
+                        <span className="mr-6 font-bold">{copy.ui.todayNote}</span>
                         <span className="hidden h-8 w-px bg-[#dfe2ec] sm:block" />
                         <p className="text-sm text-[#071044]/80 sm:ml-6">
-                          3 dossiers sont joignables entre 17h et 19h selon les règles de contact.
+                          {copy.ui.reachableCases}
                         </p>
                         <button
                           type="button"
                           className="inline-flex items-center gap-3 font-semibold text-[#0047ff] text-sm sm:ml-auto"
                         >
-                          Voir lesquels
+                          {copy.ui.viewWhich}
                           <ChevronRight className="h-5 w-5" />
                         </button>
                       </section>
@@ -2632,23 +2612,23 @@ export function RecouvrementProductExperience() {
                       <section className={cn(cardClass, "overflow-hidden")}>
                         <div className="border-[#e4e6ee] border-b px-6 py-6">
                           <h2 className="!font-sans !text-[#050816] font-extrabold text-lg">
-                            Actions rapides
+                            {copy.ui.quickActions}
                           </h2>
-                          <p className="mt-1.5 text-[#5d6275] text-xs">
-                            Actions générales sur la file du jour.
-                          </p>
+                          <p className="mt-1.5 text-[#5d6275] text-xs">{copy.ui.quickSubtitle}</p>
                         </div>
                         <div className="divide-y divide-[#e4e6ee]">
-                          {quickActions.map(({ label, detail, Icon }) => (
+                          {quickActions.map((Icon, index) => (
                             <button
-                              key={label}
+                              key={copy.quick[index]?.[0]}
                               type="button"
                               className="flex w-full items-center gap-4 px-6 py-5 text-left transition hover:bg-[#f7f8fb]"
                             >
                               <Icon className="h-6 w-6 shrink-0" />
                               <span>
-                                <span className="block font-bold text-sm">{label}</span>
-                                <span className="mt-1 block text-xs">{detail}</span>
+                                <span className="block font-bold text-sm">
+                                  {copy.quick[index]?.[0]}
+                                </span>
+                                <span className="mt-1 block text-xs">{copy.quick[index]?.[1]}</span>
                               </span>
                               <ChevronRight className="ml-auto h-5 w-5" />
                             </button>
@@ -2659,7 +2639,7 @@ export function RecouvrementProductExperience() {
                       <section className={cn(cardClass, "p-6")}>
                         <div className="mb-6 flex items-center justify-between">
                           <h2 className="!font-sans !text-[#050816] font-extrabold text-lg">
-                            Cadre de contact
+                            {copy.ui.contactFrameworkShort}
                           </h2>
                           <span className="rounded-full bg-[#e4f5dd] px-3 py-1 font-bold text-[#187434] text-xs">
                             RC-2048
@@ -2668,24 +2648,24 @@ export function RecouvrementProductExperience() {
                         <div className="mb-6 flex items-start gap-4 rounded-[5px] bg-[#edf9df] px-5 py-5 text-[#145b2b]">
                           <CircleCheck className="mt-0.5 h-5 w-5" />
                           <p className="font-semibold text-sm">
-                            Contact autorisé aujourd'hui
+                            {copy.ui.contactAllowedToday}
                             <br />
                             <span className="font-medium">8h - 20h</span>
                           </p>
                         </div>
                         <div className="space-y-5 text-sm">
                           <div>
-                            <p className="mb-2 font-bold">Canal conseillé</p>
+                            <p className="mb-2 font-bold">{copy.ui.recommendedChannel}</p>
                             <p className="flex items-center gap-3">
                               <Phone className="h-5 w-5" />
-                              Appel sortant
+                              {copy.ui.outboundCall}
                             </p>
                           </div>
                           <div>
-                            <p className="mb-2 font-bold">Alternative</p>
+                            <p className="mb-2 font-bold">{copy.ui.alternative}</p>
                             <p className="flex items-center gap-3">
                               <Mail className="h-5 w-5" />
-                              Email de confirmation
+                              {copy.ui.confirmationEmail}
                             </p>
                           </div>
                         </div>
@@ -2698,12 +2678,8 @@ export function RecouvrementProductExperience() {
                       >
                         <Sparkles className="h-7 w-7 text-[#071044]" />
                         <span>
-                          <span className="block font-bold text-sm">
-                            Besoin d'aide sur un dossier ?
-                          </span>
-                          <span className="mt-1 block text-xs">
-                            Consultez les règles applicables
-                          </span>
+                          <span className="block font-bold text-sm">{copy.ui.needHelp}</span>
+                          <span className="mt-1 block text-xs">{copy.ui.consultRules}</span>
                         </span>
                         <ChevronRight className="ml-auto h-5 w-5" />
                       </button>
@@ -2718,7 +2694,7 @@ export function RecouvrementProductExperience() {
       {assistantMode === "drawer" ? (
         <button
           type="button"
-          aria-label="Fermer l'assistant"
+          aria-label={copy.ui.close}
           onClick={closeAssistant}
           className="fixed inset-x-0 bottom-0 top-[90px] z-40 bg-[#050816]/38 backdrop-blur-[1px] transition-opacity max-md:top-0"
         />

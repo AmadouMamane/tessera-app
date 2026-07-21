@@ -211,6 +211,13 @@ export const ChatEndEventSchema = z.object({
   confidence: z.number().min(0).max(1).nullable(),
   citations: z.array(ChatCitationSchema),
   finish_reason: z.enum(["complete", "escalated", "error"]),
+  confirmation_required: z
+    .object({
+      tool: z.literal("card_block"),
+      card_last_four: z.string().regex(/^\d{4}$/),
+    })
+    .nullable()
+    .optional(),
   debug: ChatDebugSchema.optional(),
 });
 export type ChatEndEvent = z.infer<typeof ChatEndEventSchema>;

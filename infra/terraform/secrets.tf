@@ -8,10 +8,16 @@
 locals {
   managed_secrets = {
     # Key → human-readable description of the secret's purpose.
-    postgres_url      = "Tessera Postgres connection string (psycopg DSN, written by postgres.tf)."
-    bearer_token      = "Optional bearer token for the public API; leave empty to disable auth."
-    audit_signing_key = "HMAC key used to sign audit-trail entries."
-    vertex_project_id = "GCP project id used when calling Vertex AI (may differ from the deployment project)."
+    postgres_url                   = "Tessera Postgres connection string (psycopg DSN, written by postgres.tf)."
+    bearer_token                   = "Optional bearer token for the public API; leave empty to disable auth."
+    audit_signing_key              = "Reserved legacy HMAC secret; it is not a substitute for the RFC 3161 ledger seal and is not injected at runtime."
+    vertex_project_id              = "GCP project id used when calling Vertex AI (may differ from the deployment project)."
+    api_session_signing_key        = "HMAC key for signed customer-session cookies (agent only)."
+    operator_assertion_signing_key = "Shared HMAC key used by the frontend to mint and the agent to verify operator assertions."
+    frontend_auth_secret           = "Auth.js JWT signing secret (frontend only)."
+    frontend_admin_password        = "Seeded public-demo admin password (frontend only)."
+    frontend_auditor_password      = "Seeded public-demo auditor password (frontend only)."
+    frontend_collections_password  = "Seeded public-demo collections password (frontend only)."
   }
 }
 
@@ -56,6 +62,36 @@ resource "random_password" "audit_signing_key" {
   special = false
 }
 
+resource "random_password" "api_session_signing_key" {
+  length  = 64
+  special = false
+}
+
+resource "random_password" "operator_assertion_signing_key" {
+  length  = 64
+  special = false
+}
+
+resource "random_password" "frontend_auth_secret" {
+  length  = 64
+  special = false
+}
+
+resource "random_password" "frontend_admin_password" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "frontend_auditor_password" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "frontend_collections_password" {
+  length  = 32
+  special = false
+}
+
 resource "google_secret_manager_secret_version" "bearer_token_placeholder" {
   secret      = google_secret_manager_secret.managed["bearer_token"].id
   secret_data = random_password.bearer_token.result
@@ -83,11 +119,100 @@ resource "google_secret_manager_secret_version" "vertex_project_id_placeholder" 
   }
 }
 
-# Read access for the runtime service account — grants the Cloud Run SA the
-# ability to fetch the latest version of every managed secret at start-up.
+resource "google_secret_manager_secret_version" "api_session_signing_key" {
+  secret      = google_secret_manager_secret.managed["api_session_signing_key"].id
+  secret_data = random_password.api_session_signing_key.result
+
+  lifecycle {
+    ignore_changes = [secret_data]
+  }
+}
+
+resource "google_secret_manager_secret_version" "operator_assertion_signing_key" {
+  secret      = google_secret_manager_secret.managed["operator_assertion_signing_key"].id
+  secret_data = random_password.operator_assertion_signing_key.result
+
+  lifecycle {
+    ignore_changes = [secret_data]
+  }
+}
+
+resource "google_secret_manager_secret_version" "frontend_auth_secret" {
+  secret      = google_secret_manager_secret.managed["frontend_auth_secret"].id
+  secret_data = random_password.frontend_auth_secret.result
+
+  lifecycle {
+    ignore_changes = [secret_data]
+  }
+}
+
+resource "google_secret_manager_secret_version" "frontend_admin_password" {
+  secret      = google_secret_manager_secret.managed["frontend_admin_password"].id
+  secret_data = random_password.frontend_admin_password.result
+
+  lifecycle {
+    ignore_changes = [secret_data]
+  }
+}
+
+resource "google_secret_manager_secret_version" "frontend_auditor_password" {
+  secret      = google_secret_manager_secret.managed["frontend_auditor_password"].id
+  secret_data = random_password.frontend_auditor_password.result
+
+  lifecycle {
+    ignore_changes = [secret_data]
+  }
+}
+
+resource "google_secret_manager_secret_version" "frontend_collections_password" {
+  secret      = google_secret_manager_secret.managed["frontend_collections_password"].id
+  secret_data = random_password.frontend_collections_password.result
+
+  lifecycle {
+    ignore_changes = [secret_data]
+  }
+}
+
+# Read access is scoped to the secrets each runtime actually consumes. The agent must not read
+# dashboard passwords or Auth.js material; the frontend must not read the customer-session key.
+locals {
+  agent_runtime_secret_keys = toset([
+    "postgres_url",
+    "bearer_token",
+    "api_session_signing_key",
+    "operator_assertion_signing_key",
+  ])
+  frontend_runtime_secret_keys = toset([
+    "bearer_token",
+    "operator_assertion_signing_key",
+    "frontend_auth_secret",
+    "frontend_admin_password",
+    "frontend_auditor_password",
+    "frontend_collections_password",
+  ])
+}
+
 resource "google_secret_manager_secret_iam_member" "runtime_access" {
-  for_each  = google_secret_manager_secret.managed
-  secret_id = each.value.id
+  for_each  = local.agent_runtime_secret_keys
+  secret_id = google_secret_manager_secret.managed[each.value].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.agent.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "frontend_runtime_access" {
+  for_each  = local.frontend_runtime_secret_keys
+  secret_id = google_secret_manager_secret.managed[each.value].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.frontend.email}"
+}
+
+# The qualified TSA trust root is supplied out of band. Its bytes never cross Terraform state.
+data "google_secret_manager_secret" "seal_tsa_cert" {
+  secret_id = var.seal_tsa_cert_secret_id
+}
+
+resource "google_secret_manager_secret_iam_member" "agent_seal_tsa_cert_access" {
+  secret_id = data.google_secret_manager_secret.seal_tsa_cert.id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.agent.email}"
 }

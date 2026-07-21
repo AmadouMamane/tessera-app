@@ -16,14 +16,6 @@ resource "google_service_account" "frontend" {
   description  = "Service account used by the Next.js Cloud Run revision."
 }
 
-# Grant the front-end SA read access to the bearer-token secret only (the same
-# secret the agent enforces), so it can inject Authorization on backend calls.
-resource "google_secret_manager_secret_iam_member" "frontend_bearer_access" {
-  secret_id = google_secret_manager_secret.managed["bearer_token"].id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.frontend.email}"
-}
-
 resource "google_cloud_run_v2_service" "frontend" {
   name     = local.frontend_service
   location = var.region
@@ -75,6 +67,59 @@ resource "google_cloud_run_v2_service" "frontend" {
           }
         }
       }
+      env {
+        name  = "TESSERA_ENVIRONMENT"
+        value = local.env
+      }
+      env {
+        name  = "TESSERA_DASHBOARD_PUBLIC"
+        value = "true"
+      }
+      env {
+        name = "AUTH_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.managed["frontend_auth_secret"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.managed["operator_assertion_signing_key"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "TESSERA_AUTH_ADMIN_PASSWORD"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.managed["frontend_admin_password"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "TESSERA_AUTH_AUDITOR_PASSWORD"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.managed["frontend_auditor_password"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "TESSERA_AUTH_COLLECTIONS_PASSWORD"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.managed["frontend_collections_password"].secret_id
+            version = "latest"
+          }
+        }
+      }
 
       # The standalone server has no dedicated health route (/ 307-redirects to
       # the locale), so probe the socket rather than an HTTP path.
@@ -103,12 +148,17 @@ resource "google_cloud_run_v2_service" "frontend" {
   depends_on = [
     google_project_service.apis,
     google_secret_manager_secret_version.bearer_token_placeholder,
+    google_secret_manager_secret_version.operator_assertion_signing_key,
+    google_secret_manager_secret_version.frontend_auth_secret,
+    google_secret_manager_secret_version.frontend_admin_password,
+    google_secret_manager_secret_version.frontend_auditor_password,
+    google_secret_manager_secret_version.frontend_collections_password,
   ]
 }
 
 # Public invoker binding for the demo — mirror the agent's policy.
 resource "google_cloud_run_v2_service_iam_member" "frontend_invokers" {
-  for_each = toset(var.allowed_invokers)
+  for_each = toset(var.frontend_allowed_invokers)
   project  = var.project_id
   location = google_cloud_run_v2_service.frontend.location
   name     = google_cloud_run_v2_service.frontend.name

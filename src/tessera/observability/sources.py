@@ -357,9 +357,8 @@ class _MemStat:
 async def _scalar_stat(sql: str) -> dict[str, object]:
     """Run one read-only aggregate; return {} if the table is absent."""
     async with _connection() as conn:
-        conn.row_factory = dict_row
         try:
-            async with conn.cursor() as cur:
+            async with conn.cursor(row_factory=dict_row) as cur:
                 await cur.execute(sql)
                 row = await cur.fetchone()
                 return dict(row) if row else {}
@@ -380,9 +379,8 @@ async def _fetch_longterm() -> _MemStat:
     stat.first = _as_dt(agg.get("first"))
     if stat.rows:
         async with _connection() as conn:
-            conn.row_factory = dict_row
             try:
-                async with conn.cursor() as cur:
+                async with conn.cursor(row_factory=dict_row) as cur:
                     await cur.execute(
                         "SELECT kind, count(*) AS n FROM long_term_memory "
                         "GROUP BY kind ORDER BY n DESC"
@@ -419,9 +417,8 @@ _CHARS_PER_TOKEN = 4
 async def _fetch_index_chars() -> dict[str, int]:
     """Real character volume per corpus category (for the indexing-cost estimate)."""
     async with _connection() as conn:
-        conn.row_factory = dict_row
         try:
-            async with conn.cursor() as cur:
+            async with conn.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
                     "SELECT metadata->>'category' AS cat, sum(length(text)) AS chars "
                     "FROM documents GROUP BY 1"
@@ -437,9 +434,8 @@ async def _fetch_index_chars() -> dict[str, int]:
 async def _query(sql: str) -> list[dict[str, object]]:
     """Run one read-only SELECT; return [] if the table is absent."""
     async with _connection() as conn:
-        conn.row_factory = dict_row
         try:
-            async with conn.cursor() as cur:
+            async with conn.cursor(row_factory=dict_row) as cur:
                 await cur.execute(sql)
                 return list(await cur.fetchall())
         except Exception:  # missing table degrades to empty
@@ -529,9 +525,8 @@ async def _daily_growth(table: str) -> list[dict[str, object]]:
     """
     table = safe_identifier(table)
     async with _connection() as conn:
-        conn.row_factory = dict_row
         try:
-            async with conn.cursor() as cur:
+            async with conn.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
                     f"SELECT date_trunc('day', created_at)::date AS day, count(*) AS n "  # noqa: S608
                     f"FROM {table} "

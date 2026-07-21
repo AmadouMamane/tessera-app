@@ -282,50 +282,48 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
     with store_read(
         "postgres", "conversation_messages.fleet_rollup", target="conversation_messages"
     ) as read:
-        async with _connection() as conn:
-            conn.row_factory = dict_row
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    "SELECT agent_id, "  # noqa: S608  (escalation clause is a constant)
-                    "count(DISTINCT conversation_id) AS convs, "
-                    "count(*) FILTER (WHERE role = 'user') AS turns, "
-                    "count(*) AS msgs, "
-                    f"count(*) FILTER (WHERE role = 'assistant' AND ({_ESCALATION_ILIKE})) "
-                    "AS escal, "
-                    "count(*) FILTER (WHERE role = 'assistant') AS answers, "
-                    "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat "
-                    # ADR 0040: real traffic only — operator TEST turns (synthetic) never
-                    # inflate the Flotte, matching the business-event surfaces and the Synthèse.
-                    "FROM conversation_messages WHERE NOT synthetic GROUP BY agent_id"
-                )
-                by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
+        async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT agent_id, "  # noqa: S608  (escalation clause is a constant)
+                "count(DISTINCT conversation_id) AS convs, "
+                "count(*) FILTER (WHERE role = 'user') AS turns, "
+                "count(*) AS msgs, "
+                f"count(*) FILTER (WHERE role = 'assistant' AND ({_ESCALATION_ILIKE})) "
+                "AS escal, "
+                "count(*) FILTER (WHERE role = 'assistant') AS answers, "
+                "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat "
+                # ADR 0040: real traffic only — operator TEST turns (synthetic) never
+                # inflate the Flotte, matching the business-event surfaces and the Synthèse.
+                "FROM conversation_messages WHERE NOT synthetic GROUP BY agent_id"
+            )
+            by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
 
-                await cur.execute(
-                    "SELECT count(*) FILTER (WHERE role = 'user') AS turns "
-                    "FROM conversation_messages WHERE NOT synthetic"
-                )
-                org_turns = int((await cur.fetchone() or {}).get("turns") or 0)
+            await cur.execute(
+                "SELECT count(*) FILTER (WHERE role = 'user') AS turns "
+                "FROM conversation_messages WHERE NOT synthetic"
+            )
+            org_turns = int((await cur.fetchone() or {}).get("turns") or 0)
 
-                # Deduplicated conversation rollup via the shared helper — a handoff
-                # conversation counts ONCE for the org, never the per-agent sum.
-                rollup = await dedup_org_total(
-                    cur,
-                    table="conversation_messages",
-                    entity_col="conversation_id",
-                    synthetic_col="synthetic",
-                )
-                # Reconciliation: `rollup.shared` answers about this table's own neighbourhood
-                # and reads 0 with composure when handed-off journeys never share an id here.
-                # So ask about the journeys the S1 journal actually attests: every one this
-                # store cannot see under two agents is double-counted by the dedup, and the
-                # payload carries both numbers so the UI states the gap instead of "0 shared".
-                handoff_seen_shared = await shared_entities_among(
-                    cur,
-                    table="conversation_messages",
-                    entity_col="conversation_id",
-                    entities=handoff_convs,
-                    synthetic_col="synthetic",
-                )
+            # Deduplicated conversation rollup via the shared helper — a handoff
+            # conversation counts ONCE for the org, never the per-agent sum.
+            rollup = await dedup_org_total(
+                cur,
+                table="conversation_messages",
+                entity_col="conversation_id",
+                synthetic_col="synthetic",
+            )
+            # Reconciliation: `rollup.shared` answers about this table's own neighbourhood
+            # and reads 0 with composure when handed-off journeys never share an id here.
+            # So ask about the journeys the S1 journal actually attests: every one this
+            # store cannot see under two agents is double-counted by the dedup, and the
+            # payload carries both numbers so the UI states the gap instead of "0 shared".
+            handoff_seen_shared = await shared_entities_among(
+                cur,
+                table="conversation_messages",
+                entity_col="conversation_id",
+                entities=handoff_convs,
+                synthetic_col="synthetic",
+            )
         read.rows_read(len(by_agent))
 
     # Every read below is SYNCHRONOUS — Postgres, Prometheus, the ledger, the eval snapshots.

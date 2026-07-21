@@ -28,7 +28,14 @@ from typing import TYPE_CHECKING, Any
 
 from tessera.agent.sdk.instrument import tool_span
 from tessera.authz import auth_satisfies
-from tessera.guard.audit import GUARD_ACTOR, current_auth_state, emit_audit, guard_disabled
+from tessera.guard.audit import (
+    GUARD_ACTOR,
+    confirmed_tools,
+    current_auth_state,
+    current_tool_call_counts,
+    emit_audit,
+    guard_disabled,
+)
 from tessera.guard.decisions import (
     Decision,
     DecisionKind,
@@ -142,6 +149,18 @@ def _check_tool(
             )
         ]
 
+    if policy.requires_confirmation and policy.name not in confirmed_tools.get():
+        return [
+            Decision(
+                kind=DecisionKind.DENY,
+                rule=f"tool.{policy.name}.requires_confirmation",
+                rationale=(
+                    f"tool {policy.name!r} requires an explicit human confirmation "
+                    "from the action-control channel"
+                ),
+            )
+        ]
+
     decisions: list[Decision] = []
     for arg_name, arg_rule in policy.arguments.items():
         if arg_rule.pattern is None:
@@ -159,6 +178,23 @@ def _check_tool(
                     ),
                 )
             )
+
+    counts = current_tool_call_counts.get()
+    if not decisions and counts is not None:
+        used = counts.get(policy.name, 0)
+        if used >= policy.max_calls_per_turn:
+            decisions.append(
+                Decision(
+                    kind=DecisionKind.DENY,
+                    rule=f"tool.{policy.name}.max_calls_per_turn",
+                    rationale=(
+                        f"tool {policy.name!r} reached its per-turn limit "
+                        f"of {policy.max_calls_per_turn}"
+                    ),
+                )
+            )
+        else:
+            counts[policy.name] = used + 1
 
     if not decisions:
         decisions.append(

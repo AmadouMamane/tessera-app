@@ -24,6 +24,7 @@ export interface SendRecouvrementAssistantMessageRequest {
   conversationId?: string;
   turnId?: string;
   surface?: "dedicated-ui" | "cockpit-embedded";
+  language?: "fr" | "en" | "de";
   signal?: AbortSignal;
 }
 
@@ -37,6 +38,7 @@ export interface SendRecouvrementAssistantActionRequest {
   conversationId?: string;
   turnId?: string;
   surface?: "dedicated-ui" | "cockpit-embedded";
+  language?: "fr" | "en" | "de";
   signal?: AbortSignal;
 }
 
@@ -62,6 +64,7 @@ export async function sendRecouvrementAssistantMessage({
   conversationId,
   turnId,
   surface = "dedicated-ui",
+  language,
   signal,
 }: SendRecouvrementAssistantMessageRequest): Promise<RecouvrementAssistantResponse> {
   const response = await fetch("/api/recouvrement-assistant/message", {
@@ -77,6 +80,7 @@ export async function sendRecouvrementAssistantMessage({
       conversation_id: conversationId,
       turn_id: turnId,
       surface,
+      language,
     }),
     signal,
   });
@@ -96,6 +100,7 @@ export async function sendRecouvrementAssistantAction({
   conversationId,
   turnId,
   surface = "dedicated-ui",
+  language,
   signal,
 }: SendRecouvrementAssistantActionRequest): Promise<RecouvrementAssistantResponse> {
   const response = await fetch("/api/recouvrement-assistant/action", {
@@ -111,6 +116,7 @@ export async function sendRecouvrementAssistantAction({
       conversation_id: conversationId,
       turn_id: turnId,
       surface,
+      language,
     }),
     signal,
   });

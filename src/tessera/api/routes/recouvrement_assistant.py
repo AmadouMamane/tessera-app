@@ -22,7 +22,7 @@ from __future__ import annotations
 import sys
 import time
 import uuid
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
@@ -71,6 +71,7 @@ class RecouvrementAssistantRequest(BaseModel):
     conversation_id: str | None = Field(default=None, max_length=120)
     turn_id: str | None = Field(default=None, max_length=120)
     surface: str = Field(default=DEFAULT_SURFACE, max_length=80)
+    language: Literal["fr", "en", "de"] = "fr"
 
 
 class RecouvrementAssistantActionRequest(BaseModel):
@@ -88,6 +89,7 @@ class RecouvrementAssistantActionRequest(BaseModel):
     conversation_id: str | None = Field(default=None, max_length=120)
     turn_id: str | None = Field(default=None, max_length=120)
     surface: str = Field(default=DEFAULT_SURFACE, max_length=80)
+    language: Literal["fr", "en", "de"] = "fr"
 
 
 def _artifact_from_request(raw: dict[str, Any]) -> RecouvrementArtifact:
@@ -184,6 +186,7 @@ async def recouvrement_assistant_message(
         conversation_id=payload.conversation_id,
         turn_id=payload.turn_id,
         surface=payload.surface,
+        language=payload.language,
     )
     latency_ms = (time.perf_counter() - started) * _MS_PER_SECOND
     await _persist_recouvrement_turn(payload, result, latency_ms)
@@ -223,5 +226,6 @@ async def recouvrement_assistant_action(
             conversation_id=payload.conversation_id,
             turn_id=payload.turn_id,
             surface=payload.surface,
+            language=payload.language,
         )
     )

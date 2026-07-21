@@ -16,6 +16,8 @@ on:
 permissions:
   contents: read
   id-token: write   # required for keyless auth to GCP via OIDC
+  attestations: write
+  packages: write
 
 concurrency:
   group: deploy-${{ github.event.inputs.environment || 'production' }}
@@ -43,6 +45,8 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      - uses: docker/setup-buildx-action@v3
+
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
@@ -54,9 +58,10 @@ jobs:
           else
             TAG="$(git rev-parse --short HEAD)"
           fi
-          IMAGE="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/tessera-agent:${TAG}"
-          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}"     >> "$GITHUB_OUTPUT"
+          BASE="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}"
+          echo "agent_image=${BASE}/tessera-agent:${TAG}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=${BASE}/tessera-frontend:${TAG}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Build agent image
         uses: docker/build-push-action@v6
@@ -65,12 +70,33 @@ jobs:
           file: infra/docker/Dockerfile.agent
           push: true
           tags: |
-            ${{ steps.image.outputs.image }}
+            ${{ steps.image.outputs.agent_image }}
             ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/tessera-agent:latest
           provenance: true
           sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ steps.image.outputs.frontend_image }}
+            ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/tessera-frontend:latest
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify the external TSA trust root exists
+        run: |
+          test -n "${{ vars.TESSERA_SEAL_TSA_CERT_SECRET_ID }}"
+          test -n "${{ vars.TESSERA_SEAL_TSA_URL }}"
+          gcloud secrets versions describe latest \
+            --secret="${{ vars.TESSERA_SEAL_TSA_CERT_SECRET_ID }}" >/dev/null
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -85,25 +111,40 @@ jobs:
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="prefix=tessera/${{ github.event.inputs.environment || 'production' }}"
 
+      - name: Select isolated Terraform workspace
+        working-directory: infra/terraform
+        run: terraform workspace select -or-create="${{ github.event.inputs.environment || 'production' }}"
+
       - name: Terraform plan
         working-directory: infra/terraform
         run: |
           terraform plan \
             -var "project_id=${{ vars.GCP_PROJECT_ID }}" \
-            -var "image=${{ steps.image.outputs.image }}" \
+            -var "environment=${{ github.event.inputs.environment || 'production' }}" \
+            -var "image=${{ steps.image.outputs.agent_image }}" \
+            -var "frontend_image=${{ steps.image.outputs.frontend_image }}" \
+            -var 'frontend_allowed_invokers=["allUsers"]' \
+            -var "seal_tsa_url=${{ vars.TESSERA_SEAL_TSA_URL }}" \
+            -var "seal_tsa_cert_secret_id=${{ vars.TESSERA_SEAL_TSA_CERT_SECRET_ID }}" \
             -out=tfplan
 
       - name: Terraform apply
         working-directory: infra/terraform
         run: terraform apply -auto-approve tfplan
 
-      - name: Smoke test
+      - name: Smoke test the public route and the frontend-to-agent proxy
+        working-directory: infra/terraform
         run: |
-          URL="$(gcloud run services describe tessera-agent --region=${{ env.REGION }} --format='value(status.url)')"
+          URL="$(terraform output -raw frontend_url)"
           for _ in 1 2 3 4 5; do
-            if curl -fsS "${URL}/healthz" >/dev/null; then
-              echo "healthz OK at ${URL}"; exit 0
+            if curl -fsS "${URL}/api/healthz" >/dev/null \
+              && curl -fsS -L "${URL}/fr" >/dev/null \
+              && curl -fsS -L "${URL}/en" >/dev/null \
+              && curl -fsS -L "${URL}/de" >/dev/null; then
+              echo "frontend + proxied backend health + FR/EN/DE routes OK at ${URL}"
+              exit 0
             fi
             sleep 5
           done
-          echo "::error::healthz did not return 200 after 25s"; exit 1
+          echo "::error::critical public routes did not return 2xx after 25s"
+          exit 1

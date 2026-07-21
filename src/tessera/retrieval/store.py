@@ -202,12 +202,10 @@ async def knn_search(
     regardless of the active conversation language.
     """
     table = safe_identifier(get_settings().postgres.vector_table)
-    async with _connection() as conn:
-        conn.row_factory = dict_row
-        async with conn.cursor() as cur:
-            if language is not None:
-                await cur.execute(
-                    f"""
+    async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        if language is not None:
+            await cur.execute(
+                f"""
                     SELECT source, chunk_id, language, text, metadata,
                            1 - (embedding <=> %s::vector) AS score
                     FROM {table}
@@ -215,11 +213,11 @@ async def knn_search(
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s;
                     """,
-                    (query_embedding, corpus, language.value, query_embedding, top_k),
-                )
-            else:
-                await cur.execute(
-                    f"""
+                (query_embedding, corpus, language.value, query_embedding, top_k),
+            )
+        else:
+            await cur.execute(
+                f"""
                     SELECT source, chunk_id, language, text, metadata,
                            1 - (embedding <=> %s::vector) AS score
                     FROM {table}
@@ -227,9 +225,9 @@ async def knn_search(
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s;
                     """,
-                    (query_embedding, corpus, query_embedding, top_k),
-                )
-            rows = await cur.fetchall()
+                (query_embedding, corpus, query_embedding, top_k),
+            )
+        rows = await cur.fetchall()
     return [
         VectorHit(
             source=str(row["source"]),

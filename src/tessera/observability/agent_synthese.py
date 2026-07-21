@@ -179,56 +179,54 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
     # marked ``synthetic``) are written to the transcript but excluded here, so they
     # never inflate this agent's conversations / tours / résolution / latence.
     where = f"agent_id = %s AND NOT synthetic AND ({window})"
-    async with _connection() as conn:
-        conn.row_factory = dict_row
-        async with conn.cursor() as cur:
-            await cur.execute(
-                "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "  # noqa: S608
-                "count(*) FILTER (WHERE role = 'user') AS turns, "
-                "count(*) FILTER (WHERE role = 'assistant') AS answers, "
-                "count(DISTINCT subject_id) FILTER (WHERE subject_id IS NOT NULL) AS subjects, "
-                f"count(DISTINCT conversation_id) FILTER (WHERE {_ESCAL_SQL}) AS escal_convs, "
-                "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms, "
-                f"max(created_at) AS last_at FROM conversation_messages WHERE {where}",
-                (agent_id,),
-            )
-            totals = await cur.fetchone() or {}
+    async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "  # noqa: S608
+            "count(*) FILTER (WHERE role = 'user') AS turns, "
+            "count(*) FILTER (WHERE role = 'assistant') AS answers, "
+            "count(DISTINCT subject_id) FILTER (WHERE subject_id IS NOT NULL) AS subjects, "
+            f"count(DISTINCT conversation_id) FILTER (WHERE {_ESCAL_SQL}) AS escal_convs, "
+            "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms, "
+            f"max(created_at) AS last_at FROM conversation_messages WHERE {where}",
+            (agent_id,),
+        )
+        totals = await cur.fetchone() or {}
 
-            await cur.execute(
-                "SELECT date_trunc('day', created_at) AS day, "  # noqa: S608
-                "count(DISTINCT conversation_id) AS convs, "
-                f"count(DISTINCT conversation_id) FILTER (WHERE {_ESCAL_SQL}) AS escal_convs, "
-                "count(*) FILTER (WHERE role = 'user') AS turns, "
-                "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms "
-                f"FROM conversation_messages WHERE {where} GROUP BY 1 ORDER BY 1",
-                (agent_id,),
-            )
-            daily = list(await cur.fetchall())
+        await cur.execute(
+            "SELECT date_trunc('day', created_at) AS day, "  # noqa: S608
+            "count(DISTINCT conversation_id) AS convs, "
+            f"count(DISTINCT conversation_id) FILTER (WHERE {_ESCAL_SQL}) AS escal_convs, "
+            "count(*) FILTER (WHERE role = 'user') AS turns, "
+            "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms "
+            f"FROM conversation_messages WHERE {where} GROUP BY 1 ORDER BY 1",
+            (agent_id,),
+        )
+        daily = list(await cur.fetchall())
 
-            await cur.execute(
-                "SELECT conversation_id, max(created_at) AS ended, "  # noqa: S608
-                "count(*) FILTER (WHERE role = 'user') AS turns, "
-                "(array_agg(content ORDER BY id) "
-                "  FILTER (WHERE role = 'user'))[1] AS first_q, "
-                f"bool_or({_ESCAL_SQL}) AS escalated "
-                f"FROM conversation_messages WHERE {where} GROUP BY conversation_id "
-                "ORDER BY ended DESC LIMIT %s",
-                (agent_id, _RECENT_CONVERSATIONS),
-            )
-            recent_convs = list(await cur.fetchall())
+        await cur.execute(
+            "SELECT conversation_id, max(created_at) AS ended, "  # noqa: S608
+            "count(*) FILTER (WHERE role = 'user') AS turns, "
+            "(array_agg(content ORDER BY id) "
+            "  FILTER (WHERE role = 'user'))[1] AS first_q, "
+            f"bool_or({_ESCAL_SQL}) AS escalated "
+            f"FROM conversation_messages WHERE {where} GROUP BY conversation_id "
+            "ORDER BY ended DESC LIMIT %s",
+            (agent_id, _RECENT_CONVERSATIONS),
+        )
+        recent_convs = list(await cur.fetchall())
 
-            await cur.execute(
-                "SELECT role, content, latency_ms, created_at "  # noqa: S608
-                f"FROM conversation_messages WHERE {where} ORDER BY id DESC LIMIT %s",
-                (agent_id, _RECENT_ACTIVITY),
-            )
-            recent_msgs = list(await cur.fetchall())
+        await cur.execute(
+            "SELECT role, content, latency_ms, created_at "  # noqa: S608
+            f"FROM conversation_messages WHERE {where} ORDER BY id DESC LIMIT %s",
+            (agent_id, _RECENT_ACTIVITY),
+        )
+        recent_msgs = list(await cur.fetchall())
 
-            await cur.execute("SELECT count(*) AS n FROM documents")
-            doc_count = (await cur.fetchone() or {}).get("n", 0)
+        await cur.execute("SELECT count(*) AS n FROM documents")
+        doc_count = (await cur.fetchone() or {}).get("n", 0)
 
-            await cur.execute("SELECT count(DISTINCT metadata->>'category') AS n FROM documents")
-            cat_count = (await cur.fetchone() or {}).get("n", 0)
+        await cur.execute("SELECT count(DISTINCT metadata->>'category') AS n FROM documents")
+        cat_count = (await cur.fetchone() or {}).get("n", 0)
 
     return {
         "totals": totals,
@@ -254,15 +252,13 @@ async def _fetch_csat(agent_id: str, period_days: int | None) -> dict[str, int]:
     window = f"created_at >= now() - interval '{int(period_days)} days'" if period_days else "TRUE"
     where = f"agent_id = %s AND NOT synthetic AND ({window})"
     try:
-        async with _connection() as conn:
-            conn.row_factory = dict_row
-            async with conn.cursor() as cur:
-                await cur.execute(
-                    "SELECT count(*) FILTER (WHERE rating = 'up') AS up, "  # noqa: S608
-                    f"count(*) AS total FROM customer_feedback WHERE {where}",
-                    (agent_id,),
-                )
-                row = await cur.fetchone() or {}
+        async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT count(*) FILTER (WHERE rating = 'up') AS up, "  # noqa: S608
+                f"count(*) AS total FROM customer_feedback WHERE {where}",
+                (agent_id,),
+            )
+            row = await cur.fetchone() or {}
     except Exception as exc:  # never break the Synthèse over a feedback read
         sys.stderr.write(f"tessera.observability.agent_synthese: csat read failed: {exc}\n")
         return {"up": 0, "total": 0}

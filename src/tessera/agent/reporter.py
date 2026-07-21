@@ -23,7 +23,7 @@ from tessera.agent.state import AgentState, Citation, ConversationMessage
 from tessera.guard import grounding
 from tessera.guard.redaction import apply_output_guard, mask_pan
 from tessera.llm.router import ChatMessage, backend_for_model
-from tessera.memory import memory_backend_for, scope_for
+from tessera.memory import memory_backend_for_state, scope_for
 from tessera.settings import LanguageCode
 
 if TYPE_CHECKING:
@@ -126,13 +126,7 @@ async def _build_chat_messages(
     """
     # ADR 0036 — the seam-resolved memory knobs pick the backend; a state that
     # never crossed the seam gets the org singleton (historical behaviour).
-    memory_cfg = state.get("memory") or {}
-    tier = memory_cfg.get("tier")
-    window = memory_cfg.get("window")
-    backend = memory_backend_for(
-        tier if isinstance(tier, str) else None,
-        int(window) if isinstance(window, int | float) and not isinstance(window, bool) else None,
-    )
+    backend = memory_backend_for_state(state)
     scope = scope_for(
         state["conversation_id"], state["language"], subject_id=state.get("subject_id")
     )

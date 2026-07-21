@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 import time
 import uuid
@@ -51,8 +52,10 @@ from tessera.api.operator import resolve_request_context
 from tessera.api.session import issue_resume_token
 from tessera.authz import AuthState
 from tessera.guard.audit import (
+    confirmed_tools,
     current_auth_state,
     current_model,
+    current_tool_call_counts,
     emit_handoff,
     emit_routing,
     guard_disabled,
@@ -67,7 +70,7 @@ from tessera.guard.redaction import (
     redaction_notice,
 )
 from tessera.llm.budget import estimate_turn_cost, get_budget_tracker, model_is_paid
-from tessera.memory import get_memory_backend, scope_for
+from tessera.memory import memory_backend_for_state, scope_for
 from tessera.memory.protocol import TurnRecord
 from tessera.memory.transcript import append_messages, last_agent_for, load_transcript
 from tessera.observability import replay, semconv
@@ -272,6 +275,23 @@ class ChatRequest(BaseModel):
             '["prompt_injection", "pii"]. Empty/absent = full policy applies.'
         ),
     )
+    confirmed_tools: list[Literal["card_block"]] | None = Field(
+        default=None,
+        max_length=1,
+        description=(
+            "Tools explicitly confirmed through a human UI action for this turn. "
+            "This channel is separate from model-generated text."
+        ),
+    )
+
+
+class ActionConfirmationRequired(BaseModel):
+    """Public-safe action metadata rendered as an explicit human control."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tool: Literal["card_block"]
+    card_last_four: str = Field(pattern=r"^\d{4}$")
 
 
 class ChatEnvelope(BaseModel):
@@ -287,7 +307,28 @@ class ChatEnvelope(BaseModel):
     confidence: float | None
     citations: list[dict[str, str]]
     finish_reason: Literal["complete", "escalated", "error"]
+    confirmation_required: ActionConfirmationRequired | None = None
     debug: dict[str, object] | None = None
+
+
+def _confirmation_required(state: Mapping[str, object]) -> ActionConfirmationRequired | None:
+    decisions = state.get("guard_decisions")
+    if not isinstance(decisions, list) or not any(
+        isinstance(decision, GuardDecisionRecord)
+        and decision.policy_rule == "tool.card_block.requires_confirmation"
+        for decision in decisions
+    ):
+        return None
+    calls = state.get("tool_calls")
+    if not isinstance(calls, list):
+        return None
+    for call in calls:
+        if not isinstance(call, ToolCallRecord) or call.tool_name != "card_block":
+            continue
+        last_four = call.arguments.get("card_last_four")
+        if isinstance(last_four, str) and re.fullmatch(r"\d{4}", last_four):
+            return ActionConfirmationRequired(tool="card_block", card_last_four=last_four)
+    return None
 
 
 def _fmt_ms(ms: float) -> str:
@@ -805,6 +846,8 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # Publish the server-derived auth-state so the guard's tool allowlist gates
     # account/PII tools on the real session (anonymous → denied, customer → ok).
     current_auth_state.set(auth_state)
+    confirmed_tools.set(frozenset(request.confirmed_tools or ()))
+    current_tool_call_counts.set({})
     # Per-turn agent attribution: the supervisor routes this turn to an agent
     # (parcours by default; an intent can trigger a governed handoff). The chosen
     # agent handles the whole turn and is stamped on every event, metric and
@@ -1111,7 +1154,7 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # Mechanism B (ADR 0007): form summary/long-term memory off the hot path.
     # No-op for the window backend; real work for summary/persistent backends.
     _spawn_background(
-        get_memory_backend().record(
+        memory_backend_for_state(state).record(
             scope=scope_for(conversation_id, resolved_language, subject_id=effective_subject),
             turn=TurnRecord(
                 user_input=request.message,
@@ -1171,6 +1214,7 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
             for c in turn_citations
         ],
         finish_reason=outcome,
+        confirmation_required=_confirmation_required(state),
         debug=_debug_from_state(
             state=state,
             timings=node_timings,

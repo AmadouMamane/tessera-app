@@ -219,6 +219,33 @@ reference. The receiving team is a Crédit Aurore human advisor; the ticketing
 backend (Salesforce / Zendesk / internal CRM) sits behind a protocol so the demo
 can run with no external service.
 
+## SOC 2 — control mapping and evidence readiness
+
+**Current claim:** Tessera provides a SOC 2 control mapping and an exportable evidence base. It is
+**not SOC 2 attested** and does not claim a Type I or Type II report. A SOC 2 report is an
+assertion-based examination of a service organisation's system and controls, performed under AICPA
+attestation standards by an independent CPA. Product code can implement and evidence controls; it
+cannot issue that independent opinion.
+
+The official AICPA scope covers controls relevant to security, availability, processing integrity,
+confidentiality and privacy. Source: [AICPA, *SOC 2® Reporting on an Examination of Controls at a
+Service Organization*](https://www.aicpa-cima.com/cpe-learning/publication/soc-2-reporting-on-an-examination-of-controls-at-a-service-organization-relevant-to-security-availability-processing-integrity-confidentiality-or-privacy).
+
+| Trust Services category | Tessera control implementation | Durable evidence | Readiness / remaining external work |
+|---|---|---|---|
+| Security | server-derived roles; operator assertions; one guarded tool chokepoint; fail-closed exposed configuration; scoped Secret Manager access | attributed governance acts; guard allow/deny records; CI security workflow; Terraform plan | implemented and continuously testable; management system scope, risk assessment and CPA testing not performed |
+| Availability | Cloud Run health probes and bounded scaling; rate/cost breakers; incident runbook; off-chrono canaries | health/signal timeline; incident records; deploy smoke output; SLO views | technical controls present; an agreed availability commitment, DR exercise and operating-period samples are still required |
+| Processing integrity | typed request/response schemas; deterministic guard decisions; non-regression release gate; hash-chained ledger | eval scorecards with lineage; audit entries; release decisions; RFC 3161 seal receipts | evidence-producing; population completeness and sample selection must be validated by the examiner |
+| Confidentiality | PII screening/redaction; subject-scoped reads; least privilege; secrets off-repo; EU deployment posture | redaction decisions; access events; secret/IAM Terraform; data-residency trace dimensions | control design present; contracts, classification register and provider evidence remain organisation-specific |
+| Privacy | consent, TTL, erasure and durable transcript governance; customer-session capability; GDPR-grounded escalation | consent/erasure audit hooks; retention/purge events; transcript subject attribution | engineering controls present; privacy notices, controller/processor records and legal approval remain institution-specific |
+
+The cockpit framework label is therefore **“SOC 2 — control mapping”**, never “SOC 2 Type II”. The
+footer repeats **“no CPA attestation”** so a sales screenshot cannot silently promote readiness into
+certification. The commercial path is additive: freeze the system boundary, appoint control owners,
+collect evidence over the chosen observation period, remediate gaps, then commission an independent
+CPA examination. When a signed report exists, its scope, period and opinion can be linked here and
+only then may the product surface name the attained report type.
+
 ## Limitations
 
 - **No legal advice.** Tessera does not provide legal or regulatory advice. Its
@@ -230,8 +257,9 @@ can run with no external service.
 - **Personalised investment advice is out of scope.** The FR system prompt
   explicitly forbids it; failure case
   `32_policy_violation_conseil_investissement` guards against regressions.
-- **Audit completeness is best-effort.** Sink failures are swallowed; the
-  `postgres` regulatory-replay sink is not yet implemented.
+- **A transport copy can fail without losing the ledger entry.** Sink failures are loud; the
+  Postgres audit ledger remains the authoritative append-only record independently of the sink
+  (ADR 0023). Operational monitoring must still alert on a missing Cloud Logging copy.
 
 ## Data residency
 

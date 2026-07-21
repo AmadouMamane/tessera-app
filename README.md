@@ -9,9 +9,9 @@ Guarded at runtime by a first-party, policy-driven guard at a single tool-call c
 Validated by a non-regression harness over 63 publicly documented agent failures.
 Deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.3 70B locally on Apple Silicon.
 
-[![CI](https://github.com/AmadouMamane/tessera/actions/workflows/ci.yml/badge.svg)](https://github.com/AmadouMamane/tessera/actions/workflows/ci.yml)
-[![Eval](https://github.com/AmadouMamane/tessera/actions/workflows/eval.yml/badge.svg)](https://github.com/AmadouMamane/tessera/actions/workflows/eval.yml)
-[![Security](https://github.com/AmadouMamane/tessera/actions/workflows/security.yml/badge.svg)](https://github.com/AmadouMamane/tessera/actions/workflows/security.yml)
+[![CI](https://github.com/AmadouMamane/tessera-app/actions/workflows/ci.yml/badge.svg)](https://github.com/AmadouMamane/tessera-app/actions/workflows/ci.yml)
+[![Eval](https://github.com/AmadouMamane/tessera-app/actions/workflows/eval.yml/badge.svg)](https://github.com/AmadouMamane/tessera-app/actions/workflows/eval.yml)
+[![Security](https://github.com/AmadouMamane/tessera-app/actions/workflows/security.yml/badge.svg)](https://github.com/AmadouMamane/tessera-app/actions/workflows/security.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![mypy: strict](https://img.shields.io/badge/mypy-strict-2A6DB2.svg)](https://mypy.readthedocs.io/)
@@ -82,8 +82,11 @@ is displayed, not hidden.
 **The two memories.** The first records *what the agents do* — conversations, measurements,
 business events — and feeds the dashboards. The second records *what we decide about them*:
 this reply validated, this message blocked, this agent tested on Tuesday at 2:07 pm. That is
-the audit ledger, each entry chained to the previous one so none can be altered without it
-showing. It is what you hand an auditor.
+the audit ledger. Each entry is chained to the previous one; in exposed deployments, its head is
+periodically bound to a qualified third-party RFC 3161 timestamp. Any later rewrite is therefore
+detectable outside Tessera, and only a live verification earns the **infalsifiable ledger** status
+([ADR 0042](./docs/decisions/0042-infalsifiability-is-an-earned-deployment-property.md)). It is
+what you hand an auditor.
 
 **Going further.** Every architecture decision is written down, dated and argued in
 [`docs/decisions/`](docs/decisions/) — including the mistakes and their corrections, because
@@ -98,23 +101,26 @@ Tessera is a **complete, opinionated, deployed assembly** of four quality layers
 It builds deliberately on proven components rather than reinventing them:
 
 - A first-party runtime guard behind a single declared seam (`src/tessera/guard/adapter.py`). Its injection detection is the separate [`limes`](https://github.com/AmadouMamane/Limes) package, consumed behind that seam (ADR 0028/0029) — the single source of truth for the injection patterns, measured on the real turn path (F1 on the cockpit, not a package-presence badge). [`mcp-firewall`](https://github.com/ressl/mcp-firewall) is cited as prior art for the category.
-- A non-regression harness whose patterns draw on [AgentAssay](https://github.com/agentassay) and [Promptfoo](https://github.com/promptfoo/promptfoo).
-- An audit-trail design informed by the AEGIS research line.
+- A non-regression harness whose patterns draw on
+  [AgentAssay](https://arxiv.org/abs/2603.02601) and
+  [Promptfoo](https://github.com/promptfoo/promptfoo).
+- A pre-execution/audit design informed by
+  [AEGIS](https://arxiv.org/abs/2603.12621).
 
 The engineering work is the end-to-end integration and the EU banking domain semantics: multilingual regulatory retrieval, deterministic policy short-circuits on the critical failure cases, a per-model evaluation scorecard, and a production deployment with an on-premises fallback.
 
 ### Built on / inspired by
 
-| Project / Paper        | Role                                          |
-| ---------------------- | --------------------------------------------- |
-| [`mcp-firewall`](https://github.com/ressl/mcp-firewall) (ressl) | Guard-category prior art (ADR 0028) |
-| AEGIS                  | Audit-trail design pattern                    |
-| DFAH                   | Failure taxonomy for agent harnesses          |
-| AgentAssay             | Regression-test scaffolding patterns          |
-| Promptfoo              | YAML-driven prompt evaluation / interop       |
-| STING                  | Tool-use stress testing                       |
-| Bernstein              | Multilingual evaluation framing               |
-| ALTK                   | Agent-level toolkit comparisons               |
+| Project / paper | Verified source | Precise relationship to Tessera |
+| --- | --- | --- |
+| mcp-firewall (Robert Ressl) | [source repository](https://github.com/ressl/mcp-firewall) | Prior art for a policy chokepoint; Tessera's guard is first-party and in-process (ADR 0028). |
+| AEGIS — *No Tool Call Left Unchecked* | [paper](https://arxiv.org/abs/2603.12621) | Comparator for pre-execution mediation, human approval and tamper-evident audit. |
+| DFAH — Determinism & Faithfulness Assurance Harness | [reference implementation](https://github.com/ibm-client-engineering/output-drift-financial-llms/blob/main/DFAH.md) | Comparator for repeated-run trajectory determinism and faithfulness; not the source of Tessera's failure taxonomy. |
+| AgentAssay — *Token-Efficient Regression Testing…* | [paper](https://arxiv.org/abs/2603.02601) · [source](https://github.com/qualixar/agentassay) | Regression, mutation and three-valued-verdict reference; Tessera keeps a purpose-built domain harness. |
+| Promptfoo | [source repository](https://github.com/promptfoo/promptfoo) | Declarative cases and prompt-evaluation interoperability reference. |
+| STING — *Helpful to a Fault…* | [paper](https://arxiv.org/abs/2602.16346) | Multi-turn, multilingual red-team reference; Tessera's current catalogue remains mostly single-turn. |
+| Bernstein | [project introduction](https://bernstein.run/blog/introducing-bernstein) | Comparator for deterministic orchestration, isolated worktrees and replayable audit lineage — not multilingual evaluation. |
+| ALTK — Agent Lifecycle Toolkit | [paper](https://arxiv.org/abs/2603.15473) · [documentation](https://agenttoolkit.github.io/altk-main/) | Comparator for modular pre/post-tool lifecycle middleware. |
 
 Academic citations in [`docs/differentiation.md`](./docs/differentiation.md) are verified against the source papers.
 
@@ -134,8 +140,8 @@ make gate      # run it twice; a check that passes once and fails once is a red 
 
 `make gate` is the definition, `.github/workflows/ci.yml` job `gate` is a caller — there is no second, drifting copy of the command list. It is hermetic: no secrets, no services, no browser.
 
-- **Python — 1,573 tests pass** (`pytest -m "not integration"`). Agent graph, router/policy deterministic short-circuits (including the policy/scope refusal guard, the third-party-PII guard, the auth redirect and the DORA corrections with their false-positive contracts), retrieval, guard, corpus generation, the LLM router, the memory tiers (window / summary / persistent / entity ledger / governance), and reasoning-trace stripping. Plus `ruff check`, `ruff format --check`, `mypy --strict`.
-- **Frontend — 132 tests pass** (`vitest run`), plus `tsc --noEmit` and `biome check`, with `pnpm` pinned by `packageManager` (9.15.0).
+- **Python — 2,515 tests pass** (`pytest -m "not integration"`, 83.5% coverage). Agent graph, router/policy deterministic short-circuits (including the policy/scope refusal guard, the third-party-PII guard, the auth redirect and the DORA corrections with their false-positive contracts), retrieval, guard, corpus generation, the LLM router, the memory tiers (window / summary / persistent / entity ledger / governance), and reasoning-trace stripping. Plus `ruff check`, `ruff format --check`, `mypy --strict`.
+- **Frontend — 425 tests pass** (`vitest run`), plus `tsc --noEmit` and `biome check`, with `pnpm` pinned by `packageManager` (9.15.0).
 - **Security workflow.** `bandit`, `pip-audit`, Trivy. The supply-chain workflow builds, signs (cosign), and attaches SLSA provenance + an SBOM to the agent image.
 
 Until 2026-07-10 this section claimed the frontend `biome` and `tsc` ran in CI. They did not — no workflow invoked `pnpm`, `biome`, `tsc`, `vitest` or Playwright, so the entire frontend could rot without a witness. The `gate` job is what makes the claim true.
@@ -143,7 +149,11 @@ Until 2026-07-10 this section claimed the frontend `biome` and `tsc` ran in CI. 
 ### Not gating CI (needs live services)
 
 - **End-to-end suite** (`webapp/frontend/e2e/`, Playwright). The `e2e` job runs it against a **production build** (`next build` + `next start`), one worker, with PostgreSQL from a service container. Against a seeded local stack the suite is **182 passed / 0 failed / 0 skipped**, twice in a row. On the bare runner it is **160 / 19 / 2**, and those 19 are an empty database, not spec debt: the catalogue expects 17 sources and finds the 2 memory tables, because the fifteen corpus categories live in a pgvector index the runner has never been fed. So the job stays **non-blocking**. It flips when CI gets a seeded dataset — which needs embeddings, hence a model, hence a secret the gate must never hold. Narrowing the job to the data-independent subset would be a weaker gate wearing the name of the gate, and that is not something we do.
-- **Integration suite** (`tests/integration/`, `pytest.mark.integration`) exercises the full graph and the persistent memory backend. A subset needs a seeded PostgreSQL and a live LLM (Ollama / Vertex AI) that the hosted runner does not provide, so the job runs for visibility but is **non-blocking**. Locally, with services up: `uv run pytest tests/integration/ -m integration` (currently 16 pass / 3 require seeded Postgres + a running model).
+- **Integration suite** (`tests/integration/`, `pytest.mark.integration`) collected **53 tests** on
+  2026-07-21: **40 passed, 13 skipped, 0 failed**. The skips are explicit service contracts:
+  nine require the optional ClickHouse observability stack (`make obs-up`) and four require
+  Langfuse. PostgreSQL-backed agent, ledger and memory paths are green; the workflow remains
+  non-blocking because those two optional services are not always provisioned.
 
 ### Regression harness — what the numbers below are, and are not
 
@@ -212,8 +222,6 @@ This sweep is the proof. Two of the three models score **exactly the same absolu
 - The 70B is 42 GB and 16× slower than the 3B, is the **only model to score worse in absolute terms**, and is blocked. Bigger is not better here.
 
 Full breakdown: [`eval/reports/sweep/comparison.md`](./eval/reports/sweep/comparison.md). Method and rules: [`docs/eval.md`](./docs/eval.md).
-| Mistral 7B             | 68%        |
-| DeepSeek-R1 7B         | 58%        |
 
 ---
 
@@ -232,7 +240,6 @@ Full breakdown: [`eval/reports/sweep/comparison.md`](./eval/reports/sweep/compar
                 │             │                                 │
                 │             ▼                                 ▼
                 │      [product_lookup,                  audit trail
-                │       regulation_lookup,               (structured)
                 │       account_lookup,
                 │       simulator,
                 │       escalation]
@@ -266,8 +273,8 @@ A larger SVG version lives in [`docs/images/architecture.svg`](./docs/images/arc
 ### Install
 
 ```bash
-git clone https://github.com/AmadouMamane/tessera.git
-cd tessera
+git clone https://github.com/AmadouMamane/tessera-app.git
+cd tessera-app
 uv sync                       # installs runtime + dev dependencies
 uv run pre-commit install     # enables ruff + mypy + hooks at commit time
 cp .env.example .env.local    # then edit secrets
@@ -289,17 +296,16 @@ docker compose up -d postgres
 uv run python scripts/ingest_regulations.py
 uv run python scripts/seed_demo.py
 
-# Start the FastAPI agent
-uv run python scripts/run_local.py
-# → POST http://localhost:8080/chat   (SSE streaming)
-# → GET  http://localhost:8080/audit  (read-only audit trail)
-```
+# Start the reference backend and frontend with their health gates
+make dev-up
+# → frontend http://localhost:3097
+# → backend  http://localhost:8099/healthz
 
-### Run the dashboard
+# Inspect the served commit, processes and both health endpoints
+make dev-status
 
-```bash
-cd webapp/frontend && pnpm install && pnpm dev
-# → http://localhost:3000
+# Stop both reference servers
+make dev-down
 ```
 
 ### Run the regression harness

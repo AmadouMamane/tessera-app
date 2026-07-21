@@ -111,6 +111,12 @@ class VertexAIBackend:
         if usage is not None:
             usage["input_tokens"] = input_tokens
             usage["output_tokens"] = output_tokens
+        get_budget_tracker().record(
+            backend=self.name,
+            model=self.model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
 
     async def chat(
         self,

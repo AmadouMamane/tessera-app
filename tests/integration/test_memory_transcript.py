@@ -72,7 +72,7 @@ class TestTranscriptRoundTrip:
         # whether it was an operator TEST (``synthetic``), so real-traffic reads can
         # count clients and exclude tests. Read the columns back raw — ``load_transcript``
         # intentionally returns only the conversational record.
-        from tessera.settings import get_settings
+        from tessera.retrieval.store import get_pool
 
         conv = uuid.uuid4()
         turn_real = uuid.uuid4()
@@ -99,9 +99,13 @@ class TestTranscriptRoundTrip:
             subject_id="tester",
             synthetic=True,
         )
-        dsn = str(get_settings().postgres.dsn)
-        async with await psycopg.AsyncConnection.connect(dsn, connect_timeout=2) as conn:
-            cur = await conn.execute(
+        # Read through the application pool: its configure hook pins the
+        # environment-specific search_path (``tessera_ci`` in CI).  A raw
+        # psycopg connection reads ``public`` instead and can silently inspect
+        # a stale table from another posture.
+        pool = get_pool()
+        async with pool.connection() as conn, conn.cursor() as cur:
+            await cur.execute(
                 "SELECT turn_id, synthetic, subject_id FROM conversation_messages "
                 "WHERE conversation_id = %s AND role = 'user'",
                 (conv,),

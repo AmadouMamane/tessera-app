@@ -6,6 +6,8 @@ import {
   artifactFamilyForArtifact,
   artifactFamilyForTask,
   buildArtifactInsertionPreparedResponse,
+  buildArtifactPendingValidationResponse,
+  buildCaseSummaryDraft,
   buildContactRuleBackendUnavailableFallback,
   buildDraftBackendUnavailableFallback,
   buildInvalidDraftEditResponse,
@@ -278,7 +280,7 @@ describe("structured schedule backend bridge", () => {
     expect(source).toContain('route.backendIntent === "explain_payment_options"');
     expect(source).toContain("const currentArtifact =");
     expect(source).toContain("currentArtifact,");
-    expect(source).toContain("contentFromScheduleProposal(proposal)");
+    expect(source).toContain("contentFromScheduleProposal(proposal, copy)");
   });
 });
 
@@ -336,9 +338,59 @@ describe("contactRuleCards", () => {
       "Aucun appel ne doit être préparé tant que la vérification backend est indisponible.",
     );
   });
+
+  it("builds the dynamic blocked-window sentence in the selected locale", () => {
+    const response = {
+      visibleReply: "blocked",
+      artifact: {
+        id: "RC-2048-contact-rule-v1",
+        type: "contact_rule_v1",
+        task: "check_rule",
+        title: "Contact rule — RC-2048",
+        status: "draft",
+        content: { decision: "blocked", requested_time: "23:00", allowed_window: "08:00-20:00" },
+      },
+      cardUpdates: {},
+      suggestedActions: [],
+      businessEvents: [],
+      businessScores: [],
+      decisions: {},
+    };
+
+    expect(contactRuleCards(response, "en").allowedItems).toEqual([
+      "Phone contact remains permitted only within 08:00–20:00. No call at 23:00 may be prepared.",
+    ]);
+    expect(contactRuleCards(response, "de").allowedItems).toEqual([
+      "Telefonischer Kontakt bleibt nur im Zeitfenster 08:00–20:00 zulässig. Für 23:00 darf kein Anruf vorbereitet werden.",
+    ]);
+  });
 });
 
 describe("footerActionsForRecouvrementArtifact", () => {
+  it("localizes generated footer actions without changing their business meaning", () => {
+    const artifact = {
+      id: "RC-2048-schedule-v2",
+      type: "schedule_proposal_v2",
+      task: "propose_schedule",
+      title: "Schedule — RC-2048",
+      status: "draft",
+      content: {},
+    };
+
+    expect(footerActionsForRecouvrementArtifact(artifact, "en")).toEqual([
+      "Adjust duration",
+      "Compare options",
+      "Prepare customer message",
+      "Submit for approval",
+    ]);
+    expect(footerActionsForRecouvrementArtifact(artifact, "de")).toEqual([
+      "Laufzeit anpassen",
+      "Optionen vergleichen",
+      "Kundennachricht vorbereiten",
+      "Zur Freigabe einreichen",
+    ]);
+  });
+
   it("uses blocked contact actions instead of draft actions", () => {
     expect(
       footerActionsForRecouvrementArtifact({
@@ -505,9 +557,9 @@ describe("footerActionsForRecouvrementArtifact", () => {
       "utf8",
     );
 
-    expect(source).toContain("Règle de contact vérifiée pour RC-2048.");
-    expect(source).toContain("Action de contact bloquée pour RC-2048.");
-    expect(source).toContain('hasContactRuleArtifact ? "Revérifier" : "Régénérer"');
+    expect(source).toContain("copy.ui.verifiedResult");
+    expect(source).toContain("copy.ui.blockedResult");
+    expect(source).toContain("hasContactRuleArtifact ? copy.ui.recheck : copy.ui.regenerate");
     expect(source).not.toContain("Voici une proposition adaptée au dossier RC-2048.");
   });
 
@@ -537,11 +589,39 @@ describe("footerActionsForRecouvrementArtifact", () => {
 
     expect(source).toContain("MIN_ASSISTANT_THINKING_MS = 1800");
     expect(source).toContain("completeAfterThinkingMinimum");
-    expect(source).toContain("Recouvrement réfléchit");
+    expect(source).toContain("copy.ui.thinking");
     expect(source).toContain("AssistantThinkingIndicator");
     expect(source).toContain("recouvrement-assistant-bloom");
     expect(source).toContain("recouvrement-thinking-dot");
     expect(styles).toContain("@keyframes recouvrement-bloom-breathe");
     expect(styles).toContain("@keyframes recouvrement-dot-wave");
+  });
+});
+
+describe("localized Recouvrement fallbacks", () => {
+  it.each(["en", "de"] as const)("does not leak French business copy in %s", (locale) => {
+    const artifact = {
+      id: "RC-2048-reminder-v1",
+      type: "reminder_draft_v1",
+      task: "draft_reminder",
+      title: locale === "en" ? "Reminder draft — RC-2048" : "Mahnungsentwurf — RC-2048",
+      status: "draft",
+      content: { message_sent: false },
+    };
+    const outputs = [
+      buildScheduleProposalDraft("3 months", 3, locale),
+      buildCaseSummaryDraft(locale),
+      buildContactRuleBackendUnavailableFallback(locale),
+      buildDraftBackendUnavailableFallback(artifact, locale),
+      buildPaymentOptionsBackendUnavailableFallback(locale),
+      buildInvalidDraftEditResponse(null, locale),
+      buildArtifactInsertionPreparedResponse(artifact, "insert", locale),
+      buildArtifactPendingValidationResponse(artifact, "submit", locale),
+      buildReminderPreparedResponse(artifact, locale),
+    ];
+
+    expect(JSON.stringify(outputs)).not.toMatch(
+      /\b(?:dossier|échéancier|relance|paiement|aucun|aucune|préparé|validation requise|montant dû|retard|mensualité|durée demandée|soumettre|insérer|vérification indisponible)\b/i,
+    );
   });
 });

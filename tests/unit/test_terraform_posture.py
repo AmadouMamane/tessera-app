@@ -11,11 +11,10 @@ defaulted to the literal string ``REPLACE_ME`` under ``ignore_changes``, so a fo
 rotation shipped a publicly known constant and left audit entries forgeable by anyone who had
 read this repository.
 
-THIS IS A RATCHET, NOT A PROOF. Terraform is not installed in this environment and the gate
-does not run ``terraform validate``; these tests read the HCL as text. They cannot tell you
-the configuration is correct — only that the specific defaults which were shipped open have
-not come back. The `.tf` changes themselves remain unverified by any tool, which is exactly
-why lane B halts for human review instead of merging.
+THIS IS A RATCHET, NOT A PROOF. These tests read the HCL as text and only prevent known
+deployment regressions. The blocking CI job additionally runs Terraform 1.8.5 ``fmt`` and
+``validate``; the release workflow's environment-scoped ``plan`` is the final provider/GCP
+contract before apply.
 """
 
 from __future__ import annotations
@@ -26,6 +25,7 @@ from pathlib import Path
 import pytest
 
 _TERRAFORM = Path(__file__).resolve().parents[2] / "infra" / "terraform"
+_ROOT = _TERRAFORM.parents[1]
 
 
 def _read(name: str) -> str:
@@ -95,3 +95,57 @@ def test_the_audit_bucket_retention_is_locked() -> None:
     observability_tf = _read("observability.tf")
     assert "retention_policy" in observability_tf
     assert "is_locked        = true" in observability_tf
+
+
+def test_secret_manager_access_is_scoped_per_secret() -> None:
+    """Neither runtime may inherit project-wide access to every secret in the project."""
+    main_tf = _read("main.tf")
+    secrets_tf = _read("secrets.tf")
+    assert "roles/secretmanager.secretAccessor" not in main_tf
+    assert 'resource "google_secret_manager_secret_iam_member" "runtime_access"' in secrets_tf
+    assert (
+        'resource "google_secret_manager_secret_iam_member" "frontend_runtime_access"' in secrets_tf
+    )
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "AUTH_SECRET",
+        "TESSERA_API_OPERATOR_ASSERTION_SIGNING_KEY",
+        "TESSERA_AUTH_ADMIN_PASSWORD",
+        "TESSERA_AUTH_AUDITOR_PASSWORD",
+        "TESSERA_AUTH_COLLECTIONS_PASSWORD",
+    ],
+)
+def test_frontend_runtime_secrets_are_injected(name: str) -> None:
+    assert f'name = "{name}"' in _read("cloud_run_frontend.tf")
+
+
+def test_exposed_agent_is_configured_for_a_qualified_external_seal() -> None:
+    cloud_run = _read("cloud_run.tf")
+    assert 'name  = "TESSERA_GUARD__SEAL_PROVIDER"' in cloud_run
+    assert 'value = "rfc3161"' in cloud_run
+    assert 'name  = "TESSERA_GUARD__SEAL_TSA_QUALIFIED"' in cloud_run
+    assert 'value = "true"' in cloud_run
+    assert 'mount_path = "/var/run/secrets/tessera"' in cloud_run
+    assert "data.google_secret_manager_secret.seal_tsa_cert" in cloud_run
+
+
+def test_release_workflow_builds_and_deploys_both_images() -> None:
+    deploy = (_ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+    assert "infra/docker/Dockerfile.agent" in deploy
+    assert "infra/docker/Dockerfile.frontend" in deploy
+    assert "provenance: true" in deploy
+    assert "sbom: true" in deploy
+    assert '-var "image=${{ steps.image.outputs.agent_image }}"' in deploy
+    assert '-var "frontend_image=${{ steps.image.outputs.frontend_image }}"' in deploy
+    assert "TESSERA_SEAL_TSA_CERT_SECRET_ID" in deploy
+    assert "TESSERA_SEAL_TSA_URL" in deploy
+
+
+def test_ci_validates_terraform_before_e2e() -> None:
+    ci = (_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "terraform fmt -check -recursive infra/terraform" in ci
+    assert "terraform init -backend=false" in ci
+    assert "terraform validate" in ci

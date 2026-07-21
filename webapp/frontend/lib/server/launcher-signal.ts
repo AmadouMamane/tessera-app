@@ -57,6 +57,14 @@ export interface LauncherSignal {
   // indisponible", never a fabricated "vérifiée"). NEVER inferred from the mere
   // existence of audit entries.
   integrityVerified: boolean | null;
+  // Full opposability verdict: only `scelle_opposable` earns the public
+  // “registre infalsifiable” state (ADR 0042). Null means the check is unreachable.
+  opposabilityBadge:
+    | "non_scelle"
+    | "scelle_opposable"
+    | "scelle_non_qualifie"
+    | "integrite_partielle"
+    | null;
   // Guard activity since local midnight — messages checked (transcript turns,
   // ADR 0040) and denials recorded (audit trail), each from its own witness.
   // `null` → the band's SECURE column renders "compteurs indisponibles".
@@ -75,16 +83,20 @@ function asHealth(value: string): AgentHealth {
  * when the check is unreachable — never a fabricated "verified". The launcher
  * surfaces ONLY this aggregate boolean (ADR 0009), never the audit trail itself.
  */
-async function loadIntegrityVerified(): Promise<boolean | null> {
+async function loadIntegrityVerdict(): Promise<{
+  verified: boolean | null;
+  badge: LauncherSignal["opposabilityBadge"];
+}> {
   try {
     const res = await fetch(`${backendUrl()}/audit/integrity`, {
       cache: "no-store",
       headers: backendHeaders({ Accept: "application/json" }),
     });
-    if (!res.ok) return null;
-    return AuditIntegritySchema.parse(await res.json()).verified;
+    if (!res.ok) return { verified: null, badge: null };
+    const integrity = AuditIntegritySchema.parse(await res.json());
+    return { verified: integrity.verified, badge: integrity.badge };
   } catch {
-    return null;
+    return { verified: null, badge: null };
   }
 }
 
@@ -112,9 +124,9 @@ async function loadGuardActivity(): Promise<LauncherSignal["guardActivity"]> {
 }
 
 export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
-  const [fleet, integrityVerified, guardActivity] = await Promise.all([
+  const [fleet, integrity, guardActivity] = await Promise.all([
     loadFleet(),
-    loadIntegrityVerified(),
+    loadIntegrityVerdict(),
     loadGuardActivity(),
   ]);
   if (!fleet?.available || !fleet.agents || fleet.agents.length === 0) return null;
@@ -154,7 +166,8 @@ export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
     agentsWithRelease: withRelease.length,
     gateVerdict,
     agents,
-    integrityVerified,
+    integrityVerified: integrity.verified,
+    opposabilityBadge: integrity.badge,
     guardActivity,
     generatedAt: new Date().toISOString(),
   };

@@ -275,13 +275,11 @@ def _scan_handoffs(
 
 async def _fetch_documents() -> list[dict[str, Any]]:
     table = safe_identifier(get_settings().postgres.vector_table)
-    async with _connection() as conn:
-        conn.row_factory = dict_row
-        async with conn.cursor() as cur:
-            await cur.execute(
-                f"SELECT source, language, metadata, inserted_at FROM {table}"  # noqa: S608
-            )
-            return list(await cur.fetchall())
+    async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            f"SELECT source, language, metadata, inserted_at FROM {table}"  # noqa: S608
+        )
+        return list(await cur.fetchall())
 
 
 async def _fetch_original(at: datetime | None) -> dict[str, Any] | None:
@@ -302,11 +300,9 @@ async def _fetch_original(at: datetime | None) -> dict[str, Any] | None:
         " ORDER BY u.id DESC LIMIT 1) AS question "
         f"FROM conversation_messages a {where} ORDER BY a.created_at DESC LIMIT 1"
     )
-    async with _connection() as conn:
-        conn.row_factory = dict_row
-        async with conn.cursor() as cur:
-            await cur.execute(query, params)
-            return await cur.fetchone()
+    async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, params)
+        return await cur.fetchone()
 
 
 # --- assembly -----------------------------------------------------------------

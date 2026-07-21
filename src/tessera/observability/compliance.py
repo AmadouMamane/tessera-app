@@ -65,7 +65,11 @@ _FRAMEWORKS: dict[str, tuple[str, str, str]] = {
     "ai_act": ("EU AI Act", "EU AI Act", "EU AI Act"),
     "dora": ("DORA", "DORA", "DORA"),
     "iso27001": ("ISO/IEC 27001", "ISO/IEC 27001", "ISO/IEC 27001"),
-    "soc2": ("SOC 2 Type II", "SOC 2 Typ II", "SOC 2 Type II"),
+    "soc2": (
+        "SOC 2 — matrice de contrôles",
+        "SOC 2 — Kontrollmatrix",
+        "SOC 2 — control mapping",
+    ),
     "internal": ("Politiques internes", "Interne Richtlinien", "Internal policies"),
 }
 

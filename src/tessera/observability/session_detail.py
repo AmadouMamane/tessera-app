@@ -78,15 +78,13 @@ async def compute_session_detail(conversation_id: str, at: str | None = None) ->
     except (ValueError, TypeError):
         return {"available": False}
 
-    async with _connection() as conn:
-        conn.row_factory = dict_row
-        async with conn.cursor() as cur:
-            await cur.execute(
-                "SELECT turn_id, seq, agent_id, role, content, created_at "
-                "FROM conversation_messages WHERE conversation_id = %s ORDER BY id ASC",
-                (conv_uuid,),
-            )
-            rows = list(await cur.fetchall())
+    async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            "SELECT turn_id, seq, agent_id, role, content, created_at "
+            "FROM conversation_messages WHERE conversation_id = %s ORDER BY id ASC",
+            (conv_uuid,),
+        )
+        rows = list(await cur.fetchall())
 
     if not rows:
         return {"available": False}

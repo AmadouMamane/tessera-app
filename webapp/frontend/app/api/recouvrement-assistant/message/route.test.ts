@@ -24,7 +24,11 @@ function messageRequest(): Request {
   return new Request("http://localhost:3097/api/recouvrement-assistant/message", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ case_id: "RC-2048", message: "ok puis-je l'appeler à 22h ?" }),
+    body: JSON.stringify({
+      case_id: "RC-2048",
+      message: "Darf ich den Kunden um 22 Uhr anrufen?",
+      language: "de",
+    }),
   });
 }
 
@@ -96,6 +100,7 @@ describe("POST /api/recouvrement-assistant/message — the edge gate (P0 F-1)", 
     );
     const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
     const headers = requestInit.headers as Record<string, string>;
+    expect(JSON.parse(String(requestInit.body))).toMatchObject({ language: "de" });
     const token = headers["X-Tessera-Operator-Assertion"] ?? "";
     expect(token).toBeTruthy();
     // The assertion carries the VERIFIED identity the agent will trust — principal and

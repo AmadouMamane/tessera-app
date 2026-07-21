@@ -226,6 +226,9 @@ class AgentState(TypedDict):
 
     # --- Planning ---------------------------------------------------------
     plan: list[WorkerName]
+    # Canonical rule-intent names selected by the planner.  Workers use these
+    # identities instead of re-parsing prose or scraping the rationale string.
+    intents: list[str]
     plan_rationale: NotRequired[str]
 
     # --- Retrieval --------------------------------------------------------
@@ -322,6 +325,7 @@ def new_state(
         language_confidence=language_confidence,
         messages=messages,
         plan=[],
+        intents=[],
         retrieved_documents=[],
         tool_calls=[],
         guard_decisions=[],

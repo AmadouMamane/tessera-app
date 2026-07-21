@@ -263,6 +263,9 @@ _EXIT_WITNESSES: dict[str, str] = {
     # failing in seconds since ~2026-07-10, so none of them is a live witness of anything today.
     # They are registered because they are what CI *will* be the day billing is restored, and a
     # laundered witness that nobody has run yet is a laundered witness.
+    # Format/init/validate are blocking and their native exit codes decide whether the deployable
+    # Terraform contract passes. This is a verdict, not an artefact-producing action.
+    ".github/workflows/ci.yml::terraform": "VERDICT",
     ".github/workflows/ci.yml::gate": "VERDICT",
     ".github/workflows/ci.yml::precommit": "VERDICT",
     # `continue-on-error: true`. 182 Playwright specs against a production build, a seeded

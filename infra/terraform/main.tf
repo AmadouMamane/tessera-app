@@ -83,7 +83,6 @@ resource "google_service_account" "agent" {
 locals {
   agent_roles = [
     "roles/cloudsql.client",
-    "roles/secretmanager.secretAccessor",
     "roles/aiplatform.user",
     "roles/logging.logWriter",
     "roles/monitoring.metricWriter",

@@ -115,6 +115,10 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
   const abortRef = useRef<AbortController | null>(null);
   const handledExternalPromptRef = useRef<string | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    tool: "card_block";
+    card_last_four: string;
+  } | null>(null);
 
   const {
     messages,
@@ -183,7 +187,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
   }, []);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, confirmedTools?: Array<"card_block">) => {
       // Snapshot history BEFORE appendUser modifies the store, and read
       // conversationId directly from the store so truncateFromMessage's
       // synchronous reset is always visible here.
@@ -194,6 +198,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
       const currentConvId = snap.conversationId;
 
       appendUser(text);
+      setPendingConfirmation(null);
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -249,6 +254,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
             conversation_id: currentConvId ?? undefined,
             subject_id: getSubjectId(),
             history: history.length > 0 ? history : undefined,
+            confirmed_tools: confirmedTools,
           },
           {
             signal: controller.signal,
@@ -280,6 +286,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                 needsEscalation: envelope.needs_escalation,
                 confidence: envelope.confidence,
               });
+              setPendingConfirmation(envelope.confirmation_required ?? null);
             },
             onError: (message) => {
               if (rafId !== null) {
@@ -461,6 +468,25 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               messages[messages.length - 1]?.role === "assistant" &&
               messages.length >= 2 && (
                 <div className="mt-3 pl-11">
+                  {pendingConfirmation && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void sendMessage(
+                          t("confirmCardBlockMessage", {
+                            lastFour: pendingConfirmation.card_last_four,
+                          }),
+                          ["card_block"],
+                        )
+                      }
+                      className="mb-3 inline-flex items-center gap-2 rounded-lg bg-navy-900 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500"
+                    >
+                      <Lock className="h-3.5 w-3.5" />
+                      {t("confirmCardBlockAction", {
+                        lastFour: pendingConfirmation.card_last_four,
+                      })}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleRegenerate}

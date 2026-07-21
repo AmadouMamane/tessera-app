@@ -23,14 +23,15 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 /**
- * sha256 of the validated sections, verbatim as approved on 2026-07-10.
+ * sha256 of the validated sections, including the strengthened infalsifiability contract
+ * explicitly approved on 2026-07-21.
  *
  * Re-run the printed digest and update these ONLY once the rewording is approved. A failure
  * here is not a broken test — it is the guard doing the one job it has.
  */
 const APPROVED_SECTIONS = {
-  fr: "a815b549c52ce375d45a2c34a5aec09a1a83a95a00dbf8cdd2bf8d9aab3125b1",
-  en: "f76d02db77de0fa3c13a1e970ad64bb3dcfe31c6de4384be6ec239a6d71a7952",
+  fr: "b421362a2208d01b65203e738a36ae442b83163966274b6b1af947c2cb099f40",
+  en: "9b843b1be5770b375870b709855087004c996d4be809d76e0763875ff130247d",
 } as const;
 
 interface Section {

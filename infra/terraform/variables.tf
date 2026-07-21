@@ -49,6 +49,26 @@ variable "frontend_service_name" {
   default     = "tessera-frontend"
 }
 
+variable "seal_tsa_url" {
+  description = "HTTPS endpoint of the qualified RFC 3161 TSA selected from an EU Trusted List."
+  type        = string
+
+  validation {
+    condition     = can(regex("^https://", var.seal_tsa_url))
+    error_message = "seal_tsa_url must be an HTTPS URL."
+  }
+}
+
+variable "seal_tsa_cert_secret_id" {
+  description = "Existing Secret Manager secret id whose latest version contains the TSA validation certificate/CA bundle; managed out of band so certificate material never enters Terraform state."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.seal_tsa_cert_secret_id)) > 0
+    error_message = "seal_tsa_cert_secret_id must name an existing Secret Manager secret."
+  }
+}
+
 variable "frontend_cpu" {
   description = "vCPU allocation per front-end Cloud Run instance."
   type        = string
@@ -175,6 +195,12 @@ variable "allowed_invokers" {
   # Now empty by default: no principal may invoke the service until one is named. A public
   # demo is still possible, but it has to be ASKED for. Secure by default, exposed by choice.
   description = "IAM principals allowed to invoke the Cloud Run service. Normally the frontend service account ONLY. Set to [\"allUsers\"] to deliberately publish a public demo."
+  type        = list(string)
+  default     = []
+}
+
+variable "frontend_allowed_invokers" {
+  description = "IAM principals allowed to invoke the public frontend. Keep empty for a private deployment; the demo workflow deliberately passes [\"allUsers\"]."
   type        = list(string)
   default     = []
 }

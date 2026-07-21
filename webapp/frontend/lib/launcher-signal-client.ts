@@ -15,6 +15,9 @@ const PillarSignalWireSchema = z.object({
   agentsWithRelease: z.number().int().nonnegative(),
   agents: z.array(z.object({ verdictStale: z.boolean() })),
   integrityVerified: z.boolean().nullable(),
+  opposabilityBadge: z
+    .enum(["non_scelle", "scelle_opposable", "scelle_non_qualifie", "integrite_partielle"])
+    .nullable(),
   guardActivity: z
     .object({
       checkedToday: z.number().int().nonnegative(),

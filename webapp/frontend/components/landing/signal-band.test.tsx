@@ -43,6 +43,7 @@ function mkSignal(over: Partial<LauncherSignal> = {}): LauncherSignal {
     gateVerdict: "blocked",
     agents: [],
     integrityVerified: true,
+    opposabilityBadge: "scelle_opposable",
     guardActivity: { checkedToday: 214, blockedToday: 2 },
     generatedAt: "2026-07-21T12:00:00.000Z",
     ...over,
@@ -107,16 +108,29 @@ describe("launcherPillars — the honest mapping", () => {
     expect(p?.[2]).toMatchObject({ stateKey: "signal.evaluateReadyStale", tone: "stale" });
   });
 
-  it("integrity: verified only when really verified, honest state otherwise", () => {
-    expect(launcherPillars(mkSignal({ integrityVerified: true }))?.[3]).toMatchObject({
-      stateKey: "signal.integrityVerified",
+  it("proof: infalsifiable only when the qualified external seal earns it", () => {
+    expect(
+      launcherPillars(
+        mkSignal({ integrityVerified: true, opposabilityBadge: "scelle_opposable" }),
+      )?.[3],
+    ).toMatchObject({
+      stateKey: "signal.ledgerInfalsifiable",
       tone: "verified",
     });
-    expect(launcherPillars(mkSignal({ integrityVerified: false }))?.[3]).toMatchObject({
+    expect(
+      launcherPillars(
+        mkSignal({ integrityVerified: true, opposabilityBadge: "integrite_partielle" }),
+      )?.[3],
+    ).toMatchObject({ stateKey: "signal.integrityVerifiedSealPending", tone: "stale" });
+    expect(
+      launcherPillars(mkSignal({ integrityVerified: false, opposabilityBadge: "non_scelle" }))?.[3],
+    ).toMatchObject({
       stateKey: "signal.integrityUnverified",
       tone: "unverified",
     });
-    expect(launcherPillars(mkSignal({ integrityVerified: null }))?.[3]).toMatchObject({
+    expect(
+      launcherPillars(mkSignal({ integrityVerified: null, opposabilityBadge: null }))?.[3],
+    ).toMatchObject({
       stateKey: "signal.integrityUnavailable",
       tone: "neutral",
     });
@@ -159,13 +173,41 @@ describe("SignalBand — the rendered pillars", () => {
     expect(screen.getAllByText(/2 agents sur 6 prêts/).length).toBeGreaterThan(0);
   });
 
-  it("integrity: 'vérifiée' only when verified; honest states otherwise", () => {
-    const { rerender } = render(wrap(<Band signal={mkSignal({ integrityVerified: true })} />));
-    expect(screen.getAllByText(/Chaîne d’audit vérifiée/).length).toBeGreaterThan(0);
-    rerender(wrap(<Band signal={mkSignal({ integrityVerified: false })} />));
+  it("proof: the infalsifiable label follows the qualified live verdict", () => {
+    const { rerender } = render(
+      wrap(
+        <Band
+          signal={mkSignal({
+            integrityVerified: true,
+            opposabilityBadge: "scelle_opposable",
+          })}
+        />,
+      ),
+    );
+    expect(screen.getAllByText(/Registre infalsifiable/).length).toBeGreaterThan(0);
+    rerender(
+      wrap(
+        <Band
+          signal={mkSignal({
+            integrityVerified: true,
+            opposabilityBadge: "integrite_partielle",
+          })}
+        />,
+      ),
+    );
+    expect(
+      screen.getAllByText(/Chaîne vérifiée · scellement qualifié attendu/).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/Registre infalsifiable/)).toBeNull();
+    rerender(
+      wrap(
+        <Band signal={mkSignal({ integrityVerified: false, opposabilityBadge: "non_scelle" })} />,
+      ),
+    );
     expect(screen.getAllByText(/Chaîne non vérifiée/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Chaîne d’audit vérifiée/)).toBeNull();
-    rerender(wrap(<Band signal={mkSignal({ integrityVerified: null })} />));
+    rerender(
+      wrap(<Band signal={mkSignal({ integrityVerified: null, opposabilityBadge: null })} />),
+    );
     expect(screen.getAllByText(/Vérification indisponible/).length).toBeGreaterThan(0);
   });
 

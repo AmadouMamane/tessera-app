@@ -23,12 +23,14 @@ The badge is recomputed live from a cryptographic verification, never stored (re
 from __future__ import annotations
 
 import base64
+import os
 import subprocess  # the RFC 3161 provider shells out to openssl (configured path only)
 import tempfile
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, Protocol, runtime_checkable
+from urllib.parse import urlparse
 
 from tessera.guard.audit import LEDGER_SEAL_TYPE, SEAL_ACTOR, emit_ledger_seal
 from tessera.guard.ledger_store import (
@@ -62,6 +64,7 @@ __all__ = [
     "run_seal_cycle",
     "seal_badge",
     "seal_posture",
+    "validate_exposed_seal_config",
 ]
 
 _GENESIS = "0" * 64
@@ -292,6 +295,60 @@ def seal_posture(settings: Settings | None = None) -> dict[str, object]:
         "sealing": sealing,
         "cadence_s": guard.seal_interval_s if sealing else None,
     }
+
+
+def validate_exposed_seal_config(settings: Settings | None = None) -> None:
+    """Refuse an exposed deployment that cannot earn the infalsifiability claim.
+
+    Local development and CI deliberately keep the honest ``none`` provider.  Staging and
+    production are public proof surfaces: ADR 0042 requires a qualified RFC 3161 provider, an
+    HTTPS endpoint, a readable pinned trust root, and bounded verification/seal cadences.  This
+    validates *posture*, not provider availability; the live badge still requires a successfully
+    re-verified token and therefore can never become cosmetic.
+
+    Raises:
+        RuntimeError: If an exposed environment cannot produce and verify qualified seals.
+    """
+    from tessera.settings import Environment, get_settings
+
+    resolved = settings or get_settings()
+    if resolved.environment not in {Environment.STAGING, Environment.PRODUCTION}:
+        return
+
+    guard = resolved.guard
+    errors: list[str] = []
+    if guard.seal_provider != "rfc3161":
+        errors.append("TESSERA_GUARD__SEAL_PROVIDER must be 'rfc3161'")
+
+    tsa_url = guard.seal_tsa_url or ""
+    parsed = urlparse(tsa_url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        errors.append("TESSERA_GUARD__SEAL_TSA_URL must be an absolute HTTPS URL")
+
+    cert = guard.seal_tsa_cert
+    if cert is None or not cert.is_file() or not os.access(cert, os.R_OK):
+        errors.append("TESSERA_GUARD__SEAL_TSA_CERT must be a readable pinned trust-root file")
+
+    if not guard.seal_tsa_qualified:
+        errors.append("TESSERA_GUARD__SEAL_TSA_QUALIFIED must be true for a qualified EU TSA")
+    if guard.seal_interval_s <= 0:
+        errors.append("TESSERA_GUARD__SEAL_INTERVAL_S must be positive")
+    if not guard.seal_interval_s <= guard.seal_staleness_budget_s <= 2 * guard.seal_interval_s:
+        errors.append(
+            "TESSERA_GUARD__SEAL_STALENESS_BUDGET_S must be between one and two seal intervals"
+        )
+    if not 0 < guard.ledger_verify_interval_s <= guard.seal_interval_s:
+        errors.append(
+            "TESSERA_GUARD__LEDGER_VERIFY_INTERVAL_S must be positive and no greater than the "
+            "seal interval"
+        )
+
+    if errors:
+        details = "; ".join(errors)
+        raise RuntimeError(
+            "Exposed Tessera deployments must earn the externally verifiable "
+            f"'registre infalsifiable' claim (ADR 0042): {details}."
+        )
 
 
 # ── Evaluation (display side — pure, cached, live) ──────────────────────────────

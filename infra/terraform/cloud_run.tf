@@ -48,6 +48,18 @@ resource "google_cloud_run_v2_service" "agent" {
       }
     }
 
+    volumes {
+      name = "seal-tsa-trust"
+      secret {
+        secret = data.google_secret_manager_secret.seal_tsa_cert.secret_id
+        items {
+          version = "latest"
+          path    = "tsa-ca.pem"
+          mode    = 0444
+        }
+      }
+    }
+
     containers {
       image = var.image
 
@@ -67,6 +79,10 @@ resource "google_cloud_run_v2_service" "agent" {
       volume_mounts {
         name       = "cloudsql"
         mount_path = "/cloudsql"
+      }
+      volume_mounts {
+        name       = "seal-tsa-trust"
+        mount_path = "/var/run/secrets/tessera"
       }
 
       # ── Plain environment variables ──────────────────────────────────────────
@@ -124,6 +140,22 @@ resource "google_cloud_run_v2_service" "agent" {
         name  = "TESSERA_LEDGER_DUAL_WRITE"
         value = "1"
       }
+      env {
+        name  = "TESSERA_GUARD__SEAL_PROVIDER"
+        value = "rfc3161"
+      }
+      env {
+        name  = "TESSERA_GUARD__SEAL_TSA_URL"
+        value = var.seal_tsa_url
+      }
+      env {
+        name  = "TESSERA_GUARD__SEAL_TSA_CERT"
+        value = "/var/run/secrets/tessera/tsa-ca.pem"
+      }
+      env {
+        name  = "TESSERA_GUARD__SEAL_TSA_QUALIFIED"
+        value = "true"
+      }
 
       # ── Secret-backed environment variables ──────────────────────────────────
 
@@ -141,6 +173,24 @@ resource "google_cloud_run_v2_service" "agent" {
         value_source {
           secret_key_ref {
             secret  = google_secret_manager_secret.managed["bearer_token"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "TESSERA_API__SESSION_SIGNING_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.managed["api_session_signing_key"].secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "TESSERA_API__OPERATOR_ASSERTION_SIGNING_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.managed["operator_assertion_signing_key"].secret_id
             version = "latest"
           }
         }
@@ -175,6 +225,9 @@ resource "google_cloud_run_v2_service" "agent" {
     google_project_service.apis,
     google_secret_manager_secret_version.postgres_password,
     google_secret_manager_secret_version.bearer_token_placeholder,
+    google_secret_manager_secret_version.api_session_signing_key,
+    google_secret_manager_secret_version.operator_assertion_signing_key,
+    google_secret_manager_secret_iam_member.agent_seal_tsa_cert_access,
   ]
 }
 
@@ -187,4 +240,17 @@ resource "google_cloud_run_v2_service_iam_member" "invokers" {
   name     = google_cloud_run_v2_service.agent.name
   role     = "roles/run.invoker"
   member   = each.value
+}
+
+# The BFF uses Tessera's own service bearer in the Authorization header. Cloud Run would normally
+# also require a Google ID token in that same header. For the INTERNAL ingress posture, allow the
+# transport anonymously and keep application authentication authoritative: the run.app URL still
+# rejects internet traffic at ingress, while the bearer rejects other internal callers.
+resource "google_cloud_run_v2_service_iam_member" "internal_transport" {
+  count    = var.ingress == "INGRESS_TRAFFIC_ALL" ? 0 : 1
+  project  = var.project_id
+  location = google_cloud_run_v2_service.agent.location
+  name     = google_cloud_run_v2_service.agent.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }

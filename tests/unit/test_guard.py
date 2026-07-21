@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from tessera.authz import AuthState
 from tessera.guard.adapter import check_user_input, guarded_invoke
+from tessera.guard.audit import confirmed_tools, current_auth_state, current_tool_call_counts
 from tessera.guard.decisions import DecisionKind, load_policy
 from tessera.settings import LanguageCode
 
@@ -160,3 +162,74 @@ class TestGuardedInvoke:
             language=LanguageCode.EN,
         )
         assert result.allowed is False
+
+    @pytest.mark.asyncio
+    async def test_confirmation_rule_blocks_until_human_channel_confirms(self) -> None:
+        called = False
+
+        async def _invoke() -> str:
+            nonlocal called
+            called = True
+            return "blocked"
+
+        arguments = {
+            "customer_id": "demo-customer-001",
+            "card_last_four": "4242",
+            "reason": "customer_request",
+        }
+        auth_token = current_auth_state.set(AuthState.CUSTOMER)
+        try:
+            denied = await guarded_invoke(
+                tool_name="card_block",
+                invoke=_invoke,
+                arguments=arguments,
+                language=LanguageCode.FR,
+            )
+            assert denied.allowed is False
+            assert called is False
+            assert any(d.policy_rule.endswith("requires_confirmation") for d in denied.decisions)
+
+            confirm_token = confirmed_tools.set(frozenset({"card_block"}))
+            try:
+                allowed = await guarded_invoke(
+                    tool_name="card_block",
+                    invoke=_invoke,
+                    arguments=arguments,
+                    language=LanguageCode.FR,
+                )
+            finally:
+                confirmed_tools.reset(confirm_token)
+        finally:
+            current_auth_state.reset(auth_token)
+        assert allowed.allowed is True
+        assert called is True
+
+    @pytest.mark.asyncio
+    async def test_max_calls_per_turn_is_enforced_at_the_chokepoint(self) -> None:
+        calls = 0
+
+        async def _invoke() -> str:
+            nonlocal calls
+            calls += 1
+            return "ok"
+
+        token = current_tool_call_counts.set({})
+        try:
+            first = await guarded_invoke(
+                tool_name="ticket_escalate",
+                invoke=_invoke,
+                arguments={"reason": "customer_request"},
+                language=LanguageCode.EN,
+            )
+            second = await guarded_invoke(
+                tool_name="ticket_escalate",
+                invoke=_invoke,
+                arguments={"reason": "customer_request"},
+                language=LanguageCode.EN,
+            )
+        finally:
+            current_tool_call_counts.reset(token)
+        assert first.allowed is True
+        assert second.allowed is False
+        assert calls == 1
+        assert any(d.policy_rule.endswith("max_calls_per_turn") for d in second.decisions)
