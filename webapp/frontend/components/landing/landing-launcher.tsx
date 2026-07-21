@@ -72,6 +72,8 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--amber-soft": "#FBBF24",
   "--success": "#22C55E",
   "--danger": "#F87171",
+  "--indigo": "#818CF8",
+  "--violet": "#C084FC",
   "--radius-lg": "24px",
   "--radius-md": "16px",
   "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -321,12 +323,26 @@ const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
   prove: Fingerprint,
 };
 
-// Tone → accent. Colour is INFORMATION here, never decoration (operator call,
-// 2026-07-21 — four decorative hues read as noise): every capability kicker
-// sits in the same quiet slate, and only a real verdict recolours its column —
+// One capability, one hue — carried by the ICON, never the words (the dataviz
+// doctrine that reconciled the two operator calls of 2026-07-21: "une couleur
+// par fonctionnalité" ET "pas trop coloré" — text wears text tokens, the mark
+// beside it carries identity). The quartet is computed, not eyeballed:
+// validated on the navy surface for CVD separation (worst adjacent ΔE 18.9
+// deutan), normal-vision floor (23.9 ≥ 15), chroma and 3:1 contrast; the
+// chart-mark lightness band is waived — these are text-labelled 14px icons,
+// and the label is the secondary encoding. Status hues (green/amber/red) stay
+// reserved for verdicts and appear in no capability slot.
+const PILLAR_ACCENT: Record<PillarKey, string> = {
+  supervise: "var(--cyan)",
+  secure: "var(--indigo)",
+  evaluate: "var(--champagne)",
+  prove: "var(--violet)",
+};
+
+// Tone → STATE accent. Colour on a state line is INFORMATION, never decoration:
+// the kickers' words sit in quiet slate, and only a real verdict recolours —
 // amber for a release verdict put back in play, green/red for the audit
-// chain's own verification state. One coloured word on the band, exactly where
-// the eye should go.
+// chain's own verification state.
 const TONE_COLOR: Record<PillarTone, string> = {
   live: "var(--text-secondary)",
   guard: "var(--text-secondary)",
@@ -389,7 +405,10 @@ function PillarColumn({
           )}
           style={{ color: titleColor }}
         >
-          <Icon className="h-[14px] w-[14px] shrink-0 stroke-[1.9]" />
+          <Icon
+            className="h-[14px] w-[14px] shrink-0 stroke-[1.9]"
+            style={{ color: PILLAR_ACCENT[pillar.key] }}
+          />
           {title}
         </span>
         <MetricInfo
