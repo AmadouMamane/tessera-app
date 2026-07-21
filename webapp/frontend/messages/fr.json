@@ -7330,14 +7330,40 @@
       "agentSecurity": "sécurité {passed}/{total} cas conformes",
       "agentEvaluatedOn": "Évalué le {date}",
       "pillarSupervise": "Supervision en temps réel",
-      "agentsSupervised": "{count, plural, one {# agent supervisé} other {# agents supervisés}}",
-      "pillarEvaluate": "Évaluation et sécurité continues",
-      "releaseGatesReady": "Release gates actifs · {ready} sur {total} prêts",
+      "agentsSupervised": "{count, plural, one {# agent observé} other {# agents observés}}",
+      "pillarSecure": "Sécurité à chaque message",
+      "messagesChecked": "{checked, plural, one {# message contrôlé} other {# messages contrôlés}} · {blocked, plural, =0 {aucun blocage aujourd’hui} one {# bloqué aujourd’hui} other {# bloqués aujourd’hui}}",
+      "noMessagesToday": "Aucun message aujourd’hui",
+      "activityUnavailable": "Compteurs indisponibles",
+      "pillarEvaluate": "Évaluation avant production",
+      "evaluateReady": "{ready, plural, one {# agent sur {total} prêt} other {# agents sur {total} prêts}}",
+      "evaluateReadyStale": "{ready, plural, one {# agent sur {total} prêt} other {# agents sur {total} prêts}} · re-éval requise",
       "evaluationsActive": "Évaluations actives",
       "pillarProve": "Preuves à tout instant",
-      "integrityVerified": "Chaîne d’intégrité vérifiée",
+      "integrityVerified": "Chaîne d’audit vérifiée",
       "integrityUnverified": "Chaîne non vérifiée",
-      "integrityUnavailable": "Vérification indisponible"
+      "integrityUnavailable": "Vérification indisponible",
+      "justNow": "à l’instant",
+      "minutesAgo": "il y a {m} min",
+      "info": {
+        "seeForYourself": "Voir par vous-même",
+        "supervise": {
+          "what": "Tessera écoute la télémétrie que chaque agent publie — santé, activité, mesures — sans jamais intervenir dans ses échanges.",
+          "how": "Le compte et l’horodatage reflètent les données réellement reçues, rafraîchies en continu : si le signal se coupe, cette case le dit, elle n’invente pas un chiffre."
+        },
+        "secure": {
+          "what": "Chaque message traverse un point de contrôle unique qui peut bloquer une attaque, masquer une donnée sensible ou faire appel à un humain.",
+          "how": "Compteurs lus du journal d’audit, où chaque refus est inscrit ; les messages d’essai (canaris, tests opérateur) sont inclus — le contrôle s’exerce sur chacun d’eux."
+        },
+        "evaluate": {
+          "what": "Avant d’être exposé aux clients, chaque agent doit réussir un jeu d’épreuves, dont un socle de sécurité commun à tous.",
+          "how": "Le verdict vient du dernier passage de l’agent ; toute modification — modèle, consignes, règles — le remet en jeu : l’agent devra prouver à nouveau qu’il est prêt."
+        },
+        "prove": {
+          "what": "Chaque décision est inscrite dans un journal où chaque entrée est scellée à la précédente : rien ne peut être altéré sans que cela se voie.",
+          "how": "La vérification est refaite automatiquement à chaque lecture ; ce qui s’affiche est le verdict du dernier contrôle réussi."
+        }
+      }
     },
     "demoLogin": {
       "note": "Compte de démonstration",

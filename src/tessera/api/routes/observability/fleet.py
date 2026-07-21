@@ -39,6 +39,7 @@ from tessera.observability import (
     chrome as chrome_mod,
     corpus_freshness as corpus_freshness_mod,
     fleet as fleet_mod,
+    guard_activity as guard_activity_mod,
     knowledge as knowledge_mod,
     replay as replay_mod,
     roadmap as roadmap_mod,
@@ -260,6 +261,24 @@ async def observability_agent_garde_fous(lang: str = "fr") -> dict[str, object]:
         return {"available": True, **(await agent_garde_fous_mod.build_agent_garde_fous(lang))}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_garde_fous: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/observability/guard-activity")
+async def observability_guard_activity() -> dict[str, object]:
+    """Guard-activity aggregate for the public launcher band (ADR 0009).
+
+    Two counters, each from its own witness: user turns recorded today in the
+    durable transcript (ADR 0040 — every persisted user turn entered through the
+    input guard; test turns included, the scope the band's popover states) and
+    input-guard denials recorded today in the tamper-evident audit trail. Only
+    aggregates a public visitor may see — never per-case detail. Degrades to
+    ``available: false`` on failure.
+    """
+    try:
+        return {"available": True, **(await guard_activity_mod.build_guard_activity())}
+    except Exception as exc:  # never break the launcher
+        sys.stderr.write(f"tessera.observability.guard_activity: failed: {exc}\n")
         return {"available": False}
 
 

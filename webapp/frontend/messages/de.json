@@ -7328,14 +7328,40 @@
       "agentSecurity": "Sicherheit {passed}/{total} Fälle konform",
       "agentEvaluatedOn": "Geprüft am {date}",
       "pillarSupervise": "Überwachung in Echtzeit",
-      "agentsSupervised": "{count, plural, one {# überwachter Agent} other {# überwachte Agenten}}",
-      "pillarEvaluate": "Kontinuierliche Evaluierung und Sicherheit",
-      "releaseGatesReady": "Release-Gates aktiv · {ready} von {total} bereit",
+      "agentsSupervised": "{count, plural, one {# beobachteter Agent} other {# beobachtete Agenten}}",
+      "pillarSecure": "Sicherheit bei jeder Nachricht",
+      "messagesChecked": "{checked, plural, one {# Nachricht geprüft} other {# Nachrichten geprüft}} · {blocked, plural, =0 {heute keine blockiert} one {# heute blockiert} other {# heute blockiert}}",
+      "noMessagesToday": "Heute keine Nachrichten",
+      "activityUnavailable": "Zähler nicht verfügbar",
+      "pillarEvaluate": "Evaluierung vor der Produktion",
+      "evaluateReady": "{ready, plural, one {# Agent von {total} bereit} other {# Agenten von {total} bereit}}",
+      "evaluateReadyStale": "{ready, plural, one {# Agent von {total} bereit} other {# Agenten von {total} bereit}} · Neubewertung erforderlich",
       "evaluationsActive": "Evaluierungen aktiv",
       "pillarProve": "Nachweise jederzeit",
-      "integrityVerified": "Integritätskette verifiziert",
-      "integrityUnverified": "Integritätskette nicht verifiziert",
-      "integrityUnavailable": "Verifizierung nicht verfügbar"
+      "integrityVerified": "Audit-Kette verifiziert",
+      "integrityUnverified": "Kette nicht verifiziert",
+      "integrityUnavailable": "Verifizierung nicht verfügbar",
+      "justNow": "gerade eben",
+      "minutesAgo": "vor {m} Min.",
+      "info": {
+        "seeForYourself": "Sehen Sie selbst",
+        "supervise": {
+          "what": "Tessera hört auf die Telemetrie, die jeder Agent veröffentlicht — Gesundheit, Aktivität, Messwerte — ohne je in seine Gespräche einzugreifen.",
+          "how": "Zahl und Zeitstempel spiegeln die tatsächlich empfangenen Daten wider, laufend aktualisiert: Fällt das Signal aus, sagt dieses Feld es — es erfindet keine Zahl."
+        },
+        "secure": {
+          "what": "Jede Nachricht durchläuft eine einzige Kontrollstelle, die einen Angriff blockieren, sensible Daten maskieren oder einen Menschen hinzuziehen kann.",
+          "how": "Zähler aus dem Audit-Journal, in dem jede Ablehnung verzeichnet ist; Testnachrichten (Canaries, Operator-Tests) sind enthalten — die Kontrolle greift bei jeder von ihnen."
+        },
+        "evaluate": {
+          "what": "Bevor ein Agent Kundschaft bedient, muss er einen Prüfsatz bestehen, darunter eine für alle gemeinsame Sicherheitsbasis.",
+          "how": "Das Urteil stammt aus dem letzten Durchlauf des Agenten; jede Änderung — Modell, Anweisungen, Regeln — stellt es infrage: Der Agent muss erneut beweisen, dass er bereit ist."
+        },
+        "prove": {
+          "what": "Jede Entscheidung wird in ein Journal geschrieben, in dem jeder Eintrag mit dem vorherigen versiegelt ist: Nichts kann unbemerkt verändert werden.",
+          "how": "Die Prüfung wird bei jedem Lesen automatisch wiederholt; angezeigt wird das Urteil der letzten erfolgreichen Kontrolle."
+        }
+      }
     },
     "demoLogin": {
       "note": "Demokonto",
