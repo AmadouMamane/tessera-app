@@ -9147,7 +9147,7 @@
     "pageTitle": "Tessera verstehen",
     "pageLead": "Drei Minuten, um zu verstehen, was Sie hier sehen.",
     "diagram": {
-      "caption": "Die zwei Welten, die Agenten und die zwei Gedaechtnisse.",
+      "caption": "Die Agenten arbeiten auf der Bankseite; das Cockpit beobachtet, testet und bewahrt die Belege. Dazwischen: eine einzige Tuer.",
       "bank": "Die Bank",
       "cockpit": "Das Cockpit",
       "door": "Eine einzige Tuer, nur in eine Richtung",
@@ -9168,12 +9168,12 @@
         ]
       },
       {
-        "heading": "Die zwei Welten",
+        "heading": "Die Bank und das Cockpit",
         "body": [
-          "Schon auf der ersten Seite laesst Tessera Sie zwischen zwei Welten waehlen. Diese Trennung ist kein Detail der Oberflaeche: sie ist das Herz des Systems.",
+          "Schon auf der ersten Seite bittet Tessera Sie, einen Bereich zu waehlen: die Bank oder das Cockpit, das sie ueberwacht. Diese Trennung ist kein Detail der Oberflaeche: sie ist das Herz des Systems.",
           "Die Fachbereiche sind die Bank, so wie ihre Kunden und Berater sie erleben: die Website von Crédit Aurore mit ihrem Assistenten, die Beraterkonsole fuer offene Forderungen. Nichts dort verraet die Maschinerie, und das ist Absicht — ein Kunde darf niemals hinter die Kulissen sehen.",
           "Das Cockpit ist der Maschinenraum: die Flotte der Agenten, ihre Signale, ihre Vertrauensstufen, ihre Belege. Hier arbeitet die Bedienkraft — die Person, die fuer die Flotte verantwortlich ist.",
-          "Die beiden Welten sprechen nur durch eine einzige Tuer miteinander, und nur in eine Richtung: die Bedienkraft darf ansehen, was die Kunden erleben; umgekehrt ist es unmoeglich."
+          "Zwischen beiden gibt es nur eine einzige Tuer, und nur in eine Richtung: die Bedienkraft darf ansehen, was die Kunden erleben; umgekehrt ist es unmoeglich."
         ]
       },
       {

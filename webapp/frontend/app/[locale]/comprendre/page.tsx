@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { TwoWorldsDiagram } from "@/components/comprendre/two-worlds-diagram";
+import { ComprendreDiagram } from "@/components/comprendre/comprendre-diagram";
 import { AppShell } from "@/components/layout/app-shell";
 import { Link } from "@/i18n/navigation";
 
@@ -45,7 +45,7 @@ export default async function ComprendrePage({ params }: PageProps) {
     // store — see `AppShell.publicAccess`, which exactly one page sets.
     <AppShell title={t("pageTitle")} description={t("pageLead")} publicAccess>
       <article className="mx-auto max-w-[46rem] pb-12">
-        <TwoWorldsDiagram />
+        <ComprendreDiagram />
 
         {sections.map((section) => (
           <section key={section.heading} className="mt-10 first:mt-0">

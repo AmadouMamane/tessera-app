@@ -9149,7 +9149,7 @@
     "pageTitle": "Comprendre Tessera",
     "pageLead": "Trois minutes pour comprendre ce que vous regardez.",
     "diagram": {
-      "caption": "Les deux mondes, les agents, et les deux mémoires.",
+      "caption": "Les agents travaillent côté banque ; le cockpit observe, teste et conserve les preuves. Entre les deux, une seule porte.",
       "bank": "La banque",
       "cockpit": "Le cockpit",
       "door": "Une seule porte, à sens unique",
@@ -9170,12 +9170,12 @@
         ]
       },
       {
-        "heading": "Les deux mondes",
+        "heading": "La banque et le cockpit",
         "body": [
-          "Dès la première page, Tessera vous fait choisir entre deux mondes. Cette séparation n'est pas un détail d'interface : c'est le cœur du système.",
+          "Dès la première page, Tessera vous demande de choisir un espace : la banque, ou le cockpit qui la supervise. Cette séparation n'est pas un détail d'interface : c'est le cœur du système.",
           "Les espaces métier, c'est la banque telle que ses clients et ses conseillers la vivent : le site de Crédit Aurore avec son assistant, la console du conseiller qui gère les impayés. Rien n'y trahit la machinerie, et c'est voulu — un client ne doit jamais voir les coulisses.",
           "Le cockpit, c'est la salle des machines : la flotte d'agents, leurs signaux, leurs niveaux de confiance, leurs preuves. C'est là que travaille l'opérateur — la personne responsable de la flotte.",
-          "Les deux mondes ne communiquent que par une seule porte, et dans un seul sens : l'opérateur peut aller voir ce que vivent les clients ; l'inverse est impossible."
+          "Entre les deux, une seule porte, à sens unique : l'opérateur peut aller voir ce que vivent les clients ; l'inverse est impossible."
         ]
       },
       {

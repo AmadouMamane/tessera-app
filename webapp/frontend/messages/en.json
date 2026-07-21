@@ -9147,7 +9147,7 @@
     "pageTitle": "Understand Tessera",
     "pageLead": "Three minutes to understand what you are looking at.",
     "diagram": {
-      "caption": "The two worlds, the agents, and the two memories.",
+      "caption": "The agents work on the bank side; the cockpit observes, tests, and keeps the evidence. Between the two, a single door.",
       "bank": "The bank",
       "cockpit": "The cockpit",
       "door": "A single door, one way only",
@@ -9168,12 +9168,12 @@
         ]
       },
       {
-        "heading": "The two worlds",
+        "heading": "The bank and the cockpit",
         "body": [
-          "From the very first page, Tessera asks you to choose between two worlds. That separation is not an interface detail: it is the heart of the system.",
+          "From the very first page, Tessera asks you to pick a space: the bank, or the cockpit that supervises it. That separation is not an interface detail: it is the heart of the system.",
           "The business spaces are the bank as its customers and advisors live it: the Crédit Aurore website with its assistant, the advisor's console for overdue payments. Nothing there betrays the machinery — deliberately. A customer should never see backstage.",
           "The cockpit is the engine room: the fleet of agents, their signals, their trust levels, their evidence. This is where the operator works — the person accountable for the fleet.",
-          "The two worlds communicate through a single door, in a single direction: the operator may go see what customers experience; the reverse is impossible."
+          "Between the two there is a single door, one way only: the operator may go see what customers experience; the reverse is impossible."
         ]
       },
       {

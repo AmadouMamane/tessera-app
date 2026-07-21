@@ -23,15 +23,17 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 /**
- * sha256 of the validated sections, including the strengthened infalsifiability contract
- * explicitly approved on 2026-07-21.
+ * sha256 of the validated sections. Two reworkings were approved on 2026-07-21: the
+ * strengthened infalsifiability contract (RFC 3161 seal, verifiable outside Tessera), and
+ * the "two worlds" section reworded at the author's request (the metaphor read as neither
+ * fluid nor natural — the section now names the two spaces: the bank and the cockpit).
  *
  * Re-run the printed digest and update these ONLY once the rewording is approved. A failure
  * here is not a broken test — it is the guard doing the one job it has.
  */
 const APPROVED_SECTIONS = {
-  fr: "b421362a2208d01b65203e738a36ae442b83163966274b6b1af947c2cb099f40",
-  en: "9b843b1be5770b375870b709855087004c996d4be809d76e0763875ff130247d",
+  fr: "2a30bad8deaac7b865d60fc88f95bc0ba78f6e511dd02e40abed7555a1903957",
+  en: "e74a17c069bdabf90cdd222e3aa2af83ae35712a4811cb8d2aefe4d616c7c13b",
 } as const;
 
 interface Section {
@@ -156,7 +158,7 @@ describe("the public escape hatch stays a hatch", () => {
 
 describe("nothing on the page is hardcoded", () => {
   const page = read("app/[locale]/comprendre/page.tsx");
-  const diagram = read("components/comprendre/two-worlds-diagram.tsx");
+  const diagram = read("components/comprendre/comprendre-diagram.tsx");
 
   it("the page reads its sections from the catalogue", () => {
     expect(page).toContain('t.raw("sections")');
