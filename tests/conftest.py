@@ -103,8 +103,15 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
         "TESSERA_POSTGRES__DSN",
         "postgresql://tessera:tessera@localhost:5432/tessera_test",
     )
-    # Audit reads via API need a file path:
-    monkeypatch.setenv("TESSERA_AUDIT_FILE", str(tmp_path / "audit.log"))
+    # Guard audit chain file — the NESTED name is the one settings honour.
+    # `TESSERA_AUDIT_FILE` (set here until 2026-07-21) was a dead name: settings
+    # ignored it and `guard.audit_file` silently stayed at the machine-shared
+    # state-dir default. Nothing leaked in practice — measured 2026-07-21: the
+    # `AUDIT_SINK=stdout` pin above was the ONLY thing standing between the unit
+    # suite's injection denials and the live ledger. One changed sink default
+    # away from a leak, with an isolation line that named nothing (ADR 0026).
+    # `test_unit_env_guard_ledger_isolation.py` now interrogates the thing.
+    monkeypatch.setenv("TESSERA_GUARD__AUDIT_FILE", str(tmp_path / "audit.log"))
     # The dev .env.local demo override (auto-grant retention consent) must never
     # leak into the suite: governance tests assert the conservative default
     # (no long-term retention without explicit consent).
