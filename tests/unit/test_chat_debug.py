@@ -9,11 +9,15 @@ must trace to the agent state, never a fabricated default.
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from tessera.agent.supervisor import RoutingDecision
 from tessera.api.routes.chat import _debug_from_state, _debug_trace
 from tessera.llm.budget import estimate_turn_cost
 from tessera.settings import LanguageCode
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def _state() -> dict[str, object]:
@@ -253,3 +257,116 @@ def test_estimate_turn_cost_resolves_provider_by_model() -> None:
     provider, cost = estimate_turn_cost(model="llama3.2:3b", input_tokens=5000, output_tokens=500)
     assert provider == "ollama"
     assert cost == Decimal(0)
+
+
+# ---------------------------------------------------------------------------
+# XT-01 — the S2 capture seam. The turn state holds the assembled prompt, the
+# resolved sampling and the tool records; the seam must thread them into the
+# replay bundle rather than drop them at the capture boundary.
+
+
+def test_the_capture_helpers_read_the_real_state() -> None:
+    from tessera.agent.state import ToolCallRecord
+    from tessera.api.routes.chat import (
+        _capture_prompt_messages,
+        _capture_sampling,
+        _capture_tool_calls,
+    )
+
+    state = _state()
+    state["sampling"] = {"temperature": 0.3, "top_p": 0.9}
+    state["tool_calls"] = [
+        ToolCallRecord(
+            tool_name="loan_simulate",
+            node="simulator",
+            arguments={"amount": 1000},
+            result={"ok": True},
+            succeeded=True,
+            duration_ms=12.34,
+        )
+    ]
+    assert _capture_prompt_messages(state) == [
+        {"role": "system", "content": "You are a banking assistant."},
+        {"role": "user", "content": "Quels sont les frais ?"},
+    ]
+    assert _capture_sampling(state) == {"temperature": 0.3, "top_p": 0.9}
+    # Arguments and results never reach the record — they can carry PII.
+    assert _capture_tool_calls(state) == [
+        {"name": "loan_simulate", "node": "simulator", "succeeded": True, "duration_ms": 12.3}
+    ]
+
+
+def test_the_capture_helpers_say_none_when_nothing_was_recorded() -> None:
+    from tessera.api.routes.chat import (
+        _capture_prompt_messages,
+        _capture_sampling,
+        _capture_tool_calls,
+    )
+
+    empty: dict[str, object] = {}
+    assert _capture_prompt_messages(empty) is None
+    assert _capture_sampling(empty) is None
+    assert _capture_tool_calls(empty) is None
+
+
+def test_the_online_eval_seam_threads_the_s2_record_into_the_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+    import uuid as uuid_mod
+    from types import SimpleNamespace
+
+    from tessera.api.routes import chat as chat_module
+    from tessera.observability import replay as replay_module
+    from tessera.observability.eval import online as online_eval
+
+    async def _stub_evaluate_turn(**_kwargs: object) -> object:
+        return SimpleNamespace(verdict=SimpleNamespace(score=0.8))
+
+    captured: dict[str, object] = {}
+
+    def _record_capture(**kwargs: object) -> object:
+        captured.update(kwargs)
+        return SimpleNamespace(bundle_id="recorded")
+
+    # chat.py binds these modules by name; patching the module OBJECTS reaches
+    # the names chat.py holds (a `from x import y` copies the reference).
+    monkeypatch.setattr(online_eval, "evaluate_turn", _stub_evaluate_turn)
+    monkeypatch.setattr(replay_module, "capture_bundle", _record_capture)
+
+    conversation_id = uuid_mod.uuid4()
+    turn_id = uuid_mod.uuid4()
+    asyncio.run(
+        chat_module._run_online_eval(
+            question="q",
+            answer="a",
+            context="c",
+            language=LanguageCode.FR,
+            conversation_id=conversation_id,
+            model="m",
+            agent_id="support-client",
+            turn_id=turn_id,
+            prompt_messages=[{"role": "user", "content": "q"}],
+            sampling={"temperature": 0.2},
+            max_output_tokens=256,
+            tool_calls=[
+                {
+                    "name": "card_block",
+                    "node": "account_lookup",
+                    "succeeded": True,
+                    "duration_ms": 3.0,
+                }
+            ],
+            node_starts={"router": 0.0},
+            reporter_ms=421.0,
+        )
+    )
+    assert captured["turn_id"] == str(turn_id)
+    assert captured["prompt_messages"] == [{"role": "user", "content": "q"}]
+    assert captured["sampling"] == {"temperature": 0.2}
+    assert captured["max_output_tokens"] == 256
+    assert captured["tool_calls"] == [
+        {"name": "card_block", "node": "account_lookup", "succeeded": True, "duration_ms": 3.0}
+    ]
+    assert captured["node_starts"] == {"router": 0.0}
+    assert captured["reporter_ms"] == 421.0

@@ -77,3 +77,37 @@ test("the shadow rail mirrors captured turns against a candidate model, for real
   await rail.getByRole("button", { name: "Lancer le shadow" }).click();
   await expect(rail.getByText(/comparés|Aucun tour capturé/)).toBeVisible({ timeout: 150_000 });
 });
+
+// XT-01 — the cassette lens: mode always displayed, selection URL-derived.
+
+test("cassettes tab shows the Live mode chip and an honest list or empty state", async ({
+  page,
+}) => {
+  await page.getByRole("tab", { name: "Cassettes" }).click();
+  await expect(page.getByRole("tab", { name: "Cassettes" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  // The mode is always displayed (rail norm): Live when no cassette is selected.
+  await expect(page.getByTestId("cassette-mode")).toBeVisible();
+  await expect(page.getByTestId("cassette-mode")).toHaveText(/Live · dernières captures/);
+  // Either real cassette rows or the honest empty message — never a fabricated list.
+  const zone = page.locator("section", { hasText: /Cassettes capturées/ }).first();
+  await expect(zone).toBeVisible();
+});
+
+test("a ?bundle= deep link lands on the cassette lens and says so honestly", async ({ page }) => {
+  await page.goto(`${PAGE}?bundle=inexistant-e2e`);
+  // The deep link names a cassette: the page opens the lens, not the overview.
+  await expect(page.getByRole("tab", { name: "Cassettes" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+    { timeout: 20_000 },
+  );
+  // Replay mode chip (URL-derived selection), and an honest not-found for a
+  // cassette outside the live window — never a fabricated detail panel.
+  await expect(page.getByTestId("cassette-mode")).toHaveText(/Replay · cassette sélectionnée/);
+  await expect(
+    page.getByText(/n’est plus dans la fenêtre|n'est plus dans la fenêtre/),
+  ).toBeVisible();
+});

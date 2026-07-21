@@ -1302,6 +1302,30 @@ export const ReplayBundleSchema = z.object({
   original_score: z.number(),
   lineage: LineageSchema.nullable().optional(),
   latency_ms: z.record(z.string(), z.number()).nullable().optional(),
+  agent_id: z.string().nullable().optional(),
+  turn_id: z.string().nullable().optional(),
+  // XT-01 — the S2 execution record. Every field is optional: a bundle
+  // captured before the capture existed reads as "non capturé". Zod strips
+  // undeclared keys, so each S2 field the lens reads MUST be declared here.
+  prompt_messages: z
+    .array(z.object({ role: z.string(), content: z.string() }))
+    .nullable()
+    .optional(),
+  sampling: z.record(z.string(), z.number()).nullable().optional(),
+  max_output_tokens: z.number().nullable().optional(),
+  tool_calls: z
+    .array(
+      z.object({
+        name: z.string(),
+        node: z.string(),
+        succeeded: z.boolean(),
+        duration_ms: z.number(),
+      }),
+    )
+    .nullable()
+    .optional(),
+  node_starts: z.record(z.string(), z.number()).nullable().optional(),
+  reporter_ms: z.number().nullable().optional(),
 });
 export type ReplayBundle = z.infer<typeof ReplayBundleSchema>;
 

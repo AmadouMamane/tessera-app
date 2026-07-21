@@ -113,6 +113,48 @@ def _spawn_background(coro: Coroutine[object, object, None]) -> None:
     task.add_done_callback(_BACKGROUND_TASKS.discard)
 
 
+def _capture_prompt_messages(state: Mapping[str, object]) -> list[dict[str, str]] | None:
+    """The exact assembled LLM message list, for the S2 replay record (XT-01)."""
+    raw = state.get("debug_prompt_messages")
+    if not isinstance(raw, list) or not raw:
+        return None
+    return [
+        {"role": str(m.get("role", "")), "content": str(m.get("content", ""))}
+        for m in raw
+        if isinstance(m, dict)
+    ]
+
+
+def _capture_sampling(state: Mapping[str, object]) -> dict[str, float] | None:
+    """The seam-resolved sampling that served the turn (ADR 0031), or ``None``."""
+    raw = state.get("sampling")
+    if not isinstance(raw, dict):
+        return None
+    resolved = {str(k): float(v) for k, v in raw.items() if isinstance(v, int | float)}
+    return resolved or None
+
+
+def _capture_tool_calls(state: Mapping[str, object]) -> list[dict[str, object]] | None:
+    """Tool invocations as span rows: name, parent node, outcome, duration.
+
+    Arguments and results are deliberately not captured — they can carry PII;
+    the S2 record keeps the shape of the execution, not the payloads.
+    """
+    raw = state.get("tool_calls", [])
+    if not isinstance(raw, list) or not raw:
+        return None
+    return [
+        {
+            "name": call.tool_name,
+            "node": call.node,
+            "succeeded": call.succeeded,
+            "duration_ms": round(call.duration_ms, 1),
+        }
+        for call in raw
+        if isinstance(call, ToolCallRecord)
+    ]
+
+
 async def _run_online_eval(
     *,
     question: str,
@@ -122,13 +164,22 @@ async def _run_online_eval(
     conversation_id: uuid.UUID,
     model: str,
     agent_id: str,
+    turn_id: uuid.UUID | None = None,
     lineage: Lineage | None = None,
     latency_ms: dict[str, float] | None = None,
+    prompt_messages: list[dict[str, str]] | None = None,
+    sampling: dict[str, float] | None = None,
+    max_output_tokens: int | None = None,
+    tool_calls: list[dict[str, object]] | None = None,
+    node_starts: dict[str, float] | None = None,
+    reporter_ms: float | None = None,
 ) -> None:
     """Score the turn off the hot path and capture it for replay (ADR 0010).
 
     ``agent_id`` attributes the score and the replay bundle to the responding
-    agent, so per-agent SLO / trend / cost read the agent's own turns.
+    agent, so per-agent SLO / trend / cost read the agent's own turns. The S2
+    keyword group threads the execution record (assembled prompt, sampling,
+    tool spans, real offsets) into the bundle — the XT-01 cassette.
 
     Never raises into the turn.
     """
@@ -155,8 +206,15 @@ async def _run_online_eval(
                 original_model=model,
                 conversation_id=str(conversation_id),
                 agent_id=agent_id,
+                turn_id=str(turn_id) if turn_id is not None else None,
                 lineage=lineage,
                 latency_ms=latency_ms,
+                prompt_messages=prompt_messages,
+                sampling=sampling,
+                max_output_tokens=max_output_tokens,
+                tool_calls=tool_calls,
+                node_starts=node_starts,
+                reporter_ms=reporter_ms,
             )
     except Exception as exc:  # cold path must never break the response
         sys.stderr.write(f"tessera.observability.eval: online eval failed: {exc}\n")
@@ -1179,6 +1237,11 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         )
         # Sink 6 of the design note: the judge and the durable replay bundle
         # receive the masked question — faithful to what the model itself saw.
+        # XT-01 (registre des rails): the bundle is the S2 record of this
+        # execution — the exact assembled prompt, the seam-resolved sampling,
+        # the tool spans with their parent node, and the real start offsets, so
+        # the cassette can be re-read and replayed after this process is gone.
+        max_tokens_raw = state.get("max_output_tokens")
         _spawn_background(
             _run_online_eval(
                 question=persisted_user_text,
@@ -1188,12 +1251,21 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
                 conversation_id=conversation_id,
                 model=effective_model,
                 agent_id=agent_id,
+                turn_id=turn_id,
                 lineage=build_lineage(
                     language=resolved_language.value,
                     model=effective_model,
                     documents=docs_for_eval,
                 ),
                 latency_ms=dict(node_timings),
+                prompt_messages=_capture_prompt_messages(state),
+                sampling=_capture_sampling(state),
+                max_output_tokens=(
+                    int(max_tokens_raw) if isinstance(max_tokens_raw, int) else None
+                ),
+                tool_calls=_capture_tool_calls(state),
+                node_starts=dict(node_starts) or None,
+                reporter_ms=reporter_ms,
             )
         )
 

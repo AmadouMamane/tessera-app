@@ -93,6 +93,40 @@ def _row_to_bundle(row: dict[str, object]) -> ReplayBundle | None:
                 if isinstance((business_events_raw := row.get("business_events")), list)
                 else []
             ),
+            prompt_messages=(
+                [
+                    {"role": str(m.get("role", "")), "content": str(m.get("content", ""))}
+                    for m in prompt_raw
+                    if isinstance(m, dict)
+                ]
+                if isinstance((prompt_raw := row.get("prompt_messages")), list)
+                else None
+            ),
+            sampling=(
+                {str(k): float(v) for k, v in sampling_raw.items() if isinstance(v, int | float)}
+                if isinstance((sampling_raw := row.get("sampling")), dict)
+                else None
+            ),
+            max_output_tokens=(
+                int(max_tokens_raw)
+                if isinstance((max_tokens_raw := row.get("max_output_tokens")), int | float)
+                else None
+            ),
+            tool_calls=(
+                [dict(item) for item in tool_calls_raw if isinstance(item, dict)]
+                if isinstance((tool_calls_raw := row.get("tool_calls")), list)
+                else None
+            ),
+            node_starts=(
+                {str(k): float(v) for k, v in starts_raw.items() if isinstance(v, int | float)}
+                if isinstance((starts_raw := row.get("node_starts")), dict)
+                else None
+            ),
+            reporter_ms=(
+                float(reporter_raw)
+                if isinstance((reporter_raw := row.get("reporter_ms")), int | float)
+                else None
+            ),
         )
     except (KeyError, TypeError, ValueError):
         return None
@@ -195,6 +229,17 @@ class ReplayBundle:
     agent_id: str | None = None
     turn_id: str | None = None
     business_events: list[dict[str, object]] = field(default_factory=list)
+    # S2 capture (registre des rails, XT-01): the replay-relevant inputs the
+    # turn actually used. All optional — a bundle captured before these fields
+    # existed reads as "non capturé", never fabricated. There is deliberately
+    # no seed field: no generation backend exposes or sets one today (S2 says
+    # "seed si disponible"); adding an empty knob would be a lie.
+    prompt_messages: list[dict[str, str]] | None = None
+    sampling: dict[str, float] | None = None
+    max_output_tokens: int | None = None
+    tool_calls: list[dict[str, object]] | None = None
+    node_starts: dict[str, float] | None = None
+    reporter_ms: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,11 +270,20 @@ def capture_bundle(
     business_events: list[dict[str, object]] | None = None,
     lineage: Lineage | None = None,
     latency_ms: dict[str, float] | None = None,
+    prompt_messages: list[dict[str, str]] | None = None,
+    sampling: dict[str, float] | None = None,
+    max_output_tokens: int | None = None,
+    tool_calls: list[dict[str, object]] | None = None,
+    node_starts: dict[str, float] | None = None,
+    reporter_ms: float | None = None,
 ) -> ReplayBundle:
     """Capture a grounded turn for later replay; returns the stored bundle.
 
     ``agent_id`` attributes the bundle to the responding agent so per-agent
-    cost / toxicity / PII / what-changed read that agent's own turns.
+    cost / toxicity / PII / what-changed read that agent's own turns. The S2
+    keyword group (``prompt_messages`` … ``reporter_ms``) records what the
+    execution actually used — callers pass only what they truly have; absent
+    values stay ``None`` and read as "non capturé" downstream (XT-01).
     """
     if business_events is None and conversation_id is not None and turn_id is not None:
         from tessera.observability import business_events as business_events_mod
@@ -254,6 +308,12 @@ def capture_bundle(
         latency_ms=latency_ms,
         agent_id=agent_id,
         business_events=list(business_events or []),
+        prompt_messages=prompt_messages,
+        sampling=sampling,
+        max_output_tokens=max_output_tokens,
+        tool_calls=tool_calls,
+        node_starts=node_starts,
+        reporter_ms=reporter_ms,
     )
     _warm_live_buffer()
     _BUNDLES.append(bundle)

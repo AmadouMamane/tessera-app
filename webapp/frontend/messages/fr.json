@@ -4336,7 +4336,46 @@
     }
   },
   "replay": {
+    "cassette": {
+      "title": "Cassettes d’exécution",
+      "modeLive": "Live · dernières captures",
+      "modeReplay": "Replay · cassette sélectionnée",
+      "listTitle": "Cassettes capturées ({count})",
+      "empty": "Aucune cassette capturée — chaque tour ancré est capturé automatiquement dès qu’un client parle à l’agent.",
+      "pick": "Sélectionnez une cassette pour lire son exécution enregistrée : trace, prompt assemblé, paramètres, appels d’outils — puis rejouez-la contre un modèle candidat.",
+      "notFound": "La cassette « {id} » n’est plus dans la fenêtre des 100 captures récentes.",
+      "turnTitle": "Tour capturé",
+      "metaModel": "Modèle d’origine",
+      "metaScore": "Score (fidélité)",
+      "metaLanguage": "Langue",
+      "metaAgent": "Agent",
+      "metaSampling": "Échantillonnage",
+      "metaMaxTokens": "Plafond de sortie",
+      "notCaptured": "non capturé",
+      "question": "Question (masquée)",
+      "answer": "Réponse d’origine",
+      "traceTitle": "Trace d’exécution (arbre)",
+      "traceEmpty": "Aucune forme d’exécution capturée pour cette cassette.",
+      "traceUnpositioned": "Capture antérieure aux offsets réels — durées seules, sans position ni total (les nœuds parallèles se chevauchent).",
+      "traceTotal": "Total réel :",
+      "orphanTools": "Appels d’outils sans nœud attribué",
+      "toolCall": "· appel d’outil",
+      "promptTitle": "Prompt LLM assemblé",
+      "promptNotCaptured": "Prompt non capturé — cassette antérieure à la capture S2, ou tour sans synthèse LLM.",
+      "replayTitle": "Rejouer contre un modèle candidat",
+      "candidateModel": "Modèle candidat",
+      "replayRun": "Rejouer",
+      "replayRunning": "Rejeu en cours…",
+      "replayFrozen": "Lecture à date — on n’agit pas dans le passé.",
+      "replayFailed": "Le rejeu a échoué (modèle indisponible ou cassette évincée).",
+      "similarity": "similarité"
+    },
     "explain": {
+      "cassettes": {
+        "what": "Chaque tour ancré est capturé comme une cassette rejouable : question masquée, contexte récupéré, réponse, prompt assemblé, échantillonnage, appels d’outils et offsets réels des nœuds.",
+        "how": "Sélection par l’URL (?bundle=), partageable. Le rejeu régénère la réponse sur le même couple (question, contexte) avec le modèle candidat, la re-juge et affiche l’écart de score. Ce qui n’a pas été capturé s’affiche « non capturé », jamais inventé.",
+        "source": "Magasin append-only bundles.jsonl (capture S2, registre des rails XT-01)"
+      },
       "zone": {
         "actual": {
           "what": "L'état courant du rejeu / trafic fantôme : volumes, écarts et couverture sur la période.",
@@ -4465,6 +4504,7 @@
     "subtitle": "Rejouer précisément des sessions, comparer aux baselines et observer le trafic fantôme.",
     "tabs": {
       "overview": "Vue d’ensemble",
+      "cassettes": "Cassettes",
       "sessions": "Sessions rejouées",
       "shadow": "Trafic fantôme",
       "comparisons": "Comparaisons",

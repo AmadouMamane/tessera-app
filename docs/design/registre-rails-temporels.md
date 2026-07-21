@@ -1,6 +1,13 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.5 (2026-07-21)
+> Section destinée à `docs/design/ui-contract.md` · v1.6 (2026-07-22)
+>
+> v1.6 — XT-01 passe à **Implémenté** : la capture S2 est complétée à la couture de capture
+> (prompt LLM assemblé, échantillonnage résolu, appels d'outils portant leur nœud parent réel,
+> offsets de départ mesurés, durée du reporter ; pas de seed — aucun backend n'en expose un, en
+> capturer serait un mensonge), et la lentille cassette vit sur AGIR / Replay (onglet Cassettes :
+> sélection `?bundle=` dérivée de l'URL, mode toujours affiché, honest-empty, arbre C3
+> nœuds→outils, rejeu par le POST gouverné existant). Note datée XT-01 ci-dessous.
 >
 > v1.5 — audit complet des 8 rails contre le code (SR-01 confirmé conforme et pris comme norme
 > de référence, validée produit). Le registre se trompait dans les deux sens : TE-01 passe à
@@ -59,12 +66,12 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | **ER-01** | Evaluation Run Rail | Historique des runs d'évaluation | `AGENT / Évaluations` | S3 | C2 | Implémenté |
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Partiel — timeline implémentée |
 | **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | À faire — substrat manquant (note) |
-| **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | À faire — amorces (note) |
+| **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | Implémenté — cassette (note) |
 | **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (toutes) | S4 | C4 | Implémenté |
 
 > **SR-01 (état au 2026-06-27)** — implémenté comme `components/overview/temporal-rail.tsx`, rendu par les pages SURVEILLER (Vue d'ensemble, Qualité IA, Conformité, Sécurité & privacy). Modes **Live · Historique · Comparé (baseline) · À une date** — navigation de **signaux** uniquement (S4/C4). **Aucun replay d'exécution** : ce composant ne rejoue jamais un tour/trace (déplacement d'un curseur T sur les signaux persistés, lus as-of-T). Mode actif **toujours affiché** ; état dérivé de l'**URL** (deep-link `?asof=&period=` — le paramètre de fenêtre s'appelle `period`, corrigé v1.5, plus `at`/`to`/`compare`), pas d'un état local ; fenêtre (Période) lue depuis le **window-store partagé**, non dupliquée (§8). Le code de rail (`SR-01`) reste interne — **jamais affiché** (§ glossaire). Auparavant mal nommé « XT-01 » sur la Vue d'ensemble : corrigé.
 
-> **XT-01 reste « À faire »** — son seul home est `AGENT / Console` et `AGIR / Replay` (trace d'exécution S2/C3, replay d'exécution). Il **n'est plus** sur la Vue d'ensemble. Le waterfall de trace de la Console (`TraceColumn`) en est l'amorce ; le rail XT-01 normatif complet (scrub de spans + replay) reste à spécifier/implémenter.
+> **XT-01** — homes `AGENT / Console` (waterfall live du tour courant, SSE) et `AGIR / Replay` (lentille cassette sur les captures persistées). Il **n'est plus** sur la Vue d'ensemble. Implémenté au 2026-07-22 — voir la note datée XT-01 plus bas.
 
 > **ER-01 (état au 2026-07-15)** — implémenté comme `webapp/frontend/components/agent/evaluation-run-rail.tsx`, rendu par `AGENT / Évaluations` ; payload `runs` de `src/tessera/observability/agent_evaluations.py` (`_runs_rail`). Il parcourt les **runs d'évaluation** de l'agent (S3/C2 — journal de runs lu depuis `eval/reports/<env>/`, convergent avec la table `eval_gating` mesurée le 2026-07-15 : 29/29 runs partagés identiques) — **pas** les signaux (domaine du SR-01, S4/C4), **aucun replay**. Chaque point = un run portant sa **provenance stockée** (date + version de catalogue + modèle, `eval-gate-policy.md` § provenance — jamais une « dernière éval » unique) et le **verdict gate enregistré au moment du run** (absent = « non enregistré », jamais recalculé contre les dérogations d'aujourd'hui). Modes **Live (dernier run) · Historique (run sélectionné)**, toujours affichés ; sélection dérivée de l'**URL** (deep-link `?run=<run_at>`), jamais d'un état local. Honest-empty : agent sans run ⇒ rail explicitement vide (« Éval non exécutée ») ; 1 run ⇒ 1 point sans tendance ; **Δ** de taux seulement entre **deux** runs de la **même** version de catalogue. Le code de rail (`ER-01`) reste interne — **jamais affiché**. Portes d'entrée : la Vue par agent (lentille qualité de `SURVEILLER / Qualité IA`) et la Flotte mènent à la page Évaluations de l'agent.
 
@@ -131,6 +138,29 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 > replay UI reste due** — la page AGIR / Replay est un dashboard analytique, aucune cassette.
 > Chemin : compléter la capture S2 → lentille replay (mode « Replay » affiché, dérivé de l'URL)
 > → arbre C3.
+
+> **XT-01 (état au 2026-07-22) — Implémenté (cassette + arbre à 2 niveaux).** La capture S2 est
+> complétée à la couture `chat.py → capture_bundle` : prompt LLM assemblé exact
+> (`debug_prompt_messages`, question masquée — fidèle à ce que le modèle a vu), échantillonnage
+> résolu au seam (ADR 0031) + plafond de sortie, appels d'outils (nom / nœud / issue / durée —
+> jamais les arguments ni les résultats, potentiellement PII), offsets réels de départ des
+> nœuds et durée mesurée du reporter streamé. Chaque `ToolCallRecord` porte désormais son nœud
+> créateur (`node=NODE_NAME`, posé par le worker lui-même, 5 sites) — la parenté de l'arbre est
+> **réelle**, jamais déduite du timing. Pas de champ seed : aucun backend de génération n'en
+> expose ou n'en fixe un aujourd'hui (S2 dit « si disponible »). Les bundles antérieurs
+> relisent `None` partout et s'affichent « non capturé » (témoin
+> `test_a_legacy_row_without_the_s2_fields_still_reads`). La **lentille cassette** vit sur
+> `AGIR / Replay`, onglet Cassettes (`components/replay/replay-cassette.tsx`) : sélection
+> **dérivée de l'URL** (`?bundle=`, un deep-link ouvre l'onglet), **mode toujours affiché**
+> (« Live · dernières captures » / « Replay · cassette sélectionnée »), honest-empty, arbre C3
+> nœuds→outils avec waterfall positionné aux offsets réels (`lib/replay-cassette.ts`, pur et
+> testé ; sans offsets : durées seules, **aucun total fabriqué** — les nœuds parallèles se
+> chevauchent), prompt et sampling affichés, rejeu contre un modèle candidat par le
+> `POST /observability/replay` existant (gouverné ; gelé en lecture as-of — on n'agit pas dans
+> le passé). Hors périmètre, dits tels quels : les spans OTel restent export-only (le substrat
+> S2 relisible est `bundles.jsonl`, append-only) ; l'arbre est à 2 niveaux (nœuds → outils),
+> pas de profondeur arbitraire ; le waterfall Console (`TraceColumn`) reste la vue live SSE du
+> tour courant.
 
 ## 5. Contrat de composant (commun)
 

@@ -102,6 +102,7 @@ async def run(state: AgentState) -> dict[str, object]:
 
     call = ToolCallRecord(
         tool_name="loan_simulate",
+        node=NODE_NAME,
         arguments=arguments,
         result=guarded_result.result,
         succeeded=guarded_result.allowed and guarded_result.error is None,

@@ -104,6 +104,10 @@ class ToolCallRecord:
     error: str | None = None
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     duration_ms: float = 0.0
+    # The graph node (worker) that invoked the tool — the span's real parent in
+    # the C3 execution tree (registre des rails, XT-01). Set by the creating
+    # worker itself; "" means unattributed (records predating this field).
+    node: str = ""
 
 
 @dataclass(frozen=True, slots=True)

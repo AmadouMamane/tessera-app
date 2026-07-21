@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
@@ -24,6 +25,7 @@ import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import { ReplayCassettes } from "@/components/replay/replay-cassette";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
@@ -47,6 +49,7 @@ const STATUS_BADGE: Record<string, string> = {
 
 const TABS = [
   "overview",
+  "cassettes",
   "sessions",
   "shadow",
   "comparisons",
@@ -78,7 +81,12 @@ function Info({ k, title }: { k: string; title: string }) {
 export function ReplayOverview() {
   const t = useTranslations("replay");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  // XT-01 — a `?bundle=` deep link names a cassette: land on the cassette
+  // lens, not the analytics overview, so the shared URL shows what it names.
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<Tab>(() =>
+    searchParams.has("bundle") ? "cassettes" : "overview",
+  );
   // AGIR composition (registre §6): As-of reads the folded captures/diffs at T.
   const asof = useAsOf();
   const { data } = useQuery({
@@ -107,6 +115,7 @@ export function ReplayOverview() {
       <AgirRail />
 
       <div id="replay-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
+        {activeTab === "cassettes" ? <ReplayCassettes asof={asof} /> : null}
         {activeTab === "sessions" ? (
           <div className="grid gap-3 xl:grid-cols-12">
             <RecentSessions t={t} data={data} className="xl:col-span-7" />

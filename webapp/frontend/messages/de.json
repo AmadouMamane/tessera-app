@@ -4336,7 +4336,46 @@
     }
   },
   "replay": {
+    "cassette": {
+      "title": "Ausführungskassetten",
+      "modeLive": "Live · letzte Aufnahmen",
+      "modeReplay": "Replay · ausgewählte Kassette",
+      "listTitle": "Aufgenommene Kassetten ({count})",
+      "empty": "Keine Kassette aufgenommen — jeder fundierte Turn wird automatisch aufgenommen, sobald ein Kunde mit dem Agenten spricht.",
+      "pick": "Wählen Sie eine Kassette, um die aufgezeichnete Ausführung zu lesen: Trace, zusammengesetzter Prompt, Parameter, Tool-Aufrufe — und spielen Sie sie gegen ein Kandidatenmodell ab.",
+      "notFound": "Kassette „{id}“ liegt nicht mehr in den 100 jüngsten Aufnahmen.",
+      "turnTitle": "Aufgenommener Turn",
+      "metaModel": "Ursprungsmodell",
+      "metaScore": "Score (Treue)",
+      "metaLanguage": "Sprache",
+      "metaAgent": "Agent",
+      "metaSampling": "Sampling",
+      "metaMaxTokens": "Ausgabelimit",
+      "notCaptured": "nicht erfasst",
+      "question": "Frage (maskiert)",
+      "answer": "Ursprüngliche Antwort",
+      "traceTitle": "Ausführungstrace (Baum)",
+      "traceEmpty": "Für diese Kassette wurde keine Ausführungsform erfasst.",
+      "traceUnpositioned": "Aufnahme vor den realen Offsets — nur Dauern, ohne Position und ohne Summe (parallele Knoten überlappen).",
+      "traceTotal": "Reale Summe:",
+      "orphanTools": "Tool-Aufrufe ohne zugeordneten Knoten",
+      "toolCall": "· Tool-Aufruf",
+      "promptTitle": "Zusammengesetzter LLM-Prompt",
+      "promptNotCaptured": "Prompt nicht erfasst — Kassette vor der S2-Erfassung oder Turn ohne LLM-Synthese.",
+      "replayTitle": "Gegen ein Kandidatenmodell abspielen",
+      "candidateModel": "Kandidatenmodell",
+      "replayRun": "Abspielen",
+      "replayRunning": "Wiedergabe läuft…",
+      "replayFrozen": "As-of-Lektüre — in der Vergangenheit wird nicht gehandelt.",
+      "replayFailed": "Wiedergabe fehlgeschlagen (Modell nicht verfügbar oder Kassette verdrängt).",
+      "similarity": "Ähnlichkeit"
+    },
     "explain": {
+      "cassettes": {
+        "what": "Jeder fundierte Turn wird als abspielbare Kassette erfasst: maskierte Frage, abgerufener Kontext, Antwort, zusammengesetzter Prompt, Sampling, Tool-Aufrufe und reale Knoten-Offsets.",
+        "how": "Die Auswahl lebt in der URL (?bundle=), teilbar. Die Wiedergabe erzeugt die Antwort auf demselben Paar (Frage, Kontext) mit dem Kandidatenmodell neu, bewertet sie erneut und zeigt die Score-Differenz. Nicht Erfasstes heißt „nicht erfasst“, nie erfunden.",
+        "source": "Append-only-Speicher bundles.jsonl (S2-Erfassung, Schienenregister XT-01)"
+      },
       "zone": {
         "actual": {
           "what": "Der aktuelle Zustand von Replay / Schattenverkehr: Volumina, Abweichungen und Abdeckung im Zeitraum.",
@@ -4465,6 +4504,7 @@
     "subtitle": "Sessions exakt wiedergeben, mit Baselines vergleichen und Schattenverkehr-Traffic beobachten.",
     "tabs": {
       "overview": "Übersicht",
+      "cassettes": "Kassetten",
       "sessions": "Wiedergegebene Sessions",
       "shadow": "Schattenverkehr-Traffic",
       "comparisons": "Vergleiche",

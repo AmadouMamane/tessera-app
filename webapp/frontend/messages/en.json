@@ -4336,7 +4336,46 @@
     }
   },
   "replay": {
+    "cassette": {
+      "title": "Execution cassettes",
+      "modeLive": "Live · latest captures",
+      "modeReplay": "Replay · selected cassette",
+      "listTitle": "Captured cassettes ({count})",
+      "empty": "No cassette captured — every grounded turn is captured automatically as soon as a customer talks to the agent.",
+      "pick": "Select a cassette to read its recorded execution: trace, assembled prompt, parameters, tool calls — then replay it against a candidate model.",
+      "notFound": "Cassette “{id}” is no longer within the 100 most recent captures.",
+      "turnTitle": "Captured turn",
+      "metaModel": "Original model",
+      "metaScore": "Score (faithfulness)",
+      "metaLanguage": "Language",
+      "metaAgent": "Agent",
+      "metaSampling": "Sampling",
+      "metaMaxTokens": "Output cap",
+      "notCaptured": "not captured",
+      "question": "Question (masked)",
+      "answer": "Original answer",
+      "traceTitle": "Execution trace (tree)",
+      "traceEmpty": "No execution shape was captured for this cassette.",
+      "traceUnpositioned": "Capture predates real offsets — durations only, no position and no total (parallel nodes overlap).",
+      "traceTotal": "Real total:",
+      "orphanTools": "Tool calls with no attributed node",
+      "toolCall": "· tool call",
+      "promptTitle": "Assembled LLM prompt",
+      "promptNotCaptured": "Prompt not captured — cassette predates the S2 capture, or the turn had no LLM synthesis.",
+      "replayTitle": "Replay against a candidate model",
+      "candidateModel": "Candidate model",
+      "replayRun": "Replay",
+      "replayRunning": "Replaying…",
+      "replayFrozen": "As-of reading — one does not act in the past.",
+      "replayFailed": "Replay failed (model unavailable or cassette evicted).",
+      "similarity": "similarity"
+    },
     "explain": {
+      "cassettes": {
+        "what": "Every grounded turn is captured as a replayable cassette: masked question, retrieved context, answer, assembled prompt, sampling, tool calls and real node offsets.",
+        "how": "Selection lives in the URL (?bundle=), shareable. Replay regenerates the answer on the same (question, context) pair with the candidate model, re-judges it and shows the score delta. Whatever was not captured reads “not captured”, never invented.",
+        "source": "Append-only bundles.jsonl store (S2 capture, rails registry XT-01)"
+      },
       "zone": {
         "actual": {
           "what": "The current state of replay / shadow traffic: volumes, deviations and coverage over the period.",
@@ -4465,6 +4504,7 @@
     "subtitle": "Replay sessions precisely, compare against baselines and observe shadow traffic.",
     "tabs": {
       "overview": "Overview",
+      "cassettes": "Cassettes",
       "sessions": "Replayed sessions",
       "shadow": "Shadow traffic",
       "comparisons": "Comparisons",
