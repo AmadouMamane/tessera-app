@@ -72,8 +72,6 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--amber-soft": "#FBBF24",
   "--success": "#22C55E",
   "--danger": "#F87171",
-  "--steel": "#93C5FD",
-  "--periwinkle": "#A78BFA",
   "--radius-lg": "24px",
   "--radius-md": "16px",
   "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -323,14 +321,16 @@ const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
   prove: Fingerprint,
 };
 
-// Tone → accent. `live`/`guard`/`govern` are the neutral capability accents;
-// `stale` (amber) marks a release verdict put back in play; the PROOFS tones
-// recolour by the real verification verdict. Status colours stay reserved for
-// real states — a gate holding an agent back is NOT red.
+// Tone → accent. Colour is INFORMATION here, never decoration (operator call,
+// 2026-07-21 — four decorative hues read as noise): every capability kicker
+// sits in the same quiet slate, and only a real verdict recolours its column —
+// amber for a release verdict put back in play, green/red for the audit
+// chain's own verification state. One coloured word on the band, exactly where
+// the eye should go.
 const TONE_COLOR: Record<PillarTone, string> = {
-  live: "var(--periwinkle)",
-  guard: "var(--steel)",
-  govern: "var(--champagne)",
+  live: "var(--text-secondary)",
+  guard: "var(--text-secondary)",
+  govern: "var(--text-secondary)",
   stale: "var(--amber)",
   verified: "var(--success)",
   unverified: "var(--danger)",
@@ -362,9 +362,13 @@ function PillarColumn({
   const accent = TONE_COLOR[pillar.tone];
   const title = tr(pillar.titleKey);
   const state = tr(pillar.stateKey, pillar.stateVars);
-  // Only the PROOFS state is recoloured by its verdict (§5); counts and gate
-  // lines stay in primary text so a held-back agent is never painted red.
-  const stateColor = pillar.key === "prove" ? accent : "var(--text-primary)";
+  // A capability NAME is a name, never a verdict: every kicker sits in the same
+  // quiet slate. Only a STATE that carries a real verdict recolours — the audit
+  // chain's verification (green/red) and a release verdict put back in play
+  // (amber). Counts stay primary so a held-back agent is never painted red.
+  const titleColor = "var(--text-secondary)";
+  const stateColor =
+    pillar.key === "prove" || pillar.tone === "stale" ? accent : "var(--text-primary)";
   return (
     <div className="flex flex-1 flex-col items-center gap-[7px] px-[12px] py-[15px] text-center">
       {/* One complete accessible label — the SR hears "name : state" as a unit
@@ -383,7 +387,7 @@ function PillarColumn({
             "flex items-center justify-center gap-[7px] font-semibold text-[10.5px] uppercase leading-[1.25] tracking-[0.11em]",
             dimmed && "opacity-60",
           )}
-          style={{ color: accent }}
+          style={{ color: titleColor }}
         >
           <Icon className="h-[14px] w-[14px] shrink-0 stroke-[1.9]" />
           {title}
