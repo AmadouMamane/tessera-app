@@ -140,7 +140,7 @@ make gate      # run it twice; a check that passes once and fails once is a red 
 
 `make gate` is the definition, `.github/workflows/ci.yml` job `gate` is a caller — there is no second, drifting copy of the command list. It is hermetic: no secrets, no services, no browser.
 
-- **Python — 2,517 tests pass** (`pytest -m "not integration"`, 83.5% coverage). Agent graph, router/policy deterministic short-circuits (including the policy/scope refusal guard, the third-party-PII guard, the auth redirect and the DORA corrections with their false-positive contracts), retrieval, guard, corpus generation, the LLM router, the memory tiers (window / summary / persistent / entity ledger / governance), and reasoning-trace stripping. Plus `ruff check`, `ruff format --check`, `mypy --strict`.
+- **Python — 2,517 tests pass** (`pytest -m "not integration"`, 83.3% coverage). Agent graph, router/policy deterministic short-circuits (including the policy/scope refusal guard, the third-party-PII guard, the auth redirect and the DORA corrections with their false-positive contracts), retrieval, guard, corpus generation, the LLM router, the memory tiers (window / summary / persistent / entity ledger / governance), and reasoning-trace stripping. Plus `ruff check`, `ruff format --check`, `mypy --strict`.
 - **Frontend — 425 tests pass** (`vitest run`), plus `tsc --noEmit` and `biome check`, with `pnpm` pinned by `packageManager` (9.15.0).
 - **Security workflow.** `bandit`, `pip-audit`, Trivy. The supply-chain workflow builds, signs (cosign), and attaches SLSA provenance + an SBOM to the agent image.
 

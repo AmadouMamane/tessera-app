@@ -30,8 +30,8 @@ updates this file after every step. A resuming session reads this first, then co
 ## Audit 360 remediation — 2026-07-21
 
 **Worktree / branch :** `agents/codex-audit`, `codex/audit-360-2026-07-21`. Remédiation
-`5a8a1d8c`, puis `main` à `cf405f94` réconcilié par le merge `accfd771` — tranche encore non
-fusionnée dans `main` et non publiée.
+`5a8a1d8c`, puis `main` à `cf405f94` réconcilié par le merge `accfd771` — tranche livrée dans
+`main` après double gate vert ; publication distante hors périmètre de cette livraison locale.
 
 - **Vérité mécanique fermée :** aucune mutation de `conn.row_factory`; intégration
   `40 pass / 13 skips explicites ClickHouse-Langfuse / 0 fail`; budget Vertex streaming
@@ -49,10 +49,11 @@ fusionnée dans `main` et non publiée.
   d'une chaîne wheel/sdist + OIDC PyPI + attestations PEP 740/Sigstore ; gate Limes `48` tests vert.
 - **Gate de la tranche :** deux passes vertes avant réconciliation, puis gate de livraison relancé
   deux fois sur l'arbre réconcilié : `2 517` tests Python, `425` frontend, Ruff, format, mypy
-  strict, TypeScript et Biome sans erreur ; couverture `83,5 %`.
-- **Bascule restante, volontairement non simulée :** fusionner la branche puis redémarrer les
-  serveurs de référence depuis `main` ; appliquer Terraform avec certificat d'un TSA réellement
-  qualifié ; configurer le trusted publisher PyPI puis fusionner/taguer Limes.
+  strict, TypeScript et Biome sans erreur ; couverture `83,3 %`.
+- **Bascule locale réalisée :** branche fusionnée puis serveurs de référence redémarrés depuis
+  `main`, avec healthchecks et smoke critique `5/5` verts. Restent externes : appliquer Terraform
+  avec certificat d'un TSA réellement qualifié ; configurer le trusted publisher PyPI puis
+  fusionner/taguer Limes.
 
 Rapport détaillé : [`audit-360-2026-07-21.md`](./audit-360-2026-07-21.md).
 
