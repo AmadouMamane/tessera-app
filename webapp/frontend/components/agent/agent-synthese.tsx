@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clock3,
   Flag,
+  Info,
   Radio,
   Settings2,
   Sparkles,
@@ -17,10 +18,12 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import type { ReactNode } from "react";
 
-import { MetricInfo } from "@/components/cockpit/metric-info";
+import { CardInfo } from "@/components/cockpit/card-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { useTemporalState } from "@/components/overview/temporal-rail";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchAgentSynthese } from "@/lib/api/client";
 import type { AgentSynthese as Data } from "@/lib/api/schemas";
@@ -291,40 +294,57 @@ function SyntheseSkeleton() {
 
 function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
   const tone: OverviewTone = kpi.good ? "success" : "danger";
+  // The ⓘ pastille only renders when an explanation is authored for this KPI; mirror
+  // that same honest-empty check so the tooltip only advertises "click for more" when
+  // there is actually an ⓘ to click.
+  const te = useTranslations("agentSynthese.explain");
+  const hasInfo = te.has(`kpi.${kpi.key}.what`);
+  // Whole-tile hover reveals the verbose name (label is kept terse so it never
+  // ellipsises). A real Radix Tooltip, not native `title=`: the native delay is
+  // browser-fixed (~1 s) and untunable, whereas this inherits the app-wide 200 ms
+  // provider (with skipDelay, so sweeping across the dense strip never flickers). The
+  // tooltip also SIGNPOSTS the ⓘ, so the hover promotes the click instead of pre-empting it.
   return (
-    <div className="flex h-[112px] flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <div className="flex items-center gap-1">
-        <p className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{kpi.label}</p>
-        {kpi.explain ? (
-          <MetricInfo
-            title={kpi.label}
-            what={kpi.explain.what}
-            how={kpi.explain.how ?? undefined}
-            source={kpi.explain.source ?? undefined}
-          />
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex min-h-[112px] flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+          <div className="flex items-center gap-1">
+            <p className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{kpi.label}</p>
+            <CardInfo ns="agentSynthese" k={`kpi.${kpi.key}`} title={kpi.full ?? kpi.label} />
+          </div>
+          <p className="mt-0.5 text-[1.35rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
+            {kpi.value}
+          </p>
+          <span
+            className={cn(
+              "mt-1 line-clamp-1 text-[0.6rem] tabular-nums",
+              kpi.good ? "text-emerald-400" : "text-red-400",
+            )}
+          >
+            {kpi.delta}
+          </span>
+          <div className="mt-auto pt-1.5">
+            <MetricSparkline values={kpi.series} tone={tone} height={20} />
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p className="font-medium">{kpi.full ?? kpi.label}</p>
+        {hasInfo ? (
+          <p className="mt-1 text-[0.66rem] opacity-70">
+            Cliquez sur <Info className="inline h-3 w-3 align-middle" aria-hidden /> pour en savoir
+            plus
+          </p>
         ) : null}
-      </div>
-      <p className="mt-0.5 text-[1.35rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
-        {kpi.value}
-      </p>
-      <span
-        className={cn(
-          "mt-1 line-clamp-1 text-[0.6rem] tabular-nums",
-          kpi.good ? "text-emerald-400" : "text-red-400",
-        )}
-      >
-        {kpi.delta}
-      </span>
-      <div className="mt-auto pt-1">
-        <MetricSparkline values={kpi.series} tone={tone} height={26} />
-      </div>
-    </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
 function Card({
   title,
   subtitle,
+  info,
   cta,
   ctaHref,
   children,
@@ -332,6 +352,7 @@ function Card({
 }: {
   title?: string;
   subtitle?: string;
+  info?: ReactNode;
   cta?: string;
   ctaHref?: string;
   children: ReactNode;
@@ -346,7 +367,10 @@ function Card({
     >
       {title ? (
         <div className="mb-2 flex flex-col gap-0.5">
-          <h2 className="text-[0.78rem] font-semibold text-[var(--tessera-text)]">{title}</h2>
+          <div className="flex items-center gap-1">
+            <h2 className="text-[0.78rem] font-semibold text-[var(--tessera-text)]">{title}</h2>
+            {info}
+          </div>
           {subtitle ? (
             <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{subtitle}</p>
           ) : null}
@@ -388,7 +412,13 @@ function Profile({ data, className }: { data: Data; className?: string }) {
   const p = data.profile;
   if (!p) return null;
   return (
-    <Card title="Aperçu de l'agent" cta={p.cta} ctaHref={p.ctaHref} className={className}>
+    <Card
+      title="Aperçu de l'agent"
+      info={<CardInfo ns="agentSynthese" k="profile" title="Aperçu de l'agent" />}
+      cta={p.cta}
+      ctaHref={p.ctaHref}
+      className={className}
+    >
       <div className="flex items-center gap-3">
         <Image
           src="/brand/agent-robot.png"
@@ -399,7 +429,10 @@ function Profile({ data, className }: { data: Data; className?: string }) {
           className="h-14 w-14 shrink-0 rounded-xl object-cover"
         />
         <div className="min-w-0">
-          <p className="truncate text-[0.92rem] font-semibold text-[var(--tessera-text)]">
+          <p
+            title={p.name}
+            className="truncate text-[0.92rem] font-semibold text-[var(--tessera-text)]"
+          >
             {p.name}
           </p>
           <span className="mt-0.5 inline-flex items-center gap-1.5 text-[0.66rem] text-emerald-300">
@@ -411,7 +444,9 @@ function Profile({ data, className }: { data: Data; className?: string }) {
         {p.fields.map((f) => (
           <div key={f.label} className="flex items-center justify-between gap-2">
             <dt className="text-[var(--tessera-text-muted)]">{f.label}</dt>
-            <dd className="min-w-0 truncate font-medium text-[var(--tessera-text)]">{f.value}</dd>
+            <dd title={f.value} className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+              {f.value}
+            </dd>
           </div>
         ))}
       </dl>
@@ -423,7 +458,13 @@ function Capabilities({ data, className }: { data: Data; className?: string }) {
   const c = data.capabilities;
   if (!c) return null;
   return (
-    <Card title={c.title} cta={c.cta} ctaHref={c.ctaHref} className={className}>
+    <Card
+      title={c.title}
+      info={<CardInfo ns="agentSynthese" k="capabilities" title={c.title} />}
+      cta={c.cta}
+      ctaHref={c.ctaHref}
+      className={className}
+    >
       <ul className="flex flex-col gap-2">
         {c.items.map((it) => (
           <li
@@ -431,7 +472,9 @@ function Capabilities({ data, className }: { data: Data; className?: string }) {
             className="flex items-center gap-2 text-[0.74rem] text-[var(--tessera-text)]"
           >
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-            <span className="min-w-0 truncate">{it}</span>
+            <span title={it} className="min-w-0 truncate">
+              {it}
+            </span>
           </li>
         ))}
       </ul>
@@ -443,13 +486,20 @@ function Repartition({ data, className }: { data: Data; className?: string }) {
   const r = data.repartition;
   if (!r) return null;
   return (
-    <Card title={r.title} subtitle={r.subtitle} className={className}>
+    <Card
+      title={r.title}
+      subtitle={r.subtitle}
+      info={<CardInfo ns="agentSynthese" k="repartition" title={r.title} />}
+      className={className}
+    >
       {r.items.length === 0 ? <EmptyRow label="Aucun événement de routage." /> : null}
       <ul className="flex flex-col gap-2.5">
         {r.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
             <div className="flex items-center justify-between text-[0.72rem]">
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">{it.label}</span>
+              <span title={it.label} className="min-w-0 truncate text-[var(--tessera-text)]">
+                {it.label}
+              </span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">{it.pct}%</span>
             </div>
             <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
@@ -469,11 +519,19 @@ function Performance({ data, className }: { data: Data; className?: string }) {
   const pf = data.performance;
   if (!pf) return null;
   return (
-    <Card title={pf.title} cta={pf.cta} ctaHref={pf.ctaHref} className={className}>
+    <Card
+      title={pf.title}
+      info={<CardInfo ns="agentSynthese" k="performance" title={pf.title} />}
+      cta={pf.cta}
+      ctaHref={pf.ctaHref}
+      className={className}
+    >
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {pf.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-[var(--tessera-text-muted)]">{r.label}</span>
+            <span title={r.label} className="min-w-0 truncate text-[var(--tessera-text-muted)]">
+              {r.label}
+            </span>
             <span className="flex shrink-0 items-center gap-1.5">
               <span className="font-medium tabular-nums text-[var(--tessera-text)]">{r.value}</span>
               <span
@@ -496,7 +554,13 @@ function Conversations({ data, className }: { data: Data; className?: string }) 
   const c = data.conversations;
   if (!c) return null;
   return (
-    <Card title={c.title} cta={c.cta} ctaHref={c.ctaHref} className={className}>
+    <Card
+      title={c.title}
+      info={<CardInfo ns="agentSynthese" k="conversations" title={c.title} />}
+      cta={c.cta}
+      ctaHref={c.ctaHref}
+      className={className}
+    >
       {c.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2">
         {c.rows.map((r, i) => (
@@ -505,12 +569,18 @@ function Conversations({ data, className }: { data: Data; className?: string }) 
             className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)]/50 pb-2 last:border-0 last:pb-0"
           >
             <span className="min-w-0">
-              <span className="block truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
+              <Truncate
+                full={r.title}
+                className="text-[0.74rem] font-medium text-[var(--tessera-text)]"
+              >
                 {r.title}
-              </span>
-              <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+              </Truncate>
+              <Truncate
+                full={`${r.user} - ${r.time}`}
+                className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+              >
                 {r.user} - {r.time}
-              </span>
+              </Truncate>
             </span>
             <span
               className={cn(
@@ -531,7 +601,13 @@ function Activity({ data, className }: { data: Data; className?: string }) {
   const a = data.activity;
   if (!a) return null;
   return (
-    <Card title={a.title} cta={a.cta} ctaHref={a.ctaHref} className={className}>
+    <Card
+      title={a.title}
+      info={<CardInfo ns="agentSynthese" k="activity" title={a.title} />}
+      cta={a.cta}
+      ctaHref={a.ctaHref}
+      className={className}
+    >
       {a.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2.5">
         {a.rows.map((r, i) => (
@@ -546,8 +622,13 @@ function Activity({ data, className }: { data: Data; className?: string }) {
               {r.time}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[var(--tessera-text)]">{r.label}</span>
-              <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+              <span title={r.label} className="block truncate text-[var(--tessera-text)]">
+                {r.label}
+              </span>
+              <span
+                title={r.detail}
+                className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
+              >
                 {r.detail}
               </span>
             </span>
@@ -571,7 +652,13 @@ function Prompts({ data, className }: { data: Data; className?: string }) {
   const p = data.prompts;
   if (!p) return null;
   return (
-    <Card title={p.title} cta={p.cta} ctaHref={p.ctaHref} className={className}>
+    <Card
+      title={p.title}
+      info={<CardInfo ns="agentSynthese" k="prompts" title={p.title} />}
+      cta={p.cta}
+      ctaHref={p.ctaHref}
+      className={className}
+    >
       {p.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2">
         {p.rows.map((r) => (
@@ -586,7 +673,10 @@ function Prompts({ data, className }: { data: Data; className?: string }) {
                   {r.version}
                 </span>
               </span>
-              <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+              <span
+                title={r.updated}
+                className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
+              >
                 {r.updated}
               </span>
             </span>
@@ -606,7 +696,12 @@ function Context({ data }: { data: Data }) {
   const c = data.context;
   if (!c) return null;
   return (
-    <Card title="Contexte de l'agent" cta={c.cta} ctaHref={c.ctaHref}>
+    <Card
+      title="Contexte de l'agent"
+      info={<CardInfo ns="agentSynthese" k="context" title="Contexte de l'agent" />}
+      cta={c.cta}
+      ctaHref={c.ctaHref}
+    >
       <div className="flex items-center gap-3">
         <Image
           src="/brand/agent-robot.png"
@@ -618,12 +713,17 @@ function Context({ data }: { data: Data }) {
         />
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[0.92rem] font-semibold text-[var(--tessera-text)]">
-            <span className="truncate">{c.name}</span>
+            <span title={c.name} className="truncate">
+              {c.name}
+            </span>
             <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.55rem] font-medium capitalize text-emerald-300">
               {c.status}
             </span>
           </p>
-          <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+          <span
+            title={`ID : ${c.agentId}`}
+            className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
+          >
             ID : {c.agentId}
           </span>
         </div>
@@ -635,7 +735,9 @@ function Context({ data }: { data: Data }) {
         {c.fields.map((f) => (
           <div key={f.label} className="flex items-center justify-between gap-2">
             <dt className="text-[var(--tessera-text-muted)]">{f.label}</dt>
-            <dd className="min-w-0 truncate font-medium text-[var(--tessera-text)]">{f.value}</dd>
+            <dd title={f.value} className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+              {f.value}
+            </dd>
           </div>
         ))}
       </dl>
@@ -647,7 +749,12 @@ function OpAlerts({ data }: { data: Data }) {
   const a = data.opAlerts;
   if (!a) return null;
   return (
-    <Card title={a.title} cta={a.cta} ctaHref={a.ctaHref}>
+    <Card
+      title={a.title}
+      info={<CardInfo ns="agentSynthese" k="opAlerts" title={a.title} />}
+      cta={a.cta}
+      ctaHref={a.ctaHref}
+    >
       {a.items.length === 0 ? (
         <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-[0.72rem] text-emerald-300">
           <CheckCircle2 className="h-4 w-4 shrink-0" /> Aucune alerte
@@ -663,10 +770,16 @@ function OpAlerts({ data }: { data: Data }) {
               )}
             >
               <span className="min-w-0">
-                <span className="block truncate text-[0.72rem] font-medium text-[var(--tessera-text)]">
+                <span
+                  title={it.label}
+                  className="block truncate text-[0.72rem] font-medium text-[var(--tessera-text)]"
+                >
                   {it.label}
                 </span>
-                <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <span
+                  title={it.detail}
+                  className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
+                >
                   {it.detail}
                 </span>
               </span>
@@ -691,7 +804,7 @@ function QuickAccess({ data }: { data: Data }) {
   if (!q) return null;
   const icons = [Sparkles, Settings2, Bot, CalendarClock];
   return (
-    <Card title={q.title}>
+    <Card title={q.title} info={<CardInfo ns="agentSynthese" k="quickAccess" title={q.title} />}>
       <div className="grid grid-cols-2 gap-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? Sparkles;
@@ -702,10 +815,16 @@ function QuickAccess({ data }: { data: Data }) {
               className="flex flex-col gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2.5 text-left hover:border-[#7c5cf5]/50"
             >
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
-              <span className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
+              <span
+                title={it.label}
+                className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]"
+              >
                 {it.label}
               </span>
-              <span className="truncate text-[0.6rem] text-[var(--tessera-text-muted)]">
+              <span
+                title={it.sublabel}
+                className="truncate text-[0.6rem] text-[var(--tessera-text-muted)]"
+              >
                 {it.sublabel}
               </span>
             </Link>

@@ -7492,7 +7492,87 @@
       "test": "Test assistant",
       "configure": "Configure assistant"
     },
-    "empty": "No data available."
+    "empty": "No data available.",
+    "explain": {
+      "profile": {
+        "what": "The agent's identity: name, status, owner and key parameters.",
+        "source": "Agent profile (declared configuration)."
+      },
+      "capabilities": {
+        "what": "The agent's declared capabilities — what it can do.",
+        "source": "Agent manifest."
+      },
+      "repartition": {
+        "what": "The breakdown of the agent's traffic by nature (question, hand-off, guardrail, tool …).",
+        "how": "Share of each category among the period's routing events.",
+        "source": "Observed agent activity."
+      },
+      "performance": {
+        "what": "The agent's performance indicators (latency, throughput, escalations …) over the period.",
+        "how": "Each row compares the current value to the previous period.",
+        "source": "Agent telemetry."
+      },
+      "prompts": {
+        "what": "The agent's active prompts and their version.",
+        "source": "Agent prompt catalog."
+      },
+      "conversations": {
+        "what": "The agent's recent conversations and their outcome (resolved / escalated).",
+        "source": "Agent turn transcript."
+      },
+      "activity": {
+        "what": "The agent's recent activity feed, event by event.",
+        "source": "Agent activity log."
+      },
+      "context": {
+        "what": "The agent's deployment context: identity, description and key fields.",
+        "source": "Agent profile (declared configuration)."
+      },
+      "opAlerts": {
+        "what": "The open operational alerts on the agent.",
+        "how": "Signals beyond a threshold; “no alerts” when everything is green.",
+        "source": "Agent monitoring signals."
+      },
+      "quickAccess": {
+        "what": "Shortcuts to the governance surfaces related to the agent.",
+        "source": "Internal cockpit links."
+      },
+      "kpi": {
+        "conversations": {
+          "what": "The number of distinct customer dialogues the agent handled over the period — a whole conversation, not a single exchange.",
+          "how": "A conversation contains several turns, so this number is smaller than turns handled.",
+          "source": "Observed agent activity."
+        },
+        "turns": {
+          "what": "The number of turns the agent handled over the period — a turn is a single exchange (one question + one answer).",
+          "how": "Several turns per conversation, so this number is larger than conversations handled.",
+          "source": "Observed agent activity."
+        },
+        "users": {
+          "what": "The number of distinct users the agent served.",
+          "how": "Distinct people who were in contact with the agent during the period.",
+          "source": "Observed agent activity."
+        },
+        "resolution": {
+          "what": "The share of conversations the agent resolved without handing over to a human.",
+          "how": "Resolved conversations relative to the total.",
+          "source": "Observed agent activity."
+        },
+        "satisfaction": {
+          "what": "The satisfaction of the users served (thumbs 👍 / 👎).",
+          "how": "Positive votes relative to all votes.",
+          "source": "Customer feedback (CSAT)."
+        },
+        "latency": {
+          "what": "The agent's response time (median).",
+          "source": "Agent telemetry."
+        },
+        "handoffs": {
+          "what": "The number of handoffs to another agent or a human.",
+          "source": "Observed agent activity."
+        }
+      }
+    }
   },
   "agentConfigurations": {
     "topbarTitle": "AGENT",
@@ -7503,7 +7583,70 @@
     "saveError": "Save failed. Try again.",
     "backendDefault": "Backend default",
     "resetToDefault": "Reset (backend default)",
-    "notApplied": "Not applied by {backend}"
+    "notApplied": "Not applied by {backend}",
+    "explain": {
+      "identity": {
+        "what": "The agent's identity: name, description and editable or read-only attributes.",
+        "source": "Agent declared configuration (/observability/agent-configurations)."
+      },
+      "model": {
+        "what": "The language model serving the agent and its parameters.",
+        "source": "Agent declared configuration."
+      },
+      "behavior": {
+        "what": "The agent's governed behavior settings: selection, escalation, retrieval, memory.",
+        "how": "Each setting applies at the execution point (runtime seam); an unchanged value inherits the backend default.",
+        "source": "Agent declared configuration."
+      },
+      "routing": {
+        "what": "The agent's routing rules: when it takes a turn, when it hands off.",
+        "source": "Agent declared configuration."
+      },
+      "tags": {
+        "what": "The agent's tags, metadata and archival state.",
+        "source": "Agent declared configuration."
+      },
+      "status": {
+        "what": "The agent's service state, including its real availability (liveness).",
+        "how": "The availability badge reads the /readyz probe at display time.",
+        "source": "/observability/agent-configurations + /readyz."
+      },
+      "active_model": {
+        "what": "The model actually active for the agent (name, provider).",
+        "source": "Agent declared configuration."
+      },
+      "summary": {
+        "what": "A label/value summary of the agent's configuration.",
+        "source": "Agent declared configuration."
+      },
+      "history": {
+        "what": "The history of the agent's configuration changes.",
+        "how": "Timeline of governed changes; the full detail lives in the audit log.",
+        "source": "Audit log (/prouver/audit-logs)."
+      },
+      "links": {
+        "what": "Useful links to the agent's definition and governance.",
+        "source": "Internal cockpit links."
+      },
+      "behavior_runtime": {
+        "what": "The runtime setting (selection / sampling) applied to each of the agent's turns.",
+        "how": "Applied at the execution point; “backend default” until overridden.",
+        "source": "Agent declared configuration (runtime seam, ADR 0030-0032)."
+      },
+      "behavior_escalation": {
+        "what": "The threshold beyond which the agent escalates to a human rather than acting.",
+        "how": "Governed slider; the lower it is, the earlier the agent escalates.",
+        "source": "Agent declared configuration (ADR 0033)."
+      },
+      "behavior_retrieval": {
+        "what": "The retrieval setting: how many sources the agent fetches, and whether retrieval is active.",
+        "source": "Agent declared configuration (ADR 0035)."
+      },
+      "behavior_memory": {
+        "what": "The memory source and its depth for this agent.",
+        "source": "Agent declared configuration (ADR 0036)."
+      }
+    }
   },
   "agentConsole": {
     "title": "Console (Debug)",
@@ -7530,7 +7673,48 @@
     "traceSpans": "spans",
     "traceExport": "Export (JSONL)",
     "traceEmpty": "The execution trace will appear here after a turn.",
-    "debugAwaiting": "The turn's internals (prompt, memory, routing, cost, scores) will appear here after a turn."
+    "debugAwaiting": "The turn's internals (prompt, memory, routing, cost, scores) will appear here after a turn.",
+    "explain": {
+      "sandbox": {
+        "what": "The overrides applied to this test turn: model, system prompt, guardrails.",
+        "how": "Sandbox settings; they only affect turns launched from the console.",
+        "source": "/observability/sandbox-config."
+      },
+      "summary": {
+        "what": "The summary of the last turn: context, quality, sources, tools, guardrails, evaluation and debug.",
+        "source": "Live turn (streaming) + /observability/agent-console."
+      },
+      "quality": {
+        "what": "The quality scores of the played turn (fidelity, grounding, relevance …).",
+        "how": "Computed on the live turn; “—” while no turn has been played.",
+        "source": "Live turn (streaming)."
+      },
+      "sources": {
+        "what": "The sources retrieved and used during this turn.",
+        "source": "Live turn (streaming)."
+      },
+      "tools": {
+        "what": "The tool calls of this turn: name, status, latency.",
+        "source": "Live turn (streaming) or /observability/agent-console."
+      },
+      "guardrails": {
+        "what": "The guardrail checks triggered on this turn: name, status, detail.",
+        "source": "Live turn (streaming) or /observability/agent-console."
+      },
+      "evaluation": {
+        "what": "The metrics of the agent's last evaluation run (not of this turn).",
+        "how": "Taken from the last eval run; honestly “—” if there is no run.",
+        "source": "/observability/agent-console (last eval run)."
+      },
+      "debug": {
+        "what": "The turn's internal detail: routing, prompt, memory, review, usage, language, draft, config.",
+        "source": "Live turn (streaming)."
+      },
+      "trace": {
+        "what": "The turn's execution waterfall: the time spent in each node (span).",
+        "source": "Live turn trace (OTel)."
+      }
+    }
   },
   "agentConnaissances": {
     "title": "Knowledge",
@@ -7567,7 +7751,40 @@
     "prevPage": "Previous page",
     "nextPage": "Next page",
     "paramsFallback": "Parameters",
-    "volumeMin": "Minimum volume"
+    "volumeMin": "Minimum volume",
+    "explain": {
+      "sources": {
+        "what": "The number of knowledge sources attached to the agent.",
+        "source": "/observability/agent-connaissances."
+      },
+      "coverage": {
+        "what": "The share of the perimeter covered by the attached sources.",
+        "how": "Aggregated coverage of the agent's active sources.",
+        "source": "/observability/agent-connaissances."
+      },
+      "freshness": {
+        "what": "The freshness of the sources: how long since they were refreshed.",
+        "source": "/observability/agent-connaissances."
+      },
+      "citation": {
+        "what": "The share of the agent's answers that cite a source.",
+        "how": "Answers citing at least one source, relative to the total.",
+        "source": "/observability/agent-connaissances."
+      },
+      "hitrate": {
+        "what": "The retrieval hit rate: the share of queries that return a relevant source.",
+        "source": "/observability/agent-connaissances."
+      },
+      "table": {
+        "what": "The list of the agent's knowledge sources: type, status, coverage, freshness, citation.",
+        "how": "Sortable and filterable; a click opens the source detail.",
+        "source": "/observability/agent-connaissances."
+      },
+      "detail": {
+        "what": "A source's detail: usage, grounded answers, parameters, attachment and activation.",
+        "source": "/observability/agent-connaissances."
+      }
+    }
   },
   "agentGardeFous": {
     "title": "Guardrails",
@@ -7587,7 +7804,70 @@
     "ruleCount": "{shown} of {total} rules",
     "detailEyebrow": "Guardrail details",
     "descriptionLabel": "Description",
-    "policyUpdated": "policy.yaml — last updated {date}"
+    "policyUpdated": "policy.yaml — last updated {date}",
+    "explain": {
+      "rules": {
+        "what": "The number of guardrail rules defined for the agent.",
+        "source": "/observability/agent-garde-fous."
+      },
+      "categories": {
+        "what": "The number of guardrail categories covered (injection, PII, tools, memory …).",
+        "source": "/observability/agent-garde-fous."
+      },
+      "block": {
+        "what": "The share of guardrail decisions that blocked an action.",
+        "how": "“Blocked” decisions relative to all decisions.",
+        "source": "Guard decisions (audit log)."
+      },
+      "incidents": {
+        "what": "The number of guardrail incidents over the period.",
+        "source": "/observability/agent-garde-fous."
+      },
+      "falsepos": {
+        "what": "The estimated share of false positives: blocks that should not have happened.",
+        "source": "/observability/agent-garde-fous."
+      },
+      "decisions": {
+        "what": "The total number of decisions made by the guardrail over the period.",
+        "source": "Guard decisions (audit log)."
+      },
+      "snapshot": {
+        "what": "The snapshot of the active policy: version, update date, evaluation set and coverage.",
+        "source": "/observability/agent-garde-fous."
+      },
+      "watch": {
+        "what": "The guardrail points to watch (drifts, attention required).",
+        "source": "/observability/agent-garde-fous."
+      },
+      "quick": {
+        "what": "Shortcuts to common guardrail actions.",
+        "source": "Internal cockpit links."
+      },
+      "coverage": {
+        "what": "The guardrail coverage by domain.",
+        "how": "One bar per domain, proportional to the share covered.",
+        "source": "/observability/agent-garde-fous."
+      },
+      "reasons": {
+        "what": "The main blocking reasons, from most to least frequent.",
+        "how": "Count of “blocked” decisions grouped by reason.",
+        "source": "Guard decisions (audit log)."
+      },
+      "mode_distribution": {
+        "what": "The breakdown of rules by enforcement mode (blocking, logged, disabled).",
+        "source": "/observability/agent-garde-fous."
+      },
+      "overrides": {
+        "what": "The manual overrides: the rules disabled in the durable store.",
+        "how": "Rules toggled by an operator, with their author.",
+        "source": "Overrides store (durable, governed)."
+      },
+      "table": {
+        "what": "The list of guardrail rules: category, severity, status, mode, coverage, last update.",
+        "how": "Sortable and filterable; a click opens the rule detail.",
+        "source": "/observability/agent-garde-fous."
+      }
+    }
   },
   "agentPrompts": {
     "title": "Prompts",
@@ -7607,7 +7887,61 @@
     "detailEyebrow": "Prompt details",
     "descriptionLabel": "Description",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "explain": {
+      "prompts": {
+        "what": "The number of prompts in the agent's catalog.",
+        "source": "/observability/agent-prompts."
+      },
+      "categories": {
+        "what": "The number of distinct prompt types.",
+        "source": "/observability/agent-prompts."
+      },
+      "coverage": {
+        "what": "The i18n coverage of prompts: the share translated into all three languages.",
+        "how": "Prompts available in FR/DE/EN relative to the total.",
+        "source": "/observability/agent-prompts."
+      },
+      "variables": {
+        "what": "The number of distinct template variables ({var}) used by the prompts.",
+        "source": "/observability/agent-prompts."
+      },
+      "avglen": {
+        "what": "The average length of prompts (in characters).",
+        "source": "/observability/agent-prompts."
+      },
+      "missing": {
+        "what": "The number of prompts missing at least one language.",
+        "how": "Green when no prompt is missing a language.",
+        "source": "/observability/agent-prompts."
+      },
+      "snapshot": {
+        "what": "The snapshot of the active prompt set: tag, last update, version, evaluation set, coverage.",
+        "source": "/observability/agent-prompts."
+      },
+      "overlay": {
+        "what": "The governed prompt overlay: the served version vs the proposed version, and its propose / approve / reject cycle.",
+        "how": "The change goes through a governed proposal before being served.",
+        "source": "/observability/agent-prompt-overlay (ADR 0037)."
+      },
+      "table": {
+        "what": "The prompt catalog: type, status, version, quality, last update, owner, tests.",
+        "how": "Sortable and filterable; a click opens the prompt detail.",
+        "source": "/observability/agent-prompts."
+      },
+      "watch": {
+        "what": "The prompts to watch (quality drift, attention required).",
+        "source": "/observability/agent-prompts."
+      },
+      "quick": {
+        "what": "Shortcuts to common prompt actions.",
+        "source": "Internal cockpit links."
+      },
+      "by_type": {
+        "what": "The number of prompts per type, with their coverage.",
+        "source": "/observability/agent-prompts."
+      }
+    }
   },
   "agentMetier": {
     "title": "Business",
@@ -7673,6 +8007,107 @@
       "lastCheck": "last check {ago}",
       "neverChecked": "no applicable check yet",
       "accumulating": "Accumulating"
+    },
+    "explain": {
+      "signals": {
+        "what": "The agent's business signals: what it produces for the customer (resolution, compliance, avoided effects), not model quality.",
+        "how": "Derived from actually observed turns and tied to a business capability.",
+        "source": "Agent business telemetry (observability level L3)."
+      },
+      "northStar": {
+        "what": "The agent's primary business objective: the single number that best sums up the value it creates.",
+        "how": "Success rate of the north-star signal over the turns actually checked; “—” while no check applies.",
+        "source": "Business signals (observed turns)."
+      },
+      "capabilities": {
+        "what": "The breakdown per business capability: volume handled, compliance, share needing human approval, share blocked, avoided external effects.",
+        "how": "Aggregation of observed business runs, one row per declared capability.",
+        "source": "/observability/business-capabilities."
+      },
+      "runs": {
+        "what": "The individual runs (workflows) of the selected capability, with their steps and outcome.",
+        "how": "Latest observed runs for the capability, most recent first.",
+        "source": "/observability/business-runs."
+      },
+      "level": {
+        "runtime": {
+          "what": "The signals measured automatically at each turn, without human intervention.",
+          "source": "Business signals (observed turns)."
+        },
+        "human_action": {
+          "what": "The signals that depend on a human action or approval.",
+          "source": "Business signals (observed turns)."
+        },
+        "other": {
+          "what": "The other business signals, outside automatic execution and human action.",
+          "source": "Business signals (observed turns)."
+        }
+      },
+      "col": {
+        "volume": {
+          "what": "The number of executions of this capability in the period.",
+          "source": "/observability/business-capabilities."
+        },
+        "conformity": {
+          "what": "The share of executions that comply with the business rules.",
+          "how": "Compliant executions relative to the total.",
+          "source": "/observability/business-capabilities."
+        },
+        "validation": {
+          "what": "The share of executions that needed human approval before continuing.",
+          "source": "/observability/business-capabilities."
+        },
+        "blocked": {
+          "what": "The share of executions blocked by a safeguard before any effect.",
+          "source": "/observability/business-capabilities."
+        },
+        "prevented": {
+          "what": "The number of unwanted external effects avoided: actions stopped before impact.",
+          "source": "/observability/business-capabilities."
+        }
+      },
+      "signal": {
+        "contact_window_compliance": {
+          "what": "The share of contacts made within the time windows allowed by regulation.",
+          "source": "Business signals."
+        },
+        "validation_required_compliance": {
+          "what": "The share of actions that, when the rule requires it, were duly submitted for human approval.",
+          "source": "Business signals."
+        },
+        "action_blocking_correctness": {
+          "what": "The share of sensitive actions correctly blocked before they ran.",
+          "source": "Business signals."
+        },
+        "artifact_governance": {
+          "what": "The share of documents and artifacts produced with a complete, governed trail.",
+          "source": "Business signals."
+        },
+        "client_message_safety": {
+          "what": "The share of messages sent to the customer judged safe (neither offensive nor misleading).",
+          "source": "Business signals."
+        },
+        "payment_option_safety": {
+          "what": "The share of payment offers that are compliant and safe for the customer.",
+          "source": "Business signals."
+        },
+        "action_governance": {
+          "what": "The share of agent actions carried out within the intended governance framework.",
+          "source": "Business signals."
+        },
+        "no_uncontrolled_external_effect": {
+          "what": "The share of turns with no uncontrolled external effect (e.g. an unauthorized send).",
+          "source": "Business signals."
+        },
+        "recouvrement_trace_completeness": {
+          "what": "The share of debt-collection cases with a complete end-to-end trail.",
+          "source": "Business signals."
+        },
+        "amount_consistency": {
+          "what": "The share of amounts that are consistent across the steps of the case (no discrepancy).",
+          "source": "Business signals."
+        }
+      }
     }
   },
   "agentEvaluations": {
@@ -7680,7 +8115,76 @@
     "subtitle": "Measure, analyse and improve the answer quality of the assistant and its agents.",
     "loading": "Loading evaluations…",
     "unavailable": "Evaluations unavailable.",
-    "realtime": "Live"
+    "realtime": "Live",
+    "explain": {
+      "score": {
+        "what": "The agent's overall evaluation score, out of 10.",
+        "how": "Aggregate of judged cases; the subtext gives passed cases / total.",
+        "source": "/observability/agent-evaluations."
+      },
+      "success": {
+        "what": "The success rate of the last run: the share of cases that pass.",
+        "how": "Passed cases relative to all cases in the set.",
+        "source": "/observability/agent-evaluations."
+      },
+      "halluc": {
+        "what": "The hallucination rate: the share of failed factuality probes.",
+        "how": "Failed factuality probes relative to the total.",
+        "source": "/observability/agent-evaluations."
+      },
+      "relevance": {
+        "what": "The relevance of the agent's answers, out of 10.",
+        "how": "Share of agent cases judged relevant, scaled to 10.",
+        "source": "/observability/agent-evaluations."
+      },
+      "fidelity": {
+        "what": "The fidelity to sources: the share of answers correctly grounded in a citation.",
+        "how": "Passed citation cases relative to the total.",
+        "source": "/observability/agent-evaluations."
+      },
+      "coverage": {
+        "what": "The coverage of the evaluation set: the number of tests run.",
+        "how": "Tests run, across N categories and N languages.",
+        "source": "/observability/agent-evaluations."
+      },
+      "verdict": {
+        "what": "The release gate's verdict: is the agent deployable, and why.",
+        "how": "Combines the security floor (T0), the domain tiers (T2) and the critical cases per language.",
+        "source": "Evaluation gate (eval-gate-policy)."
+      },
+      "lifecycle": {
+        "what": "The run's lifecycle: candidate, deployed, target, environment, model, period.",
+        "source": "/observability/agent-evaluations."
+      },
+      "snapshot": {
+        "what": "The snapshot of the active evaluation set: tag, update, version, set, coverage.",
+        "source": "/observability/agent-evaluations."
+      },
+      "gatePolicy": {
+        "what": "The gate's structure: floor and tiers (Venn), floor by category, critical cases per language, overrides registry.",
+        "source": "Evaluation gate (eval-gate-policy)."
+      },
+      "judge": {
+        "what": "The metrics judged by the judge model: fidelity, grounding, anti-hallucination, with the model used.",
+        "source": "/observability/agent-evaluations (judge model)."
+      },
+      "watch": {
+        "what": "The evaluation points to watch (attention required).",
+        "source": "/observability/agent-evaluations."
+      },
+      "quick": {
+        "what": "Shortcuts to common evaluation actions.",
+        "source": "Internal cockpit links."
+      },
+      "trend": {
+        "what": "The evolution of the evaluation score over time.",
+        "source": "/observability/agent-evaluations."
+      },
+      "runRail": {
+        "what": "The log of evaluation runs: each run is selectable (deep link ?run=).",
+        "source": "/observability/agent-evaluations."
+      }
+    }
   },
   "agentHistorique": {
     "title": "Session history",
@@ -7694,6 +8198,60 @@
       "untitled": "Untitled",
       "messages": "{n, plural, one {# message} other {# messages}}",
       "turns": "{n, plural, one {# turn} other {# turns}}"
+    },
+    "explain": {
+      "sessions": {
+        "what": "The total number of the agent's evaluation sessions.",
+        "source": "/observability/agent-historique."
+      },
+      "messages": {
+        "what": "The number of messages exchanged (one question + one answer per session).",
+        "source": "/observability/agent-historique."
+      },
+      "answers": {
+        "what": "The number of answers generated by the agent.",
+        "source": "/observability/agent-historique."
+      },
+      "success": {
+        "what": "The success rate: the share of sessions that pass.",
+        "how": "Successful sessions relative to the total.",
+        "source": "/observability/agent-historique."
+      },
+      "latency": {
+        "what": "The agent's median response time (p50).",
+        "how": "Median of per-turn latencies; the delta tracks p95.",
+        "source": "/observability/agent-historique."
+      },
+      "tokens": {
+        "what": "The total number of tokens consumed.",
+        "how": "Sum of input and output tokens.",
+        "source": "/observability/agent-historique."
+      },
+      "trend": {
+        "what": "The evolution of the session count over time, compared to the previous period.",
+        "source": "/observability/agent-historique."
+      },
+      "by_agent": {
+        "what": "The breakdown of sessions by agent.",
+        "how": "Share of each agent in the total sessions.",
+        "source": "/observability/agent-historique."
+      },
+      "scores": {
+        "what": "The distribution of session scores.",
+        "source": "/observability/agent-historique."
+      },
+      "successCard": {
+        "what": "The success rate shown as a gauge, with its context note.",
+        "source": "/observability/agent-historique."
+      },
+      "watch": {
+        "what": "The sessions to watch (attention required).",
+        "source": "/observability/agent-historique."
+      },
+      "quick": {
+        "what": "Shortcuts to the surfaces related to the history.",
+        "source": "Internal cockpit links."
+      }
     }
   },
   "agentAFaire": {
@@ -7765,6 +8323,19 @@
         "what": "The recent activity on the backlog.",
         "how": "Latest status and assignment changes.",
         "source": "Operator backlog (durable state)."
+      },
+      "timeline": {
+        "what": "The timeline of recent events in the operator backlog.",
+        "source": "Operator backlog (/observability/agent-a-faire)."
+      },
+      "table": {
+        "what": "The backlog of cases to handle: priority, type, source, assignment, SLA, due date, status.",
+        "how": "Sortable, filterable and paginated; a click opens the case detail.",
+        "source": "Operator backlog (/observability/agent-a-faire)."
+      },
+      "quick": {
+        "what": "Shortcuts to common handling actions.",
+        "source": "Internal cockpit links."
       }
     },
     "quickNeedsRow": "Select a row — this action is taken from the detail panel",
@@ -8435,6 +9006,16 @@
         "what": "The estimated LLM cost over the period (tokens × model rate).",
         "how": "Sum of tokens × rate per model.",
         "source": "Budget counters (cost)."
+      },
+      "day_cost": {
+        "what": "The LLM spend for the current day (cumulative cost today).",
+        "how": "Sum of per-model costs over the current day.",
+        "source": "Budget counters (daily cost)."
+      },
+      "ceiling": {
+        "what": "The configured daily spend ceiling; \"no ceiling\" when unset.",
+        "how": "Daily budget cap applied at the execution point.",
+        "source": "Budget policy (ceiling €)."
       }
     },
     "loading": "Loading model catalogue...",

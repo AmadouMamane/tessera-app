@@ -36,7 +36,9 @@ test("renders the real KPI strip from the live sources", async ({ page }) => {
   await expect(page.getByText("Taux de résolution").first()).toBeVisible();
   await expect(page.getByText(/\d+,\d+%/).first()).toBeVisible();
   // Operational counters, not eval trivia: the strip is events-only since 90ebb257.
-  await expect(page.getByText("Tours traités (24h)").first()).toBeVisible();
+  // KPI labels were shortened (no "(24h)" suffix — it lied at 7j/30j); the ⓘ pastille
+  // now carries the full definition, so the tile shows the terse noun "Tours".
+  await expect(page.getByText("Tours", { exact: true }).first()).toBeVisible();
   // The indexed-fragment count moved into the profile card ("15 sources / 241 fragments").
   await expect(page.getByText(/\d+ sources \/ \d+ fragments/).first()).toBeVisible();
   // The routing-motive breakdown replaced the old language mix.

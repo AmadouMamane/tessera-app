@@ -4067,6 +4067,9 @@ export type AssistantOverview = z.infer<typeof AssistantOverviewSchema>;
 const SynKpiSchema = z.object({
   key: z.string(),
   label: z.string(),
+  // Verbose descriptive form for the `title=` hover tooltip. `label` is kept terse so the
+  // narrow tile never ellipsises; `full` restores it (e.g. "Conversations traitées") on hover.
+  full: z.string().optional(),
   value: z.string(),
   delta: z.string(),
   good: z.boolean(),
