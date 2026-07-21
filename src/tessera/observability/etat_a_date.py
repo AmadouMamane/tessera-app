@@ -320,6 +320,16 @@ def _truncate(text: str, limit: int = _ANSWER_PREVIEW) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
 
 
+def _oneline(text: str) -> str:
+    """Collapse whitespace; never truncate.
+
+    The question is a short identifier shown clipped with a hover reveal, so it
+    must carry its FULL text — a baked cut would make the reveal show the same
+    clipped string. The answer body keeps :func:`_truncate` (preview + detail).
+    """
+    return " ".join(text.split())
+
+
 def _snapshot_id(at: datetime | None) -> str:
     if at is None:
         return "SNAP-LIVE"
@@ -665,7 +675,7 @@ def _original_card(original: dict[str, Any] | None, at: datetime | None) -> dict
     return {
         "available": True,
         "ref_code": _ref_code(ts_dt or at),
-        "question": _truncate(str(original.get("question") or "-"), 200),
+        "question": _oneline(str(original.get("question") or "-")),
         "answer": _truncate(str(original.get("answer") or "-")),
         "timestamp": _fmt(ts_dt),
         "session": f"SES-{_short_uuid(original.get('conv'))}",

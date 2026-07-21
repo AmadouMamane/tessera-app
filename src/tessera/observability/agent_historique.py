@@ -87,6 +87,17 @@ def _truncate(text: str, limit: int = _RESPONSE_LIMIT) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
 
 
+def _oneline(text: str) -> str:
+    """Collapse whitespace; never truncate.
+
+    A field shown clipped but with a hover reveal must carry its FULL text — a
+    length cut baked here would make the reveal show the same clipped string.
+    Bodies (responses) keep :func:`_truncate` (preview + detail panel); short
+    identifiers (the question/title) use this.
+    """
+    return " ".join(text.split())
+
+
 def _kpi(
     key: str, label: str, value: str, delta: str, delta_tone: str, tone: str, series: list[int]
 ) -> dict[str, object]:
@@ -169,7 +180,7 @@ def _row(session: SessionRow, lang: str) -> dict[str, object]:
         "tools_count": len(session.tools),
         "input_tokens": session.input_tokens,
         "output_tokens": session.output_tokens,
-        "question": _truncate(session.title, 160),
+        "question": _oneline(session.title),
         "response": _truncate(session.response),
     }
 

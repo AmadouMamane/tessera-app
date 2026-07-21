@@ -135,9 +135,14 @@ def _turns_label(n: int) -> str:
     return f"{n} échange" if n <= 1 else f"{n} échanges"
 
 
-def _truncate(text: str, limit: int = 64) -> str:
-    text = " ".join(text.split())
-    return text if len(text) <= limit else text[: limit - 1].rstrip() + "..."
+def _oneline(text: str) -> str:
+    """Collapse whitespace so a title renders on one line.
+
+    The full text is sent as-is — never pre-truncated. The frontend CSS clips it
+    for display (``truncate``) and the hover tooltip reveals the whole thing; a
+    value baked-truncated here would make that reveal show the same clipped text.
+    """
+    return " ".join(text.split())
 
 
 def _parse_iso(value: object) -> datetime | None:
@@ -391,6 +396,7 @@ def _kpi(
     good: bool,
     series: Sequence[int],
     explain: dict[str, str] | None = None,
+    full: str | None = None,
 ) -> dict[str, object]:
     kpi: dict[str, object] = {
         "key": key,
@@ -400,6 +406,12 @@ def _kpi(
         "good": good,
         "series": list(series),
     }
+    # The verbose descriptive name for the ``title=`` hover tooltip. ``label`` is kept
+    # terse so the narrow tile never ellipsises; ``full`` restores the descriptive form
+    # (e.g. label "Conversations" → full "Conversations traitées") on hover. No period
+    # suffix here — "(24h)" would relapse into the lie we dropped at 7j/30j.
+    if full is not None:
+        kpi["full"] = full
     # A MetricInfo tooltip (what/how/source) — attached only when a cell has a story
     # worth explaining, so an honest-but-small number is not mistaken for a bug.
     if explain is not None:
@@ -463,19 +475,21 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
     return [
         _kpi(
             "conversations",
-            "Conversations touchées (24h)",
+            "Conversations",
             _fmt_int(n_convs),
             _delta_vs_yesterday(conv_series),
             True,
             conv_series,
+            full="Conversations traitées",
         ),
         _kpi(
             "turns",
-            "Tours traités (24h)",
+            "Tours",
             _fmt_int(n_turns),
             _delta_vs_yesterday(turn_series),
             True,
             turn_series,
+            full="Tours traités",
         ),
         # Distinct clients the agent served, from the turn's ``subject_id`` (ADR 0040).
         # Honest, not fabricated: a turn with no captured identity (anonymous) is not
@@ -484,11 +498,12 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
         # there; recouvrement counts distinct cases, where it is already meaningful.
         _kpi(
             "users",
-            "Utilisateurs servis (24h)",
+            "Utilisateurs",
             _fmt_int(n_subjects) if n_subjects else "—",
-            ("clients distincts servis" if n_subjects else "aucune identité client sur la période"),
+            ("clients distincts" if n_subjects else "aucune identité client"),
             True,
             [],
+            full="Utilisateurs servis",
             explain={
                 "what": "Le nombre de clients DISTINCTS servis par l'agent sur la période.",
                 "how": (
@@ -504,25 +519,23 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
         ),
         _kpi(
             "resolution",
-            "Taux de résolution",
+            "Résolution",
             f"{resolution_pct:.1f}%".replace(".", ",") if n_convs else "—",
             (_delta_vs_yesterday(res_series) if n_convs else "aucune conversation"),
             resolution_pct >= _GOOD_RESOLUTION_PCT,
             res_series,
+            full="Taux de résolution",
         ),
         # Real customer CSAT from captured 👍/👎 votes (ADR 0041). Honest "—" until a
         # customer has actually voted — a satisfaction rate is never fabricated.
         _kpi(
             "satisfaction",
-            "Satisfaction moyenne",
+            "Satisfaction",
             f"{csat_pct}%" if csat_pct is not None else "—",
-            (
-                f"{csat_up} / {csat_total} avis positifs"
-                if csat_total
-                else "aucun avis client sur la période"
-            ),
+            (f"{csat_up} / {csat_total} avis positifs" if csat_total else "aucun avis"),
             csat_pct is None or csat_pct >= _GOOD_CSAT_PCT,
             [],
+            full="Satisfaction moyenne",
             explain={
                 "what": "La part d'avis clients positifs sur les réponses de l'agent.",
                 "how": (
@@ -537,19 +550,21 @@ def _kpis(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str, object]
         ),
         _kpi(
             "latency",
-            "Temps de réponse moyen",
+            "Temps de réponse",
             _secs(obs_lat_ms) if obs_lat_ms is not None else "—",
-            ("trafic réel de l'agent" if obs_lat_ms is not None else "aucun tour mesuré"),
+            ("trafic réel" if obs_lat_ms is not None else "aucun tour mesuré"),
             (obs_lat_ms is not None and obs_lat_ms <= _GOOD_MEAN_MS),
             lat_series,
+            full="Temps de réponse moyen",
         ),
         _kpi(
             "handoffs",
-            "Handoffs (24h)",
+            "Handoffs",
             str(handoffs_in + handoffs_out),
             f"{handoffs_in} entrants / {handoffs_out} sortants",
             True,
             [],
+            full="Handoffs entrants / sortants",
         ),
     ]
 
@@ -694,7 +709,7 @@ def _assemble(
     routing: Counter[str] = journal["routing"]
     routing_total = sum(routing.values())
     repartition: dict[str, object] = {
-        "title": "Répartition des conversations (24h)",
+        "title": "Répartition des conversations",
         "subtitle": "Par motif de routage",
         "items": [
             {
@@ -707,7 +722,7 @@ def _assemble(
     }
 
     performance: dict[str, object] = {
-        "title": "Performance détaillée (24h)",
+        "title": "Performance détaillée",
         "rows": [
             {
                 "label": "Taux de résolution",
@@ -756,7 +771,7 @@ def _assemble(
         "ctaHref": _page(agent_id, "historique"),
         "rows": [
             {
-                "title": _truncate(str(c.get("first_q") or "Conversation"), 56),
+                "title": _oneline(str(c.get("first_q") or "Conversation")),
                 "user": _turns_label(int(c.get("turns") or 0)),
                 "time": _fmt_dt(c.get("ended")),
                 "status": "escalade" if c.get("escalated") else "resolu",

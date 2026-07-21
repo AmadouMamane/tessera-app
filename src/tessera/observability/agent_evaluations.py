@@ -640,7 +640,6 @@ def _runs_rail(agent_id: str, lang: str) -> dict[str, object]:
 
 _FAILURES_DIR = Path(__file__).resolve().parents[3] / "eval" / "failures"
 _RESPONSE_SNIPPET = 320
-_QUESTION_SNIPPET = 320
 _MS_PER_S = 1000
 
 
@@ -694,6 +693,16 @@ def _snippet(text: str, limit: int) -> str:
     """Collapse whitespace and cap to ``limit`` chars with an ellipsis."""
     collapsed = " ".join(text.split())
     return collapsed if len(collapsed) <= limit else collapsed[: limit - 1].rstrip() + "…"
+
+
+def _oneline(text: str) -> str:
+    """Collapse whitespace; never truncate.
+
+    The question is a short identifier shown clipped with a hover reveal, so it
+    must carry its FULL text — a baked cut would make the reveal show the same
+    clipped string. The response body keeps :func:`_snippet` (preview + detail).
+    """
+    return " ".join(text.split())
 
 
 def _duration_label(ms: float, lang: str) -> str:
@@ -854,7 +863,7 @@ def _results_block(snap: EvalSnapshot, lang: str) -> dict[str, object]:
                 "input_tokens": session.input_tokens,
                 "output_tokens": session.output_tokens,
                 "total_tokens": session.total_tokens,
-                "question": _snippet(question, _QUESTION_SNIPPET),
+                "question": _oneline(question),
                 "response": _snippet(session.response, _RESPONSE_SNIPPET),
                 "reasons": list(session.reasons),
                 "started_at": session.started_at,
