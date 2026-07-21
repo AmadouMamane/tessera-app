@@ -4298,7 +4298,7 @@
       "atRisk": "{n} incidents at risk",
       "playbooks": "{n} active playbooks",
       "proofs": "{n} proofs generated (7d)",
-      "source": "Source of truth: {src}",
+      "source": "Source of truth: Incident registry",
       "sync": "Last sync: {ago}"
     },
     "durable": {
@@ -4613,7 +4613,7 @@
       "activeUsers": "Active users: {n}",
       "confidence": "Confidence level: {level}",
       "chain": "Audit chain intact",
-      "source": "Source of truth: {src}",
+      "source": "Source of truth: Replay log · bundles.jsonl",
       "soc": "SOC connected"
     },
     "quick": {
@@ -5023,7 +5023,7 @@
     "footer": {
       "release": "Linked release: {id}",
       "chain": "Truth chain · OK",
-      "source": "Source of truth: {src}",
+      "source": "Source of truth: Curation queue (S1) · eval/reports",
       "sync": "Last update: {ago}"
     },
     "decide": {
@@ -5334,7 +5334,7 @@
       "journal": "View log"
     },
     "footer": {
-      "source": "Source of truth: {src}",
+      "source": "Source of truth: Rule catalogue · automation_store",
       "certified": "{txt}"
     },
     "tabx": {
@@ -5633,7 +5633,7 @@
     },
     "footer": {
       "chain": "{txt}",
-      "source": "Source of truth: {src}"
+      "source": "Source of truth: S1 audit log (hash-chained)"
     }
   },
   "signalCatalogue": {
@@ -5740,7 +5740,7 @@
     },
     "footer": {
       "total": "{n} signals",
-      "source": "Source of truth: {src}"
+      "source": "Source of truth: Signal catalogue · tessera-eval"
     },
     "explain": {
       "total": {
@@ -5914,7 +5914,7 @@
       "policies": "View all policies"
     },
     "footer": {
-      "source": "Source of truth: {src}",
+      "source": "Source of truth: policy.yaml · audit ledger",
       "chain": "{txt}"
     },
     "explain": {
@@ -6175,7 +6175,7 @@
       "rows": "No source matches the filters."
     },
     "footer": {
-      "source": "Live data · {src}"
+      "source": "Live data · pgvector · transcript"
     },
     "view": {
       "embeddings": "Indexing & embeddings",
@@ -6389,7 +6389,7 @@
     },
     "footer": {
       "total": "{n} roles",
-      "source": "Source of truth: {src}",
+      "source": "Source of truth: RBAC policy · audit log",
       "shown": "{n} roles shown"
     },
     "agentFilterHint": "Global GOUVERNER/PLATEFORME filter — distinct from the AGENT switcher.",
@@ -6555,7 +6555,7 @@
     },
     "footer": {
       "total": "{n} integrations",
-      "source": "Source of truth: {src}",
+      "source": "Source of truth: policy.yaml · tool audit log",
       "shown": "{n} tools shown"
     },
     "readonlyNote": "Tools defined in code, policy in policy.yaml (PR)",
@@ -6690,7 +6690,7 @@
     },
     "footer": {
       "version": "{v}",
-      "source": "{src}"
+      "source": "/healthz · /readyz · settings"
     },
     "runtime": {
       "uptime": "Uptime",
@@ -6855,7 +6855,7 @@
     },
     "footer": {
       "version": "{v}",
-      "source": "Source of truth: {src}"
+      "source": "Source of truth: Model catalogue · audit log"
     },
     "models": {
       "title": "Configured AI models ({n})",
@@ -6995,7 +6995,7 @@
     },
     "footer": {
       "total": "{n} items",
-      "source": "{src}"
+      "source": "Operator backlog"
     },
     "rowOpen": "View detail",
     "close": "Close",
@@ -7903,7 +7903,7 @@
         "source": "/observability/agent-prompts."
       },
       "variables": {
-        "what": "The number of distinct template variables ({var}) used by the prompts.",
+        "what": "The number of distinct template variables ('{var}') used by the prompts.",
         "source": "/observability/agent-prompts."
       },
       "avglen": {
@@ -8707,7 +8707,7 @@
     },
     "footer": {
       "total": "{n} documents",
-      "source": "Source: {src}"
+      "source": "Source: Client space (demo)"
     },
     "drawer": {
       "close": "Close",
@@ -8752,7 +8752,7 @@
     },
     "footer": {
       "total": "{n} requests",
-      "source": "Source: {src}"
+      "source": "Source: Client space (demo)"
     }
   },
   "clientAlerts": {
@@ -8776,7 +8776,7 @@
     },
     "footer": {
       "total": "{n} notifications",
-      "source": "Source: {src}"
+      "source": "Source: Client space (demo)"
     }
   },
   "clientSettings": {
@@ -8821,7 +8821,7 @@
       "eraseSubject": "Request to erase my personal data"
     },
     "footer": {
-      "source": "Source: {src}"
+      "source": "Source: Client space (demo)"
     }
   },
   "connectors": {
@@ -8872,7 +8872,7 @@
     },
     "footer": {
       "total": "{n} connectors",
-      "source": "Source: {src}"
+      "source": "Source: Connector catalogue · platform config"
     },
     "explain": {
       "total": {
@@ -8952,7 +8952,7 @@
     },
     "footer": {
       "total": "{n} accounts",
-      "source": "Source: {src}"
+      "source": "Source: Seeded accounts (ADR 0009) · RBAC"
     },
     "explain": {
       "total": {

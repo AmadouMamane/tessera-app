@@ -4298,7 +4298,7 @@
       "atRisk": "{n} Incidents mit Risiko",
       "playbooks": "{n} aktive Verfahren",
       "proofs": "{n} erzeugte Nachweise (7T)",
-      "source": "Quelle der Wahrheit: {src}",
+      "source": "Quelle der Wahrheit: Incident-Register",
       "sync": "Letzte Sync: {ago}"
     },
     "durable": {
@@ -4613,7 +4613,7 @@
       "activeUsers": "Aktive Nutzer: {n}",
       "confidence": "Konfidenzniveau: {level}",
       "chain": "Audit-Kette intakt",
-      "source": "Quelle der Wahrheit: {src}",
+      "source": "Quelle der Wahrheit: Replay-Journal · bundles.jsonl",
       "soc": "SOC verbunden"
     },
     "quick": {
@@ -5023,7 +5023,7 @@
     "footer": {
       "release": "Verknüpftes Release: {id}",
       "chain": "Wahrheitskette · OK",
-      "source": "Quelle der Wahrheit: {src}",
+      "source": "Quelle der Wahrheit: Kurations-Queue (S1) · eval/reports",
       "sync": "Letzte Aktualisierung: {ago}"
     },
     "decide": {
@@ -5334,7 +5334,7 @@
       "journal": "Protokoll anzeigen"
     },
     "footer": {
-      "source": "Quelle der Wahrheit: {src}",
+      "source": "Quelle der Wahrheit: Regelkatalog · automation_store",
       "certified": "{txt}"
     },
     "tabx": {
@@ -5633,7 +5633,7 @@
     },
     "footer": {
       "chain": "{txt}",
-      "source": "Quelle der Wahrheit: {src}"
+      "source": "Quelle der Wahrheit: S1-Audit-Journal (hash-verkettet)"
     }
   },
   "signalCatalogue": {
@@ -5740,7 +5740,7 @@
     },
     "footer": {
       "total": "{n} Signale",
-      "source": "Quelle der Wahrheit: {src}"
+      "source": "Quelle der Wahrheit: Signalkatalog · tessera-eval"
     },
     "explain": {
       "total": {
@@ -5914,7 +5914,7 @@
       "policies": "Alle Policies anzeigen"
     },
     "footer": {
-      "source": "Quelle der Wahrheit: {src}",
+      "source": "Quelle der Wahrheit: policy.yaml · Audit-Ledger",
       "chain": "{txt}"
     },
     "explain": {
@@ -6175,7 +6175,7 @@
       "rows": "Keine Quelle entspricht den Filtern."
     },
     "footer": {
-      "source": "Live-Daten · {src}"
+      "source": "Live-Daten · pgvector · Transcript"
     },
     "view": {
       "embeddings": "Indexierung & Embeddings",
@@ -6389,7 +6389,7 @@
     },
     "footer": {
       "total": "{n} Rollen",
-      "source": "Quelle der Wahrheit: {src}",
+      "source": "Quelle der Wahrheit: RBAC-Richtlinie · Audit-Journal",
       "shown": "{n} Rollen angezeigt"
     },
     "agentFilterHint": "Globaler GOUVERNER/PLATEFORME-Filter — getrennt vom AGENT-Umschalter.",
@@ -6555,7 +6555,7 @@
     },
     "footer": {
       "total": "{n} Integrationen",
-      "source": "Quelle der Wahrheit: {src}",
+      "source": "Quelle der Wahrheit: policy.yaml · Tool-Audit-Journal",
       "shown": "{n} Tools angezeigt"
     },
     "readonlyNote": "Tools im Code definiert, Politik in policy.yaml (PR)",
@@ -6690,7 +6690,7 @@
     },
     "footer": {
       "version": "{v}",
-      "source": "{src}"
+      "source": "/healthz · /readyz · settings"
     },
     "runtime": {
       "uptime": "Laufzeit",
@@ -6855,7 +6855,7 @@
     },
     "footer": {
       "version": "{v}",
-      "source": "Quelle der Wahrheit: {src}"
+      "source": "Quelle der Wahrheit: Modellkatalog · Audit-Journal"
     },
     "models": {
       "title": "Konfigurierte KI-Modelle ({n})",
@@ -6995,7 +6995,7 @@
     },
     "footer": {
       "total": "{n} Elemente",
-      "source": "{src}"
+      "source": "Operator-Backlog"
     },
     "rowOpen": "Details ansehen",
     "close": "Schließen",
@@ -7903,7 +7903,7 @@
         "source": "/observability/agent-prompts."
       },
       "variables": {
-        "what": "Die Anzahl unterschiedlicher Template-Variablen ({var}), die von den Prompts verwendet werden.",
+        "what": "Die Anzahl unterschiedlicher Template-Variablen ('{var}'), die von den Prompts verwendet werden.",
         "source": "/observability/agent-prompts."
       },
       "avglen": {
@@ -8707,7 +8707,7 @@
     },
     "footer": {
       "total": "{n} Dokumente",
-      "source": "Quelle: {src}"
+      "source": "Quelle: Kundenbereich (Demo)"
     },
     "drawer": {
       "close": "Schließen",
@@ -8752,7 +8752,7 @@
     },
     "footer": {
       "total": "{n} Anfragen",
-      "source": "Quelle: {src}"
+      "source": "Quelle: Kundenbereich (Demo)"
     }
   },
   "clientAlerts": {
@@ -8776,7 +8776,7 @@
     },
     "footer": {
       "total": "{n} Benachrichtigungen",
-      "source": "Quelle: {src}"
+      "source": "Quelle: Kundenbereich (Demo)"
     }
   },
   "clientSettings": {
@@ -8821,7 +8821,7 @@
       "eraseSubject": "Antrag auf Löschung meiner personenbezogenen Daten"
     },
     "footer": {
-      "source": "Quelle: {src}"
+      "source": "Quelle: Kundenbereich (Demo)"
     }
   },
   "connectors": {
@@ -8872,7 +8872,7 @@
     },
     "footer": {
       "total": "{n} Konnektoren",
-      "source": "Quelle: {src}"
+      "source": "Quelle: Konnektorenkatalog · Plattform-Konfig"
     },
     "explain": {
       "total": {
@@ -8952,7 +8952,7 @@
     },
     "footer": {
       "total": "{n} Konten",
-      "source": "Quelle: {src}"
+      "source": "Quelle: Geseedete Konten (ADR 0009) · RBAC"
     },
     "explain": {
       "total": {

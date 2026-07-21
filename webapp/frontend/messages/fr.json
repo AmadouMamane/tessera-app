@@ -4298,7 +4298,7 @@
       "atRisk": "{n} incidents à risque",
       "playbooks": "{n} procédures actifs",
       "proofs": "{n} preuves générées (7j)",
-      "source": "Source de vérité : {src}",
+      "source": "Source de vérité : Registre des incidents",
       "sync": "Dernière sync : {ago}"
     },
     "durable": {
@@ -4613,7 +4613,7 @@
       "activeUsers": "Utilisateurs actifs : {n}",
       "confidence": "Niveau de confiance : {level}",
       "chain": "Chaîne d’audit intacte",
-      "source": "Source de vérité : {src}",
+      "source": "Source de vérité : Journal des rejeux · bundles.jsonl",
       "soc": "SOC connecté"
     },
     "quick": {
@@ -5023,7 +5023,7 @@
     "footer": {
       "release": "Release liée : {id}",
       "chain": "Chaîne de vérité · OK",
-      "source": "Source de vérité : {src}",
+      "source": "Source de vérité : File de curation (S1) · eval/reports",
       "sync": "Dernière mise à jour : {ago}"
     },
     "decide": {
@@ -5334,7 +5334,7 @@
       "journal": "Voir le journal"
     },
     "footer": {
-      "source": "Source de vérité : {src}",
+      "source": "Source de vérité : Catalogue de règles · automation_store",
       "certified": "{txt}"
     },
     "tabx": {
@@ -5633,7 +5633,7 @@
     },
     "footer": {
       "chain": "{txt}",
-      "source": "Source de vérité : {src}"
+      "source": "Source de vérité : Journal d'audit S1 (hash-chaîné)"
     }
   },
   "signalCatalogue": {
@@ -5740,7 +5740,7 @@
     },
     "footer": {
       "total": "{n} signaux",
-      "source": "Source de vérité : {src}"
+      "source": "Source de vérité : Catalogue de signaux · tessera-eval"
     },
     "explain": {
       "total": {
@@ -5914,7 +5914,7 @@
       "policies": "Voir toutes les politiques"
     },
     "footer": {
-      "source": "Source de vérité : {src}",
+      "source": "Source de vérité : policy.yaml · Ledger d'audit",
       "chain": "{txt}"
     },
     "explain": {
@@ -6175,7 +6175,7 @@
       "rows": "Aucune source ne correspond aux filtres."
     },
     "footer": {
-      "source": "Données live · {src}"
+      "source": "Données live · pgvector · transcript"
     },
     "view": {
       "embeddings": "Indexation & embeddings",
@@ -6389,7 +6389,7 @@
     },
     "footer": {
       "total": "{n} rôles",
-      "source": "Source de vérité : {src}",
+      "source": "Source de vérité : Politique RBAC · Journal d'audit",
       "shown": "{n} rôles affichés"
     },
     "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
@@ -6555,7 +6555,7 @@
     },
     "footer": {
       "total": "{n} intégrations",
-      "source": "Source de vérité : {src}",
+      "source": "Source de vérité : policy.yaml · Journal d'audit des outils",
       "shown": "{n} outils affichés"
     },
     "readonlyNote": "Outils définis dans le code, politique dans policy.yaml (PR)",
@@ -6690,7 +6690,7 @@
     },
     "footer": {
       "version": "{v}",
-      "source": "{src}"
+      "source": "/healthz · /readyz · settings"
     },
     "runtime": {
       "uptime": "Durée d'activité",
@@ -6855,7 +6855,7 @@
     },
     "footer": {
       "version": "{v}",
-      "source": "Source de vérité : {src}"
+      "source": "Source de vérité : Catalogue de modèles · Journal d'audit"
     },
     "models": {
       "title": "Modèles IA configurés ({n})",
@@ -6995,7 +6995,7 @@
     },
     "footer": {
       "total": "{n} éléments",
-      "source": "{src}"
+      "source": "Backlog opérateur"
     },
     "rowOpen": "Voir le détail",
     "close": "Fermer",
@@ -7905,7 +7905,7 @@
         "source": "/observability/agent-prompts."
       },
       "variables": {
-        "what": "Le nombre de variables de gabarit distinctes ({var}) utilisées par les prompts.",
+        "what": "Le nombre de variables de gabarit distinctes ('{var}') utilisées par les prompts.",
         "source": "/observability/agent-prompts."
       },
       "avglen": {
@@ -8709,7 +8709,7 @@
     },
     "footer": {
       "total": "{n} documents",
-      "source": "Source : {src}"
+      "source": "Source : Espace client (démo)"
     },
     "drawer": {
       "close": "Fermer",
@@ -8754,7 +8754,7 @@
     },
     "footer": {
       "total": "{n} demandes",
-      "source": "Source : {src}"
+      "source": "Source : Espace client (démo)"
     }
   },
   "clientAlerts": {
@@ -8778,7 +8778,7 @@
     },
     "footer": {
       "total": "{n} notifications",
-      "source": "Source : {src}"
+      "source": "Source : Espace client (démo)"
     }
   },
   "clientSettings": {
@@ -8823,7 +8823,7 @@
       "eraseSubject": "Demande d’effacement de mes données personnelles"
     },
     "footer": {
-      "source": "Source : {src}"
+      "source": "Source : Espace client (démo)"
     }
   },
   "connectors": {
@@ -8874,7 +8874,7 @@
     },
     "footer": {
       "total": "{n} connecteurs",
-      "source": "Source : {src}"
+      "source": "Source : Catalogue connecteurs · config plateforme"
     },
     "explain": {
       "total": {
@@ -8954,7 +8954,7 @@
     },
     "footer": {
       "total": "{n} comptes",
-      "source": "Source : {src}"
+      "source": "Source : Comptes seedés (ADR 0009) · RBAC"
     },
     "explain": {
       "total": {
