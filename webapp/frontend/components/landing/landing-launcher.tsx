@@ -72,6 +72,7 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--amber-soft": "#FBBF24",
   "--success": "#22C55E",
   "--danger": "#F87171",
+  "--steel": "#93C5FD",
   "--radius-lg": "24px",
   "--radius-md": "16px",
   "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -327,7 +328,7 @@ const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
 // real states — a gate holding an agent back is NOT red.
 const TONE_COLOR: Record<PillarTone, string> = {
   live: "var(--cyan)",
-  guard: "var(--rose)",
+  guard: "var(--steel)",
   govern: "var(--champagne)",
   stale: "var(--amber)",
   verified: "var(--success)",
