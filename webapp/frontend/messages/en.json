@@ -7347,22 +7347,17 @@
       "justNow": "just now",
       "minutesAgo": "{m} min ago",
       "info": {
-        "seeForYourself": "See for yourself",
         "supervise": {
-          "what": "Tessera listens to the telemetry every agent publishes — health, activity, measurements — without ever stepping into its conversations.",
-          "how": "The count and timestamp reflect data actually received, refreshed continuously: if the signal drops, this tile says so — it never invents a number."
+          "what": "Tessera listens to the telemetry every agent publishes — health, activity, measurements — without ever stepping into its conversations."
         },
         "secure": {
-          "what": "Every message passes through a single checkpoint that can block an attack, mask sensitive data, or call in a human.",
-          "how": "Counters read from the audit journal, where every refusal is recorded; trial messages (canaries, operator tests) are included — the checkpoint runs on each of them."
+          "what": "Every message passes through a single checkpoint that can block an attack, mask sensitive data, or call in a human."
         },
         "evaluate": {
-          "what": "Before serving customers, every agent must pass a test set, including a security baseline shared by all.",
-          "how": "The verdict comes from the agent's latest run; any change — model, instructions, rules — puts it back in play: the agent must prove itself ready again."
+          "what": "Before serving customers, every agent must pass a test set, including a security baseline shared by all."
         },
         "prove": {
-          "what": "Every decision joins a hash chain whose head is timestamped by a qualified trust provider independent from Tessera: any later rewrite becomes independently detectable.",
-          "how": "“Tamper-proof ledger” appears only after the full chain and RFC 3161 token verify against the pinned trust root; otherwise the missing proof is named."
+          "what": "Every decision joins a hash chain whose head is timestamped by a qualified trust provider independent from Tessera: any later rewrite becomes independently detectable."
         }
       }
     },

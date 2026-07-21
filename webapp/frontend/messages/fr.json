@@ -7349,22 +7349,17 @@
       "justNow": "à l’instant",
       "minutesAgo": "il y a {m} min",
       "info": {
-        "seeForYourself": "Voir par vous-même",
         "supervise": {
-          "what": "Tessera écoute la télémétrie que chaque agent publie — santé, activité, mesures — sans jamais intervenir dans ses échanges.",
-          "how": "Le compte et l’horodatage reflètent les données réellement reçues, rafraîchies en continu : si le signal se coupe, cette case le dit, elle n’invente pas un chiffre."
+          "what": "Tessera écoute la télémétrie que chaque agent publie — santé, activité, mesures — sans jamais intervenir dans ses échanges."
         },
         "secure": {
-          "what": "Chaque message traverse un point de contrôle unique qui peut bloquer une attaque, masquer une donnée sensible ou faire appel à un humain.",
-          "how": "Compteurs lus du journal d’audit, où chaque refus est inscrit ; les messages d’essai (canaris, tests opérateur) sont inclus — le contrôle s’exerce sur chacun d’eux."
+          "what": "Chaque message traverse un point de contrôle unique qui peut bloquer une attaque, masquer une donnée sensible ou faire appel à un humain."
         },
         "evaluate": {
-          "what": "Avant d’être exposé aux clients, chaque agent doit réussir un jeu d’épreuves, dont un socle de sécurité commun à tous.",
-          "how": "Le verdict vient du dernier passage de l’agent ; toute modification — modèle, consignes, règles — le remet en jeu : l’agent devra prouver à nouveau qu’il est prêt."
+          "what": "Avant d’être exposé aux clients, chaque agent doit réussir un jeu d’épreuves, dont un socle de sécurité commun à tous."
         },
         "prove": {
-          "what": "Chaque décision rejoint une chaîne de hachage dont le sommet est horodaté par un prestataire qualifié extérieur à Tessera : toute réécriture postérieure devient détectable hors de Tessera.",
-          "how": "« Registre infalsifiable » n’apparaît qu’après vérification de toute la chaîne et du jeton RFC 3161 contre la racine de confiance épinglée ; sinon l’état manquant est nommé."
+          "what": "Chaque décision rejoint une chaîne de hachage dont le sommet est horodaté par un prestataire qualifié extérieur à Tessera : toute réécriture postérieure devient détectable hors de Tessera."
         }
       }
     },

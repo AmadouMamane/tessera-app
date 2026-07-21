@@ -347,8 +347,8 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # attribution the public governance feed already shows; no customer subject data.
     # 124-125 (lot 7): GET /observability/evidence-packs/{id}/{manifest,verify} —
     # artifact counts, digests and integrity verdicts; no customer subject data.
-    # 126 (2026-07-21 signal band): GET /observability/guard-activity — aggregate
-    # counts only; the full canary sweep above proves it exposes no subject payload.
+    # 126 (2026-07-21): GET /observability/guard-activity — the launcher band's
+    # day counters (messages checked/blocked, ADR 0009); no customer subject data.
     assert len(public) == 126
 
 

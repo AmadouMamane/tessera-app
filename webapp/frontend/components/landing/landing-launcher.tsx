@@ -14,7 +14,7 @@ import {
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { AppHeader } from "@/components/layout/app-header";
@@ -72,6 +72,8 @@ export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
   "--amber-soft": "#FBBF24",
   "--success": "#22C55E",
   "--danger": "#F87171",
+  "--indigo": "#818CF8",
+  "--violet": "#C084FC",
   "--radius-lg": "24px",
   "--radius-md": "16px",
   "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
@@ -321,14 +323,30 @@ const PILLAR_ICON: Record<PillarKey, typeof ShieldCheck> = {
   prove: Fingerprint,
 };
 
-// Tone → accent. `live`/`guard`/`govern` are the neutral capability accents;
-// `stale` (amber) marks a release verdict put back in play; the PROOFS tones
-// recolour by the real verification verdict. Status colours stay reserved for
-// real states — a gate holding an agent back is NOT red.
+// One capability, one hue — carried by the ICON, never the words (the dataviz
+// doctrine that reconciled the two operator calls of 2026-07-21: "une couleur
+// par fonctionnalité" ET "pas trop coloré" — text wears text tokens, the mark
+// beside it carries identity). The quartet is computed, not eyeballed:
+// validated on the navy surface for CVD separation (worst adjacent ΔE 18.9
+// deutan), normal-vision floor (23.9 ≥ 15), chroma and 3:1 contrast; the
+// chart-mark lightness band is waived — these are text-labelled 14px icons,
+// and the label is the secondary encoding. Status hues (green/amber/red) stay
+// reserved for verdicts and appear in no capability slot.
+const PILLAR_ACCENT: Record<PillarKey, string> = {
+  supervise: "var(--cyan)",
+  secure: "var(--indigo)",
+  evaluate: "var(--champagne)",
+  prove: "var(--violet)",
+};
+
+// Tone → STATE accent. Colour on a state line is INFORMATION, never decoration:
+// the kickers' words sit in quiet slate, and only a real verdict recolours —
+// amber for a release verdict put back in play, green/red for the audit
+// chain's own verification state.
 const TONE_COLOR: Record<PillarTone, string> = {
-  live: "var(--cyan)",
-  guard: "var(--cyan)",
-  govern: "var(--champagne)",
+  live: "var(--text-secondary)",
+  guard: "var(--text-secondary)",
+  govern: "var(--text-secondary)",
   stale: "var(--amber)",
   verified: "var(--success)",
   unverified: "var(--danger)",
@@ -360,37 +378,47 @@ function PillarColumn({
   const accent = TONE_COLOR[pillar.tone];
   const title = tr(pillar.titleKey);
   const state = tr(pillar.stateKey, pillar.stateVars);
-  // Only the PROOFS state is recoloured by its verdict (§5); counts and gate
-  // lines stay in primary text so a held-back agent is never painted red.
-  const stateColor = pillar.key === "prove" ? accent : "var(--text-primary)";
+  // A capability NAME is a name, never a verdict: every kicker sits in the same
+  // quiet slate. Only a STATE that carries a real verdict recolours — the audit
+  // chain's verification (green/red) and a release verdict put back in play
+  // (amber). Counts stay primary so a held-back agent is never painted red.
+  const titleColor = "var(--text-secondary)";
+  const stateColor =
+    pillar.key === "prove" || pillar.tone === "stale" ? accent : "var(--text-primary)";
   return (
-    <div className="flex flex-1 flex-col items-center gap-[7px] px-[14px] py-[15px] text-center">
+    <div className="flex flex-1 flex-col items-center gap-[7px] px-[12px] py-[15px] text-center">
       {/* One complete accessible label — the SR hears "name : state" as a unit
           (§8); the visible title/state are decorative duplicates, so the meaning
           never rides on colour or icon alone. The ⓘ button stays OUTSIDE the
           aria-hidden spans: it is interactive, not decoration. */}
       <span className="sr-only">{`${title} : ${state}${freshness ? ` · ${freshness}` : ""}`}</span>
-      <span className="flex items-center justify-center gap-[6px]">
+      {/* items-start + a 1px nudge keep the ⓘ hugging the FIRST line of the
+          kicker: centred against a wrapped two-line title it floats mid-air,
+          visually detached from the words it explains. Softened at rest
+          (opacity) so the kicker row stays calm; full presence on hover/focus. */}
+      <span className="flex items-start justify-center gap-[5px]">
         <span
           aria-hidden="true"
           className={cn(
             "flex items-center justify-center gap-[7px] font-semibold text-[10.5px] uppercase leading-[1.25] tracking-[0.11em]",
             dimmed && "opacity-60",
           )}
-          style={{ color: accent }}
+          style={{ color: titleColor }}
         >
-          <Icon className="h-[14px] w-[14px] shrink-0 stroke-[1.9]" />
+          <Icon
+            className="h-[14px] w-[14px] shrink-0 stroke-[1.9]"
+            style={{ color: PILLAR_ACCENT[pillar.key] }}
+          />
           {title}
         </span>
+        {/* Public landing: the popover DESCRIBES the capability, nothing more.
+            "Calcul"/"Source" are cockpit vocabulary — an operator's questions,
+            not a visitor's (operator call, 2026-07-21). The provenance story
+            lives one click away on /comprendre. */}
         <MetricInfo
+          className="mt-[-1px] opacity-55 hover:opacity-100 focus-visible:opacity-100"
           title={title}
           what={tr(`signal.info.${pillar.key}.what`)}
-          how={tr(`signal.info.${pillar.key}.how`)}
-          source={
-            <Link className="underline underline-offset-2" href="/comprendre">
-              {tr("signal.info.seeForYourself")}
-            </Link>
-          }
         />
       </span>
       <span
@@ -400,7 +428,12 @@ function PillarColumn({
       >
         {state}
         {freshness ? (
-          <span className={cn("text-[var(--text-secondary)]", dimmed && "opacity-70")}>
+          <span
+            className={cn(
+              "text-[11px] text-[var(--text-secondary)] tracking-[0.01em]",
+              dimmed ? "opacity-60" : "opacity-75",
+            )}
+          >
             {` · ${freshness}`}
           </span>
         ) : null}
@@ -469,19 +502,31 @@ export function SignalBand({
   // (real blocked count) — it explains why "prêts < total", never a blanket claim.
   const showSocle = live.agentsWithRelease > 0 && live.passedAgents < live.agentsWithRelease;
   return (
-    <div className="mt-8 flex w-full max-w-[1060px] flex-col items-center gap-[16px]">
+    <div className="mt-8 flex w-full max-w-[1120px] flex-col items-center gap-[16px]">
       {/* One bounded band, four capability columns — compact, stacks on mobile,
           never four big cards. The freshness stamp rides on the two columns whose
-          claim is temporal (supervise: "temps réel"; prove: "à tout instant"). */}
-      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-x sm:divide-y-0">
-        {pillars.map((pillar) => (
-          <PillarColumn
-            key={pillar.key}
-            t={t}
-            pillar={pillar}
-            freshness={pillar.key === "supervise" || pillar.key === "prove" ? freshness : undefined}
-            dimmed={dimmed}
-          />
+          claim is temporal (supervise: "temps réel"; prove: "à tout instant").
+          Desktop separators are inset gradient hairlines (fading at both ends) —
+          a full-height rule cuts the band into boxes; a faded filet reads as one
+          surface. Mobile keeps the plain stacked divide. */}
+      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-y-0">
+        {pillars.map((pillar, index) => (
+          <Fragment key={pillar.key}>
+            {index > 0 ? (
+              <span
+                aria-hidden="true"
+                className="my-[9px] hidden w-px shrink-0 self-stretch bg-gradient-to-b from-transparent via-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] to-transparent sm:block"
+              />
+            ) : null}
+            <PillarColumn
+              t={t}
+              pillar={pillar}
+              freshness={
+                pillar.key === "supervise" || pillar.key === "prove" ? freshness : undefined
+              }
+              dimmed={dimmed}
+            />
+          </Fragment>
         ))}
       </div>
       {showSocle ? (
