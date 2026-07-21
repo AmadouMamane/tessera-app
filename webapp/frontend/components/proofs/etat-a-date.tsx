@@ -32,6 +32,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchEtatADate, saveEtatSnapshot } from "@/lib/api/client";
 import type { EtatADate as Data } from "@/lib/api/schemas";
@@ -882,7 +883,9 @@ function Original({ data, className }: { data: Data; className?: string }) {
             <p className="mb-0.5 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
               {t("question")}
             </p>
-            <p className="text-[var(--tessera-text-muted)]">{o.question}</p>
+            <Truncate full={o.question} className="text-[var(--tessera-text-muted)]">
+              {o.question}
+            </Truncate>
           </div>
           <div>
             <p className="mb-0.5 text-[0.74rem] font-semibold text-[var(--tessera-text)]">

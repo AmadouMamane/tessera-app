@@ -29,6 +29,8 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import {
@@ -698,8 +700,11 @@ function SandboxControls({
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.7rem]">
-        <span className="inline-flex items-center rounded-md border border-[#d98b1f]/40 bg-[#3a2a14]/40 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-[#f4c76a]">
-          env Sandbox
+        <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center rounded-md border border-[#d98b1f]/40 bg-[#3a2a14]/40 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-[#f4c76a]">
+            env Sandbox
+          </span>
+          <CardInfo ns="agentConsole" k="sandbox" title="env Sandbox" />
         </span>
 
         <label className="inline-flex items-center gap-1.5">
@@ -1149,6 +1154,7 @@ function TraceColumn({
       <div className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
         <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[#e0a23a]">
           <Activity className="h-4 w-4" /> {t("traceTitle")}
+          <CardInfo ns="agentConsole" k="trace" title={t("traceTitle")} />
         </span>
       </div>
 
@@ -1210,7 +1216,9 @@ function TraceSpan({
               <AlertTriangle className="h-3.5 w-3.5" />
             )}
           </span>
-          <span className="truncate text-[var(--tessera-text)]">{span.label}</span>
+          <Truncate full={span.label} className="text-[var(--tessera-text)]">
+            {span.label}
+          </Truncate>
         </span>
         <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
           {fmtMs(span.duration_ms)}
@@ -1281,8 +1289,9 @@ function ResponseSummary({
     <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] h-[460px] overflow-y-auto">
       {data.context ? <ContextStrip ctx={data.context} /> : null}
       <div className="border-b border-[var(--tessera-border)] px-3.5 py-2.5">
-        <h2 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">
+        <h2 className="flex items-center gap-1 text-[0.82rem] font-semibold text-[var(--tessera-text)]">
           {t("summaryTitle")}
+          <CardInfo ns="agentConsole" k="summary" title={t("summaryTitle")} />
         </h2>
       </div>
 
@@ -1354,17 +1363,22 @@ function Awaiting({ text, className }: { text: string; className?: string }) {
 
 function PanelHead({
   title,
+  info,
   cta,
   href,
 }: {
   title: string;
+  info?: ReactNode;
   cta?: string;
   href?: string;
 }) {
   const cls = "inline-flex items-center gap-0.5 text-[0.64rem] text-[#f4c76a] hover:text-white";
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
-      <h3 className="text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
+      <h3 className="flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+        {title}
+        {info}
+      </h3>
       {cta && href ? (
         <Link href={href} className={cls}>
           {cta} <ChevronRight className="h-3 w-3" />
@@ -1378,7 +1392,10 @@ function Quality({ q }: { q: NonNullable<ChatDebug["quality"]> }) {
   return (
     <div className="p-3.5">
       <div className="mb-2.5 flex items-center justify-between gap-2">
-        <h3 className="text-[0.74rem] font-semibold text-[var(--tessera-text)]">{q.title}</h3>
+        <h3 className="flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+          {q.title}
+          <CardInfo ns="agentConsole" k="quality" title={q.title} />
+        </h3>
         <span
           className={cn(
             "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
@@ -1412,11 +1429,18 @@ function SourcesPanel({ s }: { s: NonNullable<ChatDebug["sources"]> }) {
   const agentId = useAgentId();
   return (
     <div className="p-3.5">
-      <PanelHead title={s.title} cta={s.cta} href={agentPath(agentId, "connaissances")} />
+      <PanelHead
+        title={s.title}
+        info={<CardInfo ns="agentConsole" k="sources" title={s.title} />}
+        cta={s.cta}
+        href={agentPath(agentId, "connaissances")}
+      />
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {s.rows.map((r, i) => (
           <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-[var(--tessera-text)]">{r.label}</span>
+            <Truncate full={r.label} className="min-w-0 text-[var(--tessera-text)]">
+              {r.label}
+            </Truncate>
             <span className="shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">
               {r.scope}
             </span>
@@ -1430,13 +1454,19 @@ function SourcesPanel({ s }: { s: NonNullable<ChatDebug["sources"]> }) {
 function ToolsPanel({ tl }: { tl: NonNullable<Data["tools"]> }) {
   return (
     <div className="p-3.5">
-      <PanelHead title={tl.title} />
+      <PanelHead
+        title={tl.title}
+        info={<CardInfo ns="agentConsole" k="tools" title={tl.title} />}
+      />
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {tl.rows.map((r) => (
           <li key={r.name} className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate font-mono text-[0.68rem] text-[var(--tessera-text)]">
+            <Truncate
+              full={r.name}
+              className="min-w-0 font-mono text-[0.68rem] text-[var(--tessera-text)]"
+            >
               {r.name}
-            </span>
+            </Truncate>
             <span className="flex shrink-0 items-center gap-3">
               <span className={cn("text-[0.66rem] font-medium", STATUS_TONE[r.tone])}>
                 {r.status}
@@ -1453,7 +1483,10 @@ function ToolsPanel({ tl }: { tl: NonNullable<Data["tools"]> }) {
 function GuardrailsPanel({ g }: { g: NonNullable<Data["guardrails"]> }) {
   return (
     <div className="p-3.5">
-      <PanelHead title={g.title} />
+      <PanelHead
+        title={g.title}
+        info={<CardInfo ns="agentConsole" k="guardrails" title={g.title} />}
+      />
       <ul className="flex flex-col gap-2">
         {g.rows.map((r) => (
           <li key={r.name} className="flex flex-col gap-1">
@@ -1483,14 +1516,21 @@ function EvaluationPanel({ ev }: { ev: Data["evaluation"] }) {
   if (!ev) return null;
   return (
     <div className="p-3.5">
-      <PanelHead title={ev.title} cta={ev.cta} href={agentPath(agentId, "evaluations")} />
+      <PanelHead
+        title={ev.title}
+        info={<CardInfo ns="agentConsole" k="evaluation" title={ev.title} />}
+        cta={ev.cta}
+        href={agentPath(agentId, "evaluations")}
+      />
       <p className="mb-2 text-[0.62rem] leading-relaxed text-[var(--tessera-text-muted)]">
         {ev.note}
       </p>
       <ul className="flex flex-col gap-1.5 text-[0.72rem]">
         {ev.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-[var(--tessera-text)]">{r.label}</span>
+            <Truncate full={r.label} className="min-w-0 text-[var(--tessera-text)]">
+              {r.label}
+            </Truncate>
             <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
               {r.value ?? "—"}
             </span>
@@ -1643,7 +1683,10 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
               >
                 <summary className="flex cursor-pointer items-center gap-2 px-2 py-1 text-[0.64rem]">
                   <Chip tone={ROLE_TONE[m.role] ?? undefined}>{m.role}</Chip>
-                  <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+                  <span
+                    title={m.content.slice(0, 80)}
+                    className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]"
+                  >
                     {m.content.slice(0, 80)}
                   </span>
                 </summary>

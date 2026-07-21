@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Truncate } from "@/components/ui/truncate";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { AGENT_SCOPE_ALL, AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchFleet } from "@/lib/api/client";
@@ -71,7 +72,9 @@ function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string
         >
           <Filter className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
           <span className="text-[var(--tessera-text-muted)]">{t("label")}</span>
-          <span className="max-w-[10rem] truncate">{label}</span>
+          <Truncate full={label} className="max-w-[10rem]">
+            {label}
+          </Truncate>
           <ChevronDown className="h-3 w-3 text-[var(--tessera-text-muted)]" />
         </button>
       </DropdownMenuTrigger>
@@ -90,7 +93,7 @@ function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string
             onSelect={() => select(a.id)}
             className="flex items-center justify-between gap-3"
           >
-            <span className="truncate">{a.name}</span>
+            <Truncate full={a.name}>{a.name}</Truncate>
             {a.id === scope ? <Check className="h-3.5 w-3.5 text-[#b9a6ff]" /> : null}
           </DropdownMenuItem>
         ))}

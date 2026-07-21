@@ -23,6 +23,8 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import { fetchAgentHistorique } from "@/lib/api/client";
@@ -377,9 +379,12 @@ function LiveConversations({ data, locale }: { data: Data; locale: string }) {
           {convos.slice(0, 8).map((c) => (
             <li key={c.conversation_id} className="flex items-center gap-3 py-2">
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[0.82rem] text-[var(--tessera-text)]">
+                <Truncate
+                  full={c.title || t("live.untitled")}
+                  className="text-[0.82rem] text-[var(--tessera-text)]"
+                >
                   {c.title || t("live.untitled")}
-                </div>
+                </Truncate>
                 <div className="mt-0.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
                   <Clock className="h-3 w-3" />
                   {new Date(c.last_at).toLocaleString(locale, {
@@ -409,9 +414,10 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
     <div className="flex h-[96px] flex-col justify-between rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="flex items-center gap-2">
         <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={kpi.label} className="text-[0.64rem] text-[var(--tessera-text-muted)]">
           {kpi.label}
-        </span>
+        </Truncate>
+        <CardInfo ns="agentHistorique" k={kpi.key} title={kpi.label} />
       </div>
       <p className="text-[1.3rem] font-semibold tabular-nums text-[var(--tessera-text)]">
         {kpi.value}
@@ -864,12 +870,14 @@ function initials(name: string): string {
 
 function PanelCard({
   title,
+  info,
   control,
   cta,
   ctaHref,
   children,
 }: {
   title: string;
+  info?: React.ReactNode;
   control?: string;
   cta?: string;
   ctaHref?: string;
@@ -878,7 +886,10 @@ function PanelCard({
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-[0.72rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
+        <h3 className="flex items-center gap-1 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+          {title}
+          {info}
+        </h3>
         {control ? (
           <span className="inline-flex items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.6rem] text-[var(--tessera-text-muted)]">
             {control}
@@ -902,7 +913,11 @@ function TrendCard({ data }: { data: Data }) {
   const tr = data.trend;
   if (!tr) return null;
   return (
-    <PanelCard title={tr.title} control={tr.control}>
+    <PanelCard
+      title={tr.title}
+      info={<CardInfo ns="agentHistorique" k="trend" title={tr.title} />}
+      control={tr.control}
+    >
       <LineChart a={tr.series} b={tr.prev} />
       <div className="mt-2 flex flex-wrap items-center gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
         <span className="inline-flex items-center gap-1.5">
@@ -962,12 +977,19 @@ function ByAgent({ data }: { data: Data }) {
   const b = data.by_agent;
   if (!b) return null;
   return (
-    <PanelCard title={b.title} cta={b.cta} ctaHref={b.cta_href}>
+    <PanelCard
+      title={b.title}
+      info={<CardInfo ns="agentHistorique" k="by_agent" title={b.title} />}
+      cta={b.cta}
+      ctaHref={b.cta_href}
+    >
       <ul className="flex flex-col gap-2">
         {b.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2 text-[0.66rem]">
-              <span className="min-w-0 truncate text-[var(--tessera-text)]">{it.label}</span>
+              <Truncate full={it.label} className="min-w-0 text-[var(--tessera-text)]">
+                {it.label}
+              </Truncate>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
                 {it.value} <span className="text-[0.58rem]">({it.share})</span>
               </span>
@@ -989,7 +1011,7 @@ function ScoreDonut({ data }: { data: Data }) {
   const C = 2 * Math.PI * R;
   let acc = 0;
   return (
-    <PanelCard title={s.title}>
+    <PanelCard title={s.title} info={<CardInfo ns="agentHistorique" k="scores" title={s.title} />}>
       <div className="flex items-center gap-3">
         <span className="relative inline-flex h-[88px] w-[88px] shrink-0 items-center justify-center">
           <svg viewBox="0 0 88 88" className="h-[88px] w-[88px] -rotate-90" aria-hidden="true">
@@ -1024,9 +1046,13 @@ function ScoreDonut({ data }: { data: Data }) {
             <span className="max-w-[48px] truncate text-[0.7rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
               {s.center}
             </span>
-            <span className="line-clamp-2 max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--tessera-text-muted)]">
+            <Truncate
+              full={s.center_label}
+              lines={2}
+              className="max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--tessera-text-muted)]"
+            >
               {s.center_label}
-            </span>
+            </Truncate>
           </span>
         </span>
         <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.62rem]">
@@ -1039,9 +1065,9 @@ function ScoreDonut({ data }: { data: Data }) {
                     SEG_DOT[seg.tone] ?? "bg-slate-400",
                   )}
                 />
-                <span className="min-w-0 truncate text-[var(--tessera-text-muted)]">
+                <Truncate full={seg.label} className="min-w-0 text-[var(--tessera-text-muted)]">
                   {seg.label}
-                </span>
+                </Truncate>
               </span>
               <span className="pl-2.5 tabular-nums text-[var(--tessera-text)]">
                 {seg.value} <span className="text-[var(--tessera-text-muted)]">({seg.share})</span>
@@ -1060,7 +1086,12 @@ function SuccessCard({ data }: { data: Data }) {
   const r = 15.915;
   const off = 100 - s.gauge;
   return (
-    <PanelCard title={s.title} cta={s.cta} ctaHref={s.cta_href}>
+    <PanelCard
+      title={s.title}
+      info={<CardInfo ns="agentHistorique" k="successCard" title={s.title} />}
+      cta={s.cta}
+      ctaHref={s.cta_href}
+    >
       <div className="flex flex-1 flex-col items-center justify-center gap-1">
         <span className="relative inline-flex h-[80px] w-[80px] items-center justify-center">
           <svg viewBox="0 0 36 36" className="h-[80px] w-[80px] -rotate-90" aria-hidden="true">
@@ -1097,7 +1128,12 @@ function Watch({ data }: { data: Data }) {
   const w = data.watch;
   if (!w) return null;
   return (
-    <PanelCard title={w.title} cta={w.cta} ctaHref={w.cta_href}>
+    <PanelCard
+      title={w.title}
+      info={<CardInfo ns="agentHistorique" k="watch" title={w.title} />}
+      cta={w.cta}
+      ctaHref={w.cta_href}
+    >
       <ul className="flex flex-col gap-2.5">
         {w.items.map((it) => (
           <li key={it.title} className="flex items-start gap-2">
@@ -1108,12 +1144,15 @@ function Watch({ data }: { data: Data }) {
               )}
             />
             <span className="min-w-0">
-              <span className="block truncate text-[0.72rem] text-[var(--tessera-text)]">
+              <Truncate full={it.title} className="text-[0.72rem] text-[var(--tessera-text)]">
                 {it.title}
-              </span>
-              <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+              </Truncate>
+              <Truncate
+                full={it.detail}
+                className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+              >
                 {it.detail}
-              </span>
+              </Truncate>
             </span>
           </li>
         ))}
@@ -1142,14 +1181,16 @@ function Quick({
     evaluate: agentPath(agentId, "console"),
   };
   return (
-    <PanelCard title={q.title}>
+    <PanelCard title={q.title} info={<CardInfo ns="agentHistorique" k="quick" title={q.title} />}>
       <div className="grid grid-cols-2 gap-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? Play;
           const inner = (
             <>
               <Icon className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
-              <span className="min-w-0 truncate">{it.label}</span>
+              <Truncate full={it.label} className="min-w-0">
+                {it.label}
+              </Truncate>
             </>
           );
           const href = HREF[it.key];
@@ -1243,9 +1284,12 @@ function Detail({
         </p>
         <div className="mt-1 flex items-center gap-2">
           <MessagesSquare className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-          <span className="truncate font-mono text-[0.82rem] font-semibold text-[var(--tessera-text)]">
+          <Truncate
+            full={row.sid}
+            className="font-mono text-[0.82rem] font-semibold text-[var(--tessera-text)]"
+          >
             {row.sid}
-          </span>
+          </Truncate>
         </div>
       </div>
 
@@ -1313,9 +1357,12 @@ function Detail({
                 {info.map((it) => (
                   <li key={it.label} className="flex items-center justify-between gap-2">
                     <span className="text-[var(--tessera-text-muted)]">{it.label}</span>
-                    <span className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+                    <Truncate
+                      full={it.value}
+                      className="min-w-0 font-medium text-[var(--tessera-text)]"
+                    >
                       {it.value}
-                    </span>
+                    </Truncate>
                   </li>
                 ))}
               </ul>

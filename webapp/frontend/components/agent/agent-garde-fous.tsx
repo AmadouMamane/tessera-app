@@ -21,11 +21,13 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
 import {
   TemporalRail,
   useRailTimeline,
   useTemporalState,
 } from "@/components/overview/temporal-rail";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchAgentGardeFous, mutateGardeFousRule } from "@/lib/api/client";
 import type { AgentGardeFous as Data } from "@/lib/api/schemas";
@@ -307,7 +309,9 @@ function labelFor(
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-[0.64rem] text-[var(--tessera-text)]">
-      <span className="max-w-[200px] truncate">{label}</span>
+      <Truncate full={label} className="max-w-[200px]">
+        {label}
+      </Truncate>
       <button type="button" onClick={onRemove} aria-label={`Remove ${label}`}>
         <X className="h-3 w-3 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]" />
       </button>
@@ -325,7 +329,10 @@ function Snapshot({ data }: { data: Data }) {
           <span className="flex items-center gap-1.5 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <Clock className="h-3.5 w-3.5 text-[#8b7cf0]" /> {s.tag}
           </span>
-          <span className="text-[0.92rem] font-semibold text-[var(--tessera-text)]">{s.label}</span>
+          <span className="flex items-center gap-1 text-[0.92rem] font-semibold text-[var(--tessera-text)]">
+            {s.label}
+            <CardInfo ns="agentGardeFous" k="snapshot" title={s.label} />
+          </span>
         </Field>
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.updated_label}</span>
@@ -407,9 +414,10 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
     <div className="flex h-[88px] flex-col justify-between rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="flex items-center gap-2">
         <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={kpi.label} className="text-[0.64rem] text-[var(--tessera-text-muted)]">
           {kpi.label}
-        </span>
+        </Truncate>
+        <CardInfo ns="agentGardeFous" k={kpi.key} title={kpi.label} />
       </div>
       <div>
         <p className="text-[1.3rem] font-semibold tabular-nums text-[var(--tessera-text)]">
@@ -707,9 +715,12 @@ function RulesTable({
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <ShieldCheck className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-                        <span className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
+                        <Truncate
+                          full={r.name}
+                          className="text-[0.74rem] font-medium text-[var(--tessera-text)]"
+                        >
                           {r.name}
-                        </span>
+                        </Truncate>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
@@ -809,15 +820,20 @@ function RulesTable({
 
 function PanelCard({
   title,
+  infoK,
   children,
 }: {
   title: string;
+  infoK?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
+        <h3 className="flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+          {title}
+          {infoK ? <CardInfo ns="agentGardeFous" k={infoK} title={title} /> : null}
+        </h3>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </section>
@@ -828,7 +844,7 @@ function Watch({ data }: { data: Data }) {
   const w = data.watch;
   if (!w) return null;
   return (
-    <PanelCard title={w.title}>
+    <PanelCard title={w.title} infoK="watch">
       <ul className="flex flex-col gap-2.5">
         {w.items.map((it) => (
           <li key={it.title} className="flex items-start gap-2">
@@ -843,9 +859,12 @@ function Watch({ data }: { data: Data }) {
                 {it.title}
               </span>
               {it.detail ? (
-                <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <Truncate
+                  full={it.detail}
+                  className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+                >
                   {it.detail}
-                </span>
+                </Truncate>
               ) : null}
             </span>
           </li>
@@ -865,7 +884,7 @@ function Quick({ data }: { data: Data }) {
   const q = data.quick;
   if (!q) return null;
   return (
-    <PanelCard title={q.title}>
+    <PanelCard title={q.title} infoK="quick">
       <div className="flex flex-col gap-2">
         {q.items.map((it) => (
           <Link
@@ -874,7 +893,9 @@ function Quick({ data }: { data: Data }) {
             className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.72rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
           >
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
-            <span className="min-w-0 truncate">{it.label}</span>
+            <Truncate full={it.label} className="min-w-0">
+              {it.label}
+            </Truncate>
           </Link>
         ))}
       </div>
@@ -886,7 +907,7 @@ function Coverage({ data }: { data: Data }) {
   const c = data.coverage;
   if (!c) return null;
   return (
-    <PanelCard title={c.title}>
+    <PanelCard title={c.title} infoK="coverage">
       <ul className="flex flex-col gap-2.5">
         {c.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
@@ -911,7 +932,7 @@ function Reasons({ data }: { data: Data }) {
   const r = data.reasons;
   if (!r) return null;
   return (
-    <PanelCard title={r.title}>
+    <PanelCard title={r.title} infoK="reasons">
       {r.items.length === 0 ? (
         <p className="py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun blocage.</p>
       ) : null}
@@ -940,7 +961,7 @@ function ModeDistribution({ data }: { data: Data }) {
   const m = data.mode_distribution;
   if (!m) return null;
   return (
-    <PanelCard title={m.title}>
+    <PanelCard title={m.title} infoK="mode_distribution">
       <p className="-mt-1 mb-1 text-[0.66rem] text-[var(--tessera-text-muted)]">{m.subtitle}</p>
       <ul className="flex flex-col gap-2.5">
         {m.items.map((it) => (
@@ -975,7 +996,7 @@ function Overrides({ data }: { data: Data }) {
   const o = data.overrides;
   if (!o) return null;
   return (
-    <PanelCard title={o.title}>
+    <PanelCard title={o.title} infoK="overrides">
       <p className="-mt-1 mb-1 text-[0.66rem] text-[var(--tessera-text-muted)]">{o.subtitle}</p>
       {o.items.length === 0 ? (
         <p className="py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">{o.empty}</p>
@@ -987,9 +1008,9 @@ function Overrides({ data }: { data: Data }) {
               className="flex items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
             >
               <span className="flex min-w-0 flex-col">
-                <span className="truncate text-[0.72rem] text-[var(--tessera-text)]">
+                <Truncate full={it.name} className="text-[0.72rem] text-[var(--tessera-text)]">
                   {it.name}
-                </span>
+                </Truncate>
                 <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {it.category} · {it.mode}
                 </span>
@@ -1038,12 +1059,18 @@ function Detail({
           <div className="flex min-w-0 items-center gap-2">
             <ShieldCheck className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
             <span className="min-w-0">
-              <span className="block truncate text-[0.85rem] font-semibold text-[var(--tessera-text)]">
+              <Truncate
+                full={d.name}
+                className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+              >
                 {d.name}
-              </span>
-              <span className="block truncate font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
+              </Truncate>
+              <Truncate
+                full={d.id}
+                className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
+              >
                 {d.id}
-              </span>
+              </Truncate>
             </span>
           </div>
           <span
@@ -1128,9 +1155,12 @@ function Detail({
               {d.config.map((c) => (
                 <li key={c.label} className="flex items-center justify-between gap-2">
                   <span className="text-[var(--tessera-text-muted)]">{c.label}</span>
-                  <span className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+                  <Truncate
+                    full={c.value}
+                    className="min-w-0 font-medium text-[var(--tessera-text)]"
+                  >
                     {c.value}
-                  </span>
+                  </Truncate>
                 </li>
               ))}
             </ul>

@@ -16,6 +16,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Search, X } fro
 import { useLocale } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { Truncate } from "@/components/ui/truncate";
 import { cn } from "@/lib/cn";
 
 export function pick(locale: string, fr: string, de: string, en: string): string {
@@ -612,13 +613,19 @@ export function EvalDrawer({
               </span>
             ) : null}
             <div className="min-w-0">
-              <span className="block truncate text-[0.85rem] font-semibold text-[var(--tessera-text)]">
+              <Truncate
+                full={title}
+                className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+              >
                 {title}
-              </span>
+              </Truncate>
               {subtitle ? (
-                <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <Truncate
+                  full={subtitle}
+                  className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+                >
                   {subtitle}
-                </span>
+                </Truncate>
               ) : null}
             </div>
           </div>

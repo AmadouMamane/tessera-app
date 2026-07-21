@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truncate } from "@/components/ui/truncate";
 import type {
   CatalogTab,
   SectionItem,
@@ -94,7 +95,7 @@ function KpiTile({ k }: { k: TabKpi }) {
   return (
     <Card className="flex h-[92px] flex-col gap-0.5 p-3">
       <div className="flex items-center gap-1 text-[0.7rem] text-[var(--muted-foreground)]">
-        <span className="truncate">{k.label}</span>
+        <Truncate full={k.label}>{k.label}</Truncate>
         <ExplainInfo title={k.label} explain={k.explain} className="ml-auto" />
       </div>
       <div className={`text-2xl font-semibold tabular-nums ${kpiTone(k.tone)}`}>
@@ -111,9 +112,9 @@ function KpiTile({ k }: { k: TabKpi }) {
           <span className="whitespace-nowrap">{k.delta.replace(/^[+-]/, "")}</span>
         </div>
       ) : k.sub ? (
-        <div className="mt-auto truncate text-[0.65rem] text-[var(--muted-foreground)]">
+        <Truncate full={k.sub} className="mt-auto text-[0.65rem] text-[var(--muted-foreground)]">
           {k.sub}
-        </div>
+        </Truncate>
       ) : null}
     </Card>
   );
@@ -135,11 +136,13 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
         <span className="flex items-center gap-1.5">
           <Initials name={c.name} />
           <span className="min-w-0">
-            <span className="block truncate text-[0.72rem]">{c.name}</span>
+            <Truncate full={c.name} className="text-[0.72rem]">
+              {c.name}
+            </Truncate>
             {c.role ? (
-              <span className="block truncate text-[0.58rem] text-[var(--muted-foreground)]">
+              <Truncate full={c.role} className="text-[0.58rem] text-[var(--muted-foreground)]">
                 {c.role}
-              </span>
+              </Truncate>
             ) : null}
           </span>
         </span>
@@ -197,7 +200,7 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
     case "num":
       return <span className="tabular-nums">{String(v)}</span>;
     default:
-      return <span className="truncate">{String(v)}</span>;
+      return <Truncate full={String(v)}>{String(v)}</Truncate>;
   }
 }
 
@@ -415,9 +418,13 @@ function Donut({ value, label }: { value: number; label?: string | null }) {
           {Math.round(value * 100)}%
         </span>
         {label ? (
-          <span className="line-clamp-2 max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--muted-foreground)]">
+          <Truncate
+            full={label}
+            lines={2}
+            className="max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--muted-foreground)]"
+          >
             {label}
-          </span>
+          </Truncate>
         ) : null}
       </div>
     </div>
@@ -438,11 +445,11 @@ function ItemRow({ it }: { it: SectionItem }) {
   return (
     <li className="flex items-center justify-between gap-2 text-[0.7rem]">
       <span className="min-w-0">
-        <span className="block truncate">{it.label}</span>
+        <Truncate full={it.label}>{it.label}</Truncate>
         {it.sub ? (
-          <span className="block truncate text-[0.58rem] text-[var(--muted-foreground)]">
+          <Truncate full={it.sub} className="text-[0.58rem] text-[var(--muted-foreground)]">
             {it.sub}
-          </span>
+          </Truncate>
         ) : null}
       </span>
       {it.value ? (
@@ -480,7 +487,9 @@ function Section({ s }: { s: TabSection }) {
             const bar = b as { label: string; value: number; tone?: string };
             return (
               <li key={bar.label} className="flex items-center gap-2 text-[0.68rem]">
-                <span className="w-24 shrink-0 truncate">{bar.label}</span>
+                <Truncate full={bar.label} className="w-24 shrink-0">
+                  {bar.label}
+                </Truncate>
                 <span className="h-[4px] flex-1 overflow-hidden rounded-full bg-[var(--tessera-border)]">
                   <span
                     className={`block h-full rounded-full ${BAR_BG[tone(bar.tone)]}`}

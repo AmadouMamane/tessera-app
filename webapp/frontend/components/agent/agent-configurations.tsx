@@ -20,6 +20,8 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import {
   fetchAgentConfigurations,
@@ -116,10 +118,10 @@ export function AgentConfigurations() {
       />
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="min-w-0 overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[linear-gradient(180deg,rgba(8,28,48,0.94),rgba(5,20,35,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-          <FieldSection block={data.identity} ctx={ctx} />
-          <FieldSection block={data.model} ctx={ctx} />
+          <FieldSection block={data.identity} ctx={ctx} explainKey="identity" />
+          <FieldSection block={data.model} ctx={ctx} explainKey="model" />
           <Behavior data={data} ctx={ctx} />
-          <FieldSection block={data.routing} ctx={ctx} compact />
+          <FieldSection block={data.routing} ctx={ctx} compact explainKey="routing" />
           <Tags
             data={data}
             ctx={ctx}
@@ -285,6 +287,7 @@ function FieldSection({
   block,
   ctx,
   compact = false,
+  explainKey,
 }: {
   block?: {
     title: string;
@@ -294,13 +297,15 @@ function FieldSection({
   };
   ctx: Ctx;
   compact?: boolean;
+  explainKey: string;
 }) {
   if (!block) return null;
   return (
     <div className={cn("border-b border-[var(--tessera-border)] px-5 py-2.5", compact && "py-2")}>
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <h2 className="font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
+        <h2 className="flex items-center gap-1.5 font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
           {block.title}
+          <CardInfo ns="agentConfigurations" k={explainKey} title={block.title} />
         </h2>
         {block.link ? (
           <Link
@@ -419,9 +424,12 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
           field.kind === "textarea" ? "min-h-[38px] items-start py-1.5 leading-snug" : "h-7",
         )}
       >
-        <span className={cn("min-w-0 truncate", field.kind === "textarea" && "whitespace-normal")}>
+        <Truncate
+          full={current}
+          className={cn("min-w-0", field.kind === "textarea" && "whitespace-normal")}
+        >
           {current}
-        </span>
+        </Truncate>
         {field.badge ? (
           <span className="ml-auto shrink-0 rounded-full bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-semibold text-[var(--tessera-text)]">
             {field.badge}
@@ -459,8 +467,9 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
   if (!b) return null;
   return (
     <div className="border-b border-[var(--tessera-border)] px-5 py-2.5">
-      <h2 className="mb-1.5 font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
+      <h2 className="mb-1.5 flex items-center gap-1.5 font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
         {b.title}
+        <CardInfo ns="agentConfigurations" k="behavior" title={b.title} />
       </h2>
       <div className="grid gap-x-12 gap-y-2 lg:grid-cols-2">
         <div className="grid gap-2">
@@ -487,6 +496,7 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
             <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
               {b.runtime.label}
             </span>
+            <CardInfo ns="agentConfigurations" k="behavior_runtime" title={b.runtime.label} />
             <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1.5 text-[0.62rem] text-cyan-300">
               {b.runtime.backend}
             </span>
@@ -504,9 +514,12 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           data-testid="behavior-escalation"
           className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
         >
-          <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
-            {b.escalation.title}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+              {b.escalation.title}
+            </span>
+            <CardInfo ns="agentConfigurations" k="behavior_escalation" title={b.escalation.title} />
+          </div>
           <div className="mt-1.5">
             <SliderRow item={b.escalation.slider} ctx={ctx} runtime={b.runtime} />
           </div>
@@ -521,9 +534,12 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           data-testid="behavior-retrieval"
           className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
         >
-          <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
-            {b.retrieval.title}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+              {b.retrieval.title}
+            </span>
+            <CardInfo ns="agentConfigurations" k="behavior_retrieval" title={b.retrieval.title} />
+          </div>
           <div className="mt-1.5 grid gap-2">
             <SliderRow item={b.retrieval.slider} ctx={ctx} runtime={b.runtime} />
             <LabeledControl field={b.retrieval.toggle} ctx={ctx} />
@@ -537,9 +553,12 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           data-testid="behavior-memory"
           className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
         >
-          <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
-            {b.memory.title}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+              {b.memory.title}
+            </span>
+            <CardInfo ns="agentConfigurations" k="behavior_memory" title={b.memory.title} />
+          </div>
           <div className="mt-1.5 grid gap-2">
             <SelectRow field={b.memory.select} ctx={ctx} />
             <SliderRow item={b.memory.slider} ctx={ctx} runtime={b.runtime} />
@@ -740,8 +759,9 @@ function Tags({
   };
   return (
     <div className="px-5 py-2.5">
-      <h2 className="mb-1.5 font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
+      <h2 className="mb-1.5 flex items-center gap-1.5 font-sans text-[0.92rem] font-semibold text-[var(--tessera-text)]">
         {tags.title}
+        <CardInfo ns="agentConfigurations" k="tags" title={tags.title} />
       </h2>
       <div className="grid gap-x-12 gap-y-2 lg:grid-cols-2">
         <div>
@@ -834,8 +854,9 @@ function Status({ data }: { data: Data }) {
   return (
     <Panel>
       <div className="mb-2.5 flex items-center gap-3 border-b border-[var(--tessera-border)] pb-2">
-        <h2 className="font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
+        <h2 className="flex items-center gap-1.5 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
           {s.title}
+          <CardInfo ns="agentConfigurations" k="status" title={s.title} />
         </h2>
         <span
           className={cn(
@@ -889,14 +910,15 @@ function ActiveModel({ data }: { data: Data }) {
   if (!m) return null;
   return (
     <Panel>
-      <h2 className="mb-2 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
+      <h2 className="mb-2 flex items-center gap-1.5 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
         {m.title}
+        <CardInfo ns="agentConfigurations" k="active_model" title={m.title} />
       </h2>
       <div className="rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.72)] p-2.5">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="truncate text-[0.9rem] font-medium text-[var(--tessera-text)]">
+          <Truncate full={m.name} className="text-[0.9rem] font-medium text-[var(--tessera-text)]">
             {m.name}
-          </span>
+          </Truncate>
           <Badge>{m.provider}</Badge>
         </div>
         {m.rows.map((row) => (
@@ -915,8 +937,9 @@ function Summary({ data }: { data: Data }) {
   if (!s) return null;
   return (
     <Panel>
-      <h2 className="mb-2 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
+      <h2 className="mb-2 flex items-center gap-1.5 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
         {s.title}
+        <CardInfo ns="agentConfigurations" k="summary" title={s.title} />
       </h2>
       <div className="grid gap-1.5">
         {s.rows.map((row) => (
@@ -936,8 +959,9 @@ function History({ data }: { data: Data }) {
   return (
     <Panel>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
+        <h2 className="flex items-center gap-1.5 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
           {h.title}
+          <CardInfo ns="agentConfigurations" k="history" title={h.title} />
         </h2>
         <Link
           href="/prouver/audit-logs"
@@ -981,8 +1005,9 @@ function LinksPanel({ data }: { data: Data }) {
   if (!links) return null;
   return (
     <Panel>
-      <h2 className="mb-2 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
+      <h2 className="mb-2 flex items-center gap-1.5 font-sans text-[0.95rem] font-semibold text-[var(--tessera-text)]">
         {links.title}
+        <CardInfo ns="agentConfigurations" k="links" title={links.title} />
       </h2>
       <div className="grid gap-2.5">
         {links.items.map((link) => (

@@ -25,11 +25,13 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
 import {
   TemporalRail,
   useRailTimeline,
   useTemporalState,
 } from "@/components/overview/temporal-rail";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import { fetchAgentEvaluations, requestAgentRelease } from "@/lib/api/client";
@@ -499,10 +501,12 @@ function LifecycleBar({ data }: { data: Data }) {
       value: candidate ? fmtRunStamp(candidate) : "—",
     },
   ];
+  const title = pick(locale, "Cycle de vie", "Lebenszyklus", "Lifecycle");
   return (
     <section className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <span className="text-[10px] uppercase tracking-wide text-[#b9a6ff]">
-        {pick(locale, "Cycle de vie", "Lebenszyklus", "Lifecycle")}
+      <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#b9a6ff]">
+        {title}
+        <CardInfo ns="agentEvaluations" k="lifecycle" title={title} />
       </span>
       {cells.map((c) => (
         <div key={c.label} className="flex flex-col gap-0.5">
@@ -682,8 +686,11 @@ function VerdictBanner({ data }: { data: Data }) {
                 "Release gate verdict",
               )}
             </p>
-            <p className={`text-[1.15rem] font-semibold leading-tight ${labelColor}`}>
+            <p
+              className={`flex items-center gap-1.5 text-[1.15rem] font-semibold leading-tight ${labelColor}`}
+            >
               {gate.label}
+              <CardInfo ns="agentEvaluations" k="verdict" title={gate.label} />
             </p>
             {gate.reason ? (
               <p className="mt-0.5 text-[11px] text-[var(--tessera-text-muted)]">{gate.reason}</p>
@@ -885,6 +892,12 @@ function GatePolicySection({ data }: { data: Data }) {
   const cc = gate.critical_cases;
   const wv = gate.waivers;
   const socleCats = gate.socle_by_category ?? [];
+  const vennTitle = pick(
+    locale,
+    "Appartenance structurelle (Venn) — somme = exécutions",
+    "Strukturelle Zugehoerigkeit (Venn) — Summe = Ausfuehrungen",
+    "Structural membership (Venn) — sum = executions",
+  );
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -892,13 +905,9 @@ function GatePolicySection({ data }: { data: Data }) {
       <div className="grid gap-2.5 xl:grid-cols-12">
         <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:col-span-7">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {pick(
-                locale,
-                "Appartenance structurelle (Venn) — somme = exécutions",
-                "Strukturelle Zugehoerigkeit (Venn) — Summe = Ausfuehrungen",
-                "Structural membership (Venn) — sum = executions",
-              )}
+            <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {vennTitle}
+              <CardInfo ns="agentEvaluations" k="gatePolicy" title={vennTitle} />
             </span>
             <span
               className={cn(
@@ -993,7 +1002,9 @@ function GatePolicySection({ data }: { data: Data }) {
                   key={c.category}
                   className="flex items-center justify-between rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5"
                 >
-                  <span className="truncate text-[11px] text-[var(--tessera-text)]">{c.label}</span>
+                  <Truncate full={c.label} className="text-[11px] text-[var(--tessera-text)]">
+                    {c.label}
+                  </Truncate>
                   <span
                     className={cn(
                       "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
@@ -1158,9 +1169,12 @@ function GatePolicySection({ data }: { data: Data }) {
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[11px] font-medium text-[var(--tessera-text)]">
+                      <Truncate
+                        full={`${it.case_id} · ${it.language}`}
+                        className="text-[11px] font-medium text-[var(--tessera-text)]"
+                      >
                         {it.case_id} · {it.language}
-                      </span>
+                      </Truncate>
                       <span
                         className={cn(
                           "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium",
@@ -1172,7 +1186,10 @@ function GatePolicySection({ data }: { data: Data }) {
                         {it.status_label}
                       </span>
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-[10px] text-[var(--tessera-text-muted)]">
+                    <p
+                      title={it.justification}
+                      className="mt-0.5 line-clamp-2 text-[10px] text-[var(--tessera-text-muted)]"
+                    >
                       {it.justification}
                     </p>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[9px] text-[var(--tessera-text-muted)]">
@@ -1208,6 +1225,7 @@ function JudgeMetrics({ data, className }: { data: Data; className?: string }) {
   const locale = useLocale();
   const judge = data.judge;
   if (!judge) return null;
+  const title = pick(locale, "Métriques jugées", "Bewertete Metriken", "Judged metrics");
 
   return (
     <section
@@ -1217,8 +1235,9 @@ function JudgeMetrics({ data, className }: { data: Data; className?: string }) {
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {pick(locale, "Métriques jugées", "Bewertete Metriken", "Judged metrics")}
+        <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          {title}
+          <CardInfo ns="agentEvaluations" k="judge" title={title} />
         </span>
         <span className="text-[10px] text-[var(--tessera-text-muted)]">
           {judge.available
@@ -1256,7 +1275,10 @@ function Snapshot({ data, onAsof }: { data: Data; onAsof: () => void }) {
           <span className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {s.tag}
           </span>
-          <span className="text-[0.92rem] font-semibold text-[var(--tessera-text)]">{s.label}</span>
+          <span className="flex items-center gap-1 text-[0.92rem] font-semibold text-[var(--tessera-text)]">
+            {s.label}
+            <CardInfo ns="agentEvaluations" k="snapshot" title={s.label} />
+          </span>
         </Field>
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.updated_label}</span>
@@ -1337,9 +1359,10 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
     <div className="flex h-[96px] flex-col justify-between rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="flex items-center gap-2">
         <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={kpi.label} className="text-[0.64rem] text-[var(--tessera-text-muted)]">
           {kpi.label}
-        </span>
+        </Truncate>
+        <CardInfo ns="agentEvaluations" k={kpi.key} title={kpi.label} />
       </div>
       {kpi.gauge !== null ? (
         <div className="flex items-center gap-2">
@@ -1593,9 +1616,12 @@ function RunsTable(p: TableProps) {
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-                      <span className="truncate text-[0.72rem] font-medium text-[var(--tessera-text)]">
+                      <Truncate
+                        full={r.name}
+                        className="text-[0.72rem] font-medium text-[var(--tessera-text)]"
+                      >
                         {r.name}
-                      </span>
+                      </Truncate>
                     </div>
                   </td>
                   <td className="px-3 py-2.5">
@@ -1778,13 +1804,23 @@ function PageArrow({
 
 function PanelCard({
   title,
+  info,
   cta,
   ctaHref,
   children,
-}: { title: string; cta?: string; ctaHref?: string; children: React.ReactNode }) {
+}: {
+  title: string;
+  info?: React.ReactNode;
+  cta?: string;
+  ctaHref?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <h3 className="mb-2 text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
+      <h3 className="mb-2 flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+        {title}
+        {info}
+      </h3>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       {cta && ctaHref ? (
         <Link
@@ -1802,7 +1838,12 @@ function Watch({ data }: { data: Data }) {
   const w = data.watch;
   if (!w) return null;
   return (
-    <PanelCard title={w.title} cta={w.cta} ctaHref={w.cta_href}>
+    <PanelCard
+      title={w.title}
+      info={<CardInfo ns="agentEvaluations" k="watch" title={w.title} />}
+      cta={w.cta}
+      ctaHref={w.cta_href}
+    >
       <ul className="flex flex-col gap-2.5">
         {w.items.map((it) => (
           <li key={it.title} className="flex items-start gap-2">
@@ -1813,12 +1854,15 @@ function Watch({ data }: { data: Data }) {
               )}
             />
             <span className="min-w-0">
-              <span className="block truncate text-[0.72rem] text-[var(--tessera-text)]">
+              <Truncate full={it.title} className="text-[0.72rem] text-[var(--tessera-text)]">
                 {it.title}
-              </span>
-              <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+              </Truncate>
+              <Truncate
+                full={it.detail}
+                className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+              >
                 {it.detail}
-              </span>
+              </Truncate>
             </span>
           </li>
         ))}
@@ -1834,7 +1878,7 @@ function Quick({ data }: { data: Data }) {
   const icons = [Play, GitCompare, BarChart3, Layers];
   const hrefs = quickHref(agentId);
   return (
-    <PanelCard title={q.title}>
+    <PanelCard title={q.title} info={<CardInfo ns="agentEvaluations" k="quick" title={q.title} />}>
       <div className="grid grid-cols-2 gap-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? Play;
@@ -1845,7 +1889,9 @@ function Quick({ data }: { data: Data }) {
               className="flex flex-col items-start gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
-              <span className="min-w-0 truncate">{it.label}</span>
+              <Truncate full={it.label} className="min-w-0">
+                {it.label}
+              </Truncate>
             </Link>
           );
         })}
@@ -1858,7 +1904,10 @@ function Trend({ data }: { data: Data }) {
   const tr = data.trend;
   if (!tr) return null;
   return (
-    <PanelCard title={tr.title}>
+    <PanelCard
+      title={tr.title}
+      info={<CardInfo ns="agentEvaluations" k="trend" title={tr.title} />}
+    >
       <div className="mb-2 flex items-baseline gap-1">
         <span className="text-[1.25rem] font-semibold tabular-nums text-[var(--tessera-text)]">
           {tr.value}
@@ -2026,9 +2075,12 @@ function Detail({
         <div className="mt-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <Sparkles className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-            <span className="min-w-0 truncate text-[0.85rem] font-semibold text-[var(--tessera-text)]">
+            <Truncate
+              full={row.name}
+              className="min-w-0 text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+            >
               {row.name}
-            </span>
+            </Truncate>
           </div>
           <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-emerald-300">
             {row.status}

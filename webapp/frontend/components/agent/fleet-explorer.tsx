@@ -18,6 +18,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { agentIcon } from "@/components/agent/agent-icon";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import type { Fleet } from "@/lib/api/schemas";
@@ -473,7 +474,9 @@ function AgentCard({
       <div className="flex items-start justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2">
           <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
-          <span className="truncate font-semibold">{agent.name}</span>
+          <Truncate full={agent.name} className="font-semibold">
+            {agent.name}
+          </Truncate>
         </span>
         <span className="flex shrink-0 items-center gap-1">
           <span
@@ -484,7 +487,10 @@ function AgentCard({
         </span>
       </div>
       {agent.description ? (
-        <p className="-mt-1.5 line-clamp-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+        <p
+          title={agent.description}
+          className="-mt-1.5 line-clamp-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]"
+        >
           {agent.description}
         </p>
       ) : null}
@@ -570,18 +576,21 @@ function AgentRow({
         className={cn("h-2 w-2 shrink-0 rounded-full", HEALTH_DOT[agent.health] ?? "bg-amber-400")}
       />
       <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
-      <span className="w-[160px] shrink-0 truncate font-semibold" title={agent.description}>
+      <Truncate full={agent.name} className="w-[160px] shrink-0 font-semibold">
         {agent.name}
-      </span>
+      </Truncate>
       <AudienceBadge external={external} t={t} />
       {isPlatformWitness(agent) ? <WitnessChip t={t} /> : null}
       <ContractChips agent={agent} t={t} />
       <LevelBadge agent={agent} t={t} />
       <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
       <PendingBusinessChip agent={agent} t={t} />
-      <span className="hidden truncate text-[0.66rem] text-[var(--tessera-text-muted)] md:inline">
+      <Truncate
+        full={agent.owner}
+        className="hidden text-[0.66rem] text-[var(--tessera-text-muted)] md:inline"
+      >
         {agent.owner}
-      </span>
+      </Truncate>
       {(() => {
         const r = agent.release;
         const pct = passPct(agent);

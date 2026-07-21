@@ -25,11 +25,13 @@ import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
 import {
   TemporalRail,
   useRailTimeline,
   useTemporalState,
 } from "@/components/overview/temporal-rail";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import { fetchAgentPrompts, proposePromptOverlay, reviewPromptOverlay } from "@/lib/api/client";
@@ -277,7 +279,9 @@ function labelFor(
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-[0.64rem] text-[var(--tessera-text)]">
-      <span className="max-w-[220px] truncate">{label}</span>
+      <Truncate full={label} className="max-w-[220px]">
+        {label}
+      </Truncate>
       <button type="button" onClick={onRemove} aria-label={`Remove ${label}`}>
         <X className="h-3 w-3 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]" />
       </button>
@@ -368,9 +372,10 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
     <div className="flex h-[88px] flex-col justify-between rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="flex items-center gap-2">
         <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <span className="truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={kpi.label} className="text-[0.64rem] text-[var(--tessera-text-muted)]">
           {kpi.label}
-        </span>
+        </Truncate>
+        <CardInfo ns="agentPrompts" k={kpi.key} title={kpi.label} />
       </div>
       {kpi.gauge !== null ? (
         <div className="flex items-center gap-2">
@@ -599,9 +604,12 @@ function PromptsTable({
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-                        <span className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
+                        <Truncate
+                          full={r.name}
+                          className="text-[0.74rem] font-medium text-[var(--tessera-text)]"
+                        >
                           {r.name}
-                        </span>
+                        </Truncate>
                       </div>
                     </td>
                     <td className="px-3 py-2.5">
@@ -659,18 +667,23 @@ function PromptsTable({
 
 function PanelCard({
   title,
+  info,
   cta,
   href,
   children,
 }: {
   title: string;
+  info?: React.ReactNode;
   cta?: string;
   href?: Route;
   children: React.ReactNode;
 }) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <h3 className="mb-2 text-[0.74rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
+      <h3 className="mb-2 flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+        {title}
+        {info}
+      </h3>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       {cta && href ? (
         <Link
@@ -689,7 +702,12 @@ function Watch({ data }: { data: Data }) {
   const agentId = useAgentId();
   if (!w) return null;
   return (
-    <PanelCard title={w.title} cta={w.cta} href={agentPath(agentId, "evaluations") as Route}>
+    <PanelCard
+      title={w.title}
+      info={<CardInfo ns="agentPrompts" k="watch" title={w.title} />}
+      cta={w.cta}
+      href={agentPath(agentId, "evaluations") as Route}
+    >
       <ul className="flex flex-col gap-2.5">
         {w.items.map((it) => (
           <li key={it.title} className="flex items-start gap-2">
@@ -716,7 +734,7 @@ function Quick({ data }: { data: Data }) {
   if (!q) return null;
   const icons = [Code2, FlaskConical, CalendarClock, Boxes];
   return (
-    <PanelCard title={q.title}>
+    <PanelCard title={q.title} info={<CardInfo ns="agentPrompts" k="quick" title={q.title} />}>
       <div className="grid grid-cols-2 gap-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? FlaskConical;
@@ -727,7 +745,9 @@ function Quick({ data }: { data: Data }) {
               className="flex flex-col items-start gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
-              <span className="min-w-0 truncate">{it.label}</span>
+              <Truncate full={it.label} className="min-w-0">
+                {it.label}
+              </Truncate>
             </Link>
           );
         })}
@@ -740,7 +760,7 @@ function ByType({ data }: { data: Data }) {
   const b = data.by_type;
   if (!b) return null;
   return (
-    <PanelCard title={b.title}>
+    <PanelCard title={b.title} info={<CardInfo ns="agentPrompts" k="by_type" title={b.title} />}>
       <ul className="flex flex-col gap-2.5">
         {b.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
@@ -783,12 +803,18 @@ function Detail({ detail, className }: { detail: DetailT | null; className?: str
           <div className="flex min-w-0 items-center gap-2">
             <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
             <span className="min-w-0">
-              <span className="block truncate text-[0.85rem] font-semibold text-[var(--tessera-text)]">
+              <Truncate
+                full={d.name}
+                className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+              >
                 {d.name}
-              </span>
-              <span className="block truncate font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
+              </Truncate>
+              <Truncate
+                full={d.id}
+                className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
+              >
                 {d.id}
-              </span>
+              </Truncate>
             </span>
           </div>
           <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-emerald-300">
@@ -864,9 +890,12 @@ function Detail({ detail, className }: { detail: DetailT | null; className?: str
                 {d.config.map((c) => (
                   <li key={c.label} className="flex items-center justify-between gap-2">
                     <span className="text-[var(--tessera-text-muted)]">{c.label}</span>
-                    <span className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+                    <Truncate
+                      full={c.value}
+                      className="min-w-0 font-medium text-[var(--tessera-text)]"
+                    >
                       {c.value}
-                    </span>
+                    </Truncate>
                   </li>
                 ))}
               </ul>
@@ -1004,7 +1033,10 @@ function OverlayPanel({ overlay, agentId }: { overlay?: PromptOverlay; agentId: 
       data-testid="prompt-overlay"
       className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <h3 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">{overlay.title}</h3>
+      <h3 className="flex items-center gap-1 text-[0.82rem] font-semibold text-[var(--tessera-text)]">
+        {overlay.title}
+        <CardInfo ns="agentPrompts" k="overlay" title={overlay.title} />
+      </h3>
       <p className="mt-0.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
         {overlay.note}
       </p>

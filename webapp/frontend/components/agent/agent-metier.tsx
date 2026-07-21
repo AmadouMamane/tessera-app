@@ -18,6 +18,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { type KeyboardEvent, useCallback, useMemo } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
 import { MetricCard } from "@/components/cockpit/metric-card";
 import { WorkflowRunsPanel } from "@/components/observability/workflow-runs-panel";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Truncate } from "@/components/ui/truncate";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { fetchBusinessCapabilities, fetchBusinessRuns } from "@/lib/api/client";
 import type {
@@ -246,7 +248,7 @@ function TrendHint({ trend }: { trend: BusinessTrend }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-1 text-[0.68rem] text-[var(--tessera-text-muted)]">
       <TrendIcon className="h-3 w-3 shrink-0" />
-      <span className="truncate">{trendLabel(trend, t)}</span>
+      <Truncate full={trendLabel(trend, t)}>{trendLabel(trend, t)}</Truncate>
     </span>
   );
 }
@@ -306,6 +308,7 @@ function SignalKpiStrip({
         <div className="flex items-center gap-2">
           <BriefcaseBusiness className="h-4 w-4 text-[#b9a6ff]" />
           <h2 className="text-sm font-semibold">{t("signals.title")}</h2>
+          <CardInfo ns="agentMetier" k="signals" title={t("signals.title")} />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <TemporalModeBadge asOf={asOf} />
@@ -393,6 +396,7 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
             <div className="mb-1 flex items-center gap-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[#c4b5fd]">
               <Target className="h-3.5 w-3.5" />
               {t("signals.northStar")}
+              <CardInfo ns="agentMetier" k="northStar" title={label} />
             </div>
             <p className="text-sm font-semibold leading-snug">{label}</p>
           </div>
@@ -439,8 +443,13 @@ function SignalGroup({
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <span className="font-medium">
+        <span className="flex items-center gap-1 font-medium">
           {pseudoSignal ? signalLevelLabel(pseudoSignal, t) : level}
+          <CardInfo
+            ns="agentMetier"
+            k={`level.${level}`}
+            title={pseudoSignal ? signalLevelLabel(pseudoSignal, t) : level}
+          />
         </span>
         <span>{signals.length}</span>
       </div>
@@ -461,6 +470,7 @@ function SignalMetric({ signal, label }: { signal: BusinessSignalValue; label: s
       value={hasValue ? pct(signal.value_pct) : "—"}
       delta={signal.status === "unknown" ? <Badge tone="neutral">—</Badge> : null}
       trend={<TrendHint trend={signal.trend} />}
+      info={<CardInfo ns="agentMetier" k={`signal.${signal.key}`} title={label} />}
     />
   );
 }
@@ -524,6 +534,7 @@ function CapabilitiesTable({
         <CardTitle className="flex items-center gap-1.5 font-sans text-[0.82rem] font-medium tracking-normal">
           <BarChart3 className="h-4 w-4 text-[var(--tessera-green)]" />
           {t("capabilities.title")}
+          <CardInfo ns="agentMetier" k="capabilities" title={t("capabilities.title")} />
         </CardTitle>
       </CardHeader>
       <CardContent className="min-w-0 overflow-hidden p-0">
@@ -534,19 +545,54 @@ function CapabilitiesTable({
                 {t("capabilities.columns.capability")}
               </TableHead>
               <TableHead className="h-8 w-[10%] px-3 text-right text-[0.6rem]">
-                {t("capabilities.columns.volume")}
+                <span className="inline-flex items-center justify-end gap-1">
+                  {t("capabilities.columns.volume")}
+                  <CardInfo
+                    ns="agentMetier"
+                    k="col.volume"
+                    title={t("capabilities.columns.volume")}
+                  />
+                </span>
               </TableHead>
               <TableHead className="h-8 w-[12%] px-3 text-right text-[0.6rem]">
-                {t("capabilities.columns.conformity")}
+                <span className="inline-flex items-center justify-end gap-1">
+                  {t("capabilities.columns.conformity")}
+                  <CardInfo
+                    ns="agentMetier"
+                    k="col.conformity"
+                    title={t("capabilities.columns.conformity")}
+                  />
+                </span>
               </TableHead>
               <TableHead className="hidden h-8 w-[12%] px-3 text-right text-[0.6rem] md:table-cell">
-                {t("capabilities.columns.validation")}
+                <span className="inline-flex items-center justify-end gap-1">
+                  {t("capabilities.columns.validation")}
+                  <CardInfo
+                    ns="agentMetier"
+                    k="col.validation"
+                    title={t("capabilities.columns.validation")}
+                  />
+                </span>
               </TableHead>
               <TableHead className="hidden h-8 w-[10%] px-3 text-right text-[0.6rem] lg:table-cell">
-                {t("capabilities.columns.blocked")}
+                <span className="inline-flex items-center justify-end gap-1">
+                  {t("capabilities.columns.blocked")}
+                  <CardInfo
+                    ns="agentMetier"
+                    k="col.blocked"
+                    title={t("capabilities.columns.blocked")}
+                  />
+                </span>
               </TableHead>
               <TableHead className="hidden h-8 w-[12%] px-3 text-right text-[0.6rem] md:table-cell">
-                {t("capabilities.columns.prevented")}
+                <span className="inline-flex items-center justify-end gap-1">
+                  {t("capabilities.columns.prevented")}
+                  <CardInfo
+                    ns="agentMetier"
+                    k="col.prevented"
+                    title={t("capabilities.columns.prevented")}
+                  />
+                </span>
               </TableHead>
               <TableHead className="h-8 w-[12%] px-3 text-[0.6rem]">
                 {t("capabilities.columns.trend")}

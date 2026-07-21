@@ -22,8 +22,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CardInfo } from "@/components/cockpit/card-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Truncate } from "@/components/ui/truncate";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { fetchAgentConnaissances, mutateConnaissancesSource } from "@/lib/api/client";
 import type { AgentConnaissances as Data } from "@/lib/api/schemas";
@@ -366,7 +368,7 @@ function AttachMenu({
                 }}
                 className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[0.72rem] text-[var(--tessera-text)] hover:bg-[var(--tessera-bg)] disabled:opacity-60"
               >
-                <span className="truncate">{it.name}</span>
+                <Truncate full={it.name}>{it.name}</Truncate>
                 <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {it.type}
                 </span>
@@ -444,9 +446,10 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#e0a23a]/30 bg-[#e0a23a]/10 text-[#e0a23a]">
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <span className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={kpi.label} className="text-[0.66rem] text-[var(--tessera-text-muted)]">
           {kpi.label}
-        </span>
+        </Truncate>
+        <CardInfo ns="agentConnaissances" k={kpi.key} title={kpi.label} />
       </div>
       <p className="mt-1.5 text-[1.5rem] font-semibold leading-none tabular-nums text-white">
         {kpi.value}
@@ -917,12 +920,18 @@ function SourcesTable({
                       <FileGlyph />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[0.76rem] font-medium text-[var(--tessera-text)]">
+                      <Truncate
+                        full={r.name}
+                        className="text-[0.76rem] font-medium text-[var(--tessera-text)]"
+                      >
                         {r.name}
-                      </span>
-                      <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+                      </Truncate>
+                      <Truncate
+                        full={r.path}
+                        className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+                      >
                         {r.path}
-                      </span>
+                      </Truncate>
                     </span>
                   </div>
                 </td>
@@ -1137,6 +1146,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
       {answer ? (
         <>
           <p
+            title={answer}
             className={cn(
               "mt-1 text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]",
               clampable && !open && "line-clamp-2",
@@ -1277,9 +1287,13 @@ function DetailPanel({
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
             <FileGlyph />
           </span>
-          <span className="truncate text-[0.85rem] font-semibold text-[var(--tessera-text)]">
+          <Truncate
+            full={d.name}
+            className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+          >
             {d.name}
-          </span>
+          </Truncate>
+          <CardInfo ns="agentConnaissances" k="detail" title={d.name} />
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span

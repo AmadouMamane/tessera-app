@@ -28,6 +28,7 @@ import type { Route } from "next";
 import { useLocale } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import type { AgentEvaluations as Data } from "@/lib/api/schemas";
@@ -157,7 +158,9 @@ export function SetsTab({ data }: { data: Data }) {
       render: (r) => (
         <div className="flex min-w-0 items-center gap-2">
           <Boxes className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-          <span className="truncate font-medium text-[var(--tessera-text)]">{r.name}</span>
+          <Truncate full={r.name} className="font-medium text-[var(--tessera-text)]">
+            {r.name}
+          </Truncate>
           {r.active ? (
             <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-[0.5rem] font-medium uppercase text-emerald-300">
               {pick(locale, "Actif", "Aktiv", "Active")}
@@ -363,9 +366,9 @@ function SetDrawer({
               >
                 {c.severity_label}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]" title={c.title}>
+              <Truncate full={c.title} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {c.title}
-              </span>
+              </Truncate>
               <span className="shrink-0 text-[0.58rem] text-[var(--tessera-text-muted)]">
                 {c.category_label}
               </span>
@@ -442,12 +445,15 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
       sortValue: (r) => r.title,
       render: (r) => (
         <div className="flex min-w-0 flex-col">
-          <span className="truncate font-medium text-[var(--tessera-text)]" title={r.title}>
+          <Truncate full={r.title} className="font-medium text-[var(--tessera-text)]">
             {r.title}
-          </span>
-          <span className="truncate font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
+          </Truncate>
+          <Truncate
+            full={r.case_id}
+            className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
+          >
             {r.case_id}
-          </span>
+          </Truncate>
         </div>
       ),
     },

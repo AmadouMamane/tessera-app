@@ -3,6 +3,7 @@
 import { BellOff } from "lucide-react";
 import { type ComponentType, type ReactNode, useState } from "react";
 
+import { Truncate } from "@/components/ui/truncate";
 import { cn } from "@/lib/cn";
 
 /**
@@ -206,11 +207,9 @@ function GaugeRibbon({
             >
               {eyebrow}
             </span>
-            <span
-              className={cn("min-w-0 truncate text-[0.85rem] font-semibold leading-tight", s.title)}
-            >
+            <Truncate className={cn("min-w-0 text-[0.85rem] font-semibold leading-tight", s.title)}>
               {title}
-            </span>
+            </Truncate>
           </div>
           {gauge ? (
             <div className="mt-2 flex items-center gap-3">
@@ -284,7 +283,7 @@ function SlimRibbon({ severity, title, action, meta }: BaseProps & { meta?: Reac
         />
         <span className={cn("relative inline-flex h-2.5 w-2.5 rounded-full", s.dot)} />
       </span>
-      <p className={cn("min-w-0 truncate text-[0.85rem] font-semibold", s.title)}>{title}</p>
+      <Truncate className={cn("min-w-0 text-[0.85rem] font-semibold", s.title)}>{title}</Truncate>
       {meta ? (
         <span className="hidden shrink-0 items-center gap-1.5 text-[11px] text-[var(--tessera-text-muted)] sm:flex">
           <span aria-hidden>·</span>

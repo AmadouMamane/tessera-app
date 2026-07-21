@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Truncate } from "@/components/ui/truncate";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import { fetchFleet } from "@/lib/api/client";
@@ -48,7 +49,9 @@ export function AgentSwitcher() {
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] px-3 text-[0.78rem] font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
         >
           <CurrentIcon className="h-4 w-4 text-[#b9a6ff]" />
-          <span className="max-w-[12rem] truncate">{current?.name ?? agentId}</span>
+          <Truncate full={current?.name ?? agentId} className="max-w-[12rem]">
+            {current?.name ?? agentId}
+          </Truncate>
           <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
         </button>
       </DropdownMenuTrigger>
@@ -63,7 +66,7 @@ export function AgentSwitcher() {
             >
               <span className="flex min-w-0 items-center gap-2">
                 <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
-                <span className="truncate">{a.name}</span>
+                <Truncate full={a.name}>{a.name}</Truncate>
               </span>
               {a.id === agentId ? <Check className="h-3.5 w-3.5 text-[#b9a6ff]" /> : null}
             </DropdownMenuItem>

@@ -34,6 +34,7 @@ import {
   downloadBlob,
   toCsv,
 } from "@/components/agent/agent-subtab-shared";
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchAgentAFaire, mutateAFaireItem } from "@/lib/api/client";
 import type { AgentAFaire as Data } from "@/lib/api/schemas";
@@ -277,8 +278,11 @@ function Timeline({ data }: { data: Data }) {
   if (!tl) return null;
   return (
     <section className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2">
-      <span className="text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        {tl.title}
+      <span className="flex items-center gap-1">
+        <span className="text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          {tl.title}
+        </span>
+        <ExplainInfo k="timeline" title={tl.title} />
       </span>
       {tl.events.map((e, i) => (
         <span key={`${e.time}-${e.ref}-${i}`} className="flex items-center gap-2">
@@ -314,7 +318,9 @@ function Kpi({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
   return (
     <div className="flex h-[96px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <p className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
-        <span className="min-w-0 truncate">{kpi.label}</span>
+        <Truncate full={kpi.label} className="min-w-0">
+          {kpi.label}
+        </Truncate>
         <ExplainInfo k={kpi.key} title={kpi.label} />
       </p>
       <p className="mt-0.5 whitespace-nowrap text-[1.3rem] font-semibold leading-none text-white">
@@ -526,8 +532,9 @@ function TaskTable({
   if (!tbl) return null;
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-      <div className="border-b border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] font-medium text-[var(--tessera-text)]">
-        {tbl.count}
+      <div className="flex items-center gap-1 border-b border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] font-medium text-[var(--tessera-text)]">
+        <span>{tbl.count}</span>
+        <ExplainInfo k="table" title={tbl.count} />
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-[0.72rem]">
@@ -598,24 +605,18 @@ function TaskTable({
                     </Badge>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={it.type}>
-                      {it.type}
-                    </span>
+                    <Truncate full={it.type}>{it.type}</Truncate>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text)]">
-                    <span className="block truncate" title={it.title}>
-                      {it.title}
-                    </span>
+                    <Truncate full={it.title}>{it.title}</Truncate>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
-                    <span className="block truncate" title={`${it.source} ${it.ref}`}>
+                    <Truncate full={`${it.source} ${it.ref}`}>
                       {it.source} <span className="font-mono text-[0.58rem]">{it.ref}</span>
-                    </span>
+                    </Truncate>
                   </td>
                   <td className="px-2 py-2 text-[var(--tessera-text)]">
-                    <span className="block truncate" title={it.assignee}>
-                      {it.assignee}
-                    </span>
+                    <Truncate full={it.assignee}>{it.assignee}</Truncate>
                   </td>
                   <td
                     className={cn(
@@ -911,7 +912,10 @@ function TaskDrawer({
                   {d.context.map((c) => (
                     <div key={c.label} className="flex items-center justify-between gap-2">
                       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
-                      <dd className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
+                      <dd
+                        title={c.value}
+                        className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]"
+                      >
                         {c.value}
                       </dd>
                     </div>
@@ -929,7 +933,10 @@ function TaskDrawer({
                   {d.sla_rows.map((r) => (
                     <div key={r.label} className="flex items-center justify-between gap-2">
                       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{r.label}</dt>
-                      <dd className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
+                      <dd
+                        title={r.value}
+                        className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]"
+                      >
                         {r.value}
                       </dd>
                     </div>
@@ -946,7 +953,10 @@ function TaskDrawer({
                   {d.context.slice(0, 1).map((c) => (
                     <div key={c.label} className="flex items-center justify-between gap-2">
                       <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
-                      <dd className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
+                      <dd
+                        title={c.value}
+                        className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]"
+                      >
                         {c.value}
                       </dd>
                     </div>
@@ -1078,7 +1088,9 @@ function Panel({
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="flex min-w-0 items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
-          <span className="min-w-0 truncate">{title}</span>
+          <Truncate full={title} className="min-w-0">
+            {title}
+          </Truncate>
           {info}
         </h3>
       </div>
@@ -1123,9 +1135,12 @@ function Donut({ data }: { data: Data }) {
             <span className="max-w-[54px] truncate text-base font-semibold leading-none tabular-nums text-white">
               {d.center}
             </span>
-            <span className="line-clamp-2 max-w-[54px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+            <Truncate
+              lines={2}
+              className="max-w-[54px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]"
+            >
               {d.center_label}
-            </span>
+            </Truncate>
           </div>
         </div>
         <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.62rem]">
@@ -1136,7 +1151,9 @@ function Donut({ data }: { data: Data }) {
                   className="h-1.5 w-1.5 shrink-0 rounded-full"
                   style={{ background: s.color }}
                 />
-                <span className="min-w-0 truncate text-[var(--tessera-text)]">{s.label}</span>
+                <Truncate full={s.label} className="min-w-0 text-[var(--tessera-text)]">
+                  {s.label}
+                </Truncate>
               </span>
               <span className="pl-2.5 tabular-nums text-[var(--tessera-text-muted)]">
                 {s.count} ({s.share})
@@ -1210,14 +1227,16 @@ function Quick({ t, data }: { t: T; data: Data }) {
   const btnCls =
     "flex w-full flex-col items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-2 text-center text-[0.6rem] text-[var(--tessera-text)]";
   return (
-    <Panel title={q.title}>
+    <Panel title={q.title} info={<ExplainInfo k="quick" title={q.title} />}>
       <div className="grid grid-cols-3 gap-2">
         {q.items.map((it, i) => {
           const Icon = icons[i % icons.length] ?? ArrowUpRight;
           const inner = (
             <>
               <Icon className="h-4 w-4 text-[#b9a6ff]" />
-              <span className="min-w-0 truncate">{it}</span>
+              <Truncate full={it} className="min-w-0">
+                {it}
+              </Truncate>
             </>
           );
           if (i === 4) {
@@ -1273,9 +1292,9 @@ function Activity({ data }: { data: Data }) {
           >
             <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
             <span className="shrink-0 font-medium text-[var(--tessera-text)]">{it.actor}</span>
-            <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
+            <Truncate full={it.action} className="min-w-0 flex-1 text-[var(--tessera-text-muted)]">
               {it.action}
-            </span>
+            </Truncate>
             <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
               {it.time}
             </span>

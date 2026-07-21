@@ -28,6 +28,7 @@ import type { Route } from "next";
 import { useLocale } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
 import type { AgentHistorique as Data } from "@/lib/api/schemas";
@@ -146,9 +147,12 @@ function identityColumns(locale: string): Column<Row>[] {
       width: "20%",
       sortValue: (r) => r.case_id,
       render: (r) => (
-        <span className="truncate font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+        <Truncate
+          full={r.case_id}
+          className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]"
+        >
           {r.case_id}
-        </span>
+        </Truncate>
       ),
     },
     {
@@ -157,9 +161,9 @@ function identityColumns(locale: string): Column<Row>[] {
       width: "16%",
       sortValue: (r) => r.category_label,
       render: (r) => (
-        <span className="truncate text-[0.68rem] text-[var(--tessera-text)]">
+        <Truncate full={r.category_label} className="text-[0.68rem] text-[var(--tessera-text)]">
           {r.category_label}
-        </span>
+        </Truncate>
       ),
     },
   ];
@@ -244,9 +248,9 @@ export function MessagesTab({ data }: { data: Data }) {
       width: "28%",
       sortable: false,
       render: (r) => (
-        <span className="truncate text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={r.question} className="text-[0.68rem] text-[var(--tessera-text-muted)]">
           {r.question}
-        </span>
+        </Truncate>
       ),
     },
     {
@@ -660,7 +664,9 @@ export function UsersTab({ data }: { data: Data }) {
       render: (r) => (
         <div className="flex min-w-0 items-center gap-2">
           <UserRound className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-          <span className="truncate font-medium text-[var(--tessera-text)]">{r.user}</span>
+          <Truncate full={r.user} className="font-medium text-[var(--tessera-text)]">
+            {r.user}
+          </Truncate>
         </div>
       ),
     },

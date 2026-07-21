@@ -13,6 +13,7 @@ import { Braces, FileCode2, Languages } from "lucide-react";
 import { useLocale } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { Truncate } from "@/components/ui/truncate";
 import type { AgentPrompts as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import {
@@ -149,7 +150,10 @@ export function VariablesTab({ data }: { data: Data }) {
       render: (r) => (
         <div className="flex min-w-0 items-center gap-2">
           <Braces className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-          <span className="truncate font-mono font-medium text-[var(--tessera-text)]">{`{${r.name}}`}</span>
+          <Truncate
+            full={`{${r.name}}`}
+            className="font-mono font-medium text-[var(--tessera-text)]"
+          >{`{${r.name}}`}</Truncate>
         </div>
       ),
     },
@@ -167,9 +171,12 @@ export function VariablesTab({ data }: { data: Data }) {
       width: "25%",
       sortable: false,
       render: (r) => (
-        <span className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <Truncate
+          full={r.prompts.map((p) => p.name).join(", ")}
+          className="text-[0.66rem] text-[var(--tessera-text-muted)]"
+        >
           {r.prompts.map((p) => p.name).join(", ")}
-        </span>
+        </Truncate>
       ),
     },
   ];
@@ -239,9 +246,9 @@ export function VariablesTab({ data }: { data: Data }) {
                 key={p.key}
                 className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.72rem]"
               >
-                <span className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+                <Truncate full={p.name} className="min-w-0 font-medium text-[var(--tessera-text)]">
                   {p.name}
-                </span>
+                </Truncate>
                 <span className="shrink-0 font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
                   {p.id}
                 </span>
@@ -324,7 +331,9 @@ export function I18nTab({ data }: { data: Data }) {
       render: (r) => (
         <div className="flex min-w-0 items-center gap-2">
           <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
-          <span className="truncate font-medium text-[var(--tessera-text)]">{r.name}</span>
+          <Truncate full={r.name} className="font-medium text-[var(--tessera-text)]">
+            {r.name}
+          </Truncate>
         </div>
       ),
     },
