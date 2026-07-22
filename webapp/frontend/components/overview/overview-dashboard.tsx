@@ -395,14 +395,9 @@ export function OverviewDashboard({
           beneath it (user feedback) — not first, not buried. */}
       {lead}
 
-      {/* The command bar pins under the page topbar; it sits just under the alert and
-          sticks to the top once you scroll past it. Two opaque covers, so the content
-          scrolling behind never shows through or above the pinned bar:
-           · -mx-4 sm:-mx-6 + the page bg → a full-bleed band covering the sides;
-           · shadow-[0_-20px_…] → a same-colour (NOT a visible elevation shadow) fill
-             that paints the 20px gap ABOVE the bar.
-          The rail stays visually FLAT (the band is the page bg, 0 blur/spread up). */}
-      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 shadow-[0_-20px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
+      {/* The command bar pins under the page topbar. A shallow same-colour fill keeps
+          scrolling content behind it without opening a large gap below the alert. */}
+      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 shadow-[0_-8px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
         <SignalCommandBar
           temporal={temporal}
           timeline={timeline.data}

@@ -1,0 +1,89 @@
+# Cockpit clarity — run status
+
+## Scope
+
+Humanise every cockpit page without changing data contracts, identifiers used as evidence, or
+uncertainty. The work covers first-reading copy, dense tables, filters, actions, empty states and
+shared spacing. Technical identifiers remain available when they are themselves the audited fact;
+they no longer carry the explanation alone.
+
+## Live audit — 2026-07-22
+
+- Reference tree: `main` at `b32951c1`, frontend `:3097`, backend `:8099`.
+- `/fr/agents`: the first summary exposes `Conversations (org, dédupliqué)`, `Somme naïve par
+  agent`, `Dédoublonnées`; the page subtitle adds `eval-gate`, `run de référence` and `totaux
+  org`. These are internal aggregation and delivery terms, not operator language.
+- `/fr/surveiller/qualite-ia`: the same reconciliation appears in the per-agent table. Live DOM
+  before correction: `Somme naïve 430 · 0 dédoublonnées · 0 conversations partagées`, then
+  `37` transfers attested and `0` conversations found under two agents. The numbers are retained;
+  only their explanation changes.
+- On the same page, the SLO ribbon ends at y=249 and the temporal controls start at y=275: a
+  26 px visual interruption. The source confirms a 20 px wrapper margin whose only purpose is to
+  clear a 16 px upward background fill. The overview page repeats the pattern with 24 px / 20 px.
+- The fleet page itself is already compact (summary ends at y=204; controls begin at y=216).
+  Its spacing is not reduced.
+- Representative live pages were then inspected across `À traiter`, `À faire`, `Surveiller`,
+  `Agir`, `Prouver`, `Configurer` and `Admin`. The heaviest remaining first-reading debt is in the
+  inbox/task queues, evidence centre, state-at-date view, signal catalogue and shared role labels.
+- Preview review on `:3098` confirmed the compact alert-to-rail transition, the rewritten fleet
+  reconciliation, the evidence-centre hierarchy, the signal catalogue and both work queues. A
+  second pass on `/fr/a-faire` found raw English evaluation titles in the table; the backend now
+  gives every case currently present in the real queue a human FR/DE/EN display title while its
+  case id remains visible as the evidence reference.
+- Final live pass after restarting the preview confirmed the queue vocabulary in all three
+  languages: the Livret A case is humanised in French and German, the encoded-instruction case is
+  humanised in English, and self-assignment renders as `Moi`, `Me` and `Ich` without altering the
+  stored assignee.
+- A final overview DOM sweep removed the remaining first-reading delivery shorthand: release
+  gates, burn rate, RAG/Privacy impact labels, roadmap headings, live probes and release-state
+  columns now use operator language in FR/DE/EN. Route slugs and exact signal identifiers remain
+  unchanged because they are contracts or evidence.
+- System profile and raw audit rows intentionally retain exact product names, versions, rule IDs
+  and event fields: those values are evidence, not interface jargon.
+
+## Ratchets
+
+- `cockpit-clarity.test.ts`: rejects the opaque fleet vocabulary in FR/EN/DE, preserves all six
+  reconciliation placeholders, and rejects internal project terms in French page introductions.
+- The same test rejects alert margins above the compact spacing scale and sticky background fills
+  deeper than 8 px. Both rules include an explicit mutation reproducing the former code.
+- Page-family ratchets now cover the primary incident, curation, release-control and automation
+  vocabulary. Each family has a mutation proving that a removed internal term makes the test red.
+- The same ratchet now covers evidence objects, work queues, signal names, shared scope wording,
+  authority labels, date controls and overview delivery shorthand. It contains 50 checks,
+  including explicit mutations for every protected family.
+
+## Progress
+
+- [x] Fresh branch `codex/cockpit-clarity` from `origin/main`.
+- [x] Sole-writer claim acquired (`e911d673-305e-4b5f-a47d-61e9cc643c63`).
+- [x] Source and live-browser inventory completed on representative pages in every sidebar family.
+- [x] Slice 1 — fleet language, page introductions, shared alert/rail density.
+- [x] Incidents — coordination, deadlines, response plans, actions and backend catalogue rewritten.
+- [x] Evaluation set — review workflow, coverage gaps, approval and readiness language rewritten.
+- [x] Release control — human first reading plus exact raw diagnostic in an explicit detail panel.
+- [x] Automatic rules — rule names, triggers, actions, states and governance language rewritten.
+- [x] Slice 2 — inbox/task queues, proof surfaces, signal catalogue and shared role labels.
+- [x] Real queue titles, categories, sources and self-assignment localised in FR/DE/EN without
+  mutating the imported evaluation evidence.
+- [x] Slice 3 — `make gate-twice`, final preview restart and FR/DE/EN spot-check.
+
+## Targeted checks already green
+
+- Frontend targeted suite: 72 tests (50 clarity ratchets, 17 fleet reconciliations, 5 launch
+  controls).
+- Backend targeted suite: 93 tests across queues, signal catalogue, state-at-date, incidents,
+  evaluation-set review, automatic rules, lifecycle and launch decisions.
+- Queue-specific suite after the live finding: 28 tests.
+- Frontend `tsc --noEmit` and targeted Biome checks are green.
+- Full `make gate-twice` is green twice on the same tree (`15fcaf50e090`): 502 frontend tests and
+  2,578 non-integration Python tests passed on each run, with Ruff, formatting, mypy, TypeScript
+  and Biome green.
+
+## Known limits and owed follow-up
+
+- `/prouver/etat-a-date` is intentionally unavailable to the seeded administrator session used by
+  the browser (`Accès opérateur requis`); its payload and component remain covered by targeted
+  backend and frontend tests.
+- Preserve specialised terms inside evidence/source panels when they are the fact being audited;
+  introduce or explain them instead of silently weakening their meaning.

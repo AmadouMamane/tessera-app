@@ -55,6 +55,11 @@ type TT = ReturnType<typeof useTranslations<"table">>;
 type Data = SignalData;
 type SortKey = "name" | "category" | "source" | "severity" | "status" | "quality" | "owner";
 
+function translated(t: T, group: string, value: string): string {
+  const key = `${group}.${value}`;
+  return t.has(key) ? t(key) : value;
+}
+
 const COLS: { key: string; sort?: SortKey; w: string }[] = [
   { key: "name", sort: "name", w: "18%" },
   { key: "category", sort: "category", w: "10%" },
@@ -96,7 +101,9 @@ export function SignalCatalogue() {
       if (category !== "all" && s.category !== category) return false;
       if (source !== "all" && s.source !== source) return false;
       if (!q) return true;
-      return `${s.name} ${s.description} ${s.id} ${s.owner}`.toLowerCase().includes(q);
+      return `${s.name} ${translated(t, "name", s.name)} ${s.description} ${s.id} ${s.owner}`
+        .toLowerCase()
+        .includes(q);
     });
     const dir = sort.dir;
     return [...filtered].sort((a, b) => {
@@ -111,7 +118,7 @@ export function SignalCatalogue() {
           return a[sort.key].localeCompare(b[sort.key], "fr") * dir;
       }
     });
-  }, [signals, query, status, severity, category, source, sort]);
+  }, [signals, query, status, severity, category, source, sort, t]);
 
   if (!data) return <Skeleton />;
   if (!data.available) return <Unavailable t={t} />;
@@ -308,7 +315,7 @@ function FilterStrip({
         label={t("filters.source")}
         value={source}
         onChange={onSource}
-        options={data.sources.map((s) => ({ value: s, label: s }))}
+        options={data.sources.map((s) => ({ value: s, label: translated(t, "sourceValue", s) }))}
         allLabel={t("filters.all")}
       />
       <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
@@ -444,7 +451,7 @@ function SignalTable({
                   tabIndex={0}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                   role="button"
-                  aria-label={s.name}
+                  aria-label={translated(t, "name", s.name)}
                   className={cn(
                     "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
@@ -452,10 +459,10 @@ function SignalTable({
                 >
                   <td className="py-1.5 pl-5 pr-2">
                     <Truncate
-                      full={s.name}
-                      className="font-mono text-[0.7rem] text-[var(--tessera-text)]"
+                      full={translated(t, "name", s.name)}
+                      className="text-[0.7rem] font-medium text-[var(--tessera-text)]"
                     >
-                      {s.name}
+                      {translated(t, "name", s.name)}
                     </Truncate>
                     <Truncate
                       full={s.id}
@@ -470,7 +477,9 @@ function SignalTable({
                     </Truncate>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <Truncate full={s.source}>{s.source}</Truncate>
+                    <Truncate full={translated(t, "sourceValue", s.source)}>
+                      {translated(t, "sourceValue", s.source)}
+                    </Truncate>
                   </td>
                   <td className="px-2 py-1.5">
                     <Badge className={SEV_BADGE[s.severity]}>{t(`severity.${s.severity}`)}</Badge>
@@ -495,7 +504,9 @@ function SignalTable({
                     <Truncate full={s.last_activity}>{s.last_activity}</Truncate>
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                    <Truncate full={s.owner}>{s.owner}</Truncate>
+                    <Truncate full={translated(t, "ownerValue", s.owner)}>
+                      {translated(t, "ownerValue", s.owner)}
+                    </Truncate>
                   </td>
                   <td className="px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
                     <Truncate full={s.modified}>{s.modified}</Truncate>
@@ -699,7 +710,7 @@ function SignalDrawer({ t, signal, onClose }: { t: T; signal: ScSignal; onClose:
         ref={dialogRef}
         open
         aria-modal="true"
-        aria-label={signal.name}
+        aria-label={translated(t, "name", signal.name)}
         onKeyDown={onTrapKey}
         onCancel={(event) => {
           event.preventDefault();
@@ -716,12 +727,16 @@ function SignalDrawer({ t, signal, onClose }: { t: T; signal: ScSignal; onClose:
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Truncate as="p" full={d.name} className="font-mono text-sm font-semibold text-white">
-                {d.name}
+              <Truncate
+                as="p"
+                full={translated(t, "name", d.name)}
+                className="text-sm font-semibold text-white"
+              >
+                {translated(t, "name", d.name)}
               </Truncate>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                  {d.id}
+                  {d.name} · {d.id}
                 </span>
                 <Badge className={SEV_BADGE[d.severity]}>{t(`severity.${d.severity}`)}</Badge>
                 <Badge className={STATUS_BADGE[d.status]}>{t(`status.${d.status}`)}</Badge>

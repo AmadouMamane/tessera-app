@@ -92,25 +92,29 @@ _TR: dict[str, tuple[str, str, str]] = {
         "(its business events must be verifiable).",
     ),
     "lvl_none": ("aucun", "keiner", "none"),
-    "s_live": ("Live", "Live", "Live"),
-    "s_ready": ("Prêt à promouvoir", "Bereit zur Promotion", "Ready to promote"),
+    "s_live": ("En service", "Im Einsatz", "In service"),
+    "s_ready": ("Prêt à être mis en ligne", "Bereit zur Freigabe", "Ready to launch"),
     # The eval-gate label may ONLY be shown when the eval-gate is what blocks. When the
     # gate passed but the observability level is below the release requirement, the block
     # is the level, and the label must say so — a generic "Bloqué (eval-gate)" there would
     # be a soft lie (ADR 0017 §A2.4 honesty).
-    "s_blocked": ("Bloqué (eval-gate)", "Blockiert (Eval-Gate)", "Blocked (eval-gate)"),
+    "s_blocked": (
+        "Bloqué par l'évaluation",
+        "Durch die Bewertung blockiert",
+        "Blocked by the evaluation",
+    ),
     "s_blocked_level": (
-        "Bloqué (niveau d'observabilité)",
-        "Blockiert (Observability-Stufe)",
-        "Blocked (observability level)",
+        "Bloqué : preuves de fonctionnement insuffisantes",
+        "Blockiert: unzureichende Betriebsnachweise",
+        "Blocked: insufficient operating evidence",
     ),
     # ADR 0021 Rule 1. Named for what it means, not for the module it comes from: the point
     # an operator must grasp in one glance is that the model made the agent WORSE than
     # running with no model at all — not that some "floor check" failed.
     "s_blocked_floor": (
-        "Bloqué (pire que sans modèle)",
-        "Blockiert (schlechter als ohne Modell)",
-        "Blocked (worse than no model)",
+        "Bloqué : moins fiable que sans modèle",
+        "Blockiert: unzuverlässiger als ohne Modell",
+        "Blocked: less reliable than no model",
     ),
     "s_awaiting": ("En attente d'évaluation", "Bewertung ausstehend", "Awaiting evaluation"),
 }

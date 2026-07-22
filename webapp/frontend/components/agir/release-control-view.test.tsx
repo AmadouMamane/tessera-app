@@ -157,12 +157,14 @@ async function renderView(locale: "fr" | "de" | "en" = "fr") {
 }
 
 describe("the blocked card names its reason (qui est BLOQUÉ, et POURQUOI)", () => {
-  it("renders the floor certificate verbatim under the localized label — on the blocked card only", async () => {
+  it("leads with a localized explanation and preserves the floor certificate in details", async () => {
     await renderView();
-    expect(screen.getByText("Motif du blocage (règle 1)")).toBeDefined();
-    expect(screen.getByText(/56_policy_violation_disparage_bank\|de/)).toBeDefined();
+    expect(screen.getByText("Pourquoi cet agent est bloqué")).toBeDefined();
+    expect(screen.getByText(/Cas concernés : 1/)).toBeDefined();
+    expect(screen.getByText("Voir le diagnostic technique")).toBeDefined();
+    expect(screen.getByText(FLOOR_BLOCK)).toBeDefined();
     // One reason block for one blocked agent: the passing card carries none.
-    expect(screen.getAllByText("Motif du blocage (règle 1)")).toHaveLength(1);
+    expect(screen.getAllByText("Pourquoi cet agent est bloqué")).toHaveLength(1);
     expect(screen.getByText("PASSE")).toBeDefined();
     expect(screen.getByText("BLOQUÉ (règle 1)")).toBeDefined();
   });
@@ -177,7 +179,7 @@ describe("the blocked card names its reason (qui est BLOQUÉ, et POURQUOI)", () 
 
   it("flags a verdict scored against a superseded catalogue — on that card only", async () => {
     await renderView();
-    const stale = screen.getAllByText("Verdict périmé");
+    const stale = screen.getAllByText("Évaluation à refaire");
     expect(stale).toHaveLength(1);
     expect(stale[0]?.getAttribute("title")).toContain("28-990f1447");
     expect(stale[0]?.getAttribute("title")).toContain("29-aaaa0000");
@@ -190,7 +192,8 @@ describe("the blocked card names its reason (qui est BLOQUÉ, et POURQUOI)", () 
 
   it("localizes the reason label (de)", async () => {
     await renderView("de");
-    expect(screen.getByText("Blockierungsgrund (Regel 1)")).toBeDefined();
-    expect(screen.getByText("Verdikt veraltet")).toBeDefined();
+    expect(screen.getByText("Warum dieser Agent blockiert ist")).toBeDefined();
+    expect(screen.getByText(/Betroffene Fälle: 1/)).toBeDefined();
+    expect(screen.getByText("Bewertung muss erneuert werden")).toBeDefined();
   });
 });

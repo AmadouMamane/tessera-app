@@ -41,10 +41,9 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
           bar (children). */}
       <OverviewDashboard
         lead={
-          // mb must exceed the temporal chrome's upward `shadow-[0_-20px_…]` (20px)
-          // so the bg-coloured shadow never paints over the alert ribbon's rounded
-          // bottom — mb-6 (24px) keeps a 4px clearance.
-          <div className="mb-6">
+          // Keep the alert and its temporal controls visually connected. The sticky
+          // chrome uses only a shallow background fill, so 12px is sufficient.
+          <div className="mb-3">
             <SignalBreachHero />
           </div>
         }

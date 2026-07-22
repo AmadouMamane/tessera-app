@@ -57,11 +57,13 @@ describe("the way in to the evaluations view", () => {
     await renderSwitch("fr", "signals");
     const texts = screen.getAllByRole("link").map((l) => l.textContent ?? "");
     const evalDoor = texts.find((t) => /Évaluations/.test(t)) ?? "";
-    // The things the monitoring view does NOT serve — the old orphan's content, named.
-    expect(evalDoor).toMatch(/gate de release/);
-    expect(evalDoor).toMatch(/plancher mesuré sans aucun modèle/);
+    // The old orphan's content is named in operator language, without delivery shorthand.
+    expect(evalDoor).toMatch(/Jeu de cas/);
+    expect(evalDoor).toMatch(/résultat sans modèle/);
+    expect(evalDoor).toMatch(/comparaisons/);
     const signalsDoor = texts.find((t) => /Suivi continu/.test(t)) ?? "";
-    expect(signalsDoor).toMatch(/SLO/);
+    expect(signalsDoor).toMatch(/Objectifs/);
+    expect(signalsDoor).toMatch(/fiabilité/);
   });
 
   it("marks the active view, so the switch states where the reader IS", async () => {

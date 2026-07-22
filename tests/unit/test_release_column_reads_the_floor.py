@@ -96,7 +96,7 @@ class TestOnlyAnOkReleases:
         state = _wire(monkeypatch, gate=_Gate(passed=True), floor=_Floor(releasable=refusal))("fr")
 
         assert state.passed is False
-        assert state.verdict_label == "BLOQUÉ (règle 1)"
+        assert state.verdict_label == "BLOQUÉ : MOINS FIABLE QUE SANS MODÈLE"
         assert state.verdict_tone == "crit"
         assert state.floor_ok is False
         assert state.floor_block == refusal.reason  # the WHY travels, not just the bit
@@ -109,7 +109,7 @@ class TestOnlyAnOkReleases:
         state = _wire(monkeypatch, gate=_Gate(passed=True), floor=_Floor(releasable=blind))("fr")
 
         assert state.passed is False
-        assert state.verdict_label == "NE PEUT PAS DIRE (plancher)"
+        assert state.verdict_label == "ÉVALUATION INSUFFISANTE"
         assert state.verdict_tone == "bad"
         assert state.floor_block == blind.blind_spot
 
@@ -117,7 +117,7 @@ class TestOnlyAnOkReleases:
         state = _wire(monkeypatch, gate=_Gate(passed=True), floor=_Floor())("fr")
 
         assert state.passed is True
-        assert state.verdict_label == "PASSE"
+        assert state.verdict_label == "PRÊT"
         assert state.floor_ok is True
         assert state.floor_block is None
 
@@ -130,7 +130,7 @@ class TestOnlyAnOkReleases:
         state = _wire(monkeypatch, gate=gate, floor=_Floor(releasable=refusal))("fr")
 
         assert state.passed is False
-        assert state.verdict_label == "BLOQUÉ par le socle"
+        assert state.verdict_label == "BLOQUÉ PAR LES TESTS COMMUNS"
         assert state.floor_ok is False
         assert state.floor_block == refusal.reason
 
@@ -139,8 +139,8 @@ class TestOnlyAnOkReleases:
             monkeypatch, gate=_Gate(passed=True), floor=_Floor(releasable=NotOk("certified"))
         )
 
-        assert run("en").verdict_label == "BLOCKED (rule 1)"
-        assert run("de").verdict_label == "BLOCKIERT (Regel 1)"
+        assert run("en").verdict_label == "BLOCKED: LESS RELIABLE THAN NO MODEL"
+        assert run("de").verdict_label == "BLOCKIERT: UNZUVERLÄSSIGER ALS OHNE MODELL"
 
     def test_the_wire_carries_the_floor_fields(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """`as_dict` feeds the fleet AND Release Control — the fields must survive it."""

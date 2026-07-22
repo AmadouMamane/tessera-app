@@ -31,46 +31,78 @@ __all__ = ["compute_curation_overview"]
 # Localized free-text (fr, de, en). IDs/names/dates/enum keys stay verbatim.
 _TR: dict[str, tuple[str, str, str]] = {
     "why1": (
-        "Faible couverture intent crédit immobilier",
-        "Geringe Abdeckung Intent Immobilienkredit",
-        "Low coverage of mortgage intent",
+        "Trop peu de cas sur le crédit immobilier",
+        "Zu wenige Fälle zu Immobilienkrediten",
+        "Too few mortgage cases",
     ),
     "why2": (
-        "Faible couverture langue DE",
-        "Geringe Abdeckung Sprache DE",
-        "Low coverage of DE language",
+        "Trop peu de cas en allemand",
+        "Zu wenige Fälle auf Deutsch",
+        "Too few cases in German",
     ),
     "why3": (
-        "Cluster de refus sous-segment",
-        "Ablehnungs-Cluster im Untersegment",
-        "Refusal cluster in sub-segment",
+        "Plusieurs refus dans une même situation",
+        "Mehrere Ablehnungen in derselben Situation",
+        "Several refusals in the same situation",
     ),
     "why4": (
-        "Cas limite compliance Art. 50",
-        "Compliance-Grenzfall Art. 50",
-        "Art. 50 compliance edge case",
+        "Cas à vérifier au regard de l'article 50",
+        "Fall im Hinblick auf Artikel 50 prüfen",
+        "Case to review against Article 50",
     ),
     "wf_collect": ("Collecte", "Erfassung", "Collection"),
-    "wf_norm": ("Normalisation", "Normalisierung", "Normalization"),
-    "wf_dedup": ("Déduplication", "Deduplizierung", "Deduplication"),
-    "wf_pii": ("Masquage PII", "PII-Maskierung", "PII masking"),
-    "wf_label": ("Labellisation", "Labeling", "Labeling"),
-    "wf_dual": ("Validation dual-control", "Dual-Control-Validierung", "Dual-control validation"),
-    "wf_promo": ("Promotion dataset", "Dataset-Promotion", "Dataset promotion"),
+    "wf_norm": ("Mise au même format", "Einheitliches Format", "Use a common format"),
+    "wf_dedup": ("Retrait des doublons", "Duplikate entfernen", "Remove duplicates"),
+    "wf_pii": (
+        "Masquage des données personnelles",
+        "Personenbezogene Daten maskieren",
+        "Mask personal data",
+    ),
+    "wf_label": ("Classement des cas", "Fälle einordnen", "Classify cases"),
+    "wf_dual": (
+        "Double validation",
+        "Bestätigung durch zwei Personen",
+        "Two-person approval",
+    ),
+    "wf_promo": (
+        "Ajout au jeu d'évaluation",
+        "Zum Prüfsatz hinzufügen",
+        "Add to the evaluation set",
+    ),
     "dt_today": ("aujourd'hui {t}", "heute {t}", "today {t}"),
     "dt_yesterday": ("hier {t}", "gestern {t}", "yesterday {t}"),
     "dt_mon": ("lun. {t}", "Mo. {t}", "Mon {t}"),
-    "act1": ("Promotion lot — CUR-018", "Lot-Promotion - CUR-018", "Lot promotion - CUR-018"),
-    "act2": (
-        "Revue assignée — CUR-042",
-        "Review zugewiesen - CUR-042",
-        "Review assigned - CUR-042",
+    "act1": (
+        "Sélection ajoutée au jeu — CUR-018",
+        "Auswahl zum Prüfsatz hinzugefügt — CUR-018",
+        "Selection added to the set — CUR-018",
     ),
-    "act3": ("Masquage PII — lot", "PII-Maskierung - Lot", "PII masking - lot"),
-    "act4": ("Lot créé — CUR-042", "Lot erstellt - CUR-042", "Lot created - CUR-042"),
-    "act5": ("Replay de validation", "Validierungs-Replay", "Validation replay"),
+    "act2": (
+        "Vérification attribuée — CUR-042",
+        "Prüfung zugewiesen — CUR-042",
+        "Review assigned — CUR-042",
+    ),
+    "act3": (
+        "Données personnelles masquées",
+        "Personenbezogene Daten maskiert",
+        "Personal data masked",
+    ),
+    "act4": (
+        "Sélection créée — CUR-042",
+        "Auswahl erstellt — CUR-042",
+        "Selection created — CUR-042",
+    ),
+    "act5": (
+        "Cas rejoués pour vérification",
+        "Fälle zur Prüfung erneut abgespielt",
+        "Cases replayed for review",
+    ),
     "actor_system": ("Système", "System", "System"),
-    "rel_ready": ("Prêt à publier", "Bereit zur Veroeffentlichung", "Ready to publish"),
+    "rel_ready": ("Prêt pour la mise en ligne", "Bereit zur Freigabe", "Ready to launch"),
+    "owner_analyst": ("Analyse", "Analyse", "Analysis"),
+    "owner_engineering": ("Ingénierie des modèles", "Modellentwicklung", "Model engineering"),
+    "owner_compliance": ("Conformité", "Regelkonformität", "Compliance"),
+    "owner_admin": ("Administration", "Administration", "Administration"),
     "sync_2min": ("il y a 2 min", "vor 2 Min", "2 min ago"),
 }
 
@@ -275,10 +307,20 @@ def compute_curation_overview(lang: str = "fr", at: str | None = None) -> dict[s
     ]
 
     owners = [
-        {"role": "Analyst", "required": 1, "assigned": 1, "status": "ok"},
-        {"role": "M. Engineer", "required": 2, "assigned": 2, "status": "ok"},
-        {"role": "Compliance", "required": 1, "assigned": 0, "status": "pending"},
-        {"role": "Admin", "required": 1, "assigned": 1, "status": "ok"},
+        {"role": _t("owner_analyst", lang), "required": 1, "assigned": 1, "status": "ok"},
+        {
+            "role": _t("owner_engineering", lang),
+            "required": 2,
+            "assigned": 2,
+            "status": "ok",
+        },
+        {
+            "role": _t("owner_compliance", lang),
+            "required": 1,
+            "assigned": 0,
+            "status": "pending",
+        },
+        {"role": _t("owner_admin", lang), "required": 1, "assigned": 1, "status": "ok"},
     ]
 
     actions = [

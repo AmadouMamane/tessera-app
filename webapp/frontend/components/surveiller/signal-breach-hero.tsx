@@ -11,12 +11,12 @@ import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchSLO } from "@/lib/api/client";
 
-const METRIC_LABEL: Record<string, string> = {
-  faithfulness: "Fidélité",
-  relevance: "Pertinence",
-  availability: "Disponibilité",
-  latency: "Latence",
-};
+const METRIC_KEY = {
+  faithfulness: "metric.faithfulness",
+  relevance: "metric.relevance",
+  availability: "metric.availability",
+  latency: "metric.latency",
+} as const;
 
 /**
  * P2 — Surveiller signal hero, rendered as the shared premium {@link AlertRibbon}:
@@ -56,7 +56,8 @@ export function SignalBreachHero({
   // Tight (no space before %) for the gauge marker flag: a trailing " %" widens the
   // box on the right and shifts the visible digits left of the vertical marker.
   const pctTight = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")}%`;
-  const metric = METRIC_LABEL[data.metric] ?? data.metric;
+  const metricKey = METRIC_KEY[data.metric as keyof typeof METRIC_KEY];
+  const metric = metricKey ? t(metricKey) : data.metric;
 
   if (!data.breaching) {
     const okTitle = t("okShort", {

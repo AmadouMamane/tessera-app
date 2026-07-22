@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
@@ -680,10 +681,7 @@ function AutomationsRail({
               {g.roles.map((r, i) => (
                 <li key={`${r.mode}-${i}`} className="flex items-start gap-2">
                   <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
-                    {/* r.mode here is a role-authority tier (Admin / Compliance+ /
-                        Operator+), not the auto/approb execution mode — render the
-                        backend label directly (it is not localized). */}
-                    {r.mode}
+                    <AuthorityLabel authority={r.mode} />
                   </Badge>
                   <span className="min-w-0 flex-1 text-[0.66rem] text-[var(--tessera-text)]">
                     {r.scope}

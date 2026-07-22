@@ -18,6 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -994,7 +995,7 @@ function ActionButton({
         {label}
       </span>
       <Badge tone="neutral" className="text-[0.55rem]">
-        {requiredRole}
+        <AuthorityLabel authority={requiredRole} />
       </Badge>
     </button>
   );

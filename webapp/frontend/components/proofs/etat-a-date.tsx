@@ -814,6 +814,7 @@ function VerifiedBadge({ ok, label }: { ok: boolean; label: string }) {
 }
 
 function Reconstructed({ data, className }: { data: Data; className?: string }) {
+  const t = useTranslations("etatADate");
   const r = data.reconstructed;
   if (!r) return null;
   return (
@@ -826,7 +827,8 @@ function Reconstructed({ data, className }: { data: Data; className?: string }) 
       className={className}
     >
       <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
-        Snapshot · <span className="font-mono text-[var(--tessera-text)]">{r.snapshot_id}</span>
+        {t("snapshotLabel")} ·{" "}
+        <span className="font-mono text-[var(--tessera-text)]">{r.snapshot_id}</span>
       </p>
       <p className="mt-3 text-[0.68rem] text-[var(--tessera-text-muted)]">{r.built_label}</p>
     </Panel>
@@ -846,7 +848,7 @@ function Original({ data, className }: { data: Data; className?: string }) {
       className={className}
     >
       <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-        Référence · <span className="font-mono">{o.ref_code}</span>
+        {t("referenceLabel")} · <span className="font-mono">{o.ref_code}</span>
       </p>
       {o.available ? (
         <div className="mt-2 flex flex-col gap-2 text-[0.74rem]">
@@ -956,6 +958,7 @@ function GovCardView({
 }
 
 function Chronology({ data, className }: { data: Data; className?: string }) {
+  const t = useTranslations("etatADate");
   const tl = data.timeline;
   if (!tl) return null;
   return (
@@ -967,7 +970,7 @@ function Chronology({ data, className }: { data: Data; className?: string }) {
       className={className}
     >
       {tl.rows.length === 0 ? (
-        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">Aucun événement à T.</p>
+        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">{t("noTimeline")}</p>
       ) : (
         <ul className="flex flex-col gap-2.5">
           {tl.rows.map((r, i) => (

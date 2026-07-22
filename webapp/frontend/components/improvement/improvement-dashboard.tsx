@@ -18,6 +18,7 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -758,7 +759,9 @@ function SensitiveLink({
     >
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)] group-hover:text-[var(--tessera-green)]" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      <Badge tone="warning">Admin+</Badge>
+      <Badge tone="warning">
+        <AuthorityLabel authority="Admin+" />
+      </Badge>
     </Link>
   );
 }

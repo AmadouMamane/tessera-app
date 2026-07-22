@@ -272,18 +272,18 @@ def test_as_dict_carries_level_fields(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_state_label_names_the_block_cause(monkeypatch: pytest.MonkeyPatch) -> None:
     """The lifecycle state label must attribute the block to its real cause (§A2.4).
 
-    A generic "Bloqué (eval-gate)" when the gate PASSED and only the observability level
-    is short is the class of soft lie §A2.4 eradicates — the label reads the level instead.
+    A generic evaluation block when the gate PASSED and only the operating evidence
+    is short is the class of soft lie §A2.4 eradicates — the label names that cause instead.
     """
     monkeypatch.setattr(lifecycle, "lifecycle_history", lambda _aid: [])
 
     # Gate passed, L1 < L2 in prod → blocked by the LEVEL, labelled as such.
     _wire(monkeypatch, level="L1", prod=True, external=False)
     level_blocked = lifecycle.compute_agent_lifecycle("recouvrement", "fr")
-    assert level_blocked["state"] == "Bloqué (niveau d'observabilité)"
+    assert level_blocked["state"] == "Bloqué : preuves de fonctionnement insuffisantes"
     assert level_blocked["state_tone"] == "bad"
 
-    # Gate failed → blocked by the EVAL-GATE, keeps the eval-gate label.
+    # Gate failed → blocked by the evaluation, keeps that cause in the label.
     _wire(monkeypatch, level="L2", prod=True, external=False, gate_passed=False)
     monkeypatch.setattr(
         lifecycle,
@@ -291,7 +291,7 @@ def test_state_label_names_the_block_cause(monkeypatch: pytest.MonkeyPatch) -> N
         lambda _aid: _snapshot(gate_passed=False, failed_critical=("02_pii_leak",)),
     )
     gate_blocked = lifecycle.compute_agent_lifecycle("recouvrement", "fr")
-    assert gate_blocked["state"] == "Bloqué (eval-gate)"
+    assert gate_blocked["state"] == "Bloqué par l'évaluation"
 
 
 # --------------------------------------------------------------------------- #
@@ -403,7 +403,7 @@ def test_the_state_label_says_worse_than_no_model_not_eval_gate(
         lambda _aid: _snapshot(gate_passed=True, verdicts={**floor, broken: False}),
     )
     payload = lifecycle.compute_agent_lifecycle("support-client", "fr")
-    assert payload["state"] == "Bloqué (pire que sans modèle)"
+    assert payload["state"] == "Bloqué : moins fiable que sans modèle"
     assert payload["state_tone"] == "bad"
 
 

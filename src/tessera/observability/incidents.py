@@ -184,31 +184,56 @@ class _RealIncidents:
 
     def trigger_label(self, rule: str, lang: str) -> str:
         if rule.startswith("prompt_injection"):
-            return "Prompt injection"
+            return _loc(
+                lang,
+                "Instruction malveillante",
+                "Schädliche Anweisung",
+                "Malicious instruction",
+            )
         if rule.startswith("pii"):
-            return _loc(lang, "Fuite PII — mémoire", "PII-Leck — Speicher", "PII leak — memory")
+            return _loc(
+                lang,
+                "Données personnelles exposées en mémoire",
+                "Personenbezogene Daten im Speicher offengelegt",
+                "Personal data exposed in memory",
+            )
         if rule.startswith("memory."):
             return _loc(
                 lang,
-                "Gouvernance mémoire — refus",
-                "Speicher-Governance — Ablehnung",
-                "Memory governance — deny",
+                "Accès à la mémoire refusé",
+                "Speicherzugriff abgelehnt",
+                "Memory access denied",
             )
         if rule.startswith("tool."):
             name = rule.split(".")[1] if "." in rule else rule
             return _loc(
                 lang,
-                f"Outil refusé — {name}",
-                f"Tool abgelehnt — {name}",
-                f"Tool denied — {name}",
+                f"Action refusée — {name}",
+                f"Aktion abgelehnt — {name}",
+                f"Action denied — {name}",
             )
-        return _loc(lang, "Guard — autre règle", "Guard — andere Regel", "Guard — other rule")
+        return _loc(
+            lang,
+            "Autre règle de protection",
+            "Andere Schutzregel",
+            "Other protection rule",
+        )
 
     def playbook_for(self, rule: str, lang: str) -> str:
         if rule.startswith("prompt_injection"):
-            return "Prompt injection containment"
+            return _loc(
+                lang,
+                "Instruction malveillante",
+                "Schädliche Anweisung",
+                "Malicious instruction",
+            )
         if rule.startswith(("pii", "memory.")):
-            return _loc(lang, "Purge mémoire PII", "PII-Speicher leeren", "PII memory purge")
+            return _loc(
+                lang,
+                "Données personnelles en mémoire",
+                "Personenbezogene Daten im Speicher",
+                "Personal data in memory",
+            )
         return "—"
 
 
@@ -279,8 +304,13 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
 
     # Recurring playbook names, localized once and reused across the page so the
     # triage queue, catalogue and resolution chart stay consistent.
-    pb_pii = _loc(lang, "Purge mémoire PII", "PII-Speicher leeren", "PII memory purge")
-    pb_conf = _loc(lang, "Incident conformité", "Konformitaetsvorfall", "Compliance incident")
+    pb_pii = _loc(
+        lang,
+        "Données personnelles en mémoire",
+        "Personenbezogene Daten im Speicher",
+        "Personal data in memory",
+    )
+    pb_conf = _loc(lang, "Écart de conformité", "Abweichung von Vorgaben", "Compliance gap")
 
     # REAL posture: clusters from the ledger + the low-faithfulness cluster; the
     # lifecycle metrics (MTTA/MTTR/auto-resolution/SLA/evidence packs) have no
@@ -334,29 +364,44 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
                 "owner": "—",
                 "sla": "—",
                 "sla_tone": "warn",
-                "playbook": "Hallucination — RAG",
+                "playbook": _loc(
+                    lang,
+                    "Réponse sans source fiable",
+                    "Antwort ohne verlässliche Quelle",
+                    "Answer without a reliable source",
+                ),
                 "role": "Operator+",
             }
         )
 
     playbook_catalog = [
         {
-            "name": "Hallucination — RAG",
+            "name": _loc(
+                lang,
+                "Réponse sans source fiable",
+                "Antwort ohne verlässliche Quelle",
+                "Answer without a reliable source",
+            ),
             "desc": _loc(
                 lang,
-                "Détecter & réduire les hallucinations RAG",
-                "RAG-Halluzinationen erkennen & reduzieren",
-                "Detect & reduce RAG hallucinations",
+                "Détecter et réduire les réponses non étayées",
+                "Nicht belegte Antworten erkennen und reduzieren",
+                "Detect and reduce unsupported answers",
             ),
             "runs": 18,
         },
         {
-            "name": "Prompt injection containment",
+            "name": _loc(
+                lang,
+                "Instruction malveillante",
+                "Schädliche Anweisung",
+                "Malicious instruction",
+            ),
             "desc": _loc(
                 lang,
-                "Confiner une injection de prompt",
-                "Eine Prompt-Injection eindaemmen",
-                "Contain a prompt injection",
+                "Bloquer l'instruction et limiter ses effets",
+                "Anweisung blockieren und ihre Folgen begrenzen",
+                "Block the instruction and limit its effects",
             ),
             "runs": 12,
         },
@@ -364,19 +409,24 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
             "name": pb_pii,
             "desc": _loc(
                 lang,
-                "Effacer la PII en mémoire (RGPD)",
-                "PII im Speicher loeschen (DSGVO)",
-                "Erase PII from memory (GDPR)",
+                "Effacer les données personnelles conservées en mémoire",
+                "Gespeicherte personenbezogene Daten aus dem Speicher löschen",
+                "Erase personal data held in memory",
             ),
             "runs": 9,
         },
         {
-            "name": "Freeze release & rollback",
+            "name": _loc(
+                lang,
+                "Suspendre la mise en ligne",
+                "Freigabe anhalten",
+                "Pause the launch",
+            ),
             "desc": _loc(
                 lang,
-                "Geler la release et revenir en arrière",
-                "Release einfrieren und zuruecksetzen",
-                "Freeze the release and roll back",
+                "Suspendre la mise en ligne et revenir à la version précédente",
+                "Freigabe anhalten und zur vorherigen Version zurückkehren",
+                "Pause the launch and return to the previous version",
             ),
             "runs": 13,
         },
@@ -384,9 +434,9 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
             "name": pb_conf,
             "desc": _loc(
                 lang,
-                "Art. 50 / RGPD — remédiation",
-                "Art. 50 / DSGVO — Behebung",
-                "Art. 50 / GDPR — remediation",
+                "Corriger un écart aux exigences de l'article 50 ou du RGPD",
+                "Abweichung von Artikel 50 oder DSGVO-Anforderungen beheben",
+                "Correct a gap against Article 50 or GDPR requirements",
             ),
             "runs": 7,
         },
@@ -484,7 +534,12 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
         control_cases = []
 
     running_playbook = {
-        "name": "Prompt injection containment",
+        "name": _loc(
+            lang,
+            "Instruction malveillante",
+            "Schädliche Anweisung",
+            "Malicious instruction",
+        ),
         "incident": "INC-231",
         "owner": "S. SysAdmin",
         "role": "Operator+",
@@ -499,7 +554,12 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
             },
             {
                 "key": "containment",
-                "label": _loc(lang, "Containment", "Eindaemmung", "Containment"),
+                "label": _loc(
+                    lang,
+                    "Limitation des effets",
+                    "Folgen begrenzen",
+                    "Limit the effects",
+                ),
                 "time": "11:48:48",
                 "state": "current",
             },
@@ -625,10 +685,40 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
     }
 
     resolution_by_playbook = [
-        {"name": "Hallucination — RAG", "pct": 73, "ratio": "10/14", "color": "#f97316"},
+        {
+            "name": _loc(
+                lang,
+                "Réponse sans source fiable",
+                "Antwort ohne verlässliche Quelle",
+                "Answer without a reliable source",
+            ),
+            "pct": 73,
+            "ratio": "10/14",
+            "color": "#f97316",
+        },
         {"name": pb_pii, "pct": 89, "ratio": "8/9", "color": "#34d399"},
-        {"name": "Prompt injection containment", "pct": 83, "ratio": "10/12", "color": "#60a5fa"},
-        {"name": "Freeze release & rollback", "pct": 75, "ratio": "9/12", "color": "#a78bfa"},
+        {
+            "name": _loc(
+                lang,
+                "Instruction malveillante",
+                "Schädliche Anweisung",
+                "Malicious instruction",
+            ),
+            "pct": 83,
+            "ratio": "10/12",
+            "color": "#60a5fa",
+        },
+        {
+            "name": _loc(
+                lang,
+                "Suspendre la mise en ligne",
+                "Freigabe anhalten",
+                "Pause the launch",
+            ),
+            "pct": 75,
+            "ratio": "9/12",
+            "color": "#a78bfa",
+        },
         {"name": pb_conf, "pct": 71, "ratio": "5/7", "color": "#fbbf24"},
     ]
 
@@ -640,34 +730,49 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
     postmortems = [
         {
             "id": "INC-224",
-            "label": "Hallucination — RAG",
+            "label": _loc(
+                lang,
+                "Réponse sans source fiable",
+                "Antwort ohne verlässliche Quelle",
+                "Answer without a reliable source",
+            ),
             "rca": _loc(
                 lang,
-                "Chunking trop large — reranker ajusté",
-                "Chunking zu gross — Reranker angepasst",
-                "Chunking too large — reranker adjusted",
+                "Sources découpées trop largement — sélection affinée",
+                "Quellen zu grob unterteilt — Auswahl verfeinert",
+                "Sources split too broadly — selection refined",
             ),
             "resolved": _resolved("12:05", "J-2"),
         },
         {
             "id": "INC-221",
-            "label": _loc(lang, "Fuite PII — mémoire", "PII-Leck — Speicher", "PII leak — memory"),
+            "label": _loc(
+                lang,
+                "Données personnelles exposées en mémoire",
+                "Personenbezogene Daten im Speicher offengelegt",
+                "Personal data exposed in memory",
+            ),
             "rca": _loc(
                 lang,
-                "TTL mémoire manquant — purge auto.",
-                "Speicher-TTL fehlt — Auto-Bereinigung",
-                "Missing memory TTL — auto purge",
+                "Durée de conservation absente — effacement automatique ajouté",
+                "Aufbewahrungsdauer fehlte — automatisches Löschen ergänzt",
+                "Retention period was missing — automatic deletion added",
             ),
             "resolved": _resolved("16:40", "J-2"),
         },
         {
             "id": "INC-223",
-            "label": "Prompt injection",
+            "label": _loc(
+                lang,
+                "Instruction malveillante",
+                "Schädliche Anweisung",
+                "Malicious instruction",
+            ),
             "rca": _loc(
                 lang,
-                "Motif jailbreak — règle ajoutée",
-                "Jailbreak-Muster — Regel hinzugefuegt",
-                "Jailbreak pattern — rule added",
+                "Nouvelle forme d'instruction malveillante — règle ajoutée",
+                "Neue Form schädlicher Anweisung — Regel ergänzt",
+                "New form of malicious instruction — rule added",
             ),
             "resolved": _resolved("11:03", "J-3"),
         },
@@ -681,9 +786,9 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
             ),
             "rca": _loc(
                 lang,
-                "Routage langue — seuil revu",
-                "Sprachrouting — Schwelle ueberarbeitet",
-                "Language routing — threshold revised",
+                "Langue mal reconnue — seuil de détection revu",
+                "Sprache falsch erkannt — Erkennungsschwelle angepasst",
+                "Language misidentified — detection threshold revised",
             ),
             "resolved": _resolved("09:18", "J-4"),
         },

@@ -87,12 +87,9 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <QualityViewSwitch active="signals" locale={locale} />
-      {/* SLO breach alert LEADS; the dashboard's temporal rail sits directly beneath it;
-          the agent-scope context (Vue par agent) renders below the rail via `agentScope`.
-          The gap must exceed the sticky chrome's upward `shadow-[0_-16px_…]` (16px) so the
-          rail's bg-coloured shadow never paints over the banner's bottom edge — `mb-5` (20px)
-          keeps a 4px clearance. */}
-      <div className="mb-5">
+      {/* The alert leads and the temporal controls follow as one compact reading sequence.
+          A shallow background fill on the sticky chrome keeps both rounded edges clean. */}
+      <div className="mb-3">
         <SignalBreachHero variant="gauge" />
       </div>
       <ObservabilityDashboard

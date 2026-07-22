@@ -21,6 +21,19 @@ const STATE_DOT: Record<string, string> = {
   warn: "bg-amber-400",
 };
 
+const FLOOR_BLOCK_PATTERN =
+  /worse than silence on (?<count>\d+) run\(s\).*?\((?<caseId>[^)]+)\).*?over (?<passes>\d+) full passes/i;
+
+function floorBlockParams(reason: string) {
+  const groups = FLOOR_BLOCK_PATTERN.exec(reason)?.groups;
+  if (!groups?.count || !groups.caseId || !groups.passes) return null;
+  return {
+    count: Number(groups.count),
+    caseId: groups.caseId,
+    passes: Number(groups.passes),
+  };
+}
+
 /**
  * Release Control body — org summary + per-agent release pipeline cards.
  *
@@ -107,6 +120,7 @@ export async function ReleaseControlView({
       <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
         {agents.map((a) => {
           const rel = a.release;
+          const floorParams = rel.floor_block ? floorBlockParams(rel.floor_block) : null;
           return (
             <section
               key={a.agent_id}
@@ -200,17 +214,22 @@ export async function ReleaseControlView({
                 </dl>
               ) : null}
 
-              {/* The REASON an operator ships or doesn't. The floor's certificate line is
-                  measured evidence (ADR 0021 Rule 1) — rendered verbatim under a localized
-                  label, never paraphrased: the page must show who is blocked AND why. */}
+              {/* The first reading explains the measured floor in the operator's language.
+                  The source diagnosis remains verbatim and available one click below it. */}
               {rel.available && !rel.passed && rel.floor_block ? (
                 <div className="rounded-md border border-red-500/30 bg-red-500/5 px-2.5 py-1.5">
                   <p className="text-[0.6rem] font-medium uppercase tracking-wide text-red-300">
                     {t("floorReason")}
                   </p>
-                  <p className="mt-0.5 text-[0.62rem] leading-relaxed text-[var(--tessera-text-muted)]">
-                    {rel.floor_block}
+                  <p className="mt-1 text-[0.68rem] leading-relaxed text-[var(--tessera-text)]">
+                    {floorParams ? t("floorSummary", floorParams) : t("floorSummaryGeneric")}
                   </p>
+                  <details className="mt-1.5 text-[0.6rem] text-[var(--tessera-text-muted)]">
+                    <summary className="cursor-pointer text-[#b9a6ff] hover:underline">
+                      {t("floorTechnicalDetail")}
+                    </summary>
+                    <p className="mt-1 leading-relaxed">{rel.floor_block}</p>
+                  </details>
                 </div>
               ) : null}
 

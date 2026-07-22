@@ -529,7 +529,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     <div className="flex flex-col gap-2">
       {/* Sticky chrome: tab bar + business actions on one row (image normative),
           the shared compact temporal rail (Live/Replay) below. */}
-      <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-16px_0_0_var(--tessera-bg)]">
+      <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-8px_0_0_var(--tessera-bg)]">
         {/* The temporal rail LEADS the chrome — directly beneath the SLO alert the page
             renders above the dashboard (user feedback) — then the actions + tabs. */}
         <SignalCommandBar

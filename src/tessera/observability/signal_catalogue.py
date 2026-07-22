@@ -76,14 +76,14 @@ _DESC: dict[str, tuple[str, str, str]] = {
         "Leak of personal data in the model's outputs.",
     ),
     "prompt_injection": (
-        "Contournement du pare-feu par injection de prompt.",
-        "Umgehung der Firewall durch Prompt-Injection.",
-        "Firewall bypass via prompt injection.",
+        "Tentative de faire ignorer à l'agent les instructions qui le protègent.",
+        "Versuch, den Agenten seine schützenden Anweisungen ignorieren zu lassen.",
+        "Attempt to make the agent ignore the instructions that protect it.",
     ),
     "hallucination": (
-        "Réponses non étayées par le corpus récupéré (hallucination factuelle).",
-        "Antworten ohne Beleg im abgerufenen Korpus (faktische Halluzination).",
-        "Answers unsupported by the retrieved corpus (factual hallucination).",
+        "Réponses qui ne sont pas appuyées par les sources retrouvées.",
+        "Antworten, die nicht durch die gefundenen Quellen gestützt sind.",
+        "Answers that are not supported by the sources found.",
     ),
     "citation_fabrication": (
         "Citations ou références fabriquées dans la réponse.",
@@ -91,14 +91,14 @@ _DESC: dict[str, tuple[str, str, str]] = {
         "Fabricated citations or references in the answer.",
     ),
     "tool_misuse": (
-        "Mauvais usage ou appel non autorisé d'un outil.",
-        "Missbrauch oder unbefugter Aufruf eines Tools.",
-        "Misuse or unauthorized call of a tool.",
+        "Outil utilisé à mauvais escient ou sans autorisation.",
+        "Werkzeug falsch oder ohne Berechtigung verwendet.",
+        "Tool used incorrectly or without permission.",
     ),
     "policy_violation": (
-        "Violation d'une politique interne encadrée par la garde.",
-        "Verstoss gegen eine durch die Guard geregelte interne Richtlinie.",
-        "Violation of an internal policy enforced by the guard.",
+        "Règle interne non respectée pendant une réponse ou une action.",
+        "Interne Regel bei einer Antwort oder Aktion nicht eingehalten.",
+        "Internal rule not followed during an answer or action.",
     ),
     "regulatory_misstatement": (
         "Affirmation réglementaire erronée (DORA / RGPD / BaFin).",
@@ -106,9 +106,9 @@ _DESC: dict[str, tuple[str, str, str]] = {
         "Incorrect regulatory statement (DORA / GDPR / BaFin).",
     ),
     "overconfidence": (
-        "Sur-confiance : action affirmée sans vérification suffisante.",
-        "Uebermaessiges Selbstvertrauen: Handlung ohne ausreichende Pruefung.",
-        "Overconfidence: asserted action without sufficient verification.",
+        "Réponse ou action présentée comme certaine sans vérification suffisante.",
+        "Antwort oder Aktion als sicher dargestellt, ohne ausreichende Prüfung.",
+        "Answer or action presented as certain without enough verification.",
     ),
     "language_mixing": (
         "Mélange de langues ou mauvais routage de la langue de réponse.",
@@ -116,9 +116,9 @@ _DESC: dict[str, tuple[str, str, str]] = {
         "Language mixing or wrong response-language routing.",
     ),
     "escalation_failure": (
-        "Échec d'escalade vers un opérateur humain quand requis.",
-        "Fehlende Eskalation an einen menschlichen Operator bei Bedarf.",
-        "Failed escalation to a human operator when required.",
+        "Intervention humaine non demandée alors qu'elle était nécessaire.",
+        "Menschliche Hilfe nicht angefordert, obwohl sie erforderlich war.",
+        "Human help not requested when it was required.",
     ),
 }
 
@@ -133,15 +133,26 @@ _TR: dict[str, tuple[str, str, str]] = {
     "l_pass_rate": ("Taux de réussite", "Erfolgsrate", "Pass rate"),
     "l_cases_passed": ("Cas réussis", "Bestandene Faelle", "Passed cases"),
     "l_cases_failed": ("Cas en échec", "Fehlgeschlagene Faelle", "Failed cases"),
-    "l_model": ("Modèle d'éval", "Eval-Modell", "Eval model"),
-    "l_last_run": ("Dernier run", "Letzter Lauf", "Last run"),
-    "l_deny": ("Motifs de blocage", "Blockiermuster", "Deny patterns"),
-    "l_pii": ("Motifs PII", "PII-Muster", "PII patterns"),
+    "l_model": ("Modèle évalué", "Geprüftes Modell", "Evaluated model"),
+    "l_last_run": ("Dernière évaluation", "Letzte Prüfung", "Last evaluation"),
+    "l_deny": ("Formes d'attaque bloquées", "Blockierte Angriffsformen", "Blocked attack patterns"),
+    "l_pii": (
+        "Types de données personnelles",
+        "Arten personenbezogener Daten",
+        "Personal-data types",
+    ),
     "l_guarded_tools": ("Outils encadrés", "Eingeschraenkte Tools", "Guarded tools"),
-    "l_policy_version": ("Version policy", "Policy-Version", "Policy version"),
+    "l_policy_version": ("Version des règles", "Regelversion", "Rule version"),
+    "source_guard": ("Contrôle en ligne", "Laufende Kontrolle", "Live check"),
+    "source_eval": ("Évaluation", "Prüfung", "Evaluation"),
+    "footer_source": (
+        "Évaluation ({model}) et règles de contrôle",
+        "Prüfung ({model}) und Kontrollregeln",
+        "Evaluation ({model}) and control rules",
+    ),
     "v_pass_rate": ("Taux de réussite", "Erfolgsrate", "Pass rate"),
     "v_higher_better": ("Plus haut est mieux", "Hoeher ist besser", "Higher is better"),
-    "v_per_run": ("Par run d'évaluation", "Pro Evaluierungslauf", "Per evaluation run"),
+    "v_per_run": ("À chaque évaluation", "Bei jeder Prüfung", "At each evaluation"),
     "v_all_env": ("Tous (fr / de / en)", "Alle (fr / de / en)", "All (fr / de / en)"),
     "v_passed": ("Réussis", "Bestanden", "Passed"),
     "v_failed": ("Échecs", "Fehler", "Failed"),
@@ -263,7 +274,10 @@ def _signal(
         "severity": severity,
         "description": desc,
         "definition": [
-            {"label": _t("l_source", lang), "value": source},
+            {
+                "label": _t("l_source", lang),
+                "value": _t("source_guard" if source == "Guard" else "source_eval", lang),
+            },
             {"label": _t("l_type", lang), "value": _t("v_pass_rate", lang)},
             {"label": _t("l_unit", lang), "value": "%"},
             {"label": _t("l_direction", lang), "value": _t("v_higher_better", lang)},
@@ -362,7 +376,7 @@ def _assemble(
         "sources": sources,
         "footer": {
             "total": total,
-            "source": f"Eval ({snapshot.model}) + guard/policy.yaml",
+            "source": _t("footer_source", lang).format(model=snapshot.model),
         },
         "run_at": run_dt.strftime("%d/%m/%Y") if run_dt else "-",
     }

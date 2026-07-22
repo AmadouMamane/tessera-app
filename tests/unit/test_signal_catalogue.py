@@ -90,8 +90,8 @@ def test_guard_rows_only_for_guard_sourced_signals() -> None:
     by_name = {s["name"]: s for s in _assemble(_snapshot(), _policy(), _now(), "fr")["signals"]}  # type: ignore[union-attr]
     # pii_leak is guard-enforced -> real policy composition surfaced.
     guard = by_name["pii_leak_rate"]["detail"]["guard"]
-    assert {"label": "Motifs de blocage", "value": "2"} in guard
-    assert {"label": "Motifs PII", "value": "1"} in guard
+    assert {"label": "Formes d'attaque bloquées", "value": "2"} in guard
+    assert {"label": "Types de données personnelles", "value": "1"} in guard
     # hallucination is eval-only -> no guard composition.
     assert by_name["hallucination_rate"]["detail"]["guard"] == []
 

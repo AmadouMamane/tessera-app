@@ -14,6 +14,7 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -430,7 +431,7 @@ function ActionCard({
       <div className="flex flex-wrap gap-1">
         {roles.map((r) => (
           <Badge key={r.label} tone={r.tone}>
-            {r.label}
+            <AuthorityLabel authority={r.label} />
           </Badge>
         ))}
       </div>
@@ -1036,8 +1037,12 @@ function SensitiveAction({ icon: Icon, label }: { icon: LucideIcon; label: strin
     <div className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 text-[0.72rem]">
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      <Badge tone="warning">Admin+</Badge>
-      <Badge tone="danger">Dual</Badge>
+      <Badge tone="warning">
+        <AuthorityLabel authority="Admin+" />
+      </Badge>
+      <Badge tone="danger">
+        <AuthorityLabel authority="Dual" />
+      </Badge>
     </div>
   );
 }

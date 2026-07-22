@@ -1,4 +1,12 @@
 {
+  "authority": {
+    "admin": "Administrateur",
+    "operator": "Opérateur ou administrateur",
+    "compliance": "Conformité ou administrateur",
+    "auditor": "Auditeur ou administrateur",
+    "dualControl": "Deux validations",
+    "technical": "Niveau d’accès : {role}"
+  },
   "metricInfo": {
     "about": "À propos de {name}",
     "calcul": "Calcul",
@@ -48,20 +56,20 @@
     "inbox": "À traiter",
     "overview": "Vue d’ensemble",
     "quality": "Qualité IA",
-    "security": "Sécurité & Privacy",
+    "security": "Sécurité & confidentialité",
     "compliance": "Conformité",
     "reliability": "Fiabilité & coût",
     "improvement": "Amélioration",
     "incidents": "Incidents & procédures",
-    "replay": "Rejeu, trafic fantôme & navigation temporelle",
-    "curation": "Curation eval set",
-    "release": "Release Control",
-    "automations": "Automations",
+    "replay": "Rejeu & essai sans exposition",
+    "curation": "Jeux d'évaluation",
+    "release": "Mise en ligne",
+    "automations": "Règles automatiques",
     "audit": "Journal d'audit",
-    "proofExporters": "Preuves & exporteurs",
+    "proofExporters": "Preuves & exports",
     "evidencePack": "Dossier de preuves",
-    "signalCatalog": "Signal Catalog",
-    "policies": "Policies & garde-fous",
+    "signalCatalog": "Catalogue des signaux",
+    "policies": "Politiques & garde-fous",
     "sourcesMemory": "Sources & mémoire",
     "rolesAccess": "Rôles & accès",
     "integrations": "Intégrations",
@@ -103,7 +111,7 @@
       "configurations": "Configurations",
       "connaissances": "Connaissances",
       "agentGuardrails": "Garde-fous",
-      "prompts": "Prompts",
+      "prompts": "Instructions",
       "metier": "Métier",
       "evaluations": "Évaluations",
       "console": "Console",
@@ -112,19 +120,19 @@
       "aFaire": "À faire",
       "vueEnsemble": "Vue d’ensemble",
       "qualiteIa": "Qualité IA",
-      "securitePrivacy": "Sécurité & Privacy",
+      "securitePrivacy": "Sécurité & confidentialité",
       "conformite": "Conformité",
       "fiabiliteCout": "Fiabilité & coût",
       "observabilite": "Observabilité",
       "amelioration": "Amélioration",
       "incidentsPlaybooks": "Incidents & procédures",
-      "replayShadow": "Rejeu & trafic fantôme",
-      "curationEvalSet": "Curation eval set",
-      "releaseControl": "Release Control",
-      "automations": "Automations",
+      "replayShadow": "Rejeu & essai sans exposition",
+      "curationEvalSet": "Jeux d'évaluation",
+      "releaseControl": "Mise en ligne",
+      "automations": "Règles automatiques",
       "auditLogs": "Journal d’audit",
-      "evidenceStore": "Evidence store",
-      "signalCatalog": "Signal Catalog",
+      "evidenceStore": "Centre de preuves",
+      "signalCatalog": "Catalogue des signaux",
       "platformGuardrails": "Garde-fous",
       "modeles": "Modèles",
       "connecteurs": "Connecteurs",
@@ -173,7 +181,7 @@
   },
   "overview": {
     "title": "Vue d’ensemble",
-    "subtitle": "Control · état, risques, actions et preuves",
+    "subtitle": "L'essentiel pour comprendre l'état de la flotte, les risques, les actions à mener et les preuves disponibles.",
     "context": {
       "environment": "Environnement",
       "lifecycle": "Période",
@@ -196,7 +204,7 @@
       "degraded": "Service dégradé"
     },
     "time": {
-      "live": "Live",
+      "live": "En direct",
       "realtime": "Données en temps réel",
       "period": "Période",
       "sevenDays": "7 derniers jours",
@@ -231,12 +239,12 @@
       "cmpTarget": "Objectif cible",
       "cmpPrevPeriod": "Période précédente",
       "cmpBaseline": "Baseline",
-      "cmpPrevRelease": "Release précédente",
+      "cmpPrevRelease": "Version précédente",
       "cmpNow": "Maintenant",
       "cmpNone": "Aucun",
       "reasonNoTarget": "Non disponible — objectif non défini",
       "reasonNoBaseline": "Non disponible — aucune baseline validée",
-      "reasonNoPrevRelease": "Non disponible — pas de release précédente",
+      "reasonNoPrevRelease": "Non disponible — aucune version précédente",
       "reasonNoPrevPeriod": "Non disponible — période antérieure incomplète",
       "reasonNotComparable": "Non disponible — état actuel non comparable",
       "descLive": "Données actuelles",
@@ -314,15 +322,15 @@
     },
     "kpi": {
       "quality": "Score qualité (objectif de service)",
-      "qualityDelta": "vitesse de consommation {burn}×",
+      "qualityDelta": "marge d’erreur consommée à {burn}× le rythme prévu",
       "failingControls": "Contrôles en échec",
       "failingDelta": "{n} hors objectif",
       "openRisks": "Risques ouverts",
       "openRisksDelta": "{anomalies} anomalies · {playbooks} procédures",
-      "regression": "Régression release",
+      "regression": "Échec apparu avec la version",
       "regressed": "Régression",
       "stable": "Stable",
-      "cost": "Coût LLM (7j)",
+      "cost": "Coût des modèles (7 j)",
       "costDelta": "{tokens} tokens",
       "audit": "Preuves d’audit",
       "auditOk": "chaîne vérifiée",
@@ -335,7 +343,7 @@
     "explain": {
       "quality": {
         "what": "La part des réponses jugées conformes par l'évaluation continue : fidélité aux sources, absence d'hallucination, respect des règles.",
-        "how": "Réponses conformes ÷ réponses évaluées sur la période, ramené sur 100. La cible est le seuil de service (SLO).",
+        "how": "Réponses conformes ÷ réponses évaluées sur la période, ramené sur 100. La cible est l’objectif de service.",
         "source": "Journal d'évaluation continue (un score par tour)."
       },
       "failingControls": {
@@ -366,18 +374,18 @@
         "how": "Chaque ligne est un signal ; l'état compare la valeur courante à son seuil."
       },
       "cases": {
-        "what": "La file des cas de contrôle à traiter par un opérateur, triés par priorité et délai (SLA).",
+        "what": "La file des cas de contrôle à traiter par un opérateur, triés par priorité et délai de traitement.",
         "how": "Cas ouverts issus des contrôles et signalements ; les onglets filtrent par priorité.",
         "source": "File opérateur (page À traiter)."
       },
       "controlCases": {
-        "what": "Les procédures d'incident (playbooks) actuellement déclenchées et leurs premières étapes.",
-        "how": "Un playbook se déclenche quand son signal franchit le seuil défini."
+        "what": "Les procédures d'incident actuellement déclenchées et leurs premières étapes.",
+        "how": "Une procédure se déclenche quand son signal franchit le seuil défini."
       },
       "governed": {
         "what": "Le flux des décisions gouvernées : routage d'agent, transfert (hand-off), proposition, mise en production.",
-        "how": "Événements append-only du journal de gouvernance, les plus récents d'abord — chacun opposable.",
-        "source": "Journal d'audit S1 (événements de gouvernance)."
+        "how": "Le journal de gouvernance conserve les événements sans les réécrire, les plus récents d'abord.",
+        "source": "Journal des décisions de gouvernance."
       },
       "traces": {
         "what": "Le volume de traces d'exécution et les latences p50/p95 observées.",
@@ -385,13 +393,13 @@
       },
       "rightIncidents": {
         "what": "Les incidents de sécurité et qualité actifs.",
-        "how": "Playbooks déclenchés (grappes de refus guard, faible fidélité) + sessions anormales détectées.",
-        "source": "Incidents & playbooks + détection d'anomalies."
+        "how": "Procédures déclenchées après une série de refus de sécurité ou une faible fidélité aux sources, auxquelles s'ajoutent les sessions anormales détectées.",
+        "source": "Incidents, procédures et détection d'anomalies."
       },
       "rightRelease": {
-        "what": "L'état des portes de release (qualité, sécurité, conformité).",
-        "how": "Qualité = SLO non franchi ; sécurité = 0 toxicité et 0 fuite PII ; conformité = AI-Act + taux de conformité >= 95 %.",
-        "source": "SLO + toxicité/PII + conformité."
+        "what": "Les trois vérifications requises avant une mise en ligne : qualité, sécurité et conformité.",
+        "how": "Chaque vérification compare les résultats observés à l'objectif défini pour autoriser ou bloquer la mise en ligne.",
+        "source": "Évaluations de qualité, de sécurité et de conformité."
       },
       "rightActivities": {
         "what": "Les derniers scores d'évaluation enregistrés.",
@@ -400,8 +408,8 @@
       },
       "analyticsScores": {
         "what": "La tendance des scores de qualité sur la période.",
-        "how": "Moyenne par bucket temporel + direction (amélioration/dégradation) et premier vs second demi.",
-        "source": "Rapport de tendance (scores d'éval)."
+        "how": "Moyenne par intervalle de temps, direction de l'évolution et comparaison entre la première et la seconde moitié.",
+        "source": "Rapport de tendance des évaluations."
       },
       "analyticsDistribution": {
         "what": "La répartition du trafic évalué par langue.",
@@ -414,9 +422,9 @@
         "source": "Signaux de contrôle en direct."
       },
       "governanceSection": {
-        "what": "Les actions recommandées, dérivées de la feuille de route.",
-        "how": "Éléments de roadmap réels : thème, gravité et suggestion par signal.",
-        "source": "Feuille de route (roadmap)."
+        "what": "Les actions recommandées, dérivées du plan d'amélioration.",
+        "how": "Chaque élément précise le thème, la gravité et l'action suggérée pour le signal concerné.",
+        "source": "Plan d'amélioration."
       },
       "footerConfidence": {
         "what": "La confiance globale : part des signaux suivis qui atteignent leur cible.",
@@ -436,7 +444,7 @@
       "impact": "Impact",
       "action": "Action",
       "investigate": "Investiguer",
-      "liveProbe": "sonde live · hors catalogue",
+      "liveProbe": "mesure actuelle · hors catalogue",
       "viewAll": "Voir tous les signaux",
       "currentPolicy": "Politique actuelle",
       "currentPolicyHint": "Calibration de la politique de garde actuellement en vigueur. Recalculée à chaque affichage mais inchangée tant que la politique n'est pas redéployée — elle n'est donc pas reconstituée à l'instant choisi."
@@ -488,12 +496,12 @@
       "fail": "Échec"
     },
     "impact": {
-      "rag": "RAG / Ancrage",
+      "rag": "Réponses appuyées sur les sources",
       "safety": "Sécurité réponse",
-      "privacy": "Privacy / mémoire",
+      "privacy": "Données personnelles et mémoire",
       "quality": "Qualité réponse",
-      "tools": "Outils / Agents",
-      "security": "Sécurité / Guard"
+      "tools": "Outils et agents",
+      "security": "Règles de sécurité"
     },
     "controlCases": {
       "title": "Incidents à traiter (procédures)",
@@ -504,14 +512,14 @@
     "rightColumn": {
       "incidents": "Incidents actifs ou récents",
       "noIncidents": "Aucun incident actif.",
-      "release": "Release / changements",
+      "release": "Mise en ligne et changements",
       "blocked": "Bloquée",
       "clear": "OK",
       "noBaseline": "Aucune référence à comparer.",
       "gates": {
-        "quality": "Gate qualité",
-        "security": "Security gate",
-        "compliance": "Compliance gate"
+        "quality": "Qualité",
+        "security": "Sécurité",
+        "compliance": "Conformité"
       },
       "activities": "Scores récents",
       "noActivity": "Aucun score récent.",
@@ -520,18 +528,18 @@
     "quick": {
       "title": "Actions rapides",
       "redteam": "Lancer le test d'intrusion",
-      "freezeReleases": "Geler les releases",
+      "freezeReleases": "Suspendre les mises en ligne",
       "replay": "Ouvrir Qualité IA",
       "ticket": "Créer un ticket",
       "replayAt": "Voir l’historique",
       "redteamRunning": "Test d'intrusion en cours…",
       "redteamDone": "Test d'intrusion terminé.",
       "redteamErr": "Échec du test d'intrusion.",
-      "frozen": "Releases gelées.",
-      "unfrozen": "Releases dégelées.",
-      "frozenBadge": "Gelées",
+      "frozen": "Mises en ligne suspendues.",
+      "unfrozen": "Mises en ligne réautorisées.",
+      "frozenBadge": "Suspendues",
       "ticketCreated": "Ticket créé.",
-      "compareLive": "Comparer au Live",
+      "compareLive": "Comparer à maintenant",
       "histDisabled": "Indisponible en historique",
       "histTag": "historique"
     },
@@ -547,7 +555,7 @@
       }
     },
     "governance": {
-      "title": "Actions recommandées (feuille de route)",
+      "title": "Actions recommandées",
       "subtitle": "Sévérité · signal",
       "empty": "Aucune action recommandée."
     },
@@ -816,7 +824,7 @@
       "lastCheck": "Dernière vérification",
       "clock": "Horloge système"
     },
-    "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT ; filtre la chaîne d'audit par agent_id (événements stampés)."
+    "agentFilterHint": "Le filtre choisi s'applique à toutes les pages de gouvernance. Ici, il limite le journal aux événements attribués à cet agent."
   },
   "eval": {
     "explainer": {
@@ -1134,11 +1142,11 @@
       }
     },
     "title": "État du service",
-    "description": "Indicateurs en temps réel sur le backend, le pool Postgres et le budget LLM.",
+    "description": "Suivez la disponibilité de Tessera, de la base de données et des modèles.",
     "cards": {
-      "backend": "Backend",
+      "backend": "Service Tessera",
       "readiness": "Disponibilité",
-      "budget": "Budget LLM (prod)",
+      "budget": "Budget des modèles",
       "version": "Version"
     },
     "status": {
@@ -1147,7 +1155,7 @@
       "down": "Hors ligne"
     },
     "tail": {
-      "title": "Échantillonnage tail-based (traces)",
+      "title": "Conservation ciblée des traces",
       "guarantee": "Tail conservé : {pct}%",
       "traces": "Traces vues",
       "kept": "Conservées",
@@ -1797,7 +1805,7 @@
   },
   "quality": {
     "title": "Qualité IA",
-    "subtitle": "Signaux qualité, SLO, runs, modèles et juge — le suivi continu des réponses.",
+    "subtitle": "Suivez la qualité des réponses, les écarts à l'objectif et les évaluations avant mise en ligne.",
     "sections": {
       "quality": "Fidélité & évaluation",
       "security": "Sécurité & garde",
@@ -1805,22 +1813,22 @@
       "reliability": "Fiabilité, outils & coût",
       "sessions": "Sessions & parcours",
       "memory": "Mémoire & RGPD",
-      "act": "Agir — rejeu, trafic fantôme, curation",
+      "act": "Agir — relecture, essai sans exposition, jeux d'évaluation",
       "platform": "Plateforme & corpus"
     },
     "tabs": {
       "overview": "Vue d'ensemble",
       "signals": "Signaux qualité",
-      "runs": "Runs & datasets",
+      "runs": "Évaluations & jeux de cas",
       "failed": "Cas échoués",
       "models": "Comparaisons modèles",
-      "judge": "Calibration juge"
+      "judge": "Fiabilité de l'évaluation"
     },
     "cta": {
       "evidence": "Générer dossier de preuves qualité",
       "runEval": "Lancer évaluation",
       "compareModels": "Comparer modèles",
-      "openDataset": "Ouvrir dataset"
+      "openDataset": "Ouvrir le jeu de cas"
     },
     "sec": {
       "etat": "État actuel",
@@ -2333,50 +2341,50 @@
     "seeDetail": "Voir le détail",
     "reco": {
       "title": "Actions recommandées",
-      "curate": "Ajouter cas échoués au regression-set",
-      "freeze": "Geler les releases",
+      "curate": "Ajouter les cas échoués au jeu de non-régression",
+      "freeze": "Suspendre les mises en ligne",
       "playbook": "Ouvrir procédure hallucination",
-      "shadow": "Rejouer un trafic fantôme",
+      "shadow": "Tester sur du trafic copié",
       "ticket": "Créer ticket conformité",
-      "caption": "Actions sensibles en dual control (Admin + Operator)",
-      "corpus": "Vérifier corpus & RAG",
-      "rerun": "Relancer évaluation ciblée",
-      "catalog": "Mettre à jour Signal Catalog",
-      "block": "Bloquer release actuelle",
+      "caption": "Actions sensibles soumises à une double validation",
+      "corpus": "Vérifier les sources documentaires",
+      "rerun": "Relancer une évaluation ciblée",
+      "catalog": "Mettre à jour le catalogue des signaux",
+      "block": "Bloquer la mise en ligne actuelle",
       "seeEvidence": "Voir preuves qualité"
     },
     "rr": {
       "problems": "Derniers problèmes",
       "seeCases": "Voir tous les cas échoués",
-      "release": "Release actuelle",
+      "release": "Version actuelle",
       "inProd": "En production",
-      "seeReleases": "Voir les releases",
+      "seeReleases": "Voir les versions",
       "since": "déployée",
       "quick": "Liens rapides",
-      "quickRun": "Run en cours",
-      "quickPolicies": "Policies & garde-fous",
-      "quickScheduled": "Runs programmés",
-      "quickCatalog": "Signal Catalog",
+      "quickRun": "Évaluation en cours",
+      "quickPolicies": "Politiques & garde-fous",
+      "quickScheduled": "Évaluations programmées",
+      "quickCatalog": "Catalogue des signaux",
       "seeLinks": "Voir tous les liens",
       "activity": "Activités récentes",
       "seeActivity": "Voir toutes les activités",
       "noActivity": "Aucune activité récente",
       "noProblems": "Aucun problème ouvert",
       "actions": "Actions rapides",
-      "linkRuns": "Voir tous les runs",
-      "linkTraces": "Explorer les traces",
-      "linkDataset": "Ouvrir le dataset actif",
+      "linkRuns": "Voir toutes les évaluations",
+      "linkTraces": "Voir le détail d'exécution",
+      "linkDataset": "Ouvrir le jeu de cas actif",
       "linkEvidence": "Générer dossier de preuves qualité",
       "blocked": "bloquée",
       "impact": "Impact",
       "openedAt": "Ouverte le",
-      "actRun": "Run qualité terminé ({n} cas)",
-      "actReleaseBlocked": "Release {v} bloquée",
-      "actReleaseDeployed": "Release {v} déployée"
+      "actRun": "Évaluation terminée ({n} cas)",
+      "actReleaseBlocked": "Version {v} bloquée",
+      "actReleaseDeployed": "Version {v} mise en ligne"
     },
     "statusbar": {
       "realtime": "Données : temps réel",
-      "dataset": "Dataset actif",
+      "dataset": "Jeu de cas actif",
       "truthChain": "Chaîne de vérité",
       "truthSource": "Source de vérité : YAML/Git",
       "lastUpdate": "Dernière mise à jour",
@@ -2385,13 +2393,13 @@
     },
     "temporal": {
       "live": "Live",
-      "replay": "Relire à T",
+      "replay": "Voir à une date",
       "window": "7 derniers jours",
       "liveData": "Données en temps réel"
     },
     "rail": {
       "scoreTitle": "Résumé du score",
-      "scoreCaption": "SLO qualité (fidélité)",
+      "scoreCaption": "Objectif qualité (fidélité)",
       "topFailing": "Top catégories en échec",
       "sensitive": "Actions sensibles",
       "role": "Rôle",
@@ -2406,7 +2414,7 @@
       "green": "Signaux au vert",
       "refusal": "Taux de refus",
       "failed": "Cas échoués",
-      "judge": "Calibration juge",
+      "judge": "Fiabilité de l'évaluation",
       "conformance": "Conformité"
     },
     "empty": {
@@ -2453,8 +2461,8 @@
         "model": "Modèle",
         "session": "Session",
         "graph": "Graphe",
-        "retrieval": "Retrieval",
-        "guard": "Garde",
+        "retrieval": "Recherche documentaire",
+        "guard": "Protection",
         "tool": "Outil"
       },
       "group": {
@@ -2465,10 +2473,10 @@
       },
       "action": {
         "playbook": "Ouvrir procédure hallucination",
-        "recalibrate": "Recalibrer le juge",
-        "corpus": "Vérifier corpus & RAG",
+        "recalibrate": "Revoir la fiabilité de l'évaluation",
+        "corpus": "Vérifier les sources documentaires",
         "review": "Examiner le signal",
-        "curate": "Curer le dataset",
+        "curate": "Enrichir le jeu de cas",
         "policy": "Revoir la politique"
       },
       "themeTitle": "Répartition par thème",
@@ -2486,19 +2494,19 @@
       "causes": "Causes probables",
       "impact": "Impact",
       "change": "Changement",
-      "corpusChanged": "Corpus RAG modifié",
+      "corpusChanged": "Sources documentaires modifiées",
       "scoreRegressed": "Régression de score confirmée",
-      "costQuality": "Coût évaluation vs Qualité",
-      "costAxis": "Coût/run",
+      "costQuality": "Coût de l'évaluation et qualité",
+      "costAxis": "Coût par évaluation",
       "qualityAxis": "Qualité",
-      "runsBars": "Pass-rate des derniers runs",
+      "runsBars": "Réussite des dernières évaluations",
       "faithGrounding": "Fidélité vs Ancrage (7 j)",
       "good": "Bon",
       "mid": "Moyen",
       "low": "Faible",
-      "dataset": "Dataset",
-      "passTotal": "Pass/Total",
-      "regressionsByRelease": "Régressions par release",
+      "dataset": "Jeu de cas",
+      "passTotal": "Réussis / Total",
+      "regressionsByRelease": "Échecs par version",
       "noRegressions": "Aucune régression ouverte"
     },
     "failed": {
@@ -2604,7 +2612,7 @@
       }
     },
     "judge": {
-      "title": "Calibration juge",
+      "title": "Fiabilité de l'évaluation",
       "unavailable": "Calibration indisponible (juge hors-ligne).",
       "kappa": "Cohen κ",
       "agreement": "Accord",
@@ -3030,20 +3038,20 @@
       "hallucination": "Hallucinations critiques"
     },
     "release": {
-      "title": "Release actuelle",
+      "title": "Version actuelle",
       "deployed": "Déployé le",
       "changes": "{n} changements",
       "stable": "Stable",
       "openRegressions": "{n} régression(s)",
-      "nonRegression": "Non-régression",
+      "nonRegression": "Stabilité des résultats",
       "regressions": "Régressions critiques"
     },
     "exec": {
       "kpi": {
         "scoreGlobal": "Score qualité global",
-        "nonRegression": "Taux non-régression",
+        "nonRegression": "Stabilité des résultats",
         "regressionsOpen": "Régressions ouvertes",
-        "judgeKappa": "Accord juge κ",
+        "judgeKappa": "Accord avec les évaluateurs",
         "casEval": "Cas évalués",
         "casFailed": "Cas échoués"
       },
@@ -3051,7 +3059,7 @@
         "title": "État actuel",
         "failing": "Signaux en échec",
         "alert": "Signaux en alerte",
-        "impact": "Impact release",
+        "impact": "Effet sur la mise en ligne",
         "evolution": "Évolution",
         "low": "Faible",
         "medium": "Modéré",
@@ -3060,7 +3068,7 @@
         "falling": "En baisse",
         "flat": "Stable",
         "globalQuality": "Qualité globale",
-        "releaseLabel": "Release actuelle",
+        "releaseLabel": "Version actuelle",
         "evolutionVsPrev": "Évolution vs période précédente"
       },
       "topProblems": "Signaux qualité — top problèmes",
@@ -3089,7 +3097,7 @@
       "fiche": "Fiche signal",
       "byAgent": "Décomposable par agent",
       "byAgent_yes": "Oui",
-      "byAgent_no": "Non — org-wide par construction",
+      "byAgent_no": "Non — valeur commune à toute la flotte",
       "byAgent_undeclared": "Non déclarée au registre",
       "source": "Source",
       "collector": "Collector",
@@ -3102,22 +3110,22 @@
       "actions": "Actions prescriptives",
       "createCase": "Créer un case",
       "assignOwner": "Assigner un responsable",
-      "dualControl": "Dual control · Admin+"
+      "dualControl": "Validation par deux personnes"
     },
     "views": {
       "ariaLabel": "Vues de la page",
       "signals": "Suivi continu",
-      "signalsSub": "Signaux qualité, SLO, calibration du juge — en temps réel",
-      "evaluations": "Évaluations & gate de release",
-      "evaluationsSub": "Jeu de cas, plancher mesuré sans aucun modèle, contribution du modèle, comparaisons"
+      "signalsSub": "Objectifs, écarts et fiabilité de l'évaluation — en temps réel",
+      "evaluations": "Évaluations avant mise en ligne",
+      "evaluationsSub": "Jeu de cas, résultat sans modèle, apport du modèle et comparaisons"
     }
   },
   "security": {
-    "title": "Sécurité & Privacy",
-    "subtitle": "Attaques, PII, moindre privilège, mémoire et conformité runtime.",
+    "title": "Sécurité & confidentialité",
+    "subtitle": "Suivez les attaques, les données personnelles, les droits d'accès et les protections appliquées en fonctionnement.",
     "live": "Temps réel",
     "period": "Période : 7 jours",
-    "dualControl": "Dual control",
+    "dualControl": "Validation par deux personnes",
     "cta": {
       "redteam": "Lancer test d'intrusion",
       "report": "Exporter rapport"
@@ -3504,13 +3512,13 @@
     },
     "tabs": {
       "overview": "Vue d’ensemble",
-      "promptInjection": "Prompt injection",
-      "pii": "PII & Privacy",
-      "guard": "Guard & policies",
-      "tools": "Outils & privilèges",
-      "memory": "Mémoire & GDPR",
-      "isolation": "Isolation & tenants",
-      "redteam": "Red-team & efficacité"
+      "promptInjection": "Instructions malveillantes",
+      "pii": "Données personnelles",
+      "guard": "Protections & règles",
+      "tools": "Outils & droits d'accès",
+      "memory": "Mémoire & vie privée",
+      "isolation": "Séparation des environnements",
+      "redteam": "Tests d'attaque & efficacité"
     },
     "tabx": {
       "probes": "Attaques testées (harnais)",
@@ -3541,7 +3549,7 @@
   },
   "compliance": {
     "title": "Conformité",
-    "subtitle": "Posture réglementaire dérivée des signaux runtime réels.",
+    "subtitle": "La posture réglementaire calculée à partir de ce que font réellement les agents.",
     "loading": "Chargement de la posture de conformité…",
     "unavailable": "Posture de conformité indisponible.",
     "tabs": {
@@ -3725,7 +3733,7 @@
   },
   "reliability": {
     "title": "Fiabilité & coût",
-    "subtitle": "Disponibilité, latence, erreurs et coût économique de l'agent.",
+    "subtitle": "Suivez la disponibilité, le temps de réponse, les erreurs et le coût de l'agent.",
     "loading": "Chargement de la posture fiabilité…",
     "unavailable": "Posture fiabilité indisponible.",
     "noErrors": "Aucune erreur sur la fenêtre",
@@ -3968,7 +3976,7 @@
   "improvement": {
     "openSource": "Ouvrir la source : {label}",
     "title": "Amélioration",
-    "subtitle": "Priorisez, exécutez et mesurez les remédiations qualité de vos agents IA.",
+    "subtitle": "Choisissez les corrections à mener et mesurez leur effet sur la qualité des agents.",
     "loading": "Chargement de la posture d'amélioration…",
     "unavailable": "Posture d'amélioration indisponible.",
     "temporal": {
@@ -4129,18 +4137,18 @@
         "how": "Incidents ouverts dont la sévérité est « critique »."
       },
       "mtta": {
-        "what": "Le délai moyen de prise en charge (MTTA) : du déclenchement à l'accusé de réception, moyenné sur 7 jours.",
+        "what": "Le délai moyen entre le déclenchement d'un incident et sa prise en charge, calculé sur 7 jours.",
         "how": "Moyenne (accusé − déclenchement) sur les incidents des 7 derniers jours.",
         "source": "Journal des incidents (horodatages)."
       },
       "mttr": {
-        "what": "Le délai moyen de résolution (MTTR) : du déclenchement à la clôture, moyenné sur 7 jours.",
+        "what": "Le délai moyen entre le déclenchement d'un incident et sa résolution, calculé sur 7 jours.",
         "how": "Moyenne (clôture − déclenchement) sur les incidents des 7 derniers jours.",
         "source": "Journal des incidents (horodatages)."
       },
       "playbooks": {
-        "what": "Le nombre de procédures (playbooks) actuellement en cours d'exécution.",
-        "how": "Playbooks à l'état « en cours »."
+        "what": "Le nombre de procédures actuellement en cours.",
+        "how": "Procédures dont l'exécution a commencé et n'est pas terminée."
       },
       "autoresolve": {
         "what": "La part d'incidents résolus automatiquement, sans intervention humaine.",
@@ -4148,91 +4156,91 @@
       },
       "evidence": {
         "what": "Le nombre de dossiers de preuves générés à partir des incidents.",
-        "how": "Packs de preuve produits sur la fenêtre.",
-        "source": "Magasin de preuves."
+        "how": "Dossiers de preuves préparés sur la période.",
+        "source": "Centre de preuves."
       },
       "sla_risk": {
-        "what": "Le nombre d'incidents à risque de dépasser leur échéance de service (SLA).",
-        "how": "Incidents dont le temps restant avant échéance SLA est faible."
+        "what": "Le nombre d'incidents dont l'échéance de service approche.",
+        "how": "Incidents pour lesquels il reste peu de temps avant l'échéance convenue."
       },
       "queue": {
-        "what": "La file de triage des incidents, ordonnée par priorité (sévérité croisée au délai SLA).",
-        "how": "Incidents ouverts triés par sévérité puis par délai SLA restant.",
+        "what": "Les incidents ouverts, classés selon leur gravité et le temps restant avant leur échéance.",
+        "how": "Les incidents les plus graves ou les plus proches de leur échéance apparaissent d'abord.",
         "source": "Registre des incidents."
       },
       "sla": {
-        "what": "Les escalades SLA : les incidents dont l'échéance de service approche, avec le temps restant.",
-        "how": "Temps restant avant dépassement du SLA, par incident."
+        "what": "Les incidents dont l'échéance de service approche, avec le temps restant.",
+        "how": "Temps restant avant l'échéance convenue, pour chaque incident."
       }
     },
     "title": "Incidents & procédures",
-    "subtitle": "Réponse aux incidents, orchestration des procédures et remédiation gouvernée.",
+    "subtitle": "Suivez les incidents, appliquez les procédures adaptées et contrôlez chaque correction.",
     "tabs": {
       "overview": "Vue d’ensemble",
       "incidents": "Incidents",
       "playbooks": "Procédures",
-      "orchestration": "Orchestration",
+      "orchestration": "Coordination",
       "actions": "Actions",
-      "postmortems": "Post-mortems",
+      "postmortems": "Bilans",
       "problemes": "Problèmes connus",
       "rapports": "Rapports"
     },
     "rail": {
-      "live": "Live",
+      "live": "En direct",
       "realtime": "Données en temps réel",
       "period": "Période : {days} jours",
       "updated": "Dernière mise à jour : {time}",
-      "replay": "Relire à T"
+      "replay": "Revoir à la date choisie"
     },
     "actions": {
-      "createTicket": "Créer ticket",
-      "launchPlaybook": "Lancer procédure",
-      "evidencePack": "Générer dossier de preuves",
+      "createTicket": "Créer un incident",
+      "launchPlaybook": "Lancer la procédure",
+      "evidencePack": "Préparer le dossier de preuves",
       "exportJson": "Exporter les incidents (JSON)"
     },
     "zone": {
       "actual": "A · État actuel",
-      "triage": "B · Diagnostic / triage",
-      "execution": "C · Exécution & automation",
-      "impact": "D · Impact & performance"
+      "triage": "B · Diagnostic et priorité",
+      "execution": "C · Mise en œuvre et règles automatiques",
+      "impact": "D · Résultats et délais"
     },
     "kpi": {
       "open": "Incidents ouverts",
       "critical": "Critiques",
-      "mtta": "MTTA (moy. 7j)",
-      "mttr": "MTTR (moy. 7j)",
-      "playbooks": "Procédures actifs",
-      "autoresolve": "Auto-résolution",
-      "evidence": "Evidence packs générés",
-      "sla_risk": "Incidents avec SLA à risque"
+      "mtta": "Délai de prise en charge (moy. 7 j)",
+      "mttr": "Délai de résolution (moy. 7 j)",
+      "playbooks": "Procédures actives",
+      "autoresolve": "Résolution automatique",
+      "evidence": "Dossiers de preuves préparés",
+      "sla_risk": "Échéance de service proche"
     },
     "delta": {
       "vs7d": "vs J-7"
     },
     "triage": {
-      "queue": "File prioritaire des incidents",
-      "catalog": "Catalogue des procédures recommandés",
+      "queue": "Incidents à traiter en priorité",
+      "catalog": "Procédures recommandées",
       "recent": "Incidents récents",
-      "sla": "SLA & Escalades",
+      "sla": "Échéances à surveiller",
       "distribution": "Répartition des incidents",
-      "controlCases": "Control cases prioritaires",
+      "controlCases": "Vérifications prioritaires",
       "viewAll": "Voir tout",
       "viewCatalog": "Voir tout le catalogue",
       "viewCases": "Voir tous les cas",
       "recentMore": "+{n} autres incidents",
-      "runs": "{n} exéc.",
-      "assoc": "Assoc. à {n}",
+      "runs": "{n} utilisations",
+      "assoc": "{n} associés",
       "incidentsCount": "{n} incidents"
     },
     "col": {
-      "id": "ID incident",
+      "id": "Incident",
       "severity": "Sévérité",
-      "trigger": "Stade déclencheur",
+      "trigger": "Signal déclencheur",
       "domain": "Domaine",
       "status": "Statut",
       "owner": "Responsable",
-      "sla": "SLA",
-      "playbook": "Procédure recommandé",
+      "sla": "Échéance",
+      "playbook": "Procédure recommandée",
       "role": "Rôle requis"
     },
     "severity": {
@@ -4246,23 +4254,23 @@
       "resolu": "Résolu"
     },
     "domain": {
-      "privacy": "Privacy",
-      "qualite_rag": "Qualité / RAG",
+      "privacy": "Vie privée",
+      "qualite_rag": "Qualité des réponses",
       "securite": "Sécurité",
-      "observabilite": "Observabilité",
+      "observabilite": "État du service",
       "conformite": "Conformité"
     },
     "exec": {
       "running": "Procédure en cours",
       "journal": "Journal de réponse (extrait)",
-      "automations": "Automations",
+      "automations": "Règles automatiques",
       "quickActions": "Actions rapides",
       "owner": "Responsable",
       "role": "Rôle requis",
       "proofs": "Preuves générées",
       "elapsed": "Temps écoulé",
       "viewAll": "Voir tout le journal",
-      "viewAllAuto": "Voir toutes les automations"
+      "viewAllAuto": "Voir toutes les règles automatiques"
     },
     "journalCol": {
       "time": "Heure",
@@ -4278,33 +4286,33 @@
     },
     "autoStatus": {
       "actif": "Actif",
-      "dryrun": "Dry-run",
+      "dryrun": "Essai sans action",
       "inactif": "Inactif"
     },
     "quick": {
       "assignOwner": "Assigner responsable",
-      "launchContainment": "Lancer containment",
-      "freezeRelease": "Geler release",
-      "createJira": "Créer ticket Jira",
-      "evidencePack": "Générer dossier de preuves"
+      "launchContainment": "Limiter l'incident",
+      "freezeRelease": "Suspendre la mise en ligne",
+      "createJira": "Créer un suivi Jira",
+      "evidencePack": "Préparer le dossier de preuves"
     },
     "impact": {
-      "mttr": "MTTA / MTTR sur 7 jours",
-      "resolution": "Taux de résolution par procédure (7j)",
-      "byDomain": "Incidents par domaine (7j)",
-      "postmortems": "Leçons apprises — Post-mortems récents",
+      "mttr": "Délais de prise en charge et de résolution (7 j)",
+      "resolution": "Part des incidents résolus par procédure (7 j)",
+      "byDomain": "Incidents par domaine (7 j)",
+      "postmortems": "Ce que nous avons appris — derniers bilans",
       "viewFull": "Voir l’analyse complète",
-      "viewAll": "Voir tous les post-mortems",
-      "mttaLine": "MTTA",
-      "mttrLine": "MTTR"
+      "viewAll": "Voir tous les bilans",
+      "mttaLine": "Prise en charge",
+      "mttrLine": "Résolution"
     },
     "footer": {
       "critical": "{n} incidents critiques",
-      "atRisk": "{n} incidents à risque",
-      "playbooks": "{n} procédures actifs",
+      "atRisk": "{n} incidents proches de leur échéance",
+      "playbooks": "{n} procédures actives",
       "proofs": "{n} preuves générées (7j)",
-      "source": "Source de vérité : Registre des incidents",
-      "sync": "Dernière sync : {ago}"
+      "source": "Source : registre des incidents",
+      "sync": "Dernière mise à jour : {ago}"
     },
     "durable": {
       "title": "Incidents déclarés",
@@ -4314,7 +4322,7 @@
       "colSeverity": "Sévérité",
       "colStatus": "Statut",
       "colOpenedBy": "Ouvert par",
-      "colPlaybook": "Playbook",
+      "colPlaybook": "Procédure",
       "colActions": "Actions",
       "takeCharge": "Prendre en charge",
       "resolve": "Résoudre",
@@ -4331,10 +4339,10 @@
         "resolu": "Résolu"
       },
       "pb": {
-        "pb-injection": "Confinement injection",
-        "pb-pii-purge": "Purge mémoire PII",
-        "pb-quality-review": "Revue qualité",
-        "pb-degradation": "Dégradation service"
+        "pb-injection": "Blocage d'une instruction malveillante",
+        "pb-pii-purge": "Effacement des données personnelles en mémoire",
+        "pb-quality-review": "Vérification de la qualité",
+        "pb-degradation": "Baisse de qualité du service"
       }
     }
   },
@@ -4503,8 +4511,8 @@
         }
       }
     },
-    "title": "Rejeu & trafic fantôme",
-    "subtitle": "Rejouer précisément des sessions, comparer aux baselines et observer le trafic fantôme.",
+    "title": "Rejeu & essai sans exposition",
+    "subtitle": "Rejouez des sessions et testez une nouvelle version sur du trafic copié, sans l'exposer aux clients.",
     "tabs": {
       "overview": "Vue d’ensemble",
       "cassettes": "Cassettes",
@@ -4849,13 +4857,13 @@
         }
       }
     },
-    "title": "Curation eval set",
-    "subtitle": "Sélectionner, enrichir, promouvoir et gouverner les tours qui alimentent les jeux d’évaluation.",
+    "title": "Jeux d'évaluation",
+    "subtitle": "Sélectionnez et enrichissez les échanges qui servent à évaluer les agents.",
     "tabs": {
       "overview": "Vue d’ensemble",
-      "curate": "À curer",
-      "coverage": "Couverture & gaps",
-      "promotions": "Promotions",
+      "curate": "À examiner",
+      "coverage": "Couverture à compléter",
+      "promotions": "Ajoutés au jeu",
       "rejections": "Rejets",
       "history": "Historique"
     },
@@ -4863,53 +4871,53 @@
       "vs7d": "vs J-7"
     },
     "actions": {
-      "launchScoring": "Lancer scoring",
-      "createLot": "Créer lot de curation",
-      "evidencePack": "Générer dossier de preuves"
+      "launchScoring": "Lancer l'évaluation",
+      "createLot": "Créer une sélection",
+      "evidencePack": "Préparer le dossier de preuves"
     },
     "rail": {
       "realtime": "Données en temps réel"
     },
     "zone": {
       "actual": "A · État actuel",
-      "diagnostic": "B · Diagnostic de curation",
-      "gaps": "C · Gaps & couverture",
+      "diagnostic": "B · Pourquoi ces échanges",
+      "gaps": "C · Couverture à compléter",
       "governance": "D · Actions & gouvernance",
       "trends": "E · Impact & tendances"
     },
     "kpi": {
-      "candidates": "Tours candidats",
-      "promotable": "Promouvables",
+      "candidates": "Échanges à examiner",
+      "promotable": "Prêts à être ajoutés",
       "manual_review": "À revoir manuellement",
       "rejected": "Rejetés",
-      "intent_coverage": "Couverture intents",
+      "intent_coverage": "Situations couvertes",
       "lang_coverage": "Couverture langues",
       "duplicates": "Doublons détectés",
-      "failures": "Failures / PII bloquées",
+      "failures": "Échecs et données personnelles bloqués",
       "pending": "En attente",
-      "escalations": "Escalades",
+      "escalations": "Avis supplémentaire requis",
       "critical": "Critiques",
       "decided": "Décidés"
     },
     "panel": {
-      "priorityLots": "Lots candidats prioritaires",
-      "whyTours": "Pourquoi ces tours ?",
-      "workflow": "Workflow de curation",
-      "release": "Release actuelle",
-      "linkedEvidence": "Jeux liés / évidence",
-      "coverage": "Couverture du set d’éval",
+      "priorityLots": "Échanges à examiner en priorité",
+      "whyTours": "Pourquoi ces échanges ?",
+      "workflow": "Préparation du jeu d'évaluation",
+      "release": "Mise en ligne actuelle",
+      "linkedEvidence": "Jeux liés et preuves",
+      "coverage": "Couverture du jeu d'évaluation",
       "distribution": "Répartition des candidats",
       "qualitySignals": "Signaux de qualité des candidats",
-      "linkedDatasets": "Datasets liés",
-      "owners": "Owners & rôles requis",
+      "linkedDatasets": "Jeux de cas liés",
+      "owners": "Responsables et rôles requis",
       "quickActions": "Actions rapides",
       "recentActivity": "Activités récentes",
-      "backlogTrend": "Évolution de la file d'attente de curation (7 j)",
-      "balance": "Balance promote / rejeter / revoir (7 j)",
-      "impact": "Impact attendu sur pass-rate"
+      "backlogTrend": "Échanges en attente d'examen (7 j)",
+      "balance": "Décisions prises sur les échanges (7 j)",
+      "impact": "Effet attendu sur le taux de réussite"
     },
     "col": {
-      "id": "Lot ID",
+      "id": "Échange",
       "source": "Source",
       "category": "Catégorie",
       "score": "Score de valeur",
@@ -4933,9 +4941,9 @@
       "status": "Statut"
     },
     "source": {
-      "live": "Live",
+      "live": "En direct",
       "replay": "Rejeu",
-      "shadow": "Trafic fantôme"
+      "shadow": "Essai sans exposition"
     },
     "risk": {
       "eleve": "Élevé",
@@ -4943,12 +4951,12 @@
       "bas": "Bas"
     },
     "category": {
-      "hallucination": "Hallucination",
-      "pii": "PII",
+      "hallucination": "Réponse sans source fiable",
+      "pii": "Données personnelles",
       "conformite": "Conformité",
       "outils": "Outils",
-      "grounding": "Ancrage",
-      "pii_securite": "PII / Sécurité",
+      "grounding": "Sources disponibles",
+      "pii_securite": "Données personnelles / Sécurité",
       "multilingue": "Multilingue",
       "autres": "Autres"
     },
@@ -4958,16 +4966,16 @@
       "attente": "En attente"
     },
     "dist": {
-      "hallucination": "Hallucination",
-      "grounding": "Ancrage",
+      "hallucination": "Réponse sans source fiable",
+      "grounding": "Sources disponibles",
       "conformite": "Conformité",
-      "pii_securite": "PII / Sécurité",
+      "pii_securite": "Données personnelles / Sécurité",
       "outils": "Outils",
       "multilingue": "Multilingue",
       "autres": "Autres"
     },
     "cov": {
-      "intent": "Intent",
+      "intent": "Situation",
       "langue": "Langue",
       "canal": "Canal",
       "politique": "Politique",
@@ -4981,12 +4989,12 @@
       "support": "Support général"
     },
     "signal": {
-      "dedup": "Déduplication",
-      "anchoring": "Ancrage disponible",
-      "labels": "Labels suffisants",
-      "pii_sensitivity": "Sensibilité PII",
-      "cross_tenant": "Fuite cross-tenant",
-      "release_coverage": "Couverture release"
+      "dedup": "Doublons retirés",
+      "anchoring": "Sources disponibles",
+      "labels": "Catégories suffisamment renseignées",
+      "pii_sensitivity": "Détection des données personnelles",
+      "cross_tenant": "Fuite entre environnements",
+      "release_coverage": "Couverture avant mise en ligne"
     },
     "level": {
       "bon": "Bon",
@@ -4994,7 +5002,7 @@
       "faible": "Faible"
     },
     "dsCol": {
-      "dataset": "Dataset",
+      "dataset": "Jeu de cas",
       "size": "Taille",
       "status": "Statut",
       "updated": "Dernière MAJ"
@@ -5010,14 +5018,14 @@
       "pending": "En attente"
     },
     "action": {
-      "promote": "Promouvoir 11 tours",
-      "assign_review": "Assigner revue conformité",
-      "freeze": "Geler lot sensible",
-      "create_replay": "Créer rejeu de validation",
-      "export": "Exporter lot vers dataset signé"
+      "promote": "Ajouter les échanges sélectionnés",
+      "assign_review": "Confier la vérification de conformité",
+      "freeze": "Suspendre la sélection sensible",
+      "create_replay": "Rejouer ces cas pour les vérifier",
+      "export": "Ajouter la sélection au jeu validé"
     },
     "actCtrl": {
-      "dualControl": "Dual-control requis",
+      "dualControl": "Double validation requise",
       "signature": "Signature requise"
     },
     "actCol": {
@@ -5028,61 +5036,61 @@
     "quick": {
       "filterSensitivity": "Filtrer par sensibilité",
       "openCatalog": "Ouvrir catalogue de signaux",
-      "evidencePack": "Générer dossier de preuves"
+      "evidencePack": "Préparer le dossier de preuves"
     },
     "release": {
-      "ready": "Prêt à publier",
-      "readiness": "Readiness score",
-      "viewDetail": "Voir le détail release"
+      "ready": "Prêt pour la mise en ligne",
+      "readiness": "Niveau de préparation",
+      "viewDetail": "Voir le détail de la mise en ligne"
     },
     "evidence": {
       "currentCohort": "Cohorte courante",
-      "openPack": "Ouvrir Dossier de preuves"
+      "openPack": "Ouvrir le dossier de preuves"
     },
     "backlogLegend": {
       "total": "Total",
-      "toCurate": "À curer",
-      "promotable": "Promouvables",
+      "toCurate": "À examiner",
+      "promotable": "Prêts à être ajoutés",
       "rejected": "Rejetés"
     },
     "balanceLegend": {
-      "promote": "Promouvoir",
+      "promote": "Ajouter au jeu",
       "reject": "Rejeter",
       "review": "Revoir"
     },
     "impact": {
       "before": "Avant (actuel)",
       "after": "Après (projeté)",
-      "currentRate": "Pass-rate actuel",
-      "projectedRate": "Pass-rate projeté",
+      "currentRate": "Taux de réussite actuel",
+      "projectedRate": "Taux de réussite projeté",
       "expectedDelta": "Δ attendu",
       "viewDetail": "Voir le détail de l’impact"
     },
     "viewAll": {
       "lots": "Voir tous les candidats",
       "reasons": "Voir toutes les raisons",
-      "workflow": "Voir le workflow détaillé",
+      "workflow": "Voir toutes les étapes",
       "signals": "Voir le détail des signaux",
-      "datasets": "Voir tous les datasets",
+      "datasets": "Voir tous les jeux de cas",
       "activities": "Voir toutes les activités"
     },
     "footer": {
-      "release": "Release liée : {id}",
-      "chain": "Chaîne de vérité · OK",
-      "source": "Source de vérité : File de curation (S1) · eval/reports",
+      "release": "Mise en ligne liée : {id}",
+      "chain": "Chaîne de preuves · vérifiée",
+      "source": "Source : file d'examen et rapports d'évaluation",
       "sync": "Dernière mise à jour : {ago}"
     },
     "decide": {
       "pending": "En attente",
-      "promote": "Promouvoir",
+      "promote": "Ajouter au jeu",
       "review": "Revoir",
       "reject": "Rejeter"
     },
     "tabview": {
-      "curateTitle": "File de curation — candidats réels",
+      "curateTitle": "Échanges à examiner — données réelles",
       "searchPlaceholder": "Rechercher un cas, un agent…",
       "queueCount": "{n} candidats",
-      "promotionsTitle": "Candidats promus (décisions réelles)",
+      "promotionsTitle": "Échanges ajoutés au jeu (décisions réelles)",
       "rejectionsTitle": "Candidats rejetés (décisions réelles)",
       "historyTitle": "Historique des décisions",
       "empty": "Aucun candidat dans cet état."
@@ -5219,49 +5227,49 @@
         }
       }
     },
-    "title": "Automations",
-    "subtitle": "Orchestrez les règles, déclencheurs et actions automatiques de votre système IA en gardant le contrôle humain, la traçabilité et les garde-fous.",
+    "title": "Règles automatiques",
+    "subtitle": "Définissez ce qui peut se déclencher automatiquement, ce qui attend une validation humaine et gardez la trace de chaque action.",
     "tabs": {
       "overview": "Vue d’ensemble",
       "rules": "Règles",
       "executions": "Exécutions",
-      "approvals": "Approbations",
-      "audit": "Audit & journal"
+      "approvals": "Validations humaines",
+      "audit": "Historique des actions"
     },
     "delta": {
       "vsHier": "vs hier"
     },
     "actions": {
-      "createAutomation": "Créer une automation",
-      "simulateRule": "Simuler une règle",
+      "createAutomation": "Créer une règle",
+      "simulateRule": "Tester une règle",
       "export": "Exporter",
-      "evidencePack": "Générer dossier de preuves"
+      "evidencePack": "Préparer le dossier de preuves"
     },
     "rail": {
       "realtime": "Données en temps réel"
     },
     "zone": {
       "actual": "État actuel",
-      "catalogue": "A · Catalogue d’automations",
-      "pipeline": "B · Pipeline d’exécution (24h)",
+      "catalogue": "A · Règles automatiques",
+      "pipeline": "B · Étapes des actions (24 h)",
       "distribution": "C · Répartition par type",
-      "env": "D · Exécutions par environnement",
-      "journal": "E · Journal d’exécution récent",
-      "governance": "G · Gouvernance & contrôle",
-      "approvals": "H · Approbations en attente",
-      "guardrails": "I · Garde-fous les plus sollicités (7j)",
-      "performance": "J · Performance des automations (30j)",
-      "savings": "K · Économies / impact (30j)",
-      "context": "L · Contexte & release"
+      "env": "D · Actions par environnement",
+      "journal": "E · Dernières actions",
+      "governance": "G · Contrôles et responsabilités",
+      "approvals": "H · Validations en attente",
+      "guardrails": "I · Protections les plus sollicitées (7 j)",
+      "performance": "J · Résultats des règles (30 j)",
+      "savings": "K · Temps et actions économisés (30 j)",
+      "context": "L · Version et provenance"
     },
     "kpi": {
-      "active": "Automations actives",
-      "executions": "Exécutions / 24h",
-      "success_rate": "Taux de succès",
-      "approvals": "Avec approbation",
-      "blocked": "Bloquées par garde-fou",
+      "active": "Règles actives",
+      "executions": "Actions déclenchées (24 h)",
+      "success_rate": "Actions réussies",
+      "approvals": "Avec validation humaine",
+      "blocked": "Actions bloquées par une protection",
       "sensitive": "Actions sensibles",
-      "mttr": "MTTR auto"
+      "mttr": "Délai moyen de correction"
     },
     "panel": {
       "recentIncidents": "Incidents automatisés récents",
@@ -5273,14 +5281,14 @@
       "action": "Action",
       "scope": "Portée",
       "mode": "Mode",
-      "lastRun": "Dernière exécution",
-      "success": "Succès (7j)",
+      "lastRun": "Dernier déclenchement",
+      "success": "Réussite (7 j)",
       "role": "Rôle requis",
       "status": "Statut"
     },
     "mode": {
-      "auto": "Auto",
-      "approb": "Approb."
+      "auto": "Automatique",
+      "approb": "Validation humaine"
     },
     "status": {
       "active": "Active",
@@ -5306,22 +5314,22 @@
       "securite": "Sécurité",
       "conformite": "Conformité",
       "memoire": "Mémoire",
-      "release": "Release",
+      "release": "Mise en ligne",
       "cout": "Coût"
     },
     "env": {
-      "prod": "Prod",
-      "preprod": "Preprod",
+      "prod": "Production",
+      "preprod": "Préproduction",
       "staging": "Préproduction",
-      "dev": "Dev",
+      "dev": "Développement",
       "local": "Local"
     },
     "jCol": {
       "time": "Horodatage",
-      "automation": "Automation",
+      "automation": "Règle",
       "trigger": "Déclencheur",
       "actor": "Exécutée par",
-      "evidence": "Évidence ID",
+      "evidence": "Preuve",
       "duration": "Durée",
       "result": "Résultat"
     },
@@ -5337,11 +5345,11 @@
       "reject": "Rejeter"
     },
     "gr": {
-      "pii_guard": "PII guard",
-      "release_gate": "Release gate",
-      "policy_check": "Policy check",
-      "dual_control": "Dual control",
-      "budget_cap": "Budget cap"
+      "pii_guard": "Protection des données personnelles",
+      "release_gate": "Contrôle avant mise en ligne",
+      "policy_check": "Vérification des règles",
+      "dual_control": "Double validation",
+      "budget_cap": "Plafond de dépenses"
     },
     "perf": {
       "success": "Taux de succès",
@@ -5350,19 +5358,19 @@
     "savings": {
       "tickets": "Tickets évités",
       "minutes": "Minutes gagnées",
-      "executions": "Exécutions auto",
-      "evidences": "Évidences générées"
+      "executions": "Actions automatiques",
+      "evidences": "Preuves générées"
     },
     "ctx": {
       "version": "Version du catalogue",
       "modified": "Dernière modif",
       "author": "Auteur",
-      "branch": "Branche Git",
+      "branch": "Version du code",
       "scope": "Portée par défaut",
       "history": "Voir l’historique des versions"
     },
     "gov": {
-      "dualControl": "Dual contrôle activé",
+      "dualControl": "Double validation active",
       "rolesByMode": "Rôles requis par mode",
       "defaultScope": "Portée par défaut",
       "chain": "Chaîne d’audit intacte"
@@ -5371,7 +5379,7 @@
       "activate": "Activer toutes les règles",
       "suspend": "Suspendre toutes les règles",
       "openJournal": "Ouvrir journal",
-      "viewApprovals": "Voir approbations"
+      "viewApprovals": "Voir les validations"
     },
     "viewAll": {
       "all": "Voir tout",
@@ -5380,21 +5388,21 @@
       "journal": "Voir le journal"
     },
     "footer": {
-      "source": "Source de vérité : Catalogue de règles · automation_store",
+      "source": "Source : catalogue et journal des règles",
       "certified": "{txt}"
     },
     "tabx": {
       "evaluateNow": "Évaluer les règles maintenant",
       "evaluating": "Évaluation…",
       "auditLink": "Ouvrir le journal d’audit (chaîne)",
-      "noApprovals": "Aucune approbation en attente — une règle en mode approbation qui se déclenche ouvre ici sa demande."
+      "noApprovals": "Aucune validation en attente — lorsqu'une règle exige un accord humain, sa demande apparaît ici."
     }
   },
   "proofs": {
     "explain": {
       "kpi": {
         "packs": {
-          "what": "Le nombre de dossiers de preuves (evidence packs) générés sur la période.",
+          "what": "Le nombre de dossiers de preuves créés sur la période.",
           "how": "Compte des packs créés par le pipeline de preuve."
         },
         "artifacts": {
@@ -5455,7 +5463,7 @@
           "source": "Journal d'audit S1 (hash-chaîné)."
         },
         "exporters": {
-          "what": "Les exporteurs et destinations qui reçoivent les dossiers de preuves (S3, SIEM, coffre…).",
+          "what": "Les destinations qui reçoivent les dossiers de preuves (archive, supervision, coffre…).",
           "how": "État, format et file d'attente par destination configurée."
         },
         "retention": {
@@ -5483,7 +5491,7 @@
           "source": "Chaîne du ledger d'audit (hash)."
         },
         "recentPacks": {
-          "what": "Les dossiers de preuves (packs) récents.",
+          "what": "Les dossiers de preuves créés récemment.",
           "how": "Sous-système de démonstration : les lignes sont illustratives, sans store réel de packs.",
           "source": "Pas de source réelle (démonstration)."
         },
@@ -5512,12 +5520,12 @@
     "drill": {
       "chain": "Voir le journal d'audit"
     },
-    "title": "Preuves & exporteurs",
-    "subtitle": "Assembler, signer, vérifier et exporter les artefacts de preuve de l’IA.",
+    "title": "Centre de preuves",
+    "subtitle": "Rassemblez, signez, vérifiez et exportez les éléments qui prouvent ce qui s'est passé.",
     "tabs": {
       "overview": "Vue d’ensemble",
-      "evidencePacks": "Evidence packs",
-      "exporters": "Exporteurs",
+      "evidencePacks": "Dossiers de preuves",
+      "exporters": "Envois",
       "chain": "Chaîne de preuve",
       "destinations": "Destinations & rétention"
     },
@@ -5525,34 +5533,34 @@
       "vs7d": "vs 7 jours précédents"
     },
     "rail": {
-      "realtime": "Données en temps réel"
+      "realtime": "État présent"
     },
     "zone": {
       "actual": "État actuel",
-      "pipeline": "Pipeline de preuve",
-      "currentPack": "Pack courant",
-      "recentPacks": "Evidence packs récents",
-      "distribution": "Répartition des artefacts",
-      "exporters": "Exporteurs & destinations",
-      "crypto": "Vérification cryptographique",
-      "controlCases": "Preuves liées aux control cases",
+      "pipeline": "De la collecte à l’envoi",
+      "currentPack": "Dossier en préparation",
+      "recentPacks": "Dossiers récents",
+      "distribution": "Contenu des preuves",
+      "exporters": "Destinations d’envoi",
+      "crypto": "Contrôle de l’intégrité",
+      "controlCases": "Preuves liées aux cas vérifiés",
       "retention": "Rétention & obligations",
       "journal": "Journal des exports",
       "queue": "Preuves à traiter",
       "integrity": "Intégrité de la chaîne",
       "quickActions": "Actions rapides",
-      "alerts": "Alertes export"
+      "alerts": "Alertes d’envoi"
     },
     "kpi": {
-      "packs": "Packs générés",
-      "artifacts": "Artefacts de preuve",
-      "export_rate": "Taux d’export",
-      "exporters": "Exporteurs actifs",
-      "latency": "Latence moy.",
-      "retention": "Couverture rétention",
+      "packs": "Dossiers créés",
+      "artifacts": "Éléments conservés",
+      "export_rate": "Envois réussis",
+      "exporters": "Destinations disponibles",
+      "latency": "Délai moyen",
+      "retention": "Obligations couvertes",
       "audit_entries": "Entrées d'audit",
       "eval_scores": "Scores d'évaluation",
-      "replays": "Bundles de rejeu",
+      "replays": "Rejeux conservés",
       "reports": "Rapports d'évaluation",
       "chain": "Intégrité de la chaîne"
     },
@@ -5560,7 +5568,7 @@
       "collecte": "Collecte",
       "normalisation": "Normalisation",
       "signature": "Signature",
-      "pack": "Pack",
+      "pack": "Mise en dossier",
       "export": "Export",
       "chainOk": "Chaîne de preuve intacte",
       "chainBroken": "Chaîne de preuve rompue"
@@ -5571,29 +5579,29 @@
       "verify": "Vérifier signature",
       "hash": "Hash",
       "signer": "Signataire",
-      "none": "Aucun pack créé — gelez le premier manifeste d'évidence.",
-      "create": "Créer un pack",
-      "manifestOk": "Manifeste intègre (empreinte re-dérivée)",
-      "manifestBad": "Manifeste ALTÉRÉ — l'empreinte ne re-dérive pas",
+      "none": "Aucun dossier créé — rassemblez les premiers éléments à conserver.",
+      "create": "Créer un dossier",
+      "manifestOk": "Inventaire intact (empreinte vérifiée)",
+      "manifestBad": "Inventaire ALTÉRÉ — l'empreinte ne correspond plus",
       "chainOkNow": "chaîne d'audit vérifiée à l'instant",
       "chainBadNow": "chaîne d'audit ROMPUE à l'instant",
-      "frozenAsof": "On n'agit pas dans le passé — revenez à maintenant pour geler un pack."
+      "frozenAsof": "Un état passé est consultable, pas modifiable — revenez à maintenant pour créer un dossier."
     },
     "content": {
-      "audit_logs": "logs d’audit",
-      "eval_cases": "cas d’éval",
+      "audit_logs": "entrées d’audit",
+      "eval_cases": "cas d’évaluation",
       "incidents": "incidents",
-      "release_manifests": "manifests release",
-      "policy_snapshots": "snapshots de politiques",
+      "release_manifests": "inventaires de mise en ligne",
+      "policy_snapshots": "versions des politiques",
       "audit_entries": "entrées d'audit",
-      "eval_scores": "scores d'éval",
-      "replay_bundles": "bundles replay",
-      "eval_reports": "rapports d'éval"
+      "eval_scores": "résultats d’évaluation",
+      "replay_bundles": "rejeux conservés",
+      "eval_reports": "rapports d’évaluation"
     },
     "packCol": {
-      "id": "Pack ID",
+      "id": "Identifiant du dossier",
       "scope": "Portée",
-      "artifacts": "Artefacts",
+      "artifacts": "Éléments",
       "signature": "Signature",
       "destinations": "Destinations",
       "by": "Créé par",
@@ -5607,19 +5615,19 @@
       "echec": "Échec partiel"
     },
     "art": {
-      "audit_logs": "Logs d’audit",
-      "eval_scores": "Scores d’éval",
-      "replays": "Replays",
-      "manifests": "Manifests",
-      "snapshots": "Snapshots",
+      "audit_logs": "Entrées d’audit",
+      "eval_scores": "Résultats d’évaluation",
+      "replays": "Rejeux",
+      "manifests": "Inventaires",
+      "snapshots": "Versions conservées",
       "reports": "Rapports"
     },
     "expCol": {
       "destination": "Destination",
       "format": "Format",
       "status": "Statut",
-      "lastPush": "Dernier push",
-      "queue": "File",
+      "lastPush": "Dernier envoi",
+      "queue": "En attente",
       "retention": "Rétention"
     },
     "expStatus": {
@@ -5635,7 +5643,7 @@
       "chainLength": "Longueur de chaîne"
     },
     "ccCol": {
-      "caseId": "Case ID",
+      "caseId": "Identifiant du cas",
       "subject": "Sujet",
       "linked": "Preuves liées",
       "owner": "Responsable",
@@ -5667,25 +5675,48 @@
       "viewQueue": "Voir la file d’attente"
     },
     "quick": {
-      "createPack": "Créer dossier de preuves",
+      "createPack": "Créer un dossier de preuves",
       "exportSiem": "Exporter vers SIEM",
-      "downloadManifest": "Télécharger manifest",
-      "manageExporters": "Gérer les exporteurs"
+      "downloadManifest": "Télécharger l’inventaire",
+      "manageExporters": "Gérer les destinations"
     },
     "viewAll": {
       "all": "Voir tout",
-      "packs": "Voir tous les packs",
-      "exporters": "Gérer les exporteurs",
+      "packs": "Voir tous les dossiers",
+      "exporters": "Gérer les destinations",
       "alerts": "Voir toutes les alertes ({n})"
     },
     "footer": {
       "chain": "{txt}",
-      "source": "Source de vérité : Journal d'audit S1 (hash-chaîné)"
+      "source": "Source : journal d’audit chaîné"
     }
   },
   "signalCatalogue": {
-    "title": "Signal catalogue",
-    "subtitle": "Cataloguez, gouvernez et surveillez tous les signaux IA utilisés dans vos systèmes.",
+    "title": "Catalogue des signaux",
+    "subtitle": "Définissez chaque signal, sa source et la conduite à tenir lorsqu'il évolue.",
+    "name": {
+      "pii_leak_rate": "Données personnelles révélées",
+      "prompt_injection_bypass": "Instructions contournées",
+      "hallucination_rate": "Réponses sans appui fiable",
+      "citation_fabrication_rate": "Références inventées",
+      "tool_misuse_rate": "Outils mal utilisés",
+      "policy_violation_rate": "Règles internes non respectées",
+      "regulatory_error_rate": "Erreurs réglementaires",
+      "overconfidence_rate": "Affirmations trop certaines",
+      "language_routing_error": "Mauvaise langue de réponse",
+      "escalation_failure_rate": "Intervention humaine non demandée"
+    },
+    "sourceValue": {
+      "Guard": "Contrôle en ligne",
+      "Eval": "Évaluation"
+    },
+    "ownerValue": {
+      "Privacy Team": "Équipe confidentialité",
+      "Security Team": "Équipe sécurité",
+      "AI Quality Team": "Équipe qualité IA",
+      "Compliance": "Conformité",
+      "Safety Team": "Équipe sûreté"
+    },
     "actions": {
       "importSignal": "Importer un signal",
       "exportCatalogue": "Exporter le catalogue",
@@ -5697,18 +5728,18 @@
       "severity": "Sévérité",
       "category": "Catégorie",
       "source": "Source",
-      "owner": "Propriétaire",
+      "owner": "Responsable",
       "environment": "Environnement",
       "button": "Filtrer",
       "all": "Tous"
     },
     "kpi": {
-      "total": "Signaux totaux",
-      "active": "Actifs",
-      "evaluation": "En évaluation",
+      "total": "Signaux suivis",
+      "active": "Avec assez de cas",
+      "evaluation": "À enrichir",
       "deprecated": "Dépréciés",
       "disabled": "Désactivés",
-      "critical": "Critical",
+      "critical": "Critiques",
       "high": "Élevé",
       "medium": "Moyen",
       "low": "Faible"
@@ -5720,20 +5751,20 @@
       "source": "Source",
       "severity": "Sévérité",
       "status": "Statut",
-      "quality": "Qualité (30j)",
-      "lastActivity": "Dernière activité",
-      "owner": "Propriétaire",
-      "modified": "Modifié le"
+      "quality": "Cas réussis",
+      "lastActivity": "Dernière évaluation",
+      "owner": "Responsable",
+      "modified": "Évalué le"
     },
     "severity": {
-      "critical": "Critical",
+      "critical": "Critique",
       "high": "Élevé",
       "medium": "Moyen",
       "low": "Faible"
     },
     "status": {
-      "active": "Actif",
-      "evaluation": "En évaluation",
+      "active": "Échantillon suffisant",
+      "evaluation": "À enrichir",
       "deprecated": "Déprécié",
       "disabled": "Désactivé"
     },
@@ -5778,8 +5809,8 @@
       "viewSignal": "Voir le signal",
       "viewEvals": "Voir les évaluations liées",
       "secDefinition": "Définition",
-      "secPerformance": "Performance réelle",
-      "secGuard": "Composition de la garde",
+      "secPerformance": "Résultats observés",
+      "secGuard": "Contrôles appliqués",
       "byLanguage": "Cas par langue",
       "outcomeTitle": "Réussite / Échec",
       "secTags": "Étiquettes",
@@ -5838,8 +5869,8 @@
     }
   },
   "policies": {
-    "title": "Policies & garde-fous",
-    "subtitle": "Gouvernance des politiques, garde-fous runtime, workflow d’approbation et historique des versions.",
+    "title": "Politiques & garde-fous",
+    "subtitle": "Définissez les règles, faites valider les changements et suivez leur historique.",
     "actions": {
       "createDraft": "Créer version brouillon",
       "compareVersions": "Comparer versions",
@@ -5948,7 +5979,7 @@
       "force_activation": "Forcer activation {v}",
       "disable": "Désactiver politique",
       "delete_draft": "Supprimer version brouillon",
-      "reservedOps": "Réservé aux Ops Admin+"
+      "reservedOps": "Administrateur requis"
     },
     "links": {
       "audit_journal": "Ouvrir journal d’audit",
@@ -6132,7 +6163,7 @@
       }
     },
     "title": "Sources & mémoire",
-    "subtitle": "Le substrat de données réel de l'agent : corpus pgvector et mémoire.",
+    "subtitle": "Consultez les documents et les souvenirs sur lesquels l'agent s'appuie.",
     "activitySubject": "sujet",
     "tabs": {
       "overview": "Vue d'ensemble",
@@ -6439,7 +6470,7 @@
       "source": "Source de vérité : Politique RBAC · Journal d'audit",
       "shown": "{n} rôles affichés"
     },
-    "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
+    "agentFilterHint": "Le filtre choisi s'applique à toutes les pages de gouvernance et de configuration.",
     "readonlyNote": "Rôles définis dans le code (session.ts), modifiés par PR",
     "cap": {
       "cockpit": "Cockpit",
@@ -6932,21 +6963,21 @@
     "cycleStatus": "Changer le statut",
     "noResults": "Aucun élément ne correspond aux filtres.",
     "rail": {
-      "live": "Live",
-      "queue": "File actuelle",
-      "realtime": "Données en temps réel",
+      "live": "État présent",
+      "queue": "Décisions à prendre",
+      "realtime": "Mise à jour automatique",
       "period": "Période",
-      "sla": "SLA",
+      "sla": "Délai",
       "updated": "Dernière mise à jour",
-      "replay": "Relire file à T",
+      "replay": "Revoir à une date",
       "compareTo": "Comparer à",
       "bulk": "Actions groupées"
     },
     "kpi": {
       "total": "À traiter (total)",
       "urgent": "À traiter (urgents)",
-      "sla_2h": "SLA < 2h",
-      "overdue": "En retard (SLA dépassé)",
+      "sla_2h": "Échéance proche",
+      "overdue": "Échéance dépassée",
       "assigned": "Assignés à moi",
       "resolved": "Résolus aujourd’hui",
       "avg_time": "Temps moyen",
@@ -7005,7 +7036,7 @@
       "title": "Titre",
       "source": "Source",
       "assignee": "Assigné à",
-      "sla": "SLA",
+      "sla": "Temps restant",
       "due": "Échéance",
       "status": "Statut"
     },
@@ -7031,7 +7062,7 @@
     },
     "zone": {
       "byType": "Répartition par type",
-      "sla": "SLA & échéances",
+      "sla": "Échéances",
       "actions": "Actions rapides",
       "activity": "Activité récente"
     },
@@ -7041,13 +7072,13 @@
       "h2_8": "2h – 8h",
       "gt8h": "> 8h",
       "viewDetail": "Voir le détail",
-      "viewSla": "Voir les SLA"
+      "viewSla": "Voir les échéances"
     },
     "actions": {
       "take": "Prendre",
       "resolve": "Résoudre",
       "assign": "Assigner",
-      "escalate": "Escalader"
+      "escalate": "Transmettre"
     },
     "footer": {
       "total": "{n} éléments",
@@ -7082,7 +7113,7 @@
       "id": "ID"
     },
     "sessionActive": "Session active",
-    "replayAt": "Relire à T",
+    "replayAt": "Revoir la session à une date",
     "period24h": "24h",
     "newSession": "Nouvelle session",
     "chat": {
@@ -7193,18 +7224,18 @@
   "fleet": {
     "explain": {
       "orgConversations": {
-        "what": "Le nombre total de conversations de la flotte, dédupliqué : une conversation partagée entre agents (hand-off) n'est comptée qu'une seule fois.",
-        "how": "Conversations distinctes au niveau organisation, les conversations partagées comptées une seule fois.",
-        "source": "Flotte — agrégat org dédupliqué."
+        "what": "Le nombre réel de conversations dans la flotte. Lorsqu'une conversation passe d'un agent à un autre, elle ne compte qu'une fois.",
+        "how": "Chaque conversation est comptée une fois dans toute la flotte, même si plusieurs agents l'ont traitée.",
+        "source": "Vue d'ensemble de la flotte."
       },
       "naiveSum": {
-        "what": "La somme naïve des conversations par agent : additionne le total de chaque agent sans dédupliquer, donc surcompte les conversations partagées.",
-        "how": "Somme des conversations de chaque agent, avant déduplication."
+        "what": "Le total avant correction des doublons : on additionne les conversations vues par chaque agent. Une conversation transférée peut alors apparaître plusieurs fois.",
+        "how": "Addition des conversations vues par chaque agent, avant retrait des doublons."
       },
       "dedupSaved": {
-        "what": "L'écart évité par la déduplication : les conversations comptées en double dans la somme naïve. La ligne « partagées » indique combien sont passées par au moins deux agents (hand-off).",
-        "how": "Somme naïve − total org dédupliqué ; « partagées » = conversations traitées par ≥ 2 agents.",
-        "source": "Flotte — déduplication."
+        "what": "Le nombre de doublons retirés du total. La ligne « passées par plusieurs agents » indique les conversations transférées.",
+        "how": "Total additionné par agent moins conversations uniques dans la flotte.",
+        "source": "Vue flotte — correction des doublons."
       }
     },
     "searchPlaceholder": "Rechercher un agent…",
@@ -7223,25 +7254,25 @@
     "govern": "Gouverner",
     "evaluations": "Évaluations",
     "title": "Flotte d'agents",
-    "subtitle": "Gouverner la flotte — verdict eval-gate, sécurité du socle, run de référence. Totaux org dédupliqués.",
+    "subtitle": "Pilotez vos agents à partir d'une vue commune : état de mise en ligne, sécurité et dernière évaluation.",
     "evalRate": "{rate} % de réussite sur son jeu d'évaluation ({passed}/{total})",
     "socleSecurity": "sécurité {passed}/{total} cas conformes",
     "evaluatedOn": "Évalué le {date}",
     "stale": "Périmé · re-éval",
-    "orgConversations": "Conversations (org, dédupliqué)",
-    "naiveSum": "Somme naïve par agent",
-    "dedupSaved": "Dédoublonnées",
-    "shared": "conversations partagées",
+    "orgConversations": "Conversations uniques",
+    "naiveSum": "Total avant correction",
+    "dedupSaved": "Doublons retirés",
+    "shared": "passées par plusieurs agents",
     "volume": "Volume",
     "latency": "Latence (réel)",
     "escalation": "Refus/escalade",
     "handoffs": "Transferts (e/s)",
     "open": "Ouvrir l'agent",
     "judgedNote": "Les scores qualité jugés (résolution, fidélité) restent partagés jusqu'à l'évaluation per-agent (Phase 4) ; seuls les signaux observables diffèrent ici.",
-    "release": "État de release",
-    "releaseNotRun": "Éval non exécutée",
+    "release": "Prêt à être mis en ligne",
+    "releaseNotRun": "Non évalué",
     "candidate": "Candidate",
-    "releaseNote": "Verdict eval-gate par agent (run de référence, grain cas × langue) — chaque agent est un package gouverné.",
+    "releaseNote": "Dernier contrôle avant mise en ligne de chaque agent, vérifié cas par cas et dans chaque langue.",
     "observabilityLevel": "Niveau d'observabilité {level}",
     "pendingBusinessItems": "{n} métier en attente",
     "witnessBadge": "Témoin plateforme",
@@ -7576,7 +7607,7 @@
       "mode": "Mode",
       "period": "Période",
       "updated": "Dernière mise à jour",
-      "replay": "Relire à T",
+      "replay": "Voir l'agent à une date",
       "comparison": "Comparaison rapide",
       "realtime": "Données en temps réel"
     },
@@ -7745,8 +7776,8 @@
     }
   },
   "agentConsole": {
-    "title": "Console (Debug)",
-    "subtitle": "Interagissez avec l'assistant et observez en détail les traces, sources, outils et garde-fous.",
+    "title": "Console de test",
+    "subtitle": "Testez l'agent et voyez les sources, les outils et les protections mobilisés pour chaque réponse.",
     "loading": "Chargement de la console…",
     "unavailable": "Console indisponible.",
     "realtime": "Live",
@@ -7966,8 +7997,8 @@
     }
   },
   "agentPrompts": {
-    "title": "Prompts",
-    "subtitle": "Gérez les prompts systèmes, templates et instructions utilisés par l'assistant et les agents.",
+    "title": "Instructions",
+    "subtitle": "Gérez les instructions système et les modèles de texte utilisés par l'agent.",
     "loading": "Chargement des prompts…",
     "unavailable": "Prompts indisponibles.",
     "realtime": "Live",
@@ -8485,11 +8516,11 @@
     "refPlaceholder": "ID de réponse, session, trace, incident...",
     "contextSource": "Source du contexte",
     "reconstruct": "Reconstituer",
-    "saveSnapshot": "Enregistrer cet instantané",
+    "saveSnapshot": "Conserver cet état",
     "downloadReport": "Télécharger le rapport",
     "loading": "Reconstruction en cours…",
     "unavailable": "Reconstruction indisponible.",
-    "live": "Maintenant (live)",
+    "live": "État présent",
     "source": "Source",
     "type": "Type",
     "langs": "Langues",
@@ -8497,8 +8528,8 @@
     "updated": "Dernière maj",
     "status": "Statut",
     "saving": "Enregistrement…",
-    "saved": "Instantané enregistré",
-    "noSnapshots": "Aucun instantané enregistré.",
+    "saved": "État conservé",
+    "noSnapshots": "Aucun état conservé.",
     "savedAt": "enregistré le",
     "reload": "Recharger",
     "searchPlaceholder": "Rechercher une source...",
@@ -8515,21 +8546,24 @@
     "firstSeen": "Première indexation",
     "lastSeen": "Dernière indexation à T",
     "close": "Fermer",
-    "tenant": "Tenant",
+    "tenant": "Espace",
     "question": "Question",
     "answer": "Réponse",
     "timestampLabel": "Horodatage",
-    "sessionLabel": "Session / trace",
+    "sessionLabel": "Conversation / trace",
     "noOriginal": "Aucune réponse trouvée à cette date.",
-    "diffVsNow": "Diff vs état actuel",
-    "colVersion": "Version incluse à T",
-    "colDocuments": "Documents accessibles",
-    "colAccessibleUntil": "Accessible jusqu'à T",
+    "diffVsNow": "Ce qui a changé depuis",
+    "colVersion": "Version utilisée",
+    "colDocuments": "Documents disponibles",
+    "colAccessibleUntil": "Disponibles jusqu’à",
     "now": "Maintenant",
     "goToDate": "Aller à une date",
     "prevMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
     "sealed": "Scellé",
+    "snapshotLabel": "Instantané",
+    "referenceLabel": "Référence",
+    "noTimeline": "Aucun événement à cette date.",
     "sealVerifying": "Vérification en cours…",
     "scopeLabel": "Filtré par source :",
     "scopeClear": "Toutes les sources"
@@ -8537,44 +8571,44 @@
   "agentScope": {
     "label": "Agents :",
     "all": "Tous les agents",
-    "hint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
+    "hint": "Ce filtre agit sur toutes les vues de gouvernance ; il ne change pas l'agent ouvert dans sa fiche.",
     "breakdownTitle": "Vue par agent",
     "openEvaluations": "Voir les évaluations de l'agent",
-    "breakdownNote": "KPIs observables réels par agent — totaux org dédupliqués.",
+    "breakdownNote": "Données réelles observées pour chaque agent. Le total de la flotte compte chaque conversation une fois.",
     "colAgent": "Agent",
     "colVolume": "Volume",
     "colEscalation": "Refus/escalade",
     "colLatency": "Latence",
     "colHandoffs": "Transferts (e/s)",
-    "colRelease": "État de release",
-    "orgTotal": "Total org (dédup)",
-    "releaseNotRun": "Éval non exécutée",
+    "colRelease": "Mise en ligne",
+    "orgTotal": "Total de la flotte",
+    "releaseNotRun": "Non évalué",
     "colSignalValue": "Valeur ({metric})",
-    "colSloGap": "Écart au SLO",
-    "colContribution": "Contribution (mauvais / total)",
+    "colSloGap": "Écart à l'objectif",
+    "colContribution": "Réponses concernées",
     "colFaithfulness": "Fidélité",
     "colHallucination": "Hallucination",
-    "colRegression": "Régr. bloquantes (T1)",
-    "colGate": "Gate (cas passés)",
-    "colEvalFreshness": "Dernière éval",
+    "colRegression": "Échecs bloquants",
+    "colGate": "Cas réussis",
+    "colEvalFreshness": "Dernière évaluation",
     "alarmNote": "Signal en alerte : {metric} — le tableau répond à ce signal, trié par contribution décroissante.",
-    "qualityNote": "Lentille qualité par agent — aucun signal en alerte.",
-    "securityNote": "Lentille sécurité par agent — fuites PII, toxicité, refus de la garde. Les sondes org-wide (efficacité garde, contournement d'injection) restent dans le corps de page.",
-    "complianceNote": "Lentille conformité par agent — actes gouvernés, entrées au ledger, escalades. L'intégrité du ledger reste org-wide.",
-    "reliabilityNote": "Lentille fiabilité par agent — erreurs outils, latence moyenne, coût. Le p95 n'a pas de substrat par agent.",
-    "observabilityNote": "Lentille observabilité par agent — anomalies comportementales, conformité de schéma des appels outils. La santé du pipeline (collecteur, traces) reste org-wide dans le corps de page.",
-    "proofNote": "Lentille preuve par agent — actes gouvernés et entrées au ledger de chaque agent. L'intégrité de la chaîne d'audit est org-wide par construction (une sous-chaîne par agent serait une garantie plus faible) et reste dans le corps de page.",
+    "qualityNote": "Qualité par agent — aucun signal n'est actuellement en alerte.",
+    "securityNote": "Sécurité par agent — fuites de données personnelles, toxicité et actions refusées. Les contrôles communs restent présentés pour toute la flotte dans la page.",
+    "complianceNote": "Conformité par agent — actes gouvernés, preuves enregistrées et escalades. L'intégrité du journal d'audit reste vérifiée pour toute la flotte.",
+    "reliabilityNote": "Fiabilité par agent — erreurs d'outils, délai moyen et coût. Les délais les plus élevés sont calculés pour toute la flotte.",
+    "observabilityNote": "Suivi par agent — comportements inhabituels et format des appels d'outils. La santé de la collecte reste présentée pour toute la flotte.",
+    "proofNote": "Preuves par agent — actes gouvernés et entrées du journal d'audit. L'intégrité de la chaîne reste vérifiée pour toute la flotte, afin de conserver une garantie complète.",
     "colAnomalies": "Anomalies (anormales / sessions)",
     "colConformance": "Conformité schéma (violations / appels)",
     "colPiiLeaks": "Fuites PII (fuites / tours)",
     "colToxicity": "Toxicité (toxiques / tours)",
     "colGuardDenied": "Refus garde (refus / appels)",
     "colGovernedActs": "Actes gouvernés",
-    "colLedgerEntries": "Entrées ledger",
+    "colLedgerEntries": "Entrées du journal d'audit",
     "colToolErrors": "Erreurs outils (erreurs / appels)",
     "colCostTokens": "Coût (tokens)",
     "costMeanTitle": "Moyenne par tour : {mean} tokens",
-    "maskedOrgWide": "Tableau masqué : signal org-wide par construction — non décomposable par agent (voir la Fiche signal).",
+    "maskedOrgWide": "Ce tableau n'est pas affiché : ce signal concerne toute la flotte et ne peut pas être réparti par agent. Consultez sa fiche pour le détail.",
     "metricUnknown": "métrique inconnue",
     "metric": {
       "faithfulness": "Fidélité",
@@ -8582,38 +8616,41 @@
       "availability": "Disponibilité",
       "latency": "Latence"
     },
-    "contribReconciled": "∑ contributions par agent = {sum} · total org = {org} — cohérents sur cette fenêtre.",
-    "contribGap": "∑ contributions par agent ({sum}) ≠ total org ({org}) : un parcours transféré touche deux agents mais compte une fois dans le total org — voir la réconciliation des transferts ci-dessous.",
-    "contribUnknown": "Réconciliation des contributions impossible : total org ou tranches par agent indisponibles.",
+    "contribReconciled": "Détail par agent : {sum} · total de la flotte : {org} — les deux concordent sur cette période.",
+    "contribGap": "Le détail par agent ({sum}) est supérieur au total de la flotte ({org}) : une conversation transférée apparaît chez deux agents, mais une seule fois dans le total. Le contrôle des transferts ci-dessous explique l'écart.",
+    "contribUnknown": "Le total ne peut pas encore être vérifié : le total de la flotte ou le détail par agent n'est pas disponible.",
     "staleEval": "Verdict daté : le catalogue a évolué depuis cette éval.",
     "refusal": {
-      "no-sample": "Aucun tour de cet agent sur la fenêtre — mesuré, pas refusé.",
-      "absent": "Signal absent du snapshot pour cet agent.",
-      "schema-drift": "Payload hors contrat — valeur refusée.",
-      "no-report": "Pas de report de scope lisible — la tranche ne peut être prouvée.",
-      "unavailable": "Signal non calculable sur cette fenêtre.",
-      "org-wide": "Signal org-wide par construction — aucune valeur par agent.",
-      "not-honoured": "Dimension agent non honorée par la lecture — valeur refusée."
+      "no-sample": "Aucune activité de cet agent sur la période.",
+      "absent": "Ce signal n'a pas été reçu pour cet agent.",
+      "schema-drift": "La donnée reçue ne respecte pas le format attendu.",
+      "no-report": "La lecture ne permet pas de confirmer ce détail par agent.",
+      "unavailable": "Ce signal ne peut pas être calculé sur cette période.",
+      "org-wide": "Ce signal concerne toute la flotte ; il n'existe pas de valeur par agent.",
+      "not-honoured": "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée."
     },
-    "dedupExplain": "Somme naïve {naive} · {saved} dédoublonnées · {shared} conversations partagées",
-    "handoffReconciled": "Transferts réconciliés : les {attested} conversations transférées (journal d'audit) comptent une fois dans le total org.",
-    "handoffGap": "Réconciliation impossible : le journal d'audit atteste {events} transferts sur {attested} conversations, mais le magasin n'en retrouve que {seen} sous deux agents — ces parcours peuvent être comptés en double dans le total org.",
+    "dedupExplain": "Avant correction : {naive} · {saved} doublons retirés · {shared} passées par plusieurs agents",
+    "handoffReconciled": "Transferts vérifiés : les {attested} conversations transférées n'apparaissent qu'une fois dans le total de la flotte.",
+    "handoffGap": "Le total ne peut pas encore être confirmé : le journal d'audit enregistre {events} transferts dans {attested} conversations, mais les données de la flotte n'en retrouvent que {seen} traitées par plusieurs agents. Certaines conversations peuvent donc être comptées deux fois.",
     "empty": "Aucune donnée flotte disponible.",
-    "orgSignalsNote": "Filtre agent actif : les cartes ci-dessous lisent les signaux de cet agent. Les sondes de politique partagée (pare-feu, refus), la chaîne d'audit, les traces et le rail temporel restent à l'échelle organisation.",
-    "orgWide": "Échelle org",
-    "orgWideHint": "Sonde de politique partagée — identique pour tous les agents, non ventilable.",
-    "orgPostureNote": "Vue par agent ci-dessus. Cette vue reste à l'échelle organisation — ses indicateurs agrègent toute la flotte, pas l'agent sélectionné.",
+    "orgSignalsNote": "Filtre agent actif : les cartes ci-dessous montrent les signaux de cet agent. Les contrôles communs, la chaîne d'audit, les traces et l'historique restent calculés pour toute la flotte.",
+    "orgWide": "Toute la flotte",
+    "orgWideHint": "Contrôle commun à tous les agents ; il ne peut pas être réparti agent par agent.",
+    "orgPostureNote": "La vue par agent est présentée ci-dessus. Les indicateurs de cette page portent toujours sur toute la flotte, pas seulement sur l'agent sélectionné.",
     "usefulLinks": "Liens utiles",
-    "linkRelease": "Gouvernance · Release Control",
+    "linkRelease": "Gouvernance · Mise en ligne",
     "linkAudit": "Preuve · Journal d'audit",
     "linkSignals": "Définition · Catalogue de signaux"
   },
   "releaseControl": {
     "viewFleet": "Voir tous les agents",
     "viewAgent": "Voir l'agent",
-    "summaryCases": "Cas passés",
-    "floorReason": "Motif du blocage (règle 1)",
-    "stale": "Verdict périmé",
+    "summaryCases": "Cas réussis",
+    "floorReason": "Pourquoi cet agent est bloqué",
+    "floorSummary": "L'évaluation montre des échecs répétés du modèle, évités lorsqu'il n'est pas appelé. Cas concernés : {count}. Exemple : {caseId}. Constat confirmé sur {passes} évaluations complètes.",
+    "floorSummaryGeneric": "L'agent reste bloqué tant que l'évaluation complète ne démontre pas que le modèle fait au moins aussi bien qu'une réponse sans modèle.",
+    "floorTechnicalDetail": "Voir le diagnostic technique",
+    "stale": "Évaluation à refaire",
     "staleTitle": "Évalué contre le catalogue {was} ; catalogue actuel {now}",
     "explain": {
       "summaryCases": {
@@ -8662,34 +8699,34 @@
         "source": "Registre des agents + verdict de gate par agent."
       }
     },
-    "title": "Release Control",
-    "subtitle": "Pipeline de release par agent — verdict eval-gate, package gouverné versionné.",
+    "title": "Mise en ligne",
+    "subtitle": "Pour chaque agent, vérifiez l'évaluation, la version et les preuves avant de le mettre à disposition.",
     "total": "Agents",
-    "passing": "Prêts à promouvoir",
+    "passing": "Prêts à être mis en ligne",
     "blocked": "Bloqués",
-    "notRun": "Sans run",
+    "notRun": "À évaluer",
     "evalNotRun": "Évaluation non exécutée",
-    "evalSet": "Jeu d'éval",
-    "executions": "Exécutions (cas × langue)",
-    "socle": "Socle (T0)",
+    "evalSet": "Jeu d'évaluation",
+    "executions": "Vérifications effectuées",
+    "socle": "Tests communs",
     "socleOk": "OK",
     "socleFail": "ÉCHEC",
-    "blockingSocle": "Bloquants socle",
-    "blockingT1": "Bloquants T1",
-    "waived": "Dérogés actifs",
+    "blockingSocle": "Échecs sur les tests communs",
+    "blockingT1": "Échecs critiques",
+    "waived": "Exceptions actives",
     "lastEvent": "Dernier événement",
-    "empty": "Aucun agent / donnée de release disponible.",
+    "empty": "Aucune donnée de mise en ligne disponible pour ces agents.",
     "flow": {
       "proposed": "Proposé",
-      "reviewed": "Revu",
-      "approved": "Approuvé",
-      "live": "Live"
+      "reviewed": "Vérifié",
+      "approved": "Autorisé",
+      "live": "Mis à disposition"
     }
   },
   "usedBy": {
-    "hint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT.",
-    "modelsSubtitle": "Catalogue de modèles partagés (lecture seule ici) — quels agents consomment chaque modèle.",
-    "guardrailsSubtitle": "Profils de garde-fous partagés (lecture seule ici) — quels agents consomment chaque profil.",
+    "hint": "Le filtre s'applique à toutes les pages de gouvernance et de configuration.",
+    "modelsSubtitle": "Voyez les modèles disponibles et les agents qui utilisent chacun d'eux.",
+    "guardrailsSubtitle": "Voyez les protections disponibles et les agents auxquels elles s'appliquent.",
     "consumers": "{count} agent(s)",
     "regate": "{count} à re-valider",
     "loading": "Chargement…",
@@ -8704,7 +8741,7 @@
     "loading": "Chargement…",
     "empty": "Aucune donnée RBAC disponible.",
     "followup": "Portée actuelle : org (chaque rôle couvre tous les agents). L'affectation d'un rôle à des agents spécifiques (store de binding rôle x agent) est un suivi.",
-    "agentFilterHint": "Filtre global GOUVERNER/PLATEFORME — distinct du sélecteur d'agent AGENT."
+    "agentFilterHint": "Le filtre choisi s'applique à toutes les pages de gouvernance et de configuration."
   },
   "appFooter": {
     "sourceOfTruth": "Source de vérité : YAML · Git",
@@ -8750,16 +8787,22 @@
     "sheetCta": "Découvrir comment cette démonstration est pilotée"
   },
   "signalHero": {
-    "title": "Signal franchi (SLO)",
-    "breached": "SLO franchi · {metric} — {rate} < objectif {threshold}",
-    "ok": "SLO respecté · {metric} — {rate} ≥ objectif {threshold}",
-    "burn": "Burn ×{x} · {bad}/{n} mauvais sur la fenêtre",
+    "title": "Objectif de qualité",
+    "breached": "Objectif non atteint · {metric} — {rate} < objectif {threshold}",
+    "ok": "Objectif atteint · {metric} — {rate} ≥ objectif {threshold}",
+    "burn": "Rythme d'erreur ×{x} · {bad} réponses sur {n} sous l'objectif",
     "breachedShort": "{metric} — {rate} < objectif {threshold}",
     "okShort": "{metric} — {rate} ≥ objectif {threshold}",
-    "burnRate": "Burn ×{x}",
-    "burnBad": "{bad}/{n} mauvais sur la fenêtre",
-    "stopPulse": "Acquitter",
-    "remediate": "Remédier dans Incidents"
+    "burnRate": "Rythme d'erreur ×{x}",
+    "burnBad": "{bad} réponses sur {n} sous l'objectif",
+    "stopPulse": "Marquer comme vu",
+    "remediate": "Ouvrir les actions",
+    "metric": {
+      "faithfulness": "Fidélité",
+      "relevance": "Pertinence",
+      "availability": "Disponibilité",
+      "latency": "Délai de réponse"
+    }
   },
   "shell": {
     "focus": {
@@ -9000,7 +9043,7 @@
     "allRoles": "Tous les rôles",
     "mfaOn": "Activée",
     "mfaOff": "Désactivée",
-    "phaseNote": "Phase 1 (ADR 0009) : jeu de comptes amorcés, sans annuaire utilisateurs. Les rôles s'appliquent à l'échelle de l'organisation ; le provider OIDC est un suivi planifié.",
+    "phaseNote": "Comptes de démonstration sans annuaire central. Les mêmes rôles couvrent actuellement toute la flotte.",
     "kpi": {
       "total": "Comptes",
       "active": "Actifs",
@@ -9584,13 +9627,13 @@
     "helpUnderstand": "Comprendre Tessera"
   },
   "agirRail": {
-    "liveBadge": "Live",
-    "asofBadge": "Lecture à date",
+    "liveBadge": "État présent",
+    "asofBadge": "État à une date",
     "asofReading": "État reconstitué au {t} — les actions sont désactivées.",
-    "backToLive": "Revenir au direct",
+    "backToLive": "Revenir à l'état présent",
     "liveNote": "Vous agissez sur l'état présent.",
-    "pickLabel": "Voir à date",
-    "frozenTitle": "Lecture à date — revenez au direct pour agir",
+    "pickLabel": "Revoir à une date",
+    "frozenTitle": "État à une date — revenez à l'état présent pour agir",
     "pickTime": "Heure"
   }
 }

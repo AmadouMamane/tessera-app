@@ -84,17 +84,37 @@ _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
 
 # Localized display of the FR gate-verdict labels (sourced from the shared
 # eval-gate view) + the honest empty state. Unmapped labels fall through verbatim.
+_VERDICT_FR: dict[str, str] = {
+    "BLOQUÉ par le socle": "BLOQUÉ PAR LES TESTS COMMUNS",
+    "BLOQUÉ (critiques non dérogés)": "BLOQUÉ PAR UN CAS CRITIQUE",
+    "BLOQUÉ (domaine)": "BLOQUÉ PAR UNE EXIGENCE MÉTIER",
+    "BLOQUÉ (règle 1)": "BLOQUÉ : MOINS FIABLE QUE SANS MODÈLE",
+    "NE PEUT PAS DIRE (plancher)": "ÉVALUATION INSUFFISANTE",
+    "PASSE": "PRÊT",
+    "Éval non exécutée": "Évaluation non exécutée",
+}
 _VERDICT_TR: dict[str, tuple[str, str]] = {
-    "BLOQUÉ par le socle": ("DURCH SOCKEL BLOCKIERT", "BLOCKED by core"),
+    "BLOQUÉ par le socle": ("DURCH GEMEINSAME TESTS BLOCKIERT", "BLOCKED by shared tests"),
     "BLOQUÉ (critiques non dérogés)": (
-        "BLOCKIERT (kritische ohne Ausnahme)",
-        "BLOCKED (unwaived critical)",
+        "DURCH KRITISCHEN FALL BLOCKIERT",
+        "BLOCKED by a critical case",
     ),
-    "BLOQUÉ (domaine)": ("BLOCKIERT (Domaene)", "BLOCKED (domain)"),
-    "BLOQUÉ (règle 1)": ("BLOCKIERT (Regel 1)", "BLOCKED (rule 1)"),
-    "NE PEUT PAS DIRE (plancher)": ("KANN NICHT SAGEN (Sockel)", "CANNOT SAY (floor)"),
-    "PASSE": ("BESTANDEN", "PASS"),
-    "Éval non exécutée": ("Eval nicht ausgefuehrt", "Eval not run"),
+    "BLOQUÉ (domaine)": (
+        "DURCH FACHLICHE ANFORDERUNG BLOCKIERT",
+        "BLOCKED by a business requirement",
+    ),
+    "BLOQUÉ (règle 1)": (
+        "BLOCKIERT: UNZUVERLÄSSIGER ALS OHNE MODELL",
+        "BLOCKED: LESS RELIABLE THAN NO MODEL",
+    ),
+    "NE PEUT PAS DIRE (plancher)": ("BEWERTUNG NICHT AUSREICHEND", "EVALUATION NOT SUFFICIENT"),
+    "BLOQUÉ : MOINS FIABLE QUE SANS MODÈLE": (
+        "BLOCKIERT: UNZUVERLÄSSIGER ALS OHNE MODELL",
+        "BLOCKED: LESS RELIABLE THAN NO MODEL",
+    ),
+    "ÉVALUATION INSUFFISANTE": ("BEWERTUNG NICHT AUSREICHEND", "EVALUATION NOT SUFFICIENT"),
+    "PASSE": ("BEREIT", "READY"),
+    "Éval non exécutée": ("Bewertung nicht ausgeführt", "Evaluation not run"),
 }
 
 
@@ -102,7 +122,7 @@ def _verdict_label(label: str, lang: str) -> str:
     """Localize a gate-verdict label for display (de/en); FR is the canonical."""
     idx = _LANG_IDX.get(lang, 0)
     if idx == 0:
-        return label
+        return _VERDICT_FR.get(label, label)
     pair = _VERDICT_TR.get(label)
     return pair[idx - 1] if pair else label
 
@@ -239,7 +259,9 @@ def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
     verdict_tone = gate.verdict_tone
     if gate.passed and not floor_ok:
         blocked = isinstance(floor.releasable, NotOk)
-        verdict_label = "BLOQUÉ (règle 1)" if blocked else "NE PEUT PAS DIRE (plancher)"
+        verdict_label = (
+            "BLOQUÉ : MOINS FIABLE QUE SANS MODÈLE" if blocked else "ÉVALUATION INSUFFISANTE"
+        )
         verdict_tone = "crit" if blocked else "bad"
     return AgentRelease(
         agent_id=agent_id,

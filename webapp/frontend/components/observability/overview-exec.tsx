@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricKpi } from "@/components/observability/evolution-chart";
 import type { SignalRow } from "@/components/observability/signals-table";
@@ -677,7 +678,7 @@ export function RecommendedActions({
               </span>
             ) : null}
             <Badge tone={a.role === "admin" ? "warning" : "success"} className="px-1 text-[0.6rem]">
-              {a.role === "admin" ? "Admin+" : "Operator+"}
+              <AuthorityLabel authority={a.role === "admin" ? "Admin+" : "Operator+"} />
             </Badge>
           </button>
         ))}

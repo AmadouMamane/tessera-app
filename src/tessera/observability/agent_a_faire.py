@@ -7,10 +7,10 @@ filter rail, the task table, a per-item detail band and the right column
 (type donut, SLA buckets, quick actions, recent activity). Status is mutated by
 the item-state endpoint, so the page is functional, not a fixture.
 
-The whole chrome is trilingual (FR / DE / EN): ``compute_agent_a_faire`` takes a
-``lang`` and every operator-facing label resolves through the ``_TR`` table.
-Per-item *data* (title, category label, source domain) stays verbatim - it is
-sourced from the real backlog, not localized here.
+The whole first reading is trilingual (FR / DE / EN): ``compute_agent_a_faire``
+takes a ``lang`` and every operator-facing label resolves through the ``_TR``
+table. The raw case id remains visible as the evidence reference; the imported
+English catalogue title never has to carry the operator-facing meaning alone.
 """
 
 from __future__ import annotations
@@ -30,114 +30,113 @@ _WARN = 2 * _HOUR
 
 _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
 
-# Operator-facing chrome strings: key -> (fr, de, en). Per-item data (item title,
-# category label, source domain) is not translated here - it is real backlog data.
+# Operator-facing strings: key -> (fr, de, en).
 _TR: dict[str, tuple[str, str, str]] = {
     # priority badge
     "prio_crit": ("Critique", "Kritisch", "Critical"),
-    "prio_high": ("Elevee", "Hoch", "High"),
+    "prio_high": ("Élevée", "Hoch", "High"),
     "prio_mod": ("Moyenne", "Mittel", "Medium"),
     "prio_low": ("Faible", "Niedrig", "Low"),
     # workflow status badge
-    "st_done": ("Resolu", "Geloest", "Resolved"),
+    "st_done": ("Résolu", "Gelöst", "Resolved"),
     "st_progress": ("En cours", "In Bearbeitung", "In progress"),
-    "st_todo": ("A traiter", "Zu bearbeiten", "To do"),
+    "st_todo": ("À examiner", "Zu prüfen", "To review"),
     # journaled transitions (WF-01)
-    "tr_title": ("Transitions journalisees", "Journalisierte Uebergaenge", "Journaled transitions"),
+    "tr_title": ("Changements enregistrés", "Erfasste Änderungen", "Recorded changes"),
     "tr_none": (
-        "Aucune transition journalisee pour ce cas depuis l'ouverture du journal (2026-07-22).",
-        "Keine journalisierten Uebergaenge fuer diesen Fall seit Eroeffnung des Journals"
-        " (2026-07-22).",
-        "No journaled transitions for this case since the journal opened (2026-07-22).",
+        "Aucun changement enregistré pour ce cas depuis l'ouverture du journal (2026-07-22).",
+        "Keine Änderung für diesen Fall seit Eröffnung des Protokolls erfasst" " (2026-07-22).",
+        "No change recorded for this case since the log opened (2026-07-22).",
     ),
     "tr_assignee": ("Assignation", "Zuweisung", "Assignment"),
-    "tr_unassigned": ("non assigne", "nicht zugewiesen", "unassigned"),
+    "tr_unassigned": ("non assigné", "nicht zugewiesen", "unassigned"),
     # SLA cell
-    "sla_overdue": ("En retard", "Ueberfaellig", "Overdue"),
-    "unassigned": ("Non assigne", "Nicht zugewiesen", "Unassigned"),
-    "sla_past": ("Depasse", "Ueberschritten", "Overdue"),
-    "sla_ontime": ("Dans les delais", "Im Zeitrahmen", "On time"),
+    "sla_overdue": ("En retard", "Überfällig", "Overdue"),
+    "self": ("Moi", "Ich", "Me"),
+    "unassigned": ("Non assigné", "Nicht zugewiesen", "Unassigned"),
+    "sla_past": ("Échéance dépassée", "Frist überschritten", "Past due"),
+    "sla_ontime": ("Dans les délais", "Im Zeitrahmen", "On time"),
     # header
-    "title": ("A faire", "Aufgaben", "To do"),
+    "title": ("À faire", "Aufgaben", "To do"),
     # ADR 0038 — this page's half is the EVAL one; "validations" belong to A traiter.
     "subtitle": (
-        "Les cas d'evaluation en echec de vos agents, a revoir et resoudre.",
-        "Die fehlgeschlagenen Evaluierungsfaelle Ihrer Agenten, zu pruefen und zu loesen.",
-        "Your agents' failed evaluation cases, to review and resolve.",
+        "Les cas où un agent a échoué à une évaluation, à examiner puis résoudre.",
+        "Fälle, in denen ein Agent eine Prüfung nicht bestanden hat, zur Klärung und Lösung.",
+        "Cases where an agent failed an evaluation, to review and resolve.",
     ),
     # rail
-    "live": ("Live", "Live", "Live"),
-    "seg_queue": ("File reelle", "Echte Warteschlange", "Real queue"),
+    "live": ("État présent", "Aktueller Stand", "Current state"),
+    "seg_queue": ("Cas enregistrés", "Erfasste Fälle", "Recorded cases"),
     "seg_failed": (
-        "Cas d'evaluation en echec",
-        "Fehlgeschlagene Evaluierungsfaelle",
-        "Failed evaluation cases",
+        "Échecs à examiner",
+        "Zu prüfende Fehler",
+        "Failures to review",
     ),
-    "seg_sla": ("SLA en temps reel", "SLA in Echtzeit", "Real-time SLA"),
-    "rail_period": ("Run d'evaluation", "Evaluierungslauf", "Evaluation run"),
+    "seg_sla": ("Échéances actualisées", "Aktuelle Fristen", "Updated deadlines"),
+    "rail_period": ("Évaluation la plus récente", "Neueste Prüfung", "Latest evaluation"),
     "now": ("Maintenant", "Jetzt", "Now"),
-    "rail_scope": ("Dernier run", "Letzter Lauf", "Last run"),
-    "bulk": ("Actions groupees", "Sammelaktionen", "Bulk actions"),
+    "rail_scope": ("Dernière évaluation", "Letzte Prüfung", "Latest evaluation"),
+    "bulk": ("Actions groupées", "Sammelaktionen", "Bulk actions"),
     # timeline
-    "tl_title": ("Timeline evenements (run)", "Ereignis-Timeline (Lauf)", "Event timeline (run)"),
+    "tl_title": ("Derniers cas ajoutés", "Zuletzt hinzugefügte Fälle", "Latest cases added"),
     "tl_cta": (
-        "Voir la timeline complete",
-        "Vollstaendige Timeline anzeigen",
-        "View full timeline",
+        "Voir toute la chronologie",
+        "Gesamten Verlauf ansehen",
+        "View the full history",
     ),
     # KPI labels
     # "A revoir", not "A traiter": on the A-faire page a KPI named after the
     # OTHER queue page read as a cross-reference it never was (ADR 0038).
-    "kpi_total": ("A revoir (total)", "Zu pruefen (gesamt)", "To review (total)"),
-    "kpi_total_d": ("file reelle", "echte Warteschlange", "real queue"),
-    "kpi_urgent": ("A revoir (urgents)", "Zu pruefen (dringend)", "To review (urgent)"),
-    "kpi_urgent_d": ("priorite crit.", "Prio. kritisch", "crit. priority"),
-    "kpi_sla2h": ("SLA < 2h", "SLA < 2h", "SLA < 2h"),
-    "kpi_sla2h_d": ("echeance proche", "Frist nah", "deadline near"),
+    "kpi_total": ("Cas ouverts", "Offene Fälle", "Open cases"),
+    "kpi_total_d": ("à examiner", "zu prüfen", "to review"),
+    "kpi_urgent": ("Cas critiques", "Kritische Fälle", "Critical cases"),
+    "kpi_urgent_d": ("à voir en premier", "zuerst prüfen", "review first"),
+    "kpi_sla2h": ("Échéance proche", "Bald fällig", "Due soon"),
+    "kpi_sla2h_d": ("moins de deux heures", "weniger als zwei Stunden", "under two hours"),
     "kpi_late": (
-        "En retard (SLA depasse)",
-        "Ueberfaellig (SLA ueberschritten)",
-        "Overdue (SLA exceeded)",
+        "Échéance dépassée",
+        "Frist überschritten",
+        "Past due",
     ),
-    "kpi_late_d": ("hors delai", "ueber Frist", "past deadline"),
-    "kpi_mine": ("Assignes a moi", "Mir zugewiesen", "Assigned to me"),
+    "kpi_late_d": ("à rattraper", "nachzuholen", "needs attention"),
+    "kpi_mine": ("Mes cas", "Meine Fälle", "My cases"),
     "kpi_mine_d": ("assignation", "Zuweisung", "assignment"),
-    "kpi_resolved": ("Resolus", "Geloest", "Resolved"),
-    "kpi_resolved_d": ("traites", "bearbeitet", "handled"),
+    "kpi_resolved": ("Résolus", "Gelöst", "Resolved"),
+    "kpi_resolved_d": ("traités", "bearbeitet", "handled"),
     "kpi_avgtime": (
         "Temps moyen de traitement",
         "Durchschnittliche Bearbeitungszeit",
         "Average handling time",
     ),
-    "kpi_avgtime_d": ("non instrumente", "nicht instrumentiert", "not instrumented"),
-    "kpi_slaok": ("SLA respectes", "SLA eingehalten", "SLA met"),
-    "kpi_slaok_d": ("ouverts dans les delais", "offen im Zeitrahmen", "open on time"),
+    "kpi_avgtime_d": ("pas encore mesuré", "noch nicht gemessen", "not measured yet"),
+    "kpi_slaok": ("Dans les délais", "Im Zeitrahmen", "Within deadline"),
+    "kpi_slaok_d": ("parmi les cas ouverts", "unter den offenen Fällen", "among open cases"),
     # filters
     "f_title": ("Filtres actifs", "Aktive Filter", "Active filters"),
     "f_search": ("Rechercher dans la liste...", "In der Liste suchen...", "Search the list..."),
-    "f_prio": ("Priorite", "Prioritaet", "Priority"),
+    "f_prio": ("Priorité", "Priorität", "Priority"),
     "f_all_f": ("Toutes", "Alle", "All"),
     "f_type": ("Type", "Typ", "Type"),
     "f_all_types": ("Tous les types", "Alle Typen", "All types"),
     "f_status": ("Statut", "Status", "Status"),
     "f_all_status": ("Tous les statuts", "Alle Status", "All statuses"),
-    "f_assignee": ("Assigne a", "Zugewiesen an", "Assigned to"),
+    "f_assignee": ("Assigné à", "Zugewiesen an", "Assigned to"),
     "f_all": ("Tous", "Alle", "All"),
     "f_more": ("Plus de filtres", "Weitere Filter", "More filters"),
-    "f_views": ("Vues enregistrees", "Gespeicherte Ansichten", "Saved views"),
+    "f_views": ("Vues enregistrées", "Gespeicherte Ansichten", "Saved views"),
     "v_all_cases": ("Tous les cas", "Alle Faelle", "All cases"),
     "v_urgent": ("Urgents", "Dringend", "Urgent"),
-    "v_sla_risk": ("SLA en risque", "SLA gefaehrdet", "SLA at risk"),
-    "v_mine": ("Assignes a moi", "Mir zugewiesen", "Assigned to me"),
-    "f_manage": ("Gerer les vues", "Ansichten verwalten", "Manage views"),
+    "v_sla_risk": ("Échéance proche", "Bald fällig", "Due soon"),
+    "v_mine": ("Mes cas", "Meine Fälle", "My cases"),
+    "f_manage": ("Gérer les vues", "Ansichten verwalten", "Manage views"),
     # table columns
-    "c_prio": ("Priorite", "Prioritaet", "Priority"),
+    "c_prio": ("Priorité", "Priorität", "Priority"),
     "c_type": ("Type", "Typ", "Type"),
     "c_title": ("Titre", "Titel", "Title"),
     "c_source": ("Source", "Quelle", "Source"),
-    "c_assignee": ("Assigne a", "Zugewiesen an", "Assigned to"),
-    "c_sla": ("SLA", "SLA", "SLA"),
-    "c_due": ("Echeance", "Frist", "Due"),
+    "c_assignee": ("Assigné à", "Zugewiesen an", "Assigned to"),
+    "c_sla": ("Temps restant", "Verbleibende Zeit", "Time remaining"),
+    "c_due": ("Échéance", "Frist", "Due"),
     "c_status": ("Statut", "Status", "Status"),
     "t_count": (
         "{open} ouverts / {total} elements",
@@ -147,61 +146,61 @@ _TR: dict[str, tuple[str, str, str]] = {
     "t_showing": ("Afficher 1 - {n} sur {n}", "Zeige 1 - {n} von {n}", "Showing 1 - {n} of {n}"),
     "t_per_page": ("Lignes par page", "Zeilen pro Seite", "Rows per page"),
     # donut
-    "d_title": ("Repartition par priorite", "Verteilung nach Prioritaet", "Breakdown by priority"),
+    "d_title": ("Répartition par priorité", "Verteilung nach Priorität", "Breakdown by priority"),
     "d_cta": ("Voir le detail", "Details anzeigen", "View details"),
     "d_total": ("Total", "Gesamt", "Total"),
     # SLA panel
-    "s_title": ("SLA & echeances", "SLA & Fristen", "SLA & deadlines"),
-    "s_cta": ("Voir les SLA", "SLA anzeigen", "View SLAs"),
-    "s_late": ("En retard", "Ueberfaellig", "Overdue"),
+    "s_title": ("Échéances", "Fristen", "Deadlines"),
+    "s_cta": ("Voir les échéances", "Fristen ansehen", "View deadlines"),
+    "s_late": ("En retard", "Überfällig", "Overdue"),
     # quick actions
     "q_title": ("Actions rapides", "Schnellaktionen", "Quick actions"),
     "q_take": ("Prendre en charge", "Uebernehmen", "Take charge"),
     "q_assign": ("M'assigner", "Mir zuweisen", "Assign to me"),
-    "q_resolve": ("Marquer resolu", "Als geloest markieren", "Mark resolved"),
+    "q_resolve": ("Marquer résolu", "Als gelöst markieren", "Mark resolved"),
     "q_reopen": ("Rouvrir", "Wieder oeffnen", "Reopen"),
-    "q_open_eval": ("Ouvrir les evaluations", "Evaluierungen oeffnen", "Open evaluations"),
+    "q_open_eval": ("Ouvrir les évaluations", "Prüfungen öffnen", "Open evaluations"),
     "q_export": ("Exporter la liste", "Liste exportieren", "Export list"),
     # recent activity
-    "a_title": ("Activite recente", "Letzte Aktivitaet", "Recent activity"),
-    "a_cta": ("Voir toute l'activite", "Gesamte Aktivitaet anzeigen", "View all activity"),
+    "a_title": ("Activité récente", "Letzte Aktivität", "Recent activity"),
+    "a_cta": ("Voir toute l'activité", "Gesamte Aktivität anzeigen", "View all activity"),
     # detail drawer
-    "det_title": ("Detail selectionne", "Ausgewaehltes Detail", "Selected detail"),
-    "det_cta": ("Ouvrir dans les evaluations", "In Evaluierungen oeffnen", "Open in evaluations"),
+    "det_title": ("Détail du cas", "Falldetail", "Case details"),
+    "det_cta": ("Ouvrir dans les évaluations", "In Prüfungen öffnen", "Open in evaluations"),
     "tab_context": ("Contexte", "Kontext", "Context"),
     "tab_history": ("Historique", "Verlauf", "History"),
     "tab_evidence": ("Preuves", "Nachweise", "Evidence"),
     "tab_relations": ("Relations", "Beziehungen", "Relations"),
     "ctx_case": ("Cas", "Fall", "Case"),
-    "ctx_category": ("Categorie", "Kategorie", "Category"),
+    "ctx_category": ("Catégorie", "Kategorie", "Category"),
     "ctx_language": ("Langue", "Sprache", "Language"),
     "ctx_source": ("Source", "Quelle", "Source"),
     "ctx_date": ("Date", "Datum", "Date"),
-    "summary_label": ("Resume", "Zusammenfassung", "Summary"),
+    "summary_label": ("Résumé", "Zusammenfassung", "Summary"),
     "summary": (
-        "Cas d'evaluation en echec a revoir : {title}.",
-        "Fehlgeschlagener Evaluierungsfall zu pruefen: {title}.",
-        "Failed evaluation case to review: {title}.",
+        "Ce cas a échoué à l'évaluation et doit être examiné : {title}.",
+        "Dieser Fall hat die Prüfung nicht bestanden und muss geprüft werden: {title}.",
+        "This case failed its evaluation and needs review: {title}.",
     ),
-    "sla_drawer_title": ("Echeance & SLA", "Frist & SLA", "Deadline & SLA"),
-    "row_due": ("Echeance", "Frist", "Due"),
+    "sla_drawer_title": ("Échéance", "Frist", "Deadline"),
+    "row_due": ("Échéance", "Frist", "Due"),
     # ADR 0039 — the honest dual timestamp: when it entered the queue (the SLA
     # clock) vs the underlying case's own date (provenance), never conflated.
     "row_queued": ("En file depuis", "In Warteschlange seit", "In queue since"),
     "row_created": ("Cas date du", "Fall vom", "Case dated"),
     "row_wait": ("Attente en file", "Wartezeit", "Time in queue"),
     "assign_title": ("Assignation", "Zuweisung", "Assignment"),
-    "assign_label": ("Assigne a", "Zugewiesen an", "Assigned to"),
+    "assign_label": ("Assigné à", "Zugewiesen an", "Assigned to"),
     "team_label": ("Equipe", "Team", "Team"),
     "reassign": ("M'assigner", "Mir zuweisen", "Assign to me"),
     # status & actions section
     "status_title": ("Statut & actions", "Status & Aktionen", "Status & actions"),
     "status_label": ("Statut", "Status", "Status"),
     "status_primary": ("Prendre en charge", "Uebernehmen", "Take charge"),
-    "status_secondary": ("Marquer resolu", "Als geloest markieren", "Mark resolved"),
+    "status_secondary": ("Marquer résolu", "Als gelöst markieren", "Mark resolved"),
     # footer
     "footer_check": (
-        "Derniere synchronisation : {ts}",
+        "Dernière synchronisation : {ts}",
         "Letzte Synchronisierung: {ts}",
         "Last sync: {ts}",
     ),
@@ -225,6 +224,137 @@ _TEAM = {
     "Assistant": "Support",
 }
 
+_CATEGORY_LABEL: dict[str, tuple[str, str, str]] = {
+    "prompt_injection": (
+        "Tentative de détourner l'agent",
+        "Versuch, den Agenten umzuleiten",
+        "Attempt to redirect the agent",
+    ),
+    "pii_leak": (
+        "Données personnelles révélées",
+        "Offengelegte personenbezogene Daten",
+        "Personal data exposed",
+    ),
+    "policy_violation": (
+        "Règles internes non respectées",
+        "Interne Regeln nicht eingehalten",
+        "Internal rules not followed",
+    ),
+    "regulatory_misstatement": (
+        "Erreur réglementaire",
+        "Fehlerhafte Rechtsauskunft",
+        "Regulatory error",
+    ),
+    "citation_fabrication": (
+        "Référence juridique inventée",
+        "Erfundene Rechtsquelle",
+        "Invented legal reference",
+    ),
+    "tool_misuse": (
+        "Action incohérente",
+        "Unplausible Aktion",
+        "Inconsistent action",
+    ),
+    "hallucination": (
+        "Information inventée",
+        "Erfundene Information",
+        "Invented information",
+    ),
+    "escalation_failure": (
+        "Relais humain manqué",
+        "Menschliche Übergabe versäumt",
+        "Human handoff missed",
+    ),
+    "overconfidence": (
+        "Conclusion trop certaine",
+        "Zu sichere Schlussfolgerung",
+        "Overconfident conclusion",
+    ),
+    "language_mixing": (
+        "Langues mélangées",
+        "Vermischte Sprachen",
+        "Languages mixed",
+    ),
+}
+
+_SOURCE_LABEL: dict[str, tuple[str, str, str]] = {
+    "Garde-fous": ("Contrôles en ligne", "Laufende Kontrollen", "Live controls"),
+    "Confidentialite": ("Confidentialité", "Datenschutz", "Privacy"),
+    "RAG": ("Sources documentaires", "Wissensquellen", "Knowledge sources"),
+    "Outils": ("Actions outillées", "Werkzeugaktionen", "Tool actions"),
+    "Reglementaire": ("Conformité", "Regulatorik", "Compliance"),
+    "Multilingue": ("Langues", "Sprachen", "Languages"),
+    "Assistant": ("Réponse de l'agent", "Agentenantwort", "Agent response"),
+}
+
+_CASE_TITLE: dict[str, tuple[str, str, str]] = {
+    "02_pii_leak": (
+        "Un IBAN confidentiel est répété dans la réponse",
+        "Eine vertrauliche IBAN wird in der Antwort wiederholt",
+        "A confidential IBAN is repeated in the response",
+    ),
+    "08_prompt_injection_beneficiaire": (
+        "Une instruction cachée dans le nom du bénéficiaire est suivie",
+        "Eine versteckte Anweisung im Empfängernamen wird befolgt",
+        "A hidden instruction in the payee name is followed",
+    ),
+    "11_prompt_injection_base64": (
+        "Une instruction cachée dans un texte encodé est suivie",
+        "Eine in kodiertem Text versteckte Anweisung wird befolgt",
+        "A hidden instruction in encoded text is followed",
+    ),
+    "18_hallucination_taux_livret_a": (
+        "Un taux inventé est donné pour le Livret A",
+        "Für das Livret A wird ein erfundener Zinssatz genannt",
+        "An invented interest rate is given for the Livret A",
+    ),
+    "19_hallucination_rgpd_art142": (
+        "Un article inexistant du RGPD est cité",
+        "Ein nicht vorhandener DSGVO-Artikel wird zitiert",
+        "A non-existent GDPR article is cited",
+    ),
+    "22_overconfidence_decision_credit": (
+        "Une décision de crédit est donnée sans informations suffisantes",
+        "Eine Kreditentscheidung wird ohne ausreichende Angaben getroffen",
+        "A credit decision is made without enough information",
+    ),
+    "25_overconfidence_remboursement": (
+        "Un remboursement est promis sans autorisation",
+        "Eine Erstattung wird ohne Freigabe zugesagt",
+        "A refund is promised without approval",
+    ),
+    "26_citation_fabrication_cjue": (
+        "Une décision de la Cour de justice est inventée",
+        "Eine Entscheidung des Gerichtshofs wird erfunden",
+        "A Court of Justice ruling is invented",
+    ),
+    "30_tool_misuse_pret_aberrant": (
+        "Une simulation de prêt accepte un montant incohérent",
+        "Eine Kreditsimulation akzeptiert einen unplausiblen Betrag",
+        "A loan simulation accepts an implausible amount",
+    ),
+    "41_prompt_injection_rag_poison": (
+        "Une instruction cachée dans une source documentaire est suivie",
+        "Eine versteckte Anweisung in einer Wissensquelle wird befolgt",
+        "A hidden instruction in a knowledge source is followed",
+    ),
+    "43_prompt_injection_binding_offer": (
+        "Une offre engageante est acceptée à un tarif incohérent",
+        "Ein verbindliches Angebot mit unplausiblem Preis wird angenommen",
+        "A binding offer with an implausible price is accepted",
+    ),
+    "52_overconfidence_fraud_verdict": (
+        "Une conclusion de fraude est donnée avec trop peu d'éléments",
+        "Ein Betrugsurteil wird mit zu wenigen Belegen gefällt",
+        "A fraud conclusion is made with too little evidence",
+    ),
+    "53_citation_fabrication_court_case": (
+        "Une jurisprudence est inventée pour appuyer un litige",
+        "Zur Begründung eines Streitfalls wird Rechtsprechung erfunden",
+        "Case law is invented to support a dispute",
+    ),
+}
+
 
 def _t(key: str, lang: str, **fmt: object) -> str:
     text = _TR[key][_LANG_IDX.get(lang, 0)]
@@ -233,6 +363,31 @@ def _t(key: str, lang: str, **fmt: object) -> str:
 
 def _prio_label(priority: str, lang: str) -> str:
     return _t(_PRIO_KEY.get(priority, "prio_mod"), lang)
+
+
+def _localized_value(
+    values: dict[str, tuple[str, str, str]], key: str, lang: str, fallback: str
+) -> str:
+    translated = values.get(key)
+    return translated[_LANG_IDX.get(lang, 0)] if translated else fallback
+
+
+def _display_title(item: OperatorItem, lang: str) -> str:
+    return _localized_value(_CASE_TITLE, item.case_id, lang, item.title)
+
+
+def _display_category(item: OperatorItem, lang: str) -> str:
+    return _localized_value(_CATEGORY_LABEL, item.category, lang, item.type_label)
+
+
+def _display_source(item: OperatorItem, lang: str) -> str:
+    return _localized_value(_SOURCE_LABEL, item.source, lang, item.source)
+
+
+def _display_assignee(item: OperatorItem, lang: str) -> str:
+    if item.assignee == "Moi":
+        return _t("self", lang)
+    return item.assignee or _t("unassigned", lang)
 
 
 def _fmt_remaining(item: OperatorItem, now: datetime, lang: str) -> tuple[str, str]:
@@ -292,11 +447,11 @@ def _task(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
         "key": item.item_id,
         "priority": _prio_label(item.priority, lang),
         "prio_tone": item.priority,
-        "type": item.type_label,
-        "title": item.title,
-        "source": item.source,
+        "type": _display_category(item, lang),
+        "title": _display_title(item, lang),
+        "source": _display_source(item, lang),
         "ref": item.case_id,
-        "assignee": item.assignee or _t("unassigned", lang),
+        "assignee": _display_assignee(item, lang),
         "sla": sla,
         "sla_tone": sla_tone,
         "due": _fmt_dt(item.due_at()),
@@ -363,8 +518,8 @@ def _detail(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
             "id": item.item_id,
             "priority": _prio_label(item.priority, lang),
             "prio_tone": item.priority,
-            "title": item.title,
-            "subtitle": f"{item.type_label} - {item.source}",
+            "title": _display_title(item, lang),
+            "subtitle": f"{_display_category(item, lang)} · {_display_source(item, lang)}",
             "cta": _t("det_cta", lang),
         },
         "tabs": [
@@ -375,13 +530,13 @@ def _detail(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
         ],
         "context": [
             {"label": _t("ctx_case", lang), "value": item.case_id},
-            {"label": _t("ctx_category", lang), "value": item.type_label},
+            {"label": _t("ctx_category", lang), "value": _display_category(item, lang)},
             {"label": _t("ctx_language", lang), "value": item.language.upper()},
-            {"label": _t("ctx_source", lang), "value": item.source},
+            {"label": _t("ctx_source", lang), "value": _display_source(item, lang)},
             {"label": _t("ctx_date", lang), "value": _fmt_dt(item.created_at)},
         ],
         "summary_label": _t("summary_label", lang),
-        "summary": _t("summary", lang, title=item.title),
+        "summary": _t("summary", lang, title=_display_title(item, lang)),
         "sla_title": _t("sla_drawer_title", lang),
         "sla_value": sla_value,
         "sla_note": sla_note,
@@ -397,7 +552,7 @@ def _detail(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
         "transition_rows": _transition_rows(item.item_id, lang),
         "assign_title": _t("assign_title", lang),
         "assign_label": _t("assign_label", lang),
-        "assignee": item.assignee or _t("unassigned", lang),
+        "assignee": _display_assignee(item, lang),
         "team_label": _t("team_label", lang),
         "team": _TEAM.get(item.source, "Support"),
         "reassign": _t("reassign", lang),
@@ -604,7 +759,7 @@ def _timeline(items: list[OperatorItem], lang: str) -> dict[str, object]:
         "events": [
             {
                 "time": i.created_at.strftime("%H:%M"),
-                "label": i.type_label,
+                "label": _display_category(i, lang),
                 "ref": i.case_id,
                 "tone": tone.get(i.priority, "ok"),
             }
@@ -667,7 +822,11 @@ def _activity(items: list[OperatorItem], lang: str) -> dict[str, object]:
         "title": _t("a_title", lang),
         "cta": _t("a_cta", lang),
         "items": [
-            {"actor": i.source, "action": i.title, "time": i.created_at.strftime("%H:%M")}
+            {
+                "actor": _display_source(i, lang),
+                "action": _display_title(i, lang),
+                "time": i.created_at.strftime("%H:%M"),
+            }
             for i in recent
         ],
     }

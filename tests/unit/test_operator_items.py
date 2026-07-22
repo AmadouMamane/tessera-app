@@ -15,6 +15,7 @@ filter re-swallows the other half and turns these tests red.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -393,6 +394,40 @@ def test_inbox_aggregates_real_items(monkeypatch: pytest.MonkeyPatch) -> None:
     assert row_d["status"] == "resolved"  # done -> resolved
 
 
+def test_inbox_humanizes_business_action_titles_without_mutating_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    validation = replace(
+        _item("validation", "high", "todo", hours_ago=0.1, kind="business_event"),
+        case_id="RC-1",
+        category="validation_requested",
+        title="Validation requise - RC-1 (schedule_proposal_v2)",
+    )
+    blocked = replace(
+        _item("blocked", "crit", "todo", hours_ago=0.1, kind="business_event"),
+        case_id="RC-2",
+        category="action_blocked",
+        title="Action bloquée - RC-2 (prepare_outbound_call)",
+    )
+    items = [validation, blocked]
+    monkeypatch.setattr(inbox, "load_items_for", lambda *_a, **_k: items)
+
+    assert [row["title"] for row in inbox.compute_inbox_overview(now=NOW, lang="fr")["items"]] == [
+        "Validation à donner — RC-1",
+        "Action arrêtée — RC-2",
+    ]
+    assert [row["title"] for row in inbox.compute_inbox_overview(now=NOW, lang="en")["items"]] == [
+        "Approval needed — RC-1",
+        "Action stopped — RC-2",
+    ]
+    assert [row["title"] for row in inbox.compute_inbox_overview(now=NOW, lang="de")["items"]] == [
+        "Freigabe erforderlich — RC-1",
+        "Aktion gestoppt — RC-2",
+    ]
+    assert validation.title.endswith("(schedule_proposal_v2)")
+    assert blocked.title.endswith("(prepare_outbound_call)")
+
+
 def test_a_faire_aggregates_and_exposes_details(monkeypatch: pytest.MonkeyPatch) -> None:
     items = [
         _item("a", "crit", "todo", hours_ago=3),  # overdue
@@ -409,12 +444,70 @@ def test_a_faire_aggregates_and_exposes_details(monkeypatch: pytest.MonkeyPatch)
     # one detail per item, keyed; workflow status is independent of SLA breach.
     assert len(payload["details"]) == 3
     det_a = next(d for d in payload["details"] if d["key"] == "a.fr")
-    assert det_a["current_status"] == "A traiter"  # overdue does NOT mask workflow status
+    assert det_a["current_status"] == "À examiner"  # overdue does NOT mask workflow status
     task_a = next(t for t in payload["table"]["tasks"] if t["key"] == "a.fr")
     assert task_a["sla"] == "En retard"  # breach shown in the SLA cell
-    assert task_a["status"] == "A traiter"
+    assert task_a["status"] == "À examiner"
     det_b = next(d for d in payload["details"] if d["key"] == "b.fr")
     assert det_b["current_status"] == "En cours"
+
+
+def test_a_faire_humanizes_eval_cases_without_mutating_the_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw = replace(
+        _item("raw", "crit", "todo", hours_ago=0.1),
+        case_id="11_prompt_injection_base64",
+        category="prompt_injection",
+        type_label="Securite - Injection de prompt",
+        title="Encoding bypass — instruction hidden in a base64 blob",
+        source="Garde-fous",
+    )
+    monkeypatch.setattr(agent_a_faire, "load_items_for", lambda *_a, **_k: [raw])
+
+    fr = agent_a_faire.compute_agent_a_faire(now=NOW, lang="fr")["table"]["tasks"][0]
+    de = agent_a_faire.compute_agent_a_faire(now=NOW, lang="de")["table"]["tasks"][0]
+    en = agent_a_faire.compute_agent_a_faire(now=NOW, lang="en")["table"]["tasks"][0]
+
+    assert fr["title"] == "Une instruction cachée dans un texte encodé est suivie"
+    assert fr["type"] == "Tentative de détourner l'agent"
+    assert fr["source"] == "Contrôles en ligne"
+    assert de["title"] == "Eine in kodiertem Text versteckte Anweisung wird befolgt"
+    assert en["title"] == "A hidden instruction in encoded text is followed"
+    assert en["assignee"] == "Unassigned"
+    assert raw.title == "Encoding bypass — instruction hidden in a base64 blob"
+    assert raw.case_id == "11_prompt_injection_base64"
+
+    mine = replace(raw, assignee="Moi")
+    monkeypatch.setattr(agent_a_faire, "load_items_for", lambda *_a, **_k: [mine])
+    assert (
+        agent_a_faire.compute_agent_a_faire(now=NOW, lang="de")["table"]["tasks"][0]["assignee"]
+        == "Ich"
+    )
+    assert (
+        agent_a_faire.compute_agent_a_faire(now=NOW, lang="en")["table"]["tasks"][0]["assignee"]
+        == "Me"
+    )
+
+
+def test_a_faire_has_a_human_title_for_every_real_case() -> None:
+    cases = {
+        case_id: titles
+        for case_id, titles in agent_a_faire._CASE_TITLE.items()
+        if case_id
+        in {
+            "08_prompt_injection_beneficiaire",
+            "11_prompt_injection_base64",
+            "18_hallucination_taux_livret_a",
+            "22_overconfidence_decision_credit",
+            "25_overconfidence_remboursement",
+            "26_citation_fabrication_cjue",
+            "30_tool_misuse_pret_aberrant",
+            "53_citation_fabrication_court_case",
+        }
+    }
+    assert len(cases) == 8
+    assert all(all(title.strip() for title in titles) for titles in cases.values())
 
 
 # --- ADR 0038 — the nature partition ratchet ---------------------------------

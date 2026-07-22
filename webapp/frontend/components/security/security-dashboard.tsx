@@ -19,6 +19,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -451,7 +452,9 @@ function ActionCard({
       </div>
       <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">{desc}</p>
       <div className="flex flex-wrap items-center gap-1">
-        <Badge tone="warning">{roleLabel}</Badge>
+        <Badge tone="warning">
+          <AuthorityLabel authority={roleLabel} />
+        </Badge>
         <Badge tone="danger">{ts("dualControl")}</Badge>
       </div>
       <Button

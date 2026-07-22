@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Fragment, useMemo, useState } from "react";
 
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -789,7 +790,9 @@ export function SignalsTable({
                             </td>
                             <td className="px-2 py-2">
                               <Badge tone={r.role === "admin" ? "warning" : "success"}>
-                                {r.role === "admin" ? "Admin+" : "Operator+"}
+                                <AuthorityLabel
+                                  authority={r.role === "admin" ? "Admin+" : "Operator+"}
+                                />
                               </Badge>
                             </td>
                             <td className="py-2 pr-4 pl-2">

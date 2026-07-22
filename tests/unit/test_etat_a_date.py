@@ -113,7 +113,7 @@ def test_guardrails_diff_is_a_real_two_point_count() -> None:
     payload = _assemble(audit_total=15_000)
     gr = payload["guardrails"]
     rows = {r["label"]: r["value"] for r in gr["rows"]}  # type: ignore[index]
-    assert rows["Bundle de politiques"] == "Guardrails Banking v2"
+    assert rows["Ensemble de règles"] == "Guardrails Banking v2"
     diff = gr["diff"]  # type: ignore[index]
     changed = next(d for d in diff if "14 900 décisions" in d["text"])
     assert changed["kind"] == "changed"
@@ -124,12 +124,12 @@ def test_prompt_diff_reflects_mtime_vs_t() -> None:
         _rows(), _audit(), _StubPolicy(), _ctx(prompt_after=True), _original(), T_MID, now=NOW
     )
     assert any(  # type: ignore[index]
-        d["kind"] == "changed" and "modifié après T" in d["text"]
+        d["kind"] == "changed" and "modifiées depuis cette date" in d["text"]
         for d in after["prompt_model"]["diff"]
     )
     before = _assemble()
     assert any(  # type: ignore[index]
-        d["kind"] == "unchanged" and "inchangé depuis T" in d["text"]
+        d["kind"] == "unchanged" and "inchangées depuis cette date" in d["text"]
         for d in before["prompt_model"]["diff"]
     )
 

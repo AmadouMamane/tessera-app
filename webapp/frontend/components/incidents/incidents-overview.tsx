@@ -26,6 +26,7 @@ import { type ReactNode, useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
+import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
@@ -1166,7 +1167,7 @@ function SevBadge({ severity, t }: { severity: string; t: T }) {
 function RoleBadge({ role }: { role: string }) {
   return (
     <span className="inline-flex shrink-0 items-center rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-text-muted)]">
-      {role}
+      <AuthorityLabel authority={role} />
     </span>
   );
 }

@@ -56,52 +56,80 @@ _ENV_COLOR = {"prod": "#34d399", "preprod": "#60a5fa", "staging": "#fbbf24", "de
 _RULE_COPY: dict[str, tuple[tuple[str, str, str], tuple[str, str, str], tuple[str, str, str]]] = {
     "gate_freeze": (
         (
-            "Gel release sur gate FAIL",
-            "Release-Freeze bei Gate FAIL",
-            "Freeze release on gate FAIL",
+            "Suspendre une mise en ligne après un échec",
+            "Freigabe nach fehlgeschlagener Prüfung anhalten",
+            "Pause a launch after a failed check",
         ),
         (
-            "Dernier run d'éval : gate FAIL",
-            "Letzter Eval-Lauf: Gate FAIL",
-            "Latest eval run: gate FAIL",
+            "La dernière évaluation bloque la mise en ligne",
+            "Die letzte Bewertung blockiert die Freigabe",
+            "The latest evaluation blocks the launch",
         ),
-        ("Recommander le gel de release", "Release-Freeze empfehlen", "Recommend release freeze"),
+        (
+            "Recommander la suspension de la mise en ligne",
+            "Anhalten der Freigabe empfehlen",
+            "Recommend pausing the launch",
+        ),
     ),
     "chain_alert": (
         ("Alerte chaîne d'audit", "Audit-Ketten-Alarm", "Audit-chain alert"),
         (
-            "verify_active_ledger : chaîne rompue",
-            "verify_active_ledger: Kette gebrochen",
-            "verify_active_ledger: chain broken",
+            "La chaîne du journal d'audit est rompue",
+            "Die Kette des Prüfprotokolls ist unterbrochen",
+            "The audit-log chain is broken",
         ),
-        ("Alerter conformité", "Compliance alarmieren", "Alert compliance"),
+        (
+            "Prévenir l'équipe conformité",
+            "Team für Regelkonformität benachrichtigen",
+            "Notify the compliance team",
+        ),
     ),
     "low_faith_review": (
-        ("Revue fidélité faible", "Review geringe Treue", "Low-faithfulness review"),
         (
-            "Tours capturés sous le seuil de fidélité",
-            "Erfasste Turns unter Treue-Schwelle",
-            "Captured turns below faithfulness threshold",
+            "Vérifier les réponses peu fidèles aux sources",
+            "Antworten mit geringer Quellentreue prüfen",
+            "Review answers with low source fidelity",
         ),
-        ("Ouvrir une revue qualité", "Qualitaets-Review oeffnen", "Open a quality review"),
+        (
+            "Des réponses s'écartent trop de leurs sources",
+            "Antworten weichen zu stark von ihren Quellen ab",
+            "Answers stray too far from their sources",
+        ),
+        (
+            "Ouvrir une vérification de qualité",
+            "Qualitätsprüfung öffnen",
+            "Open a quality review",
+        ),
     ),
     "deny_spike": (
-        ("Pic de refus guard", "Guard-Ablehnungsspitze", "Guard deny spike"),
         (
-            "Refus guard 24h au-dessus du seuil",
-            "Guard-Denies 24h ueber Schwelle",
-            "Guard denies 24h above threshold",
+            "Hausse inhabituelle des refus de sécurité",
+            "Ungewöhnlicher Anstieg von Sicherheitsablehnungen",
+            "Unusual rise in security refusals",
+        ),
+        (
+            "Les refus de sécurité dépassent le seuil sur 24 heures",
+            "Sicherheitsablehnungen überschreiten in 24 Stunden den Grenzwert",
+            "Security refusals exceed the threshold over 24 hours",
         ),
         ("Notifier l'équipe sécurité", "Sicherheitsteam benachrichtigen", "Notify security team"),
     ),
     "curation_backlog": (
-        ("Backlog de curation", "Kurations-Backlog", "Curation backlog"),
         (
-            "Candidats en attente au-dessus du seuil",
-            "Wartende Kandidaten ueber Schwelle",
-            "Pending candidates above threshold",
+            "Trop d'échanges en attente d'examen",
+            "Zu viele Gespräche warten auf Prüfung",
+            "Too many conversations awaiting review",
         ),
-        ("Assigner une revue de curation", "Kurations-Review zuweisen", "Assign a curation review"),
+        (
+            "Le nombre d'échanges à examiner dépasse le seuil",
+            "Die Zahl der zu prüfenden Gespräche überschreitet den Grenzwert",
+            "The number of conversations to review exceeds the threshold",
+        ),
+        (
+            "Attribuer une vérification",
+            "Prüfung zuweisen",
+            "Assign a review",
+        ),
     ),
 }
 

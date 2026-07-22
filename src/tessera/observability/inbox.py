@@ -29,17 +29,32 @@ __all__ = ["compute_inbox_overview"]
 
 # Localized free-text (fr, de, en).
 _TR: dict[str, tuple[str, str, str]] = {
-    "rail_period": ("Événements métier", "Fachliche Ereignisse", "Business events"),
-    "rail_sla": ("Temps réel", "Echtzeit", "Real time"),
-    "rail_compare": ("Validations & blocages", "Freigaben & Sperren", "Validations & blocks"),
+    "rail_period": ("Décisions métier", "Fachliche Entscheidungen", "Business decisions"),
+    "rail_sla": ("État présent", "Aktueller Stand", "Current state"),
+    "rail_compare": (
+        "Validations et actions arrêtées",
+        "Freigaben und gestoppte Aktionen",
+        "Approvals and stopped actions",
+    ),
     "footer_src": (
-        "Validations en attente et actions bloquées (grammaire métier)",
-        "Ausstehende Freigaben und blockierte Aktionen (fachliche Grammatik)",
-        "Pending validations and blocked actions (business grammar)",
+        "Journal des validations et des actions arrêtées",
+        "Protokoll der Freigaben und gestoppten Aktionen",
+        "Approval and stopped-action log",
     ),
     "v_todo": ("a signalé", "hat gemeldet", "reported"),
     "v_progress": ("traite", "bearbeitet", "handling"),
     "v_done": ("a résolu", "hat geloest", "resolved"),
+    "overdue": ("En retard", "Überfällig", "Overdue"),
+    "validation_title": (
+        "Validation à donner — {case_id}",
+        "Freigabe erforderlich — {case_id}",
+        "Approval needed — {case_id}",
+    ),
+    "blocked_title": (
+        "Action arrêtée — {case_id}",
+        "Aktion gestoppt — {case_id}",
+        "Action stopped — {case_id}",
+    ),
     # journaled transitions (WF-01)
     "tr_st_todo": ("À traiter", "Zu bearbeiten", "To do"),
     "tr_st_progress": ("En cours", "In Bearbeitung", "In progress"),
@@ -111,12 +126,12 @@ _HOUR = 3600
 _WARN = 2 * _HOUR
 
 
-def _fmt_remaining(item: OperatorItem, now: datetime) -> str:
+def _fmt_remaining(item: OperatorItem, now: datetime, lang: str) -> str:
     if item.status == "done":
         return "-"
     remaining = item.remaining_seconds(now)
     if remaining < 0:
-        return "En retard"
+        return _t("overdue", lang)
     hours = int(remaining // _HOUR)
     minutes = int((remaining % _HOUR) // 60)
     return f"{hours}h {minutes:02d}m" if hours else f"{minutes} min"
@@ -124,6 +139,15 @@ def _fmt_remaining(item: OperatorItem, now: datetime) -> str:
 
 def _fmt_due(item: OperatorItem) -> str:
     return item.due_at().strftime("%d/%m %H:%M")
+
+
+def _display_title(item: OperatorItem, lang: str) -> str:
+    """Human title for the queue; the raw event remains unchanged in the ledger."""
+    key = {
+        "validation_requested": "validation_title",
+        "action_blocked": "blocked_title",
+    }.get(item.category)
+    return _t(key, lang).format(case_id=item.case_id) if key else item.title
 
 
 def _kpi(
@@ -210,10 +234,10 @@ def compute_inbox_overview(
             "agent": agent_names.get(i.agent_id, i.agent_id),
             "priority": _PRIORITY_KEY.get(i.priority, "medium"),
             "type": _TYPE_BUCKET.get(i.category, "other"),
-            "title": i.title,
+            "title": _display_title(i, lang),
             "source": i.source,
             "assignee": i.assignee or "—",
-            "sla": _fmt_remaining(i, now),
+            "sla": _fmt_remaining(i, now, lang),
             "sla_tone": i.sla_tone(now),
             "due": _fmt_due(i),
             "status": _STATUS_KEY.get(i.status, "todo"),

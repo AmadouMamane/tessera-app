@@ -56,7 +56,7 @@ def test_incident_clusters_derive_from_the_ledger(monkeypatch: pytest.MonkeyPatc
     assert len(rows) == 4
     top = rows[0]
     # Injection dominates (3 denies in-window), marked critical / security.
-    assert "Prompt injection" in str(top["trigger"])
+    assert "Instruction malveillante" in str(top["trigger"])
     assert "(3)" in str(top["trigger"])
     assert top["severity"] == "critique"
     assert top["domain"] == "securite"
@@ -95,7 +95,7 @@ def test_recent_feed_and_footer_are_live(monkeypatch: pytest.MonkeyPatch) -> Non
     ids = [r["id"] for r in recent]
     assert len(ids) == len(set(ids)), f"an id that names two rows names neither: {ids}"
     assert len(recent) == 3  # injection, wire-transfer, pii — one row each
-    assert recent[0]["label"] == "Prompt injection"
+    assert recent[0]["label"] == "Malicious instruction"
     # The burst's single row is stamped with its LATEST event, not an older one.
     assert recent[0]["time"] == (NOW - timedelta(hours=1)).strftime("%H:%M")
     # What the dedup did not list is still counted, never silently dropped.

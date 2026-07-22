@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 //
-// The "Total org (dédup)" footer used to close with "(handoff = 1)" — a sentence about
+// The fleet-total footer used to close with "(handoff = 1)" — a sentence about
 // handoffs computed from a table that had never been asked about handoffs. Found live:
 // the S1 journal attested 34 transfers over 34 conversations while `shared_conversations`
-// read 0, and the footer rendered "0 dédoublonnées" as though a reconciliation had
+// read 0, and the footer implied that no duplicates existed as though a reconciliation had
 // happened. These tests pin the honest footer: when the journal's claim and the store's
 // answer disagree, the gap is STATED; when they agree, that is said too; and the wire
 // schema carries the three reconciliation fields (zod strips undeclared keys, so a missing
@@ -138,7 +138,7 @@ function twoAgentFleet() {
   });
 }
 
-describe("the handoff reconciliation line under Total org (dédup)", () => {
+describe("the transfer verification line under the fleet total", () => {
   it("the schema carries the reconciliation fields — zod must not strip them", () => {
     const fleet = fleetFromWire({
       handoff_events: 34,
@@ -159,10 +159,10 @@ describe("the handoff reconciliation line under Total org (dédup)", () => {
 
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
-    const gap = screen.getByText(/Réconciliation impossible/);
+    const gap = screen.getByText(/Le total ne peut pas encore être confirmé/);
     expect(gap.textContent).toMatch(/34 transferts/);
-    expect(gap.textContent).toMatch(/comptés en double/);
-    expect(screen.queryByText(/Transferts réconciliés/)).toBeNull();
+    expect(gap.textContent).toMatch(/comptées deux fois/);
+    expect(screen.queryByText(/Transferts vérifiés/)).toBeNull();
     // And the old unearned claim is gone from the dedup line itself.
     expect(screen.queryByText(/handoff = 1/)).toBeNull();
   });
@@ -176,8 +176,8 @@ describe("the handoff reconciliation line under Total org (dédup)", () => {
 
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
-    expect(screen.getByText(/Transferts réconciliés/)).toBeTruthy();
-    expect(screen.queryByText(/Réconciliation impossible/)).toBeNull();
+    expect(screen.getByText(/Transferts vérifiés/)).toBeTruthy();
+    expect(screen.queryByText(/Le total ne peut pas encore être confirmé/)).toBeNull();
   });
 
   it("stays silent when the journal attests no handoffs at all", async () => {
@@ -189,8 +189,8 @@ describe("the handoff reconciliation line under Total org (dédup)", () => {
 
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
-    expect(screen.queryByText(/Réconciliation impossible/)).toBeNull();
-    expect(screen.queryByText(/Transferts réconciliés/)).toBeNull();
+    expect(screen.queryByText(/Le total ne peut pas encore être confirmé/)).toBeNull();
+    expect(screen.queryByText(/Transferts vérifiés/)).toBeNull();
   });
 
   it("renders the gap sentence in every locale", async () => {
@@ -203,9 +203,9 @@ describe("the handoff reconciliation line under Total org (dédup)", () => {
       });
       render(await AgentBreakdown({ fleet, scope: "all", locale }));
       const pattern = {
-        fr: /Réconciliation impossible/,
-        de: /Abgleich nicht möglich/,
-        en: /Cannot reconcile/,
+        fr: /Le total ne peut pas encore être confirmé/,
+        de: /Die Gesamtzahl kann noch nicht bestätigt werden/,
+        en: /The total cannot be confirmed yet/,
       }[locale];
       expect(screen.getByText(pattern)).toBeTruthy();
     }
@@ -229,16 +229,16 @@ describe("the default (monitoring) lens is UNCHANGED — the non-regression", ()
       "Refus/escalade",
       "Latence",
       "Transferts (e/s)",
-      "État de release",
+      "Mise en ligne",
     ]) {
       expect(screen.getByText(col)).toBeTruthy();
     }
     expect(screen.getByText("26,8 %")).toBeTruthy(); // escalation_rate
     expect(screen.getByText("4,6 s")).toBeTruthy(); // latency_ms
     expect(screen.getByText("0 / 34")).toBeTruthy(); // handoffs in / out
-    expect(screen.getByText("Éval non exécutée")).toBeTruthy();
+    expect(screen.getByText("Non évalué")).toBeTruthy();
     // And no lens column has leaked into it.
-    expect(screen.queryByText(/Écart au SLO/)).toBeNull();
+    expect(screen.queryByText(/Écart à l'objectif/)).toBeNull();
     expect(screen.queryByText(/Contribution/)).toBeNull();
   });
 });
@@ -264,10 +264,10 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
     );
 
     expect(screen.getByText("Valeur (Fidélité)")).toBeTruthy();
-    expect(screen.getByText("Écart au SLO")).toBeTruthy();
-    expect(screen.getByText("Contribution (mauvais / total)")).toBeTruthy();
+    expect(screen.getByText("Écart à l'objectif")).toBeTruthy();
+    expect(screen.getByText("Réponses concernées")).toBeTruthy();
     // The release column is the other lane's work — it rides in every lens, untouched.
-    expect(screen.getByText("État de release")).toBeTruthy();
+    expect(screen.getByText("Mise en ligne")).toBeTruthy();
     // The heaviest contributor is first, and its numbers are named.
     const rows = screen.getAllByRole("row");
     expect(rowAt(rows, 1).textContent).toMatch(/Support Client/);
@@ -285,15 +285,15 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
     expect(doors).toContain("/fr/agents/support-client/evaluations");
   });
 
-  it("shows the contribution reconciliation — ∑ slices vs the deduplicated org total", async () => {
+  it("shows that the per-agent detail matches the fleet total", async () => {
     renderWithIntl(
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: alarm }),
     );
     // 14 + 5 = 19 = the org's own count on this window: stated, not assumed.
-    expect(screen.getByText(/∑ contributions par agent = 19 · total org = 19/)).toBeTruthy();
+    expect(screen.getByText(/Détail par agent : 19 · total de la flotte : 19/)).toBeTruthy();
   });
 
-  it("WRITES the gap when the slices do not reconcile with the org total — never smooths it", async () => {
+  it("WRITES the gap when the per-agent detail does not match the fleet total", async () => {
     // A handed-off journey touches two agents and counts ONCE in the org: ∑ slices = org would
     // be a coincidence, not a proof. The same discipline as the handoff footer above.
     const unreconciled: AlarmLens = { ...alarm, sumNBad: 19, orgNBad: 17 };
@@ -305,8 +305,10 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
         lens: unreconciled,
       }),
     );
-    const line = screen.getByText(/∑ contributions par agent \(19\) ≠ total org \(17\)/);
-    expect(line.textContent).toMatch(/compte une fois dans le total org/);
+    const line = screen.getByText(
+      /Le détail par agent \(19\) est supérieur au total de la flotte \(17\)/,
+    );
+    expect(line.textContent).toMatch(/une seule fois dans le total/);
   });
 
   it("a refused cell shows a dash that SAYS WHY — never a fabricated number", async () => {
@@ -331,7 +333,9 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
     expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
     expect(rowAt(rows, 2).textContent).toMatch(/—/);
     expect(
-      screen.getAllByTitle("Dimension agent non honorée par la lecture — valeur refusée.").length,
+      screen.getAllByTitle(
+        "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée.",
+      ).length,
     ).toBeGreaterThan(0);
   });
 });
@@ -342,7 +346,7 @@ describe("an ORG-WIDE signal gets NO table — and the operator is told why", ()
     render(
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: masked }),
     );
-    expect(screen.getByText(/org-wide par construction/)).toBeTruthy();
+    expect(screen.getByText(/ce signal concerne toute la flotte/)).toBeTruthy();
     // No table at all — an inapplicable breakdown must not render as an empty one.
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByText("Support Client")).toBeNull();
@@ -386,14 +390,16 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
     expect(screen.getByText("Fuites PII (fuites / tours)")).toBeTruthy();
     expect(screen.getByText("Toxicité (toxiques / tours)")).toBeTruthy();
     expect(screen.getByText("Refus garde (refus / appels)")).toBeTruthy();
-    expect(screen.getByText("État de release")).toBeTruthy();
+    expect(screen.getByText("Mise en ligne")).toBeTruthy();
     expect(screen.getByText("2 / 7")).toBeTruthy();
     expect(screen.getByText("133 / 521")).toBeTruthy();
     // The empty window and the dead read are BOTH dashes, but they say different things.
     expect(
-      screen.getAllByTitle("Aucun tour de cet agent sur la fenêtre — mesuré, pas refusé.").length,
+      screen.getAllByTitle("Aucune activité de cet agent sur la période.").length,
     ).toBeGreaterThan(0);
-    expect(screen.getAllByTitle("Signal non calculable sur cette fenêtre.").length).toBe(1);
+    expect(
+      screen.getAllByTitle("Ce signal ne peut pas être calculé sur cette période.").length,
+    ).toBe(1);
     // Monitoring columns are GONE — they answered a different question.
     expect(screen.queryByText("Volume")).toBeNull();
     expect(screen.queryByText("Transferts (e/s)")).toBeNull();
@@ -428,7 +434,7 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
       }),
     );
     expect(screen.getByText("Actes gouvernés")).toBeTruthy();
-    expect(screen.getByText("Entrées ledger")).toBeTruthy();
+    expect(screen.getByText("Entrées du journal d'audit")).toBeTruthy();
     // The fleet's own escalation fact rides along — the same per-agent fact as monitoring.
     expect(screen.getByText("Refus/escalade")).toBeTruthy();
     expect(screen.getByText("69")).toBeTruthy();
@@ -482,7 +488,9 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
     // The fleet's own average latency rides along (same fact as the monitoring column).
     expect(screen.getByText("4,6 s")).toBeTruthy();
     expect(
-      screen.getAllByTitle("Dimension agent non honorée par la lecture — valeur refusée.").length,
+      screen.getAllByTitle(
+        "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée.",
+      ).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText("Volume")).toBeNull();
   });
@@ -521,15 +529,17 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
     );
     expect(screen.getByText("Anomalies (anormales / sessions)")).toBeTruthy();
     expect(screen.getByText("Conformité schéma (violations / appels)")).toBeTruthy();
-    expect(screen.getByText("État de release")).toBeTruthy();
+    expect(screen.getByText("Mise en ligne")).toBeTruthy();
     expect(screen.getByText("1 / 7")).toBeTruthy();
     expect(screen.getByText("0 / 9 521")).toBeTruthy();
     // The empty window and the refused slice are BOTH dashes, but they say different things.
     expect(
-      screen.getAllByTitle("Aucun tour de cet agent sur la fenêtre — mesuré, pas refusé.").length,
+      screen.getAllByTitle("Aucune activité de cet agent sur la période.").length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByTitle("Dimension agent non honorée par la lecture — valeur refusée.").length,
+      screen.getAllByTitle(
+        "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée.",
+      ).length,
     ).toBe(1);
     expect(screen.queryByText("Volume")).toBeNull();
     expect(screen.queryByText("Transferts (e/s)")).toBeNull();
@@ -556,9 +566,9 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
       }),
     );
     expect(screen.getByText("Actes gouvernés")).toBeTruthy();
-    expect(screen.getByText("Entrées ledger")).toBeTruthy();
-    expect(screen.getByText(/Lentille preuve par agent/)).toBeTruthy();
-    expect(screen.queryByText(/Lentille conformité par agent/)).toBeNull();
+    expect(screen.getByText("Entrées du journal d'audit")).toBeTruthy();
+    expect(screen.getByText(/Preuves par agent/)).toBeTruthy();
+    expect(screen.queryByText(/Conformité par agent/)).toBeNull();
     expect(screen.queryByText("Volume")).toBeNull();
   });
 });
@@ -600,10 +610,12 @@ describe("the quality lens answers the page's own question when nothing breaches
     );
     expect(screen.getByText("Fidélité")).toBeTruthy();
     expect(screen.getByText("Hallucination")).toBeTruthy();
-    expect(screen.getByText("Régr. bloquantes (T1)")).toBeTruthy();
-    expect(screen.getByText("Dernière éval")).toBeTruthy();
+    expect(screen.getByText("Échecs bloquants")).toBeTruthy();
+    expect(screen.getByText("Dernière évaluation")).toBeTruthy();
     expect(screen.getByText("96,2 %")).toBeTruthy();
-    expect(screen.getAllByTitle("Signal non calculable sur cette fenêtre.").length).toBe(2);
+    expect(
+      screen.getAllByTitle("Ce signal ne peut pas être calculé sur cette période.").length,
+    ).toBe(2);
     // The row's door: each agent name resolves to ITS evaluations page.
     const doors = screen
       .getAllByRole("link")

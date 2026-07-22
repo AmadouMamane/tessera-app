@@ -397,9 +397,9 @@ def _guardrails_card(
             "changed",
             _loc(
                 lang,
-                f"{_fmt_int(after)} décisions du guard journalisées après T",
-                f"{_fmt_int(after)} Guard-Entscheidungen nach T protokolliert",
-                f"{_fmt_int(after)} guard decisions logged after T",
+                f"{_fmt_int(after)} décisions de contrôle enregistrées depuis cette date",
+                f"{_fmt_int(after)} Kontrollentscheidungen seit diesem Zeitpunkt erfasst",
+                f"{_fmt_int(after)} control decisions recorded since this date",
             ),
         )
         if after > 0
@@ -407,9 +407,9 @@ def _guardrails_card(
             "unchanged",
             _loc(
                 lang,
-                "Aucune décision du guard après T",
-                "Keine Guard-Entscheidung nach T",
-                "No guard decision after T",
+                "Aucune décision de contrôle depuis cette date",
+                "Keine Kontrollentscheidung seit diesem Zeitpunkt",
+                "No control decision since this date",
             ),
         ),
         _changed(
@@ -432,20 +432,28 @@ def _guardrails_card(
     return _card(
         [
             (
-                _loc(lang, "Bundle de politiques", "Richtlinienbuendel", "Policy bundle"),
+                _loc(lang, "Ensemble de règles", "Regelwerk", "Rule set"),
                 f"Guardrails Banking v{policy.version}",
             ),
-            (_loc(lang, "Règles actives", "Aktive Regeln", "Active rules"), str(rules_active)),
             (
-                _loc(lang, "Motifs d'injection", "Injection-Muster", "Injection patterns"),
+                _loc(lang, "Contrôles actifs", "Aktive Kontrollen", "Active checks"),
+                str(rules_active),
+            ),
+            (
+                _loc(
+                    lang,
+                    "Formes d'attaque bloquées",
+                    "Blockierte Angriffsformen",
+                    "Blocked attack patterns",
+                ),
                 str(len(policy.prompt_injection_deny)),
             ),
             (
                 _loc(
                     lang,
-                    "Motifs PII surveillés",
-                    "Ueberwachte PII-Muster",
-                    "Monitored PII patterns",
+                    "Types de données personnelles surveillés",
+                    "Überwachte Arten personenbezogener Daten",
+                    "Monitored personal-data types",
                 ),
                 str(len(policy.pii_patterns)),
             ),
@@ -472,15 +480,15 @@ def _prompt_model_card(ctx: _Context, at: datetime | None, lang: str) -> dict[st
             at,
             _loc(
                 lang,
-                "System prompt modifié après T",
-                "System-Prompt nach T geaendert",
-                "System prompt changed after T",
+                "Instructions système modifiées depuis cette date",
+                "Systemanweisungen seit diesem Zeitpunkt geändert",
+                "System instructions changed since this date",
             ),
             _loc(
                 lang,
-                "System prompt inchangé depuis T",
-                "System-Prompt seit T unveraendert",
-                "System prompt unchanged since T",
+                "Instructions système inchangées depuis cette date",
+                "Systemanweisungen seit diesem Zeitpunkt unverändert",
+                "System instructions unchanged since this date",
             ),
         ),
         _d("unchanged", _loc(lang, "Modèle inchangé", "Modell unveraendert", "Model unchanged")),
@@ -488,7 +496,10 @@ def _prompt_model_card(ctx: _Context, at: datetime | None, lang: str) -> dict[st
     return _card(
         [
             (_loc(lang, "Modèle (figé)", "Modell (eingefroren)", "Model (frozen)"), ctx.model),
-            (_loc(lang, "Runtime", "Runtime", "Runtime"), "Ollama on-prem"),
+            (
+                _loc(lang, "Moteur d'exécution", "Ausführungsumgebung", "Execution engine"),
+                "Ollama on-prem",
+            ),
             (
                 _loc(lang, "Profil d'exécution", "Ausfuehrungsprofil", "Execution profile"),
                 ctx.profile,
@@ -496,9 +507,9 @@ def _prompt_model_card(ctx: _Context, at: datetime | None, lang: str) -> dict[st
             (
                 _loc(
                     lang,
-                    "Version du system prompt",
-                    "System-Prompt-Version",
-                    "System prompt version",
+                    "Version des instructions",
+                    "Version der Anweisungen",
+                    "Instruction version",
                 ),
                 _loc(
                     lang,
@@ -513,7 +524,7 @@ def _prompt_model_card(ctx: _Context, at: datetime | None, lang: str) -> dict[st
             ),
         ],
         diff,
-        _loc(lang, "Voir le contenu du prompt", "Prompt-Inhalt anzeigen", "View prompt content"),
+        _loc(lang, "Voir les instructions", "Anweisungen ansehen", "View instructions"),
         f"/agents/{DEFAULT_AGENT_ID}/prompts",
     )
 
@@ -543,11 +554,13 @@ def _release_card(ctx: _Context, at: datetime | None, lang: str) -> dict[str, ob
     return _card(
         [
             (_loc(lang, "Jeu d'évaluation", "Evaluierungsset", "Evaluation set"), ctx.catalogue),
-            (_loc(lang, "Date d'exécution", "Ausfuehrungsdatum", "Run date"), _fmt(ctx.run_dt)),
+            (_loc(lang, "Date de l'évaluation", "Prüfdatum", "Evaluation date"), _fmt(ctx.run_dt)),
             (_loc(lang, "Environnement", "Umgebung", "Environment"), "Local / on-prem"),
             (_loc(lang, "Modèle évalué", "Evaluiertes Modell", "Evaluated model"), ctx.model),
             (
-                _loc(lang, "Statut vs actuel", "Status vs. aktuell", "Status vs current"),
+                _loc(
+                    lang, "Par rapport à aujourd'hui", "Vergleich mit heute", "Compared with today"
+                ),
                 _loc(lang, "À jour", "Aktuell", "Up to date")
                 if up_to_date
                 else _loc(lang, "Historique", "Historisch", "Historical"),
@@ -555,7 +568,10 @@ def _release_card(ctx: _Context, at: datetime | None, lang: str) -> dict[str, ob
         ],
         diff,
         _loc(
-            lang, "Voir le détail de la release", "Release-Details anzeigen", "View release details"
+            lang,
+            "Voir le détail de la mise en ligne",
+            "Freigabedetails ansehen",
+            "View launch details",
         ),
         f"/agents/{DEFAULT_AGENT_ID}/evaluations",
     )
@@ -651,7 +667,7 @@ def _timeline(
 
 def _snapshot_section(snapshots: list[dict[str, Any]], lang: str) -> dict[str, object]:
     return {
-        "title": _loc(lang, "Snapshots enregistrés", "Gespeicherte Snapshots", "Saved snapshots"),
+        "title": _loc(lang, "États enregistrés", "Gespeicherte Zustände", "Saved states"),
         "rows": [
             {
                 "id": str(s.get("id", "")),
@@ -821,18 +837,18 @@ def _assemble(
         "reconstructed": {
             "title": _loc(
                 lang,
-                "État reconstitué à T",
-                "Zustand rekonstruiert zu T",
-                "State reconstructed at T",
+                "État retrouvé à cette date",
+                "Zustand zu diesem Zeitpunkt",
+                "State at this date",
             ),
             "snapshot_id": _snapshot_id(at),
             "verified": content_ok,
             "verified_label": verified_label,
             "built_label": _loc(
                 lang,
-                f"Reconstitué le {_fmt(now)} par Tessera Ops",
-                f"Rekonstruiert am {_fmt(now)} von Tessera Ops",
-                f"Reconstructed on {_fmt(now)} by Tessera Ops",
+                f"Vérifié le {_fmt(now)} par Tessera",
+                f"Am {_fmt(now)} von Tessera geprüft",
+                f"Verified on {_fmt(now)} by Tessera",
             ),
         },
         "opposability": opp_block,
@@ -843,27 +859,25 @@ def _assemble(
             **_original_card(original, at),
         },
         "guardrails": {
-            "title": _loc(
-                lang, "Garde-fous actifs à T", "Aktive Schutzregeln zu T", "Active guardrails at T"
-            ),
+            "title": _loc(lang, "Règles appliquées", "Angewandte Regeln", "Rules applied"),
             **_guardrails_card(policy, audit, ctx, at, lang),
         },
         "prompt_model": {
             "title": _loc(
-                lang, "Prompt & modèle à T", "Prompt & Modell zu T", "Prompt & model at T"
+                lang, "Instructions et modèle", "Anweisungen und Modell", "Instructions and model"
             ),
             **_prompt_model_card(ctx, at, lang),
         },
         "release": {
-            "title": _loc(lang, "Release à T", "Release zu T", "Release at T"),
+            "title": _loc(lang, "Mise en ligne", "Freigabe", "Launch status"),
             **_release_card(ctx, at, lang),
         },
         "timeline": {
             "title": _loc(
                 lang,
-                f"Chronologie à l'instant T ({_fmt(at) if at else live})",
-                f"Chronologie zum Zeitpunkt T ({_fmt(at) if at else live})",
-                f"Timeline at instant T ({_fmt(at) if at else live})",
+                f"Événements jusqu'au {_fmt(at) if at else live}",
+                f"Ereignisse bis {_fmt(at) if at else live}",
+                f"Events up to {_fmt(at) if at else live}",
             ),
             "rows": _timeline(states, audit, at, lang),
             "cta": _loc(
@@ -902,24 +916,24 @@ def _assemble(
         "table": {
             "title": _loc(
                 lang,
-                "Sources accessibles à l'instant T",
-                "Zu T zugaengliche Quellen",
-                "Sources accessible at instant T",
+                "Sources disponibles à cette date",
+                "Zu diesem Zeitpunkt verfügbare Quellen",
+                "Sources available at this date",
             ),
             "rows": _table(states, lang),
         },
         "handoffs": {
             "title": _loc(
                 lang,
-                "Passations agent→agent à l'instant T",
-                "Agent→Agent-Uebergaben zu T",
-                "Agent→agent handoffs at instant T",
+                "Transferts entre agents jusqu'à cette date",
+                "Übergaben zwischen Agenten bis zu diesem Zeitpunkt",
+                "Transfers between agents up to this date",
             ),
             "subtitle": _loc(
                 lang,
-                "Routage opposable : qui tenait la conversation, reconstitué à T.",
-                "Opponierbares Routing: wer die Konversation fuehrte, rekonstruiert zu T.",
-                "Opposable routing: who held the conversation, reconstructed at T.",
+                "Qui prenait en charge la conversation, d'après le journal d'audit.",
+                "Wer die Konversation bearbeitete, laut Audit-Protokoll.",
+                "Who was handling the conversation, according to the audit trail.",
             ),
             "rows": handoffs or [],
         },
@@ -1026,35 +1040,32 @@ def _banner(lang: str, agent: str | None) -> str:
     """The scope banner: which dimensions folded to which agent, in the UI language."""
     head = _loc(
         lang,
-        "Reconstitué (accessibilité) n'est pas rejoué (sortie du modèle). Cette vue "
-        "reconstitue l'état accessible et applicable à T ; elle ne rejoue pas la réponse "
-        "exacte. Pour rejouer une exécution, utiliser AGIR - Replay. ",
-        "Rekonstruiert (Zugaenglichkeit) ist nicht Wiederholt (Modellausgabe). Diese "
-        "Ansicht rekonstruiert den zu T zugaenglichen und anwendbaren Zustand; sie "
-        "wiederholt nicht die exakte Antwort. Zum Wiederholen einer Ausfuehrung AGIR - "
-        "Replay verwenden. ",
-        "Reconstructed (accessibility) is not Replayed (model output). This view "
-        "reconstructs the state accessible and applicable at T; it does not replay the "
-        "exact answer. To replay an execution, use AGIR - Replay. ",
+        "Cette vue retrouve les sources, les règles et la configuration disponibles à la date "
+        "choisie. Elle ne relance pas le modèle et ne recrée donc pas sa réponse exacte. ",
+        "Diese Ansicht zeigt die Quellen, Regeln und Einstellungen, die zum gewählten Zeitpunkt "
+        "verfügbar waren. Sie führt das Modell nicht erneut aus und erzeugt seine Antwort "
+        "nicht neu. ",
+        "This view restores the sources, rules and settings available at the selected date. "
+        "It does not run the model again, so it does not recreate its exact answer. ",
     )
     if agent is not None:
         return head + _loc(
             lang,
-            f"Portée : décisions de garde et passations repliées sur l'agent {agent} ; "
-            "le corpus de connaissances reste partagé (org-wide).",
-            f"Umfang: Guard-Entscheidungen und Uebergaben auf den Agenten {agent} gefaltet; "
-            "der Wissenskorpus bleibt geteilt (org-weit).",
-            f"Scope: guard decisions and handoffs folded to agent {agent}; "
-            "the knowledge corpus stays shared (org-wide).",
+            f"Pour l'agent {agent}, les décisions de contrôle et les transferts sont filtrés ; "
+            "les connaissances restent communes à toute la flotte.",
+            f"Für den Agenten {agent} werden Kontrollentscheidungen und Übergaben gefiltert; "
+            "das Wissen bleibt für die gesamte Flotte gemeinsam.",
+            f"For agent {agent}, control decisions and transfers are filtered; "
+            "knowledge remains shared across the fleet.",
         )
     return head + _loc(
         lang,
-        "Portée : le package de l'agent Support client (agent par défaut) ; "
-        "les flux de gouvernance (ledger, passations) sont org-wide.",
-        "Umfang: das Paket des Agenten Kundensupport (Standard-Agent); die "
-        "Governance-Stroeme (Ledger, Uebergaben) sind org-weit.",
-        "Scope: the Customer support agent's package (default agent); "
-        "the governance streams (ledger, handoffs) are org-wide.",
+        "La configuration affichée est celle de l'agent Support client ; les décisions de "
+        "contrôle et les transferts couvrent toute la flotte.",
+        "Angezeigt wird die Konfiguration des Kundenservice-Agenten; Kontrollentscheidungen "
+        "und Übergaben umfassen die gesamte Flotte.",
+        "The displayed configuration belongs to the Customer support agent; control decisions "
+        "and transfers cover the whole fleet.",
     )
 
 
