@@ -35,6 +35,38 @@ test("overview shows real bundle counts and honest dashes", async ({ page }) => 
   await expect(kpiZone.getByText("—").first()).toBeVisible();
 });
 
+test("no overview table paints outside its card", async ({ page }) => {
+  // The "Sessions récentes" table used to overflow its panel by ~144px — its
+  // origin column painted in the gutter and behind the aside cards. Wide tables
+  // scroll in their OWN container now; assert every table stays inside its card.
+  await expect(page.getByText("Sessions récentes").first()).toBeVisible({ timeout: 20_000 });
+  const overflows = await page.evaluate(() => {
+    const out: { title: string; overflow: number }[] = [];
+    for (const tb of document.querySelectorAll("main table")) {
+      const panel = tb.closest("div.rounded-lg");
+      if (!panel) continue;
+      // Measure the PAINT box: a wide table inside an overflow container keeps
+      // its full layout width (getBoundingClientRect would still "overflow") but
+      // its paint is clipped by that container — so judge the clipping ancestor.
+      const clip = tb.closest(".overflow-x-auto") ?? tb;
+      const t = clip.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      out.push({
+        title: (panel.querySelector("h3")?.textContent ?? "?").trim(),
+        overflow: Math.round(t.right - p.right),
+      });
+    }
+    return out;
+  });
+  expect(overflows.length).toBeGreaterThan(0);
+  for (const o of overflows) {
+    expect(
+      o.overflow,
+      `table "${o.title}" paints ${o.overflow}px past its card`,
+    ).toBeLessThanOrEqual(0);
+  }
+});
+
 test("comparisons tab lists the real run-to-run diffs", async ({ page }) => {
   await page.getByRole("tab", { name: "Comparaisons" }).click();
   await expect(page.getByRole("tab", { name: "Comparaisons" })).toHaveAttribute(
@@ -67,12 +99,20 @@ test("shadow and exports tabs are flagged demonstration", async ({ page }) => {
 test("the shadow rail mirrors captured turns against a candidate model, for real", async ({
   page,
 }) => {
+  // The mirror is honestly slow (real judge). The result expect below allows
+  // 150s — but the DEFAULT test timeout is 30s, which silently capped it: an
+  // expectation the test can never wait out is a witness that cannot see.
+  test.setTimeout(180_000);
   const rail = page.locator("aside").filter({ hasText: "Rejouer en shadow" });
   await expect(rail.getByLabel("Modèle candidat")).toBeVisible({ timeout: 20_000 });
   // The dead "compare to a baseline" selects and the fake time pills are gone
   // from the rail (the comparisons TAB legitimately keeps its own title).
   await expect(rail.getByText("Comparer à une référence")).toHaveCount(0);
   await expect(rail.getByText("24h", { exact: true })).toHaveCount(0);
+  // Pick a candidate the LOCAL serving path can serve: the catalogue's default
+  // (gemini-*) only exists on the frontier path — on this bench Ollama answers
+  // 404 and the run 500s instantly. The mirror under test needs a real model.
+  await rail.getByLabel("Modèle candidat").selectOption("llama3.2:3b");
   // Run it: a real mirror (2 turns, real judge) — slow, and honestly so.
   await rail.getByRole("button", { name: "Lancer le shadow" }).click();
   await expect(rail.getByText(/comparés|Aucun tour capturé/)).toBeVisible({ timeout: 150_000 });

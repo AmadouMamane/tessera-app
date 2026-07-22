@@ -505,32 +505,36 @@ function RecentSessions({
       className={className}
       action={<ViewAll label={t("viewAll.all")} onClick={onViewAll} />}
     >
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.model")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.status")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.origin")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.recent_sessions.map((s) => (
-            <tr key={s.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-              <td className="px-1.5 py-1 font-mono text-[#87bfff]">{s.id}</td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.service}</td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{s.model}</td>
-              <td className="px-1.5 py-1">
-                <StatusBadge status={s.status} t={t} />
-              </td>
-              <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
-                {s.origin}
-              </td>
+      {/* A table whose min-content beats the card overflows it and paints under
+          the neighbouring cards — wide content scrolls in its OWN container. */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.model")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.status")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.origin")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.recent_sessions.map((s) => (
+              <tr key={s.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
+                <td className="px-1.5 py-1 font-mono text-[#87bfff]">{s.id}</td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.service}</td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{s.model}</td>
+                <td className="px-1.5 py-1">
+                  <StatusBadge status={s.status} t={t} />
+                </td>
+                <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
+                  {s.origin}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -550,41 +554,43 @@ function TopDeviations({
       className={className}
       action={<ViewAll label={t("viewAll.deviations")} onClick={onViewAll} />}
     >
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.type")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.baseline")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("col.severity")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("col.delta")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.top_deviations.map((d) => (
-            <tr
-              key={`${d.id}-${d.type}`}
-              className="border-b border-[var(--tessera-border)]/60 last:border-0"
-            >
-              <td className="px-1.5 py-1 font-mono text-[#87bfff]">{d.id}</td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{d.service}</td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">
-                {t(`type.${d.type}`)}
-              </td>
-              <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
-                {d.baseline}
-              </td>
-              <td className={cn("px-1.5 py-1 font-medium", SEV_TEXT[d.severity])}>
-                {t(`severity.${d.severity}`)}
-              </td>
-              <td className="px-1.5 py-1 text-right font-mono tabular-nums text-red-300">
-                {d.delta}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.type")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.baseline")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("col.severity")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("col.delta")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.top_deviations.map((d) => (
+              <tr
+                key={`${d.id}-${d.type}`}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="px-1.5 py-1 font-mono text-[#87bfff]">{d.id}</td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text)]">{d.service}</td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">
+                  {t(`type.${d.type}`)}
+                </td>
+                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
+                  {d.baseline}
+                </td>
+                <td className={cn("px-1.5 py-1 font-medium", SEV_TEXT[d.severity])}>
+                  {t(`severity.${d.severity}`)}
+                </td>
+                <td className="px-1.5 py-1 text-right font-mono tabular-nums text-red-300">
+                  {d.delta}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -602,28 +608,35 @@ function Comparisons({
       className={className}
       action={<ViewAll label={t("viewAll.comparisons")} onClick={onViewAll} />}
     >
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("col.comparison")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("col.sessions")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("col.deviations")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.recent_comparisons.map((c) => (
-            <tr key={c.label} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-              <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text)]">
-                {c.label}
-              </td>
-              <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
-                {c.sessions}
-              </td>
-              <td className="px-1.5 py-1 text-right tabular-nums text-amber-300">{c.deviations}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("col.comparison")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("col.sessions")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("col.deviations")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.recent_comparisons.map((c) => (
+              <tr
+                key={c.label}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text)]">
+                  {c.label}
+                </td>
+                <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                  {c.sessions}
+                </td>
+                <td className="px-1.5 py-1 text-right tabular-nums text-amber-300">
+                  {c.deviations}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -837,6 +850,11 @@ function ReplayRail({
                     ties: shadow.data.ties,
                   })}
             </output>
+          ) : null}
+          {shadow.isError ? (
+            // A failed mirror must SAY so (e.g. a candidate the local serving
+            // path cannot serve) — a silent error reads as "still running".
+            <output className="text-[0.64rem] text-red-300">{t("rail.error")}</output>
           ) : null}
           <button
             type="button"

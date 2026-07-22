@@ -2,16 +2,17 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  Activity as ActivityIcon,
   Bot,
   CalendarClock,
   CheckCircle2,
   ChevronRight,
   Clock3,
+  History,
   Info,
-  Radio,
+  RotateCcw,
   Settings2,
   Sparkles,
-  Undo2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
@@ -19,9 +20,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { useAsOf } from "@/components/agir/agir-rail";
+import { AsOfPickerChip } from "@/components/cockpit/asof-picker-chip";
 import { CardInfo } from "@/components/cockpit/card-info";
+import { CHIP_ACTIVE, CHIP_BASE, SelectChip } from "@/components/cockpit/rail-chip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { useTemporalState } from "@/components/overview/temporal-rail";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Truncate } from "@/components/ui/truncate";
@@ -135,13 +139,11 @@ export function AgentSynthese() {
 // (v1.11) only because the content now honours it: the backend takes `at` and
 // re-reads transcript / CSAT / journal over the window ending at T. Knowledge
 // counts, prompts, registry identity and the chain badge stay live — the As-of
-// banner says exactly that (scoped claim, same rule as the AGIR rail).
+// micro-line says exactly that (scoped claim, same rule as the AGIR rail). The
+// rail wears the shared SR-01 chip grammar (rail-chip + AsOfPickerChip): no
+// status colours for a reading, no OS-drawn datetime panel on the strip.
 
-const PERIOD_OPTIONS: { key: string; label: string }[] = [
-  { key: "h24", label: "24h" },
-  { key: "d7", label: "7 jours" },
-  { key: "d30", label: "30 jours" },
-];
+const PERIODS = ["h24", "d7", "d30"] as const;
 
 function AgentRail({
   temporal,
@@ -152,18 +154,12 @@ function AgentRail({
   asOf: string | null;
   agentName: string;
 }) {
+  const t = useTranslations("agentSynthese");
+  const ta = useTranslations("agirRail");
+  const to = useTranslations("overview.time");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  // datetime-local speaks LOCAL wall-clock; the URL speaks UTC ISO. Convert
-  // explicitly both ways — slicing the ISO would silently shift the display.
-  const toLocalInput = (iso: string) => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
 
   const setAsof = (value: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -176,93 +172,58 @@ function AgentRail({
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   };
 
+  const ReadingIcon = asOf ? History : ActivityIcon;
   return (
-    <section className="sr01-strip flex flex-col gap-2 rounded-2xl p-2.5 backdrop-blur-md">
-      <div className="flex flex-wrap items-center gap-2">
-        <Segment icon={Radio} label="Mode">
-          {asOf ? (
-            <span className="inline-flex items-center gap-1.5 font-semibold text-amber-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(240,170,60,0.85)]" />
-              État au {new Date(asOf).toLocaleString("fr-FR")}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(0,200,120,0.85)]" />
-              Live · En direct
-            </span>
-          )}
-        </Segment>
-
-        <Segment icon={Clock3} label="Période">
-          <select
-            value={temporal.periodKey}
-            onChange={(e) => temporal.setPeriodKey(e.target.value)}
-            className="cursor-pointer rounded bg-transparent font-semibold text-[var(--tessera-text)] outline-none"
-          >
-            {PERIOD_OPTIONS.map((p) => (
-              <option key={p.key} value={p.key} className="bg-[var(--tessera-surface)]">
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </Segment>
-
-        <Segment icon={CalendarClock} label="Voir à date">
-          <input
-            type="datetime-local"
-            aria-label="Voir à date"
-            value={asOf ? toLocalInput(asOf) : ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              setAsof(v ? new Date(v).toISOString() : null);
-            }}
-            className="cursor-pointer bg-transparent font-semibold text-[var(--tessera-text)] outline-none"
-          />
-        </Segment>
-
-        {asOf ? (
-          <button
-            type="button"
-            onClick={() => setAsof(null)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
-          >
-            <Undo2 className="h-3.5 w-3.5" /> Retour au direct
-          </button>
-        ) : null}
+    <section className="sr01-strip rounded-2xl backdrop-blur-md">
+      <div className="sr01-command-row flex flex-wrap items-center gap-2 px-3 py-2">
+        {/* Lecture — the reading, always visible (champagne indicator chip, the
+            SR-01 primary-reading grammar — never a status colour). */}
+        <span className={cn(CHIP_BASE, CHIP_ACTIVE, "cursor-default")}>
+          <ReadingIcon className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
+          {to("reading")}
+          <span className="font-semibold text-[var(--tessera-text)]">
+            {asOf ? ta("asofBadge") : ta("liveBadge")}
+          </span>
+        </span>
+        <SelectChip
+          icon={Clock3}
+          label={to("period")}
+          value={temporal.periodKey}
+          onChange={temporal.setPeriodKey}
+          options={PERIODS.map((p) => ({ value: p, label: to(p) }))}
+        />
+        <AsOfPickerChip value={asOf} onChange={setAsof} />
       </div>
 
-      {asOf ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2">
-          <span className="text-xs text-[var(--tessera-text-muted)]">
-            <b className="font-semibold text-amber-300">Mode : État à date</b> — Conversations,
-            satisfaction et journal de {agentName} relus sur la fenêtre finissant au{" "}
-            {new Date(asOf).toLocaleString("fr-FR")} ; connaissances, prompts et badge de chaîne
-            restent en direct.
+      {/* Contextual micro-line — the exact scoped claim of the active reading,
+          and the single "Revenir au direct" (outline, SR-01 grammar). */}
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+        {asOf ? (
+          <span className="min-w-0">
+            <span className="font-medium text-[var(--tessera-text)]">
+              {ta("asofBadge")} · {new Date(asOf).toLocaleString()}
+            </span>
+            <span> — {t("railAsofScope", { agent: agentName })}</span>
           </span>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2">
-          <span className="text-xs text-[var(--tessera-text-muted)]">
-            <b className="font-semibold text-sky-300">Mode : Live</b> — Vous consultez les données
-            en direct de {agentName}.
+        ) : (
+          <span className="font-medium text-[var(--tessera-text)]">
+            {t("railLiveScope", { agent: agentName })}
           </span>
-        </div>
-      )}
+        )}
+        {asOf ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="ml-auto h-7 gap-1.5 px-2.5 text-xs"
+            onClick={() => setAsof(null)}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {ta("backToLive")}
+          </Button>
+        ) : null}
+      </div>
     </section>
-  );
-}
-
-function Segment({
-  icon: Icon,
-  label,
-  children,
-}: { icon: typeof Clock3; label: string; children: ReactNode }) {
-  return (
-    <span className="flex h-9 items-center gap-2 whitespace-nowrap rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text-muted)]">
-      <Icon className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
-      <span className="uppercase tracking-wide text-[0.6rem]">{label}</span>
-      {children}
-    </span>
   );
 }
 
