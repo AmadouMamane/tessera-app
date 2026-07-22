@@ -16,7 +16,13 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 
-__all__ = ["DEFAULT_AGENT_ID", "current_agent_id", "resolve_agent_id"]
+__all__ = [
+    "DEFAULT_AGENT_ID",
+    "current_agent_id",
+    "current_conversation_id",
+    "current_turn_id",
+    "resolve_agent_id",
+]
 
 #: Default agent slug used until the multi-agent registry (Phase 1) lands.
 DEFAULT_AGENT_ID = "support-client"
@@ -24,6 +30,13 @@ DEFAULT_AGENT_ID = "support-client"
 #: Agent acting on the current turn. Set at the turn boundary (chat route) and
 #: read by audit/metric/transcript emitters. Defaults to the single agent.
 current_agent_id: ContextVar[str] = ContextVar("tessera_current_agent_id", default=DEFAULT_AGENT_ID)
+
+#: Correlation carried by the current chat turn. Audit emitters use these fields to distinguish
+#: a governed product/test turn from a direct policy probe that has no business-turn identity.
+current_conversation_id: ContextVar[str | None] = ContextVar(
+    "tessera_current_conversation_id", default=None
+)
+current_turn_id: ContextVar[str | None] = ContextVar("tessera_current_turn_id", default=None)
 
 
 def resolve_agent_id(agent_id: str | None = None) -> str:

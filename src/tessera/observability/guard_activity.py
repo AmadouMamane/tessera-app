@@ -119,8 +119,8 @@ def exchange_counts_since(since: datetime, *, path: Path | None = None) -> Guard
     Returns:
         Controlled and blocked counts over real traffic only.
     """
-    controlled = 0
-    blocked = 0
+    controlled_turns: set[str] = set()
+    blocked_turns: set[str] = set()
     for entry in read_ledger_entries(path, since=since):
         if (
             entry.get("type") != "tessera.guard.audit"
@@ -131,10 +131,16 @@ def exchange_counts_since(since: datetime, *, path: Path | None = None) -> Guard
         when = _parse_dt(entry.get("occurred_at"))
         if when is None or when < since:
             continue
-        controlled += 1
+        turn_id = entry.get("turn_id")
+        if not isinstance(turn_id, str) or not turn_id:
+            # Direct guard probes are audit evidence, but they are not business exchanges. A
+            # chat turn carries its server-issued identity at emit time; without it the reader
+            # cannot honestly classify the entry as real traffic.
+            continue
+        controlled_turns.add(turn_id)
         if entry.get("outcome") == "denied":
-            blocked += 1
-    return GuardExchangeCounts(controlled=controlled, blocked=blocked)
+            blocked_turns.add(turn_id)
+    return GuardExchangeCounts(controlled=len(controlled_turns), blocked=len(blocked_turns))
 
 
 def _blocked_today_cached(since: datetime) -> int:

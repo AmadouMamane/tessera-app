@@ -10,9 +10,9 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 const LOCALES = ["fr", "en", "de"] as const;
 
 const APPROVED_V2 = {
-  fr: "50275997554a7ffbe371b6320f6687601dea2c22a0e610980e20555b9f1eed74",
-  en: "d0ce1346ccc678c28855dd925f210e850777aaceebe7928b6134bd7d98e33381",
-  de: "18faaff28f4c6f56a67c7cbfbaa95ba7641b7a61c241daaf6c16cadb2fb0f007",
+  fr: "f3da4ca862021f45a6a5d87f6cf7adaff620ecc10903d63fe3d113e019d2a4cc",
+  en: "563125f8d776964aec8de18c4eada5467373e9d07326dc5555b86a4ad8d10217",
+  de: "7c9141979130b122627d8b38589f28d43c1ab4849c3f17be0c78ee948597d799",
 } as const;
 
 const APPROVED_V1_SECTIONS = {
@@ -22,7 +22,13 @@ const APPROVED_V1_SECTIONS = {
 
 interface Catalogue {
   comprendreV2: {
-    diagram: { columns: unknown[]; flows: unknown[] };
+    hero: { body: string };
+    diagram: {
+      transition: string;
+      caption: string;
+      columns: unknown[];
+      flows: unknown[];
+    };
     journey: { steps: unknown[]; illustrative: { rows: unknown[] } };
     live: { cards: unknown[] };
     details: { items: unknown[] };
@@ -77,6 +83,14 @@ describe("the closed v2 content contract", () => {
     expect(copy).not.toMatch(
       /une organisation|zéro contournement|conformité assurée|sans risque|en toute confiance|infalsifiable/i,
     );
+  });
+
+  it.each(LOCALES)("%s keeps one question list and spends the closing line once", (locale) => {
+    const copy = catalogue(locale).comprendreV2;
+    expect(copy.hero.body).not.toMatch(/what are they doing|que font-ils|was tun sie/i);
+    expect(copy.diagram.transition.length).toBeGreaterThan(20);
+    expect(copy.diagram.caption.length).toBeGreaterThan(30);
+    expect(copy.diagram.caption).not.toBe(copy.closing.title);
   });
 });
 
@@ -150,12 +164,14 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(diagram).toMatch(/ArrowLeft|ArrowRight|ArrowDown/);
     expect(diagram).toContain('t("shield")');
     expect(diagram).toContain('t("door")');
-    expect(diagram).toContain('t("legend")');
+    expect(diagram).toContain('t("caption")');
+    expect(diagram).not.toContain('t("legend")');
+    expect(overview).toContain('t("diagram.transition")');
   });
 
   it("frames the diagram as all of Tessera and gives AI agents a visual centre", () => {
     expect(diagram).toContain('useTranslations("app")');
-    expect(diagram).toContain('page("closing.title")');
+    expect(diagram).not.toContain('page("closing.title")');
     expect(diagram).toContain('data-diagram-plane="business"');
     expect(diagram).toContain('data-diagram-plane="agents"');
     expect(diagram).toContain('data-diagram-plane="cockpit"');
@@ -168,7 +184,6 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(diagram).toContain('data-diagram-guard="true"');
     expect(diagram).toContain('data-diagram-guard-label="true"');
     expect(diagram).toContain("xl:h-12");
-    expect(diagram).toContain('data-contrast-label="flows"');
     expect(diagram).toContain('data-contrast-label="door"');
     expect(overview).toContain('data-contrast-label="questions"');
     expect(overview).toContain('data-contrast-label="moment"');

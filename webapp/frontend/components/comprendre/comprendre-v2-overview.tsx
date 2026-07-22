@@ -185,6 +185,9 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
       </section>
 
       <section className="py-10">
+        <p className="mb-4 text-sm font-medium text-[var(--tessera-text-muted)]">
+          {t("diagram.transition")}
+        </p>
         <ComprendreV2Diagram />
       </section>
 

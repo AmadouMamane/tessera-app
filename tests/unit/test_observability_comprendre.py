@@ -8,8 +8,12 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from tessera.agent.identity import current_conversation_id, current_turn_id
 from tessera.api.routes.observability import comprendre as comprendre_route
+from tessera.guard import audit as guard_audit
+from tessera.guard.adapter import check_user_input
 from tessera.observability import agent_release, comprendre, guard_activity, turn_evidence
+from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -65,6 +69,7 @@ def test_t1_reads_positive_counter_increases_inside_the_window() -> None:
 def _entry(
     when: datetime,
     *,
+    turn_id: str | None = None,
     outcome: str = "allowed",
     synthetic: bool | None = False,
     target: str = "user_input",
@@ -78,6 +83,8 @@ def _entry(
     }
     if synthetic is not None:
         entry["synthetic"] = synthetic
+    if turn_id is not None:
+        entry["turn_id"] = turn_id
     return entry
 
 
@@ -90,19 +97,84 @@ def _ledger(path: Path, entries: list[dict[str, Any]]) -> Path:
 def test_t3_counts_real_guard_entries_and_ignores_a_synthetic_turn(tmp_path: Path) -> None:
     since = _NOW - timedelta(hours=8)
     base = [
-        _entry(_NOW - timedelta(hours=2)),
-        _entry(_NOW - timedelta(hours=1), outcome="denied", synthetic=None),
+        _entry(_NOW - timedelta(hours=2), turn_id="real-allowed"),
+        _entry(
+            _NOW - timedelta(hours=1),
+            turn_id="real-denied",
+            outcome="denied",
+            synthetic=None,
+        ),
     ]
     before = guard_activity.exchange_counts_since(since, path=_ledger(tmp_path, base))
 
     # Mutation required by the spec: injecting a denied synthetic turn changes neither number.
     after = guard_activity.exchange_counts_since(
         since,
-        path=_ledger(tmp_path, [*base, _entry(_NOW, outcome="denied", synthetic=True)]),
+        path=_ledger(
+            tmp_path,
+            [
+                *base,
+                _entry(
+                    _NOW,
+                    turn_id="synthetic-denied",
+                    outcome="denied",
+                    synthetic=True,
+                ),
+            ],
+        ),
     )
 
     assert before == guard_activity.GuardExchangeCounts(controlled=2, blocked=1)
     assert after == before
+
+
+def test_t3_excludes_before_midnight_and_direct_guard_probes(tmp_path: Path) -> None:
+    since = comprendre.paris_midnight(_NOW)
+    entries = [
+        _entry(since - timedelta(microseconds=1), turn_id="yesterday"),
+        _entry(since + timedelta(minutes=1), turn_id="real-allowed"),
+        _entry(
+            since + timedelta(minutes=2),
+            turn_id="real-denied",
+            outcome="denied",
+        ),
+        _entry(since + timedelta(minutes=3), outcome="denied"),
+        _entry(
+            since + timedelta(minutes=4),
+            turn_id="synthetic-denied",
+            outcome="denied",
+            synthetic=True,
+        ),
+    ]
+
+    assert guard_activity.exchange_counts_since(
+        since, path=_ledger(tmp_path, entries)
+    ) == guard_activity.GuardExchangeCounts(controlled=2, blocked=1)
+
+
+def test_allowed_input_is_journaled_with_its_server_turn_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ledger = tmp_path / "audit.log"
+    settings = get_settings()
+    monkeypatch.setattr(settings.guard, "audit_file", ledger)
+    monkeypatch.setattr(settings.guard, "audit_sink", "file")
+    monkeypatch.setattr(guard_audit, "_last_hash", None)
+    conversation_token = current_conversation_id.set("conversation-real")
+    turn_token = current_turn_id.set("turn-real")
+    try:
+        result = check_user_input("Bonjour, quel est le solde de mon compte ?")
+    finally:
+        current_turn_id.reset(turn_token)
+        current_conversation_id.reset(conversation_token)
+
+    assert result.allowed is True
+    entries = [json.loads(line) for line in ledger.read_text().splitlines() if line.strip()]
+    assert len(entries) == 1
+    assert entries[0]["outcome"] == "allowed"
+    assert entries[0]["conversation_id"] == "conversation-real"
+    assert entries[0]["turn_id"] == "turn-real"
 
 
 def test_t3_day_starts_at_midnight_europe_paris_in_summer_and_winter() -> None:

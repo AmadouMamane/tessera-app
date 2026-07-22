@@ -491,7 +491,7 @@ def emit_audit(
       it from a verified session; :meth:`Actor.system` names a non-human origin out loud. Both
       are explicit, and that is the point — omission is not one of the options.
     """
-    from tessera.agent.identity import resolve_agent_id
+    from tessera.agent.identity import current_conversation_id, current_turn_id, resolve_agent_id
     from tessera.observability.business_events import is_synthetic_turn
     from tessera.settings import LLMProfile, get_settings
 
@@ -517,6 +517,12 @@ def emit_audit(
         actor=actor,
         synthetic=is_synthetic_turn(),
     )
+    conversation_id = current_conversation_id.get()
+    turn_id = current_turn_id.get()
+    if conversation_id is not None:
+        entry["conversation_id"] = conversation_id
+    if turn_id is not None:
+        entry["turn_id"] = turn_id
     _append_to_chain(entry, sink, settings.guard.audit_file)
 
 

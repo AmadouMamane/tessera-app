@@ -322,6 +322,16 @@ def check_user_input(
             )
         )
 
+    emit_audit(
+        target="user_input",
+        arguments={"text": "[redacted — input checked]"},
+        decisions=records,
+        sink=settings.guard.audit_sink,
+        actor=GUARD_ACTOR,
+        outcome="allowed",
+    )
+    _record_guard_decision("user_input", "allowed")
+
     return InputCheckResult(
         allowed=True,
         sanitised_text=sanitised,

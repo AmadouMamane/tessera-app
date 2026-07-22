@@ -228,6 +228,48 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   `cc1d4f5c5df7`** ; chaque passage valide TypeScript, Biome (27 avertissements historiques),
   446 tests frontend, Ruff, format, mypy strict et 2 560 tests backend hors intégration.
 
+### Correctifs d'audit live
+
+- Source : Addendum 2 de `Tessera_private/revue-comprendre-v2-2026-07-22.md`, audit DOM live
+  du preview `:3098`. Verdict : approuvé sous condition AL-1 + AL-2 ; AL-3/4/5 pris dans la
+  même fenêtre.
+- **AL-1, mesure avant correction** : le backend du preview répond directement
+  `controlled_today=2365`, `blocked_today=2365`, `since=2026-07-22T00:00:00+02:00` ; le DOM
+  ne duplique donc pas `controlled_today` et l'hypothèse (a) est fausse. La requête sur le même
+  ledger Postgres donne 34 023 entrées `tessera.guard.audit/user_input` historiques, dont 2 365
+  depuis minuit Paris ; la borne SQL est donc appliquée et 2 365 n'est pas l'historique entier :
+  l'hypothèse (b) est fausse elle aussi.
+- **AL-1, vraie jambe** : les 2 365 entrées du jour sont toutes des refus
+  `injection.limes.deny`, émis par rafales de cas d'épreuve ; 2 249 prédatent le champ
+  `synthetic`, 116 portent `synthetic=false`, et aucune ne porte d'identité de tour. Le lecteur
+  comptait toute entrée d'audit `user_input` comme un échange contrôlé, alors que le seam
+  n'émet une entrée que lors d'un refus ou d'une transformation, jamais pour l'autorisation
+  ordinaire. Le dénominateur était donc le journal des exceptions, pas celui des échanges.
+- Correction retenue sur le seam S1 existant : corréler chaque décision de guard au `turn_id`
+  du tour chat, journaliser aussi l'autorisation ordinaire, puis ne compter que les décisions
+  liées à un tour et non synthétiques. Les appels directs d'épreuve sans tour ne deviennent plus
+  des chiffres métier ; les tours réels autorisés alimentent enfin le dénominateur.
+- **AL-1, mesure après correction** : sur le même ledger et la même borne
+  `2026-07-22T00:00:00+02:00`, le backend du preview répond
+  `controlled_today=null`, `blocked_today=null`. C'est l'honest-empty attendu : le stock du jour
+  ne contient aucun tour chat corrélé que le lecteur puisse honnêtement promouvoir en échange
+  métier. Le test frontend rend explicitement `{controlled: 3, blocked: 1}` et exige `3` puis `1` ;
+  la mutation qui relie `blocked` à `controlled_today` échoue, puis l'arbre restauré repasse vert.
+  Côté backend, une entrée d'avant minuit, une sonde directe et un tour synthétique sont exclus,
+  tandis qu'un tour réel autorisé et un tour réel refusé donnent exactement `2/1`.
+- **AL-2 à AL-5** : la phrase finale ne vit plus que dans la finale 8b ; le panneau reçoit une
+  caption neutre dédiée en FR/DE/EN. Les pastilles de légende supérieures ont disparu et les cartes
+  directionnelles restent l'unique légende, avec les couleurs déjà reprises par les flèches. Le
+  paragraphe introductif s'arrête avant la liste des quatre questions, portée uniquement par sa
+  carte, et une transition trilingue introduit désormais la géographie du schéma.
+- Validation ciblée avant atterrissage : 62 tests backend verts, 65 tests frontend verts,
+  TypeScript et Biome verts. Le contrôle DOM via le navigateur intégré est bloqué par sa politique
+  d'accès à l'URL locale ; aucun contournement n'a été tenté. La validation visuelle finale reste
+  donc celle du preview opérateur pendant le HALT éclair.
+- Owed hors lot, sans action : le monde du preview reste incohérent pour une démo tant que son
+  seed ne produit pas ensemble une spine et un ledger représentatifs. Le seed d'un monde cohérent
+  appartient à une passe dédiée.
+
 ## Questions bloquantes / déviations proposées
 
 Aucune. Si une déviation de contenu, de contrat ou de structure devenait nécessaire, elle sera écrite ici et le run s'arrêtera avant de la prendre.

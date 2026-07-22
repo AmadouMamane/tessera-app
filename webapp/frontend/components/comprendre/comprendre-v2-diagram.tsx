@@ -74,17 +74,15 @@ const agentTones = [
 ] satisfies VisualTone[];
 
 const flowVisuals = [
-  { icon: KeyRound, dot: "bg-sky-400", text: "text-sky-200", line: "bg-sky-400/60" },
-  { icon: Activity, dot: "bg-cyan-400", text: "text-cyan-200", line: "bg-cyan-400/60" },
+  { icon: KeyRound, text: "text-sky-200", line: "bg-sky-400/60" },
+  { icon: Activity, text: "text-cyan-200", line: "bg-cyan-400/60" },
   {
     icon: FlaskConical,
-    dot: "bg-violet-400",
     text: "text-violet-200",
     line: "bg-violet-400/60",
   },
   {
     icon: ScrollText,
-    dot: "bg-amber-400",
     text: "text-amber-200",
     line: "bg-amber-400/60",
   },
@@ -101,7 +99,6 @@ const panelGlowTones = {
 /** A readable map of Tessera's business, agent, governance and evidence planes. */
 export function ComprendreV2Diagram() {
   const app = useTranslations("app");
-  const page = useTranslations("comprendreV2");
   const t = useTranslations("comprendreV2.diagram");
   const columns = t.raw("columns") as DiagramColumn[];
   const flows = t.raw("flows") as DiagramFlow[];
@@ -125,7 +122,7 @@ export function ComprendreV2Diagram() {
         className="pointer-events-none absolute -right-32 top-24 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.09),transparent_70%)] blur-3xl"
       />
 
-      <header className="relative flex flex-wrap items-center justify-between gap-5 border-[var(--tessera-border)] border-b bg-[rgba(4,15,27,0.3)] px-5 py-5 sm:px-7">
+      <header className="relative flex items-center border-[var(--tessera-border)] border-b bg-[rgba(4,15,27,0.3)] px-5 py-5 sm:px-7">
         <div className="flex min-w-0 items-center gap-4">
           <span className="relative grid size-11 shrink-0 place-items-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-200 shadow-[0_0_28px_rgba(34,211,238,0.12)]">
             <Orbit className="size-6" aria-hidden="true" />
@@ -136,21 +133,8 @@ export function ComprendreV2Diagram() {
               {app("title")}
             </p>
             <p className="mt-1 max-w-[48rem] text-sm font-medium leading-6 text-[var(--tessera-text)]">
-              {page("closing.title")}
+              {t("caption")}
             </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <p
-            data-contrast-label="flows"
-            className="font-mono text-[0.6rem] font-medium tracking-[0.13em] text-[var(--tessera-text-muted)] uppercase"
-          >
-            {t("legend")}
-          </p>
-          <div aria-hidden="true" className="flex items-center gap-1.5">
-            {flowVisuals.map((visual) => (
-              <span key={visual.dot} className={`h-1.5 w-7 rounded-full ${visual.dot}`} />
-            ))}
           </div>
         </div>
       </header>

@@ -27,7 +27,7 @@ from starlette.responses import StreamingResponse
 
 from tessera.agent import build_graph, reporter as reporter_module
 from tessera.agent.grounding import select_grounded_citations
-from tessera.agent.identity import current_agent_id
+from tessera.agent.identity import current_agent_id, current_conversation_id, current_turn_id
 
 # Runtime (not TYPE_CHECKING): the §4 synthetic decision compares against
 # `Surface.COCKPIT_EMBEDDED`, so the enum member must exist at run time, not only for mypy.
@@ -869,6 +869,8 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
 ) -> AsyncIterator[bytes]:
     conversation_id = request.conversation_id or uuid.uuid4()
     turn_id = uuid.uuid4()
+    current_conversation_id.set(str(conversation_id))
+    current_turn_id.set(str(turn_id))
     language = request.language or get_settings().default_language
     pinned_confidence = 1.0 if request.language is not None else 0.0
     auth_state = session.auth_state
