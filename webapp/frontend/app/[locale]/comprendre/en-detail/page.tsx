@@ -29,36 +29,43 @@ export default async function ComprendreDetailPage({ params }: PageProps) {
 
   return (
     <ComprendreShell title={t("pageTitle")} description={t("pageLead")}>
-      <article className="mx-auto max-w-[46rem] pb-12">
+      <article className="mx-auto max-w-[76rem] pb-12">
         <ComprendreDiagram />
 
-        {sections.map((section) => (
-          <section key={section.heading} className="mt-10 first:mt-0">
-            <h2 className="font-semibold text-[1.05rem] text-[var(--tessera-text)]">
-              {section.heading}
-            </h2>
-            {section.body.map((paragraph) => (
-              <p
-                key={paragraph.slice(0, 48)}
-                className="mt-3 text-[0.9rem] text-[var(--tessera-text-muted)] leading-relaxed"
-              >
-                {paragraph}
-              </p>
-            ))}
-            {section.proof ? (
-              <p className="mt-4 border-[#7c5cf5]/50 border-l-2 pl-3 text-[0.82rem] text-[var(--tessera-text-muted)] italic">
-                <Link
-                  href={section.proof.href}
-                  className="font-medium text-[#b9a6ff] not-italic hover:text-white"
-                >
-                  {t("proofLabel")}
-                </Link>
-                {t("proofSeparator")}
-                {section.proof.text}
-              </p>
-            ) : null}
-          </section>
-        ))}
+        <div className="mt-10 divide-y divide-[var(--tessera-border)] border-[var(--tessera-border)] border-y">
+          {sections.map((section) => (
+            <section
+              key={section.heading}
+              className="grid gap-4 py-8 lg:grid-cols-[minmax(12rem,18rem)_minmax(0,1fr)] lg:gap-10"
+            >
+              <h2 className="font-semibold text-[1.05rem] text-[var(--tessera-text)]">
+                {section.heading}
+              </h2>
+              <div className="max-w-[58rem]">
+                {section.body.map((paragraph) => (
+                  <p
+                    key={paragraph.slice(0, 48)}
+                    className="mt-3 first:mt-0 text-[0.9rem] leading-relaxed text-[var(--tessera-text-muted)]"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+                {section.proof ? (
+                  <p className="mt-4 border-[#7c5cf5]/50 border-l-2 pl-3 text-[0.82rem] text-[var(--tessera-text-muted)] italic">
+                    <Link
+                      href={section.proof.href}
+                      className="font-medium text-[#b9a6ff] not-italic hover:text-white"
+                    >
+                      {t("proofLabel")}
+                    </Link>
+                    {t("proofSeparator")}
+                    {section.proof.text}
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          ))}
+        </div>
       </article>
     </ComprendreShell>
   );

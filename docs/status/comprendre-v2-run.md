@@ -149,6 +149,37 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   navigateur alternatif n'a été utilisé. La validation visuelle finale reste donc à faire dans
   l'onglet opérateur déjà ouvert avant de considérer cette correction comme validée visuellement.
 
+### Seconde revue corrective — plafond typographique, philosophie du schéma, largeur en détail
+
+- Retour opérateur : aucun texte du corps ne doit dépasser « Comprendre Tessera — en 3 minutes »
+  dans le header ; le schéma restait réducteur en faisant de la porte à sens unique son introduction
+  et du contrôle en ligne son bandeau principal ; la forme souhaitée est plus proche de D pour les
+  couleurs, les icônes et l'entête. `/comprendre/en-detail` était trop étroit.
+- Relecture avant code : `AGENTS.md` → spec privée → playbook, puis `README.md`, `docs/design.md`,
+  `docs/safety.md`, `docs/differentiation.md` et ADR 0011, 0013, 0015, 0019, 0021, 0022, 0028.
+  L'intention retenue n'est pas « un firewall central » : Tessera assemble le plan métier, des agents
+  qui publient leurs faits, un plan de gouvernance, une invocation déclarée, quatre couches de qualité
+  et un registre possédé pour ce qui gate ou prouve.
+- Le schéma reste un composant HTML/CSS responsive, accessible et trilingue. Il reprend la grammaire
+  visuelle de D : bleu pour les espaces métier, émeraude pour les agents, violet pour le cockpit,
+  ambre pour le registre ; cartes iconographiées, entête de « salle des machines », deux rails nommés
+  pour télémétrie/tests. Le bouclier est replacé sur sa couture, le registre reste séparé et la phrase
+  de la porte descend en note de frontière. Aucun texte fermé n'est modifié ni supprimé.
+- `SectionHeader` et la conclusion passent à `text-xl` (1,25 rem), donc sous le `h1` standard du
+  cockpit (1,45 rem). Un ratchet parcourt les sources et refuse les tailles Tailwind `2xl+` ainsi que
+  toute taille arbitraire supérieure à 1,45 rem.
+- `/comprendre/en-detail` adopte le même conteneur `max-w-[76rem]` que `/comprendre`. Ses sections
+  utilisent une grille éditoriale titre/prose afin d'occuper la largeur sans produire des lignes de
+  texte illisiblement longues.
+- Aucun catalogue FR/DE/EN, claim, fait, route ou contrat de données n'a changé. TypeScript vert ;
+  Biome ciblé vert ; **59 tests ciblés verts** (28 contrat `/comprendre` + 31 ratchet numérique).
+  Les routes `/fr/comprendre` et `/fr/comprendre/en-detail` répondent toutes deux HTTP 200 sur le
+  preview `:3098`. La validation visuelle reste celle de l'opérateur dans l'onglet ouvert, la politique
+  du navigateur intégré interdisant toujours la lecture automatisée de localhost.
+- `make gate-twice` : **TWICE-GREEN sur un seul arbre `b3fcb1124083`** ; chaque passage valide
+  TypeScript, Biome (27 avertissements historiques), 444 tests frontend, Ruff, format, mypy strict
+  et 2 560 tests backend hors intégration.
+
 ## Questions bloquantes / déviations proposées
 
 Aucune. Si une déviation de contenu, de contrat ou de structure devenait nécessaire, elle sera écrite ici et le run s'arrêtera avant de la prendre.

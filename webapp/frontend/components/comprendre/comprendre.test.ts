@@ -89,10 +89,13 @@ describe("the harvested long reading remains available", () => {
   });
 
   it("the detail route reads the existing catalogue and the concise page links to it", () => {
-    expect(read("app/[locale]/comprendre/en-detail/page.tsx")).toContain('t.raw("sections")');
-    expect(read("components/comprendre/comprendre-v2-overview.tsx")).toContain(
-      'href="/comprendre/en-detail"',
-    );
+    const detail = read("app/[locale]/comprendre/en-detail/page.tsx");
+    const overview = read("components/comprendre/comprendre-v2-overview.tsx");
+    expect(detail).toContain('t.raw("sections")');
+    expect(overview).toContain('href="/comprendre/en-detail"');
+    expect(detail).toContain("max-w-[76rem]");
+    expect(overview).toContain("max-w-[76rem]");
+    expect(detail).not.toContain("max-w-[46rem]");
   });
 
   it("does not carry the abandoned timeline navigation", () => {
@@ -139,10 +142,26 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(diagram).not.toMatch(/Espaces métier|Registre d.audit|Télémétrie/);
   });
 
-  it("keeps the cockpit header as the only visible page title and explains flows without arrows", () => {
+  it("keeps the cockpit header as the only visible page title and gives each arrow one rail", () => {
     expect(overview).not.toContain('t("hero.title")');
-    expect(diagram).not.toMatch(/ArrowLeft|ArrowRight|ArrowDown/);
+    expect(overview).not.toContain('t("diagram.door")');
+    expect(diagram).toContain("function GuardBridge");
+    expect(diagram).toContain("function ExchangeBridge");
+    expect(diagram).toMatch(/ArrowLeft|ArrowRight|ArrowDown/);
+    expect(diagram).toContain('t("shield")');
+    expect(diagram).toContain('t("door")');
     expect(diagram).toContain('t("legend")');
+  });
+
+  it("never renders copy larger than the standard cockpit header title", () => {
+    const sources = `${overview}\n${diagram}`;
+    const arbitraryRemSizes = [...sources.matchAll(/text-\[(\d+(?:\.\d+)?)rem\]/g)].map(
+      ([, value]) => Number(value),
+    );
+
+    expect(read("components/layout/app-header.tsx")).toContain("text-[1.45rem]");
+    expect(sources).not.toMatch(/text-(?:2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)/);
+    expect(arbitraryRemSizes.every((size) => size <= 1.45)).toBe(true);
   });
 });
 

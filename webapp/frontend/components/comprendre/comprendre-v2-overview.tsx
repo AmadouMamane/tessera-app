@@ -182,9 +182,6 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
       </section>
 
       <section className="py-10">
-        <p className="mb-6 max-w-3xl border-[var(--tessera-green)] border-l-2 pl-4 text-sm leading-7 text-[var(--tessera-text-muted)]">
-          {t("diagram.door")}
-        </p>
         <ComprendreV2Diagram />
       </section>
 
@@ -455,7 +452,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
       <section className="overflow-hidden rounded-3xl border border-[var(--tessera-border-strong)] bg-[linear-gradient(135deg,var(--tessera-surface-elevated),var(--tessera-surface))] shadow-[var(--shadow-card-elevated)]">
         <div className="grid gap-8 p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <h2 className="max-w-3xl text-balance text-2xl leading-snug font-semibold tracking-[-0.015em] text-[var(--tessera-text)]">
+            <h2 className="max-w-3xl text-balance text-xl leading-snug font-semibold tracking-[-0.015em] text-[var(--tessera-text)]">
               {t("closing.title")}
             </h2>
             <p className="mt-5 max-w-4xl text-base leading-relaxed text-[var(--tessera-text-muted)]">
@@ -489,7 +486,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
 function SectionHeader({ title, body }: { title: string; body?: string }) {
   return (
     <header className="max-w-3xl">
-      <h2 className="text-balance text-[clamp(1.45rem,2vw,1.85rem)] leading-snug font-semibold tracking-[-0.015em] text-[var(--tessera-text)]">
+      <h2 className="text-balance text-xl leading-snug font-semibold tracking-[-0.015em] text-[var(--tessera-text)]">
         {title}
       </h2>
       {body ? (
