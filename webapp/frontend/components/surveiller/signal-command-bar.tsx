@@ -153,6 +153,7 @@ export function SignalCommandBar({
   sloTarget,
   hasPresentScore = false,
   liveStatus,
+  scopeFilter = true,
 }: {
   temporal: Temporal;
   timeline?: TimelineReport;
@@ -160,6 +161,12 @@ export function SignalCommandBar({
   /** True when a present quality score exists, so the "Maintenant" baseline is real. */
   hasPresentScore?: boolean;
   liveStatus: string;
+  /**
+   * Whether the page's content honours the `?agent=` scope. A page whose queries
+   * ignore it (e.g. PROUVER / Preuves & exporteurs — org-wide stores) passes false:
+   * a filter chip that filters nothing is a phantom control (registre, purge v1.5).
+   */
+  scopeFilter?: boolean;
 }) {
   const t = useTranslations("overview.time");
   // Reading, panel-open and the comparison lens all live in the shared temporal
@@ -204,6 +211,8 @@ export function SignalCommandBar({
     queryKey: ["fleet-scope-filter"],
     queryFn: ({ signal }) => fetchFleet(signal),
     staleTime: 60_000,
+    // Only fetched for the scoped-agents count; a scope-less page never reads it.
+    enabled: scopeFilter,
   });
   const fleetCount = fleet.data?.agents?.length ?? 0;
   const dataRange = useDataRange();
@@ -267,15 +276,26 @@ export function SignalCommandBar({
           ? t("vuePeriod", { from: fromText, to: toText })
           : t("modeHistory");
 
-  // Contextual micro-line — describes ONLY the active state (registre §3).
-  const agents = (
-    <Suspense
-      key="agents"
-      fallback={<span className="tabular-nums">{t("agentsObserved", { n: fleetCount })}</span>}
-    >
-      <ObservedAgentsLabel fleetCount={fleetCount} />
-    </Suspense>
-  );
+  // Contextual micro-line — describes ONLY the active state (registre §3). The
+  // agents segment (scoped count) only exists where the scope filter does: a page
+  // whose content ignores `?agent=` neither filters nor claims a scoped count.
+  const agentSegments: { key: string; node: ReactNode }[] = scopeFilter
+    ? [
+        {
+          key: "agents",
+          node: (
+            <Suspense
+              key="agents"
+              fallback={
+                <span className="tabular-nums">{t("agentsObserved", { n: fleetCount })}</span>
+              }
+            >
+              <ObservedAgentsLabel fleetCount={fleetCount} />
+            </Suspense>
+          ),
+        },
+      ]
+    : [];
   let microSegments: { key: string; node: ReactNode }[];
   if (reading === "live") {
     microSegments = [
@@ -290,7 +310,7 @@ export function SignalCommandBar({
             },
           ]
         : []),
-      { key: "agents", node: agents },
+      ...agentSegments,
     ];
   } else if (reading === "asof") {
     microSegments = asOfText
@@ -298,7 +318,7 @@ export function SignalCommandBar({
           // "État au {T} · {n} agents observés" — the ambiguous "actions appliquées
           // au présent" is removed from the micro-line (and the rail).
           { key: "state", node: <span>{t("microStateAt", { time: asOfText })}</span> },
-          { key: "agents", node: agents },
+          ...agentSegments,
         ]
       : [{ key: "pick", node: <span>{t("microPickInstant")}</span> }];
   } else {
@@ -312,7 +332,7 @@ export function SignalCommandBar({
             <span>{t("modeHistory")}</span>
           ),
       },
-      { key: "agents", node: agents },
+      ...agentSegments,
       {
         key: "compare",
         node: <span>{t("microComparison", { compare: compareLabel(compare, t) })}</span>,
@@ -380,8 +400,9 @@ export function SignalCommandBar({
             options={PERIODS.map((p) => ({ value: p, label: t(p) }))}
           />
         )}
-        {/* Agents — global scope filter (URL-driven, self-contained chip). */}
-        <AgentScopeFilter contentClassName="sr01-menu" />
+        {/* Agents — global scope filter (URL-driven, self-contained chip). Only on
+            pages whose content honours the scope (never a phantom control). */}
+        {scopeFilter ? <AgentScopeFilter contentClassName="sr01-menu" /> : null}
         {/* Comparer à — same level as Lecture/Période/Agents, in ALL readings; only
             computable references are selectable, the rest are disabled with a reason.
             "À un instant" before a day is picked: nothing to compare yet, so the

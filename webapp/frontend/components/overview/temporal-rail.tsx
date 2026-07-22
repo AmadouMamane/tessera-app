@@ -351,7 +351,10 @@ export function TemporalRail({
   if (mode === "live" && !embedded) {
     const last = timeline ? new Date(timeline.window_end) : null;
     return (
-      <section className="flex min-h-[42px] flex-wrap items-center gap-3 border-y border-[var(--tessera-border)] bg-transparent px-1 py-2">
+      // Instrument surface (sr01-strip): a rail is a temporal control instrument,
+      // visually distinct from the page's content cards — same lacquered chrome
+      // as the SURVEILLER command bar, in compact form.
+      <section className="sr01-strip flex min-h-[46px] flex-wrap items-center gap-3 rounded-2xl px-3 py-2 backdrop-blur-md">
         <Badge className="rounded-md border-[#005c42] bg-[#003f30] px-3 py-1 text-[#7ff0b6]">
           {t("live")}
         </Badge>
@@ -450,7 +453,10 @@ export function TemporalRail({
       className={cn(
         embedded
           ? "pt-1"
-          : "rounded-md border border-[#9a5f18]/60 bg-[var(--tessera-surface)] p-4 shadow-[var(--shadow-card)]",
+          : // Standalone expanded rail: the same lacquered instrument surface as
+            // the SURVEILLER command bar (sr01-strip) — a rail must read as the
+            // page's temporal instrument, never as one more content card.
+            "sr01-strip sr01-strip-expanded rounded-2xl p-4 backdrop-blur-md",
       )}
     >
       {/* Auto-sized controls (no wrap); only the "viewing-at" value is fixed-width

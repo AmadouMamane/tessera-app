@@ -51,7 +51,9 @@ export function AgirRail() {
   return (
     <section
       data-testid="agir-rail"
-      className="flex min-h-[44px] shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-1.5 text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+      // Instrument surface (sr01-strip): every temporal rail wears the same
+      // lacquered chrome, visually distinct from the page's content cards.
+      className="sr01-strip flex min-h-[44px] shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl px-3 py-1.5 text-xs backdrop-blur-md"
     >
       <span
         className={cn(

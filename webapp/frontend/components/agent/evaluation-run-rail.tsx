@@ -97,7 +97,9 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
   return (
     <section
       className={cn(
-        "flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
+        // Instrument surface (sr01-strip): ER-01 is a temporal rail — it wears the
+        // same lacquered chrome as every rail, distinct from the content cards.
+        "sr01-strip flex min-w-0 flex-col gap-2 rounded-2xl p-3 backdrop-blur-md",
         className,
       )}
     >

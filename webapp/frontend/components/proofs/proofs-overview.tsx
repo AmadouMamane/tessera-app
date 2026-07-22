@@ -21,11 +21,8 @@ import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
-import {
-  TemporalRail,
-  useRailTimeline,
-  useTemporalState,
-} from "@/components/overview/temporal-rail";
+import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
+import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
@@ -215,17 +212,20 @@ export function ProofsOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
-      <TemporalRail
-        mode={temporal.mode}
-        liveStatus={t("rail.realtime")}
+      {/* THE SR-01 command bar — the same component as SURVEILLER / Vue d'ensemble
+          (registre §1: same substrate S4 ⇒ same base component, same instrument
+          chrome). No agent-scope filter: the proofs stores are org-wide and the
+          page's queries ignore `?agent=` — a filter that filters nothing would be
+          a phantom control. No sloTarget/hasPresentScore either: no quality target
+          lives on this page, so "Comparer à" is honestly disabled-with-reason
+          (the old standalone rail showed an "objectif" baseline it could never
+          compute). The business zones below stay live — the as-of re-read of the
+          proofs payload is the registered promotion path, not faked here. */}
+      <SignalCommandBar
+        temporal={temporal}
         timeline={railTimeline.data}
-        selectedAt={temporal.selectedAt}
-        onSelectedAtChange={temporal.setSelectedAt}
-        periodKey={temporal.periodKey}
-        onPeriodChange={temporal.setPeriodKey}
-        windowEnd={temporal.windowEnd}
-        onPickDate={temporal.pickDate}
-        onModeChange={temporal.changeMode}
+        liveStatus={t("rail.realtime")}
+        scopeFilter={false}
       />
 
       <div id="proofs-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">

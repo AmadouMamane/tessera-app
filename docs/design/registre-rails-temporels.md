@@ -1,6 +1,23 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.7 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.8 (2026-07-22)
+>
+> v1.8 — convergence visuelle et honnêteté des instances SR-01, après balayage **page par
+> page** (l'unité d'audit v1.5 était le rail ; celle-ci est la page). (1) **Un rail porte la
+> surface instrument** (`sr01-strip`, laque sombre à liseré cyan) — il se distingue de toute
+> carte de contenu ; appliqué au rail standalone (Prompts, Garde-fous, Évaluations), à
+> l'agir-rail et à l'ER-01 ; le PeriodRail (Fiabilité & coût) reste une **carte d'agrégats**,
+> pas un instrument de navigation — il ne porte pas ce chrome. (2) **Preuves & exporteurs rend
+> désormais LE `SignalCommandBar`** de la Vue d'ensemble (même composant, même substrat S4)
+> au lieu d'une variante appauvrie — sans filtre Agents (les magasins de preuve sont org-wide,
+> un filtre qui ne filtre rien est un contrôle fantôme) et sans baseline objectif (l'ancien
+> rail affichait « Comparer à objectif » sans jamais pouvoir le calculer ; désormais
+> désactivé-avec-raison). Écart dit tel quel : les zones métier de la page restent **live** —
+> la relecture as-of du payload proofs (`compute_proofs_overview` n'a pas de paramètre `asof`)
+> est le chemin de promotion, pas simulée. (3) Écarts constatés au balayage, nommés :
+> **Qualité IA** et **Amélioration** ne rendent **aucun** scrubber (la note SR-01 v1.3
+> prétendait Qualité IA ; c'était faux) — à faire ; le composant orphelin
+> `assistant-overview.tsx` (rail fantôme jamais routé) est **supprimé**.
 >
 > v1.7 — WF-01 passe à **Implémenté** : le substrat manquant est construit — journal
 > **append-only** des transitions de cas (`operator_items_transitions.jsonl`,
@@ -77,9 +94,25 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Partiel — timeline implémentée |
 | **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | Implémenté — journal + timeline (note) |
 | **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | Implémenté — cassette (note) |
-| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (toutes) | S4 | C4 | Implémenté |
+| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (4/7 pages) · `PROUVER / Preuves & exporteurs` · standalone : Prompts, Garde-fous, Évaluations (note v1.8) | S4 | C4 | Implémenté — Qualité IA/Amélioration à faire |
 
 > **SR-01 (état au 2026-06-27)** — implémenté comme `components/overview/temporal-rail.tsx`, rendu par les pages SURVEILLER (Vue d'ensemble, Qualité IA, Conformité, Sécurité & privacy). Modes **Live · Historique · Comparé (baseline) · À une date** — navigation de **signaux** uniquement (S4/C4). **Aucun replay d'exécution** : ce composant ne rejoue jamais un tour/trace (déplacement d'un curseur T sur les signaux persistés, lus as-of-T). Mode actif **toujours affiché** ; état dérivé de l'**URL** (deep-link `?asof=&period=` — le paramètre de fenêtre s'appelle `period`, corrigé v1.5, plus `at`/`to`/`compare`), pas d'un état local ; fenêtre (Période) lue depuis le **window-store partagé**, non dupliquée (§8). Le code de rail (`SR-01`) reste interne — **jamais affiché** (§ glossaire). Auparavant mal nommé « XT-01 » sur la Vue d'ensemble : corrigé.
+
+> **SR-01 (état au 2026-07-22, v1.8) — homes réels et chrome instrument.** Le **command bar**
+> (`signal-command-bar.tsx`, enveloppe premium du composant de base `temporal-rail.tsx` en mode
+> `embedded`) est rendu par **4 pages SURVEILLER** (Vue d'ensemble, Sécurité & privacy,
+> Conformité, Observabilité — leurs requêtes de contenu consomment `asOf`/`scope`) **et par
+> PROUVER / Preuves & exporteurs** (v1.8 : même composant, `scopeFilter=false` car les magasins
+> de preuve sont org-wide, pas de baseline objectif ; les zones métier restent live — la
+> relecture as-of du payload proofs est un chantier nommé, jamais simulée). Le **rail
+> standalone** (même composant de base, chrome instrument, sans filtre org) est rendu par
+> Prompts, Garde-fous et Évaluations (cf. note OT-01 : ces pages rendent SR-01, pas un OT-01).
+> **Écart** : Qualité IA et Amélioration ne rendent aucun scrubber (la note v1.3 « rendu par
+> Qualité IA » était fausse) ; Fiabilité & coût rend le `PeriodRail` (agrégats de période —
+> volontairement pas un scrubber). Promotion : brancher le bar sur ces pages **exige** que
+> leurs requêtes consomment `asOf` (le poser sans câblage recréerait le mode cosmétique purgé
+> en v1.5). **Norme visuelle (§5)** : tout rail temporel porte la surface instrument
+> (`sr01-strip`) — jamais le chrome d'une carte de contenu.
 
 > **XT-01** — homes `AGENT / Console` (waterfall live du tour courant, SSE) et `AGIR / Replay` (lentille cassette sur les captures persistées). Il **n'est plus** sur la Vue d'ensemble. Implémenté au 2026-07-22 — voir la note datée XT-01 plus bas.
 
@@ -203,6 +236,13 @@ Rail({
 ```
 
 Le **mode actif est toujours affiché** dans le rail, et l'état/surlignage **dérive de l'URL** (deep-link), jamais d'un état local.
+
+**Norme visuelle (v1.8)** — un rail est un **instrument de contrôle temporel**, pas du contenu :
+il porte la surface instrument (`sr01-strip` — laque sombre, liseré cyan, `rounded-2xl`) qui le
+distingue au premier regard des cartes de contenu de la page. Un panneau d'**agrégats** (ex.
+`PeriodRail`) n'est pas un instrument de navigation et ne porte pas ce chrome. Corollaire
+d'honnêteté : un contrôle du rail qui ne pilote rien sur la page (filtre de scope ignoré,
+baseline incalculable) est **masqué ou désactivé-avec-raison**, jamais rendu actif.
 
 ## 6. Compositions autorisées
 
