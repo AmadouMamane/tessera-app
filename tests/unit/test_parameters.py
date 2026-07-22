@@ -7,6 +7,11 @@ payload matches — so the test proves *derivation*, never a hard-coded snapshot
 
 from __future__ import annotations
 
+import os
+import re
+import subprocess
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -196,3 +201,93 @@ class TestOverrideRowsAsOf:
         assert rows[0].author == "ops@tessera"
         assert rows[0].updated_at.isoformat() == "2026-07-22T10:00:00+00:00"
         assert rows[0].reason == "essai"
+
+
+class TestPolicySocleAsOf:
+    """The policy socle at T is read from git history — or an honest None."""
+
+    @staticmethod
+    def _seed_repo(tmp_path: Path) -> Path:
+        """A throwaway repo with policy.yaml committed at two controlled instants."""
+        repo = tmp_path / "repo"
+        target = repo / "src" / "tessera" / "guard" / "policy.yaml"
+        target.parent.mkdir(parents=True)
+        base = Path("src/tessera/guard/policy.yaml").read_text(encoding="utf-8")
+
+        def run(*args: str, date: str | None = None) -> None:
+            env = dict(
+                os.environ,
+                GIT_AUTHOR_NAME="Alice",
+                GIT_AUTHOR_EMAIL="alice@example.org",
+                GIT_COMMITTER_NAME="Alice",
+                GIT_COMMITTER_EMAIL="alice@example.org",
+            )
+            if date is not None:
+                env["GIT_AUTHOR_DATE"] = date
+                env["GIT_COMMITTER_DATE"] = date
+            subprocess.run(  # noqa: S603 — fixed argv, throwaway repo
+                ["git", "-C", str(repo), *args],  # noqa: S607
+                check=True,
+                capture_output=True,
+                env=env,
+            )
+
+        repo.mkdir(exist_ok=True)
+        run("init", "-q")
+        target.write_text(base, encoding="utf-8")
+        run("add", ".")
+        run("commit", "-qm", "policy v1", date="2026-01-01T00:00:00Z")
+        bumped = re.sub(r"^version:.*$", "version: 99", base, count=1, flags=re.M)
+        assert bumped != base, "the fixture must actually change the version line"
+        target.write_text(bumped, encoding="utf-8")
+        run("add", ".")
+        run("commit", "-qm", "policy v99", date="2026-06-01T00:00:00Z")
+        return repo
+
+    def test_the_commit_at_or_before_t_wins(self, tmp_path: Path) -> None:
+        from tessera.observability import parameters as parameters_mod
+
+        repo = self._seed_repo(tmp_path)
+        first = parameters_mod.policy_socle_as_of("2026-03-01T00:00:00Z", repo_root=repo)
+        assert first is not None
+        assert first.version != "99"  # the June commit does not exist in March
+        assert first.committed_by == "Alice"
+        assert first.committed_at.year == 2026 and first.committed_at.month == 1
+
+        second = parameters_mod.policy_socle_as_of("2026-07-01T00:00:00Z", repo_root=repo)
+        assert second is not None
+        assert second.version == "99"
+
+    def test_cannot_say_is_none_never_empty(self, tmp_path: Path) -> None:
+        from tessera.observability import parameters as parameters_mod
+
+        repo = self._seed_repo(tmp_path)
+        # Before the first commit: the file has no history at T.
+        assert parameters_mod.policy_socle_as_of("2025-01-01T00:00:00Z", repo_root=repo) is None
+        # No repository at all (a container image): cannot say.
+        bare = tmp_path / "not-a-repo"
+        bare.mkdir()
+        assert parameters_mod.policy_socle_as_of("2026-07-01T00:00:00Z", repo_root=bare) is None
+        # A malformed instant never raises.
+        assert parameters_mod.policy_socle_as_of("not-a-date", repo_root=repo) is None
+
+    def test_compute_reads_the_folded_policy_numbers(self) -> None:
+        from tessera.observability import parameters as parameters_mod
+
+        at_t = parameters_mod.PolicySocleAtT(
+            version="9.9",
+            n_deny=1,
+            n_transforms=2,
+            n_pii=3,
+            n_tools=4,
+            committed_at=datetime(2026, 6, 1, tzinfo=UTC),
+            committed_by="Alice",
+        )
+        payload = parameters_mod.compute_parameters_overview("fr", policy_at=at_t)
+        version = payload["config_version"]
+        assert isinstance(version, dict)
+        assert version["version"] == "policy v9.9"
+        assert version["modified_by"] == "Alice"
+        kpis = {k["key"]: k["value"] for k in payload["kpis"]}  # type: ignore[union-attr,index]
+        assert kpis["policies"] == str(4 + 1 + 2 + 3)
+        assert kpis["security_rules"] == str(1 + 2 + 3)

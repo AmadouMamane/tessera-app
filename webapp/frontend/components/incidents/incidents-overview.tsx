@@ -25,6 +25,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
+import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
@@ -89,18 +90,25 @@ type TabKey = (typeof TABS)[number];
 
 export function IncidentsOverview() {
   const t = useTranslations("incidents");
+  const tr = useTranslations("agirRail");
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const qc = useQueryClient();
+  // AGIR As-of + Live (registre §6): the reading derives from `?asof=` and the
+  // backend replays the posture at T; while As-of every mutation is frozen —
+  // one does not act in the past.
+  const asof = useAsOf();
+  const frozen = asof !== null;
   const { data } = useQuery({
-    queryKey: ["incidents-overview", locale],
-    queryFn: ({ signal }) => fetchIncidentsOverview(locale, signal),
+    queryKey: ["incidents-overview", locale, asof ?? null],
+    queryFn: ({ signal }) => fetchIncidentsOverview(locale, asof, signal),
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: asof ? false : 30_000,
   });
   // Lot 10 — the durable incident lifecycle: every act is governed and
-  // journalled server-side; the fresh payload swaps in on success.
-  const swap = (fresh: Data) => qc.setQueryData(["incidents-overview", locale], fresh);
+  // journalled server-side; the fresh payload swaps in on success, always
+  // under the LIVE key (mutations only run live).
+  const swap = (fresh: Data) => qc.setQueryData(["incidents-overview", locale, null], fresh);
   const [showCreate, setShowCreate] = useState(false);
   const create = useMutation({
     mutationFn: (vars: { title: string; severity: string; domain: string }) =>
@@ -139,8 +147,16 @@ export function IncidentsOverview() {
         onExport={() =>
           downloadBlob("tessera-incidents.json", "application/json", JSON.stringify(data, null, 2))
         }
+        frozen={frozen}
       />
-      {showCreate ? (
+      {/* Registre §6/§8 — AGIR carries As-of + Live, never the SURVEILLER
+          signal scrubber (SR-01). The fold is real since v1.12: deny window
+          ending at T, bundles ≤ T, durable incidents replayed at T. */}
+      <AgirRail />
+      {frozen ? (
+        <output className="text-[0.66rem] text-amber-300">{tr("frozenTitle")}</output>
+      ) : null}
+      {showCreate && !frozen ? (
         <CreateIncidentForm
           t={t}
           busy={create.isPending}
@@ -153,11 +169,8 @@ export function IncidentsOverview() {
         data={data}
         onTransition={(id, status) => transition.mutate({ incident_id: id, status })}
         onPlaybook={(id, pb) => playbook.mutate({ incident_id: id, playbook_id: pb })}
-        busy={transition.isPending || playbook.isPending}
+        busy={transition.isPending || playbook.isPending || frozen}
       />
-      {/* Registre des rails temporels §6/§8 — the SURVEILLER signal scrubber
-          (SR-01) does not belong on an AGIR page; removed in lot 5. The AGIR
-          As-of+Live rail arrives with this page's own as-of fold (lot 5b). */}
 
       {activeTab !== "overview" && data.tabs?.[activeTab] ? (
         <div className="flex min-w-0 flex-col gap-2">
@@ -487,12 +500,14 @@ function CommandBar({
   onSelect,
   onCreate,
   onExport,
+  frozen = false,
 }: {
   t: T;
   activeTab: TabKey;
   onSelect: (tab: TabKey) => void;
   onCreate: () => void;
   onExport: () => void;
+  frozen?: boolean;
 }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
@@ -514,6 +529,7 @@ function CommandBar({
         <Button
           size="sm"
           onClick={onCreate}
+          disabled={frozen}
           className="h-9 gap-2 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
         >
           <Plus className="h-4 w-4" /> {t("actions.createTicket")}

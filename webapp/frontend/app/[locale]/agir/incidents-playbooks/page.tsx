@@ -18,7 +18,9 @@ export async function generateMetadata({ params }: IncidentsPageProps) {
 
 async function prefetchIncidents(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["incidents-overview", locale],
+    // The trailing null is the client's `asof ?? null` — the SSR seed must live
+    // under the exact Live key or hydration misses it (Insight 175).
+    queryKey: ["incidents-overview", locale, null],
     queryFn: async () => {
       const response = await fetch(
         `${backendUrl()}/observability/incidents?lang=${encodeURIComponent(locale)}`,

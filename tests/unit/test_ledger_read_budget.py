@@ -262,7 +262,6 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
     "tessera/observability/etat_a_date.py": "OWED",
     "tessera/observability/governance_feed.py": "OWED",
     "tessera/observability/guard_explain.py": "OWED",
-    "tessera/observability/incidents.py": "OWED",
     "tessera/observability/integrations.py": "OWED",
     "tessera/observability/policies.py": "OWED",
     "tessera/observability/session_detail.py": "OWED",
@@ -271,9 +270,9 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
 }
 
 #: How many of them are a request path that still loads the ledger. **This may only go down.**
-#: 2026-07-22: agent_synthese paid its debt — the journal scan is bounded at the seam
-#: (``read_ledger_entries(since=, until=)``, SQL-side in postgres mode).
-OWED_COUNT = 16
+#: 2026-07-22: agent_synthese, then incidents, paid their debt — both journal scans are
+#: bounded at the seam (``read_ledger_entries(since=, until=)``, SQL-side in postgres mode).
+OWED_COUNT = 15
 
 #: The readers that cannot promise a bound. ``load_ledger_payloads_of_type`` is here ON PURPOSE:
 #: it is bounded only when the type is rare, and the type the cockpit reads most is 94 % of the

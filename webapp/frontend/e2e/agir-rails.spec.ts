@@ -61,22 +61,14 @@ test("the SURVEILLER signal scrubber is gone from every AGIR page", async ({ pag
     });
     await expect(page.getByRole("button", { name: "Voir l’historique" })).toHaveCount(0);
   }
-  // Automations, curation and replay carry the AGIR rail (each with a real
-  // server-side fold); incidents alone stays bare until its real store lands
-  // (lot 10) — a rail over a fixture would be a lie.
-  for (const target of [
-    "/fr/agir/automations",
-    "/fr/agir/curation-eval-set",
-    "/fr/agir/replay-shadow",
-  ]) {
+  // EVERY AGIR page carries the As-of + Live rail, each backed by a real
+  // server-side fold. Incidents joined in v1.12 — its posture is replayed at T
+  // (deny window ending at T, bundles ≤ T, durable incidents refolded from
+  // their journals), so the rail stopped being a lie and became due.
+  for (const target of pages) {
     await page.goto(target);
     await expect(page.getByTestId("agir-rail")).toBeVisible({ timeout: 20_000 });
   }
-  await page.goto("/fr/agir/incidents-playbooks");
-  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible({
-    timeout: 20_000,
-  });
-  await expect(page.getByTestId("agir-rail")).toHaveCount(0);
 });
 
 test("curation and replay deep-link their As-of and come back to live", async ({ page }) => {

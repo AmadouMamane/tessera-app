@@ -107,8 +107,10 @@ async def observability_parameters(lang: str = "fr", asof: str | None = None) ->
     Composes the active config version, posture KPIs, quick-config categories,
     recent parameters, configuration-state distribution and compliance checks.
     With ``asof`` the governed overrides are FOLDED from the hash-chained ledger
-    at T (OT-01 — "mes paramètres d'il y a 3 h"); the process posture stays live
-    and the UI scopes the claim accordingly.
+    at T (OT-01 — "mes paramètres d'il y a 3 h") and the POLICY socle is
+    reconstructed from git history at T when a repository is present
+    (``socle_policy_asof`` says which claim holds); the runtime posture stays
+    live and the UI scopes the claim accordingly.
     Degrades to ``available: false`` on failure.
     """
     try:
@@ -117,11 +119,17 @@ async def observability_parameters(lang: str = "fr", asof: str | None = None) ->
         # hand-edited instant reads live (État à date's tolerance): the
         # frontend chip derives from the same URL and falls back identically.
         folded: list[parameters_mod.OverrideRow] | None = None
+        policy_at: parameters_mod.PolicySocleAtT | None = None
         if asof:
             try:
                 folded = parameters_mod.override_rows_as_of(asof)
             except ValueError:
                 folded = None
+            if folded is not None:
+                # The provable slice of the socle: policy.yaml at T from git.
+                # None = CANNOT SAY (no repo, no commit at T) — the flag below
+                # keeps the UI's claim exact, never silently live-under-T.
+                policy_at = parameters_mod.policy_socle_as_of(asof)
         if folded is not None:
             override_rows = folded
         else:
@@ -149,7 +157,13 @@ async def observability_parameters(lang: str = "fr", asof: str | None = None) ->
                 override_rows = []
         return {
             "available": True,
-            **parameters_mod.compute_parameters_overview(lang, override_rows=override_rows),
+            # Which as-of claim holds for the socle: true = policy socle read
+            # from git at T; false = overrides only (repo absent / no commit).
+            # Live reads carry false — there is no as-of claim to scope.
+            "socle_policy_asof": policy_at is not None,
+            **parameters_mod.compute_parameters_overview(
+                lang, override_rows=override_rows, policy_at=policy_at
+            ),
         }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.parameters: failed: {exc}\n")

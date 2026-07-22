@@ -6917,7 +6917,8 @@
     },
     "asof": {
       "liveNote": "Configuration courante — les paramètres gouvernés affichés sont ceux en vigueur.",
-      "scope": "seuls les paramètres gouvernés (journal) sont relus à cet instant ; le socle process reste celui d'aujourd'hui"
+      "scope": "seuls les paramètres gouvernés (journal) sont relus à cet instant ; le socle process reste celui d'aujourd'hui",
+      "scopeWithPolicy": "paramètres gouvernés (journal) ET socle policy (git) relus à cet instant ; les valeurs runtime restent celles d'aujourd'hui"
     }
   },
   "inbox": {

@@ -110,8 +110,13 @@ export function ParametersOverview() {
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} onExport={onExport} />
       {/* As-of + Live composition (registre §6) — the SAME rail component as
-          AGIR, with the claim scoped to what this page truly re-reads at T. */}
-      <AgirRail liveNote={t("asof.liveNote")} asofNote={t("asof.scope")} />
+          AGIR, with the claim scoped to what this page truly re-reads at T:
+          the backend SAYS whether the policy socle was reconstructed from git
+          (socle_policy_asof), so the note never claims more than the payload. */}
+      <AgirRail
+        liveNote={t("asof.liveNote")}
+        asofNote={data.socle_policy_asof ? t("asof.scopeWithPolicy") : t("asof.scope")}
+      />
       <ConfigVersionBar t={t} data={data} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

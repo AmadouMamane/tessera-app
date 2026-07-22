@@ -3851,6 +3851,9 @@ const PaKpiSchema = z.object({
 
 export const ParametersOverviewSchema = z.object({
   available: z.boolean(),
+  // As-of only: true = the policy socle was reconstructed from git at T; false
+  // (or absent, older payloads) = the fold covers the governed overrides only.
+  socle_policy_asof: z.boolean().optional(),
   generated_at: z.string(),
   config_version: z.object({
     version: z.string(),

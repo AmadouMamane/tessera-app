@@ -6917,7 +6917,8 @@
     },
     "asof": {
       "liveNote": "Current configuration — the governed parameters shown are the ones in force.",
-      "scope": "only the governed parameters (journal) are re-read at this instant; the process baseline stays today's"
+      "scope": "only the governed parameters (journal) are re-read at this instant; the process baseline stays today's",
+      "scopeWithPolicy": "governed parameters (journal) AND the policy baseline (git) are re-read at this instant; runtime values stay today's"
     }
   },
   "inbox": {

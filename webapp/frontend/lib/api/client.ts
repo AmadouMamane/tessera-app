@@ -962,10 +962,12 @@ export async function mutateIncidentPlaybook(body: {
 
 export async function fetchIncidentsOverview(
   lang: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<IncidentsOverview> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/incidents${q}`, { signal }, IncidentsOverviewSchema);
+  const params = new URLSearchParams({ lang });
+  if (at) params.set("at", at);
+  return request(`/observability/incidents?${params}`, { signal }, IncidentsOverviewSchema);
 }
 
 export async function fetchReplayShadowOverview(

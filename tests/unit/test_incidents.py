@@ -44,8 +44,8 @@ def _entries() -> list[dict[str, object]]:
 
 
 def _wire(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(inc, "read_ledger_entries", _entries)
-    monkeypatch.setattr(inc, "_scan_low_score", lambda: (2, NOW - timedelta(hours=5)))
+    monkeypatch.setattr(inc, "read_ledger_entries", lambda **_kw: _entries())
+    monkeypatch.setattr(inc, "_scan_low_score", lambda *_a, **_kw: (2, NOW - timedelta(hours=5)))
 
 
 def test_incident_clusters_derive_from_the_ledger(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -106,3 +106,44 @@ def test_recent_feed_and_footer_are_live(monkeypatch: pytest.MonkeyPatch) -> Non
     # Subsystem chrome stays a fixture (shape only).
     for key in ("running_playbook", "response_journal", "automations", "postmortems"):
         assert payload[key]
+
+
+class TestAsOfBounds:
+    """The as-of reading ends the deny window at T — later events do not exist."""
+
+    @staticmethod
+    def _audit_entry(when: datetime) -> dict[str, object]:
+        return {
+            "type": "tessera.guard.audit",
+            "occurred_at": when.isoformat(),
+            "decisions": [
+                {
+                    "decision": "deny",
+                    "policy_rule": "prompt_injection.deny",
+                    "occurred_at": when.isoformat(),
+                }
+            ],
+        }
+
+    def test_the_deny_window_ends_at_t(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        base = datetime(2026, 7, 22, 0, 0, tzinfo=UTC)
+        entries = [
+            self._audit_entry(base + timedelta(hours=10)),
+            self._audit_entry(base + timedelta(hours=14)),
+        ]
+        monkeypatch.setattr(inc, "read_ledger_entries", lambda **_kw: list(entries))
+        monkeypatch.setattr(inc, "_scan_low_score", lambda *_a, **_kw: (0, None))
+
+        live = inc._RealIncidents(base + timedelta(hours=15))
+        assert live.n_events == 2
+
+        at_noon = inc._RealIncidents(base + timedelta(hours=12))
+        assert at_noon.n_events == 1  # the 14h deny does not exist at T
+
+    def test_a_malformed_instant_reads_live_never_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(inc, "read_ledger_entries", lambda **_kw: [])
+        monkeypatch.setattr(inc, "_scan_low_score", lambda *_a, **_kw: (0, None))
+        payload = inc.compute_incidents_overview("fr", at="not-a-date")
+        assert isinstance(payload, dict) and "kpis" in payload

@@ -33,6 +33,7 @@ __all__ = [
     "attach_playbook",
     "create_incident",
     "get_incident",
+    "incidents_as_of",
     "load_incidents",
     "open_durable_counts",
     "transition_incident",
@@ -80,6 +81,67 @@ def load_incidents() -> list[dict[str, Any]]:
     """Every durable incident, oldest first (best-effort read; starts empty)."""
     raw = _load_json(_incidents_path(), [])
     return [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
+
+
+def _parse_iso(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+# The journal's ``action`` strings are a contract THIS module owns (every writer
+# above calls ``_journal_entry``); the as-of fold below parses that contract.
+_ACTION_STATUS_PREFIX: Final = "statut → "
+_ACTION_PLAYBOOK_PREFIX: Final = "playbook attaché : "
+
+
+def incidents_as_of(at: datetime) -> list[dict[str, Any]]:
+    """The durable incidents as they stood at T, replayed from each journal.
+
+    An incident opened after T does not exist at T. Status, playbook attachment
+    and closure are the last journalled acts at or before T (a journal entry
+    with no parseable instant is skipped — unplaceable acts have no place in a
+    state-at-T view); the journal itself is trimmed to ≤ T so the drawer shows
+    the history as it stood.
+    """
+    out: list[dict[str, Any]] = []
+    for incident in load_incidents():
+        opened = _parse_iso(incident.get("opened_at"))
+        if opened is None or opened > at:
+            continue
+        folded = dict(incident)
+        folded["status"] = "ouvert"
+        folded["playbook_id"] = None
+        folded["closed_at"] = None
+        folded["closed_by"] = None
+        raw_journal = incident.get("journal")
+        kept: list[dict[str, Any]] = []
+        for entry in raw_journal if isinstance(raw_journal, list) else []:
+            if not isinstance(entry, dict):
+                continue
+            when = _parse_iso(entry.get("at"))
+            if when is None or when > at:
+                continue
+            kept.append(entry)
+            action = str(entry.get("action", ""))
+            if action.startswith(_ACTION_STATUS_PREFIX):
+                status = action.removeprefix(_ACTION_STATUS_PREFIX)
+                folded["status"] = status
+                if status == "resolu":
+                    folded["closed_at"] = entry.get("at")
+                    folded["closed_by"] = entry.get("actor")
+                else:
+                    folded["closed_at"] = None
+                    folded["closed_by"] = None
+            elif action.startswith(_ACTION_PLAYBOOK_PREFIX):
+                folded["playbook_id"] = action.removeprefix(_ACTION_PLAYBOOK_PREFIX)
+        folded["journal"] = kept
+        out.append(folded)
+    return out
 
 
 def get_incident(incident_id: str) -> dict[str, Any]:

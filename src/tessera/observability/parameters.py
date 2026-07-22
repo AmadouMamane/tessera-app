@@ -15,11 +15,13 @@ to the config source (git-versioned files), not to invented users.
 
 from __future__ import annotations
 
+import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from tessera.code_identity import _git
 from tessera.guard.decisions import load_policy
 from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability._asof import occurred_before
@@ -34,7 +36,13 @@ from tessera.settings import Settings, get_settings
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__all__ = ["OverrideRow", "compute_parameters_overview", "override_rows_as_of"]
+__all__ = [
+    "OverrideRow",
+    "PolicySocleAtT",
+    "compute_parameters_overview",
+    "override_rows_as_of",
+    "policy_socle_as_of",
+]
 
 _OVERRIDE_TARGET_PREFIX = "config_overrides."
 
@@ -94,6 +102,76 @@ class OverrideRow:
     author: str
     reason: str
     updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class PolicySocleAtT:
+    """The policy slice of the process socle, reconstructed from git at T.
+
+    This is the PROVABLE part of "mon socle il y a 3 h": ``policy.yaml`` is a
+    git-tracked file, so its state at T is the last commit touching it at or
+    before T. The runtime rows (resolved ``Settings``, env overrides, file
+    mtimes) are NOT reconstructable from git and deliberately stay live — the
+    rail's scoped note says so.
+    """
+
+    version: str
+    n_deny: int
+    n_transforms: int
+    n_pii: int
+    n_tools: int
+    committed_at: datetime
+    committed_by: str
+
+
+_POLICY_REL_PATH = "src/tessera/guard/policy.yaml"
+
+
+def policy_socle_as_of(
+    asof: str, repo_root: Path | None = None, rel_path: str = _POLICY_REL_PATH
+) -> PolicySocleAtT | None:
+    """The policy socle at instant T, read from git history — or ``None``.
+
+    ``None`` is an honest CANNOT-SAY, never "empty": no git (a container image),
+    no commit touching the file at or before T, or a historical file today's
+    compiler refuses (the fold reads it through the SAME ``load_policy`` the
+    live counts use, so the numbers are commensurable by construction).
+    """
+    try:
+        at_dt = datetime.fromisoformat(asof.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if at_dt.tzinfo is None:
+        at_dt = at_dt.replace(tzinfo=UTC)
+    root = repo_root if repo_root is not None else Path(__file__).resolve().parents[3]
+    sha = _git(root, "rev-list", "-1", f"--before={at_dt.isoformat()}", "HEAD", "--", rel_path)
+    if not sha:
+        return None
+    meta = _git(root, "show", "-s", "--format=%cI%n%an", sha)
+    content = _git(root, "show", f"{sha}:{rel_path}")
+    if not meta or content is None:
+        return None
+    committed_at_raw, _, committed_by = meta.partition("\n")
+    try:
+        committed_at = datetime.fromisoformat(committed_at_raw.strip())
+    except ValueError:
+        return None
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".yaml", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            policy = load_policy(Path(handle.name))
+    except Exception:  # today's compiler refuses that historical policy
+        return None
+    return PolicySocleAtT(
+        version=str(policy.version),
+        n_deny=len(policy.prompt_injection_deny),
+        n_transforms=len(policy.prompt_injection_transforms),
+        n_pii=len(policy.pii_patterns),
+        n_tools=len(policy.tools),
+        committed_at=committed_at,
+        committed_by=committed_by.strip() or "-",
+    )
 
 
 # Localized free-text (fr, de, en). IDs/versions/dates/names/values stay verbatim.
@@ -220,7 +298,10 @@ _STATE_COLORS = {
 
 
 def compute_parameters_overview(
-    lang: str = "fr", *, override_rows: Sequence[OverrideRow] | None = None
+    lang: str = "fr",
+    *,
+    override_rows: Sequence[OverrideRow] | None = None,
+    policy_at: PolicySocleAtT | None = None,
 ) -> dict[str, object]:
     """Return the full Parameters overview payload, derived from live config.
 
@@ -228,6 +309,10 @@ def compute_parameters_overview(
         lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
         override_rows: The stored governed overrides (ADR 0030), read by the
             route. They are the only parameters with a real per-row author.
+        policy_at: The policy socle reconstructed from git at T (as-of reading).
+            When set, the policy-derived counts and the config-version card read
+            the historical policy — commit author and instant included; the
+            runtime rows stay live (not reconstructable), the rail says so.
 
     Returns:
         A JSON-serialisable mapping (same shape as the page consumes) with the
@@ -242,10 +327,10 @@ def compute_parameters_overview(
     org_chat_override = next((o.value for o in overrides if o.key == "llm.chat_model"), None)
 
     # --- Real counts ------------------------------------------------------
-    n_deny = len(policy.prompt_injection_deny)
-    n_transforms = len(policy.prompt_injection_transforms)
-    n_pii = len(policy.pii_patterns)
-    n_tools = len(policy.tools)
+    n_deny = policy_at.n_deny if policy_at else len(policy.prompt_injection_deny)
+    n_transforms = policy_at.n_transforms if policy_at else len(policy.prompt_injection_transforms)
+    n_pii = policy_at.n_pii if policy_at else len(policy.pii_patterns)
+    n_tools = policy_at.n_tools if policy_at else len(policy.tools)
     n_security = n_deny + n_transforms + n_pii
     n_policies = n_tools + n_security
     n_models = len(available_model_ids())
@@ -265,11 +350,17 @@ def compute_parameters_overview(
     configured = n_policies + memory_knobs + api_knobs + obs_knobs + n_models + n_integrations
 
     config_version = {
-        "version": f"policy v{policy.version}",
+        "version": f"policy v{policy_at.version if policy_at else policy.version}",
         "env": settings.environment.value.capitalize(),
         "status": "active",
-        "active_since": _fmt_dt(policy_mtime) if policy_mtime is not None else "-",
-        "modified_by": _t("by_config", lang),
+        "active_since": (
+            policy_at.committed_at.astimezone(UTC).strftime("%d/%m/%Y %H:%M")
+            if policy_at
+            else (_fmt_dt(policy_mtime) if policy_mtime is not None else "-")
+        ),
+        # As-of: the commit AUTHOR is a real attribution git carries; live keeps
+        # the honest "by configuration" (no per-parameter author store).
+        "modified_by": policy_at.committed_by if policy_at else _t("by_config", lang),
         "validation": _t("validated", lang),
         "next_review": "-",
     }

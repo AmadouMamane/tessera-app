@@ -100,14 +100,17 @@ def _parse_when(value: object) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
-def _scan_low_score() -> tuple[int, datetime | None]:
-    """Count the real low-faithfulness turns in the captured replay bundles."""
+def _scan_low_score(asof: str | None = None) -> tuple[int, datetime | None]:
+    """Count the real low-faithfulness turns in the captured replay bundles.
+
+    ``asof`` set = only bundles captured at or before T (state as of T).
+    """
     count = 0
     last: datetime | None = None
     try:
         from tessera.observability.replay import recent_bundles
 
-        bundles = recent_bundles()
+        bundles = recent_bundles(at=asof)
     except Exception:
         return 0, None
     for bundle in bundles:
@@ -133,9 +136,15 @@ class _Cluster:
 
 
 class _RealIncidents:
-    """The live incident feed: deny clusters + the low-faithfulness cluster."""
+    """The incident feed: deny clusters + the low-faithfulness cluster.
 
-    def __init__(self, now: datetime) -> None:
+    ``now`` is the reference instant — the wall clock live, T under an as-of
+    reading — and the 7-day window ends there. The ledger read is bounded at
+    the seam (``since``/``until``, SQL-side in postgres mode); the caller-side
+    filter stays as the belt for the file fallback.
+    """
+
+    def __init__(self, now: datetime, asof: str | None = None) -> None:
         window = now - timedelta(days=7)
         day_keys = [(now - timedelta(days=d)).date().isoformat() for d in range(6, -1, -1)]
         self.day_denies: dict[str, int] = dict.fromkeys(day_keys, 0)
@@ -143,7 +152,7 @@ class _RealIncidents:
         self.n_events = 0
         self.events: list[tuple[datetime, str, str]] = []  # (when, rule, severity)
         try:
-            entries = read_ledger_entries()
+            entries = read_ledger_entries(since=window, until=now)
         except Exception:
             entries = []
         for entry in entries:
@@ -156,7 +165,7 @@ class _RealIncidents:
                 if not isinstance(dec, dict) or dec.get("decision") != "deny":
                     continue
                 when = _parse_when(dec.get("occurred_at")) or _parse_when(entry.get("occurred_at"))
-                if when is None or when < window:
+                if when is None or when < window or when > now:
                     continue
                 rule = str(dec.get("policy_rule", "") or "guard.autre")
                 severity, domain = _rule_meta(rule)
@@ -170,7 +179,7 @@ class _RealIncidents:
                 )
                 cl.count += 1
                 cl.last = max(when, cl.last)
-        self.low_score, self.low_last = _scan_low_score()
+        self.low_score, self.low_last = _scan_low_score(asof)
         self.clusters = sorted(clusters.values(), key=lambda c: (-c.count, c.rule))
 
     def trigger_label(self, rule: str, lang: str) -> str:
@@ -203,32 +212,45 @@ class _RealIncidents:
         return "—"
 
 
-def open_incidents(now: datetime | None = None) -> tuple[int, int]:
+def open_incidents(now: datetime | None = None, *, at: str | None = None) -> tuple[int, int]:
     """``(open, critical)`` from the same core the page renders — never a second count.
 
     The sidebar badge and this page must agree by construction, so the badge asks the
     incident core rather than re-deriving "open" from the ledger on its own. Both numbers
     are the exact expressions ``compute_incidents_overview`` puts in its KPI strip.
+    ``at`` set = the state as of T: the deny window ends at T and the durable
+    incidents are replayed from their journals (``incidents_as_of``).
     """
-    from tessera.observability.incident_store import open_durable_counts
+    from tessera.observability.incident_store import incidents_as_of, open_durable_counts
 
-    core = _RealIncidents(now or datetime.now(UTC))
+    moment = now or _parse_when(at) or datetime.now(UTC)
+    core = _RealIncidents(moment, asof=at)
     n_open = len(core.clusters) + (1 if core.low_score else 0)
     n_critical = sum(1 for cluster in core.clusters if cluster.severity == "critique")
     # Lot 10 — the durable incidents an operator actually opened count too;
     # the sidebar badge stays the ONE source both surfaces ask.
-    durable_open, durable_critical = open_durable_counts()
+    if at is not None:
+        folded = incidents_as_of(moment)
+        open_ones = [i for i in folded if i.get("status") != "resolu"]
+        durable_open = len(open_ones)
+        durable_critical = sum(1 for i in open_ones if i.get("severity") == "critique")
+    else:
+        durable_open, durable_critical = open_durable_counts()
     return n_open + durable_open, n_critical + durable_critical
 
 
-def _durable_incident_rows() -> list[dict[str, object]]:
-    """The durable incidents, newest first, shaped for the page (verbatim facts)."""
-    from tessera.observability.incident_store import load_incidents
+def _durable_incident_rows(at_dt: datetime | None = None) -> list[dict[str, object]]:
+    """The durable incidents, newest first, shaped for the page (verbatim facts).
 
-    return list(reversed(load_incidents()))
+    ``at_dt`` set = the journal-replayed state at T (``incidents_as_of``).
+    """
+    from tessera.observability.incident_store import incidents_as_of, load_incidents
+
+    rows = incidents_as_of(at_dt) if at_dt is not None else load_incidents()
+    return list(reversed(rows))
 
 
-def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
+def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Return the full Incidents & playbooks overview payload.
 
     Args:
@@ -238,6 +260,10 @@ def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
             post-mortems). Severity / status / domain / KPI labels are localized
             in the frontend via next-intl keys; owner / actor names and IDs stay
             verbatim.
+        at: Optional ISO instant — the AGIR as-of reading. The deny window ends
+            at T, low-faithfulness bundles are read as of T and the durable
+            incidents are replayed from their journals at T. ``None`` or
+            malformed reads live.
 
     Returns:
         A JSON-serialisable mapping with the current posture KPIs, the triage
@@ -245,8 +271,11 @@ def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
         automation rules and the 7-day impact series — everything the page
         renders, in one document.
     """
-    now = datetime.now(UTC)
-    core = _RealIncidents(now)
+    at_dt = _parse_when(at)
+    if at_dt is None:
+        at = None  # malformed instant reads live, never raises
+    now = at_dt or datetime.now(UTC)
+    core = _RealIncidents(now, asof=at)
 
     # Recurring playbook names, localized once and reused across the page so the
     # triage queue, catalogue and resolution chart stay consistent.
@@ -258,7 +287,7 @@ def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
     # store in this build -> honest dashes, never invented numbers.
     # The sidebar badge reads these through `open_incidents()`. Compute them there once,
     # so a change to what "open" means cannot land on one surface and not the other.
-    n_open, n_critical = open_incidents(now)
+    n_open, n_critical = open_incidents(now, at=at)
     deny_series = list(core.day_denies.values())
     kpis = [
         _kpi("open", str(n_open), "0", False, deny_series or [0] * 7),
@@ -664,7 +693,7 @@ def compute_incidents_overview(lang: str = "fr") -> dict[str, object]:
         "generated_at": now.isoformat(),
         # Lot 10 — the DURABLE incidents an operator opened (empty until someone
         # does; the journal carries every attributed act).
-        "durable_incidents": _durable_incident_rows(),
+        "durable_incidents": _durable_incident_rows(at_dt),
         "period_days": 7,
         "updated_at": now.strftime("%H:%M:%S"),
         "kpis": kpis,

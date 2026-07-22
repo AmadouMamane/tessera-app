@@ -61,16 +61,18 @@ async def observability_guardrail_catalogue(
 
 
 @router.get("/observability/incidents")
-async def observability_incidents(lang: str = "fr") -> dict[str, object]:
+async def observability_incidents(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Incidents & playbooks overview (page #10).
 
     Composes the current incident posture, the triage queue with recommended
     playbooks, the running playbook timeline, the automation rules and the
     7-day impact charts into one payload. ``lang`` localizes the chrome and the
-    per-tab operational catalogues. Degrades to ``available: false``.
+    per-tab operational catalogues. ``at`` (ISO instant) reads the posture as
+    of T: deny window ending at T, bundles ≤ T, durable incidents replayed from
+    their journals (registre §6 — AGIR As-of). Degrades to ``available: false``.
     """
     try:
-        return {"available": True, **incidents_mod.compute_incidents_overview(lang)}
+        return {"available": True, **incidents_mod.compute_incidents_overview(lang, at)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.incidents: failed: {exc}\n")
         return {"available": False}

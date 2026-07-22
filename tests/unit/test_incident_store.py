@@ -6,6 +6,7 @@ one); every act on it is attributed and journalled; vocabularies are closed.
 
 from __future__ import annotations
 
+import datetime as _dt
 from typing import TYPE_CHECKING
 
 import pytest
@@ -86,3 +87,62 @@ def test_playbook_attach_is_declared_catalogue_only() -> None:
     assert any("pb-quality-review" in e["action"] for e in attached["journal"])
     with pytest.raises(ValueError, match="catalogue"):
         store.attach_playbook(iid, "pb-imaginaire", by="claire@bank.eu")
+
+
+class _Clock:
+    """A scriptable ``datetime`` stand-in: ``now`` reads the scripted instant."""
+
+    current = _dt.datetime(2026, 7, 22, 10, 0, tzinfo=_dt.UTC)
+    fromisoformat = _dt.datetime.fromisoformat
+
+    @classmethod
+    def now(cls, tz: object = None) -> _dt.datetime:  # noqa: ARG003 — datetime.now signature
+        return cls.current
+
+
+class TestIncidentsAsOf:
+    """The durable incidents at T are a journal replay, never today's rows."""
+
+    @staticmethod
+    def _script(monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(store, "datetime", _Clock)
+        _Clock.current = _dt.datetime(2026, 7, 22, 10, 0, tzinfo=_dt.UTC)
+        store.create_incident(
+            title="Fuite PII", severity="critique", domain="conformite", opened_by="alice"
+        )
+        inc_id = store.load_incidents()[0]["incident_id"]
+        _Clock.current = _dt.datetime(2026, 7, 22, 11, 0, tzinfo=_dt.UTC)
+        store.transition_incident(inc_id, "en_cours", by="bob")
+        _Clock.current = _dt.datetime(2026, 7, 22, 11, 30, tzinfo=_dt.UTC)
+        store.attach_playbook(inc_id, "pb-pii-purge", by="bob")
+        _Clock.current = _dt.datetime(2026, 7, 22, 12, 0, tzinfo=_dt.UTC)
+        store.transition_incident(inc_id, "resolu", by="carol")
+        _Clock.current = _dt.datetime(2026, 7, 22, 13, 0, tzinfo=_dt.UTC)
+        store.create_incident(
+            title="Dérive qualité", severity="moyen", domain="qualite", opened_by="alice"
+        )
+
+    def test_mid_life_state_is_replayed_not_todays(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._script(monkeypatch)
+        folded = store.incidents_as_of(_dt.datetime(2026, 7, 22, 11, 45, tzinfo=_dt.UTC))
+        assert len(folded) == 1  # the 13h incident does not exist at T
+        one = folded[0]
+        assert one["status"] == "en_cours"  # today's store says "resolu"
+        assert one["playbook_id"] == "pb-pii-purge"
+        assert one["closed_at"] is None
+        assert len(one["journal"]) == 3  # ouverture + statut + playbook, ≤ T only
+
+    def test_closure_and_late_rows_appear_at_their_instant(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._script(monkeypatch)
+        folded = store.incidents_as_of(_dt.datetime(2026, 7, 22, 12, 30, tzinfo=_dt.UTC))
+        assert len(folded) == 1
+        assert folded[0]["status"] == "resolu"
+        assert folded[0]["closed_by"] == "carol"
+
+        later = store.incidents_as_of(_dt.datetime(2026, 7, 22, 14, 0, tzinfo=_dt.UTC))
+        assert len(later) == 2
+
+        before = store.incidents_as_of(_dt.datetime(2026, 7, 22, 9, 0, tzinfo=_dt.UTC))
+        assert before == []

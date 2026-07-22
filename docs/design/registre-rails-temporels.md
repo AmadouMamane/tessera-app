@@ -1,6 +1,22 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.11 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.12 (2026-07-22)
+>
+> v1.12 — deux chantiers AGIR/CONFIGURER soldés. (1) **incidents-playbooks porte l'agir-rail
+> RÉEL** (le « à évaluer » de v1.9 est tranché en faveur du rail) : `compute_incidents_overview
+> (lang, at)` — fenêtre deny de 7 jours FINISSANT à T (seam `read_ledger_entries(since=, until=)`,
+> SQL en postgres — la dette du cliquet ledger descend 16→15), bundles low-score ≤ T, et les
+> incidents durables REJOUÉS depuis leur journal à T (`incident_store.incidents_as_of` : un
+> incident ouvert après T n'existe pas, le statut/playbook/clôture sont les derniers actes ≤ T,
+> le journal du drawer est tronqué à T) ; `?asof=` URL, mutations gelées (création, prise en
+> charge, résolution, playbook), swap de mutation sous la clé LIVE. (2) **Le socle policy de
+> Paramètres est relu à T depuis git** : `policy_socle_as_of` retrouve le dernier commit de
+> `policy.yaml` ≤ T (`rev-list --before`), recompile le fichier historique avec LE MÊME
+> `load_policy` que le live (nombres commensurables par construction), et porte l'auteur et
+> l'instant du commit ; sans dépôt (image conteneur), sans commit ≤ T, ou si le compilateur
+> d'aujourd'hui refuse le fichier historique → CANNOT-SAY honnête, le payload le dit
+> (`socle_policy_asof`) et la note du rail n'affirme que ce qui tient. Les valeurs runtime
+> (Settings résolus, mtimes) restent live, dit tel quel.
 >
 > v1.11 — deux promotions AGENT. (1) **AT-01 Implémenté** : « Voir à date » revient sur la
 > Synthèse — retiré en v1.5 parce qu'il mentait, il ne revient que parce que le contenu
@@ -431,7 +447,7 @@ signifie : pas de besoin temporel prouvé, pas de rail — en mettre un serait d
 | `prouver/evidence-store` | SR-01 command bar + payload as-of réel, création gelée à T | Implémenté (v1.9) |
 | `prouver/etat-a-date` | TE-01 reconstruction as-of + badge d'opposabilité | Implémenté |
 | `agir/automations` · `curation-eval-set` · `replay-shadow` | agir-rail (As-of + Live, mutations gelées à T) | Implémenté |
-| `agir/incidents-playbooks` | aucune | **À évaluer** — mêmes mutations gelables que ses sœurs AGIR ; l'agir-rail devrait s'y étendre |
+| `agir/incidents-playbooks` | agir-rail As-of + Live (`?asof=`), posture rejouée à T (deny/bundles/incidents durables), mutations gelées | Implémenté (v1.12) |
 | `agir/release-control` | aucune | — release = acte au présent ; l'historique est au ledger (Journal d'audit) |
 | `agents/[id]/synthese` | AT-01 feed (Live · Période · Voir à date réel, `?asof=`) | Implémenté (v1.11) — bannière scopée |
 | `agents/[id]/evaluations` | ER-01 run rail + SR-01 standalone | Implémenté |
@@ -439,7 +455,7 @@ signifie : pas de besoin temporel prouvé, pas de rail — en mettre un serait d
 | `agents/[id]/console` | XT-01 waterfall live (SSE) | Implémenté |
 | `agents/[id]/configurations` · `connaissances` · `garde-fous` · `prompts` · `metier` | amorces OT-01 (versions, overlay, renvois) | Partiel — promotion = C1 par-objet consultable à T |
 | `a-traiter` · `a-faire` | WF-01 timeline de transitions dans les drawers | Implémenté — un scrubber de file n'a pas de sens (SLA = présent) |
-| `configurer/parametres` | AgirRail As-of + Live (`?asof=`), overrides refoldés du ledger à T, claim scopé | Implémenté — overrides (v1.9.1) ; socle git/policy à T : chantier |
+| `configurer/parametres` | AgirRail As-of + Live (`?asof=`), overrides refoldés du ledger à T + socle policy relu de git à T (`socle_policy_asof`) | Implémenté (v1.12) — runtime live, dit tel quel |
 | `configurer/modeles` · `garde-fous` · `politiques` | historique par mtimes / overlay | Partiel OT-01 — même chemin de fold que Paramètres |
 | `configurer/sources-memoire` | VersionsBlock + renvois TE-01 (`?sources=`) | Partiel OT-01 — le renvoi est voulu (preuve → PROUVER) |
 | `configurer/connecteurs` · `integrations` · `signal-catalog` | aucune | — catalogues descriptifs ; leurs mutations gouvernées sont au ledger |

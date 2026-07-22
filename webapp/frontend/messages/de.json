@@ -6917,7 +6917,8 @@
     },
     "asof": {
       "liveNote": "Aktuelle Konfiguration — die angezeigten gesteuerten Parameter sind die geltenden.",
-      "scope": "nur die gesteuerten Parameter (Journal) werden zu diesem Zeitpunkt neu gelesen; die Prozessbasis bleibt die heutige"
+      "scope": "nur die gesteuerten Parameter (Journal) werden zu diesem Zeitpunkt neu gelesen; die Prozessbasis bleibt die heutige",
+      "scopeWithPolicy": "gesteuerte Parameter (Journal) UND Policy-Basis (Git) werden zu diesem Zeitpunkt neu gelesen; die Laufzeitwerte bleiben die heutigen"
     }
   },
   "inbox": {
