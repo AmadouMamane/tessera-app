@@ -38,7 +38,7 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
 |---|---|---|---|---|
 | 1 — backend | terminé | `49828247` | `8f3f9f9a7fc6` · twice-green | 59 tests ciblés verts ; mutations T1/T3/T4/T5 ; synthétique inchangé ; égalité T4 |
 | 2 — page | terminé | `2e643ebf` | `355e7e1404c3` · twice-green | FR verbatim ; DE/EN ; BFF + zod ; 5 liens ; `/en-detail` |
-| 3 — ratchets | terminé | en préparation | `5c930c580bbd` · twice-green | mutation `214` rouge ; 5 e2e verts ; captures vide/FR/EN/DE |
+| 3 — ratchets | terminé | `659c3c55` | `5c930c580bbd` · twice-green | mutation `214` rouge ; 5 e2e verts ; captures vide/FR/EN/DE |
 
 ## Mutations et captures
 
