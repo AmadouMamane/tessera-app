@@ -349,7 +349,9 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # artifact counts, digests and integrity verdicts; no customer subject data.
     # 126 (2026-07-21): GET /observability/guard-activity — the launcher band's
     # day counters (messages checked/blocked, ADR 0009); no customer subject data.
-    assert len(public) == 126
+    # 127 (2026-07-22): GET /observability/comprendre — public proof-tile facts;
+    # fleet counts, guard totals, release buckets and chain freshness only.
+    assert len(public) == 127
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

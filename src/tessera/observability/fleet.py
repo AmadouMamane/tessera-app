@@ -46,7 +46,14 @@ if TYPE_CHECKING:
 
     from tessera.agent.registry import Agent
 
-__all__ = ["BusinessCardFacts", "FleetAgent", "FleetData", "FleetOrgTotals", "compute_fleet"]
+__all__ = [
+    "BusinessCardFacts",
+    "FleetAgent",
+    "FleetData",
+    "FleetOrgTotals",
+    "compute_fleet",
+    "registered_agent_ids",
+]
 
 
 # --- The payload's shape, as a TYPE ------------------------------------------------------------
@@ -153,6 +160,11 @@ def _registry_agents() -> list[dict[str, Any]]:
         ]
     except (OSError, ValueError):
         return []
+
+
+def registered_agent_ids() -> set[str]:
+    """Return the agent identifiers currently declared by the fleet registry."""
+    return {str(agent["id"]) for agent in _registry_agents()}
 
 
 def _agent_records() -> dict[str, Agent]:

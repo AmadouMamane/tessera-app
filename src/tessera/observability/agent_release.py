@@ -16,14 +16,24 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.eval_floor import grade_against_own_floor
 from tessera.observability.eval_gate_view import build_gate_view
 from tessera.verdict import NotOk, Ok
 
-__all__ = ["AgentRelease", "ReleaseFacts", "agent_release_state", "fleet_release_states"]
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+__all__ = [
+    "AgentRelease",
+    "ReleaseBuckets",
+    "ReleaseFacts",
+    "agent_release_state",
+    "fleet_release_buckets",
+    "fleet_release_states",
+]
 
 
 class ReleaseFacts(TypedDict):
@@ -56,6 +66,18 @@ class ReleaseFacts(TypedDict):
     socle_total: int
     floor_ok: bool
     floor_block: str | None
+
+
+class ReleaseBuckets(TypedDict):
+    """Mutually exclusive fleet buckets shared by every release summary."""
+
+    total: int
+    evaluated: int
+    ready: int
+    review: int
+    missing: int
+    stale: int
+    blocked: int
 
 
 _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
@@ -253,3 +275,45 @@ def fleet_release_states(lang: str = "fr") -> dict[str, AgentRelease]:
     except (OSError, ValueError):
         agents = []
     return {aid: agent_release_state(aid, lang) for aid in agents}
+
+
+def fleet_release_buckets(
+    states: Mapping[str, AgentRelease] | None = None,
+    *,
+    lang: str = "fr",
+) -> ReleaseBuckets:
+    """Bucket the fleet using the same :class:`AgentRelease` verdicts as the Eval tile.
+
+    A ready agent has a release-authorised verdict on a fresh catalogue. Every other registry
+    agent belongs to exactly one review bucket: no verdict, stale verdict, or blocked verdict.
+    The function accepts already-read states so callers such as the fleet endpoint never perform
+    a second eval read merely to produce the summary.
+
+    Args:
+        states: Optional already-read release states keyed by agent id.
+        lang: Locale used only when states need to be loaded.
+
+    Returns:
+        Mutually exclusive counts whose sum is ``total``.
+    """
+    releases = states if states is not None else fleet_release_states(lang)
+    missing = sum(not release.available for release in releases.values())
+    stale = sum(release.available and release.verdict_stale for release in releases.values())
+    ready = sum(
+        release.available and release.passed and not release.verdict_stale
+        for release in releases.values()
+    )
+    blocked = sum(
+        release.available and not release.passed and not release.verdict_stale
+        for release in releases.values()
+    )
+    total = len(releases)
+    return {
+        "total": total,
+        "evaluated": total - missing,
+        "ready": ready,
+        "review": total - ready,
+        "missing": missing,
+        "stale": stale,
+        "blocked": blocked,
+    }

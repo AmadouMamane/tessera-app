@@ -131,13 +131,15 @@ def test_the_public_reads_are_untouched() -> None:
     freeze spans every GET on the observability router). +1 on 2026-07-21:
     the launcher's guard-activity aggregate (messages checked/blocked since
     midnight — ADR 0009 showcase-safe day counters, no subject data).
+    +1 on 2026-07-22: the `/comprendre` proof aggregate (fleet witnesses,
+    day guard totals, release buckets and chain freshness; no subject data).
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 131
+    assert len(read_routes) == 132
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

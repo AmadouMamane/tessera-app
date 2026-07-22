@@ -451,11 +451,13 @@ def test_the_audit_entry_version_says_whether_an_actor_was_recordable() -> None:
         data_residency="eu",
         agent_id="support-client",
         actor=audit_mod.Actor(principal=PRINCIPAL, role=ROLE),
+        synthetic=False,
     )
 
     assert entry["version"] == 3
     assert entry["actor"] == PRINCIPAL
     assert entry["actor_role"] == ROLE
+    assert entry["synthetic"] is False
     assert entry["model"] == "llama3.2:3b", "the model is recorded, and it is not the author"
 
 

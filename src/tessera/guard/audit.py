@@ -339,6 +339,7 @@ def _build_entry(
     data_residency: str,
     agent_id: str,
     actor: Actor,
+    synthetic: bool,
 ) -> dict[str, Any]:
     """Build one S1 guard-audit entry. It names its author, or it does not get built.
 
@@ -376,6 +377,10 @@ def _build_entry(
         "outcome": outcome,
         "actor": actor.principal,
         "actor_role": actor.role,
+        # The turn posture belongs on the decision event itself. Inferring it later from a
+        # separate invocation row cannot join reliably when older in-process turns have no
+        # invocation event. Historical entries omit the key and are treated as real.
+        "synthetic": synthetic,
         "model": model,
         "data_residency": data_residency,
         "arguments": _coerce_arguments(arguments),
@@ -487,6 +492,7 @@ def emit_audit(
       are explicit, and that is the point — omission is not one of the options.
     """
     from tessera.agent.identity import resolve_agent_id
+    from tessera.observability.business_events import is_synthetic_turn
     from tessera.settings import LLMProfile, get_settings
 
     settings = get_settings()
@@ -509,6 +515,7 @@ def emit_audit(
         data_residency=settings.observability.data_residency,
         agent_id=resolve_agent_id(agent_id),
         actor=actor,
+        synthetic=is_synthetic_turn(),
     )
     _append_to_chain(entry, sink, settings.guard.audit_file)
 

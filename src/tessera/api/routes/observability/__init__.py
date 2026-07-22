@@ -26,6 +26,7 @@ from tessera.api.routes.observability import (
     business,
     client,
     compliance,
+    comprendre,
     console,
     evals,
     feedback,
@@ -83,6 +84,7 @@ from tessera.api.routes.observability.compliance import (
     observability_sources,
     observability_system_profile,
 )
+from tessera.api.routes.observability.comprendre import observability_comprendre
 from tessera.api.routes.observability.console import (
     observability_agent_console,
     observability_assistant,
@@ -226,6 +228,7 @@ router = APIRouter()
 router.include_router(business.router)
 router.include_router(client.router)
 router.include_router(compliance.router)
+router.include_router(comprendre.router)
 router.include_router(console.router)
 router.include_router(evals.router)
 router.include_router(fleet.router)

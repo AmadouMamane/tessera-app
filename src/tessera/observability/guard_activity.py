@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import threading
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
@@ -95,6 +96,47 @@ def blocked_since(since: datetime, *, path: Path | None = None) -> int:
     return count
 
 
+@dataclass(frozen=True, slots=True)
+class GuardExchangeCounts:
+    """Real user exchanges controlled by the guard in a journal window."""
+
+    controlled: int
+    blocked: int
+
+
+def exchange_counts_since(since: datetime, *, path: Path | None = None) -> GuardExchangeCounts:
+    """Count real input-guard exchanges from the S1 journal.
+
+    One ``tessera.guard.audit`` entry targeting ``user_input`` is one controlled exchange. A
+    refusal increments the blocked bucket once, regardless of how many decision records explain
+    it. Entries stamped ``synthetic`` are excluded at this read seam (ADR 0019 section 4); old
+    entries without the field predate the stamp and remain real by default.
+
+    Args:
+        since: Inclusive aware lower bound.
+        path: Optional ledger path override for tests.
+
+    Returns:
+        Controlled and blocked counts over real traffic only.
+    """
+    controlled = 0
+    blocked = 0
+    for entry in read_ledger_entries(path, since=since):
+        if (
+            entry.get("type") != "tessera.guard.audit"
+            or entry.get("target") != "user_input"
+            or entry.get("synthetic") is True
+        ):
+            continue
+        when = _parse_dt(entry.get("occurred_at"))
+        if when is None or when < since:
+            continue
+        controlled += 1
+        if entry.get("outcome") == "denied":
+            blocked += 1
+    return GuardExchangeCounts(controlled=controlled, blocked=blocked)
+
+
 def _blocked_today_cached(since: datetime) -> int:
     """``blocked_since`` behind a short TTL cache keyed on the day window."""
     global _blocked_cache
@@ -125,4 +167,10 @@ async def build_guard_activity() -> dict[str, object]:
     return {"checked_today": checked, "blocked_today": blocked, "since": since.isoformat()}
 
 
-__all__ = ["blocked_since", "build_guard_activity", "local_midnight"]
+__all__ = [
+    "GuardExchangeCounts",
+    "blocked_since",
+    "build_guard_activity",
+    "exchange_counts_since",
+    "local_midnight",
+]

@@ -35,6 +35,7 @@ slice, not in a badge change.
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from typing import Literal
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
@@ -44,6 +45,7 @@ __all__ = [
     "TurnEvidence",
     "agents_with_turn_evidence",
     "has_turn_evidence",
+    "recent_turn_evidence",
     "turn_evidence_enabled",
     "turn_evidence_state",
 ]
@@ -61,6 +63,13 @@ _ENABLE_FLAG = "TESSERA_LEVEL_TURN_EVIDENCE"
 _TRUTHY = {"1", "true", "yes", "on"}
 #: A PromQL instant-vector sample is ``[timestamp, "value"]`` — a 2-tuple.
 _SAMPLE_LEN = 2
+
+#: The counter is scraped more frequently than this range. Asking Prometheus for the increase
+#: over two minutes, once a minute, gives a bounded 24-hour read with enough overlap not to miss
+#: an increment between two evaluation instants. These are read-model sampling parameters, never
+#: user-facing numbers.
+_RECENT_STEP = "60s"
+_RECENT_INCREASE_RANGE = "2m"
 
 
 def turn_evidence_enabled() -> bool:
@@ -95,6 +104,72 @@ def agents_with_turn_evidence() -> set[str] | None:
             continue
         if isinstance(agent_id, str) and agent_id and count > 0:
             observed.add(agent_id)
+    return observed
+
+
+def recent_turn_evidence(
+    since: datetime,
+    *,
+    until: datetime | None = None,
+    adapter: PrometheusAdapter | None = None,
+) -> dict[str, datetime]:
+    """Last observed turn-counter increment per agent inside a bounded window.
+
+    This is the time-aware sibling of :func:`agents_with_turn_evidence`. The cumulative instant
+    vector can prove that an agent emitted *at some point in retention* but cannot support the
+    `/comprendre` contract "observed during the last 24 hours". A Prometheus range query over
+    ``increase`` interrogates the same fleet evidence seam without pretending that a process
+    counter's current value has a date.
+
+    Args:
+        since: Inclusive aware lower bound.
+        until: Inclusive aware upper bound; defaults to now in UTC.
+        adapter: Optional spine adapter override for tests.
+
+    Returns:
+        A mapping from agent id to the timestamp of its latest positive counter increase.
+
+    Raises:
+        ValueError: If either bound is timezone-naive or the window is inverted.
+        SpineUnavailableError: Propagated when the Prometheus spine cannot be read.
+    """
+    end = until or datetime.now(UTC)
+    if since.tzinfo is None or end.tzinfo is None:
+        msg = "recent turn-evidence bounds must be timezone-aware"
+        raise ValueError(msg)
+    if end < since:
+        msg = "recent turn-evidence window is inverted"
+        raise ValueError(msg)
+    reader = adapter or PrometheusAdapter()
+    query = f"sum by (agent_id) (increase({_TURNS_METRIC}[{_RECENT_INCREASE_RANGE}])) > 0"
+    rows = reader.range(
+        query,
+        start=since.isoformat(),
+        end=end.isoformat(),
+        step=_RECENT_STEP,
+    )
+    observed: dict[str, datetime] = {}
+    for row in rows:
+        metric = row.get("metric")
+        values = row.get("values")
+        if not isinstance(metric, dict) or not isinstance(values, list):
+            continue
+        agent_id = metric.get("agent_id")
+        if not isinstance(agent_id, str) or not agent_id:
+            continue
+        for point in values:
+            if not isinstance(point, list | tuple) or len(point) != _SAMPLE_LEN:
+                continue
+            try:
+                stamp = datetime.fromtimestamp(float(point[0]), tz=UTC)
+                increase = float(point[1])
+            except (TypeError, ValueError, OSError):
+                continue
+            if increase <= 0 or stamp < since or stamp > end:
+                continue
+            previous = observed.get(agent_id)
+            if previous is None or stamp > previous:
+                observed[agent_id] = stamp
     return observed
 
 
