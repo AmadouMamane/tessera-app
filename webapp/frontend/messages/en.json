@@ -9296,8 +9296,8 @@
     "frozenTitle": "As-of reading — return to live to act"
   },
   "comprendreCodex": {
-    "title": "Tessera in 3 minutes · Codex",
-    "subtitle": "What the product changes, without technical jargon.",
+    "title": "Tessera · 3′",
+    "subtitle": "The Codex reading, without technical jargon.",
     "metaTitle": "Tessera in 3 minutes · Codex proposal",
     "metaDescription": "A business reading of Tessera to understand in three minutes how to observe, decide and prove.",
     "content": {
@@ -9313,6 +9313,17 @@
         "May it act in this situation?",
         "Will we be able to prove it later?"
       ],
+      "timeline": {
+        "label": "Three-minute journey",
+        "items": [
+          { "target": "problem", "time": "00:00", "label": "The risk" },
+          { "target": "journey", "time": "00:35", "label": "Business case" },
+          { "target": "phases", "time": "01:25", "label": "Controls" },
+          { "target": "roles", "time": "02:05", "label": "The roles" },
+          { "target": "honesty", "time": "02:35", "label": "Evidence" },
+          { "target": "close", "time": "03:00", "label": "One sentence" }
+        ]
+      },
       "problem": {
         "time": "00:00",
         "eyebrow": "The starting point",
@@ -9343,12 +9354,26 @@
         ],
         "allowed": "Allowed: the answer may be sent within the defined scope.",
         "review": "Needs confirmation: the right person receives the case and decides.",
-        "evidence": "In both cases, the decision, the rule, its version and the author are retained in a verifiable trail."
+        "evidence": "In both cases, the decision, the rule, its version and the author are retained in a verifiable trail.",
+        "receipt": {
+          "eyebrow": "Illustrative example",
+          "title": "An actionable decision, not an abstract indicator.",
+          "status": "Human confirmation required",
+          "rows": [
+            { "label": "Request", "value": "Three-month payment plan" },
+            { "label": "Rule applied", "value": "Autonomy threshold exceeded" },
+            { "label": "Owner", "value": "Designated business manager" },
+            {
+              "label": "Evidence linked",
+              "value": "Rule · version · decision · author · timestamp"
+            }
+          ]
+        }
       },
       "phases": {
         "time": "01:25",
         "eyebrow": "The product in four moments",
-        "title": "Control exists before, during and after the turn.",
+        "title": "Control exists before, during and after the action.",
         "body": "Tessera assembles four established disciplines and connects them to the same business reality. The value lies in that continuity, not in a new proprietary method.",
         "items": [
           {
@@ -9409,7 +9434,7 @@
           },
           {
             "label": "Under control",
-            "condition": "The applicable policy was actually evaluated on the action."
+            "condition": "The applicable rule was actually evaluated on the action."
           },
           {
             "label": "Sealed · opposable",
@@ -9417,7 +9442,7 @@
           }
         ],
         "boundaryTitle": "What Tessera is — and is not",
-        "boundary": "Tessera is neither the agent, a new firewall nor a certification. It is the control plane that assembles guardrails, tests, audit and human validation around your agents — then shows the quality of evidence actually earned."
+        "boundary": "Tessera is neither the agent, a new firewall nor a certification. It is the control plane that connects authorisation rules, tests, audit and human validation around your agents — then shows the quality of evidence actually earned."
       },
       "close": {
         "time": "03:00",

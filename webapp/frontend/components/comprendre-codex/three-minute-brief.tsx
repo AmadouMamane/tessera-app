@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Clock3,
   FileCheck2,
+  FileText,
   Fingerprint,
   Gauge,
   Hand,
@@ -20,6 +21,7 @@ import {
 import type { ReactNode } from "react";
 
 import { Link } from "@/i18n/navigation";
+import { TimelineNav } from "./timeline-nav";
 
 export interface ThreeMinuteCopy {
   eyebrow: string;
@@ -30,6 +32,10 @@ export interface ThreeMinuteCopy {
   outcomeLabel: string;
   outcome: string;
   questions: string[];
+  timeline: {
+    label: string;
+    items: Array<{ target: string; time: string; label: string }>;
+  };
   problem: {
     time: string;
     eyebrow: string;
@@ -56,6 +62,12 @@ export interface ThreeMinuteCopy {
     allowed: string;
     review: string;
     evidence: string;
+    receipt: {
+      eyebrow: string;
+      title: string;
+      status: string;
+      rows: Array<{ label: string; value: string }>;
+    };
   };
   phases: {
     time: string;
@@ -98,7 +110,7 @@ const roleIcons = [Gauge, UsersRound, Scale] as const;
 
 export function ThreeMinuteBrief({ copy }: { copy: ThreeMinuteCopy }) {
   return (
-    <article className="relative isolate pb-16" aria-labelledby="three-minute-title">
+    <article className="relative isolate pb-36 sm:pb-28" aria-labelledby="three-minute-title">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 -top-5 -z-10 h-[34rem] overflow-hidden"
@@ -168,6 +180,8 @@ export function ThreeMinuteBrief({ copy }: { copy: ThreeMinuteCopy }) {
           </a>
         </aside>
       </section>
+
+      <TimelineNav label={copy.timeline.label} items={copy.timeline.items} />
 
       <div id="story" className="mx-auto max-w-[1320px] scroll-mt-6">
         <StorySection
@@ -279,6 +293,44 @@ export function ThreeMinuteBrief({ copy }: { copy: ThreeMinuteCopy }) {
               <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">
                 {copy.journey.evidence}
               </p>
+            </div>
+
+            <div className="grid gap-6 border-t border-[var(--tessera-border)] bg-[linear-gradient(135deg,rgba(139,183,255,0.07),transparent_58%)] p-5 sm:p-7 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+              <div>
+                <p className="font-mono text-[0.62rem] font-semibold tracking-[0.14em] text-[#8bb7ff] uppercase">
+                  {copy.journey.receipt.eyebrow}
+                </p>
+                <div className="mt-4 flex items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[rgba(139,183,255,0.24)] bg-[rgba(139,183,255,0.08)] text-[#8bb7ff]">
+                    <FileText className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h4 className="font-serif text-xl leading-snug font-medium text-[var(--tessera-text)]">
+                      {copy.journey.receipt.title}
+                    </h4>
+                    <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-[rgba(229,147,8,0.28)] bg-[rgba(229,147,8,0.1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-warning-500)]">
+                      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+                      {copy.journey.receipt.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <dl className="grid overflow-hidden rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] sm:grid-cols-2">
+                {copy.journey.receipt.rows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="border-b border-[var(--tessera-border)] p-4 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0"
+                  >
+                    <dt className="font-mono text-[0.59rem] tracking-[0.12em] text-[var(--tessera-text-subtle)] uppercase">
+                      {row.label}
+                    </dt>
+                    <dd className="mt-2 text-sm leading-relaxed font-medium text-[var(--tessera-text)]">
+                      {row.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
         </StorySection>
@@ -411,7 +463,7 @@ export function ThreeMinuteBrief({ copy }: { copy: ThreeMinuteCopy }) {
 
         <section
           id="close"
-          className="mt-16 scroll-mt-24 overflow-hidden rounded-[1.4rem] border border-[var(--tessera-border-strong)] bg-[linear-gradient(135deg,var(--tessera-surface-elevated),var(--tessera-surface))] shadow-[var(--shadow-card-elevated)]"
+          className="mt-16 scroll-mt-32 overflow-hidden rounded-[1.4rem] border border-[var(--tessera-border-strong)] bg-[linear-gradient(135deg,var(--tessera-surface-elevated),var(--tessera-surface))] shadow-[var(--shadow-card-elevated)]"
         >
           <div className="grid gap-8 p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-end">
             <div>
@@ -487,7 +539,7 @@ function StorySection({
   return (
     <section
       id={id}
-      className="grid scroll-mt-24 gap-7 border-b border-[var(--tessera-border)] py-14 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10 lg:py-20"
+      className="grid scroll-mt-32 gap-7 border-b border-[var(--tessera-border)] py-14 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10 lg:py-20"
     >
       <header>
         <div className="sticky top-0">

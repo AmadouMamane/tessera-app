@@ -9298,8 +9298,8 @@
     "frozenTitle": "Lecture à date — revenez au direct pour agir"
   },
   "comprendreCodex": {
-    "title": "Tessera en 3 minutes · Codex",
-    "subtitle": "Ce que le produit change, sans jargon technique.",
+    "title": "Tessera · 3′",
+    "subtitle": "La lecture Codex, sans jargon technique.",
     "metaTitle": "Tessera en 3 minutes · proposition Codex",
     "metaDescription": "Une lecture métier de Tessera pour comprendre en trois minutes comment observer, décider et prouver.",
     "content": {
@@ -9315,6 +9315,17 @@
         "Peut-il agir dans cette situation ?",
         "Pourrons-nous le démontrer ensuite ?"
       ],
+      "timeline": {
+        "label": "Parcours en trois minutes",
+        "items": [
+          { "target": "problem", "time": "00:00", "label": "Le risque" },
+          { "target": "journey", "time": "00:35", "label": "Le cas métier" },
+          { "target": "phases", "time": "01:25", "label": "Les contrôles" },
+          { "target": "roles", "time": "02:05", "label": "Les rôles" },
+          { "target": "honesty", "time": "02:35", "label": "La preuve" },
+          { "target": "close", "time": "03:00", "label": "En une phrase" }
+        ]
+      },
       "problem": {
         "time": "00:00",
         "eyebrow": "Le point de départ",
@@ -9345,12 +9356,23 @@
         ],
         "allowed": "Autorisé : la réponse peut partir dans le périmètre prévu.",
         "review": "À confirmer : la bonne personne reçoit le cas et décide.",
-        "evidence": "Dans les deux cas, la décision, la règle, sa version et l’auteur sont conservés dans une piste vérifiable."
+        "evidence": "Dans les deux cas, la décision, la règle, sa version et l’auteur sont conservés dans une piste vérifiable.",
+        "receipt": {
+          "eyebrow": "Exemple illustratif",
+          "title": "Une décision exploitable, pas un voyant abstrait.",
+          "status": "Confirmation humaine requise",
+          "rows": [
+            { "label": "Demande", "value": "Échéancier de trois mois" },
+            { "label": "Règle appliquée", "value": "Seuil d’autonomie dépassé" },
+            { "label": "Responsable", "value": "Manager métier désigné" },
+            { "label": "Preuve liée", "value": "Règle · version · décision · auteur · horodatage" }
+          ]
+        }
       },
       "phases": {
         "time": "01:25",
         "eyebrow": "Le produit en quatre moments",
-        "title": "Le contrôle existe avant, pendant et après le tour.",
+        "title": "Le contrôle existe avant, pendant et après l’action.",
         "body": "Tessera assemble quatre disciplines connues et les relie à une même réalité métier. La valeur est dans cette continuité, pas dans une nouvelle méthode propriétaire.",
         "items": [
           {
@@ -9411,7 +9433,7 @@
           },
           {
             "label": "Sous contrôle",
-            "condition": "La politique applicable a réellement été évaluée sur l’action."
+            "condition": "La règle applicable a réellement été évaluée sur l’action."
           },
           {
             "label": "Scellé · opposable",
@@ -9419,7 +9441,7 @@
           }
         ],
         "boundaryTitle": "Ce que Tessera est — et n’est pas",
-        "boundary": "Tessera n’est ni l’agent, ni un nouveau firewall, ni une certification. C’est le plan de contrôle qui assemble garde, tests, audit et validation humaine autour de vos agents — puis montre la qualité de preuve réellement gagnée."
+        "boundary": "Tessera n’est ni l’agent, ni un nouveau firewall, ni une certification. C’est le plan de contrôle qui relie règles d’autorisation, tests, audit et validation humaine autour de vos agents — puis montre la qualité de preuve réellement gagnée."
       },
       "close": {
         "time": "03:00",

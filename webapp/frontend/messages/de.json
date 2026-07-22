@@ -9296,8 +9296,8 @@
     "frozenTitle": "Lesemodus — zurück zu Live, um zu handeln"
   },
   "comprendreCodex": {
-    "title": "Tessera in 3 Minuten · Codex",
-    "subtitle": "Was das Produkt verändert — ohne Fachjargon.",
+    "title": "Tessera · 3′",
+    "subtitle": "Die Codex-Lesart — ohne Fachjargon.",
     "metaTitle": "Tessera in 3 Minuten · Codex-Entwurf",
     "metaDescription": "Eine fachliche Einführung in Tessera: in drei Minuten verstehen, wie Beobachten, Entscheiden und Nachweisen zusammenkommen.",
     "content": {
@@ -9313,6 +9313,17 @@
         "Darf er in dieser Situation handeln?",
         "Können wir es später belegen?"
       ],
+      "timeline": {
+        "label": "Drei-Minuten-Rundgang",
+        "items": [
+          { "target": "problem", "time": "00:00", "label": "Das Risiko" },
+          { "target": "journey", "time": "00:35", "label": "Der Praxisfall" },
+          { "target": "phases", "time": "01:25", "label": "Kontrollen" },
+          { "target": "roles", "time": "02:05", "label": "Die Rollen" },
+          { "target": "honesty", "time": "02:35", "label": "Der Nachweis" },
+          { "target": "close", "time": "03:00", "label": "Ein Satz" }
+        ]
+      },
       "problem": {
         "time": "00:00",
         "eyebrow": "Der Ausgangspunkt",
@@ -9343,12 +9354,26 @@
         ],
         "allowed": "Zulässig: Die Antwort darf im vorgesehenen Rahmen gesendet werden.",
         "review": "Bestätigung nötig: Die richtige Person erhält den Fall und entscheidet.",
-        "evidence": "In beiden Fällen bleiben Entscheidung, Regel, Version und Urheber in einer überprüfbaren Spur erhalten."
+        "evidence": "In beiden Fällen bleiben Entscheidung, Regel, Version und Urheber in einer überprüfbaren Spur erhalten.",
+        "receipt": {
+          "eyebrow": "Veranschaulichendes Beispiel",
+          "title": "Eine nutzbare Entscheidung statt einer abstrakten Anzeige.",
+          "status": "Menschliche Bestätigung erforderlich",
+          "rows": [
+            { "label": "Anfrage", "value": "Zahlungsplan über drei Monate" },
+            { "label": "Angewandte Regel", "value": "Autonomieschwelle überschritten" },
+            { "label": "Verantwortlich", "value": "Benannte fachliche Führungskraft" },
+            {
+              "label": "Verknüpfter Nachweis",
+              "value": "Regel · Version · Entscheidung · Urheber · Zeitstempel"
+            }
+          ]
+        }
       },
       "phases": {
         "time": "01:25",
         "eyebrow": "Das Produkt in vier Momenten",
-        "title": "Kontrolle wirkt vor, während und nach dem Vorgang.",
+        "title": "Kontrolle wirkt vor, während und nach der Aktion.",
         "body": "Tessera verbindet vier etablierte Disziplinen mit derselben fachlichen Realität. Der Wert liegt in dieser Kontinuität, nicht in einer neuen proprietären Methode.",
         "items": [
           {
@@ -9409,7 +9434,7 @@
           },
           {
             "label": "Unter Kontrolle",
-            "condition": "Die anwendbare Richtlinie wurde für die Aktion tatsächlich ausgewertet."
+            "condition": "Die anwendbare Regel wurde für die Aktion tatsächlich ausgewertet."
           },
           {
             "label": "Versiegelt · beweiskräftig",
@@ -9417,7 +9442,7 @@
           }
         ],
         "boundaryTitle": "Was Tessera ist — und was nicht",
-        "boundary": "Tessera ist weder der Agent noch eine neue Firewall oder Zertifizierung. Es ist die Kontrollebene, die Schutzregeln, Tests, Audit und menschliche Freigabe um Ihre Agenten verbindet — und dann die tatsächlich erreichte Nachweisqualität zeigt."
+        "boundary": "Tessera ist weder der Agent noch eine neue Firewall oder Zertifizierung. Es ist die Kontrollebene, die Autorisierungsregeln, Tests, Audit und menschliche Freigabe um Ihre Agenten verbindet — und dann die tatsächlich erreichte Nachweisqualität zeigt."
       },
       "close": {
         "time": "03:00",

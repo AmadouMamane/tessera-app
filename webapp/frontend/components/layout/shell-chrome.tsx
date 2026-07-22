@@ -19,6 +19,11 @@ import { CommandPalette } from "./command-palette";
  * palette) can drive it from one place.
  */
 const COLLAPSE_KEY = "tessera.sidebarCollapsed";
+const NARROW_SHELL_QUERY = "(max-width: 767px)";
+
+export function resolveSidebarCollapsed(storedPreference: string | null, narrow: boolean): boolean {
+  return narrow || storedPreference === "1";
+}
 
 interface ShellChromeValue {
   collapsed: boolean;
@@ -47,9 +52,21 @@ export function ShellChrome({ children }: { children: ReactNode }) {
   const [focus, setFocus] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // Hydrate the persisted collapsed preference after mount (avoids SSR mismatch).
+  // Hydrate the persisted desktop preference after mount (avoids SSR mismatch).
+  // A full-width rail would leave too little room for the page on a narrow
+  // viewport, so mobile always starts compact; the operator can still expand
+  // it temporarily with the edge handle.
   useEffect(() => {
-    setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
+    const media = window.matchMedia(NARROW_SHELL_QUERY);
+    const applyViewport = () => {
+      setCollapsed(
+        resolveSidebarCollapsed(window.localStorage.getItem(COLLAPSE_KEY), media.matches),
+      );
+    };
+
+    applyViewport();
+    media.addEventListener("change", applyViewport);
+    return () => media.removeEventListener("change", applyViewport);
   }, []);
 
   const toggleCollapsed = useCallback(() => {
