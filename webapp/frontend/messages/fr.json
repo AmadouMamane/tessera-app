@@ -9296,5 +9296,141 @@
     "liveNote": "Vous agissez sur l'état présent.",
     "pickLabel": "Voir à date",
     "frozenTitle": "Lecture à date — revenez au direct pour agir"
+  },
+  "comprendreCodex": {
+    "title": "Tessera en 3 minutes · Codex",
+    "subtitle": "Ce que le produit change, sans jargon technique.",
+    "metaTitle": "Tessera en 3 minutes · proposition Codex",
+    "metaDescription": "Une lecture métier de Tessera pour comprendre en trois minutes comment observer, décider et prouver.",
+    "content": {
+      "eyebrow": "Guide express",
+      "heroTitle": "Vos agents IA travaillent. Tessera vous permet d’en répondre.",
+      "heroLead": "Un agent peut répondre, consulter un dossier ou préparer une action. Tessera observe ce qu’il fait, applique vos règles avant l’action et conserve une preuve compréhensible de la décision.",
+      "heroSummary": "En bref : voir, décider, prouver.",
+      "readTime": "Lecture guidée · 3 minutes",
+      "outcomeLabel": "À la fin de cette page",
+      "outcome": "Vous saurez expliquer Tessera en une phrase, sans parler de modèles ni de logs.",
+      "questions": [
+        "Que fait réellement l’agent ?",
+        "Peut-il agir dans cette situation ?",
+        "Pourrons-nous le démontrer ensuite ?"
+      ],
+      "problem": {
+        "time": "00:00",
+        "eyebrow": "Le point de départ",
+        "title": "Une bonne réponse ne suffit pas.",
+        "body": "Pour faire confiance à un agent IA, il faut comprendre le chemin qui mène à sa réponse — et savoir qui reprend la main quand la situation l’exige.",
+        "beforeLabel": "Sans plan de contrôle",
+        "afterLabel": "Avec Tessera",
+        "contrastBefore": "Une démonstration peut sembler convaincante sans dire si l’agent a utilisé la bonne source, respecté la règle ou engagé la banque.",
+        "contrastAfter": "La même interaction devient observable, soumise à des règles, attribuée à un responsable et reconstruisible après coup."
+      },
+      "journey": {
+        "time": "00:35",
+        "eyebrow": "Un exemple concret",
+        "title": "Tessera se place entre l’intention et l’action.",
+        "body": "Prenons un cas simple : un client en retard demande un échéancier. L’agent prépare une réponse ; Tessera vérifie le contexte avant que cette réponse ne produise un effet.",
+        "customer": "Un client demande un échéancier.",
+        "agent": "L’agent prépare une réponse et une action.",
+        "checkpoint": "Tessera vérifie",
+        "requestLabel": "Demande",
+        "agentLabel": "Agent",
+        "checkpointLabel": "Contrôle",
+        "evidenceLabel": "Preuve produite",
+        "checks": [
+          "Identité et périmètre",
+          "Règle applicable",
+          "Autorisation d’agir",
+          "Besoin d’un humain"
+        ],
+        "allowed": "Autorisé : la réponse peut partir dans le périmètre prévu.",
+        "review": "À confirmer : la bonne personne reçoit le cas et décide.",
+        "evidence": "Dans les deux cas, la décision, la règle, sa version et l’auteur sont conservés dans une piste vérifiable."
+      },
+      "phases": {
+        "time": "01:25",
+        "eyebrow": "Le produit en quatre moments",
+        "title": "Le contrôle existe avant, pendant et après le tour.",
+        "body": "Tessera assemble quatre disciplines connues et les relie à une même réalité métier. La valeur est dans cette continuité, pas dans une nouvelle méthode propriétaire.",
+        "items": [
+          {
+            "marker": "Avant",
+            "title": "Tester",
+            "body": "Rejouer les situations connues avant une mise en service et empêcher qu’une correction ne réintroduise un ancien échec."
+          },
+          {
+            "marker": "Pendant",
+            "title": "Autoriser",
+            "body": "Appliquer les règles au point précis où l’agent veut consulter une donnée ou déclencher une action sensible."
+          },
+          {
+            "marker": "Si besoin",
+            "title": "Faire décider",
+            "body": "Transmettre le contexte utile à un humain, avec une raison claire, plutôt que masquer l’incertitude de l’agent."
+          },
+          {
+            "marker": "Après",
+            "title": "Prouver",
+            "body": "Conserver une chronologie structurée pour expliquer ce qui s’est passé, selon quelle règle et sous quelle version."
+          }
+        ]
+      },
+      "roles": {
+        "time": "02:05",
+        "eyebrow": "Une réalité, trois lectures",
+        "title": "Chacun obtient la réponse dont il a besoin.",
+        "body": "Le cockpit ne montre pas le même niveau de détail à tout le monde. Il traduit une même preuve selon la décision à prendre.",
+        "items": [
+          {
+            "title": "Direction · DRH",
+            "question": "Où l’IA agit-elle, et qui en répond ?",
+            "answer": "Une vue des agents, des usages, des responsables et des seuils où l’intervention humaine devient obligatoire."
+          },
+          {
+            "title": "Manager métier",
+            "question": "Que dois-je traiter aujourd’hui ?",
+            "answer": "Une file de situations expliquées, attribuées et priorisées, avec la prochaine action proposée sans décision automatique cachée."
+          },
+          {
+            "title": "Risques · IT",
+            "question": "Pouvons-nous reconstruire et défendre la décision ?",
+            "answer": "Les règles, versions, sources, traces et preuves nécessaires pour vérifier le comportement et répondre à un audit."
+          }
+        ],
+        "sharedTruth": "Les vues changent ; les faits ne changent pas. Direction, métier et risques lisent la même décision depuis une source de vérité commune."
+      },
+      "honesty": {
+        "time": "02:35",
+        "eyebrow": "La confiance se mérite",
+        "title": "Tessera ne transforme pas un voyant vert en promesse absolue.",
+        "body": "Chaque mot fort est lié à une condition mesurable. Si la preuve manque, l’interface le dit au lieu de combler le vide par du marketing.",
+        "statuses": [
+          {
+            "label": "Disponible",
+            "condition": "Les services nécessaires répondent et leur état est observé."
+          },
+          {
+            "label": "Sous contrôle",
+            "condition": "La politique applicable a réellement été évaluée sur l’action."
+          },
+          {
+            "label": "Scellé · opposable",
+            "condition": "La chaîne est vérifiée et un scellement tiers qualifié, frais et vérifiable est présent."
+          }
+        ],
+        "boundaryTitle": "Ce que Tessera est — et n’est pas",
+        "boundary": "Tessera n’est ni l’agent, ni un nouveau firewall, ni une certification. C’est le plan de contrôle qui assemble garde, tests, audit et validation humaine autour de vos agents — puis montre la qualité de preuve réellement gagnée."
+      },
+      "close": {
+        "time": "03:00",
+        "eyebrow": "La phrase à retenir",
+        "title": "Tessera transforme des agents IA difficiles à superviser en systèmes gouvernables.",
+        "body": "Il rend leurs actions visibles, place vos règles avant les actes sensibles, fait intervenir la bonne personne et conserve une preuve que l’on peut relire et vérifier.",
+        "verbs": ["Voir", "Décider", "Prouver"],
+        "businessCta": "Voir une journée métier",
+        "cockpitCta": "Explorer les espaces",
+        "footnote": "Positionnement honnête : la valeur de Tessera tient à l’assemblage bout en bout et à la sémantique bancaire européenne, pas à l’invention de chaque brique."
+      }
+    }
   }
 }

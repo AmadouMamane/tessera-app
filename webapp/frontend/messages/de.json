@@ -9294,5 +9294,141 @@
     "liveNote": "Sie handeln auf dem aktuellen Zustand.",
     "pickLabel": "Stand zum Datum",
     "frozenTitle": "Lesemodus — zurück zu Live, um zu handeln"
+  },
+  "comprendreCodex": {
+    "title": "Tessera in 3 Minuten · Codex",
+    "subtitle": "Was das Produkt verändert — ohne Fachjargon.",
+    "metaTitle": "Tessera in 3 Minuten · Codex-Entwurf",
+    "metaDescription": "Eine fachliche Einführung in Tessera: in drei Minuten verstehen, wie Beobachten, Entscheiden und Nachweisen zusammenkommen.",
+    "content": {
+      "eyebrow": "Schnelleinstieg",
+      "heroTitle": "Ihre KI-Agenten arbeiten. Tessera macht sie verantwortbar.",
+      "heroLead": "Ein Agent kann antworten, einen Fall einsehen oder eine Aktion vorbereiten. Tessera beobachtet sein Handeln, wendet Ihre Regeln vor der Aktion an und bewahrt einen verständlichen Nachweis der Entscheidung auf.",
+      "heroSummary": "Kurz gesagt: sehen, entscheiden, nachweisen.",
+      "readTime": "Geführte Lektüre · 3 Minuten",
+      "outcomeLabel": "Am Ende dieser Seite",
+      "outcome": "können Sie Tessera in einem Satz erklären — ohne über Modelle oder Logs zu sprechen.",
+      "questions": [
+        "Was tut der Agent tatsächlich?",
+        "Darf er in dieser Situation handeln?",
+        "Können wir es später belegen?"
+      ],
+      "problem": {
+        "time": "00:00",
+        "eyebrow": "Der Ausgangspunkt",
+        "title": "Eine gute Antwort reicht nicht.",
+        "body": "Wer einem KI-Agenten vertrauen will, muss den Weg zu seiner Antwort verstehen — und wissen, wer übernimmt, wenn die Situation es verlangt.",
+        "beforeLabel": "Ohne Kontrollebene",
+        "afterLabel": "Mit Tessera",
+        "contrastBefore": "Eine Demo kann überzeugen, ohne zu zeigen, ob der Agent die richtige Quelle genutzt, die Regel beachtet oder die Bank verpflichtet hat.",
+        "contrastAfter": "Dieselbe Interaktion wird beobachtbar, regelgebunden, einer verantwortlichen Person zugeordnet und im Nachhinein rekonstruierbar."
+      },
+      "journey": {
+        "time": "00:35",
+        "eyebrow": "Ein konkretes Beispiel",
+        "title": "Tessera steht zwischen Absicht und Aktion.",
+        "body": "Ein einfacher Fall: Ein Kunde im Rückstand bittet um einen Zahlungsplan. Der Agent bereitet eine Antwort vor; Tessera prüft den Kontext, bevor daraus eine Wirkung entsteht.",
+        "customer": "Ein Kunde bittet um einen Zahlungsplan.",
+        "agent": "Der Agent bereitet Antwort und Aktion vor.",
+        "checkpoint": "Tessera prüft",
+        "requestLabel": "Anfrage",
+        "agentLabel": "Agent",
+        "checkpointLabel": "Kontrolle",
+        "evidenceLabel": "Nachweis erzeugt",
+        "checks": [
+          "Identität und Umfang",
+          "Anwendbare Regel",
+          "Handlungsberechtigung",
+          "Menschliche Entscheidung nötig"
+        ],
+        "allowed": "Zulässig: Die Antwort darf im vorgesehenen Rahmen gesendet werden.",
+        "review": "Bestätigung nötig: Die richtige Person erhält den Fall und entscheidet.",
+        "evidence": "In beiden Fällen bleiben Entscheidung, Regel, Version und Urheber in einer überprüfbaren Spur erhalten."
+      },
+      "phases": {
+        "time": "01:25",
+        "eyebrow": "Das Produkt in vier Momenten",
+        "title": "Kontrolle wirkt vor, während und nach dem Vorgang.",
+        "body": "Tessera verbindet vier etablierte Disziplinen mit derselben fachlichen Realität. Der Wert liegt in dieser Kontinuität, nicht in einer neuen proprietären Methode.",
+        "items": [
+          {
+            "marker": "Vorher",
+            "title": "Testen",
+            "body": "Bekannte Situationen vor der Freigabe wiederholen und verhindern, dass eine Korrektur einen dokumentierten Fehler zurückbringt."
+          },
+          {
+            "marker": "Währenddessen",
+            "title": "Autorisieren",
+            "body": "Regeln genau dort anwenden, wo der Agent Daten einsehen oder eine sensible Aktion auslösen möchte."
+          },
+          {
+            "marker": "Bei Bedarf",
+            "title": "Menschen entscheiden lassen",
+            "body": "Den nützlichen Kontext mit klarem Grund an eine Person übergeben, statt die Unsicherheit des Agenten zu verbergen."
+          },
+          {
+            "marker": "Danach",
+            "title": "Nachweisen",
+            "body": "Eine strukturierte Chronologie bewahren, die erklärt, was unter welcher Regel und Version geschehen ist."
+          }
+        ]
+      },
+      "roles": {
+        "time": "02:05",
+        "eyebrow": "Eine Realität, drei Sichten",
+        "title": "Jede Rolle erhält die passende Antwort.",
+        "body": "Das Cockpit zeigt nicht allen dieselbe Detailtiefe. Es übersetzt denselben Nachweis in die jeweils anstehende Entscheidung.",
+        "items": [
+          {
+            "title": "Leitung · HR",
+            "question": "Wo handelt KI — und wer trägt Verantwortung?",
+            "answer": "Eine Übersicht über Agenten, Einsätze, Verantwortliche und Schwellen, an denen menschliches Eingreifen verpflichtend wird."
+          },
+          {
+            "title": "Fachliche Führung",
+            "question": "Was muss ich heute bearbeiten?",
+            "answer": "Eine erklärte, zugewiesene und priorisierte Fallliste mit vorgeschlagenem nächsten Schritt — ohne versteckte automatische Entscheidung."
+          },
+          {
+            "title": "Risiko · IT",
+            "question": "Können wir die Entscheidung rekonstruieren und vertreten?",
+            "answer": "Regeln, Versionen, Quellen, Spuren und Nachweise, um das Verhalten zu prüfen und einen Audit zu beantworten."
+          }
+        ],
+        "sharedTruth": "Die Sichten ändern sich, die Fakten nicht. Leitung, Fachbereich und Risiko lesen dieselbe Entscheidung aus einer gemeinsamen Wahrheitsquelle."
+      },
+      "honesty": {
+        "time": "02:35",
+        "eyebrow": "Vertrauen muss verdient werden",
+        "title": "Tessera macht aus einer grünen Anzeige kein absolutes Versprechen.",
+        "body": "Jede starke Aussage ist an eine messbare Bedingung gebunden. Fehlt der Nachweis, zeigt die Oberfläche das offen, statt die Lücke mit Marketing zu füllen.",
+        "statuses": [
+          {
+            "label": "Verfügbar",
+            "condition": "Die erforderlichen Dienste antworten und ihr Zustand wird beobachtet."
+          },
+          {
+            "label": "Unter Kontrolle",
+            "condition": "Die anwendbare Richtlinie wurde für die Aktion tatsächlich ausgewertet."
+          },
+          {
+            "label": "Versiegelt · beweiskräftig",
+            "condition": "Die Kette ist geprüft und ein frisches, verifizierbares Siegel eines qualifizierten Dritten liegt vor."
+          }
+        ],
+        "boundaryTitle": "Was Tessera ist — und was nicht",
+        "boundary": "Tessera ist weder der Agent noch eine neue Firewall oder Zertifizierung. Es ist die Kontrollebene, die Schutzregeln, Tests, Audit und menschliche Freigabe um Ihre Agenten verbindet — und dann die tatsächlich erreichte Nachweisqualität zeigt."
+      },
+      "close": {
+        "time": "03:00",
+        "eyebrow": "Der Satz zum Mitnehmen",
+        "title": "Tessera macht schwer beaufsichtigbare KI-Agenten zu steuerbaren Systemen.",
+        "body": "Es macht ihre Handlungen sichtbar, stellt Ihre Regeln vor sensible Aktionen, bindet die richtige Person ein und bewahrt Nachweise, die gelesen und geprüft werden können.",
+        "verbs": ["Sehen", "Entscheiden", "Nachweisen"],
+        "businessCta": "Einen Arbeitstag ansehen",
+        "cockpitCta": "Bereiche erkunden",
+        "footnote": "Ehrliche Positionierung: Tessera gewinnt seinen Wert aus der durchgängigen Verbindung und der europäischen Bankfachlichkeit — nicht aus der Erfindung jeder einzelnen Komponente."
+      }
+    }
   }
 }

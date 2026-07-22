@@ -9294,5 +9294,141 @@
     "liveNote": "You are acting on the current state.",
     "pickLabel": "View as of",
     "frozenTitle": "As-of reading — return to live to act"
+  },
+  "comprendreCodex": {
+    "title": "Tessera in 3 minutes · Codex",
+    "subtitle": "What the product changes, without technical jargon.",
+    "metaTitle": "Tessera in 3 minutes · Codex proposal",
+    "metaDescription": "A business reading of Tessera to understand in three minutes how to observe, decide and prove.",
+    "content": {
+      "eyebrow": "Express guide",
+      "heroTitle": "Your AI agents are working. Tessera makes them accountable.",
+      "heroLead": "An agent can answer, consult a case or prepare an action. Tessera observes what it does, applies your rules before the action and keeps an understandable record of the decision.",
+      "heroSummary": "In short: see, decide, prove.",
+      "readTime": "Guided reading · 3 minutes",
+      "outcomeLabel": "By the end of this page",
+      "outcome": "You will be able to explain Tessera in one sentence, without talking about models or logs.",
+      "questions": [
+        "What is the agent actually doing?",
+        "May it act in this situation?",
+        "Will we be able to prove it later?"
+      ],
+      "problem": {
+        "time": "00:00",
+        "eyebrow": "The starting point",
+        "title": "A good answer is not enough.",
+        "body": "To trust an AI agent, you need to understand the path to its answer — and know who takes over when the situation requires it.",
+        "beforeLabel": "Without a control plane",
+        "afterLabel": "With Tessera",
+        "contrastBefore": "A demonstration can look convincing without showing whether the agent used the right source, followed the rule or committed the bank.",
+        "contrastAfter": "The same interaction becomes observable, policy-bound, assigned to an owner and reconstructable afterwards."
+      },
+      "journey": {
+        "time": "00:35",
+        "eyebrow": "A concrete example",
+        "title": "Tessera sits between intent and action.",
+        "body": "Take a simple case: a customer in arrears asks for a payment plan. The agent prepares an answer; Tessera checks the context before that answer can have an effect.",
+        "customer": "A customer asks for a payment plan.",
+        "agent": "The agent prepares an answer and an action.",
+        "checkpoint": "Tessera checks",
+        "requestLabel": "Request",
+        "agentLabel": "Agent",
+        "checkpointLabel": "Control",
+        "evidenceLabel": "Evidence produced",
+        "checks": [
+          "Identity and scope",
+          "Applicable rule",
+          "Permission to act",
+          "Need for a human"
+        ],
+        "allowed": "Allowed: the answer may be sent within the defined scope.",
+        "review": "Needs confirmation: the right person receives the case and decides.",
+        "evidence": "In both cases, the decision, the rule, its version and the author are retained in a verifiable trail."
+      },
+      "phases": {
+        "time": "01:25",
+        "eyebrow": "The product in four moments",
+        "title": "Control exists before, during and after the turn.",
+        "body": "Tessera assembles four established disciplines and connects them to the same business reality. The value lies in that continuity, not in a new proprietary method.",
+        "items": [
+          {
+            "marker": "Before",
+            "title": "Test",
+            "body": "Replay known situations before release and prevent a correction from reintroducing a previously documented failure."
+          },
+          {
+            "marker": "During",
+            "title": "Authorise",
+            "body": "Apply policy at the exact point where the agent wants to consult data or trigger a sensitive action."
+          },
+          {
+            "marker": "When needed",
+            "title": "Have a person decide",
+            "body": "Pass useful context to a human with a clear reason instead of hiding the agent’s uncertainty."
+          },
+          {
+            "marker": "After",
+            "title": "Prove",
+            "body": "Keep a structured timeline to explain what happened, under which rule and under which version."
+          }
+        ]
+      },
+      "roles": {
+        "time": "02:05",
+        "eyebrow": "One reality, three readings",
+        "title": "Everyone gets the answer they need.",
+        "body": "The cockpit does not show the same level of detail to everyone. It translates the same evidence according to the decision at hand.",
+        "items": [
+          {
+            "title": "Leadership · HR",
+            "question": "Where is AI acting, and who is accountable?",
+            "answer": "A view of agents, uses, owners and the thresholds where human intervention becomes mandatory."
+          },
+          {
+            "title": "Business manager",
+            "question": "What do I need to handle today?",
+            "answer": "A queue of explained, assigned and prioritised situations, with a proposed next action and no hidden automated decision."
+          },
+          {
+            "title": "Risk · IT",
+            "question": "Can we reconstruct and defend the decision?",
+            "answer": "The rules, versions, sources, traces and evidence needed to verify behaviour and respond to an audit."
+          }
+        ],
+        "sharedTruth": "The views change; the facts do not. Leadership, business and risk read the same decision from one shared source of truth."
+      },
+      "honesty": {
+        "time": "02:35",
+        "eyebrow": "Trust must be earned",
+        "title": "Tessera does not turn a green light into an absolute promise.",
+        "body": "Every strong word is tied to a measurable condition. When evidence is missing, the interface says so instead of filling the gap with marketing.",
+        "statuses": [
+          {
+            "label": "Available",
+            "condition": "The required services respond and their state is observed."
+          },
+          {
+            "label": "Under control",
+            "condition": "The applicable policy was actually evaluated on the action."
+          },
+          {
+            "label": "Sealed · opposable",
+            "condition": "The chain is verified and a fresh, verifiable qualified third-party seal is present."
+          }
+        ],
+        "boundaryTitle": "What Tessera is — and is not",
+        "boundary": "Tessera is neither the agent, a new firewall nor a certification. It is the control plane that assembles guardrails, tests, audit and human validation around your agents — then shows the quality of evidence actually earned."
+      },
+      "close": {
+        "time": "03:00",
+        "eyebrow": "The sentence to remember",
+        "title": "Tessera turns hard-to-supervise AI agents into governable systems.",
+        "body": "It makes their actions visible, places your rules before sensitive acts, involves the right person and keeps evidence that can be read and verified.",
+        "verbs": ["See", "Decide", "Prove"],
+        "businessCta": "See a business day",
+        "cockpitCta": "Explore the spaces",
+        "footnote": "Honest positioning: Tessera’s value lies in the end-to-end assembly and European banking semantics, not in inventing every component."
+      }
+    }
   }
 }
