@@ -6911,6 +6911,10 @@
       "chat": "Chat",
       "embedding": "Embedding",
       "manage": "Manage models"
+    },
+    "asof": {
+      "liveNote": "Current configuration — the governed parameters shown are the ones in force.",
+      "scope": "only the governed parameters (journal) are re-read at this instant; the process baseline stays today's"
     }
   },
   "inbox": {

@@ -17,6 +17,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
+import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
@@ -84,9 +85,13 @@ export function ParametersOverview() {
   const t = useTranslations("parameters");
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  // As-of T (OT-01, URL-derived `?asof=`): the governed overrides are refolded
+  // from the ledger at T — "mes paramètres d'il y a 3 h". Key must stay accorded
+  // with the SSR prefetch (`[..., null]` in live — Insight 175).
+  const asOf = useAsOf();
   const { data } = useQuery({
-    queryKey: ["parameters-overview", locale],
-    queryFn: ({ signal }) => fetchParametersOverview(locale, signal),
+    queryKey: ["parameters-overview", locale, asOf ?? null],
+    queryFn: ({ signal }) => fetchParametersOverview(locale, signal, asOf),
     staleTime: 60_000,
   });
 
@@ -104,6 +109,9 @@ export function ParametersOverview() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} onExport={onExport} />
+      {/* As-of + Live composition (registre §6) — the SAME rail component as
+          AGIR, with the claim scoped to what this page truly re-reads at T. */}
+      <AgirRail liveNote={t("asof.liveNote")} asofNote={t("asof.scope")} />
       <ConfigVersionBar t={t} data={data} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

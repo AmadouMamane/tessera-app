@@ -101,34 +101,52 @@ async def observability_governance(
 
 
 @router.get("/observability/parameters")
-async def observability_parameters(lang: str = "fr") -> dict[str, object]:
-    """Settings / parameters overview (page #21).
+async def observability_parameters(lang: str = "fr", asof: str | None = None) -> dict[str, object]:
+    """Settings / parameters overview (page #21), live or governed-overrides as-of T.
 
     Composes the active config version, posture KPIs, quick-config categories,
     recent parameters, configuration-state distribution and compliance checks.
+    With ``asof`` the governed overrides are FOLDED from the hash-chained ledger
+    at T (OT-01 — "mes paramètres d'il y a 3 h"); the process posture stays live
+    and the UI scopes the claim accordingly.
     Degrades to ``available: false`` on failure.
     """
     try:
-        # ADR 0030 — the stored governed overrides are the only parameters with a
-        # real per-row author; the store read is async so it happens here, and the
-        # sync composer receives plain rows. Fail open to base: an unreadable
-        # store must not blank the whole page.
-        try:
-            from tessera.api.config_overrides import list_overrides
+        # As-of T: the overrides in force at T, refolded from the governed
+        # journal — never today's store rows under a T label. A malformed
+        # hand-edited instant reads live (État à date's tolerance): the
+        # frontend chip derives from the same URL and falls back identically.
+        folded: list[parameters_mod.OverrideRow] | None = None
+        if asof:
+            try:
+                folded = parameters_mod.override_rows_as_of(asof)
+            except ValueError:
+                folded = None
+        if folded is not None:
+            override_rows = folded
+        else:
+            # ADR 0030 — the stored governed overrides are the only parameters
+            # with a real per-row author; the store read is async so it happens
+            # here, and the sync composer receives plain rows. Fail open to base:
+            # an unreadable store must not blank the whole page.
+            try:
+                from tessera.api.config_overrides import list_overrides
 
-            override_rows = [
-                parameters_mod.OverrideRow(
-                    key=o.key,
-                    value=o.value,
-                    author=o.author,
-                    reason=o.reason,
-                    updated_at=o.updated_at,
+                override_rows = [
+                    parameters_mod.OverrideRow(
+                        key=o.key,
+                        value=o.value,
+                        author=o.author,
+                        reason=o.reason,
+                        updated_at=o.updated_at,
+                    )
+                    for o in await list_overrides()
+                ]
+            except Exception as exc:
+                sys.stderr.write(
+                    f"tessera.observability.parameters: overrides read failed: {exc}\n"
                 )
-                for o in await list_overrides()
-            ]
-        except Exception as exc:
-            sys.stderr.write(f"tessera.observability.parameters: overrides read failed: {exc}\n")
-            override_rows = []
+                override_rows = []
         return {
             "available": True,
             **parameters_mod.compute_parameters_overview(lang, override_rows=override_rows),

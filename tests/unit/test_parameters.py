@@ -7,6 +7,11 @@ payload matches — so the test proves *derivation*, never a hard-coded snapshot
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pytest
+
 from tessera.guard.decisions import load_policy
 from tessera.observability.model_catalogue import available_model_ids
 from tessera.observability.parameters import compute_parameters_overview
@@ -127,3 +132,67 @@ def test_models_configured_come_from_the_real_catalogue() -> None:
     assert all(m["role"] in ("chat", "embedding") for m in models)  # type: ignore[index]
     active = {m["name"] for m in models if m["status"] == "active"}  # type: ignore[index]
     assert active and active <= names
+
+
+# ── OT-01 · « mes paramètres d'il y a 3 h » — le fold as-of des overrides ──────
+
+
+class TestOverrideRowsAsOf:
+    """The governed overrides at T are a real fold of the ledger, never today's store."""
+
+    @staticmethod
+    def _entries() -> list[dict[str, object]]:
+        def ev(hour: int, key: str, args: dict[str, object]) -> dict[str, object]:
+            return {
+                "target": f"config_overrides.{key}",
+                "occurred_at": f"2026-07-22T{hour:02d}:00:00+00:00",
+                "actor": "ops@tessera",
+                "arguments": args,
+            }
+
+        return [
+            ev(10, "llm.chat_model", {"value": "mistral:7b", "reason": "essai"}),
+            ev(11, "llm.chat_model", {"value": "gemma3:27b", "reason": "quality"}),
+            {"target": "operator_item.transition", "occurred_at": "2026-07-22T11:30:00+00:00"},
+            ev(12, "llm.chat_model", {"reverted": True, "reason": "retour au socle"}),
+            ev(13, "llm.chat_model", {"value": "llama3.3:70b", "reason": "final"}),
+            ev(13, "guard.escalation_threshold", {"value": "0.4", "reason": "pilote"}),
+        ]
+
+    def _rows_at(self, monkeypatch: pytest.MonkeyPatch, hour: int) -> dict[str, str]:
+        from tessera.observability import parameters as parameters_mod
+
+        entries = self._entries()
+        monkeypatch.setattr(parameters_mod, "read_ledger_entries", lambda **_kw: list(entries))
+        rows = parameters_mod.override_rows_as_of(f"2026-07-22T{hour:02d}:30:00+00:00")
+        return {r.key: r.value for r in rows}
+
+    def test_the_last_write_at_or_before_t_wins(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        assert self._rows_at(monkeypatch, 10) == {"llm.chat_model": "mistral:7b"}
+        assert self._rows_at(monkeypatch, 11) == {"llm.chat_model": "gemma3:27b"}
+
+    def test_a_revert_removes_the_override_back_to_base(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert self._rows_at(monkeypatch, 12) == {}
+
+    def test_a_rewrite_after_the_revert_reinstalls_it(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert self._rows_at(monkeypatch, 13) == {
+            "llm.chat_model": "llama3.3:70b",
+            "guard.escalation_threshold": "0.4",
+        }
+
+    def test_the_row_carries_the_verified_author_and_the_real_instant(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from tessera.observability import parameters as parameters_mod
+
+        entries = self._entries()
+        monkeypatch.setattr(parameters_mod, "read_ledger_entries", lambda **_kw: list(entries))
+        rows = parameters_mod.override_rows_as_of("2026-07-22T10:30:00+00:00")
+        assert len(rows) == 1
+        assert rows[0].author == "ops@tessera"
+        assert rows[0].updated_at.isoformat() == "2026-07-22T10:00:00+00:00"
+        assert rows[0].reason == "essai"

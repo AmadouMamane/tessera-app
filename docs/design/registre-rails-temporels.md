@@ -1,6 +1,17 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.9 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.9.1 (2026-07-22)
+>
+> v1.9.1 — le chantier « paramètres à T » nommé en v1.9 est **exécuté** (périmètre overrides) :
+> `override_rows_as_of(asof)` fold RÉEL du ledger (`config_overrides.<clé>`, écritures et
+> reverts, auteur vérifié au top-level, lecture bornée `until`), route
+> `GET /observability/parameters?asof=`, et CONFIGURER / Paramètres rend la composition §6
+> As-of + Live via **LE même composant** `AgirRail` — enrichi de deux notes scopées
+> (`liveNote` / `asofNote`) pour que la lecture « État au T » dise EXACTEMENT ce qu'elle
+> couvre : les paramètres gouvernés sont relus à T, le socle process reste celui d'aujourd'hui
+> (la relecture du socle — git/policy à T — reste un chantier, dit tel quel). Témoins :
+> `TestOverrideRowsAsOf` (dernier write ≤ T par clé, revert = retour au socle, réécriture
+> post-revert, auteur + instant réels).
 >
 > v1.9 — câblage réel et complétude, sur trois fronts. (1) **Preuves & exporteurs devient
 > as-of RÉEL** : `compute_proofs_overview(lang, asof=)` borne chaque compteur réel à T
@@ -358,7 +369,7 @@ signifie : pas de besoin temporel prouvé, pas de rail — en mettre un serait d
 | `agents/[id]/console` | XT-01 waterfall live (SSE) | Implémenté |
 | `agents/[id]/configurations` · `connaissances` · `garde-fous` · `prompts` · `metier` | amorces OT-01 (versions, overlay, renvois) | Partiel — promotion = C1 par-objet consultable à T |
 | `a-traiter` · `a-faire` | WF-01 timeline de transitions dans les drawers | Implémenté — un scrubber de file n'a pas de sens (SLA = présent) |
-| `configurer/parametres` | aucune | **À faire** — « paramètres à T » : substrat prouvé (note OT-01 v1.9), fold + lentille dus |
+| `configurer/parametres` | AgirRail As-of + Live (`?asof=`), overrides refoldés du ledger à T, claim scopé | Implémenté — overrides (v1.9.1) ; socle git/policy à T : chantier |
 | `configurer/modeles` · `garde-fous` · `politiques` | historique par mtimes / overlay | Partiel OT-01 — même chemin de fold que Paramètres |
 | `configurer/sources-memoire` | VersionsBlock + renvois TE-01 (`?sources=`) | Partiel OT-01 — le renvoi est voulu (preuve → PROUVER) |
 | `configurer/connecteurs` · `integrations` · `signal-catalog` | aucune | — catalogues descriptifs ; leurs mutations gouvernées sont au ledger |

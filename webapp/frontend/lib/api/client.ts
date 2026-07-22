@@ -1193,9 +1193,18 @@ export async function fetchSystemProfile(
 export async function fetchParametersOverview(
   lang: string,
   signal?: AbortSignal,
+  asOf?: string | null,
 ): Promise<ParametersOverview> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/parameters${q}`, { signal }, ParametersOverviewSchema);
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  // As-of T: the governed overrides are refolded from the ledger at T (OT-01).
+  if (asOf) params.set("asof", asOf);
+  const q = params.toString();
+  return request(
+    `/observability/parameters${q ? `?${q}` : ""}`,
+    { signal },
+    ParametersOverviewSchema,
+  );
 }
 
 /** The governed operable-knob panel (ADR 0030): org + per-agent chat model. */

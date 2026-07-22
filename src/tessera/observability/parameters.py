@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tessera.guard.decisions import load_policy
+from tessera.guard.ledger_store import read_ledger_entries
+from tessera.observability._asof import occurred_before
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.model_catalogue import (
     _active_ids,
@@ -32,7 +34,51 @@ from tessera.settings import Settings, get_settings
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__all__ = ["OverrideRow", "compute_parameters_overview"]
+__all__ = ["OverrideRow", "compute_parameters_overview", "override_rows_as_of"]
+
+_OVERRIDE_TARGET_PREFIX = "config_overrides."
+
+
+def override_rows_as_of(asof: str) -> list[OverrideRow]:
+    """The governed knob overrides in force at instant T — a real S1 fold (OT-01).
+
+    Every knob write and revert is a governed act on the hash-chained ledger
+    (``target="config_overrides.<key>"``, ``arguments`` carrying ``value``/
+    ``reason`` or ``reverted``, top-level verified ``actor``). Entries come back
+    oldest→newest, so the state at T is the last event at or before T per key:
+    a write installs the override, a revert removes it (back to the base). The
+    read is bounded (``until``) on the ``occurred_at`` index in postgres; file
+    mode filters the seam's dicts with the shared as-of comparison.
+    """
+    at_dt = datetime.fromisoformat(asof.replace("Z", "+00:00"))
+    if at_dt.tzinfo is None:
+        at_dt = at_dt.replace(tzinfo=UTC)
+    rows: dict[str, OverrideRow] = {}
+    for entry in read_ledger_entries(until=at_dt):
+        target = entry.get("target")
+        if not (isinstance(target, str) and target.startswith(_OVERRIDE_TARGET_PREFIX)):
+            continue
+        occurred = entry.get("occurred_at")
+        if not occurred_before(occurred, at_dt.isoformat()):
+            continue
+        key = target.removeprefix(_OVERRIDE_TARGET_PREFIX)
+        args = entry.get("arguments")
+        args = args if isinstance(args, dict) else {}
+        if args.get("reverted") is True:
+            rows.pop(key, None)
+            continue
+        try:
+            updated_at = datetime.fromisoformat(str(occurred))
+        except ValueError:
+            continue  # an unreadable instant cannot claim a place in an as-of view
+        rows[key] = OverrideRow(
+            key=key,
+            value=str(args.get("value", "")),
+            author=str(entry.get("actor", "")),
+            reason=str(args.get("reason", "")),
+            updated_at=updated_at,
+        )
+    return list(rows.values())
 
 
 @dataclass(frozen=True, slots=True)

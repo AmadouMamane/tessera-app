@@ -21,7 +21,20 @@ export function useAsOf(): string | null {
   return useSearchParams().get("asof");
 }
 
-export function AgirRail() {
+export function AgirRail({
+  liveNote,
+  asofNote,
+}: {
+  /** Page-scoped Live wording (default: the AGIR "you act on the present"). */
+  liveNote?: string;
+  /**
+   * What the As-of reading actually covers on THIS page (e.g. Paramètres: only
+   * the governed overrides are refolded at T — the process posture stays live).
+   * A reading that claims more than the backend re-reads is the cosmetic mode
+   * purged in registre v1.5; this note is how a page keeps the claim exact.
+   */
+  asofNote?: string;
+} = {}) {
   const t = useTranslations("agirRail");
   const router = useRouter();
   const pathname = usePathname();
@@ -70,6 +83,9 @@ export function AgirRail() {
         <>
           <span className="min-w-0 truncate text-[0.68rem] text-[var(--tessera-text)]">
             {t("asofReading", { t: new Date(asof).toLocaleString() })}
+            {asofNote ? (
+              <span className="text-[var(--tessera-text-muted)]"> · {asofNote}</span>
+            ) : null}
           </span>
           <button
             type="button"
@@ -80,7 +96,9 @@ export function AgirRail() {
           </button>
         </>
       ) : (
-        <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("liveNote")}</span>
+        <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+          {liveNote ?? t("liveNote")}
+        </span>
       )}
       <label className="ml-auto inline-flex items-center gap-1.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
         {t("pickLabel")}

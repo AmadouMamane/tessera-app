@@ -18,7 +18,9 @@ export async function generateMetadata({ params }: ParametresPageProps) {
 
 async function prefetchParameters(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["parameters-overview", locale],
+    // MUST match the client's key EXACTLY (Insight 175): the client key carries
+    // the as-of instant (null = live), so the SSR seed hydrates the live view.
+    queryKey: ["parameters-overview", locale, null],
     queryFn: async () => {
       const response = await fetch(
         `${backendUrl()}/observability/parameters?lang=${encodeURIComponent(locale)}`,

@@ -6911,6 +6911,10 @@
       "chat": "Chat",
       "embedding": "Embedding",
       "manage": "Gérer les modèles"
+    },
+    "asof": {
+      "liveNote": "Configuration courante — les paramètres gouvernés affichés sont ceux en vigueur.",
+      "scope": "seuls les paramètres gouvernés (journal) sont relus à cet instant ; le socle process reste celui d'aujourd'hui"
     }
   },
   "inbox": {
