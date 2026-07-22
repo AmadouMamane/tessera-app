@@ -342,6 +342,10 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   Le navigateur intégré avait refusé l'automatisation du preview local et aucun contournement n'a été
   tenté. Les quatre témoins exigés — vide-FR, FR, EN et DE — ne sont donc toujours pas régénérés ; le
   merge sur `main` reste suspendu à leur production, malgré l'approbation visuelle live.
+- **Instruction opérateur d'atterrissage** : après rappel explicite de ce témoin manquant, Amadou a
+  demandé de fusionner la branche dans `main` et de redémarrer les serveurs de référence. Le HALT est
+  donc levé par instruction directe du propriétaire ; les quatre captures restent une dette documentée,
+  elles ne sont pas présentées comme produites.
 - Owed hors lot, sans action : le monde du preview reste incohérent pour une démo tant que son
   seed ne produit pas ensemble une spine et un ledger représentatifs. Le seed d'un monde cohérent
   appartient à une passe dédiée.
