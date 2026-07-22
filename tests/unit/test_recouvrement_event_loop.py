@@ -96,7 +96,10 @@ async def test_message_route_does_not_pin_the_event_loop(
     monkeypatch.setattr(module, "run_recouvrement_graph_v1", _blocking)
 
     ticks = await _ticks_during(
-        recouvrement_assistant_message(RecouvrementAssistantRequest(message="bonjour"))
+        recouvrement_assistant_message(
+            RecouvrementAssistantRequest(message="bonjour"),
+            session=_verified_session(monkeypatch),
+        )
     )
 
     # Pre-fix this is 0: the loop is pinned for the whole turn. Post-fix the ticker gets

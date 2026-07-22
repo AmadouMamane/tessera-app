@@ -1167,6 +1167,7 @@ def test_business_event_payload_validation_and_versioning(
 
 async def test_recouvrement_assistant_endpoint_returns_structured_contract(
     observed_recouvrement_stores: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = RecouvrementAssistantRequest(
         case_id="RC-2048",
@@ -1175,7 +1176,9 @@ async def test_recouvrement_assistant_endpoint_returns_structured_contract(
         turn_id="turn-endpoint",
         assistant_state={"activeTask": "check_rule"},
     )
-    output = await recouvrement_assistant_message(payload)
+    output = await recouvrement_assistant_message(
+        payload, session=_verified_collections_session(monkeypatch)
+    )
 
     assert output["artifact"]["type"] == "contact_rule_v1"
     assert output["artifact"]["title"] == "Cadre de contact — RC-2048"
@@ -1191,6 +1194,7 @@ async def test_recouvrement_assistant_endpoint_returns_structured_contract(
 
 async def test_recouvrement_assistant_endpoint_returns_schedule_contract(
     observed_recouvrement_stores: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = RecouvrementAssistantRequest(
         case_id="RC-2048",
@@ -1199,7 +1203,9 @@ async def test_recouvrement_assistant_endpoint_returns_schedule_contract(
         turn_id="turn-endpoint-schedule",
         assistant_state={"activeTask": "check_rule"},
     )
-    output = await recouvrement_assistant_message(payload)
+    output = await recouvrement_assistant_message(
+        payload, session=_verified_collections_session(monkeypatch)
+    )
 
     assert output["decisions"]["intent"] == "propose_schedule"
     assert output["artifact"]["type"] == "schedule_proposal_v2"
@@ -1219,6 +1225,7 @@ async def test_recouvrement_assistant_endpoint_returns_schedule_contract(
 
 async def test_recouvrement_assistant_endpoint_returns_draft_contract(
     observed_recouvrement_stores: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = RecouvrementAssistantRequest(
         case_id="RC-2048",
@@ -1227,7 +1234,9 @@ async def test_recouvrement_assistant_endpoint_returns_draft_contract(
         turn_id="turn-endpoint-draft",
         assistant_state={"activeTask": "draft_reminder"},
     )
-    output = await recouvrement_assistant_message(payload)
+    output = await recouvrement_assistant_message(
+        payload, session=_verified_collections_session(monkeypatch)
+    )
 
     assert output["decisions"]["intent"] == "draft_reminder"
     assert output["artifact"]["type"] == "reminder_draft_v1"
@@ -1246,6 +1255,7 @@ async def test_recouvrement_assistant_endpoint_returns_draft_contract(
 
 async def test_recouvrement_assistant_endpoint_returns_summary_contract(
     observed_recouvrement_stores: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = RecouvrementAssistantRequest(
         case_id="RC-2048",
@@ -1254,7 +1264,9 @@ async def test_recouvrement_assistant_endpoint_returns_summary_contract(
         turn_id="turn-endpoint-summary",
         assistant_state={"activeTask": "summary"},
     )
-    output = await recouvrement_assistant_message(payload)
+    output = await recouvrement_assistant_message(
+        payload, session=_verified_collections_session(monkeypatch)
+    )
 
     assert output["decisions"]["intent"] == "summarize_case"
     assert output["artifact"]["type"] == "case_summary_v1"
@@ -1272,6 +1284,7 @@ async def test_recouvrement_assistant_endpoint_returns_summary_contract(
 
 async def test_recouvrement_assistant_endpoint_returns_payment_options_contract(
     observed_recouvrement_stores: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = RecouvrementAssistantRequest(
         case_id="RC-2048",
@@ -1280,7 +1293,9 @@ async def test_recouvrement_assistant_endpoint_returns_payment_options_contract(
         turn_id="turn-endpoint-payment",
         assistant_state={"activeTask": "explain_payment_options"},
     )
-    output = await recouvrement_assistant_message(payload)
+    output = await recouvrement_assistant_message(
+        payload, session=_verified_collections_session(monkeypatch)
+    )
 
     assert output["visibleReply"] == "Options de paiement du dossier RC-2048 préparées."
     assert output["decisions"]["intent"] == "explain_payment_options"

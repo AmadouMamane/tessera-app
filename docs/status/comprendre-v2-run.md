@@ -274,7 +274,11 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   les routes humaines propagent `actor_of(session)` et chaque sonde/tâche système nomme son acteur.
   La proposition de prompt transporte elle aussi l'`Actor` vérifié au lieu de dupliquer une chaîne
   `author`. Validation après correction : 122 tests ciblés verts, dont les 45 témoins d'auteur,
-  Ruff, format et mypy verts. Le gate-twice complet est à relancer sur ce nouvel arbre.
+  Ruff, format et mypy verts. La relance complète a ensuite trouvé six appels directs de tests
+  Recouvrement encore figés sur l'ancienne signature sans session ; le code de production est
+  resté strict et les tests injectent désormais la vraie `SessionContext` collections signée par
+  leur helper existant. Les 42 tests Recouvrement repassent verts. Le gate-twice complet est à
+  relancer sur ce nouvel arbre.
 - Owed hors lot, sans action : le monde du preview reste incohérent pour une démo tant que son
   seed ne produit pas ensemble une spine et un ledger représentatifs. Le seed d'un monde cohérent
   appartient à une passe dédiée.
