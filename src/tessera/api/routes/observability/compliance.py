@@ -218,16 +218,17 @@ async def observability_evidence_pack_verify(pack_id: str) -> dict[str, object]:
 
 
 @router.get("/observability/proofs")
-async def observability_proofs(lang: str = "fr") -> dict[str, object]:
-    """Proofs & exporter overview (page #15).
+async def observability_proofs(lang: str = "fr", asof: str | None = None) -> dict[str, object]:
+    """Proofs & exporter overview (page #15), live or as-of ``asof``.
 
     Composes the proof posture, assembly pipeline, current evidence pack,
     recent packs, artifact distribution, exporters & destinations, cryptographic
     verification, control-case proofs, retention obligations and export journal.
+    With ``asof`` every real count is bounded at T (SR-01 "État au T" is real).
     Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **proofs_mod.compute_proofs_overview(lang)}
+        return {"available": True, **proofs_mod.compute_proofs_overview(lang, asof=asof)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.proofs: failed: {exc}\n")
         return {"available": False}

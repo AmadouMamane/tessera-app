@@ -1082,9 +1082,14 @@ export async function fetchAutomationsOverview(
 export async function fetchProofsOverview(
   lang: string,
   signal?: AbortSignal,
+  asOf?: string | null,
 ): Promise<ProofsOverview> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/proofs${q}`, { signal }, ProofsOverviewSchema);
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  // As-of T: the backend bounds every real count at T (SR-01 reading is real).
+  if (asOf) params.set("asof", asOf);
+  const q = params.toString();
+  return request(`/observability/proofs${q ? `?${q}` : ""}`, { signal }, ProofsOverviewSchema);
 }
 
 /** The real collection-case queue + counters (subject-scoped; BFF attaches the assertion). */

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { type ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 
 import { DeltaBadge, MetricCard } from "@/components/cockpit/metric-card";
 import { MetricInfo } from "@/components/cockpit/metric-info";
@@ -82,10 +82,21 @@ function makeWindow(preset: Period, anchor: Date = new Date()): AuditWindow {
   return { preset, since: since.toISOString(), until: until.toISOString() };
 }
 
-export function AuditTable({ initialWindow }: { initialWindow?: AuditWindow }) {
+export function AuditTable({
+  initialWindow,
+  breakdown,
+}: {
+  initialWindow?: AuditWindow;
+  /**
+   * The per-agent proof card, rendered by the page (server component) and slotted
+   * UNDER the temporal rail: the rail is the page's instrument and reads first,
+   * the agent lens is content beneath it (registre §5 v1.8).
+   */
+  breakdown?: ReactNode;
+}) {
   return (
     <Suspense fallback={<AuditTableFallback />}>
-      <AuditTableInner initialWindow={initialWindow} />
+      <AuditTableInner initialWindow={initialWindow} breakdown={breakdown} />
     </Suspense>
   );
 }
@@ -105,7 +116,13 @@ function AuditTableFallback() {
   );
 }
 
-function AuditTableInner({ initialWindow }: { initialWindow?: AuditWindow }) {
+function AuditTableInner({
+  initialWindow,
+  breakdown,
+}: {
+  initialWindow?: AuditWindow;
+  breakdown?: ReactNode;
+}) {
   const t = useTranslations("audit");
   const tCommon = useTranslations("common");
   const formatter = useFormatter();
@@ -193,6 +210,7 @@ function AuditTableInner({ initialWindow }: { initialWindow?: AuditWindow }) {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden text-[var(--tessera-text)]">
       <WindowControl
+        variant="instrument"
         presets={PERIODS.map((period) => ({ value: period, label: t(`window.${period}`) }))}
         period={window.preset}
         onPeriod={(value) => applyPeriod(value as Period)}
@@ -208,6 +226,8 @@ function AuditTableInner({ initialWindow }: { initialWindow?: AuditWindow }) {
           nextMonth: t("window.nextMonth"),
         }}
       />
+
+      {breakdown}
 
       <MetricGrid
         overview={overview.data}

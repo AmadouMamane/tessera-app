@@ -18,7 +18,9 @@ export async function generateMetadata({ params }: ProofsPageProps) {
 
 async function prefetchProofs(queryClient: QueryClient, locale: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["proofs-overview", locale],
+    // MUST match the client's key EXACTLY (Insight 175): the client key carries
+    // the as-of instant (null = live), so the SSR seed hydrates the live view.
+    queryKey: ["proofs-overview", locale, null],
     queryFn: async () => {
       const response = await fetch(
         `${backendUrl()}/observability/proofs?lang=${encodeURIComponent(locale)}`,

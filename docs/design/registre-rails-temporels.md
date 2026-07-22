@@ -1,6 +1,21 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.8 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.9 (2026-07-22)
+>
+> v1.9 — câblage réel et complétude, sur trois fronts. (1) **Preuves & exporteurs devient
+> as-of RÉEL** : `compute_proofs_overview(lang, asof=)` borne chaque compteur réel à T
+> (préfixe du ledger — SQL en postgres, seam fichier sinon —, scores/bundles/rapports/packs à
+> T ; verdict de chaîne AU PRÉFIXE : une rupture après la borne T laisse l'état à T sain), la
+> page passe `temporal.asOf` à sa requête, et « Créer un pack » est **gelé dans le passé** (on
+> n'agit pas dans le passé, règle agir-rail). Le bar SR-01 y est donc pilotant, plus seulement
+> contextuel. (2) **AU-01 enregistré et promu** : la barre de fenêtre du Journal d'audit
+> (période 24h/7j/30j + plage réelle + saut à date, qui borne les requêtes en SQL) est un rail
+> de plein droit — elle monte **au-dessus** de la carte « Vue par agent » et porte le chrome
+> instrument (`WindowControl variant="instrument"`). (3) **Inventaire page-par-page** (§10) :
+> chaque route porte un verdict rail/pas-rail motivé ; OT-01 gagne le home CONFIGURER /
+> Paramètres avec son chemin de promotion — le substrat « paramètres à T » EXISTE (chaque
+> mutation de knob au ledger hash-chaîné porte `{value, base, reason}` et les reverts sont
+> journalisés : l'état des knobs à T est un fold réel), il manque le fold et la lentille.
 >
 > v1.8 — convergence visuelle et honnêteté des instances SR-01, après balayage **page par
 > page** (l'unité d'audit v1.5 était le rail ; celle-ci est la page). (1) **Un rail porte la
@@ -88,13 +103,14 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | Code | Nom canonique | Usage | Pages | Substrat | Composant | État |
 |------|---------------|-------|-------|----------|-----------|------|
 | **TE-01** | Temporal Evidence Rail | Preuve opposable / reconstitution à T | `PROUVER / État à date` | S1 | C1 (as-of) | Implémenté |
-| **OT-01** | Object Trace Rail | Historique local d'un objet agent | Configurations, Connaissances, Garde-fous, Prompts, Sources & mémoire | S1 | C1 (par-objet) | Partiel — amorces (note) |
+| **OT-01** | Object Trace Rail | Historique local d'un objet agent / de config | Configurations, Connaissances, Garde-fous, Prompts, Sources & mémoire, `CONFIGURER / Paramètres` (v1.9) | S1 | C1 (par-objet) | Partiel — amorces (note) |
 | **AT-01** | Agent Activity Rail | Activité récente (feed) — *pas* les signaux | `AGENT / Synthèse` | S1 | C1 (feed) | Partiel — feed implémenté |
 | **ER-01** | Evaluation Run Rail | Historique des runs d'évaluation | `AGENT / Évaluations` | S3 | C2 | Implémenté |
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Partiel — timeline implémentée |
 | **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | Implémenté — journal + timeline (note) |
 | **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | Implémenté — cassette (note) |
-| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (4/7 pages) · `PROUVER / Preuves & exporteurs` · standalone : Prompts, Garde-fous, Évaluations (note v1.8) | S4 | C4 | Implémenté — Qualité IA/Amélioration à faire |
+| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (4/7 pages) · `PROUVER / Preuves & exporteurs` (payload as-of réel, v1.9) · standalone : Prompts, Garde-fous, Évaluations (note v1.8) | S4 | C4 | Implémenté — Qualité IA/Amélioration à faire |
+| **AU-01** | Audit Window Rail | Fenêtrage réel du journal d'audit (période + saut à date) | `PROUVER / Journal d'audit` | S1 | C2 (fenêtre) | Implémenté — instrument (v1.9) |
 
 > **SR-01 (état au 2026-06-27)** — implémenté comme `components/overview/temporal-rail.tsx`, rendu par les pages SURVEILLER (Vue d'ensemble, Qualité IA, Conformité, Sécurité & privacy). Modes **Live · Historique · Comparé (baseline) · À une date** — navigation de **signaux** uniquement (S4/C4). **Aucun replay d'exécution** : ce composant ne rejoue jamais un tour/trace (déplacement d'un curseur T sur les signaux persistés, lus as-of-T). Mode actif **toujours affiché** ; état dérivé de l'**URL** (deep-link `?asof=&period=` — le paramètre de fenêtre s'appelle `period`, corrigé v1.5, plus `at`/`to`/`compare`), pas d'un état local ; fenêtre (Période) lue depuis le **window-store partagé**, non dupliquée (§8). Le code de rail (`SR-01`) reste interne — **jamais affiché** (§ glossaire). Auparavant mal nommé « XT-01 » sur la Vue d'ensemble : corrigé.
 
@@ -113,6 +129,38 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 > leurs requêtes consomment `asOf` (le poser sans câblage recréerait le mode cosmétique purgé
 > en v1.5). **Norme visuelle (§5)** : tout rail temporel porte la surface instrument
 > (`sr01-strip`) — jamais le chrome d'une carte de contenu.
+
+> **SR-01 / Preuves & exporteurs (état au 2026-07-22, v1.9) — as-of RÉEL.**
+> `compute_proofs_overview(lang, asof=)` borne chaque compteur réel à T : préfixe du ledger
+> (`ledger_length_as_of` en SQL sur postgres ; seam `read_ledger_entries` + `occurred_before`
+> en mode fichier), `read_scores(at=)`, `persisted_bundles(at=)`, rapports (instant du run
+> dans le nom `<run-id>_<lang>.json`, repli mtime pour les alias `latest*.json`), packs par
+> `created_at`. **Verdict de chaîne au préfixe** : l'intégrité de contenu de la chaîne
+> entière implique celle de tout préfixe — une rupture à l'indice b laisse l'état à T sain si
+> b ≥ borne(T) (témoin `test_the_chain_verdict_at_t_is_the_prefix_verdict`). Le frontend passe
+> `temporal.asOf` (débouncé) dans la clé de requête ; « Créer un pack » est gelé en as-of avec
+> raison (« on n'agit pas dans le passé »). Restent démonstration, dits tels quels : SIEM /
+> exporteurs / journal d'export (`SyntheticNotice evidence_export`).
+
+> **AU-01 (état au 2026-07-22, v1.9) — Implémenté, promu instrument.** La barre de fenêtre du
+> Journal d'audit était déjà **réelle** (préréglages 24h/7j/30j + plage affichée depuis le
+> payload + saut à date ; `since`/`until` bornent les requêtes overview/table en SQL sur
+> l'index `occurred_at`) mais rendue comme une carte quelconque SOUS la carte « Vue par
+> agent » — invisible comme rail. v1.9 : elle monte **en tête** (la carte agent se glisse
+> dessous via le slot `breakdown` d'`AuditTable`) et porte le chrome instrument
+> (`WindowControl variant="instrument"` — le défaut `card` préserve l'usage du header).
+> Pas de scrubber d'instant ici : le journal se consulte par FENÊTRE (C2), l'état à T est le
+> domaine de TE-01.
+
+> **OT-01 / Paramètres (état au 2026-07-22, v1.9) — chemin de promotion, substrat PROUVÉ.**
+> « Voir mes paramètres d'il y a 3 h » est constructible sans nouveau substrat : chaque
+> mutation de knob passe par le patron gouverné et le ledger hash-chaîné porte
+> `{value, base, reason}` et les reverts (`{"reverted": True, ...}`) — les deux sites
+> d'émission vivent dans `api/routes/settings.py`, horodatés `occurred_at`. L'état des knobs à T = base + fold des
+> mutations ≤ T (dernier write non reverté). Chantier : `compute_parameters_overview(asof=)`
+> (fold), lentille as-of sur CONFIGURER / Paramètres (mode affiché, `?asof=` URL, mutations
+> gelées à T — règle agir-rail), témoin unitaire du fold. Même patron ensuite pour Modèles /
+> Garde-fous / Politiques (leurs mutations sont au même ledger).
 
 > **XT-01** — homes `AGENT / Console` (waterfall live du tour courant, SSE) et `AGIR / Replay` (lentille cassette sur les captures persistées). Il **n'est plus** sur la Vue d'ensemble. Implémenté au 2026-07-22 — voir la note datée XT-01 plus bas.
 
@@ -286,3 +334,34 @@ Mention obligatoire sous le badge : « *Statut attribué uniquement après véri
 > La numérotation `1 · 2 · 3 · A · D` n'est **pas** requise sur l'écran opérationnel (lecture en scan) ; elle est **réservée à l'export Evidence Pack** (artefact légal, lecture séquentielle type affidavit).
 
 > **Règle de production** : ne pas régénérer une page validée pour ce genre d'évolution — encoder l'invariant ici. Une régénération risque de réintroduire des régressions (visuelles, textuelles ou de navigation).
+
+## 10. Inventaire page-par-page (v1.9)
+
+Verdict temporel de CHAQUE route (l'unité v1.5 était le rail ; celle-ci est la page). « — »
+signifie : pas de besoin temporel prouvé, pas de rail — en mettre un serait du chrome.
+
+| Route | Affordance temporelle | Verdict |
+|-------|----------------------|---------|
+| `surveiller/vue-ensemble` · `securite-privacy` · `conformite` · `observabilite` | SR-01 command bar, contenu as-of/scope | Implémenté |
+| `surveiller/qualite-ia` | aucune | **À faire** — SR-01 exige d'abord `asof` dans les requêtes d'éval (jamais un bar cosmétique) |
+| `surveiller/amelioration` | aucune | **À faire** — même condition |
+| `surveiller/fiabilite-cout` | PeriodRail (agrégats de période) | Voulu tel quel — agrégats, pas un scrubber |
+| `prouver/audit-logs` | AU-01 fenêtre réelle + saut à date, instrument, en tête | Implémenté (v1.9) |
+| `prouver/evidence-store` | SR-01 command bar + payload as-of réel, création gelée à T | Implémenté (v1.9) |
+| `prouver/etat-a-date` | TE-01 reconstruction as-of + badge d'opposabilité | Implémenté |
+| `agir/automations` · `curation-eval-set` · `replay-shadow` | agir-rail (As-of + Live, mutations gelées à T) | Implémenté |
+| `agir/incidents-playbooks` | aucune | **À évaluer** — mêmes mutations gelables que ses sœurs AGIR ; l'agir-rail devrait s'y étendre |
+| `agir/release-control` | aucune | — release = acte au présent ; l'historique est au ledger (Journal d'audit) |
+| `agents/[id]/synthese` | AT-01 feed (Live + Période) | Partiel — promotion = `until=T` backend (note v1.5) |
+| `agents/[id]/evaluations` | ER-01 run rail + SR-01 standalone | Implémenté |
+| `agents/[id]/historique` (+ `[sessionId]`) | CT-01 timeline de conversation | Partiel (note v1.5) |
+| `agents/[id]/console` | XT-01 waterfall live (SSE) | Implémenté |
+| `agents/[id]/configurations` · `connaissances` · `garde-fous` · `prompts` · `metier` | amorces OT-01 (versions, overlay, renvois) | Partiel — promotion = C1 par-objet consultable à T |
+| `a-traiter` · `a-faire` | WF-01 timeline de transitions dans les drawers | Implémenté — un scrubber de file n'a pas de sens (SLA = présent) |
+| `configurer/parametres` | aucune | **À faire** — « paramètres à T » : substrat prouvé (note OT-01 v1.9), fold + lentille dus |
+| `configurer/modeles` · `garde-fous` · `politiques` | historique par mtimes / overlay | Partiel OT-01 — même chemin de fold que Paramètres |
+| `configurer/sources-memoire` | VersionsBlock + renvois TE-01 (`?sources=`) | Partiel OT-01 — le renvoi est voulu (preuve → PROUVER) |
+| `configurer/connecteurs` · `integrations` · `signal-catalog` | aucune | — catalogues descriptifs ; leurs mutations gouvernées sont au ledger |
+| `admin/*` | aucune | — gestion d'accès, pas de navigation temporelle ; les actes sont au ledger |
+| `flotte` (`agents`) | états live + liens | — porte d'entrée ; le temporel vit sur les pages d'agent |
+| `comprendre` · `produit*` · `espaces` · `recouvrement` · `eval` · `login` · `select-space` · `settings` | aucune | — pages publiques / démo / utilitaires |

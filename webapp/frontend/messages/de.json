@@ -5572,7 +5572,8 @@
       "manifestOk": "Manifest intakt (Prüfsumme re-deriviert)",
       "manifestBad": "Manifest VERÄNDERT — Prüfsumme re-deriviert nicht",
       "chainOkNow": "Audit-Kette jetzt verifiziert",
-      "chainBadNow": "Audit-Kette jetzt GEBROCHEN"
+      "chainBadNow": "Audit-Kette jetzt GEBROCHEN",
+      "frozenAsof": "In der Vergangenheit wird nicht gehandelt — zurück zu Jetzt, um ein Paket einzufrieren."
     },
     "content": {
       "audit_logs": "Audit-Logs",

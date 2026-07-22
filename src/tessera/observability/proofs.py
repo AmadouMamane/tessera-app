@@ -29,14 +29,63 @@ Composes the "Preuves & exporteurs" overview. The page has two halves:
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from tessera.guard.ledger_store import verify_active_ledger
+from tessera.guard.ledger_store import (
+    ledger_length_as_of,
+    ledger_source,
+    read_ledger_entries,
+    verify_active_ledger,
+)
+from tessera.observability._asof import occurred_before
 from tessera.observability.eval.report_paths import iter_report_files
 from tessera.observability.evidence_pack_store import load_packs
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.observability.replay import persisted_bundles
 from tessera.observability.spine.adapters import read_scores
 from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from tessera.guard.audit import ChainStatus
+
+
+def _parse_asof(asof: str | None) -> datetime | None:
+    """Parse the cockpit's as-of instant; tolerant like État à date's ``_parse_at``.
+
+    A bare instant (no offset) reads as UTC; a malformed hand-edited deep-link
+    yields ``None`` (live) rather than crashing the whole payload — the frontend
+    temporal state falls back to live on the same garbage, so both agree.
+    """
+    if not asof:
+        return None
+    try:
+        parsed = datetime.fromisoformat(asof.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def _report_time(path: Path) -> datetime:
+    """The instant an eval report came to exist — never a bare pass/fail verdict.
+
+    Run reports are named ``<YYYYMMDD>T<HHMMSS>Z_<lang>.json`` — the run instant
+    is authoritative. Alias/aggregate files (``latest.json``, ``_model_judge.json``)
+    carry no instant in their name and fall back to the file's real mtime (the
+    same common-provenance convention as the Configurations history). Only when
+    even the stat fails does the file fall open — ``datetime.min`` sorts at or
+    before every cutoff, so a bad name never silently drops a real report.
+    """
+    stem = path.stem.split("_", 1)[0]
+    try:
+        return datetime.strptime(stem, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    except ValueError:
+        try:
+            return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+        except OSError:
+            return datetime.min.replace(tzinfo=UTC)
+
 
 __all__ = ["compute_proofs_overview"]
 
@@ -133,8 +182,26 @@ def _kpi(
     }
 
 
-def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
-    """Return the full Proofs & exporter overview payload.
+def _ledger_count_at(chain: ChainStatus, at_dt: datetime | None, asof: str | None) -> int:
+    """Ledger entries existing at T; live (``at_dt`` None) reads the chain length.
+
+    Postgres counts in SQL on the ``occurred_at`` index (never a 38 MB
+    materialisation); file mode (fast CI / on-prem) filters the read seam's
+    dicts — both mediums yield the same rows, so the count is medium-agnostic.
+    """
+    if at_dt is None:
+        return chain.length
+    if ledger_source() == "postgres":
+        return ledger_length_as_of(at_dt)
+    # Bounded read (ledger read budget): postgres bounds `until` in SQL; file mode
+    # returns the flat journal, so the occurred_before filter stays load-bearing.
+    return sum(
+        1 for e in read_ledger_entries(until=at_dt) if occurred_before(e.get("occurred_at"), asof)
+    )
+
+
+def compute_proofs_overview(lang: str = "fr", asof: str | None = None) -> dict[str, object]:
+    """Return the full Proofs & exporter overview payload, live or as-of T.
 
     The proof-posture KPIs, the artifact distribution and the cryptographic
     verification are derived from real stores (audit ledger, eval scores, replay
@@ -143,6 +210,9 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
 
     Args:
         lang: UI language (``fr`` / ``de`` / ``en``) for the localized free-text.
+        asof: optional ISO instant T — every real count is then bounded at T
+            (ledger prefix, scores/bundles/reports/packs at or before T), so the
+            SR-01 command bar's "État au T" reading is REAL, never cosmetic.
 
     Returns:
         A JSON-serialisable mapping. ``chain_verified`` reflects the real audit
@@ -151,13 +221,17 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
     """
     lang = _norm_lang(lang)
     now = datetime.now(UTC)
+    at_dt = _parse_asof(asof)
+    # A malformed asof reads as live: keep the string in sync so every reader
+    # below (occurred_before, read_scores, persisted_bundles) sees the SAME cut.
+    asof = at_dt.isoformat() if at_dt is not None else None
 
-    # ── Real derivable core ────────────────────────────────────────────────
+    # ── Real derivable core (bounded at T when asof is set) ────────────────
     chain = verify_active_ledger()
-    n_audit = chain.length
-    n_scores = len(read_scores(full=True))
-    n_bundles = len(persisted_bundles())
-    n_reports = sum(1 for _ in iter_report_files())
+    n_audit = _ledger_count_at(chain, at_dt, asof)
+    n_scores = len(read_scores(at=asof)) if asof else len(read_scores(full=True))
+    n_bundles = len(persisted_bundles(at=asof))
+    n_reports = sum(1 for p in iter_report_files() if at_dt is None or _report_time(p) <= at_dt)
     total = n_audit + n_scores + n_bundles + n_reports
 
     def _pct(n: int) -> int:
@@ -167,12 +241,16 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
         # Honest: the current real count, no fabricated trend line.
         return [v] * 7
 
-    # Percentage of the chain that re-derives cleanly (100% when intact; when a
-    # break is found at index b, the b entries before it are the intact prefix).
+    # Chain verdict AT T. Content integrity of the full chain implies every prefix
+    # is intact; a break at index b leaves the b entries before it intact — so the
+    # state at T is clean whenever the break sits at/after the T-prefix boundary.
+    clean_at_t = chain.verified or (chain.broken_at is not None and chain.broken_at >= n_audit)
+    # Percentage of the T-prefix that re-derives cleanly (100% when intact; when a
+    # break is found at index b inside the prefix, the b entries before it hold).
     intact_pct = (
         100
-        if chain.verified
-        else (round((chain.broken_at or 0) / chain.length * 100) if chain.length else 0)
+        if clean_at_t
+        else (round(min(chain.broken_at or 0, n_audit) / n_audit * 100) if n_audit else 0)
     )
 
     kpis = [
@@ -184,7 +262,7 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
         _kpi("chain", f"{intact_pct}%", "0", True, _flat(intact_pct)),
     ]
 
-    if chain.verified:
+    if clean_at_t:
         alerts = [{"level": "ok", "label": _t("alert_chain_ok", lang)}]
     else:
         alerts = [
@@ -211,19 +289,20 @@ def compute_proofs_overview(lang: str = "fr") -> dict[str, object]:
         "valid_signatures": f"{intact_pct}%",
         "algorithm": "SHA-256",
         "chain_length": _fmt_int(n_audit),
-        "anomalies": 0 if chain.verified else 1,
+        "anomalies": 0 if clean_at_t else 1,
     }
 
     footer_chain = (
         _t("footer_chain", lang)
-        if chain.verified
+        if clean_at_t
         else _t("footer_chain_broken", lang).format(n=chain.broken_at)
     )
 
     # ── REAL evidence packs (lot 7): durable manifests, attributed + digested ─
+    # As-of T only the packs frozen at/before T exist (their created_at is real).
     env_label = get_settings().environment.value.capitalize()
     scope_label = f"{env_label} · Crédit Aurore"
-    packs = load_packs()
+    packs = [p for p in load_packs() if occurred_before(p.get("created_at"), asof)]
     n_packs = len(packs)
 
     def _pack_time(iso: object) -> str:

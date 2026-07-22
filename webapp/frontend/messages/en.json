@@ -5572,7 +5572,8 @@
       "manifestOk": "Manifest intact (digest re-derives)",
       "manifestBad": "Manifest TAMPERED — the digest does not re-derive",
       "chainOkNow": "audit chain verified right now",
-      "chainBadNow": "audit chain BROKEN right now"
+      "chainBadNow": "audit chain BROKEN right now",
+      "frozenAsof": "One does not act in the past — return to now to freeze a pack."
     },
     "content": {
       "audit_logs": "audit logs",

@@ -5572,7 +5572,8 @@
       "manifestOk": "Manifeste intègre (empreinte re-dérivée)",
       "manifestBad": "Manifeste ALTÉRÉ — l'empreinte ne re-dérive pas",
       "chainOkNow": "chaîne d'audit vérifiée à l'instant",
-      "chainBadNow": "chaîne d'audit ROMPUE à l'instant"
+      "chainBadNow": "chaîne d'audit ROMPUE à l'instant",
+      "frozenAsof": "On n'agit pas dans le passé — revenez à maintenant pour geler un pack."
     },
     "content": {
       "audit_logs": "logs d’audit",

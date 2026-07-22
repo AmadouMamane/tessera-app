@@ -55,6 +55,7 @@ export function WindowControl({
   onDate,
   loading,
   labels,
+  variant = "card",
 }: {
   presets: WindowPreset[];
   /** The active preset's ``value``. */
@@ -69,6 +70,12 @@ export function WindowControl({
   onDate: (value: string) => void;
   loading: boolean;
   labels: WindowControlLabels;
+  /**
+   * "instrument" wears the sr01-strip lacquer (registre §5 v1.8: a temporal rail
+   * is visually distinct from content cards). Default "card" keeps the neutral
+   * surface for embedded uses (e.g. the app header).
+   */
+  variant?: "card" | "instrument";
 }) {
   const formatter = useFormatter();
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -94,7 +101,14 @@ export function WindowControl({
   }, [pickerOpen]);
 
   return (
-    <section className="flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <section
+      className={cn(
+        "flex min-h-[54px] shrink-0 flex-wrap items-center gap-3 px-4 py-2",
+        variant === "instrument"
+          ? "sr01-strip rounded-2xl backdrop-blur-md"
+          : "rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+      )}
+    >
       <span className="min-w-16 text-xs font-medium text-[var(--tessera-text-muted)]">
         {labels.window}
       </span>

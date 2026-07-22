@@ -164,3 +164,68 @@ def test_evidence_pack_lifecycle_is_attributed_and_digest_verifiable(
     # A second pack's window starts where the first ended.
     second = eps.create_pack(created_by="bob@bank.eu")
     assert second["period_start"] == pack["created_at"]
+
+
+# ── As-of T: the SR-01 reading on Preuves & exporteurs is REAL, never cosmetic ──
+
+
+def test_asof_far_in_the_future_matches_the_live_counts() -> None:
+    live = compute_proofs_overview("fr")
+    at_t = compute_proofs_overview("fr", asof="2099-01-01T00:00:00+00:00")
+    assert at_t["artifacts_total"] == live["artifacts_total"]
+    for key in ("artifacts", "audit_entries", "eval_scores", "replays", "reports"):
+        assert _kpi(at_t, key) == _kpi(live, key)
+
+
+def test_asof_before_any_data_reads_an_honest_zero() -> None:
+    payload = compute_proofs_overview("fr", asof="1970-01-02T00:00:00+00:00")
+    assert payload["artifacts_total"] == 0
+    for key in ("artifacts", "audit_entries", "eval_scores", "replays", "reports"):
+        assert _int(_kpi(payload, key)) == 0
+    # No pack existed at T either — honest empties, not today's pack under a T label.
+    assert payload["current_pack"] is None
+    assert payload["recent_packs"] == []
+
+
+def test_a_malformed_asof_reads_live_not_a_crash() -> None:
+    # Tolerant like État à date's `_parse_at`: garbage deep-link → live reading
+    # (the frontend temporal state falls back to live on the same garbage).
+    live = compute_proofs_overview("fr")
+    payload = compute_proofs_overview("fr", asof="not-a-date")
+    assert payload["artifacts_total"] == live["artifacts_total"]
+
+
+def test_the_chain_verdict_at_t_is_the_prefix_verdict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A break AFTER the T-prefix boundary leaves the state at T clean; inside, not."""
+    from tessera.guard.audit import ChainStatus
+    from tessera.observability import proofs as proofs_mod
+
+    def _entries(n: int) -> list[dict[str, object]]:
+        return [{"occurred_at": "2020-01-01T00:00:00+00:00"} for _ in range(n)]
+
+    monkeypatch.setattr(
+        proofs_mod,
+        "verify_active_ledger",
+        lambda: ChainStatus(verified=False, length=10, broken_at=7),
+    )
+    monkeypatch.setattr(proofs_mod, "read_scores", lambda **_kw: [])
+    monkeypatch.setattr(proofs_mod, "persisted_bundles", lambda **_kw: [])
+    monkeypatch.setattr(proofs_mod, "iter_report_files", list)
+    monkeypatch.setattr(proofs_mod, "load_packs", list)
+    asof = "2021-01-01T00:00:00+00:00"
+
+    # 5 entries at T, break at index 7 → the whole T-prefix re-derives: clean.
+    monkeypatch.setattr(proofs_mod, "read_ledger_entries", lambda **_kw: _entries(5))
+    clean = compute_proofs_overview("fr", asof=asof)
+    assert clean["crypto"]["anomalies"] == 0
+    assert clean["crypto"]["valid_signatures"] == "100%"
+    assert clean["alerts"][0]["level"] == "ok"
+
+    # 9 entries at T, break at index 7 → the break sits INSIDE the prefix: 7/9.
+    monkeypatch.setattr(proofs_mod, "read_ledger_entries", lambda **_kw: _entries(9))
+    broken = compute_proofs_overview("fr", asof=asof)
+    assert broken["crypto"]["anomalies"] == 1
+    assert broken["crypto"]["valid_signatures"] == "78%"
+    assert broken["alerts"][0]["level"] == "bad"

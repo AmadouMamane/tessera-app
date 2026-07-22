@@ -114,8 +114,10 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
               {t("agentFilterHint")}
             </span>
           </div>
-          <div className="mb-3">{proofSection}</div>
-          <AuditTable initialWindow={window} />
+          {/* The temporal window rail renders FIRST (inside AuditTable, instrument
+              chrome), then the per-agent proof card slots beneath it — the rail is
+              the page's instrument, the agent lens is content (registre §5). */}
+          <AuditTable initialWindow={window} breakdown={proofSection} />
         </HydrationBoundary>
       ) : (
         <OperatorLocked locale={locale} />

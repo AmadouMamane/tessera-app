@@ -73,16 +73,21 @@ export function ProofsOverview() {
   const railTimeline = useRailTimeline();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const qc = useQueryClient();
+  // The DEBOUNCED committed instant T (null = live): every real count in the
+  // payload is bounded at T by the backend, so the bar's reading is never
+  // cosmetic — scrubbing re-reads the page (registre §5).
+  const asOf = temporal.asOf;
+  const proofsKey = ["proofs-overview", locale, asOf ?? null] as const;
   const { data } = useQuery({
-    queryKey: ["proofs-overview", locale],
-    queryFn: ({ signal }) => fetchProofsOverview(locale, signal),
+    queryKey: proofsKey,
+    queryFn: ({ signal }) => fetchProofsOverview(locale, signal, asOf),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
   // Freeze one evidence-pack manifest (governed act; fresh payload swaps in).
   const createPack = useMutation({
     mutationFn: () => mutateEvidencePackCreate(locale),
-    onSuccess: (fresh) => qc.setQueryData(["proofs-overview", locale], fresh),
+    onSuccess: (fresh) => qc.setQueryData(proofsKey, fresh),
   });
   // Real verification verdict for the displayed pack (two facts, shown as such).
   const [verdict, setVerdict] = useState<EvidencePackVerify | null>(null);
@@ -124,6 +129,7 @@ export function ProofsOverview() {
           className="xl:col-span-5"
           onCreate={() => createPack.mutate()}
           creating={createPack.isPending}
+          frozen={asOf != null}
           onVerify={(id) => verify.mutate(id)}
           verifying={verify.isPending}
           verdict={verdict}
@@ -294,6 +300,7 @@ export function ProofsOverview() {
               data={data}
               onCreatePack={() => createPack.mutate()}
               creating={createPack.isPending}
+              frozen={asOf != null}
               onExportSiem={exportSiem}
               onDownloadManifest={
                 data.current_pack ? () => downloadManifest(data.current_pack?.id ?? "") : null
@@ -432,6 +439,7 @@ function CurrentPack({
   className,
   onCreate,
   creating,
+  frozen,
   onVerify,
   verifying,
   verdict,
@@ -442,6 +450,8 @@ function CurrentPack({
   className?: string;
   onCreate: () => void;
   creating: boolean;
+  /** Viewing the past (as-of T): one does not act in the past — create is frozen. */
+  frozen?: boolean;
   onVerify: (id: string) => void;
   verifying: boolean;
   verdict: EvidencePackVerify | null;
@@ -460,7 +470,8 @@ function CurrentPack({
           <p className="text-[0.7rem] text-[var(--tessera-text-muted)]">{t("pack.none")}</p>
           <Button
             size="sm"
-            disabled={creating}
+            disabled={creating || frozen}
+            title={frozen ? t("pack.frozenAsof") : undefined}
             onClick={onCreate}
             className="h-8 gap-1.5 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-[0.7rem] text-[#d8eaff] hover:bg-[#22609f]"
           >
@@ -763,6 +774,7 @@ function ProofsRail({
   data,
   onCreatePack,
   creating,
+  frozen,
   onExportSiem,
   onDownloadManifest,
 }: {
@@ -770,6 +782,8 @@ function ProofsRail({
   data: Data;
   onCreatePack: () => void;
   creating: boolean;
+  /** Viewing the past (as-of T): the create act is frozen (reads stay live). */
+  frozen?: boolean;
   onExportSiem: () => void;
   onDownloadManifest: (() => void) | null;
 }) {
@@ -812,7 +826,8 @@ function ProofsRail({
                 key: "createPack",
                 icon: PackageCheck,
                 onClick: onCreatePack,
-                disabled: creating,
+                disabled: creating || frozen,
+                title: frozen ? t("pack.frozenAsof") : undefined,
               },
               { key: "exportSiem", icon: UploadCloud, onClick: onExportSiem },
               {
@@ -827,6 +842,7 @@ function ProofsRail({
               icon: typeof PackageCheck;
               onClick?: () => void;
               disabled?: boolean;
+              title?: string;
               href?: Route;
             }[]
           ).map((q) => {
@@ -851,6 +867,7 @@ function ProofsRail({
                     type="button"
                     onClick={q.onClick}
                     disabled={q.disabled === true}
+                    title={q.title}
                     className={cls}
                   >
                     {body}
