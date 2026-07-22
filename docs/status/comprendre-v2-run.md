@@ -333,6 +333,15 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   réduire leur espacement.
   Le surtitre des quatre questions est descendu de sept pixels au total pour le rapprocher du premier
   libellé, sans déplacer l'orbite.
+- **Atterrissage après validation visuelle** : Amadou a approuvé le cadran orbital final sur le preview
+  `:3098`. `origin/main` a été récupéré puis fusionné dans la branche sans seconde rebase, au commit de
+  merge `ef95b804`. Le gate d'atterrissage est **TWICE-GREEN sur un seul arbre `19b1ebe9fb09`**, HEAD
+  `ef95b8049614` : chaque passage valide 452 tests frontend, TypeScript, Biome (25 avertissements
+  historiques), Ruff, format, mypy strict et 2 575 tests backend hors intégration.
+- **HALT captures maintenu** : les captures présentes avant l'audit ne représentent pas le cadran final.
+  Le navigateur intégré avait refusé l'automatisation du preview local et aucun contournement n'a été
+  tenté. Les quatre témoins exigés — vide-FR, FR, EN et DE — ne sont donc toujours pas régénérés ; le
+  merge sur `main` reste suspendu à leur production, malgré l'approbation visuelle live.
 - Owed hors lot, sans action : le monde du preview reste incohérent pour une démo tant que son
   seed ne produit pas ensemble une spine et un ledger représentatifs. Le seed d'un monde cohérent
   appartient à une passe dédiée.
