@@ -1,9 +1,13 @@
 "use client";
 
-import { CircleDot, History, Undo2 } from "lucide-react";
+import { Activity, History, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { AsOfPickerChip } from "@/components/cockpit/asof-picker-chip";
+import { LiveBeacon } from "@/components/cockpit/live-beacon";
+import { CHIP_ACTIVE, CHIP_BASE } from "@/components/cockpit/rail-chip";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 /**
@@ -14,6 +18,11 @@ import { cn } from "@/lib/cn";
  * (`?asof=<ISO>`), never from local state, so an As-of reading is deep-linkable
  * and shareable. While As-of, the page's mutations are disabled by the caller —
  * one does not act in the past.
+ *
+ * The rail wears the SR-01 command-bar grammar (chips on the lacquered strip +
+ * a contextual micro-line): a Lecture chip naming the reading, the premium
+ * "Voir à date / État au" picker (shared CalendarPopover — never the OS-drawn
+ * datetime panel), and the single outline "Revenir au direct".
  */
 
 /** The page's As-of instant from the URL, or null in Live. */
@@ -36,19 +45,11 @@ export function AgirRail({
   asofNote?: string;
 } = {}) {
   const t = useTranslations("agirRail");
+  const to = useTranslations("overview.time");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const asof = searchParams.get("asof");
-
-  // datetime-local speaks LOCAL wall-clock; the URL speaks UTC ISO. Convert
-  // explicitly both ways — slicing the ISO would silently shift the display.
-  const toLocalInput = (iso: string) => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
 
   const setAsof = (value: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -61,58 +62,59 @@ export function AgirRail({
     router.replace(qs ? `${pathname}?${qs}` : pathname);
   };
 
+  const ReadingIcon = asof ? History : Activity;
   return (
     <section
       data-testid="agir-rail"
       // Instrument surface (sr01-strip): every temporal rail wears the same
       // lacquered chrome, visually distinct from the page's content cards.
-      className="sr01-strip flex min-h-[44px] shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl px-3 py-1.5 text-xs backdrop-blur-md"
+      className="sr01-strip shrink-0 rounded-2xl backdrop-blur-md"
     >
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[0.66rem] font-medium",
-          asof
-            ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-            : "border-emerald-500/40 bg-emerald-500/15 text-emerald-300",
-        )}
-      >
-        {asof ? <History className="h-3 w-3" /> : <CircleDot className="h-3 w-3" />}
-        {asof ? t("asofBadge") : t("liveBadge")}
-      </span>
-      {asof ? (
-        <>
-          <span className="min-w-0 truncate text-[0.68rem] text-[var(--tessera-text)]">
-            {t("asofReading", { t: new Date(asof).toLocaleString() })}
-            {asofNote ? (
-              <span className="text-[var(--tessera-text-muted)]"> · {asofNote}</span>
-            ) : null}
+      <div className="sr01-command-row flex flex-wrap items-center gap-2 px-3 py-2">
+        {/* Lecture — the reading, always visible. An indicator chip (champagne,
+            like SR-01's primary reading control), not a second way to switch:
+            picking a date and "Revenir au direct" are the single entries. */}
+        <span className={cn(CHIP_BASE, CHIP_ACTIVE, "cursor-default")}>
+          <ReadingIcon className="h-3.5 w-3.5 shrink-0 text-gold-600 dark:text-gold-400" />
+          {to("reading")}
+          <span className="font-semibold text-[var(--tessera-text)]">
+            {asof ? t("asofBadge") : t("liveBadge")}
           </span>
-          <button
-            type="button"
-            onClick={() => setAsof(null)}
-            className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.66rem] font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
-          >
-            <Undo2 className="h-3 w-3" /> {t("backToLive")}
-          </button>
-        </>
-      ) : (
-        <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-          {liveNote ?? t("liveNote")}
+          {/* The heartbeat: Live here is URL-derived (no ?asof), true by
+              construction — the one place the beacon may beat (live-beacon). */}
+          {asof ? null : <LiveBeacon />}
         </span>
-      )}
-      <label className="ml-auto inline-flex items-center gap-1.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
-        {t("pickLabel")}
-        <input
-          type="datetime-local"
-          aria-label={t("pickLabel")}
-          value={asof ? toLocalInput(asof) : ""}
-          onChange={(e) => {
-            const v = e.target.value;
-            setAsof(v ? new Date(v).toISOString() : null);
-          }}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.64rem] text-[var(--tessera-text)]"
-        />
-      </label>
+        <AsOfPickerChip value={asof} onChange={setAsof} />
+      </div>
+
+      {/* Contextual micro-line — describes ONLY the active reading, and carries
+          the single "Revenir au direct" (outline, discreet — SR-01 grammar). */}
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+        {asof ? (
+          <span className="min-w-0">
+            <span className="font-medium text-[var(--tessera-text)]">
+              {t("asofReading", { t: new Date(asof).toLocaleString() })}
+            </span>
+            {asofNote ? <span> · {asofNote}</span> : null}
+          </span>
+        ) : (
+          <span className="font-medium text-[var(--tessera-text)]">
+            {liveNote ?? t("liveNote")}
+          </span>
+        )}
+        {asof ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="ml-auto h-7 gap-1.5 px-2.5 text-xs"
+            onClick={() => setAsof(null)}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {t("backToLive")}
+          </Button>
+        ) : null}
+      </div>
     </section>
   );
 }

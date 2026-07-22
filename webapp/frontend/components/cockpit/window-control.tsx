@@ -5,7 +5,7 @@ import { useFormatter } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { CalendarPopover } from "@/components/cockpit/calendar-popover";
-import { Button } from "@/components/ui/button";
+import { CHIP_BASE, CHIP_NEUTRAL } from "@/components/cockpit/rail-chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
 
@@ -112,25 +112,29 @@ export function WindowControl({
       <span className="min-w-16 text-xs font-medium text-[var(--tessera-text-muted)]">
         {labels.window}
       </span>
-      <div className="flex h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+      {/* Rail grammar (rail-chip): glass surfaces, the ACTIVE preset in champagne
+          — the chosen window is a chosen reading, never a status colour. No
+          heartbeat here: this window is anchored at mint (a frozen `until`), so
+          a beating "live" dot would claim a present the page does not follow. */}
+      <div className="flex h-9 rounded-lg border border-[rgba(96,194,242,0.26)] bg-[rgba(96,194,242,0.05)] p-1 shadow-[inset_0_1px_0_rgba(160,220,250,0.09)]">
         {presets.map((preset) => (
           <button
             key={preset.value}
             type="button"
             onClick={() => onPeriod(preset.value)}
             className={cn(
-              "h-7 rounded px-3 text-xs font-medium transition-colors",
+              "h-7 rounded-md px-3 text-xs font-medium transition-colors",
               period === preset.value
-                ? "bg-[#123e6a] text-[#d8eaff] ring-1 ring-[#2e72d2]"
-                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+                ? "bg-gold-500/[0.15] text-gold-700 ring-1 ring-gold-500/40 dark:text-gold-200"
+                : "text-[var(--tessera-text-muted)] hover:bg-[rgba(96,194,242,0.12)] hover:text-[var(--tessera-text)]",
             )}
           >
             {preset.label}
           </button>
         ))}
       </div>
-      <div className="flex h-9 max-w-[520px] shrink-0 items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-        <CalendarDays className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
+      <div className="flex h-9 max-w-[520px] shrink-0 items-center gap-3 rounded-lg border border-[rgba(96,194,242,0.26)] bg-[rgba(96,194,242,0.05)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(160,220,250,0.09)]">
+        <CalendarDays className="h-4 w-4 shrink-0 text-gold-600 dark:text-gold-400" />
         {loading || !windowStart || !windowEnd ? (
           <Skeleton className="h-4 w-64" />
         ) : (
@@ -148,17 +152,15 @@ export function WindowControl({
         )}
       </div>
       <div ref={pickerRef} className="relative">
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
           aria-expanded={pickerOpen}
           onClick={() => setPickerOpen((open) => !open)}
-          className="h-9 gap-2 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 font-medium text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]"
+          className={cn(CHIP_BASE, CHIP_NEUTRAL, "cursor-pointer rounded-lg font-medium")}
         >
-          <CalendarDays className="h-4 w-4" />
+          <CalendarDays className="h-4 w-4 shrink-0 text-gold-600 dark:text-gold-400" />
           {labels.refresh}
-        </Button>
+        </button>
         {pickerOpen ? (
           <CalendarPopover
             selectedDate={selectedDate}
@@ -167,7 +169,7 @@ export function WindowControl({
               setPickerOpen(false);
             }}
             labels={{ prevMonth: labels.prevMonth, nextMonth: labels.nextMonth }}
-            className="absolute right-0 top-[calc(100%+0.5rem)] z-50"
+            className="sr01-menu absolute right-0 top-[calc(100%+0.5rem)] z-50"
           />
         ) : null}
       </div>

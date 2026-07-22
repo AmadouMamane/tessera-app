@@ -67,9 +67,11 @@ test("the premium calendar opens and selects a day", async ({ page }) => {
     .getByRole("button", { name: /^Maintenant/ })
     .first()
     .click();
-  // The homemade popover (month grid + time input) is shown.
+  // The SHARED CalendarPopover (rail grammar) + time input are shown. Its day
+  // cells carry full-date accessible names ("lundi 20 juillet 2026"), not bare
+  // digits — the homemade violet grid is gone.
   await expect(page.locator('input[type="time"]')).toBeVisible();
-  await page.getByRole("button", { name: "20", exact: true }).click();
+  await page.getByRole("button", { name: / 20 / }).click();
   // The trigger now reads the selected date instead of "Maintenant".
   await expect(page.getByRole("button", { name: /20.*2026/ }).first()).toBeVisible();
 });

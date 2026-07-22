@@ -71,6 +71,37 @@ test("the SURVEILLER signal scrubber is gone from every AGIR page", async ({ pag
   }
 });
 
+test("the as-of picker is the shared premium calendar, never the OS datetime panel", async ({
+  page,
+}) => {
+  await page.goto("/fr/agir/automations");
+  const rail = page.getByTestId("agir-rail");
+  await expect(rail).toBeVisible({ timeout: 20_000 });
+  // No native datetime-local input on the strip — its OS-drawn calendar can't be
+  // themed to the lacquered rail (the foreign white panel the refonte removed).
+  await expect(rail.locator('input[type="datetime-local"]')).toHaveCount(0);
+  // Live wears the heartbeat (one beacon, on the Lecture chip).
+  await expect(rail.locator("span.animate-ping")).toHaveCount(1);
+
+  await rail.getByRole("button", { name: "Voir à date" }).click();
+  const dialog = rail.getByRole("dialog", { name: "Voir à date" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('input[type="time"]')).toBeVisible();
+
+  // Pick day 15 of the PREVIOUS month — always in the past whatever today is
+  // (a current-month day would be disabled early in the month and rot the spec).
+  await dialog.getByRole("button", { name: "Mois précédent" }).click();
+  await dialog.getByRole("button", { name: / 15 / }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rail.getByText("Lecture à date")).toBeVisible();
+  await expect(page).toHaveURL(/asof=/);
+  // The heartbeat never beats in the past.
+  await expect(rail.locator("span.animate-ping")).toHaveCount(0);
+
+  await rail.getByRole("button", { name: "Revenir au direct" }).click();
+  await expect(rail.getByText("Live", { exact: true })).toBeVisible();
+});
+
 test("curation and replay deep-link their As-of and come back to live", async ({ page }) => {
   await page.goto("/fr/agir/curation-eval-set?asof=2000-01-01T00:00:00.000Z");
   const rail = page.getByTestId("agir-rail");

@@ -4641,7 +4641,8 @@
       "running": "Shadow läuft…",
       "resultLine": "{n} verglichen — {wins} gewonnen · {losses} verloren · {ties} unentschieden",
       "noBundles": "Keine erfassten Turns zum Wiederholen.",
-      "openComparisons": "Vergleiche mit Referenzen ansehen"
+      "openComparisons": "Vergleiche mit Referenzen ansehen",
+      "error": "Shadow-Replay fehlgeschlagen — das Kandidatenmodell konnte nicht bedient werden."
     },
     "viewAll": {
       "all": "Alle anzeigen",
@@ -7662,7 +7663,9 @@
           "source": "Beobachtete Aktivität des Agenten."
         }
       }
-    }
+    },
+    "railAsofScope": "Gespräche, Zufriedenheit und Journal von {agent} werden über das Fenster bis zu diesem Zeitpunkt neu gelesen; Wissensquellen, Prompts und Ketten-Badge bleiben live.",
+    "railLiveScope": "Sie sehen die Live-Daten von {agent}."
   },
   "agentConfigurations": {
     "asofScope": "nur der objektbezogene Verlauf wird zu diesem Zeitpunkt neu gelesen; die angezeigte Konfiguration und das Formular bleiben der aktuelle Stand",
@@ -9585,6 +9588,7 @@
     "backToLive": "Zurück zu Live",
     "liveNote": "Sie handeln auf dem aktuellen Zustand.",
     "pickLabel": "Stand zum Datum",
-    "frozenTitle": "Lesemodus — zurück zu Live, um zu handeln"
+    "frozenTitle": "Lesemodus — zurück zu Live, um zu handeln",
+    "pickTime": "Uhrzeit"
   }
 }

@@ -61,18 +61,20 @@ test("the operational-alerts CTA navigates to the agent's guardrails", async ({ 
 });
 
 test("the period control re-queries the transcript window", async ({ page }) => {
-  // The period <select> sits directly in the rail now — there is no "Relire à T" button to
-  // reveal it. The contract worth asserting is that changing it re-queries the backend for
-  // that window; the totals it returns are data, and pinning one ("2 108") is what rotted.
-  const periodSelect = page.locator('select:has(option[value="d30"])');
-  await expect(periodSelect).toBeVisible();
+  // The period control is the premium rail chip (a themed dropdown — the native
+  // <select> left with the AT-01 rail refonte). The contract worth asserting is
+  // that changing it re-queries the backend for that window; the totals it
+  // returns are data, and pinning one ("2 108") is what rotted.
+  const periodChip = page.getByRole("button", { name: /Période/ });
+  await expect(periodChip).toBeVisible();
 
   const refetch = page.waitForResponse(
     (r) => r.url().includes("agent-synthese") && r.url().includes("period=d30") && r.ok(),
   );
-  await periodSelect.selectOption("d30");
+  await periodChip.click();
+  await page.getByRole("menuitem", { name: "30 jours" }).click();
   await refetch;
-  await expect(periodSelect).toHaveValue("d30");
+  await expect(periodChip).toContainText("30 jours");
 });
 
 test("the profile CTA navigates to the configuration page", async ({ page }) => {

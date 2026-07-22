@@ -4641,7 +4641,8 @@
       "running": "Shadow running…",
       "resultLine": "{n} compared — {wins} won · {losses} lost · {ties} tied",
       "noBundles": "No captured turns to replay.",
-      "openComparisons": "See the baseline comparisons"
+      "openComparisons": "See the baseline comparisons",
+      "error": "Shadow replay failed — the candidate model could not be served."
     },
     "viewAll": {
       "all": "View all",
@@ -7662,7 +7663,9 @@
           "source": "Observed agent activity."
         }
       }
-    }
+    },
+    "railAsofScope": "Conversations, satisfaction and the journal of {agent} re-read over the window ending at this instant; knowledge, prompts and the chain badge stay live.",
+    "railLiveScope": "You are viewing live data for {agent}."
   },
   "agentConfigurations": {
     "asofScope": "only the per-object history is re-read at this instant; the displayed configuration and the form stay the current state",
@@ -9571,6 +9574,7 @@
     "backToLive": "Back to live",
     "liveNote": "You are acting on the current state.",
     "pickLabel": "View as of",
-    "frozenTitle": "As-of reading — return to live to act"
+    "frozenTitle": "As-of reading — return to live to act",
+    "pickTime": "Time"
   }
 }

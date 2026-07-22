@@ -1,11 +1,16 @@
 "use client";
 
+import { MetricInfo } from "@/components/cockpit/metric-info";
+import { Truncate } from "@/components/ui/truncate";
+import { fetchReplays, runReplay } from "@/lib/api/client";
+import type { ReplayBundle, ReplayResult } from "@/lib/api/schemas";
+import { cn } from "@/lib/cn";
+import { type CassetteSpan, buildCassetteTrace } from "@/lib/replay-cassette";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Check,
   ChevronRight,
-  CircleDot,
   Clapperboard,
   CornerDownRight,
   Play,
@@ -13,13 +18,6 @@ import {
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-
-import { MetricInfo } from "@/components/cockpit/metric-info";
-import { Truncate } from "@/components/ui/truncate";
-import { fetchReplays, runReplay } from "@/lib/api/client";
-import type { ReplayBundle, ReplayResult } from "@/lib/api/schemas";
-import { cn } from "@/lib/cn";
-import { type CassetteSpan, buildCassetteTrace } from "@/lib/replay-cassette";
 
 // XT-01 (registre des rails) — the execution-trace cassette lens. The selected
 // cassette derives from the URL (`?bundle=<id>`, deep-linkable), never from
@@ -68,16 +66,24 @@ export function ReplayCassettes({ asof }: { asof: string | null }) {
   return (
     <section className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
+        {/* Reading indicator, in the rail grammar: a chosen cassette wears the
+            champagne of a chosen instant (never violet), live the neutral glass.
+            STATIC dot — the page's one heartbeat is the AGIR rail's, right
+            above; a second beating dot in the same view would compete with it. */}
         <span
           className={cn(
             "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[0.66rem] font-medium",
             selectedId
-              ? "border-[#7c5cf5]/60 bg-[#7c5cf5]/10 text-[#c9b8ff]"
-              : "border-emerald-500/40 bg-emerald-500/15 text-emerald-300",
+              ? "border-gold-500/45 bg-gold-500/[0.12] text-gold-700 dark:text-gold-200"
+              : "border-[rgba(96,194,242,0.26)] bg-[rgba(96,194,242,0.05)] text-[var(--tessera-text)]",
           )}
           data-testid="cassette-mode"
         >
-          {selectedId ? <Clapperboard className="h-3 w-3" /> : <CircleDot className="h-3 w-3" />}
+          {selectedId ? (
+            <Clapperboard className="h-3 w-3" />
+          ) : (
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+          )}
           {selectedId ? t("cassette.modeReplay") : t("cassette.modeLive")}
         </span>
         {selected ? (

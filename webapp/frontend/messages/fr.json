@@ -4641,7 +4641,8 @@
       "running": "Shadow en cours…",
       "resultLine": "{n} comparés — {wins} gagnés · {losses} perdus · {ties} égalités",
       "noBundles": "Aucun tour capturé à rejouer.",
-      "openComparisons": "Voir les comparaisons aux références"
+      "openComparisons": "Voir les comparaisons aux références",
+      "error": "Échec du rejeu shadow — le modèle candidat n'a pas pu être servi."
     },
     "viewAll": {
       "all": "Voir tout",
@@ -7664,7 +7665,9 @@
           "source": "Activité observée de l'agent."
         }
       }
-    }
+    },
+    "railAsofScope": "Conversations, satisfaction et journal de {agent} relus sur la fenêtre finissant à cet instant ; connaissances, prompts et badge de chaîne restent en direct.",
+    "railLiveScope": "Vous consultez les données en direct de {agent}."
   },
   "agentConfigurations": {
     "asofScope": "seul l'historique par-objet est relu à cet instant ; la configuration affichée et le formulaire restent l'état actuel",
@@ -9587,6 +9590,7 @@
     "backToLive": "Revenir au direct",
     "liveNote": "Vous agissez sur l'état présent.",
     "pickLabel": "Voir à date",
-    "frozenTitle": "Lecture à date — revenez au direct pour agir"
+    "frozenTitle": "Lecture à date — revenez au direct pour agir",
+    "pickTime": "Heure"
   }
 }
