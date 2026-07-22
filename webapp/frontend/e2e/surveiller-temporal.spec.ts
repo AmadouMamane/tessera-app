@@ -58,6 +58,19 @@ function bar(page: Page) {
   return page.locator("section").filter({ hasText: "Comparer à" }).first();
 }
 
+/**
+ * Wait for the "Événements" ARROWS — i.e. for the timeline report to have landed.
+ * Until it does, the bar honestly renders the disabled capsule ("Aucun événement
+ * dans la fenêtre") with no arrow buttons, and the first aggregation regularly
+ * takes more than the 5s default expect timeout through the BFF. Four tests used
+ * to race that load and rot red on any slow banc.
+ */
+async function awaitEventNav(page: Page) {
+  await expect(page.locator('[aria-label="Événement précédent"]').first()).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
 async function open(page: Page, query: string) {
   await page.goto(`${PAGE}${query}`);
   await expect(bar(page)).toBeVisible();
@@ -94,11 +107,13 @@ test("Maintenant: real-time header, no return button, no player transport", asyn
   // The live concept wears ONE word everywhere ("Maintenant"): the old second
   // wording ("…au direct") is gone, so the mode and its return button never disagree.
   await expect(page.getByText(/au direct/i)).toHaveCount(0);
-  // The video-player cassette is gone (start / play / latest); only event nav remains.
+  // The video-player cassette is gone (start / play / latest); only event nav
+  // remains — asserted once the loaded control is there, so the zero-counts
+  // witness the loaded bar, not a still-loading one.
+  await awaitEventNav(page);
+  await expect(page.locator('[aria-label="Événement suivant"]').first()).toBeVisible();
   await expect(page.locator('[aria-label="Début"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="Le plus récent"]')).toHaveCount(0);
-  await expect(page.locator('[aria-label="Événement précédent"]').first()).toBeVisible();
-  await expect(page.locator('[aria-label="Événement suivant"]').first()).toBeVisible();
 });
 
 test("Live: scrubbing to a past instant flips the reading to Historique (mode == content)", async ({
@@ -282,6 +297,13 @@ test("dragging the scrubber previews ('Aperçu') without committing; release com
   page,
 }) => {
   await open(page, "?lecture=history&expanded=1");
+  // The micro-line's period framing needs the timeline report; wait for it before
+  // dragging, so the held-drag assertions test the preview contract, not a load race.
+  await expect(
+    bar(page)
+      .getByText(/Période du/)
+      .first(),
+  ).toBeVisible({ timeout: 30_000 });
   const slider = bar(page).locator('[role="slider"]').first();
   const box = await slider.boundingBox();
   if (!box) throw new Error("scrubber not found");
@@ -337,22 +359,19 @@ test("selecting an event via the arrows shows its full timestamp", async ({ page
 test("the replay cassette stays on XT-01 (AGIR/Replay), not on SURVEILLER", async ({ page }) => {
   // SURVEILLER (SR-01): event navigation, never a video-player cassette.
   await open(page, "?lecture=history&expanded=1");
+  await awaitEventNav(page);
   await expect(page.locator('[aria-label="Événement suivant"]').first()).toBeVisible();
   await expect(page.locator('[aria-label="Début"]')).toHaveCount(0);
   await expect(page.locator('[aria-label="Le plus récent"]')).toHaveCount(0);
 
-  // AGIR / Replay (XT-01): the legitimate cassette is present.
+  // AGIR / Replay (XT-01): the execution replay moved into its own cassette LENS
+  // (the Cassettes tab, deep-linkable via `?bundle=`) — the old "Voir l'historique"
+  // execution rail no longer exists anywhere on the page, and this spec once froze
+  // it. The lens declares its mode chip (Live without a bundle, Replay with one),
+  // and the SR-01 signal event-nav never renders on that surface.
   await page.goto("/fr/agir/replay-shadow");
-  // `count()` reads the DOM once, before the data-gated rail mounts (`replay-overview.tsx:91`
-  // returns early until its query resolves). It was therefore always 0, the click was always
-  // skipped, and the page stayed LIVE — so the cassette this test exists to find never
-  // appeared. Wait for the control instead of polling for it once.
-  const voir = page.getByRole("button", { name: /Voir l.historique/ }).first();
-  await expect(voir).toBeVisible({ timeout: 15_000 });
-  await voir.click();
-  await expect(page.locator('[aria-label="Début"]').first()).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('[aria-label="Suivant"]').first()).toBeVisible();
-  // …and the signal event-nav is NOT used there.
+  await page.getByRole("tab", { name: "Cassettes" }).click();
+  await expect(page.getByTestId("cassette-mode")).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('[aria-label="Événement suivant"]')).toHaveCount(0);
 });
 
@@ -483,6 +502,7 @@ test("SR-01 event navigation is a labelled 'Événements' control, never a playe
   await open(page, "?expanded=1");
   // A clear "Événements" label + the two event arrows (tooltips), not arrows alone.
   await expect(bar(page).getByText("Événements").first()).toBeVisible();
+  await awaitEventNav(page);
   await expect(bar(page).locator('[aria-label="Événement précédent"]').first()).toBeVisible();
   await expect(bar(page).locator('[aria-label="Événement suivant"]').first()).toBeVisible();
   // None of the execution-cassette controls leak onto SR-01 (XT-01 only).

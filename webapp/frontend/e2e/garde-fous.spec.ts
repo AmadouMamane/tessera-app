@@ -70,12 +70,20 @@ test("the enable/disable toggle flips state and reverts", async ({ page }) => {
   const detail = page.locator("section", { hasText: "Détails du garde-fou" });
   await page.getByRole("button", { name: "Outil - Solde de compte" }).click();
   const toggle = detail.getByRole("switch");
-  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  // The rule state is DURABLE and shared on a dev banc: never presume it starts
+  // enabled (a polluted store made this spec red on main). Witness the flip and
+  // the revert from whatever state it is actually in, and leave it as found.
+  await expect(toggle).toBeVisible();
+  const initial = await toggle.getAttribute("aria-checked");
+  const flipped = initial === "true" ? "false" : "true";
   await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  // The mutation's response rebuilds the whole garde-fous payload (an OWED
+  // full-ledger read) — regularly >5s on a cold banc, with the switch disabled
+  // while pending. Wait for the round-trip, don't race it.
+  await expect(toggle).toHaveAttribute("aria-checked", flipped, { timeout: 30_000 });
   // Restore the durable state so the test leaves nothing dirty.
   await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  await expect(toggle).toHaveAttribute("aria-checked", initial ?? "true", { timeout: 30_000 });
 });
 
 test("closes a filter dropdown on outside click", async ({ page }) => {
