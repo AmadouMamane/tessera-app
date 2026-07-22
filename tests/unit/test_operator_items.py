@@ -686,3 +686,57 @@ class TestTheItemStateEndpointsHonourThePartition:
         task_ids = {t["key"] for t in served.json()["table"]["tasks"]}
         assert task_ids == eval_ids
         assert not (task_ids & business_ids)
+
+
+class TestTheTransitionsJournal:
+    """WF-01 — the case rail's substrate: append-only, attributed, honest.
+
+    The state file keeps only the current state; every effective change lands
+    in `operator_items_transitions.jsonl` as `{item_id, at, kind, from, to, by}`
+    and is never rewritten. `by` has no default (ADR 0024): an unattributed
+    transition is impossible to write.
+    """
+
+    @staticmethod
+    def _wire_memory_store(monkeypatch: pytest.MonkeyPatch) -> dict[str, dict[str, str]]:
+        """An in-memory state store (the suite's autouse fixture no-ops saves)."""
+        store: dict[str, dict[str, str]] = {}
+        monkeypatch.setattr(oi, "_load_state", lambda: {k: dict(v) for k, v in store.items()})
+        monkeypatch.setattr(
+            oi, "_save_state", lambda s: store.update({k: dict(v) for k, v in s.items()})
+        )
+        return store
+
+    def test_a_transition_is_journaled_with_its_author(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._wire_memory_store(monkeypatch)
+        oi.set_item_state("case-j1", status="progress", by="amadou")
+        oi.set_item_state("case-j1", status="done", assignee="Julie", by="julie.d")
+        rows = oi.transitions_for("case-j1")
+        assert [(r["kind"], r["from"], r["to"], r["by"]) for r in rows] == [
+            ("status", "todo", "progress", "amadou"),
+            ("status", "progress", "done", "julie.d"),
+            ("assignee", "", "Julie", "julie.d"),
+        ]
+        # Append-only: the second write did not erase the first transition.
+        assert all(r["item_id"] == "case-j1" for r in rows)
+        assert all(r["at"] for r in rows)
+
+    def test_a_no_op_write_appends_no_transition(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._wire_memory_store(monkeypatch)
+        oi.set_item_state("case-j2", status="progress", by="amadou")
+        oi.set_item_state("case-j2", status="progress", by="amadou")  # same status
+        rows = oi.transitions_for("case-j2")
+        assert len(rows) == 1  # a transition that changed nothing is not a transition
+
+    def test_the_author_is_required_by_signature(self) -> None:
+        with pytest.raises(TypeError):
+            oi.set_item_state("case-j3", status="progress")  # type: ignore[call-arg]
+
+    def test_the_journal_is_scoped_per_item(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._wire_memory_store(monkeypatch)
+        oi.set_item_state("case-j4", status="progress", by="amadou")
+        oi.set_item_state("case-j5", status="done", by="julie.d")
+        assert {r["item_id"] for r in oi.transitions_for("case-j4")} == {"case-j4"}
+        assert {r["item_id"] for r in oi.transitions_for("case-j5")} == {"case-j5"}

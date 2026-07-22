@@ -11,7 +11,9 @@ import {
   Search,
   X,
 } from "lucide-react";
+import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
@@ -100,7 +102,22 @@ export function InboxOverview() {
   const [fStatus, setFStatus] = useState(ALL);
   const [fType, setFType] = useState(ALL);
   const [fAgent, setFAgent] = useState(ALL);
-  const [selected, setSelected] = useState<string | null>(null);
+  // WF-01 (rail norm): the selected case derives from the URL (`?item=`),
+  // never from local state — a case detail is deep-linkable and shareable.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selected = searchParams.get("item");
+  const setSelected = (itemId: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (itemId) {
+      params.set("item", itemId);
+    } else {
+      params.delete("item");
+    }
+    const qs = params.toString();
+    router.replace((qs ? `${pathname}?${qs}` : pathname) as Route);
+  };
   const mutate = useMutation({
     mutationFn: mutateInboxItem,
     // The key must match the query's — `["inbox-overview", locale]`. Writing the
@@ -796,6 +813,36 @@ function InboxDrawer({
               </div>
             ))}
           </dl>
+
+          {/* WF-01 — the journaled transitions of this case, each naming its
+              verified author (ADR 0024). Honest empty when it never moved. */}
+          <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+            <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {t("drawer.transitions")}
+            </p>
+            {item.transitions.length > 0 ? (
+              <ol className="mt-1.5 flex flex-col gap-1.5 text-[0.68rem]">
+                {item.transitions.map((r, i) => (
+                  <li
+                    key={`${r.at}-${r.label}-${i}`}
+                    className="flex items-baseline justify-between gap-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="text-[var(--tessera-text)]">{r.label}</span>{" "}
+                      <span className="text-[var(--tessera-text-muted)]">· {r.by}</span>
+                    </span>
+                    <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+                      {r.at}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-1.5 text-[0.62rem] leading-snug text-[var(--tessera-text-muted)]">
+                {t("drawer.transitionsEmpty")}
+              </p>
+            )}
+          </div>
 
           <div className="mt-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
             <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">

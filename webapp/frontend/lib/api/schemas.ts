@@ -3964,6 +3964,11 @@ export const InboxOverviewSchema = z.object({
       status: z.enum(["todo", "in_progress", "waiting", "resolved"]),
       href: z.string().optional().default(""),
       source_kind: z.string().optional().default("eval_failure"),
+      // WF-01 — journaled case transitions, each naming its verified author.
+      transitions: z
+        .array(z.object({ at: z.string(), label: z.string(), by: z.string() }))
+        .optional()
+        .default([]),
     }),
   ),
   total_items: z.number().int(),
@@ -4439,6 +4444,12 @@ const AgentAFaireDetailSchema = z.object({
   sla_note: z.string(),
   sla_tone: z.string(),
   sla_rows: z.array(z.object({ label: z.string(), value: z.string() })),
+  // WF-01 — journaled case transitions, each naming its verified author.
+  transitions_title: z.string().optional(),
+  transitions_empty: z.string().optional(),
+  transition_rows: z
+    .array(z.object({ at: z.string(), label: z.string(), by: z.string(), kind: z.string() }))
+    .optional(),
   assign_title: z.string(),
   assign_label: z.string(),
   assignee: z.string(),

@@ -106,7 +106,8 @@ test("'Prendre en charge' persists the workflow status", async ({ page }) => {
   await expect(page.locator("table tbody tr").first()).toContainText("En cours");
 
   // Restore: mark resolved is also durable; leave a known clean-ish state.
-  await page.locator("table tbody tr").first().click();
+  // Since WF-01 the selection lives in the URL (?item=), so the reload has
+  // ALREADY reopened the drawer on the same case — use it directly.
   const reopened = page.getByRole("dialog");
   await reopened.getByRole("button", { name: "Marquer resolu" }).click();
   await expect(reopened.getByText("Resolu").first()).toBeVisible();
@@ -155,7 +156,9 @@ test("the drawer tabs gate real content: history note, evidence link, honest rel
   await page.locator("table tbody tr").first().click();
   const detail = page.getByRole("dialog");
   await detail.getByRole("button", { name: "Historique" }).click();
-  await expect(detail.getByText(/jalons datés ci-dessus sont capturés/)).toBeVisible();
+  // WF-01: the tab shows the journaled transitions (title always present;
+  // rows or the honest per-case empty note below it).
+  await expect(detail.getByText("Transitions journalisees")).toBeVisible();
   await detail.getByRole("button", { name: "Preuves" }).click();
   await expect(detail.getByRole("link", { name: /Ouvrir dans les evaluations/ })).toHaveAttribute(
     "href",
@@ -194,4 +197,36 @@ test("rail bulk is honestly disabled and the dead timeline CTA is gone", async (
     "Non câblé — cette action arrive dans un lot dédié",
   );
   await expect(page.getByRole("button", { name: "Voir la timeline complete" })).toHaveCount(0);
+});
+
+// ── WF-01: the case transitions journal is real, attributed, URL-derived ─────
+
+test("the selected case lives in the URL and deep-links back to its drawer", async ({ page }) => {
+  await page.locator("table tbody tr").first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page).toHaveURL(/item=/);
+  const url = page.url();
+  // A fresh load of the same URL reopens the same case — the selection is the
+  // URL's, never a local state's (rail norm).
+  await page.goto(url);
+  await expect(page.getByRole("dialog")).toBeVisible({ timeout: 20_000 });
+});
+
+test("a transition lands in the Historique tab with its author — no more 'not journaled'", async ({
+  page,
+}) => {
+  await page.locator("table tbody tr").first().click();
+  const detail = page.getByRole("dialog");
+  // Drive both lifecycle buttons: whatever the durable starting status, at
+  // least one of the two is an effective transition and must be journaled.
+  await detail.getByRole("button", { name: "Prendre en charge" }).click();
+  await expect(detail.getByText("En cours").first()).toBeVisible({ timeout: 15_000 });
+  await detail.getByRole("button", { name: "Marquer resolu" }).click();
+  await expect(detail.getByText("Resolu").first()).toBeVisible({ timeout: 15_000 });
+  await detail.getByRole("button", { name: "Historique" }).click();
+  // A real journaled row: "<from> -> <to>" naming its verified author.
+  await expect(detail.getByText(/-> (En cours|Resolu)/).first()).toBeVisible();
+  await expect(detail.getByText("Transitions journalisees")).toBeVisible();
+  // The old honest-gap note is gone — transitions ARE journaled now.
+  await expect(detail.getByText(/ne sont pas journalisées/)).toHaveCount(0);
 });

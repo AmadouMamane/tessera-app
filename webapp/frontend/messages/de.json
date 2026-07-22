@@ -6913,6 +6913,10 @@
     }
   },
   "inbox": {
+    "drawer": {
+      "transitions": "Journalisierte Übergänge",
+      "transitionsEmpty": "Keine journalisierten Übergänge für diesen Fall seit Eröffnung des Journals (2026-07-22)."
+    },
     "title": "Zu bearbeiten",
     "subtitle": "Ausstehende Freigaben und blockierte Aktionen aus dem Fachbereich, zu entscheiden.",
     "cycleStatus": "Status ändern",
@@ -7037,7 +7041,7 @@
     },
     "footer": {
       "total": "{n} Elemente",
-      "source": "Operator-Backlog"
+      "source": "{src}"
     },
     "rowOpen": "Details ansehen",
     "close": "Schließen",
@@ -8412,7 +8416,6 @@
       }
     },
     "quickNeedsRow": "Wählen Sie eine Zeile — diese Aktion erfolgt im Detailbereich",
-    "historyNote": "Statusübergänge werden nicht protokolliert — nur die obigen datierten Meilensteine sind erfasst.",
     "noRelations": "Keine Beziehungen für dieses Element erfasst."
   },
   "etatADate": {

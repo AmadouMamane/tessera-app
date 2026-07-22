@@ -6913,6 +6913,10 @@
     }
   },
   "inbox": {
+    "drawer": {
+      "transitions": "Journaled transitions",
+      "transitionsEmpty": "No journaled transitions for this case since the journal opened (2026-07-22)."
+    },
     "title": "To process",
     "subtitle": "Pending validations and blocked business actions, awaiting your decision.",
     "cycleStatus": "Change status",
@@ -7037,7 +7041,7 @@
     },
     "footer": {
       "total": "{n} items",
-      "source": "Operator backlog"
+      "source": "{src}"
     },
     "rowOpen": "View detail",
     "close": "Close",
@@ -8412,7 +8416,6 @@
       }
     },
     "quickNeedsRow": "Select a row — this action is taken from the detail panel",
-    "historyNote": "Status transitions are not journaled — only the dated milestones above are captured.",
     "noRelations": "No relations captured for this item."
   },
   "etatADate": {

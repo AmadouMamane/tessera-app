@@ -255,16 +255,106 @@ def _save_state(state: dict[str, dict[str, str]]) -> None:
     )
 
 
-def set_item_state(item_id: str, *, status: str | None = None, assignee: str | None = None) -> None:
-    """Persist a status/assignee change for one queue item."""
+def _transitions_path() -> Path:
+    """Append-only journal of case transitions (WF-01), next to the state file.
+
+    The state file holds only the CURRENT state and is rewritten wholesale; the
+    journal is never rewritten — a rail is a projection of an append-only
+    substrate (registre des rails §1), so the substrate lives in its own file.
+    """
+    return get_settings().guard.audit_file.parent / "operator_items_transitions.jsonl"
+
+
+def _append_transitions(rows: list[dict[str, str]]) -> None:
+    """Append transition rows to the journal, best effort (never breaks a write)."""
+    if not rows:
+        return
+    try:
+        path = _transitions_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fp:
+            for row in rows:
+                fp.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        sys.stderr.write(f"tessera.observability.operator_items: journal append failed: {exc}\n")
+
+
+def transitions_by_item() -> dict[str, list[dict[str, str]]]:
+    """All journaled transitions grouped by item, oldest first; best effort.
+
+    One scan of the journal for callers that decorate a whole backlog —
+    per-item reads would rescan the file once per case.
+    """
+    grouped: dict[str, list[dict[str, str]]] = {}
+    try:
+        path = _transitions_path()
+        if not path.exists():
+            return grouped
+        with path.open("r", encoding="utf-8") as fp:
+            for raw in fp:
+                stripped = raw.strip()
+                if not stripped:
+                    continue
+                try:
+                    obj = json.loads(stripped)
+                except ValueError:
+                    continue
+                if isinstance(obj, dict) and "item_id" in obj:
+                    row = {str(k): str(v) for k, v in obj.items()}
+                    grouped.setdefault(row["item_id"], []).append(row)
+    except OSError:
+        return grouped
+    return grouped
+
+
+def transitions_for(item_id: str) -> list[dict[str, str]]:
+    """The journaled transitions of one item, oldest first; best-effort read."""
+    return transitions_by_item().get(item_id, [])
+
+
+def set_item_state(
+    item_id: str, *, status: str | None = None, assignee: str | None = None, by: str
+) -> None:
+    """Persist a status/assignee change for one queue item, journaled with its author.
+
+    ``by`` is the verified operator principal (ADR 0024) — required and without
+    a default, so an unattributed transition is impossible to write. Every
+    effective change appends ``{item_id, at, kind, from, to, by}`` to the
+    append-only transitions journal (WF-01); a no-op (same status, same
+    assignee) appends nothing — a transition that changed nothing is not a
+    transition.
+    """
     state = _load_state()
     entry = state.get(item_id, {"status": _DEFAULT_STATUS, "assignee": ""})
-    if status is not None and status in _VALID_STATUS:
+    at = _now().isoformat()
+    rows: list[dict[str, str]] = []
+    if status is not None and status in _VALID_STATUS and status != entry.get("status"):
+        rows.append(
+            {
+                "item_id": item_id,
+                "at": at,
+                "kind": "status",
+                "from": str(entry.get("status", _DEFAULT_STATUS)),
+                "to": status,
+                "by": by,
+            }
+        )
         entry["status"] = status
-    if assignee is not None:
+    if assignee is not None and assignee != entry.get("assignee"):
+        rows.append(
+            {
+                "item_id": item_id,
+                "at": at,
+                "kind": "assignee",
+                "from": str(entry.get("assignee", "")),
+                "to": assignee,
+                "by": by,
+            }
+        )
         entry["assignee"] = assignee
     state[item_id] = entry
     _save_state(state)
+    _append_transitions(rows)
 
 
 def _parse_dt(value: str) -> datetime:

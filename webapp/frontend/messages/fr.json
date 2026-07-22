@@ -6913,6 +6913,10 @@
     }
   },
   "inbox": {
+    "drawer": {
+      "transitions": "Transitions journalisées",
+      "transitionsEmpty": "Aucune transition journalisée pour ce cas depuis l'ouverture du journal (2026-07-22)."
+    },
     "title": "À traiter",
     "subtitle": "Validations en attente et actions bloquées du métier, à décider.",
     "cycleStatus": "Changer le statut",
@@ -7037,7 +7041,7 @@
     },
     "footer": {
       "total": "{n} éléments",
-      "source": "Backlog opérateur"
+      "source": "{src}"
     },
     "rowOpen": "Voir le détail",
     "close": "Fermer",
@@ -8414,7 +8418,6 @@
       }
     },
     "quickNeedsRow": "Sélectionnez une ligne — cette action s'applique depuis le panneau de détail",
-    "historyNote": "Les transitions de statut ne sont pas journalisées — seuls les jalons datés ci-dessus sont capturés.",
     "noRelations": "Aucune relation capturée pour cet élément."
   },
   "etatADate": {

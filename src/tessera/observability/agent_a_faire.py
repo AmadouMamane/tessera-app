@@ -42,6 +42,16 @@ _TR: dict[str, tuple[str, str, str]] = {
     "st_done": ("Resolu", "Geloest", "Resolved"),
     "st_progress": ("En cours", "In Bearbeitung", "In progress"),
     "st_todo": ("A traiter", "Zu bearbeiten", "To do"),
+    # journaled transitions (WF-01)
+    "tr_title": ("Transitions journalisees", "Journalisierte Uebergaenge", "Journaled transitions"),
+    "tr_none": (
+        "Aucune transition journalisee pour ce cas depuis l'ouverture du journal (2026-07-22).",
+        "Keine journalisierten Uebergaenge fuer diesen Fall seit Eroeffnung des Journals"
+        " (2026-07-22).",
+        "No journaled transitions for this case since the journal opened (2026-07-22).",
+    ),
+    "tr_assignee": ("Assignation", "Zuweisung", "Assignment"),
+    "tr_unassigned": ("non assigne", "nicht zugewiesen", "unassigned"),
     # SLA cell
     "sla_overdue": ("En retard", "Ueberfaellig", "Overdue"),
     "unassigned": ("Non assigne", "Nicht zugewiesen", "Unassigned"),
@@ -295,6 +305,50 @@ def _task(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
     }
 
 
+def _status_word(value: str, lang: str) -> str:
+    """The localized word for a journaled status value (raw value if unknown)."""
+    key = {"todo": "st_todo", "progress": "st_progress", "done": "st_done"}.get(value)
+    return _t(key, lang) if key else value
+
+
+def _fmt_journal_at(value: str) -> str:
+    """A journaled ISO instant, formatted like the drawer's other dates."""
+    try:
+        return _fmt_dt(datetime.fromisoformat(value))
+    except ValueError:
+        return value
+
+
+def _transition_rows(item_id: str, lang: str) -> list[dict[str, str]]:
+    """The item's journaled transitions (WF-01), localized, oldest first.
+
+    Real rows from the append-only journal — each names its verified author
+    (ADR 0024). An empty list is the honest answer for a case whose lifecycle
+    predates the journal or never moved.
+    """
+    from tessera.observability import operator_items as operator_items_mod
+
+    rows: list[dict[str, str]] = []
+    for row in operator_items_mod.transitions_for(item_id):
+        if row.get("kind") == "assignee":
+            frm = row.get("from", "") or _t("tr_unassigned", lang)
+            to = row.get("to", "") or _t("tr_unassigned", lang)
+            label = f"{_t('tr_assignee', lang)} : {frm} -> {to}"
+        else:
+            from_word = _status_word(row.get("from", ""), lang)
+            to_word = _status_word(row.get("to", ""), lang)
+            label = f"{from_word} -> {to_word}"
+        rows.append(
+            {
+                "at": _fmt_journal_at(row.get("at", "")),
+                "label": label,
+                "by": row.get("by", ""),
+                "kind": row.get("kind", "status"),
+            }
+        )
+    return rows
+
+
 def _detail(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
     sla, _ = _fmt_remaining(item, now, lang)
     status, status_tone = _status_label(item, lang)
@@ -338,6 +392,9 @@ def _detail(item: OperatorItem, now: datetime, lang: str) -> dict[str, object]:
             {"label": _t("row_wait", lang), "value": _fmt_age(item.queued_seconds(now))},
             {"label": _t("row_created", lang), "value": _fmt_dt(item.created_at)},
         ],
+        "transitions_title": _t("tr_title", lang),
+        "transitions_empty": _t("tr_none", lang),
+        "transition_rows": _transition_rows(item.item_id, lang),
         "assign_title": _t("assign_title", lang),
         "assign_label": _t("assign_label", lang),
         "assignee": item.assignee or _t("unassigned", lang),

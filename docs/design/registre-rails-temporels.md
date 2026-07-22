@@ -1,6 +1,16 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.6 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.7 (2026-07-22)
+>
+> v1.7 — WF-01 passe à **Implémenté** : le substrat manquant est construit — journal
+> **append-only** des transitions de cas (`operator_items_transitions.jsonl`,
+> `{item_id, at, kind, from, to, by}`, jamais réécrit) écrit par `set_item_state(..., by=)` dont
+> l'auteur est **obligatoire et sans défaut** ; les deux endpoints de transition passent au
+> patron gouverné (session vérifiée, `actor_of`, `emit_governance_mutation` — l'écart ADR 0024
+> est clos, actes 15/16 du cliquet d'attribution). La timeline C2 est rendue dans les DEUX
+> drawers (À faire : onglet Historique ; À traiter : bloc Transitions), chaque ligne nomme son
+> auteur vérifié, et la sélection de cas dérive de l'URL (`?item=`) sur les deux pages. La note
+> « transitions non journalisées » est retirée — elle disait vrai, elle ne l'est plus.
 >
 > v1.6 — XT-01 passe à **Implémenté** : la capture S2 est complétée à la couture de capture
 > (prompt LLM assemblé, échantillonnage résolu, appels d'outils portant leur nœud parent réel,
@@ -65,7 +75,7 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | **AT-01** | Agent Activity Rail | Activité récente (feed) — *pas* les signaux | `AGENT / Synthèse` | S1 | C1 (feed) | Partiel — feed implémenté |
 | **ER-01** | Evaluation Run Rail | Historique des runs d'évaluation | `AGENT / Évaluations` | S3 | C2 | Implémenté |
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Partiel — timeline implémentée |
-| **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | À faire — substrat manquant (note) |
+| **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | Implémenté — journal + timeline (note) |
 | **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | Implémenté — cassette (note) |
 | **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (toutes) | S4 | C4 | Implémenté |
 
@@ -126,6 +136,25 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 > append-only (§1) : sans journal de transitions `{from, to, at, by}`, WF-01 ne peut pas
 > exister. Déjà bons et à conserver : partition par nature (ADR 0038), horloge SLA depuis
 > l'entrée en file (ADR 0039), badge d'état courant, mode Live affiché, honest-empty.
+
+> **WF-01 (état au 2026-07-22) — Implémenté (journal + timeline + attribution).** Le substrat
+> est construit : `operator_items_transitions.jsonl` (même dossier que le magasin d'état),
+> **append-only** — jamais réécrit, une ligne `{item_id, at, kind, from, to, by}` par changement
+> effectif (un no-op n'écrit rien : une transition qui ne change rien n'est pas une transition).
+> `set_item_state(..., by=)` exige l'auteur **sans défaut** (ADR 0024 — une transition non
+> attribuée est impossible à écrire) ; les deux endpoints (`inbox/item-state`,
+> `agent-a-faire/item-state`) passent au patron gouverné : session vérifiée → `actor_of` →
+> journal → `emit_governance_mutation` (actes 15/16 du cliquet `governed_acts_name_their_author`,
+> `governed_prefixes` élargi en même temps — protocole Insight 177). Projection C2 rendue sur
+> les **deux homes** : drawer À faire (onglet Historique — lignes `de → vers · auteur · date`,
+> lues du journal par `_transition_rows`) et drawer À traiter (bloc Transitions, décoré en une
+> **seule** lecture du journal par backlog via `transitions_by_item`). Sélection de cas dérivée
+> de l'**URL** (`?item=`, deep-link) sur les deux pages ; honest-empty : un cas jamais déplacé
+> depuis l'ouverture du journal (2026-07-22) le dit tel quel — l'historique d'avant le journal
+> n'existe pas et n'est **pas** reconstitué. Témoins : `TestTheTransitionsJournal`
+> (append-only, auteur requis par signature, no-op silencieux, scope par cas), e2e `a-faire`
+> (deep-link + transition → ligne attribuée). Restent au magasin d'état (écrasement, voulu) :
+> le statut courant et `first_seen` (ADR 0039).
 
 > **XT-01 (état au 2026-07-21) — À faire, amorces précisées.** `agir-rail.tsx` n'est **pas**
 > XT-01 : c'est l'implémentation conforme de la **composition §6** (As-of + Live, `?asof` URL,

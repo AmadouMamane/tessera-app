@@ -16,7 +16,11 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
-from tessera.observability.operator_items import NATURE_A_TRAITER, load_items_for
+from tessera.observability.operator_items import (
+    NATURE_A_TRAITER,
+    load_items_for,
+    transitions_by_item,
+)
 
 if TYPE_CHECKING:
     from tessera.observability.operator_items import OperatorItem
@@ -36,11 +40,49 @@ _TR: dict[str, tuple[str, str, str]] = {
     "v_todo": ("a signalé", "hat gemeldet", "reported"),
     "v_progress": ("traite", "bearbeitet", "handling"),
     "v_done": ("a résolu", "hat geloest", "resolved"),
+    # journaled transitions (WF-01)
+    "tr_st_todo": ("À traiter", "Zu bearbeiten", "To do"),
+    "tr_st_progress": ("En cours", "In Bearbeitung", "In progress"),
+    "tr_st_done": ("Résolu", "Gelöst", "Resolved"),
+    "tr_assignee": ("Assignation", "Zuweisung", "Assignment"),
+    "tr_unassigned": ("non assigné", "nicht zugewiesen", "unassigned"),
 }
 
 
 def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
+
+
+def _transition_rows_for(
+    journal: dict[str, list[dict[str, str]]], item_id: str, lang: str
+) -> list[dict[str, str]]:
+    """Journaled transitions of one case (WF-01), localized, oldest first.
+
+    Real rows from the append-only journal, each naming its verified author
+    (ADR 0024). An empty list is the honest answer for a case that never moved
+    since the journal opened.
+    """
+
+    def word(value: str) -> str:
+        key = {"todo": "tr_st_todo", "progress": "tr_st_progress", "done": "tr_st_done"}.get(value)
+        return _t(key, lang) if key else value
+
+    def fmt_at(value: str) -> str:
+        try:
+            return datetime.fromisoformat(value).strftime("%d/%m/%Y %H:%M")
+        except ValueError:
+            return value
+
+    rows: list[dict[str, str]] = []
+    for row in journal.get(item_id, []):
+        if row.get("kind") == "assignee":
+            frm = row.get("from", "") or _t("tr_unassigned", lang)
+            to = row.get("to", "") or _t("tr_unassigned", lang)
+            label = f"{_t('tr_assignee', lang)} : {frm} → {to}"
+        else:
+            label = f"{word(row.get('from', ''))} → {word(row.get('to', ''))}"
+        rows.append({"at": fmt_at(row.get("at", "")), "label": label, "by": row.get("by", "")})
+    return rows
 
 
 _TYPE_COLOR = {
@@ -158,6 +200,9 @@ def compute_inbox_overview(
         "compare": _t("rail_compare", lang),
     }
 
+    # WF-01 — one journal scan decorates the whole backlog with its real,
+    # attributed transition rows (never one file scan per case).
+    journal = transitions_by_item()
     payload_items = [
         {
             "id": i.item_id,
@@ -174,6 +219,7 @@ def compute_inbox_overview(
             "status": _STATUS_KEY.get(i.status, "todo"),
             "href": i.detail_href,
             "source_kind": i.source_kind,
+            "transitions": _transition_rows_for(journal, i.item_id, lang),
         }
         for i in items
     ]

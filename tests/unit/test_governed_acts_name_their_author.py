@@ -828,6 +828,23 @@ GOVERNANCE_ACTS: dict[str, _Act] = {
         "superadmin",
         {"agent_id": "support-client", "action": "revoke"},
     ),
+    # 15th/16th acts, 2026-07-22 (WF-01): a queue-item transition is a governed
+    # act — it moves a human case along its lifecycle. Both endpoints journal
+    # the transition with the verified author and emit to the chain; the
+    # registry's scope was widened to see their routes at the same time
+    # (Insight 177 protocol).
+    "transition a business queue item": _Act(
+        "POST",
+        "/observability/inbox/item-state",
+        "admin",
+        {"item_id": "ITEM-probe-001", "status": "progress"},
+    ),
+    "transition an eval queue item": _Act(
+        "POST",
+        "/observability/agent-a-faire/item-state",
+        "admin",
+        {"item_id": "ITEM-probe-001", "status": "done"},
+    ),
 }
 
 
@@ -940,6 +957,24 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("tessera.observability.prompt_overlay.propose_overlay", _propose_overlay)
     monkeypatch.setattr("tessera.observability.prompt_overlay.review_overlay", _review_overlay)
 
+    # Queue-item transitions (15th/16th acts, WF-01): stub the STORE write (it
+    # wants a JSON file + the JSONL journal on disk), the partition read and
+    # the rebuilt page payloads; route, emitter and chain stay real.
+    def _set_item_state(
+        item_id: str, *, status: str | None = None, assignee: str | None = None, by: str
+    ) -> None:
+        assert by, "the route must pass the verified principal, never empty"
+
+    monkeypatch.setattr("tessera.observability.operator_items.set_item_state", _set_item_state)
+    monkeypatch.setattr(
+        "tessera.observability.operator_items.available_item_ids",
+        lambda _nature: {"ITEM-probe-001"},
+    )
+    monkeypatch.setattr("tessera.observability.inbox.compute_inbox_overview", lambda *_a, **_kw: {})
+    monkeypatch.setattr(
+        "tessera.observability.agent_a_faire.compute_agent_a_faire", lambda *_a, **_kw: {}
+    )
+
 
 def _resolve(act: _Act) -> _Act:
     """Fill the placeholders from the live stores — a driver must use a REAL rule id."""
@@ -1031,6 +1066,9 @@ def _is_governance_mutation(route: APIRoute, method: str) -> bool:
         "/observability/agent-configurations/config",
         # 2026-07-18 (ADR 0037): the prompt-overlay lifecycle joined (2 acts).
         "/observability/agent-prompt-overlay/",
+        # 2026-07-22 (WF-01): queue-item transitions joined (2 acts).
+        "/observability/inbox/item-state",
+        "/observability/agent-a-faire/item-state",
         "/settings/",
     )
     return route.path.startswith(governed_prefixes)
