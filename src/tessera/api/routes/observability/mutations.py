@@ -394,11 +394,35 @@ async def observability_agent_garde_fous_mutate(
 
 @router.post("/observability/agent-connaissances/source-state")
 async def observability_agent_connaissances_mutate(
-    body: _SourceStateBody, lang: str = "fr"
+    body: _SourceStateBody,
+    session: Annotated[SessionContext, Depends(require_operator)],
+    lang: str = "fr",
 ) -> dict[str, object]:
-    """Persist an attach/detach/activate change and return the fresh payload."""
+    """Persist an attach/detach/activate change — a governed, journalled act.
+
+    Detaching a source changes what the agent may ground its answers on, so the
+    act names its verified author (ADR 0024) and lands on the S1 ledger
+    (``target="knowledge_source.<key>"``) — the per-source trace on the detail
+    sheet, the cockpit Journal, the governance feed and the SIEM export all read
+    that entry. Same deliberate ordering as the rule-state toggle above: the
+    entry is written BEFORE the store mutation. A no-op (the requested state
+    already held) writes nothing — "nothing changed" must never read as
+    "change recorded".
+    """
     if body.key not in knowledge_mod.available_sources():
         raise HTTPException(status_code=404, detail="unknown source")
+    prior = knowledge_mod.source_state_of(body.key)
+    changes = {
+        field: value
+        for field, value in (("attached", body.attached), ("active", body.active))
+        if value is not None and prior[field] is not value
+    }
+    if changes:
+        emit_governance_mutation(
+            target=f"knowledge_source.{body.key}",
+            detail={**changes, **{f"was_{f}": prior[f] for f in changes}},
+            actor=actor_of(session),
+        )
     knowledge_mod.set_source_state(body.key, attached=body.attached, active=body.active)
     return {"available": True, **(await knowledge_mod.build_connaissances(lang))}
 

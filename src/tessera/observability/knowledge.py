@@ -5,8 +5,11 @@ source inventory (name, type, chunk count, languages, freshness, coverage) is
 read from the ``documents`` table that the corpus ingestion populates, so every
 row corresponds to chunks you can actually find in pgvector. Per-agent
 attach/active state is persisted to a durable JSON file next to the guard audit
-log, and mutated by the attach/detach/activate endpoints. Citation rates come
-from a cached retrieval probe (see ``scripts/probe_retrieval.py``) when present.
+log, and mutated by the attach/detach/activate endpoints — each state change is
+a governed act journalled on the S1 ledger (``target="knowledge_source.<cat>"``,
+verified top-level actor) BEFORE the store write, and the per-source trace is
+folded back from that ledger onto the detail sheet. Citation rates come from a
+cached retrieval probe (see ``scripts/probe_retrieval.py``) when present.
 
 Free-text data is verbatim French with ASCII-only punctuation.
 """
@@ -19,6 +22,7 @@ from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
 
+from tessera.guard.ledger_store import read_ledger_entries
 from tessera.retrieval import citations
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
@@ -32,6 +36,8 @@ __all__ = [
     "available_sources",
     "build_connaissances",
     "set_source_state",
+    "source_state_of",
+    "source_state_traces",
 ]
 
 # category id -> type tone ("reg" | "prod"). Names live in _SOURCE_NAME below.
@@ -185,6 +191,25 @@ _TR: dict[str, tuple[str, str, str]] = {
     "a_active": ("Active pour cet agent", "Für diesen Agenten aktiv", "Active for this agent"),
     "a_index": ("Dernière indexation", "Letzte Indexierung", "Last indexing"),
     "a_used": ("Dernière utilisation", "Letzte Nutzung", "Last use"),
+    "journal_title": (
+        "Actes journalisés (S1)",
+        "Journalisierte Akte (S1)",
+        "Journalled acts (S1)",
+    ),
+    "journal_empty": (
+        "Aucun acte journalisé — la trace commence au premier acte gouverné.",
+        "Kein journalisierter Akt — die Spur beginnt mit dem ersten Akt.",
+        "No journalled act — the trace starts at the first governed act.",
+    ),
+    "journal_unavailable": (
+        "Journal S1 indisponible",
+        "S1-Journal nicht verfügbar",
+        "S1 journal unavailable",
+    ),
+    "j_attached": ("Rattachée", "Verknüpft", "Attached"),
+    "j_detached": ("Détachée", "Getrennt", "Detached"),
+    "j_activated": ("Activée", "Aktiviert", "Activated"),
+    "j_deactivated": ("Désactivée", "Deaktiviert", "Deactivated"),
     "yes": ("Oui", "Ja", "Yes"),
     "no": ("Non", "Nein", "No"),
     "toggle_label": ("Active pour cet agent", "Für diesen Agenten aktiv", "Active for this agent"),
@@ -353,6 +378,67 @@ def set_source_state(
     _save_state(state)
 
 
+def source_state_of(category: str) -> dict[str, bool]:
+    """The current durable attach/active state of one source category.
+
+    The route reads this BEFORE mutating so it can journal what actually
+    changed (and journal nothing on a no-op — "nothing changed" must never
+    read as "change recorded").
+    """
+    entry = _load_state().get(category, {})
+    return {
+        "attached": bool(entry.get("attached", True)),
+        "active": bool(entry.get("active", True)),
+    }
+
+
+#: Ledger target prefix of the journalled attach/detach/activate acts. The
+#: mutation route writes it; the fold below parses it — one module owns both.
+_TRACE_TARGET_PREFIX = "knowledge_source."
+
+
+def source_state_traces(*, until: datetime | None = None) -> dict[str, list[dict[str, object]]]:
+    """Per-source journalled attach/detach acts from the S1 ledger, oldest→newest.
+
+    Every state change lands on the hash-chained audit ledger before the store
+    write (``target="knowledge_source.<cat>"``, arguments carrying the changed
+    fields, top-level verified ``actor``). The read is bounded (``until``) on
+    the ``occurred_at`` index in postgres; file mode hands back the whole
+    journal, so the belt filter below holds the bound in both mediums. An entry
+    with no parseable instant cannot claim a place in a dated trace and is
+    excluded.
+    """
+    bound = until or datetime.now(UTC)
+    if bound.tzinfo is None:
+        bound = bound.replace(tzinfo=UTC)
+    out: dict[str, list[dict[str, object]]] = {}
+    for entry in read_ledger_entries(until=bound):
+        target = entry.get("target")
+        if not (isinstance(target, str) and target.startswith(_TRACE_TARGET_PREFIX)):
+            continue
+        try:
+            at = datetime.fromisoformat(str(entry.get("occurred_at")))
+        except ValueError:
+            continue
+        if at.tzinfo is None:
+            at = at.replace(tzinfo=UTC)
+        if at > bound:
+            continue
+        args = entry.get("arguments")
+        args = args if isinstance(args, dict) else {}
+        out.setdefault(target.removeprefix(_TRACE_TARGET_PREFIX), []).append(
+            {
+                "at": at,
+                "by": str(entry.get("actor", "")),
+                "attached": args.get("attached")
+                if isinstance(args.get("attached"), bool)
+                else None,
+                "active": args.get("active") if isinstance(args.get("active"), bool) else None,
+            }
+        )
+    return out
+
+
 def available_sources() -> set[str]:
     """The set of known source category ids (for endpoint validation)."""
     return set(_SOURCE_META)
@@ -404,9 +490,20 @@ async def build_connaissances(lang: str = "fr") -> dict[str, object]:
 
     Display labels are localized via ``lang`` (fr/de/en); logic keys
     (``status_tone``, ``type_tone``, ``fresh_days``, ``coverage``) stay stable.
+    An unreachable ledger yields ``trace=None`` — the sheet says "journal
+    unavailable", never an empty trace it did not witness (ADR 0026).
     """
+    try:
+        trace: dict[str, list[dict[str, object]]] | None = source_state_traces()
+    except Exception:
+        trace = None
     return _assemble(
-        await _fetch_rows(), _load_state(), await load_citation_probe(), _load_traffic(), lang
+        await _fetch_rows(),
+        _load_state(),
+        await load_citation_probe(),
+        _load_traffic(),
+        lang,
+        trace=trace,
     )
 
 
@@ -417,8 +514,13 @@ def _assemble(
     traffic: dict[str, object],
     lang: str,
     now: datetime | None = None,
+    trace: dict[str, list[dict[str, object]]] | None = None,
 ) -> dict[str, object]:
-    """Pure assembly of the Connaissances payload (no I/O) - unit-testable."""
+    """Pure assembly of the Connaissances payload (no I/O) - unit-testable.
+
+    ``trace`` is the pre-read per-source S1 fold (``source_state_traces``);
+    ``None`` means the ledger could not be read and the sheets say so.
+    """
     lang = _norm_lang(lang)
     now = now or datetime.now(UTC)
     agg = _aggregate(raw_rows)
@@ -520,7 +622,17 @@ def _assemble(
         },
     ]
 
-    details = [_build_detail(r, agg, state, traffic, lang) for r in rows_out]
+    details = [
+        _build_detail(
+            r,
+            agg,
+            state,
+            traffic,
+            lang,
+            trace.get(str(r["key"]), []) if trace is not None else None,
+        )
+        for r in rows_out
+    ]
 
     return {
         "title": "Connaissances",
@@ -572,12 +684,37 @@ def _summary(chunks: int, docs: int, langs: str, lang: str) -> str:
     return f"Source ancrée dans pgvector : {chunks} chunks issus de {docs} documents, en {langs}."
 
 
+def _trace_acts(trace: list[dict[str, object]], lang: str) -> list[dict[str, str]]:
+    """Localized journal rows (newest first) from one source's S1 fold."""
+    labels = (
+        ("attached", True, "j_attached"),
+        ("attached", False, "j_detached"),
+        ("active", True, "j_activated"),
+        ("active", False, "j_deactivated"),
+    )
+    acts: list[dict[str, str]] = []
+    for ev in reversed(trace):
+        parts = [_t(key, lang) for field, value, key in labels if ev.get(field) is value]
+        if not parts:
+            continue  # an entry that names no state change carries no act
+        at = ev.get("at")
+        acts.append(
+            {
+                "at": at.strftime("%d/%m/%Y %H:%M") if isinstance(at, datetime) else "",
+                "by": str(ev.get("by", "")),
+                "action": " · ".join(parts),
+            }
+        )
+    return acts
+
+
 def _build_detail(
     row: dict[str, object],
     agg: _Aggregate,
     state: dict[str, dict[str, bool]],
     traffic: dict[str, object],
     lang: str,
+    trace: list[dict[str, object]] | None,
 ) -> dict[str, object]:
     cat = str(row["key"])
     st = state.get(cat, {"attached": True, "active": True})
@@ -640,10 +777,11 @@ def _build_detail(
             {"label": _t("p_distance", lang), "value": "cosine"},
             {"label": _t("p_status", lang), "value": str(row["status"])},
         ],
-        # OT-01 object-trace: the attachment state of this source for this agent.
-        # Sourced from the durable attach/active store + the real pgvector ingestion
-        # timestamp + traffic. Note: attach/detach are not yet S1-audited, so this
-        # is current state + ingestion, not a full versioned event history.
+        # OT-01 object-trace: current attach/active state from the durable store,
+        # plus the per-source journal of governed acts folded from the S1 ledger
+        # (attach/detach/activate are journalled BEFORE the store write). The
+        # trace starts at the first governed act — earlier state is pre-substrate
+        # and is not fabricated. ``journal: None`` = ledger unreachable, said so.
         "attachment": {
             "title": _t("attach_title", lang),
             "rows": [
@@ -663,6 +801,10 @@ def _build_detail(
                 },
                 {"label": _t("a_used", lang), "value": last_used},
             ],
+            "journal_title": _t("journal_title", lang),
+            "journal": _trace_acts(trace, lang) if trace is not None else None,
+            "journal_empty": _t("journal_empty", lang),
+            "journal_unavailable": _t("journal_unavailable", lang),
         },
         "actions_title": _t("actions_title", lang),
         "toggle_label": _t("toggle_label", lang),

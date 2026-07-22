@@ -119,6 +119,10 @@ function AgentConnaissancesInner() {
     onSuccess: (fresh) => {
       setMutError(null);
       qc.setQueryData(["agent-connaissances", locale], fresh);
+      // The response was built in the same request as the S1 append, which is
+      // spooled and drained asynchronously — its own journal fold can miss the
+      // just-written act. One refetch lands after the drain; the poll backstops.
+      qc.invalidateQueries({ queryKey: ["agent-connaissances", locale] });
     },
     onError: () => setMutError(t("mutationError")),
   });
@@ -1414,6 +1418,40 @@ function DetailPanel({
                 </li>
               ))}
             </ul>
+            {d.attachment.journal_title ? (
+              <div data-testid="source-journal" className="mt-2">
+                <h4 className="mb-1 text-[0.68rem] font-semibold text-[var(--tessera-text-muted)]">
+                  {d.attachment.journal_title}
+                </h4>
+                {Array.isArray(d.attachment.journal) ? (
+                  d.attachment.journal.length > 0 ? (
+                    <ul className="flex flex-col gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.68rem]">
+                      {d.attachment.journal.map((ev) => (
+                        <li
+                          key={`${ev.at}-${ev.action}`}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <span className="font-medium text-[var(--tessera-text)]">
+                            {ev.action}
+                          </span>
+                          <span className="text-[var(--tessera-text-muted)]">
+                            {ev.at} · {ev.by}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[0.68rem] text-[var(--tessera-text-muted)]">
+                      {d.attachment.journal_empty}
+                    </p>
+                  )
+                ) : (
+                  <p className="text-[0.68rem] text-amber-300">
+                    {d.attachment.journal_unavailable}
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

@@ -70,3 +70,35 @@ test("closes a filter dropdown on outside click", async ({ page }) => {
   await page.getByPlaceholder(/Rechercher/).click(); // a neutral element outside the menu
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
+
+test("an active toggle is journalled S1 with its author on the source sheet", async ({ page }) => {
+  // The governed act (activate/deactivate) must land on the sheet's per-source
+  // journal, attributed to the verified operator — the OT-01 substrate. The S1
+  // append is spooled and drained asynchronously, so the journal is re-read
+  // until the act appears. The toggle is flipped and restored so the suite
+  // leaves the state as it found it.
+  await page.locator("table tbody tr").first().click();
+  const drawer = page.locator("dialog[aria-modal=true]");
+  await expect(drawer).toBeVisible();
+
+  const toggle = drawer.locator("button[aria-pressed]");
+  const wasOn = (await toggle.getAttribute("aria-pressed")) === "true";
+  const firstAct = drawer.getByTestId("source-journal").locator("li").first();
+  // Earlier governed acts may already sit in the trace with the same label, so
+  // the witness is "the NEWEST act changed and is this one", never a bare match.
+  const before = (await firstAct.count()) ? await firstAct.innerText() : "";
+
+  await toggle.click();
+  // The aria-pressed flip is the mutation-complete barrier: acting again before
+  // it lands would re-send the same state and be refused as a silent no-op.
+  await expect(toggle).toHaveAttribute("aria-pressed", String(!wasOn));
+  await expect(firstAct).not.toHaveText(before, { timeout: 45_000 });
+  await expect(firstAct).toContainText(wasOn ? "Désactivée" : "Activée");
+  await expect(firstAct).toContainText("admin");
+
+  const mid = await firstAct.innerText();
+  await toggle.click(); // restore
+  await expect(toggle).toHaveAttribute("aria-pressed", String(wasOn));
+  await expect(firstAct).not.toHaveText(mid, { timeout: 45_000 });
+  await expect(firstAct).toContainText(wasOn ? "Activée" : "Désactivée");
+});

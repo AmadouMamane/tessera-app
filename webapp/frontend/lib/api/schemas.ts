@@ -4990,6 +4990,15 @@ export const AgentConnaissancesSchema = z.object({
           .object({
             title: z.string(),
             rows: z.array(z.object({ label: z.string(), value: z.string() })),
+            journal_title: z.string().optional(),
+            // S1 fold of the governed attach/detach acts: a list (possibly empty),
+            // or null when the ledger could not be read — rendered as such.
+            journal: z
+              .array(z.object({ at: z.string(), by: z.string(), action: z.string() }))
+              .nullable()
+              .optional(),
+            journal_empty: z.string().optional(),
+            journal_unavailable: z.string().optional(),
           })
           .optional(),
         actions_title: z.string(),
