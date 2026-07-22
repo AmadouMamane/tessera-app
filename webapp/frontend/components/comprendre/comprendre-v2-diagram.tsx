@@ -39,7 +39,7 @@ export function ComprendreV2Diagram() {
         className="pointer-events-none absolute -top-40 left-1/3 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(0,200,120,0.11),transparent_68%)] blur-3xl"
       />
 
-      <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1fr)_minmax(0,1fr)]">
         {columns.map((column, index) => {
           const Icon = columnIcons[index] ?? Gauge;
           return (
@@ -69,8 +69,8 @@ export function ComprendreV2Diagram() {
               </section>
 
               {index === 0 ? (
-                <div className="flex items-center justify-center lg:pointer-events-none lg:absolute lg:top-1/2 lg:left-1/3 lg:z-10 lg:-translate-x-1/2 lg:-translate-y-1/2">
-                  <div className="flex max-w-xs items-center gap-3 rounded-2xl border border-[rgba(0,200,120,0.35)] bg-[color-mix(in_srgb,var(--tessera-surface-elevated)_90%,transparent)] px-4 py-3 shadow-lg backdrop-blur">
+                <div className="flex items-center justify-center lg:pointer-events-none">
+                  <div className="flex w-full max-w-xs items-center gap-3 rounded-2xl border border-[rgba(0,200,120,0.35)] bg-[color-mix(in_srgb,var(--tessera-surface-elevated)_90%,transparent)] px-4 py-3 shadow-lg backdrop-blur lg:flex-col lg:px-3 lg:text-center">
                     <ShieldCheck
                       className="size-6 shrink-0 text-[var(--tessera-green)]"
                       aria-hidden="true"
@@ -86,8 +86,8 @@ export function ComprendreV2Diagram() {
         })}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <div className="hidden lg:block" />
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="hidden lg:col-span-2 lg:block" />
         <section className="rounded-2xl border border-[#8bb7ff]/30 bg-[#8bb7ff]/[0.06] p-5">
           <div className="flex items-start gap-3">
             <ScrollText className="mt-0.5 size-5 shrink-0 text-[#8bb7ff]" aria-hidden="true" />

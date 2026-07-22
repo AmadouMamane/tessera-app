@@ -37,8 +37,8 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
 | Lot | Statut | Commit | Gate twice | Preuves |
 |---|---|---|---|---|
 | 1 — backend | terminé | `49828247` | `8f3f9f9a7fc6` · twice-green | 59 tests ciblés verts ; mutations T1/T3/T4/T5 ; synthétique inchangé ; égalité T4 |
-| 2 — page | terminé | en préparation | `355e7e1404c3` · twice-green | FR verbatim ; DE/EN ; BFF + zod ; 5 liens ; `/en-detail` |
-| 3 — ratchets | à faire | — | — | mutation `214` rouge ; e2e vide/liens/langues |
+| 2 — page | terminé | `2e643ebf` | `355e7e1404c3` · twice-green | FR verbatim ; DE/EN ; BFF + zod ; 5 liens ; `/en-detail` |
+| 3 — ratchets | terminé | en préparation | `5c930c580bbd` · twice-green | mutation `214` rouge ; 5 e2e verts ; captures vide/FR/EN/DE |
 
 ## Mutations et captures
 
@@ -100,6 +100,31 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   `page-nature.test.ts` repasse avec **12 tests verts**.
 - `make gate-twice` final : **TWICE-GREEN sur un seul arbre `355e7e1404c3`** ; chaque passage
   valide TypeScript, Biome (27 avertissements historiques), 436 tests frontend, Ruff, format,
+  mypy strict et 2 560 tests backend hors intégration.
+
+### Lot 3 — ratchets
+
+- `chrome-honesty.test.ts` couvre désormais les sources JSX de `/comprendre` et rejette tout
+  littéral numérique visible hors liste blanche structurelle. Mutation physique exécutée :
+  l'ajout de `<p>214</p>` dans `comprendre-v2-overview.tsx` produit exactement un contrevenant
+  (`literal: "214"`) et fait passer le fichier à **1 échec / 30 succès** ; mutation retirée, le
+  ratchet repasse à **31 tests verts**.
+- E2E ciblé sur `make dev-preview PORT=3098` : base vierge simulée via le BFF → quatre tirets et
+  leurs quatre raisons FR exactes ; les cinq liens de preuve résolvent leurs routes localisées
+  réelles ; les titres, divulgations de fiction et liens de lecture détaillée rendent en FR, EN
+  et DE. Résultat final ciblé : **5 passed**.
+- La revue visuelle du diagramme a révélé que le bouclier absolu masquait le texte des cartes
+  métier et agent. Le bouclier occupe désormais sa propre colonne de grille ; une nouvelle
+  inspection du preview confirme l'absence de chevauchement sans changer texte ni contrat.
+- Captures générées et inspectées :
+  - base vierge FR : `/tmp/tessera-comprendre-v2-empty-fr.png` ;
+  - FR : `/tmp/tessera-comprendre-v2-fr.png` ;
+  - EN : `/tmp/tessera-comprendre-v2-en.png` ;
+  - DE : `/tmp/tessera-comprendre-v2-de.png`.
+- TypeScript strict ciblé : **vert** ; Biome ciblé : **vert** ; aucun texte ni claim fermé n'a
+  été modifié pendant le ratchet.
+- `make gate-twice` final : **TWICE-GREEN sur un seul arbre `5c930c580bbd`** ; chaque passage
+  valide TypeScript, Biome (27 avertissements historiques), 442 tests frontend, Ruff, format,
   mypy strict et 2 560 tests backend hors intégration.
 
 ## Questions bloquantes / déviations proposées

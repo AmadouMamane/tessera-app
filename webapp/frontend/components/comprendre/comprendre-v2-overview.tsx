@@ -291,7 +291,10 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
         <ProofLink href="/recouvrement" label={t("proofLabel")} />
       </section>
 
-      <section className="border-[var(--tessera-border)] border-t py-14">
+      <section
+        data-testid="comprendre-live-section"
+        className="border-[var(--tessera-border)] border-t py-14"
+      >
         <SectionHeader title={t("live.title")} />
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {cards.map((card, index) => {
@@ -303,7 +306,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
             return (
               <article
                 key={card.title}
-                data-testid={`comprendre-live-${index}`}
+                data-testid={`comprendre-live-tile-${index}`}
                 className="flex min-h-full flex-col rounded-2xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-5"
               >
                 <span className="grid size-10 place-items-center rounded-xl bg-[var(--tessera-muted)] text-[var(--tessera-green)]">
