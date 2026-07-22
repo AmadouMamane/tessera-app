@@ -32,7 +32,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from tessera.observability.eval.report_paths import report_files_for
@@ -248,6 +248,24 @@ def _parse_run_at(stamp: str) -> int | None:
     return int(dt.timestamp() * 1000)
 
 
+def _asof_run_ms(at: str | None) -> int | None:
+    """ISO instant → epoch ms in the run-stamp convention, or ``None`` (live).
+
+    The bound is converted to UTC and re-read through :func:`_parse_run_at` so
+    both sides of the comparison carry the same naive-local skew. A malformed
+    instant reads live rather than raising.
+    """
+    if not at:
+        return None
+    try:
+        dt = datetime.fromisoformat(at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(UTC)
+    return _parse_run_at(dt.strftime("%Y%m%dT%H%M%SZ"))
+
+
 def _full_runs(runs: list[_RunCats]) -> list[_RunCats]:
     """The substantive full-catalogue runs (enough themes and cases), oldest→newest."""
     return [r for r in runs if len(r.cats) >= _MIN_FULL_CATEGORIES and r.n_total >= _MIN_FULL_TOTAL]
@@ -259,12 +277,17 @@ def _full_runs(runs: list[_RunCats]) -> list[_RunCats]:
 def load_quality_datasets(
     failures_dir: Path | None = None,
     reports_dir: Path | None = None,
+    *,
+    at: str | None = None,
 ) -> QualityDatasetsReport:
     """Join the failure catalogue with the run archive into themed quality datasets.
 
     Args:
         failures_dir: Failure catalogue directory; defaults to ``eval/failures``.
         reports_dir: Report archive directory; defaults to ``eval/reports``.
+        at: Optional ISO instant — only runs stamped at or before it are read
+            (state as of T). ``None`` or malformed reads live. A run whose stamp
+            cannot be placed in time is excluded from an as-of view.
 
     Returns:
         A :class:`QualityDatasetsReport`. An empty catalogue yields an empty report
@@ -273,6 +296,9 @@ def load_quality_datasets(
     """
     catalogue = _load_catalogue(failures_dir or default_failures_dir())
     runs = _load_run_cats(reports_dir)
+    at_ms = _asof_run_ms(at)
+    if at_ms is not None:
+        runs = [r for r in runs if (t := _parse_run_at(r.run_at)) is not None and t <= at_ms]
     full = _full_runs(runs)
 
     latest = full[-1] if full else None
@@ -337,7 +363,7 @@ def load_quality_datasets(
         languages=all_langs,
         monitored=len(datasets),
         coverage_pct=coverage_pct,
-        pipeline=_pipeline(runs, latest, sum(t.cases for t in catalogue.values())),
+        pipeline=_pipeline(runs, latest, sum(t.cases for t in catalogue.values()), ref_ms=at_ms),
     )
 
 
@@ -353,8 +379,17 @@ def _pipeline(
     runs: list[_RunCats],
     latest: _RunCats | None,
     catalogue_cases: int,
+    *,
+    ref_ms: int | None = None,
 ) -> PipelineStatus:
-    """Real pipeline health from the report archive; unknown signals stay ``None``."""
+    """Real pipeline health from the report archive; unknown signals stay ``None``.
+
+    Args:
+        runs: Per-run category breakdowns, oldest→newest.
+        latest: Newest substantive full run, if any.
+        catalogue_cases: Total case count of the failure catalogue.
+        ref_ms: Reference instant for freshness (an as-of bound); ``None`` = now.
+    """
     stamps = [t for t in (_parse_run_at(r.run_at) for r in runs) if t is not None]
     newest = max(stamps) if stamps else None
     jobs_window = 0
@@ -363,7 +398,8 @@ def _pipeline(
         jobs_window = sum(1 for t in stamps if t >= start)
     freshness: float | None = None
     if newest is not None:
-        freshness = max(0.0, (datetime.now().timestamp() * 1000 - newest) / 1000.0)
+        ref = ref_ms if ref_ms is not None else datetime.now().timestamp() * 1000
+        freshness = max(0.0, (ref - newest) / 1000.0)
     coverage: float | None = None
     if latest is not None and catalogue_cases > 0:
         evaluated = len({cid for s in latest.cats.values() for cid in s.case_ids})

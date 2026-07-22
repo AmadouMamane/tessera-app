@@ -1,6 +1,21 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.9.1 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.10 (2026-07-22)
+>
+> v1.10 — le chantier SR-01 « Qualité IA / Amélioration » est soldé, avec une correction de
+> vérité au passage. (1) **Qualité IA était DÉJÀ câblée** : son composant s'appelle
+> `observability-dashboard.tsx` (piège de nom — il ne sert PAS la page Observabilité), et il
+> rend le command bar avec des requêtes as-of/scope réelles depuis la v1.8 ; les mentions v1.8
+> « Observabilité câblée » et §10 « Qualité IA : aucune » décrivaient donc le monde à l'envers,
+> corrigées ici. Sa vue éval (`ScorecardView`) est la lentille d'éval (domaine ER-01), pas un
+> scrubber. (2) **Amélioration est câblée pour de vrai** : `compute_improvement(lang, at)`
+> borne `read_scores(at)`, `recent_bundles(at=)` et `load_quality_datasets(at=)` (runs d'éval
+> filtrés par l'instant du run ≤ T, fraîcheur pipeline relative à T) ; la fraîcheur du corpus
+> reste vive (les fichiers corpus ne portent pas d'historique) — dit tel quel. Le bar y est
+> `scopeFilter=false` (posture org-wide). (3) **Observabilité requalifiée** : `health-dashboard`
+> lit quatre états de processus vivants (health / readiness / budget / tail-sampling) sans
+> substrat S4 persisté — un scrubber y serait le mode cosmétique purgé en v1.5 ; verdict
+> motivé : pas de rail.
 >
 > v1.9.1 — le chantier « paramètres à T » nommé en v1.9 est **exécuté** (périmètre overrides) :
 > `override_rows_as_of(asof)` fold RÉEL du ledger (`config_overrides.<clé>`, écritures et
@@ -120,7 +135,7 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Partiel — timeline implémentée |
 | **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | Implémenté — journal + timeline (note) |
 | **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | Implémenté — cassette (note) |
-| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (4/7 pages) · `PROUVER / Preuves & exporteurs` (payload as-of réel, v1.9) · standalone : Prompts, Garde-fous, Évaluations (note v1.8) | S4 | C4 | Implémenté — Qualité IA/Amélioration à faire |
+| **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (5/7 pages, dont Qualité IA et Amélioration — note v1.10) · `PROUVER / Preuves & exporteurs` (payload as-of réel, v1.9) · standalone : Prompts, Garde-fous, Évaluations (note v1.8) | S4 | C4 | Implémenté (v1.10) |
 | **AU-01** | Audit Window Rail | Fenêtrage réel du journal d'audit (période + saut à date) | `PROUVER / Journal d'audit` | S1 | C2 (fenêtre) | Implémenté — instrument (v1.9) |
 
 > **SR-01 (état au 2026-06-27)** — implémenté comme `components/overview/temporal-rail.tsx`, rendu par les pages SURVEILLER (Vue d'ensemble, Qualité IA, Conformité, Sécurité & privacy). Modes **Live · Historique · Comparé (baseline) · À une date** — navigation de **signaux** uniquement (S4/C4). **Aucun replay d'exécution** : ce composant ne rejoue jamais un tour/trace (déplacement d'un curseur T sur les signaux persistés, lus as-of-T). Mode actif **toujours affiché** ; état dérivé de l'**URL** (deep-link `?asof=&period=` — le paramètre de fenêtre s'appelle `period`, corrigé v1.5, plus `at`/`to`/`compare`), pas d'un état local ; fenêtre (Période) lue depuis le **window-store partagé**, non dupliquée (§8). Le code de rail (`SR-01`) reste interne — **jamais affiché** (§ glossaire). Auparavant mal nommé « XT-01 » sur la Vue d'ensemble : corrigé.
@@ -152,6 +167,23 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 > `temporal.asOf` (débouncé) dans la clé de requête ; « Créer un pack » est gelé en as-of avec
 > raison (« on n'agit pas dans le passé »). Restent démonstration, dits tels quels : SIEM /
 > exporteurs / journal d'export (`SyntheticNotice evidence_export`).
+
+> **SR-01 (état au 2026-07-22, v1.10) — Qualité IA démasquée, Amélioration câblée,
+> Observabilité requalifiée.** Correction de vérité : la note v1.8 listait « Observabilité »
+> parmi les pages câblées et l'écart « Qualité IA ne rend aucun scrubber » — c'était le monde
+> à l'envers, induit par un piège de nom : le composant `observability-dashboard.tsx` sert
+> `surveiller/qualite-ia` (la page Observabilité rend `health-dashboard.tsx`). Constat lu du
+> code : **Qualité IA** rend le command bar avec requêtes as-of/scope réelles depuis v1.8 ;
+> sa vue éval (`ScorecardView`) est la lentille d'éval — domaine ER-01, pas un scrubber.
+> **Amélioration** (v1.10) : `compute_improvement(lang, at)` borne `read_scores(at)`,
+> `recent_bundles(at=)` et `load_quality_datasets(at=)` — les runs d'éval sont filtrés par
+> l'instant du run (`run_at` ≤ T, un run non datable est exclu d'une vue as-of), la fraîcheur
+> pipeline est relative à T ; la fraîcheur du **corpus** reste vive (fichiers sans historique),
+> dit tel quel. `GET /observability/improvement?at=` ; le dashboard porte le command bar en
+> `scopeFilter=false` (posture org-wide, pas de `?agent=` dans sa requête) et coupe le polling
+> en mode Historique. **Observabilité** : health / readiness / budget / tail-sampling sont des
+> états de processus vivants sans substrat S4 persisté — verdict motivé : pas de rail (un
+> scrubber y serait le mode cosmétique purgé en v1.5).
 
 > **AU-01 (état au 2026-07-22, v1.9) — Implémenté, promu instrument.** La barre de fenêtre du
 > Journal d'audit était déjà **réelle** (préréglages 24h/7j/30j + plage affichée depuis le
@@ -353,9 +385,10 @@ signifie : pas de besoin temporel prouvé, pas de rail — en mettre un serait d
 
 | Route | Affordance temporelle | Verdict |
 |-------|----------------------|---------|
-| `surveiller/vue-ensemble` · `securite-privacy` · `conformite` · `observabilite` | SR-01 command bar, contenu as-of/scope | Implémenté |
-| `surveiller/qualite-ia` | aucune | **À faire** — SR-01 exige d'abord `asof` dans les requêtes d'éval (jamais un bar cosmétique) |
-| `surveiller/amelioration` | aucune | **À faire** — même condition |
+| `surveiller/vue-ensemble` · `securite-privacy` · `conformite` | SR-01 command bar, contenu as-of/scope | Implémenté |
+| `surveiller/qualite-ia` | SR-01 command bar, requêtes as-of/scope réelles (composant `observability-dashboard.tsx` — piège de nom, note v1.10) | Implémenté (v1.8, constaté v1.10) — vue éval = lentille ER-01 |
+| `surveiller/amelioration` | SR-01 command bar `scopeFilter=false`, posture minée bornée à T (scores/bundles/runs) | Implémenté (v1.10) — fraîcheur corpus vive, dit tel quel |
+| `surveiller/observabilite` | aucune | — états de processus vivants (health/readiness/budget/tail-sampling), aucun substrat S4 : pas de rail (v1.10) |
 | `surveiller/fiabilite-cout` | PeriodRail (agrégats de période) | Voulu tel quel — agrégats, pas un scrubber |
 | `prouver/audit-logs` | AU-01 fenêtre réelle + saut à date, instrument, en tête | Implémenté (v1.9) |
 | `prouver/evidence-store` | SR-01 command bar + payload as-of réel, création gelée à T | Implémenté (v1.9) |

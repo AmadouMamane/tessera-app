@@ -900,10 +900,12 @@ export async function fetchReliability(
 /** Continuous-improvement posture mined from the telemetry roadmap (#09). */
 export async function fetchImprovement(
   lang: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<ImprovementReport> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/improvement${q}`, { signal }, ImprovementReportSchema);
+  const params = new URLSearchParams({ lang });
+  if (at) params.set("at", at);
+  return request(`/observability/improvement?${params}`, { signal }, ImprovementReportSchema);
 }
 
 /** Open one durable incident (governed act; opener = verified assertion). */

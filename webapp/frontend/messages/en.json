@@ -3971,6 +3971,9 @@
     "subtitle": "Prioritise, run and measure quality remediations for your AI agents.",
     "loading": "Loading improvement posture…",
     "unavailable": "Improvement posture unavailable.",
+    "temporal": {
+      "liveData": "Real-time data"
+    },
     "tabs": {
       "overview": "Overview",
       "plan": "Action plan",

@@ -134,6 +134,37 @@ def test_pass_rate_drift_and_coverage(tmp_path: Path) -> None:
     assert report.catalogue_version == "63-abc"
 
 
+def test_asof_bound_excludes_later_runs(tmp_path: Path) -> None:
+    """`at` reads the archive as of T: later runs vanish, the earlier one leads (SR-01)."""
+    failures = tmp_path / "failures"
+    reports = tmp_path / "reports"
+    failures.mkdir()
+    reports.mkdir()
+    _write_failures(failures, cases_per_theme=5)
+    _write_report(reports, "prev.json", run_at="20260601T000000Z", model="m", passed_per_theme=2)
+    _write_report(reports, "latest.json", run_at="20260606T000000Z", model="m", passed_per_theme=4)
+
+    between = load_quality_datasets(failures, reports, at="2026-06-03T00:00:00Z")
+    pii = {d.key: d for d in between.datasets}["pii_leak"]
+    assert pii.pass_rate == 2 / 5  # the 06-06 run does not exist yet at T
+    assert pii.drift is None  # a single run at T has nothing to drift against
+    assert pii.updated_at == "20260601T000000Z"
+
+    # A bound before every run reads an unexercised archive, never raises.
+    empty = load_quality_datasets(failures, reports, at="1970-01-01T00:00:00Z")
+    assert all(d.pass_rate is None for d in empty.datasets)
+    assert empty.pipeline.runs_total == 0
+
+    # A far-future bound keeps every run and a malformed bound reads live. The
+    # pipeline block is compared field-wise: data_freshness_seconds is measured
+    # against now() live (two calls never tie) and against T under a bound.
+    live = load_quality_datasets(failures, reports)
+    far = load_quality_datasets(failures, reports, at="2999-01-01T00:00:00Z")
+    malformed = load_quality_datasets(failures, reports, at="not-a-date")
+    assert far.datasets == live.datasets == malformed.datasets
+    assert far.pipeline.runs_total == live.pipeline.runs_total == malformed.pipeline.runs_total
+
+
 def test_partial_coverage_and_missing_theme(tmp_path: Path) -> None:
     failures = tmp_path / "failures"
     reports = tmp_path / "reports"

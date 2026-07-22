@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from importlib import resources
 from pathlib import Path
 
@@ -181,10 +182,29 @@ def _action_label(signal: str, evidence: int, lang: str) -> str:
     }.get(signal, _t("a_treat_signal", lang).format(s=signal))
 
 
-def compute_improvement(lang: str = "fr") -> ImprovementReport:
-    """Assemble the continuous-improvement posture from the real telemetry."""
+def _valid_at(at: str | None) -> str | None:
+    """The instant if it parses as ISO, else ``None`` (read live, never raise)."""
+    if not at:
+        return None
+    try:
+        datetime.fromisoformat(at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return at
+
+
+def compute_improvement(lang: str = "fr", at: str | None = None) -> ImprovementReport:
+    """Assemble the continuous-improvement posture from the real telemetry.
+
+    Args:
+        lang: Display language (fr / de / en).
+        at: Optional ISO instant — scores, replay bundles and eval runs are then
+            read as of T. Corpus freshness stays live (the corpus files carry no
+            history); ``None`` or malformed reads live.
+    """
     lang = _norm_lang(lang)
-    scores = read_scores()
+    at = _valid_at(at)
+    scores = read_scores(at)
     n_turns = 0
     n_low = 0
     languages_low: dict[str, int] = {}
@@ -198,7 +218,7 @@ def compute_improvement(lang: str = "fr") -> ImprovementReport:
             key = lang_val if isinstance(lang_val, str) else "unknown"
             languages_low[key] = languages_low.get(key, 0) + 1
 
-    questions = [b.question for b in replay_mod.recent_bundles()]
+    questions = [b.question for b in replay_mod.recent_bundles(at=at)]
     intents = routing_intent_mod.aggregate_intents(questions)
     data_dir = Path(str(resources.files("tessera.corpus.data")))
     freshness = corpus_freshness_mod.load_corpus_freshness(data_dir)
@@ -213,7 +233,7 @@ def compute_improvement(lang: str = "fr") -> ImprovementReport:
         )
     )
 
-    datasets = load_quality_datasets()
+    datasets = load_quality_datasets(at=at)
     total_evidence = sum(it.evidence for it in roadmap.items) or 1
 
     opportunities: list[Opportunity] = []

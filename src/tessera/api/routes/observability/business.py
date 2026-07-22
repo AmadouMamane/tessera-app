@@ -125,15 +125,17 @@ async def observability_business_runs(
 
 
 @router.get("/observability/improvement")
-async def observability_improvement(lang: str = "fr") -> dict[str, object]:
+async def observability_improvement(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Continuous-improvement posture mined from the telemetry roadmap (#09).
 
     Turns the real roadmap backlog (low-faithfulness turns, unknown intents,
     stale corpora) plus eval-set coverage and corpus freshness into prioritised
-    improvement opportunities. Degrades to ``available: false`` on failure.
+    improvement opportunities. ``at`` reads the mined posture as of that instant
+    (scores, replay bundles, eval runs — SR-01); corpus freshness stays live.
+    Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **asdict(improvement_mod.compute_improvement(lang))}
+        return {"available": True, **asdict(improvement_mod.compute_improvement(lang, at))}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
         return {"available": False}

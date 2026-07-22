@@ -3971,6 +3971,9 @@
     "subtitle": "Priorisieren, ausführen und messen Sie Qualitäts-Remediationen Ihrer KI-Agenten.",
     "loading": "Verbesserungs-Haltung wird geladen…",
     "unavailable": "Verbesserungs-Haltung nicht verfügbar.",
+    "temporal": {
+      "liveData": "Echtzeitdaten"
+    },
     "tabs": {
       "overview": "Übersicht",
       "plan": "Aktionsplan",

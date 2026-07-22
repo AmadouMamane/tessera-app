@@ -3971,6 +3971,9 @@
     "subtitle": "Priorisez, exécutez et mesurez les remédiations qualité de vos agents IA.",
     "loading": "Chargement de la posture d'amélioration…",
     "unavailable": "Posture d'amélioration indisponible.",
+    "temporal": {
+      "liveData": "Données en temps réel"
+    },
     "tabs": {
       "overview": "Vue d'ensemble",
       "plan": "Plan d'action",

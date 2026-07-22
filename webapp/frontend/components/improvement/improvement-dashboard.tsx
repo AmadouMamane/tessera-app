@@ -19,6 +19,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
+import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -202,20 +204,38 @@ export function ImprovementDashboard() {
   const ti = useTranslations("improvement");
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("overview");
+  const temporal = useTemporalState();
+  const { asOf, historyMode } = temporal;
+  const railTimeline = useRailTimeline();
   const q = useQuery({
-    queryKey: ["improvement", locale],
-    queryFn: ({ signal }) => fetchImprovement(locale, signal),
-    refetchInterval: POLL,
+    queryKey: ["improvement", locale, asOf ?? null],
+    queryFn: ({ signal }) => fetchImprovement(locale, asOf, signal),
+    refetchInterval: historyMode ? false : POLL,
   });
   const d = q.data;
 
+  // SR-01 command bar — the improvement posture is org-wide (no ?agent= in its
+  // query), so the agent-scope chip is hidden with its fleet fetch (v1.8 rule:
+  // a control the page does not honour is not shown).
+  const commandBar = (
+    <SignalCommandBar
+      temporal={temporal}
+      timeline={railTimeline.data}
+      liveStatus={ti("temporal.liveData")}
+      scopeFilter={false}
+    />
+  );
+
   if (!d?.available) {
     return (
-      <Card>
-        <CardContent className="py-10 text-center text-sm text-[var(--muted-foreground)]">
-          {q.isLoading ? ti("loading") : ti("unavailable")}
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-2">
+        {commandBar}
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-[var(--muted-foreground)]">
+            {q.isLoading ? ti("loading") : ti("unavailable")}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -476,6 +496,7 @@ export function ImprovementDashboard() {
 
   return (
     <div className="flex flex-col gap-2">
+      {commandBar}
       <nav
         role="tablist"
         aria-label={ti("title")}
