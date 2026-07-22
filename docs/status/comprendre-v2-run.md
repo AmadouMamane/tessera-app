@@ -346,6 +346,11 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   demandé de fusionner la branche dans `main` et de redémarrer les serveurs de référence. Le HALT est
   donc levé par instruction directe du propriétaire ; les quatre captures restent une dette documentée,
   elles ne sont pas présentées comme produites.
+- **Atterri** : `main` a avancé en fast-forward jusqu'à `bb1105e7`, puis a été poussé sur `origin/main`.
+  Le tag `archive/comprendre-A-codex` pointe sur `b1dcd5d5` ; le worktree `codex-audit` et la branche
+  locale `codex/comprendre-3-minutes` ont été retirés après vérification de propreté. Le preview
+  `:3098/:8098` est coupé. Les serveurs de référence `:3097/:8099` servent le main fusionné ; les
+  routes FR/EN/DE et `/observability/comprendre` répondent HTTP 200.
 - Owed hors lot, sans action : le monde du preview reste incohérent pour une démo tant que son
   seed ne produit pas ensemble une spine et un ledger représentatifs. Le seed d'un monde cohérent
   appartient à une passe dédiée.
