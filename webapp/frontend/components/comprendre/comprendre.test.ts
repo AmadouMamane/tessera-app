@@ -153,6 +153,17 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(diagram).toContain('t("legend")');
   });
 
+  it("frames the diagram as all of Tessera and gives AI agents a visual centre", () => {
+    expect(diagram).toContain('useTranslations("app")');
+    expect(diagram).toContain('page("closing.title")');
+    expect(diagram).toContain('data-diagram-plane="business"');
+    expect(diagram).toContain('data-diagram-plane="agents"');
+    expect(diagram).toContain('data-diagram-plane="cockpit"');
+    expect(diagram).toContain('data-agent-node="true"');
+    expect(diagram).toContain("function AgentPanel");
+    expect(diagram).not.toContain("cockpitCaption");
+  });
+
   it("never renders copy larger than the standard cockpit header title", () => {
     const sources = `${overview}\n${diagram}`;
     const arbitraryRemSizes = [...sources.matchAll(/text-\[(\d+(?:\.\d+)?)rem\]/g)].map(

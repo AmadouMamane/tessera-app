@@ -180,6 +180,32 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   TypeScript, Biome (27 avertissements historiques), 444 tests frontend, Ruff, format, mypy strict
   et 2 560 tests backend hors intégration.
 
+### Troisième revue corrective — vue d'ensemble Tessera et agents IA incarnés
+
+- Retour opérateur sur capture : le diagramme restait centré sur « La salle des machines de la
+  flotte » et traitait les agents IA comme une simple liste, alors que D leur donnait une présence
+  iconographique forte et que l'image doit raconter Tessera dans son ensemble.
+- L'entête du schéma ne reprend plus la légende locale du cockpit. Il s'ouvre sur le nom Tessera et
+  la phrase fermée de conclusion, déjà catalogués dans les trois langues. La mention « salle des
+  machines » reste à sa place exacte : comme caption du seul panneau Cockpit.
+- Les Agents IA deviennent le centre visuel : panneau émeraude élargi, noyau illustré, motif de
+  constellation et quatre cartes iconographiées distinctes pour les quatre entrées fermées. Les
+  espaces métier et le cockpit gardent leurs propres panneaux bleu/violet et leurs icônes ; le
+  registre ambre reste une mémoire séparée sous les agents.
+- Les invariants du schéma sont conservés sans déplacement de sens : bouclier sur la couture de
+  l'échange, deux rails nommés entre agents et cockpit, quatre flux avec directions explicites et
+  phrase de la porte visible mais rattachée au seul flux d'accès utilisateur.
+- Aucun catalogue FR/DE/EN, claim, fait, route ou contrat de données n'a changé. Le nouveau ratchet
+  exige les trois plans, le cadrage global via les catalogues, le panneau dédié aux agents et
+  l'absence de `cockpitCaption` promu en entête. TypeScript vert, Biome vert et **60 tests ciblés
+  verts** (29 contrat `/comprendre` + 31 honnêteté du chrome).
+- Le navigateur intégré a pu être connecté pendant cette passe : rendu réel contrôlé au viewport
+  courant, puis au breakpoint large temporaire `1600×1100` ; trois plans présents, quatre nœuds
+  agents rendus, viewport restauré avant la fin. Le preview reste servi sur `:3098`.
+- `make gate-twice` : **TWICE-GREEN sur un seul arbre `0043e8645f63`** ; chaque passage valide
+  TypeScript, Biome (27 avertissements historiques), 445 tests frontend, Ruff, format, mypy strict
+  et 2 560 tests backend hors intégration.
+
 ## Questions bloquantes / déviations proposées
 
 Aucune. Si une déviation de contenu, de contrat ou de structure devenait nécessaire, elle sera écrite ici et le run s'arrêtera avant de la prendre.
