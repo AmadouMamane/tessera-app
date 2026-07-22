@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  Bot,
-  Building2,
-  Gauge,
-  ScrollText,
-  ShieldCheck,
-} from "lucide-react";
+import { Bot, Building2, CircleDot, Gauge, ScrollText, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface DiagramColumn {
@@ -24,7 +15,6 @@ interface DiagramFlow {
 }
 
 const columnIcons = [Building2, Bot, Gauge] as const;
-const flowIcons = [ArrowLeft, ArrowRight, ArrowLeft, ArrowDown] as const;
 
 /** The approved E architecture map: three spaces, one online guard and a separate ledger. */
 export function ComprendreV2Diagram() {
@@ -33,62 +23,53 @@ export function ComprendreV2Diagram() {
   const flows = t.raw("flows") as DiagramFlow[];
 
   return (
-    <figure className="relative overflow-hidden rounded-3xl border border-[var(--tessera-border-strong)] bg-[linear-gradient(145deg,var(--tessera-surface-elevated),var(--tessera-surface))] p-5 shadow-[var(--shadow-card-elevated)] sm:p-8">
+    <figure className="relative overflow-hidden rounded-2xl border border-[var(--tessera-border-strong)] bg-[linear-gradient(145deg,var(--tessera-surface-elevated),var(--tessera-surface))] p-5 shadow-[var(--shadow-card)] sm:p-7">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-40 left-1/3 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(0,200,120,0.11),transparent_68%)] blur-3xl"
       />
 
-      <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="relative flex items-center gap-3 rounded-xl border border-[rgba(0,200,120,0.28)] bg-[rgba(0,200,120,0.06)] px-4 py-3">
+        <ShieldCheck className="size-5 shrink-0 text-[var(--tessera-green)]" aria-hidden="true" />
+        <p className="text-sm leading-6 font-medium text-[var(--tessera-text)]">{t("shield")}</p>
+      </div>
+
+      <div className="relative mt-5 grid gap-4 lg:grid-cols-3">
         {columns.map((column, index) => {
           const Icon = columnIcons[index] ?? Gauge;
           return (
-            <div key={column.title} className="contents">
-              <section className="relative rounded-2xl border border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] p-5">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-10 place-items-center rounded-xl border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] text-[var(--tessera-green)]">
-                    <Icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <h3 className="font-semibold text-[var(--tessera-text)]">{column.title}</h3>
-                </div>
-                <ul className="mt-5 space-y-2">
-                  {column.items.map((item) => (
-                    <li
-                      key={item}
-                      className="rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2.5 text-sm text-[var(--tessera-text)]"
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                {column.caption ? (
-                  <p className="mt-4 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
-                    {column.caption}
-                  </p>
-                ) : null}
-              </section>
-
-              {index === 0 ? (
-                <div className="flex items-center justify-center lg:pointer-events-none">
-                  <div className="flex w-full max-w-xs items-center gap-3 rounded-2xl border border-[rgba(0,200,120,0.35)] bg-[color-mix(in_srgb,var(--tessera-surface-elevated)_90%,transparent)] px-4 py-3 shadow-lg backdrop-blur lg:flex-col lg:px-3 lg:text-center">
-                    <ShieldCheck
-                      className="size-6 shrink-0 text-[var(--tessera-green)]"
-                      aria-hidden="true"
-                    />
-                    <span className="text-xs leading-relaxed font-semibold text-[var(--tessera-text)]">
-                      {t("shield")}
-                    </span>
-                  </div>
-                </div>
+            <section
+              key={column.title}
+              className="relative rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] p-5"
+            >
+              <div className="flex items-center gap-3">
+                <span className="grid size-9 place-items-center rounded-lg border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] text-[var(--tessera-green)]">
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
+                <h3 className="text-sm font-semibold text-[var(--tessera-text)]">{column.title}</h3>
+              </div>
+              <ul className="mt-4 space-y-2">
+                {column.items.map((item) => (
+                  <li
+                    key={item}
+                    className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2.5 text-sm text-[var(--tessera-text)]"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              {column.caption ? (
+                <p className="mt-4 text-xs leading-6 text-[var(--tessera-text-muted)]">
+                  {column.caption}
+                </p>
               ) : null}
-            </div>
+            </section>
           );
         })}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="hidden lg:col-span-2 lg:block" />
-        <section className="rounded-2xl border border-[#8bb7ff]/30 bg-[#8bb7ff]/[0.06] p-5">
+      <div className="relative mt-4">
+        <section className="rounded-xl border border-[#8bb7ff]/30 bg-[#8bb7ff]/[0.06] p-5">
           <div className="flex items-start gap-3">
             <ScrollText className="mt-0.5 size-5 shrink-0 text-[#8bb7ff]" aria-hidden="true" />
             <div>
@@ -99,36 +80,31 @@ export function ComprendreV2Diagram() {
             </div>
           </div>
         </section>
-        <div className="hidden lg:block" />
       </div>
 
-      <p className="mt-6 rounded-2xl border border-dashed border-[var(--tessera-border-strong)] bg-[var(--tessera-bg-soft)] px-5 py-4 text-sm leading-relaxed font-medium text-[var(--tessera-text)]">
-        {t("door")}
-      </p>
-
-      <div className="mt-6 border-[var(--tessera-border)] border-t pt-5">
+      <figcaption className="relative mt-5 border-[var(--tessera-border)] border-t pt-5">
         <p className="font-mono text-[0.62rem] tracking-[0.13em] text-[var(--tessera-text-subtle)] uppercase">
           {t("legend")}
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {flows.map((flow, index) => {
-            const Icon = flowIcons[index] ?? ArrowRight;
-            return (
-              <div key={flow.label} className="flex items-start gap-3 text-xs">
-                <Icon className="mt-0.5 size-4 shrink-0 text-[var(--tessera-green)]" aria-hidden />
-                <span>
-                  <strong className="block font-semibold text-[var(--tessera-text)]">
-                    {flow.label}
-                  </strong>
-                  <span className="mt-1 block leading-relaxed text-[var(--tessera-text-muted)]">
-                    {flow.detail}
-                  </span>
+        <div className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+          {flows.map((flow) => (
+            <div key={flow.label} className="flex items-start gap-3 text-xs">
+              <CircleDot
+                className="mt-0.5 size-4 shrink-0 text-[var(--tessera-green)]"
+                aria-hidden
+              />
+              <span>
+                <strong className="block font-semibold text-[var(--tessera-text)]">
+                  {flow.label}
+                </strong>
+                <span className="mt-1 block leading-6 text-[var(--tessera-text-muted)]">
+                  {flow.detail}
                 </span>
-              </div>
-            );
-          })}
+              </span>
+            </div>
+          ))}
         </div>
-      </div>
+      </figcaption>
     </figure>
   );
 }

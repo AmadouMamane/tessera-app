@@ -144,27 +144,21 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
   }, []);
 
   return (
-    <article className="relative isolate mx-auto max-w-[82rem] pb-16">
+    <article className="relative isolate mx-auto max-w-[76rem] pb-14">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-12 -z-10 h-[38rem] overflow-hidden"
+        className="pointer-events-none absolute inset-x-0 -top-12 -z-10 h-[28rem] overflow-hidden"
       >
-        <div className="absolute -top-52 left-[12%] h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle,rgba(0,200,120,0.12),transparent_68%)] blur-3xl" />
-        <div className="absolute -top-56 right-[5%] h-[38rem] w-[38rem] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.1),transparent_70%)] blur-3xl" />
+        <div className="absolute -top-52 left-[12%] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,rgba(0,200,120,0.08),transparent_68%)] blur-3xl" />
+        <div className="absolute -top-56 right-[5%] h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.07),transparent_70%)] blur-3xl" />
       </div>
 
-      <header className="grid gap-8 border-[var(--tessera-border)] border-b pt-5 pb-12 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)] lg:items-end lg:gap-14">
+      <section className="grid gap-7 border-[var(--tessera-border)] border-b py-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] lg:items-start lg:gap-12">
         <div>
-          <h1 className="max-w-5xl text-balance font-serif text-[clamp(2.7rem,5vw,5.5rem)] leading-[0.98] font-medium tracking-[-0.045em] text-[var(--tessera-text)]">
-            {t("hero.title")}
-          </h1>
-          <p className="mt-7 max-w-3xl text-pretty text-[clamp(1.05rem,1.4vw,1.3rem)] leading-relaxed text-[var(--tessera-text-muted)]">
-            {t("hero.lead")}
-          </p>
-          <p className="mt-5 max-w-4xl text-sm leading-relaxed text-[var(--tessera-text-muted)]">
+          <p className="max-w-[68ch] text-base leading-7 text-[var(--tessera-text-muted)]">
             {t("hero.body")}
           </p>
-          <p className="mt-5 flex max-w-4xl items-start gap-3 text-sm leading-relaxed font-medium text-[var(--tessera-text)]">
+          <p className="mt-5 flex max-w-[68ch] items-start gap-3 text-sm leading-7 font-medium text-[var(--tessera-text)]">
             <span className="mt-2 h-px w-8 shrink-0 bg-[var(--tessera-green)]" aria-hidden />
             {t("hero.summary")}
           </p>
@@ -185,13 +179,16 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
             ))}
           </ul>
         </aside>
-      </header>
+      </section>
 
-      <section className="py-12">
+      <section className="py-10">
+        <p className="mb-6 max-w-3xl border-[var(--tessera-green)] border-l-2 pl-4 text-sm leading-7 text-[var(--tessera-text-muted)]">
+          {t("diagram.door")}
+        </p>
         <ComprendreV2Diagram />
       </section>
 
-      <section className="border-[var(--tessera-border)] border-t py-14">
+      <section className="border-[var(--tessera-border)] border-t py-10">
         <SectionHeader title={journey.title} body={journey.body} />
         <div className="mt-8 overflow-hidden rounded-3xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[var(--shadow-card)]">
           <div className="grid lg:grid-cols-4">
@@ -293,7 +290,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
 
       <section
         data-testid="comprendre-live-section"
-        className="border-[var(--tessera-border)] border-t py-14"
+        className="border-[var(--tessera-border)] border-t py-10"
       >
         <SectionHeader title={t("live.title")} />
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -312,7 +309,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
                 <span className="grid size-10 place-items-center rounded-xl bg-[var(--tessera-muted)] text-[var(--tessera-green)]">
                   <Icon className="size-5" aria-hidden />
                 </span>
-                <h3 className="mt-5 font-serif text-xl font-medium text-[var(--tessera-text)]">
+                <h3 className="mt-5 text-base font-semibold text-[var(--tessera-text)]">
                   {card.title}
                 </h3>
                 <p
@@ -334,7 +331,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
         </p>
       </section>
 
-      <section className="border-[var(--tessera-border)] border-t py-14">
+      <section className="border-[var(--tessera-border)] border-t py-10">
         <div className="divide-y divide-[var(--tessera-border)] rounded-3xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           {details.map((detail, index) => {
             const Icon = detailIcons[index] ?? Gauge;
@@ -348,7 +345,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
                 </span>
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="font-serif text-xl font-medium text-[var(--tessera-text)]">
+                    <h3 className="text-base font-semibold text-[var(--tessera-text)]">
                       {detail.title}
                     </h3>
                     <span className="rounded-full border border-[var(--tessera-border-strong)] px-2.5 py-1 font-mono text-[0.6rem] tracking-[0.1em] text-[var(--tessera-text-subtle)] uppercase">
@@ -382,7 +379,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
         </div>
       </section>
 
-      <section className="border-[var(--tessera-border)] border-t py-14">
+      <section className="border-[var(--tessera-border)] border-t py-10">
         <SectionHeader title={t("roles.title")} body={t("roles.lead")} />
         <div className="mt-8 grid gap-4 lg:grid-cols-3">
           {roles.map((role, index) => {
@@ -398,7 +395,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
                   </span>
                   <h3 className="font-semibold text-[var(--tessera-text)]">{role.title}</h3>
                 </div>
-                <q className="mt-6 block font-serif text-xl leading-snug text-[var(--tessera-text)]">
+                <q className="mt-5 block text-base leading-7 font-medium text-[var(--tessera-text)]">
                   {role.question}
                 </q>
                 <p className="mt-4 border-[var(--tessera-green)] border-l pl-4 text-sm leading-relaxed text-[var(--tessera-text-muted)]">
@@ -414,7 +411,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
         </p>
       </section>
 
-      <section className="border-[var(--tessera-border)] border-t py-14">
+      <section className="border-[var(--tessera-border)] border-t py-10">
         <SectionHeader title={t("difference.title")} />
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {rules.map((rule) => (
@@ -422,9 +419,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
               key={rule.title}
               className="rounded-2xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-6"
             >
-              <h3 className="font-serif text-xl font-medium text-[var(--tessera-text)]">
-                {rule.title}
-              </h3>
+              <h3 className="text-base font-semibold text-[var(--tessera-text)]">{rule.title}</h3>
               <p className="mt-3 text-sm leading-relaxed text-[var(--tessera-text-muted)]">
                 {rule.body}
               </p>
@@ -438,7 +433,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
         </div>
       </section>
 
-      <section className="border-[var(--tessera-border)] border-t py-14">
+      <section className="border-[var(--tessera-border)] border-t py-10">
         <SectionHeader title={t("further.title")} body={t("further.decisionRegister")} />
         <p className="mt-6 max-w-5xl text-sm leading-relaxed text-[var(--tessera-text-muted)]">
           {t("further.storiesLead")} <strong>{t("further.storyFork")}</strong>
@@ -460,7 +455,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
       <section className="overflow-hidden rounded-3xl border border-[var(--tessera-border-strong)] bg-[linear-gradient(135deg,var(--tessera-surface-elevated),var(--tessera-surface))] shadow-[var(--shadow-card-elevated)]">
         <div className="grid gap-8 p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <h2 className="max-w-4xl text-balance font-serif text-[clamp(2rem,4vw,4rem)] leading-tight font-medium tracking-[-0.035em] text-[var(--tessera-text)]">
+            <h2 className="max-w-3xl text-balance text-2xl leading-snug font-semibold tracking-[-0.015em] text-[var(--tessera-text)]">
               {t("closing.title")}
             </h2>
             <p className="mt-5 max-w-4xl text-base leading-relaxed text-[var(--tessera-text-muted)]">
@@ -493,12 +488,12 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
 
 function SectionHeader({ title, body }: { title: string; body?: string }) {
   return (
-    <header className="max-w-4xl">
-      <h2 className="text-balance font-serif text-[clamp(1.9rem,3.2vw,3.3rem)] leading-tight font-medium tracking-[-0.03em] text-[var(--tessera-text)]">
+    <header className="max-w-3xl">
+      <h2 className="text-balance text-[clamp(1.45rem,2vw,1.85rem)] leading-snug font-semibold tracking-[-0.015em] text-[var(--tessera-text)]">
         {title}
       </h2>
       {body ? (
-        <p className="mt-4 text-pretty text-base leading-relaxed text-[var(--tessera-text-muted)]">
+        <p className="mt-3 text-pretty text-sm leading-7 text-[var(--tessera-text-muted)]">
           {body}
         </p>
       ) : null}

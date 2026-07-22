@@ -127,6 +127,28 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   valide TypeScript, Biome (27 avertissements historiques), 442 tests frontend, Ruff, format,
   mypy strict et 2 560 tests backend hors intégration.
 
+### Revue corrective après HALT — hiérarchie et lisibilité
+
+- Retour opérateur : le grand titre du corps dupliquait le `h1` du header cockpit et créait une
+  ouverture disproportionnée ; plusieurs intertitres et citations restaient trop grands, le
+  diagramme arrivait sans transition et ses flèches directionnelles n'étaient pas décodables.
+- Le header standard (`1.45rem`) reste l'unique titre de page visible. Le corps commence directement
+  par le récit, sur une largeur de lecture bornée ; les halos, espacements, intertitres, titres de
+  cartes, citations et conclusion sont ramenés à l'échelle typographique des pages cockpit.
+- Le texte existant « Une seule porte, à sens unique… » sert désormais de transition avant le
+  diagramme. Celui-ci n'utilise plus aucune flèche : trois zones stables, le contrôle en ligne en
+  règle transversale, le registre séparé, puis les quatre flux expliqués par leur libellé et leur
+  détail directionnel déjà présents dans les catalogues.
+- Aucun catalogue FR/DE/EN, claim, fait, route ou contrat de données n'a changé. TypeScript ciblé
+  vert ; **58 tests ciblés verts** (contrat `/comprendre` + ratchet numérique). Le preview
+  `:3098/:8098` compile sans erreur et sert le worktree courant.
+- `make gate-twice` correctif : **TWICE-GREEN sur un seul arbre `eabf62e12ee3`** ; chaque passage
+  valide TypeScript, Biome (27 avertissements historiques), 443 tests frontend, Ruff, format,
+  mypy strict et 2 560 tests backend hors intégration.
+- Limite de revue : la politique du navigateur intégré refuse toute lecture de l'URL locale ; aucun
+  navigateur alternatif n'a été utilisé. La validation visuelle finale reste donc à faire dans
+  l'onglet opérateur déjà ouvert avant de considérer cette correction comme validée visuellement.
+
 ## Questions bloquantes / déviations proposées
 
 Aucune. Si une déviation de contenu, de contrat ou de structure devenait nécessaire, elle sera écrite ici et le run s'arrêtera avant de la prendre.

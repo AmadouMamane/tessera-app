@@ -138,6 +138,12 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(overview).not.toMatch(/Tessera est le poste|Crédit Aurore est fictive/);
     expect(diagram).not.toMatch(/Espaces métier|Registre d.audit|Télémétrie/);
   });
+
+  it("keeps the cockpit header as the only visible page title and explains flows without arrows", () => {
+    expect(overview).not.toContain('t("hero.title")');
+    expect(diagram).not.toMatch(/ArrowLeft|ArrowRight|ArrowDown/);
+    expect(diagram).toContain('t("legend")');
+  });
 });
 
 describe("the public escape hatch stays narrowly scoped", () => {

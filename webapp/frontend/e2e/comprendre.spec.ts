@@ -80,9 +80,7 @@ for (const { locale, title, fiction } of LOCALES) {
   test(`${locale} renders the closed title and fiction disclosure`, async ({ page }) => {
     const response = await page.goto(`/${locale}/comprendre`);
     expect(response?.ok()).toBe(true);
-    await expect(
-      page.getByRole("main").getByRole("heading", { name: title, exact: true }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
     await expect(page.getByText(fiction, { exact: false })).toBeVisible();
     await expect(
       page.getByRole("link", { name: /lecture détaillée|detailed reading|ausführliche Lektüre/i }),
