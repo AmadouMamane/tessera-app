@@ -11,11 +11,14 @@ import {
   Radio,
   Settings2,
   Sparkles,
+  Undo2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { useAsOf } from "@/components/agir/agir-rail";
 import { CardInfo } from "@/components/cockpit/card-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { useTemporalState } from "@/components/overview/temporal-rail";
@@ -69,11 +72,12 @@ export function AgentSynthese() {
   const t = useTranslations("agentSynthese");
   const agentId = useAgentId();
   const temporal = useTemporalState();
+  const asOf = useAsOf();
   const { data } = useQuery({
-    queryKey: ["agent-synthese", agentId, temporal.periodKey],
-    queryFn: ({ signal }) => fetchAgentSynthese(agentId, temporal.periodKey, signal),
+    queryKey: ["agent-synthese", agentId, temporal.periodKey, asOf ?? null],
+    queryFn: ({ signal }) => fetchAgentSynthese(agentId, temporal.periodKey, asOf, signal),
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: asOf ? false : 30_000,
   });
 
   if (data === undefined) {
@@ -89,7 +93,7 @@ export function AgentSynthese() {
 
   return (
     <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
-      <AgentRail temporal={temporal} agentName={data.context?.name ?? "l'agent"} />
+      <AgentRail temporal={temporal} asOf={asOf} agentName={data.context?.name ?? "l'agent"} />
 
       <div className="grid gap-2.5 xl:grid-cols-12">
         {/* Left region: KPI strip + two card rows */}
@@ -125,12 +129,13 @@ export function AgentSynthese() {
   );
 }
 
-// ── AT-01 rail (Live + Période) ──────────────────────────────────────────────
-// The page's data is always live over a trailing window: the backend takes no
-// as-of instant, so this rail offers none. A "Voir à date" segment used to sit
-// here with a banner claiming "données reconstituées au point sélectionné"
-// while the data stayed live — a displayed mode the page cannot honour is a
-// lie, so it was removed (registre §1: no mode without its content).
+// ── AT-01 rail (Live · Période · Voir à date) ────────────────────────────────
+// "Voir à date" was removed in registre v1.5 because the backend had no as-of
+// instant — a displayed mode the page cannot honour is a lie. It returns
+// (v1.11) only because the content now honours it: the backend takes `at` and
+// re-reads transcript / CSAT / journal over the window ending at T. Knowledge
+// counts, prompts, registry identity and the chain badge stay live — the As-of
+// banner says exactly that (scoped claim, same rule as the AGIR rail).
 
 const PERIOD_OPTIONS: { key: string; label: string }[] = [
   { key: "h24", label: "24h" },
@@ -140,19 +145,52 @@ const PERIOD_OPTIONS: { key: string; label: string }[] = [
 
 function AgentRail({
   temporal,
+  asOf,
   agentName,
 }: {
   temporal: ReturnType<typeof useTemporalState>;
+  asOf: string | null;
   agentName: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // datetime-local speaks LOCAL wall-clock; the URL speaks UTC ISO. Convert
+  // explicitly both ways — slicing the ISO would silently shift the display.
+  const toLocalInput = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const setAsof = (value: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set("asof", value);
+    } else {
+      params.delete("asof");
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  };
+
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
+    <section className="sr01-strip flex flex-col gap-2 rounded-2xl p-2.5 backdrop-blur-md">
       <div className="flex flex-wrap items-center gap-2">
         <Segment icon={Radio} label="Mode">
-          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(0,200,120,0.85)]" />
-            Live · En direct
-          </span>
+          {asOf ? (
+            <span className="inline-flex items-center gap-1.5 font-semibold text-amber-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(240,170,60,0.85)]" />
+              État au {new Date(asOf).toLocaleString("fr-FR")}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(0,200,120,0.85)]" />
+              Live · En direct
+            </span>
+          )}
         </Segment>
 
         <Segment icon={Clock3} label="Période">
@@ -168,14 +206,48 @@ function AgentRail({
             ))}
           </select>
         </Segment>
+
+        <Segment icon={CalendarClock} label="Voir à date">
+          <input
+            type="datetime-local"
+            aria-label="Voir à date"
+            value={asOf ? toLocalInput(asOf) : ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              setAsof(v ? new Date(v).toISOString() : null);
+            }}
+            className="cursor-pointer bg-transparent font-semibold text-[var(--tessera-text)] outline-none"
+          />
+        </Segment>
+
+        {asOf ? (
+          <button
+            type="button"
+            onClick={() => setAsof(null)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
+          >
+            <Undo2 className="h-3.5 w-3.5" /> Retour au direct
+          </button>
+        ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2">
-        <span className="text-xs text-[var(--tessera-text-muted)]">
-          <b className="font-semibold text-sky-300">Mode : Live</b> — Vous consultez les données en
-          direct de {agentName}.
-        </span>
-      </div>
+      {asOf ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+          <span className="text-xs text-[var(--tessera-text-muted)]">
+            <b className="font-semibold text-amber-300">Mode : État à date</b> — Conversations,
+            satisfaction et journal de {agentName} relus sur la fenêtre finissant au{" "}
+            {new Date(asOf).toLocaleString("fr-FR")} ; connaissances, prompts et badge de chaîne
+            restent en direct.
+          </span>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2">
+          <span className="text-xs text-[var(--tessera-text-muted)]">
+            <b className="font-semibold text-sky-300">Mode : Live</b> — Vous consultez les données
+            en direct de {agentName}.
+          </span>
+        </div>
+      )}
     </section>
   );
 }

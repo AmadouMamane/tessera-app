@@ -1,6 +1,18 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.10 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.11 (2026-07-22)
+>
+> v1.11 — deux promotions AGENT. (1) **AT-01 Implémenté** : « Voir à date » revient sur la
+> Synthèse — retiré en v1.5 parce qu'il mentait, il ne revient que parce que le contenu
+> l'honore : `compute_agent_synthese(agent_id, period, at)` relit transcript, CSAT et journal
+> S1 sur la **fenêtre finissant à T** (SQL borné des deux côtés via `_transcript_scope`, seam
+> ledger `read_ledger_entries(since=, until=)` — la dette du cliquet ledger descend 17→16) ;
+> `?asof=` URL, mode affiché, bannière scopée (connaissances / prompts / badge de chaîne
+> restent live, dit tel quel). (2) **CT-01 Implémenté** : la timeline de conversation gagne
+> les **filtres C2 dérivés de l'URL** (`?turn_agent=`, `?routed=1` — chips servies serveur,
+> deep-linkables, honest-empty quand le filtre ne matche rien) et le chrome instrument ; et
+> les conversations RÉELLES sortent du sous-onglet fixture : elles mènent la page Historique,
+> la zone d'éval déterministe passe dessous, estampillée `SyntheticNotice`.
 >
 > v1.10 — le chantier SR-01 « Qualité IA / Amélioration » est soldé, avec une correction de
 > vérité au passage. (1) **Qualité IA était DÉJÀ câblée** : son composant s'appelle
@@ -130,9 +142,9 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 |------|---------------|-------|-------|----------|-----------|------|
 | **TE-01** | Temporal Evidence Rail | Preuve opposable / reconstitution à T | `PROUVER / État à date` | S1 | C1 (as-of) | Implémenté |
 | **OT-01** | Object Trace Rail | Historique local d'un objet agent / de config | Configurations, Connaissances, Garde-fous, Prompts, Sources & mémoire, `CONFIGURER / Paramètres` (v1.9) | S1 | C1 (par-objet) | Partiel — amorces (note) |
-| **AT-01** | Agent Activity Rail | Activité récente (feed) — *pas* les signaux | `AGENT / Synthèse` | S1 | C1 (feed) | Partiel — feed implémenté |
+| **AT-01** | Agent Activity Rail | Activité récente (feed) — *pas* les signaux | `AGENT / Synthèse` | S1 | C1 (feed) | Implémenté — Voir à date réel (note v1.11) |
 | **ER-01** | Evaluation Run Rail | Historique des runs d'évaluation | `AGENT / Évaluations` | S3 | C2 | Implémenté |
-| **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Partiel — timeline implémentée |
+| **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Implémenté — filtres + sortie du fixture (note v1.11) |
 | **WF-01** | Workflow Case Rail | Cycle de traitement humain | `AGENT / À traiter`, `À faire` | S3 | C2 + état | Implémenté — journal + timeline (note) |
 | **XT-01** | Execution Trace Rail | Trace technique d'une exécution | `AGENT / Console`, `AGIR / Replay` | S2 | C3 | Implémenté — cassette (note) |
 | **SR-01** | Signal Scrubber Rail | Surveillance continue dans le temps | `SURVEILLER` (5/7 pages, dont Qualité IA et Amélioration — note v1.10) · `PROUVER / Preuves & exporteurs` (payload as-of réel, v1.9) · standalone : Prompts, Garde-fous, Évaluations (note v1.8) | S4 | C4 | Implémenté (v1.10) |
@@ -228,6 +240,19 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 > borner `_fetch_transcript`/`_scan_journal` par `until=T`, passer T du client au backend, et
 > alors seulement ré-offrir le mode.
 
+> **AT-01 (état au 2026-07-22, v1.11) — Implémenté.** La promotion nommée ci-dessus est
+> exécutée telle quelle : `compute_agent_synthese(agent_id, period_days, at)` — le scope
+> transcript/CSAT devient la fenêtre `period` **finissant à T** (`_transcript_scope`,
+> `created_at <= T AND created_at >= T - interval`, SQL paramétré), le scan du journal S1
+> est borné **au seam** (`read_ledger_entries(since=, until=)`, SQL en postgres ; les filtres
+> côté appelant restent la ceinture du mode fichier, un événement sans instant parseable est
+> exclu d'une vue à T) — `agent_synthese` sort du set OWED du cliquet ledger (17→16). Le rail
+> ré-offre « Voir à date » (datetime-local → `?asof=` URL, patron agir-rail), porte le chrome
+> instrument (`sr01-strip`) et une bannière **scopée** : conversations, satisfaction et
+> journal relus à T ; connaissances, prompts, identité registre et badge de chaîne restent
+> live. Témoins : `test_transcript_scope_at_t_bounds_both_ends`,
+> `test_scan_journal_until_excludes_later_and_unplaceable_events`, `test_parse_at_is_tolerant`.
+
 > **CT-01 (état au 2026-07-21) — Partiel.** La **timeline tour-par-tour est implémentée et
 > réelle** : `agents/[agentId]/historique/[sessionId]/page.tsx` (sélection par l'URL de route),
 > payload `observability/session_detail.py` sur le transcript durable (ADR 0040), honest-empty,
@@ -237,6 +262,18 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 > sélectionnée », et `transcript.list_conversations` **exclut enfin les tours synthétiques**
 > (un essai d'opérateur ne se présente plus comme une conversation client). Promotion =
 > filtres C2 sur la timeline et sortie du fixture éval qui partage l'écran.
+
+> **CT-01 (état au 2026-07-22, v1.11) — Implémenté.** Les deux conditions de promotion sont
+> exécutées. (1) **Filtres C2 sur la timeline** : chips dérivées de l'URL (`?turn_agent=<id>`,
+> `?routed=1`), rendues serveur sur la page de session — par agent (avec compte de tours,
+> seulement quand la conversation en implique plusieurs) et « tours routés » ; deep-linkables,
+> honest-empty explicite quand le filtre ne matche rien ; le bandeau de chronologie porte le
+> chrome instrument (`sr01-strip`). (2) **Sortie du fixture** : le bloc « Conversations en
+> direct » (l'entrée réelle vers la chronologie) ne partage plus le sous-onglet Messages avec
+> l'échangeur d'éval déterministe — il mène la page Historique, au-dessus des sous-onglets ;
+> la zone fixture restante est estampillée (`SyntheticNotice agent_historique`, capacité déjà
+> déclarée `synthetic`). Le tableau de bord d'éval déterministe reste sur la page, dit tel
+> quel — sa suppression totale est une décision produit non prise en silence.
 
 > **OT-01 (état au 2026-07-21) — Partiel, requalifié.** La note v1.4 (« Connaissances cadré »)
 > ne décrivait pas la réalité : le seul bloc **Versions** réel (runs d'ingestion + honest-empty)
@@ -396,9 +433,9 @@ signifie : pas de besoin temporel prouvé, pas de rail — en mettre un serait d
 | `agir/automations` · `curation-eval-set` · `replay-shadow` | agir-rail (As-of + Live, mutations gelées à T) | Implémenté |
 | `agir/incidents-playbooks` | aucune | **À évaluer** — mêmes mutations gelables que ses sœurs AGIR ; l'agir-rail devrait s'y étendre |
 | `agir/release-control` | aucune | — release = acte au présent ; l'historique est au ledger (Journal d'audit) |
-| `agents/[id]/synthese` | AT-01 feed (Live + Période) | Partiel — promotion = `until=T` backend (note v1.5) |
+| `agents/[id]/synthese` | AT-01 feed (Live · Période · Voir à date réel, `?asof=`) | Implémenté (v1.11) — bannière scopée |
 | `agents/[id]/evaluations` | ER-01 run rail + SR-01 standalone | Implémenté |
-| `agents/[id]/historique` (+ `[sessionId]`) | CT-01 timeline de conversation | Partiel (note v1.5) |
+| `agents/[id]/historique` (+ `[sessionId]`) | CT-01 timeline + filtres URL (`?turn_agent=`, `?routed=1`), conversations réelles en tête | Implémenté (v1.11) — fixture estampillé dessous |
 | `agents/[id]/console` | XT-01 waterfall live (SSE) | Implémenté |
 | `agents/[id]/configurations` · `connaissances` · `garde-fous` · `prompts` · `metier` | amorces OT-01 (versions, overlay, renvois) | Partiel — promotion = C1 par-objet consultable à T |
 | `a-traiter` · `a-faire` | WF-01 timeline de transitions dans les drawers | Implémenté — un scrubber de file n'a pas de sens (SLA = présent) |

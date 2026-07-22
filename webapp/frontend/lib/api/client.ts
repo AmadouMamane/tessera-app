@@ -1725,10 +1725,12 @@ export async function saveEtatSnapshot(
 export async function fetchAgentSynthese(
   agentId: string,
   period: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<AgentSynthese> {
-  const query = new URLSearchParams({ period, agent_id: agentId }).toString();
-  return request(`/observability/agent-synthese?${query}`, { signal }, AgentSyntheseSchema);
+  const params = new URLSearchParams({ period, agent_id: agentId });
+  if (at) params.set("at", at);
+  return request(`/observability/agent-synthese?${params}`, { signal }, AgentSyntheseSchema);
 }
 
 export async function fetchAgentConsole(

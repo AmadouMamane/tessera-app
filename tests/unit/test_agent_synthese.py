@@ -289,3 +289,60 @@ async def test_fetch_transcript_reads_real_traffic_only_and_the_subject(
     assert tx_queries  # totals + daily + recent_convs + recent_msgs
     assert all("NOT synthetic" in q for q in tx_queries)
     assert any("count(DISTINCT subject_id)" in q for q in tx_queries)
+
+
+def test_transcript_scope_at_t_bounds_both_ends() -> None:
+    """The as-of scope is the period window ENDING at T, SQL-side (AT-01)."""
+    until = datetime(2026, 6, 15, 12, 0, tzinfo=UTC)
+    where, params = syn._transcript_scope("support-client", 7, until)
+    assert "created_at <= %s" in where
+    assert "created_at >= %s - interval '7 days'" in where
+    assert "now()" not in where
+    assert params == ["support-client", until, until]
+
+    live_where, live_params = syn._transcript_scope("support-client", 7, None)
+    assert "created_at >= now() - interval '7 days'" in live_where
+    assert live_params == ["support-client"]
+
+
+def test_scan_journal_until_excludes_later_and_unplaceable_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Journal events after T — or carrying no instant — leave the as-of view."""
+    entries = [
+        {
+            "type": "tessera.agent.handoff",
+            "occurred_at": "2026-06-15T10:00:00+00:00",
+            "to_agent": "support-client",
+            "from_agent": "onboarding",
+        },
+        {
+            "type": "tessera.agent.handoff",
+            "occurred_at": "2026-06-15T14:00:00+00:00",
+            "to_agent": "support-client",
+            "from_agent": "onboarding",
+        },
+        # No occurred_at: countable live, unplaceable in a state-at-T view.
+        {"type": "tessera.agent.routing", "agent_id": "support-client", "reason": "intent -> x"},
+    ]
+    monkeypatch.setattr(syn, "read_ledger_entries", lambda **_kw: entries)
+
+    live = syn._scan_journal("support-client", None)
+    assert live["in"] == 2
+    assert live["routing"]["intent"] == 1
+
+    at_noon = syn._scan_journal(
+        "support-client", None, until=datetime(2026, 6, 15, 12, 0, tzinfo=UTC)
+    )
+    assert at_noon["in"] == 1
+    assert at_noon["routing"] == Counter()
+
+
+def test_parse_at_is_tolerant() -> None:
+    """A malformed instant reads live (None), an ISO instant becomes aware UTC."""
+    assert syn._parse_at(None) is None
+    assert syn._parse_at("not-a-date") is None
+    parsed = syn._parse_at("2026-06-15T12:00:00Z")
+    assert parsed == datetime(2026, 6, 15, 12, 0, tzinfo=UTC)
+    naive = syn._parse_at("2026-06-15T12:00:00")
+    assert naive is not None and naive.tzinfo is not None

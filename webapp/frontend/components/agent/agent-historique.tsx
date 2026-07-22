@@ -24,6 +24,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
@@ -265,7 +266,13 @@ export function AgentHistorique() {
         </Link>
       </div>
 
+      {/* CT-01 (v1.11): the REAL conversations — the entry into the turn-by-turn
+          timeline — lead the page instead of sharing a subtab with the eval
+          fixture. The fixture dashboard below is stamped synthetic. */}
+      <LiveConversations data={data} locale={locale} />
+
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
+      <SyntheticNotice signalId="agent_historique" compact />
 
       {activeIdx === 0 ? (
         <>
@@ -339,12 +346,7 @@ export function AgentHistorique() {
         </div>
       ) : null}
 
-      {activeIdx === 2 ? (
-        <>
-          <MessagesTab data={data} />
-          <LiveConversations data={data} locale={locale} />
-        </>
-      ) : null}
+      {activeIdx === 2 ? <MessagesTab data={data} /> : null}
       {activeIdx === 3 ? <EvaluationsTab data={data} /> : null}
       {activeIdx === 4 ? <TracesTab data={data} /> : null}
       {activeIdx === 5 ? <UsersTab data={data} /> : null}

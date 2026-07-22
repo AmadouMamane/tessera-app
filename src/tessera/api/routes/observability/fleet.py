@@ -340,7 +340,7 @@ async def observability_agent_configurations(
 
 @router.get("/observability/agent-synthese")
 async def observability_agent_synthese(
-    period: str = "d7", agent_id: str = DEFAULT_AGENT_ID
+    period: str = "d7", agent_id: str = DEFAULT_AGENT_ID, at: str | None = None
 ) -> dict[str, object]:
     """Agent overview ("Synthese de l'agent") dashboard (reference image 25).
 
@@ -353,11 +353,14 @@ async def observability_agent_synthese(
     The ``period`` query param (``h24``/``d7``/``d30``) restricts the
     transcript-derived figures to that trailing window; unknown values mean the
     whole history. The ``agent_id`` query param scopes the slice to one agent
-    (per-turn attribution); it defaults to the single agent.
+    (per-turn attribution); it defaults to the single agent. ``at`` (ISO instant)
+    is the AT-01 "Voir à date" reading: transcript/CSAT/journal figures are read
+    over the window ending at T (registry identity, knowledge counts and the
+    chain badge stay live — the rail says so).
     """
     period_days = _SYNTHESE_PERIODS.get(period)
     try:
-        payload = await agent_synthese_mod.compute_agent_synthese(agent_id, period_days)
+        payload = await agent_synthese_mod.compute_agent_synthese(agent_id, period_days, at)
         return {"available": True, **payload}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_synthese: failed: {exc}\n")

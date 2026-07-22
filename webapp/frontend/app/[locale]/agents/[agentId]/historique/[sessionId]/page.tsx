@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { MessageContent } from "@/components/chat/message-content";
+import { Link } from "@/i18n/navigation";
 import { SessionDetailSchema } from "@/lib/api/schemas";
 import { canReadSubjectData, operatorSurfaceForRole } from "@/lib/auth/roles";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
@@ -10,6 +11,13 @@ import { OPERATOR_ASSERTION_HEADER, mintOperatorAssertion } from "@/lib/server/o
 
 interface PageProps {
   params: Promise<{ locale: string; agentId: string; sessionId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+/** First value of a search param (Next may hand a list), or null. */
+function param(sp: Record<string, string | string[] | undefined>, key: string): string | null {
+  const v = sp[key];
+  return typeof v === "string" ? v : Array.isArray(v) ? (v[0] ?? null) : null;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -74,9 +82,10 @@ async function loadDetail(conversationId: string): Promise<DetailResult> {
   }
 }
 
-export default async function SessionDetailPage({ params }: PageProps) {
-  const { locale, sessionId } = await params;
+export default async function SessionDetailPage({ params, searchParams }: PageProps) {
+  const { locale, agentId, sessionId } = await params;
   setRequestLocale(locale);
+  const sp = await searchParams;
   const t = await getTranslations({ locale, namespace: "assistant" });
   const result = await loadDetail(sessionId);
 
@@ -106,6 +115,34 @@ export default async function SessionDetailPage({ params }: PageProps) {
 
   const agents = data.agents ?? [];
   const handoffs = data.handoffs ?? [];
+  const allTurns = data.turns ?? [];
+
+  // CT-01 C2 filters — URL-derived (server-rendered links), never local state:
+  // the filtered reading is deep-linkable and shareable like every rail state.
+  const turnAgent = param(sp, "turn_agent");
+  const routedOnly = param(sp, "routed") === "1";
+  const turns = allTurns.filter(
+    (turn) =>
+      (turnAgent === null || turn.agent_id === turnAgent) &&
+      (!routedOnly || Boolean(turn.routing_reason)),
+  );
+  const routedCount = allTurns.filter((turn) => Boolean(turn.routing_reason)).length;
+  const basePath = `/agents/${agentId}/historique/${sessionId}`;
+  const filterHref = (next: { turn_agent?: string | null; routed?: boolean }) => {
+    const agentSel = next.turn_agent === undefined ? turnAgent : next.turn_agent;
+    const routedSel = next.routed === undefined ? routedOnly : next.routed;
+    const q = new URLSearchParams();
+    if (agentSel) q.set("turn_agent", agentSel);
+    if (routedSel) q.set("routed", "1");
+    const qs = q.toString();
+    return qs ? `${basePath}?${qs}` : basePath;
+  };
+  const chip = (active: boolean) =>
+    `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.66rem] transition-colors ${
+      active
+        ? "border-[#7c5cf5] bg-[#6d4aed]/25 text-[#c9b8ff]"
+        : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+    }`;
 
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
@@ -149,18 +186,50 @@ export default async function SessionDetailPage({ params }: PageProps) {
       {/* CT-01 Conversation Timeline Rail (internal code): turns in order, each
           attributed to the agent that handled it (per-turn agent_id). The mode
           chip is always visible: this page is by construction the "selected
-          conversation" reading — the latest one lives on the Historique tab. */}
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[0.66rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {t("sessionDetail.timeline")}
+          conversation" reading — the latest one lives on the Historique tab.
+          Instrument surface (sr01-strip): every temporal rail wears the same
+          lacquered chrome, visually distinct from the content cards. */}
+      <section className="sr01-strip mt-1 flex flex-col gap-2 rounded-2xl px-3 py-2 backdrop-blur-md">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[0.66rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {t("sessionDetail.timeline")}
+          </p>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
+            {t("sessionDetail.modeHistory")}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {t("sessionDetail.filterLabel")}
+          </span>
+          <Link href={filterHref({ turn_agent: null })} className={chip(turnAgent === null)}>
+            {t("sessionDetail.filterAll")} · {allTurns.length}
+          </Link>
+          {agents.length > 1
+            ? agents.map((a) => (
+                <Link
+                  key={a.id}
+                  href={filterHref({ turn_agent: a.id })}
+                  className={chip(turnAgent === a.id)}
+                >
+                  <Bot className="h-3 w-3" /> {a.name} ·{" "}
+                  {allTurns.filter((turn) => turn.agent_id === a.id).length}
+                </Link>
+              ))
+            : null}
+          <Link href={filterHref({ routed: !routedOnly })} className={chip(routedOnly)}>
+            <ArrowRight className="h-3 w-3" /> {t("sessionDetail.filterRouted")} · {routedCount}
+          </Link>
+        </div>
+      </section>
+      {turns.length === 0 ? (
+        <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-center text-xs text-[var(--tessera-text-muted)]">
+          {t("sessionDetail.filterEmpty")}
         </p>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
-          {t("sessionDetail.modeHistory")}
-        </span>
-      </div>
+      ) : null}
       {/* Turns, each attributed to the agent that handled it */}
       <ol className="flex flex-col gap-2.5">
-        {data.turns.map((turn) => (
+        {turns.map((turn) => (
           <li
             key={turn.turn}
             className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3.5"

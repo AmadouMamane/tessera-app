@@ -164,21 +164,45 @@ _ESCAL_SQL = (
 )
 
 
-async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str, Any]:
+def _transcript_scope(
+    agent_id: str, period_days: int | None, until: datetime | None
+) -> tuple[str, list[Any]]:
+    """The shared WHERE clause + params for the transcript reads.
+
+    ``until`` set = the AT-01 as-of reading: the window becomes the ``period_days``
+    ending at T instead of ending at now.
+    """
+    # An interval literal cannot be a placeholder; period_days is a validated int.
+    # ADR 0040: the Synthèse reflects REAL traffic — operator TEST turns (Console,
+    # marked ``synthetic``) are written to the transcript but excluded here, so they
+    # never inflate this agent's conversations / tours / résolution / latence.
+    clauses = ["agent_id = %s", "NOT synthetic"]
+    params: list[Any] = [agent_id]
+    if until is not None:
+        clauses.append("created_at <= %s")
+        params.append(until)
+    if period_days:
+        if until is not None:
+            clauses.append(f"created_at >= %s - interval '{int(period_days)} days'")
+            params.append(until)
+        else:
+            clauses.append(f"created_at >= now() - interval '{int(period_days)} days'")
+    return " AND ".join(clauses), params
+
+
+async def _fetch_transcript(
+    agent_id: str, period_days: int | None, until: datetime | None = None
+) -> dict[str, Any]:
     """Read the durable conversation transcript aggregates for one agent.
 
     Returns totals, per-day buckets (for the KPI sparklines, including a per-day
     resolution and latency series), the most recent conversations and the latest
     messages (for the activity feed). Every transcript-derived figure is scoped to
     ``agent_id`` at the turn grain (one ``user`` message = one turn) and, when
-    ``period_days`` is set, to that trailing window.
+    ``period_days`` is set, to that trailing window — ending at ``until`` (state
+    as of T) when set, at now otherwise.
     """
-    # An interval literal cannot be a placeholder; period_days is a validated int.
-    window = f"created_at >= now() - interval '{int(period_days)} days'" if period_days else "TRUE"
-    # ADR 0040: the Synthèse reflects REAL traffic — operator TEST turns (Console,
-    # marked ``synthetic``) are written to the transcript but excluded here, so they
-    # never inflate this agent's conversations / tours / résolution / latence.
-    where = f"agent_id = %s AND NOT synthetic AND ({window})"
+    where, params = _transcript_scope(agent_id, period_days, until)
     async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             "SELECT count(DISTINCT conversation_id) AS convs, count(*) AS msgs, "  # noqa: S608
@@ -188,7 +212,7 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
             f"count(DISTINCT conversation_id) FILTER (WHERE {_ESCAL_SQL}) AS escal_convs, "
             "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms, "
             f"max(created_at) AS last_at FROM conversation_messages WHERE {where}",
-            (agent_id,),
+            tuple(params),
         )
         totals = await cur.fetchone() or {}
 
@@ -199,7 +223,7 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
             "count(*) FILTER (WHERE role = 'user') AS turns, "
             "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat_ms "
             f"FROM conversation_messages WHERE {where} GROUP BY 1 ORDER BY 1",
-            (agent_id,),
+            tuple(params),
         )
         daily = list(await cur.fetchall())
 
@@ -211,14 +235,14 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
             f"bool_or({_ESCAL_SQL}) AS escalated "
             f"FROM conversation_messages WHERE {where} GROUP BY conversation_id "
             "ORDER BY ended DESC LIMIT %s",
-            (agent_id, _RECENT_CONVERSATIONS),
+            (*params, _RECENT_CONVERSATIONS),
         )
         recent_convs = list(await cur.fetchall())
 
         await cur.execute(
             "SELECT role, content, latency_ms, created_at "  # noqa: S608
             f"FROM conversation_messages WHERE {where} ORDER BY id DESC LIMIT %s",
-            (agent_id, _RECENT_ACTIVITY),
+            (*params, _RECENT_ACTIVITY),
         )
         recent_msgs = list(await cur.fetchall())
 
@@ -238,25 +262,27 @@ async def _fetch_transcript(agent_id: str, period_days: int | None) -> dict[str,
     }
 
 
-async def _fetch_csat(agent_id: str, period_days: int | None) -> dict[str, int]:
+async def _fetch_csat(
+    agent_id: str, period_days: int | None, until: datetime | None = None
+) -> dict[str, int]:
     """Real customer-satisfaction counts for one agent (ADR 0041).
 
     Reads the durable ``customer_feedback`` store — a 👍/👎 the customer left on an
     assistant reply — scoped to ``agent_id`` and, like the transcript reads, to real
-    traffic (``NOT synthetic``) and the trailing window. Returns ``{up, total}``; the
-    Synthèse renders an honest "—" when ``total`` is 0.
+    traffic (``NOT synthetic``) and the trailing window (ending at ``until`` when the
+    AT-01 as-of reading is active). Returns ``{up, total}``; the Synthèse renders an
+    honest "—" when ``total`` is 0.
 
     Degrades to zeros (never raises) so a missing store or an unreachable Postgres reads
     as "no votes yet", never as a broken dashboard.
     """
-    window = f"created_at >= now() - interval '{int(period_days)} days'" if period_days else "TRUE"
-    where = f"agent_id = %s AND NOT synthetic AND ({window})"
+    where, params = _transcript_scope(agent_id, period_days, until)
     try:
         async with _connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 "SELECT count(*) FILTER (WHERE rating = 'up') AS up, "  # noqa: S608
                 f"count(*) AS total FROM customer_feedback WHERE {where}",
-                (agent_id,),
+                tuple(params),
             )
             row = await cur.fetchone() or {}
     except Exception as exc:  # never break the Synthèse over a feedback read
@@ -268,22 +294,31 @@ async def _fetch_csat(agent_id: str, period_days: int | None) -> dict[str, int]:
 # --- S1 journal scan -----------------------------------------------------------
 
 
-def _scan_journal(agent_id: str, since: datetime | None) -> dict[str, Any]:
+def _scan_journal(
+    agent_id: str, since: datetime | None, until: datetime | None = None
+) -> dict[str, Any]:
     """Single pass over the S1 hash-chained journal, scoped to ``agent_id``.
 
     Returns the handoff counts (incoming/outgoing), the supervisor routing-motive
     distribution (by the prefix of ``reason``), and the most recent journal events
     (handoffs + guard/tool decisions) for the AT-01 activity feed. Everything here
-    is a real, tamper-evident S1 event — never a fixture.
+    is a real, tamper-evident S1 event — never a fixture. ``until`` set = the as-of
+    reading: events after T are excluded (and so is an event that carries no
+    parseable instant — an unplaceable event has no place in a state-at-T view);
+    the bound is pushed into the read seam, SQL-side in postgres mode.
     """
     handoffs_in = handoffs_out = 0
     routing: Counter[str] = Counter()
     handoff_events: list[dict[str, Any]] = []
     guard_events: deque[dict[str, Any]] = deque(maxlen=_JOURNAL_EVENT_CAP)
 
-    for obj in read_ledger_entries():
+    # The seam bounds the read in postgres mode; the file fallback returns all,
+    # so the caller-side filters below stay as the belt for both bounds.
+    for obj in read_ledger_entries(since=since, until=until):
         when = _parse_iso(obj.get("occurred_at"))
         if since is not None and when is not None and when < since:
+            continue
+        if until is not None and (when is None or when > until):
             continue
         kind = obj.get("type")
         if kind == "tessera.agent.handoff":
@@ -865,8 +900,19 @@ def _activity_rows(tx: dict[str, Any], journal: dict[str, Any]) -> list[dict[str
     return out
 
 
+def _parse_at(at: str | None) -> datetime | None:
+    """The as-of bound if it parses as ISO, else ``None`` (read live, never raise)."""
+    if not at:
+        return None
+    try:
+        parsed = datetime.fromisoformat(at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
 async def compute_agent_synthese(
-    agent_id: str = DEFAULT_AGENT_ID, period_days: int | None = None
+    agent_id: str = DEFAULT_AGENT_ID, period_days: int | None = None, at: str | None = None
 ) -> dict[str, object]:
     """Return the Synthese dashboard payload, sourced end to end from real data.
 
@@ -876,18 +922,25 @@ async def compute_agent_synthese(
             internal links point at ``/agents/<agent_id>/...``.
         period_days: Trailing window (in days) the operational figures are
             restricted to. ``None`` means the whole history.
+        at: Optional ISO instant — the AT-01 "Voir à date" reading. Transcript,
+            CSAT and journal figures are then read over the window ending at T.
+            Knowledge counts, prompts, registry identity and the chain-integrity
+            badge stay live (no historical substrate) — the rail says so.
+            ``None`` or malformed reads live.
     """
     try:
         agent = get_agent(agent_id)
     except KeyError:
         agent = get_agent(DEFAULT_AGENT_ID)
     cfg = _effective(agent.id)
-    tx = await _fetch_transcript(agent.id, period_days)
+    at_dt = _parse_at(at)
+    tx = await _fetch_transcript(agent.id, period_days, until=at_dt)
     # Carry the real CSAT counts alongside the transcript aggregates (ADR 0041); the KPI
     # assembler reads ``tx["csat"]`` and renders an honest "—" when nobody has voted.
-    tx["csat"] = await _fetch_csat(agent.id, period_days)
-    since = datetime.now(UTC) - timedelta(days=period_days) if period_days else None
-    journal = _scan_journal(agent.id, since)
+    tx["csat"] = await _fetch_csat(agent.id, period_days, until=at_dt)
+    anchor = at_dt if at_dt is not None else datetime.now(UTC)
+    since = anchor - timedelta(days=period_days) if period_days else None
+    journal = _scan_journal(agent.id, since, until=at_dt)
     try:
         chain = verify_active_ledger()
         chain_ok = chain.verified
