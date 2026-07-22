@@ -164,7 +164,10 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
           </p>
         </div>
         <aside className="rounded-2xl border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] p-6 shadow-[var(--shadow-card)]">
-          <p className="font-mono text-[0.64rem] tracking-[0.14em] text-[var(--tessera-text-subtle)] uppercase">
+          <p
+            data-contrast-label="questions"
+            className="font-mono text-[0.64rem] font-medium tracking-[0.14em] text-[var(--tessera-text-muted)] uppercase"
+          >
             {t("hero.questionsLabel")}
           </p>
           <ul className="mt-4 space-y-3">
@@ -345,7 +348,10 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
                     <h3 className="text-base font-semibold text-[var(--tessera-text)]">
                       {detail.title}
                     </h3>
-                    <span className="rounded-full border border-[var(--tessera-border-strong)] px-2.5 py-1 font-mono text-[0.6rem] tracking-[0.1em] text-[var(--tessera-text-subtle)] uppercase">
+                    <span
+                      data-contrast-label="moment"
+                      className="rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg-soft)] px-2.5 py-1 font-mono text-[0.6rem] font-semibold tracking-[0.1em] text-[var(--tessera-text-muted)] uppercase"
+                    >
                       {detail.moment}
                     </span>
                   </div>

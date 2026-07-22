@@ -141,7 +141,10 @@ export function ComprendreV2Diagram() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <p className="font-mono text-[0.6rem] tracking-[0.13em] text-[var(--tessera-text-subtle)] uppercase">
+          <p
+            data-contrast-label="flows"
+            className="font-mono text-[0.6rem] font-medium tracking-[0.13em] text-[var(--tessera-text-muted)] uppercase"
+          >
             {t("legend")}
           </p>
           <div aria-hidden="true" className="flex items-center gap-1.5">
@@ -205,7 +208,10 @@ export function ComprendreV2Diagram() {
                     </div>
                   </div>
                   {isAccessFlow ? (
-                    <p className="mt-3 border-white/[0.06] border-t pt-2.5 text-[0.6rem] leading-4 text-[var(--tessera-text-subtle)]">
+                    <p
+                      data-contrast-label="door"
+                      className="mt-3 border-white/[0.06] border-t pt-2.5 text-[0.6rem] leading-4 font-medium text-[var(--tessera-text-muted)]"
+                    >
                       {t("door")}
                     </p>
                   ) : null}
@@ -379,8 +385,11 @@ function PanelGlow({ tone }: { tone: string }) {
 
 function GuardBridge({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-center py-2 xl:flex-col xl:py-0">
-      <div className="relative flex w-full items-center justify-center xl:h-px">
+    <div
+      data-diagram-guard="true"
+      className="flex items-center justify-center py-2 xl:flex-col xl:py-0"
+    >
+      <div className="relative flex w-full items-center justify-center xl:h-12">
         <span
           aria-hidden="true"
           className="absolute inset-x-2 top-1/2 h-px bg-gradient-to-r from-sky-400/65 via-emerald-300/85 to-emerald-400/65"
@@ -390,7 +399,10 @@ function GuardBridge({ label }: { label: string }) {
           <ShieldCheck className="size-5" aria-hidden="true" />
         </span>
       </div>
-      <p className="mt-2 max-w-[7.5rem] text-center text-[0.6rem] leading-4 text-emerald-100/65">
+      <p
+        data-diagram-guard-label="true"
+        className="mt-2 max-w-[7.5rem] text-center text-[0.6rem] leading-4 text-emerald-100/80"
+      >
         {label}
       </p>
     </div>

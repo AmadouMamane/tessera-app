@@ -164,6 +164,16 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(diagram).not.toContain("cockpitCaption");
   });
 
+  it("reserves space around the guard and keeps explanatory labels legible", () => {
+    expect(diagram).toContain('data-diagram-guard="true"');
+    expect(diagram).toContain('data-diagram-guard-label="true"');
+    expect(diagram).toContain("xl:h-12");
+    expect(diagram).toContain('data-contrast-label="flows"');
+    expect(diagram).toContain('data-contrast-label="door"');
+    expect(overview).toContain('data-contrast-label="questions"');
+    expect(overview).toContain('data-contrast-label="moment"');
+  });
+
   it("never renders copy larger than the standard cockpit header title", () => {
     const sources = `${overview}\n${diagram}`;
     const arbitraryRemSizes = [...sources.matchAll(/text-\[(\d+(?:\.\d+)?)rem\]/g)].map(

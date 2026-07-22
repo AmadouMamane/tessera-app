@@ -206,6 +206,28 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   TypeScript, Biome (27 avertissements historiques), 445 tests frontend, Ruff, format, mypy strict
   et 2 560 tests backend hors intégration.
 
+### Quatrième revue corrective — collision du guard et contraste des micro-libellés
+
+- La capture opérateur a isolé une collision au premier connecteur : au breakpoint `xl`, la voie
+  interne du guard était forcée à `h-px` tandis que le badge bouclier gardait une hauteur de 44 px.
+  Le badge débordait donc de son conteneur et masquait le début de « Sécurité à chaque échange ».
+- La voie réserve désormais `h-12` au badge. Les textes « Quatre questions simples », « Les quatre
+  flux », la phrase complète de la porte et les quatre moments gagnent un niveau de contraste
+  ciblé (`text-muted`, graisse 500/600) ; les moments reçoivent aussi le fond secondaire existant.
+  Aucun autre texte secondaire n'est éclairci globalement.
+- Un ratchet source exige les marqueurs des quatre familles de contraste, la hauteur réservée du
+  guard et ses deux surfaces mesurables. Aucun catalogue FR/DE/EN ni texte fermé n'a changé.
+- TypeScript vert, Biome ciblé vert et **61 tests ciblés verts** (30 contrat `/comprendre` + 31
+  honnêteté du chrome). Mesure dans le navigateur après recompilation : `overlap=false`, espace
+  badge→libellé = **10 px**, couleur calculée des sept libellés contrôlés = `rgb(154, 159, 161)`,
+  graisses 500 pour questions/flux/porte et 600 pour les quatre moments.
+- Un premier lancement du gate a signalé uniquement un doublon d'Insight 207 créé en parallèle
+  dans la mémoire privée. L'entrée concurrente la plus récente a été renumérotée 208 conformément
+  au ratchet ; les 4 tests du registre mémoire sont alors redevenus verts.
+- `make gate-twice` relancé sur l'arbre corrigé : **TWICE-GREEN sur un seul arbre
+  `cc1d4f5c5df7`** ; chaque passage valide TypeScript, Biome (27 avertissements historiques),
+  446 tests frontend, Ruff, format, mypy strict et 2 560 tests backend hors intégration.
+
 ## Questions bloquantes / déviations proposées
 
 Aucune. Si une déviation de contenu, de contrat ou de structure devenait nécessaire, elle sera écrite ici et le run s'arrêtera avant de la prendre.
