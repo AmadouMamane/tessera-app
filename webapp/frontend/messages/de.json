@@ -9210,8 +9210,9 @@
     "hero": {
       "title": "Tessera verstehen — in 3 Minuten",
       "lead": "Tessera ist der Leitstand für die KI-Agenten einer Bank.",
-      "body": "Eine Bank kann mehrere Agenten einsetzen: Einer antwortet Kunden, ein anderer begleitet Kontoeröffnungen, ein dritter unterstützt die Inkassoteams. Sie können von verschiedenen Teams mit unterschiedlichen Technologien entwickelt worden sein. Trotzdem beantwortet Tessera vier einfache Fragen.",
-      "summary": "Tessera überwacht Agenten in Echtzeit, schützt ihre Interaktionen, bewertet sie vor der Bereitstellung und bewahrt die Nachweise auf, die zur Rekonstruktion jeder Entscheidung nötig sind.",
+      "body": "Eine Bank kann mehrere Agenten einsetzen: Einer antwortet Kunden, ein anderer begleitet Kontoeröffnungen, ein dritter unterstützt die Inkassoteams. Von unterschiedlichen Teams mit unterschiedlichen Technologien entwickelt, müssen sie dennoch über eine gemeinsame Sicht gesteuert werden, die sich an vier einfachen Fragen orientiert.",
+      "summary": "Tessera führt in einem Cockpit die Elemente zusammen, die zur Beantwortung jeder dieser Fragen benötigt werden.",
+      "orbitCenter": "Tessera",
       "questionsLabel": "Vier einfache Fragen",
       "questions": [
         "Was tun sie?",
@@ -9221,8 +9222,9 @@
       ]
     },
     "diagram": {
-      "transition": "Zuerst die Geografie: Wer wo verortet ist und was zirkuliert.",
+      "lead": "Drei Bereiche, klar getrennte Rollen und gesteuerte Interaktionen",
       "caption": "Die Bank, ihre Agenten, das Cockpit – und was zwischen ihnen zirkuliert.",
+      "agentFoundations": ["Fachlicher Kontext", "Regeln & Leitplanken"],
       "columns": [
         {
           "title": "Fachbereiche",

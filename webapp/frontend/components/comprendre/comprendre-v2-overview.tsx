@@ -71,6 +71,19 @@ const detailIcons = [Gauge, ShieldCheck, ClipboardCheck, FileCheck2] as const;
 const roleIcons = [Gauge, UsersRound, Scale] as const;
 const proofRoutes = ["/agents", "/surveiller", "/eval", "/prouver"] as const;
 const detailRoutes = ["/agents", "/surveiller", "/eval", "/prouver"] as const;
+const questionOrbitPositions = [
+  "sm:top-3 sm:left-1/2 sm:max-w-56 sm:-translate-x-1/2 sm:flex-col-reverse sm:items-center sm:text-center",
+  "sm:top-1/2 sm:right-0 sm:max-w-44 sm:-translate-y-1/2 sm:text-left",
+  "sm:top-1/2 sm:left-0 sm:max-w-44 sm:-translate-y-1/2 sm:flex-row-reverse sm:text-right",
+  "sm:bottom-0 sm:left-1/2 sm:max-w-80 sm:-translate-x-1/2 sm:flex-col sm:items-center sm:text-center",
+] as const;
+const questionOrbitTones = [
+  "bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.55)]",
+  "bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.55)]",
+  "bg-amber-300 shadow-[0_0_16px_rgba(252,211,77,0.5)]",
+  "bg-violet-300 shadow-[0_0_16px_rgba(196,181,253,0.55)]",
+] as const;
+const questionOrbitTextOffsets = ["sm:translate-y-1", "", "", ""] as const;
 
 function elapsed(t: T, generatedAt: string, observedAt: string): string {
   const generated = Date.parse(generatedAt);
@@ -153,42 +166,69 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
         <div className="absolute -top-56 right-[5%] h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.07),transparent_70%)] blur-3xl" />
       </div>
 
-      <section className="grid gap-7 border-[var(--tessera-border)] border-b py-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] lg:items-start lg:gap-12">
-        <div>
-          <p className="max-w-[68ch] text-base leading-7 text-[var(--tessera-text-muted)]">
-            {t("hero.body")}
-          </p>
-          <p className="mt-5 flex max-w-[68ch] items-start gap-3 text-sm leading-7 font-medium text-[var(--tessera-text)]">
-            <span className="mt-2 h-px w-8 shrink-0 bg-[var(--tessera-green)]" aria-hidden />
-            {t("hero.summary")}
-          </p>
+      <section className="border-[var(--tessera-border)] border-b pt-8 pb-12">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.72fr)_minmax(34rem,1.28fr)] lg:items-center lg:gap-12">
+          <div>
+            <p className="max-w-[58ch] text-base leading-7 text-[var(--tessera-text-muted)]">
+              {t("hero.body")}
+            </p>
+            <p className="mt-6 max-w-[58ch] text-sm leading-6 font-medium text-[var(--tessera-text-muted)]">
+              {t("hero.summary")}
+            </p>
+          </div>
+
+          <aside aria-labelledby="comprendre-orbit-label">
+            <p
+              id="comprendre-orbit-label"
+              data-contrast-label="questions"
+              className="translate-y-[7px] text-center font-mono text-[0.64rem] font-medium tracking-[0.14em] text-[var(--tessera-text-muted)] uppercase"
+            >
+              {t("hero.questionsLabel")}
+            </p>
+
+            <div className="relative mx-auto mt-5 max-w-[44rem] sm:h-[22rem]">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 left-1/2 hidden h-44 w-[17rem] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-emerald-300/25 shadow-[0_0_42px_rgba(0,200,120,0.08)] sm:block"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 left-1/2 hidden h-52 w-[21rem] -translate-x-1/2 -translate-y-1/2 rotate-6 rounded-[50%] border border-cyan-300/15 sm:block"
+              />
+
+              <div className="relative z-10 mx-auto mb-8 grid size-28 place-items-center rounded-full border border-emerald-300/35 bg-[radial-gradient(circle_at_35%_30%,rgba(16,185,129,0.2),rgba(3,19,25,0.96)_68%)] text-center shadow-[0_0_42px_rgba(0,200,120,0.12)] sm:absolute sm:top-1/2 sm:left-1/2 sm:mb-0 sm:-translate-x-1/2 sm:-translate-y-1/2">
+                <div>
+                  <Radar className="mx-auto size-5 text-emerald-200" aria-hidden />
+                  <p className="mt-2 text-xs font-semibold tracking-[0.14em] text-emerald-100 uppercase">
+                    {t("hero.orbitCenter")}
+                  </p>
+                </div>
+              </div>
+
+              <ul className="relative z-20 grid grid-cols-2 gap-x-6 gap-y-7 sm:block sm:h-full">
+                {questions.map((question, index) => (
+                  <li
+                    key={question}
+                    className={`flex items-start gap-2.5 text-[0.88rem] leading-5 font-medium text-[var(--tessera-text)] sm:absolute ${questionOrbitPositions[index]}`}
+                  >
+                    <span
+                      className={`mt-1.5 size-2 shrink-0 rounded-full ${questionOrbitTones[index]}`}
+                      aria-hidden
+                    />
+                    <span className={questionOrbitTextOffsets[index]}>{question}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
         </div>
-        <aside className="rounded-2xl border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] p-6 shadow-[var(--shadow-card)]">
-          <p
-            data-contrast-label="questions"
-            className="font-mono text-[0.64rem] font-medium tracking-[0.14em] text-[var(--tessera-text-muted)] uppercase"
-          >
-            {t("hero.questionsLabel")}
-          </p>
-          <ul className="mt-4 space-y-3">
-            {questions.map((question) => (
-              <li
-                key={question}
-                className="flex items-start gap-3 border-[var(--tessera-border)] border-t pt-3 text-sm text-[var(--tessera-text)] first:border-t-0 first:pt-0"
-              >
-                <Check className="mt-0.5 size-4 shrink-0 text-[var(--tessera-green)]" aria-hidden />
-                {question}
-              </li>
-            ))}
-          </ul>
-        </aside>
       </section>
 
       <section className="py-10">
-        <p className="mb-4 text-sm font-medium text-[var(--tessera-text-muted)]">
-          {t("diagram.transition")}
-        </p>
-        <ComprendreV2Diagram />
+        <SectionHeader title={t("diagram.lead")} />
+        <div className="mt-8">
+          <ComprendreV2Diagram />
+        </div>
       </section>
 
       <section className="border-[var(--tessera-border)] border-t py-10">

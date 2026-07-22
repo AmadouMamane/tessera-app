@@ -10,9 +10,9 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 const LOCALES = ["fr", "en", "de"] as const;
 
 const APPROVED_V2 = {
-  fr: "f3da4ca862021f45a6a5d87f6cf7adaff620ecc10903d63fe3d113e019d2a4cc",
-  en: "563125f8d776964aec8de18c4eada5467373e9d07326dc5555b86a4ad8d10217",
-  de: "7c9141979130b122627d8b38589f28d43c1ab4849c3f17be0c78ee948597d799",
+  fr: "bf518934728cc93a301aece567205f57b39fb98a7ef6d66a2710637fbcdb0ac6",
+  en: "987ecae5a14964bc0914b2e73abe4a55bd90eceba0649a1e9c68bfc6fd7c13f2",
+  de: "6a8ee3e86db9bc5809a0fc7f77913f7351febe3a3476a84948c5e4ea587c83d9",
 } as const;
 
 const APPROVED_V1_SECTIONS = {
@@ -22,10 +22,11 @@ const APPROVED_V1_SECTIONS = {
 
 interface Catalogue {
   comprendreV2: {
-    hero: { body: string };
+    hero: { body: string; orbitCenter: string; questions: unknown[] };
     diagram: {
-      transition: string;
+      lead: string;
       caption: string;
+      agentFoundations: string[];
       columns: unknown[];
       flows: unknown[];
     };
@@ -64,7 +65,10 @@ describe("the closed v2 content contract", () => {
 
   it.each(LOCALES)("%s carries every repeated block with the same cardinality", (locale) => {
     const copy = catalogue(locale).comprendreV2;
+    expect(copy.hero.questions).toHaveLength(4);
+    expect(copy.hero.orbitCenter).toBe("Tessera");
     expect(copy.diagram.columns).toHaveLength(3);
+    expect(copy.diagram.agentFoundations).toHaveLength(2);
     expect(copy.diagram.flows).toHaveLength(4);
     expect(copy.journey.steps).toHaveLength(4);
     expect(copy.journey.illustrative.rows).toHaveLength(4);
@@ -88,9 +92,20 @@ describe("the closed v2 content contract", () => {
   it.each(LOCALES)("%s keeps one question list and spends the closing line once", (locale) => {
     const copy = catalogue(locale).comprendreV2;
     expect(copy.hero.body).not.toMatch(/what are they doing|que font-ils|was tun sie/i);
-    expect(copy.diagram.transition.length).toBeGreaterThan(20);
+    expect(copy.hero.body).toMatch(
+      /four simple questions|quatre questions simples|vier einfachen fragen/i,
+    );
     expect(copy.diagram.caption.length).toBeGreaterThan(30);
     expect(copy.diagram.caption).not.toBe(copy.closing.title);
+  });
+
+  it("introduces the question orbit once, after the editorial bridge", () => {
+    const overview = read("components/comprendre/comprendre-v2-overview.tsx");
+    expect(overview.indexOf('t("hero.body")')).toBeLessThan(overview.indexOf('t("hero.summary")'));
+    expect(overview.indexOf('t("hero.summary")')).toBeLessThan(
+      overview.indexOf('t("hero.questionsLabel")'),
+    );
+    expect(overview.match(/questions\.map/g)).toHaveLength(1);
   });
 });
 
@@ -166,7 +181,7 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(diagram).toContain('t("door")');
     expect(diagram).toContain('t("caption")');
     expect(diagram).not.toContain('t("legend")');
-    expect(overview).toContain('t("diagram.transition")');
+    expect(overview).not.toContain('t("diagram.transition")');
   });
 
   it("frames the diagram as all of Tessera and gives AI agents a visual centre", () => {
@@ -176,8 +191,15 @@ describe("the implementation keeps content and data out of the page module", () 
     expect(diagram).toContain('data-diagram-plane="agents"');
     expect(diagram).toContain('data-diagram-plane="cockpit"');
     expect(diagram).toContain('data-agent-node="true"');
+    expect(diagram).toContain('data-agent-foundation="true"');
     expect(diagram).toContain("function AgentPanel");
     expect(diagram).not.toContain("cockpitCaption");
+    expect(diagram).not.toContain("size-14 place-items-center");
+    expect(overview).toContain('<SectionHeader title={t("diagram.lead")} />');
+  });
+
+  it("does not imply an unbacked live status with decorative icon dots", () => {
+    expect(diagram).not.toMatch(/absolute -right-1 -top-1 size-2(?:\.5)? rounded-full/);
   });
 
   it("reserves space around the guard and keeps explanatory labels legible", () => {

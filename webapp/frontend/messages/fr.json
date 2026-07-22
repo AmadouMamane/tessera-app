@@ -9212,8 +9212,9 @@
     "hero": {
       "title": "Comprendre Tessera — en 3 minutes",
       "lead": "Tessera est le poste de pilotage des agents d'intelligence artificielle d'une banque.",
-      "body": "Une banque peut employer plusieurs agents : l'un répond aux clients, un autre accompagne les ouvertures de compte, un troisième aide les équipes de recouvrement. Ils ont pu être construits par des équipes différentes, avec des technologies différentes. Tessera permet pourtant de répondre à quatre questions simples.",
-      "summary": "Tessera supervise les agents en temps réel, protège leurs échanges, les évalue avant leur mise à disposition et conserve les preuves nécessaires pour reconstituer chaque décision.",
+      "body": "Une banque peut employer plusieurs agents : l'un répond aux clients, un autre accompagne les ouvertures de compte, un troisième aide les équipes de recouvrement. Conçus par des équipes différentes et avec des technologies différentes, ils doivent pourtant être pilotés à partir d'une vue commune, structurée autour de quatre questions simples.",
+      "summary": "Tessera réunit dans un même cockpit les éléments nécessaires pour répondre à chacune d'elles.",
+      "orbitCenter": "Tessera",
       "questionsLabel": "Quatre questions simples",
       "questions": [
         "Que font-ils ?",
@@ -9223,8 +9224,9 @@
       ]
     },
     "diagram": {
-      "transition": "D'abord la géographie : qui vit où, et ce qui circule.",
+      "lead": "Trois espaces, des rôles distincts et des échanges gouvernés",
       "caption": "La banque, ses agents, le cockpit — et ce qui circule entre eux.",
+      "agentFoundations": ["Contexte métier", "Règles & Garde-fous"],
       "columns": [
         {
           "title": "Espaces métier",

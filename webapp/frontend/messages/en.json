@@ -9210,8 +9210,9 @@
     "hero": {
       "title": "Understand Tessera — in 3 minutes",
       "lead": "Tessera is the control room for a bank's artificial intelligence agents.",
-      "body": "A bank may employ several agents: one answers customers, another assists with account openings, and a third helps the collections teams. They may have been built by different teams, with different technologies. Yet Tessera makes it possible to answer four simple questions.",
-      "summary": "Tessera supervises agents in real time, protects their exchanges, evaluates them before they are made available and retains the evidence needed to reconstruct each decision.",
+      "body": "A bank may employ several agents: one answers customers, another assists with account openings, and a third helps the collections teams. Built by different teams with different technologies, they must nevertheless be governed through a shared view structured around four simple questions.",
+      "summary": "Tessera brings together in a single cockpit the elements needed to answer each of them.",
+      "orbitCenter": "Tessera",
       "questionsLabel": "Four simple questions",
       "questions": [
         "What are they doing?",
@@ -9221,8 +9222,9 @@
       ]
     },
     "diagram": {
-      "transition": "First, the geography: who lives where, and what flows.",
+      "lead": "Three spaces, distinct roles and governed exchanges",
       "caption": "The bank, its agents, the cockpit — and what flows between them.",
+      "agentFoundations": ["Business context", "Rules & guardrails"],
       "columns": [
         {
           "title": "Business spaces",

@@ -261,7 +261,9 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   caption neutre dédiée en FR/DE/EN. Les pastilles de légende supérieures ont disparu et les cartes
   directionnelles restent l'unique légende, avec les couleurs déjà reprises par les flèches. Le
   paragraphe introductif s'arrête avant la liste des quatre questions, portée uniquement par sa
-  carte, et une transition trilingue introduit désormais la géographie du schéma.
+  carte. Lors du HALT visuel, Amadou a demandé le retrait de la transition AL-5, redondante avec la
+  caption du panneau ; la ligne et ses trois clés de catalogue ont été supprimées, sans modifier la
+  caption « La banque, ses agents, le cockpit — et ce qui circule entre eux. »
 - Validation ciblée avant atterrissage : 62 tests backend verts, 65 tests frontend verts,
   TypeScript et Biome verts. Le contrôle DOM via le navigateur intégré est bloqué par sa politique
   d'accès à l'URL locale ; aucun contournement n'a été tenté. La validation visuelle finale reste
@@ -277,8 +279,60 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   Ruff, format et mypy verts. La relance complète a ensuite trouvé six appels directs de tests
   Recouvrement encore figés sur l'ancienne signature sans session ; le code de production est
   resté strict et les tests injectent désormais la vraie `SessionContext` collections signée par
-  leur helper existant. Les 42 tests Recouvrement repassent verts. Le gate-twice complet est à
-  relancer sur ce nouvel arbre.
+  leur helper existant. Les 42 tests Recouvrement repassent verts.
+- **Gate d'atterrissage sur l'arbre rebasé : TWICE-GREEN sur un seul arbre
+  `cfcff5657102`**, HEAD `89093346f528`. Chacun des deux passages valide TypeScript, Biome
+  (avertissements historiques seulement), 450 tests frontend, Ruff, format, mypy strict et
+  2 575 tests backend hors intégration.
+- **Preview final** : frontend `:3098` (PID 10308) et backend `:8098` (PID 10291) servent le
+  HEAD `89093346`. Le lecteur live répond encore honnêtement
+  `controlled_today=null`, `blocked_today=null`, avec la borne
+  `2026-07-22T00:00:00+02:00` ; `/fr/comprendre`, `/en/comprendre` et `/de/comprendre`
+  répondent tous HTTP 200.
+- **Captures et HALT éclair** : les quatre PNG présents sous `/tmp` datent de 16:06–16:07,
+  donc d'avant AL-1..AL-5 et ne sont pas présentés comme régénérés. La politique du navigateur
+  intégré refuse l'accès automatisé à l'URL locale du preview ; conformément à cette politique,
+  aucun navigateur ni protocole alternatif n'a été employé. Le preview final reste ouvert sur
+  `:3098` pour la validation visuelle d'Amadou et la régénération supervisée des captures
+  vide-FR, FR, EN et DE. **HALT maintenu : aucun merge, tag, push ou retrait de branche avant
+  cette validation.**
+- **Micro-correction pendant le HALT** : à la demande d'Amadou, la transition AL-5 a été retirée
+  sans remplacement ; la caption interne suffit. Les trois catalogues, leur empreinte et le
+  ratchet de présence ont été mis à jour. Après le retrait des deux points décoratifs, le gate
+  complet est **TWICE-GREEN sur un seul arbre `3232ded3bd34`** : chaque passage valide 451 tests
+  frontend, TypeScript, Biome (27 avertissements
+  historiques), Ruff, format, mypy strict et 2 575 tests backend hors intégration.
+  Les petits points verts des icônes d'en-tête et d'agent étaient de simples ornements de « statut
+  actif », sans donnée ni contrat. Amadou a demandé leur retrait pendant le HALT ; les deux points
+  ont été supprimés et un ratchet empêche le retour de ce motif de statut non adossé à une donnée.
+- **Ajustement final du schéma pendant le HALT** : le second robot placé sous le titre « Agents IA »
+  a été retiré. Deux fondations trilingues — contexte métier et règles/garde-fous — occupent désormais
+  le pied du panneau agents, selon la structure de la maquette D. La ligne « Trois espaces, des rôles
+  distincts et des échanges gouvernés » introduit le panneau via le même composant `SectionHeader`
+  que « Tessera se place entre l'intention et l'action. ». Le nouvel arbre est **TWICE-GREEN sur
+  `221426f884f4`** : chaque passage valide 451 tests frontend, TypeScript, Biome (27 avertissements
+  historiques), Ruff, format, mypy strict et 2 575 tests backend hors intégration.
+- **Fluidité de l'introduction pendant le HALT** : le paragraphe pose désormais la diversité des
+  agents puis le besoin d'une vue commune. La variante visuelle en cours de validation place Tessera
+  au centre de deux cerceaux fins et les quatre questions autour, sans flèche ni sens de circulation ;
+  les quatre points reprennent les couleurs des flux du schéma. Le texte reste éditorial, sans panneau,
+  et l'orbite se replie en grille lisible sur mobile sans dupliquer le contenu. Le paragraphe relie
+  désormais explicitement cette vue commune aux quatre questions qui structurent le cadran. Les
+  formulations FR/EN/DE, les empreintes de catalogue et un ratchet d'ordre source sont mis à jour. Les
+  essais précédents — bandeau détaché, pied vert, panneau unique puis grille nue — ont été refusés
+  pendant le HALT ; le gate du premier a été interrompu et aucun ne constitue un témoin de validation.
+  La question basse conserve sa position dans l'orbite ; la bordure de section est légèrement abaissée
+  pour augmenter l'espace vertical sous l'ensemble.
+  Les quatre libellés sont orientés vers l'extérieur de leur point d'ancrage et le cerceau externe est
+  resserré afin qu'aucun texte ne rentre dans l'orbite. Le screenshot de contrôle a montré que le premier
+  réglage laissait encore les points latéraux à l'intérieur du cerceau externe ; les deux ellipses sont
+  donc réduites ensemble pour ménager un dégagement visible sur les quatre axes.
+  Le libellé supérieur et son point sont ensuite rapprochés légèrement du cerceau, comme un seul groupe,
+  tout en conservant un espace visible.
+  Le point supérieur reste ensuite fixe tandis que son seul libellé est descendu de quatre pixels pour
+  réduire leur espacement.
+  Le surtitre des quatre questions est descendu de sept pixels au total pour le rapprocher du premier
+  libellé, sans déplacer l'orbite.
 - Owed hors lot, sans action : le monde du preview reste incohérent pour une démo tant que son
   seed ne produit pas ensemble une spine et un ledger représentatifs. Le seed d'un monde cohérent
   appartient à une passe dédiée.

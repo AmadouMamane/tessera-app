@@ -8,6 +8,7 @@ import {
   Bot,
   Building2,
   ClipboardCheck,
+  Database,
   FileCheck2,
   FlaskConical,
   HandCoins,
@@ -45,6 +46,7 @@ interface VisualTone {
 const businessIcons = [Landmark, HandCoins] satisfies LucideIcon[];
 const agentIcons = [MessagesSquare, UserPlus, HandCoins, Network] satisfies LucideIcon[];
 const cockpitIcons = [Activity, FlaskConical, ClipboardCheck, FileCheck2] satisfies LucideIcon[];
+const agentFoundationIcons = [Database, ShieldCheck] satisfies LucideIcon[];
 
 const agentTones = [
   {
@@ -102,6 +104,7 @@ export function ComprendreV2Diagram() {
   const t = useTranslations("comprendreV2.diagram");
   const columns = t.raw("columns") as DiagramColumn[];
   const flows = t.raw("flows") as DiagramFlow[];
+  const agentFoundations = t.raw("agentFoundations") as string[];
   const [business, agents, cockpit] = columns;
   const accessFlow = flows.at(0);
 
@@ -126,7 +129,6 @@ export function ComprendreV2Diagram() {
         <div className="flex min-w-0 items-center gap-4">
           <span className="relative grid size-11 shrink-0 place-items-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-200 shadow-[0_0_28px_rgba(34,211,238,0.12)]">
             <Orbit className="size-6" aria-hidden="true" />
-            <span className="absolute -right-1 -top-1 size-2 rounded-full border border-[#071521] bg-emerald-300" />
           </span>
           <div className="min-w-0">
             <p className="font-mono text-[0.66rem] tracking-[0.17em] text-cyan-300 uppercase">
@@ -143,7 +145,7 @@ export function ComprendreV2Diagram() {
         <div className="grid items-stretch gap-3 xl:grid-cols-[minmax(0,0.82fr)_7rem_minmax(0,1.32fr)_8.5rem_minmax(0,0.96fr)]">
           <BusinessPanel column={business} />
           <GuardBridge label={t("shield")} />
-          <AgentPanel column={agents} />
+          <AgentPanel column={agents} foundations={agentFoundations} />
           <ExchangeBridge flows={flows} />
           <CockpitPanel column={cockpit} />
         </div>
@@ -242,7 +244,7 @@ function BusinessPanel({ column }: { column: DiagramColumn }) {
   );
 }
 
-function AgentPanel({ column }: { column: DiagramColumn }) {
+function AgentPanel({ column, foundations }: { column: DiagramColumn; foundations: string[] }) {
   return (
     <section
       data-diagram-plane="agents"
@@ -256,15 +258,6 @@ function AgentPanel({ column }: { column: DiagramColumn }) {
       <PanelHeading icon={Bot} title={column.title} tone="emerald" featured />
 
       <div className="relative p-4">
-        <div className="mb-4 flex items-center justify-center gap-3" aria-hidden="true">
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent to-emerald-400/35" />
-          <span className="relative grid size-14 place-items-center rounded-2xl border border-emerald-300/40 bg-[#09261f] text-emerald-200 shadow-[0_0_30px_rgba(52,211,153,0.17)]">
-            <Bot className="size-7" />
-            <span className="absolute -right-1 -top-1 size-2.5 rounded-full border-2 border-[#09261f] bg-emerald-300" />
-          </span>
-          <span className="h-px flex-1 bg-gradient-to-l from-transparent to-emerald-400/35" />
-        </div>
-
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
           {column.items.map((item, index) => {
             const Icon = agentIcons[index] ?? Bot;
@@ -287,6 +280,21 @@ function AgentPanel({ column }: { column: DiagramColumn }) {
                 <span className="relative mt-3 block text-xs font-medium leading-5 text-[var(--tessera-text)]">
                   {item}
                 </span>
+              </li>
+            );
+          })}
+        </ul>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+          {foundations.map((foundation, index) => {
+            const FoundationIcon = agentFoundationIcons[index] ?? ShieldCheck;
+            return (
+              <li
+                key={foundation}
+                data-agent-foundation="true"
+                className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.055] px-3 py-2 text-center text-[0.68rem] font-medium text-emerald-100/85"
+              >
+                <FoundationIcon className="size-4 shrink-0 text-emerald-200" aria-hidden="true" />
+                <span>{foundation}</span>
               </li>
             );
           })}
