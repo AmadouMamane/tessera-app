@@ -7666,6 +7666,7 @@
     }
   },
   "agentConfigurations": {
+    "asofScope": "seul l'historique par-objet est relu à cet instant ; la configuration affichée et le formulaire restent l'état actuel",
     "topbarTitle": "AGENT",
     "title": "Configurations",
     "subtitle": "Réglages de cet agent : identité, modèle, comportement et statut.",

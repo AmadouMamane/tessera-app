@@ -17,7 +17,9 @@ export async function generateMetadata({ params }: PageProps) {
 
 async function prefetch(queryClient: QueryClient, locale: string, agentId: string) {
   await queryClient.prefetchQuery({
-    queryKey: ["agent-prompts", agentId, locale],
+    // The trailing null is the client's `asOf ?? null` — the SSR seed must live
+    // under the exact Live key or hydration misses it (Insight 175).
+    queryKey: ["agent-prompts", agentId, locale, null],
     queryFn: async () => {
       const params = new URLSearchParams({ agent_id: agentId, lang: locale });
       const response = await fetch(`${backendUrl()}/observability/agent-prompts?${params}`, {

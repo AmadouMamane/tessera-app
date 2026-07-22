@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
@@ -663,7 +663,10 @@ def _fmt_mtime(path: Path) -> str:
 
 
 def _build_history(
-    policy_path: Path, lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID
+    policy_path: Path,
+    lang: str = "fr",
+    agent_id: str = DEFAULT_AGENT_ID,
+    until: datetime | None = None,
 ) -> list[dict[str, str]]:
     """Real change history: durable form-save log + real config-file mtimes.
 
@@ -672,6 +675,9 @@ def _build_history(
     (the source's actual mtime), newest first. Form saves are scoped to
     ``agent_id`` (OT-01 is a per-object trace); the repo-file mtimes stay,
     because settings/policy/prompts/corpus are provenance for every agent.
+    ``until`` set = the as-of reading: events after T leave the list (an mtime
+    row is the file's LAST update event — if that instant is after T the event
+    does not exist yet at T and the row honestly disappears).
     """
     console = _loc(lang, "Console", "Konsole", "Console")
     repo = _loc(lang, "Dépôt (Git)", "Repository (Git)", "Repository (Git)")
@@ -735,6 +741,8 @@ def _build_history(
     for path, label in sources:
         if path.exists():
             events.append((_mtime_dt(path), repo, f"{label} {updated}"))
+    if until is not None:
+        events = [e for e in events if e[0] <= until]
     events.sort(key=lambda e: e[0], reverse=True)
     return [
         {"time": when.strftime("%d/%m/%Y %H:%M"), "actor": actor, "label": label}
@@ -1101,8 +1109,19 @@ async def _serving_effectiveness(agent_slug: str) -> tuple[str, str, tuple[str, 
     return model, backend.name, SAMPLING_APPLIED.get(backend.name, ()), provenance
 
 
+def _parse_at(at: str | None) -> datetime | None:
+    """The as-of bound if it parses as ISO, else ``None`` (read live, never raise)."""
+    if not at:
+        return None
+    try:
+        parsed = datetime.fromisoformat(at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
 async def compute_agent_configurations(
-    agent_slug: str = DEFAULT_AGENT_ID, lang: str = "fr"
+    agent_slug: str = DEFAULT_AGENT_ID, lang: str = "fr", at: str | None = None
 ) -> dict[str, object]:
     """Return the active agent configuration payload (real + editable overrides).
 
@@ -1115,6 +1134,10 @@ async def compute_agent_configurations(
     Async since ADR 0031: the behaviour block derives which sliders the serving
     backend applies from the agent's *effective* model (ADR 0030 override
     resolution — a durable read).
+
+    ``at`` (ISO instant) bounds the OT-01 per-object history at T — the change
+    log and provenance events after T leave the list; every other block stays
+    live (the acting surface acts on the present; the rail says so).
     """
     settings = get_settings()
     cfg = _effective(agent_slug)
@@ -1606,7 +1629,9 @@ async def compute_agent_configurations(
                 lang, "Historique des modifications", "Aenderungsverlauf", "Change history"
             ),
             "cta": _loc(lang, "Voir tout", "Alle anzeigen", "View all"),
-            "items": _build_history(settings.guard.policy_path, lang, agent_slug),
+            "items": _build_history(
+                settings.guard.policy_path, lang, agent_slug, until=_parse_at(at)
+            ),
         },
         "links": {
             "title": _loc(lang, "Liens utiles", "Nuetzliche Links", "Useful links"),

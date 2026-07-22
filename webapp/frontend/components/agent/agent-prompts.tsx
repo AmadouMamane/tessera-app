@@ -98,12 +98,16 @@ export function AgentPrompts() {
   const agentId = useAgentId();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
+  // OT-01: the SR-01 rail's as-of instant ALSO bounds the per-object overlay
+  // decision history at T (one rail drives both readings) and freezes the
+  // overlay mutations — one does not act in the past.
+  const { asOf } = temporal;
   const [subtab, setSubtab] = useState("");
   const { data } = useQuery({
-    queryKey: ["agent-prompts", agentId, locale],
-    queryFn: ({ signal }) => fetchAgentPrompts(agentId, locale, signal),
+    queryKey: ["agent-prompts", agentId, locale, asOf ?? null],
+    queryFn: ({ signal }) => fetchAgentPrompts(agentId, locale, asOf, signal),
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: asOf ? false : 30_000,
   });
 
   const [search, setSearch] = useState("");
@@ -189,7 +193,7 @@ export function AgentPrompts() {
             instanceHint="prompts actifs · édités par PR Git"
           />
 
-          <OverlayPanel overlay={data.overlay} agentId={agentId} />
+          <OverlayPanel overlay={data.overlay} agentId={agentId} frozen={asOf != null} />
 
           <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
             {(data.kpis ?? []).map((k, i) => (
@@ -1003,12 +1007,18 @@ function Footer({ data }: { data: Data }) {
  *  An operator proposes an overlay draft (guard-screened server-side); only a
  *  superadmin approves / rejects / revokes, and never the draft's own author
  *  (two-person rule, enforced server-side — the UI reflects it honestly). */
-function OverlayPanel({ overlay, agentId }: { overlay?: PromptOverlay; agentId: string }) {
+function OverlayPanel({
+  overlay,
+  agentId,
+  frozen = false,
+}: { overlay?: PromptOverlay; agentId: string; frozen?: boolean }) {
   const qc = useQueryClient();
   const role = useSession().data?.user?.role;
   const isSuper = role === "superadmin";
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [rawBusy, setBusy] = useState(false);
+  // While As-of, every overlay act is frozen (registre §6, agir-rail rule).
+  const busy = rawBusy || frozen;
   const [error, setError] = useState<string | null>(null);
   if (!overlay) return null;
   const L = overlay.labels;

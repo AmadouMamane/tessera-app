@@ -20,6 +20,7 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { CardInfo } from "@/components/cockpit/card-info";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
@@ -54,12 +55,17 @@ export function AgentConfigurations() {
   const locale = useLocale();
   const qc = useQueryClient();
   const agentId = useAgentId();
-  const queryKey = ["agent-configurations", agentId, locale];
+  // OT-01 as-of (registre §6): `?asof=` bounds the per-object history at T and
+  // freezes the acting surface — one does not act in the past.
+  const asof = useAsOf();
+  const frozen = asof !== null;
+  const queryKey = ["agent-configurations", agentId, locale, asof ?? null];
+  const liveKey = ["agent-configurations", agentId, locale, null];
   const { data } = useQuery({
     queryKey,
-    queryFn: ({ signal }) => fetchAgentConfigurations(agentId, locale, signal),
+    queryFn: ({ signal }) => fetchAgentConfigurations(agentId, locale, asof, signal),
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: asof ? false : 30_000,
   });
 
   const [draft, setDraft] = useState<Draft>({});
@@ -69,14 +75,14 @@ export function AgentConfigurations() {
     onSuccess: (fresh) => {
       setError(false);
       setDraft({});
-      qc.setQueryData(queryKey, fresh);
+      qc.setQueryData(liveKey, fresh);
     },
     onError: () => setError(true),
   });
   // Archive is a standalone durable toggle (it must not clobber pending edits).
   const archiveMut = useMutation({
     mutationFn: (changes: Draft) => saveAgentConfigurations(agentId, changes, locale),
-    onSuccess: (fresh) => qc.setQueryData(queryKey, fresh),
+    onSuccess: (fresh) => qc.setQueryData(liveKey, fresh),
   });
 
   const setField = (key: string, serverValue: Override, value: Override) => {
@@ -102,10 +108,13 @@ export function AgentConfigurations() {
   return (
     <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
       <AgentCrossLinks page="configurations" />
+      {/* OT-01 As-of + Live (registre §6) — the per-object history is refolded
+          at T by the backend; the form below freezes while reading the past. */}
+      <AgirRail asofNote={t("asofScope")} />
       <Header
         data={data}
         dirty={dirty}
-        saving={save.isPending}
+        saving={save.isPending || frozen}
         error={error}
         onSave={() => save.mutate(draft)}
         onReset={() => setDraft({})}
@@ -126,7 +135,7 @@ export function AgentConfigurations() {
             data={data}
             ctx={ctx}
             onArchive={() => archiveMut.mutate({ archived: !(data.tags?.archived ?? false) })}
-            archiving={archiveMut.isPending}
+            archiving={archiveMut.isPending || frozen}
           />
         </section>
         <aside className="flex min-w-0 flex-col gap-2.5">

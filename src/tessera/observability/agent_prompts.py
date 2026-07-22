@@ -377,25 +377,61 @@ def _variables(per_lang: dict[str, dict[str, str]], key: str) -> list[str]:
 
 
 async def build_agent_prompts(
-    lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID
+    lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID, at: str | None = None
 ) -> dict[str, object]:
     """Assemble the Prompts payload from the live YAML source of truth.
 
     ``agent_id`` scopes the in-page navigation links (``/agents/<agent_id>/...``).
     The payload also carries the ONE governed exception to this page's
-    read-only rule: the per-agent overlay lifecycle (ADR 0037).
+    read-only rule: the per-agent overlay lifecycle (ADR 0037). ``at`` (ISO
+    instant) bounds the OT-01 per-object trace at T: overlay lifecycle events
+    after T leave the decision history (the serving text and the YAML base stay
+    live — the rail scopes the claim). Malformed reads live.
     """
     per_lang, newest = _load_all()
     payload = _assemble(per_lang, newest, lang, agent_id, now=datetime.now(UTC))
-    payload["overlay"] = _overlay_section(agent_id, lang)
+    payload["overlay"] = _overlay_section(agent_id, lang, until=_parse_until(at))
     return payload
 
 
-def _overlay_section(agent_id: str, lang: str) -> dict[str, object]:
-    """The governed overlay lifecycle state for this agent (ADR 0037)."""
+def _parse_until(at: str | None) -> datetime | None:
+    """The as-of bound if it parses as ISO, else ``None`` (read live, never raise)."""
+    if not at:
+        return None
+    try:
+        parsed = datetime.fromisoformat(at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+def _event_instant(event: dict[str, object]) -> datetime | None:
+    """The event's instant, aware, or ``None`` when it cannot be placed in time."""
+    raw = event.get("at")
+    if not isinstance(raw, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+def _overlay_section(agent_id: str, lang: str, until: datetime | None = None) -> dict[str, object]:
+    """The governed overlay lifecycle state for this agent (ADR 0037).
+
+    ``until`` set = the OT-01 as-of reading of the decision history: an event
+    after T — or carrying no parseable instant — leaves the list.
+    """
     from tessera.observability.prompt_overlay import MAX_OVERLAY_CHARS, load_overlay_state
 
     state = load_overlay_state(agent_id)
+    if until is not None:
+        state["history"] = [
+            e
+            for e in state["history"]
+            if isinstance(e, dict) and (t := _event_instant(e)) is not None and t <= until
+        ]
     return {
         "title": _t(("Overlay gouverné", "Governter Overlay", "Governed overlay"), lang),
         "note": _t(

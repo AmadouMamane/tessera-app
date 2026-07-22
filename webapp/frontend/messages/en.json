@@ -7664,6 +7664,7 @@
     }
   },
   "agentConfigurations": {
+    "asofScope": "only the per-object history is re-read at this instant; the displayed configuration and the form stay the current state",
     "topbarTitle": "AGENT",
     "title": "Configurations",
     "subtitle": "Settings for this agent: identity, model, behaviour and status.",

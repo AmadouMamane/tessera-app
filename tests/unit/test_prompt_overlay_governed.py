@@ -218,3 +218,37 @@ def test_a_console_override_suppresses_the_overlay() -> None:
 @pytest.mark.parametrize("language", [LanguageCode.FR, LanguageCode.DE, LanguageCode.EN])
 def test_every_bundle_carries_the_overlay_header(language: LanguageCode) -> None:
     assert reporter.load_prompts(language).get("overlay_header", "").strip()
+
+
+def test_overlay_history_at_t_drops_later_and_unplaceable_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OT-01 (v1.13): the decision history at T is the events ≤ T, nothing else."""
+    from datetime import UTC, datetime
+
+    from tessera.observability import agent_prompts as ap
+
+    state = {
+        "approved": None,
+        "draft": None,
+        "history": [
+            {"at": "2026-06-01T10:00:00+00:00", "event": "proposed", "author": "op"},
+            {"at": "2026-06-15T10:00:00+00:00", "event": "approved", "author": "root"},
+            {"event": "rejected", "author": "root"},  # no instant: unplaceable at T
+        ],
+    }
+    monkeypatch.setattr(
+        "tessera.observability.prompt_overlay.load_overlay_state", lambda _aid: dict(state)
+    )
+
+    live_history = ap._overlay_section("support-client", "fr")["history"]
+    assert isinstance(live_history, list)
+    assert len(live_history) == 3  # live keeps everything, unplaceable included
+
+    at_t_history = ap._overlay_section(
+        "support-client", "fr", until=datetime(2026, 6, 10, tzinfo=UTC)
+    )["history"]
+    assert isinstance(at_t_history, list)
+    assert [e["event"] for e in at_t_history] == ["proposed"]
+
+    assert ap._parse_until("not-a-date") is None  # malformed reads live, never raises

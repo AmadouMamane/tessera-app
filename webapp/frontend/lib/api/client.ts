@@ -1850,10 +1850,17 @@ export async function submitCustomerFeedback(args: {
 export async function fetchAgentConfigurations(
   agentId: string,
   lang: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<AgentConfigurations> {
-  const q = `?agent_id=${encodeURIComponent(agentId)}${lang ? `&lang=${encodeURIComponent(lang)}` : ""}`;
-  return request(`/observability/agent-configurations${q}`, { signal }, AgentConfigurationsSchema);
+  const params = new URLSearchParams({ agent_id: agentId });
+  if (lang) params.set("lang", lang);
+  if (at) params.set("at", at);
+  return request(
+    `/observability/agent-configurations?${params}`,
+    { signal },
+    AgentConfigurationsSchema,
+  );
 }
 
 /** Persist editable agent-profile overrides; returns the refreshed payload. */
@@ -1955,10 +1962,12 @@ export async function mutateGardeFousRule(body: {
 export async function fetchAgentPrompts(
   agentId: string,
   lang?: string,
+  at?: string | null,
   signal?: AbortSignal,
 ): Promise<AgentPrompts> {
   const params = new URLSearchParams({ agent_id: agentId });
   if (lang) params.set("lang", lang);
+  if (at) params.set("at", at);
   return request(`/observability/agent-prompts?${params}`, { signal }, AgentPromptsSchema);
 }
 

@@ -1,6 +1,21 @@
 # Registre des rails temporels — Tessera
 
-> Section destinée à `docs/design/ui-contract.md` · v1.12 (2026-07-22)
+> Section destinée à `docs/design/ui-contract.md` · v1.13 (2026-07-22)
+>
+> v1.13 — la promotion OT-01 « C1 par-objet consultable à T » est exécutée là où le substrat
+> existe, et le verdict est posé home par home. **Configurations** : l'historique par-objet
+> (journal durable des saves scopé `agent_id` + événements de provenance des fichiers) est
+> borné à T (`_build_history(until=)` — une ligne mtime dont l'instant est postérieur à T
+> n'existe pas encore à T et disparaît honnêtement) ; la page porte l'AgirRail As-of + Live
+> (`?asof=`), le formulaire et l'archivage gèlent en lecture du passé, note scopée. **Prompts** :
+> le rail SR-01 déjà présent pilote AUSSI la lecture par-objet — son instant borne l'historique
+> des décisions du cycle overlay (ADR 0037, `_overlay_section(until=)` : un événement après T
+> ou sans instant parseable sort de la liste) et gèle proposer/approuver/rejeter/révoquer ; le
+> texte servi et la base YAML restent live, dit tel quel. **Sources & mémoire** : le renvoi
+> TE-01 (`?sources=`) EST la consultation à T — règle de placement, pas un manque. **Métier** :
+> déjà as-of (`?at=`). **Connaissances** : attach/detach ne sont pas journalisés S1 — pas de
+> C1 sans substrat ; dette nommée. **Garde-fous** : la policy n'a pas d'historique par-agent —
+> sa relecture à T vit au socle Paramètres (v1.12) et à État à date.
 >
 > v1.12 — deux chantiers AGIR/CONFIGURER soldés. (1) **incidents-playbooks porte l'agir-rail
 > RÉEL** (le « à évaluer » de v1.9 est tranché en faveur du rail) : `compute_incidents_overview
@@ -157,7 +172,7 @@ Règle de placement : **config → versions · signaux → scrubber (Surveiller)
 | Code | Nom canonique | Usage | Pages | Substrat | Composant | État |
 |------|---------------|-------|-------|----------|-----------|------|
 | **TE-01** | Temporal Evidence Rail | Preuve opposable / reconstitution à T | `PROUVER / État à date` | S1 | C1 (as-of) | Implémenté |
-| **OT-01** | Object Trace Rail | Historique local d'un objet agent / de config | Configurations, Connaissances, Garde-fous, Prompts, Sources & mémoire, `CONFIGURER / Paramètres` (v1.9) | S1 | C1 (par-objet) | Partiel — amorces (note) |
+| **OT-01** | Object Trace Rail | Historique local d'un objet agent / de config | Configurations, Prompts (à T — note v1.13), Métier (`?at=`), Sources & mémoire (renvoi TE-01), `CONFIGURER / Paramètres` (v1.9.1/v1.12) | S1 | C1 (par-objet) | Implémenté là où le substrat existe (note v1.13) — Connaissances : substrat dû |
 | **AT-01** | Agent Activity Rail | Activité récente (feed) — *pas* les signaux | `AGENT / Synthèse` | S1 | C1 (feed) | Implémenté — Voir à date réel (note v1.11) |
 | **ER-01** | Evaluation Run Rail | Historique des runs d'évaluation | `AGENT / Évaluations` | S3 | C2 | Implémenté |
 | **CT-01** | Conversation Timeline Rail | Chronologie conversationnelle | `AGENT / Historique` | S3 | C2 | Implémenté — filtres + sortie du fixture (note v1.11) |
@@ -453,7 +468,8 @@ signifie : pas de besoin temporel prouvé, pas de rail — en mettre un serait d
 | `agents/[id]/evaluations` | ER-01 run rail + SR-01 standalone | Implémenté |
 | `agents/[id]/historique` (+ `[sessionId]`) | CT-01 timeline + filtres URL (`?turn_agent=`, `?routed=1`), conversations réelles en tête | Implémenté (v1.11) — fixture estampillé dessous |
 | `agents/[id]/console` | XT-01 waterfall live (SSE) | Implémenté |
-| `agents/[id]/configurations` · `connaissances` · `garde-fous` · `prompts` · `metier` | amorces OT-01 (versions, overlay, renvois) | Partiel — promotion = C1 par-objet consultable à T |
+| `agents/[id]/configurations` · `prompts` | historique par-objet borné à T (`?asof=`), mutations gelées (AgirRail / rail SR-01 partagé) | Implémenté (v1.13) |
+| `agents/[id]/garde-fous` · `connaissances` · `metier` | garde-fous : policy à T via Paramètres/État à date ; métier : déjà `?at=` ; connaissances : attach/detach non journalisés | métier Implémenté ; connaissances : substrat S1 dû (dette nommée) |
 | `a-traiter` · `a-faire` | WF-01 timeline de transitions dans les drawers | Implémenté — un scrubber de file n'a pas de sens (SLA = présent) |
 | `configurer/parametres` | AgirRail As-of + Live (`?asof=`), overrides refoldés du ledger à T + socle policy relu de git à T (`socle_policy_asof`) | Implémenté (v1.12) — runtime live, dit tel quel |
 | `configurer/modeles` · `garde-fous` · `politiques` | historique par mtimes / overlay | Partiel OT-01 — même chemin de fold que Paramètres |

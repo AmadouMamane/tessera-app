@@ -7664,6 +7664,7 @@
     }
   },
   "agentConfigurations": {
+    "asofScope": "nur der objektbezogene Verlauf wird zu diesem Zeitpunkt neu gelesen; die angezeigte Konfiguration und das Formular bleiben der aktuelle Stand",
     "topbarTitle": "AGENT",
     "title": "Konfigurationen",
     "subtitle": "Einstellungen für diesen Agenten: Identität, Modell, Verhalten und Status.",

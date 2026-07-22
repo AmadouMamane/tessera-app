@@ -168,7 +168,7 @@ async def observability_agent_evaluations(
 
 @router.get("/observability/agent-prompts")
 async def observability_agent_prompts(
-    lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID
+    lang: str = "fr", agent_id: str = DEFAULT_AGENT_ID, at: str | None = None
 ) -> dict[str, object]:
     """Agent Prompts ("Prompts") dashboard (reference image 28).
 
@@ -177,10 +177,14 @@ async def observability_agent_prompts(
     categories, languages, template variables, lengths and the per-prompt text
     in the detail panel are all real. Read-only (prompts live in Git). Display
     labels are localized via ``lang`` (fr/de/en). ``agent_id`` scopes the
-    in-page navigation links. Degrades to ``available: false`` on failure.
+    in-page navigation links. ``at`` (ISO instant) bounds the OT-01 overlay
+    decision history at T. Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **(await agent_prompts_mod.build_agent_prompts(lang, agent_id))}
+        return {
+            "available": True,
+            **(await agent_prompts_mod.build_agent_prompts(lang, agent_id, at)),
+        }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_prompts: failed: {exc}\n")
         return {"available": False}
@@ -319,6 +323,7 @@ async def observability_agent_connaissances(lang: str = "fr") -> dict[str, objec
 async def observability_agent_configurations(
     agent_id: str = DEFAULT_AGENT_ID,
     lang: str = "fr",
+    at: str | None = None,
 ) -> dict[str, object]:
     """Agent Configurations dashboard (reference image 26).
 
@@ -326,12 +331,13 @@ async def observability_agent_configurations(
     corpus-backed sources into the operator configuration form. Degrades to
     ``available: false`` so the dashboard keeps rendering if a local source is
     temporarily unreadable. ``agent_id`` scopes the in-page navigation links;
-    ``lang`` localizes the chrome and the editable option values.
+    ``lang`` localizes the chrome and the editable option values. ``at`` (ISO
+    instant) bounds the OT-01 per-object history at T.
     """
     try:
         return {
             "available": True,
-            **(await agent_configurations_mod.compute_agent_configurations(agent_id, lang)),
+            **(await agent_configurations_mod.compute_agent_configurations(agent_id, lang, at)),
         }
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.agent_configurations: failed: {exc}\n")
