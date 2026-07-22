@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tessera.guard.adapter import check_user_input
+from tessera.guard.audit import GUARD_ACTOR
 from tessera.guard.decisions import load_policy
 
 if TYPE_CHECKING:
@@ -61,7 +62,7 @@ def load_forbidden() -> list[str]:
 
 
 def _refused(text: str, policy: Policy) -> bool:
-    return not check_user_input(text, policy=policy).allowed
+    return not check_user_input(text, policy=policy, actor=GUARD_ACTOR).allowed
 
 
 def compute_refusal_calibration(

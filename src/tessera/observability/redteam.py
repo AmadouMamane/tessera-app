@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tessera.guard.adapter import check_user_input
+from tessera.guard.audit import GUARD_ACTOR
 from tessera.guard.decisions import load_policy
 from tessera.observability.firewall_efficacy import load_injection_prompts
 
@@ -73,7 +74,11 @@ def run_redteam(
     attacks = list(corpus) if corpus is not None else load_adversarial_corpus()
     active_policy = policy or load_policy()
 
-    bypassed = [text for text in attacks if check_user_input(text, policy=active_policy).allowed]
+    bypassed = [
+        text
+        for text in attacks
+        if check_user_input(text, policy=active_policy, actor=GUARD_ACTOR).allowed
+    ]
     n_attacks = len(attacks)
     snapshot = RedTeamSnapshot(
         ran_at=datetime.now(UTC).isoformat(),

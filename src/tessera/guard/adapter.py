@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     # Runtime-imported lazily inside the functions below to avoid a
     # guard.adapter -> agent.state -> agent.graph -> guard.adapter import cycle.
     from tessera.agent.state import GuardDecisionRecord
+    from tessera.authz import Actor
 
 __all__ = [
     "GuardedResult",
@@ -247,6 +248,7 @@ def check_user_input(
     text: str,
     *,
     policy: Policy | None = None,
+    actor: Actor,
 ) -> InputCheckResult:
     """Check raw user input for prompt injection (limes) and role-play sanitisation.
 
@@ -261,6 +263,12 @@ def check_user_input(
         An :class:`InputCheckResult` whose ``allowed`` flag is ``False`` when
         limes refused (or could not look), or ``True`` with a (potentially
         redacted) ``sanitised_text`` when the input is acceptable.
+
+    Args:
+        text: Raw text to inspect.
+        policy: Optional compiled policy override for tests and offline evaluations.
+        actor: Verified principal behind the input, or the named guard actor when no human
+            principal exists at the call site.
     """
     from tessera.agent.state import GuardDecisionRecord
 
@@ -285,7 +293,7 @@ def check_user_input(
             arguments={"text": "[redacted — injection refused by limes]"},
             decisions=records,
             sink=settings.guard.audit_sink,
-            actor=GUARD_ACTOR,
+            actor=actor,
             outcome="denied",
         )
         _record_guard_decision("user_input", "denied")
@@ -327,7 +335,7 @@ def check_user_input(
         arguments={"text": "[redacted — input checked]"},
         decisions=records,
         sink=settings.guard.audit_sink,
-        actor=GUARD_ACTOR,
+        actor=actor,
         outcome="allowed",
     )
     _record_guard_decision("user_input", "allowed")

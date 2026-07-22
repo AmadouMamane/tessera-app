@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from tessera.guard.adapter import check_user_input
+from tessera.guard.audit import GUARD_ACTOR
 from tessera.guard.decisions import load_policy
 from tessera.guard.limes_backend import injection_witness
 
@@ -101,9 +102,17 @@ def compute_efficacy(
     negatives = list(benign) if benign is not None else load_benign()
     policy = load_policy()
 
-    tp = sum(1 for text in positives if not check_user_input(text, policy=policy).allowed)
+    tp = sum(
+        1
+        for text in positives
+        if not check_user_input(text, policy=policy, actor=GUARD_ACTOR).allowed
+    )
     fn = len(positives) - tp
-    fp = sum(1 for text in negatives if not check_user_input(text, policy=policy).allowed)
+    fp = sum(
+        1
+        for text in negatives
+        if not check_user_input(text, policy=policy, actor=GUARD_ACTOR).allowed
+    )
     tn = len(negatives) - fp
 
     precision = tp / (tp + fp) if (tp + fp) else 0.0

@@ -1195,12 +1195,13 @@ def run(state: AgentState) -> dict[str, object]:
         check_user_input,
         emit_refuse_policy,
     )
+    from tessera.guard.audit import GUARD_ACTOR
 
     # Injection check runs before any language pinning logic. The sandbox can
     # disable it for a turn via guard_overrides; the decision is still recorded
     # for audit, but a matched pattern no longer short-circuits the graph.
     injection_disabled = "prompt_injection" in set(state.get("guard_overrides") or [])
-    input_check = check_user_input(state["user_input"])
+    input_check = check_user_input(state["user_input"], actor=GUARD_ACTOR)
     guard_decisions: list[GuardDecisionRecord] = list(state.get("guard_decisions") or []) + list(
         input_check.decisions
     )

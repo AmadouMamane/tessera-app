@@ -89,7 +89,7 @@ async def form_memories(scope: MemoryScope, turn: TurnRecord) -> None:
     facts = await _extract_facts(turn)
     written = 0
     for fact in facts:
-        screened = governance.screen_memory(fact)
+        screened = governance.screen_memory(fact, actor=_REFLECTOR_ACTOR)
         if not screened.allowed:
             governance.audit_memory(
                 action="memory.write",

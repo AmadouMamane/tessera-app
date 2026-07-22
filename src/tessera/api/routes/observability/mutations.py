@@ -495,7 +495,7 @@ async def observability_prompt_overlay_propose(
 
     actor = actor_of(session)
     try:
-        state = prompt_overlay_mod.propose_overlay(body.agent_id, body.text, author=actor.principal)
+        state = prompt_overlay_mod.propose_overlay(body.agent_id, body.text, actor=actor)
     except (prompt_overlay_mod.OverlayGuardRefusedError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     emit_governance_mutation(

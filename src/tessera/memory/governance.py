@@ -126,14 +126,14 @@ def _mask_secrets(text: str) -> tuple[str, bool]:
     return out, masked
 
 
-def screen_memory(text: str) -> ScreenResult:
+def screen_memory(text: str, *, actor: Actor) -> ScreenResult:
     """Screen a memory candidate for injection content, then minimise PII.
 
     Rejects outright when the text matches an injection deny pattern (a poisoned
     memory must never be stored or shown). Otherwise masks card numbers and full
     IBANs and returns the minimised text.
     """
-    check = check_user_input(text)
+    check = check_user_input(text, actor=actor)
     if not check.allowed:
         return ScreenResult(allowed=False, text="", rationale="matched injection deny pattern")
     minimised, masked = _mask_secrets(check.sanitised_text)

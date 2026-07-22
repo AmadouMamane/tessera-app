@@ -175,7 +175,7 @@ async def rectify_memory_item(
 ) -> Response:
     """Rectify a stored memory's text (GDPR Art. 16). Re-screened and re-embedded."""
     subject_id = str(conversation_id)
-    screened = governance.screen_memory(payload.text)
+    screened = governance.screen_memory(payload.text, actor=actor_of(session))
     if not screened.allowed:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="rejected")
     updated = await persistent.update_memory_text(

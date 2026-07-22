@@ -10,6 +10,7 @@ import pytest
 
 from tessera.agent.identity import current_conversation_id, current_turn_id
 from tessera.api.routes.observability import comprendre as comprendre_route
+from tessera.authz import Actor
 from tessera.guard import audit as guard_audit
 from tessera.guard.adapter import check_user_input
 from tessera.observability import agent_release, comprendre, guard_activity, turn_evidence
@@ -164,7 +165,9 @@ def test_allowed_input_is_journaled_with_its_server_turn_identity(
     conversation_token = current_conversation_id.set("conversation-real")
     turn_token = current_turn_id.set("turn-real")
     try:
-        result = check_user_input("Bonjour, quel est le solde de mon compte ?")
+        result = check_user_input(
+            "Bonjour, quel est le solde de mon compte ?", actor=guard_audit.GUARD_ACTOR
+        )
     finally:
         current_turn_id.reset(turn_token)
         current_conversation_id.reset(conversation_token)
@@ -175,6 +178,27 @@ def test_allowed_input_is_journaled_with_its_server_turn_identity(
     assert entries[0]["outcome"] == "allowed"
     assert entries[0]["conversation_id"] == "conversation-real"
     assert entries[0]["turn_id"] == "turn-real"
+
+
+def test_allowed_input_journal_preserves_a_verified_human_actor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ledger = tmp_path / "audit.log"
+    settings = get_settings()
+    monkeypatch.setattr(settings.guard, "audit_file", ledger)
+    monkeypatch.setattr(settings.guard, "audit_sink", "file")
+    monkeypatch.setattr(guard_audit, "_last_hash", None)
+
+    result = check_user_input(
+        "Correction d'une mémoire client",
+        actor=Actor(principal="operator@example.test", role="super-admin"),
+    )
+
+    assert result.allowed is True
+    entries = [json.loads(line) for line in ledger.read_text().splitlines() if line.strip()]
+    assert entries[0]["actor"] == "operator@example.test"
+    assert entries[0]["actor_role"] == "super-admin"
 
 
 def test_t3_day_starts_at_midnight_europe_paris_in_summer_and_winter() -> None:

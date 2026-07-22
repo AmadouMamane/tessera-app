@@ -266,6 +266,15 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
   TypeScript et Biome verts. Le contrôle DOM via le navigateur intégré est bloqué par sa politique
   d'accès à l'URL locale ; aucun contournement n'a été tenté. La validation visuelle finale reste
   donc celle du preview opérateur pendant le HALT éclair.
+- **Premier gate sur l'arbre rebasé, rouge utile** : la nouvelle entrée d'autorisation révélait
+  qu'une rectification mémoire authentifiée écrivait d'abord `actor=system:guard`, avant son acte
+  métier correctement attribué. Le ratchet transversal
+  `test_every_governed_act_names_the_principal_who_performed_it` l'a refusé. Correction : `Actor`
+  est désormais obligatoire sur `check_user_input` et `screen_memory`, sans valeur par défaut ;
+  les routes humaines propagent `actor_of(session)` et chaque sonde/tâche système nomme son acteur.
+  La proposition de prompt transporte elle aussi l'`Actor` vérifié au lieu de dupliquer une chaîne
+  `author`. Validation après correction : 122 tests ciblés verts, dont les 45 témoins d'auteur,
+  Ruff, format et mypy verts. Le gate-twice complet est à relancer sur ce nouvel arbre.
 - Owed hors lot, sans action : le monde du preview reste incohérent pour une démo tant que son
   seed ne produit pas ensemble une spine et un ledger représentatifs. Le seed d'un monde cohérent
   appartient à une passe dédiée.

@@ -30,6 +30,8 @@ from tessera.settings import get_settings
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tessera.authz import Actor
+
 __all__ = [
     "MAX_OVERLAY_CHARS",
     "OverlayGuardRefusedError",
@@ -107,7 +109,7 @@ def _record(bucket: dict[str, Any], event: str, author: str, chars: int) -> None
     bucket["history"] = history[:_HISTORY_LIMIT]
 
 
-def propose_overlay(agent_id: str, text: str, *, author: str) -> dict[str, Any]:
+def propose_overlay(agent_id: str, text: str, *, actor: Actor) -> dict[str, Any]:
     """Store a draft overlay proposal (operator act, ADR 0037 §2).
 
     The text is screened by the SAME limes-backed injection guard that screens
@@ -126,7 +128,7 @@ def propose_overlay(agent_id: str, text: str, *, author: str) -> dict[str, Any]:
         # import-light (the audit-run circular-import trap).
         from tessera.guard.adapter import check_user_input
 
-        check = check_user_input(text)
+        check = check_user_input(text, actor=actor)
         if not check.allowed:
             raise OverlayGuardRefusedError(
                 "the injection guard refused this overlay text — refused, never stored"
@@ -135,8 +137,8 @@ def propose_overlay(agent_id: str, text: str, *, author: str) -> dict[str, Any]:
     bucket = store.get(agent_id)
     if not isinstance(bucket, dict):
         bucket = {}
-    bucket["draft"] = {"text": text, "author": author, "at": _now()}
-    _record(bucket, "proposed", author, len(text))
+    bucket["draft"] = {"text": text, "author": actor.principal, "at": _now()}
+    _record(bucket, "proposed", actor.principal, len(text))
     store[agent_id] = bucket
     _save_all(store)
     return load_overlay_state(agent_id)

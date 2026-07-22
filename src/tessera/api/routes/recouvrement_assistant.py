@@ -152,6 +152,7 @@ async def _persist_recouvrement_turn(
 @router.post("/api/recouvrement-assistant/message")
 async def recouvrement_assistant_message(
     payload: RecouvrementAssistantRequest,
+    session: Annotated[SessionContext, Depends(require_collections_operator)],
 ) -> dict[str, object]:
     """Run the first specialised Recouvrement graph and return drawer-ready cards.
 
@@ -171,7 +172,7 @@ async def recouvrement_assistant_message(
     a fabricated drawer payload — the contract's ``artifact`` cannot be honestly built
     for a turn that never ran.
     """
-    check = check_user_input(payload.message)
+    check = check_user_input(payload.message, actor=actor_of(session))
     if not check.allowed:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

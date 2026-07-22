@@ -37,6 +37,8 @@ from tessera.retrieval import embeddings
 from tessera.retrieval.store import get_pool
 from tessera.settings import get_settings
 
+_MEMORY_READ_ACTOR: Final = Actor.system("memory-read-screen")
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -451,7 +453,7 @@ class PersistentBackend(SummaryBackend):
         # and masking residual PII (ADR 0007, anti-poisoning).
         screened: list[MemoryItem] = []
         for item in items:
-            result = governance.screen_memory(item.text)
+            result = governance.screen_memory(item.text, actor=_MEMORY_READ_ACTOR)
             if result.allowed:
                 screened.append(replace(item, text=result.text))
         governance.audit_memory(

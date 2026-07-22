@@ -944,10 +944,10 @@ def _governance_stores(monkeypatch: pytest.MonkeyPatch) -> None:
     # Prompt-overlay lifecycle (13th/14th acts, ADR 0037): stub the STORE (it
     # wants a JSON file on disk and the limes guard); route, emitter and chain
     # stay real. The stubs assert the routes pass the verified principal.
-    def _propose_overlay(agent_id: str, text: str, *, author: str) -> dict[str, object]:
-        assert author, "the propose route must pass the verified principal"
+    def _propose_overlay(agent_id: str, text: str, *, actor: Actor) -> dict[str, object]:
+        assert actor.principal, "the propose route must pass the verified principal"
         return {
-            "draft": {"text": text, "author": author, "at": "probe"},
+            "draft": {"text": text, "author": actor.principal, "at": "probe"},
             "approved": None,
             "history": [],
         }

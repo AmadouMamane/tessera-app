@@ -24,11 +24,16 @@ import pytest
 
 from tessera.agent import reporter
 from tessera.agent.state import AgentState, new_state
+from tessera.authz import Actor
 from tessera.observability import prompt_overlay
 from tessera.settings import LanguageCode
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def _actor(principal: str) -> Actor:
+    return Actor(principal=principal, role="super-admin")
 
 
 @pytest.fixture(autouse=True)
@@ -43,7 +48,7 @@ def _tmp_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_propose_stores_an_attributed_draft() -> None:
     state = prompt_overlay.propose_overlay(
-        "support-client", "Mentionner la campagne A.", author="alice"
+        "support-client", "Mentionner la campagne A.", actor=_actor("alice")
     )
     assert state["draft"] == {
         "text": "Mentionner la campagne A.",
@@ -56,7 +61,9 @@ def test_propose_stores_an_attributed_draft() -> None:
 
 
 def test_approval_by_another_person_promotes_and_serves() -> None:
-    prompt_overlay.propose_overlay("support-client", "Mentionner la campagne A.", author="alice")
+    prompt_overlay.propose_overlay(
+        "support-client", "Mentionner la campagne A.", actor=_actor("alice")
+    )
     state = prompt_overlay.review_overlay("support-client", "approve", reviewer="bob")
     assert state["draft"] is None
     assert state["approved"]["text"] == "Mentionner la campagne A."
@@ -66,7 +73,7 @@ def test_approval_by_another_person_promotes_and_serves() -> None:
 
 
 def test_self_approval_is_refused_and_the_draft_survives() -> None:
-    prompt_overlay.propose_overlay("support-client", "Texte.", author="alice")
+    prompt_overlay.propose_overlay("support-client", "Texte.", actor=_actor("alice"))
     with pytest.raises(prompt_overlay.SelfApprovalError):
         prompt_overlay.review_overlay("support-client", "approve", reviewer="alice")
     state = prompt_overlay.load_overlay_state("support-client")
@@ -76,16 +83,16 @@ def test_self_approval_is_refused_and_the_draft_survives() -> None:
 
 
 def test_reject_discards_the_draft_and_keeps_the_serving_text() -> None:
-    prompt_overlay.propose_overlay("support-client", "V1.", author="alice")
+    prompt_overlay.propose_overlay("support-client", "V1.", actor=_actor("alice"))
     prompt_overlay.review_overlay("support-client", "approve", reviewer="bob")
-    prompt_overlay.propose_overlay("support-client", "V2.", author="alice")
+    prompt_overlay.propose_overlay("support-client", "V2.", actor=_actor("alice"))
     state = prompt_overlay.review_overlay("support-client", "reject", reviewer="bob")
     assert state["draft"] is None
     assert state["approved"]["text"] == "V1."  # the serving text is untouched
 
 
 def test_revoke_retires_the_serving_overlay() -> None:
-    prompt_overlay.propose_overlay("support-client", "V1.", author="alice")
+    prompt_overlay.propose_overlay("support-client", "V1.", actor=_actor("alice"))
     prompt_overlay.review_overlay("support-client", "approve", reviewer="bob")
     state = prompt_overlay.review_overlay("support-client", "revoke", reviewer="bob")
     assert state["approved"] is None
@@ -93,9 +100,9 @@ def test_revoke_retires_the_serving_overlay() -> None:
 
 
 def test_approving_an_empty_draft_is_the_governed_retirement() -> None:
-    prompt_overlay.propose_overlay("support-client", "V1.", author="alice")
+    prompt_overlay.propose_overlay("support-client", "V1.", actor=_actor("alice"))
     prompt_overlay.review_overlay("support-client", "approve", reviewer="bob")
-    prompt_overlay.propose_overlay("support-client", "", author="alice")
+    prompt_overlay.propose_overlay("support-client", "", actor=_actor("alice"))
     state = prompt_overlay.review_overlay("support-client", "approve", reviewer="bob")
     assert state["approved"] is None
 
@@ -107,7 +114,7 @@ def test_review_without_a_draft_says_so() -> None:
 
 def test_an_oversized_draft_is_refused_never_stored() -> None:
     with pytest.raises(ValueError, match="2000"):
-        prompt_overlay.propose_overlay("support-client", "x" * 2001, author="alice")
+        prompt_overlay.propose_overlay("support-client", "x" * 2001, actor=_actor("alice"))
     assert prompt_overlay.load_overlay_state("support-client")["draft"] is None
 
 
@@ -119,10 +126,12 @@ def test_a_guard_refused_draft_is_refused_never_stored(
 
     monkeypatch.setattr(
         "tessera.guard.adapter.check_user_input",
-        lambda _text: SimpleNamespace(allowed=False, decisions=(), sanitised_text=""),
+        lambda _text, *, actor: SimpleNamespace(
+            allowed=False, decisions=(), sanitised_text="", actor=actor
+        ),
     )
     with pytest.raises(prompt_overlay.OverlayGuardRefusedError):
-        prompt_overlay.propose_overlay("support-client", "texte quelconque", author="alice")
+        prompt_overlay.propose_overlay("support-client", "texte quelconque", actor=_actor("alice"))
     assert prompt_overlay.load_overlay_state("support-client")["draft"] is None
 
 
