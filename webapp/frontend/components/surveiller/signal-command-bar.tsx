@@ -18,6 +18,7 @@ import { useSearchParams } from "next/navigation";
 import { type ComponentType, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
+import { LiveBeacon } from "@/components/cockpit/live-beacon";
 import { CHIP_ACTIVE, CHIP_BASE, CHIP_NEUTRAL, SelectChip } from "@/components/cockpit/rail-chip";
 import {
   GoToDateButton,
@@ -567,6 +568,8 @@ function LectureMenu({
           <span className="font-semibold text-[var(--tessera-text)]">
             {t(labelKeyFor[reading])}
           </span>
+          {/* Heartbeat only in Maintenant — the reading that follows the present. */}
+          {reading === "live" ? <LiveBeacon /> : null}
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-600/70 dark:text-gold-400/70" />
         </button>
       </DropdownMenuTrigger>

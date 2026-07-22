@@ -80,6 +80,8 @@ test("the as-of picker is the shared premium calendar, never the OS datetime pan
   // No native datetime-local input on the strip — its OS-drawn calendar can't be
   // themed to the lacquered rail (the foreign white panel the refonte removed).
   await expect(rail.locator('input[type="datetime-local"]')).toHaveCount(0);
+  // Live wears the heartbeat (one beacon, on the Lecture chip).
+  await expect(rail.locator("span.animate-ping")).toHaveCount(1);
 
   await rail.getByRole("button", { name: "Voir à date" }).click();
   const dialog = rail.getByRole("dialog", { name: "Voir à date" });
@@ -93,6 +95,8 @@ test("the as-of picker is the shared premium calendar, never the OS datetime pan
   await expect(dialog).toHaveCount(0);
   await expect(rail.getByText("Lecture à date")).toBeVisible();
   await expect(page).toHaveURL(/asof=/);
+  // The heartbeat never beats in the past.
+  await expect(rail.locator("span.animate-ping")).toHaveCount(0);
 
   await rail.getByRole("button", { name: "Revenir au direct" }).click();
   await expect(rail.getByText("Live", { exact: true })).toBeVisible();

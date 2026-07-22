@@ -30,6 +30,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { CalendarPopover } from "@/components/cockpit/calendar-popover";
+import { LiveBeacon } from "@/components/cockpit/live-beacon";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Truncate } from "@/components/ui/truncate";
@@ -316,20 +318,21 @@ export function EtatADate() {
           {/* The active time-mode, always visible (registre §5): Live or the
               reconstruction instant, worded by the backend (`meta.as_of_label`). */}
           {data?.meta?.as_of_label ? (
+            // Rail grammar (registre §5): a chosen instant wears champagne —
+            // never violet — and Live carries the heartbeat, not a static dot.
             <span
               className={cn(
                 "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs",
                 asOf === null
                   ? "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)]"
-                  : "border-[#7c5cf5]/60 bg-[#7c5cf5]/10 text-[#c9b8ff]",
+                  : "border-gold-500/45 bg-gold-500/[0.12] text-gold-700 dark:text-gold-200",
               )}
             >
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  asOf === null ? "bg-emerald-400" : "bg-[#b9a6ff]",
-                )}
-              />
+              {asOf === null ? (
+                <LiveBeacon />
+              ) : (
+                <span className="h-1.5 w-1.5 rounded-full bg-gold-400" />
+              )}
               {data.meta.as_of_label}
             </span>
           ) : null}
@@ -474,32 +477,21 @@ function ScopeBar({ t, scope }: { t: T; scope: Scope }) {
 
 // The selector folds to a real fleet id; this sentinel keeps the historical default.
 const DEFAULT_AGENT_OPTION = "— défaut —";
-const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 /** Date -> "YYYY-MM-DDTHH:MM" (local), the datetime-local contract. */
 function fmtLocal(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-/** 42 day-cells (6 weeks) for a Monday-first month grid. */
-function monthGrid(month: Date): Date[] {
-  const first = startOfMonth(month);
-  const mondayOffset = (first.getDay() + 6) % 7;
-  const start = new Date(first.getFullYear(), first.getMonth(), first.getDate() - mondayOffset);
-  return Array.from(
-    { length: 42 },
-    (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i),
-  );
-}
-const sameDay = (a: Date, b: Date) =>
-  a.getFullYear() === b.getFullYear() &&
-  a.getMonth() === b.getMonth() &&
-  a.getDate() === b.getDate();
 
-/** Premium date+time picker: a homemade calendar popover (no native picker). */
+/**
+ * Premium date+time picker — the SHARED CalendarPopover in an `sr01-menu` shell
+ * (the rail grammar): never a second homemade month grid, never a native
+ * datetime panel, and champagne — not violet — for a chosen instant. Draft
+ * semantics are the caller's: `value` is a local "YYYY-MM-DDTHH:MM" string that
+ * the page applies with "Reconstituer", so the popover stays open after a day
+ * pick (day + time are tuned together, then reconstructed).
+ */
 function DateTimePicker({
   t,
   value,
@@ -517,23 +509,12 @@ function DateTimePicker({
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, () => setOpen(false));
   const selected = value ? new Date(value) : null;
-  const [month, setMonth] = useState(() => startOfMonth(selected ?? new Date()));
-  useEffect(() => {
-    if (open) setMonth(startOfMonth(selected ?? new Date()));
-    // biome-ignore lint/correctness/useExhaustiveDependencies: only re-center when opening
-  }, [open]);
-
-  const days = useMemo(() => monthGrid(month), [month]);
-  const monthLabel = useMemo(
-    () => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(month),
-    [locale, month],
-  );
   const time = value ? value.slice(11, 16) : "12:00";
-  const today = new Date();
 
-  function pickDay(d: Date) {
+  function pickDay(day: string) {
+    const [y = 1970, m = 1, d = 1] = day.split("-").map(Number);
     const [hh = "12", mm = "00"] = time.split(":");
-    onChange(fmtLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate(), +hh, +mm)));
+    onChange(fmtLocal(new Date(y, m - 1, d, +hh, +mm)));
   }
   function pickTime(value_: string) {
     const base = selected ?? new Date();
@@ -557,12 +538,14 @@ function DateTimePicker({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex h-9 w-[15rem] items-center gap-2 rounded-md border bg-[var(--tessera-bg)] px-2.5 text-left text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-[#7c5cf5]/60",
-          selected ? "border-[#7c5cf5]/60" : "border-[var(--tessera-border)]",
+          "flex h-9 w-[15rem] items-center gap-2 rounded-md border bg-[var(--tessera-bg)] px-2.5 text-left text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:border-gold-500/60",
+          selected ? "border-gold-500/45 bg-gold-500/[0.08]" : "border-[var(--tessera-border)]",
         )}
       >
-        <CalendarDays className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+        <CalendarDays className="h-4 w-4 shrink-0 text-gold-600 dark:text-gold-400" />
         <span className="truncate text-[var(--tessera-text)]">{trigger}</span>
+        {/* Static dot: the page's ONE heartbeat lives on the mode badge above —
+            a second beating dot on the same surface would just compete with it. */}
         {live ? (
           <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
         ) : (
@@ -570,60 +553,14 @@ function DateTimePicker({
         )}
       </button>
       {open ? (
-        <div className="absolute left-0 z-50 mt-1 w-[19rem] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.42)]">
-          <div className="mb-2 flex items-center justify-between">
-            <button
-              type="button"
-              aria-label={t("prevMonth")}
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-              className="grid h-7 w-7 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-[0.8rem] font-semibold capitalize text-[var(--tessera-text)]">
-              {monthLabel}
-            </span>
-            <button
-              type="button"
-              aria-label={t("nextMonth")}
-              onClick={() => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-              className="grid h-7 w-7 place-items-center rounded-md border border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-[0.6rem] font-medium uppercase text-[var(--tessera-text-muted)]">
-            {WEEKDAYS.map((d, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: fixed weekday header with a duplicate "M"
-              <span key={`${d}-${i}`}>{d}</span>
-            ))}
-          </div>
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {days.map((d) => {
-              const inMonth = d.getMonth() === month.getMonth();
-              const isSel = selected ? sameDay(d, selected) : false;
-              const isToday = sameDay(d, today);
-              return (
-                <button
-                  key={fmtLocal(d)}
-                  type="button"
-                  onClick={() => pickDay(d)}
-                  className={cn(
-                    "h-7 rounded-md text-[0.72rem] tabular-nums transition-colors",
-                    isSel
-                      ? "bg-[#6d4aed] font-semibold text-white"
-                      : "hover:bg-[var(--tessera-surface)]",
-                    !isSel && inMonth ? "text-[var(--tessera-text)]" : "",
-                    !isSel && !inMonth ? "text-[var(--tessera-text-muted)]/50" : "",
-                    !isSel && isToday ? "ring-1 ring-inset ring-[#7c5cf5]/60" : "",
-                  )}
-                >
-                  {d.getDate()}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-3">
+        <div className="sr01-menu absolute left-0 z-50 mt-1 w-[292px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] shadow-[0_20px_60px_rgba(0,0,0,0.42)]">
+          <CalendarPopover
+            selectedDate={selected ?? new Date()}
+            onPick={pickDay}
+            labels={{ prevMonth: t("prevMonth"), nextMonth: t("nextMonth") }}
+            className="w-full border-0 bg-transparent shadow-none"
+          />
+          <div className="flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3 pb-3 pt-2.5">
             <label className="flex items-center gap-2 text-[0.72rem] text-[var(--tessera-text-muted)]">
               <Clock className="h-3.5 w-3.5" />
               <input
@@ -631,7 +568,7 @@ function DateTimePicker({
                 value={time}
                 onChange={(e) => pickTime(e.target.value)}
                 aria-label={t("dateTime")}
-                className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-1 text-[var(--tessera-text)] outline-none [color-scheme:dark]"
+                className="h-8 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 text-xs text-[var(--tessera-text)] outline-none [color-scheme:dark]"
               />
             </label>
             <button

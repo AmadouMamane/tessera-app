@@ -22,6 +22,7 @@ import type { ReactNode } from "react";
 import { useAsOf } from "@/components/agir/agir-rail";
 import { AsOfPickerChip } from "@/components/cockpit/asof-picker-chip";
 import { CardInfo } from "@/components/cockpit/card-info";
+import { LiveBeacon } from "@/components/cockpit/live-beacon";
 import { CHIP_ACTIVE, CHIP_BASE, SelectChip } from "@/components/cockpit/rail-chip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { useTemporalState } from "@/components/overview/temporal-rail";
@@ -184,6 +185,7 @@ function AgentRail({
           <span className="font-semibold text-[var(--tessera-text)]">
             {asOf ? ta("asofBadge") : ta("liveBadge")}
           </span>
+          {asOf ? null : <LiveBeacon />}
         </span>
         <SelectChip
           icon={Clock3}

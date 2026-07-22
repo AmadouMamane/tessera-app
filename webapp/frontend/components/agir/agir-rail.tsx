@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { AsOfPickerChip } from "@/components/cockpit/asof-picker-chip";
+import { LiveBeacon } from "@/components/cockpit/live-beacon";
 import { CHIP_ACTIVE, CHIP_BASE } from "@/components/cockpit/rail-chip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
@@ -79,6 +80,9 @@ export function AgirRail({
           <span className="font-semibold text-[var(--tessera-text)]">
             {asof ? t("asofBadge") : t("liveBadge")}
           </span>
+          {/* The heartbeat: Live here is URL-derived (no ?asof), true by
+              construction — the one place the beacon may beat (live-beacon). */}
+          {asof ? null : <LiveBeacon />}
         </span>
         <AsOfPickerChip value={asof} onChange={setAsof} />
       </div>
