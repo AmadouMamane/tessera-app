@@ -500,7 +500,7 @@ export function SignalBand({
     : t("signal.justNow");
   // The socle line appears ONLY when the gate is really holding some agents back
   // (real blocked count) — it explains why "prêts < total", never a blanket claim.
-  const showSocle = live.agentsWithRelease > 0 && live.passedAgents < live.agentsWithRelease;
+  const showSocle = (live.evaluationBuckets?.review ?? 0) > 0;
   return (
     <div className="mt-8 flex w-full max-w-[1120px] flex-col items-center gap-[16px]">
       {/* One bounded band, four capability columns — compact, stacks on mobile,

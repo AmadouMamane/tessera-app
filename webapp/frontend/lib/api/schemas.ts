@@ -6426,3 +6426,46 @@ export const OverviewSnapshotSchema = z.object({
   meta: z.unknown().optional(),
 });
 export type OverviewSnapshotEnvelope = z.infer<typeof OverviewSnapshotSchema>;
+
+// ---------------------------------------------------------------------------
+// Public `/comprendre` proof facts — one backend aggregate, tile-level empties
+// ---------------------------------------------------------------------------
+
+export const ComprendrePayloadSchema = z
+  .object({
+    available: z.literal(true),
+    generated_at: z.string().min(1),
+    fleet: z
+      .object({
+        observed_agents: z.number().int().nonnegative().nullable(),
+        last_signal_at: z.string().min(1).nullable(),
+        is_silent: z.boolean().nullable(),
+        window_hours: z.number().int().positive(),
+      })
+      .strict(),
+    guard: z
+      .object({
+        controlled_today: z.number().int().nonnegative().nullable(),
+        blocked_today: z.number().int().nonnegative().nullable(),
+        since: z.string().min(1),
+      })
+      .strict(),
+    evaluations: z
+      .object({
+        ready_agents: z.number().int().nonnegative().nullable(),
+        review_agents: z.number().int().nonnegative().nullable(),
+      })
+      .strict(),
+    audit: z
+      .object({
+        last_verified_at: z.string().min(1).nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const ComprendreResponseSchema = z.discriminatedUnion("available", [
+  ComprendrePayloadSchema,
+  z.object({ available: z.literal(false) }).strict(),
+]);
+export type ComprendreResponse = z.infer<typeof ComprendreResponseSchema>;

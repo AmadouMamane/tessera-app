@@ -7398,6 +7398,7 @@
       "activityUnavailable": "Compteurs indisponibles",
       "pillarEvaluate": "Évaluation avant production",
       "evaluateReady": "{ready, plural, one {# agent sur {total} prêt} other {# agents sur {total} prêts}}",
+      "evaluateBuckets": "{ready, plural, one {# agent prêt} other {# agents prêts}} · {review} à évaluer ou réévaluer",
       "evaluateReadyStale": "{ready, plural, one {# agent sur {total} prêt} other {# agents sur {total} prêts}} · re-éval requise",
       "evaluationsActive": "Évaluations actives",
       "pillarProve": "Preuves à tout instant",
@@ -9205,6 +9206,275 @@
     "payment_options_safety": "Sûreté des options de paiement",
     "amount_consistency": "Cohérence des montants"
   },
+  "comprendreV2": {
+    "pageTitle": "Comprendre Tessera — en 3 minutes",
+    "pageLead": "Tessera est le poste de pilotage des agents d'intelligence artificielle d'une banque.",
+    "hero": {
+      "title": "Comprendre Tessera — en 3 minutes",
+      "lead": "Tessera est le poste de pilotage des agents d'intelligence artificielle d'une banque.",
+      "body": "Une banque peut employer plusieurs agents : l'un répond aux clients, un autre accompagne les ouvertures de compte, un troisième aide les équipes de recouvrement. Ils ont pu être construits par des équipes différentes, avec des technologies différentes. Tessera permet pourtant de répondre à quatre questions simples : que font-ils ? Leurs échanges sont-ils protégés ? Sont-ils prêts à être exposés ? Et peut-on démontrer, preuves à l'appui, ce qui s'est passé ?",
+      "summary": "Tessera supervise les agents en temps réel, protège leurs échanges, les évalue avant leur mise à disposition et conserve les preuves nécessaires pour reconstituer chaque décision.",
+      "questionsLabel": "Quatre questions simples",
+      "questions": [
+        "Que font-ils ?",
+        "Leurs échanges sont-ils protégés ?",
+        "Sont-ils prêts à être exposés ?",
+        "Peut-on démontrer, preuves à l'appui, ce qui s'est passé ?"
+      ]
+    },
+    "diagram": {
+      "columns": [
+        {
+          "title": "Espaces métier",
+          "items": ["Site client · Assistant IA", "Espace recouvrement · Collaborateurs"],
+          "caption": "Expérience métier sans exposition de la machinerie"
+        },
+        {
+          "title": "Agents IA",
+          "items": [
+            "Répondre aux clients",
+            "Ouvrir un compte",
+            "Gérer les impayés",
+            "…et d'autres agents"
+          ]
+        },
+        {
+          "title": "Cockpit",
+          "items": [
+            "Supervision en temps réel",
+            "Tests & diagnostics",
+            "Évaluation avant production",
+            "Preuves & audit"
+          ],
+          "caption": "La salle des machines de la flotte"
+        }
+      ],
+      "shield": "Sécurité à chaque échange (contrôles en ligne)",
+      "audit": {
+        "title": "Registre d'audit",
+        "body": "Journal des décisions et des événements ; toute altération devient détectable"
+      },
+      "door": "Une seule porte, à sens unique : l'opérateur peut aller voir ce que vivent les clients ; l'inverse est impossible.",
+      "legend": "Les quatre flux",
+      "flows": [
+        {
+          "label": "Accès utilisateur",
+          "detail": "Sens unique : cockpit vers espaces métier"
+        },
+        {
+          "label": "Télémétrie",
+          "detail": "Agents vers cockpit"
+        },
+        {
+          "label": "Tests & diagnostics",
+          "detail": "Cockpit vers agents"
+        },
+        {
+          "label": "Traces d'audit",
+          "detail": "Vers le registre"
+        }
+      ]
+    },
+    "journey": {
+      "title": "Tessera se place entre l'intention et l'action.",
+      "body": "Prenons un cas simple : un client en retard demande un échéancier. L'agent prépare une réponse ; Tessera vérifie le contexte avant que cette réponse ne produise un effet.",
+      "steps": [
+        {
+          "label": "01 · Demande",
+          "body": "Un client demande un échéancier."
+        },
+        {
+          "label": "02 · Agent",
+          "body": "L'agent prépare une réponse et une action."
+        },
+        {
+          "label": "03 · Contrôle",
+          "body": "Tessera vérifie :"
+        },
+        {
+          "label": "04 · Décision"
+        }
+      ],
+      "checks": [
+        "Identité et périmètre",
+        "Règle applicable",
+        "Autorisation d'agir",
+        "Besoin d'un humain"
+      ],
+      "allowed": "Autorisé : la réponse peut partir dans le périmètre prévu.",
+      "review": "Ou à confirmer : la bonne personne reçoit le cas et décide.",
+      "evidence": "Dans les deux cas, la décision, la règle, sa version et son auteur sont conservés dans une piste vérifiable.",
+      "illustrative": {
+        "label": "Exemple illustratif",
+        "status": "Confirmation humaine requise",
+        "rows": [
+          {
+            "label": "Demande",
+            "value": "Échéancier de trois mois"
+          },
+          {
+            "label": "Règle appliquée",
+            "value": "Seuil d'autonomie dépassé"
+          },
+          {
+            "label": "Responsable",
+            "value": "Manager métier désigné"
+          },
+          {
+            "label": "Preuve liée",
+            "value": "Règle, version, décision, auteur, horodatage"
+          }
+        ]
+      },
+      "after": "Dans cet exemple, Tessera intervient au moment où la réponse peut produire un effet. La plateforme supervise aussi l'agent en continu, l'évalue avant de l'exposer, et conserve ensuite la preuve de ce qui a été décidé — c'est l'objet des quatre lignes plus bas.",
+      "mechanismLead": "Ce cas précis est rédigé pour l'explication. Le mécanisme, lui, est réel :"
+    },
+    "proofLabel": "Voir la preuve",
+    "live": {
+      "title": "Quatre capacités, et pour chacune : le fait mesuré qui la prouve, à l'instant où vous lisez.",
+      "cards": [
+        {
+          "title": "Supervision en temps réel",
+          "body": "Tessera reçoit les signaux de santé, d'activité et de qualité publiés par les agents, sans intervenir dans leurs échanges."
+        },
+        {
+          "title": "Sécurité à chaque échange",
+          "body": "Chaque échange passe par un contrôle capable de bloquer une attaque, de masquer une donnée sensible ou de faire intervenir un humain."
+        },
+        {
+          "title": "Évaluation avant production",
+          "body": "Avant d'être exposé, chaque agent doit réussir un ensemble d'épreuves, dont un socle de sécurité commun."
+        },
+        {
+          "title": "Preuves à tout instant",
+          "body": "Chaque décision est inscrite dans un journal dont les entrées sont liées entre elles : toute modification devient détectable."
+        }
+      ],
+      "fleet": {
+        "fact": "{count} agents observés · dernière donnée reçue {freshness}{silent, select, true { — flotte silencieuse} other {}}",
+        "empty": "— aucun signal reçu · la flotte n'a encore rien publié",
+        "window": "Agents ayant publié une mesure sur les {hours} dernières heures"
+      },
+      "guard": {
+        "fact": "{controlled} échanges contrôlés aujourd'hui · {blocked} bloqués",
+        "empty": "— aucun échange aujourd'hui"
+      },
+      "evaluations": {
+        "fact": "{ready} agents prêts · {review} à évaluer ou réévaluer",
+        "empty": "— aucun verdict · aucune évaluation enregistrée"
+      },
+      "audit": {
+        "fact": "chaîne d'audit vérifiée {freshness}",
+        "empty": "— chaîne non vérifiée depuis le démarrage"
+      },
+      "foundation": "Le socle de sécurité bloque toute promotion dès qu'un cas critique non dérogeable échoue."
+    },
+    "time": {
+      "seconds": "il y a {count} s",
+      "minutes": "il y a {count} min",
+      "hours": "il y a {count} h"
+    },
+    "details": {
+      "items": [
+        {
+          "title": "Superviser en temps réel.",
+          "moment": "En continu",
+          "body": "Chaque agent publie en continu le récit de son activité : conversations, décisions, résultats, santé technique. Tessera ne fouille jamais à l'intérieur d'un agent — c'est l'agent qui publie, et le cockpit qui lit.",
+          "chips": [
+            "Indépendant de la technologie",
+            "Données horodatées",
+            "Transparence sur la fraîcheur"
+          ],
+          "cta": "Explorer la flotte et les mesures"
+        },
+        {
+          "title": "Protéger chaque échange.",
+          "moment": "Pendant l'échange",
+          "body": "En production, chaque échange traverse un contrôle en ligne unique. Il peut bloquer une attaque, masquer une donnée sensible, refuser une requête ou demander une intervention humaine. Les contournements connus sont documentés dans le harnais d'épreuves — soixante-trois situations publiques, dont les faiblesses encore ouvertes.",
+          "chips": ["Contrôles en ligne", "Politiques appliquées", "Journalisation systématique"],
+          "cta": "Voir les contrôles et les blocages"
+        },
+        {
+          "title": "Évaluer avant d'exposer.",
+          "moment": "Avant l'exposition",
+          "body": "Avant d'être servi aux utilisateurs, chaque agent doit prouver qu'il est prêt. Il passe un ensemble d'épreuves et reçoit un verdict de release. Toute modification significative rend son verdict à réévaluer. Un modèle y est jugé sur ce qu'il apporte au-dessus d'un plancher mesuré sans modèle — un score brut ne suffit pas.",
+          "chips": ["Harnais d'évaluation", "Socle de sécurité commun", "Verdict versionné"],
+          "cta": "Voir les évaluations et les verdicts"
+        },
+        {
+          "title": "Prouver à tout instant.",
+          "moment": "Après l'action",
+          "body": "Tessera conserve la trace de ce qui s'est passé et de ce que nous avons décidé. Le registre d'audit relie chaque entrée à la précédente : toute altération devient détectable.",
+          "chips": ["Journal chaîné", "Vérifications régulières", "Reconstitution à date"],
+          "cta": "Ouvrir la page Prouver"
+        }
+      ]
+    },
+    "roles": {
+      "title": "Chacun obtient la réponse dont il a besoin.",
+      "lead": "Une même réalité, trois lectures. Les vues changent ; les faits ne changent pas.",
+      "items": [
+        {
+          "title": "Direction",
+          "question": "Où l'IA agit-elle, et qui en répond ?",
+          "answer": "Une vue des agents, des usages, des responsables et des seuils où l'intervention humaine devient obligatoire."
+        },
+        {
+          "title": "Manager métier",
+          "question": "Que dois-je traiter aujourd'hui ?",
+          "answer": "Une file de situations expliquées, attribuées et priorisées, sans décision automatique cachée."
+        },
+        {
+          "title": "Risques · IT",
+          "question": "Pouvons-nous reconstruire et défendre la décision ?",
+          "answer": "Les règles, versions, sources, traces et preuves nécessaires pour vérifier le comportement et répondre à un audit."
+        }
+      ],
+      "truth": "Les vues changent ; les faits ne changent pas."
+    },
+    "difference": {
+      "title": "Ce qui rend Tessera différent",
+      "items": [
+        {
+          "title": "Rien n'est inventé.",
+          "body": "Un chiffre affiché est un chiffre mesuré. Quand une donnée n'existe pas encore, l'écran montre un tiret et explique pourquoi.",
+          "chip": "L1 calculé"
+        },
+        {
+          "title": "Déclaré n'est pas mesuré.",
+          "body": "Les capacités annoncées par un agent sont distinguées des preuves collectées. La différence est visible, jamais cachée.",
+          "chip": "L2 déclaré · aucune preuve"
+        },
+        {
+          "title": "Synthétique n'est pas réel.",
+          "body": "Les essais envoyés depuis le cockpit sont marqués comme synthétiques et n'impactent jamais les chiffres métier."
+        },
+        {
+          "title": "Chaque métrique a une origine.",
+          "body": "Sa source, son horodatage, sa fraîcheur. Vous savez toujours d'où vient un chiffre."
+        }
+      ]
+    },
+    "further": {
+      "title": "Aller plus loin",
+      "decisionRegister": "Chaque décision d'architecture est écrite, datée et argumentée dans un registre de décisions — y compris les erreurs et leurs corrections, parce qu'un système qui ne documente que ses réussites ne documente rien.",
+      "storiesLead": "Deux récits racontent les moments les plus instructifs : ",
+      "storyFork": "le jour où le registre d'audit a fourché",
+      "storiesJoin": ", et ",
+      "storyForeign": "les vingt minutes qu'il a fallu pour intégrer un agent étranger",
+      "storiesEnd": ". Si vous êtes du métier, commencez par là.",
+      "detailLead": "Pour la version longue de cette page — les deux mémoires, les agents témoins, ce qui est vrai et ce qui est seulement déclaré : ",
+      "detailLink": "la lecture détaillée",
+      "detailEnd": "."
+    },
+    "closing": {
+      "title": "Tessera transforme des agents IA difficiles à superviser en systèmes gouvernables.",
+      "body": "Il rend leurs actions observables, applique les règles avant les effets sensibles, fait intervenir la bonne personne quand la décision l'exige, et conserve une preuve que l'on peut relire et vérifier.",
+      "cockpitCta": "Entrer dans le cockpit → la vue d'ensemble",
+      "businessCta": "Explorer les espaces → les espaces métier"
+    },
+    "fiction": "Crédit Aurore est fictive — c'est une démonstration. Tout le reste fonctionne pour de vrai. Quand quelque chose est simulé, l'écran vous le dit. C'est une règle de la maison."
+  },
   "comprendre": {
     "pageTitle": "Comprendre Tessera",
     "pageLead": "Trois minutes pour comprendre ce que vous regardez.",
@@ -9220,6 +9490,7 @@
       "ledger": "Le registre d'audit"
     },
     "proofLabel": "Voir la preuve",
+    "proofSeparator": " : ",
     "sections": [
       {
         "heading": "Qu'est-ce que Tessera ?",

@@ -14,32 +14,15 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { SignalBand } from "@/components/landing/landing-launcher";
 import { launcherPillars } from "@/lib/launcher-pillars";
-import type { LauncherAgentSignal, LauncherSignal } from "@/lib/server/launcher-signal";
+import type { LauncherSignal } from "@/lib/server/launcher-signal";
 import messages from "@/messages/fr.json";
-
-function mkAgent(over: Partial<LauncherAgentSignal> = {}): LauncherAgentSignal {
-  return {
-    name: "support-client",
-    health: "good",
-    gatePassed: true,
-    gateLabel: null,
-    passRate: null,
-    passed: null,
-    total: null,
-    runAt: null,
-    catalogueVersion: null,
-    verdictStale: false,
-    soclePassed: null,
-    socleTotal: null,
-    ...over,
-  };
-}
 
 function mkSignal(over: Partial<LauncherSignal> = {}): LauncherSignal {
   return {
     agentsCount: 6,
     passedAgents: 2,
     agentsWithRelease: 6,
+    evaluationBuckets: { ready: 2, review: 4 },
     gateVerdict: "blocked",
     agents: [],
     integrityVerified: true,
@@ -82,8 +65,8 @@ describe("launcherPillars — the honest mapping", () => {
       stateVars: { checked: 214, blocked: 2 },
     });
     expect(p?.[2]).toMatchObject({
-      stateKey: "signal.evaluateReady",
-      stateVars: { ready: 2, total: 6 },
+      stateKey: "signal.evaluateBuckets",
+      stateVars: { ready: 2, review: 4 },
     });
   });
 
@@ -98,14 +81,25 @@ describe("launcherPillars — the honest mapping", () => {
   });
 
   it("release gate: honest fallback when the gate has produced no verdict", () => {
-    const p = launcherPillars(mkSignal({ agentsWithRelease: 0, passedAgents: 0 }));
+    const p = launcherPillars(mkSignal({ evaluationBuckets: null }));
     expect(p?.[2]?.stateKey).toBe("signal.evaluationsActive");
     expect(p?.[2]?.stateVars).toBeUndefined();
   });
 
-  it("release gate: a stale verdict puts the column back in play (amber), never pretends", () => {
-    const p = launcherPillars(mkSignal({ agents: [mkAgent({ verdictStale: true })] }));
-    expect(p?.[2]).toMatchObject({ stateKey: "signal.evaluateReadyStale", tone: "stale" });
+  it("release gate: the review bucket puts the column back in play", () => {
+    const p = launcherPillars(mkSignal({ evaluationBuckets: { ready: 2, review: 1 } }));
+    expect(p?.[2]).toMatchObject({ stateKey: "signal.evaluateBuckets", tone: "stale" });
+  });
+
+  it("release gate: ignores the legacy frontend rollup and uses the shared endpoint buckets", () => {
+    const p = launcherPillars(
+      mkSignal({
+        passedAgents: 99,
+        agentsWithRelease: 99,
+        evaluationBuckets: { ready: 2, review: 4 },
+      }),
+    );
+    expect(p?.[2]?.stateVars).toEqual({ ready: 2, review: 4 });
   });
 
   it("proof: infalsifiable only when the qualified external seal earns it", () => {
@@ -169,8 +163,10 @@ describe("SignalBand — the rendered pillars", () => {
   });
 
   it("the ready count is the gate's real verdict", () => {
-    render(wrap(<Band signal={mkSignal({ passedAgents: 2, agentsWithRelease: 6 })} />));
-    expect(screen.getAllByText(/2 agents sur 6 prêts/).length).toBeGreaterThan(0);
+    render(wrap(<Band signal={mkSignal({ evaluationBuckets: { ready: 2, review: 4 } })} />));
+    expect(screen.getAllByText(/2 agents prêts · 4 à évaluer ou réévaluer/).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("proof: the infalsifiable label follows the qualified live verdict", () => {

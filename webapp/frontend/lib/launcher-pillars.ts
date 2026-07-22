@@ -20,6 +20,7 @@ export interface PillarSignal {
   agentsCount: number;
   passedAgents: number;
   agentsWithRelease: number;
+  evaluationBuckets: { ready: number; review: number } | null;
   agents: readonly { verdictStale: boolean }[];
   integrityVerified: boolean | null;
   opposabilityBadge:
@@ -106,25 +107,16 @@ export function launcherPillars(signal: PillarSignal | null): Pillar[] | null {
             tone: "guard",
           };
 
-  // 3 · Evaluate — the RELEASE gate, judged per agent BEFORE production. The
-  // ready count is the gate's OWN verdict over the agents it has actually
-  // judged (an unevaluated agent is not "not ready" — it is out of the
-  // denominator). A stale verdict (superseded catalogue) puts the column in
-  // amber "re-éval requise": the gate demands again, it does not pretend.
-  const gatesActive = signal.agentsWithRelease > 0;
-  const staleCount = signal.agents.filter((a) => a.verdictStale).length;
+  // 3 · Evaluate — the exact ready/review buckets composed by the shared
+  // backend release seam. Missing, refused and stale verdicts all remain in
+  // `review`; the launcher never rebuilds those semantics from agent rows.
+  const buckets = signal.evaluationBuckets;
   const evaluate: Pillar = {
     key: "evaluate",
     titleKey: "signal.pillarEvaluate",
-    stateKey: gatesActive
-      ? staleCount > 0
-        ? "signal.evaluateReadyStale"
-        : "signal.evaluateReady"
-      : "signal.evaluationsActive",
-    stateVars: gatesActive
-      ? { ready: signal.passedAgents, total: signal.agentsWithRelease }
-      : undefined,
-    tone: gatesActive && staleCount > 0 ? "stale" : "govern",
+    stateKey: buckets ? "signal.evaluateBuckets" : "signal.evaluationsActive",
+    stateVars: buckets ? { ready: buckets.ready, review: buckets.review } : undefined,
+    tone: buckets && buckets.review > 0 ? "stale" : "govern",
   };
 
   // 4 · Prove — ADR 0042 reserves “registre infalsifiable” for the composed live verdict:

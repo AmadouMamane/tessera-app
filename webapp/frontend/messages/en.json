@@ -7396,6 +7396,7 @@
       "activityUnavailable": "Counters unavailable",
       "pillarEvaluate": "Evaluation before production",
       "evaluateReady": "{ready, plural, one {# agent of {total} ready} other {# agents of {total} ready}}",
+      "evaluateBuckets": "{ready, plural, one {# agent ready} other {# agents ready}} · {review} to evaluate or re-evaluate",
       "evaluateReadyStale": "{ready, plural, one {# agent of {total} ready} other {# agents of {total} ready}} · re-eval required",
       "evaluationsActive": "Evaluations active",
       "pillarProve": "Evidence at any point in time",
@@ -9203,6 +9204,261 @@
     "payment_options_safety": "Payment-options safety",
     "amount_consistency": "Amount consistency"
   },
+  "comprendreV2": {
+    "pageTitle": "Understand Tessera — in 3 minutes",
+    "pageLead": "Tessera is the control room for a bank's artificial intelligence agents.",
+    "hero": {
+      "title": "Understand Tessera — in 3 minutes",
+      "lead": "Tessera is the control room for a bank's artificial intelligence agents.",
+      "body": "A bank may employ several agents: one answers customers, another assists with account openings, and a third helps the collections teams. They may have been built by different teams, with different technologies. Yet Tessera makes it possible to answer four simple questions: what are they doing? Are their exchanges protected? Are they ready to be exposed? And can we demonstrate, with evidence, what happened?",
+      "summary": "Tessera supervises agents in real time, protects their exchanges, evaluates them before they are made available and retains the evidence needed to reconstruct each decision.",
+      "questionsLabel": "Four simple questions",
+      "questions": [
+        "What are they doing?",
+        "Are their exchanges protected?",
+        "Are they ready to be exposed?",
+        "Can we demonstrate, with evidence, what happened?"
+      ]
+    },
+    "diagram": {
+      "columns": [
+        {
+          "title": "Business spaces",
+          "items": ["Customer site · AI assistant", "Collections space · Staff"],
+          "caption": "Business experience without exposing the machinery"
+        },
+        {
+          "title": "AI agents",
+          "items": ["Answer customers", "Open an account", "Manage arrears", "…and other agents"]
+        },
+        {
+          "title": "Cockpit",
+          "items": [
+            "Real-time supervision",
+            "Tests & diagnostics",
+            "Evaluation before production",
+            "Evidence & audit"
+          ],
+          "caption": "The fleet's engine room"
+        }
+      ],
+      "shield": "Security at every exchange (online controls)",
+      "audit": {
+        "title": "Audit ledger",
+        "body": "Log of decisions and events; any alteration becomes detectable"
+      },
+      "door": "A single, one-way door: the operator can see what customers experience; the reverse is impossible.",
+      "legend": "The four flows",
+      "flows": [
+        {
+          "label": "User access",
+          "detail": "One way: cockpit to business spaces"
+        },
+        {
+          "label": "Telemetry",
+          "detail": "Agents to cockpit"
+        },
+        {
+          "label": "Tests & diagnostics",
+          "detail": "Cockpit to agents"
+        },
+        {
+          "label": "Audit traces",
+          "detail": "To the ledger"
+        }
+      ]
+    },
+    "journey": {
+      "title": "Tessera sits between intent and action.",
+      "body": "Take a simple case: a customer in arrears asks for a payment plan. The agent prepares an answer; Tessera checks the context before that answer can have an effect.",
+      "steps": [
+        {
+          "label": "01 · Request",
+          "body": "A customer asks for a payment plan."
+        },
+        {
+          "label": "02 · Agent",
+          "body": "The agent prepares an answer and an action."
+        },
+        {
+          "label": "03 · Control",
+          "body": "Tessera checks:"
+        },
+        {
+          "label": "04 · Decision"
+        }
+      ],
+      "checks": ["Identity and scope", "Applicable rule", "Permission to act", "Need for a human"],
+      "allowed": "Allowed: the answer may be sent within the defined scope.",
+      "review": "Or needs confirmation: the right person receives the case and decides.",
+      "evidence": "In both cases, the decision, the rule, its version and the author are retained in a verifiable trail.",
+      "illustrative": {
+        "label": "Illustrative example",
+        "status": "Human confirmation required",
+        "rows": [
+          {
+            "label": "Request",
+            "value": "Three-month payment plan"
+          },
+          {
+            "label": "Rule applied",
+            "value": "Autonomy threshold exceeded"
+          },
+          {
+            "label": "Owner",
+            "value": "Designated business manager"
+          },
+          {
+            "label": "Evidence linked",
+            "value": "Rule, version, decision, author, timestamp"
+          }
+        ]
+      },
+      "after": "In this example, Tessera intervenes when the answer can have an effect. The platform also supervises the agent continuously, evaluates it before exposing it, and then retains evidence of what was decided — this is the purpose of the four sections below.",
+      "mechanismLead": "This specific case is written for explanation. The mechanism itself is real:"
+    },
+    "proofLabel": "See the evidence",
+    "live": {
+      "title": "Four capabilities, each with the measured fact that proves it at the moment you read it.",
+      "cards": [
+        {
+          "title": "Real-time supervision",
+          "body": "Tessera receives health, activity and quality signals published by agents without intervening in their exchanges."
+        },
+        {
+          "title": "Security at every exchange",
+          "body": "Every exchange goes through a control able to block an attack, mask sensitive data or involve a human."
+        },
+        {
+          "title": "Evaluation before production",
+          "body": "Before being exposed, every agent must pass a set of tests, including a shared security foundation."
+        },
+        {
+          "title": "Evidence at all times",
+          "body": "Every decision is recorded in a log whose entries are linked together: any modification becomes detectable."
+        }
+      ],
+      "fleet": {
+        "fact": "{count} agents observed · last data received {freshness}{silent, select, true { — fleet silent} other {}}",
+        "empty": "— no signal received · the fleet has not published anything yet",
+        "window": "Agents that published a measurement in the last {hours} hours"
+      },
+      "guard": {
+        "fact": "{controlled} exchanges controlled today · {blocked} blocked",
+        "empty": "— no exchange today"
+      },
+      "evaluations": {
+        "fact": "{ready} agents ready · {review} to evaluate or reassess",
+        "empty": "— no verdict · no evaluation recorded"
+      },
+      "audit": {
+        "fact": "audit chain verified {freshness}",
+        "empty": "— chain not verified since startup"
+      },
+      "foundation": "The security foundation blocks any promotion as soon as a non-waivable critical case fails."
+    },
+    "time": {
+      "seconds": "{count} s ago",
+      "minutes": "{count} min ago",
+      "hours": "{count} h ago"
+    },
+    "details": {
+      "items": [
+        {
+          "title": "Supervise in real time.",
+          "moment": "Continuously",
+          "body": "Each agent continuously publishes the account of its activity: conversations, decisions, results and technical health. Tessera never searches inside an agent — the agent publishes, and the cockpit reads.",
+          "chips": ["Independent of technology", "Timestamped data", "Transparent freshness"],
+          "cta": "Explore the fleet and measurements"
+        },
+        {
+          "title": "Protect every exchange.",
+          "moment": "During the exchange",
+          "body": "In production, every exchange passes through one online control. It can block an attack, mask sensitive data, refuse a request or ask for human intervention. Known bypasses are documented in the test harness — sixty-three public situations, including weaknesses that remain open.",
+          "chips": ["Online controls", "Policies applied", "Systematic logging"],
+          "cta": "See controls and blocks"
+        },
+        {
+          "title": "Evaluate before exposure.",
+          "moment": "Before exposure",
+          "body": "Before being served to users, every agent must prove it is ready. It passes a set of tests and receives a release verdict. Any significant change makes its verdict due for reassessment. A model is judged on what it adds above a measured baseline without a model — a raw score is not enough.",
+          "chips": ["Evaluation harness", "Shared security foundation", "Versioned verdict"],
+          "cta": "See evaluations and verdicts"
+        },
+        {
+          "title": "Prove at all times.",
+          "moment": "After the action",
+          "body": "Tessera retains a trace of what happened and what we decided. The audit ledger links each entry to the previous one: any alteration becomes detectable.",
+          "chips": ["Chained log", "Regular checks", "Point-in-time reconstruction"],
+          "cta": "Open the Prove page"
+        }
+      ]
+    },
+    "roles": {
+      "title": "Everyone gets the answer they need.",
+      "lead": "One reality, three readings. The views change; the facts do not.",
+      "items": [
+        {
+          "title": "Leadership",
+          "question": "Where is AI acting, and who is accountable?",
+          "answer": "A view of agents, uses, owners and the thresholds where human intervention becomes mandatory."
+        },
+        {
+          "title": "Business manager",
+          "question": "What do I need to handle today?",
+          "answer": "A queue of explained, assigned and prioritised situations, with no hidden automated decision."
+        },
+        {
+          "title": "Risk · IT",
+          "question": "Can we reconstruct and defend the decision?",
+          "answer": "The rules, versions, sources, traces and evidence needed to verify behaviour and respond to an audit."
+        }
+      ],
+      "truth": "The views change; the facts do not."
+    },
+    "difference": {
+      "title": "What makes Tessera different",
+      "items": [
+        {
+          "title": "Nothing is invented.",
+          "body": "A displayed figure is a measured figure. When data does not yet exist, the screen shows a dash and explains why.",
+          "chip": "L1 calculated"
+        },
+        {
+          "title": "Declared is not measured.",
+          "body": "Capabilities announced by an agent are distinguished from collected evidence. The difference is visible, never hidden.",
+          "chip": "L2 declared · no evidence"
+        },
+        {
+          "title": "Synthetic is not real.",
+          "body": "Tests sent from the cockpit are marked as synthetic and never affect business figures."
+        },
+        {
+          "title": "Every metric has an origin.",
+          "body": "Its source, timestamp and freshness. You always know where a figure comes from."
+        }
+      ]
+    },
+    "further": {
+      "title": "Go further",
+      "decisionRegister": "Every architecture decision is written, dated and argued in a decision log — including errors and their corrections, because a system that only documents its successes documents nothing.",
+      "storiesLead": "Two stories recount the most instructive moments: ",
+      "storyFork": "the day the audit ledger forked",
+      "storiesJoin": ", and ",
+      "storyForeign": "the twenty minutes it took to integrate a foreign agent",
+      "storiesEnd": ". If this is your field, start there.",
+      "detailLead": "For the long version of this page — the two memories, witness agents, what is true and what is only declared: ",
+      "detailLink": "the detailed reading",
+      "detailEnd": "."
+    },
+    "closing": {
+      "title": "Tessera turns hard-to-supervise AI agents into governable systems.",
+      "body": "It makes their actions observable, applies rules before sensitive effects, involves the right person when the decision requires it, and retains evidence that can be read and verified.",
+      "cockpitCta": "Enter the cockpit → overview",
+      "businessCta": "Explore the spaces → business spaces"
+    },
+    "fiction": "Crédit Aurore is fictional — this is a demonstration. Everything else works for real. When something is simulated, the screen tells you. That is a house rule."
+  },
   "comprendre": {
     "pageTitle": "Understand Tessera",
     "pageLead": "Three minutes to understand what you are looking at.",
@@ -9218,6 +9474,7 @@
       "ledger": "The audit ledger"
     },
     "proofLabel": "See for yourself",
+    "proofSeparator": ": ",
     "sections": [
       {
         "heading": "What is Tessera?",

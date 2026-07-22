@@ -74,6 +74,7 @@ export const PAGE_NATURE = {
   "/agir/replay-shadow": { kind: "org-wide" },
   "/agir/curation-eval-set": { kind: "org-wide" },
   // ── PROUVER ───────────────────────────────────────────────────────────────────────────
+  "/prouver": { kind: "redirect" },
   "/prouver/audit-logs": { kind: "lens", domain: "proof" },
   "/prouver/etat-a-date": { kind: "org-wide" },
   "/prouver/evidence-store": { kind: "org-wide" },

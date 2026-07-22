@@ -205,6 +205,7 @@ describe("every zone page declares its nature — no silent default", () => {
       "/agir/automations": { kind: "org-wide" },
       "/agir/replay-shadow": { kind: "org-wide" },
       "/agir/curation-eval-set": { kind: "org-wide" },
+      "/prouver": { kind: "redirect" },
       "/prouver/audit-logs": { kind: "lens", domain: "proof" },
       "/prouver/etat-a-date": { kind: "org-wide" },
       "/prouver/evidence-store": { kind: "org-wide" },

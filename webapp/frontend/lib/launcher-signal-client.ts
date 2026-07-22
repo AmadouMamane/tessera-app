@@ -13,6 +13,12 @@ const PillarSignalWireSchema = z.object({
   agentsCount: z.number().int().nonnegative(),
   passedAgents: z.number().int().nonnegative(),
   agentsWithRelease: z.number().int().nonnegative(),
+  evaluationBuckets: z
+    .object({
+      ready: z.number().int().nonnegative(),
+      review: z.number().int().nonnegative(),
+    })
+    .nullable(),
   agents: z.array(z.object({ verdictStale: z.boolean() })),
   integrityVerified: z.boolean().nullable(),
   opposabilityBadge: z

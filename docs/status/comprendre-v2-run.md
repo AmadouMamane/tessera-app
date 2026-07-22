@@ -36,8 +36,8 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
 
 | Lot | Statut | Commit | Gate twice | Preuves |
 |---|---|---|---|---|
-| 1 — backend | terminé | en préparation | `8f3f9f9a7fc6` · twice-green | 59 tests ciblés verts ; mutations T1/T3/T4/T5 ; synthétique inchangé ; égalité T4 |
-| 2 — page | à faire | — | — | FR verbatim ; DE/EN ; BFF + zod ; 5 liens ; `/en-detail` |
+| 1 — backend | terminé | `49828247` | `8f3f9f9a7fc6` · twice-green | 59 tests ciblés verts ; mutations T1/T3/T4/T5 ; synthétique inchangé ; égalité T4 |
+| 2 — page | terminé | en préparation | `355e7e1404c3` · twice-green | FR verbatim ; DE/EN ; BFF + zod ; 5 liens ; `/en-detail` |
 | 3 — ratchets | à faire | — | — | mutation `214` rouge ; e2e vide/liens/langues |
 
 ## Mutations et captures
@@ -74,6 +74,33 @@ Ces écarts ne changent ni les définitions ni les décisions de la spec ; ils n
 - `make gate-twice` final : **TWICE-GREEN sur un seul arbre `8f3f9f9a7fc6`** ; chaque passage
   valide TypeScript, Biome (27 warnings historiques), 429 tests frontend, Ruff, format, mypy
   strict et 2 560 tests backend hors intégration.
+
+### Lot 2 — page
+
+- Récolte en lecture seule depuis `b1dcd5d5` : structure visuelle du mini-cas et des cartes de
+  rôles, plus les traductions FR/DE/EN des sous-arbres `journey` et `roles`. Les divergences de
+  la branche A face au texte fermé (titre `Direction · DRH`, prochaine action proposée côté
+  manager) n'ont pas été reprises ; le texte de la spec reste souverain.
+- `/comprendre` lit l'agrégat côté serveur, le rafraîchit via `GET /api/comprendre`, et valide les
+  deux chemins avec le même schéma Zod discriminé. Une indisponibilité ou un payload invalide
+  devient `{available:false}` et conserve les honest-empty par tuile.
+- La tuile publique `/eval` du launcher consomme désormais les buckets `ready/review` de ce même
+  agrégat ; le test de mutation lui injecte un ancien rollup `passedAgents=99` et prouve qu'il est
+  ignoré au profit du seam partagé.
+- La prose v1 et ses catalogues existants sont servis par `/comprendre/en-detail`. Le nouveau shell
+  public partagé maintient une seule occurrence d'autorisation explicite. `timeline-nav.tsx` n'a
+  été ni copié ni recréé.
+- Les cinq liens fermés sont câblés vers `/recouvrement`, `/agents`, `/surveiller`, `/eval` et
+  `/prouver`. L'index `/prouver`, absent sur `main`, est matérialisé comme redirection locale vers
+  le journal d'audit afin que la route demandée résolve sans texte supplémentaire.
+- Preuves ciblées pré-gate : **42 tests verts** (`comprendre.test.ts` + `signal-band.test.tsx`) ;
+  TypeScript strict frontend vert ; catalogues JSON valides ; Biome ciblé remis en forme.
+- Premier essai du gate : rouge attendu du ratchet de nature de page sur le nouvel index
+  `/prouver`. La route et son snapshot figé sont désormais explicitement déclarés `redirect` ;
+  `page-nature.test.ts` repasse avec **12 tests verts**.
+- `make gate-twice` final : **TWICE-GREEN sur un seul arbre `355e7e1404c3`** ; chaque passage
+  valide TypeScript, Biome (27 avertissements historiques), 436 tests frontend, Ruff, format,
+  mypy strict et 2 560 tests backend hors intégration.
 
 ## Questions bloquantes / déviations proposées
 

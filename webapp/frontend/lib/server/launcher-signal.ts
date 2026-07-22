@@ -3,6 +3,7 @@ import "server-only";
 import { AuditIntegritySchema, GuardActivitySchema } from "@/lib/api/schemas";
 
 import { backendHeaders, backendUrl } from "./backend";
+import { loadComprendreFacts } from "./comprendre";
 import { loadFleet } from "./fleet";
 
 /**
@@ -48,6 +49,9 @@ export interface LauncherSignal {
   // to one agent, never to the fleet.
   passedAgents: number;
   agentsWithRelease: number;
+  // Exact ready/review buckets from the same backend aggregate `/comprendre` renders.
+  // The public /eval pillar consumes this object, never a second frontend calculation.
+  evaluationBuckets: { ready: number; review: number } | null;
   gateVerdict: "pass" | "blocked" | "unknown";
   agents: LauncherAgentSignal[];
   // Real, fleet-wide audit-chain content-integrity verdict (tamper-evidence),
@@ -124,10 +128,11 @@ async function loadGuardActivity(): Promise<LauncherSignal["guardActivity"]> {
 }
 
 export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
-  const [fleet, integrity, guardActivity] = await Promise.all([
+  const [fleet, integrity, guardActivity, comprendre] = await Promise.all([
     loadFleet(),
     loadIntegrityVerdict(),
     loadGuardActivity(),
+    loadComprendreFacts(),
   ]);
   if (!fleet?.available || !fleet.agents || fleet.agents.length === 0) return null;
 
@@ -164,6 +169,15 @@ export async function loadLauncherSignal(): Promise<LauncherSignal | null> {
     agentsCount: agents.length,
     passedAgents,
     agentsWithRelease: withRelease.length,
+    evaluationBuckets:
+      comprendre.available &&
+      comprendre.evaluations.ready_agents !== null &&
+      comprendre.evaluations.review_agents !== null
+        ? {
+            ready: comprendre.evaluations.ready_agents,
+            review: comprendre.evaluations.review_agents,
+          }
+        : null,
     gateVerdict,
     agents,
     integrityVerified: integrity.verified,
