@@ -8627,9 +8627,9 @@
       "org-wide": "This signal applies to the whole fleet; there is no per-agent value.",
       "not-honoured": "Agent dimension not honoured by the read — value refused."
     },
-    "dedupExplain": "Before correction: {naive} · {saved} duplicates removed · {shared} handled by several agents",
+    "dedupExplain": "{naive} conversations after adding each agent's volume. {shared} are found under several agents; {saved} are removed from the total.",
     "handoffReconciled": "Transfers verified: the {attested} transferred conversations appear only once in the fleet total.",
-    "handoffGap": "The total cannot be confirmed yet: the audit log records {events} transfers across {attested} conversations, but the fleet data finds only {seen} handled by several agents. Some conversations may therefore be counted twice.",
+    "handoffGap": "Why check this? A transferred conversation can appear under both the sending and receiving agent. The audit log counts {events} transfers across {attested} conversations, yet the reconciliation finds only {seen} under two agents. Until those passages can be linked, a conversation may be counted twice.",
     "empty": "No fleet data available.",
     "orgSignalsNote": "Agent filter active: the cards below show this agent's signals. Shared controls, the audit chain, traces, and history remain calculated for the whole fleet.",
     "orgWide": "Whole fleet",

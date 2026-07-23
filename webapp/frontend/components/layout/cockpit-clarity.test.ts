@@ -408,6 +408,12 @@ describe("cockpit language stays human at the first reading level", () => {
     }
   });
 
+  it("explains why a transferred conversation can be counted under two agents", () => {
+    expect(fr.agentScope.handoffGap).toMatch(/agent de départ.*agent d'arrivée/u);
+    expect(en.agentScope.handoffGap).toMatch(/sending.*receiving agent/u);
+    expect(de.agentScope.handoffGap).toMatch(/abgebenden.*übernehmenden Agenten/u);
+  });
+
   it.each([
     ["fr", fr],
     ["en", en],

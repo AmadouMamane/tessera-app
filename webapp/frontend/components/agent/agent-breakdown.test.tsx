@@ -159,9 +159,11 @@ describe("the transfer verification line under the fleet total", () => {
 
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
-    const gap = screen.getByText(/Le total ne peut pas encore être confirmé/);
+    const gap = screen.getByText(/Pourquoi vérifier/);
     expect(gap.textContent).toMatch(/34 transferts/);
-    expect(gap.textContent).toMatch(/comptées deux fois/);
+    expect(gap.textContent).toMatch(/agent de départ/);
+    expect(gap.textContent).toMatch(/agent d'arrivée/);
+    expect(gap.textContent).toMatch(/une conversation peut être comptée deux fois/);
     expect(screen.queryByText(/Transferts vérifiés/)).toBeNull();
     // And the old unearned claim is gone from the dedup line itself.
     expect(screen.queryByText(/handoff = 1/)).toBeNull();
@@ -177,7 +179,7 @@ describe("the transfer verification line under the fleet total", () => {
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
     expect(screen.getByText(/Transferts vérifiés/)).toBeTruthy();
-    expect(screen.queryByText(/Le total ne peut pas encore être confirmé/)).toBeNull();
+    expect(screen.queryByText(/Pourquoi vérifier/)).toBeNull();
   });
 
   it("stays silent when the journal attests no handoffs at all", async () => {
@@ -203,9 +205,9 @@ describe("the transfer verification line under the fleet total", () => {
       });
       render(await AgentBreakdown({ fleet, scope: "all", locale }));
       const pattern = {
-        fr: /Le total ne peut pas encore être confirmé/,
-        de: /Die Gesamtzahl kann noch nicht bestätigt werden/,
-        en: /The total cannot be confirmed yet/,
+        fr: /Pourquoi vérifier/,
+        de: /Warum prüfen/,
+        en: /Why check this/,
       }[locale];
       expect(screen.getByText(pattern)).toBeTruthy();
     }

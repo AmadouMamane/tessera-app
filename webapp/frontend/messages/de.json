@@ -8627,9 +8627,9 @@
       "org-wide": "Dieses Signal gilt für die gesamte Flotte; es gibt keinen Wert pro Agent.",
       "not-honoured": "Agent-Dimension bei der Lesung nicht honoriert — Wert verweigert."
     },
-    "dedupExplain": "Vor der Korrektur: {naive} · {saved} Doppelzählungen entfernt · {shared} von mehreren Agenten bearbeitet",
+    "dedupExplain": "{naive} Konversationen nach Addition der Gesprächszahlen jedes Agenten. {shared} werden bei mehreren Agenten gefunden; {saved} werden aus der Gesamtsumme entfernt.",
     "handoffReconciled": "Übergaben geprüft: Die {attested} übergebenen Konversationen erscheinen nur einmal in der Flottensumme.",
-    "handoffGap": "Die Gesamtzahl kann noch nicht bestätigt werden: Das Audit-Protokoll enthält {events} Übergaben in {attested} Konversationen, die Flottendaten finden davon aber nur {seen} bei mehreren Agenten. Einige Konversationen können daher doppelt gezählt sein.",
+    "handoffGap": "Warum prüfen? Eine übergebene Konversation kann sowohl beim abgebenden als auch beim übernehmenden Agenten erscheinen. Das Audit-Protokoll zählt {events} Übergaben in {attested} Konversationen, der Abgleich findet davon jedoch nur {seen} bei zwei Agenten. Solange diese Übergänge nicht verknüpft sind, kann eine Konversation doppelt gezählt werden.",
     "empty": "Keine Flottendaten verfügbar.",
     "orgSignalsNote": "Agentenfilter aktiv: Die Karten unten zeigen die Signale dieses Agenten. Gemeinsame Kontrollen, Audit-Kette, Spuren und Verlauf werden weiterhin für die gesamte Flotte berechnet.",
     "orgWide": "Gesamte Flotte",

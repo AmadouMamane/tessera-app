@@ -50,7 +50,7 @@ they no longer carry the explanation alone.
 - Page-family ratchets now cover the primary incident, curation, release-control and automation
   vocabulary. Each family has a mutation proving that a removed internal term makes the test red.
 - The same ratchet now covers evidence objects, work queues, signal names, shared scope wording,
-  authority labels, date controls and overview delivery shorthand. It contains 50 checks,
+  authority labels, date controls and overview delivery shorthand. It contains 51 checks,
   including explicit mutations for every protected family.
 
 ## Progress
@@ -70,13 +70,13 @@ they no longer carry the explanation alone.
 
 ## Targeted checks already green
 
-- Frontend targeted suite: 72 tests (50 clarity ratchets, 17 fleet reconciliations, 5 launch
+- Frontend targeted suite: 73 tests (51 clarity ratchets, 17 fleet reconciliations, 5 launch
   controls).
 - Backend targeted suite: 93 tests across queues, signal catalogue, state-at-date, incidents,
   evaluation-set review, automatic rules, lifecycle and launch decisions.
 - Queue-specific suite after the live finding: 28 tests.
 - Frontend `tsc --noEmit` and targeted Biome checks are green.
-- Full `make gate-twice` is green twice on the same tree (`15fcaf50e090`): 502 frontend tests and
+- Full `make gate-twice` is green twice on the same tree (`a751c935482f`): 503 frontend tests and
   2,578 non-integration Python tests passed on each run, with Ruff, formatting, mypy, TypeScript
   and Biome green.
 
@@ -87,3 +87,13 @@ they no longer carry the explanation alone.
   backend and frontend tests.
 - Preserve specialised terms inside evidence/source panels when they are the fact being audited;
   introduce or explain them instead of silently weakening their meaning.
+
+## Correctif total de flotte — 2026-07-23
+
+- Finding live : `Avant correction`, `doublons retirés` et `total non confirmé` signalaient une
+  incertitude sans expliquer son origine au visiteur.
+- Correction : la première ligne décrit désormais le calcul (addition des volumes par agent,
+  conversations retrouvées chez plusieurs agents, retraits du total). La seconde explique le
+  mécanisme concret : une conversation transférée peut apparaître chez l'agent de départ et chez
+  l'agent d'arrivée tant que les deux passages ne sont pas reliés.
+- Les six valeurs de réconciliation et leurs contrats restent inchangés.

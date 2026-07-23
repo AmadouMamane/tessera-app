@@ -8629,9 +8629,9 @@
       "org-wide": "Ce signal concerne toute la flotte ; il n'existe pas de valeur par agent.",
       "not-honoured": "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée."
     },
-    "dedupExplain": "Avant correction : {naive} · {saved} doublons retirés · {shared} passées par plusieurs agents",
+    "dedupExplain": "{naive} conversations en additionnant le volume de chaque agent. {shared} sont retrouvées chez plusieurs agents ; {saved} sont retirées du total.",
     "handoffReconciled": "Transferts vérifiés : les {attested} conversations transférées n'apparaissent qu'une fois dans le total de la flotte.",
-    "handoffGap": "Le total ne peut pas encore être confirmé : le journal d'audit enregistre {events} transferts dans {attested} conversations, mais les données de la flotte n'en retrouvent que {seen} traitées par plusieurs agents. Certaines conversations peuvent donc être comptées deux fois.",
+    "handoffGap": "Pourquoi vérifier ? Une conversation transférée peut figurer chez l'agent de départ et chez l'agent d'arrivée. Le journal d'audit compte {events} transferts dans {attested} conversations, mais le rapprochement n'en retrouve que {seen} chez deux agents. Tant que ces passages ne sont pas reliés, une conversation peut être comptée deux fois.",
     "empty": "Aucune donnée flotte disponible.",
     "orgSignalsNote": "Filtre agent actif : les cartes ci-dessous montrent les signaux de cet agent. Les contrôles communs, la chaîne d'audit, les traces et l'historique restent calculés pour toute la flotte.",
     "orgWide": "Toute la flotte",
