@@ -1,4 +1,4 @@
-"""The dedup's "0 shared" must be reconciled against the journeys the S1 journal attests.
+"""A fleet handoff must be a completed transition, not merely a raw ledger label.
 
 Found live on 2026-07-13: the ledger attested **34 handoffs over 34 conversations** while the
 conversation store reported **zero** shared conversations — and the org-total footer rendered
@@ -8,21 +8,30 @@ happened. It had not. ``OrgRollup.shared`` asks the conversation table about its
 journeys never share an id there at all — a witness answering about its neighbourhood
 (ADR 0026) while the sentence it feeds claims to be about handoffs.
 
-The fleet payload now carries both halves so the UI can state a gap instead of implying a
-completed dedup: the journal side (``handoff_events`` + the exact conversation ids) and the
-store side (how many of THOSE ids it can see under more than one agent). These tests pin each
-half, and the seam between them.
+The first correction exposed both halves so the UI could state that gap. The 2026-07-23 root
+diagnosis then showed why all 37 live entries failed reconciliation: a brand-new Onboarding
+conversation was routed from a technical Support default and logged as a handoff even though
+Support never handled it. The fleet business counter now requires a prior source turn and the
+persisted target turn; the raw immutable entries remain available as audit evidence. These tests
+pin the raw journal seam, the completed-transition seam and both ledger modes.
 """
 
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 import pytest
 
 from tessera.observability.agent_scope import shared_entities_among
-from tessera.observability.fleet import _handoff_counts
+from tessera.observability.fleet import (
+    HandoffClaim,
+    _handoff_counts,
+    _verified_file_handoff_rollup,
+    _verified_handoff_rollup,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -110,6 +119,117 @@ class _RefusingCursor:
 
     async def execute(self, sql: str, params: object = None) -> None:
         raise AssertionError("no query may run for an empty entity set")
+
+
+class _VerifiedRollupCursor:
+    """A cursor double for the bounded SQL reconciliation aggregate."""
+
+    def __init__(self, rows: list[dict[str, object]]) -> None:
+        self.calls: list[tuple[str, object]] = []
+        self._rows = rows
+
+    async def execute(self, sql: str, params: object = None) -> None:
+        self.calls.append((sql, params))
+
+    async def fetchall(self) -> list[dict[str, object]]:
+        return self._rows
+
+
+class TestOnlyPersistedAgentTransitionsAreHandoffs:
+    """A default route must never become a historical transfer fact."""
+
+    @pytest.mark.asyncio
+    async def test_the_aggregate_requires_a_prior_source_turn_and_the_persisted_target_turn(
+        self,
+    ) -> None:
+        cur = _VerifiedRollupCursor(
+            [
+                {
+                    "from_agent": "support-client",
+                    "to_agent": "onboarding",
+                    "events": 2,
+                    "conversations": 1,
+                }
+            ]
+        )
+
+        rollup = await _verified_handoff_rollup(cur)  # type: ignore[arg-type]
+
+        assert rollup.incoming == {"onboarding": 2}
+        assert rollup.outgoing == {"support-client": 2}
+        assert rollup.events == 2
+        assert rollup.conversations == 1
+
+        sql, params = cur.calls[0]
+        assert params == ("tessera.agent.handoff",)
+        assert "source.agent_id = claim.from_agent" in sql
+        assert "source.created_at < claim.occurred_at" in sql
+        assert "NOT source.synthetic" in sql
+        assert "target.agent_id = claim.to_agent" in sql
+        assert "target.turn_id::text = claim.turn_id" in sql
+        assert "NOT target.synthetic" in sql
+
+    @pytest.mark.asyncio
+    async def test_the_file_escape_rejects_an_initial_route_with_only_a_target_turn(self) -> None:
+        claim = HandoffClaim(
+            conversation_id=UUID("11111111-1111-4111-8111-111111111111"),
+            turn_id="22222222-2222-4222-8222-222222222222",
+            from_agent="support-client",
+            to_agent="onboarding",
+            occurred_at=datetime(2026, 7, 23, 8, 0, tzinfo=UTC),
+        )
+        cur = _VerifiedRollupCursor(
+            [
+                {
+                    "conversation_id": str(claim.conversation_id),
+                    "turn_id": claim.turn_id,
+                    "agent_id": "onboarding",
+                    "created_at": datetime(2026, 7, 23, 8, 0, 1, tzinfo=UTC),
+                }
+            ]
+        )
+
+        rollup = await _verified_file_handoff_rollup(cur, [claim])  # type: ignore[arg-type]
+
+        assert rollup.events == 0
+        assert rollup.conversations == 0
+        assert rollup.incoming == {}
+        assert rollup.outgoing == {}
+
+    @pytest.mark.asyncio
+    async def test_the_file_escape_keeps_a_real_transition_between_two_persisted_turns(
+        self,
+    ) -> None:
+        claim = HandoffClaim(
+            conversation_id=UUID("11111111-1111-4111-8111-111111111111"),
+            turn_id="22222222-2222-4222-8222-222222222222",
+            from_agent="support-client",
+            to_agent="onboarding",
+            occurred_at=datetime(2026, 7, 23, 8, 0, tzinfo=UTC),
+        )
+        cur = _VerifiedRollupCursor(
+            [
+                {
+                    "conversation_id": str(claim.conversation_id),
+                    "turn_id": "00000000-0000-4000-8000-000000000000",
+                    "agent_id": "support-client",
+                    "created_at": datetime(2026, 7, 23, 7, 55, tzinfo=UTC),
+                },
+                {
+                    "conversation_id": str(claim.conversation_id),
+                    "turn_id": claim.turn_id,
+                    "agent_id": "onboarding",
+                    "created_at": datetime(2026, 7, 23, 8, 0, 1, tzinfo=UTC),
+                },
+            ]
+        )
+
+        rollup = await _verified_file_handoff_rollup(cur, [claim])  # type: ignore[arg-type]
+
+        assert rollup.events == 1
+        assert rollup.conversations == 1
+        assert rollup.incoming == {"onboarding": 1}
+        assert rollup.outgoing == {"support-client": 1}
 
 
 class TestTheStoreSide:

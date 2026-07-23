@@ -6102,11 +6102,10 @@ export const FleetSchema = z.object({
   naive_sum_conversations: z.number().optional(),
   shared_conversations: z.number().optional(),
   dedup_saved: z.number().optional(),
-  // Handoff reconciliation — the S1 journal's claim beside the conversation store's answer.
-  // The journal attests `handoff_events` transfers over `handoff_conversations` journeys; the
-  // store sees `handoff_conversations_seen_shared` of them under >1 agent. A gap means the org
-  // total double-counts attested journeys, and the footer must SAY it — zod strips undeclared
-  // keys, so leaving these out would silently re-arm the "0 shared, looks reconciled" bug.
+  // Completed handoffs corroborated by the source and target transcript turns. The backend does
+  // not promote legacy initial-route ledger labels into these fleet business counts. Keep all
+  // three fields on the wire so a degraded or older producer can still expose a reconciliation
+  // gap instead of letting zod silently strip it.
   handoff_events: z.number().optional(),
   handoff_conversations: z.number().optional(),
   handoff_conversations_seen_shared: z.number().optional(),

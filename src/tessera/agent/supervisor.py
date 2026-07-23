@@ -105,11 +105,16 @@ def route_turn(
     pool_agents = routable(surface, auth_state)
     pool = {agent.id for agent in pool_agents}
 
-    base = current_agent or DEFAULT_AGENT_ID
-    try:
-        get_agent(base)
-    except (KeyError, OSError, ValueError):
-        base = DEFAULT_AGENT_ID
+    active_agent = current_agent
+    if active_agent is not None:
+        try:
+            get_agent(active_agent)
+        except (KeyError, OSError, ValueError):
+            active_agent = None
+    if active_agent not in pool:
+        active_agent = None
+
+    base = active_agent or DEFAULT_AGENT_ID
     # A parcours agent no longer permitted on this surface/auth must not keep the
     # turn (never silently retain a gated-out agent). Prefer the default agent when
     # it is itself routable here (the customer widget); otherwise fall back to the
@@ -125,15 +130,24 @@ def route_turn(
             base = DEFAULT_AGENT_ID
 
     intent = _detect_intent(user_input)
+    if intent and intent != base and intent in pool and active_agent is None:
+        return RoutingDecision(
+            agent_id=intent,
+            handoff=False,
+            from_agent=None,
+            reason=f"intent->{intent} (initial route)",
+        )
     if (
         intent
         and intent != base
-        and can_handoff(base, intent, surface=surface, auth_state=auth_state)
+        and active_agent is not None
+        and can_handoff(active_agent, intent, surface=surface, auth_state=auth_state)
     ):
         return RoutingDecision(
             agent_id=intent,
             handoff=True,
-            from_agent=base,
-            reason=f"intent->{intent} (handoff {base}->{intent})",
+            from_agent=active_agent,
+            reason=f"intent->{intent} (handoff {active_agent}->{intent})",
         )
-    return RoutingDecision(agent_id=base, handoff=False, from_agent=None, reason=f"stay->{base}")
+    reason = f"stay->{base}" if active_agent is not None else f"initial->{base}"
+    return RoutingDecision(agent_id=base, handoff=False, from_agent=None, reason=reason)

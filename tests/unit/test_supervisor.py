@@ -38,6 +38,22 @@ def test_new_conversation_defaults_to_the_default_agent() -> None:
     d = supervisor.route_turn(None, "Bonjour", surface=_WIDGET, auth_state=AuthState.ANONYMOUS)
     assert d.agent_id == DEFAULT_AGENT_ID
     assert d.handoff is False
+    assert d.reason == f"initial->{DEFAULT_AGENT_ID}"
+
+
+def test_new_conversation_routes_to_its_intent_without_inventing_a_handoff() -> None:
+    """The technical default is not an agent that actually handled the journey."""
+    d = supervisor.route_turn(
+        None,
+        "Je voudrais ouvrir un nouveau compte.",
+        surface=_WIDGET,
+        auth_state=AuthState.ANONYMOUS,
+    )
+
+    assert d.agent_id == "onboarding"
+    assert d.handoff is False
+    assert d.from_agent is None
+    assert d.reason == "intent->onboarding (initial route)"
 
 
 def test_intent_triggers_a_governed_handoff() -> None:

@@ -14,7 +14,10 @@ eval (Phase 4) and is intentionally absent here.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, TypedDict
+from uuid import UUID
 
 from psycopg.rows import dict_row
 
@@ -28,7 +31,7 @@ from tessera.guard.ledger_store import (
 from tessera.observability import quality_nets, turn_evidence
 from tessera.observability.agent_health import health_state
 from tessera.observability.agent_release import ReleaseFacts, fleet_release_states
-from tessera.observability.agent_scope import dedup_org_total, shared_entities_among
+from tessera.observability.agent_scope import dedup_org_total
 from tessera.observability.agentspec_projection import (
     declared_observability_level,
     declares_telemetry,
@@ -43,6 +46,8 @@ from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from psycopg import AsyncCursor
 
     from tessera.agent.registry import Agent
 
@@ -129,6 +134,27 @@ class FleetData(TypedDict):
     handoff_conversations_seen_shared: int
 
 
+@dataclass(frozen=True, slots=True)
+class HandoffRollup:
+    """Completed agent transitions proven by both the ledger and transcript."""
+
+    incoming: dict[str, int]
+    outgoing: dict[str, int]
+    events: int
+    conversations: int
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffClaim:
+    """One raw ledger claim that an agent transition happened."""
+
+    conversation_id: UUID
+    turn_id: str
+    from_agent: str
+    to_agent: str
+    occurred_at: datetime
+
+
 _ESCALATION_ILIKE = (
     "content ILIKE '%%escalad%%' OR content ILIKE '%%conseiller%%' "
     "OR content ILIKE '%%ticket%%' OR content ILIKE '%%transf%%'"
@@ -160,6 +186,11 @@ def _registry_agents() -> list[dict[str, Any]]:
         ]
     except (OSError, ValueError):
         return []
+
+
+def _count_cell(value: object) -> int:
+    """Convert a SQL aggregate cell to an integer without widening arbitrary objects."""
+    return int(value) if isinstance(value, int | float) else 0
 
 
 def registered_agent_ids() -> set[str]:
@@ -217,6 +248,187 @@ def _handoff_counts(audit_path: Path) -> tuple[dict[str, int], dict[str, int], i
         if conversation_id:
             conv_ids.add(conversation_id)
     return incoming, outgoing, events, conv_ids
+
+
+def _file_handoff_claims(audit_path: Path) -> list[HandoffClaim]:
+    """Read structurally complete handoff claims from the file escape ledger."""
+    claims: list[HandoffClaim] = []
+    for entry in read_ledger_entries(audit_path):
+        if entry.get("type") != HANDOFF_TYPE:
+            continue
+        try:
+            conversation_id = UUID(str(entry.get("conversation_id", "")))
+            occurred_at = datetime.fromisoformat(str(entry.get("occurred_at", "")))
+        except ValueError:
+            continue
+        turn_id = str(entry.get("turn_id", ""))
+        from_agent = str(entry.get("from_agent", ""))
+        to_agent = str(entry.get("to_agent", ""))
+        if not turn_id or not from_agent or not to_agent:
+            continue
+        if occurred_at.tzinfo is None:
+            occurred_at = occurred_at.replace(tzinfo=UTC)
+        claims.append(
+            HandoffClaim(
+                conversation_id=conversation_id,
+                turn_id=turn_id,
+                from_agent=from_agent,
+                to_agent=to_agent,
+                occurred_at=occurred_at,
+            )
+        )
+    return claims
+
+
+async def _verified_handoff_rollup(
+    cur: AsyncCursor[dict[str, object]],
+) -> HandoffRollup:
+    """Count only completed transitions between two persisted agent turns.
+
+    The historical ledger contains entries emitted when a brand-new conversation was routed
+    directly to Onboarding: the supervisor used Support as a technical fallback and called the
+    first orientation a handoff even though Support never handled a turn. The ledger is
+    append-only, so those entries cannot be rewritten. This read therefore earns the business
+    word "handoff" by requiring both witnesses:
+
+    * a real, non-synthetic source-agent message before the ledger event;
+    * a real, non-synthetic target-agent message from the exact turn named by the event.
+
+    The database performs the reconciliation as one aggregate; no ledger or transcript history
+    is materialised in Python. Invalid legacy conversation ids remain in the audit trail but
+    cannot be cast to UUID and therefore cannot masquerade as completed transitions.
+    """
+    query = """
+        WITH claims AS (
+            SELECT
+                occurred_at,
+                payload->>'from_agent' AS from_agent,
+                payload->>'to_agent' AS to_agent,
+                payload->>'turn_id' AS turn_id,
+                CASE
+                    WHEN payload->>'conversation_id' ~*
+                         '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+                    THEN (payload->>'conversation_id')::uuid
+                    ELSE NULL
+                END AS conversation_uuid
+            FROM audit_ledger
+            WHERE payload->>'type' = %s
+        ),
+        verified AS (
+            SELECT claim.*
+            FROM claims claim
+            WHERE claim.conversation_uuid IS NOT NULL
+              AND claim.from_agent IS NOT NULL
+              AND claim.to_agent IS NOT NULL
+              AND claim.turn_id IS NOT NULL
+              AND EXISTS (
+                  SELECT 1
+                  FROM conversation_messages source
+                  WHERE source.conversation_id = claim.conversation_uuid
+                    AND source.agent_id = claim.from_agent
+                    AND source.created_at < claim.occurred_at
+                    AND NOT source.synthetic
+              )
+              AND EXISTS (
+                  SELECT 1
+                  FROM conversation_messages target
+                  WHERE target.conversation_id = claim.conversation_uuid
+                    AND target.agent_id = claim.to_agent
+                    AND target.turn_id::text = claim.turn_id
+                    AND NOT target.synthetic
+              )
+        )
+        SELECT
+            claim.from_agent,
+            claim.to_agent,
+            count(*) AS events,
+            (SELECT count(DISTINCT all_verified.conversation_uuid)
+             FROM verified all_verified) AS conversations
+        FROM verified claim
+        GROUP BY claim.from_agent, claim.to_agent
+    """
+    await cur.execute(query, (HANDOFF_TYPE,))
+    rows = await cur.fetchall()
+    incoming: dict[str, int] = {}
+    outgoing: dict[str, int] = {}
+    events = 0
+    conversations = 0
+    for row in rows:
+        from_agent = str(row.get("from_agent") or "")
+        to_agent = str(row.get("to_agent") or "")
+        count = _count_cell(row.get("events"))
+        if from_agent:
+            outgoing[from_agent] = outgoing.get(from_agent, 0) + count
+        if to_agent:
+            incoming[to_agent] = incoming.get(to_agent, 0) + count
+        events += count
+        conversations = max(conversations, _count_cell(row.get("conversations")))
+    return HandoffRollup(
+        incoming=incoming,
+        outgoing=outgoing,
+        events=events,
+        conversations=conversations,
+    )
+
+
+async def _verified_file_handoff_rollup(
+    cur: AsyncCursor[dict[str, object]],
+    claims: list[HandoffClaim],
+) -> HandoffRollup:
+    """Verify file-ledger claims against the same transcript evidence as Postgres mode."""
+    if not claims:
+        return HandoffRollup(incoming={}, outgoing={}, events=0, conversations=0)
+    conversation_ids = sorted({claim.conversation_id for claim in claims}, key=str)
+    await cur.execute(
+        """
+        SELECT
+            conversation_id::text AS conversation_id,
+            turn_id::text AS turn_id,
+            agent_id,
+            min(created_at) AS created_at
+        FROM conversation_messages
+        WHERE conversation_id = ANY(%s)
+          AND NOT synthetic
+        GROUP BY conversation_id, turn_id, agent_id
+        """,
+        (conversation_ids,),
+    )
+    evidence = await cur.fetchall()
+    incoming: dict[str, int] = {}
+    outgoing: dict[str, int] = {}
+    events = 0
+    conversations: set[UUID] = set()
+    for claim in claims:
+        conversation_id = str(claim.conversation_id)
+        source_seen = False
+        for row in evidence:
+            created_at = row.get("created_at")
+            if (
+                str(row.get("conversation_id") or "") == conversation_id
+                and str(row.get("agent_id") or "") == claim.from_agent
+                and isinstance(created_at, datetime)
+                and created_at < claim.occurred_at
+            ):
+                source_seen = True
+                break
+        target_seen = any(
+            str(row.get("conversation_id") or "") == conversation_id
+            and str(row.get("agent_id") or "") == claim.to_agent
+            and str(row.get("turn_id") or "") == claim.turn_id
+            for row in evidence
+        )
+        if not source_seen or not target_seen:
+            continue
+        events += 1
+        conversations.add(claim.conversation_id)
+        incoming[claim.to_agent] = incoming.get(claim.to_agent, 0) + 1
+        outgoing[claim.from_agent] = outgoing.get(claim.from_agent, 0) + 1
+    return HandoffRollup(
+        incoming=incoming,
+        outgoing=outgoing,
+        events=events,
+        conversations=len(conversations),
+    )
 
 
 def _integrity_broken() -> bool:
@@ -284,13 +496,11 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
     ``lang`` localizes the per-agent release ``verdict_label``; all other fields
     are language-independent.
     """
-    # The handoff journal is read BEFORE the SQL block — alone among the ledger reads, it cannot
-    # join the gather below: the dedup reconciliation has to ask the conversation store about the
-    # exact journeys the journal attests, so their ids must exist before the cursor closes.
-    incoming, outgoing, handoff_events, handoff_convs = await asyncio.to_thread(
-        _handoff_counts, get_settings().guard.audit_file
+    file_handoff_claims = (
+        await asyncio.to_thread(_file_handoff_claims, get_settings().guard.audit_file)
+        if ledger_source() == "file"
+        else None
     )
-
     with store_read(
         "postgres", "conversation_messages.fleet_rollup", target="conversation_messages"
     ) as read:
@@ -324,18 +534,15 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
                 entity_col="conversation_id",
                 synthetic_col="synthetic",
             )
-            # Reconciliation: `rollup.shared` answers about this table's own neighbourhood
-            # and reads 0 with composure when handed-off journeys never share an id here.
-            # So ask about the journeys the S1 journal actually attests: every one this
-            # store cannot see under two agents is double-counted by the dedup, and the
-            # payload carries both numbers so the UI states the gap instead of "0 shared".
-            handoff_seen_shared = await shared_entities_among(
-                cur,
-                table="conversation_messages",
-                entity_col="conversation_id",
-                entities=handoff_convs,
-                synthetic_col="synthetic",
-            )
+            if ledger_source() == "postgres":
+                handoffs = await _verified_handoff_rollup(cur)
+            else:
+                # File is the explicit operator escape hatch. Its scan is irreducible, but the
+                # resulting claims still earn "handoff" through the same transcript evidence.
+                handoffs = await _verified_file_handoff_rollup(
+                    cur,
+                    file_handoff_claims or [],
+                )
         read.rows_read(len(by_agent))
 
     # Every read below is SYNCHRONOUS — Postgres, Prometheus, the ledger, the eval snapshots.
@@ -423,8 +630,8 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
                 "messages": int(row.get("msgs") or 0),
                 "escalation_rate": escalation_rate,
                 "latency_ms": round(float(lat), 1) if lat is not None else None,
-                "handoffs_in": int(incoming.get(aid, 0)),
-                "handoffs_out": int(outgoing.get(aid, 0)),
+                "handoffs_in": int(handoffs.incoming.get(aid, 0)),
+                "handoffs_out": int(handoffs.outgoing.get(aid, 0)),
                 # Three facts, one rule, stated in `agent_health`. Green is a claim about
                 # observed evidence, never merely the absence of bad news.
                 "health": health_state(
@@ -460,12 +667,9 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
         "naive_sum_conversations": rollup.naive_sum,
         "shared_conversations": rollup.shared,
         "dedup_saved": rollup.dedup_saved,
-        # The handoff reconciliation, as numbers — never a pre-digested "ok". The journal
-        # attests `handoff_events` transfers over `handoff_conversations` journeys; the
-        # conversation store can see `…_seen_shared` of them under two agents. A gap means
-        # the org total double-counts journeys the journal proves are single, and the UI
-        # must say so beside the dedup line.
-        "handoff_events": handoff_events,
-        "handoff_conversations": len(handoff_convs),
-        "handoff_conversations_seen_shared": handoff_seen_shared,
+        # A fleet handoff is a completed transition, not any raw entry carrying the legacy
+        # event type. The ledger entry, prior source turn and persisted target turn all agree.
+        "handoff_events": handoffs.events,
+        "handoff_conversations": handoffs.conversations,
+        "handoff_conversations_seen_shared": handoffs.conversations,
     }

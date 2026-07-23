@@ -350,9 +350,9 @@ class FleetPayload(BaseModel):
     naive_sum_conversations: int
     shared_conversations: int
     dedup_saved: int
-    # Handoff reconciliation — the S1 journal's claim beside the conversation store's answer.
-    # `handoff_events` transfers over `handoff_conversations` journeys are attested; the store
-    # sees `handoff_conversations_seen_shared` of them under >1 agent. The UI states any gap.
+    # Completed handoffs only: a raw S1 label earns this business meaning when a prior source
+    # turn and the exact persisted target turn corroborate it. The immutable raw entries remain
+    # in the audit ledger; legacy initial routes are not promoted into fleet transfer counts.
     handoff_events: int
     handoff_conversations: int
     handoff_conversations_seen_shared: int

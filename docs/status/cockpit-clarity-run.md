@@ -97,3 +97,28 @@ they no longer carry the explanation alone.
   mécanisme concret : une conversation transférée peut apparaître chez l'agent de départ et chez
   l'agent d'arrivée tant que les deux passages ne sont pas reliés.
 - Les six valeurs de réconciliation et leurs contrats restent inchangés.
+
+## Correctif racine des faux transferts — 2026-07-23
+
+- Branche fraîche `codex/handoff-initial-route` depuis `origin/main=43edbba3`, claim
+  `5510f279-ed9f-498f-8821-3c66278330bc`.
+- Diagnostic live avant correction : 37 événements bruts `support-client → onboarding` dans
+  37 conversations. La jointure sur le transcript en retrouve 35 uniquement sous `onboarding`,
+  2 absentes et aucune sous deux agents.
+- Cause : `route_turn(None, …)` substituait le défaut technique `support-client`, puis appelait
+  « handoff » la première orientation vers `onboarding`. Support n'avait jamais traité le
+  parcours.
+- Émission corrigée : une conversation neuve rend `initial-><agent>` ou
+  `intent-><agent> (initial route)`, avec `handoff=false` et sans événement
+  `tessera.agent.handoff`. Un vrai handoff exige un agent courant persistant.
+- Lecture historique corrigée sans réécrire le journal append-only : le compteur flotte exige
+  un tour réel de l'agent source antérieur à l'événement et le tour cible exact, réel et
+  persistant. Même règle en mode Postgres et dans l'échappatoire fichier.
+- Preview `:8098` après correction : `handoff_events=0`, `handoff_conversations=0`,
+  `handoff_conversations_seen_shared=0`; les compteurs entrants/sortants des cartes sont tous
+  à zéro. Les 37 entrées brutes restent consultables dans le journal comme preuve historique.
+- Tests ciblés : 20 verts, dont mutations « premier message directement Onboarding »,
+  « cible seule rejetée » et « source antérieure + cible exacte conservées ».
+- Gate complet : `make gate-twice` vert deux fois sur le même arbre
+  `b729bda53c4f` ; chaque passage a validé 2 582 tests Python hors intégration et 503
+  tests frontend, avec Ruff, formatage, mypy, TypeScript et Biome verts.
