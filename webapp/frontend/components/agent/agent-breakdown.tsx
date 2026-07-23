@@ -137,13 +137,13 @@ export async function AgentBreakdown({
                 ? t("observabilityNote")
                 : lens.kind === "proof"
                   ? t("proofNote")
-                  : t("breakdownNote");
+                  : null;
 
   return (
     <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[0.82rem] font-semibold">{t("breakdownTitle")}</h2>
-        <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{note}</p>
+        {note ? <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{note}</p> : null}
       </div>
       <div className="overflow-x-auto">
         {lens.kind === "alarm" ? (
@@ -268,36 +268,31 @@ function DedupFooter({
   seenShared: number;
   handoffGap: number;
 }) {
-  const sharedConversations = fleet.shared_conversations ?? 0;
-  const duplicatesRemoved = fleet.dedup_saved ?? 0;
-  const explanationKey =
-    sharedConversations === 0 && duplicatesRemoved === 0 ? "dedupExplainNone" : "dedupExplain";
+  const total = fmtInt(fleet.org?.conversations ?? 0);
 
-  return (
-    <>
-      <span className="block">
-        {t(explanationKey, {
-          naive: fmtInt(fleet.naive_sum_conversations ?? 0),
-          saved: fmtInt(duplicatesRemoved),
-          shared: fmtInt(sharedConversations),
+  if (attested === 0) {
+    return <span className="block">{t("noHandoffSummary", { total })}</span>;
+  }
+
+  if (handoffGap > 0) {
+    return (
+      <span className="block text-amber-300/90">
+        {t("handoffGap", {
+          events: fmtInt(fleet.handoff_events ?? 0),
+          attested: fmtInt(attested),
+          seen: fmtInt(seenShared),
         })}
       </span>
-      {attested > 0 ? (
-        handoffGap > 0 ? (
-          <span className="mt-0.5 block text-amber-300/90">
-            {t("handoffGap", {
-              events: fmtInt(fleet.handoff_events ?? 0),
-              attested: fmtInt(attested),
-              seen: fmtInt(seenShared),
-            })}
-          </span>
-        ) : (
-          <span className="mt-0.5 block">
-            {t("handoffReconciled", { attested: fmtInt(attested) })}
-          </span>
-        )
-      ) : null}
-    </>
+    );
+  }
+
+  return (
+    <span className="block">
+      {t(`handoffSummary.${attested === 1 ? "one" : "many"}`, {
+        attested: fmtInt(attested),
+        total,
+      })}
+    </span>
   );
 }
 

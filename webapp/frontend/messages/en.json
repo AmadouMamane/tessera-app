@@ -8572,7 +8572,6 @@
     "hint": "This filter applies to every governance view; it does not change the agent opened in its own page.",
     "breakdownTitle": "Per-agent view",
     "openEvaluations": "View the agent's evaluations",
-    "breakdownNote": "Real activity observed for each agent. The fleet total counts every conversation once.",
     "colAgent": "Agent",
     "colVolume": "Volume",
     "colEscalation": "Refusal/escalation",
@@ -8627,9 +8626,11 @@
       "org-wide": "This signal applies to the whole fleet; there is no per-agent value.",
       "not-honoured": "Agent dimension not honoured by the read — value refused."
     },
-    "dedupExplain": "{naive} conversations after adding each agent's volume. {shared} are found under several agents; {saved} are removed from the total.",
-    "dedupExplainNone": "Adding the conversations handled by each agent gives a total of {naive}. No conversation appears under more than one agent, so the total stays unchanged.",
-    "handoffReconciled": "Transfers verified: the {attested} transferred conversations appear only once in the fleet total.",
+    "noHandoffSummary": "No handoff between agents was observed during the period, so adding the conversations handled by each agent directly gives the fleet total: {total} conversations.",
+    "handoffSummary": {
+      "one": "One conversation moved from one agent to another. It appears in both agents' activity, but counts only once in the fleet total: {total} conversations.",
+      "many": "{attested} conversations moved from one agent to another. They appear in both agents' activity, but count only once in the fleet total: {total} conversations."
+    },
     "handoffGap": "Why check this? A transferred conversation can appear under both the sending and receiving agent. The audit log counts {events} transfers across {attested} conversations, yet the reconciliation finds only {seen} under two agents. Until those passages can be linked, a conversation may be counted twice.",
     "empty": "No fleet data available.",
     "orgSignalsNote": "Agent filter active: the cards below show this agent's signals. Shared controls, the audit chain, traces, and history remain calculated for the whole fleet.",

@@ -134,3 +134,16 @@ they no longer carry the explanation alone.
   protègent le cas zéro ; 70 tests frontend ciblés, TypeScript et Biome sont verts.
 - `make gate-twice` est vert deux fois sur le même arbre `2586c873269b` : 2 582 tests
   Python hors intégration et 505 tests frontend par passage.
+
+## Résumé de flotte piloté par l’état — 2026-07-23
+
+- Le pied de table choisit désormais une phrase métier complète : aucun transfert constaté,
+  transferts vérifiés et comptés une seule fois, ou rapprochement incomplet expliqué.
+- En présence de transferts vérifiés, il nomme le nombre de conversations passées entre agents,
+  explique leur présence dans l’activité des deux agents concernés et donne le total de la flotte.
+- Le sous-titre générique « Données réelles observées […] » est supprimé du tableau de suivi ;
+  les notes propres aux vues qualité, sécurité, conformité, fiabilité, observabilité et preuve
+  restent affichées car elles expliquent leurs colonnes.
+- Validation : 72 tests ciblés puis la suite frontend complète de 507 tests, TypeScript et
+  Biome verts. `make gate-twice` n’a pas été exécuté, conformément à l’instruction utilisateur
+  de le suspendre jusqu’à nouvel ordre.

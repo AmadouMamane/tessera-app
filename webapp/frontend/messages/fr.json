@@ -8574,7 +8574,6 @@
     "hint": "Ce filtre agit sur toutes les vues de gouvernance ; il ne change pas l'agent ouvert dans sa fiche.",
     "breakdownTitle": "Vue par agent",
     "openEvaluations": "Voir les évaluations de l'agent",
-    "breakdownNote": "Données réelles observées pour chaque agent. Le total de la flotte compte chaque conversation une fois.",
     "colAgent": "Agent",
     "colVolume": "Volume",
     "colEscalation": "Refus/escalade",
@@ -8629,9 +8628,11 @@
       "org-wide": "Ce signal concerne toute la flotte ; il n'existe pas de valeur par agent.",
       "not-honoured": "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée."
     },
-    "dedupExplain": "{naive} conversations en additionnant le volume de chaque agent. {shared} sont retrouvées chez plusieurs agents ; {saved} sont retirées du total.",
-    "dedupExplainNone": "L'addition des conversations traitées par chaque agent donne un total de {naive}. Aucune conversation n'apparaît chez plusieurs agents : ce total reste donc inchangé.",
-    "handoffReconciled": "Transferts vérifiés : les {attested} conversations transférées n'apparaissent qu'une fois dans le total de la flotte.",
+    "noHandoffSummary": "Sur la période, aucun transfert entre agents n'a été constaté : l'addition des conversations traitées par chaque agent donne donc directement le total de la flotte, soit {total} conversations.",
+    "handoffSummary": {
+      "one": "Une conversation est passée d'un agent à un autre. Elle figure dans l'activité des deux agents concernés, mais n'est comptée qu'une fois dans le total de la flotte : {total} conversations.",
+      "many": "{attested} conversations sont passées d'un agent à un autre. Elles figurent dans l'activité des deux agents concernés, mais ne sont comptées qu'une fois dans le total de la flotte : {total} conversations."
+    },
     "handoffGap": "Pourquoi vérifier ? Une conversation transférée peut figurer chez l'agent de départ et chez l'agent d'arrivée. Le journal d'audit compte {events} transferts dans {attested} conversations, mais le rapprochement n'en retrouve que {seen} chez deux agents. Tant que ces passages ne sont pas reliés, une conversation peut être comptée deux fois.",
     "empty": "Aucune donnée flotte disponible.",
     "orgSignalsNote": "Filtre agent actif : les cartes ci-dessous montrent les signaux de cet agent. Les contrôles communs, la chaîne d'audit, les traces et l'historique restent calculés pour toute la flotte.",

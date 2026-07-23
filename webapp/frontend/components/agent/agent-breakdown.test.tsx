@@ -59,11 +59,19 @@ function rowAt(rows: HTMLElement[], i: number): HTMLElement {
 }
 
 /** A wire-shaped fleet payload, parsed through the REAL schema — never a hand-typed object. */
-function fleetFromWire(reconciliation: {
-  handoff_events: number;
-  handoff_conversations: number;
-  handoff_conversations_seen_shared: number;
-}) {
+function fleetFromWire(
+  reconciliation: {
+    handoff_events: number;
+    handoff_conversations: number;
+    handoff_conversations_seen_shared: number;
+  },
+  totals: {
+    naive?: number;
+    total?: number;
+    shared?: number;
+    saved?: number;
+  } = {},
+) {
   return FleetSchema.parse({
     available: true,
     agents: [
@@ -82,10 +90,10 @@ function fleetFromWire(reconciliation: {
         release: null,
       },
     ],
-    org: { conversations: 415, turns: 483 },
-    naive_sum_conversations: 415,
-    shared_conversations: 0,
-    dedup_saved: 0,
+    org: { conversations: totals.total ?? 415, turns: 483 },
+    naive_sum_conversations: totals.naive ?? 415,
+    shared_conversations: totals.shared ?? 0,
+    dedup_saved: totals.saved ?? 0,
     ...reconciliation,
   });
 }
@@ -169,17 +177,29 @@ describe("the transfer verification line under the fleet total", () => {
     expect(screen.queryByText(/handoff = 1/)).toBeNull();
   });
 
-  it("says reconciled when every attested journey is seen under two agents", async () => {
-    const fleet = fleetFromWire({
-      handoff_events: 3,
-      handoff_conversations: 2,
-      handoff_conversations_seen_shared: 2,
-    });
+  it("explains verified transfers in plain language and gives the fleet total once", async () => {
+    const fleet = fleetFromWire(
+      {
+        handoff_events: 3,
+        handoff_conversations: 2,
+        handoff_conversations_seen_shared: 2,
+      },
+      {
+        naive: 417,
+        total: 415,
+        shared: 2,
+        saved: 2,
+      },
+    );
 
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
-    expect(screen.getByText(/Transferts vérifiés/)).toBeTruthy();
+    const explanation = screen.getByText(/2 conversations sont passées d'un agent à un autre/);
+    expect(explanation.textContent).toContain("l'activité des deux agents concernés");
+    expect(explanation.textContent).toContain("qu'une fois dans le total de la flotte");
+    expect(explanation.textContent).toContain("415 conversations");
     expect(screen.queryByText(/Pourquoi vérifier/)).toBeNull();
+    expect(screen.queryByText(/doublons|retirées du total/)).toBeNull();
   });
 
   it("stays silent when the journal attests no handoffs at all", async () => {
@@ -195,15 +215,26 @@ describe("the transfer verification line under the fleet total", () => {
     expect(screen.queryByText(/Transferts vérifiés/)).toBeNull();
   });
 
-  it("states a zero reconciliation as a natural sentence, not '0 are found / removed'", async () => {
+  it("states no transfers as one direct, natural sentence", async () => {
     const fleet = fleetFromWire(NO_HANDOFFS);
 
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
-    const explanation = screen.getByText(/L'addition des conversations traitées/);
-    expect(explanation.textContent).toContain("Aucune conversation n'apparaît");
-    expect(explanation.textContent).toContain("ce total reste donc inchangé");
+    const explanation = screen.getByText(/aucun transfert entre agents n'a été constaté/i);
+    expect(explanation.textContent).toContain(
+      "l'addition des conversations traitées par chaque agent donne donc directement le total de la flotte",
+    );
+    expect(explanation.textContent).toContain("415 conversations");
     expect(explanation.textContent).not.toMatch(/0 sont retrouvées|0 sont retirées/);
+  });
+
+  it("removes the redundant generic note above the monitoring table", async () => {
+    render(await AgentBreakdown({ fleet: fleetFromWire(NO_HANDOFFS), scope: "all", locale: "fr" }));
+
+    expect(screen.queryByText(/Données réelles observées pour chaque agent/)).toBeNull();
+    expect(
+      screen.queryByText(/Le total de la flotte compte chaque conversation une fois/),
+    ).toBeNull();
   });
 
   it("renders the gap sentence in every locale", async () => {

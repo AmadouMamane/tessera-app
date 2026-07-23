@@ -397,23 +397,29 @@ describe("cockpit language stays human at the first reading level", () => {
     expect(pageEntryCopy(fr).filter((copy) => OPAQUE_FRENCH_PAGE_ENTRY.test(copy))).toEqual([]);
   });
 
-  it("preserves every fleet reconciliation value in all three languages", () => {
+  it("preserves the facts needed by every fleet reconciliation state in all three languages", () => {
     for (const catalogue of [fr, en, de]) {
-      expect(catalogue.agentScope.dedupExplain).toContain("{naive}");
-      expect(catalogue.agentScope.dedupExplain).toContain("{saved}");
-      expect(catalogue.agentScope.dedupExplain).toContain("{shared}");
-      expect(catalogue.agentScope.dedupExplainNone).toContain("{naive}");
-      expect(catalogue.agentScope.dedupExplainNone).not.toMatch(/\{shared\}|\{saved\}/u);
+      expect(catalogue.agentScope.noHandoffSummary).toContain("{total}");
+      expect(catalogue.agentScope.handoffSummary.one).toContain("{total}");
+      expect(catalogue.agentScope.handoffSummary.many).toContain("{attested}");
+      expect(catalogue.agentScope.handoffSummary.many).toContain("{total}");
       expect(catalogue.agentScope.handoffGap).toContain("{events}");
       expect(catalogue.agentScope.handoffGap).toContain("{attested}");
       expect(catalogue.agentScope.handoffGap).toContain("{seen}");
+      expect(catalogue.agentScope).not.toHaveProperty("breakdownNote");
     }
   });
 
   it("uses a natural zero-state for fleet reconciliation in every language", () => {
-    expect(fr.agentScope.dedupExplainNone).toMatch(/Aucune conversation.*total reste/u);
-    expect(en.agentScope.dedupExplainNone).toMatch(/No conversation.*total stays/u);
-    expect(de.agentScope.dedupExplainNone).toMatch(/Keine Konversation.*Gesamtzahl bleibt/u);
+    expect(fr.agentScope.noHandoffSummary).toMatch(/aucun transfert.*total de la flotte/u);
+    expect(en.agentScope.noHandoffSummary).toMatch(/No handoff.*fleet total/u);
+    expect(de.agentScope.noHandoffSummary).toMatch(/keine Übergabe.*Flottensumme/u);
+  });
+
+  it("explains verified transfers in ordinary language in every language", () => {
+    expect(fr.agentScope.handoffSummary.many).toMatch(/deux agents concernés.*une fois/u);
+    expect(en.agentScope.handoffSummary.many).toMatch(/both agents.*only once/u);
+    expect(de.agentScope.handoffSummary.many).toMatch(/beider beteiligten Agenten.*einmal/u);
   });
 
   it("explains why a transferred conversation can be counted under two agents", () => {
@@ -515,7 +521,7 @@ describe("cockpit language stays human at the first reading level", () => {
 
   it("has teeth: restoring the original fleet sentence turns the ratchet red", () => {
     const mutant = structuredClone(fr);
-    mutant.agentScope.dedupExplain =
+    mutant.agentScope.noHandoffSummary =
       "Somme naïve {naive} · {saved} dédoublonnées · {shared} conversations partagées";
     expect(visibleFleetCopy(mutant)).toMatch(OPAQUE_FLEET_COPY.fr);
   });
