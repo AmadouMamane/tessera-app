@@ -217,3 +217,59 @@ they no longer carry the explanation alone.
 - Dette distincte : le premier chargement à froid de Vue d’ensemble lance encore un fan-out de
   lectures non temporelles. Il ne bloque plus le changement de curseur une fois la page stabilisée,
   mais mérite un lot dédié de regroupement backend/BFF plutôt qu’un nouveau délai frontend.
+
+## Densification verticale de Vue d’ensemble — 2026-07-23
+
+- Branche fraîche `codex/compact-overview` depuis `origin/main=87899211`, claim sole-writer
+  `166823e1-f82f-4d79-a335-3aad48eb10e9`.
+- Diagnostic DOM avant correction sur le preview `:3098` : les actions occupaient seules une
+  ligne de 36 px ; le bandeau commençait à `y=166`, le rail à `y=264` et mesurait 324 px, puis
+  « Vue par agent » commençait à `y=612`. Les espaces venaient de l’addition du `gap-4`, du
+  `mb-1.5` des actions, du `mb-3` du bandeau et des marges internes du rail.
+- Correction : sur les grands écrans du cockpit, le bandeau et les actions de preuve partagent
+  la même bande d’ouverture ; sur un écran standard à 1440 px ils restent empilés pour préserver
+  la largeur de la jauge. Après revue live, toutes les surfaces sœurs adoptent une trame exacte
+  de 10 × 10 px : premier niveau, KPI, deux colonnes, cartes empilées et triptyque analytique.
+  Le fond sticky reste à 4 px et le rail réduit ses paddings, sa marge avant l’axe, l’espacement
+  de la légende, le détail sélectionné et le lien PROUVER.
+- Mesure après correction, bandeau chargé : bande d’ouverture `y=108..174`, rail
+  `y=184..452/456` selon le rafraîchissement asynchrone, « Vue par agent » à `y=466`. Le premier
+  tableau remonte donc de 146 px. Le curseur tient exactement dans ses 52 px
+  (`clientHeight=scrollHeight=52`) : aucun chevauchement avec la légende.
+- Mesure DOM de la trame finale : quatre écarts verticaux de premier niveau à 10 px, cinq écarts
+  horizontaux KPI à 10 px, séparation des colonnes à 10 px et cinq écarts verticaux des cartes
+  de gauche à 10 px.
+- Un ratchet rejette désormais le retour d’un autre rythme entre surfaces sœurs, du padding
+  vertical de commande supérieur à `1.5` ou de la marge `mt-6` devant l’axe. Validation ciblée :
+  55 tests de clarté verts, Biome vert sur les fichiers frontend touchés, TypeScript et
+  `git diff --check` verts.
+- `make gate-twice` n’a pas été exécuté, conformément à l’instruction utilisateur toujours active.
+
+## Trame 10 × 10 étendue à tout le cockpit — 2026-07-23
+
+- La trame validée sur Vue d’ensemble devient un contrat du shell : ses enfants directs sont
+  séparés de 10 px et toute collection flex/grid de cartes partagées reçoit 10 px dans les deux
+  axes. Les espacements internes des cartes restent propres à chaque composant.
+- Les anciens tableaux qui n’utilisaient pas la carte partagée marquent désormais explicitement
+  leurs zones, panneaux et tuiles comme surfaces. Cela couvre notamment incidents, rejeu,
+  automatismes, jeux d’évaluation, preuves, conformité, observabilité, politiques, accès,
+  intégrations, système, sources, files et paramètres.
+- Les marges locales qui doublaient le rythme du shell ont été retirées des pages Surveiller,
+  Agir, Prouver, Configurer et Admin. Finding live supplémentaire : le sélecteur des deux vues
+  Qualité conservait `mb-4`, soit 26 px réels avec le shell ; après correction ses deux écarts
+  verticaux et son écart horizontal sont tous à 10 px.
+- Mesures DOM sur le preview `:3098` :
+  - Sécurité : bandeau → dashboard 10 px ; six zones, KPI, panneaux et rail à 10 × 10 px ;
+  - Qualité : trois écarts de premier niveau à 10 px et portes de vue séparées de 10 px ;
+  - Rejeu : racine, deux colonnes, huit KPI, zones, panneaux et rail à 10 × 10 px ;
+  - Flotte : racine et grille de six agents à 10 × 10 px ;
+  - Modèles : filtre → catalogue 10 px, huit KPI 10 × 10 px, tableau → détail 10 px ;
+  - Incidents : quatre zones, huit KPI, colonnes et panneaux à 10 × 10 px ;
+  - Conformité : bandeau → dashboard 10 px, zones, sept KPI, panneaux et rail à 10 × 10 px.
+- Le ratchet passe de 55 à 61 tests et protège le shell, la carte partagée, les composants
+  historiques, les racines de page et le sélecteur Qualité. TypeScript et `git diff --check`
+  sont verts.
+- Le `biome check` large reste rouge sur 51 fichiers historiques pour une dérive de formatage
+  globale (principalement indentation espaces contre tabs) qui existait avant les changements de
+  classes ; aucune réécriture massive hors lot n’a été faite. `make gate-twice` reste suspendu
+  conformément à l’instruction utilisateur.

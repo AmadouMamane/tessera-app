@@ -105,7 +105,10 @@ function Panel({
 /** A translucent banded section grouping one cockpit zone (A · B · C · …). */
 function Zone({ label, children, info }: { label: string; children: ReactNode; info?: ReactNode }) {
   return (
-    <section className="rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5">
+    <section
+      data-slot="card"
+      className="rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5"
+    >
       <div className="flex items-center gap-1.5">
         <Sec>{label}</Sec>
         {info ? <span className="shrink-0">{info}</span> : null}
@@ -1369,7 +1372,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       {/* The temporal rail LEADS — directly beneath the SLO breach alert the page renders
           above the dashboard (user feedback) — then the chrome, then the agent scope. */}
       <SignalCommandBar
@@ -1422,15 +1425,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
 
       {/* Agent-scope context (Vue par agent) sits BELOW the rail, so the rail stays
           directly under the SLO alert. */}
-      {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
+      {agentScope ? <div>{agentScope}</div> : null}
 
       {activeTab !== "overview" ? (
-        <div id="security-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-2">
+        <div id="security-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-2.5">
           {domainView[activeTab]}
         </div>
       ) : (
-        <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="flex min-w-0 flex-col gap-2">
+        <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-2.5">
             {/* A. État actuel */}
             <Zone
               label={ts("sec.actual")}
@@ -1795,7 +1798,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       )}
 
       {/* footer status */}
-      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
         <Chip icon={Radio} label={ts("status.realtime")} tone="text-[var(--tessera-green)]" />
         <Chip icon={ShieldCheck} label={ts("status.chain")} tone="text-[var(--tessera-green)]" />
         <Chip icon={AlertTriangle} label={ts("status.signals", { n: 200 })} />
@@ -1859,8 +1862,8 @@ function SecurityRail({
         : "bg-[var(--muted-foreground)]";
 
   return (
-    <aside className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-col gap-2 xl:sticky xl:top-4">
+    <aside className="flex min-w-0 flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5 xl:sticky xl:top-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-1.5 text-sm">

@@ -48,7 +48,7 @@ export async function GovScopeSection({
 }) {
   const t = await getTranslations({ locale, namespace: "agentScope" });
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       {signalHero ? <SignalBreachHero orgWide={!perAgent} /> : null}
       <div className="flex flex-wrap items-center gap-3">
         <AgentScopeFilter />

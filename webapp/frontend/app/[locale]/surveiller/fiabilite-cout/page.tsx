@@ -27,7 +27,7 @@ export default async function ReliabilityPage({ params, searchParams }: Reliabil
   const t = await getTranslations({ locale, namespace: "reliability" });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
-      <div className="mb-3">
+      <div>
         <GovScopeSection
           fleet={fleet}
           scope={scope}

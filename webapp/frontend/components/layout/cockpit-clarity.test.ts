@@ -381,6 +381,23 @@ function oversizedUpwardShadow(source: string): number[] {
   });
 }
 
+function overviewStackGap(source: string): number | undefined {
+  const match = source.match(/flex w-full flex-col gap-(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : undefined;
+}
+
+function commandRowPadding(source: string): number | undefined {
+  const match = source.match(/sr01-command-row[^"]* py-(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : undefined;
+}
+
+function timelineTopGap(source: string): number | undefined {
+  const match = source.match(
+    /className="relative mt-(\d+(?:\.\d+)?)[^"]*cursor-pointer select-none"/,
+  );
+  return match ? Number(match[1]) : undefined;
+}
+
 describe("cockpit language stays human at the first reading level", () => {
   it.each([
     ["fr", fr],
@@ -615,6 +632,11 @@ describe("alert-to-rail spacing stays compact", () => {
     join(root, "components/overview/overview-dashboard.tsx"),
     "utf8",
   );
+  const signalCommandBar = readFileSync(
+    join(root, "components/surveiller/signal-command-bar.tsx"),
+    "utf8",
+  );
+  const temporalRail = readFileSync(join(root, "components/overview/temporal-rail.tsx"), "utf8");
 
   it("does not insert a large margin between a signal banner and its temporal controls", () => {
     expect(excessiveAlertGap(qualityPage)).toEqual([]);
@@ -626,11 +648,155 @@ describe("alert-to-rail spacing stays compact", () => {
     expect(oversizedUpwardShadow(overviewDashboard)).toEqual([]);
   });
 
+  it("keeps the overview opening band and expanded rail vertically compact", () => {
+    expect(overviewStackGap(overviewDashboard)).toBe(2.5);
+    expect(commandRowPadding(signalCommandBar)).toBeLessThanOrEqual(1.5);
+    expect(timelineTopGap(temporalRail)).toBeLessThanOrEqual(3);
+  });
+
+  it("uses a ten-pixel rhythm between sibling surfaces on the overview", () => {
+    for (const layoutClass of [
+      "grid gap-2.5 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-center",
+      "grid gap-2.5 md:grid-cols-2 xl:grid-cols-6",
+      "grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]",
+      "flex min-w-0 flex-col gap-2.5",
+      "grid gap-2.5 xl:grid-cols-3",
+    ]) {
+      expect(overviewDashboard).toContain(layoutClass);
+    }
+  });
+
   it("has teeth: the former spacing and shadow are rejected", () => {
     const marginMutation = '<div className="mb-6"><SignalBreachHero /></div>';
     const shadowMutation =
       '<div className="shadow-[0_-20px_0_0_var(--tessera-bg)]">temporal controls</div>';
+    const stackMutation = '<div className="flex w-full flex-col gap-4 pb-8">';
+    const commandMutation = '<div className="sr01-command-row flex py-3">';
+    const timelineMutation = '<div className="relative mt-6 h-14 cursor-pointer select-none">';
     expect(excessiveAlertGap(marginMutation)).toEqual([6]);
     expect(oversizedUpwardShadow(shadowMutation)).toEqual([20]);
+    expect(overviewStackGap(stackMutation)).toBeGreaterThan(2.5);
+    expect(commandRowPadding(commandMutation)).toBeGreaterThan(1.5);
+    expect(timelineTopGap(timelineMutation)).toBeGreaterThan(3);
+  });
+});
+
+describe("cockpit surfaces keep one ten-pixel rhythm", () => {
+  const root = process.cwd();
+  const shellFrame = readFileSync(join(root, "components/layout/shell-frame.tsx"), "utf8");
+  const card = readFileSync(join(root, "components/ui/card.tsx"), "utf8");
+  const globals = readFileSync(join(root, "app/globals.css"), "utf8");
+  const security = readFileSync(
+    join(root, "components/security/security-dashboard.tsx"),
+    "utf8",
+  );
+  const qualityViewSwitch = readFileSync(
+    join(root, "components/surveiller/quality-view-switch.tsx"),
+    "utf8",
+  );
+
+  const pageRoots = [
+    "components/incidents/incidents-overview.tsx",
+    "components/curation/curation-overview.tsx",
+    "components/replay/replay-overview.tsx",
+    "components/system/system-profile.tsx",
+    "components/parameters/parameters-overview.tsx",
+    "components/proofs/proofs-overview.tsx",
+    "components/policies/policies-overview.tsx",
+    "components/automations/automations-overview.tsx",
+    "components/inbox/inbox-overview.tsx",
+    "components/connectors/connectors-overview.tsx",
+    "components/integrations/integrations-overview.tsx",
+    "components/signals/signal-catalogue.tsx",
+    "components/access/access-overview.tsx",
+    "components/users/users-overview.tsx",
+    "components/agent/agent-configurations.tsx",
+    "components/agent/agent-prompts.tsx",
+    "components/agent/agent-historique.tsx",
+    "components/agent/agent-a-faire.tsx",
+    "components/agent/agent-garde-fous.tsx",
+    "components/agent/agent-connaissances.tsx",
+    "components/agent/fleet-explorer.tsx",
+    "components/sources/sources-overview.tsx",
+    "components/configurer/guardrail-catalogue.tsx",
+    "components/configurer/model-catalogue.tsx",
+    "components/agent/gov-scope-section.tsx",
+    "components/health/health-dashboard.tsx",
+    "components/agir/release-control-view.tsx",
+    "components/reliability/reliability-dashboard.tsx",
+    "components/improvement/improvement-dashboard.tsx",
+    "components/compliance/compliance-dashboard.tsx",
+    "components/observability/observability-dashboard.tsx",
+    "components/proofs/etat-a-date.tsx",
+    "components/agent/agent-subtab-shared.tsx",
+    "components/agent/agent-console.tsx",
+    "app/[locale]/agents/page.tsx",
+    "app/[locale]/agents/[agentId]/historique/[sessionId]/page.tsx",
+  ] as const;
+  const customSurfaceSources = [
+    "components/incidents/incidents-overview.tsx",
+    "components/automations/automations-overview.tsx",
+    "components/curation/curation-overview.tsx",
+    "components/proofs/proofs-overview.tsx",
+    "components/replay/replay-overview.tsx",
+    "components/replay/replay-cassette.tsx",
+    "components/compliance/compliance-dashboard.tsx",
+    "components/observability/observability-dashboard.tsx",
+    "components/proofs/etat-a-date.tsx",
+    "components/policies/policies-overview.tsx",
+    "components/access/access-overview.tsx",
+    "components/integrations/integrations-overview.tsx",
+    "components/system/system-profile.tsx",
+    "components/sources/sources-overview.tsx",
+    "components/inbox/inbox-overview.tsx",
+    "components/parameters/parameters-overview.tsx",
+    "components/configurer/model-catalogue.tsx",
+    "components/configurer/guardrail-catalogue.tsx",
+  ] as const;
+
+  it("sets the shell and every sibling Card collection to ten pixels", () => {
+    expect(shellFrame).toContain("mx-auto flex h-full w-full flex-col gap-2.5");
+    expect(card).toContain('data-slot="card"');
+    expect(globals).toContain(
+      ':where(.flex, .grid):has(> [data-slot="card"] ~ [data-slot="card"])',
+    );
+    expect(globals).toContain("gap: 0.625rem !important");
+  });
+
+  it("keeps custom page stacks on the same ten-pixel rhythm", () => {
+    for (const path of pageRoots) {
+      expect(readFileSync(join(root, path), "utf8"), path).toMatch(
+        /flex[^"]*flex-col gap-2\.5(?:\s|")/,
+      );
+    }
+  });
+
+  it("marks legacy panels as surfaces so their flex and grid parents inherit ten pixels", () => {
+    for (const path of customSurfaceSources) {
+      expect(readFileSync(join(root, path), "utf8"), path).toContain('data-slot="card"');
+    }
+  });
+
+  it("keeps the quality view doors ten pixels apart without an extra bottom margin", () => {
+    expect(qualityViewSwitch).toContain(
+      'className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"',
+    );
+    expect(qualityViewSwitch).not.toMatch(/<nav[^>]*className="[^"]*mb-/u);
+  });
+
+  it("removes the security page's former eight-pixel and negative-gap exceptions", () => {
+    expect(security).toContain('className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_340px]"');
+    expect(security).toContain('className="flex min-w-0 flex-col gap-2.5"');
+    expect(security).not.toContain('className="-mt-0.5"');
+    expect(security).not.toContain(
+      'className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t',
+    );
+  });
+
+  it("has teeth: widening the shell or sibling-card gutter turns the ratchet red", () => {
+    const shellMutation = shellFrame.replace("flex-col gap-2.5", "flex-col gap-4");
+    const cssMutation = globals.replace("gap: 0.625rem !important", "gap: 1rem !important");
+    expect(shellMutation).not.toContain("mx-auto flex h-full w-full flex-col gap-2.5");
+    expect(cssMutation).not.toContain("gap: 0.625rem !important");
   });
 });

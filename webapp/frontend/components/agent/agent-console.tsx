@@ -377,7 +377,7 @@ export function AgentConsole() {
     ? `sess_${conversationId.slice(0, 8)}`
     : data.context?.session_id;
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       {/* Operator-context strip — honestly reflects the surface this turn runs
           on (ADR 0010 Phase B). With a verified operator session the console
           reaches the operator fleet (recouvrement) on the cockpit surface;
@@ -464,7 +464,7 @@ function ConsoleHonestEmpty({
   subtitle?: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <div className="flex min-h-[54vh] items-center justify-center">
         <div className="w-full max-w-2xl rounded-lg border border-dashed border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-6 py-12 text-center">
           <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)]">
@@ -518,7 +518,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
   const green = outcome?.verdict === "green";
 
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <header className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-base font-semibold">{data.title}</h1>

@@ -28,7 +28,7 @@ export default async function ReleaseControlPage({ params, searchParams }: PageP
 
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <AgentScopeFilter />
         <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{ts("hint")}</span>
       </div>

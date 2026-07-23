@@ -216,7 +216,7 @@ export function ProofsOverview() {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
       {/* THE SR-01 command bar — the same component as SURVEILLER / Vue d'ensemble
           (registre §1: same substrate S4 ⇒ same base component, same instrument
@@ -283,7 +283,7 @@ export function ProofsOverview() {
             </div>
           </Zone>
 
-          <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid min-w-0 gap-2.5 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-w-0 flex-col gap-3">
               {pipelineZone}
               {packsZone}
@@ -929,7 +929,7 @@ function ProofsRail({
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
       <Chip
         icon={ShieldCheck}
         tone="text-[var(--tessera-green)]"
@@ -955,7 +955,10 @@ function Zone({
   children: ReactNode;
 }) {
   return (
-    <section className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5">
+    <section
+      data-slot="card"
+      className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5"
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
           {label}
@@ -983,6 +986,7 @@ function Panel({
 }) {
   return (
     <div
+      data-slot="card"
       className={cn(
         "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
         className,
@@ -1013,7 +1017,10 @@ function KpiTile({
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
-    <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <div
+      data-slot="card"
+      className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
       <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}

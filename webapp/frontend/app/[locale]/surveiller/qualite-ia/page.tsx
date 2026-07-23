@@ -51,7 +51,7 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
         <QualityViewSwitch active="evaluations" locale={locale} />
         {/* Plain-language way in for a visitor: what the catalogue is, what the floor means,
             why an absolute score is not the grade. The expert detail below stays intact. */}
-        <details className="mb-4 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3">
+        <details className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3">
           <summary className="cursor-pointer text-[0.8rem] font-semibold">
             {tEval("explainer.title")}
           </summary>
@@ -89,7 +89,7 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
       <QualityViewSwitch active="signals" locale={locale} />
       {/* The alert leads and the temporal controls follow as one compact reading sequence.
           A shallow background fill on the sticky chrome keeps both rounded edges clean. */}
-      <div className="mb-3">
+      <div>
         <SignalBreachHero variant="gauge" />
       </div>
       <ObservabilityDashboard

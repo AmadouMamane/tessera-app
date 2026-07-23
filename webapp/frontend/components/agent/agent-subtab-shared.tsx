@@ -639,7 +639,7 @@ export function EvalDrawer({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3.5">{children}</div>
       </dialog>
     </div>
   );

@@ -173,7 +173,7 @@ export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
   ];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       {/* Toolbar — search · filters + counters · grid/list toggle. */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">

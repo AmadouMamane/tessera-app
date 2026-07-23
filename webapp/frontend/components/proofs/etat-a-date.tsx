@@ -306,7 +306,7 @@ export function EtatADate() {
   const detail = selected ? (allRows.find((r) => r.key === selected) ?? null) : null;
 
   return (
-    <div className="relative flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="relative flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       {/* Banner + page actions share one row (no wasted line). */}
       <div className="flex flex-wrap items-stretch gap-3">
         {data?.meta?.banner ? (
@@ -718,6 +718,7 @@ function Panel({
 }) {
   return (
     <section
+      data-slot="card"
       className={cn(
         "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
         className,
@@ -1656,7 +1657,7 @@ const SKELETON_CARDS = ["a", "b", "c"];
 
 function EtatSkeleton() {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       <div className="grid gap-2.5 xl:grid-cols-12">
         <Skeleton className="h-40 rounded-lg xl:col-span-3" />
         <Skeleton className="h-40 rounded-lg xl:col-span-5" />

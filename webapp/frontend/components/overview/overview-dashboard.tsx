@@ -404,23 +404,19 @@ export function OverviewDashboard({
   const sloReady = slo.data && slo.data.n > 0 ? slo.data : undefined;
 
   return (
-    // No top pull-up: the page actions row is vertically CENTERED in the band between
-    // the header rule and the rail — ≈ equal space above (the main's pt-5) and below
-    // (the gap to the rail).
-    <div className="flex w-full flex-col gap-4 pb-8">
-      {/* Page actions (Exporter rapport · Générer le dossier de preuves) — at page
-          level, centered in the band between the header and the rail. The small mb
-          clears the sticky wrapper's upward fill band below (so it never paints over
-          the buttons' bottom edge while unscrolled). */}
-      <PageEvidenceActions className="mb-1.5" />
-
-      {/* The page leads with the SLO breach ALERT; the temporal rail sits directly
-          beneath it (user feedback) — not first, not buried. */}
-      {lead}
+    <div className="flex w-full flex-col gap-2.5 pb-6">
+      {/* The alert and the page-level evidence actions share one opening band on wide
+          cockpit screens: the actions no longer reserve an otherwise empty 36px row
+          above the alert. On narrower screens they stack without compressing the SLO
+          gauge. The actions remain outside the temporal bar (registre §2). */}
+      <div className="grid gap-2.5 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-center">
+        <div className="min-w-0">{lead}</div>
+        <PageEvidenceActions className="self-center" />
+      </div>
 
       {/* The command bar pins under the page topbar. A shallow same-colour fill keeps
           scrolling content behind it without opening a large gap below the alert. */}
-      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pt-1 pb-2 shadow-[0_-8px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
+      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-1 shadow-[0_-4px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
         <SignalCommandBar
           temporal={temporal}
           timeline={timeline.data}
@@ -449,7 +445,7 @@ export function OverviewDashboard({
       {/* Below the rail: the remaining static server content. */}
       {children}
 
-      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+      <section className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-6">
         <KpiCard
           label={t("kpi.quality")}
           infoKey="quality"
@@ -553,8 +549,8 @@ export function OverviewDashboard({
         />
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-4">
+      <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex min-w-0 flex-col gap-2.5">
           <CriticalControlsTable
             controls={controls}
             signals={controlSignals.data?.controls}
@@ -590,7 +586,7 @@ export function OverviewDashboard({
             provTag={provenanceTag}
           />
         </div>
-        <aside className="flex min-w-0 flex-col gap-4">
+        <aside className="flex min-w-0 flex-col gap-2.5">
           <IncidentsCard
             playbooks={playbooks.data}
             anomalies={anomalies.data}
@@ -1991,7 +1987,7 @@ function AnalyticsSection({
         : "info";
 
   return (
-    <section className="grid gap-4 xl:grid-cols-3">
+    <section className="grid gap-2.5 xl:grid-cols-3">
       <Card className="rounded-lg">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">

@@ -149,7 +149,7 @@ export function AgentPrompts() {
     setVars(ALL);
   };
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <AgentCrossLinks page="prompts" />
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button

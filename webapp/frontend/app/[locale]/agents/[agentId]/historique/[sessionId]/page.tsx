@@ -145,7 +145,7 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
     }`;
 
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       {/* Header: conversation + involved agents */}
       <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
         <p className="truncate text-[0.95rem] font-semibold">{data.title}</p>

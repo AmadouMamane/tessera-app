@@ -48,7 +48,7 @@ export default async function FleetPage({ params }: PageProps) {
   const org = data?.org;
 
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       {/* Org rollup — deduplicated (a shared conversation counts once). */}
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
         <div className="flex flex-wrap items-center gap-6">

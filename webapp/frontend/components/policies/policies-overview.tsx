@@ -102,7 +102,7 @@ export function PoliciesOverview() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
       <VersionRail t={t} data={data} />
 
@@ -659,6 +659,7 @@ function Panel({
 }) {
   return (
     <div
+      data-slot="card"
       className={cn(
         "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
         className,
@@ -699,6 +700,7 @@ function KpiTile({
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
     <div
+      data-slot="card"
       className={cn(
         "group relative flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
         href && "transition-colors hover:border-[#2e72d2]/50",

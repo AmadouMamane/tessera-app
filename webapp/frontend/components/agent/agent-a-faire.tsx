@@ -206,7 +206,7 @@ export function AgentAFaire() {
   };
 
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <Rail data={data} />
       <Timeline data={data} />
 

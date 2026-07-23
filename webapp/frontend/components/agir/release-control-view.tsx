@@ -72,7 +72,7 @@ export async function ReleaseControlView({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5">
       {/* Org summary — distinct-agent counts by release readiness. The counts drill
           into the real fleet list. */}
       <section className="flex flex-col gap-2">

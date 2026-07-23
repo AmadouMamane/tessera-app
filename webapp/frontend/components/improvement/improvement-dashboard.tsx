@@ -229,7 +229,7 @@ export function ImprovementDashboard() {
 
   if (!d?.available) {
     return (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5">
         {commandBar}
         <Card>
           <CardContent className="py-10 text-center text-sm text-[var(--muted-foreground)]">
@@ -496,7 +496,7 @@ export function ImprovementDashboard() {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       {commandBar}
       <nav
         role="tablist"

@@ -118,7 +118,7 @@ type SortKey = "name" | "type" | "volume" | "citation";
 
 function SourcesSkeleton() {
   return (
-    <div className="flex min-w-0 animate-pulse flex-col gap-3" aria-hidden="true">
+    <div className="flex min-w-0 animate-pulse flex-col gap-2.5" aria-hidden="true">
       <div className="h-[54px] rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]" />
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -218,7 +218,7 @@ export function SourcesOverview() {
   const isTable = TABLE_VIEWS.has(view);
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 text-[var(--tessera-text)]">
+    <div className="flex min-w-0 flex-col gap-2.5 text-[var(--tessera-text)]">
       <CommandBar t={t} note={data.readonly_note} onExport={onExport} />
       <TabStrip
         accent="blue"
@@ -1976,7 +1976,10 @@ function Panel({
   children,
 }: { title: string; info?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <div
+      data-slot="card"
+      className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
       <h3 className="mb-2 flex items-center gap-1 text-[0.72rem] font-semibold uppercase leading-tight tracking-wide text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{title}</span>
         {info}

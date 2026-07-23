@@ -105,7 +105,7 @@ export function ReplayOverview() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} active={activeTab} onSelect={setActiveTab} />
       {/* AGIR / Replay is XT-01's home (registre): the rail keeps the legitimate
           execution-replay cassette (début · précédent · play/pause · suivant · fin).
@@ -114,7 +114,7 @@ export function ReplayOverview() {
           run diffs fold to T server-side. */}
       <AgirRail />
 
-      <div id="replay-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
+      <div id="replay-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-2.5">
         {activeTab === "cassettes" ? <ReplayCassettes asof={asof} /> : null}
         {activeTab === "sessions" ? (
           <div className="grid gap-3 xl:grid-cols-12">
@@ -183,7 +183,7 @@ export function ReplayOverview() {
       </div>
 
       {activeTab !== "overview" ? null : (
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_312px]">
+        <div className="grid min-w-0 gap-2.5 xl:grid-cols-[minmax(0,1fr)_312px]">
           <div className="flex min-w-0 flex-col gap-3">
             {/* A · État actuel */}
             <Zone label={t("zone.actual")} info={<Info k="zone.actual" title={t("zone.actual")} />}>
@@ -902,7 +902,7 @@ function ReplayRail({
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
       <Chip
         icon={Activity}
         tone="text-[var(--tessera-green)]"
@@ -926,7 +926,10 @@ function Footer({ t, data }: { t: T; data: Data }) {
 
 function Zone({ label, info, children }: { label: string; info?: ReactNode; children: ReactNode }) {
   return (
-    <section className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5">
+    <section
+      data-slot="card"
+      className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5"
+    >
       <h2 className="mb-2 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {label}
         {info}
@@ -951,6 +954,7 @@ function Panel({
 }) {
   return (
     <div
+      data-slot="card"
       className={cn(
         "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
         className,
@@ -985,7 +989,10 @@ function KpiTile({
   const good = up === kpi.good_is_up;
   const magnitude = kpi.delta_label.replace(/^[+-]\s*/, "");
   return (
-    <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <div
+      data-slot="card"
+      className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
       <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
         <Truncate full={label} className="min-w-0">
           {label}

@@ -385,6 +385,14 @@
 }
 
 @layer utilities {
+  /*
+   * Cockpit rhythm: sibling surfaces share one 10 px gutter in both axes.
+   * Internal layout remains owned by each surface.
+   */
+  [data-shell-content] :where(.flex, .grid):has(> [data-slot="card"] ~ [data-slot="card"]) {
+    gap: 0.625rem !important;
+  }
+
   .text-balance {
     text-wrap: balance;
   }

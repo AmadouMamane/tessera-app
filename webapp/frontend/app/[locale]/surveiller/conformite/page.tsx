@@ -30,7 +30,7 @@ export default async function CompliancePage({ params, searchParams }: Complianc
     <AppShell title={t("title")} description={t("subtitle")}>
       {/* SLO breach alert LEADS; the dashboard's temporal rail sits directly beneath it;
           the agent-scope context (Vue par agent) renders below the rail via `agentScope`. */}
-      <div className="mb-3">
+      <div>
         {/* Regulatory posture is a fleet/framework aggregate (org-wide), so the hero
             reads the FLEET SLO even under an agent filter — never one agent's SLO. */}
         <SignalBreachHero orgWide />

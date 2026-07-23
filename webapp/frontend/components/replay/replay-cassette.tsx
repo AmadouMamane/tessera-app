@@ -132,7 +132,10 @@ type T = ReturnType<typeof useTranslations<"replay">>;
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <section
+      data-slot="card"
+      className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
       <h3 className="text-[0.72rem] font-medium text-[var(--tessera-text)]">{title}</h3>
       {children}
     </section>

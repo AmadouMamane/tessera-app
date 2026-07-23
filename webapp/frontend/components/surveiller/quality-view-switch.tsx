@@ -38,7 +38,7 @@ export async function QualityViewSwitch({
     },
   ];
   return (
-    <nav aria-label={t("views.ariaLabel")} className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <nav aria-label={t("views.ariaLabel")} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
       {views.map((view) => (
         <Link
           key={view.key}

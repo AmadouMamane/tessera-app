@@ -153,7 +153,7 @@ export function InboxOverview() {
     mutate.mutate({ item_id: id, status: STATUS_TO_BACKEND[NEXT_STATUS[status] ?? "todo"] });
 
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <Rail t={t} data={data} />
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">
@@ -989,7 +989,10 @@ function Panel({
   children,
 }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <div
+      data-slot="card"
+      className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="min-w-0 truncate text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
           {title}

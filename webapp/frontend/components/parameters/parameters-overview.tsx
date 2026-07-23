@@ -107,7 +107,7 @@ export function ParametersOverview() {
     downloadBlob("tessera-parameters.json", "application/json", JSON.stringify(data, null, 2));
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} activeTab={activeTab} onSelect={setActiveTab} onExport={onExport} />
       {/* As-of + Live composition (registre §6) — the SAME rail component as
           AGIR, with the claim scoped to what this page truly re-reads at T:
@@ -617,7 +617,10 @@ function Panel({
   children,
 }: { title: string; info?: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <div
+      data-slot="card"
+      className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="flex min-w-0 items-center gap-1 text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
           <span className="min-w-0 truncate">{title}</span>

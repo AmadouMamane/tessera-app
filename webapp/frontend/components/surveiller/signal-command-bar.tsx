@@ -402,7 +402,7 @@ export function SignalCommandBar({
       {/* Collapsed command row — the single temporal focus. The `sr01-command-row`
           class lifts it into a faintly raised control deck (cool top-light over the
           lacquer, rounded to the strip's top corners). */}
-      <div className="sr01-command-row flex flex-wrap items-center gap-2 px-3 py-2">
+      <div className="sr01-command-row flex flex-wrap items-center gap-2 px-3 py-1.5">
         {/* Lecture — Maintenant / À un instant / Historique, with per-mode
             definitions IN the menu (not a permanent line), differentiated by icon. */}
         <LectureMenu reading={reading} onChange={(v) => temporal.setReading(v)} t={t} />
@@ -486,7 +486,7 @@ export function SignalCommandBar({
           above), and repeating the SAME reading glyph here stacked two identical
           icons vertically and read as a second control. The line is a state
           summary, so its bold first segment carries the meaning. */}
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1 text-[0.7rem] text-[var(--tessera-text-muted)]">
         {microSegments.map((seg, i) => (
           <span key={seg.key} className="flex items-center gap-1.5">
             {i > 0 ? <span aria-hidden>·</span> : null}
@@ -529,7 +529,7 @@ export function SignalCommandBar({
               Date/locale formatting during SSR while collapsed -> a hydration
               mismatch. Gating on `expanded` keeps the grid-rows reveal AND a clean SSR. */}
           {expanded ? (
-            <div className="border-t border-[rgba(96,194,242,0.15)] px-3 pb-3 pt-2">
+            <div className="border-t border-[rgba(96,194,242,0.15)] px-3 pb-2 pt-1">
               {/* No descriptive rail header: the reading lives in the command-bar
                   Lecture chip and the synthetic state in the micro-line above, so the
                   rail goes STRAIGHT to the visualisation (timeline · legend · the
@@ -557,10 +557,10 @@ export function SignalCommandBar({
                   PROUVER · État à date shows only with an instant chosen (a
                   point-in-time reconstruction, not a replay). */}
               {temporal.activeAt ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.activeAt)}`}
-                    className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-blue-300 hover:bg-[var(--tessera-muted)]"
+                    className="flex h-8 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-blue-300 hover:bg-[var(--tessera-muted)]"
                   >
                     <CalendarClock className="h-4 w-4" />
                     {t("openInProofs")}

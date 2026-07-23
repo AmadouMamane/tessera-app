@@ -93,7 +93,10 @@ function Sec({ children }: { children: ReactNode }) {
 /** A translucent banded section grouping one cockpit zone (A · B · C · …). */
 function Zone({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <section className="rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5">
+    <section
+      data-slot="card"
+      className="rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5"
+    >
       <Sec>{label}</Sec>
       <div className="mt-1.5">{children}</div>
     </section>
@@ -315,7 +318,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
     // states its own unavailability — found live with ClickHouse down, the whole page
     // collapsed to one sentence while the per-agent facts were sitting in Postgres.
     return (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5">
         {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
         <Card>
           <CardContent className="py-10 text-center text-sm text-[var(--muted-foreground)]">
@@ -332,7 +335,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
   const trend = d.score_series ?? [];
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       {/* SR-01 rail LEADS — directly beneath the SLO breach alert the page renders above
           the dashboard (user feedback); then the tabs and the per-agent context. */}
       <SignalCommandBar

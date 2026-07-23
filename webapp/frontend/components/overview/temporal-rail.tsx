@@ -452,7 +452,7 @@ export function TemporalRail({
     <section
       className={cn(
         embedded
-          ? "pt-1"
+          ? "pt-0"
           : // Standalone expanded rail: the same lacquered instrument surface as
             // the SURVEILLER command bar (sr01-strip) — a rail must read as the
             // page's temporal instrument, never as one more content card.
@@ -609,7 +609,7 @@ export function TemporalRail({
         aria-valuemax={end}
         aria-valuenow={currentT}
         aria-valuetext={selectedAt == null ? t("nowLive") : new Date(currentT).toLocaleString()}
-        className="relative mt-6 h-14 cursor-pointer select-none"
+        className="relative mt-3 h-[3.25rem] cursor-pointer select-none"
         onPointerDown={(e) => {
           setPlaying(false);
           trackRef.current?.setPointerCapture(e.pointerId);
@@ -772,7 +772,7 @@ export function TemporalRail({
       </div>
 
       {/* Legend — what the scrubber ticks mean. */}
-      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.62rem] text-[var(--muted-foreground)]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.62rem] text-[var(--muted-foreground)]">
         <span className="font-medium text-[var(--foreground)]">{t("legendScores")} :</span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-0.5 rounded bg-emerald-400" />
@@ -805,7 +805,7 @@ export function TemporalRail({
       {embedded && selectedAt == null ? null : (
         <div
           className={cn(
-            "mt-2 flex items-center gap-3 rounded-md border px-3 py-2 text-xs",
+            "mt-1 flex items-center gap-3 rounded-md border px-3 py-1.5 text-xs",
             selectedAt != null
               ? "border-gold-500/30 bg-gold-500/5"
               : liveSnapshot

@@ -23,7 +23,7 @@ export default async function ModelesPage({ params }: PageProps) {
   return (
     <AppShell title={tn("item.modeles")} description={t("modelsSubtitle")}>
       <Suspense fallback={null}>
-        <div className="mb-3 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <AgentScopeFilter />
           <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
         </div>

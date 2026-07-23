@@ -31,7 +31,7 @@ export default async function HealthPage({ params, searchParams }: HealthPagePro
   const lens = await loadDeclaredLens("/surveiller/observabilite", fleet);
   return (
     <AppShell title={t("title")} description={t("description")}>
-      <div className="mb-3">
+      <div>
         <GovScopeSection
           fleet={fleet}
           scope={scope}

@@ -50,13 +50,13 @@ export default async function AccessPage({ params }: AccessPageProps) {
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <Suspense fallback={null}>
-        <div className="mb-3 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <AgentScopeFilter />
           <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
             {t("agentFilterHint")}
           </span>
         </div>
-        <div className="mb-3">
+        <div>
           <RbacAgentMatrix />
         </div>
         <HydrationBoundary state={dehydrate(queryClient)}>

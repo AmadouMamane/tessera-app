@@ -108,7 +108,7 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
     <AppShell title={t("title")} description={t("description")}>
       {operator ? (
         <HydrationBoundary state={dehydrate(queryClient)}>
-          <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <AgentScopeFilter />
             <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
               {t("agentFilterHint")}

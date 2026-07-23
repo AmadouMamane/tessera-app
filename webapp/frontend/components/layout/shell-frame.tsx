@@ -35,12 +35,12 @@ export function ShellFrame({
           <div
             data-shell-content
             className={cn(
-              "mx-auto flex h-full w-full flex-col",
+              "mx-auto flex h-full w-full flex-col gap-2.5",
               focus ? "max-w-[1760px]" : "max-w-[1600px]",
             )}
           >
             {pageSubtitle ? (
-              <p className="mb-4 max-w-4xl text-sm text-[var(--tessera-text-muted)]">
+              <p className="max-w-4xl text-sm text-[var(--tessera-text-muted)]">
                 {pageSubtitle}
               </p>
             ) : null}

@@ -86,12 +86,13 @@ export function ModelCatalogue() {
   const selected = dismissed ? null : (rows.find((m) => m.id === selectedId) ?? rows[0] ?? null);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       {data.kpis ? (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
           {data.kpis.map((kpi) => (
             <div
               key={kpi.key}
+              data-slot="card"
               className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
             >
               <p className="flex items-center gap-1 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -110,7 +111,7 @@ export function ModelCatalogue() {
 
       <ServingModels />
 
-      <div className={cn("grid gap-3", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
+      <div className={cn("grid gap-2.5", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
         <div className="overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           <table
             className="w-full border-collapse text-left text-[0.72rem]"

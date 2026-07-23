@@ -48,13 +48,7 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
         fleetLocale={locale}
         initialFleetPeriod={initialFleetPeriod}
         initialFleetAt={initialFleetAt}
-        lead={
-          // Keep the alert and its temporal controls visually connected. The sticky
-          // chrome uses only a shallow background fill, so 12px is sufficient.
-          <div className="mb-3">
-            <SignalBreachHero />
-          </div>
-        }
+        lead={<SignalBreachHero />}
       >
         {isScopedToAgent(scope) ? (
           <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">

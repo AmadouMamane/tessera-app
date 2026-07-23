@@ -106,7 +106,7 @@ export function AgentConfigurations() {
   }
 
   return (
-    <div className="flex flex-col gap-3 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
       <AgentCrossLinks page="configurations" />
       {/* OT-01 As-of + Live (registre §6) — the per-object history is refolded
           at T by the backend; the form below freezes while reading the past. */}

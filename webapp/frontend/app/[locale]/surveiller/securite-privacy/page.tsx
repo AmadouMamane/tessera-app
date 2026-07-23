@@ -34,7 +34,7 @@ export default async function SecurityPage({ params, searchParams }: SecurityPag
     <AppShell title={t("title")} description={t("subtitle")}>
       {/* SLO breach alert LEADS; the dashboard's temporal rail sits directly beneath it;
           the agent-scope context renders below the rail via `agentScope`. */}
-      <div className="mb-3">
+      <div>
         <SignalBreachHero />
       </div>
       <SecurityDashboard

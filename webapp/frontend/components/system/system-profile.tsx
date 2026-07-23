@@ -70,7 +70,7 @@ export function SystemProfile() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-1 text-[var(--tessera-text)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pb-1 text-[var(--tessera-text)]">
       <CommandBar t={t} onExport={onExport} onRefresh={() => refetch()} refreshing={isFetching} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
@@ -509,6 +509,7 @@ function Panel({
 }) {
   return (
     <div
+      data-slot="card"
       className={cn(
         "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
         className,

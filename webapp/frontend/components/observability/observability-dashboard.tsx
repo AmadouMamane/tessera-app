@@ -156,7 +156,10 @@ function Zone({
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5">
+    <section
+      data-slot="card"
+      className="min-w-0 rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5"
+    >
       <h2 className="mt-0.5 mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClassName}`} />
         {label}
@@ -526,7 +529,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       {/* Sticky chrome: tab bar + business actions on one row (image normative),
           the shared compact temporal rail (Live/Replay) below. */}
       <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-8px_0_0_var(--tessera-bg)]">

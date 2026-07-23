@@ -27,7 +27,7 @@ export default async function ImprovementPage({ params, searchParams }: Improvem
   const t = await getTranslations({ locale, namespace: "improvement" });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
-      <div className="mb-3">
+      <div>
         {/* Product decision (2026-07-15): no per-agent improvement signal exists, so the page
             reuses the QUALITY lens — the per-agent regression facts (blocking T1, gate,
             eval freshness) are the improvement facts that actually exist. */}
