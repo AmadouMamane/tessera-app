@@ -191,3 +191,29 @@ they no longer carry the explanation alone.
 - Dette lifecycle observée à l’arrêt : `make dev-down PORT=3098` ignore `PORT` et a arrêté la
   référence `:3097/:8099` au lieu du preview. Les deux PID exacts du preview ont été terminés
   séparément et les six ports vérifiés libres. Rendre `dev-down` paramétrable est hors de ce lot.
+
+## Correctif latence du curseur temporel — 2026-07-23
+
+- Branche fraîche `codex/fast-temporal-cursor` depuis `origin/main=1aba7979`, claim sole-writer
+  repris explicitement sous `c3f8dfe2-3594-45d3-ba6b-1dfb46649dc3`.
+- Diagnostic chiffré : la correction de cohérence précédente déclenchait une navigation RSC de
+  toute la page à chaque instant stabilisé. Les lectures observées prenaient de `3,9 s` à `11 s`.
+  Sous la rafale des requêtes historiques, la flotte seule arrivait après `7,295 s`.
+- Correction : la table de suivi de la flotte est désormais un îlot client hydraté par le payload
+  serveur initial. Un commit de curseur ne relit que `/observability/fleet` ; l’URL partageable
+  continue d’être publiée, sans navigation RSC de toute la page. Les autres cartes conservent leur
+  valeur précédente et ne relisent le même instant qu’après la réponse flotte.
+- Mesure sur le preview stabilisé `:3098` : la lecture flotte à T répond en `474 ms`, puis les
+  autres cartes se mettent à jour sans page blanche. Le test impose un changement visible en
+  moins de `2,5 s` et vérifie qu’une seule requête flotte temporelle est émise.
+- Matrice vérifiée contre l’agrégat backend : `Maintenant` avec la fenêtre `d7`, `À un instant`
+  avec le même T que le deep-link, `Historique` au début de `d30`, puis retour à `Maintenant`.
+  Les totaux DOM égalent l’oracle backend dans les quatre états ; le scénario historique conserve
+  aussi l’oracle coût.
+- Validation ciblée : 3 E2E de lecture temporelle verts, dont le cycle
+  live → historique → live ; 33 tests unitaires ciblés verts ; TypeScript, Biome et
+  `git diff --check` verts. `make gate-twice` reste volontairement non exécuté conformément à
+  l’instruction utilisateur.
+- Dette distincte : le premier chargement à froid de Vue d’ensemble lance encore un fan-out de
+  lectures non temporelles. Il ne bloque plus le changement de curseur une fois la page stabilisée,
+  mais mérite un lot dédié de regroupement backend/BFF plutôt qu’un nouveau délai frontend.

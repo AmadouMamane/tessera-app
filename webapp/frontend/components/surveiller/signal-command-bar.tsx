@@ -159,6 +159,8 @@ export function SignalCommandBar({
   hasPresentScore = false,
   liveStatus,
   scopeFilter = true,
+  refreshServerOnCommit = true,
+  knownFleetCount,
 }: {
   temporal: Temporal;
   timeline?: TimelineReport;
@@ -166,6 +168,13 @@ export function SignalCommandBar({
   /** True when a present quality score exists, so the "Maintenant" baseline is real. */
   hasPresentScore?: boolean;
   liveStatus: string;
+  /**
+   * Whether a committed T must rerender server children. The overview owns a
+   * narrow client fleet query, so it disables this expensive whole-page fallback.
+   */
+  refreshServerOnCommit?: boolean;
+  /** Server-known fleet size, avoiding a duplicate fleet read for the scope chip. */
+  knownFleetCount?: number;
   /**
    * Whether the page's content honours the `?agent=` scope. A page whose queries
    * ignore it (e.g. PROUVER / Preuves & exporteurs — org-wide stores) passes false:
@@ -190,12 +199,12 @@ export function SignalCommandBar({
   useEffect(() => {
     const previous = previousCommittedAsOf.current;
     previousCommittedAsOf.current = temporal.asOf;
-    if (previous === undefined || previous === temporal.asOf) return;
+    if (!refreshServerOnCommit || previous === undefined || previous === temporal.asOf) return;
     const id = window.setTimeout(() => {
       router.replace(`${window.location.pathname}${window.location.search}`, { scroll: false });
     }, 0);
     return () => window.clearTimeout(id);
-  }, [temporal.asOf, router]);
+  }, [temporal.asOf, router, refreshServerOnCommit]);
   // Reading, panel-open and the comparison lens all live in the shared temporal
   // state (URL-backed source of truth) — not private to the bar.
   const { reading, compare, setCompare, expanded, setExpanded } = temporal;
@@ -245,9 +254,9 @@ export function SignalCommandBar({
     queryFn: ({ signal }) => fetchFleet(signal),
     staleTime: 60_000,
     // Only fetched for the scoped-agents count; a scope-less page never reads it.
-    enabled: scopeFilter,
+    enabled: scopeFilter && knownFleetCount == null,
   });
-  const fleetCount = fleet.data?.agents?.length ?? 0;
+  const fleetCount = knownFleetCount ?? fleet.data?.agents?.length ?? 0;
   const dataRange = useDataRange();
   const minPickDate = dataRange.data?.start ? new Date(dataRange.data.start) : undefined;
 

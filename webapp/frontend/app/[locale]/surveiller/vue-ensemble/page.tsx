@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { AgentBreakdown } from "@/components/agent/agent-breakdown";
 import { AppShell } from "@/components/layout/app-shell";
 import { OverviewDashboard } from "@/components/overview/overview-dashboard";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
@@ -27,6 +26,9 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
   const sp = await searchParams;
   const scope = readAgentScope(sp);
   const fleet = await loadFleet(locale, sp);
+  const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+  const initialFleetPeriod = first(sp.period) ?? "d7";
+  const initialFleetAt = first(sp.asof) ?? first(sp.at) ?? first(sp.to) ?? null;
 
   return (
     <AppShell
@@ -41,6 +43,11 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
           (SR-01) sits directly beneath it; the per-agent breakdown follows below the
           bar (children). */}
       <OverviewDashboard
+        initialFleet={fleet}
+        fleetScope={scope}
+        fleetLocale={locale}
+        initialFleetPeriod={initialFleetPeriod}
+        initialFleetAt={initialFleetAt}
         lead={
           // Keep the alert and its temporal controls visually connected. The sticky
           // chrome uses only a shallow background fill, so 12px is sufficient.
@@ -49,9 +56,6 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
           </div>
         }
       >
-        <div className="mb-3">
-          <AgentBreakdown fleet={fleet} scope={scope} locale={locale} />
-        </div>
         {isScopedToAgent(scope) ? (
           <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
             {ts("orgSignalsNote")}

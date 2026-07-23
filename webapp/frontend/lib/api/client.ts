@@ -2081,8 +2081,20 @@ export async function fetchSessionDetail(
 }
 
 /** Fleet rollup (per-agent observable KPIs + deduplicated org totals). */
-export async function fetchFleet(signal?: AbortSignal): Promise<Fleet> {
-  return request("/observability/fleet", { signal }, FleetSchema);
+export async function fetchFleet(
+  signal?: AbortSignal,
+  options: { lang?: string; period?: string; at?: string } = {},
+): Promise<Fleet> {
+  const params = new URLSearchParams();
+  if (options.lang) params.set("lang", options.lang);
+  if (options.period) params.set("period", options.period);
+  if (options.at) params.set("at", options.at);
+  const query = params.toString();
+  return request(
+    `/observability/fleet${query ? `?${query}` : ""}`,
+    { signal, priority: options.at ? "high" : "auto" },
+    FleetSchema,
+  );
 }
 
 /** RBAC role × agent matrix (real roles × real registry agents). */

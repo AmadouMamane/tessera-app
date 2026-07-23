@@ -72,6 +72,7 @@ function discoverZonePages(): Map<string, string> {
 const PER_AGENT_MARKERS = [
   "<AgentBreakdown",
   "<GovScopeSection",
+  "initialFleet={fleet}",
   "ReleaseControlView",
   "RbacAgentMatrix",
   "loadDeclaredLens(",
@@ -107,9 +108,14 @@ function pageViolations(route: string, nature: PageNature, source: string): stri
 
   // nature.kind === "lens"
   if (nature.domain === "monitoring") {
-    // The explicit generic view: AgentBreakdown's default columns, and NOTHING loaded —
-    // a monitoring page calling a lens loader is drift toward an undeclared domain.
-    if (!source.includes("<AgentBreakdown") && !source.includes("<GovScopeSection")) {
+    // The explicit generic view: AgentBreakdown's default columns (server-rendered,
+    // or handed to the overview's temporal client island), and NOTHING loaded — a
+    // monitoring page calling a lens loader is drift toward an undeclared domain.
+    if (
+      !source.includes("<AgentBreakdown") &&
+      !source.includes("<GovScopeSection") &&
+      !source.includes("initialFleet={fleet}")
+    ) {
       violations.push(`${route}: declared lens:monitoring but renders no breakdown`);
     }
     for (const loader of ["loadDeclaredLens(", "loadDomainLens(", "loadBreakdownLens("]) {
@@ -256,7 +262,12 @@ describe("the checker actually bites (synthetic sources through the REAL path)",
   });
 
   it("an org-wide page rendering ANY per-agent view is named, marker by marker", () => {
-    for (const marker of ["<AgentBreakdown", "<GovScopeSection", "RbacAgentMatrix"]) {
+    for (const marker of [
+      "<AgentBreakdown",
+      "<GovScopeSection",
+      "initialFleet={fleet}",
+      "RbacAgentMatrix",
+    ]) {
       const v = pageViolations("/x", { kind: "org-wide" }, `${marker} whatever`);
       expect(v.some((m) => m.includes(marker))).toBe(true);
     }
@@ -273,6 +284,13 @@ describe("the checker actually bites (synthetic sources through the REAL path)",
     ).toEqual([]);
     expect(
       pageViolations("/x", { kind: "lens", domain: "monitoring" }, "<GovScopeSection fleet />"),
+    ).toEqual([]);
+    expect(
+      pageViolations(
+        "/x",
+        { kind: "lens", domain: "monitoring" },
+        "<OverviewDashboard initialFleet={fleet} />",
+      ),
     ).toEqual([]);
     expect(
       pageViolations("/x", { kind: "lens", domain: "release" }, "<ReleaseControlView data />"),

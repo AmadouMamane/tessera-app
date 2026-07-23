@@ -29,9 +29,10 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { z } from "zod";
 
+import { TemporalMonitoringBreakdown } from "@/components/agent/temporal-monitoring-breakdown";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { PageEvidenceActions } from "@/components/overview/page-evidence-actions";
@@ -62,7 +63,7 @@ import {
   fetchTracesObs,
   runRedteam,
 } from "@/lib/api/client";
-import type { OverviewSnapshotEnvelope } from "@/lib/api/schemas";
+import type { Fleet, OverviewSnapshotEnvelope } from "@/lib/api/schemas";
 import {
   AnomalyReportSchema,
   CostReportSchema,
@@ -116,7 +117,6 @@ import { isOrgWide, signalSupports } from "@/lib/signal-registry";
  */
 const SNAPSHOT_FAST = ["slo", "trend", "toxicity", "pii_leak", "cost", "funnel", "scores"] as const;
 const SNAPSHOT_SLOW = ["anomalies", "what_changed"] as const;
-
 /**
  * Give one card the shape it already expects — `{ data, isLoading, … }` — over a shared query.
  *
@@ -152,11 +152,21 @@ const POLL_FAST_MS = 10_000;
 export function OverviewDashboard({
   children,
   lead,
+  initialFleet,
+  fleetScope,
+  fleetLocale,
+  initialFleetPeriod,
+  initialFleetAt,
 }: {
   children?: ReactNode;
   /** Rendered ABOVE the temporal rail (e.g. the SLO breach alert), so the rail sits
    * directly beneath the alert. The rest (per-agent breakdown) stays in `children`. */
   lead?: ReactNode;
+  initialFleet: Fleet | null;
+  fleetScope: string;
+  fleetLocale: string;
+  initialFleetPeriod: string;
+  initialFleetAt: string | null;
 }) {
   const t = useTranslations("overview");
   const locale = useLocale();
@@ -174,7 +184,18 @@ export function OverviewDashboard({
   // Live/As-of/Historique reading). The SignalCommandBar owns the controls; the
   // page reads asOf/historyMode to scope its queries (ADR 0011).
   const temporal = useTemporalState();
-  const { asOf, historyMode, reading, selectedAt, changeMode } = temporal;
+  const { historyMode, reading, selectedAt, changeMode } = temporal;
+  const [secondaryAsOf, setSecondaryAsOf] = useState<string | null>(null);
+  // Returning to live releases every temporal key immediately.
+  useEffect(() => {
+    if (temporal.activeAt == null) setSecondaryAsOf(null);
+  }, [temporal.activeAt]);
+  // The fleet total is the first, most visible proof that the cursor took effect.
+  // The heavier fan-out receives the exact same T only when that narrow read has
+  // settled. This is deterministic under a warm or cold backend, unlike a timer.
+  const finishTemporalFleet = useCallback((settledAt: string) => {
+    setSecondaryAsOf(settledAt);
+  }, []);
   // The provenance chip reflects the active READING (Lecture), never `historyMode`:
   // a scrubbed Historique reads the PERIOD's evolution ("Sur la période"), not a
   // single point — only "À un instant" (asof) reconstructs an instant ("À cet
@@ -209,14 +230,16 @@ export function OverviewDashboard({
   // into a single key would silently change how often `anomalies` and `what_changed` refresh —
   // invisible on screen, and exactly the kind of "no behaviour change" that is not one.
   const snapshotFast = useQuery({
-    queryKey: ["ov-snapshot-fast", asOf, scope],
-    queryFn: ({ signal }) => fetchOverviewSnapshot(signal, asOf ?? undefined, scope, SNAPSHOT_FAST),
+    queryKey: ["ov-snapshot-fast", secondaryAsOf, scope],
+    queryFn: ({ signal }) =>
+      fetchOverviewSnapshot(signal, secondaryAsOf ?? undefined, scope, SNAPSHOT_FAST),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const snapshotSlow = useQuery({
-    queryKey: ["ov-snapshot-slow", asOf, scope],
-    queryFn: ({ signal }) => fetchOverviewSnapshot(signal, asOf ?? undefined, scope, SNAPSHOT_SLOW),
+    queryKey: ["ov-snapshot-slow", secondaryAsOf, scope],
+    queryFn: ({ signal }) =>
+      fetchOverviewSnapshot(signal, secondaryAsOf ?? undefined, scope, SNAPSHOT_SLOW),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
@@ -243,14 +266,14 @@ export function OverviewDashboard({
     staleTime: Number.POSITIVE_INFINITY,
   });
   const conformance = useQuery({
-    queryKey: ["ov-conformance", asOf, scope],
-    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined, scope),
+    queryKey: ["ov-conformance", secondaryAsOf, scope],
+    queryFn: ({ signal }) => fetchConformance(signal, secondaryAsOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const tools = useQuery({
-    queryKey: ["ov-tools", asOf, scope],
-    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined, scope),
+    queryKey: ["ov-tools", secondaryAsOf, scope],
+    queryFn: ({ signal }) => fetchToolValidity(signal, secondaryAsOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
@@ -262,14 +285,14 @@ export function OverviewDashboard({
 
   // --- Incidents / risk ----------------------------------------------------
   const playbooks = useQuery({
-    queryKey: ["ov-playbooks", asOf, scope],
-    queryFn: ({ signal }) => fetchPlaybooks(signal, asOf ?? undefined, scope),
+    queryKey: ["ov-playbooks", secondaryAsOf, scope],
+    queryFn: ({ signal }) => fetchPlaybooks(signal, secondaryAsOf ?? undefined, scope),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
   const roadmap = useQuery({
-    queryKey: ["ov-roadmap", asOf, scope],
-    queryFn: ({ signal }) => fetchRoadmap(signal, asOf ?? undefined, scope),
+    queryKey: ["ov-roadmap", secondaryAsOf, scope],
+    queryFn: ({ signal }) => fetchRoadmap(signal, secondaryAsOf ?? undefined, scope),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
@@ -279,14 +302,14 @@ export function OverviewDashboard({
   // chain VERIFICATION stays a structural "now" check (server-side), so the card
   // reads "à T" like every other point-in-time signal instead of a lone "live".
   const aiAct = useQuery({
-    queryKey: ["ov-ai-act", asOf],
-    queryFn: ({ signal }) => fetchAIAct(signal, asOf ?? undefined),
+    queryKey: ["ov-ai-act", secondaryAsOf],
+    queryFn: ({ signal }) => fetchAIAct(signal, secondaryAsOf ?? undefined),
     refetchInterval: historyMode ? false : 30_000,
     placeholderData: keepPreviousData,
   });
   const audit = useQuery({
-    queryKey: ["ov-audit", asOf],
-    queryFn: ({ signal }) => fetchAuditIntegrity(signal, asOf ?? undefined),
+    queryKey: ["ov-audit", secondaryAsOf],
+    queryFn: ({ signal }) => fetchAuditIntegrity(signal, secondaryAsOf ?? undefined),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
@@ -309,8 +332,8 @@ export function OverviewDashboard({
   // Governed-activity feed — real S1 governance events, projected as-of-T like the
   // rest of the page (so it earns the provenance chip honestly).
   const governance = useQuery({
-    queryKey: ["ov-governance", asOf, scope],
-    queryFn: ({ signal }) => fetchGovernance(signal, asOf ?? undefined, scope),
+    queryKey: ["ov-governance", secondaryAsOf, scope],
+    queryFn: ({ signal }) => fetchGovernance(signal, secondaryAsOf ?? undefined, scope),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
@@ -324,8 +347,8 @@ export function OverviewDashboard({
   // Trace observability read back from the running Langfuse stack (the OTel traces);
   // projects as-of-T via Langfuse toTimestamp, so it earns the provenance chip.
   const tracesObs = useQuery({
-    queryKey: ["ov-traces-obs", asOf],
-    queryFn: ({ signal }) => fetchTracesObs(signal, asOf ?? undefined),
+    queryKey: ["ov-traces-obs", secondaryAsOf],
+    queryFn: ({ signal }) => fetchTracesObs(signal, secondaryAsOf ?? undefined),
     refetchInterval: historyMode ? false : 30_000,
     placeholderData: keepPreviousData,
   });
@@ -404,10 +427,26 @@ export function OverviewDashboard({
           sloTarget={slo.data?.threshold}
           hasPresentScore={Boolean(sloReady)}
           liveStatus={liveStatus}
+          refreshServerOnCommit={false}
+          knownFleetCount={initialFleet?.agents?.length ?? 0}
         />
       </div>
 
-      {/* Below the rail: the per-agent breakdown + the rest of the lead content. */}
+      {/* The only as-of server child used to force a whole-page RSC navigation.
+          It now reads its narrow fleet endpoint directly and keeps the prior
+          payload visible while the new T resolves. */}
+      <TemporalMonitoringBreakdown
+        initialFleet={initialFleet}
+        scope={fleetScope}
+        locale={fleetLocale}
+        period={temporal.periodKey}
+        at={temporal.activeAt}
+        initialPeriod={initialFleetPeriod}
+        initialAt={initialFleetAt}
+        onTemporalLoadSettled={finishTemporalFleet}
+      />
+
+      {/* Below the rail: the remaining static server content. */}
       {children}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">

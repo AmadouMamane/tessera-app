@@ -53,6 +53,18 @@ async function login(page: Page) {
   await page.waitForURL((url) => !url.pathname.endsWith("/login"), { timeout: 20_000 });
 }
 
+async function backendFleetTotal(
+  request: APIRequestContext,
+  period: string,
+  at?: string,
+): Promise<string> {
+  const params = new URLSearchParams({ period });
+  if (at) params.set("at", at);
+  const response = await request.get(`${BACKEND}/observability/fleet?${params}`);
+  expect(response.ok(), "fleet oracle must be readable").toBeTruthy();
+  return Number((await response.json()).org.conversations).toLocaleString("fr-FR");
+}
+
 /** The single SR-01 command-bar section (the one carrying "Comparer à"). */
 function bar(page: Page) {
   return page.locator("section").filter({ hasText: "Comparer à" }).first();
@@ -99,8 +111,14 @@ test("no technical title and no permanent pedagogical line", async ({ page }) =>
   await expect(page.getByText("État à un instant T ·")).toHaveCount(0);
 });
 
-test("Maintenant: real-time header, no return button, no player transport", async ({ page }) => {
+test("Maintenant: real-time header, no return button, no player transport", async ({
+  page,
+  request,
+}) => {
   await open(page, "?expanded=1");
+  await expect(page.getByTestId("fleet-org-total")).toHaveText(
+    await backendFleetTotal(request, "d7"),
+  );
   await expect(bar(page).getByText("Données en temps réel").first()).toBeVisible();
   await expect(page.getByText("Revenir à maintenant")).toHaveCount(0);
   await expect(page.getByText("Revenir au présent")).toHaveCount(0);
@@ -227,8 +245,12 @@ test("the header rule sits on row 1 (continuous with the logo), above the action
 
 test("À un instant with a date: no rail title, selected-event detail, PROUVER, one return", async ({
   page,
+  request,
 }) => {
   await open(page, `?lecture=asOf&asof=${encodeURIComponent(ASOF)}&compare=now&expanded=1`);
+  await expect(page.getByTestId("fleet-org-total")).toHaveText(
+    await backendFleetTotal(request, "d7", ASOF),
+  );
   await expect(bar(page).getByText("À un instant").first()).toBeVisible();
   // No descriptive rail header at all — no eyebrow, no badge, no micro-text, no
   // banner, no ambiguous "actions appliquées au présent" (zero repetition with the
@@ -343,10 +365,21 @@ test("committing the cursor changes both client metrics and the server fleet at 
   request,
 }) => {
   await open(page, "?period=d30&expanded=1");
+  const temporalFleetRequests: string[] = [];
+  page.on("request", (browserRequest) => {
+    const url = browserRequest.url();
+    if (url.includes("/api/observability/fleet?") && url.includes("at=")) {
+      temporalFleetRequests.push(url);
+    }
+  });
   const costValue = page.getByTestId("overview-kpi-cost-value");
   const fleetTotal = page.getByTestId("fleet-org-total");
   await expect(costValue).toBeVisible({ timeout: 30_000 });
   await expect(fleetTotal).toBeVisible();
+  // Measure the cursor itself, not the cold page fan-out that is still filling
+  // unrelated cards after first paint. The user can already see the fleet table
+  // before those reads finish, so visibility alone is not a settled-cockpit signal.
+  await page.waitForLoadState("networkidle", { timeout: 20_000 });
   const initialCost = await costValue.innerText();
   const initialFleet = await fleetTotal.innerText();
 
@@ -359,6 +392,10 @@ test("committing the cursor changes both client metrics and the server fleet at 
   await expect.poll(() => page.url(), { timeout: 5000 }).toContain("at=");
   const at = new URL(page.url()).searchParams.get("at");
   if (!at) throw new Error("the committed cursor did not publish its instant");
+  await expect.poll(() => temporalFleetRequests.length, { timeout: 1000 }).toBe(1);
+  // Measure from the commit itself, before slower secondary cards or the backend
+  // oracle below can hide the latency behind unrelated awaits.
+  await expect(fleetTotal).not.toHaveText(initialFleet, { timeout: 2_500 });
 
   const costResponse = await request.get(
     `${BACKEND}/observability/cost?at=${encodeURIComponent(at)}`,
@@ -379,7 +416,12 @@ test("committing the cursor changes both client metrics and the server fleet at 
     "the chosen instant must materially differ from the live state",
   ).toBeTruthy();
   await expect(costValue).toHaveText(expectedCost, { timeout: 15_000 });
-  await expect(fleetTotal).toHaveText(expectedFleet, { timeout: 15_000 });
+  await expect(fleetTotal).toHaveText(expectedFleet);
+  expect(temporalFleetRequests).toHaveLength(1);
+
+  await page.getByText("Revenir à maintenant").click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("at")).toBeNull();
+  await expect(fleetTotal).toHaveText(await backendFleetTotal(request, "d30"));
 });
 
 test("selecting an event via the arrows shows its full timestamp", async ({ page }) => {
