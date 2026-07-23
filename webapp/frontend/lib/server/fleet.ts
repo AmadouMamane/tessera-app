@@ -16,15 +16,30 @@ import { backendHeaders, backendUrl } from "./backend";
  * Returns `null` on any failure so callers render an honest empty state rather
  * than a fabricated one — never a fixture.
  */
-export async function loadFleet(locale = "fr"): Promise<Fleet | null> {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+const first = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+/**
+ * Server-side fleet loader.
+ *
+ * Passing `searchParams` opts the caller into the shared SURVEILLER window. A
+ * caller without a temporal rail (notably the /agents directory) deliberately
+ * keeps the all-history fleet contract.
+ */
+export async function loadFleet(locale = "fr", searchParams?: SearchParams): Promise<Fleet | null> {
   try {
-    const res = await fetch(
-      `${backendUrl()}/observability/fleet?lang=${encodeURIComponent(locale)}`,
-      {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      },
-    );
+    const params = new URLSearchParams({ lang: locale });
+    if (searchParams) {
+      params.set("period", first(searchParams.period) ?? "d7");
+      const at = first(searchParams.asof) ?? first(searchParams.at) ?? first(searchParams.to);
+      if (at) params.set("at", at);
+    }
+    const res = await fetch(`${backendUrl()}/observability/fleet?${params}`, {
+      cache: "no-store",
+      headers: backendHeaders({ Accept: "application/json" }),
+    });
     if (!res.ok) return null;
     return FleetSchema.parse(await res.json());
   } catch {

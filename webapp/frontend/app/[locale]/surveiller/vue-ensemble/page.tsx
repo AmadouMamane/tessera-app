@@ -24,8 +24,9 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
   const t = await getTranslations({ locale, namespace: "overview" });
   const ts = await getTranslations({ locale, namespace: "agentScope" });
 
-  const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet();
+  const sp = await searchParams;
+  const scope = readAgentScope(sp);
+  const fleet = await loadFleet(locale, sp);
 
   return (
     <AppShell

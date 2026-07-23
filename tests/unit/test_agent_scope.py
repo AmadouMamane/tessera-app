@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 
 from tessera.observability.agent_scope import dedup_org_total, shared_entities_among
@@ -66,9 +68,11 @@ class _RecordingCursor:
 
     def __init__(self) -> None:
         self.sqls: list[str] = []
+        self.params: list[object] = []
 
-    async def execute(self, sql: str, *_params: object) -> None:
+    async def execute(self, sql: str, *params: object) -> None:
         self.sqls.append(sql)
+        self.params.append(params[0] if params else None)
 
     async def fetchall(self) -> list[dict[str, object]]:
         return [{"agent": "a", "n": 1}]
@@ -113,6 +117,29 @@ async def test_dedup_org_total_rejects_an_unsafe_synthetic_identifier() -> None:
             entity_col="conversation_id",
             synthetic_col="synthetic OR true --",
         )
+
+
+@pytest.mark.asyncio
+async def test_dedup_org_total_scopes_every_count_to_the_requested_window() -> None:
+    """A conversation before the selected period must not survive through the dedup seam."""
+    cur = _RecordingCursor()
+    since = datetime(2026, 7, 22, 12, 0, tzinfo=UTC)
+    until = datetime(2026, 7, 23, 12, 0, tzinfo=UTC)
+
+    await dedup_org_total(
+        cur,  # type: ignore[arg-type]
+        table="conversation_messages",
+        entity_col="conversation_id",
+        synthetic_col="synthetic",
+        time_col="created_at",
+        since=since,
+        until=until,
+    )
+
+    assert len(cur.sqls) == 3
+    assert all("created_at >= %s" in sql for sql in cur.sqls)
+    assert all("created_at <= %s" in sql for sql in cur.sqls)
+    assert all(params == (since, until) for params in cur.params)
 
 
 @pytest.mark.asyncio

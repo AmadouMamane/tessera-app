@@ -160,6 +160,23 @@ def _is_available_true_dict(value: ast.expr | None) -> bool:
 
 
 class TestAnEmptyLedgerIsAFactNotAnOutage:
+    def test_the_http_period_reaches_the_fleet_read(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The rail's period is a data contract, not decorative client state."""
+        received: list[tuple[str, int | None, str | None]] = []
+
+        async def _virgin(lang: str, period_days: int | None, at: str | None) -> FleetData:
+            received.append((lang, period_days, at))
+            return VIRGIN_FLEET
+
+        monkeypatch.setattr(fleet_routes.fleet_mod, "compute_fleet", _virgin)
+
+        response = _client().get(
+            "/observability/fleet?lang=fr&period=h24&at=2026-07-23T12:00:00%2B00:00"
+        )
+
+        assert response.status_code == 200
+        assert received == [("fr", 1, "2026-07-23T12:00:00+00:00")]
+
     def test_a_virgin_install_answers_200_and_not_500(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

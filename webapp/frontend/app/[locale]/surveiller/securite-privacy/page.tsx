@@ -23,8 +23,9 @@ export default async function SecurityPage({ params, searchParams }: SecurityPag
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "security" });
-  const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet(locale);
+  const sp = await searchParams;
+  const scope = readAgentScope(sp);
+  const fleet = await loadFleet(locale, sp);
   // The page's own per-agent question: PII leaks, toxicity, guard denials — the security
   // facts the spine deposits per agent. Org-wide probes (guard efficacy, injection bypass)
   // stay in the page body; they have no per-agent substrate and get no column.

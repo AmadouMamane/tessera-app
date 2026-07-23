@@ -21,6 +21,7 @@ from tessera.sql import safe_identifier
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+    from datetime import datetime
 
     from psycopg import AsyncCursor
 
@@ -64,6 +65,9 @@ async def dedup_org_total(
     entity_col: str,
     agent_col: str = "agent_id",
     synthetic_col: str | None = None,
+    time_col: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
 ) -> OrgRollup:
     """Compute the deduplicated org rollup for an ``(entity, agent)`` table.
 
@@ -81,6 +85,10 @@ async def dedup_org_total(
         synthetic_col: when set, a boolean column (validated) whose truthy rows are
             EXCLUDED — real-traffic rollups drop operator TEST turns (ADR 0040). It is
             an identifier, never a raw predicate, so the P0.3 closure below still holds.
+        time_col: timestamp column used to scope the rollup. Required when ``since`` or
+            ``until`` is supplied and validated like every other identifier.
+        since: inclusive lower timestamp bound.
+        until: inclusive upper timestamp bound.
 
     Returns:
         An :class:`OrgRollup`.
@@ -88,33 +96,53 @@ async def dedup_org_total(
     table_id = safe_identifier(table)
     entity_id = safe_identifier(entity_col)
     agent_id = safe_identifier(agent_col)
-    # A FIXED ``NOT <ident>`` predicate over a validated identifier — not the removed raw
-    # ``where`` string. Empty when no synthetic column is named.
-    synth_where = f" WHERE NOT {safe_identifier(synthetic_col)}" if synthetic_col else ""
+    conditions: list[str] = []
+    params: list[datetime] = []
+    if synthetic_col:
+        # A FIXED ``NOT <ident>`` predicate over a validated identifier — not the removed raw
+        # ``where`` string.
+        conditions.append(f"NOT {safe_identifier(synthetic_col)}")
+    if since is not None or until is not None:
+        if time_col is None:
+            raise ValueError("time_col is required when a temporal bound is supplied")
+        time_id = safe_identifier(time_col)
+        if since is not None:
+            conditions.append(f"{time_id} >= %s")
+            params.append(since)
+        if until is not None:
+            conditions.append(f"{time_id} <= %s")
+            params.append(until)
+    scoped_where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
 
     # Every interpolation is an identifier validated above. The unused, injection-prone `where`
     # predicate parameter was removed (P0.3 class closure): no raw SQL text is accepted here,
     # so these f-strings are safe by construction, not by caller convention.
     per_agent_sql = (
         f"SELECT {agent_id} AS agent, count(DISTINCT {entity_id}) AS n "  # noqa: S608
-        f"FROM {table_id}{synth_where} GROUP BY {agent_id}"
+        f"FROM {table_id}{scoped_where} GROUP BY {agent_id}"
     )
-    org_sql = f"SELECT count(DISTINCT {entity_id}) AS n FROM {table_id}{synth_where}"  # noqa: S608
+    org_sql = f"SELECT count(DISTINCT {entity_id}) AS n FROM {table_id}{scoped_where}"  # noqa: S608
     shared_sql = (
         f"SELECT count(*) AS n FROM ("  # noqa: S608
-        f"  SELECT {entity_id} FROM {table_id}{synth_where} "
+        f"  SELECT {entity_id} FROM {table_id}{scoped_where} "
         f"  GROUP BY {entity_id} HAVING count(DISTINCT {agent_id}) > 1"
         f") s"
     )
 
-    await cur.execute(per_agent_sql)
+    async def execute(sql: str) -> None:
+        if params:
+            await cur.execute(sql, tuple(params))
+        else:
+            await cur.execute(sql)
+
+    await execute(per_agent_sql)
     by_agent = {str(r["agent"]): _as_int(r["n"]) for r in await cur.fetchall()}
     naive_sum = sum(by_agent.values())
 
-    await cur.execute(org_sql)
+    await execute(org_sql)
     org = _as_int((await cur.fetchone() or {}).get("n"))
 
-    await cur.execute(shared_sql)
+    await execute(shared_sql)
     shared = _as_int((await cur.fetchone() or {}).get("n"))
 
     return OrgRollup(

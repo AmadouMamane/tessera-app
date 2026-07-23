@@ -52,10 +52,17 @@ router = APIRouter()
 
 
 @router.get("/observability/fleet", response_model=FleetPayload | FleetUnavailable)
-async def observability_fleet(lang: str = "fr") -> FleetPayload | FleetUnavailable:
+async def observability_fleet(
+    lang: str = "fr",
+    period: str | None = None,
+    at: str | None = None,
+) -> FleetPayload | FleetUnavailable:
     """Fleet rollup: per-agent observable KPIs + deduplicated org totals.
 
-    ``lang`` localizes the per-agent release verdict label.
+    ``lang`` localizes the per-agent release verdict label. ``period`` scopes the
+    operational conversation figures to ``h24``/``d7``/``d30``; omitted keeps the
+    all-history fleet directory contract. ``at`` moves the end of that window to
+    an ISO instant.
 
     The payload is **constructed**, never splatted. ``{"available": True, **compute()}`` was a
     promise the code did not keep: `compute_fleet` returns `None` for an agent with no eval run
@@ -73,8 +80,9 @@ async def observability_fleet(lang: str = "fr") -> FleetPayload | FleetUnavailab
       the page down at the exact moment it is most needed; drowning it in the ordinary empty
       state would hide it forever. So it degrades, and it SAYS which of the two happened.
     """
+    period_days = _SYNTHESE_PERIODS.get(period) if period is not None else None
     try:
-        data = await fleet_mod.compute_fleet(lang)
+        data = await fleet_mod.compute_fleet(lang, period_days, at)
     except Exception as exc:  # never break the page
         sys.stderr.write(f"tessera.observability.fleet: failed: {exc}\n")
         return FleetUnavailable(available=False)

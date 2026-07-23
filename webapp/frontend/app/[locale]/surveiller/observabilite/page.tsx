@@ -21,8 +21,9 @@ export async function generateMetadata({ params }: HealthPageProps) {
 export default async function HealthPage({ params, searchParams }: HealthPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet(locale);
+  const sp = await searchParams;
+  const scope = readAgentScope(sp);
+  const fleet = await loadFleet(locale, sp);
   const t = await getTranslations({ locale, namespace: "health" });
   // The page's own per-agent question: behavioural anomalies and tool-call schema
   // conformance — the telemetry facts measured to deposit per agent. Pipeline health

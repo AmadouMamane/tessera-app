@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, TypedDict
 from uuid import UUID
 
@@ -282,6 +282,8 @@ def _file_handoff_claims(audit_path: Path) -> list[HandoffClaim]:
 
 async def _verified_handoff_rollup(
     cur: AsyncCursor[dict[str, object]],
+    since: datetime | None = None,
+    until: datetime | None = None,
 ) -> HandoffRollup:
     """Count only completed transitions between two persisted agent turns.
 
@@ -298,7 +300,16 @@ async def _verified_handoff_rollup(
     is materialised in Python. Invalid legacy conversation ids remain in the audit trail but
     cannot be cast to UUID and therefore cannot masquerade as completed transitions.
     """
-    query = """
+    claim_window: list[str] = []
+    params: list[object] = [HANDOFF_TYPE]
+    if since is not None:
+        claim_window.append("occurred_at >= %s")
+        params.append(since)
+    if until is not None:
+        claim_window.append("occurred_at <= %s")
+        params.append(until)
+    claim_scope = "".join(f"\n              AND {clause}" for clause in claim_window)
+    query = f"""
         WITH claims AS (
             SELECT
                 occurred_at,
@@ -313,6 +324,7 @@ async def _verified_handoff_rollup(
                 END AS conversation_uuid
             FROM audit_ledger
             WHERE payload->>'type' = %s
+            {claim_scope}
         ),
         verified AS (
             SELECT claim.*
@@ -346,8 +358,8 @@ async def _verified_handoff_rollup(
              FROM verified all_verified) AS conversations
         FROM verified claim
         GROUP BY claim.from_agent, claim.to_agent
-    """
-    await cur.execute(query, (HANDOFF_TYPE,))
+    """  # noqa: S608  (claim_scope contains only fixed clauses above)
+    await cur.execute(query, tuple(params))
     rows = await cur.fetchall()
     incoming: dict[str, int] = {}
     outgoing: dict[str, int] = {}
@@ -490,17 +502,62 @@ def _business_card_facts(aid: str, record: Agent | None) -> BusinessCardFacts:
     return {"north_star": north_star, "pending_business_items": pending}
 
 
-async def compute_fleet(lang: str = "fr") -> FleetData:
+def _window_bounds(
+    period_days: int | None,
+    at: str | None,
+) -> tuple[datetime | None, datetime | None]:
+    """Return one stable interval shared by every operational fleet query."""
+    if at is None:
+        until = datetime.now(UTC) if period_days is not None else None
+    else:
+        until = datetime.fromisoformat(at)
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=UTC)
+    since = until - timedelta(days=period_days) if until is not None and period_days else None
+    return since, until
+
+
+def _transcript_scope(
+    since: datetime | None,
+    until: datetime | None,
+) -> tuple[str, tuple[datetime, ...]]:
+    """SQL WHERE clause for real transcript traffic in the selected fleet window."""
+    clauses = ["NOT synthetic"]
+    params: list[datetime] = []
+    if since is not None:
+        clauses.append("created_at >= %s")
+        params.append(since)
+    if until is not None:
+        clauses.append("created_at <= %s")
+        params.append(until)
+    return " AND ".join(clauses), tuple(params)
+
+
+async def compute_fleet(
+    lang: str = "fr",
+    period_days: int | None = None,
+    at: str | None = None,
+) -> FleetData:
     """Return the fleet payload: per-agent observable KPIs + deduplicated org totals.
 
     ``lang`` localizes the per-agent release ``verdict_label``; all other fields
-    are language-independent.
+    are language-independent. ``period_days`` bounds every transcript-derived
+    figure to one trailing interval ending at ``at`` (or now).
     """
+    since, until = _window_bounds(period_days, at)
+    transcript_where, transcript_params = _transcript_scope(since, until)
     file_handoff_claims = (
         await asyncio.to_thread(_file_handoff_claims, get_settings().guard.audit_file)
         if ledger_source() == "file"
         else None
     )
+    if file_handoff_claims is not None:
+        file_handoff_claims = [
+            claim
+            for claim in file_handoff_claims
+            if (since is None or claim.occurred_at >= since)
+            and (until is None or claim.occurred_at <= until)
+        ]
     with store_read(
         "postgres", "conversation_messages.fleet_rollup", target="conversation_messages"
     ) as read:
@@ -516,13 +573,17 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
                 "avg(latency_ms) FILTER (WHERE latency_ms IS NOT NULL) AS lat "
                 # ADR 0040: real traffic only — operator TEST turns (synthetic) never
                 # inflate the Flotte, matching the business-event surfaces and the Synthèse.
-                "FROM conversation_messages WHERE NOT synthetic GROUP BY agent_id"
+                f"FROM conversation_messages WHERE {transcript_where} GROUP BY agent_id",
+                transcript_params,
             )
             by_agent = {str(r["agent_id"]): r for r in await cur.fetchall()}
 
             await cur.execute(
-                "SELECT count(*) FILTER (WHERE role = 'user') AS turns "
-                "FROM conversation_messages WHERE NOT synthetic"
+                "SELECT count(*) FILTER (WHERE role = 'user') AS turns "  # noqa: S608
+                # `transcript_where` is assembled from fixed clauses in `_transcript_scope`;
+                # all timestamps remain bound values.
+                f"FROM conversation_messages WHERE {transcript_where}",
+                transcript_params,
             )
             org_turns = int((await cur.fetchone() or {}).get("turns") or 0)
 
@@ -533,9 +594,12 @@ async def compute_fleet(lang: str = "fr") -> FleetData:
                 table="conversation_messages",
                 entity_col="conversation_id",
                 synthetic_col="synthetic",
+                time_col="created_at",
+                since=since,
+                until=until,
             )
             if ledger_source() == "postgres":
-                handoffs = await _verified_handoff_rollup(cur)
+                handoffs = await _verified_handoff_rollup(cur, since, until)
             else:
                 # File is the explicit operator escape hatch. Its scan is irreducible, but the
                 # resulting claims still earn "handoff" through the same transcript evidence.

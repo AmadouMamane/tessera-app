@@ -147,3 +147,24 @@ they no longer carry the explanation alone.
 - Validation : 72 tests ciblés puis la suite frontend complète de 507 tests, TypeScript et
   Biome verts. `make gate-twice` n’a pas été exécuté, conformément à l’instruction utilisateur
   de le suspendre jusqu’à nouvel ordre.
+
+## Correctif période du total de flotte — 2026-07-23
+
+- Finding live avant correction sur le backend de référence `:8099` : `h24=430`, `d7=430`,
+  `d30=430`. Le changement de période mettait à jour le store Zustand du rail, mais la table
+  restait un composant serveur chargé par `loadFleet()` sans période ; la route
+  `/observability/fleet` et ses requêtes SQL ne connaissaient elles-mêmes aucune fenêtre.
+- Correction de bout en bout : le choix de période devient une navigation Next partageable,
+  les pages SURVEILLER passent leurs paramètres au loader, la route traduit `h24/d7/d30` avec le
+  seam déjà utilisé par la Synthèse, et un même intervalle borne les volumes par agent, les tours,
+  le total dédupliqué et les transferts. `/agents`, qui n’a pas ce rail, conserve volontairement
+  son contrat tout historique.
+- Mesure sur le preview `:8098` après correction : `h24=0 conversation / 0 tour`,
+  `d7=15 conversations / 17 tours`, `d30=430 conversations / 500 tours` ; l’appel sans période
+  reste à `430 / 500`.
+- Validation ciblée : 35 tests Python (scope, transferts, contrat HTTP), 4 tests frontend
+  (navigation et loader), Ruff, formatage, mypy, TypeScript et Biome verts. Le navigateur
+  d’automatisation n’avait
+  pas la session opérateur du navigateur utilisateur et a honnêtement rendu « Accès opérateur
+  requis » ; aucune tentative de contournement. `make gate-twice` non exécuté, conformément à
+  l’instruction toujours active.

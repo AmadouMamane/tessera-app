@@ -76,7 +76,7 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
 
   const t = await getTranslations({ locale, namespace: "quality" });
   const scope = readAgentScope(sp);
-  const fleet = await loadFleet(locale);
+  const fleet = await loadFleet(locale, sp);
   // The breakdown lens answers the page's question: the breached signal when the SLO hero is in
   // alarm (per-agent culprits, sorted by contribution), the quality lens otherwise — never
   // volume/latency columns under a quality banner. `?signal=` focuses one signal from the

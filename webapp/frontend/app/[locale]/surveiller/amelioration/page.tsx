@@ -21,8 +21,9 @@ export async function generateMetadata({ params }: ImprovementPageProps) {
 export default async function ImprovementPage({ params, searchParams }: ImprovementPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const scope = readAgentScope(await searchParams);
-  const fleet = await loadFleet(locale);
+  const sp = await searchParams;
+  const scope = readAgentScope(sp);
+  const fleet = await loadFleet(locale, sp);
   const t = await getTranslations({ locale, namespace: "improvement" });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>

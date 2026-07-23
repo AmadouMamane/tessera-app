@@ -14,7 +14,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type ComponentType, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
@@ -55,6 +55,19 @@ const PERIOD_MS: Record<string, number> = {
   d7: 7 * 24 * 3600_000,
   d30: 30 * 24 * 3600_000,
 };
+
+/** URL that makes a period change visible to Next's server components. */
+export function periodNavigationUrl(
+  pathname: string,
+  currentSearch: string,
+  period: string,
+): string {
+  const params = new URLSearchParams(currentSearch);
+  if (period === "d7") params.delete("period");
+  else params.set("period", period);
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
 
 // Chip surfaces + SelectChip live in components/cockpit/rail-chip.tsx — ONE
 // grammar shared with the AGIR/AT-01 rails, so it never drifts between surfaces.
@@ -161,9 +174,18 @@ export function SignalCommandBar({
   scopeFilter?: boolean;
 }) {
   const t = useTranslations("overview.time");
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   // Reading, panel-open and the comparison lens all live in the shared temporal
   // state (URL-backed source of truth) — not private to the bar.
   const { reading, compare, setCompare, expanded, setExpanded } = temporal;
+  const changePeriod = (period: string) => {
+    temporal.setPeriodKey(period);
+    router.replace(periodNavigationUrl(pathname, searchParams.toString(), period), {
+      scroll: false,
+    });
+  };
   // The panel clips with overflow-hidden while it animates (height transition),
   // then switches to overflow-visible once open so the "Aller à une date" calendar
   // popover is NOT clipped. Reset to clipped the moment it starts collapsing.
@@ -388,7 +410,7 @@ export function SignalCommandBar({
             icon={Clock3}
             label={t("period")}
             value={temporal.periodKey}
-            onChange={temporal.setPeriodKey}
+            onChange={changePeriod}
             options={PERIODS.map((p) => ({ value: p, label: t(p) }))}
           />
         )}
