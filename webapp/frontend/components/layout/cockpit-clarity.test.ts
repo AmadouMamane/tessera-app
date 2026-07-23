@@ -402,10 +402,18 @@ describe("cockpit language stays human at the first reading level", () => {
       expect(catalogue.agentScope.dedupExplain).toContain("{naive}");
       expect(catalogue.agentScope.dedupExplain).toContain("{saved}");
       expect(catalogue.agentScope.dedupExplain).toContain("{shared}");
+      expect(catalogue.agentScope.dedupExplainNone).toContain("{naive}");
+      expect(catalogue.agentScope.dedupExplainNone).not.toMatch(/\{shared\}|\{saved\}/u);
       expect(catalogue.agentScope.handoffGap).toContain("{events}");
       expect(catalogue.agentScope.handoffGap).toContain("{attested}");
       expect(catalogue.agentScope.handoffGap).toContain("{seen}");
     }
+  });
+
+  it("uses a natural zero-state for fleet reconciliation in every language", () => {
+    expect(fr.agentScope.dedupExplainNone).toMatch(/Aucune conversation.*total reste/u);
+    expect(en.agentScope.dedupExplainNone).toMatch(/No conversation.*total stays/u);
+    expect(de.agentScope.dedupExplainNone).toMatch(/Keine Konversation.*Gesamtzahl bleibt/u);
   });
 
   it("explains why a transferred conversation can be counted under two agents", () => {

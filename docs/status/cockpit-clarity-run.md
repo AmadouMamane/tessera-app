@@ -122,3 +122,15 @@ they no longer carry the explanation alone.
 - Gate complet : `make gate-twice` vert deux fois sur le même arbre
   `b729bda53c4f` ; chaque passage a validé 2 582 tests Python hors intégration et 503
   tests frontend, avec Ruff, formatage, mypy, TypeScript et Biome verts.
+
+## Correctif de formulation à zéro — 2026-07-23
+
+- Finding live : la phrase « 0 sont retrouvées […] ; 0 sont retirées » exposait correctement
+  les valeurs, mais produisait une lecture mécanique et peu naturelle.
+- Correction : lorsque aucune conversation n'apparaît chez plusieurs agents et qu'aucun doublon
+  n'est retiré, une variante dédiée explique que l'addition donne le total affiché et que ce
+  total reste inchangé. Les valeurs non nulles conservent la formulation détaillée.
+- La variante existe dans les catalogues FR/DE/EN. Un test de rendu et un ratchet trilingue
+  protègent le cas zéro ; 70 tests frontend ciblés, TypeScript et Biome sont verts.
+- `make gate-twice` est vert deux fois sur le même arbre `2586c873269b` : 2 582 tests
+  Python hors intégration et 505 tests frontend par passage.

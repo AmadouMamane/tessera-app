@@ -8628,6 +8628,7 @@
       "not-honoured": "Agent dimension not honoured by the read — value refused."
     },
     "dedupExplain": "{naive} conversations after adding each agent's volume. {shared} are found under several agents; {saved} are removed from the total.",
+    "dedupExplainNone": "Adding the conversations handled by each agent gives a total of {naive}. No conversation appears under more than one agent, so the total stays unchanged.",
     "handoffReconciled": "Transfers verified: the {attested} transferred conversations appear only once in the fleet total.",
     "handoffGap": "Why check this? A transferred conversation can appear under both the sending and receiving agent. The audit log counts {events} transfers across {attested} conversations, yet the reconciliation finds only {seen} under two agents. Until those passages can be linked, a conversation may be counted twice.",
     "empty": "No fleet data available.",

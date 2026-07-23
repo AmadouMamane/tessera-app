@@ -268,13 +268,18 @@ function DedupFooter({
   seenShared: number;
   handoffGap: number;
 }) {
+  const sharedConversations = fleet.shared_conversations ?? 0;
+  const duplicatesRemoved = fleet.dedup_saved ?? 0;
+  const explanationKey =
+    sharedConversations === 0 && duplicatesRemoved === 0 ? "dedupExplainNone" : "dedupExplain";
+
   return (
     <>
       <span className="block">
-        {t("dedupExplain", {
+        {t(explanationKey, {
           naive: fmtInt(fleet.naive_sum_conversations ?? 0),
-          saved: fmtInt(fleet.dedup_saved ?? 0),
-          shared: fmtInt(fleet.shared_conversations ?? 0),
+          saved: fmtInt(duplicatesRemoved),
+          shared: fmtInt(sharedConversations),
         })}
       </span>
       {attested > 0 ? (

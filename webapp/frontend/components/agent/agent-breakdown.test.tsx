@@ -195,6 +195,17 @@ describe("the transfer verification line under the fleet total", () => {
     expect(screen.queryByText(/Transferts vérifiés/)).toBeNull();
   });
 
+  it("states a zero reconciliation as a natural sentence, not '0 are found / removed'", async () => {
+    const fleet = fleetFromWire(NO_HANDOFFS);
+
+    render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
+
+    const explanation = screen.getByText(/L'addition des conversations traitées/);
+    expect(explanation.textContent).toContain("Aucune conversation n'apparaît");
+    expect(explanation.textContent).toContain("ce total reste donc inchangé");
+    expect(explanation.textContent).not.toMatch(/0 sont retrouvées|0 sont retirées/);
+  });
+
   it("renders the gap sentence in every locale", async () => {
     for (const locale of ["fr", "de", "en"] as const) {
       cleanup();

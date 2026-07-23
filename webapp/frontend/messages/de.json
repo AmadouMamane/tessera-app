@@ -8628,6 +8628,7 @@
       "not-honoured": "Agent-Dimension bei der Lesung nicht honoriert — Wert verweigert."
     },
     "dedupExplain": "{naive} Konversationen nach Addition der Gesprächszahlen jedes Agenten. {shared} werden bei mehreren Agenten gefunden; {saved} werden aus der Gesamtsumme entfernt.",
+    "dedupExplainNone": "Die Addition der von jedem Agenten bearbeiteten Konversationen ergibt insgesamt {naive}. Keine Konversation erscheint bei mehreren Agenten; die Gesamtzahl bleibt daher unverändert.",
     "handoffReconciled": "Übergaben geprüft: Die {attested} übergebenen Konversationen erscheinen nur einmal in der Flottensumme.",
     "handoffGap": "Warum prüfen? Eine übergebene Konversation kann sowohl beim abgebenden als auch beim übernehmenden Agenten erscheinen. Das Audit-Protokoll zählt {events} Übergaben in {attested} Konversationen, der Abgleich findet davon jedoch nur {seen} bei zwei Agenten. Solange diese Übergänge nicht verknüpft sind, kann eine Konversation doppelt gezählt werden.",
     "empty": "Keine Flottendaten verfügbar.",
