@@ -1,14 +1,17 @@
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, Fingerprint, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { AuthControl } from "@/components/auth/auth-control";
-import { DemoCredentials } from "@/components/auth/demo-credentials";
 import { LoginForm } from "@/components/auth/login-form";
-import { Card, CardContent } from "@/components/ui/card";
+import { TesseraLogo, TesseraMark } from "@/components/brand/tessera-logo";
+import { SPACE_SELECTOR_TOKENS } from "@/components/landing/landing-launcher";
+import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link } from "@/i18n/navigation";
+import { demoCredentials } from "@/lib/auth/accounts";
+import { safeLoginReturnTo } from "@/lib/auth/return-to";
 
 interface LoginPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: LoginPageProps) {
@@ -17,49 +20,129 @@ export async function generateMetadata({ params }: LoginPageProps) {
   return { title: t("login.title") };
 }
 
-export default async function LoginPage({ params }: LoginPageProps) {
+export default async function LoginPage({ params, searchParams }: LoginPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "auth" });
-  const tc = await getTranslations({ locale, namespace: "comprendre" });
+  const returnTo = safeLoginReturnTo((await searchParams).next);
+  const demoAccounts = demoCredentials();
 
   return (
-    <div className="bg-canvas-glow flex h-screen items-center justify-center overflow-y-auto bg-[var(--background)] px-6 py-10">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-navy-900 text-gold-400 ring-1 ring-gold-500/20 dark:bg-gold-500 dark:text-navy-950">
-            <ShieldCheck className="h-6 w-6" />
+    <div
+      className="relative min-h-screen overflow-y-auto bg-[var(--bg-app)] text-[var(--text-primary)]"
+      style={SPACE_SELECTOR_TOKENS}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 20% 18%, rgba(15, 55, 91, 0.68), transparent 34%), radial-gradient(circle at 78% 60%, rgba(16, 185, 129, 0.07), transparent 28%), linear-gradient(180deg, #001025 0%, #00101f 58%, #000b18 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[300px] opacity-70"
+        style={{
+          backgroundImage: "url('/assets/tessera-waves-band.png')",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center bottom",
+          backgroundSize: "100% 100%",
+          maskImage: "linear-gradient(to top, #000 48%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to top, #000 48%, transparent 100%)",
+        }}
+      />
+
+      <header className="relative z-10 flex min-h-[82px] items-center justify-between border-b border-[var(--border-subtle)] px-6 lg:px-10">
+        <Link href="/select-space" className="rounded-md outline-none focus-visible:ring-2">
+          <TesseraLogo className="h-[42px]" />
+        </Link>
+        <Link
+          href="/select-space"
+          className="inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-[13px] text-[var(--text-secondary)] transition-colors hover:border-white/[0.06] hover:bg-white/[0.04] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("login.back")}
+        </Link>
+      </header>
+
+      <main className="relative z-10 mx-auto grid min-h-[calc(100vh-82px)] w-full max-w-[1540px] grid-cols-1 items-center px-6 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(440px,520px)] lg:gap-20 lg:px-10 xl:gap-28">
+        <section className="flex items-center py-2">
+          <div className="flex w-full max-w-[720px] flex-col items-start">
+            <DemoBadge className="mb-5" />
+            <h1 className="max-w-[680px] font-sans text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[var(--text-primary)]">
+              {t("login.title")}
+            </h1>
+            <p className="mt-5 max-w-[630px] text-[16px] leading-[1.65] text-[var(--text-secondary)]">
+              {t("login.subtitle")}
+            </p>
+            <div className="mt-7 flex flex-wrap gap-2.5">
+              {[t("login.accessIdentity"), t("login.accessRights"), t("login.accessTrace")].map(
+                (item) => (
+                  <span
+                    key={item}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-[12px] text-slate-300"
+                  >
+                    <Check className="h-3.5 w-3.5 text-emerald-300" />
+                    {item}
+                  </span>
+                ),
+              )}
+            </div>
+
+            <div
+              className="relative mt-9 hidden h-[270px] w-full max-w-[680px] lg:block"
+              aria-hidden="true"
+            >
+              <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 h-[250px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(45,212,191,0.11),transparent_64%)] blur-2xl" />
+              <div className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(148,163,184,0.52)_0.8px,transparent_0.8px)] [background-size:18px_18px] [mask-image:radial-gradient(ellipse_at_center,#000_18%,transparent_70%)]" />
+              <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 h-[198px] w-[500px] rounded-[50%] border border-cyan-300/15" />
+              <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 h-[138px] w-[340px] rounded-[50%] border border-emerald-300/20" />
+              <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 grid h-[88px] w-[88px] place-items-center rounded-[26px] border border-emerald-300/30 bg-[#041b28]/90 shadow-[0_0_44px_rgba(45,212,191,0.16)]">
+                <TesseraMark className="h-[48px] w-[48px]" />
+              </div>
+              <div className="absolute top-[30px] left-[112px] grid h-11 w-11 place-items-center rounded-[14px] border border-cyan-300/25 bg-[#062239]/90 text-cyan-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+                <Fingerprint className="h-5 w-5" />
+              </div>
+              <div className="absolute right-[94px] bottom-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-emerald-300/25 bg-[#062a2b]/90 text-emerald-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div className="absolute right-[86px] top-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-violet-300/20 bg-[#171a38]/90 text-violet-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+                <LockKeyhole className="h-5 w-5" />
+              </div>
+              <div className="absolute bottom-[34px] left-[96px] grid h-11 w-11 place-items-center rounded-[14px] border border-amber-200/20 bg-[#2a2113]/90 text-amber-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+                <KeyRound className="h-5 w-5" />
+              </div>
+            </div>
           </div>
-          <h1 className="font-serif text-2xl font-semibold">{t("login.title")}</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">{t("login.subtitle")}</p>
-        </div>
+        </section>
 
-        {/* One welcome line above the form, and only one: a visitor who lands here has already
-            chosen a world. Saying that this is a demonstration, once, before they type a
-            password they do not have, is the whole job. */}
-        <p className="mb-4 text-center text-[0.8rem] text-[var(--muted-foreground)]">
-          {tc("loginWelcome")}
-        </p>
+        <section className="relative flex min-h-0 w-full items-center border-t border-[var(--border-subtle)] py-10 lg:min-h-[690px] lg:border-t-0 lg:pl-16">
+          <div
+            className="pointer-events-none absolute inset-y-8 left-0 hidden w-px lg:block"
+            aria-hidden="true"
+            style={{
+              background:
+                "linear-gradient(180deg, transparent 0%, rgba(148, 163, 184, 0.12) 18%, rgba(110, 231, 183, 0.18) 50%, rgba(148, 163, 184, 0.12) 82%, transparent 100%)",
+            }}
+          />
+          <div className="mx-auto w-full max-w-[460px]">
+            <div className="mb-6 flex items-center gap-4 border-b border-[var(--border-subtle)] pb-6">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-emerald-300/25 bg-emerald-300/[0.08] text-emerald-200 shadow-[0_0_28px_rgba(45,212,191,0.08)]">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[16px] font-semibold text-[var(--text-primary)]">
+                  {t("login.panelTitle")}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-[var(--text-secondary)]">
+                  {t("login.panelHint")}
+                </p>
+              </div>
+            </div>
 
-        <Card>
-          <CardContent className="flex flex-col gap-5 p-6">
-            <LoginForm />
-            <DemoCredentials locale={locale} />
-          </CardContent>
-        </Card>
-
-        <div className="mt-5 flex items-center justify-between">
-          <Link
-            href="/produit"
-            className="inline-flex items-center gap-1.5 text-sm text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {t("login.back")}
-          </Link>
-          {/* Lets an already-signed-in operator see their state / sign out here. */}
-          <AuthControl />
-        </div>
-      </div>
+            <LoginForm returnTo={returnTo} demoAccounts={demoAccounts} />
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

@@ -1205,6 +1205,17 @@
     "auditorMode": "Auditor-Modus",
     "signedInAs": "Angemeldet · {role}",
     "changeAccount": "Konto wechseln",
+    "addAccount": "Konto hinzufügen",
+    "accounts": "Konten",
+    "currentAccount": "Aktuelles Konto",
+    "operatorAccount": "Betreiberkonto",
+    "customize": "Personalisierung",
+    "profile": "Systemprofil",
+    "settings": "Einstellungen",
+    "help": "Hilfe",
+    "understand": "Tessera verstehen",
+    "detailedGuide": "Ausführliche Anleitung",
+    "preferences": "Cockpit-Einstellungen",
     "menuLabel": "Benutzermenü · {role}",
     "sessionActive": "Aktive Sitzung {time}",
     "roles": {
@@ -1220,17 +1231,25 @@
     },
     "login": {
       "title": "Betreiber-Anmeldung",
-      "subtitle": "Zugriff auf Audit-Protokoll, Budget und Evaluierungsdetails.",
+      "subtitle": "Kehren Sie mit den passenden Rechten für Ihre Rolle zu Ihrem Arbeitsbereich zurück.",
+      "panelTitle": "Arbeitsbereich öffnen",
+      "panelHint": "Wählen Sie ein Demo-Profil oder geben Sie Ihre Zugangsdaten ein.",
+      "accessIdentity": "Geprüfte Identität",
+      "accessRights": "Rollenbasierter Zugriff",
+      "accessTrace": "Nachvollziehbare Sitzung",
       "username": "Benutzername",
       "password": "Passwort",
+      "manualCredentials": "oder Zugangsdaten eingeben",
+      "showPassword": "Passwort anzeigen",
+      "hidePassword": "Passwort ausblenden",
       "submit": "Anmelden",
       "submitting": "Anmeldung…",
       "error": "Ungültiger Benutzername oder Passwort.",
       "back": "Zurück zur Demo"
     },
     "demo": {
-      "title": "Demo-Zugangsdaten",
-      "hint": "Öffentliche Demo: Verwenden Sie eines dieser Konten, um alles zu sehen."
+      "title": "Demo-Profil auswählen",
+      "hint": "Ein Klick füllt die Zugangsdaten aus; Sie starten die Anmeldung selbst."
     },
     "adminOnly": "Nur für Administratoren",
     "demoSession": "Demositzung"

@@ -1,27 +1,43 @@
 "use client";
 
-import { LogIn } from "lucide-react";
+import { Eye, EyeOff, KeyRound, LogIn, UserRound } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 
+import { type DemoAccount, DemoCredentials } from "@/components/auth/demo-credentials";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "@/i18n/navigation";
 
 /**
  * Credentials sign-in form (ADR 0009). Calls Auth.js with redirect:false so we
- * can show an inline error, then sends the user to the locale root on success.
- * The root role-routes server-side (ADR 0013): identity is the door, so an
- * operator lands in the cockpit — not on the demo picker.
+ * can show an inline error, then returns the user to the guarded internal route
+ * they requested. A direct visit without a return target keeps the locale root
+ * fallback.
  */
-export function LoginForm() {
+export function LoginForm({
+  returnTo,
+  demoAccounts,
+}: {
+  returnTo: string | null;
+  demoAccounts: DemoAccount[];
+}) {
   const t = useTranslations("auth.login");
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
+
+  function selectDemoAccount(account: DemoAccount) {
+    setUsername(account.username);
+    setPassword(account.password);
+    setSelectedUsername(account.username);
+    setError(false);
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,39 +49,91 @@ export function LoginForm() {
       setError(true);
       return;
     }
-    router.push("/");
+    router.push(returnTo ?? "/");
     router.refresh();
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3">
-      <label htmlFor="login-username" className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-[var(--muted-foreground)]">{t("username")}</span>
-        <Input
-          id="login-username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          autoComplete="username"
-          required
-        />
+    <form onSubmit={onSubmit} className="flex flex-col">
+      <DemoCredentials
+        accounts={demoAccounts}
+        selectedUsername={selectedUsername}
+        onSelect={selectDemoAccount}
+      />
+
+      <div className="my-5 flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+          {t("manualCredentials")}
+        </span>
+        <span className="h-px flex-1 bg-[var(--border-subtle)]" />
+      </div>
+
+      <label htmlFor="login-username" className="flex flex-col gap-2 text-sm">
+        <span className="text-[12px] font-medium text-[var(--text-secondary)]">
+          {t("username")}
+        </span>
+        <span className="relative">
+          <UserRound className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-4 z-10 h-4 w-4 text-slate-500" />
+          <Input
+            id="login-username"
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setSelectedUsername(null);
+            }}
+            autoComplete="username"
+            required
+            className="h-12 rounded-xl border-[var(--border-subtle)] bg-[#00101f]/70 pr-4 pl-11 text-[14px] text-[var(--text-primary)] shadow-inner focus-visible:ring-1 focus-visible:ring-emerald-300/55"
+          />
+        </span>
       </label>
-      <label htmlFor="login-password" className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium text-[var(--muted-foreground)]">{t("password")}</span>
-        <Input
-          id="login-password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          required
-        />
+
+      <label htmlFor="login-password" className="mt-4 flex flex-col gap-2 text-sm">
+        <span className="text-[12px] font-medium text-[var(--text-secondary)]">
+          {t("password")}
+        </span>
+        <span className="relative">
+          <KeyRound className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-4 z-10 h-4 w-4 text-slate-500" />
+          <Input
+            id="login-password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setSelectedUsername(null);
+            }}
+            autoComplete="current-password"
+            required
+            className="h-12 rounded-xl border-[var(--border-subtle)] bg-[#00101f]/70 pr-12 pl-11 text-[14px] text-[var(--text-primary)] shadow-inner focus-visible:ring-1 focus-visible:ring-emerald-300/55"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            aria-label={showPassword ? t("hidePassword") : t("showPassword")}
+            className="-translate-y-1/2 absolute top-1/2 right-2.5 grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-white/[0.05] hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </span>
       </label>
+
       {error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p
+          role="alert"
+          className="mt-3 rounded-xl border border-red-400/20 bg-red-400/[0.06] px-3 py-2.5 text-[12px] text-red-300"
+        >
           {t("error")}
         </p>
       ) : null}
-      <Button type="submit" variant="primary" disabled={pending} className="mt-1 gap-2">
+
+      <Button
+        type="submit"
+        variant="accent"
+        size="lg"
+        disabled={pending}
+        className="mt-5 h-12 w-full rounded-xl border border-amber-200/40 bg-[linear-gradient(135deg,#f4c76a,#d6b66a)] text-[14px] font-semibold text-[#00101f] shadow-[0_12px_28px_rgba(214,182,106,0.16)] transition-transform hover:-translate-y-px hover:bg-[linear-gradient(135deg,#f8d17f,#dfbf70)]"
+      >
         <LogIn className="h-4 w-4" />
         {pending ? t("submitting") : t("submit")}
       </Button>

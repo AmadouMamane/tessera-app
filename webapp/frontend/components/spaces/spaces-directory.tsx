@@ -11,19 +11,11 @@ import {
   Star,
   UserRound,
 } from "lucide-react";
-import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
-
-// Demo-mode seeded credentials for a guarded surface (off in prod → undefined).
-export interface SurfaceDemo {
-  username: string;
-  password: string;
-  label: string;
-}
 
 export interface SurfaceView {
   key: string;
@@ -36,17 +28,12 @@ export interface SurfaceView {
   // d'ensemble). `authRequired` drives the access chip + CTA.
   authRequired: boolean;
   authNote: string;
-  demo: SurfaceDemo | null;
   // False when the CURRENT authenticated role cannot enter this surface (e.g. a
   // `collections` session and the customer product). The card is then shown inert
   // instead of a link that would bounce to the role's own landing (ADR 0013). For
-  // an anonymous session this is always true — the auth/demo affordance handles it.
+  // an anonymous session this is always true — each protected surface owns its
+  // login redirect and post-login return.
   accessible: boolean;
-  // True when entering this surface requires the demo 1-click login (anonymous
-  // visitor, or a session the surface rejects). False for a session that can
-  // already enter: the card then NAVIGATES — it never re-logs a real session
-  // as the seeded demo account (a silent privilege downgrade, bug 2026-07-18).
-  demoNeeded: boolean;
 }
 
 export interface SurfaceGroup {
@@ -149,36 +136,10 @@ function SurfaceCard({
   onToggleFavorite,
 }: { surface: FlatSurface; favorite: boolean; onToggleFavorite: () => void }) {
   const t = useTranslations("spaces");
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
   const a = ACCENT[surface.audience];
   const Icon = SURFACE_ICON[surface.key] ?? Boxes;
   const audienceLabel = surface.audience === "internal" ? t("groupInternal") : t("groupExternal");
-  const demo = surface.demo;
-  const actionLabel = demo ? demo.label : t("open");
-
-  const enter = async () => {
-    if (!demo) return;
-    setPending(true);
-    // A session that can already enter is navigated as-is — the demo login is
-    // for the visitor who cannot, never a downgrade of a real session.
-    if (!surface.demoNeeded) {
-      router.push(surface.href);
-      router.refresh();
-      return;
-    }
-    const res = await signIn("credentials", {
-      username: demo.username,
-      password: demo.password,
-      redirect: false,
-    });
-    if (res && !res.error) {
-      router.push(surface.href);
-      router.refresh();
-    } else {
-      setPending(false);
-    }
-  };
+  const actionLabel = t("open");
 
   const actionAria = `${surface.name} — ${actionLabel}`;
   const locked = !surface.accessible;
@@ -191,21 +152,12 @@ function SurfaceCard({
         "group/card relative flex min-h-[200px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-[20px] border px-[18px] pb-[22px] pt-[42px] text-center transition-[border-color,box-shadow]",
         a.border,
         locked ? "cursor-not-allowed opacity-55" : "hover:shadow-[0_12px_28px_rgba(0,0,0,0.34)]",
-        pending && "opacity-70",
       )}
       style={{ background: CARD_BG }}
     >
       {/* Stretched action covers the whole card (no nested interactives). Inert
           when the current role can't enter — no link that would bounce away. */}
-      {locked ? null : demo ? (
-        <button
-          type="button"
-          onClick={enter}
-          disabled={pending}
-          aria-label={actionAria}
-          className={cn("absolute inset-0 rounded-[20px]", FOCUS)}
-        />
-      ) : (
+      {locked ? null : (
         <Link
           href={surface.href}
           aria-label={actionAria}
@@ -283,36 +235,11 @@ function SurfaceRow({
   onToggleFavorite,
 }: { surface: FlatSurface; favorite: boolean; onToggleFavorite: () => void }) {
   const t = useTranslations("spaces");
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
   const a = ACCENT[surface.audience];
   const Icon = SURFACE_ICON[surface.key] ?? Boxes;
   const audienceLabel = surface.audience === "internal" ? t("groupInternal") : t("groupExternal");
-  const demo = surface.demo;
 
-  const enter = async () => {
-    if (!demo) return;
-    setPending(true);
-    // Same rule as the card variant: never re-log an already-authorized session.
-    if (!surface.demoNeeded) {
-      router.push(surface.href);
-      router.refresh();
-      return;
-    }
-    const res = await signIn("credentials", {
-      username: demo.username,
-      password: demo.password,
-      redirect: false,
-    });
-    if (res && !res.error) {
-      router.push(surface.href);
-      router.refresh();
-    } else {
-      setPending(false);
-    }
-  };
-
-  const actionLabel = demo ? demo.label : t("open");
+  const actionLabel = t("open");
   const actionAria = `${surface.name} — ${actionLabel}`;
   const locked = !surface.accessible;
   return (
@@ -322,18 +249,9 @@ function SurfaceRow({
         "group/row relative flex w-full items-center gap-[16px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[14px] text-left transition-[border-color]",
         a.border,
         locked && "cursor-not-allowed opacity-55",
-        pending && "opacity-70",
       )}
     >
-      {locked ? null : demo ? (
-        <button
-          type="button"
-          onClick={enter}
-          disabled={pending}
-          aria-label={actionAria}
-          className={cn("absolute inset-0 rounded-[16px]", FOCUS)}
-        />
-      ) : (
+      {locked ? null : (
         <Link
           href={surface.href}
           aria-label={actionAria}

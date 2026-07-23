@@ -22,7 +22,19 @@ const recouvrementProductExperience = read(
   "components/recouvrement/recouvrement-product-experience.tsx",
 );
 const systemStatus = read("components/layout/system-status-pill.tsx");
+const sidebar = read("components/layout/sidebar.tsx");
 const userMenu = read("components/layout/user-menu.tsx");
+
+function accountMenuIsRailBound(menuSource: string, sidebarSource: string): boolean {
+  return (
+    sidebarSource.includes("md:w-[252px]") &&
+    menuSource.includes("w-full") &&
+    menuSource.includes("w-[var(--radix-dropdown-menu-trigger-width)]") &&
+    menuSource.includes('side={compact ? "bottom" : "top"}') &&
+    menuSource.includes('align={compact ? "end" : "start"}') &&
+    !menuSource.includes("min-w-[15rem]")
+  );
+}
 
 describe("H1 shared header components", () => {
   it("uses one tree-aware ledger wording source for the footer and system popover", () => {
@@ -47,13 +59,53 @@ describe("H1 shared header components", () => {
 
   it("anchors account actions, language and theme under the user menu without a role toggle", () => {
     expect(authControl).toContain("UserMenu");
+    expect(authControl).toContain("compact={compact}");
+    expect(authControl).not.toContain("session.user.name");
     expect(userMenu).toContain('href="/login"');
     expect(userMenu).toContain("changeAccount");
     expect(userMenu).toContain("signOut");
+    expect(userMenu).toContain("DropdownMenuSubContent");
     expect(userMenu).toContain("DropdownMenuRadioGroup");
     expect(userMenu).toContain("setTheme");
     expect(userMenu).not.toContain("auditorMode");
     expect(userMenu).not.toContain("setRole");
+  });
+
+  it("uses an avatar-only trigger on selection surfaces and the full role card in the cockpit", () => {
+    expect(authControl).toContain('const compact = context === "optional"');
+    expect(landingLauncher).toContain('<AppHeader plan="launcher" auth="optional" />');
+    expect(sidebar).toContain('<AuthControl context="gated" />');
+    expect(sidebar).not.toContain('<AuthControl context="gated" compact');
+    expect(userMenu).toContain("compact?: boolean");
+    expect(userMenu).toContain('? "h-10 w-10 justify-center rounded-full p-1"');
+    expect(userMenu).toContain('side={compact ? "bottom" : "top"}');
+    expect(userMenu).toContain('align={compact ? "end" : "start"}');
+    expect(userMenu).toContain("{compact ? null : (");
+  });
+
+  it("keeps the connection card and its main menu inside the expanded sidebar", () => {
+    expect(accountMenuIsRailBound(userMenu, sidebar)).toBe(true);
+
+    const overflowRegression = userMenu.replace(
+      "w-[var(--radix-dropdown-menu-trigger-width)]",
+      "min-w-[15rem]",
+    );
+    expect(accountMenuIsRailBound(overflowRegression, sidebar)).toBe(false);
+  });
+
+  it("does not repeat the signed-in identity inside the main account menu", () => {
+    const accountEntry = userMenu.match(
+      /<DropdownMenuSubTrigger className="gap-2 rounded-lg">[\s\S]*?<\/DropdownMenuSubTrigger>/,
+    )?.[0];
+
+    expect(accountEntry).toContain('t("accounts")');
+    expect(accountEntry).not.toContain("{roleLabel}");
+    expect(accountEntry).not.toContain("initials(roleLabel)");
+    expect(userMenu).not.toContain("accountIdentifier");
+    expect(userMenu).not.toContain("name?: string");
+
+    const repeatedIdentity = accountEntry?.replace('{t("accounts")}', "{roleLabel}");
+    expect(repeatedIdentity).toContain("{roleLabel}");
   });
 
   it("promotes the floating demo pill to the single DemoBadge component", () => {
@@ -89,7 +141,9 @@ describe("H2 cockpit header contract", () => {
     expect(appShell).toContain("<CockpitAuthGate>");
     expect(appShell).toContain("description={description}");
     expect(appShell).not.toContain("pageSubtitle={description}");
-    expect(cockpitAuthGate).toContain('router.replace("/login")');
+    expect(cockpitAuthGate).toContain(
+      "router.replace(`/login?next=${encodeURIComponent(pathname)}`)",
+    );
     expect(cockpitAuthGate).toContain('role === "admin"');
     expect(cockpitAuthGate).toContain('role === "auditor"');
     expect(cockpitAuthGate).toContain('role === "superadmin"');
@@ -156,6 +210,17 @@ describe("H4 product-surface header contract", () => {
 describe("H1 header i18n", () => {
   const requiredPaths = [
     "auth.changeAccount",
+    "auth.addAccount",
+    "auth.accounts",
+    "auth.currentAccount",
+    "auth.operatorAccount",
+    "auth.customize",
+    "auth.profile",
+    "auth.settings",
+    "auth.help",
+    "auth.understand",
+    "auth.detailedGuide",
+    "auth.preferences",
     "auth.menuLabel",
     "auth.sessionActive",
     "app.clientSpace",

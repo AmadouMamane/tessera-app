@@ -1205,6 +1205,17 @@
     "auditorMode": "Mode auditeur",
     "signedInAs": "Connecté · {role}",
     "changeAccount": "Changer de compte",
+    "addAccount": "Ajouter un compte",
+    "accounts": "Comptes",
+    "currentAccount": "Compte actuel",
+    "operatorAccount": "Compte opérateur",
+    "customize": "Personnalisation",
+    "profile": "Profil système",
+    "settings": "Paramètres",
+    "help": "Aide",
+    "understand": "Comprendre Tessera",
+    "detailedGuide": "Lecture détaillée",
+    "preferences": "Préférences du cockpit",
     "menuLabel": "Menu utilisateur · {role}",
     "sessionActive": "Session active {time}",
     "roles": {
@@ -1220,17 +1231,25 @@
     },
     "login": {
       "title": "Connexion opérateur",
-      "subtitle": "Accédez au journal d'audit, au budget et au détail des évaluations.",
+      "subtitle": "Retrouvez votre espace de travail avec les droits adaptés à votre rôle.",
+      "panelTitle": "Accéder à votre espace",
+      "panelHint": "Choisissez un profil de démonstration ou saisissez vos identifiants.",
+      "accessIdentity": "Identité vérifiée",
+      "accessRights": "Droits adaptés au rôle",
+      "accessTrace": "Session traçable",
       "username": "Identifiant",
       "password": "Mot de passe",
+      "manualCredentials": "ou saisissez vos identifiants",
+      "showPassword": "Afficher le mot de passe",
+      "hidePassword": "Masquer le mot de passe",
       "submit": "Se connecter",
       "submitting": "Connexion…",
       "error": "Identifiant ou mot de passe invalide.",
       "back": "Retour à la démo"
     },
     "demo": {
-      "title": "Identifiants de démonstration",
-      "hint": "Démo publique : utilisez l'un de ces comptes pour tout voir."
+      "title": "Choisir un profil de démonstration",
+      "hint": "Un clic remplit les identifiants ; vous gardez la main sur la connexion."
     },
     "adminOnly": "Réservé à l’administrateur",
     "demoSession": "Session démonstration"

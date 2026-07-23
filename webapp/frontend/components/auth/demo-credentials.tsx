@@ -1,42 +1,101 @@
+"use client";
+
+import { Check, HandCoins, KeyRound, ScanSearch, ShieldCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+export interface DemoAccount {
+  username: string;
+  password: string;
+  role: "admin" | "auditor" | "superadmin" | "collections";
+}
+
+interface DemoCredentialsProps {
+  accounts: DemoAccount[];
+  selectedUsername: string | null;
+  onSelect: (account: DemoAccount) => void;
+}
+
+const ROLE_ICONS = {
+  admin: ShieldCheck,
+  auditor: ScanSearch,
+  collections: HandCoins,
+  superadmin: ShieldCheck,
+} as const;
+
 /**
- * Demo-credentials panel for the login page (ADR 0009).
- *
- * The demo intentionally surfaces the seeded operator credentials so any
- * visitor can explore the gated surfaces — the gate is theatrical by design.
- * Reads the credentials server-side from the same source as the auth provider.
+ * Selectable demo accounts for the theatrical gate documented by ADR 0009.
+ * Selection only fills the form: the user keeps control of the sign-in action.
  */
-import { KeyRound } from "lucide-react";
-import { getTranslations } from "next-intl/server";
-
-import { demoCredentials } from "@/lib/auth/accounts";
-
-export async function DemoCredentials({ locale }: { locale: string }) {
-  const t = await getTranslations({ locale, namespace: "auth" });
-  const tRoles = await getTranslations({ locale, namespace: "auth.roles" });
-  const creds = demoCredentials();
+export function DemoCredentials({ accounts, selectedUsername, onSelect }: DemoCredentialsProps) {
+  const t = useTranslations("auth");
+  const tRoles = useTranslations("auth.roles");
 
   return (
-    <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--muted)]/40 p-4">
-      <div className="mb-2.5 flex items-center gap-2 text-xs font-medium text-[var(--muted-foreground)]">
-        <KeyRound className="h-3.5 w-3.5 text-gold-500" />
-        {t("demo.title")}
+    <div>
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-[12px] font-semibold text-[var(--text-primary)]">
+            <KeyRound className="h-3.5 w-3.5 text-[var(--champagne-strong)]" />
+            {t("demo.title")}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-[1.45] text-[var(--text-secondary)]">
+            {t("demo.hint")}
+          </p>
+        </div>
       </div>
-      <p className="mb-3 text-[0.7rem] text-[var(--muted-foreground)]/80">{t("demo.hint")}</p>
-      <ul className="flex flex-col gap-1.5">
-        {creds.map((c) => (
-          <li
-            key={c.username}
-            className="flex items-center justify-between gap-3 rounded-md bg-[var(--card)] px-3 py-1.5 font-mono text-xs"
-          >
-            <span className="text-[var(--foreground)]">
-              {c.username} <span className="text-[var(--muted-foreground)]">/</span> {c.password}
-            </span>
-            <span className="rounded bg-[var(--muted)] px-1.5 py-0.5 text-[0.65rem] text-[var(--muted-foreground)]">
-              {tRoles(c.role)}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <fieldset className="grid grid-cols-3 gap-2">
+        <legend className="sr-only">{t("demo.title")}</legend>
+        {accounts.map((account) => {
+          const selected = account.username === selectedUsername;
+          const RoleIcon = ROLE_ICONS[account.role];
+
+          return (
+            <button
+              key={account.username}
+              type="button"
+              aria-label={`${tRoles(account.role)} ${account.username}·${account.password}`}
+              aria-pressed={selected}
+              onClick={() => onSelect(account)}
+              className={`group flex min-h-[112px] w-full flex-col rounded-[18px] border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] ${
+                selected
+                  ? "border-emerald-300/35 bg-emerald-300/[0.065] shadow-[inset_0_0_0_1px_rgba(110,231,183,0.05)]"
+                  : "border-white/[0.055] bg-white/[0.018] hover:border-white/[0.1] hover:bg-white/[0.035]"
+              }`}
+            >
+              <span className="flex w-full items-start justify-between">
+                <span
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl border ${
+                    selected
+                      ? "border-emerald-300/30 bg-emerald-300/[0.1] text-emerald-200"
+                      : "border-white/[0.06] bg-[#00101f]/55 text-slate-300"
+                  }`}
+                >
+                  <RoleIcon className="h-3.5 w-3.5" />
+                </span>
+                <span
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors ${
+                    selected
+                      ? "border-emerald-300/35 bg-emerald-300/[0.12] text-emerald-200"
+                      : "border-white/[0.06] text-transparent group-hover:border-white/[0.12]"
+                  }`}
+                >
+                  <Check className="h-3 w-3" />
+                </span>
+              </span>
+              <span className="mt-2.5 min-w-0">
+                <span className="block min-h-[28px] text-[11px] font-medium leading-[1.25] text-[var(--text-primary)]">
+                  {tRoles(account.role)}
+                </span>
+                <span className="mt-1 block truncate font-mono text-[9px] leading-4 text-[var(--text-secondary)]">
+                  {account.username}
+                  <br />
+                  {account.password}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </fieldset>
     </div>
   );
 }

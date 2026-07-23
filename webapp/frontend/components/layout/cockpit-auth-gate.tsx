@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 
-import { useRouter } from "@/i18n/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 
 function hasCockpitRole(role: string | undefined): boolean {
   return role === "admin" || role === "auditor" || role === "superadmin";
@@ -14,13 +14,16 @@ function hasCockpitRole(role: string | undefined): boolean {
 export function CockpitAuthGate({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const t = useTranslations("auth.locked");
   const role = session?.user?.role;
   const allowed = hasCockpitRole(role);
 
   useEffect(() => {
-    if (status !== "loading" && !allowed) router.replace("/login");
-  }, [allowed, router, status]);
+    if (status !== "loading" && !allowed) {
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+    }
+  }, [allowed, pathname, router, status]);
 
   if (status === "loading" || !allowed) {
     return (

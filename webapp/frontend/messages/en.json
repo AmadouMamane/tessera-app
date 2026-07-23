@@ -1205,6 +1205,17 @@
     "auditorMode": "Auditor mode",
     "signedInAs": "Signed in · {role}",
     "changeAccount": "Switch account",
+    "addAccount": "Add an account",
+    "accounts": "Accounts",
+    "currentAccount": "Current account",
+    "operatorAccount": "Operator account",
+    "customize": "Personalization",
+    "profile": "System profile",
+    "settings": "Settings",
+    "help": "Help",
+    "understand": "Understand Tessera",
+    "detailedGuide": "Detailed guide",
+    "preferences": "Cockpit preferences",
     "menuLabel": "User menu · {role}",
     "sessionActive": "Active session {time}",
     "roles": {
@@ -1220,17 +1231,25 @@
     },
     "login": {
       "title": "Operator sign-in",
-      "subtitle": "Access the audit log, budget and evaluation details.",
+      "subtitle": "Return to your workspace with permissions tailored to your role.",
+      "panelTitle": "Access your workspace",
+      "panelHint": "Choose a demo profile or enter your credentials.",
+      "accessIdentity": "Verified identity",
+      "accessRights": "Role-based access",
+      "accessTrace": "Traceable session",
       "username": "Username",
       "password": "Password",
+      "manualCredentials": "or enter your credentials",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "submit": "Sign in",
       "submitting": "Signing in…",
       "error": "Invalid username or password.",
       "back": "Back to the demo"
     },
     "demo": {
-      "title": "Demo credentials",
-      "hint": "Public demo: use one of these accounts to see everything."
+      "title": "Choose a demo profile",
+      "hint": "One click fills the credentials; you stay in control of sign-in."
     },
     "adminOnly": "Administrator only",
     "demoSession": "Demo session"

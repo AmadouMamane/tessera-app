@@ -18,6 +18,9 @@ export const dynamic = "force-dynamic";
 export default async function RecouvrementLayout({ children, params }: RecouvrementLayoutProps) {
   const { locale } = await params;
   const role = await currentRole();
+  if (role === null) {
+    redirect({ href: "/login?next=/recouvrement", locale });
+  }
   if (!hasCollectionsAccess(role)) {
     redirect({ href: spaceRedirectForRole(role), locale });
   }

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { UserMenu } from "@/components/layout/user-menu";
 import { Link } from "@/i18n/navigation";
+import { cn } from "@/lib/cn";
 
 /**
  * Anonymous behaviour of {@link AuthControl}, per the header normative
@@ -18,20 +19,22 @@ import { Link } from "@/i18n/navigation";
  * - `demo` — launcher: page-level demo badge already carries the context; no
  *   extra header auth affordance for anonymous visitors.
  *
- * Signed-in behaviour is identical in every context: the user menu (who + sign
- * out). The context only changes the anonymous fallback.
+ * Signed-in behaviour keeps the same actions in every context. Optional
+ * selection surfaces use an avatar-only trigger; gated cockpit surfaces retain
+ * the full role card because the active operator role matters there.
  */
 export type AuthContext = "demo" | "optional" | "gated";
 
 /**
- * Header auth affordance (ADR 0009): a sign-in link for visitors, or a compact
- * user menu (avatar + name + role + chevron). Account switch and sign-out live
- * inside the dropdown — never as a bare button in the header.
+ * Header auth affordance (ADR 0009): a sign-in link for visitors, an avatar on
+ * selection surfaces, or the full role card in the cockpit. Account switch and
+ * sign-out live inside the dropdown — never as bare header buttons.
  */
 export function AuthControl({ context = "optional" }: { context?: AuthContext }) {
   const { data: session, status } = useSession();
   const t = useTranslations("auth");
   const role = session?.user?.role;
+  const compact = context === "optional";
 
   // Reserve the resolved control's footprint while the session loads, so it
   // doesn't pop in and reflow the (flex-wrap) header row — which would make the
@@ -40,13 +43,21 @@ export function AuthControl({ context = "optional" }: { context?: AuthContext })
     return (
       <div
         aria-hidden
-        className="flex items-center gap-2 rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] py-1 pl-1 pr-2"
+        className={cn(
+          "flex items-center border border-transparent",
+          compact ? "h-10 w-10 justify-center rounded-full p-1" : "w-full gap-2 rounded-lg p-2",
+        )}
       >
-        <span className="h-7 w-7 shrink-0 animate-pulse rounded-full bg-[var(--tessera-muted)]" />
-        <span className="hidden min-w-0 sm:flex">
-          <span className="h-3 w-28 animate-pulse rounded bg-[var(--tessera-muted)]" />
-        </span>
-        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
+        <span className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-[var(--tessera-muted)]" />
+        {compact ? null : (
+          <>
+            <span className="hidden min-w-0 flex-1 flex-col gap-1 md:flex">
+              <span className="h-3 w-24 animate-pulse rounded bg-[var(--tessera-muted)]" />
+              <span className="h-2.5 w-20 animate-pulse rounded bg-[var(--tessera-muted)]" />
+            </span>
+            <ChevronDown className="hidden h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] md:block" />
+          </>
+        )}
       </div>
     );
   }
@@ -73,5 +84,5 @@ export function AuthControl({ context = "optional" }: { context?: AuthContext })
     );
   }
 
-  return <UserMenu role={role} />;
+  return <UserMenu role={role} compact={compact} />;
 }

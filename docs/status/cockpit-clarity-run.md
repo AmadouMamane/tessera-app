@@ -273,3 +273,121 @@ they no longer carry the explanation alone.
   globale (principalement indentation espaces contre tabs) qui existait avant les changements de
   classes ; aucune réécriture massive hors lot n’a été faite. `make gate-twice` reste suspendu
   conformément à l’instruction utilisateur.
+
+## Carte de connexion et menu de compte — 2026-07-23
+
+- Branche fraîche `codex/account-menu` depuis `origin/main`, claim sole-writer repris sous
+  `c1ee5184-a3e0-45d9-b3e2-85246c358e90`.
+- Diagnostic live avant correction : la barre latérale mesurait 218 px, tandis que le menu
+  principal mesurait 240 px et dépassait donc son bord droit de 22 px. La carte utilisait un
+  petit bouton en pilule et mêlait directement compte, langues et thèmes dans un seul panneau.
+- Correction : la barre ouverte mesure 252 px ; la carte de connexion occupe toute sa largeur
+  intérieure avec avatar, rôle réel et nature du compte. Le menu principal reprend exactement
+  la largeur de son déclencheur. Les détails du compte, la personnalisation et l’aide vivent
+  dans des sous-panneaux latéraux ; un seul sous-panneau peut rester ouvert à la fois.
+- Les entrées ne simulent aucun produit absent : le rôle affiché provient de la session et chaque
+  lien mène à une route existante (`/login`, `/admin/profil-systeme`,
+  `/configurer/parametres`, `/comprendre`, `/comprendre/en-detail`, `/settings`). Les langues et
+  thèmes existants sont conservés dans Personnalisation. Tous les libellés sont catalogués en
+  FR/DE/EN.
+- Mesure après correction sur le preview `:3098` : barre 252 px, carte et menu 227 px, marges
+  gauche/droite de 12/13 px ; le menu reste donc entièrement contenu. Le panneau Aide commence
+  immédiatement à droite du menu principal et, après l’animation, remplace bien le panneau de
+  compte au lieu de se superposer à lui.
+- Validation : 18 tests de contrat du chrome verts, dont une mutation qui réintroduit la largeur
+  indépendante de 15 rem et devient rouge ; TypeScript, Biome ciblé et `git diff --check` verts.
+  `make gate-twice` reste volontairement non exécuté conformément à l’instruction utilisateur.
+- Correctif de revue sur la surface de sélection : l’identité visible dans la carte n’est plus
+  répétée mot pour mot en tête du menu. Cette ligne devient « Comptes » et ouvre le même
+  sous-panneau, où le compte actuel reste affiché une seule fois. Le petit identifiant technique
+  `admin` est supprimé. Sur les surfaces de sélection, le déclencheur devient un avatar seul de
+  40 px et le menu s’ouvre dessous, aligné à droite ; le cockpit conserve sa carte complète avec
+  rôle et type de compte. Un ratchet dédié protège cette distinction de contexte et rejette le
+  retour du nom ou de l’avatar dans l’entrée « Comptes ».
+- Correctif d’authentification de `select-space` : le badge Démonstration qualifie désormais
+  uniquement l’environnement et ne remplace plus l’accès au compte. Comme `/espaces`, la page
+  utilise le contexte `optional` : hors session, le header affiche « Connexion » ; en session,
+  il affiche le même avatar circulaire seul. Le cockpit reste `gated` et conserve sa carte
+  d’identité complète. Les deux états de `select-space` ont été vérifiés dans le DOM live sur
+  `:3098` ; les 18 tests de chrome et TypeScript restent verts.
+- Le CTA « Entrer dans le cockpit » ne connecte plus silencieusement l’anonyme au compte
+  administrateur seedé. Il est désormais un lien normal vers `/surveiller/vue-ensemble` :
+  le garde RBAC laisse entrer une session autorisée sans la modifier et redirige l’anonyme vers
+  `/login`. Le parcours live `select-space → login` et l’absence de session créée ont été
+  vérifiés ; l’E2E de non-régression ciblé est vert.
+- Le garde conserve maintenant la destination demandée dans
+  `next=/surveiller/vue-ensemble`. Après une authentification réussie, le formulaire revient
+  directement dans le cockpit au lieu de repasser par la racine puis `select-space`. La valeur
+  `next` est validée comme chemin interne non localisé : URL externes, chemins protocol-relative,
+  antislash, boucle `/login` et préfixe de langue sont refusés. Validation : 11 tests unitaires
+  du validateur, 18 tests de chrome, TypeScript et l’E2E complet
+  `select-space → login → cockpit` verts ; URL live confirmée sur `:3098`.
+- Correctif Espaces / Recouvrement : `/espaces` reste consultable hors session et ne reçoit plus
+  d’identifiants seedés côté client. Ses cartes sont des liens ordinaires ; seule la route
+  `/recouvrement` porte la décision d’accès. Pour un anonyme, elle redirige vers
+  `/login?next=/recouvrement`, puis une connexion collections réussie revient directement dans
+  la console. Le parcours E2E public → login → recouvrement est vert et la page Espaces a été
+  vérifiée en DOM live hors session.
+- Refonte visuelle de login : même fond nuit, vague, marque et tokens que le launcher ; composition
+  éditoriale à gauche, illustration orbitale discrète, formulaire vitré à droite, champs plus
+  lisibles, CTA champagne et identifiants de démonstration structurés. Le bloc d’identité
+  connecté qui flottait sous le formulaire a été retiré et « Retour à la démo » ramène maintenant
+  vers `/select-space`. Revue visuelle live effectuée sur `:3098`.
+- Incident live après connexion : Next compilait bien `/[locale]/recouvrement`, mais le chunk
+  attendu `app/[locale]/recouvrement/page.js` restait absent et répondait 404. La cause n’était
+  pas le routage login : un lancement Playwright avec la mauvaise variable d’environnement avait
+  démarré un second serveur Next.js dans le même checkout ; les deux processus écrivaient dans
+  le même `.next` et avaient corrompu le cache. Le preview `:3098/:8098` a été arrêté avec ses
+  ports explicites, le cache écarté dans `/tmp/tessera-next-recovery.n0c2WT/.next-corrupt`, puis
+  un seul preview a été relancé. Après réparation, le chunk répond 200 (5 594 124 octets), la
+  route anonyme redirige bien vers `/login?next=/recouvrement` et l’E2E public → login →
+  recouvrement repasse en 1,6 s. Aucun correctif applicatif supplémentaire n’était nécessaire.
+- Amélioration premium de login après revue live : la composition passe de 1 180 à 1 540 px
+  maximum afin de ne plus flotter au milieu des grands écrans, l’illustration d’accès gagne en
+  présence et trois repères lisibles explicitent identité, droits et traçabilité. Le panneau
+  guide désormais le visiteur : chaque profil démo est une vraie option de rôle qui remplit
+  identifiant et mot de passe au clic sans soumettre le formulaire ; la saisie manuelle reste
+  possible et le mot de passe peut être affiché ou masqué. Les libellés sont catalogués en
+  FR/EN/DE. À 1 440 × 900, le panneau reste entièrement visible, la page mesure 1 440 px de
+  large sans débordement horizontal et les deux parcours public → login → destination passent
+  en 5,2 s. Biome ciblé, TypeScript et `git diff --check` sont verts ; `make gate-twice` reste
+  suspendu sur instruction.
+- Correctif de revue : la largeur maximale de la composition ne contraint plus le header. Sur
+  le viewport live de 3 087 px, la marque retrouve une marge gauche de 40 px et « Retour à la
+  démo » une marge droite de 40 px. La plaque qui entourait l’illustration a été supprimée :
+  son conteneur calculé n’a plus ni fond, ni bordure, ni arrondi, ni ombre ; les orbites et
+  pictogrammes flottent directement sur le fond. Le panneau de connexion reste donc l’unique
+  carte dominante. TypeScript, Biome ciblé et diff-check restent verts.
+- Essai visuel option 1 : la carte flottante de connexion devient un panneau latéral intégré,
+  bord à bord sous le header. Sur le viewport live de 1 770 × 1 354 px, il commence exactement
+  à `y=82` après le header de 82 px, mesure 640 × 1 272 px, touche le bord droit à 0 px et
+  n’a ni arrondi ni ombre calculés. Une ligne lumineuse très discrète suffit à séparer le fond
+  éditorial de la zone d’accès. Le header reste en pleine largeur et aucun overflow horizontal
+  n’est présent. Biome ciblé, TypeScript et diff-check sont verts ; twice-green reste suspendu.
+- Verdict live : option 1 rejetée, panneau latéral jugé trop massif et trop « back-office ».
+  Variante suivante en preview : aucune grande carte ni fond de panneau ; le formulaire est
+  posé directement sur le fond et séparé du contenu par une ligne verticale en dégradé. À
+  1 770 × 1 354, la zone de formulaire est transparente, sans background-image, radius ou
+  shadow ; le formulaire mesure 456 × 469 px et se termine à `y=1001`, sans overflow. Les trois
+  profils démo passent d’une pile de grandes barres à trois tuiles compactes sur une ligne,
+  tout en gardant identifiant et mot de passe visibles et le même nom accessible. Biome ciblé,
+  TypeScript, diff-check et les deux E2E destinationnels sont verts en 6,0 s.
+- Essai « portail orbital » intégré : le séparateur et l’illustration autonome disparaissent.
+  Une seule orbite traverse maintenant l’ensemble du main ; le logo Tessera sert de charnière
+  entre l’introduction et le formulaire, prolongé par un trait vers la zone d’accès. Les profils
+  ne sont plus des tuiles : trois médaillons reliés sur l’orbite portent rôle et credentials,
+  puis remplissent les champs au clic. À 1 770 px, le logo occupe `x=1024..1116`, avec 37 px
+  après la zone éditoriale et 19 px avant le formulaire. La première mesure à 1 440 px révélait
+  un chevauchement de 19 px ; l’orbite passe à 58 % sous 1 536 px et recrée 39 px de respiration.
+  Le formulaire se termine à `y=769` dans 900 px, sans overflow. DOM accessible intact, Biome,
+  TypeScript, diff-check et les deux E2E destinationnels verts en 5,9 s.
+- Verdict live : portail orbital rejeté. Malgré la géométrie du logo corrigée, les ellipses
+  décoratives traversaient visuellement le formulaire et brouillaient la hiérarchie. L’essai a
+  été entièrement retiré, pas masqué : aucun `[data-login-orbit]` ne subsiste. Retour à la
+  dernière version acceptée, avec illustration confinée à gauche, séparateur discret et
+  formulaire sans grande carte. Mesure live : l’illustration se termine à `x=835`, la zone
+  formulaire commence à `x=1095`, soit 260 px sans aucun trait orbital partagé ; aucun overflow.
+  Biome, TypeScript, diff-check et les deux E2E destinationnels restent verts en 5,5 s.
+- Ajustement typographique live : « Connexion opérateur » reprend exactement la typographie du
+  titre de `select-space` — 30 px sur tous les écrans, semibold, interlignage 1,1 et approche
+  -0,02 em. Le titre reste le premier niveau sans écraser le formulaire ni les autres repères.

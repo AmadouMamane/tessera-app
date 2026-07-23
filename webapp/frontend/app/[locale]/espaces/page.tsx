@@ -5,13 +5,10 @@ import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import {
   SpacesDirectory,
-  type SurfaceDemo,
   type SurfaceGroup,
   type SurfaceView,
 } from "@/components/spaces/spaces-directory";
-import { demoCredentials } from "@/lib/auth/accounts";
 import { currentRole, hasCollectionsAccess, hasProductAccess } from "@/lib/auth/session";
-import { isDemoMode } from "@/lib/server/demo-mode";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -36,7 +33,6 @@ const SURFACES: Array<{
   href: "/produit" | "/recouvrement";
   group: "external" | "internal";
   authRequired: boolean;
-  demoRole?: string;
 }> = [
   {
     key: "client",
@@ -49,7 +45,6 @@ const SURFACES: Array<{
     href: "/recouvrement",
     group: "internal",
     authRequired: true,
-    demoRole: "collections",
   },
 ];
 
@@ -76,12 +71,6 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
     return s.key === "client" ? hasProductAccess(role) : hasCollectionsAccess(role);
   };
 
-  const demoCred = (role: string): SurfaceDemo | null => {
-    if (!isDemoMode()) return null;
-    const c = demoCredentials().find((x) => x.role === role);
-    return c ? { username: c.username, password: c.password, label: t("demoLogin") } : null;
-  };
-
   const toView = (s: (typeof SURFACES)[number]): SurfaceView => ({
     key: s.key,
     href: s.href,
@@ -89,12 +78,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
     desc: tl(`${s.key}.desc`),
     authRequired: s.authRequired,
     authNote: s.authRequired ? tl(`${s.key}.authNote`) : "",
-    demo: s.demoRole ? demoCred(s.demoRole) : null,
     accessible: accessibleForRole(s),
-    // The demo 1-click login is for the visitor who cannot enter yet; a session
-    // that already can is navigated as-is, never re-logged as the seeded demo
-    // account (silent privilege downgrade — bug 2026-07-18).
-    demoNeeded: role === null || !accessibleForRole(s),
   });
 
   const groups: SurfaceGroup[] = (["external", "internal"] as const).map((key) => ({

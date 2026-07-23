@@ -11,7 +11,6 @@ import {
   ShieldBan,
   ShieldCheck,
 } from "lucide-react";
-import { signIn } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useState } from "react";
@@ -19,9 +18,7 @@ import { Fragment, useEffect, useState } from "react";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
-import { Link, useRouter } from "@/i18n/navigation";
-import type { Role } from "@/lib/auth/accounts";
-import { demoLoginNeeded } from "@/lib/auth/roles";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import {
   type Pillar,
@@ -32,15 +29,6 @@ import {
 } from "@/lib/launcher-pillars";
 import { fetchLauncherSignal } from "@/lib/launcher-signal-client";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
-
-export interface DemoCred {
-  username: string;
-  password: string;
-}
-export interface DemoLogin {
-  operator?: DemoCred;
-  collections?: DemoCred;
-}
 
 type Accent = "gold" | "cyan" | "amber";
 export type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
@@ -166,17 +154,7 @@ function Orientation() {
   );
 }
 
-export function LandingLauncher({
-  signal,
-  demoLogin,
-  sessionRole = null,
-}: {
-  signal: LauncherSignal | null;
-  demoLogin: DemoLogin | null;
-  // The server-verified role of the CURRENT session (null = anonymous). The
-  // demo 1-click login must never clobber a session that can already enter.
-  sessionRole?: Role | null;
-}) {
+export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
   const t = useTranslations("landing");
 
   return (
@@ -210,8 +188,9 @@ export function LandingLauncher({
         {/* Unified header (docs/design/header-normative.md) — launcher variant:
             brand only at left, the global cluster (langue · thème · compte) at
             right, no contextual cluster. The launcher IS the plane chooser, so
-            no PRODUIT/COCKPIT toggle and a labelled DEMO session (not a login). */}
-        <AppHeader plan="launcher" />
+            no PRODUIT/COCKPIT toggle. The DEMO label describes the environment;
+            account access remains available independently. */}
+        <AppHeader plan="launcher" auth="optional" />
         <main className="flex flex-1 flex-col items-center justify-start px-6 pt-[110px] pb-36">
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
@@ -235,7 +214,7 @@ export function LandingLauncher({
             {/* Cockpit FIRST = the thesis (control plane is the value; business
                 apps are deliberately thin). Primary card; the métier card is
                 secondary (outline CTA), so the hierarchy matches the order. */}
-            <ControlPlaneCard t={t} demoOperator={demoLogin?.operator} sessionRole={sessionRole} />
+            <ControlPlaneCard t={t} />
             <BusinessPlaneCard t={t} />
           </section>
 
@@ -246,65 +225,6 @@ export function LandingLauncher({
         </main>
       </div>
     </div>
-  );
-}
-
-// 1-click seeded-account login (demo mode only). It opens a REAL next-auth session
-// on the seeded Credentials account (ADR 0009) then navigates to the surface — it
-// satisfies the guard by logging in, never a bypass. Rendered only when the server
-// passed demo credentials (off in production). A session that can ALREADY enter
-// the target is navigated as-is: the demo login is for the anonymous visitor,
-// never a silent downgrade of a real session (e.g. superadmin → seeded admin).
-function DemoEnterButton({
-  label,
-  cred,
-  target,
-  accent,
-  sessionRole,
-}: {
-  label: string;
-  cred: DemoCred;
-  target: "/recouvrement" | "/surveiller/vue-ensemble";
-  accent: Accent;
-  sessionRole: Role | null;
-}) {
-  const a = ACCENT[accent];
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  async function enter() {
-    setPending(true);
-    if (!demoLoginNeeded(sessionRole, target)) {
-      router.push(target);
-      router.refresh();
-      return;
-    }
-    const res = await signIn("credentials", {
-      username: cred.username,
-      password: cred.password,
-      redirect: false,
-    });
-    if (res && !res.error) {
-      router.push(target);
-      router.refresh();
-    } else {
-      setPending(false);
-    }
-  }
-  return (
-    <button
-      type="button"
-      onClick={enter}
-      disabled={pending}
-      className={cn(
-        "flex h-[46px] w-full items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em] disabled:opacity-70",
-        a.button,
-        FOCUS,
-      )}
-      style={a.buttonStyle}
-    >
-      <Lock className="h-[15px] w-[15px]" />
-      {label}
-    </button>
   );
 }
 
@@ -681,11 +601,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
 
 // Control plane (ADR 0013): the cockpit — govern the platform. Guarded to the
 // platform roles; the card surfaces the "sign-in required" note and links.
-function ControlPlaneCard({
-  t,
-  demoOperator,
-  sessionRole,
-}: { t: T; demoOperator?: DemoCred; sessionRole: Role | null }) {
+function ControlPlaneCard({ t }: { t: T }) {
   const a = ACCENT.cyan;
   return (
     <section
@@ -720,31 +636,19 @@ function ControlPlaneCard({
             ].join("  ·  ")}
           </p>
         </div>
-        {demoOperator ? (
-          <div className="mt-auto">
-            <DemoEnterButton
-              label={t("control.cta")}
-              cred={demoOperator}
-              target="/surveiller/vue-ensemble"
-              accent="cyan"
-              sessionRole={sessionRole}
-            />
-          </div>
-        ) : (
-          <Link
-            href="/surveiller/vue-ensemble"
-            className={cn(
-              "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
-              a.button,
-              FOCUS,
-            )}
-            style={a.buttonStyle}
-          >
-            <Lock className="h-[15px] w-[15px]" />
-            {t("control.cta")}
-            <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
-          </Link>
-        )}
+        <Link
+          href="/surveiller/vue-ensemble"
+          className={cn(
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            a.button,
+            FOCUS,
+          )}
+          style={a.buttonStyle}
+        >
+          <Lock className="h-[15px] w-[15px]" />
+          {t("control.cta")}
+          <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
+        </Link>
       </div>
     </section>
   );

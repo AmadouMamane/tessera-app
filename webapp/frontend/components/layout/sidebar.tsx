@@ -376,7 +376,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="group/sidebar relative flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[218px]">
+    <aside className="group/sidebar relative flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[252px]">
       <BrandHeader />
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3">
         <ul className="flex flex-col gap-2">
@@ -663,7 +663,7 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
 // session control (role label + sign-out), not a static persona.
 function IdentityBlock() {
   return (
-    <div className="border-t border-[var(--tessera-border)] px-2 py-3 md:px-3">
+    <div className="border-t border-[var(--tessera-border)] px-2 py-2.5 md:px-3">
       <AuthControl context="gated" />
     </div>
   );
