@@ -177,6 +177,25 @@ export function SignalCommandBar({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Client queries already re-read at T through `temporal.asOf`, but the fleet
+  // breakdown and the other server-rendered blocks only see search params during
+  // an RSC render. The rail writes its shareable URL with history.replaceState;
+  // once the debounced instant is committed, navigate exactly once to the URL
+  // already published by the rail so those server blocks consume the same T.
+  // A plain router.refresh() is insufficient here: Next would refresh the older
+  // router tree, not the URL written through the History API. The timeout lets
+  // the URL-mirroring effect finish first. Drag previews never change `asOf`, so
+  // they remain request-free.
+  const previousCommittedAsOf = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const previous = previousCommittedAsOf.current;
+    previousCommittedAsOf.current = temporal.asOf;
+    if (previous === undefined || previous === temporal.asOf) return;
+    const id = window.setTimeout(() => {
+      router.replace(`${window.location.pathname}${window.location.search}`, { scroll: false });
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [temporal.asOf, router]);
   // Reading, panel-open and the comparison lens all live in the shared temporal
   // state (URL-backed source of truth) — not private to the bar.
   const { reading, compare, setCompare, expanded, setExpanded } = temporal;

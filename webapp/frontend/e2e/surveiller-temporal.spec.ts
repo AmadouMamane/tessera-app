@@ -338,6 +338,50 @@ test("dragging the scrubber previews ('Aperçu') without committing; release com
   await expect.poll(() => page.url(), { timeout: 5000 }).toContain("at=");
 });
 
+test("committing the cursor changes both client metrics and the server fleet at T", async ({
+  page,
+  request,
+}) => {
+  await open(page, "?period=d30&expanded=1");
+  const costValue = page.getByTestId("overview-kpi-cost-value");
+  const fleetTotal = page.getByTestId("fleet-org-total");
+  await expect(costValue).toBeVisible({ timeout: 30_000 });
+  await expect(fleetTotal).toBeVisible();
+  const initialCost = await costValue.innerText();
+  const initialFleet = await fleetTotal.innerText();
+
+  const slider = bar(page).locator('[role="slider"]').first();
+  const box = await slider.boundingBox();
+  if (!box) throw new Error("scrubber not found");
+  // Commit close to the oldest edge of the 30-day window: the seeded world has
+  // materially less data there than now, so the before/after assertion is real.
+  await page.mouse.click(box.x + 2, box.y + box.height / 2);
+  await expect.poll(() => page.url(), { timeout: 5000 }).toContain("at=");
+  const at = new URL(page.url()).searchParams.get("at");
+  if (!at) throw new Error("the committed cursor did not publish its instant");
+
+  const costResponse = await request.get(
+    `${BACKEND}/observability/cost?at=${encodeURIComponent(at)}`,
+  );
+  expect(costResponse.ok(), "cost at T must be readable").toBeTruthy();
+  const expectedCost = `${Number((await costResponse.json()).estimated_cost_eur).toFixed(2)} €`;
+
+  const fleetResponse = await request.get(
+    `${BACKEND}/observability/fleet?period=d30&at=${encodeURIComponent(at)}`,
+  );
+  expect(fleetResponse.ok(), "fleet at T must be readable").toBeTruthy();
+  const expectedFleet = Number((await fleetResponse.json()).org.conversations).toLocaleString(
+    "fr-FR",
+  );
+
+  expect(
+    initialCost !== expectedCost || initialFleet !== expectedFleet,
+    "the chosen instant must materially differ from the live state",
+  ).toBeTruthy();
+  await expect(costValue).toHaveText(expectedCost, { timeout: 15_000 });
+  await expect(fleetTotal).toHaveText(expectedFleet, { timeout: 15_000 });
+});
+
 test("selecting an event via the arrows shows its full timestamp", async ({ page }) => {
   await open(page, "?lecture=history&expanded=1");
   // A selected instant must carry its date/time: never a bare "État à l'instant".

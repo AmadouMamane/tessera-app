@@ -874,6 +874,7 @@ function KpiCard({
   const tk = useTranslations("overview.kpi");
   return (
     <Card
+      data-testid={infoKey ? `overview-kpi-${infoKey}` : undefined}
       className={cn(
         "group relative h-full overflow-hidden rounded-lg",
         href && "transition-colors hover:border-blue-400/40",
@@ -911,7 +912,12 @@ function KpiCard({
             {loading ? (
               <Skeleton className="mt-2 h-7 w-16" />
             ) : (
-              <p className="mt-2 font-serif text-2xl font-semibold tabular-nums">{value}</p>
+              <p
+                data-testid={infoKey ? `overview-kpi-${infoKey}-value` : undefined}
+                className="mt-2 font-serif text-2xl font-semibold tabular-nums"
+              >
+                {value}
+              </p>
             )}
           </div>
           <span className={cn("rounded-lg border p-2", toneBg[tone])}>

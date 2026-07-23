@@ -168,3 +168,26 @@ they no longer carry the explanation alone.
   pas la session opérateur du navigateur utilisateur et a honnêtement rendu « Accès opérateur
   requis » ; aucune tentative de contournement. `make gate-twice` non exécuté, conformément à
   l’instruction toujours active.
+
+## Correctif commit du curseur temporel — 2026-07-23
+
+- Branche fraîche `codex/cursor-drives-cockpit` depuis `origin/main=dac9c5a9`, claim sole-writer
+  conservé (`5510f279-ed9f-498f-8821-3c66278330bc`).
+- Diagnostic par l’historique : le câblage client as-of-T des commits `a012445d`, `356e90d3` et
+  `de602f10` existe toujours. Les requêtes React Query changent bien avec `asOf`, mais la table
+  de flotte est rendue côté serveur. Le curseur publiait `at` avec `history.replaceState`, sans
+  navigation Next : les composants serveur continuaient donc à lire l’ancienne URL.
+- Preuve rouge avant correction : à l’instant choisi au début de la fenêtre, l’API renvoyait
+  `0` conversation, tandis que le DOM restait à `430`. Le coût, alimenté côté client, changeait
+  déjà correctement.
+- Correction : le glissé reste un aperçu local sans requête. Une fois l’instant stabilisé par le
+  debounce, le rail effectue une seule navigation Next vers l’URL temporelle déjà publiée. Un
+  simple `router.refresh()` a été testé et rejeté : il rechargeait encore l’ancien arbre routeur.
+- Vérification live sur `:3098` : le même commit de curseur a fait passer le total de flotte de
+  `430` à `0` et le coût de `0,02 €` à `0,00 €`, avec `lecture=history&at=…` dans l’URL.
+- Validation ciblée : les deux E2E « aperçu sans commit » et « métriques client + flotte serveur à
+  T » sont verts ; 2 tests unitaires du rail, TypeScript et Biome sont verts. `make gate-twice`
+  reste volontairement non exécuté conformément à l’instruction utilisateur.
+- Dette lifecycle observée à l’arrêt : `make dev-down PORT=3098` ignore `PORT` et a arrêté la
+  référence `:3097/:8099` au lieu du preview. Les deux PID exacts du preview ont été terminés
+  séparément et les six ports vérifiés libres. Rendre `dev-down` paramétrable est hors de ce lot.

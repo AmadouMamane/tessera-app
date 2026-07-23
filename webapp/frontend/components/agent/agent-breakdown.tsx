@@ -233,7 +233,10 @@ function MonitoringTable({
         {/* Total org — DISTINCT entities, never the sum of the rows above. */}
         <tr className="border-t-2 border-[#7c5cf5]/40">
           <td className="py-2 pr-3 font-semibold text-[#b9a6ff]">{t("orgTotal")}</td>
-          <td className="py-2 pr-3 text-right font-semibold tabular-nums text-[#b9a6ff]">
+          <td
+            data-testid="fleet-org-total"
+            className="py-2 pr-3 text-right font-semibold tabular-nums text-[#b9a6ff]"
+          >
             {fmtInt(fleet.org?.conversations ?? 0)}
           </td>
           <td
