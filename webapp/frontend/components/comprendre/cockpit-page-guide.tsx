@@ -70,7 +70,7 @@ export function CockpitPageGuide({
         </span>
       </nav>
 
-      <section className="relative overflow-hidden border-[var(--tessera-border)] border-y py-10 lg:grid lg:grid-cols-[minmax(0,0.82fr)_minmax(26rem,1.18fr)] lg:gap-16 lg:py-14">
+      <section className="relative overflow-hidden border-[var(--tessera-border)] border-y px-5 py-10 lg:grid lg:grid-cols-[minmax(0,0.82fr)_minmax(26rem,1.18fr)] lg:gap-16 lg:py-14">
         <div className="pointer-events-none absolute inset-0 opacity-70" style={GUIDE_BACKGROUND} />
         <div className="relative">
           <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/30 text-cyan-200">
@@ -94,7 +94,7 @@ export function CockpitPageGuide({
         </div>
       </section>
 
-      {viewGroups.length > 0 ? (
+      {viewGroups.length ? (
         <section className="grid gap-10 py-11 lg:grid-cols-[minmax(16rem,0.34fr)_minmax(0,1fr)] lg:gap-16 lg:py-14">
           <div>
             <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-violet-200/75">
@@ -181,7 +181,7 @@ export function CockpitPageGuide({
         </div>
 
         <div className="relative grid gap-0 lg:grid-cols-3">
-          <div className="absolute left-[8%] right-[8%] top-5 hidden h-px bg-gradient-to-r from-cyan-300/35 via-emerald-300/45 to-violet-300/35 lg:block" />
+          <div className="absolute inset-x-0 top-5 hidden h-px bg-gradient-to-r from-cyan-300/35 via-emerald-300/45 to-violet-300/35 lg:block" />
           {readingSteps.map((step, index) => {
             const Icon = STEP_ICONS[index] ?? Eye;
             return (

@@ -646,6 +646,8 @@ function Badge({ tone, active, value }: { tone: ChromeTone; active: boolean; val
 // surfaces show the same mark at the same size. `2735f9ad` cut this block to 56px and the
 // logo to `h-8` when it shrank the header; both are restored here.
 function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
+  const t = useTranslations("nav");
+
   return (
     <div
       className={cn(
@@ -653,7 +655,14 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
         collapsed ? "justify-center px-2" : "justify-center px-3 md:justify-start md:px-5",
       )}
     >
-      {collapsed ? <TesseraMark /> : <TesseraLogo className="h-11" />}
+      <Link
+        href="/"
+        aria-label={t("rail.home")}
+        title={t("rail.home")}
+        className="rounded-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/70"
+      >
+        {collapsed ? <TesseraMark /> : <TesseraLogo className="h-11" />}
+      </Link>
     </div>
   );
 }

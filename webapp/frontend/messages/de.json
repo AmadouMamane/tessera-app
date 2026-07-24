@@ -173,6 +173,7 @@
       "etatADate": "Stand zum Datum"
     },
     "rail": {
+      "home": "Zurück zur Startseite",
       "collapse": "Menü einklappen",
       "expand": "Menü ausklappen"
     }

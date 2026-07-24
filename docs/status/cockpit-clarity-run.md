@@ -616,3 +616,19 @@ they no longer carry the explanation alone.
   temps, effet des actions, validation et absences. Un footer « À retenir » conclut chaque guide
   avec son rôle et l’action défendable. Les exemples et contrats existent dans la même structure
   en FR/EN/DE ; TypeScript, Biome et les 15 ratchets ciblés restent verts.
+
+## Polissage des guides et retour à l’accueil — 2026-07-24
+
+- Branche `codex/contextual-help-polish` depuis le `main` local `e98061a2`, claim sole-writer
+  conservé (`0850b3b1-9d31-4035-9105-fe2875f90b98`).
+- Finding live avant correction : le premier texte du panneau commençait exactement sur sa
+  bordure (`x=276` pour les deux), et le trait du parcours ne couvrait que `814,8 px` dans une
+  section de `970 px`. Il apparaissait donc seulement après le premier cercle.
+- Correction : le panneau d’ouverture reçoit un retrait horizontal de `20 px` ; le connecteur
+  du parcours couvre désormais les `970 px` de la section, de bord à bord. Le logo Tessera du
+  rail devient un lien localisé FR/EN/DE vers la page d’accueil, dans les états déployé et réduit.
+- Preuve live sur `:3098` : bord du panneau `x=276`, début du texte `x=296`, trait
+  `x=276 → 1246`, et activation du lien « Retour à l’accueil » confirmée vers `/fr`.
+- Le ratchet numérique a révélé un `viewGroups.length > 0` antérieur dans le JSX du guide ;
+  le littéral a été retiré sans élargir la liste blanche. Biome, TypeScript et 65 tests ciblés
+  sont verts. `make gate-twice` reste suspendu conformément à l’instruction utilisateur.

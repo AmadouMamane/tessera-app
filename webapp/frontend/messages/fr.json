@@ -173,6 +173,7 @@
       "etatADate": "État à date"
     },
     "rail": {
+      "home": "Retour à l’accueil",
       "collapse": "Réduire le menu",
       "expand": "Déployer le menu"
     }

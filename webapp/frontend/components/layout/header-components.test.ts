@@ -89,6 +89,18 @@ describe("H1 shared header components", () => {
     expect(userMenu).toContain("{compact ? null : (");
   });
 
+  it("uses the cockpit brand as a localized route back to the home page", () => {
+    const brandHeader = sidebar.match(/function BrandHeader[\s\S]*?function IdentityBlock/)?.[0];
+
+    expect(brandHeader).toContain('const t = useTranslations("nav")');
+    expect(brandHeader).toContain('href="/"');
+    expect(brandHeader).toContain('aria-label={t("rail.home")}');
+    expect(brandHeader).toContain('title={t("rail.home")}');
+
+    const inertBrand = brandHeader?.replace('href="/"', 'href="/surveiller/vue-ensemble"');
+    expect(inertBrand).not.toContain('href="/"');
+  });
+
   it("keeps the connection card and its main menu inside the expanded sidebar", () => {
     expect(accountMenuIsRailBound(userMenu, sidebar)).toBe(true);
 
