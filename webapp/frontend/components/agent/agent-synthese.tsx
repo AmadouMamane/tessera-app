@@ -377,6 +377,7 @@ function CtaLink({ label, href }: { label: string; href?: string }) {
 
 function Profile({ data, className }: { data: Data; className?: string }) {
   const p = data.profile;
+  const agentId = useAgentId();
   if (!p) return null;
   return (
     <Card
@@ -386,32 +387,37 @@ function Profile({ data, className }: { data: Data; className?: string }) {
       ctaHref={p.ctaHref}
       className={className}
     >
-      <div className="flex items-center gap-3">
-        <Image
-          src="/brand/agent-robot.png"
-          alt={p.name}
-          width={90}
-          height={90}
-          unoptimized
-          className="h-14 w-14 shrink-0 rounded-xl object-cover"
-        />
-        <div className="min-w-0">
+      <div className="flex flex-col items-center gap-3 py-2 text-center">
+        <div className="h-[120px] w-[120px] shrink-0 overflow-hidden rounded-full border border-[var(--tessera-border)] shadow-md">
+          <Image
+            src={`/avatars/${agentId}.png`}
+            alt={p.name}
+            width={120}
+            height={120}
+            unoptimized
+            className={cn(
+              "h-full w-full object-cover",
+              agentId === "support-client" ? "scale-125" : /hello|turn|duplex/.test(agentId) ? "scale-105" : "scale-100"
+            )}
+          />
+        </div>
+        <div className="min-w-0 w-full px-2">
           <p
             title={p.name}
-            className="truncate text-[0.92rem] font-semibold text-[var(--tessera-text)]"
+            className="text-[1.05rem] font-semibold leading-tight text-[var(--tessera-text)]"
           >
             {p.name}
           </p>
-          <span className="mt-0.5 inline-flex items-center gap-1.5 text-[0.66rem] text-emerald-300">
+          <span className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-[0.7rem] text-emerald-300">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {p.status}
           </span>
         </div>
       </div>
-      <dl className="mt-3 flex flex-col gap-1.5 text-[0.72rem]">
+      <dl className="mt-4 flex flex-col gap-2 text-[0.72rem]">
         {p.fields.map((f) => (
-          <div key={f.label} className="flex items-center justify-between gap-2">
-            <dt className="text-[var(--tessera-text-muted)]">{f.label}</dt>
-            <dd title={f.value} className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+          <div key={f.label} className="flex items-start justify-between gap-3">
+            <dt className="shrink-0 text-[var(--tessera-text-muted)]">{f.label}</dt>
+            <dd title={f.value} className="font-medium text-right text-[var(--tessera-text)]">
               {f.value}
             </dd>
           </div>
@@ -669,40 +675,30 @@ function Context({ data }: { data: Data }) {
       cta={c.cta}
       ctaHref={c.ctaHref}
     >
-      <div className="flex items-center gap-3">
-        <Image
-          src="/brand/agent-robot.png"
-          alt={c.name}
-          width={80}
-          height={80}
-          unoptimized
-          className="h-12 w-12 shrink-0 rounded-xl object-cover"
-        />
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[0.92rem] font-semibold text-[var(--tessera-text)]">
-            <span title={c.name} className="truncate">
-              {c.name}
-            </span>
-            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.55rem] font-medium capitalize text-emerald-300">
-              {c.status}
-            </span>
-          </p>
-          <span
-            title={`ID : ${c.agentId}`}
-            className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
-          >
-            ID : {c.agentId}
+      <div className="flex flex-col gap-1.5 pt-1">
+        <div className="flex items-center gap-2 text-[0.95rem] font-semibold text-[var(--tessera-text)]">
+          <span title={c.name} className="truncate">
+            {c.name}
+          </span>
+          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.55rem] font-medium capitalize text-emerald-300">
+            {c.status}
           </span>
         </div>
+        <span
+          title={`ID : ${c.agentId}`}
+          className="truncate text-[0.65rem] text-[var(--tessera-text-muted)]"
+        >
+          ID : {c.agentId}
+        </span>
       </div>
       <p className="mt-2.5 text-[0.7rem] leading-snug text-[var(--tessera-text-muted)]">
         {c.description}
       </p>
-      <dl className="mt-3 flex flex-col gap-1.5 text-[0.72rem]">
+      <dl className="mt-4 flex flex-col gap-2 text-[0.72rem]">
         {c.fields.map((f) => (
-          <div key={f.label} className="flex items-center justify-between gap-2">
-            <dt className="text-[var(--tessera-text-muted)]">{f.label}</dt>
-            <dd title={f.value} className="min-w-0 truncate font-medium text-[var(--tessera-text)]">
+          <div key={f.label} className="flex items-start justify-between gap-3">
+            <dt className="shrink-0 text-[var(--tessera-text-muted)]">{f.label}</dt>
+            <dd title={f.value} className="font-medium text-right text-[var(--tessera-text)]">
               {f.value}
             </dd>
           </div>
