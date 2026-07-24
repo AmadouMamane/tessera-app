@@ -23,7 +23,7 @@ import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 
 import { type AuthContext, AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
@@ -600,7 +600,20 @@ function notificationGroupMeta(href: string): {
   return { key: "actionCenter.groups.other", icon: Bell };
 }
 
-function HelpLink({
+function HelpLink(props: { onNavigate: () => void; suppressCoachmark: boolean }) {
+  // HelpLink reads the URL via useSearchParams (contextual help keys off the current
+  // path + query), which triggers a CSR bailout during static prerendering. It lives
+  // in the shared header, so every statically-rendered public page (comprendre/*)
+  // trips `next build` without this boundary — same pattern as AgentScopeFilter. The
+  // fallback reserves the exact 9×9 icon box so the header never shifts.
+  return (
+    <Suspense fallback={<div className="h-9 w-9 shrink-0" />}>
+      <HelpLinkInner {...props} />
+    </Suspense>
+  );
+}
+
+function HelpLinkInner({
   onNavigate,
   suppressCoachmark,
 }: {
