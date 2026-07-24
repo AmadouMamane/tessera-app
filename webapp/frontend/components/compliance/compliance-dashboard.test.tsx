@@ -19,6 +19,49 @@ vi.mock("@/lib/api/client", async (importOriginal) => ({
   fetchCompliance,
 }));
 
+// ComplianceDashboard renders SignalCommandBar (added with the shared temporal rail in
+// c2f297c0) and calls useUrlBackedView; both reach router hooks that throw "invariant
+// expected app router to be mounted" without a router context in jsdom. The hooks come
+// from TWO modules: signal-command-bar reads usePathname/useRouter/useSearchParams from
+// next/navigation, while use-url-backed-view reads usePathname/useRouter from the
+// locale-aware @/i18n/navigation wrapper (and useSearchParams from next/navigation). Mock
+// both, and stub the i18n Link as a plain anchor. Test-only: the assertions below
+// (unavailable message + agentScope slot) are unchanged.
+// Inlined (not a shared const): vi.mock factories are hoisted above the module body, so
+// referencing a top-level const here would hit its temporal dead zone (the repo uses
+// vi.hoisted for the same reason with fetchCompliance).
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/surveiller/conformite",
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
+vi.mock("@/i18n/navigation", () => ({
+  usePathname: () => "/surveiller/conformite",
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  redirect: vi.fn(),
+  getPathname: () => "/surveiller/conformite",
+  Link: ({ href, children, ...rest }: { href: unknown; children: ReactNode }) => (
+    <a href={String(href)} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
 import { ComplianceDashboard } from "@/components/compliance/compliance-dashboard";
 
 function wrap(node: ReactNode) {
