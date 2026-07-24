@@ -1,38 +1,56 @@
 "use client";
 
 import {
+  Activity,
   Bell,
   CalendarDays,
   ChevronDown,
+  ChevronRight,
   CircleHelp,
+  ClipboardCheck,
   Download,
+  FlaskConical,
   Globe2,
   Grid2X2,
+  Landmark,
   PackageCheck,
   RotateCcw,
+  ShieldCheck,
+  UserRound,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { type AuthContext, AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo } from "@/components/brand/tessera-logo";
 import { CommandSearch } from "@/components/layout/command-search";
-import { SystemStatusPill } from "@/components/layout/system-status-pill";
+import {
+  SystemStatusPanel,
+  SystemStatusTrigger,
+  useSystemStatusState,
+} from "@/components/layout/system-status-pill";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { LOCALE_LABELS, type Locale, routing } from "@/i18n/routing";
-import { useChromeNotifications } from "@/lib/chrome";
+import { type ChromeNotification, useChromeNotifications } from "@/lib/chrome";
 import { cn } from "@/lib/cn";
+import {
+  contextualHelpCoachmarkKey,
+  contextualHelpHref,
+  hasContextualHelp,
+} from "@/lib/contextual-help";
 import { exportSnapshot } from "@/lib/evidence-export";
 import {
   CHAT_MODELS,
@@ -162,11 +180,8 @@ export function AppHeader({
         {/* 5.5rem = 88px, the same rule height as the launcher's `h-[88px]` row and as the
             sidebar's brand block, so the under-logo divider and the header rule are one
             continuous line. `2735f9ad` cut all three to 56px and the alignment went with them. */}
-        <div className="grid min-h-[5.5rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--tessera-border)] px-4 md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)] md:gap-4 md:px-5">
+        <div className="grid min-h-[5.5rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--tessera-border)] px-4 md:px-5">
           <div className="min-w-0">{left}</div>
-          <div className="hidden min-w-0 justify-center md:flex">
-            <CommandSearch plan="cockpit" className="w-full max-w-md" />
-          </div>
           <div className="flex min-w-0 items-center justify-end gap-2">
             <CockpitTools />
           </div>
@@ -278,18 +293,93 @@ function BrandLead({ title, href }: { title?: string; href: string }) {
   );
 }
 
+const HEADER_TOOL_ICON_CLASS = "h-[18px] w-[18px]";
+const HEADER_ICON_BUTTON_CLASS =
+  "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent bg-transparent text-[var(--tessera-text-muted)] outline-none transition-colors after:pointer-events-none after:absolute after:left-1/2 after:-bottom-[1.625rem] after:h-px after:w-5 after:-translate-x-1/2 after:bg-transparent after:transition-colors hover:text-[var(--tessera-text)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] data-[state=open]:text-[var(--tessera-green)] data-[state=open]:after:bg-[var(--tessera-green)]";
+const COCKPIT_TRAY_ID = "cockpit-control-tray";
+const COCKPIT_TRAY_TITLE_ID = "cockpit-control-tray-title";
+type CockpitPanel = "spaces" | "status" | "notifications";
+
 /**
- * Cockpit right zone: one composite system posture, then the two visible icon
- * tools allowed by the header spec. Account/preferences live in the sidebar.
+ * Cockpit right zone: one compact dock for global controls. The account and
+ * preferences remain exclusively in the sidebar, where the operator identity lives.
  */
 function CockpitTools() {
+  const [activePanel, setActivePanel] = useState<CockpitPanel | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const notifications = useChromeNotifications();
+  const systemStatus = useSystemStatusState();
+
+  useEffect(() => {
+    function closeFromOutside(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setActivePanel(null);
+      }
+    }
+    function closeFromKeyboard(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setActivePanel(null);
+      }
+    }
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromKeyboard);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromKeyboard);
+    };
+  }, []);
+
+  const togglePanel = (panel: CockpitPanel) => {
+    setActivePanel((current) => (current === panel ? null : panel));
+  };
+  const closePanel = () => setActivePanel(null);
+
   return (
-    <>
-      <OperatorProductMenu />
-      <SystemStatusPill className="hidden lg:inline-flex" />
-      <NotificationsBell />
-      <HelpMenu />
-    </>
+    <div ref={rootRef} className="relative hidden lg:block" data-testid="cockpit-control-root">
+      <div data-testid="cockpit-control-dock" className="flex h-11 items-center gap-1">
+        <div onClick={closePanel}>
+          <CommandSearch plan="cockpit" compact />
+        </div>
+        <OperatorProductTrigger
+          active={activePanel === "spaces"}
+          onToggle={() => togglePanel("spaces")}
+        />
+        <SystemStatusTrigger
+          state={systemStatus}
+          active={activePanel === "status"}
+          controls={COCKPIT_TRAY_ID}
+          onToggle={() => togglePanel("status")}
+        />
+        <NotificationsTrigger
+          items={notifications}
+          active={activePanel === "notifications"}
+          onToggle={() => togglePanel("notifications")}
+        />
+        <HelpLink onNavigate={closePanel} suppressCoachmark={activePanel !== null} />
+      </div>
+      {activePanel ? (
+        <section
+          id={COCKPIT_TRAY_ID}
+          aria-labelledby={COCKPIT_TRAY_TITLE_ID}
+          data-testid="cockpit-control-tray"
+          className="absolute right-0 top-[calc(100%+1.375rem)] z-50 w-[24rem] animate-in overflow-hidden border-[var(--tessera-border)] border-l bg-[var(--tessera-bg)] p-2 text-left text-[var(--tessera-text)] fade-in-0 slide-in-from-top-1 duration-150"
+        >
+          {activePanel === "spaces" ? (
+            <OperatorProductPanel titleId={COCKPIT_TRAY_TITLE_ID} onNavigate={closePanel} />
+          ) : null}
+          {activePanel === "status" ? (
+            <SystemStatusPanel state={systemStatus} titleId={COCKPIT_TRAY_TITLE_ID} />
+          ) : null}
+          {activePanel === "notifications" ? (
+            <NotificationsPanel
+              items={notifications}
+              titleId={COCKPIT_TRAY_TITLE_ID}
+              onNavigate={closePanel}
+            />
+          ) : null}
+        </section>
+      ) : null}
+    </div>
   );
 }
 
@@ -305,109 +395,398 @@ function CockpitTools() {
  *
  * Zero notifications means no dot. Not a grey zero: nothing.
  */
-function NotificationsBell() {
+function NotificationsTrigger({
+  items,
+  active,
+  onToggle,
+}: {
+  items: ChromeNotification[];
+  active: boolean;
+  onToggle: () => void;
+}) {
   const t = useTranslations("app");
-  const items = useChromeNotifications();
   const label = items.length
     ? t("notificationsWithCount", { count: items.length })
     : t("notificationsEmpty");
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={label}
-          title={label}
-          className="relative hidden h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:inline-flex"
-        >
-          <Bell className="h-4 w-4" aria-hidden />
-          {items.length ? (
-            <span className="-right-1 -top-1 absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 font-semibold text-[0.6rem] text-white leading-none">
-              {items.length}
-            </span>
-          ) : null}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[19rem]">
-        {items.length ? (
-          items.map((item) => (
-            <DropdownMenuItem key={item.id} asChild>
-              <Link href={item.href} className="flex items-start gap-2">
-                <span
-                  aria-hidden
-                  className={cn(
-                    "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
-                    item.tone === "danger" ? "bg-red-500" : "bg-amber-500",
-                  )}
-                />
-                <span className="min-w-0 flex-1">{item.label}</span>
-              </Link>
-            </DropdownMenuItem>
-          ))
-        ) : (
-          <p className="px-2 py-3 text-[0.75rem] text-[var(--tessera-text-muted)]">
-            {t("notificationsEmpty")}
-          </p>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <button
+      type="button"
+      aria-label={label}
+      aria-expanded={active}
+      aria-controls={COCKPIT_TRAY_ID}
+      title={label}
+      data-state={active ? "open" : "closed"}
+      onClick={onToggle}
+      className={HEADER_ICON_BUTTON_CLASS}
+    >
+      <Bell className={HEADER_TOOL_ICON_CLASS} strokeWidth={1.75} aria-hidden />
+      {items.length ? (
+        <span
+          aria-hidden
+          className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-[var(--tessera-surface)]"
+        />
+      ) : null}
+    </button>
   );
 }
 
-/**
- * The first of the three doors to `/comprendre`.
- *
- * A "?" that opened nothing was chrome pretending to be help. It is a menu now, whose first
- * item is the page that explains the whole product to someone who has never seen it. Further
- * items (keyboard shortcuts, corpus) can follow; the first one is the one that matters.
- */
-function HelpMenu() {
-  const t = useTranslations("comprendre");
+function NotificationsPanel({
+  items,
+  titleId,
+  onNavigate,
+}: {
+  items: ChromeNotification[];
+  titleId: string;
+  onNavigate: () => void;
+}) {
+  const t = useTranslations("app");
+  const groups = groupNotifications(items);
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t("helpMenu")}
-          title={t("helpMenu")}
-          className="hidden h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:inline-flex"
-        >
-          <CircleHelp className="h-4 w-4" aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[13rem]">
-        <DropdownMenuItem asChild>
-          <Link href="/comprendre">{t("helpUnderstand")}</Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <div className="px-2.5 pb-2 pt-1.5">
+        <p id={titleId} className="text-sm font-semibold">
+          {t("actionCenter.title")}
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
+          {t("actionCenter.description")}
+        </p>
+      </div>
+      {items.length ? (
+        <div className="divide-y divide-[var(--tessera-border)] border-[var(--tessera-border)] border-t">
+          {groups.map((group) => {
+            const meta = notificationGroupMeta(group.href);
+            const Icon = meta.icon;
+            const deadlineSummary =
+              group.count === undefined
+                ? null
+                : group.overdueCount === group.count
+                  ? t("actionCenter.deadline.all")
+                  : group.overdueCount
+                    ? t("actionCenter.deadline.some", {
+                        count: group.overdueCount,
+                        total: group.count,
+                      })
+                    : t("actionCenter.deadline.none");
+            return (
+              <Link
+                key={group.href}
+                href={group.href}
+                onClick={onNavigate}
+                className="group flex items-start gap-3 rounded-lg px-2.5 py-3 outline-none hover:bg-[var(--tessera-muted)] focus-visible:bg-[var(--tessera-muted)]"
+              >
+                <Icon
+                  className={cn(
+                    HEADER_TOOL_ICON_CLASS,
+                    "mt-0.5 shrink-0",
+                    group.tone === "danger" ? "text-red-400" : "text-[var(--tessera-text-muted)]",
+                  )}
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="text-[0.8rem] font-medium">
+                      {t(meta.key)}
+                      {group.count === undefined ? null : (
+                        <span className="font-normal tabular-nums text-[var(--tessera-text-muted)]">
+                          {" — "}
+                          {group.count}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)] transition-transform group-hover:translate-x-0.5"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                  </span>
+                  {deadlineSummary ? (
+                    <span className="mt-1.5 flex items-start gap-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "mt-[0.38rem] h-1.5 w-1.5 shrink-0 rounded-full",
+                          group.overdueCount ? "bg-red-400" : "bg-amber-400",
+                        )}
+                      />
+                      <span>{deadlineSummary}</span>
+                    </span>
+                  ) : (
+                    <span className="mt-1.5 block space-y-1">
+                      {group.items.map((item) => (
+                        <span
+                          key={item.id}
+                          className="flex items-start gap-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]"
+                        >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "mt-[0.38rem] h-1.5 w-1.5 shrink-0 rounded-full",
+                              item.tone === "danger" ? "bg-red-400" : "bg-amber-400",
+                            )}
+                          />
+                          <span>{item.label}</span>
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="border-[var(--tessera-border)] border-t px-3 py-4 text-center text-xs text-[var(--tessera-text-muted)]">
+          {t("notificationsEmpty")}
+        </p>
+      )}
+    </>
   );
 }
 
-function OperatorProductMenu() {
+interface NotificationGroup {
+  href: string;
+  items: ChromeNotification[];
+  tone: ChromeNotification["tone"];
+  count: number | undefined;
+  overdueCount: number;
+}
+
+function groupNotifications(items: ChromeNotification[]): NotificationGroup[] {
+  const groups = new Map<string, ChromeNotification[]>();
+  for (const item of items) {
+    const current = groups.get(item.href) ?? [];
+    current.push(item);
+    groups.set(item.href, current);
+  }
+  return [...groups.entries()].map(([href, groupedItems]) => {
+    const pending = groupedItems.find((item) => item.id.startsWith("queue:pending:"));
+    const overdue = groupedItems.find((item) => item.id.startsWith("queue:overdue:"));
+    return {
+      href,
+      items: groupedItems,
+      tone: groupedItems.some((item) => item.tone === "danger") ? "danger" : "warning",
+      count: pending?.count ?? undefined,
+      overdueCount: overdue?.count ?? 0,
+    };
+  });
+}
+
+type NotificationGroupKey =
+  | "actionCenter.groups.validations"
+  | "actionCenter.groups.evaluations"
+  | "actionCenter.groups.agents"
+  | "actionCenter.groups.proofs"
+  | "actionCenter.groups.other";
+
+function notificationGroupMeta(href: string): {
+  key: NotificationGroupKey;
+  icon: LucideIcon;
+} {
+  if (href === "/a-traiter") {
+    return { key: "actionCenter.groups.validations", icon: ClipboardCheck };
+  }
+  if (href === "/a-faire") {
+    return { key: "actionCenter.groups.evaluations", icon: FlaskConical };
+  }
+  if (href === "/surveiller/observabilite") {
+    return { key: "actionCenter.groups.agents", icon: Activity };
+  }
+  if (href === "/prouver/etat-a-date") {
+    return { key: "actionCenter.groups.proofs", icon: ShieldCheck };
+  }
+  return { key: "actionCenter.groups.other", icon: Bell };
+}
+
+function HelpLink({
+  onNavigate,
+  suppressCoachmark,
+}: {
+  onNavigate: () => void;
+  suppressCoachmark: boolean;
+}) {
+  const t = useTranslations("comprendre");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const contextual = hasContextualHelp(pathname);
+  const href = contextualHelpHref(pathname, searchParams.toString());
+  const label = contextual ? t("helpThisPage") : t("helpUnderstand");
+  const storageKey = contextualHelpCoachmarkKey(pathname);
+  const [coachmarkVisible, setCoachmarkVisible] = useState(false);
+
+  useEffect(() => {
+    if (!contextual) {
+      setCoachmarkVisible(false);
+      return;
+    }
+    try {
+      setCoachmarkVisible(window.localStorage.getItem(storageKey) !== "seen");
+    } catch {
+      setCoachmarkVisible(true);
+    }
+  }, [contextual, storageKey]);
+
+  const dismissCoachmark = () => {
+    try {
+      window.localStorage.setItem(storageKey, "seen");
+    } catch {
+      // Storage may be unavailable in a hardened browser; the current cue can
+      // still be dismissed for this render without blocking access to the guide.
+    }
+    setCoachmarkVisible(false);
+  };
+
+  const openGuide = () => {
+    dismissCoachmark();
+    onNavigate();
+  };
+
+  return (
+    <div className="relative h-9 w-9 shrink-0">
+      <Tooltip open={coachmarkVisible && !suppressCoachmark ? false : undefined}>
+        <TooltipTrigger asChild>
+          <Link
+            href={href}
+            aria-label={label}
+            onClick={openGuide}
+            className={HEADER_ICON_BUTTON_CLASS}
+          >
+            <CircleHelp className={HEADER_TOOL_ICON_CLASS} strokeWidth={1.75} aria-hidden />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" sideOffset={10}>
+          {label}
+        </TooltipContent>
+      </Tooltip>
+      {contextual && coachmarkVisible && !suppressCoachmark ? (
+        <aside
+          aria-label={t("coachmark.title")}
+          data-testid="contextual-help-coachmark"
+          className="absolute right-0 top-[calc(100%+1.625rem)] z-[60] w-[20rem] border-cyan-300/45 border-l bg-[var(--tessera-bg)] py-3 pl-4 pr-3 text-left text-[var(--tessera-text)]"
+        >
+          <button
+            type="button"
+            aria-label={t("coachmark.dismiss")}
+            onClick={dismissCoachmark}
+            className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center text-[var(--tessera-text-muted)] transition-colors hover:text-[var(--tessera-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/60"
+          >
+            <X className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+          </button>
+          <p className="pr-8 text-[0.78rem] font-semibold">{t("coachmark.title")}</p>
+          <p className="mt-1.5 pr-5 text-[0.72rem] leading-5 text-[var(--tessera-text-muted)]">
+            {t("coachmark.body")}
+          </p>
+          <Link
+            href={href}
+            onClick={openGuide}
+            className="mt-3 inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-cyan-200 transition-colors hover:text-white"
+          >
+            {t("coachmark.open")}
+            <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+          </Link>
+        </aside>
+      ) : null}
+    </div>
+  );
+}
+
+function OperatorProductTrigger({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: () => void;
+}) {
   const t = useTranslations("app");
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t("businessMenu")}
-          title={t("businessMenu")}
-          className="hidden h-9 w-9 items-center justify-center rounded-full border border-[var(--tessera-border-strong)] bg-transparent text-[var(--tessera-text)] outline-none transition-colors hover:bg-[var(--tessera-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:inline-flex"
+    <button
+      type="button"
+      aria-label={t("businessMenu")}
+      aria-expanded={active}
+      aria-controls={COCKPIT_TRAY_ID}
+      title={t("businessMenu")}
+      data-state={active ? "open" : "closed"}
+      onClick={onToggle}
+      className={HEADER_ICON_BUTTON_CLASS}
+    >
+      <Grid2X2 className={HEADER_TOOL_ICON_CLASS} strokeWidth={1.75} aria-hidden />
+    </button>
+  );
+}
+
+function OperatorProductPanel({
+  titleId,
+  onNavigate,
+}: {
+  titleId: string;
+  onNavigate: () => void;
+}) {
+  const t = useTranslations("app");
+  return (
+    <>
+      <div className="px-2.5 pb-2 pt-1.5">
+        <p id={titleId} className="text-sm font-semibold">
+          {t("spacesMenu.title")}
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
+          {t("spacesMenu.description")}
+        </p>
+      </div>
+      <div className="divide-y divide-[var(--tessera-border)] border-[var(--tessera-border)] border-t">
+        <Link
+          href="/espaces"
+          onClick={onNavigate}
+          className="group flex items-center gap-3 rounded-lg px-2.5 py-3 outline-none hover:bg-[var(--tessera-muted)] focus-visible:bg-[var(--tessera-muted)]"
         >
-          <Grid2X2 className="h-4 w-4" aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[13rem]">
-        <DropdownMenuItem asChild>
-          <Link href="/espaces">{t("business")}</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/produit">{t("clientSpace")}</Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <Landmark
+            className={cn(
+              HEADER_TOOL_ICON_CLASS,
+              "shrink-0 text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-text)]",
+            )}
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.8rem] font-medium">{t("business")}</span>
+            <span className="mt-0.5 block text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+              {t("spacesMenu.businessDescription")}
+            </span>
+          </span>
+          <ChevronRight
+            className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)] transition-transform group-hover:translate-x-0.5"
+            strokeWidth={1.75}
+            aria-hidden
+          />
+        </Link>
+        <Link
+          href="/produit"
+          onClick={onNavigate}
+          className="group flex items-center gap-3 rounded-lg px-2.5 py-3 outline-none hover:bg-[var(--tessera-muted)] focus-visible:bg-[var(--tessera-muted)]"
+        >
+          <UserRound
+            className={cn(
+              HEADER_TOOL_ICON_CLASS,
+              "shrink-0 text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-text)]",
+            )}
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.8rem] font-medium">{t("clientSpace")}</span>
+            <span className="mt-0.5 block text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+              {t("spacesMenu.clientDescription")}
+            </span>
+          </span>
+          <ChevronRight
+            className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)] transition-transform group-hover:translate-x-0.5"
+            strokeWidth={1.75}
+            aria-hidden
+          />
+        </Link>
+      </div>
+    </>
   );
 }
 

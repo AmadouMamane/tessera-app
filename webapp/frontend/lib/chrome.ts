@@ -28,6 +28,8 @@ export interface ResolvedBadge {
   tone: ChromeTone;
 }
 
+export type ChromeNotification = NonNullable<Chrome["notifications"]>["items"][number];
+
 /** 30 s, the cadence the inbox already refetches at: the badge cannot lag its own page. */
 const REFETCH_MS = 30_000;
 
@@ -56,7 +58,7 @@ export function useChromeBadge(key: ChromeBadgeKey | undefined): ResolvedBadge |
 }
 
 /** Every actionable fact the bell announces, each with the page where the act is performed. */
-export function useChromeNotifications(): NonNullable<Chrome["notifications"]>["items"] {
+export function useChromeNotifications(): ChromeNotification[] {
   const { data } = useChrome();
   if (!data?.available) return [];
   return data.notifications?.items ?? [];

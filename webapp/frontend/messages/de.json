@@ -41,7 +41,29 @@
     "business": "Fachbereiche",
     "exploreSpaces": "Bereiche erkunden",
     "notificationsWithCount": "Benachrichtigungen: {count} Fakt(en) zu bearbeiten",
-    "notificationsEmpty": "Benachrichtigungen: nichts zu bearbeiten"
+    "notificationsEmpty": "Benachrichtigungen: nichts zu bearbeiten",
+    "spacesMenu": {
+      "title": "Bereich wechseln",
+      "description": "Von den Bankwerkzeugen zum Kundenablauf wechseln.",
+      "businessDescription": "Eine Arbeitsoberfläche auswählen.",
+      "clientDescription": "Den Kundenablauf ansehen."
+    },
+    "actionCenter": {
+      "title": "Zu bearbeiten",
+      "description": "Anstehende Aufgaben, nach Thema gebündelt.",
+      "deadline": {
+        "all": "Alle sind überfällig.",
+        "some": "{count, plural, one {# von {total} ist überfällig.} other {# von {total} sind überfällig.}}",
+        "none": "Keine ist überfällig."
+      },
+      "groups": {
+        "validations": "Freigaben",
+        "evaluations": "Evaluierungen",
+        "agents": "Agenten",
+        "proofs": "Nachweise",
+        "other": "Weitere Aufgaben"
+      }
+    }
   },
   "nav": {
     "groups": {
@@ -8777,7 +8799,9 @@
   },
   "systemStatus": {
     "triggerLabel": "Systemstatus",
+    "triggerWithStatus": "Systemstatus: {status}",
     "title": "Systemhaltung",
+    "description": "Technischer Kontext und Nachweisstatus des Cockpits.",
     "environment": "Umgebung",
     "model": "Modell",
     "residence": "Residenz",
@@ -8794,6 +8818,7 @@
   "commandSearch": {
     "placeholder": "Suchen / Befehle",
     "shortcut": "⌘K",
+    "tooltip": "Suchen — {shortcut}",
     "scope": {
       "cockpit": "Agenten, Fälle und Signale suchen",
       "business": "Fälle und Kunden suchen"
@@ -9643,7 +9668,683 @@
     "launcherLink": "Tessera in 3 Minuten verstehen",
     "loginWelcome": "Dies ist eine Demonstration: treten Sie mit einem Klick in einer Testrolle ein.",
     "helpMenu": "Hilfe",
-    "helpUnderstand": "Tessera verstehen"
+    "helpUnderstand": "Tessera verstehen",
+    "helpThisPage": "Diese Seite verstehen",
+    "coachmark": {
+      "title": "Diese Seite hat einen eigenen Guide",
+      "body": "Erfahren Sie, wie die Seite zu lesen ist, woher ihre Daten stammen und was ihre Kennzahlen belegen.",
+      "open": "Guide öffnen",
+      "dismiss": "Diesen Hinweis ausblenden"
+    }
+  },
+  "pageHelp": {
+    "overview": {
+      "pageTitle": "Verstehen · Übersicht",
+      "pageLead": "Den Zustand der Flotte lesen, Handlungsbedarf erkennen und gezielt weitergehen.",
+      "back": "Zurück zur Übersicht",
+      "eyebrow": "Seitenleitfaden",
+      "intro": {
+        "title": "Ihr Ausgangspunkt im Cockpit",
+        "body": "Diese Seite bündelt die Signale für drei praktische Fragen: Arbeitet die Flotte wie erwartet, was braucht Ihre Aufmerksamkeit und wo sollten Sie genauer hinsehen? Sie ersetzt die Fachseiten nicht; sie hilft Ihnen, die richtige auszuwählen.",
+        "note": "Lesen Sie von oben nach unten. Jede Ebene ergänzt Details, ohne die Ausgangsfrage zu verändern."
+      },
+      "flow": {
+        "label": "Die Bewegung der Seite",
+        "notice": {
+          "title": "Erkennen",
+          "body": "Zielband und Kennzeichen rücken die wichtigste Abweichung in den Vordergrund."
+        },
+        "understand": {
+          "title": "Verstehen",
+          "body": "Zeitleiste, Agentenansicht und Signale zeigen, wo und wann sie entsteht."
+        },
+        "act": {
+          "title": "Entscheiden",
+          "body": "Links öffnen die Seite zum Vertiefen, Handeln oder Prüfen der Nachweise."
+        }
+      },
+      "journey": {
+        "eyebrow": "Von oben nach unten",
+        "title": "Der Lesepfad",
+        "lead": "Sie müssen nicht bei jedem Besuch alles lesen. Gehen Sie nur so weit, wie Ihre Frage es erfordert.",
+        "zones": {
+          "objective": {
+            "title": "Das Zielband",
+            "body": "Es vergleicht die beobachtete Qualität mit dem Serviceziel. Die Farbe zeigt den Abstand zum Ziel; die Skala zeigt die Lage des Messwerts.",
+            "question": "Fragen Sie sich: Braucht diese Abweichung sofortige Aufmerksamkeit?"
+          },
+          "rail": {
+            "title": "Die Zeitleiste",
+            "body": "Sie bestimmt Zeitpunkt, Zeitraum, Umfang und Vergleich für die gesamte Seite. Hier wählen Sie zwischen Gegenwart, Entwicklung im Zeitraum und einem vergangenen Zeitpunkt.",
+            "question": "Fragen Sie sich: Welchen Zeitpunkt und welchen Umfang betrachte ich tatsächlich?"
+          },
+          "agents": {
+            "title": "Die Agentenansicht",
+            "body": "Sie zeigt, wie jeder Agent zur Aktivität der Flotte beiträgt. Der Gesamtwert berücksichtigt Gespräche, die zwischen Agenten weitergegeben wurden, sofern dieser Abgleich möglich ist.",
+            "question": "Fragen Sie sich: Entsteht die Situation in der ganzen Flotte oder bei einem bestimmten Agenten?"
+          },
+          "signals": {
+            "title": "Die wichtigsten Signale",
+            "body": "Qualität, Kontrollen, Risiken, Versionsänderung, Kosten und Nachweise geben einen kurzen Überblick. Jedes Signal öffnet seine Quellseite.",
+            "question": "Fragen Sie sich: Welches Signal erklärt am besten, was ich sehe?"
+          },
+          "detail": {
+            "title": "Signale und Fälle",
+            "body": "Die Tabellen vertiefen Kontrollen, zu bearbeitende Fälle, Verfahren, gesteuerte Aktivität und Trends. Sie führen von der Feststellung zur Ursache.",
+            "question": "Fragen Sie sich: Welcher konkrete Sachverhalt braucht Analyse oder Zuständigkeit?"
+          },
+          "decision": {
+            "title": "Entscheidungen und Nachweise",
+            "body": "Die Aktionsspalte bündelt Vorfälle, Freigabekontrolle, Abkürzungen und jüngste Aktivitäten. Der Seitenabschluss erinnert an den Stand der Nachweise.",
+            "question": "Fragen Sie sich: Soll ich vertiefen, eingreifen oder einen Nachweis zusammenstellen?"
+          }
+        }
+      },
+      "time": {
+        "eyebrow": "Zeit und Umfang",
+        "title": "Was die Zeitleiste wirklich ändert",
+        "lead": "Die Zeitleiste führt keinen Agenten erneut aus. Sie ändert, wie bereits beobachtete Fakten gelesen werden.",
+        "scopeTitle": "Der Agentenfilter ändert den Umfang",
+        "scopeBody": "Mit „Alle Agenten“ sehen Sie die Bank als Ganzes. Mit einem ausgewählten Agenten werden zuordenbare Signale auf ihn eingegrenzt; weiterhin globale Fakten sind entsprechend gekennzeichnet.",
+        "modes": {
+          "now": {
+            "title": "Jetzt",
+            "body": "Sie sehen aktuelle Signale. Die Bereiche aktualisieren sich, während die Seite geöffnet bleibt."
+          },
+          "history": {
+            "title": "Verlauf",
+            "body": "Sie verfolgen die Entwicklung im gewählten Zeitraum. Die Ansicht umfasst ein Zeitfenster, keine einzelne Momentaufnahme."
+          },
+          "instant": {
+            "title": "Zu einem Zeitpunkt",
+            "body": "Sie lesen die Daten so, wie sie zum gewählten Zeitpunkt vorlagen. Aktionen beziehen sich weiterhin auf die Gegenwart."
+          }
+        }
+      },
+      "honesty": {
+        "eyebrow": "Lesen ohne Überinterpretation",
+        "title": "Hinweise, die den Sinn schützen",
+        "lead": "Die Seite unterscheidet zwischen Gemessenem, weiterhin Aktuellem und Aussagen, die in der gewählten Ansicht nicht belegbar sind.",
+        "notes": {
+          "dash": {
+            "title": "Ein Strich ist keine Null",
+            "body": "Er bedeutet, dass für diesen Umfang oder Zeitpunkt keine ausreichend belastbare Aussage möglich ist."
+          },
+          "live": {
+            "title": "Ein „Live“-Hinweis in einer früheren Ansicht ist beabsichtigt",
+            "body": "Einige Kontrollen beschreiben die aktuell eingesetzte Richtlinie. Sie behaupten nicht, eine ältere Richtlinie zu rekonstruieren."
+          },
+          "scope": {
+            "title": "Ein globales Signal bleibt global",
+            "body": "Kann ein Messwert keinem Agenten zugeordnet werden, macht der Filter daraus keinen künstlichen Einzelwert."
+          },
+          "refresh": {
+            "title": "Bereiche können sich in zwei Schritten aktualisieren",
+            "body": "Nach einem Wechsel von Zeitraum oder Zeitpunkt kann der Flottenwert vor den aufwendigeren Analysen eintreffen. Die bisherigen Werte bleiben während des Übergangs sichtbar."
+          }
+        }
+      },
+      "decisions": {
+        "eyebrow": "Am richtigen Ort fortsetzen",
+        "title": "Wann Sie eine andere Seite öffnen",
+        "lead": "Die Übersicht weist die Richtung. Fachseiten erklären die Ursache und tragen die Aktionen.",
+        "items": {
+          "quality": {
+            "title": "Qualität oder Kontrolle verschlechtert sich",
+            "body": "Öffnen Sie KI-Qualität, um Ergebnisse, Evaluierungen und betroffene Kontrollen zu prüfen."
+          },
+          "risk": {
+            "title": "Ein Risiko oder eine Anomalie erscheint",
+            "body": "Öffnen Sie Vorfälle & Verfahren, um den Fall und die vorgesehene Reaktion zu verstehen."
+          },
+          "release": {
+            "title": "Die Version scheint einen Fehler eingeführt zu haben",
+            "body": "Öffnen Sie Freigabekontrolle, um das Urteil vor der Bereitstellung zu prüfen."
+          },
+          "proof": {
+            "title": "Sie müssen den beobachteten Zustand belegen",
+            "body": "Öffnen Sie Stand zu einem Datum, um eine prüfbare Ansicht für den maßgeblichen Zeitpunkt zusammenzustellen."
+          }
+        }
+      },
+      "data": {
+        "title": "Nachvollziehen, wie diese Daten entstehen",
+        "lead": "Herkunft, Umfang, Berechnung, Aktualität und Grenzen — ohne den Lesefluss zu unterbrechen.",
+        "foundations": {
+          "origin": {
+            "title": "Herkunft",
+            "body": "Die Seite führt persistierte Geschäftsereignisse, das Audit-Journal, Evaluationsergebnisse, den Flottenzustand und Betriebssonden zusammen. Sie erzeugt keine Messung allein aus der Anzeige."
+          },
+          "scope": {
+            "title": "Umfang",
+            "body": "Der Zeitraum begrenzt die zulässigen Fakten. Ein Zeitpunkt setzt zusätzlich eine zeitliche Grenze. Der Agentenfilter verengt nur Signale, die diesem Agenten tatsächlich zugeordnet werden können; alle anderen bleiben global."
+          },
+          "calculation": {
+            "title": "Berechnung",
+            "body": "Aggregate stammen aus dem Backend oder aus einfachen, benannten Zusammensetzungen. Fehlende Daten werden nie stillschweigend durch null ersetzt."
+          },
+          "freshness": {
+            "title": "Aktualität",
+            "body": "In der Gegenwart werden Quellen je nach Aufwand aktualisiert. In einer vergangenen Ansicht stoppt die automatische Aktualisierung und die Abfragen lesen den gewählten Zeitpunkt."
+          },
+          "limits": {
+            "title": "Grenzen",
+            "body": "Dienstzustand, einige Richtliniensonden und die Operator-Warteschlange besitzen keinen belastbaren Verlauf. Sie bleiben als aktuell gekennzeichnet, statt künstlich rekonstruiert zu werden."
+          }
+        },
+        "calculations": {
+          "eyebrow": "Konkrete Beispiele",
+          "title": "Was die Seite tatsächlich berechnet",
+          "lead": "Diese Regeln erklären die Werte, die am ehesten Fragen auslösen.",
+          "items": {
+            "fleet": {
+              "title": "Flottensumme",
+              "body": "Die je Agent beobachteten Konversationen werden anhand ihrer Identität und belegter Übergaben abgeglichen. Ein Duplikat wird nur entfernt, wenn dieser Abgleich möglich ist; andernfalls weist die Seite auf die Unsicherheit hin."
+            },
+            "quality": {
+              "title": "Qualität",
+              "body": "Der Anteil der als zufriedenstellend bewerteten Turns wird mit dem zusammen mit der Messung gelieferten Ziel verglichen. Ohne tatsächlich bewerteten Turn zeigt die Seite einen Strich statt einer falschen null."
+            },
+            "controls": {
+              "title": "Kontrollen",
+              "body": "Zähler berücksichtigen nur Kontrollen mit einer verfügbaren Messung. In einer vergangenen Ansicht bleiben die Zeilen bestehen, tragen bei fehlenden Daten jedoch einen Strich."
+            },
+            "risks": {
+              "title": "Offene Risiken",
+              "body": "Der Indikator addiert erkannte Anomalien und ausgelöste Verfahren. Sind beide Quellen nicht verfügbar, wird kein Wert behauptet."
+            }
+          }
+        },
+        "contract": {
+          "title": "Technischen Vertrag anzeigen",
+          "items": {
+            "fleet": {
+              "title": "Flottenabfrage",
+              "body": "Die Abfrage /observability/fleet erhält den Zeitraum und bei Bedarf den Zeitpunkt. Sie liefert Kennzahlen je Agent sowie eine abgeglichene Gesamtsumme der Bank."
+            },
+            "snapshot": {
+              "title": "Aggregierte Signale",
+              "body": "Die Abfrage /observability/snapshot bündelt Qualitäts-, Kosten-, Risiko- und Konformitätssignale. Die Parameter at und agent werden nur an Quellen übergeben, die sie berücksichtigen können."
+            },
+            "time": {
+              "title": "Zeitvertrag",
+              "body": "Die URL trägt Ansicht, Zeitraum, Zeitpunkt, Vergleich und Agentenumfang. Der Cursor wird stabilisiert, bevor Quellen abgefragt werden, damit nicht für jedes Pixel eine Anfrage entsteht."
+            },
+            "live": {
+              "title": "Nur aktuelle Teile",
+              "body": "Dienstzustand, Bereitschaft, Richtliniensonden und Operator-Warteschlange bleiben aktuell. Die Zeitleiste bleibt ebenfalls global, damit die Navigation möglich ist."
+            },
+            "validation": {
+              "title": "Validierung",
+              "body": "Antworten werden durch FastAPI-Modelle begrenzt und anschließend durch die Zod-Schemas des BFF geprüft. Ein fehlendes Signal bleibt bis zur ehrlichen Anzeige als Strich fehlend."
+            }
+          }
+        }
+      },
+      "closing": {
+        "eyebrow": "Merksatz",
+        "body": "Die Übersicht zeigt, wo Sie hinsehen sollten. Sie wird nützlich, wenn Sie mit einer Abweichung beginnen, ihren Kontext prüfen und dann die Seite zum Verstehen, Handeln oder Belegen öffnen.",
+        "global": "Tessera als Ganzes verstehen"
+      }
+    },
+    "sharedGuide": {
+      "pageTitle": "Verstehen · {page}",
+      "back": "Zurück zu {page}",
+      "eyebrow": "Seitenleitfaden",
+      "purpose": "Die nützliche Frage",
+      "start": "Wo beginnen",
+      "readingEyebrow": "Der Weg",
+      "readingTitle": "Die Seite lesen, ohne sich zu verlieren",
+      "actionEyebrow": "Entscheiden",
+      "actionTitle": "Was diese Seite ermöglicht",
+      "dataTitle": "Verstehen, wie diese Daten entstehen",
+      "dataOrigin": "Was die Seite liest",
+      "dataLimit": "Was sie nicht behauptet",
+      "reading": {
+        "agents": [
+          {
+            "title": "Umfang bestimmen",
+            "body": "Beginnen Sie mit dem Umfang: gesamte Flotte, Arbeitswarteschlange oder ein bestimmter Agent."
+          },
+          {
+            "title": "Priorisieren",
+            "body": "Finden Sie die Abweichung, den Status oder den Fall, der wirklich eine Entscheidung verlangt."
+          },
+          {
+            "title": "Weitergehen",
+            "body": "Öffnen Sie den zugehörigen Agenten, Beleg oder Schritt, statt eine einzelne Zahl zu deuten."
+          }
+        ],
+        "agent": [
+          {
+            "title": "Agent bestätigen",
+            "body": "Die Agentenauswahl bestimmt den Umfang der gesamten Seite."
+          },
+          {
+            "title": "Fakt lesen",
+            "body": "Unterscheiden Sie Beobachtetes, Deklariertes und weiterhin nicht Verfügbares."
+          },
+          {
+            "title": "Ansichten verbinden",
+            "body": "Nutzen Sie Querverweise von der Konfiguration über das Verhalten bis zum Beleg."
+          }
+        ],
+        "monitor": [
+          {
+            "title": "Ansicht festlegen",
+            "body": "Wählen Sie zuerst Zeitraum, Zeitmodus und Umfang passend zu Ihrer Frage."
+          },
+          {
+            "title": "Signal erkennen",
+            "body": "Lesen Sie das Hauptsignal und danach die Abweichung vom Ziel oder gewählten Vergleich."
+          },
+          {
+            "title": "Ursache suchen",
+            "body": "Gehen Sie vor einer Aktion zu den Agenten und Ereignissen, die die Abweichung erklären."
+          }
+        ],
+        "act": [
+          {
+            "title": "Fall bestimmen",
+            "body": "Beginnen Sie mit dem Fall, der Version oder der Regel, die auf eine Entscheidung wartet."
+          },
+          {
+            "title": "Kontext prüfen",
+            "body": "Lesen Sie zugehörige Signale, Tests und Belege, bevor Sie handeln."
+          },
+          {
+            "title": "Handeln und protokollieren",
+            "body": "Führen Sie den vorgesehenen Schritt aus; Ergebnis und Urheber müssen prüfbar bleiben."
+          }
+        ],
+        "prove": [
+          {
+            "title": "Suche festlegen",
+            "body": "Bestimmen Sie Objekt, Zeitraum und Umfang des gesuchten Belegs."
+          },
+          {
+            "title": "Kette prüfen",
+            "body": "Prüfen Sie Herkunft, Integrität und mögliche Lücken, bevor Sie folgern."
+          },
+          {
+            "title": "Sichern oder exportieren",
+            "body": "Bereiten Sie einen prüfbaren Beleg vor, ohne fehlende Daten in Gewissheit zu verwandeln."
+          }
+        ],
+        "configure": [
+          {
+            "title": "Aktiven Stand sehen",
+            "body": "Beginnen Sie mit der Version oder Konfiguration, die tatsächlich gilt."
+          },
+          {
+            "title": "Auswirkung messen",
+            "body": "Finden Sie Agenten, Regeln und Abhängigkeiten, die eine Änderung betrifft."
+          },
+          {
+            "title": "Kontrolliert ändern",
+            "body": "Nutzen Sie den vorgesehenen Weg für Vorschlag, Freigabe und Nachvollziehbarkeit."
+          }
+        ],
+        "admin": [
+          {
+            "title": "Umfang wählen",
+            "body": "Bestimmen Sie die betroffene Person, Rolle oder Systemkomponente."
+          },
+          {
+            "title": "Realen Stand prüfen",
+            "body": "Vergleichen Sie beobachtete Rechte oder Zustände mit dem erwarteten Stand."
+          },
+          {
+            "title": "Mit Beleg anwenden",
+            "body": "Führen Sie die erlaubte Änderung aus und prüfen Sie, ob eine nutzbare Spur bleibt."
+          }
+        ]
+      }
+    },
+    "guides": {
+      "fleet": {
+        "title": "Flotte",
+        "lead": "Die Agenten der Flotte sehen und den Agenten mit Prüfbedarf finden.",
+        "question": "Welche Agenten sind aktiv, wie verteilt sich ihre Arbeit und wo sollten Sie als Nächstes hinsehen?",
+        "start": "Beginnen Sie mit der Flottenübersicht und öffnen Sie einen Agenten erst, wenn Volumen, Status oder Signal eine Prüfung begründen.",
+        "action": "Den zu prüfenden Agenten wählen und direkt zu Übersicht, Evaluierungen oder Konfiguration wechseln.",
+        "data": "Die Seite verbindet das Agentenregister mit den verfügbaren Aktivitätsfakten jedes Agenten.",
+        "limit": "Keine Aktivität beweist weder Nutzlosigkeit noch Stillstand; sie beschreibt nur, was die Quellen im angezeigten Umfang beobachtet haben."
+      },
+      "inbox": {
+        "title": "Zu bearbeiten",
+        "lead": "Freigaben und blockierte Aktionen bündeln, die eine menschliche Entscheidung brauchen.",
+        "question": "Was kann ohne eine Entscheidung des Operators nicht fortgesetzt werden?",
+        "start": "Beginnen Sie mit Dringlichkeit und Frist und öffnen Sie dann den Fall, um Blockade und Belege zu verstehen.",
+        "action": "Den Fall freigeben, ablehnen oder an die richtige Person leiten und die Entscheidung nachvollziehbar halten.",
+        "data": "Die Warteschlange entsteht aus tatsächlich offenen Operator-Elementen und ihrem aktuellen Zustand.",
+        "limit": "Sie fasst nicht alle Flottenrisiken zusammen, sondern nur Elemente, die ausdrücklich auf einen Eingriff warten."
+      },
+      "todo": {
+        "title": "Zu erledigen",
+        "lead": "Fehlgeschlagene Evaluierungsfälle finden, verstehen und korrigieren.",
+        "question": "Welche Evaluierungsfehler erfordern eine Analyse oder Korrektur?",
+        "start": "Beginnen Sie mit überfälligen oder wiederkehrenden Fällen und lesen Sie die Ursache, bevor Sie den Agenten öffnen.",
+        "action": "Die Prüfung zuweisen, die Korrektur dokumentieren und die Evaluierung erneut starten, sobald die Änderung bereit ist.",
+        "data": "Die Seite liest fehlgeschlagene Evaluierungsfälle und ihren Bearbeitungsstand aus der Operator-Warteschlange.",
+        "limit": "Ein einzelner Fehler beweist keine insgesamt schlechte Agentenleistung; er markiert ein bestimmtes Szenario zur Prüfung."
+      },
+      "quality": {
+        "title": "KI-Qualität",
+        "lead": "Beobachtete Qualität und Evaluierungen vor einer Bereitstellung verfolgen.",
+        "question": "Erreichen die Antworten das Qualitätsziel und sind Kandidatenversionen bereit?",
+        "start": "Wählen Sie Signale oder Evaluierungen und beginnen Sie mit der wichtigsten Abweichung, bevor Sie zu Agenten oder Fällen gehen.",
+        "action": "Evaluierungen eines Agenten öffnen, eine Korrektur priorisieren oder eine Freigabeentscheidung vorbereiten.",
+        "data": "Die Ansicht verbindet beobachtete Qualitätssignale mit den realen Ergebnissen der Evaluierungsläufe.",
+        "limit": "Ein Gesamtwert ersetzt weder Fehlfälle noch Abdeckung; ein fehlender Wert bleibt ein fehlender Beleg."
+      },
+      "security": {
+        "title": "Sicherheit & Datenschutz",
+        "lead": "Angriffe, personenbezogene Daten, Zugriffe und ausgelöste Schutzmaßnahmen verstehen.",
+        "question": "Welche Austausche trafen auf ein Sicherheits- oder Datenschutzrisiko und wie wurden sie behandelt?",
+        "start": "Setzen Sie Zeitraum und Umfang und unterscheiden Sie Versuche, angewandte Kontrollen und handlungsbedürftige Vorfälle.",
+        "action": "Den zu prüfenden Agenten oder Risikotyp eingrenzen und Vorfall, Regel oder Beleg öffnen.",
+        "data": "Die Seite liest Sicherheits-, Datenschutz- und Kontrollfakten zu beobachteten Austauschen.",
+        "limit": "Kein Signal bedeutet, dass in diesem Umfang kein Fakt gemeldet wurde; es ist keine Sicherheitszertifizierung."
+      },
+      "compliance": {
+        "title": "Compliance",
+        "lead": "Die regulatorische Lage aus tatsächlich beobachteten Aktionen und Kontrollen lesen.",
+        "question": "Erfüllen die Agenten die anwendbaren Pflichten in den verfügbaren Fakten?",
+        "start": "Beginnen Sie mit der abweichenden Pflicht oder Domäne und prüfen Sie die Agenten und Fakten hinter der Ansicht.",
+        "action": "Eine Prüfung priorisieren, relevante Belege öffnen oder eine Korrektur im betroffenen Umfang verlangen.",
+        "data": "Die Lage wird aus Governance-Fakten und Kontrollen zu den verfolgten Pflichten berechnet.",
+        "limit": "Diese Seite bietet eine operative Sicht; sie ersetzt weder Rechtsberatung noch regulatorische Bescheinigung."
+      },
+      "reliability": {
+        "title": "Zuverlässigkeit & Kosten",
+        "lead": "Verfügbarkeit, Antwortzeit, Fehler und Verbrauch der Flotte verfolgen.",
+        "question": "Arbeitet der Dienst mit der erwarteten Zuverlässigkeit und den erwarteten Kosten?",
+        "start": "Wählen Sie den Zeitraum, finden Sie die Abweichung bei Verfügbarkeit, Latenz, Fehlern oder Kosten und bestimmen Sie den Beitrag des Agenten.",
+        "action": "Den verantwortlichen Agenten oder Vorfall öffnen und Diagnose, Begrenzung oder Korrektur wählen.",
+        "data": "Die Seite aggregiert verfügbare Dienst- und Nutzungsfakten der Agenten im Umfang.",
+        "limit": "Ein Mittelwert kann Spitzen oder Ausreißer verdecken; lesen Sie Verteilung und Zeitraum vor einer Schlussfolgerung."
+      },
+      "observability": {
+        "title": "Observability",
+        "lead": "Verfügbarkeit von Tessera, Abhängigkeiten und Modellen prüfen.",
+        "question": "Antwortet die technische Kette, die das Cockpit benötigt, korrekt?",
+        "start": "Beginnen Sie mit der ausgefallenen oder beeinträchtigten Komponente und lesen Sie letzte Prüfung und betroffene Abhängigkeiten.",
+        "action": "Die Diagnose an die richtige Komponente leiten und nützliche Traces oder Verfahren öffnen.",
+        "data": "Die Seite liest Health-Sonden und technische Zustände, die Dienste und Abhängigkeiten bereitstellen.",
+        "limit": "Eine grüne Sonde beweist nur, dass eine bestimmte Prüfung zum Lesezeitpunkt antwortet; sie schließt andere Fehler nicht aus."
+      },
+      "improvement": {
+        "title": "Verbesserung",
+        "lead": "Nützliche Korrekturen wählen und ihre Wirkung auf Agenten messen.",
+        "question": "Welche Abweichungen verdienen eine Verbesserung und ist danach eine Wirkung sichtbar?",
+        "start": "Beginnen Sie mit der größten Abweichung, prüfen Sie Wiederholung und Agent und vergleichen Sie vor und nach der Änderung.",
+        "action": "Eine Verbesserung priorisieren, einer verantwortlichen Person zuordnen und ihre Wirkung in späteren Signalen prüfen.",
+        "data": "Die Seite verbindet verfügbare Verbesserungssignale, Priorität und beobachtete Entwicklung.",
+        "limit": "Eine zeitlich korrelierte Verbesserung beweist allein nicht, dass die Änderung ihre Ursache war."
+      },
+      "incidents": {
+        "title": "Vorfälle & Verfahren",
+        "lead": "Einen Vorfall verfolgen, das passende Verfahren anwenden und die Lösung kontrollieren.",
+        "question": "Welche Vorfälle sind offen, welches Verfahren gilt und wie weit ist die Lösung?",
+        "start": "Beginnen Sie mit Schweregrad und Frist und öffnen Sie den Vorfall für Fakten, Verfahren und bisherige Schritte.",
+        "action": "Zuweisen, einen Verfahrensschritt anwenden, eskalieren oder mit dem erwarteten Beleg schließen.",
+        "data": "Die Seite liest Vorfallsregister, Ereignisse, Verfahren und aktuellen Zustand.",
+        "limit": "Abschluss bedeutet, dass der vorgesehene Weg beendet ist; Grenzen oder fehlende Belege dürfen nicht verschwinden."
+      },
+      "replay": {
+        "title": "Replay & Shadow-Test",
+        "lead": "Eine Sitzung wiederholen und eine Kandidatenversion ohne Kundenexposition testen.",
+        "question": "Wie hätte sich eine andere Version bei einem bereits beobachteten Austausch verhalten?",
+        "start": "Wählen Sie eine erfasste Sitzung und Kandidatenversion und vergleichen Sie, ohne Replay mit Live-Verkehr zu verwechseln.",
+        "action": "Eine Abweichung dokumentieren, ein Evaluierungsset ergänzen oder weitere Korrektur verlangen.",
+        "data": "Das Replay nutzt erfasste Sitzungselemente und führt die Kandidatenversion im vorgesehenen Umfang aus.",
+        "limit": "Ein Replay misst ein erfasstes Szenario; es sagt nicht das Verhalten des gesamten Produktivverkehrs voraus."
+      },
+      "curation": {
+        "title": "Evaluierungssets",
+        "lead": "Austausche auswählen und anreichern, mit denen Agenten evaluiert werden.",
+        "question": "Decken die Evaluierungssets die wirklich wichtigen Fälle ab?",
+        "start": "Beginnen Sie mit Abdeckungslücken und Prüffällen und kontrollieren Sie Sprache, Risiko und erwartetes Ergebnis.",
+        "action": "Einen Fall annehmen, anreichern oder verwerfen, um die nächste Evaluierung zu verbessern.",
+        "data": "Die Seite liest Kandidatenfälle, Annotationen und ihre Zuordnung zu Evaluierungssets.",
+        "limit": "Viele Fälle garantieren keine gute Abdeckung; Vielfalt und Qualität der Erwartungen bleiben entscheidend."
+      },
+      "release": {
+        "title": "Bereitstellung",
+        "lead": "Version, Evaluierungen und Belege prüfen, bevor ein Agent verfügbar wird.",
+        "question": "Erfüllt jeder Agent die beobachtbaren Bedingungen für die Bereitstellung?",
+        "start": "Wählen Sie den Agenten und lesen Sie Evaluierungsurteil, Kandidatenversion und erforderliche Belege gemeinsam.",
+        "action": "Eine Version freigeben, zurückhalten oder erneut evaluieren und Entscheidung sowie Gründe prüfbar halten.",
+        "data": "Die Seite verbindet Evaluierungsseam, deklarierte Versionen und verfügbare Freigabebelege.",
+        "limit": "Bereit beschreibt konfigurierte und durchgeführte Prüfungen; es ist keine absolute Garantie künftigen Verhaltens."
+      },
+      "automations": {
+        "title": "Automatische Regeln",
+        "lead": "Festlegen, was automatisch läuft und was menschliche Freigabe braucht.",
+        "question": "Welche Aktionen können selbst auslösen, unter welchen Bedingungen und mit welcher Kontrolle?",
+        "start": "Beginnen Sie mit aktiver Regel, Auslöser und Berechtigungsstufe und lesen Sie danach den Verlauf.",
+        "action": "Eine Regel über den vorgesehenen Freigabeweg vorschlagen, aktivieren, aussetzen oder überarbeiten.",
+        "data": "Die Seite liest deklarierte automatische Regeln, ihren Zustand und zugehörige protokollierte Ausführungen.",
+        "limit": "Eine aktive Regel behauptet nicht, dass sie ausgelöst hat; die Ausführung muss im Journal bestätigt sein."
+      },
+      "audit": {
+        "title": "Auditprotokoll",
+        "lead": "Sensible Aktionen finden und ihre Nachvollziehbarkeitskette prüfen.",
+        "question": "Wer tat was, wann, an welchem Objekt und bleibt die Kette prüfbar?",
+        "start": "Setzen Sie Zeitraum und Objekt und lesen Sie Ereignis, Urheber und Integritätsstatus.",
+        "action": "Eine Entscheidung rekonstruieren, einen Vorfall verfolgen oder den zugehörigen Beleg öffnen.",
+        "data": "Die Seite liest Audit-Einträge und prüft ihre Kette nach der Integritätssemantik des Cockpits.",
+        "limit": "Das Journal beweist, was darin erfasst wurde; ein Ereignis außerhalb dieser Naht kann es nicht bescheinigen."
+      },
+      "evidence": {
+        "title": "Belegzentrum",
+        "lead": "Elemente sammeln, prüfen und exportieren, die dokumentieren, was geschah.",
+        "question": "Welche Belege gibt es für einen Agenten, Zeitraum oder eine Entscheidung?",
+        "start": "Beginnen Sie mit dem gesuchten Umfang und prüfen Sie Status, Herkunft und Integrität jedes Elements.",
+        "action": "Ein Dossier zusammenstellen, ein Element prüfen oder einen Export für eine Prüfung vorbereiten.",
+        "data": "Die Seite liest den Belegspeicher und Metadaten, die jedes Element mit seiner Herkunft verbinden.",
+        "limit": "Ein Dossier ist erst vollständig, wenn erwartete Elemente vorhanden sind; ein Export schließt keine Lücke."
+      },
+      "asof": {
+        "title": "Stand zu einem Datum",
+        "lead": "Den bekannten Zustand eines Agenten zu einem gewählten Zeitpunkt rekonstruieren.",
+        "question": "Was wusste und nutzte das System zu diesem genauen Zeitpunkt?",
+        "start": "Wählen Sie Agent und Datum und unterscheiden Sie wirklich historisierte von weiterhin aktuellen Elementen.",
+        "action": "Zwei Zustände vergleichen, eine frühere Entscheidung erklären oder eine Stichtagsprüfung vorbereiten.",
+        "data": "Die Seite rekonstruiert den Zustand aus verfügbaren Versionen und Ereignissen bis zum gewählten Zeitpunkt.",
+        "limit": "Nicht Historisiertes kann nicht rekonstruiert werden; die Seite muss das sagen, statt still den aktuellen Stand zu übernehmen."
+      },
+      "signals": {
+        "title": "Signalkatalog",
+        "lead": "Jedes Signal, seine Quelle und die erwartete Reaktion auf Änderungen definieren.",
+        "question": "Welche Signale steuern das Cockpit und was bedeutet jedes davon?",
+        "start": "Suchen Sie das Signal und lesen Sie Definition, Quelle, Schwelle und erwartete Reaktion.",
+        "action": "Ein Signal über den vorgesehenen Governance-Weg klären oder weiterentwickeln.",
+        "data": "Die Seite liest den deklarierten Signalkatalog und seine Governance-Metadaten.",
+        "limit": "Ein deklariertes Signal beweist keine Datenemission der Quelle; die Beobachtung wird auf Monitoringseiten geprüft."
+      },
+      "platformGuardrails": {
+        "title": "Schutzregeln",
+        "lead": "Verfügbare Schutzmaßnahmen und die zugehörigen Agenten sehen.",
+        "question": "Welche Schutzmaßnahmen sind aktiv und welchen Umfang decken sie ab?",
+        "start": "Beginnen Sie mit Regel und Modus und prüfen Sie nutzende Agenten sowie offene Änderungen.",
+        "action": "Eine Schutzänderung vorbereiten und Agenten mit erneutem Evaluierungsbedarf bestimmen.",
+        "data": "Die Seite liest den Schutzregelkatalog der Plattform und seine deklarierten Nutzer.",
+        "limit": "Eine deklarierte Schutzmaßnahme ist kein Beleg für eine Auslösung; Ausführungsfakten liefern diesen Beleg."
+      },
+      "models": {
+        "title": "Modelle",
+        "lead": "Verfügbare Modelle und die Agenten sehen, die sie verwenden.",
+        "question": "Welche Modelle sind verfügbar und aktiv und welche Agenten verwenden sie?",
+        "start": "Beginnen Sie mit dem tatsächlich bedienten Modell und prüfen Sie Nutzer und geplante Änderungen.",
+        "action": "Die Auswirkung eines Modellwechsels messen und die erneute Evaluierung betroffener Agenten vorbereiten.",
+        "data": "Die Seite liest den Modellkatalog und deklarierte Bindungen an Agenten.",
+        "limit": "Ein gelistetes Modell beweist weder sofortige Verfügbarkeit noch Qualität für einen Geschäftsfall."
+      },
+      "connectors": {
+        "title": "Konnektoren",
+        "lead": "Verbindungen zwischen Tessera und externen Systemen verstehen.",
+        "question": "Welche Konnektoren gibt es, wie sind sie konfiguriert und antworten sie?",
+        "start": "Beginnen Sie mit dem Status und lesen Sie Konfiguration, Umfang und letzte Prüfung.",
+        "action": "Eine Verbindung mit den vorgesehenen Rechten und Kontrollen konfigurieren, diagnostizieren oder entfernen.",
+        "data": "Die Seite liest Konnektorregister, freigebbare Konfiguration und Prüfzustände.",
+        "limit": "Ein deklarierter oder erreichbarer Konnektor beweist nicht, dass jede Geschäftsoperation gelingt."
+      },
+      "policies": {
+        "title": "Richtlinien",
+        "lead": "Plattformregeln definieren und ihre Änderungen steuern.",
+        "question": "Welche Richtlinien gelten und wo steht jeder Änderungsvorschlag?",
+        "start": "Beginnen Sie mit der aktiven Version und vergleichen Sie Vorschlag, Umfang und erforderliche Freigaben.",
+        "action": "Eine Richtlinienänderung vorschlagen, freigeben, ablehnen oder nachvollziehen.",
+        "data": "Die Seite liest deklarierte Richtlinien, Versionen und Governance-Verlauf.",
+        "limit": "Eine geschriebene Richtlinie beweist keine Anwendung auf einen Austausch; Ausführungskontrollen tragen diesen Beleg."
+      },
+      "sources": {
+        "title": "Quellen & Gedächtnis",
+        "lead": "Dokumente und Erinnerungen sehen, auf die Agenten zugreifen können.",
+        "question": "Welche Quellen versorgen Agenten, sind sie aktuell und wo werden sie verwendet?",
+        "start": "Beginnen Sie mit der aktiven Quelle und prüfen Sie Aktualität, Abdeckung und nutzende Agenten.",
+        "action": "Eine Quelle je nach Zustand anbinden, deaktivieren, aktualisieren oder untersuchen.",
+        "data": "Die Seite liest Quellenkatalog, Ingestionszustände und Bindungen an Agenten.",
+        "limit": "Eine verfügbare Quelle beweist keine Nutzung in einer bestimmten Antwort; Zitat oder Trace müssen das zeigen."
+      },
+      "parameters": {
+        "title": "Parameter",
+        "lead": "Plattformweite Einstellungen und Verhaltensweisen konfigurieren.",
+        "question": "Welche übergreifenden Einstellungen sind aktiv und was würde eine Änderung betreffen?",
+        "start": "Beginnen Sie mit aktuellem Wert und Umfang und lesen Sie vor einer Änderung die erwartete Wirkung.",
+        "action": "Eine erlaubte Einstellung ändern und ihre Übernahme prüfen.",
+        "data": "Die Seite liest von der Plattform bereitgestellte Einstellungen und aktuell gespeicherte Werte.",
+        "limit": "Ein gespeicherter Wert beweist nicht immer sofortige Wirkung; manche Änderungen brauchen Neustart oder Deployment."
+      },
+      "integrations": {
+        "title": "Integrationen",
+        "lead": "Externe Dienste anbinden und überwachen, die in Tessera integriert sind.",
+        "question": "Welche Integrationen sind aktiv, konfiguriert und korrekt mit der Plattform verbunden?",
+        "start": "Beginnen Sie mit dem Zustand und lesen Sie Fähigkeiten, Konfiguration und letzte Austausche.",
+        "action": "Eine Integration über den vorgesehenen Weg konfigurieren, diagnostizieren oder deaktivieren.",
+        "data": "Die Seite liest Integrationsregister und die technischen Zustände jeder Integration.",
+        "limit": "Ein verfügbarer Gesamtzustand garantiert weder jeden erfolgreichen Aufruf noch die Gültigkeit aller empfangenen Daten."
+      },
+      "users": {
+        "title": "Benutzer",
+        "lead": "Personen mit Tessera-Zugang und den Zustand ihrer Konten verwalten.",
+        "question": "Wer hat ein Konto, in welchem Zustand und mit welchen Zuordnungen?",
+        "start": "Suchen Sie die Person und prüfen Sie Kontozustand und Zuordnungen, bevor Sie Rechte öffnen.",
+        "action": "Ein Konto je nach Berechtigung erstellen, ändern, aussetzen oder prüfen.",
+        "data": "Die Seite liest Benutzerregister und administrative Attribute, die die Plattform bereitstellt.",
+        "limit": "Ein Konto beschreibt nicht allein die effektiven Rechte; prüfen Sie diese unter Rollen & Zugriff."
+      },
+      "roles": {
+        "title": "Rollen & Zugriff",
+        "lead": "Rollen, Berechtigungen und effektive Zugriffe der Plattform verwalten.",
+        "question": "Wer kann in Tessera was sehen oder tun und warum?",
+        "start": "Beginnen Sie mit Rolle oder Benutzer und vergleichen Sie gewährte Rechte mit dem tatsächlichen Bedarf.",
+        "action": "Eine Zuordnung oder Berechtigung ändern und die Wirkung im betroffenen Umfang prüfen.",
+        "data": "Die Seite verbindet Identitäten, Rollen und deklarierte Rechte zur Berechnung sichtbarer Zugriffe.",
+        "limit": "Eine Rechtematrix beweist keine ausgeführte Aktion; diesen Beleg trägt das Auditprotokoll."
+      },
+      "systemProfile": {
+        "title": "Systemprofil",
+        "lead": "Technische Konfiguration und operativen Zustand der Umgebung lesen.",
+        "question": "In welcher Umgebung läuft Tessera und welche Komponenten sind tatsächlich aktiv?",
+        "start": "Beginnen Sie mit Umgebung und Deployment-Modus und prüfen Sie Modelle, Abhängigkeiten und bereitgestellte Zustände.",
+        "action": "Eine Diagnose leiten, eine Konfiguration bestätigen oder eine technische Prüfung vorbereiten.",
+        "data": "Die Seite liest freigebbare Systemkonfiguration und verfügbare Betriebszustände zum Zeitpunkt der Abfrage.",
+        "limit": "Das Profil beschreibt die beobachtete Umgebung; es ersetzt weder vollständiges Infrastrukturinventar noch Zertifizierung."
+      },
+      "settings": {
+        "title": "Persönliche Einstellungen",
+        "lead": "Die eigene Erfahrung anpassen, ohne die Governance der Flotte zu verändern.",
+        "question": "Welche Einstellungen gelten für Ihre Nutzung des Cockpits?",
+        "start": "Beginnen Sie mit der gewünschten persönlichen Einstellung und unterscheiden Sie sie von administrativen Plattformparametern.",
+        "action": "Eine persönliche Einstellung ändern und ihre Wirkung in Ihrer Sitzung prüfen.",
+        "data": "Die Seite liest erfahrungsbezogene Einstellungen und Optionen, die Ihre Rolle ändern darf.",
+        "limit": "Eine persönliche Einstellung ändert weder Richtlinien noch Agenten oder administrativ gewährte Rechte."
+      },
+      "agentSummary": {
+        "title": "Agentenübersicht",
+        "lead": "Identität, Aktivität, Leistung und Warnungen eines Agenten zusammenführen.",
+        "question": "Was tut dieser Agent, in welchem Zustand ist er und was sollte geprüft werden?",
+        "start": "Bestätigen Sie den gewählten Agenten und beginnen Sie mit Hauptwarnungen und Kennzahlen vor den Details.",
+        "action": "Die nächste Analyse wählen: Konfiguration, Test, Evaluierung, Wissen oder Verlauf.",
+        "data": "Die Übersicht verbindet die deklarierte Agentenakte mit verfügbaren Aktivitätsfakten des Zeitraums.",
+        "limit": "Manche Teile bleiben aktuell, wenn kein Verlauf existiert; die Seite muss das sagen, statt Vergangenheit zu simulieren."
+      },
+      "agentConfigurations": {
+        "title": "Agentenkonfiguration",
+        "lead": "Identität, Modell, Verhalten und Status eines Agenten sehen und steuern.",
+        "question": "Mit welchen Einstellungen arbeitet dieser Agent tatsächlich?",
+        "start": "Beginnen Sie mit aktivem Wert und Herkunft und prüfen Sie Änderungen und Vererbung vor dem Bearbeiten.",
+        "action": "Eine erlaubte Einstellung ändern oder den Verlauf einer Konfiguration finden.",
+        "data": "Die Seite liest deklarierte Agentenkonfiguration, Verfügbarkeit und verfügbare gesteuerte Änderungen.",
+        "limit": "Zu einem früheren Datum sind nur historisierte Elemente lesbar; Formular und einige Zustände bleiben aktuell."
+      },
+      "agentKnowledge": {
+        "title": "Agentenwissen",
+        "lead": "Die an diesen Agenten gebundenen Quellen und ihren Zustand verstehen.",
+        "question": "Auf welche Quellen kann dieser Agent zugreifen und sind sie nutzbar?",
+        "start": "Beginnen Sie mit aktiven Quellen und prüfen Sie Abdeckung, Aktualität, Sprache und beobachtete Nutzung.",
+        "action": "Eine Quelle anbinden, deaktivieren oder untersuchen und danach ihre Nutzung in Antworten prüfen.",
+        "data": "Die Seite liest an den Agenten gebundene Quellen und verfügbare Nutzungs- oder Abdeckungskennzahlen.",
+        "limit": "Die Bindung beweist keine Nutzung in einer bestimmten Antwort; Zitat oder Trace müssen das zeigen."
+      },
+      "agentGuardrails": {
+        "title": "Schutzregeln des Agenten",
+        "lead": "Regeln und Schutzmaßnahmen sehen, die Antworten dieses Agenten begrenzen.",
+        "question": "Welche Schutzmaßnahmen gelten für diesen Agenten und in welchem Modus?",
+        "start": "Beginnen Sie mit aktiver Regel, Schweregrad und Modus und lesen Sie Herkunft und Änderungen.",
+        "action": "Eine Schutzänderung vorbereiten oder prüfen und die Regel mit beobachteten Kontrollen verbinden.",
+        "data": "Die Seite liest an den Agenten gebundene Schutzregeln und ihre deklarierte Konfiguration.",
+        "limit": "Eine aktive Regel beweist keine Auslösung; Ausführungsfakten tragen diesen Beleg."
+      },
+      "agentPrompts": {
+        "title": "Anweisungen des Agenten",
+        "lead": "Aktive Anweisungen, Versionen und Sprachabdeckung sehen.",
+        "question": "Welche Anweisungen steuern diesen Agenten und welche Version wird wirklich bedient?",
+        "start": "Beginnen Sie mit aktivem Snapshot und prüfen Sie Sprachen, Variablen, Tests und Änderungsvorschläge.",
+        "action": "Eine Anweisung prüfen, eine Version vorbereiten oder die nötigen Evaluierungen öffnen.",
+        "data": "Die Seite liest Anweisungskatalog, Versionen und gesteuerten Vorschlagszyklus des Agenten.",
+        "limit": "Eine deklarierte Anweisung erklärt keine Antwort allein; der Turn-Trace zeigt, was tatsächlich zusammengesetzt wurde."
+      },
+      "agentBusiness": {
+        "title": "Geschäftssicht des Agenten",
+        "lead": "Tatsächlich zugeordnete Geschäftsfähigkeiten, Signale und Ausführungen lesen.",
+        "question": "Welchen Geschäftswert erzeugt dieser Agent und mit welchem Kontrollniveau?",
+        "start": "Beginnen Sie mit dem wichtigsten Geschäftssignal und gehen Sie zu den Fähigkeiten und Ausführungen dahinter.",
+        "action": "Die zu verbessernde Fähigkeit, zu prüfende Ausführung oder zu stärkende Geschäftskontrolle bestimmen.",
+        "data": "Die Seite liest beobachtete Geschäftsfakten zu den deklarierten Fähigkeiten des Agenten.",
+        "limit": "Nicht zugeordnete Fakten oder unzureichende Beobachtbarkeit bleiben fehlend; die Seite darf keinen Geschäftswert erfinden."
+      },
+      "agentEvaluations": {
+        "title": "Agentenevaluierungen",
+        "lead": "Antworten des Agenten messen und das Urteil vor der Bereitstellung verstehen.",
+        "question": "Bei welchen Fällen besteht dieser Agent, wo scheitert er und kann er bereitgestellt werden?",
+        "start": "Beginnen Sie mit Urteil und gewähltem Lauf und lesen Sie Fehlfälle, Abdeckung und Sprachen.",
+        "action": "Eine Korrektur priorisieren, Läufe vergleichen oder die Freigabeentscheidung vorbereiten.",
+        "data": "Die Seite liest reale Evaluierungsläufe, Fälle, Werte, Versionen und Gate-Regeln.",
+        "limit": "Ein hoher Wert kompensiert nicht automatisch einen kritischen Fehlfall oder fehlende Abdeckung."
+      },
+      "agentConsole": {
+        "title": "Testkonsole des Agenten",
+        "lead": "Den Agenten testen und Quellen, Werkzeuge und Schutzmaßnahmen jedes Turns beobachten.",
+        "question": "Wie antwortet dieser Agent auf einen bestimmten Fall und was geschah in diesem Turn?",
+        "start": "Prüfen Sie Agent und Sandbox-Einstellungen, starten Sie einen Turn und lesen Sie Antwort, Quellen, Werkzeuge, Schutzregeln und Trace.",
+        "action": "Ein Verhalten verstehen, den Trace exportieren oder einen nützlichen Fall zur Evaluierung senden.",
+        "data": "Die Konsole verbindet den Live-Turn mit Metadaten und Traces, die der Testseam bereitstellt.",
+        "limit": "Ein Konsolen-Turn ist ein gezielter Test; er repräsentiert weder gesamte Produktion noch ein Gesamturteil über den Agenten."
+      },
+      "agentHistory": {
+        "title": "Agentenverlauf",
+        "lead": "Sitzungen, Austausche, Qualität und Compliance finden.",
+        "question": "Was geschah in den Sitzungen dieses Agenten und welche verdienen eine Prüfung?",
+        "start": "Beginnen Sie mit Zeitraum und auffälligen Sitzungen und öffnen Sie eine Sitzung für Turns und Belege.",
+        "action": "Eine Sitzung rekonstruieren, Ergebnisse vergleichen oder einen Fall zu Test und Evaluierung senden.",
+        "data": "Die Seite liest verfügbare Sitzungen und Transkripte des Agenten sowie zugeordnete Evaluierungen.",
+        "limit": "Eine nicht erfasste Sitzung kann nicht rekonstruiert werden; ein vorhandenes Transkript bedeutet nicht, dass es evaluiert wurde."
+      }
+    }
   },
   "agirRail": {
     "liveBadge": "Aktueller Stand",

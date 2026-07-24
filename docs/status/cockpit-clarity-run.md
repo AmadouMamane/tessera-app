@@ -391,3 +391,187 @@ they no longer carry the explanation alone.
 - Ajustement typographique live : « Connexion opérateur » reprend exactement la typographie du
   titre de `select-space` — 30 px sur tous les écrans, semibold, interlignage 1,1 et approche
   -0,02 em. Le titre reste le premier niveau sans écraser le formulaire ni les autres repères.
+
+## Header — dock de contrôle — 2026-07-23
+
+- Branche `codex/header-control-dock`, claim sole-writer
+  `3c85bb68-a332-471b-9f70-f114ab2026c0`, coupée du `main` local à `89d89587`.
+- La grande barre de recherche centrale disparaît. La ligne principale devient une composition
+  à deux zones — titre à gauche, dock global à droite — et conserve sa hauteur normative de
+  88 px. Le compte reste exclusivement dans le panneau gauche du cockpit.
+- Le dock regroupe la recherche compacte `⌘K`, le sélecteur d’espaces, la posture système, les
+  notifications et l’aide dans une seule capsule de 44 px. Toutes les icônes principales ont
+  une boîte cliquable de 36 px et un glyphe de 18 px.
+- Le sélecteur d’espaces devient un panneau de 336 px avec deux destinations décrites et
+  inchangées (`/espaces`, `/produit`). L’aide devient un lien direct vers `/comprendre` avec
+  tooltip partagé, sans grand menu à une seule ligne.
+- La posture système passe à 384 px. Environnement, modèle et résidence sont alignés ; le verdict
+  d’intégrité occupe une ligne pleine largeur et conserve `LedgerIntegrityText`, donc exactement
+  les mêmes données et la même sémantique que le footer.
+- La cloche conserve les faits réels de `/observability/chrome` et leurs liens. Le badge visuel
+  devient un point d’attention, car aucun store de lecture ne permet de revendiquer un nombre
+  de notifications « non lues » ; le nom accessible conserve le nombre réel de faits à traiter.
+  Les faits sont regroupés par leur destination stable (`/a-traiter`, `/a-faire`,
+  `/surveiller/observabilite`, `/prouver/etat-a-date`), jamais par analyse du texte traduit.
+- Les libellés backend de file ne disent plus « élément(s) » : ils nomment les validations et
+  évaluations avec des formes singulier/pluriel naturelles en FR/DE/EN.
+- Vérifications ciblées vertes : Biome sur huit fichiers frontend, `tsc --noEmit`,
+  `header-components.test.ts` + `chrome-honesty.test.ts` (50 tests), Ruff check + format et
+  `test_operator_items.py` (29 tests), `git diff --check`. `make gate-twice` reste suspendu sur
+  instruction.
+- Preview `:3098/:8098` sain ; compilation de `/fr/surveiller/vue-ensemble?period=d30` en HTTP
+  200 sans erreur serveur. Le contrôleur de l’onglet intégré n’a pas pu rattacher un onglet
+  après le redémarrage du preview ; la validation visuelle finale reste donc à faire par Amadou
+  au rafraîchissement.
+- Raffinement « quiet luxury » validé avant code : capsule à fond translucide sans ombre portée,
+  contrôles sans bordure individuelle, raccourci `⌘K` purement typographique, glyphes Lucide
+  principaux à 18 px et `strokeWidth=1.75`. Les panneaux Espaces, Actions et Posture perdent
+  leurs boîtes internes colorées au profit de lignes plates et de séparateurs fins. Le libellé
+  du statut devient neutre ; seule sa pastille porte encore la couleur du verdict. Les panneaux
+  partagent désormais un fondu/déplacement de 150 ms.
+- Passe minimaliste finale : la loupe devient seule visible et porte « Rechercher — ⌘K » dans
+  le tooltip partagé ; le séparateur qui la suivait disparaît. Les icônes des espaces deviennent
+  monochromes et leurs descriptions tiennent sur une ligne. La posture retire les icônes
+  décoratives de ses trois lignes et passe en grille libellé / valeur. Entre 1 024 et 1 279 px,
+  son déclencheur se réduit au point de verdict avec tooltip localisé ; à partir de 1 280 px,
+  le libellé et le chevron réapparaissent.
+- Correctif « moins de cartes » : Espaces, Posture système et Actions ne créent plus trois
+  popovers flottants indépendants. Les trois déclencheurs pilotent un seul tiroir de contrôle
+  de 384 px, attaché exactement sous la règle du header et aligné au bord droit du dock. Un clic
+  sur une autre icône remplace le contenu dans ce même tiroir ; un second clic, `Échap`, un clic
+  extérieur ou une navigation le referme. Le tiroir reprend le fond du header, sans ombre, sans
+  bord supérieur et sans arrondi supérieur ; seuls les côtés, le bas et un léger arrondi
+  inférieur le délimitent. Le contenu reste plat, séparé par des filets, sans carte imbriquée.
+  Le statut système est désormais découpé en seam de données, déclencheur et contenu afin de
+  conserver une seule lecture santé/intégrité pour les deux états du header.
+- Validation du correctif : Biome ciblé, `tsc --noEmit`, `git diff --check`,
+  `header-components.test.ts` et `chrome-honesty.test.ts` verts (50 tests). Le ratchet échoue si
+  le tiroir reprend une ombre, un arrondi complet ou une bordure supérieure. Le preview
+  `:3098/:8098` répond 200 et l’authentification jusqu’au cockpit est vérifiée dans le navigateur
+  intégré ; son viewport de 672 px reste toutefois sous le breakpoint desktop du dock, donc la
+  dernière appréciation visuelle du tiroir large est laissée au rafraîchissement d’Amadou.
+  `make gate-twice` reste suspendu sur instruction.
+- Correctif de revue « rectangle autour » : la capsule englobante du dock est supprimée. Les
+  cinq contrôles reposent directement dans le header ; leurs zones cliquables et états de survol
+  restent inchangés. Mesure DOM live à 1 440 × 900 : fond `rgba(0, 0, 0, 0)`, bordure `0px`,
+  rayon `0px`, ombre `none`. Un ratchet interdit le retour de l’ancienne classe de capsule.
+  Biome ciblé, TypeScript et les 50 tests header/chrome restent verts.
+- Raffinement final après validation : les cinq commandes ont désormais la même boîte de
+  36 × 36 px, y compris la posture système réduite à son pictogramme. L’état actif n’ajoute plus
+  de fond rectangulaire : une ligne verte d’un pixel sur la règle du header suffit. Le tiroir ne
+  dessine plus de carte complète ; seule une ligne verticale gauche guide le regard, sans rayon,
+  ombre ni bordures supérieure, droite ou basse.
+- Le centre d’actions ne répète plus deux phrases portant le même total. Chaque groupe affiche
+  désormais son nom et son volume (`Validations — 57`, `Évaluations — 18` dans le monde du
+  preview), puis une seule synthèse de délai. Les regroupements et les volumes reposent sur les
+  identifiants et compteurs structurés du backend, jamais sur l’analyse du texte traduit.
+- Diagnostic du contrat live : le compositeur produisait correctement `count`, mais
+  `/api/observability/chrome` le supprimait. La cause était le `response_model` Pydantic
+  `ChromeNotificationsItemsItem`, qui ne déclarait pas le champ — FastAPI filtre silencieusement
+  les clés absentes du modèle. Le contrat est maintenant complet sur les quatre jambes :
+  compositeur, modèle Python, schéma Zod et rendu. Après correction, le BFF sert bien les
+  compteurs `57`, `57`, `18`, `18` pour les quatre lignes de file.
+- Preuves ciblées : Ruff et format Python verts ; 74 tests backend verts, dont un test HTTP qui
+  échoue si FastAPI retire à nouveau `count` ; Biome ciblé et TypeScript verts ; 50 tests
+  header/chrome verts, dont la mutation qui relie le volume du groupe au compteur de retard.
+  Le preview `:3098/:8098` est sain. Le rechargement automatisé du navigateur intégré a été
+  refusé par sa politique d’URL locale ; aucun contournement n’a été tenté. La revue finale est
+  disponible au rafraîchissement manuel. `make gate-twice` reste suspendu sur instruction.
+
+## Aide contextuelle — pilote Vue d’ensemble — 2026-07-24
+
+- Le bouton d’aide du header devient contextuel sur `/surveiller/vue-ensemble` : il ouvre
+  `/comprendre/surveiller/vue-ensemble` et transporte la route complète d’origine dans un
+  paramètre `from` validé. La page d’aide peut ainsi ramener le visiteur à la même lecture,
+  avec sa période, son mode temporel, son instant et son filtre agent. Sur les pages qui ne
+  disposent pas encore d’un guide, l’aide conserve son repli vers `/comprendre`.
+- Le routage repose sur un registre explicite `route cockpit → guide` plutôt que sur une
+  fabrication de chemin. Un ratchet vérifie que chaque guide déclaré existe réellement, que
+  le retour n’accepte que la route opérationnelle autorisée et que les catalogues FR/EN/DE
+  exposent exactement la même structure.
+- Le pilote explique la page dans l’ordre où elle se lit et dans un registre humain :
+  repérer, comprendre, décider ; bandeau d’objectif, rail de lecture, vue par agent, signaux
+  essentiels, détails et actions. Il explicite aussi les modes Maintenant, Historique et
+  État à date, la portée du filtre agent et les conventions d’honnêteté — un tiret n’est pas
+  un zéro, un badge temps réel n’est pas réinterprété dans le passé et certains indicateurs
+  restent globaux.
+- La composition est éditoriale et linéaire, sans nouvelle pile de cartes. Les quatre sorties
+  d’action pointent vers les routes réelles de qualité, incidents, contrôle de mise en ligne
+  et preuve à date. Tous les textes visibles, métadonnées et libellés d’accessibilité sont
+  catalogués dans le même lot en FR/EN/DE ; aucun nombre visible n’est écrit en dur dans le JSX.
+- Vérifications ciblées vertes : Biome sur les dix fichiers frontend concernés,
+  `tsc --noEmit`, puis 57 tests Vitest (`contextual-help`, header et honnêteté du chrome).
+  Le ratchet numérique couvre aussi la nouvelle route et son composant. Le preview
+  `:3098/:8098` est sain et les trois routes FR/EN/DE répondent HTTP 200 sans erreur de
+  compilation. La politique d’URL locale du navigateur intégré interdit la lecture automatisée
+  du preview ; aucun contournement n’a été tenté et la validation visuelle reste donc au
+  rafraîchissement d’Amadou. `make gate-twice` reste suspendu sur instruction.
+- Extension validée après revue : le guide reconstruit maintenant la lecture exacte transportée
+  dans `from` — Maintenant, Historique ou À un instant ; fenêtre `h24`, `d7` ou `d30` ; flotte
+  ou agent précis ; instant valide lorsqu’il existe. Les valeurs hors contrat retombent sur les
+  défauts défendables au lieu d’être reprises comme du texte. Les libellés de période et de mode
+  sont ceux du rail opérationnel, pas une seconde traduction.
+- Une ligne éditoriale « Votre lecture » restitue ce contexte avant l’introduction. En bas du
+  guide, une divulgation pleine largeur et fermée par défaut explique l’origine, le périmètre,
+  les calculs, la fraîcheur et les limites. Elle détaille ensuite quatre calculs susceptibles
+  de surprendre — total de flotte, qualité, contrôles et risques ouverts — puis propose un
+  second niveau « Voir le contrat technique » pour les routes de lecture, le contrat temporel,
+  les jambes qui restent actuelles et la validation FastAPI → Zod. Aucun nouveau panneau en
+  carte n’est introduit.
+- Le navigateur live a confirmé le contexte « toute la flotte · Historique · 30 jours » et
+  l’instant localisé, le retour avec les mêmes paramètres, les deux divulgations accessibles et
+  la composition sans débordement au viewport desktop. Biome ciblé et TypeScript sont verts ;
+  les ratchets passent désormais 59 tests, dont les nouveaux cas de normalisation du contexte.
+  `make gate-twice` reste suspendu sur instruction.
+- Correctif de compréhension : « Votre lecture » devient « Contexte de départ ». Chaque mode
+  possède désormais une phrase propre afin de ne plus faire croire que « Maintenant » dure une
+  période : au présent, la phrase sépare l’état actuel de la fenêtre utilisée par certains
+  indicateurs ; en Historique et À un instant, elle nomme la lecture choisie. Une seconde ligne
+  dit explicitement que le même guide couvre Maintenant, Historique et À un instant.
+- Découverte du guide : sur une route déclarée dans le registre, une indication discrète est
+  attachée une seule fois au `?` du header. Elle explique que la page possède son guide et
+  propose de l’ouvrir. Fermeture ou ouverture écrit un acquittement versionné et propre à la
+  route dans le stockage local du navigateur ; les pages sans guide n’affichent rien. Le
+  coachmark disparaît temporairement lorsqu’un tiroir global du header est ouvert, ne porte
+  ni ombre, ni arrondi, ni boîte complète, et laisse ensuite le tooltip permanent
+  « Comprendre cette page » comme unique repère.
+- Preuve live : l’indication est apparue sous le `?` sur Vue d’ensemble en lecture Historique,
+  avec le bon lien profond ; sa fermeture l’a retirée du DOM et un rechargement de la même URL
+  l’a laissée absente. Le contexte du guide rend désormais « Contexte de départ », la lecture
+  Historique, 30 jours, l’instant sélectionné et la mention des trois modes. Biome, TypeScript,
+  diff-check et 60 tests ciblés sont verts. `make gate-twice` reste suspendu sur instruction.
+- Simplification après revue opérateur : le bloc visible « Contexte de départ » est supprimé.
+  Il n’expliquait pas la page et répétait un état que le visiteur venait de quitter. Le paramètre
+  `from` reste conservé silencieusement afin que « Retour à la vue d’ensemble » restaure la
+  lecture, la période, le périmètre et l’instant d’origine sans exposer cette plomberie dans le
+  guide. Le parseur désormais orphelin et les clés devenues inutiles sont retirés. Le navigateur
+  live confirme l’absence des trois phrases et un retour exact vers
+  `Historique · 30 jours · instant sélectionné`; Biome, TypeScript, diff-check et 58 tests
+  ciblés sont verts. `make gate-twice` reste suspendu sur instruction.
+
+## Aide contextuelle — généralisation au cockpit — 2026-07-24
+
+- Le registre couvre désormais les 29 destinations réellement exposées par la barre latérale,
+  les 9 onglets du workspace agent et la page de paramètres personnels : 39 guides en comptant
+  le pilote Vue d’ensemble. Les redirections techniques et les expériences métier hors cockpit
+  restent volontairement hors programme.
+- Vue d’ensemble conserve son guide éditorial sur mesure. Les 38 autres destinations passent
+  par une route contrôlée `/comprendre/[...segments]` et un gabarit commun sans empilement de
+  cartes : question utile, point de départ, parcours de lecture propre à la famille, décision
+  possible et divulgation repliée sur la source et les limites. Chaque page porte un contenu
+  propre en FR/EN/DE ; aucun texte visible n’est écrit dans le JSX.
+- Les routes agent normalisent l’identifiant dans le guide
+  (`/agents/<id>/prompts` → `/comprendre/agents/prompts`) tout en conservant silencieusement le
+  `from` complet. Le retour restitue donc l’agent, l’onglet, les filtres et, pour Historique, la
+  session détaillée. L’acquittement du coachmark est partagé entre agents pour un même onglet,
+  afin de ne pas réenseigner la même affordance à chaque sélection.
+- Les ratchets comparent désormais le registre aux feuilles réelles de `sidebar.tsx` et aux
+  onglets réels de `agent-tabs.tsx`, refusent une destination sans guide, vérifient la parité
+  structurelle des trois catalogues et soumettent le gabarit générique au cliquet anti-nombres
+  visibles. Ce dernier a été vu rouge sur le dégradé écrit dans le JSX, puis corrigé en déplaçant
+  la valeur structurelle hors rendu.
+- Preuves : les 117 URL issues de `39 guides × 3 langues` répondent 200 sur le preview. La revue
+  live du guide Sécurité confirme la composition sans débordement, la profondeur technique
+  fermée par défaut et le retour exact vers `Sécurité & confidentialité · 30 jours`. Biome,
+  TypeScript, diff-check, 63 tests frontend ciblés et 74 tests Python du périmètre stagé sont
+  verts. `make gate-twice` reste suspendu sur instruction.

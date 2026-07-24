@@ -691,10 +691,34 @@ class TestTheNaturePartition:
         rows = {r["id"]: r for r in chrome._queue_notifications("fr", NOW)}
         pending_business = rows["queue:pending:a_traiter"]
         assert pending_business["href"] == "/a-traiter"
+        assert pending_business["count"] == len(business_ids)
         assert str(len(business_ids)) in str(pending_business["label"])
         pending_eval = rows["queue:pending:a_faire"]
         assert pending_eval["href"] == "/a-faire"
+        assert pending_eval["count"] == len(eval_ids)
         assert str(len(eval_ids)) in str(pending_eval["label"])
+
+        for row in rows.values():
+            if row["id"].startswith("queue:overdue:"):
+                assert isinstance(row["count"], int)
+                assert (
+                    0
+                    < row["count"]
+                    <= rows[row["id"].replace("queue:overdue:", "queue:pending:")]["count"]
+                )
+
+    def test_the_chrome_names_human_actions_without_item_parentheses(self) -> None:
+        """The header speaks about approvals and evaluations, never generic ``item(s)``."""
+        from tessera.observability import chrome
+
+        assert chrome._counted_t("n_pending", 1, "fr") == ("Une validation attend votre décision")
+        assert chrome._counted_t("n_pending", 3, "fr") == ("3 validations attendent votre décision")
+        assert chrome._counted_t("n_pending_eval", 1, "en") == "One evaluation needs review"
+        assert chrome._counted_t("n_pending_eval", 3, "de") == (
+            "3 Evaluierungen müssen geprüft werden"
+        )
+        for language in ("fr", "de", "en"):
+            assert "(s)" not in chrome._counted_t("n_overdue", 3, language)
 
 
 def _operator_client(monkeypatch: pytest.MonkeyPatch) -> object:

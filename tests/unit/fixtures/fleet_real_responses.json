@@ -125,12 +125,14 @@
           {
             "id": "queue:pending",
             "label": "63 élément(s) en attente de validation",
+            "count": 63,
             "href": "/a-traiter",
             "tone": "warning"
           },
           {
             "id": "queue:overdue",
             "label": "63 élément(s) hors délai",
+            "count": 63,
             "href": "/a-traiter",
             "tone": "danger"
           }
@@ -167,12 +169,14 @@
           {
             "id": "queue:pending",
             "label": "63 Element(e) warten auf Freigabe",
+            "count": 63,
             "href": "/a-traiter",
             "tone": "warning"
           },
           {
             "id": "queue:overdue",
             "label": "63 Element(e) über der Frist",
+            "count": 63,
             "href": "/a-traiter",
             "tone": "danger"
           }
@@ -209,12 +213,14 @@
           {
             "id": "queue:pending",
             "label": "63 item(s) awaiting validation",
+            "count": 63,
             "href": "/a-traiter",
             "tone": "warning"
           },
           {
             "id": "queue:overdue",
             "label": "63 item(s) past their deadline",
+            "count": 63,
             "href": "/a-traiter",
             "tone": "danger"
           }

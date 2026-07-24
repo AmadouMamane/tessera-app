@@ -151,6 +151,45 @@ class TestTheDegradedPathSurvives:
         assert response.json() == {"available": False}
 
 
+def test_chrome_response_keeps_the_structured_notification_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FastAPI must not silently strip the count used by the compact action centre."""
+
+    monkeypatch.setattr(
+        fleet_routes.chrome_mod,
+        "compute_chrome",
+        lambda _lang: {
+            "badges": {
+                "a_traiter": {"count": 3, "tone": "warning"},
+                "a_faire": {"count": 0, "tone": "neutral"},
+                "incidents": {"count": 0, "tone": "neutral"},
+                "curation": {"count": 0, "tone": "neutral"},
+                "signal_catalog": {"count": 0, "tone": "neutral"},
+            },
+            "notifications": {
+                "count": 1,
+                "items": [
+                    {
+                        "id": "queue:pending:a_traiter",
+                        "label": "3 validations attendent une décision",
+                        "count": 3,
+                        "href": "/a-traiter",
+                        "tone": "warning",
+                    }
+                ],
+            },
+        },
+    )
+    app = FastAPI()
+    app.include_router(observability_router)
+
+    response = TestClient(app).get("/observability/chrome")
+
+    assert response.status_code == 200
+    assert response.json()["notifications"]["items"][0]["count"] == 3
+
+
 def _paths(node: object, prefix: str = "$") -> list[str]:
     """Every field path, index-agnostic — so a dropped key is visible wherever it hides."""
     out: list[str] = []

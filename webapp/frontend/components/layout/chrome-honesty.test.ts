@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const LAYOUT_DIR = "components/layout";
+const apiSchemas = readFileSync(join(root, "lib/api/schemas.ts"), "utf8");
 
 const layoutSources = readdirSync(join(root, LAYOUT_DIR))
   .filter((name) => name.endsWith(".tsx"))
@@ -27,9 +28,13 @@ const BADGE_LITERAL = /badge[A-Za-z]*\s*[:=]\s*\{?\s*["'`]?\d/;
 
 const COMPRENDRE_SOURCES = [
   "app/[locale]/comprendre/page.tsx",
+  "app/[locale]/comprendre/[...segments]/page.tsx",
+  "app/[locale]/comprendre/surveiller/vue-ensemble/page.tsx",
+  "components/comprendre/cockpit-page-guide.tsx",
   "components/comprendre/comprendre-shell.tsx",
   "components/comprendre/comprendre-v2-diagram.tsx",
   "components/comprendre/comprendre-v2-overview.tsx",
+  "components/comprendre/overview-page-guide.tsx",
 ] as const;
 
 interface NumericJsxOffender {
@@ -152,6 +157,9 @@ describe("the chrome reads its counts, it does not invent them", () => {
 
   it("the bell counts notifications the backend composed", () => {
     expect(appHeader).toContain("useChromeNotifications");
+    expect(apiSchemas).toContain("count: z.number().int().positive()");
+    expect(appHeader).toContain("count: pending?.count ?? undefined");
+    expect(appHeader).toContain("overdueCount: overdue?.count ?? 0");
   });
 
   it("the bell's accessible name carries the real count, never a static word", () => {

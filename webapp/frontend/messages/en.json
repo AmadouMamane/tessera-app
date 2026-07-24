@@ -41,7 +41,29 @@
     "business": "Business spaces",
     "exploreSpaces": "Explore the spaces",
     "notificationsWithCount": "Notifications: {count} fact(s) to act on",
-    "notificationsEmpty": "Notifications: nothing to act on"
+    "notificationsEmpty": "Notifications: nothing to act on",
+    "spacesMenu": {
+      "title": "Switch space",
+      "description": "Move from the bank’s tools to the client journey.",
+      "businessDescription": "Choose a working interface.",
+      "clientDescription": "See the client journey."
+    },
+    "actionCenter": {
+      "title": "To do",
+      "description": "Actions that need attention, grouped by topic.",
+      "deadline": {
+        "all": "All are past their deadline.",
+        "some": "{count, plural, one {# of {total} is past its deadline.} other {# of {total} are past their deadline.}}",
+        "none": "None are past their deadline."
+      },
+      "groups": {
+        "validations": "Approvals",
+        "evaluations": "Evaluations",
+        "agents": "Agents",
+        "proofs": "Evidence",
+        "other": "Other actions"
+      }
+    }
   },
   "nav": {
     "groups": {
@@ -8777,7 +8799,9 @@
   },
   "systemStatus": {
     "triggerLabel": "System status",
+    "triggerWithStatus": "System status: {status}",
     "title": "System posture",
+    "description": "The cockpit’s technical context and evidence status.",
     "environment": "Environment",
     "model": "Model",
     "residence": "Residency",
@@ -8794,6 +8818,7 @@
   "commandSearch": {
     "placeholder": "Search / Commands",
     "shortcut": "⌘K",
+    "tooltip": "Search — {shortcut}",
     "scope": {
       "cockpit": "Search agents, cases and signals",
       "business": "Search cases and clients"
@@ -9629,7 +9654,683 @@
     "launcherLink": "Understand Tessera in 3 minutes",
     "loginWelcome": "This is a demonstration: enter with one click using a trial role.",
     "helpMenu": "Help",
-    "helpUnderstand": "Understand Tessera"
+    "helpUnderstand": "Understand Tessera",
+    "helpThisPage": "Understand this page",
+    "coachmark": {
+      "title": "This page has its own guide",
+      "body": "See how to read it, where its data come from, and what its indicators can support.",
+      "open": "Open the guide",
+      "dismiss": "Hide this notice"
+    }
+  },
+  "pageHelp": {
+    "overview": {
+      "pageTitle": "Understand · Overview",
+      "pageLead": "Read the state of the fleet, spot what needs attention, and know where to act.",
+      "back": "Back to Overview",
+      "eyebrow": "Page guide",
+      "intro": {
+        "title": "Your starting point in the cockpit",
+        "body": "This page brings together the signals that answer three practical questions: is the fleet working as expected, what deserves your attention, and where should you investigate next? It does not replace the specialist pages; it helps you choose the right one.",
+        "note": "Read it from top to bottom. Each level adds detail without changing the question you started with."
+      },
+      "flow": {
+        "label": "How the page moves",
+        "notice": {
+          "title": "Notice",
+          "body": "The objective banner and key signals bring the most important gap forward."
+        },
+        "understand": {
+          "title": "Understand",
+          "body": "The time rail, agent view, and signals show where and when it is forming."
+        },
+        "act": {
+          "title": "Decide",
+          "body": "Links open the page where you can investigate, act, or review the evidence."
+        }
+      },
+      "journey": {
+        "eyebrow": "From top to bottom",
+        "title": "The reading path",
+        "lead": "You do not need to read everything on every visit. Go only as far as your question requires.",
+        "zones": {
+          "objective": {
+            "title": "The objective banner",
+            "body": "It compares observed quality with the service objective. Its colour shows the distance from the objective; the gauge shows where the measurement sits.",
+            "question": "Ask yourself: does this gap need immediate attention?"
+          },
+          "rail": {
+            "title": "The reading rail",
+            "body": "It sets the moment, period, scope, and comparison for the whole page. This is where you choose between the present, change over a period, and a past point in time.",
+            "question": "Ask yourself: which moment and scope am I actually looking at?"
+          },
+          "agents": {
+            "title": "The agent view",
+            "body": "It shows how each agent contributes to fleet activity. The total accounts for conversations that moved between agents whenever that reconciliation can be established.",
+            "question": "Ask yourself: does the situation come from the whole fleet or one particular agent?"
+          },
+          "signals": {
+            "title": "The essential signals",
+            "body": "Quality, controls, risks, version change, cost, and evidence provide a short reading of the situation. Each signal opens its source page.",
+            "question": "Ask yourself: which signal best explains what I am seeing?"
+          },
+          "detail": {
+            "title": "Signals and cases",
+            "body": "The tables detail controls, cases to handle, procedures, governed activity, and trends. They help you move from an observation to its cause.",
+            "question": "Ask yourself: which precise fact needs investigation or ownership?"
+          },
+          "decision": {
+            "title": "Decisions and evidence",
+            "body": "The action column brings together incidents, release control, shortcuts, and recent activity. The bottom of the page recalls the state of the evidence.",
+            "question": "Ask yourself: should I investigate further, intervene, or assemble evidence?"
+          }
+        }
+      },
+      "time": {
+        "eyebrow": "Time and scope",
+        "title": "What the rail really changes",
+        "lead": "The rail does not run an agent again. It changes how already observed facts are read.",
+        "scopeTitle": "The Agent filter changes the scope",
+        "scopeBody": "With “All agents”, you read the bank as a whole. With one agent selected, signals that can be attributed narrow to that agent; facts that remain global are labelled as such.",
+        "modes": {
+          "now": {
+            "title": "Now",
+            "body": "You see current signals. The blocks refresh while the page remains open."
+          },
+          "history": {
+            "title": "History",
+            "body": "You follow change across the selected period. The reading covers a window, not a single snapshot."
+          },
+          "instant": {
+            "title": "At a point in time",
+            "body": "You review the data as it stood at the chosen moment. Actions still apply to the present situation."
+          }
+        }
+      },
+      "honesty": {
+        "eyebrow": "Read without over-interpreting",
+        "title": "The signals that protect meaning",
+        "lead": "The page distinguishes what was measured, what remains current, and what cannot be supported in the selected reading.",
+        "notes": {
+          "dash": {
+            "title": "A dash is not zero",
+            "body": "It means the page does not have data strong enough to support a claim for this scope or point in time."
+          },
+          "live": {
+            "title": "A “live” badge in a past reading is deliberate",
+            "body": "Some controls describe the policy currently deployed. They do not claim to reconstruct an older policy."
+          },
+          "scope": {
+            "title": "A global signal stays global",
+            "body": "If a measurement cannot be attributed to an agent, the filter does not turn it into an individual measurement."
+          },
+          "refresh": {
+            "title": "Blocks may update in two stages",
+            "body": "After a period or time change, the fleet total may arrive before the heavier analyses. Previous values remain visible during the handover."
+          }
+        }
+      },
+      "decisions": {
+        "eyebrow": "Continue in the right place",
+        "title": "When to open another page",
+        "lead": "Overview provides direction. Specialist pages explain the cause and carry the actions.",
+        "items": {
+          "quality": {
+            "title": "Quality or a control is deteriorating",
+            "body": "Open AI Quality to review the results, evaluations, and affected controls."
+          },
+          "risk": {
+            "title": "A risk or anomaly appears",
+            "body": "Open Incidents & procedures to understand the case and the planned response."
+          },
+          "release": {
+            "title": "The version appears to have introduced a failure",
+            "body": "Open Release control to review the verdict before exposure."
+          },
+          "proof": {
+            "title": "You need to demonstrate the observed state",
+            "body": "Open State at date to assemble a verifiable reading for the relevant moment."
+          }
+        }
+      },
+      "data": {
+        "title": "Understand how these data are established",
+        "lead": "Origin, scope, calculations, freshness and limits — without interrupting the main reading.",
+        "foundations": {
+          "origin": {
+            "title": "Origin",
+            "body": "The page brings together persisted business events, the audit journal, evaluation results, fleet state and operational probes. It does not manufacture a measure from the display alone."
+          },
+          "scope": {
+            "title": "Scope",
+            "body": "The period bounds eligible facts. A point in time adds a cut-off. The agent filter narrows only signals that can genuinely be attributed to that agent; the others remain global."
+          },
+          "calculation": {
+            "title": "Calculation",
+            "body": "Aggregates come from the backend or from simple, named compositions. Missing data are never silently replaced with zero."
+          },
+          "freshness": {
+            "title": "Freshness",
+            "body": "In the present, sources refresh according to their cost. In a past reading, automatic refresh stops and queries read the selected point in time."
+          },
+          "limits": {
+            "title": "Limits",
+            "body": "Service state, some policy probes and the operator queue do not have a defensible history. They remain marked as current instead of being reconstructed artificially."
+          }
+        },
+        "calculations": {
+          "eyebrow": "Concrete examples",
+          "title": "What the page actually calculates",
+          "lead": "These rules explain the values most likely to raise questions.",
+          "items": {
+            "fleet": {
+              "title": "Fleet total",
+              "body": "Conversations observed for each agent are reconciled through their identity and attested transfers. A duplicate is removed only when that reconciliation can be established; otherwise the page states the uncertainty."
+            },
+            "quality": {
+              "title": "Quality",
+              "body": "The share of evaluated turns rated satisfactory is compared with the objective returned alongside the measure. Without any evaluated turn, the page shows a dash rather than a false zero."
+            },
+            "controls": {
+              "title": "Controls",
+              "body": "Counts include only controls with an available measure. In a past reading, rows remain in place but carry a dash when their data are missing."
+            },
+            "risks": {
+              "title": "Open risks",
+              "body": "The indicator adds detected anomalies and triggered procedures. If both sources are unavailable, no value is asserted."
+            }
+          }
+        },
+        "contract": {
+          "title": "View the technical contract",
+          "items": {
+            "fleet": {
+              "title": "Fleet read",
+              "body": "The /observability/fleet read receives the period and, when needed, the point in time. It returns per-agent measures and a reconciled bank total."
+            },
+            "snapshot": {
+              "title": "Aggregated signals",
+              "body": "The /observability/snapshot read groups quality, cost, risk and conformity signals. The at and agent parameters are passed only to sources that can honour them."
+            },
+            "time": {
+              "title": "Temporal contract",
+              "body": "The URL carries the reading, period, point in time, comparison and agent scope. The cursor settles before sources are queried, avoiding one request per pixel."
+            },
+            "live": {
+              "title": "Current-only legs",
+              "body": "Service health, readiness, policy probes and the operator queue remain current. The rail also keeps a global timeline to support navigation."
+            },
+            "validation": {
+              "title": "Validation",
+              "body": "Responses are bounded by FastAPI models and then checked by the BFF’s Zod schemas. A missing signal remains missing until it is honestly rendered as a dash."
+            }
+          }
+        }
+      },
+      "closing": {
+        "eyebrow": "Keep in mind",
+        "body": "Overview tells you where to look. It becomes useful when you start with a gap, check its context, and then open the page that lets you understand, act, or prove.",
+        "global": "Understand Tessera as a whole"
+      }
+    },
+    "sharedGuide": {
+      "pageTitle": "Understand · {page}",
+      "back": "Back to {page}",
+      "eyebrow": "Page guide",
+      "purpose": "The useful question",
+      "start": "Where to start",
+      "readingEyebrow": "The path",
+      "readingTitle": "Read the page without getting lost",
+      "actionEyebrow": "Decide",
+      "actionTitle": "What this page lets you do",
+      "dataTitle": "Understand how these data are established",
+      "dataOrigin": "What the page reads",
+      "dataLimit": "What it does not claim",
+      "reading": {
+        "agents": [
+          {
+            "title": "Set the scope",
+            "body": "Start with the scope: the whole fleet, a work queue, or one specific agent."
+          },
+          {
+            "title": "Prioritise",
+            "body": "Find the gap, status, or case that genuinely needs a decision."
+          },
+          {
+            "title": "Follow through",
+            "body": "Open the related agent, evidence, or action instead of interpreting an isolated number."
+          }
+        ],
+        "agent": [
+          {
+            "title": "Confirm the agent",
+            "body": "The agent selector defines the scope of the whole page."
+          },
+          {
+            "title": "Read the fact",
+            "body": "Distinguish what was observed, what was declared, and what remains unavailable."
+          },
+          {
+            "title": "Connect the views",
+            "body": "Use cross-links to move from configuration to behaviour and then to evidence."
+          }
+        ],
+        "monitor": [
+          {
+            "title": "Set the reading",
+            "body": "First choose the period, time mode, and scope that answer your question."
+          },
+          {
+            "title": "Spot the signal",
+            "body": "Read the main signal, then its gap from the target or selected comparison."
+          },
+          {
+            "title": "Find the cause",
+            "body": "Move down to the agents and events that explain the gap before acting."
+          }
+        ],
+        "act": [
+          {
+            "title": "Identify the case",
+            "body": "Start with the case, version, or rule that is waiting for a decision."
+          },
+          {
+            "title": "Check the context",
+            "body": "Review the related signals, tests, and evidence before taking action."
+          },
+          {
+            "title": "Act and record",
+            "body": "Take the proposed action; its outcome and author must remain verifiable."
+          }
+        ],
+        "prove": [
+          {
+            "title": "Define the search",
+            "body": "Set the object, period, and scope of the evidence you need."
+          },
+          {
+            "title": "Check the chain",
+            "body": "Check origin, integrity, and any gaps before reaching a conclusion."
+          },
+          {
+            "title": "Keep or export",
+            "body": "Prepare a verifiable item without turning missing data into certainty."
+          }
+        ],
+        "configure": [
+          {
+            "title": "See what is active",
+            "body": "Start with the version or configuration that is actually in force."
+          },
+          {
+            "title": "Measure the impact",
+            "body": "Find the agents, rules, and dependencies affected by a change."
+          },
+          {
+            "title": "Change under control",
+            "body": "Use the proposal, approval, and traceability path provided by the page."
+          }
+        ],
+        "admin": [
+          {
+            "title": "Choose the scope",
+            "body": "Identify the person, role, or system component concerned."
+          },
+          {
+            "title": "Check the real state",
+            "body": "Compare observed rights or state with what is expected."
+          },
+          {
+            "title": "Apply with evidence",
+            "body": "Make the authorised change and verify that it leaves a usable record."
+          }
+        ]
+      }
+    },
+    "guides": {
+      "fleet": {
+        "title": "Fleet",
+        "lead": "See the agents in the fleet and find the one that needs your attention.",
+        "question": "Which agents are active, how is their work distributed, and where should you look next?",
+        "start": "Start with the fleet overview, then open an agent only when a volume, status, or signal warrants investigation.",
+        "action": "Choose the agent to examine and go directly to its summary, evaluations, or configuration.",
+        "data": "The page joins the agent registry with the activity facts available for each agent.",
+        "limit": "No activity does not prove that an agent is useless or stopped; it only describes what the sources observed in the displayed scope."
+      },
+      "inbox": {
+        "title": "Needs attention",
+        "lead": "Bring together approvals and blocked actions that need a human decision.",
+        "question": "What cannot continue without an operator decision?",
+        "start": "Start with urgency and deadline, then open the case to understand what is blocked and what evidence supports the request.",
+        "action": "Approve, reject, or route the case to the right person while keeping the decision traceable.",
+        "data": "The queue is built from operator items that are genuinely pending and their current state.",
+        "limit": "The queue does not summarise every fleet risk; it only shows items explicitly waiting for intervention."
+      },
+      "todo": {
+        "title": "To do",
+        "lead": "Find failed evaluation cases that need to be understood and corrected.",
+        "question": "Which evaluation failures require investigation or correction?",
+        "start": "Start with overdue or recurring cases, then read the failure cause before opening the affected agent.",
+        "action": "Assign the review, document the correction, and rerun the evaluation when the change is ready.",
+        "data": "The page reads failed evaluation cases and their handling state from the operator queue.",
+        "limit": "One failed case does not by itself establish that an agent is poor overall; it identifies a specific scenario to examine."
+      },
+      "quality": {
+        "title": "AI quality",
+        "lead": "Track observed quality and the evaluations that precede release.",
+        "question": "Do answers meet the quality target, and are candidate versions ready?",
+        "start": "Choose between observed signals and evaluations, then start with the main gap before moving down to agents or cases.",
+        "action": "Open an agent’s evaluations, prioritise a correction, or inform a release decision.",
+        "data": "The reading combines observed quality signals and, in Evaluations view, the real results of evaluation runs.",
+        "limit": "An aggregate score does not replace failed cases or their coverage; a missing value remains missing evidence."
+      },
+      "security": {
+        "title": "Security & privacy",
+        "lead": "Understand attacks, personal data, access, and protections that were triggered.",
+        "question": "Which exchanges met a security or privacy risk, and how were they handled?",
+        "start": "Set the period and scope, then distinguish attempts, applied controls, and incidents that genuinely required action.",
+        "action": "Isolate the agent or risk type to investigate, then open the related incident, rule, or evidence.",
+        "data": "The page reads security, privacy, and control facts attached to observed exchanges.",
+        "limit": "No signal means no fact was reported in this scope; it is not a security certification."
+      },
+      "compliance": {
+        "title": "Compliance",
+        "lead": "Read the regulatory posture from actions and controls that were actually observed.",
+        "question": "Do agents follow the applicable obligations in the available facts?",
+        "start": "Start with the obligation or domain that is off track, then examine the agents and facts that make up this reading.",
+        "action": "Prioritise a check, open relevant evidence, or request a correction in the affected scope.",
+        "data": "The posture is calculated from governance facts and controls attached to the obligations being tracked.",
+        "limit": "This page provides an operational reading; it replaces neither legal advice nor a regulatory attestation."
+      },
+      "reliability": {
+        "title": "Reliability & cost",
+        "lead": "Track availability, response time, errors, and fleet consumption.",
+        "question": "Is the service operating at the expected reliability and cost level?",
+        "start": "Choose the period, find the availability, latency, error, or cost gap, then identify the contributing agent.",
+        "action": "Open the responsible agent or incident and decide whether to diagnose, limit, or correct.",
+        "data": "The page aggregates available service and usage facts for agents in scope.",
+        "limit": "An average can hide a spike or an outlier agent; always read the distribution and period before concluding."
+      },
+      "observability": {
+        "title": "Observability",
+        "lead": "Check the availability of Tessera, its dependencies, and its models.",
+        "question": "Is the technical chain required by the cockpit responding correctly?",
+        "start": "Start with the unavailable or degraded component, then read its latest check and affected dependencies.",
+        "action": "Route diagnosis to the right component and open the useful traces or procedures.",
+        "data": "The page reads health probes and technical states exposed by services and dependencies.",
+        "limit": "A green probe proves that one specific check responds at reading time; it does not guarantee that no other fault exists."
+      },
+      "improvement": {
+        "title": "Improvement",
+        "lead": "Choose useful corrections and measure their effect on agents.",
+        "question": "Which gaps deserve improvement, and is an effect visible after correction?",
+        "start": "Start with the largest gap, check its recurrence and agent, then compare the situation before and after the change.",
+        "action": "Prioritise an improvement, link it to an owner, and check its effect in later signals.",
+        "data": "The page joins available improvement signals, their priority, and observed changes.",
+        "limit": "An improvement correlated in time does not by itself prove that the change caused it."
+      },
+      "incidents": {
+        "title": "Incidents & procedures",
+        "lead": "Track an incident, apply the right procedure, and verify its resolution.",
+        "question": "Which incidents are open, which procedure applies, and how far has resolution progressed?",
+        "start": "Start with severity and deadline, then open the incident to read the facts, procedure, and actions already taken.",
+        "action": "Assign, apply a procedure step, escalate, or close with the expected evidence.",
+        "data": "The page reads the incident register, events, procedures, and current state.",
+        "limit": "Closure means the expected path was completed; it must not hide limitations or missing evidence."
+      },
+      "replay": {
+        "title": "Replay & shadow test",
+        "lead": "Replay a session and test a candidate version without exposing it to customers.",
+        "question": "How would another version have behaved on an exchange already observed?",
+        "start": "Choose a captured session and a candidate version, then compare the result without confusing replay with live traffic.",
+        "action": "Document a gap, feed an evaluation set, or decide that a version still needs correction.",
+        "data": "Replay uses captured session elements and executes the candidate version within the intended scope.",
+        "limit": "A replay measures one captured scenario; it does not predict behaviour across all production traffic."
+      },
+      "curation": {
+        "title": "Evaluation sets",
+        "lead": "Choose and enrich the exchanges used to evaluate agents.",
+        "question": "Do evaluation sets cover the cases that genuinely matter?",
+        "start": "Start with coverage gaps and cases to review, then check language, risk, and expected outcome.",
+        "action": "Accept, enrich, or discard a case to improve the next evaluation.",
+        "data": "The page reads candidate cases, their annotations, and their membership in evaluation sets.",
+        "limit": "A large number of cases does not ensure good coverage; diversity and expectation quality remain essential."
+      },
+      "release": {
+        "title": "Release",
+        "lead": "Check version, evaluations, and evidence before making an agent available.",
+        "question": "Does each agent meet the observable conditions required for release?",
+        "start": "Choose the agent, then read the evaluation verdict, candidate version, and required evidence together.",
+        "action": "Approve, hold, or send a version back for evaluation while keeping the decision and reasons verifiable.",
+        "data": "The page joins the evaluation seam, declared versions, and available release evidence.",
+        "limit": "Ready describes configured and completed checks; it is not an absolute guarantee of future behaviour."
+      },
+      "automations": {
+        "title": "Automated rules",
+        "lead": "Define what can run automatically and what remains subject to human approval.",
+        "question": "Which actions can trigger on their own, under what conditions, and with what control?",
+        "start": "Start with the active rule, its trigger, and authority level before reading its history.",
+        "action": "Propose, activate, suspend, or revise a rule through the expected approval path.",
+        "data": "The page reads declared automated rules, their state, and associated recorded executions.",
+        "limit": "An enabled rule does not claim that it was triggered; its execution must be confirmed by the journal."
+      },
+      "audit": {
+        "title": "Audit log",
+        "lead": "Find sensitive actions and verify their traceability chain.",
+        "question": "Who did what, when, to which object, and does the chain remain verifiable?",
+        "start": "Set the period and object, then read the event, its author, and its integrity status.",
+        "action": "Reconstruct a decision, follow an incident, or open the associated evidence.",
+        "data": "The page reads audit log entries and verifies their chain using the cockpit’s integrity semantics.",
+        "limit": "The journal proves what was recorded in it; it cannot attest an event that never reached this seam."
+      },
+      "evidence": {
+        "title": "Evidence centre",
+        "lead": "Collect, verify, and export the elements that document what happened.",
+        "question": "Which evidence exists for a given agent, period, or decision?",
+        "start": "Start with the required scope, then check each item’s status, provenance, and integrity.",
+        "action": "Assemble a pack, verify an item, or prepare an export for review.",
+        "data": "The page reads the evidence store and metadata that link each item to its origin.",
+        "limit": "A pack is complete only when expected items are present; an export fills no gap."
+      },
+      "asof": {
+        "title": "State at a date",
+        "lead": "Reconstruct the known state of an agent at a chosen point in time.",
+        "question": "What did the system know and use at that precise time?",
+        "start": "Choose the agent and date, then distinguish truly historical elements from those still shown as current.",
+        "action": "Compare two states, explain a past decision, or prepare a point-in-time review.",
+        "data": "The page rebuilds state from available versions and events up to the selected time.",
+        "limit": "What was not historised cannot be reconstructed; the page must say so rather than silently reuse current state."
+      },
+      "signals": {
+        "title": "Signal catalogue",
+        "lead": "Define each signal, its source, and the response expected when it changes.",
+        "question": "Which signals govern the cockpit, and what does each one mean?",
+        "start": "Find the signal, then read its definition, source, threshold, and expected response.",
+        "action": "Clarify or evolve a signal through the expected governance path.",
+        "data": "The page reads the declared signal catalogue and its governance metadata.",
+        "limit": "Declaring a signal does not prove that its source emits data; observation is checked on monitoring pages."
+      },
+      "platformGuardrails": {
+        "title": "Guardrails",
+        "lead": "See available protections and the agents to which they apply.",
+        "question": "Which protections are active, and what scope do they cover?",
+        "start": "Start with the rule and its mode, then check the agents using it and pending changes.",
+        "action": "Prepare a protection change and identify the agents that will need reevaluation.",
+        "data": "The page reads the platform guardrail catalogue and its declared consumers.",
+        "limit": "A declared protection is not proof that it triggered; execution facts provide that evidence."
+      },
+      "models": {
+        "title": "Models",
+        "lead": "See available models and the agents using each one.",
+        "question": "Which models are available and active, and which agents use them?",
+        "start": "Start with the model actually being served, then check its consumers and planned changes.",
+        "action": "Measure the impact of a model change and prepare reevaluation for affected agents.",
+        "data": "The page reads the model catalogue and declared bindings to agents.",
+        "limit": "A listed model demonstrates neither instant availability nor quality for a business case."
+      },
+      "connectors": {
+        "title": "Connectors",
+        "lead": "Understand the available connections between Tessera and external systems.",
+        "question": "Which connectors exist, how are they configured, and do they respond?",
+        "start": "Start with connector status, then read its configuration, scope, and latest check.",
+        "action": "Configure, diagnose, or remove a connection under the expected rights and controls.",
+        "data": "The page reads the connector registry, exposable configuration, and verification states.",
+        "limit": "A declared or reachable connector does not prove that every business operation will succeed."
+      },
+      "policies": {
+        "title": "Policies",
+        "lead": "Define platform rules and govern their changes.",
+        "question": "Which policies apply, and where is each change proposal in its lifecycle?",
+        "start": "Start with the active version, then compare the proposal, its scope, and required approvals.",
+        "action": "Propose, approve, reject, or trace a policy change.",
+        "data": "The page reads declared policies, versions, and governance history.",
+        "limit": "A written policy is not proof that it applied to an exchange; execution controls hold that evidence."
+      },
+      "sources": {
+        "title": "Sources & memory",
+        "lead": "See the documents and memories on which agents can rely.",
+        "question": "Which sources feed agents, are they fresh, and where are they used?",
+        "start": "Start with the active source, then check freshness, coverage, and the agents consuming it.",
+        "action": "Attach, disable, refresh, or investigate a source according to its state.",
+        "data": "The page reads the source catalogue, ingestion states, and bindings to agents.",
+        "limit": "An available source does not prove it was used in a specific answer; a citation or trace must establish that."
+      },
+      "parameters": {
+        "title": "Parameters",
+        "lead": "Configure cross-platform preferences and behaviours.",
+        "question": "Which cross-platform settings are active, and what would a change affect?",
+        "start": "Start with the current value and scope, then read the expected effect before changing it.",
+        "action": "Update an authorised setting and verify that it is taken into account.",
+        "data": "The page reads settings exposed by the platform and their currently stored values.",
+        "limit": "A stored value is not always proof of immediate effect; some changes require reload or redeployment."
+      },
+      "integrations": {
+        "title": "Integrations",
+        "lead": "Connect and monitor external services integrated with Tessera.",
+        "question": "Which integrations are active, configured, and correctly connected to the platform?",
+        "start": "Start with integration state, then read its capabilities, configuration, and latest exchanges.",
+        "action": "Configure, diagnose, or disable an integration through the expected path.",
+        "data": "The page reads the integration registry and technical states exposed by each integration.",
+        "limit": "An available global state does not guarantee every call succeeds or every received datum is valid."
+      },
+      "users": {
+        "title": "Users",
+        "lead": "Manage the people who can access Tessera and the state of their account.",
+        "question": "Who has an account, in which state, and with which assignments?",
+        "start": "Find the person, then check account state and assignments before opening their rights.",
+        "action": "Create, update, suspend, or inspect an account according to your permissions.",
+        "data": "The page reads the user registry and administrative attributes exposed by the platform.",
+        "limit": "Having an account does not describe effective permissions by itself; check them in Roles & access."
+      },
+      "roles": {
+        "title": "Roles & access",
+        "lead": "Manage roles, permissions, and effective access across the platform.",
+        "question": "Who can see or do what in Tessera, and why?",
+        "start": "Start with the role or user, then compare granted permissions with the actual need.",
+        "action": "Adjust an assignment or permission and verify its effect on the affected scope.",
+        "data": "The page joins identities, roles, and declared permissions to calculate visible access.",
+        "limit": "A rights matrix does not prove that an action occurred; the audit log carries that evidence."
+      },
+      "systemProfile": {
+        "title": "System profile",
+        "lead": "Read the environment’s technical configuration and operational state.",
+        "question": "In which environment is Tessera running, and which components are genuinely active?",
+        "start": "Start with environment and deployment mode, then check exposed models, dependencies, and states.",
+        "action": "Route a diagnosis, confirm a configuration, or prepare a technical review.",
+        "data": "The page reads exposable system configuration and operational states available at consultation time.",
+        "limit": "This profile describes the observed environment; it replaces neither a full infrastructure inventory nor a certification."
+      },
+      "settings": {
+        "title": "Personal settings",
+        "lead": "Adapt your experience without changing fleet governance.",
+        "question": "Which preferences apply to your use of the cockpit?",
+        "start": "Start with the preference you want to change and distinguish it from administrative platform settings.",
+        "action": "Change a personal preference and verify its effect in your session.",
+        "data": "The page reads preferences tied to your experience and the options your role may change.",
+        "limit": "A personal preference changes neither policies, agents, nor rights granted by administration."
+      },
+      "agentSummary": {
+        "title": "Agent summary",
+        "lead": "Bring together an agent’s identity, activity, performance, and alerts.",
+        "question": "What does this agent do, what state is it in, and what should you inspect?",
+        "start": "Confirm the selected agent, then start with the main alerts and indicators before opening details.",
+        "action": "Choose the next analysis: configuration, test, evaluation, knowledge, or history.",
+        "data": "The summary joins the agent’s declared record with available activity facts for the period.",
+        "limit": "Some legs remain current when no history exists; the page must say so rather than simulate a past state."
+      },
+      "agentConfigurations": {
+        "title": "Agent configurations",
+        "lead": "View and govern an agent’s identity, model, behaviour, and status.",
+        "question": "Which settings is this agent actually running with?",
+        "start": "Start with the active value and its origin, then check changes and inheritance before editing.",
+        "action": "Update an authorised setting or find the history of a configuration.",
+        "data": "The page reads the agent’s declared configuration, availability, and available governed changes.",
+        "limit": "At a past date, only historised elements can be read; the form and some states remain current."
+      },
+      "agentKnowledge": {
+        "title": "Agent knowledge",
+        "lead": "Understand the sources attached to this agent and their state.",
+        "question": "Which sources can this agent rely on, and are they usable?",
+        "start": "Start with active sources, then check coverage, freshness, language, and observed use.",
+        "action": "Attach, disable, or investigate a source, then verify its use in answers.",
+        "data": "The page reads sources attached to the agent and available usage or coverage indicators.",
+        "limit": "Attaching a source does not prove it grounded a specific answer; the citation or trace must show that."
+      },
+      "agentGuardrails": {
+        "title": "Agent guardrails",
+        "lead": "See the rules and protections that constrain this agent’s answers.",
+        "question": "Which protections apply to this agent, and in which mode?",
+        "start": "Start with the active rule, severity, and mode, then read its origin and changes.",
+        "action": "Prepare or review a protection change and connect the rule to observed controls.",
+        "data": "The page reads guardrails attached to the agent and their declared configuration.",
+        "limit": "An active rule does not prove it triggered; execution facts carry that evidence."
+      },
+      "agentPrompts": {
+        "title": "Agent instructions",
+        "lead": "See active instructions, versions, and language coverage.",
+        "question": "Which instructions guide this agent, and which version is actually served?",
+        "start": "Start with the active snapshot, then check languages, variables, tests, and change proposals.",
+        "action": "Review an instruction, prepare a version, or open the evaluations that must validate it.",
+        "data": "The page reads the agent instruction catalogue, versions, and governed proposal cycle.",
+        "limit": "A declared instruction is not enough to explain an answer; the turn trace shows what was actually assembled."
+      },
+      "agentBusiness": {
+        "title": "Agent business view",
+        "lead": "Read the business capabilities, signals, and runs genuinely attributed to this agent.",
+        "question": "Which business value does this agent produce, and under what level of control?",
+        "start": "Start with the main business signal, then move down to the capabilities and runs that compose it.",
+        "action": "Identify the capability to improve, run to review, or business control to strengthen.",
+        "data": "The page reads observed business facts attached to the agent’s declared capabilities.",
+        "limit": "An unattributed fact or insufficient observability remains absent; the page must not invent business value."
+      },
+      "agentEvaluations": {
+        "title": "Agent evaluations",
+        "lead": "Measure the agent’s answers and understand the verdict that precedes release.",
+        "question": "On which cases does this agent pass or fail, and can it be made available?",
+        "start": "Start with the verdict and selected run, then read failed cases, coverage, and languages.",
+        "action": "Prioritise a correction, compare runs, or inform the release decision.",
+        "data": "The page reads real evaluation runs, cases, scores, versions, and gate rules.",
+        "limit": "A high score does not automatically compensate for a failed critical case or missing coverage."
+      },
+      "agentConsole": {
+        "title": "Agent test console",
+        "lead": "Test the agent and observe the sources, tools, and protections used on each turn.",
+        "question": "How does this agent answer a specific case, and what happened during that turn?",
+        "start": "Check the agent and sandbox settings, run a turn, then read answer, sources, tools, guardrails, and trace.",
+        "action": "Understand a behaviour, export the trace, or send a useful case to evaluation.",
+        "data": "The console combines the live turn with metadata and traces made available by the test seam.",
+        "limit": "A console turn is a targeted test; it represents neither all production traffic nor a global verdict on the agent."
+      },
+      "agentHistory": {
+        "title": "Agent history",
+        "lead": "Find sessions, exchanges, quality, and compliance.",
+        "question": "What happened in this agent’s sessions, and which ones deserve review?",
+        "start": "Start with the period and sessions to watch, then open a session to read its turns and evidence.",
+        "action": "Reconstruct a session, compare outcomes, or send a case to test and evaluation.",
+        "data": "The page reads available sessions and transcripts for the agent, plus attached evaluations.",
+        "limit": "A session that was not captured cannot be reconstructed; an available transcript does not imply it was evaluated."
+      }
+    }
   },
   "agirRail": {
     "liveBadge": "Current state",

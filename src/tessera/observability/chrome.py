@@ -53,26 +53,6 @@ def _t(key: str, lang: str) -> str:
 
 
 _STRINGS: dict[str, tuple[str, str, str]] = {
-    "n_pending": (
-        "{n} élément(s) en attente de validation",
-        "{n} Element(e) warten auf Freigabe",
-        "{n} item(s) awaiting validation",
-    ),
-    "n_overdue": (
-        "{n} élément(s) hors délai",
-        "{n} Element(e) über der Frist",
-        "{n} item(s) past their deadline",
-    ),
-    "n_pending_eval": (
-        "{n} cas d'évaluation en échec à revoir",
-        "{n} fehlgeschlagene Evaluierungsfälle zu prüfen",
-        "{n} failed evaluation case(s) to review",
-    ),
-    "n_overdue_eval": (
-        "{n} cas d'évaluation hors délai",
-        "{n} Evaluierungsfälle über der Frist",
-        "{n} evaluation case(s) past their deadline",
-    ),
     "canary_red": (
         "Canary en échec : {agent}",
         "Canary fehlgeschlagen: {agent}",
@@ -89,6 +69,43 @@ _STRINGS: dict[str, tuple[str, str, str]] = {
         "Opposability seal degraded ({state})",
     ),
 }
+
+_COUNT_STRINGS: dict[str, tuple[tuple[str, str], tuple[str, str], tuple[str, str]]] = {
+    "n_pending": (
+        ("Une validation attend votre décision", "{n} validations attendent votre décision"),
+        (
+            "Eine Freigabe wartet auf Ihre Entscheidung",
+            "{n} Freigaben warten auf Ihre Entscheidung",
+        ),
+        (
+            "One approval is waiting for your decision",
+            "{n} approvals are waiting for your decision",
+        ),
+    ),
+    "n_overdue": (
+        ("Une validation a dépassé son délai", "{n} validations ont dépassé leur délai"),
+        ("Eine Freigabe ist überfällig", "{n} Freigaben sind überfällig"),
+        ("One approval is past its deadline", "{n} approvals are past their deadline"),
+    ),
+    "n_pending_eval": (
+        ("Une évaluation doit être revue", "{n} évaluations doivent être revues"),
+        ("Eine Evaluierung muss geprüft werden", "{n} Evaluierungen müssen geprüft werden"),
+        ("One evaluation needs review", "{n} evaluations need review"),
+    ),
+    "n_overdue_eval": (
+        ("Une évaluation a dépassé son délai", "{n} évaluations ont dépassé leur délai"),
+        ("Eine Evaluierung ist überfällig", "{n} Evaluierungen sind überfällig"),
+        ("One evaluation is past its deadline", "{n} evaluations are past their deadline"),
+    ),
+}
+
+
+def _counted_t(key: str, n: int, lang: str) -> str:
+    """Return human singular/plural chrome copy without ``item(s)`` placeholders."""
+    fr, de, en = _COUNT_STRINGS[key]
+    singular, plural = {"fr": fr, "de": de, "en": en}.get(lang, fr)
+    return (singular if n == 1 else plural).format(n=n)
+
 
 #: A seal that was never configured is the shipped default (``NoOpSealProvider``), not a
 #: degradation — alerting on it would teach the operator to ignore the bell. These three
@@ -217,6 +234,7 @@ def _canary_notifications(lang: str) -> list[dict[str, object]]:
                 {
                     "id": f"canary:{agent.id}",
                     "label": _t("canary_red", lang).format(agent=agent.name),
+                    "count": 1,
                     "href": "/surveiller/observabilite",
                     "tone": "danger",
                 }
@@ -249,6 +267,7 @@ def _ledger_notifications(lang: str) -> list[dict[str, object]]:
             {
                 "id": "ledger:integrity",
                 "label": _t("integrity_broken", lang),
+                "count": 1,
                 "href": "/prouver/etat-a-date",
                 "tone": "danger",
             }
@@ -258,6 +277,7 @@ def _ledger_notifications(lang: str) -> list[dict[str, object]]:
             {
                 "id": "ledger:seal",
                 "label": _t("seal_degraded", lang).format(state=seal_state),
+                "count": 1,
                 "href": "/prouver/etat-a-date",
                 "tone": "warning",
             }
@@ -291,7 +311,8 @@ def _queue_notifications(lang: str, now: datetime) -> list[dict[str, object]]:
         notifications.append(
             {
                 "id": f"queue:pending:{nature}",
-                "label": _t(pending_key, lang).format(n=len(open_items)),
+                "label": _counted_t(pending_key, len(open_items), lang),
+                "count": len(open_items),
                 "href": href,
                 "tone": "warning",
             }
@@ -301,7 +322,8 @@ def _queue_notifications(lang: str, now: datetime) -> list[dict[str, object]]:
             notifications.append(
                 {
                     "id": f"queue:overdue:{nature}",
-                    "label": _t(overdue_key, lang).format(n=len(overdue)),
+                    "label": _counted_t(overdue_key, len(overdue), lang),
+                    "count": len(overdue),
                     "href": href,
                     "tone": "danger",
                 }

@@ -41,7 +41,29 @@
     "business": "Espaces métier",
     "exploreSpaces": "Explorer les espaces",
     "notificationsWithCount": "Notifications : {count} fait(s) à traiter",
-    "notificationsEmpty": "Notifications : rien à traiter"
+    "notificationsEmpty": "Notifications : rien à traiter",
+    "spacesMenu": {
+      "title": "Changer d’espace",
+      "description": "Passer des outils de la banque au parcours client.",
+      "businessDescription": "Choisir une interface de travail.",
+      "clientDescription": "Voir le parcours client."
+    },
+    "actionCenter": {
+      "title": "À traiter",
+      "description": "Les actions à mener, regroupées par sujet.",
+      "deadline": {
+        "all": "Toutes ont dépassé leur délai.",
+        "some": "{count, plural, one {# sur {total} a dépassé son délai.} other {# sur {total} ont dépassé leur délai.}}",
+        "none": "Aucune n’a dépassé son délai."
+      },
+      "groups": {
+        "validations": "Validations",
+        "evaluations": "Évaluations",
+        "agents": "Agents",
+        "proofs": "Preuves",
+        "other": "Autres actions"
+      }
+    }
   },
   "nav": {
     "groups": {
@@ -8779,7 +8801,9 @@
   },
   "systemStatus": {
     "triggerLabel": "État système",
+    "triggerWithStatus": "État système : {status}",
     "title": "Posture système",
+    "description": "Le contexte technique et l’état des preuves du cockpit.",
     "environment": "Environnement",
     "model": "Modèle",
     "residence": "Résidence",
@@ -8796,6 +8820,7 @@
   "commandSearch": {
     "placeholder": "Rechercher / Commandes",
     "shortcut": "⌘K",
+    "tooltip": "Rechercher — {shortcut}",
     "scope": {
       "cockpit": "Rechercher agents, dossiers et signaux",
       "business": "Rechercher dossiers et clients"
@@ -9645,7 +9670,683 @@
     "launcherLink": "Comprendre Tessera en 3 minutes",
     "loginWelcome": "Ceci est une démonstration : entrez en un clic avec un rôle d'essai.",
     "helpMenu": "Aide",
-    "helpUnderstand": "Comprendre Tessera"
+    "helpUnderstand": "Comprendre Tessera",
+    "helpThisPage": "Comprendre cette page",
+    "coachmark": {
+      "title": "Cette page possède son propre guide",
+      "body": "Découvrez comment la lire, d’où viennent ses données et ce que ses indicateurs permettent d’affirmer.",
+      "open": "Ouvrir le guide",
+      "dismiss": "Masquer cette indication"
+    }
+  },
+  "pageHelp": {
+    "overview": {
+      "pageTitle": "Comprendre · Vue d’ensemble",
+      "pageLead": "Lire l’état de la flotte, repérer ce qui demande votre attention et savoir où agir.",
+      "back": "Retour à la vue d’ensemble",
+      "eyebrow": "Guide de la page",
+      "intro": {
+        "title": "Votre point de départ dans le cockpit",
+        "body": "Cette page rassemble les signaux qui permettent de répondre rapidement à trois questions : la flotte fonctionne-t-elle comme attendu, qu’est-ce qui mérite votre attention, et où poursuivre l’analyse ? Elle ne remplace pas les pages spécialisées : elle vous aide à choisir la bonne.",
+        "note": "Lisez-la du haut vers le bas. Chaque niveau ajoute du détail sans changer la question de départ."
+      },
+      "flow": {
+        "label": "Le mouvement de la page",
+        "notice": {
+          "title": "Repérer",
+          "body": "Le bandeau et les repères font ressortir l’écart qui mérite un regard."
+        },
+        "understand": {
+          "title": "Comprendre",
+          "body": "Le rail, la vue par agent et les signaux montrent où et quand il se forme."
+        },
+        "act": {
+          "title": "Décider",
+          "body": "Les liens ouvrent la page où approfondir, agir ou relire la preuve."
+        }
+      },
+      "journey": {
+        "eyebrow": "Du haut vers le bas",
+        "title": "Le parcours de lecture",
+        "lead": "Vous n’avez pas besoin de tout lire à chaque visite. Descendez seulement jusqu’au niveau qui répond à votre question.",
+        "zones": {
+          "objective": {
+            "title": "Le bandeau d’objectif",
+            "body": "Il compare la qualité observée à l’objectif de service. Sa couleur signale la distance à l’objectif ; la jauge montre où se situe la mesure.",
+            "question": "À vous demander : l’écart exige-t-il une attention immédiate ?"
+          },
+          "rail": {
+            "title": "Le rail de lecture",
+            "body": "Il fixe le moment, la période, la portée et la comparaison de toute la lecture. C’est ici que vous choisissez entre le présent, l’évolution d’une période et un instant passé.",
+            "question": "À vous demander : quel moment et quel périmètre suis-je réellement en train de regarder ?"
+          },
+          "agents": {
+            "title": "La vue par agent",
+            "body": "Elle montre comment chaque agent contribue à l’activité de la flotte. Le total tient compte des conversations qui ont circulé entre plusieurs agents lorsque ce rapprochement peut être établi.",
+            "question": "À vous demander : la situation vient-elle de toute la flotte ou d’un agent en particulier ?"
+          },
+          "signals": {
+            "title": "Les repères essentiels",
+            "body": "Qualité, contrôles, risques, changement de version, coût et preuves donnent une lecture courte de la situation. Chaque repère ouvre sa page source.",
+            "question": "À vous demander : quel signal explique le mieux ce que je vois ?"
+          },
+          "detail": {
+            "title": "Les signaux et les cas",
+            "body": "Les tableaux détaillent les contrôles, les cas à traiter, les procédures, l’activité gouvernée et les tendances. Ils servent à passer du constat à la cause.",
+            "question": "À vous demander : quel fait précis mérite une analyse ou une prise en charge ?"
+          },
+          "decision": {
+            "title": "Les décisions et les preuves",
+            "body": "La colonne d’action rassemble les incidents, le contrôle de mise en production, les raccourcis et les activités récentes. Le bas de page rappelle l’état des preuves.",
+            "question": "À vous demander : dois-je approfondir, intervenir ou constituer une preuve ?"
+          }
+        }
+      },
+      "time": {
+        "eyebrow": "Le temps et la portée",
+        "title": "Ce que le rail change vraiment",
+        "lead": "Le rail ne relance aucun agent. Il change la façon dont les faits déjà observés sont lus.",
+        "scopeTitle": "Le filtre Agent change la portée",
+        "scopeBody": "Avec « Tous les agents », vous lisez la banque dans son ensemble. Avec un agent sélectionné, les signaux qui savent être attribués se resserrent sur lui ; les faits qui restent globaux sont signalés comme tels.",
+        "modes": {
+          "now": {
+            "title": "Maintenant",
+            "body": "Vous voyez les signaux courants. Les blocs se rafraîchissent pendant que la page reste ouverte."
+          },
+          "history": {
+            "title": "Historique",
+            "body": "Vous suivez l’évolution pendant la période choisie. La lecture porte sur une fenêtre, pas sur une photographie unique."
+          },
+          "instant": {
+            "title": "À un instant",
+            "body": "Vous relisez les données telles qu’elles étaient au moment choisi. Les actions, elles, continuent de s’appliquer à la situation présente."
+          }
+        }
+      },
+      "honesty": {
+        "eyebrow": "Lire sans surinterpréter",
+        "title": "Les signes qui protègent le sens",
+        "lead": "La page distingue ce qui a été mesuré, ce qui reste actuel et ce qui ne peut pas être affirmé dans la lecture choisie.",
+        "notes": {
+          "dash": {
+            "title": "Un tiret n’est pas un zéro",
+            "body": "Il signifie que la page ne dispose pas d’une donnée suffisamment défendable pour ce périmètre ou cet instant."
+          },
+          "live": {
+            "title": "Un badge « live » dans une lecture passée est volontaire",
+            "body": "Certains contrôles décrivent la politique actuellement déployée. Ils ne prétendent pas reconstruire une politique ancienne."
+          },
+          "scope": {
+            "title": "Un signal global reste global",
+            "body": "Si une mesure ne peut pas être attribuée à un agent, le filtre ne la transforme pas artificiellement en mesure individuelle."
+          },
+          "refresh": {
+            "title": "Les blocs peuvent se mettre à jour en deux temps",
+            "body": "Après un changement de période ou d’instant, le total de la flotte peut arriver avant les analyses plus lourdes. Les anciennes valeurs restent visibles pendant la relève."
+          }
+        }
+      },
+      "decisions": {
+        "eyebrow": "Poursuivre au bon endroit",
+        "title": "Quand ouvrir une autre page",
+        "lead": "Vue d’ensemble oriente. Les pages spécialisées expliquent la cause et portent les actions.",
+        "items": {
+          "quality": {
+            "title": "La qualité ou un contrôle se dégrade",
+            "body": "Ouvrez Qualité IA pour lire les résultats, les évaluations et les contrôles concernés."
+          },
+          "risk": {
+            "title": "Un risque ou une anomalie apparaît",
+            "body": "Ouvrez Incidents et procédures pour comprendre le cas et la réponse prévue."
+          },
+          "release": {
+            "title": "La version semble avoir introduit un échec",
+            "body": "Ouvrez Contrôle de mise en production pour relire le verdict avant exposition."
+          },
+          "proof": {
+            "title": "Vous devez démontrer l’état observé",
+            "body": "Ouvrez État à date pour constituer une lecture vérifiable au moment utile."
+          }
+        }
+      },
+      "data": {
+        "title": "Comprendre comment ces données sont établies",
+        "lead": "Origine, périmètre, calculs, fraîcheur et limites — sans interrompre la lecture principale.",
+        "foundations": {
+          "origin": {
+            "title": "Origine",
+            "body": "La page assemble des événements métier persistés, le journal d’audit, les résultats d’évaluation, l’état de la flotte et des sondes de fonctionnement. Elle ne fabrique pas une mesure à partir du seul affichage."
+          },
+          "scope": {
+            "title": "Périmètre",
+            "body": "La période borne les faits admissibles. L’instant ajoute une date de coupure. Le filtre agent ne resserre que les signaux qui peuvent réellement lui être attribués ; les autres restent globaux."
+          },
+          "calculation": {
+            "title": "Calcul",
+            "body": "Les agrégats viennent du backend ou de compositions simples et nommées. Une donnée absente n’est jamais remplacée silencieusement par zéro."
+          },
+          "freshness": {
+            "title": "Fraîcheur",
+            "body": "Au présent, les sources se rafraîchissent selon leur coût. Dans le passé, l’actualisation automatique s’arrête et les requêtes relisent l’instant sélectionné."
+          },
+          "limits": {
+            "title": "Limites",
+            "body": "L’état du service, certaines sondes de politique et la file opérateur ne disposent pas d’un historique défendable. Ils restent signalés comme actuels au lieu d’être reconstruits artificiellement."
+          }
+        },
+        "calculations": {
+          "eyebrow": "Exemples concrets",
+          "title": "Ce que la page calcule réellement",
+          "lead": "Ces règles expliquent les valeurs les plus susceptibles de surprendre.",
+          "items": {
+            "fleet": {
+              "title": "Total de la flotte",
+              "body": "Les conversations observées par agent sont rapprochées grâce à leur identité et aux transferts attestés. Un doublon n’est retiré que si ce rapprochement peut être établi ; sinon la page signale l’incertitude."
+            },
+            "quality": {
+              "title": "Qualité",
+              "body": "La part des tours évalués comme satisfaisants est comparée à l’objectif renvoyé avec la mesure. Sans tour effectivement évalué, la page affiche un tiret et non un faux zéro."
+            },
+            "controls": {
+              "title": "Contrôles",
+              "body": "Les compteurs n’incluent que les contrôles qui disposent d’une mesure. En lecture passée, les lignes restent en place mais portent un tiret lorsque la donnée manque."
+            },
+            "risks": {
+              "title": "Risques ouverts",
+              "body": "Le repère additionne les anomalies détectées et les procédures déclenchées. Si les deux sources sont indisponibles, aucune valeur n’est affirmée."
+            }
+          }
+        },
+        "contract": {
+          "title": "Voir le contrat technique",
+          "items": {
+            "fleet": {
+              "title": "Lecture flotte",
+              "body": "La lecture /observability/fleet reçoit la période et, si nécessaire, l’instant. Elle renvoie les mesures par agent ainsi qu’un total de banque réconcilié."
+            },
+            "snapshot": {
+              "title": "Signaux agrégés",
+              "body": "La lecture /observability/snapshot regroupe les signaux de qualité, coût, risques et conformité. Les paramètres at et agent ne sont transmis qu’aux sources qui savent les honorer."
+            },
+            "time": {
+              "title": "Contrat temporel",
+              "body": "L’URL porte la lecture, la période, l’instant, la comparaison et la portée agent. Le curseur est stabilisé avant d’interroger les sources afin d’éviter une requête à chaque pixel."
+            },
+            "live": {
+              "title": "Jambes actuelles",
+              "body": "Santé du service, disponibilité, sondes de politique et file opérateur restent au présent. Le rail conserve aussi une chronologie globale pour permettre la navigation."
+            },
+            "validation": {
+              "title": "Validation",
+              "body": "Les réponses sont bornées par les modèles FastAPI puis vérifiées par les schémas Zod du BFF. Un signal absent reste absent jusqu’au rendu honnête sous forme de tiret."
+            }
+          }
+        }
+      },
+      "closing": {
+        "eyebrow": "À retenir",
+        "body": "Vue d’ensemble vous dit où regarder. Elle devient utile quand vous partez d’un écart, vérifiez son contexte, puis ouvrez la page qui permet de comprendre, d’agir ou de prouver.",
+        "global": "Comprendre Tessera dans son ensemble"
+      }
+    },
+    "sharedGuide": {
+      "pageTitle": "Comprendre · {page}",
+      "back": "Retour à {page}",
+      "eyebrow": "Guide de la page",
+      "purpose": "La question utile",
+      "start": "Par où commencer",
+      "readingEyebrow": "Le parcours",
+      "readingTitle": "Lire la page sans se perdre",
+      "actionEyebrow": "Décider",
+      "actionTitle": "Ce que cette page permet de faire",
+      "dataTitle": "Comprendre comment ces données sont établies",
+      "dataOrigin": "Ce que la page lit",
+      "dataLimit": "Ce qu’elle n’affirme pas",
+      "reading": {
+        "agents": [
+          {
+            "title": "Situer",
+            "body": "Commencez par le périmètre : toute la flotte, une file de travail ou un agent précis."
+          },
+          {
+            "title": "Prioriser",
+            "body": "Repérez l’écart, le statut ou le dossier qui demande réellement une décision."
+          },
+          {
+            "title": "Poursuivre",
+            "body": "Ouvrez l’agent, la preuve ou l’action liée au lieu d’interpréter un chiffre isolé."
+          }
+        ],
+        "agent": [
+          {
+            "title": "Confirmer l’agent",
+            "body": "Le sélecteur d’agent fixe le périmètre de toute la page."
+          },
+          {
+            "title": "Lire le fait",
+            "body": "Distinguez ce qui est observé, ce qui est déclaré et ce qui reste indisponible."
+          },
+          {
+            "title": "Relier",
+            "body": "Utilisez les liens croisés pour passer de la configuration au comportement, puis à la preuve."
+          }
+        ],
+        "monitor": [
+          {
+            "title": "Fixer la lecture",
+            "body": "Choisissez d’abord la période, le mode temporel et le périmètre qui répondent à votre question."
+          },
+          {
+            "title": "Repérer le signal",
+            "body": "Lisez le signal principal, puis son écart à l’objectif ou à la comparaison choisie."
+          },
+          {
+            "title": "Chercher la cause",
+            "body": "Descendez vers les agents et les événements qui expliquent l’écart avant d’agir."
+          }
+        ],
+        "act": [
+          {
+            "title": "Identifier le cas",
+            "body": "Commencez par le cas, la version ou la règle qui attend une décision."
+          },
+          {
+            "title": "Vérifier le contexte",
+            "body": "Relisez les signaux, les essais et les preuves associés avant toute action."
+          },
+          {
+            "title": "Agir et tracer",
+            "body": "Prenez l’action proposée ; son résultat et son auteur doivent rester vérifiables."
+          }
+        ],
+        "prove": [
+          {
+            "title": "Définir la recherche",
+            "body": "Fixez l’objet, la période et le périmètre de la preuve recherchée."
+          },
+          {
+            "title": "Vérifier la chaîne",
+            "body": "Contrôlez l’origine, l’intégrité et les éventuelles lacunes avant de conclure."
+          },
+          {
+            "title": "Conserver ou exporter",
+            "body": "Préparez un élément vérifiable sans transformer une absence de donnée en certitude."
+          }
+        ],
+        "configure": [
+          {
+            "title": "Voir l’état actif",
+            "body": "Commencez par la version ou la configuration effectivement en vigueur."
+          },
+          {
+            "title": "Mesurer l’impact",
+            "body": "Repérez les agents, règles et dépendances touchés par un changement."
+          },
+          {
+            "title": "Changer sous contrôle",
+            "body": "Utilisez le parcours de proposition, validation et traçabilité prévu par la page."
+          }
+        ],
+        "admin": [
+          {
+            "title": "Choisir le périmètre",
+            "body": "Identifiez la personne, le rôle ou la composante système concernée."
+          },
+          {
+            "title": "Vérifier l’état réel",
+            "body": "Comparez les droits ou l’état observé avec ce qui est attendu."
+          },
+          {
+            "title": "Appliquer avec preuve",
+            "body": "Effectuez le changement autorisé et vérifiez qu’il laisse une trace exploitable."
+          }
+        ]
+      }
+    },
+    "guides": {
+      "fleet": {
+        "title": "Flotte",
+        "lead": "Voir les agents qui composent la flotte et repérer celui qui demande votre attention.",
+        "question": "Quels agents sont actifs, comment se répartit leur activité et où faut-il regarder ensuite ?",
+        "start": "Commencez par la vue d’ensemble de la flotte, puis ouvrez un agent seulement lorsqu’un volume, un statut ou un signal justifie l’analyse.",
+        "action": "Choisir l’agent à examiner et rejoindre directement sa synthèse, ses évaluations ou sa configuration.",
+        "data": "La page rapproche le registre des agents et les faits d’activité disponibles pour chacun d’eux.",
+        "limit": "Une absence d’activité ne prouve pas qu’un agent est inutile ou arrêté ; elle décrit seulement ce que les sources ont observé sur le périmètre affiché."
+      },
+      "inbox": {
+        "title": "À traiter",
+        "lead": "Rassembler les validations et les actions bloquées qui attendent une décision humaine.",
+        "question": "Qu’est-ce qui ne peut pas continuer sans une décision de l’opérateur ?",
+        "start": "Commencez par l’urgence et le délai, puis ouvrez le dossier pour comprendre ce qui est bloqué et quelle preuve accompagne la demande.",
+        "action": "Valider, refuser ou orienter le dossier vers la personne compétente en gardant la décision traçable.",
+        "data": "La file est construite à partir des éléments opérateur réellement en attente et de leur état courant.",
+        "limit": "La file ne résume pas tous les risques de la flotte ; elle montre uniquement ce qui attend explicitement une intervention."
+      },
+      "todo": {
+        "title": "À faire",
+        "lead": "Retrouver les cas d’évaluation en échec qui doivent être compris puis corrigés.",
+        "question": "Quels échecs d’évaluation exigent une analyse ou une correction ?",
+        "start": "Commencez par les cas hors délai ou répétés, puis lisez la cause de l’échec avant d’ouvrir l’agent concerné.",
+        "action": "Affecter la revue, documenter la correction et relancer l’évaluation lorsque le changement est prêt.",
+        "data": "La page lit les cas d’évaluation en échec et leur état de traitement dans la file opérateur.",
+        "limit": "Un cas en échec n’établit pas à lui seul qu’un agent est globalement mauvais ; il signale un scénario précis à examiner."
+      },
+      "quality": {
+        "title": "Qualité IA",
+        "lead": "Suivre la qualité observée et les évaluations qui précèdent une mise à disposition.",
+        "question": "Les réponses atteignent-elles l’objectif de qualité et les versions candidates sont-elles prêtes ?",
+        "start": "Choisissez entre les signaux observés et les évaluations, puis partez de l’écart principal avant de descendre vers les agents ou les cas.",
+        "action": "Ouvrir les évaluations d’un agent, prioriser une correction ou alimenter une décision de mise en ligne.",
+        "data": "La lecture combine les signaux de qualité observés et, dans la vue Évaluations, les résultats réels des runs d’évaluation.",
+        "limit": "Un score agrégé ne remplace ni les cas en échec ni leur couverture ; une valeur absente reste une absence de preuve."
+      },
+      "security": {
+        "title": "Sécurité & confidentialité",
+        "lead": "Comprendre les attaques, les données personnelles, les accès et les protections déclenchées.",
+        "question": "Quels échanges ont rencontré un risque de sécurité ou de confidentialité, et comment ont-ils été traités ?",
+        "start": "Fixez la période et le périmètre, puis distinguez les tentatives, les contrôles appliqués et les incidents qui ont réellement nécessité une action.",
+        "action": "Isoler l’agent ou le type de risque à analyser, puis rejoindre l’incident, la règle ou la preuve correspondante.",
+        "data": "La page lit les faits de sécurité, de confidentialité et de contrôle rattachés aux échanges observés.",
+        "limit": "Aucun signal ne signifie qu’aucun fait n’a été remonté sur ce périmètre ; cela ne constitue pas une certification de sécurité."
+      },
+      "compliance": {
+        "title": "Conformité",
+        "lead": "Lire la posture réglementaire à partir des actions et contrôles réellement observés.",
+        "question": "Les agents respectent-ils les obligations applicables dans les faits disponibles ?",
+        "start": "Commencez par l’obligation ou le domaine qui s’écarte, puis examinez les agents et les faits qui composent cette lecture.",
+        "action": "Prioriser une vérification, ouvrir les preuves utiles ou demander une correction sur le périmètre concerné.",
+        "data": "La posture est calculée depuis les faits de gouvernance et les contrôles rattachés aux obligations suivies.",
+        "limit": "Cette page fournit une lecture opérationnelle ; elle ne remplace ni un avis juridique ni une attestation réglementaire."
+      },
+      "reliability": {
+        "title": "Fiabilité & coût",
+        "lead": "Suivre disponibilité, temps de réponse, erreurs et consommation de la flotte.",
+        "question": "Le service répond-il avec le niveau de fiabilité et de coût attendu ?",
+        "start": "Choisissez la période, repérez l’écart de disponibilité, de latence, d’erreur ou de coût, puis identifiez l’agent qui y contribue.",
+        "action": "Ouvrir l’agent ou l’incident responsable et décider s’il faut diagnostiquer, limiter ou corriger.",
+        "data": "La page agrège les faits de service et d’usage disponibles pour les agents du périmètre.",
+        "limit": "Une moyenne peut masquer un pic ou un agent atypique ; lisez toujours la distribution et la période avant de conclure."
+      },
+      "observability": {
+        "title": "Observabilité",
+        "lead": "Vérifier la disponibilité de Tessera, de ses dépendances et de ses modèles.",
+        "question": "La chaîne technique nécessaire au fonctionnement du cockpit répond-elle correctement ?",
+        "start": "Commencez par la composante indisponible ou dégradée, puis lisez sa dernière vérification et les dépendances touchées.",
+        "action": "Orienter le diagnostic vers la bonne composante et rejoindre les traces ou procédures utiles.",
+        "data": "La page lit les sondes de santé et les états techniques exposés par les services et dépendances.",
+        "limit": "Une sonde verte prouve qu’un contrôle précis répond au moment de la lecture ; elle ne garantit pas l’absence de tout défaut."
+      },
+      "improvement": {
+        "title": "Amélioration",
+        "lead": "Choisir les corrections utiles et mesurer leur effet sur les agents.",
+        "question": "Quels écarts méritent une amélioration et observe-t-on un effet après correction ?",
+        "start": "Partez de l’écart le plus important, vérifiez sa récurrence et son agent, puis comparez la situation avant et après le changement.",
+        "action": "Prioriser une amélioration, la relier à un responsable et vérifier son effet dans les signaux suivants.",
+        "data": "La page rapproche les signaux d’amélioration disponibles, leur priorité et les évolutions observées.",
+        "limit": "Une amélioration corrélée dans le temps ne prouve pas seule que le changement en est la cause."
+      },
+      "incidents": {
+        "title": "Incidents & procédures",
+        "lead": "Suivre un incident, appliquer la bonne procédure et contrôler sa résolution.",
+        "question": "Quels incidents sont ouverts, quelle procédure s’applique et où en est la résolution ?",
+        "start": "Commencez par la sévérité et le délai, puis ouvrez l’incident pour lire les faits, la procédure et les actions déjà menées.",
+        "action": "Affecter, appliquer une étape de procédure, escalader ou clôturer avec la preuve attendue.",
+        "data": "La page lit le registre des incidents, leurs événements, leurs procédures et leur état courant.",
+        "limit": "La clôture signifie que le parcours prévu est achevé ; elle ne doit pas effacer les limites ou preuves manquantes."
+      },
+      "replay": {
+        "title": "Rejeu & essai sans exposition",
+        "lead": "Rejouer une session et tester une version candidate sans l’exposer aux clients.",
+        "question": "Comment une autre version se serait-elle comportée sur un échange déjà observé ?",
+        "start": "Choisissez une session capturée et une version candidate, puis comparez le résultat sans confondre rejeu et trafic réel.",
+        "action": "Documenter un écart, alimenter un jeu d’évaluation ou décider qu’une version doit encore être corrigée.",
+        "data": "Le rejeu utilise les éléments capturés de la session et exécute la version candidate dans le périmètre prévu.",
+        "limit": "Un rejeu mesure un scénario capturé ; il ne prédit pas à lui seul le comportement sur toute la production."
+      },
+      "curation": {
+        "title": "Jeux d’évaluation",
+        "lead": "Choisir et enrichir les échanges qui servent à évaluer les agents.",
+        "question": "Les jeux d’évaluation couvrent-ils les cas qui comptent réellement ?",
+        "start": "Commencez par les lacunes de couverture et les cas à revoir, puis vérifiez la langue, le risque et le résultat attendu.",
+        "action": "Accepter, enrichir ou écarter un cas afin d’améliorer la prochaine évaluation.",
+        "data": "La page lit les cas candidats, leurs annotations et leur appartenance aux jeux d’évaluation.",
+        "limit": "Un grand nombre de cas n’assure pas une bonne couverture ; la diversité et la qualité des attentes restent essentielles."
+      },
+      "release": {
+        "title": "Mise en ligne",
+        "lead": "Vérifier la version, les évaluations et les preuves avant de mettre un agent à disposition.",
+        "question": "Chaque agent réunit-il les conditions observables nécessaires à sa mise en ligne ?",
+        "start": "Choisissez l’agent, puis lisez ensemble le verdict d’évaluation, la version candidate et les preuves requises.",
+        "action": "Autoriser, retenir ou remettre à évaluer une version en laissant la décision et ses motifs vérifiables.",
+        "data": "La page rapproche le seam d’évaluation, les versions déclarées et les preuves de mise en ligne disponibles.",
+        "limit": "Un statut prêt décrit les contrôles configurés et exécutés ; il ne constitue pas une garantie absolue sur le comportement futur."
+      },
+      "automations": {
+        "title": "Règles automatiques",
+        "lead": "Définir ce qui s’exécute automatiquement et ce qui reste soumis à validation humaine.",
+        "question": "Quelles actions peuvent se déclencher seules, sous quelles conditions et avec quel contrôle ?",
+        "start": "Commencez par la règle active, son déclencheur et son niveau d’autorité avant d’examiner son historique.",
+        "action": "Proposer, activer, suspendre ou réviser une règle dans le parcours de validation prévu.",
+        "data": "La page lit les règles automatiques déclarées, leur état et les exécutions tracées associées.",
+        "limit": "Une règle activée n’affirme pas qu’elle s’est déclenchée ; l’exécution doit être confirmée par son journal."
+      },
+      "audit": {
+        "title": "Journal d’audit",
+        "lead": "Retrouver les actions sensibles et vérifier leur chaîne de traçabilité.",
+        "question": "Qui a fait quoi, quand, sur quel objet et la chaîne reste-t-elle vérifiable ?",
+        "start": "Définissez la période et l’objet recherchés, puis lisez l’événement, son auteur et son statut d’intégrité.",
+        "action": "Reconstituer une décision, suivre un incident ou ouvrir l’élément de preuve associé.",
+        "data": "La page lit les entrées du journal d’audit et vérifie leur chaîne selon la sémantique d’intégrité du cockpit.",
+        "limit": "Le journal prouve ce qui y a été enregistré ; il ne peut pas attester un événement qui n’a jamais atteint cette couture."
+      },
+      "evidence": {
+        "title": "Centre de preuves",
+        "lead": "Rassembler, vérifier et exporter les éléments qui documentent ce qui s’est passé.",
+        "question": "Quelles preuves existent pour un agent, une période ou une décision donnée ?",
+        "start": "Commencez par le périmètre recherché, puis vérifiez le statut, la provenance et l’intégrité de chaque élément.",
+        "action": "Composer un dossier, vérifier une pièce ou préparer un export pour une revue.",
+        "data": "La page lit le magasin de preuves et les métadonnées qui permettent de relier chaque élément à son origine.",
+        "limit": "Un dossier ne devient complet que si les pièces attendues sont présentes ; un export ne comble aucune lacune."
+      },
+      "asof": {
+        "title": "État à date",
+        "lead": "Reconstituer l’état connu d’un agent à un instant choisi.",
+        "question": "Que savait et utilisait le système à cet instant précis ?",
+        "start": "Choisissez l’agent et la date, puis distinguez les éléments réellement historisés de ceux qui restent affichés au présent.",
+        "action": "Comparer deux états, expliquer une décision passée ou préparer une revue à date.",
+        "data": "La page recompose l’état depuis les versions et événements historisés disponibles jusqu’à l’instant choisi.",
+        "limit": "Ce qui n’est pas historisé ne peut pas être reconstruit ; la page doit le signaler plutôt que reprendre silencieusement l’état actuel."
+      },
+      "signals": {
+        "title": "Catalogue des signaux",
+        "lead": "Définir chaque signal, sa source et la conduite à tenir lorsqu’il évolue.",
+        "question": "Quels signaux gouvernent le cockpit et que signifie chacun d’eux ?",
+        "start": "Cherchez le signal, puis lisez sa définition, sa source, son seuil et la conduite attendue.",
+        "action": "Clarifier ou faire évoluer un signal dans le parcours de gouvernance prévu.",
+        "data": "La page lit le catalogue déclaré des signaux et leurs métadonnées de gouvernance.",
+        "limit": "Déclarer un signal ne prouve pas que sa source émet des données ; l’observation se vérifie sur les pages de surveillance."
+      },
+      "platformGuardrails": {
+        "title": "Garde-fous",
+        "lead": "Voir les protections disponibles et les agents auxquels elles s’appliquent.",
+        "question": "Quelles protections sont actives et quel périmètre couvrent-elles ?",
+        "start": "Commencez par la règle et son mode, puis vérifiez les agents qui l’utilisent et les changements en attente.",
+        "action": "Préparer une évolution de protection et identifier les agents qui devront être réévalués.",
+        "data": "La page lit le catalogue de garde-fous de la plateforme et leurs consommateurs déclarés.",
+        "limit": "Une protection déclarée n’est pas une preuve de déclenchement ; les contrôles réels se lisent dans les faits d’exécution."
+      },
+      "models": {
+        "title": "Modèles",
+        "lead": "Voir les modèles disponibles et les agents qui utilisent chacun d’eux.",
+        "question": "Quels modèles sont disponibles, actifs et utilisés par quels agents ?",
+        "start": "Commencez par le modèle effectivement servi, puis vérifiez ses consommateurs et les changements prévus.",
+        "action": "Mesurer l’impact d’un changement de modèle et préparer la réévaluation des agents concernés.",
+        "data": "La page lit le catalogue des modèles et les liaisons déclarées avec les agents.",
+        "limit": "La présence d’un modèle ne démontre ni sa disponibilité instantanée ni sa qualité sur un cas métier."
+      },
+      "connectors": {
+        "title": "Connecteurs",
+        "lead": "Comprendre les connexions disponibles entre Tessera et les systèmes externes.",
+        "question": "Quels connecteurs existent, comment sont-ils configurés et répondent-ils ?",
+        "start": "Commencez par le statut du connecteur, puis lisez sa configuration, son périmètre et sa dernière vérification.",
+        "action": "Configurer, diagnostiquer ou retirer une connexion selon les droits et contrôles prévus.",
+        "data": "La page lit le registre des connecteurs, leur configuration exposable et leurs états de vérification.",
+        "limit": "Un connecteur déclaré ou joignable ne prouve pas que chaque opération métier réussira."
+      },
+      "policies": {
+        "title": "Politiques",
+        "lead": "Définir les règles de la plateforme et gouverner leurs changements.",
+        "question": "Quelles politiques s’appliquent et où en est chaque proposition de changement ?",
+        "start": "Commencez par la version active, puis comparez la proposition, sa portée et les validations attendues.",
+        "action": "Proposer, approuver, rejeter ou retracer un changement de politique.",
+        "data": "La page lit les politiques déclarées, leurs versions et leur historique de gouvernance.",
+        "limit": "Une politique écrite ne prouve pas son application sur un échange ; cette preuve vit dans les contrôles d’exécution."
+      },
+      "sources": {
+        "title": "Sources & mémoire",
+        "lead": "Voir les documents et souvenirs sur lesquels les agents peuvent s’appuyer.",
+        "question": "Quelles sources alimentent les agents, sont-elles fraîches et où sont-elles utilisées ?",
+        "start": "Commencez par la source active, puis vérifiez sa fraîcheur, sa couverture et les agents qui la consomment.",
+        "action": "Rattacher, désactiver, rafraîchir ou investiguer une source selon son état.",
+        "data": "La page lit le catalogue des sources, leurs états d’ingestion et leurs liaisons avec les agents.",
+        "limit": "Une source disponible ne prouve pas qu’elle a été utilisée dans une réponse précise ; la citation ou la trace doit l’établir."
+      },
+      "parameters": {
+        "title": "Paramètres",
+        "lead": "Configurer les préférences et comportements transverses de la plateforme.",
+        "question": "Quels réglages transverses sont actifs et que changerait leur modification ?",
+        "start": "Commencez par la valeur actuelle et son périmètre, puis lisez l’effet attendu avant toute modification.",
+        "action": "Mettre à jour un réglage autorisé et vérifier sa prise en compte.",
+        "data": "La page lit les paramètres exposés par la plateforme et les valeurs actuellement enregistrées.",
+        "limit": "Une valeur enregistrée n’est pas toujours une preuve d’effet immédiat ; certaines modifications nécessitent rechargement ou redéploiement."
+      },
+      "integrations": {
+        "title": "Intégrations",
+        "lead": "Connecter et surveiller les services externes intégrés à Tessera.",
+        "question": "Quelles intégrations sont actives, configurées et correctement reliées à la plateforme ?",
+        "start": "Commencez par l’état de l’intégration, puis lisez ses capacités, sa configuration et ses derniers échanges.",
+        "action": "Configurer, diagnostiquer ou désactiver une intégration dans le parcours prévu.",
+        "data": "La page lit le registre des intégrations et les états techniques que chacune expose.",
+        "limit": "Un état global disponible ne garantit pas le succès de chaque appel ni la validité de toutes les données reçues."
+      },
+      "users": {
+        "title": "Utilisateurs",
+        "lead": "Gérer les personnes qui peuvent accéder à Tessera et l’état de leur compte.",
+        "question": "Qui possède un compte, avec quel état et quel rattachement ?",
+        "start": "Recherchez la personne, puis vérifiez son état de compte et ses rattachements avant d’ouvrir ses droits.",
+        "action": "Créer, mettre à jour, suspendre ou examiner un compte selon vos autorisations.",
+        "data": "La page lit le registre des utilisateurs et les attributs administratifs exposés par la plateforme.",
+        "limit": "La présence d’un compte ne décrit pas à elle seule ses permissions effectives ; celles-ci se vérifient dans Rôles & accès."
+      },
+      "roles": {
+        "title": "Rôles & accès",
+        "lead": "Gérer les rôles, permissions et accès effectifs à la plateforme.",
+        "question": "Qui peut voir ou faire quoi dans Tessera, et pourquoi ?",
+        "start": "Commencez par le rôle ou l’utilisateur, puis comparez les permissions accordées avec le besoin réel.",
+        "action": "Ajuster un rattachement ou une permission et vérifier l’effet sur le périmètre concerné.",
+        "data": "La page rapproche les identités, les rôles et les permissions déclarées pour calculer les accès visibles.",
+        "limit": "Une matrice de droits ne prouve pas qu’une action a été effectuée ; le journal d’audit porte cette preuve."
+      },
+      "systemProfile": {
+        "title": "Profil système",
+        "lead": "Lire la configuration technique de l’environnement et son état opérationnel.",
+        "question": "Dans quel environnement Tessera fonctionne-t-il et quelles composantes sont réellement actives ?",
+        "start": "Commencez par l’environnement et le mode de déploiement, puis vérifiez les modèles, dépendances et statuts exposés.",
+        "action": "Orienter un diagnostic, confirmer une configuration ou préparer une revue technique.",
+        "data": "La page lit la configuration système exposable et les états opérationnels disponibles au moment de la consultation.",
+        "limit": "Ce profil décrit l’environnement observé ; il ne remplace ni l’inventaire d’infrastructure complet ni une certification."
+      },
+      "settings": {
+        "title": "Paramètres personnels",
+        "lead": "Adapter les préférences de votre expérience sans modifier la gouvernance de la flotte.",
+        "question": "Quelles préférences s’appliquent à votre usage du cockpit ?",
+        "start": "Commencez par la préférence que vous souhaitez changer et distinguez-la des paramètres administratifs de la plateforme.",
+        "action": "Modifier une préférence personnelle et vérifier son effet dans votre session.",
+        "data": "La page lit les préférences liées à votre expérience et les options que votre rôle peut modifier.",
+        "limit": "Une préférence personnelle ne change ni les politiques, ni les agents, ni les droits accordés par l’administration."
+      },
+      "agentSummary": {
+        "title": "Synthèse de l’agent",
+        "lead": "Réunir l’identité, l’activité, la performance et les alertes d’un agent.",
+        "question": "Que fait cet agent, dans quel état se trouve-t-il et que faut-il examiner ?",
+        "start": "Confirmez l’agent sélectionné, puis partez des alertes et indicateurs principaux avant d’ouvrir les détails.",
+        "action": "Choisir la prochaine analyse : configuration, test, évaluation, connaissances ou historique.",
+        "data": "La synthèse rapproche la fiche déclarée de l’agent et les faits d’activité disponibles sur la période.",
+        "limit": "Certaines jambes restent au présent lorsque leur historique n’existe pas ; la page doit le signaler au lieu de simuler un passé."
+      },
+      "agentConfigurations": {
+        "title": "Configurations de l’agent",
+        "lead": "Voir et gouverner l’identité, le modèle, le comportement et le statut d’un agent.",
+        "question": "Avec quels réglages cet agent fonctionne-t-il réellement ?",
+        "start": "Commencez par la valeur active et son origine, puis vérifiez les changements et héritages avant de modifier.",
+        "action": "Mettre à jour un réglage autorisé ou retrouver l’historique d’une configuration.",
+        "data": "La page lit la configuration déclarée de l’agent, sa disponibilité et les changements gouvernés disponibles.",
+        "limit": "À une date passée, seuls les éléments historisés peuvent être relus ; le formulaire et certains statuts restent actuels."
+      },
+      "agentKnowledge": {
+        "title": "Connaissances de l’agent",
+        "lead": "Comprendre les sources auxquelles cet agent est rattaché et leur état.",
+        "question": "Sur quelles sources cet agent peut-il s’appuyer et sont-elles utilisables ?",
+        "start": "Commencez par les sources actives, puis vérifiez couverture, fraîcheur, langue et usage observé.",
+        "action": "Rattacher, désactiver ou investiguer une source, puis vérifier son usage dans les réponses.",
+        "data": "La page lit les sources rattachées à l’agent et les indicateurs d’usage ou de couverture disponibles.",
+        "limit": "Le rattachement d’une source ne prouve pas qu’elle a fondé une réponse précise ; la citation ou la trace doit le montrer."
+      },
+      "agentGuardrails": {
+        "title": "Garde-fous de l’agent",
+        "lead": "Voir les règles et protections qui encadrent les réponses de cet agent.",
+        "question": "Quelles protections s’appliquent à cet agent et dans quel mode ?",
+        "start": "Commencez par la règle active, sa sévérité et son mode, puis lisez son origine et ses changements.",
+        "action": "Préparer ou examiner une évolution de protection et relier la règle aux contrôles observés.",
+        "data": "La page lit les garde-fous rattachés à l’agent et leur configuration déclarée.",
+        "limit": "Une règle active ne prouve pas qu’elle s’est déclenchée ; les faits d’exécution portent cette preuve."
+      },
+      "agentPrompts": {
+        "title": "Instructions de l’agent",
+        "lead": "Voir les instructions actives, leurs versions et leur couverture linguistique.",
+        "question": "Quelles instructions guident cet agent et quelle version est réellement servie ?",
+        "start": "Commencez par l’instantané actif, puis vérifiez les langues, variables, tests et propositions de changement.",
+        "action": "Examiner une instruction, préparer une version ou rejoindre les évaluations qui doivent la valider.",
+        "data": "La page lit le catalogue d’instructions de l’agent, ses versions et le cycle gouverné des propositions.",
+        "limit": "Une instruction déclarée ne suffit pas à expliquer une réponse ; la trace du tour montre ce qui a effectivement été assemblé."
+      },
+      "agentBusiness": {
+        "title": "Métier de l’agent",
+        "lead": "Lire les capacités, signaux et exécutions métier réellement attribués à cet agent.",
+        "question": "Quelle valeur métier cet agent produit-il et avec quel niveau de contrôle ?",
+        "start": "Commencez par le signal métier principal, puis descendez vers les capacités et les exécutions qui le composent.",
+        "action": "Identifier la capacité à améliorer, l’exécution à revoir ou le contrôle métier à renforcer.",
+        "data": "La page lit les faits métier observés et rattachés aux capacités déclarées de l’agent.",
+        "limit": "Un fait non attribué ou un niveau d’observabilité insuffisant reste absent ; la page ne doit pas inventer la valeur métier."
+      },
+      "agentEvaluations": {
+        "title": "Évaluations de l’agent",
+        "lead": "Mesurer les réponses de l’agent et comprendre le verdict qui précède sa mise à disposition.",
+        "question": "Sur quels cas cet agent réussit-il, échoue-t-il et peut-il être mis à disposition ?",
+        "start": "Commencez par le verdict et le run sélectionné, puis lisez les cas en échec, la couverture et les langues.",
+        "action": "Prioriser une correction, comparer des runs ou alimenter la décision de mise en ligne.",
+        "data": "La page lit les runs d’évaluation réels, leurs cas, scores, versions et règles de porte.",
+        "limit": "Un score élevé ne compense pas automatiquement un cas critique en échec ou une couverture absente."
+      },
+      "agentConsole": {
+        "title": "Console de test de l’agent",
+        "lead": "Tester l’agent et observer les sources, outils et protections mobilisés sur chaque tour.",
+        "question": "Comment cet agent répond-il à un cas précis et que s’est-il passé pendant ce tour ?",
+        "start": "Vérifiez l’agent et les réglages du bac à sable, lancez un tour, puis lisez réponse, sources, outils, garde-fous et trace.",
+        "action": "Comprendre un comportement, exporter la trace ou envoyer un cas utile vers l’évaluation.",
+        "data": "La console combine le tour exécuté en direct avec les métadonnées et traces rendues disponibles par le seam de test.",
+        "limit": "Un tour de console est un test ciblé ; il ne représente ni toute la production ni un verdict global sur l’agent."
+      },
+      "agentHistory": {
+        "title": "Historique de l’agent",
+        "lead": "Retrouver les sessions, leurs échanges, leur qualité et leur conformité.",
+        "question": "Que s’est-il passé dans les sessions de cet agent et lesquelles méritent une revue ?",
+        "start": "Commencez par la période et les sessions à surveiller, puis ouvrez une session pour lire ses tours et ses preuves.",
+        "action": "Reconstituer une session, comparer les issues ou envoyer un cas vers le test et l’évaluation.",
+        "data": "La page lit les sessions et transcripts disponibles pour l’agent, ainsi que les évaluations qui leur sont rattachées.",
+        "limit": "Une session non capturée ne peut pas être reconstruite ; un transcript disponible n’implique pas qu’il ait été évalué."
+      }
+    }
   },
   "agirRail": {
     "liveBadge": "État présent",

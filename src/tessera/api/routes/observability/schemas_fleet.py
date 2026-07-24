@@ -145,6 +145,7 @@ class ChromeNotificationsItemsItem(BaseModel):
 
     id: str
     label: str
+    count: int
     href: str
     tone: str
 

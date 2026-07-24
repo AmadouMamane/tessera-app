@@ -37,7 +37,7 @@ function accountMenuIsRailBound(menuSource: string, sidebarSource: string): bool
 }
 
 describe("H1 shared header components", () => {
-  it("uses one tree-aware ledger wording source for the footer and system popover", () => {
+  it("uses one tree-aware ledger wording source for the footer and system tray", () => {
     expect(ledgerIntegrity).toContain("Content integrity is not the same signal");
     expect(ledgerIntegrity).toContain("integrityForkedAttested");
     expect(ledgerIntegrity).toContain("integrityForkedPending");
@@ -51,10 +51,16 @@ describe("H1 shared header components", () => {
 
   it("exposes a plan-scoped command-search input button with the shared shortcut", () => {
     expect(commandSearch).toContain('export type CommandSearchPlan = "cockpit" | "business"');
+    expect(commandSearch).toContain("compact?: boolean");
     expect(commandSearch).toContain('t("placeholder")');
     expect(commandSearch).toContain('t("shortcut")');
     expect(commandSearch).toContain('meta && event.key.toLowerCase() === "k"');
     expect(commandSearch).toContain("shell?.setPaletteOpen(true)");
+    expect(commandSearch).toContain('compact ? "h-[18px] w-[18px]"');
+    expect(commandSearch).toContain('"inline-flex h-9 w-9 items-center justify-center');
+    expect(commandSearch).toContain("strokeWidth={1.75}");
+    expect(commandSearch).toContain("<TooltipContent");
+    expect(commandSearch).toContain('t("tooltip", { shortcut: t("shortcut") })');
   });
 
   it("anchors account actions, language and theme under the user menu without a role toggle", () => {
@@ -119,22 +125,69 @@ describe("H1 shared header components", () => {
 describe("H2 cockpit header contract", () => {
   // 88px, not 56: the same rule height as the launcher's row and the sidebar's brand block,
   // so the top rule is one continuous line across the rail's edge.
-  it("renders the cockpit header as an 88px three-zone shell", () => {
+  it("renders the cockpit header as an 88px two-zone shell with one control dock", () => {
     expect(appHeader).toContain("grid min-h-[5.5rem]");
     expect(appHeader).toContain("grid-cols-[minmax(0,1fr)_auto]");
-    expect(appHeader).toContain(
+    expect(appHeader).not.toContain(
       "md:grid-cols-[minmax(10rem,1fr)_minmax(15rem,28rem)_minmax(10rem,1fr)]",
     );
-    expect(appHeader).toContain('<CommandSearch plan="cockpit"');
-    expect(appHeader).toContain("<SystemStatusPill");
+    expect(appHeader).toContain('data-testid="cockpit-control-dock"');
+    expect(appHeader).toContain('<CommandSearch plan="cockpit" compact />');
+    expect(appHeader).toContain("<SystemStatusTrigger");
+    expect(appHeader).toContain("<SystemStatusPanel");
+    expect(appHeader).toContain('const HEADER_TOOL_ICON_CLASS = "h-[18px] w-[18px]"');
+    expect(appHeader).toContain('className="flex h-11 items-center gap-1"');
+    expect(appHeader).not.toContain('className="flex h-11 items-center gap-1 rounded-xl border');
+    expect(appHeader).not.toContain("bg-[var(--tessera-surface)]/60");
+    expect(appHeader).not.toContain("border-cyan-400/20");
+    expect(appHeader).not.toContain("bg-emerald-400/10");
+    expect(appHeader).not.toContain("data-[state=open]:bg-[var(--tessera-muted)]");
+    expect(appHeader).toContain("data-[state=open]:after:bg-[var(--tessera-green)]");
+    expect(appHeader).not.toContain('className="mx-0.5 h-5 w-px');
     // The bell is a component now, not an icon with a frozen label: its accessible name
     // carries the real notification count (see chrome-honesty.test.ts). Asserting
     // `label="Notifications"` here would pin the static label the chrome lot removed.
-    expect(appHeader).toContain("<NotificationsBell />");
-    // The "?" is a menu now, and its label is localized: `label="Aide"` was French hardcoded
-    // into the header. Its first item is the door to /comprendre.
-    expect(appHeader).toContain("<HelpMenu />");
-    expect(appHeader).toContain('<Link href="/comprendre">');
+    expect(appHeader).toContain("<NotificationsTrigger");
+    expect(appHeader).toContain("<HelpLink");
+    expect(appHeader).toContain("<TooltipContent");
+    expect(appHeader).toContain("contextualHelpHref(pathname, searchParams.toString())");
+    expect(appHeader).toContain("hasContextualHelp(pathname)");
+    expect(appHeader).toContain("href={href}");
+    expect(appHeader).toContain("contextualHelpCoachmarkKey(pathname)");
+    expect(appHeader).toContain('window.localStorage.getItem(storageKey) !== "seen"');
+    expect(appHeader).toContain('window.localStorage.setItem(storageKey, "seen")');
+    expect(appHeader).toContain('data-testid="contextual-help-coachmark"');
+    expect(appHeader).toContain("contextual && coachmarkVisible && !suppressCoachmark");
+
+    const coachmark = appHeader.match(
+      /<aside[\s\S]*?data-testid="contextual-help-coachmark"[\s\S]*?<\/aside>/,
+    )?.[0];
+    expect(coachmark).toContain("border-cyan-300/45 border-l");
+    expect(coachmark).not.toContain("shadow");
+    expect(coachmark).not.toContain("rounded-");
+    expect(coachmark).not.toContain("border-r");
+    expect(coachmark).not.toContain("border-b");
+  });
+
+  it("groups actionable facts by their real destination and uses a dot, not a fake unread count", () => {
+    expect(appHeader).toContain("groupNotifications(items)");
+    expect(appHeader).toContain('href === "/a-traiter"');
+    expect(appHeader).toContain('href === "/a-faire"');
+    expect(appHeader).toContain('href === "/surveiller/observabilite"');
+    expect(appHeader).toContain('href === "/prouver/etat-a-date"');
+    expect(appHeader).toContain('item.id.startsWith("queue:pending:")');
+    expect(appHeader).toContain('item.id.startsWith("queue:overdue:")');
+    expect(appHeader).toContain("count: pending?.count ?? undefined");
+    expect(appHeader).toContain("overdueCount: overdue?.count ?? 0");
+    expect(appHeader).not.toMatch(/item\.label\.(match|includes|startsWith)/);
+    expect(appHeader).toContain('className="absolute right-1 top-1 h-2 w-2');
+    expect(appHeader).not.toContain("{items.length}\n            </span>");
+
+    const wrongCountLeg = appHeader.replace(
+      "count: pending?.count ?? undefined",
+      "count: overdue?.count ?? undefined",
+    );
+    expect(wrongCountLeg).not.toContain("count: pending?.count ?? undefined");
   });
 
   it("keeps cockpit preferences and identity anchored in the sidebar, not the header", () => {
@@ -147,18 +200,50 @@ describe("H2 cockpit header contract", () => {
     expect(cockpitAuthGate).toContain('role === "admin"');
     expect(cockpitAuthGate).toContain('role === "auditor"');
     expect(cockpitAuthGate).toContain('role === "superadmin"');
-    expect(appHeader).toContain("OperatorProductMenu");
+    expect(appHeader).toContain("OperatorProductTrigger");
+    expect(appHeader).toContain("OperatorProductPanel");
     expect(appHeader).toContain('href="/espaces"');
     expect(appHeader).toContain('href="/produit"');
     expect(appHeader).not.toContain("ModelBadge");
     expect(appHeader).not.toContain("StatusBadge");
   });
 
-  it("makes the system status popover visibly clickable and keeps the page subtitle in header", () => {
+  it("uses one attached shadowless tray for spaces, status and notifications", () => {
     expect(appHeader).toContain("description={description}");
     expect(appHeader).toContain("{description}");
+    expect(appHeader).toContain('type CockpitPanel = "spaces" | "status" | "notifications"');
+    expect(appHeader).toContain("activePanel ===");
+    expect(appHeader).toContain("id={COCKPIT_TRAY_ID}");
+    expect(appHeader).toContain('data-testid="cockpit-control-tray"');
+    expect(appHeader).toContain("top-[calc(100%+1.375rem)]");
+    expect(appHeader).toContain("border-[var(--tessera-border)] border-l");
+    expect(appHeader).not.toContain("rounded-b-xl");
+    expect(appHeader).not.toContain("border-x border-b");
+    expect(appHeader).toContain("bg-[var(--tessera-bg)]");
+    expect(appHeader).not.toContain("HEADER_PANEL_CLASS");
+    const tray = appHeader.match(
+      /<section[\s\S]*?data-testid="cockpit-control-tray"[\s\S]*?<\/section>/,
+    )?.[0];
+    expect(tray).not.toContain("shadow");
+    expect(tray).not.toContain("rounded-2xl");
+    expect(tray).not.toContain("border-t");
+    expect(systemStatus).not.toContain("@radix-ui/react-popover");
+    expect(systemStatus).not.toContain("Popover.Root");
+    expect(systemStatus).toContain("useSystemStatusState");
+    expect(systemStatus).toContain("SystemStatusTrigger");
+    expect(systemStatus).toContain("SystemStatusPanel");
     expect(systemStatus).toContain("cursor-pointer");
-    expect(systemStatus).toContain("ChevronDown");
+    expect(systemStatus).toContain("Activity");
+    expect(systemStatus).toContain('className="h-[18px] w-[18px]"');
+    expect(systemStatus).not.toContain("ChevronDown");
+    expect(systemStatus).toContain('t("description")');
+    expect(systemStatus).not.toContain("bg-green-500/10");
+    expect(systemStatus).not.toContain("data-[state=open]:bg-[var(--tessera-muted)]");
+    expect(systemStatus).toContain("data-[state=open]:after:bg-[var(--tessera-green)]");
+    expect(systemStatus).toContain("strokeWidth={1.75}");
+    expect(systemStatus).not.toContain("ServerCog");
+    expect(systemStatus).not.toContain("icon={");
+    expect(systemStatus).not.toContain("min-[1280px]:w-auto");
   });
 });
 
@@ -226,8 +311,29 @@ describe("H1 header i18n", () => {
     "app.clientSpace",
     "app.businessMenu",
     "app.demoExplore",
+    "app.spacesMenu.title",
+    "app.spacesMenu.description",
+    "app.spacesMenu.businessDescription",
+    "app.spacesMenu.clientDescription",
+    "app.actionCenter.title",
+    "app.actionCenter.description",
+    "app.actionCenter.deadline.all",
+    "app.actionCenter.deadline.some",
+    "app.actionCenter.deadline.none",
+    "app.actionCenter.groups.validations",
+    "app.actionCenter.groups.evaluations",
+    "app.actionCenter.groups.agents",
+    "app.actionCenter.groups.proofs",
+    "app.actionCenter.groups.other",
     "systemStatus.triggerLabel",
+    "systemStatus.triggerWithStatus",
     "systemStatus.title",
+    "systemStatus.description",
+    "comprendre.helpThisPage",
+    "comprendre.coachmark.title",
+    "comprendre.coachmark.body",
+    "comprendre.coachmark.open",
+    "comprendre.coachmark.dismiss",
     "systemStatus.environment",
     "systemStatus.model",
     "systemStatus.residence",
@@ -236,6 +342,7 @@ describe("H1 header i18n", () => {
     "systemStatus.environmentValue.local",
     "commandSearch.placeholder",
     "commandSearch.shortcut",
+    "commandSearch.tooltip",
     "commandSearch.scope.cockpit",
     "commandSearch.scope.business",
     "demoBadge.label",

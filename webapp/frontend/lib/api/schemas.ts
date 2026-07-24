@@ -6018,6 +6018,9 @@ export const ChromeSchema = z.object({
         z.object({
           id: z.string(),
           label: z.string(),
+          // Queue facts carry their measured population so the header can compose
+          // "all" / "x of y" without parsing a translated sentence.
+          count: z.number().int().positive(),
           href: z.string(),
           tone: z.enum(["danger", "warning", "neutral"]),
         }),
