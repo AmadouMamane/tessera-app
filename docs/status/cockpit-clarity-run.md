@@ -652,3 +652,14 @@ they no longer carry the explanation alone.
   point `y=98` appartient à un bouton du rail, plus au contenu sous-jacent.
 - Biome, TypeScript, diff-check et 62 tests ciblés sont verts. Une mutation qui rétablit
   `top-0` rend le ratchet rouge. `make gate-twice` reste suspendu.
+
+## Avatar de compte neutre — 2026-07-24
+
+- Finding live : le fond vert plein de l’avatar réutilisait la couleur des états opérationnels
+  et pouvait donc être lu comme un signal « actif » ou « sain » plutôt que comme une identité.
+- Correction : le déclencheur du rail et l’avatar miniature du compte courant partagent un
+  token identitaire neutre — surface élevée, contour cyan discret, texte du thème, sans halo
+  ni point d’état. Le vert reste réservé aux faits opérationnels.
+- Revue live sur `:3098` validée dans le rail et dans le sous-menu Comptes. Biome, TypeScript,
+  diff-check et 56 tests ciblés sont verts ; une mutation réintroduisant
+  `var(--tessera-green)` rend le ratchet rouge. `make gate-twice` reste suspendu.

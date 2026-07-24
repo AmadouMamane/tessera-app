@@ -89,6 +89,21 @@ describe("H1 shared header components", () => {
     expect(userMenu).toContain("{compact ? null : (");
   });
 
+  it("keeps account avatars visually neutral instead of reusing the operational green", () => {
+    const avatarClass = userMenu.match(/const IDENTITY_AVATAR_CLASS =\s*\n?\s*"([^"]+)"/)?.[1];
+
+    expect(avatarClass).toContain("bg-[var(--tessera-surface-elevated)]");
+    expect(avatarClass).toContain("border-cyan-300/30");
+    expect(userMenu).not.toContain("tessera-green");
+    expect(userMenu.match(/IDENTITY_AVATAR_CLASS/g)).toHaveLength(3);
+
+    const signalMutation = avatarClass?.replace(
+      "bg-[var(--tessera-surface-elevated)]",
+      "bg-[var(--tessera-green)]",
+    );
+    expect(signalMutation).toContain("tessera-green");
+  });
+
   it("uses the cockpit brand as a localized route back to the home page", () => {
     const brandHeader = sidebar.match(/function BrandHeader[\s\S]*?function IdentityBlock/)?.[0];
 

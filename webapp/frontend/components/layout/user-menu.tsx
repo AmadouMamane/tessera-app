@@ -47,6 +47,9 @@ interface UserMenuProps {
 
 type OpenSubmenu = "account" | "customize" | "help" | null;
 
+const IDENTITY_AVATAR_CLASS =
+  "border border-cyan-300/30 bg-[var(--tessera-surface-elevated)] text-[var(--tessera-text)]";
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "··";
@@ -109,7 +112,12 @@ export function UserMenu({ role, compact = false, className }: UserMenuProps) {
             className,
           )}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green)] text-[0.68rem] font-semibold text-[#031810]">
+          <span
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.68rem] font-semibold",
+              IDENTITY_AVATAR_CLASS,
+            )}
+          >
             {initials(roleLabel)}
           </span>
           {compact ? null : (
@@ -149,7 +157,12 @@ export function UserMenu({ role, compact = false, className }: UserMenuProps) {
               onSelect={(event) => event.preventDefault()}
               className="gap-2 rounded-lg px-2 py-2"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-green)] text-[0.56rem] font-semibold text-[#031810]">
+              <span
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.56rem] font-semibold",
+                  IDENTITY_AVATAR_CLASS,
+                )}
+              >
                 {initials(roleLabel)}
               </span>
               <span className="min-w-0 flex-1">
