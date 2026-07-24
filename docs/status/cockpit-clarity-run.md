@@ -632,3 +632,8 @@ they no longer carry the explanation alone.
 - Le ratchet numérique a révélé un `viewGroups.length > 0` antérieur dans le JSX du guide ;
   le littéral a été retiré sans élargir la liste blanche. Biome, TypeScript et 65 tests ciblés
   sont verts. `make gate-twice` reste suspendu conformément à l’instruction utilisateur.
+- Extension Vue d’ensemble : son guide sur mesure conservait indépendamment l’ancien retrait
+  de `8 %`. Ce n’était pas une régression du correctif précédent, mais une seconde implémentation
+  non couverte. Elle utilise désormais le même ancrage de bord à bord ; mesure live sur `:3098`,
+  trait et conteneur ont tous deux `x=276 → 1246`, soit `970 px`. Le ratchet couvre maintenant
+  les deux composants. Biome, TypeScript et 45 tests ciblés sont verts.

@@ -20,6 +20,10 @@ const cockpitPageGuide = readFileSync(
   join(root, "components/comprendre/cockpit-page-guide.tsx"),
   "utf8",
 );
+const overviewPageGuide = readFileSync(
+  join(root, "components/comprendre/overview-page-guide.tsx"),
+  "utf8",
+);
 
 describe("contextual cockpit help", () => {
   it("opens a static guide and preserves the current reading", () => {
@@ -147,16 +151,22 @@ describe("contextual cockpit help", () => {
     expect(Object.keys(messages[0].pageHelp.guides).sort()).toEqual(declaredKeys);
   });
 
-  it("keeps the guide opening inset and the reading connector continuous", () => {
+  it("keeps the guide opening inset and every reading connector continuous", () => {
     expect(cockpitPageGuide).toContain("border-[var(--tessera-border)] border-y px-5 py-10");
     expect(cockpitPageGuide).toContain("absolute inset-x-0 top-5 hidden h-px bg-gradient-to-r");
+    expect(overviewPageGuide).toContain("absolute inset-x-0 top-5 hidden h-px bg-gradient-to-r");
 
     const flushOpening = cockpitPageGuide.replace("border-y px-5 py-10", "border-y py-10");
     const shortenedConnector = cockpitPageGuide.replace(
       "absolute inset-x-0 top-5",
       "absolute left-[8%] right-[8%] top-5",
     );
+    const shortenedOverviewConnector = overviewPageGuide.replace(
+      "absolute inset-x-0 top-5",
+      "absolute left-[8%] right-[8%] top-5",
+    );
     expect(flushOpening).not.toContain("border-y px-5 py-10");
     expect(shortenedConnector).not.toContain("absolute inset-x-0 top-5");
+    expect(shortenedOverviewConnector).not.toContain("absolute inset-x-0 top-5");
   });
 });

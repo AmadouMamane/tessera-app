@@ -112,7 +112,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
             {t("flow.label")}
           </p>
           <div className="relative grid gap-0 sm:grid-cols-3">
-            <div className="absolute left-[8%] right-[8%] top-5 hidden h-px bg-gradient-to-r from-rose-300/40 via-cyan-300/50 to-violet-300/40 sm:block" />
+            <div className="absolute inset-x-0 top-5 hidden h-px bg-gradient-to-r from-rose-300/40 via-cyan-300/50 to-violet-300/40 sm:block" />
             {(["notice", "understand", "act"] as const).map((key) => (
               <div
                 key={key}
