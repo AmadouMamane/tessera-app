@@ -397,7 +397,11 @@ function Profile({ data, className }: { data: Data; className?: string }) {
             unoptimized
             className={cn(
               "h-full w-full object-cover",
-              agentId === "support-client" ? "scale-125" : /hello|turn|duplex/.test(agentId) ? "scale-105" : "scale-100"
+              agentId === "support-client"
+                ? "scale-125"
+                : /hello|turn|duplex/.test(agentId)
+                  ? "scale-105"
+                  : "scale-100",
             )}
           />
         </div>

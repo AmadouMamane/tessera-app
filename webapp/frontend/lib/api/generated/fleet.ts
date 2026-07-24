@@ -622,6 +622,7 @@ export const ChromeBadgesSchema = z.object({
 export const ChromeNotificationsItemsItemSchema = z.object({
   id: z.string(),
   label: z.string(),
+  count: z.number().int(),
   href: z.string(),
   tone: z.string(),
 });

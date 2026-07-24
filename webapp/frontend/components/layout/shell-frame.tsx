@@ -40,9 +40,7 @@ export function ShellFrame({
             )}
           >
             {pageSubtitle ? (
-              <p className="max-w-4xl text-sm text-[var(--tessera-text-muted)]">
-                {pageSubtitle}
-              </p>
+              <p className="max-w-4xl text-sm text-[var(--tessera-text-muted)]">{pageSubtitle}</p>
             ) : null}
             {children}
           </div>
