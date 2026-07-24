@@ -31,8 +31,13 @@ RUN apt-get update \
 COPY pyproject.toml uv.lock* ./
 RUN uv sync --frozen --no-install-project --no-dev
 
-# Then copy the source and install the project itself.
+# Then copy the source and install the project itself. `eval/` is a first-party
+# package the wheel ships (pyproject: packages = ["src/tessera", "eval"]) — the
+# agent imports eval.* at runtime (src/tessera/observability/eval_floor.py and
+# five siblings). Without it here, hatchling silently builds a wheel missing eval
+# and the container dies at startup with ModuleNotFoundError: No module named 'eval'.
 COPY src ./src
+COPY eval ./eval
 COPY README.md LICENSE ./
 RUN uv sync --frozen --no-dev
 
@@ -58,6 +63,11 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/src /app/src
+# The project is installed editable: the venv's .pth adds /app and /app/src to
+# sys.path rather than copying code into site-packages. `import tessera` resolves
+# to /app/src/tessera; `import eval` (observability/eval_floor.py + 5 siblings)
+# resolves to /app/eval — which must therefore exist in the runtime stage too.
+COPY --from=builder /app/eval /app/eval
 
 # Hardening (ADR 0008): remove pip entirely (binaries + package + dist-info, in
 # both the venv and the base image's system site-packages) so a compromised
