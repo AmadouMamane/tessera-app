@@ -1,5 +1,6 @@
 "use client";
 
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -144,7 +145,7 @@ export function SourcesOverview() {
     staleTime: 60_000,
   });
 
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useUrlBackedView(VIEWS, "overview");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);

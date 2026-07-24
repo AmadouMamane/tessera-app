@@ -9889,6 +9889,170 @@
         "global": "Comprendre Tessera dans son ensemble"
       }
     },
+    "viewAtlas": {
+      "eyebrow": "Les vues de la page",
+      "title": "Choisir la bonne lecture",
+      "lead": "Chaque onglet répond à une question différente. La vue que vous consultiez est signalée ; les autres restent expliquées pour vous aider à poursuivre.",
+      "surfaceTitle": "Les deux lectures de Qualité IA",
+      "current": "Vue consultée",
+      "see": "Ouvrir",
+      "open": "Ouvrir la vue {view}"
+    },
+    "viewDescriptions": {
+      "quality": {
+        "surfaces": {
+          "signals": "Suit la qualité observée en continu, ses objectifs, ses écarts et la fiabilité des mesures.",
+          "evaluations": "Vérifie une version avant sa mise à disposition sur un jeu de cas gouverné."
+        },
+        "signals": {
+          "overview": "Réunit l’objectif, la tendance, la couverture et les alertes pour orienter la première lecture.",
+          "signals": "Détaille chaque signal, son état, sa portée et la source qui l’établit.",
+          "runs": "Montre les campagnes qui alimentent la mesure continue et leur état d’exécution.",
+          "failed": "Isole les cas en échec afin de comprendre leur gravité, leur cause et leur suivi.",
+          "models": "Compare les modèles observés sans confondre leur contribution avec celle du jeu de test.",
+          "judge": "Mesure la stabilité du juge et les désaccords qui fragilisent l’interprétation des scores."
+        },
+        "evaluations": {
+          "cases": "Décrit le jeu de cas versionné : couverture, langues, catégories et exigences attendues.",
+          "runs": "Présente le verdict d’une campagne, ses seuils et les cas qui déterminent la décision.",
+          "compare": "Compare deux campagnes à périmètre constant pour attribuer correctement les écarts."
+        }
+      },
+      "security": {
+        "page": {
+          "overview": "Rassemble les protections, les incidents et les écarts qui méritent une analyse.",
+          "promptInjection": "Suit les tentatives de détournement des instructions et la réponse des protections.",
+          "pii": "Montre les risques d’exposition de données personnelles et les contrôles associés.",
+          "guard": "Explique les décisions du garde-fou au point de contrôle des appels d’outils.",
+          "tools": "Vérifie les permissions, les arguments et les refus liés aux outils.",
+          "memory": "Suit les risques de persistance, de portée et d’effacement de la mémoire.",
+          "isolation": "Contrôle la séparation entre utilisateurs, agents et contextes métier.",
+          "redteam": "Présente les scénarios adverses exécutés et les faiblesses encore ouvertes."
+        }
+      },
+      "compliance": {
+        "page": {
+          "overview": "Résume la couverture réglementaire, les écarts et les preuves disponibles.",
+          "mapping": "Relie les cadres réglementaires aux contrôles et aux composantes qui les portent.",
+          "obligations": "Détaille chaque obligation, son état et la responsabilité qui lui est associée.",
+          "evaluations": "Montre les contrôles évalués et les résultats qui soutiennent la lecture de conformité.",
+          "incidents": "Isole les événements susceptibles d’affecter une obligation ou un engagement.",
+          "retention": "Explique les durées de conservation, les échéances et les suppressions attendues.",
+          "evidence": "Inventorie les pièces qui étayent les contrôles et signale les lacunes.",
+          "registry": "Rassemble les traitements, finalités et bases déclarées dans le registre."
+        }
+      },
+      "reliability": {
+        "page": {
+          "overview": "Réunit disponibilité, coût, performance et capacité pour orienter le diagnostic.",
+          "reliability": "Suit la continuité du service, les erreurs et les objectifs de fiabilité.",
+          "cost": "Ventile la consommation et les coûts afin d’identifier leurs principaux moteurs.",
+          "performance": "Montre latence, débit et dégradation selon le service ou le modèle.",
+          "quotas": "Suit les limites d’usage et la marge restante avant saturation.",
+          "incidents": "Relie les interruptions et dégradations aux services concernés.",
+          "capacity": "Projette la charge observable face aux ressources et limites disponibles."
+        }
+      },
+      "improvement": {
+        "page": {
+          "overview": "Résume les opportunités, leur impact attendu et l’état du cycle d’amélioration.",
+          "plan": "Ordonne les améliorations retenues, leurs responsables et leurs prochaines étapes.",
+          "curation": "Suit les cas proposés pour enrichir les jeux d’évaluation.",
+          "experiments": "Compare les essais réalisés, leurs hypothèses et leurs résultats.",
+          "release": "Relie une amélioration validée à sa décision de mise à disposition."
+        }
+      },
+      "incidents": {
+        "page": {
+          "overview": "Résume les incidents ouverts, leur gravité et les réponses en cours.",
+          "incidents": "Détaille chaque incident, son périmètre, son propriétaire et son état.",
+          "playbooks": "Présente les procédures prévues pour répondre à chaque type de situation.",
+          "orchestration": "Montre l’enchaînement des étapes, dépendances et validations de la réponse.",
+          "actions": "Rassemble les actions exécutées ou attendues et leur résultat traçable.",
+          "postmortems": "Conserve l’analyse après résolution, les causes et les enseignements retenus.",
+          "problemes": "Regroupe les causes durables susceptibles de produire plusieurs incidents.",
+          "rapports": "Prépare les synthèses destinées au suivi interne ou réglementaire."
+        }
+      },
+      "replay": {
+        "page": {
+          "overview": "Résume les captures disponibles, les relectures et les écarts observés.",
+          "cassettes": "Inventorie les échanges capturés qui peuvent être rejoués sans agir sur un client.",
+          "sessions": "Regroupe les captures par session pour conserver le contexte de bout en bout.",
+          "shadow": "Exécute une version candidate en parallèle, sans exposer sa réponse.",
+          "comparisons": "Met côte à côte référence et candidate sur les mêmes entrées.",
+          "baselines": "Définit les résultats de référence auxquels les candidats sont comparés.",
+          "diffs": "Isole les différences de réponse, d’outil, de coût ou de décision.",
+          "evals": "Relie les relectures aux verdicts d’évaluation qui les qualifient.",
+          "exports": "Prépare les résultats partageables sans altérer les preuves sources."
+        }
+      },
+      "curation": {
+        "page": {
+          "overview": "Résume les candidats, la couverture et les décisions récentes de curation.",
+          "curate": "Présente les cas à promouvoir, revoir ou rejeter avec leur contexte.",
+          "coverage": "Montre les langues, catégories et risques encore insuffisamment couverts.",
+          "promotions": "Retrouve les cas acceptés et le jeu d’évaluation qu’ils enrichissent.",
+          "rejections": "Explique les cas écartés et conserve la raison de la décision.",
+          "history": "Retrace les décisions de curation, leurs auteurs et leurs effets."
+        }
+      },
+      "automations": {
+        "page": {
+          "overview": "Résume les règles actives, leur activité et les points qui attendent une décision.",
+          "rules": "Décrit les conditions, actions et garde-fous de chaque automatisation.",
+          "executions": "Retrace les déclenchements, résultats et erreurs effectivement observés.",
+          "approvals": "Rassemble les exécutions qui exigent une validation humaine.",
+          "audit": "Conserve les changements et décisions associés aux automatisations."
+        }
+      },
+      "evidence": {
+        "page": {
+          "overview": "Résume les preuves disponibles, leur intégrité et les lacunes à traiter.",
+          "evidencePacks": "Regroupe les pièces nécessaires à une question ou une revue donnée.",
+          "exporters": "Montre les sorties disponibles et l’état des destinations d’export.",
+          "chain": "Vérifie l’ordre, les empreintes et les ruptures éventuelles de la chaîne.",
+          "destinations": "Suit la conservation et la remise des preuves vers les systèmes autorisés."
+        }
+      },
+      "policies": {
+        "page": {
+          "overview": "Résume les politiques actives, les changements et les validations attendues.",
+          "activePolicies": "Présente les versions réellement en vigueur et leur périmètre.",
+          "history": "Retrace les versions, auteurs, approbations et dates d’effet.",
+          "runtimeGuardrails": "Relie les règles déclarées aux protections appliquées pendant l’exécution.",
+          "impactSimulator": "Estime les effets d’une proposition avant de l’appliquer.",
+          "approvals": "Rassemble les changements qui attendent une décision autorisée."
+        }
+      },
+      "sources": {
+        "page": {
+          "overview": "Résume les sources, leur fraîcheur, leur usage et les écarts de qualité.",
+          "sources": "Inventorie les documents et systèmes disponibles pour les agents.",
+          "memory": "Montre les mémoires, leur portée, leur durée et leurs consommateurs.",
+          "indexation": "Suit l’ingestion, le découpage et l’état des index de recherche.",
+          "quality": "Mesure couverture, fraîcheur et capacité de citation des contenus.",
+          "access": "Explique quels agents et rôles peuvent utiliser chaque source.",
+          "retention": "Présente les durées, échéances et règles d’effacement.",
+          "lineage": "Retrace l’origine et les transformations subies par une information.",
+          "history": "Conserve les changements de source et les opérations d’ingestion."
+        }
+      },
+      "parameters": {
+        "page": {
+          "overview": "Résume les réglages actifs et les changements qui demandent une attention.",
+          "general": "Regroupe les comportements généraux de la plateforme.",
+          "security": "Présente les réglages qui encadrent l’accès et la protection.",
+          "data": "Explique conservation, résidence et traitement des données.",
+          "models": "Définit les comportements transverses liés aux modèles.",
+          "access": "Règle les conditions d’accès et de session.",
+          "notifications": "Choisit les événements notifiés et leurs canaux.",
+          "integrations": "Configure les paramètres communs aux services reliés.",
+          "audit": "Définit la conservation et l’exploitation des traces administratives.",
+          "system": "Expose les réglages techniques du fonctionnement de la plateforme."
+        }
+      }
+    },
     "sharedGuide": {
       "pageTitle": "Comprendre · {page}",
       "back": "Retour à {page}",
@@ -9902,6 +10066,176 @@
       "dataTitle": "Comprendre comment ces données sont établies",
       "dataOrigin": "Ce que la page lit",
       "dataLimit": "Ce qu’elle n’affirme pas",
+      "dataReadingRule": "Une valeur décrit toujours une source, une portée et un moment. Si l’un de ces éléments manque, le guide privilégie l’absence expliquée à une précision trompeuse.",
+      "dataFoundations": {
+        "origin": {
+          "title": "Origine"
+        },
+        "scope": {
+          "title": "Portée",
+          "body": "Les filtres ne resserrent que les faits qui peuvent réellement leur être attribués. Un signal global reste global."
+        },
+        "freshness": {
+          "title": "Fraîcheur",
+          "body": "Les données courantes se renouvellent selon leur coût ; une lecture passée s’arrête au moment choisi lorsque la source sait l’honorer."
+        },
+        "limit": {
+          "title": "Limite"
+        }
+      },
+      "examples": {
+        "eyebrow": "Dans la pratique",
+        "title": "Exemples concrets",
+        "lead": "Ces situations montrent comment passer d’une information affichée à une lecture défendable.",
+        "agents": {
+          "items": [
+            {
+              "title": "Un agent semble inactif",
+              "body": "Vérifiez d’abord la période et les sources disponibles : une absence d’activité observée n’établit pas un arrêt."
+            },
+            {
+              "title": "Une file grossit",
+              "body": "Partez du délai et du statut, puis ouvrez le dossier ou l’agent qui porte réellement l’attente."
+            },
+            {
+              "title": "Deux agents contribuent au même parcours",
+              "body": "Utilisez les identités et transferts attestés avant d’additionner les volumes ou de conclure à un doublon."
+            }
+          ]
+        },
+        "agent": {
+          "items": [
+            {
+              "title": "Un score de l’agent baisse",
+              "body": "Reliez le run, les cas en échec et la version servie avant d’attribuer la baisse au modèle."
+            },
+            {
+              "title": "Une règle est déclarée active",
+              "body": "La configuration dit ce qui doit s’appliquer ; les traces d’exécution montrent si la règle s’est réellement déclenchée."
+            },
+            {
+              "title": "Une source est rattachée",
+              "body": "Le rattachement autorise son usage ; seule une citation ou une trace prouve son emploi dans une réponse."
+            }
+          ]
+        },
+        "monitor": {
+          "items": [
+            {
+              "title": "Un indicateur se dégrade",
+              "body": "Fixez d’abord période, périmètre et comparaison, puis descendez vers le signal et les agents qui expliquent l’écart."
+            },
+            {
+              "title": "La page affiche un tiret",
+              "body": "Le fait n’est pas suffisamment établi pour cette lecture ; ne le remplacez ni par zéro ni par la dernière valeur connue."
+            },
+            {
+              "title": "Un filtre agent est actif",
+              "body": "Les faits attribuables se resserrent sur cet agent, tandis que les mesures de plateforme restent explicitement globales."
+            }
+          ]
+        },
+        "act": {
+          "items": [
+            {
+              "title": "Une action est proposée",
+              "body": "Relisez le cas, le périmètre et les preuves associés avant de valider l’action sur l’état présent."
+            },
+            {
+              "title": "Vous consultez une date passée",
+              "body": "La page peut expliquer cet état, mais les mutations restent gelées pour éviter d’agir sur une situation révolue."
+            },
+            {
+              "title": "Une automatisation échoue",
+              "body": "Séparez le déclenchement, l’action tentée et son résultat avant de modifier la règle."
+            }
+          ]
+        },
+        "prove": {
+          "items": [
+            {
+              "title": "Une pièce manque",
+              "body": "Le dossier reste incomplet : un export ou une nouvelle présentation ne peut pas fabriquer la preuve absente."
+            },
+            {
+              "title": "La chaîne est annoncée valide",
+              "body": "Vérifiez l’ordre, les empreintes et la couverture jusqu’au point demandé, pas seulement le dernier élément."
+            },
+            {
+              "title": "Vous devez expliquer un état passé",
+              "body": "Choisissez l’instant et le périmètre, puis distinguez ce qui est historisé de ce qui reste uniquement actuel."
+            }
+          ]
+        },
+        "configure": {
+          "items": [
+            {
+              "title": "Une nouvelle version est proposée",
+              "body": "Comparez-la à la version active, identifiez les consommateurs touchés et exigez les validations prévues."
+            },
+            {
+              "title": "Un composant est disponible",
+              "body": "Sa présence dans le catalogue ne prouve ni sa disponibilité instantanée ni son adéquation à un cas métier."
+            },
+            {
+              "title": "Un réglage change",
+              "body": "Vérifiez sa portée et son mode d’application : certains changements exigent une réévaluation ou un redéploiement."
+            }
+          ]
+        },
+        "admin": {
+          "items": [
+            {
+              "title": "Un utilisateur possède un compte",
+              "body": "Le compte établit son identité dans la plateforme ; les rôles déterminent encore ce qu’il peut voir ou faire."
+            },
+            {
+              "title": "Un droit est retiré",
+              "body": "Contrôlez l’accès effectif après le changement et conservez l’auteur, le moment et la justification."
+            },
+            {
+              "title": "Le système paraît opérationnel",
+              "body": "Un statut courant oriente le diagnostic, mais ne remplace ni un inventaire complet ni une certification."
+            }
+          ]
+        }
+      },
+      "contract": {
+        "title": "Voir le contrat technique",
+        "items": {
+          "reading": "Lecture principale",
+          "scope": "Portée",
+          "time": "Temps et fraîcheur",
+          "operation": "Effet des actions",
+          "validation": "Validation",
+          "limits": "Absences et limites"
+        },
+        "operation": {
+          "agents": "Les ouvertures de dossier et changements d’affectation agissent sur l’état courant ; la liste reste une lecture de la file ou de la flotte.",
+          "agent": "Les tests, changements et décisions restent rattachés à l’agent sélectionné ; une lecture passée ne réécrit pas son état actuel.",
+          "monitor": "Les pages de surveillance sont des lectures. Leurs liens conduisent vers les surfaces d’action sans transformer un signal en décision automatique.",
+          "act": "Les mutations s’appliquent uniquement à l’état présent, avec autorisation, résultat et auteur traçables. Une lecture passée les désactive.",
+          "prove": "Créer ou exporter un dossier ne modifie pas les faits sources ; l’opération assemble ou remet des éléments déjà attestés.",
+          "configure": "Un changement suit le cycle de proposition et de validation de la page. Une valeur enregistrée n’est pas toujours immédiatement effective.",
+          "admin": "Les changements d’identité ou d’accès s’appliquent au présent et doivent produire une trace administrative exploitable."
+        },
+        "validation": {
+          "body": "Le backend borne les réponses, le BFF vérifie leur forme et le rendu conserve les absences au lieu de les convertir silencieusement en valeurs."
+        }
+      },
+      "closing": {
+        "eyebrow": "À retenir",
+        "body": {
+          "agents": "{page} sert à trouver la bonne personne, le bon agent ou le bon dossier avant d’ouvrir le détail qui permet de décider.",
+          "agent": "{page} explique une facette de l’agent sélectionné ; sa valeur vient du lien entre configuration, comportement observé et preuve.",
+          "monitor": "{page} aide à qualifier un écart avant d’agir : quel fait, sur quelle portée, à quel moment et avec quelle limite.",
+          "act": "{page} transforme un constat en action gouvernée, sans dissocier la décision de son contexte ni de sa trace.",
+          "prove": "{page} aide à démontrer ce qui peut l’être et à rendre visibles les pièces ou périodes qui manquent.",
+          "configure": "{page} montre l’état réellement déclaré, son impact et le chemin contrôlé pour le faire évoluer.",
+          "admin": "{page} relie identité, autorisation et état système afin qu’un changement reste explicable et vérifiable."
+        },
+        "global": "Comprendre Tessera dans son ensemble"
+      },
       "reading": {
         "agents": [
           {

@@ -15,7 +15,6 @@ import {
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
@@ -26,6 +25,7 @@ import { Link } from "@/i18n/navigation";
 import { fetchPoliciesOverview } from "@/lib/api/client";
 import type { PoliciesOverview as PoliciesData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const VSTATUS: Record<string, string> = {
   draft: "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
@@ -86,7 +86,7 @@ type Data = PoliciesData;
 export function PoliciesOverview() {
   const t = useTranslations("policies");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const { data } = useQuery({
     queryKey: ["policies-overview", locale],
     queryFn: ({ signal }) => fetchPoliciesOverview(locale, signal),

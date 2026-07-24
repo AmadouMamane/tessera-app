@@ -33,6 +33,7 @@ import { fetchSettingsOverrides, runShadow } from "@/lib/api/client";
 import { fetchReplayShadowOverview } from "@/lib/api/client";
 import type { ReplayShadowOverview } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const SEV_TEXT: Record<string, string> = {
   critique: "text-red-300",
@@ -84,7 +85,8 @@ export function ReplayOverview() {
   // XT-01 — a `?bundle=` deep link names a cassette: land on the cassette
   // lens, not the analytics overview, so the shared URL shows what it names.
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>(() =>
+  const [activeTab, setActiveTab] = useUrlBackedView(
+    TABS,
     searchParams.has("bundle") ? "cassettes" : "overview",
   );
   // AGIR composition (registre §6): As-of reads the folded captures/diffs at T.

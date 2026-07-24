@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
@@ -38,6 +38,7 @@ import type {
   ComplianceObligation,
   NonConformity,
 } from "@/lib/api/schemas";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -299,7 +300,7 @@ const POLL = 30_000;
 
 export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const tc = useTranslations("compliance");
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const temporal = useTemporalState();
   const { historyMode } = temporal;
   const railTimeline = useRailTimeline();

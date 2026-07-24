@@ -17,7 +17,6 @@ import {
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { useState } from "react";
 
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
@@ -37,6 +36,7 @@ import {
 } from "@/lib/api/client";
 import type { AutomationsOverview as AutomationsData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const SEV_BADGE: Record<string, string> = {
   critique: "border-red-500/30 bg-red-500/15 text-red-300",
@@ -65,7 +65,7 @@ export function AutomationsOverview() {
   // acts now. The instant derives from the URL — deep-linkable, never local.
   const asof = useAsOf();
   const frozen = asof !== null;
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["automations-overview", locale, asof],

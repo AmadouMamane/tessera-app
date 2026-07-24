@@ -16,7 +16,6 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
@@ -54,6 +53,7 @@ import type {
   FirewallEfficacy,
   PrivilegeReport,
 } from "@/lib/api/schemas";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -496,7 +496,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
-  const [activeTab, setActiveTab] = useState<SecTab>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(SEC_TABS, "overview");
   // Global agent scope (?agent=) — the score-/bundle-/audit-backed safety signals
   // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
   const searchParams = useSearchParams();

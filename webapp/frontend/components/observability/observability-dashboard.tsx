@@ -124,6 +124,7 @@ import type {
   WhatChanged,
 } from "@/lib/api/schemas";
 import { SIGNAL_FOCUS_PARAM, registryIdFor } from "@/lib/signal-focus";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const POLL_MS = 5_000;
 
@@ -187,7 +188,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
   const locale = useLocale();
-  const [tab, setTab] = useState<TabKey>("overview");
+  const [tab, setTab] = useUrlBackedView(TAB_DEFS, "overview", "tab");
   const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
   const [selectedFailed, setSelectedFailed] = useState<FailedRunCase | null>(null);

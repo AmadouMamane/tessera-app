@@ -28,6 +28,7 @@ import type {
   ReliabilityIncident,
   ReliabilityServiceRow,
 } from "@/lib/api/schemas";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -400,7 +401,7 @@ export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
   const locale = useLocale();
   const [period, setPeriod] = useState<Period>({ days: 14, anchor: null });
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const q = useQuery({
     queryKey: ["reliability", period.days, period.anchor, locale],
     queryFn: ({ signal }) => fetchReliability(signal, period.days, period.anchor, locale),

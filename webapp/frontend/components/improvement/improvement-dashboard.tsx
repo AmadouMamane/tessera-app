@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
@@ -29,6 +29,7 @@ import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchImprovement } from "@/lib/api/client";
 import type { Opportunity } from "@/lib/api/schemas";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -204,7 +205,7 @@ const POLL = 30_000;
 export function ImprovementDashboard() {
   const ti = useTranslations("improvement");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();

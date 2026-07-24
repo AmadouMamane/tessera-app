@@ -35,6 +35,7 @@ import {
 } from "@/lib/api/client";
 import type { EvidencePackVerify, ProofsOverview as ProofsData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const PACK_BADGE: Record<string, string> = {
   signe: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
@@ -71,7 +72,7 @@ export function ProofsOverview() {
   const locale = useLocale();
   const temporal = useTemporalState();
   const railTimeline = useRailTimeline();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const qc = useQueryClient();
   // The DEBOUNCED committed instant T (null = live): every real count in the
   // payload is bounded at T by the backend, so the bar's reading is never

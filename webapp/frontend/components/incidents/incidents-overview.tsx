@@ -44,6 +44,7 @@ import {
 } from "@/lib/api/client";
 import type { IncidentsOverview as IncidentsOverviewData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const SEV_BADGE: Record<string, string> = {
   critique: "border-red-500/30 bg-red-500/15 text-red-300",
@@ -93,7 +94,7 @@ export function IncidentsOverview() {
   const t = useTranslations("incidents");
   const tr = useTranslations("agirRail");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const qc = useQueryClient();
   // AGIR As-of + Live (registre §6): the reading derives from `?asof=` and the
   // backend replays the posture at T; while As-of every mutation is frozen —

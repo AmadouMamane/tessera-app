@@ -35,6 +35,7 @@ import { Link } from "@/i18n/navigation";
 import { fetchCurationOverview, mutateCurationDecision } from "@/lib/api/client";
 import type { CurationOverview as CurationData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const RISK_BADGE: Record<string, string> = {
   eleve: "border-red-500/30 bg-red-500/15 text-red-300",
@@ -98,7 +99,7 @@ export function CurationOverview() {
     refetchInterval: asof ? false : 30_000,
   });
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const decide = useMutation({
     mutationFn: mutateCurationDecision,
     onSuccess: (fresh) => qc.setQueryData(["curation-overview", locale, null], fresh),

@@ -575,3 +575,44 @@ they no longer carry the explanation alone.
   fermée par défaut et le retour exact vers `Sécurité & confidentialité · 30 jours`. Biome,
   TypeScript, diff-check, 63 tests frontend ciblés et 74 tests Python du périmètre stagé sont
   verts. `make gate-twice` reste suspendu sur instruction.
+
+## Aide contextuelle — profondeur des pages et des onglets — 2026-07-24
+
+- Diagnostic après revue opérateur : la première généralisation prouvait la couverture des
+  routes mais pas leur profondeur éditoriale. Les 38 guides génériques partageaient trois
+  paragraphes de lecture par famille et ne connaissaient aucun onglet interne. La critique est
+  fondée : une route d’aide existait, mais elle n’expliquait pas la surface réellement ouverte.
+- Les 12 tableaux de bord à onglets locaux utilisent désormais un seam commun
+  `useUrlBackedView`. La vue par défaut conserve l’URL canonique ; une vue ciblée écrit
+  `?vue=<clé>` en préservant période, agent et autres filtres. Qualité IA conserve son contrat
+  existant : `vue` distingue Suivi continu et Évaluations, tandis que `tab` distingue les
+  sous-vues. Le header transporte donc silencieusement la vue réelle dans `from`.
+- Le gabarit d’aide comporte maintenant un atlas éditorial sans nouvelle pile de cartes. Il
+  réutilise les libellés d’onglets des catalogues opérationnels, signale la vue d’origine,
+  explique la question propre à chaque onglet et permet de l’ouvrir en conservant les filtres.
+  Qualité IA documente ses 2 portes, les 6 sous-vues de suivi continu et les 3 sous-vues
+  d’évaluation. Sécurité, conformité, fiabilité, amélioration, incidents, replay, curation,
+  automations, preuves, politiques, sources et paramètres documentent chacun toutes leurs vues.
+- Les trois catalogues contiennent exactement 97 explications de vues en FR, EN et DE. Le volet
+  de données des guides génériques gagne une lecture structurée de l’origine, de la portée, de
+  la fraîcheur et des limites, avec la règle explicite qu’une absence expliquée vaut mieux
+  qu’une précision trompeuse.
+- Nouveau ratchet : les constantes `TABS`, `SEC_TABS` et `VIEWS` des 12 composants sont comparées
+  à l’atlas documenté ; chaque libellé réutilisé et chaque explication doivent exister dans les
+  trois langues. Ajouter un onglet sans aide rend désormais le test rouge.
+- Vérifications vertes : `tsc --noEmit`, Biome ciblé, `git diff --check` et 15 tests dédiés.
+  `next build` compile l’application puis échoue pendant le prérendu sur le défaut préexistant
+  `AppHeader/useSearchParams` sans frontière Suspense pour `/comprendre` et
+  `/comprendre/en-detail` ; aucun fichier de ce chantier ne modifie `app-header.tsx`.
+  Le preview `:3098/:8098` a été redémarré proprement après le build et ses deux healthchecks
+  sont verts. Le navigateur intégré n’avait plus de session opérateur, puis sa politique d’URL
+  locale a refusé le rechargement automatisé ; aucun contournement n’a été tenté. La revue
+  visuelle reste donc au rafraîchissement manuel d’Amadou. `make gate-twice` reste suspendu sur
+  instruction.
+- Approfondissement après seconde revue : le volet « Comprendre comment ces données sont
+  établies » reprend désormais toute la progression du pilote Vue d’ensemble. Après origine,
+  portée, fraîcheur et limites, il présente trois situations concrètes propres à la famille de
+  page, puis un second disclosure « Voir le contrat technique » détaillant lecture, portée,
+  temps, effet des actions, validation et absences. Un footer « À retenir » conclut chaque guide
+  avec son rôle et l’action défendable. Les exemples et contrats existent dans la même structure
+  en FR/EN/DE ; TypeScript, Biome et les 15 ratchets ciblés restent verts.

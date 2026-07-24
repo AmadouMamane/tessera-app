@@ -9873,6 +9873,170 @@
         "global": "Understand Tessera as a whole"
       }
     },
+    "viewAtlas": {
+      "eyebrow": "Page views",
+      "title": "Choose the right lens",
+      "lead": "Each tab answers a different question. The view you came from is highlighted; the others remain explained so you can continue with confidence.",
+      "surfaceTitle": "The two Quality AI lenses",
+      "current": "Current view",
+      "see": "Open",
+      "open": "Open the {view} view"
+    },
+    "viewDescriptions": {
+      "quality": {
+        "surfaces": {
+          "signals": "Tracks observed quality continuously, including targets, gaps, and measurement reliability.",
+          "evaluations": "Checks a candidate release against a governed case set before exposure."
+        },
+        "signals": {
+          "overview": "Brings target, trend, coverage, and alerts together for the first reading.",
+          "signals": "Details each signal, its status, scope, and establishing source.",
+          "runs": "Shows the campaigns feeding continuous measurement and their execution status.",
+          "failed": "Isolates failing cases so their severity, cause, and follow-up can be understood.",
+          "models": "Compares observed models without confusing model contribution with test-set effects.",
+          "judge": "Measures judge stability and disagreements that weaken score interpretation."
+        },
+        "evaluations": {
+          "cases": "Describes the versioned case set: coverage, languages, categories, and expected requirements.",
+          "runs": "Presents a campaign verdict, its thresholds, and the cases driving the decision.",
+          "compare": "Compares two campaigns on a constant scope so changes can be attributed correctly."
+        }
+      },
+      "security": {
+        "page": {
+          "overview": "Brings together protections, incidents, and gaps that warrant investigation.",
+          "promptInjection": "Tracks attempts to divert instructions and how protections respond.",
+          "pii": "Shows personal-data exposure risks and the controls applied to them.",
+          "guard": "Explains guard decisions at the tool-call control point.",
+          "tools": "Checks permissions, arguments, and refusals related to tools.",
+          "memory": "Tracks memory persistence, scope, and erasure risks.",
+          "isolation": "Checks separation between users, agents, and business contexts.",
+          "redteam": "Presents executed adversarial scenarios and weaknesses that remain open."
+        }
+      },
+      "compliance": {
+        "page": {
+          "overview": "Summarises regulatory coverage, gaps, and available evidence.",
+          "mapping": "Links regulatory frameworks to the controls and components supporting them.",
+          "obligations": "Details each obligation, its status, and assigned responsibility.",
+          "evaluations": "Shows assessed controls and results supporting the compliance reading.",
+          "incidents": "Isolates events that may affect an obligation or commitment.",
+          "retention": "Explains retention periods, due dates, and expected deletion.",
+          "evidence": "Inventories supporting items and calls out missing evidence.",
+          "registry": "Brings declared processing, purposes, and legal bases into one register."
+        }
+      },
+      "reliability": {
+        "page": {
+          "overview": "Combines availability, cost, performance, and capacity to guide diagnosis.",
+          "reliability": "Tracks service continuity, errors, and reliability objectives.",
+          "cost": "Breaks down usage and cost to reveal the main drivers.",
+          "performance": "Shows latency, throughput, and degradation by service or model.",
+          "quotas": "Tracks usage limits and remaining headroom before saturation.",
+          "incidents": "Links interruptions and degradation to affected services.",
+          "capacity": "Sets observed demand against available resources and limits."
+        }
+      },
+      "improvement": {
+        "page": {
+          "overview": "Summarises opportunities, expected impact, and improvement-cycle status.",
+          "plan": "Orders selected improvements, owners, and next steps.",
+          "curation": "Tracks cases proposed to strengthen evaluation sets.",
+          "experiments": "Compares completed experiments, their hypotheses, and outcomes.",
+          "release": "Connects a validated improvement to its release decision."
+        }
+      },
+      "incidents": {
+        "page": {
+          "overview": "Summarises open incidents, severity, and responses in progress.",
+          "incidents": "Details each incident, scope, owner, and current state.",
+          "playbooks": "Presents the response procedure planned for each type of situation.",
+          "orchestration": "Shows response steps, dependencies, and approvals in sequence.",
+          "actions": "Collects completed and pending actions with their traceable outcome.",
+          "postmortems": "Keeps the resolved-incident analysis, causes, and accepted lessons.",
+          "problemes": "Groups durable causes that may produce several incidents.",
+          "rapports": "Prepares summaries for internal or regulatory follow-up."
+        }
+      },
+      "replay": {
+        "page": {
+          "overview": "Summarises available captures, replays, and observed differences.",
+          "cassettes": "Inventories captured exchanges that can be replayed without acting on a customer.",
+          "sessions": "Groups captures by session to preserve end-to-end context.",
+          "shadow": "Runs a candidate version in parallel without exposing its answer.",
+          "comparisons": "Places reference and candidate side by side on the same inputs.",
+          "baselines": "Defines the reference outcomes used to assess candidates.",
+          "diffs": "Isolates differences in answer, tool use, cost, or decision.",
+          "evals": "Connects replays to the evaluation verdicts that qualify them.",
+          "exports": "Prepares shareable results without altering source evidence."
+        }
+      },
+      "curation": {
+        "page": {
+          "overview": "Summarises candidates, coverage, and recent curation decisions.",
+          "curate": "Presents cases to promote, review, or reject with context.",
+          "coverage": "Shows languages, categories, and risks that remain under-covered.",
+          "promotions": "Finds accepted cases and the evaluation set they strengthen.",
+          "rejections": "Explains rejected cases and preserves the decision reason.",
+          "history": "Traces curation decisions, authors, and effects."
+        }
+      },
+      "automations": {
+        "page": {
+          "overview": "Summarises active rules, their activity, and items awaiting a decision.",
+          "rules": "Describes each automation's conditions, actions, and safeguards.",
+          "executions": "Traces observed triggers, outcomes, and errors.",
+          "approvals": "Collects executions that require human approval.",
+          "audit": "Preserves changes and decisions associated with automations."
+        }
+      },
+      "evidence": {
+        "page": {
+          "overview": "Summarises available evidence, integrity, and gaps to address.",
+          "evidencePacks": "Groups the items needed for a given question or review.",
+          "exporters": "Shows available outputs and export-destination status.",
+          "chain": "Checks ordering, fingerprints, and possible breaks in the chain.",
+          "destinations": "Tracks retention and delivery of evidence to authorised systems."
+        }
+      },
+      "policies": {
+        "page": {
+          "overview": "Summarises active policies, changes, and expected approvals.",
+          "activePolicies": "Presents the versions actually in force and their scope.",
+          "history": "Traces versions, authors, approvals, and effective dates.",
+          "runtimeGuardrails": "Links declared rules to protections applied during execution.",
+          "impactSimulator": "Estimates the effects of a proposal before application.",
+          "approvals": "Collects changes awaiting an authorised decision."
+        }
+      },
+      "sources": {
+        "page": {
+          "overview": "Summarises sources, freshness, usage, and quality gaps.",
+          "sources": "Inventories documents and systems available to agents.",
+          "memory": "Shows memories, scope, lifetime, and consumers.",
+          "indexation": "Tracks ingestion, chunking, and search-index status.",
+          "quality": "Measures content coverage, freshness, and citability.",
+          "access": "Explains which agents and roles may use each source.",
+          "retention": "Presents retention periods, deadlines, and erasure rules.",
+          "lineage": "Traces information origin and transformations.",
+          "history": "Preserves source changes and ingestion operations."
+        }
+      },
+      "parameters": {
+        "page": {
+          "overview": "Summarises active settings and changes needing attention.",
+          "general": "Groups the platform's general behaviours.",
+          "security": "Presents settings governing access and protection.",
+          "data": "Explains data retention, residency, and processing.",
+          "models": "Defines platform-wide model behaviours.",
+          "access": "Sets access and session conditions.",
+          "notifications": "Chooses notified events and delivery channels.",
+          "integrations": "Configures settings shared by connected services.",
+          "audit": "Defines retention and use of administrative traces.",
+          "system": "Exposes technical settings for platform operation."
+        }
+      }
+    },
     "sharedGuide": {
       "pageTitle": "Understand · {page}",
       "back": "Back to {page}",
@@ -9886,6 +10050,176 @@
       "dataTitle": "Understand how these data are established",
       "dataOrigin": "What the page reads",
       "dataLimit": "What it does not claim",
+      "dataReadingRule": "A value always describes a source, a scope, and a moment. If one is missing, the guide prefers an explained absence to misleading precision.",
+      "dataFoundations": {
+        "origin": {
+          "title": "Origin"
+        },
+        "scope": {
+          "title": "Scope",
+          "body": "Filters narrow only facts that can genuinely be attributed to them. A global signal remains global."
+        },
+        "freshness": {
+          "title": "Freshness",
+          "body": "Current data refresh according to cost; a past reading stops at the chosen time when the source can honour it."
+        },
+        "limit": {
+          "title": "Limit"
+        }
+      },
+      "examples": {
+        "eyebrow": "In practice",
+        "title": "Concrete examples",
+        "lead": "These situations show how to move from displayed information to a defensible reading.",
+        "agents": {
+          "items": [
+            {
+              "title": "An agent appears inactive",
+              "body": "Check the period and available sources first: no observed activity does not establish that the agent has stopped."
+            },
+            {
+              "title": "A queue is growing",
+              "body": "Start with due date and status, then open the case or agent that actually carries the wait."
+            },
+            {
+              "title": "Two agents contribute to one journey",
+              "body": "Use established identities and transfers before adding volumes or concluding that a duplicate exists."
+            }
+          ]
+        },
+        "agent": {
+          "items": [
+            {
+              "title": "The agent score drops",
+              "body": "Link the run, failing cases, and served version before attributing the drop to the model."
+            },
+            {
+              "title": "A rule is declared active",
+              "body": "Configuration says what should apply; execution traces show whether the rule was actually triggered."
+            },
+            {
+              "title": "A source is attached",
+              "body": "Attachment permits use; only a citation or trace proves that it supported a specific answer."
+            }
+          ]
+        },
+        "monitor": {
+          "items": [
+            {
+              "title": "An indicator deteriorates",
+              "body": "Set period, scope, and comparison first, then trace the gap to the signal and agents that explain it."
+            },
+            {
+              "title": "The page shows a dash",
+              "body": "The fact is not sufficiently established for this reading; replace it with neither zero nor the last known value."
+            },
+            {
+              "title": "An agent filter is active",
+              "body": "Attributable facts narrow to that agent, while platform measurements remain explicitly global."
+            }
+          ]
+        },
+        "act": {
+          "items": [
+            {
+              "title": "An action is proposed",
+              "body": "Review the case, scope, and supporting evidence before approving an action on the current state."
+            },
+            {
+              "title": "You are reading a past date",
+              "body": "The page can explain that state, but mutations remain frozen to avoid acting on an expired situation."
+            },
+            {
+              "title": "An automation fails",
+              "body": "Separate the trigger, attempted action, and outcome before changing the rule."
+            }
+          ]
+        },
+        "prove": {
+          "items": [
+            {
+              "title": "An item is missing",
+              "body": "The pack remains incomplete: exporting or presenting it differently cannot create absent evidence."
+            },
+            {
+              "title": "The chain is reported valid",
+              "body": "Check order, fingerprints, and coverage up to the requested point, not only the latest item."
+            },
+            {
+              "title": "You must explain a past state",
+              "body": "Choose the time and scope, then distinguish historised facts from facts available only now."
+            }
+          ]
+        },
+        "configure": {
+          "items": [
+            {
+              "title": "A new version is proposed",
+              "body": "Compare it with the active version, identify affected consumers, and require the planned approvals."
+            },
+            {
+              "title": "A component is available",
+              "body": "Catalogue presence proves neither immediate availability nor suitability for a business case."
+            },
+            {
+              "title": "A setting changes",
+              "body": "Check scope and application mode: some changes require re-evaluation or redeployment."
+            }
+          ]
+        },
+        "admin": {
+          "items": [
+            {
+              "title": "A user has an account",
+              "body": "The account establishes identity in the platform; roles still determine what the user may see or do."
+            },
+            {
+              "title": "A permission is removed",
+              "body": "Check effective access after the change and preserve author, time, and justification."
+            },
+            {
+              "title": "The system appears operational",
+              "body": "A current status guides diagnosis, but replaces neither a complete inventory nor certification."
+            }
+          ]
+        }
+      },
+      "contract": {
+        "title": "View the technical contract",
+        "items": {
+          "reading": "Primary reading",
+          "scope": "Scope",
+          "time": "Time and freshness",
+          "operation": "Effect of actions",
+          "validation": "Validation",
+          "limits": "Absences and limits"
+        },
+        "operation": {
+          "agents": "Opening cases and changing assignments affect current state; the list remains a reading of the queue or fleet.",
+          "agent": "Tests, changes, and decisions remain attached to the selected agent; a past reading does not rewrite its current state.",
+          "monitor": "Monitoring pages are read surfaces. Their links lead to action surfaces without turning a signal into an automatic decision.",
+          "act": "Mutations apply only to current state, with authorisation, outcome, and author traceable. Past readings disable them.",
+          "prove": "Creating or exporting a pack does not change source facts; it assembles or delivers already established items.",
+          "configure": "A change follows the page's proposal and approval cycle. A stored value is not always effective immediately.",
+          "admin": "Identity and access changes apply now and must produce a usable administrative trace."
+        },
+        "validation": {
+          "body": "The backend bounds responses, the BFF checks their shape, and rendering preserves absences instead of silently converting them into values."
+        }
+      },
+      "closing": {
+        "eyebrow": "Key takeaway",
+        "body": {
+          "agents": "{page} helps find the right person, agent, or case before opening the detail needed for a decision.",
+          "agent": "{page} explains one facet of the selected agent; its value comes from linking configuration, observed behaviour, and evidence.",
+          "monitor": "{page} helps qualify a gap before action: which fact, over what scope, at what time, and with which limit.",
+          "act": "{page} turns an observation into governed action without separating the decision from its context or trace.",
+          "prove": "{page} helps demonstrate what can be established and makes missing items or periods visible.",
+          "configure": "{page} shows the state actually declared, its impact, and the controlled path for changing it.",
+          "admin": "{page} connects identity, authorisation, and system state so a change remains explainable and verifiable."
+        },
+        "global": "Understand Tessera as a whole"
+      },
       "reading": {
         "agents": [
           {

@@ -9887,6 +9887,170 @@
         "global": "Tessera als Ganzes verstehen"
       }
     },
+    "viewAtlas": {
+      "eyebrow": "Ansichten der Seite",
+      "title": "Die passende Sicht wählen",
+      "lead": "Jeder Reiter beantwortet eine andere Frage. Die zuvor geöffnete Ansicht ist markiert; die übrigen bleiben erklärt, damit Sie gezielt weitergehen können.",
+      "surfaceTitle": "Die zwei Sichten auf KI-Qualität",
+      "current": "Geöffnete Ansicht",
+      "see": "Öffnen",
+      "open": "Ansicht {view} öffnen"
+    },
+    "viewDescriptions": {
+      "quality": {
+        "surfaces": {
+          "signals": "Verfolgt beobachtete Qualität, Ziele, Abweichungen und die Verlässlichkeit der Messung laufend.",
+          "evaluations": "Prüft eine Kandidatenversion vor der Freigabe anhand eines gesteuerten Prüfsatzes."
+        },
+        "signals": {
+          "overview": "Führt Ziel, Verlauf, Abdeckung und Warnungen für den ersten Überblick zusammen.",
+          "signals": "Beschreibt jedes Signal, seinen Zustand, Geltungsbereich und seine Quelle.",
+          "runs": "Zeigt die Läufe, die die laufende Messung speisen, und ihren Ausführungsstand.",
+          "failed": "Isoliert fehlgeschlagene Fälle, damit Schwere, Ursache und Nachverfolgung verständlich werden.",
+          "models": "Vergleicht beobachtete Modelle, ohne Modellbeitrag und Prüfsatzeffekt zu vermischen.",
+          "judge": "Misst Stabilität und Abweichungen des Bewertungsmodells, die Scores unsicherer machen."
+        },
+        "evaluations": {
+          "cases": "Beschreibt den versionierten Prüfsatz: Abdeckung, Sprachen, Kategorien und Anforderungen.",
+          "runs": "Zeigt Urteil, Schwellenwerte und die für die Entscheidung maßgeblichen Fälle.",
+          "compare": "Vergleicht zwei Läufe bei gleichem Umfang, damit Abweichungen richtig zugeordnet werden."
+        }
+      },
+      "security": {
+        "page": {
+          "overview": "Bündelt Schutzmaßnahmen, Vorfälle und Abweichungen, die geprüft werden sollten.",
+          "promptInjection": "Verfolgt Versuche zur Manipulation von Anweisungen und die Reaktion der Schutzmaßnahmen.",
+          "pii": "Zeigt Risiken einer Offenlegung personenbezogener Daten und zugehörige Kontrollen.",
+          "guard": "Erklärt Entscheidungen der Schutzschicht am Kontrollpunkt für Werkzeugaufrufe.",
+          "tools": "Prüft Berechtigungen, Argumente und Ablehnungen im Zusammenhang mit Werkzeugen.",
+          "memory": "Verfolgt Risiken bei Speicherung, Geltungsbereich und Löschung von Gedächtnisinhalten.",
+          "isolation": "Prüft die Trennung zwischen Nutzern, Agenten und Fachkontexten.",
+          "redteam": "Zeigt ausgeführte Angriffsszenarien und noch offene Schwachstellen."
+        }
+      },
+      "compliance": {
+        "page": {
+          "overview": "Fasst regulatorische Abdeckung, Abweichungen und verfügbare Nachweise zusammen.",
+          "mapping": "Verknüpft regulatorische Rahmenwerke mit Kontrollen und tragenden Komponenten.",
+          "obligations": "Beschreibt jede Pflicht, ihren Status und die zugewiesene Verantwortung.",
+          "evaluations": "Zeigt bewertete Kontrollen und Ergebnisse für die Compliance-Lesart.",
+          "incidents": "Isoliert Ereignisse, die Pflichten oder Zusagen berühren können.",
+          "retention": "Erklärt Aufbewahrungsfristen, Termine und erwartete Löschungen.",
+          "evidence": "Inventarisiert Belege und weist auf fehlende Nachweise hin.",
+          "registry": "Führt deklarierte Verarbeitungen, Zwecke und Rechtsgrundlagen im Register zusammen."
+        }
+      },
+      "reliability": {
+        "page": {
+          "overview": "Verbindet Verfügbarkeit, Kosten, Leistung und Kapazität für die erste Diagnose.",
+          "reliability": "Verfolgt Dienstkontinuität, Fehler und Zuverlässigkeitsziele.",
+          "cost": "Schlüsselt Nutzung und Kosten auf, um Haupttreiber sichtbar zu machen.",
+          "performance": "Zeigt Latenz, Durchsatz und Verschlechterung nach Dienst oder Modell.",
+          "quotas": "Verfolgt Nutzungsgrenzen und verbleibenden Spielraum vor der Sättigung.",
+          "incidents": "Verknüpft Ausfälle und Verschlechterungen mit betroffenen Diensten.",
+          "capacity": "Stellt beobachtete Last den verfügbaren Ressourcen und Grenzen gegenüber."
+        }
+      },
+      "improvement": {
+        "page": {
+          "overview": "Fasst Chancen, erwartete Wirkung und Stand des Verbesserungszyklus zusammen.",
+          "plan": "Ordnet ausgewählte Verbesserungen, Verantwortliche und nächste Schritte.",
+          "curation": "Verfolgt Fälle, die Prüfsätze gezielt erweitern sollen.",
+          "experiments": "Vergleicht Versuche, ihre Hypothesen und Ergebnisse.",
+          "release": "Verknüpft eine bestätigte Verbesserung mit der Freigabeentscheidung."
+        }
+      },
+      "incidents": {
+        "page": {
+          "overview": "Fasst offene Vorfälle, Schweregrad und laufende Reaktionen zusammen.",
+          "incidents": "Beschreibt jeden Vorfall, Umfang, Verantwortung und aktuellen Stand.",
+          "playbooks": "Zeigt das vorgesehene Vorgehen für jede Art von Situation.",
+          "orchestration": "Zeigt Abfolge, Abhängigkeiten und Freigaben der Reaktion.",
+          "actions": "Bündelt ausgeführte und ausstehende Maßnahmen mit nachvollziehbarem Ergebnis.",
+          "postmortems": "Bewahrt Analyse, Ursachen und beschlossene Lehren nach der Behebung.",
+          "problemes": "Gruppiert dauerhafte Ursachen, die mehrere Vorfälle auslösen können.",
+          "rapports": "Bereitet Zusammenfassungen für interne oder regulatorische Nachverfolgung vor."
+        }
+      },
+      "replay": {
+        "page": {
+          "overview": "Fasst verfügbare Aufzeichnungen, Wiederholungen und beobachtete Unterschiede zusammen.",
+          "cassettes": "Inventarisiert aufgezeichnete Dialoge, die ohne Kundenwirkung wiederholt werden können.",
+          "sessions": "Gruppiert Aufzeichnungen nach Sitzung und bewahrt den Gesamtkontext.",
+          "shadow": "Führt eine Kandidatenversion parallel aus, ohne ihre Antwort auszuliefern.",
+          "comparisons": "Stellt Referenz und Kandidat bei gleichen Eingaben gegenüber.",
+          "baselines": "Definiert Referenzergebnisse für die Bewertung von Kandidaten.",
+          "diffs": "Isoliert Unterschiede bei Antwort, Werkzeug, Kosten oder Entscheidung.",
+          "evals": "Verknüpft Wiederholungen mit den zugehörigen Bewertungsurteilen.",
+          "exports": "Bereitet teilbare Ergebnisse vor, ohne die Ursprungsnachweise zu verändern."
+        }
+      },
+      "curation": {
+        "page": {
+          "overview": "Fasst Kandidaten, Abdeckung und jüngste Kurationsentscheidungen zusammen.",
+          "curate": "Zeigt Fälle zum Übernehmen, Prüfen oder Ablehnen mit ihrem Kontext.",
+          "coverage": "Zeigt Sprachen, Kategorien und Risiken mit unzureichender Abdeckung.",
+          "promotions": "Findet angenommene Fälle und den dadurch erweiterten Prüfsatz.",
+          "rejections": "Erklärt abgelehnte Fälle und bewahrt den Entscheidungsgrund.",
+          "history": "Verfolgt Kurationsentscheidungen, Verantwortliche und Auswirkungen."
+        }
+      },
+      "automations": {
+        "page": {
+          "overview": "Fasst aktive Regeln, ihre Nutzung und offene Entscheidungen zusammen.",
+          "rules": "Beschreibt Bedingungen, Aktionen und Schutzmaßnahmen jeder Automatisierung.",
+          "executions": "Verfolgt beobachtete Auslöser, Ergebnisse und Fehler.",
+          "approvals": "Bündelt Ausführungen, die eine menschliche Freigabe erfordern.",
+          "audit": "Bewahrt Änderungen und Entscheidungen zu Automatisierungen."
+        }
+      },
+      "evidence": {
+        "page": {
+          "overview": "Fasst verfügbare Nachweise, Integrität und offene Lücken zusammen.",
+          "evidencePacks": "Bündelt die Belege für eine bestimmte Frage oder Prüfung.",
+          "exporters": "Zeigt verfügbare Ausgaben und den Zustand der Exportziele.",
+          "chain": "Prüft Reihenfolge, Fingerabdrücke und mögliche Brüche der Kette.",
+          "destinations": "Verfolgt Aufbewahrung und Übergabe von Nachweisen an erlaubte Systeme."
+        }
+      },
+      "policies": {
+        "page": {
+          "overview": "Fasst aktive Richtlinien, Änderungen und erwartete Freigaben zusammen.",
+          "activePolicies": "Zeigt tatsächlich wirksame Versionen und ihren Geltungsbereich.",
+          "history": "Verfolgt Versionen, Verantwortliche, Freigaben und Wirksamkeitsdaten.",
+          "runtimeGuardrails": "Verknüpft deklarierte Regeln mit Schutzmaßnahmen während der Ausführung.",
+          "impactSimulator": "Schätzt die Wirkung eines Vorschlags vor der Anwendung.",
+          "approvals": "Bündelt Änderungen, die eine berechtigte Entscheidung erwarten."
+        }
+      },
+      "sources": {
+        "page": {
+          "overview": "Fasst Quellen, Aktualität, Nutzung und Qualitätslücken zusammen.",
+          "sources": "Inventarisiert Dokumente und Systeme, die Agenten nutzen können.",
+          "memory": "Zeigt Gedächtnisse, Geltungsbereich, Dauer und Verbraucher.",
+          "indexation": "Verfolgt Aufnahme, Segmentierung und Zustand der Suchindizes.",
+          "quality": "Misst Abdeckung, Aktualität und Zitierfähigkeit der Inhalte.",
+          "access": "Erklärt, welche Agenten und Rollen jede Quelle nutzen dürfen.",
+          "retention": "Zeigt Fristen, Termine und Löschregeln.",
+          "lineage": "Verfolgt Ursprung und Verarbeitungsschritte einer Information.",
+          "history": "Bewahrt Quellenänderungen und Aufnahmevorgänge."
+        }
+      },
+      "parameters": {
+        "page": {
+          "overview": "Fasst aktive Einstellungen und aufmerksamkeitsbedürftige Änderungen zusammen.",
+          "general": "Bündelt allgemeine Verhaltensweisen der Plattform.",
+          "security": "Zeigt Einstellungen für Zugriff und Schutz.",
+          "data": "Erklärt Aufbewahrung, Residenz und Verarbeitung von Daten.",
+          "models": "Definiert übergreifende Verhaltensweisen der Modelle.",
+          "access": "Regelt Zugriffs- und Sitzungsbedingungen.",
+          "notifications": "Wählt gemeldete Ereignisse und Zustellkanäle.",
+          "integrations": "Konfiguriert gemeinsame Einstellungen verbundener Dienste.",
+          "audit": "Definiert Aufbewahrung und Nutzung administrativer Spuren.",
+          "system": "Zeigt technische Einstellungen für den Plattformbetrieb."
+        }
+      }
+    },
     "sharedGuide": {
       "pageTitle": "Verstehen · {page}",
       "back": "Zurück zu {page}",
@@ -9900,6 +10064,176 @@
       "dataTitle": "Verstehen, wie diese Daten entstehen",
       "dataOrigin": "Was die Seite liest",
       "dataLimit": "Was sie nicht behauptet",
+      "dataReadingRule": "Ein Wert beschreibt immer eine Quelle, einen Umfang und einen Zeitpunkt. Fehlt eines davon, ist eine erklärte Lücke ehrlicher als irreführende Genauigkeit.",
+      "dataFoundations": {
+        "origin": {
+          "title": "Ursprung"
+        },
+        "scope": {
+          "title": "Umfang",
+          "body": "Filter schränken nur Fakten ein, die ihnen tatsächlich zugeordnet werden können. Ein globales Signal bleibt global."
+        },
+        "freshness": {
+          "title": "Aktualität",
+          "body": "Aktuelle Daten werden je nach Aufwand erneuert; eine historische Lesart endet am gewählten Zeitpunkt, wenn die Quelle dies unterstützt."
+        },
+        "limit": {
+          "title": "Grenze"
+        }
+      },
+      "examples": {
+        "eyebrow": "In der Praxis",
+        "title": "Konkrete Beispiele",
+        "lead": "Diese Situationen zeigen, wie aus einer Anzeige eine belastbare Lesart wird.",
+        "agents": {
+          "items": [
+            {
+              "title": "Ein Agent wirkt inaktiv",
+              "body": "Prüfen Sie zuerst Zeitraum und verfügbare Quellen: Keine beobachtete Aktivität belegt keinen Stillstand."
+            },
+            {
+              "title": "Eine Warteschlange wächst",
+              "body": "Beginnen Sie mit Frist und Status und öffnen Sie dann den Fall oder Agenten, der die Wartezeit tatsächlich verursacht."
+            },
+            {
+              "title": "Zwei Agenten tragen zu einem Vorgang bei",
+              "body": "Nutzen Sie belegte Identitäten und Übergaben, bevor Sie Volumen addieren oder ein Duplikat annehmen."
+            }
+          ]
+        },
+        "agent": {
+          "items": [
+            {
+              "title": "Der Agentenwert sinkt",
+              "body": "Verknüpfen Sie Lauf, fehlgeschlagene Fälle und bereitgestellte Version, bevor Sie das Modell verantwortlich machen."
+            },
+            {
+              "title": "Eine Regel ist als aktiv deklariert",
+              "body": "Die Konfiguration sagt, was gelten soll; Ausführungsspuren zeigen, ob die Regel tatsächlich ausgelöst wurde."
+            },
+            {
+              "title": "Eine Quelle ist zugeordnet",
+              "body": "Die Zuordnung erlaubt die Nutzung; nur Zitat oder Spur belegen ihren Einsatz in einer bestimmten Antwort."
+            }
+          ]
+        },
+        "monitor": {
+          "items": [
+            {
+              "title": "Ein Indikator verschlechtert sich",
+              "body": "Legen Sie zuerst Zeitraum, Umfang und Vergleich fest und verfolgen Sie die Abweichung dann zu Signal und Agenten."
+            },
+            {
+              "title": "Die Seite zeigt einen Strich",
+              "body": "Der Fakt ist für diese Lesart nicht ausreichend belegt; ersetzen Sie ihn weder durch null noch durch den letzten Wert."
+            },
+            {
+              "title": "Ein Agentenfilter ist aktiv",
+              "body": "Zuordenbare Fakten werden auf diesen Agenten begrenzt; Plattformmessungen bleiben ausdrücklich global."
+            }
+          ]
+        },
+        "act": {
+          "items": [
+            {
+              "title": "Eine Aktion wird vorgeschlagen",
+              "body": "Prüfen Sie Fall, Umfang und Nachweise, bevor Sie eine Aktion auf dem aktuellen Zustand freigeben."
+            },
+            {
+              "title": "Sie lesen einen vergangenen Zeitpunkt",
+              "body": "Die Seite kann diesen Zustand erklären; Änderungen bleiben gesperrt, damit nicht auf eine vergangene Lage eingewirkt wird."
+            },
+            {
+              "title": "Eine Automatisierung scheitert",
+              "body": "Trennen Sie Auslöser, versuchte Aktion und Ergebnis, bevor Sie die Regel ändern."
+            }
+          ]
+        },
+        "prove": {
+          "items": [
+            {
+              "title": "Ein Beleg fehlt",
+              "body": "Das Paket bleibt unvollständig: Export oder andere Darstellung können einen fehlenden Nachweis nicht erzeugen."
+            },
+            {
+              "title": "Die Kette gilt als gültig",
+              "body": "Prüfen Sie Reihenfolge, Fingerabdrücke und Abdeckung bis zum angefragten Punkt, nicht nur den letzten Eintrag."
+            },
+            {
+              "title": "Ein früherer Zustand muss erklärt werden",
+              "body": "Wählen Sie Zeitpunkt und Umfang und trennen Sie historisierte Fakten von ausschließlich aktuellen."
+            }
+          ]
+        },
+        "configure": {
+          "items": [
+            {
+              "title": "Eine neue Version wird vorgeschlagen",
+              "body": "Vergleichen Sie sie mit der aktiven Version, bestimmen Sie betroffene Verbraucher und verlangen Sie die vorgesehenen Freigaben."
+            },
+            {
+              "title": "Eine Komponente ist verfügbar",
+              "body": "Ein Katalogeintrag belegt weder sofortige Verfügbarkeit noch Eignung für einen Fachfall."
+            },
+            {
+              "title": "Eine Einstellung ändert sich",
+              "body": "Prüfen Sie Umfang und Anwendung: Manche Änderungen erfordern Neubewertung oder erneute Bereitstellung."
+            }
+          ]
+        },
+        "admin": {
+          "items": [
+            {
+              "title": "Ein Nutzer besitzt ein Konto",
+              "body": "Das Konto stellt die Identität in der Plattform her; Rollen bestimmen weiterhin, was sichtbar oder erlaubt ist."
+            },
+            {
+              "title": "Ein Recht wird entzogen",
+              "body": "Prüfen Sie den wirksamen Zugriff nach der Änderung und bewahren Sie Autor, Zeitpunkt und Begründung."
+            },
+            {
+              "title": "Das System wirkt betriebsbereit",
+              "body": "Ein aktueller Status hilft bei der Diagnose, ersetzt aber weder ein vollständiges Inventar noch eine Zertifizierung."
+            }
+          ]
+        }
+      },
+      "contract": {
+        "title": "Technischen Vertrag anzeigen",
+        "items": {
+          "reading": "Hauptlesart",
+          "scope": "Umfang",
+          "time": "Zeit und Aktualität",
+          "operation": "Wirkung von Aktionen",
+          "validation": "Validierung",
+          "limits": "Lücken und Grenzen"
+        },
+        "operation": {
+          "agents": "Das Öffnen von Fällen und Ändern von Zuweisungen wirkt auf den aktuellen Zustand; die Liste bleibt eine Lesart von Warteschlange oder Flotte.",
+          "agent": "Tests, Änderungen und Entscheidungen bleiben dem gewählten Agenten zugeordnet; eine frühere Lesart schreibt seinen aktuellen Zustand nicht um.",
+          "monitor": "Überwachungsseiten sind Leseflächen. Ihre Links führen zu Aktionen, ohne ein Signal in eine automatische Entscheidung zu verwandeln.",
+          "act": "Änderungen gelten nur für den aktuellen Zustand und bleiben mit Berechtigung, Ergebnis und Autor nachvollziehbar. Frühere Lesarten sperren sie.",
+          "prove": "Das Erstellen oder Exportieren eines Pakets ändert keine Ursprungsfakten; es bündelt oder übergibt bereits belegte Elemente.",
+          "configure": "Eine Änderung folgt dem Vorschlags- und Freigabezyklus der Seite. Ein gespeicherter Wert ist nicht immer sofort wirksam.",
+          "admin": "Änderungen an Identität oder Zugriff gelten im aktuellen Zustand und müssen eine nutzbare Verwaltungsspur erzeugen."
+        },
+        "validation": {
+          "body": "Das Backend begrenzt Antworten, das BFF prüft ihre Form und die Darstellung bewahrt Lücken, statt sie still in Werte umzuwandeln."
+        }
+      },
+      "closing": {
+        "eyebrow": "Merksatz",
+        "body": {
+          "agents": "{page} hilft, die richtige Person, den richtigen Agenten oder Fall zu finden, bevor die entscheidungsrelevanten Details geöffnet werden.",
+          "agent": "{page} erklärt einen Aspekt des gewählten Agenten durch die Verbindung von Konfiguration, beobachtetem Verhalten und Nachweis.",
+          "monitor": "{page} hilft, eine Abweichung vor einer Aktion einzuordnen: welcher Fakt, welcher Umfang, welcher Zeitpunkt und welche Grenze.",
+          "act": "{page} macht aus einer Beobachtung eine gesteuerte Aktion, ohne Entscheidung, Kontext und Spur zu trennen.",
+          "prove": "{page} hilft zu belegen, was belegbar ist, und macht fehlende Elemente oder Zeiträume sichtbar.",
+          "configure": "{page} zeigt den tatsächlich deklarierten Zustand, seine Wirkung und den kontrollierten Weg zur Änderung.",
+          "admin": "{page} verbindet Identität, Berechtigung und Systemzustand, damit eine Änderung erklärbar und prüfbar bleibt."
+        },
+        "global": "Tessera als Ganzes verstehen"
+      },
       "reading": {
         "agents": [
           {

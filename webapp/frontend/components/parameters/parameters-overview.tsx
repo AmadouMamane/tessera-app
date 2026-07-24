@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
@@ -26,6 +26,7 @@ import { Link } from "@/i18n/navigation";
 import { fetchParametersOverview } from "@/lib/api/client";
 import type { ParametersOverview as ParametersData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const PARAM_STATUS: Record<string, string> = {
   active: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
@@ -84,7 +85,7 @@ function ExplainInfo({ k, title }: { k: string; title: string }) {
 export function ParametersOverview() {
   const t = useTranslations("parameters");
   const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   // As-of T (OT-01, URL-derived `?asof=`): the governed overrides are refolded
   // from the ledger at T — "mes paramètres d'il y a 3 h". Key must stay accorded
   // with the SSR prefetch (`[..., null]` in live — Insight 175).
