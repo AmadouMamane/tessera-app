@@ -637,3 +637,18 @@ they no longer carry the explanation alone.
   non couverte. Elle utilise désormais le même ancrage de bord à bord ; mesure live sur `:3098`,
   trait et conteneur ont tous deux `x=276 → 1246`, soit `970 px`. Le ratchet couvre maintenant
   les deux composants. Biome, TypeScript et 45 tests ciblés sont verts.
+
+## Correctif du masque de scroll du rail — 2026-07-24
+
+- Finding live : une fois Vue d’ensemble défilée, le header finissait à `y=88` mais le rail
+  sticky commençait à `y=108`. Dans la bande intermédiaire de `20 px`, `elementFromPoint`
+  retrouvait un lien de carte du contenu : la page restait donc réellement visible et
+  interactive au-dessus du rail.
+- Cause : le scrollport commun porte `py-5`, tandis que le rail utilisait `top-0`. Le plan
+  sticky se calait sur le bord intérieur du padding ; l’ombre opaque de `4 px` ne pouvait pas
+  masquer les `20 px`. Cette régression a été introduite lors de l’uniformisation de la trame.
+- Correction : le rail de Vue d’ensemble utilise `-top-5`, exactement l’inverse du padding du
+  scrollport. Après le même scroll de `566 px`, header et rail se rencontrent à `y=88` et le
+  point `y=98` appartient à un bouton du rail, plus au contenu sous-jacent.
+- Biome, TypeScript, diff-check et 62 tests ciblés sont verts. Une mutation qui rétablit
+  `top-0` rend le ratchet rouge. `make gate-twice` reste suspendu.

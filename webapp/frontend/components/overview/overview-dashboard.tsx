@@ -414,9 +414,10 @@ export function OverviewDashboard({
         <PageEvidenceActions className="self-center" />
       </div>
 
-      {/* The command bar pins under the page topbar. A shallow same-colour fill keeps
-          scrolling content behind it without opening a large gap below the alert. */}
-      <div className="sticky top-0 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-1 shadow-[0_-4px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
+      {/* The main scroller owns 1.25rem of top padding. The matching negative sticky
+          offset consumes that padding only once the rail pins, so its opaque fill meets
+          the header and scrolling content cannot remain visible in a strip above it. */}
+      <div className="sticky -top-5 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-1 shadow-[0_-4px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
         <SignalCommandBar
           temporal={temporal}
           timeline={timeline.data}

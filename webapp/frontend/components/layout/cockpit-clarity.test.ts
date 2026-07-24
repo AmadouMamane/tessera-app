@@ -648,6 +648,14 @@ describe("alert-to-rail spacing stays compact", () => {
     expect(oversizedUpwardShadow(overviewDashboard)).toEqual([]);
   });
 
+  it("pins the overview rail against the header instead of exposing scrolling content", () => {
+    expect(overviewDashboard).toContain('className="sticky -top-5 z-40');
+    expect(overviewDashboard).not.toContain('className="sticky top-0 z-40');
+
+    const transparentGapMutation = overviewDashboard.replace("sticky -top-5", "sticky top-0");
+    expect(transparentGapMutation).toContain('className="sticky top-0 z-40');
+  });
+
   it("keeps the overview opening band and expanded rail vertically compact", () => {
     expect(overviewStackGap(overviewDashboard)).toBe(2.5);
     expect(commandRowPadding(signalCommandBar)).toBeLessThanOrEqual(1.5);
@@ -686,10 +694,7 @@ describe("cockpit surfaces keep one ten-pixel rhythm", () => {
   const shellFrame = readFileSync(join(root, "components/layout/shell-frame.tsx"), "utf8");
   const card = readFileSync(join(root, "components/ui/card.tsx"), "utf8");
   const globals = readFileSync(join(root, "app/globals.css"), "utf8");
-  const security = readFileSync(
-    join(root, "components/security/security-dashboard.tsx"),
-    "utf8",
-  );
+  const security = readFileSync(join(root, "components/security/security-dashboard.tsx"), "utf8");
   const qualityViewSwitch = readFileSync(
     join(root, "components/surveiller/quality-view-switch.tsx"),
     "utf8",
@@ -778,9 +783,7 @@ describe("cockpit surfaces keep one ten-pixel rhythm", () => {
   });
 
   it("keeps the quality view doors ten pixels apart without an extra bottom margin", () => {
-    expect(qualityViewSwitch).toContain(
-      'className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"',
-    );
+    expect(qualityViewSwitch).toContain('className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"');
     expect(qualityViewSwitch).not.toMatch(/<nav[^>]*className="[^"]*mb-/u);
   });
 
