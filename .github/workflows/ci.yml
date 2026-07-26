@@ -116,6 +116,20 @@ jobs:
       - name: Python — ruff, mypy, pytest (not integration)
         run: make gate-py
 
+  # The gate builds no image, so a Dockerfile / .dockerignore regression is invisible
+  # to it — twice proven at cutover (a dropped `COPY eval`; then `.dockerignore` stripping
+  # eval/reports), each surfacing only when the container booted, not when the gate ran.
+  # This job closes that blind spot: it builds the agent image and runs the image-only
+  # preflight (eval package imports · seed reports load · app factory builds) with no
+  # external services, via `make image-preflight` so there is no drift from the laptop.
+  image-preflight:
+    name: image-preflight (agent image builds & self-checks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the agent image and run its image-only preflight
+        run: make image-preflight
+
   e2e:
     name: e2e (Playwright, production build)
     runs-on: ubuntu-latest

@@ -26,8 +26,15 @@
 **/.env.*.local
 *.env
 
-# Build / test artifacts not needed at build time
+# Build / test artifacts not needed at build time.
+# The generated per-env reports (eval/reports/<env>/) are host state, never baked —
+# but the COMMITTED seed archive (eval/reports/seed/) is the floor the eval-driven
+# dashboards fall back to when a deployment has no archive of its own (Cloud Run),
+# so it MUST ship in the image. Excluding it here is exactly what left the container
+# with an empty eval/reports/ and degraded agent_historique to `available: false`.
 eval/reports/*
+!eval/reports/seed
+!eval/reports/seed/**
 **/coverage
 **/.coverage
 **/htmlcov

@@ -1,0 +1,69 @@
+# Blue-green cutover overlay — the on-prem agent as a CONTAINER on the live data.
+#
+# The reference deployment runs the front on Cloud Run while the agent, Postgres
+# and Ollama stay on-prem. This overlay runs the agent under the SAME prod image
+# path as Cloud Run (not run_local.py), joined to the live data + observability
+# stacks so it talks to everything BY SERVICE NAME (container-to-container) — no
+# host.docker.internal hop except for Ollama, which stays native for the Metal GPU.
+#
+# It exists as a tracked file (ADR 0043) because it was the third cutover surprise:
+# the container did not inherit what run_local.py read from the repo + .env.local,
+# so operator config drifted into an untracked scratchpad. Everything machine- or
+# secret-specific is parameterised: network names and paths interpolate from the
+# shell / a compose `.env`, and the two secrets come from an `env_file` that is
+# gitignored. Nothing here is a secret; the checked-in file is safe to read.
+#
+# Preconditions the boot preflight asserts (run `make preflight` after `up`):
+#   - the `data` and `obs` external networks exist (the live stacks are running);
+#   - infra/docker/cutover.env exists (copy infra/docker/cutover.env.example);
+#   - eval/reports/ is present in the repo (bind-mounted read-only as the archive).
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.unix.yml \
+#       -f docker-compose.cutover.yml up -d --no-deps --force-recreate agent
+services:
+  agent:
+    restart: unless-stopped
+    networks:
+      - data # live data: tessera-postgres reachable as `postgres`
+      - obs # observability: clickhouse / prometheus / otel-collector by name
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Ollama runs natively (Metal GPU)
+    ports:
+      - "${TESSERA_AGENT_PORT:-8099}:8080" # API (ngrok tunnels this port)
+      - "${TESSERA_METRICS_PORT:-9090}:9090" # /metrics (Prometheus scrapes it)
+    env_file:
+      # The two secrets ONLY (ClickHouse password + operator signing key), plus any
+      # machine overrides. Gitignored; create it from cutover.env.example.
+      - infra/docker/cutover.env
+    environment:
+      # Non-secret wiring, by service name across the joined networks.
+      TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@postgres:5432/tessera
+      TESSERA_CLICKHOUSE_URL: http://clickhouse:8123
+      TESSERA_PROMETHEUS_URL: http://prometheus:9090
+      TESSERA_OBSERVABILITY__OTEL_COLLECTOR_ENDPOINT: http://otel-collector:4318
+      TESSERA_OLLAMA__HOST: http://host.docker.internal:11434
+      # The base compose turns metrics OFF; the cutover needs them on (turn-evidence
+      # feeds the L1/L2 level badges) and exposes 9090 above.
+      TESSERA_OBSERVABILITY__METRICS_ENABLED: "true"
+      TESSERA_LEVEL_TURN_EVIDENCE: "1"
+      # .env.local parity (non-secret): the chat rate limits run_local.py applied.
+      TESSERA_API__RATE_LIMIT_CHAT: "${TESSERA_RATE_LIMIT_CHAT:-80/hour}"
+      TESSERA_API__RATE_LIMIT_CHAT_GLOBAL: "${TESSERA_RATE_LIMIT_CHAT_GLOBAL:-800/hour}"
+    volumes:
+      # Durable host state (audit sink + budget) — survives container recreation
+      # and reboot. Point TESSERA_AGENT_STATE at a path outside the repo.
+      - ${TESSERA_AGENT_STATE:-./.agent-state}:/tmp/tessera
+      # The eval report archive, read-only. Generated per-env reports are host
+      # state, never baked into the image; the container reads them from the repo,
+      # exactly as run_local.py did. Without this the eval-driven dashboards
+      # (agent history, evaluations, control signals) degrade to available:false.
+      - ./eval/reports:/app/eval/reports:ro
+
+networks:
+  data:
+    external: true
+    name: ${TESSERA_DATA_NETWORK:-tessera_default}
+  obs:
+    external: true
+    name: ${TESSERA_OBS_NETWORK:-tessera-claude-obs}

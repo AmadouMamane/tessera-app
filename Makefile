@@ -747,7 +747,7 @@ DEV_BACKEND_LOG ?= /tmp/tessera-backend.log
 DEV_FRONT_LOG   ?= /tmp/tessera-front.log
 _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 
-.PHONY: dev-up dev-down dev-status dev-preview
+.PHONY: dev-up dev-down dev-status dev-preview preflight image-preflight
 
 # Start backend + frontend from THIS checkout, detached; wait for health.
 dev-up: dev-secrets
@@ -811,6 +811,30 @@ dev-status:
 dev-preview:
 	@test -n "$(PORT)" || { echo "usage: make dev-preview PORT=3098 [API_PORT=8098] [METRICS_PORT=9098]"; exit 1; }
 	@api="$(API_PORT)"; [ -n "$$api" ] || api=$$(( $(PORT) + 5000 )); mport="$(METRICS_PORT)"; [ -n "$$mport" ] || mport=$$(( $$api + 1000 )); $(MAKE) --no-print-directory dev-up DEV_FPORT=$(PORT) DEV_BPORT=$$api DEV_MPORT=$$mport DEV_BACKEND_LOG=/tmp/tessera-preview-backend-$(PORT).log DEV_FRONT_LOG=/tmp/tessera-preview-front-$(PORT).log
+
+# ── Preflight: assert every declared input, or refuse loudly (ADR 0026, ADR 0043) ─
+#
+# Three cutover regressions each hid a missing container input behind a silent
+# {available:false} — the eval package, the eval/reports archive, the operator key —
+# discovered by the operator page by page instead of refused at boot. `tessera-preflight`
+# turns every such hole into ONE loud, checked verdict whose EXIT CODE is the answer
+# (0 clear · 1 a FAIL · 2 a BLIND spot the witness could not see, never "ok"). It
+# interrogates the thing itself (ADR 0026): the eval loader the dashboards call, psycopg,
+# the ClickHouse / Prometheus / Ollama clients — never a neighbouring proxy.
+#
+# `preflight` runs the FULL witness inside the running cutover container, so it sees the
+# container's real DSN, joined networks, mounts and env — the check to run after `up`
+# and before trusting a smoke-test. `HTTP=<base>` also probes a server's health routes.
+preflight:
+	@docker exec tessera-$(or $(TESSERA_ENV),local)-agent tessera-preflight $(if $(HTTP),--http $(HTTP),)
+
+# `image-preflight` is the CI-time witness: it BUILDS the agent image and runs the
+# image-only checks (eval package imports, seed reports load, app factory builds) in a
+# throwaway container with no external services — exactly the class the gate could not
+# see, so a dropped `COPY eval` or a dockerignored seed is caught at build, not cutover.
+image-preflight:
+	@docker build -f infra/docker/Dockerfile.agent -t tessera-agent:preflight .
+	@docker run --rm --entrypoint tessera-preflight tessera-agent:preflight --image-only
 
 # ── CI simulation ───────────────────────────────────────────────────────────
 

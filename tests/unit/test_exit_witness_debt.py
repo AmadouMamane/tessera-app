@@ -169,6 +169,14 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::dev-down": "action",
     "Makefile::dev-preview": "action",
     "Makefile::dev-secrets": "action",
+    # ── preflight: assert every declared container input, or refuse (ADR 0043) ─────────────────
+    # Its exit code IS the verdict (0 clear / 1 FAIL / 2 BLIND), passed through unlaundered:
+    # `docker exec … tessera-preflight` returns the command's OWN code, and a missing container
+    # (nothing to exec) is a non-zero docker error, never a false 0.
+    "Makefile::preflight": "VERDICT",
+    # `docker build …` then `docker run … tessera-preflight --image-only`: a build regression OR a
+    # failed image-only check aborts the target non-zero. Closes the gate's image blind spot.
+    "Makefile::image-preflight": "VERDICT",
     "Makefile::obs-up": "action",
     "Makefile::obs-up-core": "action",
     "Makefile::obs-down": "action",
@@ -267,6 +275,10 @@ _EXIT_WITNESSES: dict[str, str] = {
     # Terraform contract passes. This is a verdict, not an artefact-producing action.
     ".github/workflows/ci.yml::terraform": "VERDICT",
     ".github/workflows/ci.yml::gate": "VERDICT",
+    # Builds the agent image and runs its --image-only preflight (via `make image-preflight`, no
+    # drift from the laptop). Catches the Dockerfile/.dockerignore class at build — billing-blocked
+    # today like every job here, registered for the day billing returns.
+    ".github/workflows/ci.yml::image-preflight": "VERDICT",
     ".github/workflows/ci.yml::precommit": "VERDICT",
     # `continue-on-error: true`. 182 Playwright specs against a production build, a seeded
     # Postgres and a real backend — and the workflow's conclusion ignores every one of them. The

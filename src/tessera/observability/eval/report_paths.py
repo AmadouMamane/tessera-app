@@ -15,6 +15,16 @@ Contract (the layer-3 guardrails):
 Once the existing flat files are moved into their ``<env>/`` subfolder the flat
 root holds no ``*.json`` and the bridge disappears on its own, so the fallback
 can later be removed without ceremony.
+
+A third, lowest-priority read location is the committed **seed** archive
+(``eval/reports/seed/``). Unlike the generated per-env reports it is *tracked*, so
+it travels inside the built image (``Dockerfile.agent`` ``COPY eval``). It is the
+floor that keeps the eval-driven dashboards (agent history, evaluations, control
+signals) from degrading to ``available: false`` on a deployment that has no host
+directory to mount and no run of its own yet. It is consulted **only when the env
+archive is empty** — any real per-env run always wins — and it is skipped entirely
+when ``TESSERA_REPORTS_DIR`` pins an exact directory. It never fabricates a number;
+it is real ``llama3.2:3b`` catalogue output, committed as a guaranteed minimum.
 """
 
 from __future__ import annotations
@@ -29,12 +39,16 @@ __all__ = [
     "report_files_for",
     "report_read_dirs",
     "reports_flat_root",
+    "reports_seed_root",
     "reports_write_dir",
     "resolve_report_file",
 ]
 
 # src/tessera/observability/eval/report_paths.py → parents[4] == repo root.
 _FLAT_ROOT = Path(__file__).resolve().parents[4] / "eval" / "reports"
+# The committed, read-only floor archive — the only reports tracked in git, so the
+# only ones that travel inside the built image.
+_SEED_ROOT = _FLAT_ROOT / "seed"
 
 
 def _override_dir() -> Path | None:
@@ -51,6 +65,16 @@ def _override_dir() -> Path | None:
 def reports_flat_root() -> Path:
     """The legacy flat archive root (``eval/reports``), environment-independent."""
     return _FLAT_ROOT
+
+
+def reports_seed_root() -> Path:
+    """The committed, read-only floor archive (``eval/reports/seed``).
+
+    The only reports tracked in git, and therefore the only ones the built image
+    ships. Read as a last resort by :func:`iter_report_files` when the per-env
+    archive is empty.
+    """
+    return _SEED_ROOT
 
 
 def _env_name(env: str | None) -> str:
@@ -77,13 +101,22 @@ def report_read_dirs(env: str | None = None) -> list[Path]:
 
 
 def iter_report_files(env: str | None = None) -> list[Path]:
-    """All report ``*.json`` across the read dirs; ``<env>/`` wins on a name clash."""
+    """All report ``*.json`` across the read dirs; ``<env>/`` wins on a name clash.
+
+    Falls through to the committed seed floor (:func:`reports_seed_root`) ONLY when
+    the per-env archive is empty, so a real per-env run always wins and the seed can
+    never dilute or outrank live output. The fall-through is skipped when
+    ``TESSERA_REPORTS_DIR`` pins an exact directory (tests read precisely that dir).
+    """
     seen: dict[str, Path] = {}
     for directory in report_read_dirs(env):
         if not directory.exists():
             continue
         for path in directory.glob("*.json"):
             seen.setdefault(path.name, path)  # first dir (env) wins
+    if not seen and _override_dir() is None and _SEED_ROOT.exists():
+        for path in _SEED_ROOT.glob("*.json"):
+            seen.setdefault(path.name, path)
     return list(seen.values())
 
 

@@ -119,6 +119,7 @@ Changelog = "https://github.com/AmadouMamane/tessera/blob/main/CHANGELOG.md"
 tessera = "tessera.api.main:cli"
 tessera-eval = "eval.runner:main"
 tessera-ingest = "tessera.corpus.ingestion:main"
+tessera-preflight = "tessera.preflight:main"
 
 [dependency-groups]
 dev = [
