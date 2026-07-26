@@ -612,11 +612,11 @@ export const ChromeBadgesSignalCatalogSchema = z.object({
 });
 
 export const ChromeBadgesSchema = z.object({
-  a_traiter: ChromeBadgesATraiterSchema,
-  a_faire: ChromeBadgesAFaireSchema,
-  incidents: ChromeBadgesIncidentsSchema,
-  curation: ChromeBadgesCurationSchema,
-  signal_catalog: ChromeBadgesSignalCatalogSchema,
+  a_traiter: ChromeBadgesATraiterSchema.nullable().optional(),
+  a_faire: ChromeBadgesAFaireSchema.nullable().optional(),
+  incidents: ChromeBadgesIncidentsSchema.nullable().optional(),
+  curation: ChromeBadgesCurationSchema.nullable().optional(),
+  signal_catalog: ChromeBadgesSignalCatalogSchema.nullable().optional(),
 });
 
 export const ChromeNotificationsItemsItemSchema = z.object({

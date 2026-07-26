@@ -131,13 +131,21 @@ class ChromeBadgesSignalCatalog(BaseModel):
 
 
 class ChromeBadges(BaseModel):
-    """chrome.badges."""
+    """chrome.badges.
 
-    a_traiter: ChromeBadgesATraiter
-    a_faire: ChromeBadgesAFaire
-    incidents: ChromeBadgesIncidents
-    curation: ChromeBadgesCuration
-    signal_catalog: ChromeBadgesSignalCatalog
+    Every badge is OPTIONAL: ``compute_chrome`` follows the deliberate "under-report"
+    contract — a source with no count (empty queue, nothing pending) or one that cannot
+    be read contributes NOTHING rather than a zero, so the chrome under-reports before it
+    ever misreports (see tessera/observability/chrome.py). Marking these required made the
+    whole endpoint 500 the moment any queue was empty, which broke every page the chrome
+    decorates. ``ChromePayload`` still guarantees the ``badges`` object itself is present.
+    """
+
+    a_traiter: ChromeBadgesATraiter | None = None
+    a_faire: ChromeBadgesAFaire | None = None
+    incidents: ChromeBadgesIncidents | None = None
+    curation: ChromeBadgesCuration | None = None
+    signal_catalog: ChromeBadgesSignalCatalog | None = None
 
 
 class ChromeNotificationsItemsItem(BaseModel):
