@@ -8,10 +8,17 @@
  */
 import "server-only";
 
+import { cache } from "react";
+
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
-/** Whether `admin` may currently see the synthesis. Defaults to false on error. */
-export async function getSynthesisAdminFlag(): Promise<boolean> {
+/**
+ * Whether `admin` may currently see the synthesis. Defaults to false on error.
+ *
+ * Wrapped in React `cache()` so repeated reads within one render (layout + page) share a
+ * single tunnel round-trip. Request-scoped; a passthrough outside a render.
+ */
+export const getSynthesisAdminFlag = cache(async (): Promise<boolean> => {
   try {
     const res = await fetch(`${backendUrl()}/settings/synthesis-admin`, {
       headers: backendHeaders({ Accept: "application/json" }),
@@ -23,4 +30,4 @@ export async function getSynthesisAdminFlag(): Promise<boolean> {
   } catch {
     return false;
   }
-}
+});

@@ -4,8 +4,6 @@ import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { AppShell } from "@/components/layout/app-shell";
 import { ReliabilityDashboard } from "@/components/reliability/reliability-dashboard";
 import { readAgentScope } from "@/lib/agent-scope";
-import { loadDeclaredLens } from "@/lib/server/agent-lens";
-import { loadFleet } from "@/lib/server/fleet";
 
 interface ReliabilityPageProps {
   params: Promise<{ locale: string }>;
@@ -23,18 +21,17 @@ export default async function ReliabilityPage({ params, searchParams }: Reliabil
   setRequestLocale(locale);
   const sp = await searchParams;
   const scope = readAgentScope(sp);
-  const fleet = await loadFleet(locale, sp);
   const t = await getTranslations({ locale, namespace: "reliability" });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
       <div>
         <GovScopeSection
-          fleet={fleet}
+          route="/surveiller/fiabilite-cout"
           scope={scope}
           locale={locale}
+          searchParams={sp}
           signalHero
           perAgent={false}
-          lens={await loadDeclaredLens("/surveiller/fiabilite-cout", fleet)}
         />
       </div>
       <ReliabilityDashboard />

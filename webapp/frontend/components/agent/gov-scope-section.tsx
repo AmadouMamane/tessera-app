@@ -1,11 +1,12 @@
 import { getTranslations } from "next-intl/server";
 
-import { AgentBreakdown } from "@/components/agent/agent-breakdown";
+import { StreamedAgentBreakdown } from "@/components/agent/agent-breakdown-stream";
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
-import type { BreakdownLens } from "@/lib/agent-lens";
 import { isScopedToAgent } from "@/lib/agent-scope";
-import type { Fleet } from "@/lib/api/schemas";
+import type { DeclaredLensRoute } from "@/lib/page-nature";
+
+type SearchParams = Record<string, string | string[] | undefined>;
 
 /**
  * Reusable GOUVERNER / PLATEFORME header section: the global agent-scope filter +
@@ -15,6 +16,13 @@ import type { Fleet } from "@/lib/api/schemas";
  * deduplicated org total, per-agent breakdown) is consistent everywhere — distinct
  * from the AGENT switcher. Pass `signalsNote={false}` where the page below is
  * already fully per-agent and the banner would be misleading.
+ *
+ * The filter, the hero and the note render at the first round-trip; the breakdown
+ * table — the fleet read plus the per-agent lens fan-out, the page's slowest tunnel
+ * work — is STREAMED behind `<Suspense>` (see `StreamedAgentBreakdown`) so the section
+ * paints immediately and the table fills in. The section takes the page's `route` and
+ * search params rather than a pre-loaded `fleet`/`lens`, so the loads happen off the
+ * page's critical TTFB path.
  *
  * `perAgent` declares whether the PAGE BODY responds to the agent filter:
  * - `true` (default): the dashboard below reads the selected agent's own signals
@@ -29,22 +37,26 @@ import type { Fleet } from "@/lib/api/schemas";
  * page's own chrome, not stacked above the page's substance.
  */
 export async function GovScopeSection({
-  fleet,
+  route,
   scope,
   locale,
+  searchParams,
+  signalId,
   signalsNote = true,
   signalHero = false,
   perAgent = true,
-  lens,
 }: {
-  fleet: Fleet | null;
+  /** The page's declared lens route — the breakdown's columns come from here. */
+  route: DeclaredLensRoute;
   scope: string;
   locale: string;
+  /** The page's URL params — opt the fleet read into the shared SURVEILLER window. */
+  searchParams?: SearchParams;
+  /** `?signal=` focus, honoured only by the quality lens. */
+  signalId?: string;
   signalsNote?: boolean;
   signalHero?: boolean;
   perAgent?: boolean;
-  /** Column lens for the breakdown table (default: the historical monitoring columns). */
-  lens?: BreakdownLens;
 }) {
   const t = await getTranslations({ locale, namespace: "agentScope" });
   return (
@@ -54,7 +66,13 @@ export async function GovScopeSection({
         <AgentScopeFilter />
         <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
       </div>
-      <AgentBreakdown fleet={fleet} scope={scope} locale={locale} lens={lens} />
+      <StreamedAgentBreakdown
+        route={route}
+        scope={scope}
+        locale={locale}
+        fleetSearchParams={searchParams}
+        signalId={signalId}
+      />
       {/* Only when an agent is ACTUALLY selected: the note says "Filtre actif …",
           which is misleading on the default "Tous les agents" (no filter) view. The
           text matches the page: per-agent cards vs an org-posture aggregate. */}

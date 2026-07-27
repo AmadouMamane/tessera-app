@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import {
   type AgentSnapshot,
   type BreakdownLens,
@@ -19,6 +21,28 @@ import { type AgentBreakdownDomain, type DeclaredLensRoute, PAGE_NATURE } from "
 import { backendHeaders, backendUrl } from "./backend";
 
 /**
+ * The URL-keyed snapshot read behind `fetchSnapshot`, wrapped in React `cache()`.
+ *
+ * The per-agent fan-out asks the same `?agent=&signals=` snapshot at most once per
+ * render tree — the org `slo` read that decides the plan and any repeated per-agent
+ * read collapse to one tunnel round-trip. Keyed on the built URL string (request-scoped,
+ * never across renders); outside a render `cache()` is a passthrough, so tests are
+ * unaffected. This is on top of the backend's own read-through cache (ADR 0015).
+ */
+const fetchSnapshotByUrl = cache(async (url: string): Promise<OverviewSnapshot | undefined> => {
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: backendHeaders({ Accept: "application/json" }),
+    });
+    if (!res.ok) return undefined;
+    return OverviewSnapshotSchema.parse(await res.json());
+  } catch {
+    return undefined;
+  }
+});
+
+/**
  * Server-side lens loader for the Qualité IA breakdown table.
  *
  * One org read decides the lens (breach → alarm; quiet → quality; org-wide breach →
@@ -29,23 +53,14 @@ import { backendHeaders, backendUrl } from "./backend";
  * Any failed read yields `undefined` and the lens rows render their honest refusal —
  * never a fabricated value, never a blank page.
  */
-async function fetchSnapshot(params: {
+function fetchSnapshot(params: {
   agent?: string;
   signals: string;
 }): Promise<OverviewSnapshot | undefined> {
-  try {
-    const qs = new URLSearchParams();
-    if (params.agent) qs.set("agent", params.agent);
-    qs.set("signals", params.signals);
-    const res = await fetch(`${backendUrl()}/observability/snapshot?${qs.toString()}`, {
-      cache: "no-store",
-      headers: backendHeaders({ Accept: "application/json" }),
-    });
-    if (!res.ok) return undefined;
-    return OverviewSnapshotSchema.parse(await res.json());
-  } catch {
-    return undefined;
-  }
+  const qs = new URLSearchParams();
+  if (params.agent) qs.set("agent", params.agent);
+  qs.set("signals", params.signals);
+  return fetchSnapshotByUrl(`${backendUrl()}/observability/snapshot?${qs.toString()}`);
 }
 
 export async function loadBreakdownLens(

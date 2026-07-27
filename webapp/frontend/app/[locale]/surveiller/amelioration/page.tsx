@@ -4,8 +4,6 @@ import { GovScopeSection } from "@/components/agent/gov-scope-section";
 import { ImprovementDashboard } from "@/components/improvement/improvement-dashboard";
 import { AppShell } from "@/components/layout/app-shell";
 import { readAgentScope } from "@/lib/agent-scope";
-import { loadDeclaredLens } from "@/lib/server/agent-lens";
-import { loadFleet } from "@/lib/server/fleet";
 
 interface ImprovementPageProps {
   params: Promise<{ locale: string }>;
@@ -23,7 +21,6 @@ export default async function ImprovementPage({ params, searchParams }: Improvem
   setRequestLocale(locale);
   const sp = await searchParams;
   const scope = readAgentScope(sp);
-  const fleet = await loadFleet(locale, sp);
   const t = await getTranslations({ locale, namespace: "improvement" });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
@@ -32,12 +29,12 @@ export default async function ImprovementPage({ params, searchParams }: Improvem
             reuses the QUALITY lens — the per-agent regression facts (blocking T1, gate,
             eval freshness) are the improvement facts that actually exist. */}
         <GovScopeSection
-          fleet={fleet}
+          route="/surveiller/amelioration"
           scope={scope}
           locale={locale}
+          searchParams={sp}
           signalHero
           perAgent={false}
-          lens={await loadDeclaredLens("/surveiller/amelioration", fleet)}
         />
       </div>
       <ImprovementDashboard />

@@ -2,9 +2,13 @@
 //
 // It walks every zone page ON DISK (the glob may find MORE pages, never fewer) and fails:
 //   · a zone page with no declaration — the silent default is forbidden;
-//   · a page declared `lens:<X>` that does not wire ITS OWN declared lens (the single
-//     door is `loadDeclaredLens("<its-route>", …)` — a direct `loadDomainLens` call could
-//     load a neighbour's domain, so it is banned in pages);
+//   · a page declared `lens:<X>` that does not wire ITS OWN declared lens. The single door
+//     is `loadDeclaredLens("<its-route>", …)`, reached one of two ways, both carrying the
+//     page's own route literally: INLINE (the page calls it + passes `lens={…}` to the view)
+//     or STREAMED (the page hands `route="<its-route>"` to a streamed breakdown —
+//     `<StreamedAgentBreakdown` / `<GovScopeSection` — which calls it on the page's behalf so
+//     the fan-out streams behind Suspense). A direct `loadDomainLens` call could load a
+//     neighbour's domain, so it is banned in pages either way;
 //   · a page declared `org-wide` that renders ANY per-agent view;
 //   · a dead registry entry (route with no file) — the freeze must tighten.
 //
@@ -13,8 +17,9 @@
 // non-regression for the five contextualised pages and Vue d'ensemble too.
 //
 // Mutation contract (each verified red before landing):
-//   · strip `lens={…}` from a lens:security page → "does not pass a lens" → red;
-//   · swap its loadDeclaredLens route for a neighbour's → "own route" check → red;
+//   · drop a lens:security page's lens wiring (strip `lens={…}` from an inline page, or the
+//     `route="…"` from a streamed one) → "passes no lens" / "does not wire" → red;
+//   · swap its own route for a neighbour's (inline OR streamed) → "own route" check → red;
 //   · flip its registry entry to org-wide → "renders a per-agent view" → red;
 //   · add a zone page.tsx without declaring it → completeness → red.
 import { readFileSync, readdirSync } from "node:fs";
@@ -71,6 +76,7 @@ function discoverZonePages(): Map<string, string> {
  * is deliberately NOT one: narrowing an org-wide stream is an affordance, not a view. */
 const PER_AGENT_MARKERS = [
   "<AgentBreakdown",
+  "<StreamedAgentBreakdown",
   "<GovScopeSection",
   "initialFleet={fleet}",
   "ReleaseControlView",
@@ -144,9 +150,21 @@ function pageViolations(route: string, nature: PageNature, source: string): stri
   }
 
   // An AgentBreakdown domain: the page must go through the single door, with ITS OWN route.
-  if (!source.includes(`loadDeclaredLens("${route}"`)) {
+  // Two equivalent wirings are accepted, both carrying the page's own route literally:
+  //   · INLINE      — `loadDeclaredLens("<route>", …)` in the page + `lens={…}` to the view;
+  //   · STREAMED    — `route="<route>"` on a streamed breakdown (`<StreamedAgentBreakdown` /
+  //                   `<GovScopeSection`), which calls `loadDeclaredLens(route, …)` on the
+  //                   page's behalf so the fan-out streams behind Suspense.
+  // Both forbid a neighbour's route (the own-route literal is required) and a direct
+  // domain/breakdown loader in the page (registry bypass).
+  const inlineOwnRoute = source.includes(`loadDeclaredLens("${route}"`);
+  const streamedBreakdown =
+    source.includes("<StreamedAgentBreakdown") || source.includes("<GovScopeSection");
+  const streamedOwnRoute = streamedBreakdown && source.includes(`route="${route}"`);
+  if (!inlineOwnRoute && !streamedOwnRoute) {
     violations.push(
-      `${route}: declared lens:${nature.domain} but does not call loadDeclaredLens("${route}", …)`,
+      `${route}: declared lens:${nature.domain} but does not wire loadDeclaredLens("${route}", …) — ` +
+        `inline, or route="${route}" on a streamed breakdown`,
     );
   }
   if (source.includes("loadDomainLens(") || source.includes("loadBreakdownLens(")) {
@@ -154,7 +172,9 @@ function pageViolations(route: string, nature: PageNature, source: string): stri
       `${route}: declared lens:${nature.domain} but bypasses the registry (direct loader call)`,
     );
   }
-  if (!source.includes("lens={")) {
+  // The lens must actually reach a view: inline via `lens={…}`, or the streamed breakdown that
+  // loads and renders it from its own `route="…"`.
+  if (!source.includes("lens={") && !streamedBreakdown) {
     violations.push(`${route}: declared lens:${nature.domain} but passes no lens to the view`);
   }
   return violations;
@@ -244,14 +264,24 @@ describe("every zone page declares its nature — no silent default", () => {
 describe("the checker actually bites (synthetic sources through the REAL path)", () => {
   const LENS: PageNature = { kind: "lens", domain: "security" };
 
-  it("a lens page rendering the generic breakdown with no lens is named", () => {
-    const source = `const lens = await loadDeclaredLens("/x", fleet);\n<GovScopeSection fleet={fleet} />`;
+  it("a lens page rendering a breakdown NOT wired to its own route is named (inline)", () => {
+    // Renders the breakdown but wires no lens for it — the inline drop: no own-route load,
+    // no lens prop. Under the streamed contract this is a `<GovScopeSection>` with no `route`.
+    const source = "<GovScopeSection fleet={fleet} />";
     const v = pageViolations("/x", LENS, source);
-    expect(v.some((m) => m.includes("passes no lens"))).toBe(true);
+    expect(v.some((m) => m.includes("does not wire"))).toBe(true);
   });
 
-  it("a lens page wired to a NEIGHBOUR'S route is named — its own route or nothing", () => {
+  it("a lens page wired to a NEIGHBOUR'S route is named — its own route or nothing (inline)", () => {
     const source = `const lens = await loadDeclaredLens("/surveiller/conformite", fleet);\n<GovScopeSection lens={lens} />`;
+    const v = pageViolations("/surveiller/securite-privacy", LENS, source);
+    expect(v.some((m) => m.includes('loadDeclaredLens("/surveiller/securite-privacy"'))).toBe(true);
+  });
+
+  it("a lens page STREAMED to a NEIGHBOUR'S route is named — the route literal must be its own", () => {
+    // The streamed door is `route="…"`; a neighbour's route there loads the neighbour's
+    // domain just as an inline neighbour call would, so it must red the same way.
+    const source = `<StreamedAgentBreakdown route="/surveiller/conformite" scope={s} locale={l} />`;
     const v = pageViolations("/surveiller/securite-privacy", LENS, source);
     expect(v.some((m) => m.includes('loadDeclaredLens("/surveiller/securite-privacy"'))).toBe(true);
   });
@@ -264,6 +294,7 @@ describe("the checker actually bites (synthetic sources through the REAL path)",
   it("an org-wide page rendering ANY per-agent view is named, marker by marker", () => {
     for (const marker of [
       "<AgentBreakdown",
+      "<StreamedAgentBreakdown",
       "<GovScopeSection",
       "initialFleet={fleet}",
       "RbacAgentMatrix",
@@ -275,12 +306,20 @@ describe("the checker actually bites (synthetic sources through the REAL path)",
 
   it("a clean page of each nature passes", () => {
     expect(pageViolations("/x", { kind: "org-wide" }, "<StaticCatalogue />")).toEqual([]);
+    // Inline wiring (own-route load + lens prop) — still a valid shape.
     expect(
       pageViolations(
         "/x",
         LENS,
         `const lens = await loadDeclaredLens("/x", fleet);\n<GovScopeSection lens={lens} />`,
       ),
+    ).toEqual([]);
+    // Streamed wiring (own route handed to a streamed breakdown) — the shape the pages use now.
+    expect(pageViolations("/x", LENS, `<GovScopeSection route="/x" searchParams={sp} />`)).toEqual(
+      [],
+    );
+    expect(
+      pageViolations("/x", LENS, `<StreamedAgentBreakdown route="/x" scope={s} locale={l} />`),
     ).toEqual([]);
     expect(
       pageViolations("/x", { kind: "lens", domain: "monitoring" }, "<GovScopeSection fleet />"),

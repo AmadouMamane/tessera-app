@@ -5,8 +5,6 @@ import { ComplianceDashboard } from "@/components/compliance/compliance-dashboar
 import { AppShell } from "@/components/layout/app-shell";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
-import { loadDeclaredLens } from "@/lib/server/agent-lens";
-import { loadFleet } from "@/lib/server/fleet";
 
 interface CompliancePageProps {
   params: Promise<{ locale: string }>;
@@ -24,7 +22,6 @@ export default async function CompliancePage({ params, searchParams }: Complianc
   setRequestLocale(locale);
   const sp = await searchParams;
   const scope = readAgentScope(sp);
-  const fleet = await loadFleet(locale, sp);
   const t = await getTranslations({ locale, namespace: "compliance" });
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
@@ -38,11 +35,11 @@ export default async function CompliancePage({ params, searchParams }: Complianc
       <ComplianceDashboard
         agentScope={
           <GovScopeSection
-            fleet={fleet}
+            route="/surveiller/conformite"
             scope={scope}
             locale={locale}
+            searchParams={sp}
             perAgent={false}
-            lens={await loadDeclaredLens("/surveiller/conformite", fleet)}
           />
         }
       />

@@ -2,7 +2,7 @@ import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 
-import { AgentBreakdown } from "@/components/agent/agent-breakdown";
+import { StreamedAgentBreakdown } from "@/components/agent/agent-breakdown-stream";
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { AuditTable } from "@/components/audit/audit-table";
 import { OperatorLocked } from "@/components/auth/operator-locked";
@@ -10,9 +10,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { readAgentScope } from "@/lib/agent-scope";
 import { AuditOverviewSchema, AuditPageSchema } from "@/lib/api/schemas";
 import { currentRole, isOperator } from "@/lib/auth/session";
-import { loadDeclaredLens } from "@/lib/server/agent-lens";
 import { backendHeaders, backendUrl } from "@/lib/server/backend";
-import { loadFleet } from "@/lib/server/fleet";
 
 // The operator gate reads the session (cookies) per request — never prerender.
 export const dynamic = "force-dynamic";
@@ -98,10 +96,12 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
     }
     // The page's own per-agent question: each agent's proof — governed acts and ledger
     // entries (measured to deposit per agent). Chain INTEGRITY stays org-wide in the body.
+    // The breakdown STREAMS behind Suspense (fleet + lens fan-out) so the audit table paints
+    // first; no `searchParams` here keeps the deliberate all-history proof-fleet contract.
     scope = readAgentScope(await searchParams);
-    const fleet = await loadFleet(locale);
-    const lens = await loadDeclaredLens("/prouver/audit-logs", fleet);
-    proofSection = <AgentBreakdown fleet={fleet} scope={scope} locale={locale} lens={lens} />;
+    proofSection = (
+      <StreamedAgentBreakdown route="/prouver/audit-logs" scope={scope} locale={locale} />
+    );
   }
 
   return (
