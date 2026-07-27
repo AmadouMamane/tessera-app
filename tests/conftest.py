@@ -116,9 +116,15 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # leak into the suite: governance tests assert the conservative default
     # (no long-term retention without explicit consent).
     monkeypatch.setenv("TESSERA_MEMORY__CONSENT_DEFAULT", "false")
+    # The live-payloads cache is a process singleton keyed on the ledger head; a test that
+    # drove it to a head must not leave those rows visible to the next test's fresh chain.
+    from tessera.guard.ledger_store import reset_ledger_payloads_cache
+
+    reset_ledger_payloads_cache()
     get_settings.cache_clear()
     get_memory_backend.cache_clear()
     yield
+    reset_ledger_payloads_cache()
     get_settings.cache_clear()
     get_memory_backend.cache_clear()
 

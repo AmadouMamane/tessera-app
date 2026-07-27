@@ -614,29 +614,66 @@ def verify_ledger_tree(payloads: Sequence[Mapping[str, Any]]) -> LedgerTreeStatu
     )
 
 
+# ── Live-payloads cache (incremental, head-invalidated) ─────────────────────────────────────────
+# `load_ledger_payloads_sync()` was a per-request O(ledger) scan — ~62 000 rows / 38 MB
+# materialised into Python and filtered, on every SURVEILLER page (compliance, reliability,
+# proofs and timeline each drive one). Measured 1.7-2.6 s each.
+#
+# The ledger is STRICTLY append-only: a BEFORE UPDATE OR DELETE trigger RAISES on any mutation
+# (CREATE_APPEND_ONLY_TRIGGER) and `seq` is a monotonic bigserial. So the head (`max(seq)`) is a
+# COMPLETE cache key — an unchanged head proves every row and payload is byte-identical; an
+# advanced head means only `seq > head` rows were appended. That makes an incremental cache
+# provably correct: the full scan happens ONCE, then each request pays only a `max(seq)` probe on
+# the primary key plus the few new rows, serving the rest from memory. This AMORTISES the read; it
+# does NOT make it bounded — the whole chain still lives in RAM and grows with the ledger, so the
+# per-path aggregation this stops short of (the OWED debt named in test_ledger_read_budget.py) is
+# still worth paying. As-of-T reads bypass the cache: rare (seal / État-à-date) and each is bounded.
+_PAYLOADS_CACHE_LOCK: Final = threading.Lock()
+_payloads_cache_seq: int = 0
+_payloads_cache_rows: list[dict[str, Any]] = []
+
+
+def reset_ledger_payloads_cache() -> None:
+    """Drop the live-payloads cache. Tests reset it per-test so cached rows never leak forward."""
+    global _payloads_cache_seq, _payloads_cache_rows
+    with _PAYLOADS_CACHE_LOCK:
+        _payloads_cache_seq = 0
+        _payloads_cache_rows = []
+
+
 def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
     """Every promoted-ledger payload (oldest→newest by seq), optionally as of instant T.
 
     Synchronous (the spine readers are sync) over a short-lived bounded connection —
     mirrors the gating adapter's posture. Raises into the caller's honest-empty handling
     when Postgres is unreachable.
+
+    The live read (``at is None``) is served from an incremental, head-invalidated cache
+    (see the module note above): correct because the ledger is append-only and immutable, so
+    an unchanged ``max(seq)`` guarantees an unchanged result. As-of-T reads (``at`` set) bypass
+    the cache — they are rare and each already carries its own ``occurred_at`` upper bound.
     """
+    if at is not None:
+        return _load_ledger_payloads_at(at)
+    return _load_ledger_payloads_live()
+
+
+def _load_ledger_payloads_at(at: str) -> list[dict[str, Any]]:
+    """The as-of-T whole-ledger read (``occurred_at <= at``), uncached."""
     query = f"SELECT payload FROM {LEDGER_TABLE}"  # noqa: S608 — fixed identifier
     params: list[object] = []
-    if at:
-        try:
-            cutoff = datetime.fromisoformat(at)
-        except ValueError:
-            # Defensive only: the sole caller (guard/seal.py) passes datetime.isoformat(),
-            # which always parses. A malformed `at` would fall through to the unfiltered
-            # query — safe today; re-check if a raw request string ever reaches here (it
-            # would over-return, never under-return).
-            cutoff = None
-        if cutoff is not None:
-            if cutoff.tzinfo is None:
-                cutoff = cutoff.replace(tzinfo=UTC)
-            query += " WHERE occurred_at <= %s"
-            params.append(cutoff)
+    try:
+        cutoff = datetime.fromisoformat(at)
+    except ValueError:
+        # Defensive only: the sole caller (guard/seal.py) passes datetime.isoformat(), which
+        # always parses. A malformed `at` falls through to the unfiltered query — safe today;
+        # re-check if a raw request string ever reaches here (it over-returns, never under).
+        cutoff = None
+    if cutoff is not None:
+        if cutoff.tzinfo is None:
+            cutoff = cutoff.replace(tzinfo=UTC)
+        query += " WHERE occurred_at <= %s"
+        params.append(cutoff)
     query += " ORDER BY seq"
     with (
         store_read("postgres", "audit_ledger.payloads_all", target=LEDGER_TABLE) as read,
@@ -647,6 +684,45 @@ def load_ledger_payloads_sync(at: str | None = None) -> list[dict[str, Any]]:
         rows = cur.fetchall()
         read.rows_read(len(rows))
     return [row[0] for row in rows if isinstance(row[0], dict)]
+
+
+def _load_ledger_payloads_live() -> list[dict[str, Any]]:
+    """The live (``at is None``) whole-ledger read, from the incremental head-keyed cache."""
+    global _payloads_cache_seq, _payloads_cache_rows
+    with (
+        store_read("postgres", "audit_ledger.payloads_all", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(f"SELECT max(seq) FROM {LEDGER_TABLE}")  # noqa: S608 — fixed identifier
+        head_row = cur.fetchone()
+        if head_row is None:
+            # A connection double that does not model max(seq): read the whole table, uncached,
+            # so a fake sees the historical behaviour (the read-budget ratchet counts it).
+            cur.execute(f"SELECT payload FROM {LEDGER_TABLE} ORDER BY seq")  # noqa: S608
+            rows = cur.fetchall()
+            read.rows_read(len(rows))
+            return [row[0] for row in rows if isinstance(row[0], dict)]
+        head = int(head_row[0]) if head_row[0] is not None else 0
+        with _PAYLOADS_CACHE_LOCK:
+            if head == _payloads_cache_seq and _payloads_cache_rows:
+                read.rows_read(0)  # served from memory — a real, honest zero-row read
+                return list(_payloads_cache_rows)
+            # Reuse the cached prefix only when it is a strict prefix of the current head (an
+            # append). A smaller head (a test truncation/reset) discards it and re-reads from 0.
+            reuse = 0 < _payloads_cache_seq <= head
+            base = _payloads_cache_rows if reuse else []
+            anchor = _payloads_cache_seq if reuse else 0
+            cur.execute(
+                f"SELECT payload FROM {LEDGER_TABLE} WHERE seq > %s ORDER BY seq",  # noqa: S608
+                [anchor],
+            )
+            delta = [row[0] for row in cur.fetchall() if isinstance(row[0], dict)]
+            read.rows_read(len(delta))
+            rows = base + delta
+            _payloads_cache_rows = rows
+            _payloads_cache_seq = head
+            return list(rows)
 
 
 # ── Read seam (every direct ledger consumer routes here — ADR 0015 H2) ──────────
