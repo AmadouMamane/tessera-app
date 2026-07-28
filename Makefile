@@ -747,7 +747,8 @@ DEV_BACKEND_LOG ?= /tmp/tessera-backend.log
 DEV_FRONT_LOG   ?= /tmp/tessera-front.log
 _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 
-.PHONY: dev-up dev-down dev-status dev-preview preflight image-preflight
+.PHONY: dev-up dev-down dev-status dev-preview preflight image-preflight \
+        fulllocal-up fulllocal-down fulllocal-status fulllocal-tunnel fulllocal-tunnel-down
 
 # Start backend + frontend from THIS checkout, detached; wait for health.
 dev-up: dev-secrets
@@ -835,6 +836,60 @@ preflight:
 image-preflight:
 	@docker build -f infra/docker/Dockerfile.agent -t tessera-agent:preflight .
 	@docker run --rm --entrypoint tessera-preflight tessera-agent:preflight --image-only
+
+# ── Full-local (front co-located with the agent, on-prem) ────────────────────
+#
+# ADR 0045 / docs/runbook-full-local.md. Runs the Next.js front in a container NEXT TO the
+# cutover agent, reaching it over the local Docker network — so the ~14 front→agent hops per
+# page are LOCAL, not tunnelled. `fulllocal-up` brings up the pair on localhost ONLY, no
+# tunnel. `fulllocal-tunnel` is THE FLIP (gated): it publishes the front on your domain.
+FL_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.unix.yml \
+	-f docker-compose.cutover.yml -f docker-compose.fulllocal.yml
+
+# Front + agent, LOCAL only. Builds the front image, brings the pair up (the agent unchanged
+# from the cutover), waits for the front to report healthy. NO tunnel is started — nothing
+# touches your domain. Requires frontend.secret.env (the 3 matching secrets) and, like the
+# cutover, TESSERA_AGENT_STATE pointing at the durable state dir.
+fulllocal-up:
+	@test -f frontend.secret.env || { echo "missing frontend.secret.env — cp frontend.secret.env.example frontend.secret.env and fill it"; exit 2; }
+	@$(FL_COMPOSE) --profile full build frontend
+	@$(FL_COMPOSE) --profile full up -d agent frontend
+	@printf 'waiting for the front to report healthy'; \
+	for i in $$(seq 1 40); do \
+	  st=$$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-frontend 2>/dev/null); \
+	  [ "$$st" = "healthy" ] && { echo " OK"; break; }; \
+	  printf '.'; sleep 3; \
+	done
+	@echo "front (LOCAL, no tunnel): http://localhost:$${TESSERA_FRONTEND_PORT:-3090}  →  agent: http://agent:8080"
+	@echo "validate it, set real operator passwords, THEN 'make fulllocal-tunnel' when ready to flip."
+
+# Stop the front (and the tunnel if running). Leaves the AGENT up — it is the shared
+# reference, managed independently. Add AGENT=1 to also stop the agent.
+fulllocal-down:
+	@$(FL_COMPOSE) --profile full --profile flip rm -sf frontend cloudflared 2>/dev/null || true
+	@if [ -n "$(AGENT)" ]; then $(FL_COMPOSE) rm -sf agent; fi
+	@echo "front + tunnel stopped$(if $(AGENT), + agent stopped,)."
+
+fulllocal-status:
+	@echo "front : $$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-frontend 2>/dev/null || echo 'not running') · http://localhost:$${TESSERA_FRONTEND_PORT:-3090}"
+	@echo "agent : $$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-agent 2>/dev/null || echo 'not running') · workers=$$(docker exec tessera-$(or $(TESSERA_ENV),local)-agent printenv TESSERA_API__WORKERS 2>/dev/null || echo '?')"
+	@echo "tunnel: $$(docker inspect -f '{{.State.Status}}' tessera-cloudflared 2>/dev/null || echo 'not running (domain not flipped)')"
+
+# THE FLIP — publishes the local front on your domain via the Cloudflare Tunnel. GATED:
+# run ONLY when you have validated locally, set real operator passwords, created the tunnel
+# in the Cloudflare dashboard (hostname → http://frontend:3000) and put its token in
+# infra/docker/fulllocal.env. Reversible with `make fulllocal-tunnel-down`.
+fulllocal-tunnel:
+	@test -f infra/docker/fulllocal.env || { echo "missing infra/docker/fulllocal.env — cp infra/docker/fulllocal.env.example infra/docker/fulllocal.env and set TUNNEL_TOKEN"; exit 2; }
+	@echo "FLIP: publishing the local front on your domain via Cloudflare Tunnel."
+	@$(FL_COMPOSE) --profile flip up -d cloudflared
+	@echo "tunnel up. Verify your domain serves, then it is live. Rollback: make fulllocal-tunnel-down"
+
+# Rollback the flip: stop the tunnel. The domain stops resolving to this front (point DNS
+# back to Cloud Run / the previous target as needed).
+fulllocal-tunnel-down:
+	@$(FL_COMPOSE) --profile flip rm -sf cloudflared 2>/dev/null || true
+	@echo "tunnel stopped — the domain no longer resolves to the local front."
 
 # ── CI simulation ───────────────────────────────────────────────────────────
 

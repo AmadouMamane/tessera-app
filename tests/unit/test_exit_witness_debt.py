@@ -169,6 +169,15 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::dev-down": "action",
     "Makefile::dev-preview": "action",
     "Makefile::dev-secrets": "action",
+    # ── full-local (ADR 0045): they start/stop containers, they do not judge a test. The exit 2
+    #    in `-up`/`-tunnel` is a missing-precondition REFUSAL (no frontend.secret.env /
+    #    fulllocal.env), the same shape dev-up has, not a pass/fail verdict. `-tunnel` is THE FLIP
+    #    (starts the tunnel); it is gated and reversible, an act. `-status` only prints.
+    "Makefile::fulllocal-up": "action",
+    "Makefile::fulllocal-down": "action",
+    "Makefile::fulllocal-tunnel": "action",
+    "Makefile::fulllocal-tunnel-down": "action",
+    "Makefile::fulllocal-status": "report",
     # ── preflight: assert every declared container input, or refuse (ADR 0043) ─────────────────
     # Its exit code IS the verdict (0 clear / 1 FAIL / 2 BLIND), passed through unlaundered:
     # `docker exec … tessera-preflight` returns the command's OWN code, and a missing container

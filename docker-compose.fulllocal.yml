@@ -1,0 +1,63 @@
+# Full-local overlay — the FRONT co-located with the agent, on-prem (ADR 0045).
+#
+# The reference cutover runs the front on Cloud Run and the agent on-prem, so every
+# cockpit page pays ~14 front→agent round-trips across the public tunnel — the measured
+# end-to-end ceiling. This overlay collapses that: the Next.js front runs in a container
+# next to the agent, reaches it over the LOCAL Docker network (`http://agent:8080`, no
+# tunnel), and only the browser→front hop is exposed publicly — once, multiplexed, on your
+# own domain via a Cloudflare Tunnel.
+#
+# It STACKS ON TOP of the cutover overlay (same live data + obs stacks, same 4-worker
+# agent). The front joins the agent's `data` network so it can resolve `agent`; nothing
+# about the agent changes. The tunnel is a SEPARATE, GATED service (`profiles: [flip]`) —
+# `up` does NOT start it, so bringing the stack up never touches your domain. Starting it
+# IS the flip; do it only when ready (see docs/runbook-full-local.md).
+#
+# The front auto-adapts to whatever host the tunnel presents (`trustHost: true` in auth.ts
+# + forwarded headers), so NO domain is baked in here — the same image serves localhost and
+# your domain unchanged. Secrets (bearer, AUTH_SECRET, operator-assertion key) live in the
+# gitignored `frontend.secret.env`; the tunnel token in the gitignored `infra/docker/fulllocal.env`.
+#
+# Usage (see the runbook for the full procedure):
+#   cp frontend.secret.env.example frontend.secret.env            # fill the 3 secrets
+#   cp infra/docker/fulllocal.env.example infra/docker/fulllocal.env
+#   make fulllocal-up          # front + agent, LOCAL only (no tunnel) → http://localhost:3090
+#   # …validate on localhost, set real operator passwords, then when ready:
+#   make fulllocal-tunnel      # THE FLIP — starts the tunnel on your domain (gated)
+services:
+  frontend:
+    # The base compose builds this from infra/docker/Dockerfile.frontend and wires
+    # TESSERA_BACKEND_URL=http://agent:8080 + the gitignored frontend.secret.env. Here we
+    # put it on the agent's live-data network so `agent` resolves, and pin the env posture.
+    networks:
+      - data
+    environment:
+      # Posture for the front (auth cookie/security posture, demo-login fallbacks). The
+      # agent stays TESSERA_ENVIRONMENT=local; the front matches so the pair is one env.
+      TESSERA_ENVIRONMENT: local
+      # Belt-and-braces (the base already sets it): the agent is LOCAL, by service name.
+      TESSERA_BACKEND_URL: http://agent:8080
+
+  cloudflared:
+    # THE FLIP, gated behind the `flip` profile: `up` never starts it. It publishes the
+    # local front on your domain via a Cloudflare Tunnel. Token-based: create the tunnel in
+    # the Cloudflare Zero-Trust dashboard, route your hostname → http://frontend:3000 there,
+    # and drop the connector token in infra/docker/fulllocal.env. No secret lives in the repo.
+    image: cloudflare/cloudflared:latest
+    container_name: tessera-cloudflared
+    restart: unless-stopped
+    profiles: ["flip"]
+    command: tunnel --no-autoupdate run
+    env_file:
+      # Provides TUNNEL_TOKEN (the cloudflared connector reads it from the environment).
+      - infra/docker/fulllocal.env
+    networks:
+      - data
+    depends_on:
+      frontend:
+        condition: service_healthy
+
+networks:
+  data:
+    external: true
+    name: ${TESSERA_DATA_NETWORK:-tessera_default}
