@@ -119,11 +119,26 @@ async def observability_least_privilege() -> dict[str, object]:
     # Exclude non-tool audit targets: the input guard ("user_input") and the
     # memory governance actions are audited too but are not tool invocations.
     non_tools = {"user_input"}
-    usage: dict[str, int] = {}
-    for entry in _read_audit_entries():
-        target = entry.get("target")
-        if isinstance(target, str) and target not in non_tools and not target.startswith("memory."):
-            usage[target] = usage.get(target, 0) + 1
+    from tessera.guard.ledger_store import audit_target_call_counts, ledger_source
+
+    if ledger_source() == "postgres":
+        # The DB counts per target (a handful of rows) instead of materialising 64 k payloads to
+        # do usage[target] += 1. The exclusions apply to the small result — byte-identical usage.
+        usage = {
+            target: count
+            for target, count in audit_target_call_counts("tessera.guard.audit").items()
+            if target not in non_tools and not target.startswith("memory.")
+        }
+    else:
+        usage = {}
+        for entry in _read_audit_entries():
+            target = entry.get("target")
+            if (
+                isinstance(target, str)
+                and target not in non_tools
+                and not target.startswith("memory.")
+            ):
+                usage[target] = usage.get(target, 0) + 1
     return asdict(least_privilege_mod.analyze_privilege(_GRANTED_TOOLS, usage))
 
 

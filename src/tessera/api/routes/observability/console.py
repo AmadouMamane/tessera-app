@@ -16,6 +16,7 @@ must move next door.
 from __future__ import annotations
 
 import sys
+import threading
 from dataclasses import asdict
 
 from fastapi import APIRouter
@@ -40,6 +41,98 @@ from tessera.observability.spine.runtime import get_runtime_provider
 router = APIRouter()
 
 _propagation_cache: dict[str, object] | None = None
+
+# The audit-derived timeline events, memoised by ledger head (the live read only). See
+# `_audit_timeline_events`. The time rail fires `/timeline` on EVERY cockpit page; recomputing
+# the 64 k-row audit walk each time was ~1.2 s per page.
+_TIMELINE_AUDIT_LOCK = threading.Lock()
+_timeline_audit_seq: int = -1
+_timeline_audit_events: list[dict[str, object]] = []
+
+
+def reset_timeline_audit_cache() -> None:
+    """Drop the memoised audit timeline events (test isolation — the singleton is per-process)."""
+    global _timeline_audit_seq, _timeline_audit_events
+    with _TIMELINE_AUDIT_LOCK:
+        _timeline_audit_seq = -1
+        _timeline_audit_events = []
+
+
+def _compute_audit_timeline_events(at: str | None) -> list[dict[str, object]]:
+    """Model-change + guard-denial events from the audit log (≤ T), in append order.
+
+    The exact walk the timeline used to do inline: agent-model changes emitted in seq order as the
+    ``model`` field transitions, then per-hour guard-denial clusters (``target`` = the first
+    denial's, ``at`` = the last denial's, ``count`` = the denials in the hour). Order preserved:
+    model changes first (seq order), then denials — so the caller's stable sort by ``at`` is
+    identical to before.
+    """
+    events: list[dict[str, object]] = []
+    prev_model: str | None = None
+    denials: dict[str, dict[str, object]] = {}
+    for entry in _read_audit_entries():
+        ts = str(entry.get("occurred_at", ""))
+        if not ts:
+            continue
+        if not occurred_before(ts, at):
+            continue
+        outcome = str(entry.get("outcome", ""))
+        if outcome not in ("allowed", "allow"):
+            bucket = ts[:13]  # YYYY-MM-DDTHH
+            agg = denials.setdefault(
+                bucket, {"at": ts, "count": 0, "target": entry.get("target", "")}
+            )
+            count = agg["count"]
+            agg["count"] = (count if isinstance(count, int) else 0) + 1
+            agg["at"] = ts  # latest occurrence in the hour
+        model = entry.get("model")
+        if isinstance(model, str) and model and model != prev_model:
+            if prev_model is not None:
+                events.append(
+                    {
+                        "at": ts,
+                        "kind": "model_change",
+                        "label": "Modèle déployé",
+                        "detail": f"{prev_model} → {model}",
+                        "tone": "info",
+                    }
+                )
+            prev_model = model
+    for agg in denials.values():
+        events.append(
+            {
+                "at": str(agg["at"]),
+                "kind": "guard_denial",
+                "label": f"Garde — {agg['count']} refus",
+                "detail": str(agg["target"]),
+                "tone": "danger",
+            }
+        )
+    return events
+
+
+def _audit_timeline_events(at: str | None) -> list[dict[str, object]]:
+    """The audit-derived timeline events, memoised by ledger head for the LIVE read.
+
+    The events are a pure function of the strictly append-only chain, so an unchanged head means a
+    byte-identical list — memoise it and the time rail stops re-walking 64 k rows on every page. An
+    as-of read (``at`` set) carries its own upper bound, and the flat-file source has no cheap head,
+    so both recompute uncached — identical to the original inline walk.
+    """
+    global _timeline_audit_seq, _timeline_audit_events
+    from tessera.guard.ledger_store import ledger_head_seq, ledger_source
+
+    if at is not None or ledger_source() != "postgres":
+        return _compute_audit_timeline_events(at)
+    head = ledger_head_seq()
+    with _TIMELINE_AUDIT_LOCK:
+        if head == _timeline_audit_seq:
+            return list(_timeline_audit_events)
+    events = _compute_audit_timeline_events(at)
+    with _TIMELINE_AUDIT_LOCK:
+        _timeline_audit_seq = head
+        _timeline_audit_events = events
+    return list(events)
 
 
 @router.get("/observability/timeline")
@@ -90,50 +183,10 @@ async def observability_timeline(at: str | None = None) -> dict[str, object]:
                 )
             prev_judge = judge
 
-    # Guard denials + agent-model changes from the tamper-evident audit log,
-    # filtered to occurrences ≤ T. Denials are clustered by hour so a busy log
-    # becomes a few legible scrubber markers rather than hundreds of dots.
-    prev_model: str | None = None
-    denials: dict[str, dict[str, object]] = {}
-    for entry in _read_audit_entries():
-        ts = str(entry.get("occurred_at", ""))
-        if not ts:
-            continue
-        if not occurred_before(ts, at):
-            continue
-        outcome = str(entry.get("outcome", ""))
-        if outcome not in ("allowed", "allow"):
-            bucket = ts[:13]  # YYYY-MM-DDTHH
-            agg = denials.setdefault(
-                bucket, {"at": ts, "count": 0, "target": entry.get("target", "")}
-            )
-            count = agg["count"]
-            agg["count"] = (count if isinstance(count, int) else 0) + 1
-            agg["at"] = ts  # latest occurrence in the hour
-        model = entry.get("model")
-        if isinstance(model, str) and model and model != prev_model:
-            if prev_model is not None:
-                events.append(
-                    {
-                        "at": ts,
-                        "kind": "model_change",
-                        "label": "Modèle déployé",
-                        "detail": f"{prev_model} → {model}",
-                        "tone": "info",
-                    }
-                )
-            prev_model = model
-
-    for agg in denials.values():
-        events.append(
-            {
-                "at": str(agg["at"]),
-                "kind": "guard_denial",
-                "label": f"Garde — {agg['count']} refus",
-                "detail": str(agg["target"]),
-                "tone": "danger",
-            }
-        )
+    # Guard denials + agent-model changes from the tamper-evident audit log (≤ T), clustered by
+    # hour. Memoised by ledger head for the live read — the time rail asks for this on EVERY page
+    # and it re-walked 64 k rows each time (see `_audit_timeline_events`). Same events, same order.
+    events.extend(_audit_timeline_events(at))
 
     events.sort(key=lambda e: str(e["at"]))
     window_end = at or datetime.now(UTC).isoformat()

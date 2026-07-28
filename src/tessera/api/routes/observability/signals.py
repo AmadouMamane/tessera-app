@@ -131,14 +131,24 @@ async def observability_data_range() -> dict[str, object]:
     """
     from datetime import UTC, datetime
 
+    from tessera.guard.ledger_store import audit_type_min_occurred_and_count, ledger_source
+
     scores = read_scores(full=True)
-    audit_entries = _read_audit_entries()
-    start = _data_availability_start(scores, audit_entries)
-    return {
-        "start": start,
-        "end": datetime.now(UTC).isoformat(),
-        "n": len(scores) + len(audit_entries),
-    }
+    if ledger_source() == "postgres":
+        # The guard-audit type is 94 % of the chain; ask the DB for its earliest instant and its
+        # count rather than materialising every payload to take a min and a len. Byte-identical to
+        # the walk below: the same lexicographic min over the same non-blank stamps, the same total.
+        audit_min, n_audit = audit_type_min_occurred_and_count("tessera.guard.audit")
+        stamps = [stamp for s in scores if (stamp := str(s.get("scored_at", "")))]
+        if audit_min:
+            stamps.append(audit_min)
+        start = min(stamps) if stamps else None
+        n = len(scores) + n_audit
+    else:
+        audit_entries = _read_audit_entries()
+        start = _data_availability_start(scores, audit_entries)
+        n = len(scores) + len(audit_entries)
+    return {"start": start, "end": datetime.now(UTC).isoformat(), "n": n}
 
 
 @router.get("/observability/availability")

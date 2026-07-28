@@ -66,6 +66,8 @@ __all__ = [
     "LedgerShadowStatus",
     "LedgerTreeStatus",
     "active_ledger_tree_status",
+    "audit_target_call_counts",
+    "audit_type_min_occurred_and_count",
     "backfill_ledger_from_file",
     "drain_spool",
     "dual_write_enabled",
@@ -77,6 +79,7 @@ __all__ = [
     "latest_entry_of_type_for_agent",
     "ledger_available",
     "ledger_head_hash",
+    "ledger_head_seq",
     "ledger_source",
     "load_ledger_payloads_of_type",
     "load_ledger_payloads_sync",
@@ -869,6 +872,78 @@ def count_ledger_entries_of_type(entry_type: str, agent_id: str | None = None) -
         row = cur.fetchone()
         read.rows_read(1)
     return int(row[0]) if row and row[0] is not None else 0
+
+
+def ledger_head_seq() -> int:
+    """The active ledger's high-water ``seq`` (0 when empty) — one indexed row.
+
+    A complete cache key for any read over the whole append-only chain: the ledger is strictly
+    append-only (a BEFORE UPDATE OR DELETE trigger + a monotone ``seq``), so an unchanged head
+    proves every row and payload is byte-identical. Callers that memoise a full-chain fold key it
+    on this. Postgres only; a file-source caller has no cheap head and must not cache on it.
+    """
+    with (
+        store_read("postgres", "audit_ledger.head_seq", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(f"SELECT max(seq) FROM {LEDGER_TABLE}")  # noqa: S608 — fixed identifier
+        row = cur.fetchone()
+        read.rows_read(1)
+    return int(row[0]) if row and row[0] is not None else 0
+
+
+def audit_type_min_occurred_and_count(entry_type: str) -> tuple[str | None, int]:
+    """(earliest non-blank payload ``occurred_at``, total count) of one ``type`` — bounded SQL.
+
+    ``data-range`` needs only the minimum instant and the row count of the guard-audit type
+    (94 % of the chain), yet materialised every payload to take a ``min`` and a ``len``. The
+    lexicographic ``min`` over the JSON ``occurred_at`` string reproduces
+    ``_data_availability_start`` exactly — ISO-8601 sorts lexicographically, blanks excluded — and
+    ``count(*)`` is the same ``len``. One aggregate row instead of 64 k dicts. Postgres only; a
+    file-source caller stays on the materialise path.
+    """
+    query = (
+        f"SELECT min(payload->>'occurred_at') "  # noqa: S608 — fixed identifier
+        f"FILTER (WHERE coalesce(payload->>'occurred_at', '') <> ''), count(*) "
+        f"FROM {LEDGER_TABLE} WHERE payload->>'type' = %s"
+    )
+    with (
+        store_read("postgres", "audit_ledger.min_and_count_of_type", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, [entry_type])
+        row = cur.fetchone()
+        read.rows_read(1)
+    start = row[0] if row and isinstance(row[0], str) else None
+    count = int(row[1]) if row and row[1] is not None else 0
+    return start, count
+
+
+def audit_target_call_counts(entry_type: str) -> dict[str, int]:
+    """Per-``target`` occurrence counts for one ``type`` — a bounded SQL ``GROUP BY``.
+
+    ``least-privilege`` counts how often each tool ``target`` appears in the guard-audit trail; it
+    materialised 64 k payloads to do ``usage[target] += 1``. The ``GROUP BY`` returns one row per
+    distinct target (a handful), byte-identical counts. NULL targets are dropped (they are not
+    ``isinstance(str)`` in the Python path); the caller applies the ``user_input`` / ``memory.*``
+    exclusions on the small result, exactly as the loop did. Postgres only; file mode stays Python.
+    """
+    query = (
+        f"SELECT payload->>'target', count(*) FROM {LEDGER_TABLE} "  # noqa: S608 — fixed identifier
+        f"WHERE payload->>'type' = %s AND payload->>'target' IS NOT NULL "
+        f"GROUP BY payload->>'target'"
+    )
+    with (
+        store_read("postgres", "audit_ledger.target_counts_of_type", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, [entry_type])
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    return {str(target): int(count) for target, count in rows}
 
 
 def read_ledger_entries_by_target_prefix(
