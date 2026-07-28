@@ -4,9 +4,23 @@ The metric set is deliberately small; ``docs/runbook.md`` documents what
 each one is good for. We expose them via the standard ``/metrics`` endpoint
 on a separate port (default ``9090``) so the API process never serves both
 business traffic and scraping on the same socket.
+
+**Multi-worker (ADR 0044).** When the agent runs as N uvicorn workers every worker processes
+turns, so every worker increments the counters — and the L1/L2 level badges read
+``tessera_agent_turns_total`` from Prometheus. A single worker sees only 1/N of the traffic,
+so the counters MUST aggregate across the process group. That is what ``prometheus_client``'s
+multiprocess mode does: with ``PROMETHEUS_MULTIPROC_DIR`` set (exported by
+:func:`tessera.api.main.cli` before the workers spawn) each metric value is written to
+per-pid mmap files, and the exposition endpoint reads them all back through a
+:class:`~prometheus_client.multiprocess.MultiProcessCollector`, summing counters/histograms
+across every worker. Recording needs no coordination; only the exposition HTTP server is
+singular — exactly one worker (the advisory-lock leader) binds ``metrics_port``. In the
+single-worker default the env var is unset and everything behaves exactly as before.
 """
 
 from __future__ import annotations
+
+import os
 
 from prometheus_client import (
     CollectorRegistry,
@@ -70,6 +84,9 @@ BUDGET_GAUGE = Gauge(
     "tessera_llm_estimated_cost_eur",
     "Running estimate of LLM cost for the active process.",
     registry=registry,
+    # Multi-worker: keep only live workers' values (drop dead-pid files); ignored in the
+    # single-process default. Cosmetic gauge, not read by any badge.
+    multiprocess_mode="liveall",
 )
 
 EVAL_SCORE = Histogram(
@@ -159,6 +176,8 @@ SPINE_CACHE_HIT_RATIO = Gauge(
     "tessera_spine_cache_hit_ratio",
     "Running cache-hit ratio of the snapshot endpoint (served-from-cache / total).",
     registry=registry,
+    # Multi-worker: per-live-worker ratio (drop dead-pid files); ignored single-process.
+    multiprocess_mode="liveall",
 )
 
 SPINE_SHADOW_DIVERGENCE = Counter(
@@ -173,13 +192,46 @@ SPINE_SHADOW_DIVERGENCE = Counter(
 _started: bool = False
 
 
-def configure() -> None:
-    """Start the Prometheus HTTP server once per process."""
+def _exposition_registry() -> CollectorRegistry:
+    """The registry the ``/metrics`` server scrapes.
+
+    Single process: the module registry, exactly as before. Multiprocess
+    (``PROMETHEUS_MULTIPROC_DIR`` set): a fresh registry fed by
+    :class:`~prometheus_client.multiprocess.MultiProcessCollector`, which reads every
+    worker's mmap files and sums counters / aggregates gauges across the process group — so
+    ``tessera_agent_turns_total`` reflects ALL workers, not the ``1/N`` a single one saw.
+    """
+    if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+        from prometheus_client import multiprocess
+
+        aggregated = CollectorRegistry()
+        multiprocess.MultiProcessCollector(aggregated)  # type: ignore[no-untyped-call]
+        return aggregated
+    return registry
+
+
+def configure(*, serve: bool = True) -> None:
+    """Bring metrics up for this process; bind the exposition server on the leader only.
+
+    Every worker RECORDS metrics with no coordination — in multiprocess mode the module-level
+    metric objects write their values to per-pid mmap files (see the module docstring). What
+    is singular is the exposition HTTP server: exactly one process may bind ``metrics_port``.
+
+    Args:
+        serve: Whether THIS process is the one that binds ``metrics_port`` and serves
+            ``/metrics``. Pass the advisory-lock leadership flag (the lone worker in the
+            single-process default always leads → ``True``, identical to the old behaviour).
+            When ``False`` this worker still records; it just does not open the socket, so N
+            workers never fight over the port.
+    """
     global _started
     if _started:
         return
     settings = get_settings().observability
     if not settings.metrics_enabled:
         return
-    start_http_server(settings.metrics_port, registry=registry)
+    if not serve:
+        _started = True  # recording happens via the mmap store; nothing to bind here
+        return
+    start_http_server(settings.metrics_port, registry=_exposition_registry())
     _started = True

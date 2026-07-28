@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from tessera.fsutil import atomic_write_text
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -46,9 +47,7 @@ def _load() -> dict[str, dict[str, str]]:
 def _save(state: dict[str, dict[str, str]]) -> None:
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_text(path, json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False))
 
 
 def console_feedback(conversation_id: str) -> dict[str, str]:

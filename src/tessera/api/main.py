@@ -15,6 +15,7 @@ The :func:`cli` entry point is exposed as the ``tessera`` console script in
 from __future__ import annotations
 
 import asyncio
+import os
 from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING
 
@@ -25,6 +26,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from tessera import __version__
 from tessera.agent.telemetry import install_runtime_provider
 from tessera.api.config_overrides import ensure_overrides_schema
+from tessera.api.leader import bootstrap_lock, try_become_leader
 from tessera.api.limits import RequestSizeLimitMiddleware
 from tessera.api.middleware import AuthMiddleware, RequestIdMiddleware
 from tessera.api.operator import validate_operator_assertion_key
@@ -62,6 +64,7 @@ from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from pathlib import Path
 
 __all__ = ["build_app", "cli"]
 
@@ -317,9 +320,22 @@ async def _start_memory_purge_scheduler() -> asyncio.Task[None] | None:
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
+    from tessera.guard.ledger_store import ensure_audit_ledger_schema
+
     obs_logging.configure()
     traces.configure()
-    metrics.configure()
+    # Leadership FIRST (ADR 0044), on a dedicated connection independent of the pool, so two
+    # decisions can key off it: which worker binds the metrics port, and which worker runs the
+    # singleton background loops. In the single-worker default the lone process trivially wins,
+    # so both behave exactly as they did before multi-worker existed.
+    leader_conn = await try_become_leader()
+    is_leader = leader_conn is not None
+    obs_logging.get_logger("tessera.leader").info(
+        "leader.posture", is_leader=is_leader, workers=get_settings().api.workers
+    )
+    # Only the leader binds metrics_port; every worker still RECORDS via the multiprocess mmap
+    # store, so the exposed counters aggregate across the whole process group (see metrics.py).
+    metrics.configure(serve=is_leader)
     # Starlette runs synchronous (`def`) endpoints in this threadpool. The observability
     # READ handlers are synchronous so their blocking DB reads run off the event loop and
     # concurrent dashboard reads run in PARALLEL instead of serializing behind one loop.
@@ -334,25 +350,35 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     canary_tasks: list[asyncio.Task[None]] = []
     try:
         await pool.open()
-        # Materialise every durable table in the active env schema at boot so a
-        # read never falls through search_path to public (ADR 0014 invariant).
-        await ensure_schema()  # documents (pgvector)
-        await ensure_transcript_schema()  # ADR 0007, Mechanism A
-        await ensure_customer_feedback_schema()  # ADR 0041, customer CSAT store
-        await ensure_summary_schema()  # ADR 0007, Tier 1
-        await ensure_longterm_schema()  # ADR 0007, Tier 2
-        await ensure_consent_schema()  # ADR 0007, governance
-        await ensure_citation_schema()  # retrieval citation counters
-        await ensure_settings_schema()  # persisted runtime flags
-        await ensure_overrides_schema()  # ADR 0030 — governed operable-knob overrides
-        await ensure_eval_gating_schema()  # ADR 0015 §Amendment 2 — gating socle (porteur)
-        await _ensure_online_score_store()  # ADR 0015 §Correction 2b — best-effort
-        await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
-        await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
-        seal_task = await _start_seal_scheduler()  # ADR 0015 §Corr.3c — off-chrono; no-op if 'none'
-        canary_tasks = await _start_canary_scheduler()  # ADR 0019 §I4 — off-chrono; idle by default
-        purge_task = await _start_memory_purge_scheduler()  # ADR 0007 §Retention — off-chrono
-        verify_task = await _start_ledger_verification_scheduler()  # off-chrono full chain walk
+        # Materialise every durable table in the active env schema at boot so a read never
+        # falls through search_path to public (ADR 0014 invariant). Serialised across workers
+        # by a blocking advisory lock (ADR 0044) so concurrent fresh workers do not race
+        # CREATE ... IF NOT EXISTS to a catalogue duplicate-key error. Every worker runs it —
+        # idempotent — so its own view has the tables before it serves the first read.
+        async with bootstrap_lock():
+            await ensure_schema()  # documents (pgvector)
+            await ensure_transcript_schema()  # ADR 0007, Mechanism A
+            await ensure_customer_feedback_schema()  # ADR 0041, customer CSAT store
+            await ensure_summary_schema()  # ADR 0007, Tier 1
+            await ensure_longterm_schema()  # ADR 0007, Tier 2
+            await ensure_consent_schema()  # ADR 0007, governance
+            await ensure_citation_schema()  # retrieval citation counters
+            await ensure_settings_schema()  # persisted runtime flags
+            await ensure_overrides_schema()  # ADR 0030 — governed operable-knob overrides
+            await ensure_eval_gating_schema()  # ADR 0015 §Amendment 2 — gating socle (porteur)
+            await ensure_audit_ledger_schema()  # ADR 0015 §Amend.3 — ledger table on every worker
+            await _ensure_online_score_store()  # ADR 0015 §Correction 2b — best-effort
+        # The one-time convergence SWEEPS and the off-chrono BACKGROUND LOOPS run on the
+        # singleton leader ONLY (ADR 0044): N concurrent sealers / purge loops / archive
+        # sweeps are a correctness bug, not a scaling win. Non-leader workers serve request
+        # traffic against the schema the leader (and their own ensure block) materialised.
+        if is_leader:
+            await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
+            await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
+            seal_task = await _start_seal_scheduler()  # ADR 0015 §Corr.3c — off-chrono
+            canary_tasks = await _start_canary_scheduler()  # ADR 0019 §I4 — off-chrono
+            purge_task = await _start_memory_purge_scheduler()  # ADR 0007 §Retention — off-chrono
+            verify_task = await _start_ledger_verification_scheduler()  # off-chrono chain walk
         yield
     finally:
         for task in (seal_task, purge_task, verify_task, *canary_tasks):
@@ -360,6 +386,11 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 task.cancel()
                 with suppress(asyncio.CancelledError):
                     await task
+        if leader_conn is not None:
+            # Abdicate: closing the dedicated connection releases the session advisory lock,
+            # so a respawned worker can re-acquire leadership on its next boot.
+            with suppress(Exception):
+                await leader_conn.close()
         await pool.close()
 
 
@@ -462,16 +493,41 @@ def build_app() -> FastAPI:
     return app
 
 
+def _prepare_multiprocess_metrics(state_dir: Path) -> None:
+    """Set up the Prometheus multiprocess mmap directory before the workers spawn (ADR 0044).
+
+    ``prometheus_client`` reads ``PROMETHEUS_MULTIPROC_DIR`` once, at import, to decide whether
+    metric values live in per-pid mmap files (multi-worker) or in-process (single). uvicorn
+    spawns each worker as a *fresh* interpreter that inherits this process's environment, so
+    exporting the variable here — before ``uvicorn.run(workers=N)`` — is what puts every worker
+    into multiprocess mode. The directory MUST be empty at start: leftover files from a previous
+    run would be summed straight into every counter, inflating each by the last boot's totals.
+    """
+    import shutil
+
+    shutil.rmtree(state_dir, ignore_errors=True)
+    state_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["PROMETHEUS_MULTIPROC_DIR"] = str(state_dir)
+
+
 def cli() -> None:
     """Console-script entry point — boots the API via uvicorn."""
     import uvicorn
 
     settings = get_settings()
+    workers = max(1, settings.api.workers)
+    # Multi-worker only: switch Prometheus into multiprocess aggregation before the workers
+    # spawn. Passing workers=None below is exactly what uvicorn already defaults to (single
+    # process), so the single-worker path is byte-identical to the pre-ADR-0044 boot — no
+    # multiproc metrics dir, no multiprocess supervisor.
+    if workers > 1 and settings.observability.metrics_enabled:
+        _prepare_multiprocess_metrics(settings.state_dir / "prometheus")
     uvicorn.run(
         "tessera.api.main:build_app",
         host=settings.api.host,
         port=settings.api.port,
         factory=True,
+        workers=workers if workers > 1 else None,
         log_level=settings.observability.log_level.lower(),
         access_log=False,  # delegated to structlog via middleware
     )

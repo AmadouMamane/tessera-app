@@ -35,6 +35,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
+from tessera.fsutil import atomic_write_text
 from tessera.observability import business_events
 from tessera.observability.eval_data import CATEGORY_LABELS, load_eval_snapshot
 from tessera.settings import get_settings
@@ -250,9 +251,7 @@ def _load_state() -> dict[str, dict[str, str]]:
 def _save_state(state: dict[str, dict[str, str]]) -> None:
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_text(path, json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False))
 
 
 def _transitions_path() -> Path:

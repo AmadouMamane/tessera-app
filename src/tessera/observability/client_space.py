@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from importlib import resources
 from typing import TYPE_CHECKING
 
+from tessera.fsutil import atomic_write_text
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
@@ -374,9 +375,7 @@ def _load_state() -> dict[str, object]:
 def _save_state(state: dict[str, object]) -> None:
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_text(path, json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False))
 
 
 def _read_alert_ids(state: dict[str, object]) -> set[str]:

@@ -47,6 +47,12 @@ services:
       # feeds the L1/L2 level badges) and exposes 9090 above.
       TESSERA_OBSERVABILITY__METRICS_ENABLED: "true"
       TESSERA_LEVEL_TURN_EVIDENCE: "1"
+      # Multi-worker (ADR 0044): N independent GILs so the cockpit's ~14 concurrent reads
+      # parallelise on CPU instead of serialising behind one process. Prometheus switches to
+      # multiprocess aggregation and the lifespan background loops run on ONE advisory-lock
+      # leader — both handled in-process. 4 × pool(10) + 4 leader conns = 44 < max_connections
+      # 100. Override with TESSERA_WORKERS; set 1 to fall back to the single-process model.
+      TESSERA_API__WORKERS: "${TESSERA_WORKERS:-4}"
       # .env.local parity (non-secret): the chat rate limits run_local.py applied.
       TESSERA_API__RATE_LIMIT_CHAT: "${TESSERA_RATE_LIMIT_CHAT:-80/hour}"
       TESSERA_API__RATE_LIMIT_CHAT_GLOBAL: "${TESSERA_RATE_LIMIT_CHAT_GLOBAL:-800/hour}"

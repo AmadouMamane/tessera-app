@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Final
 from zoneinfo import ZoneInfo
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.fsutil import atomic_write_text
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -84,9 +85,7 @@ def _load_all() -> dict[str, Any]:
 def _save_all(store: dict[str, Any]) -> None:
     path = _store_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(store, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_text(path, json.dumps(store, indent=2, sort_keys=True, ensure_ascii=False))
 
 
 def load_overlay_state(agent_id: str = DEFAULT_AGENT_ID) -> dict[str, Any]:

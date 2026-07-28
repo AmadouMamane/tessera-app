@@ -15,6 +15,7 @@ import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from tessera.fsutil import atomic_write_text
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -71,4 +72,4 @@ def record_replay_run(
     )
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(runs[-_MAX_RUNS:], indent=2, ensure_ascii=False), encoding="utf-8")
+    atomic_write_text(path, json.dumps(runs[-_MAX_RUNS:], indent=2, ensure_ascii=False))

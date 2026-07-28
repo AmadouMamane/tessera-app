@@ -35,6 +35,7 @@ from zoneinfo import ZoneInfo
 from psycopg.rows import dict_row
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.fsutil import atomic_write_text
 from tessera.guard.decisions import load_policy
 from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability._asof import occurred_before
@@ -165,9 +166,7 @@ def _load_snapshots() -> list[dict[str, Any]]:
 def _save_snapshots(snapshots: list[dict[str, Any]]) -> None:
     path = _snapshots_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(snapshots[:_MAX_SNAPSHOTS], indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_text(path, json.dumps(snapshots[:_MAX_SNAPSHOTS], indent=2, ensure_ascii=False))
 
 
 # --- live fetch ---------------------------------------------------------------

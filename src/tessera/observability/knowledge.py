@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
 
+from tessera.fsutil import atomic_write_text
 from tessera.guard.ledger_store import read_ledger_entries_by_target_prefix
 from tessera.retrieval import citations
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
@@ -256,7 +257,7 @@ def _load_state() -> dict[str, dict[str, bool]]:
 def _save_state(state: dict[str, dict[str, bool]]) -> None:
     path = _state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
+    atomic_write_text(path, json.dumps(state, indent=2, sort_keys=True))
 
 
 def _load_probe() -> dict[str, object]:

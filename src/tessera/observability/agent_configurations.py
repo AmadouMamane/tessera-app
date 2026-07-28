@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
+from tessera.fsutil import atomic_write_text
 from tessera.guard.decisions import load_policy
 from tessera.settings import LLMProfile, get_settings
 
@@ -295,9 +296,7 @@ def _save_overrides(state: dict[str, Any], agent_id: str = DEFAULT_AGENT_ID) -> 
     path.parent.mkdir(parents=True, exist_ok=True)
     store = _load_all_overrides()
     store[agent_id] = state
-    path.write_text(
-        json.dumps(store, indent=2, sort_keys=True, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_text(path, json.dumps(store, indent=2, sort_keys=True, ensure_ascii=False))
 
 
 # --- Durable change-log: real, append-only record of every config save ---------
@@ -377,9 +376,7 @@ def _record_change(
     entries.insert(0, entry)
     path = _history_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(entries[:_HISTORY_LIMIT], indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    atomic_write_text(path, json.dumps(entries[:_HISTORY_LIMIT], indent=2, ensure_ascii=False))
 
 
 # Persisted alongside _DEFAULTS but its base value comes from live settings.

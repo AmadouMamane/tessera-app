@@ -296,6 +296,18 @@ class APISettings(BaseSettings):
     # transient DB connections); the anyio default is 40. Tune per env / DB max_connections.
     read_threads: int = 40
 
+    # Number of uvicorn worker PROCESSES (ADR 0044). The threadpool above parallelises the
+    # *I/O wait* of the synchronous reads, but a single process shares ONE GIL, so the Python
+    # CPU work of concurrent cockpit reads still serialises. N workers give N independent GILs
+    # — true CPU parallelism for the dashboard's fan-out. The default 1 is byte-identical to the
+    # single-process serving model (no multiproc metrics dir, no leader election needed). Raise
+    # it on the on-prem agent (~4) where the fan-out is the bottleneck. Constraints when >1:
+    #   * pool_max_size * workers must stay under Postgres max_connections (4 * 10 = 40 < 100);
+    #   * Prometheus switches to multiprocess aggregation (only the leader binds metrics_port);
+    #   * the lifespan background loops (seal/canary/purge/verify) run on ONE advisory-lock
+    #     leader, never N times over — see tessera.api.leader.
+    workers: int = 1
+
     # HMAC key for the signed customer-session cookie (ADR 0008/0009). Resolved
     # from the environment — in production from GCP Secret Manager, mounted as
     # TESSERA_API_SESSION_SIGNING_KEY — and NEVER committed. When unset (local

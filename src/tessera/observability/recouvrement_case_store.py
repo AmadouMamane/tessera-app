@@ -19,6 +19,7 @@ import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
+from tessera.fsutil import atomic_write_text
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -131,7 +132,7 @@ def _load_json(path: Path, fallback: Any) -> Any:
 
 def _save_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    atomic_write_text(path, json.dumps(data, indent=2, ensure_ascii=False))
 
 
 def load_cases() -> list[dict[str, Any]]:
