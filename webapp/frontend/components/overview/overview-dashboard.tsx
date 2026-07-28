@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  type UseQueryResult,
-  keepPreviousData,
-  useMutation,
-  useQuery,
-} from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ArrowRightLeft,
@@ -30,7 +25,6 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import type { z } from "zod";
 
 import { TemporalMonitoringBreakdown } from "@/components/agent/temporal-monitoring-breakdown";
 import { MetricInfo } from "@/components/cockpit/metric-info";
@@ -63,7 +57,7 @@ import {
   fetchTracesObs,
   runRedteam,
 } from "@/lib/api/client";
-import type { Fleet, OverviewSnapshotEnvelope } from "@/lib/api/schemas";
+import type { Fleet } from "@/lib/api/schemas";
 import {
   AnomalyReportSchema,
   CostReportSchema,
@@ -105,7 +99,7 @@ import {
   toneBg,
   toneText,
 } from "@/lib/overview";
-import { type SnapshotSignalId, selectSignal } from "@/lib/overview-snapshot";
+import { signalOf } from "@/lib/overview-snapshot";
 import { isOrgWide, signalSupports } from "@/lib/signal-registry";
 
 /**
@@ -117,34 +111,6 @@ import { isOrgWide, signalSupports } from "@/lib/signal-registry";
  */
 const SNAPSHOT_FAST = ["slo", "trend", "toxicity", "pii_leak", "cost", "funnel", "scores"] as const;
 const SNAPSHOT_SLOW = ["anomalies", "what_changed"] as const;
-/**
- * Give one card the shape it already expects — `{ data, isLoading, … }` — over a shared query.
- *
- * The card keeps its own empty/loading/error rendering; only the transport changed. `data` is
- * `undefined` whenever the backend had nothing to say for this signal, which is precisely the
- * honest-empty each card already handles.
- */
-function signalOf<TSchema extends z.ZodTypeAny>(
-  query: UseQueryResult<OverviewSnapshotEnvelope>,
-  id: SnapshotSignalId,
-  schema: TSchema,
-): {
-  data: z.infer<TSchema> | undefined;
-  isLoading: boolean;
-  isPending: boolean;
-  isError: boolean;
-  isFetching: boolean;
-  error: unknown;
-} {
-  return {
-    data: selectSignal(query.data, id, schema),
-    isLoading: query.isLoading,
-    isPending: query.isPending,
-    isError: query.isError,
-    isFetching: query.isFetching,
-    error: query.error,
-  };
-}
 
 const POLL_MS = 15_000;
 const POLL_FAST_MS = 10_000;

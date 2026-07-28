@@ -17,8 +17,10 @@
  *    store degrades one card, exactly as it does today, and never blanks the page.
  */
 
+import type { UseQueryResult } from "@tanstack/react-query";
 import { z } from "zod";
 
+import type { OverviewSnapshotEnvelope } from "./api/schemas";
 import type { Dimension } from "./scope";
 
 /** The signal ids the backend's snapshot set actually carries (`snapshot_signal_ids()`). */
@@ -83,6 +85,36 @@ export function selectSignal<TSchema extends z.ZodTypeAny>(
   if (!entry || entry.data === undefined || entry.data === null) return undefined;
   const parsed = schema.safeParse(entry.data);
   return parsed.success ? parsed.data : undefined;
+}
+
+/**
+ * Give one card the `{ data, isLoading, … }` shape it already expects, over a SHARED snapshot
+ * query. The card keeps its own empty/loading/error rendering; only the transport changes —
+ * N per-card requests collapse to one. `data` is `undefined` whenever the backend had nothing
+ * for this signal (validated by its own schema via `selectSignal`), which is precisely the
+ * honest-empty each card already handles. `id` is a `SelectableSignalId`, so this covers both
+ * the default snapshot set and the lens-extra signals the endpoint also serves.
+ */
+export function signalOf<TSchema extends z.ZodTypeAny>(
+  query: UseQueryResult<OverviewSnapshotEnvelope>,
+  id: SelectableSignalId,
+  schema: TSchema,
+): {
+  data: z.infer<TSchema> | undefined;
+  isLoading: boolean;
+  isPending: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  error: unknown;
+} {
+  return {
+    data: selectSignal(query.data, id, schema),
+    isLoading: query.isLoading,
+    isPending: query.isPending,
+    isError: query.isError,
+    isFetching: query.isFetching,
+    error: query.error,
+  };
 }
 
 /** The per-signal scope report exactly as the spine serialises it (`ScopeReport.as_dict`). */

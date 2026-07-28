@@ -30,8 +30,6 @@ import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { isAccessDenied } from "@/lib/api/access";
 import {
-  fetchAnomalies,
-  fetchConformance,
   fetchCrossTenant,
   fetchEmbeddingInversion,
   fetchErasureCoverage,
@@ -39,13 +37,18 @@ import {
   fetchFirewallEfficacy,
   fetchLeastPrivilege,
   fetchMemoryInventory,
-  fetchPiiLeak,
+  fetchOverviewSnapshot,
   fetchRefusal,
   fetchRegressionRisk,
   fetchScoreSeries,
-  fetchToxicity,
-  fetchWhatChanged,
 } from "@/lib/api/client";
+import {
+  AnomalyReportSchema,
+  ConformanceReportSchema,
+  PIILeakSummarySchema,
+  ToxicityReportSchema,
+  WhatChangedSchema,
+} from "@/lib/api/schemas";
 import type {
   AnomalyReport,
   ConformanceReport,
@@ -53,6 +56,7 @@ import type {
   FirewallEfficacy,
   PrivilegeReport,
 } from "@/lib/api/schemas";
+import { signalOf } from "@/lib/overview-snapshot";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
@@ -476,6 +480,21 @@ function ActionCard({
 
 const POLL = 30_000;
 
+/**
+ * The safety signals that ARE snapshot signals (`_READS` registry): ONE `/observability/snapshot`
+ * round-trip serves all five instead of five separate card fetches. They share this page's scope
+ * (`?agent=`), as-of and poll cadence, so folding them changes no refresh timing — only transport.
+ * Each card `select`s its own slice, validated by the same schema its route used (byte-identical,
+ * honest-empty on absence). The non-snapshot probes keep their own fetches.
+ */
+const SEC_SNAPSHOT_SIGNALS = [
+  "pii_leak",
+  "toxicity",
+  "anomalies",
+  "conformance",
+  "what_changed",
+] as const;
+
 // The 8 normative sub-views (32-1..32-8): overview stays comprehensive; the seven
 // focused tabs are curated REAL views over the same live security signals.
 const SEC_TABS = [
@@ -507,12 +526,19 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     queryFn: ({ signal }) => fetchFirewallEfficacy(signal),
     staleTime: Number.POSITIVE_INFINITY,
   });
-  const pii = useQuery({
-    queryKey: ["pii-leak", asOf, scope],
-    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined, scope),
+  // One batched snapshot for the five snapshot-eligible safety signals (was five fetches).
+  const secSnap = useQuery({
+    queryKey: ["sec-snapshot", asOf, scope],
+    queryFn: ({ signal }) =>
+      fetchOverviewSnapshot(signal, asOf ?? undefined, scope, SEC_SNAPSHOT_SIGNALS),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
+  const pii = signalOf(secSnap, "pii_leak", PIILeakSummarySchema);
+  const toxicity = signalOf(secSnap, "toxicity", ToxicityReportSchema);
+  const anomalies = signalOf(secSnap, "anomalies", AnomalyReportSchema);
+  const conformance = signalOf(secSnap, "conformance", ConformanceReportSchema);
+  const whatChanged = signalOf(secSnap, "what_changed", WhatChangedSchema);
   const lp = useQuery({
     queryKey: ["least-privilege"],
     queryFn: ({ signal }) => fetchLeastPrivilege(signal),
@@ -522,12 +548,6 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     queryKey: ["refusal"],
     queryFn: ({ signal }) => fetchRefusal(signal),
     staleTime: Number.POSITIVE_INFINITY,
-  });
-  const toxicity = useQuery({
-    queryKey: ["toxicity", asOf, scope],
-    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined, scope),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : POLL,
   });
   const crossTenant = useQuery({
     queryKey: ["cross-tenant"],
@@ -560,18 +580,6 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const inventoryExpiring = inventoryDenied
     ? ts("accessDenied")
     : `${inventory.data?.n_expiring_soon ?? 0}`;
-  const anomalies = useQuery({
-    queryKey: ["anomalies", asOf, scope],
-    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : POLL,
-  });
-  const conformance = useQuery({
-    queryKey: ["conformance", asOf, scope],
-    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined, scope),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : POLL,
-  });
   const regression = useQuery({
     queryKey: ["regression-risk", asOf],
     queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined),
@@ -587,12 +595,6 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const grounding = useQuery({
     queryKey: ["score-series", "grounding", asOf, scope],
     queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : POLL,
-  });
-  const whatChanged = useQuery({
-    queryKey: ["what-changed", asOf, scope],
-    queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
