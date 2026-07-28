@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
+import time
 from dataclasses import asdict
 
 from fastapi import APIRouter
@@ -50,6 +52,23 @@ from tessera.observability.spine.runtime import get_runtime_provider
 
 router = APIRouter()
 
+# The fleet rollup, memoised single-flight + short TTL (ADR 0044 follow-up). `compute_fleet` is
+# the ~0.64 s read that BOTH the overview (blocking at TTFB) and every domain page's per-agent
+# breakdown (`loadFleet` in the streamed lens) pay — and the agent-scope toggle re-runs it on a
+# fresh URL each time, though the rollup does not depend on the selected agent. A burst of those
+# shares ONE compute per worker per window. Async endpoint, so the memo uses a per-key
+# ``asyncio.Lock`` (the handler runs on the event loop, never the threadpool, so the dict itself
+# needs no lock). Live read (``at is None``) only: an as-of read carries its own bound and is rare.
+_FLEET_TTL_S = 3.0
+_fleet_cache: dict[tuple[str, str | None], tuple[float, FleetPayload | FleetUnavailable]] = {}
+_fleet_locks: dict[tuple[str, str | None], asyncio.Lock] = {}
+
+
+def reset_fleet_cache() -> None:
+    """Drop the memoised fleet rollup (test isolation — the singleton is per-process)."""
+    _fleet_cache.clear()
+    _fleet_locks.clear()
+
 
 @router.get("/observability/fleet", response_model=FleetPayload | FleetUnavailable)
 async def observability_fleet(
@@ -57,7 +76,35 @@ async def observability_fleet(
     period: str | None = None,
     at: str | None = None,
 ) -> FleetPayload | FleetUnavailable:
-    """Fleet rollup: per-agent observable KPIs + deduplicated org totals.
+    """Fleet rollup: per-agent observable KPIs + deduplicated org totals (memoised, live only).
+
+    The LIVE read (``at is None``) is served from a single-flight + short-TTL memo keyed by
+    ``(lang, period)`` — the agent-scope toggle re-requests the SAME rollup on a fresh URL, so a
+    burst shares one compute. An as-of read (``at`` set) always recomputes: the historical window
+    never changes, and caching many distinct instants would bloat the memo for no gain.
+    """
+    if at is not None:
+        return await _compute_fleet(lang, period, at)
+    key = (lang, period)
+    cached = _fleet_cache.get(key)
+    if cached is not None and time.monotonic() - cached[0] < _FLEET_TTL_S:
+        return cached[1]
+    lock = _fleet_locks.get(key)
+    if lock is None:
+        lock = _fleet_locks[key] = asyncio.Lock()
+    async with lock:
+        cached = _fleet_cache.get(key)
+        if cached is not None and time.monotonic() - cached[0] < _FLEET_TTL_S:
+            return cached[1]
+        result = await _compute_fleet(lang, period, at)
+        _fleet_cache[key] = (time.monotonic(), result)
+        return result
+
+
+async def _compute_fleet(
+    lang: str, period: str | None, at: str | None
+) -> FleetPayload | FleetUnavailable:
+    """Compute the fleet rollup with no caching (the cold path of the memo).
 
     ``lang`` localizes the per-agent release verdict label. ``period`` scopes the
     operational conversation figures to ``h24``/``d7``/``d30``; omitted keeps the

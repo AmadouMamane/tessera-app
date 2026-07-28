@@ -121,18 +121,21 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # The chrome memo is a short-TTL singleton (ADR 0044 follow-up): a test that populated it
     # must not serve its stale result to the next test's patched reads.
     from tessera.api.routes.observability.console import reset_timeline_audit_cache
+    from tessera.api.routes.observability.fleet import reset_fleet_cache
     from tessera.guard.ledger_store import reset_ledger_payloads_cache
     from tessera.observability.chrome import reset_chrome_cache
 
     reset_ledger_payloads_cache()
     reset_timeline_audit_cache()
     reset_chrome_cache()
+    reset_fleet_cache()
     get_settings.cache_clear()
     get_memory_backend.cache_clear()
     yield
     reset_ledger_payloads_cache()
     reset_timeline_audit_cache()
     reset_chrome_cache()
+    reset_fleet_cache()
     get_settings.cache_clear()
     get_memory_backend.cache_clear()
 
