@@ -30,8 +30,9 @@ absent here rather than replaced, and that absence is the point.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from tessera.observability.logging import get_logger
 
@@ -39,6 +40,12 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 LOG = get_logger("tessera.observability.chrome")
+
+#: "argument not supplied" — distinct from a supplied ``None`` (a precomputed read that
+#: FAILED). ``compute_chrome`` reads the shared operator-items halves ONCE and passes them
+#: (or ``None`` on failure) to both queue helpers; a standalone caller passes nothing and the
+#: helper reads them itself, unchanged.
+_UNSET: Final = object()
 
 #: Tone vocabulary shared by badges and notifications. ``danger`` means an SLA or an
 #: integrity guarantee is already broken; ``warning`` means it is about to be.
@@ -134,7 +141,7 @@ def _half_tone(items: Sequence[Any], now: datetime) -> Tone:
     return "neutral"
 
 
-def _queue_badges(now: datetime) -> dict[str, dict[str, object]]:
+def _queue_badges(now: datetime, halves: Any = _UNSET) -> dict[str, dict[str, object]]:
     """À traiter and À faire, each counted from the half its page lists (ADR 0038).
 
     ``a_traiter`` mirrors the inbox page's ``total_items`` (its business items);
@@ -142,13 +149,19 @@ def _queue_badges(now: datetime) -> dict[str, dict[str, object]]:
     own SLA verdict, not a number-size heuristic: red once one of ITS open items
     is past its declared due time, amber while one is inside the warning window
     the domain itself defines.
+
+    ``halves`` may be supplied precomputed (``compute_chrome`` reads it once for both queue
+    surfaces); ``None`` means that shared read failed → no badges. Omitted → read it here.
     """
     from tessera.observability.operator_items import NATURE_A_FAIRE, NATURE_A_TRAITER
 
-    try:
-        halves = _queue_halves()
-    except Exception:  # a cockpit chrome never crashes the page it decorates
-        LOG.warning("chrome.operator_items_unreadable")
+    if halves is _UNSET:
+        try:
+            halves = _queue_halves()
+        except Exception:  # a cockpit chrome never crashes the page it decorates
+            LOG.warning("chrome.operator_items_unreadable")
+            return {}
+    if halves is None:  # a precomputed read that failed
         return {}
 
     badges: dict[str, dict[str, object]] = {}
@@ -285,19 +298,25 @@ def _ledger_notifications(lang: str) -> list[dict[str, object]]:
     return notifications
 
 
-def _queue_notifications(lang: str, now: datetime) -> list[dict[str, object]]:
+def _queue_notifications(lang: str, now: datetime, halves: Any = _UNSET) -> list[dict[str, object]]:
     """Work waiting on a human — each row counted from the page it links to.
 
     ADR 0038: the pending/overdue rows that deep-link to ``/a-traiter`` count
     the business half only; the eval half gets its own rows towards ``/a-faire``.
     A row counting the union while linking to one page would be a number whose
     page cannot make it true — the exact lie this module exists to prevent.
+
+    ``halves`` shares ``compute_chrome``'s single operator-items read (``None`` = that read
+    failed → no rows); omitted → read it here.
     """
     from tessera.observability.operator_items import NATURE_A_FAIRE, NATURE_A_TRAITER
 
-    try:
-        halves = _queue_halves()
-    except Exception:
+    if halves is _UNSET:
+        try:
+            halves = _queue_halves()
+        except Exception:
+            return []
+    if halves is None:  # a precomputed read that failed
         return []
 
     notifications: list[dict[str, object]] = []
@@ -348,19 +367,40 @@ def compute_chrome(lang: str = "fr") -> dict[str, object]:
     """
     now = datetime.now(UTC)
 
-    badges = _queue_badges(now)
-    if incidents := _incidents_badge():
-        badges["incidents"] = incidents
-    if curation := _curation_badge():
-        badges["curation"] = curation
-    if signal_catalog := _signal_catalog_badge():
-        badges["signal_catalog"] = signal_catalog
+    # This bell hangs on all 32 cockpit pages, and its reads are INDEPENDENT — the incident
+    # core alone is ~440 ms. They share no mutable state (each opens its own connection), so
+    # run them concurrently and assemble the result in the SAME order: byte-identical output,
+    # bounded by the slowest read instead of their sum. The operator-items read feeds BOTH the
+    # queue badges and the queue notifications, so it happens ONCE here, not twice.
+    def _safe_halves() -> Any:
+        try:
+            return _queue_halves()
+        except Exception:  # a cockpit chrome never crashes the page it decorates
+            LOG.warning("chrome.operator_items_unreadable")
+            return None
 
-    items = [
-        *_queue_notifications(lang, now),
-        *_canary_notifications(lang),
-        *_ledger_notifications(lang),
-    ]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        f_halves = pool.submit(_safe_halves)
+        f_incidents = pool.submit(_incidents_badge)
+        f_curation = pool.submit(_curation_badge)
+        f_signal = pool.submit(_signal_catalog_badge)
+        f_canary = pool.submit(_canary_notifications, lang)
+        f_ledger = pool.submit(_ledger_notifications, lang)
+
+        halves = f_halves.result()
+        badges = _queue_badges(now, halves)
+        if incidents := f_incidents.result():
+            badges["incidents"] = incidents
+        if curation := f_curation.result():
+            badges["curation"] = curation
+        if signal_catalog := f_signal.result():
+            badges["signal_catalog"] = signal_catalog
+
+        items = [
+            *_queue_notifications(lang, now, halves),
+            *f_canary.result(),
+            *f_ledger.result(),
+        ]
     return {
         "badges": badges,
         "notifications": {"count": len(items), "items": items},
