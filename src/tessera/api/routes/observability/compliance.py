@@ -299,9 +299,14 @@ def observability_ai_act(at: str | None = None) -> dict[str, object]:
     """EU AI Act compliance posture: transparency, oversight, traceability (#76).
 
     Turn and oversight counts honour T; the audit-chain integrity check is a
-    structural property of the whole log, so it stays live.
+    structural property of the whole log, so it stays live — but this is a dashboard
+    POSTURE badge ("no proven break"), not a regulator-facing claim, so it asks the
+    checkpoint-incremental verifier (verdict-identical to the full walk,
+    ``verify_active_ledger_checkpointed`` — ~15 ms vs ~3 s on the 65k-row chain), the
+    same one the Synthèse / Garde-fous integrity dots use. The opposability full walk
+    stays for État à date and ``/api/audit/integrity``.
     """
-    from tessera.guard.ledger_store import ledger_available, verify_active_ledger
+    from tessera.guard.ledger_store import ledger_available, verify_active_ledger_checkpointed
 
     entries = _read_audit_entries()
     oversight = sum(
@@ -309,7 +314,7 @@ def observability_ai_act(at: str | None = None) -> dict[str, object]:
         for e in entries
         if e.get("target") == "ticket_escalate" and occurred_before(e.get("occurred_at"), at)
     )
-    chain = verify_active_ledger()
+    chain = verify_active_ledger_checkpointed()
     signals = ai_act_mod.AIActSignals(
         disclosure_enabled=True,  # disclosure shipped on the chat UI (#134)
         n_turns=len(replay_mod.recent_bundles(at)),
