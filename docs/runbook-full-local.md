@@ -60,9 +60,16 @@ prints `http://localhost:3090`. **No tunnel is started**; your domain is untouch
   local agent). `make fulllocal-status` shows both `healthy` and the tunnel as *not running*.
 - The felt latency here has **no tunnel between front and agent** — this is the point.
 
-**Before exposing publicly:** set real operator passwords in `frontend.secret.env`
-(`TESSERA_AUTH_*`) — the demo defaults are shown in the login UI and are unsafe on a public
-domain. The superadmin password is yours to set and keep; it is never in the repo.
+> **Login gotcha (by design).** The container front is a *production build*
+> (`NODE_ENV=production`), so it reads as EXPOSED (audit F-9) and **refuses the repo's demo
+> defaults** (`admin/tessera-admin`) — the login banner is empty and no default account works,
+> *even on localhost*. An account exists only if you set its password in `frontend.secret.env`
+> (`TESSERA_AUTH_ADMIN_PASSWORD=…`, …). The example sets the demo values so you can log in
+> immediately; recreate the front after editing (`make fulllocal-down && make fulllocal-up`).
+
+**Before exposing publicly:** replace those demo passwords with STRONG, non-repo ones — on your
+domain the front is truly public. The superadmin (it gates the paid frontier models) is yours to
+set and keep; it is never in the repo.
 
 ## 3. THE FLIP — publish on your domain (gated; do only when ready)
 
