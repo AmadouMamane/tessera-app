@@ -251,7 +251,7 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
     # ── file-mode fallbacks (the postgres path is targeted) ─────────────────────
     "tessera/observability/fleet.py": "file — postgres counts handoffs in SQL",
     "tessera/observability/quality_nets.py": "file — postgres reads one indexed canary row",
-    "tessera/api/routes/observability/_common.py": "OWED — of_type('tessera.guard.audit') = 94 %",
+    "tessera/api/routes/observability/_common.py": "OWED — audit 94 %, cached sync + filter",
     "tessera/observability/spine/adapters/current.py": "OWED — same 94 % read, via the spine",
     # ── OWED: request paths that still read the whole chain and filter in Python ─
     "tessera/observability/agent_garde_fous.py": "OWED",
