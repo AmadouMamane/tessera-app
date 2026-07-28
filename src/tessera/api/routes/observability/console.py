@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import sys
 import threading
+import time
 from dataclasses import asdict
 
 from fastapi import APIRouter
@@ -49,13 +50,25 @@ _TIMELINE_AUDIT_LOCK = threading.Lock()
 _timeline_audit_seq: int = -1
 _timeline_audit_events: list[dict[str, object]] = []
 
+# The WHOLE live timeline result, memoised single-flight + short TTL (ADR 0044 follow-up). The
+# audit half above is memoised by ledger head, but the SCORE half (`_scores_for` + the loop)
+# recomputes every call and is the residual ~1.6 s. The time rail fires /timeline on EVERY page,
+# so a burst — navigation, the poll, several operators — collapses to ONE compute per worker per
+# window instead of one score walk per request. Live read (``at is None``) only: an as-of read
+# carries its own upper bound and is rare, so it recomputes uncached, unchanged.
+_TIMELINE_RESULT_TTL_S = 3.0
+_TIMELINE_RESULT_LOCK = threading.Lock()
+_timeline_result: tuple[float, dict[str, object]] | None = None
+
 
 def reset_timeline_audit_cache() -> None:
-    """Drop the memoised audit timeline events (test isolation — the singleton is per-process)."""
-    global _timeline_audit_seq, _timeline_audit_events
+    """Drop the memoised timeline state (test isolation — the singletons are per-process)."""
+    global _timeline_audit_seq, _timeline_audit_events, _timeline_result
     with _TIMELINE_AUDIT_LOCK:
         _timeline_audit_seq = -1
         _timeline_audit_events = []
+    with _TIMELINE_RESULT_LOCK:
+        _timeline_result = None
 
 
 def _compute_audit_timeline_events(at: str | None) -> list[dict[str, object]]:
@@ -145,7 +158,28 @@ def observability_timeline(at: str | None = None) -> dict[str, object]:
     changes, agent-model changes and guard denials (the tamper-evident audit
     log). With ``?at=`` the window ends at T (as-of-T read, ADR 0011): only
     events with timestamp ≤ T are returned.
+
+    The LIVE read (``at is None``) is memoised single-flight + short TTL: a burst of time-rail
+    fetches shares one score walk (see ``_timeline_result``). An as-of read is rare and carries
+    its own bound, so it always recomputes — the historical window never changes anyway.
     """
+    global _timeline_result
+    if at is not None:
+        return _compute_timeline(at)
+    cached = _timeline_result
+    if cached is not None and time.monotonic() - cached[0] < _TIMELINE_RESULT_TTL_S:
+        return cached[1]
+    with _TIMELINE_RESULT_LOCK:
+        cached = _timeline_result
+        if cached is not None and time.monotonic() - cached[0] < _TIMELINE_RESULT_TTL_S:
+            return cached[1]
+        result = _compute_timeline(None)
+        _timeline_result = (time.monotonic(), result)
+        return result
+
+
+def _compute_timeline(at: str | None) -> dict[str, object]:
+    """Compose the time-rail events from scores + audit (the cold path of the memo)."""
     from datetime import UTC, datetime
 
     events: list[dict[str, object]] = []
