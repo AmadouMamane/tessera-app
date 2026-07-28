@@ -80,7 +80,9 @@ __all__ = [
     "ledger_source",
     "load_ledger_payloads_of_type",
     "load_ledger_payloads_sync",
+    "read_agent_journal_entries",
     "read_ledger_entries",
+    "read_ledger_entries_by_target_prefix",
     "shadow_verify_ledger",
     "verify_active_ledger",
     "verify_ledger_rows",
@@ -858,6 +860,97 @@ def count_ledger_entries_of_type(entry_type: str, agent_id: str | None = None) -
         row = cur.fetchone()
         read.rows_read(1)
     return int(row[0]) if row and row[0] is not None else 0
+
+
+def read_ledger_entries_by_target_prefix(
+    prefix: str, *, until: datetime | None = None
+) -> list[dict[str, Any]]:
+    """Ledger payloads whose ``target`` starts with ``prefix`` (oldest→newest), bounded in SQL.
+
+    ``source_state_traces`` keeps only the per-source knowledge acts (``target`` =
+    ``knowledge_source.<cat>``) out of the whole chain. It was finding them by materialising
+    every payload and testing the prefix in Python, on every Connaissances load. This pushes the
+    prefix (and the ``until`` bound) into SQL so only the handful of matching rows come back. The
+    ``LIKE`` may over-match (``_`` is a wildcard), but the caller's identical ``startswith`` belt
+    filter narrows it exactly, so the result is byte-identical. File mode has no SQL: it returns
+    the full (optionally ``until``-bounded) read and the same belt holds — identical both ways.
+    """
+    if ledger_source() != "postgres":
+        return read_ledger_entries(until=until)
+    query = f"SELECT payload FROM {LEDGER_TABLE} WHERE payload->>'target' LIKE %s"  # noqa: S608
+    params: list[object] = [prefix + "%"]
+    if until is not None:
+        query += " AND occurred_at <= %s"
+        params.append(until)
+    query += " ORDER BY seq"
+    with (
+        store_read("postgres", "audit_ledger.payloads_by_target", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    return [row[0] for row in rows if isinstance(row[0], dict)]
+
+
+def read_agent_journal_entries(
+    agent_id: str,
+    *,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    guard_tail: int,
+) -> list[dict[str, Any]]:
+    """The three journal slices ``_journal_scan`` keeps for one agent (oldest→newest), bounded.
+
+    ``agent-synthese``'s activity scan walked the WHOLE window and kept only: handoffs the agent
+    is a party to (``to_agent``/``from_agent``), the agent's routing events, and the agent's
+    guard-audit entries — of which only the most-recent ``guard_tail`` reach a capped deque. This
+    fetches exactly those rows in SQL: handoffs + routing in full, guard-audit as a ``seq DESC
+    LIMIT guard_tail`` tail, all merged in ``seq`` order. The ``deque(maxlen)`` and the caller's
+    belt filters make the result byte-identical to the full-window read — for the heavy agent
+    (whose guard-audit is 94 % of the chain) as much as the sparse ones. File mode returns the
+    full window; the belt holds there too.
+    """
+    if ledger_source() != "postgres":
+        return read_ledger_entries(since=since, until=until)
+    window = ""
+    wparams: list[object] = []
+    if since is not None:
+        window += " AND occurred_at >= %s"
+        wparams.append(since)
+    if until is not None:
+        window += " AND occurred_at <= %s"
+        wparams.append(until)
+    handoff_sql = (
+        f"SELECT seq, payload FROM {LEDGER_TABLE} WHERE "  # noqa: S608 — fixed identifier
+        f"payload->>'type' = 'tessera.agent.handoff' "
+        f"AND (payload->>'to_agent' = %s OR payload->>'from_agent' = %s){window}"
+    )
+    routing_sql = (
+        f"SELECT seq, payload FROM {LEDGER_TABLE} WHERE "  # noqa: S608
+        f"payload->>'type' = 'tessera.agent.routing' AND payload->>'agent_id' = %s{window}"
+    )
+    guard_sql = (
+        f"SELECT seq, payload FROM {LEDGER_TABLE} WHERE "  # noqa: S608
+        f"payload->>'type' = 'tessera.guard.audit' AND payload->>'agent_id' = %s{window} "
+        f"ORDER BY seq DESC LIMIT %s"
+    )
+    merged: list[tuple[int, dict[str, Any]]] = []
+    with (
+        store_read("postgres", "audit_ledger.agent_journal", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(handoff_sql, [agent_id, agent_id, *wparams])
+        merged.extend((s, p) for s, p in cur.fetchall() if isinstance(p, dict))
+        cur.execute(routing_sql, [agent_id, *wparams])
+        merged.extend((s, p) for s, p in cur.fetchall() if isinstance(p, dict))
+        cur.execute(guard_sql, [agent_id, *wparams, guard_tail])
+        merged.extend((s, p) for s, p in cur.fetchall() if isinstance(p, dict))
+        read.rows_read(len(merged))
+    merged.sort(key=lambda r: r[0])
+    return [payload for _, payload in merged]
 
 
 def latest_entry_of_type_for_agent(entry_type: str, agent_id: str) -> dict[str, Any] | None:

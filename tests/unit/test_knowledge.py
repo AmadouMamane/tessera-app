@@ -175,7 +175,7 @@ class TestSourceStateTraces:
                 _ledger_entry("knowledge_source.dora", "not-an-instant", "admin", {"active": True}),
             ]
 
-        monkeypatch.setattr(k, "read_ledger_entries", _entries)
+        monkeypatch.setattr(k, "read_ledger_entries_by_target_prefix", _entries)
         traces = k.source_state_traces()
         assert "until" in seen_kwargs, "the ledger read must be bounded at the seam"
         assert set(traces) == {"cnil"}, "foreign targets and unplaceable entries claim no place"
@@ -192,7 +192,7 @@ class TestSourceStateTraces:
                 "knowledge_source.cnil", "2026-07-10T10:00:00+00:00", "b", {"active": True}
             ),
         ]
-        monkeypatch.setattr(k, "read_ledger_entries", lambda *_a, **_kw: entries)
+        monkeypatch.setattr(k, "read_ledger_entries_by_target_prefix", lambda *_a, **_kw: entries)
         bound = datetime(2026, 7, 5, tzinfo=UTC)
         traces = k.source_state_traces(until=bound)
         assert [a["by"] for a in traces.get("cnil", [])] == [

@@ -49,7 +49,7 @@ from psycopg.rows import dict_row
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.agent.registry import Agent, get_agent
-from tessera.guard.ledger_store import read_ledger_entries, verify_active_ledger
+from tessera.guard.ledger_store import read_agent_journal_entries, verify_active_ledger
 from tessera.observability.agent_configurations import _effective
 from tessera.retrieval.store import _connection
 
@@ -312,9 +312,13 @@ def _scan_journal(
     handoff_events: list[dict[str, Any]] = []
     guard_events: deque[dict[str, Any]] = deque(maxlen=_JOURNAL_EVENT_CAP)
 
-    # The seam bounds the read in postgres mode; the file fallback returns all,
-    # so the caller-side filters below stay as the belt for both bounds.
-    for obj in read_ledger_entries(since=since, until=until):
+    # Bounded read: only this agent's handoff / routing / guard-audit slices come back from
+    # SQL (guard-audit as a `guard_tail` tail — all the capped deque keeps). The caller-side
+    # filters below stay as the belt, so the counts + feed are byte-identical to the full scan;
+    # the file fallback returns the whole window and the same belt holds.
+    for obj in read_agent_journal_entries(
+        agent_id, since=since, until=until, guard_tail=_JOURNAL_EVENT_CAP
+    ):
         when = _parse_iso(obj.get("occurred_at"))
         if since is not None and when is not None and when < since:
             continue

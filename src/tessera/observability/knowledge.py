@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 
 from psycopg.rows import dict_row
 
-from tessera.guard.ledger_store import read_ledger_entries
+from tessera.guard.ledger_store import read_ledger_entries_by_target_prefix
 from tessera.retrieval import citations
 from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.retrieval.store import _connection
@@ -412,7 +412,9 @@ def source_state_traces(*, until: datetime | None = None) -> dict[str, list[dict
     if bound.tzinfo is None:
         bound = bound.replace(tzinfo=UTC)
     out: dict[str, list[dict[str, object]]] = {}
-    for entry in read_ledger_entries(until=bound):
+    # Bounded read: only the knowledge-source acts come back from SQL; the belt filter below
+    # (identical `startswith`) still narrows any `LIKE` over-match, so the fold is byte-identical.
+    for entry in read_ledger_entries_by_target_prefix(_TRACE_TARGET_PREFIX, until=bound):
         target = entry.get("target")
         if not (isinstance(target, str) and target.startswith(_TRACE_TARGET_PREFIX)):
             continue

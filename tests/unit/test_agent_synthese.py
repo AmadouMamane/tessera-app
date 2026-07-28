@@ -325,7 +325,9 @@ def test_scan_journal_until_excludes_later_and_unplaceable_events(
         # No occurred_at: countable live, unplaceable in a state-at-T view.
         {"type": "tessera.agent.routing", "agent_id": "support-client", "reason": "intent -> x"},
     ]
-    monkeypatch.setattr(syn, "read_ledger_entries", lambda **_kw: entries)
+    # The scan reads its slices through read_agent_journal_entries now; the belt below still
+    # holds the as-of bound even when the reader hands back more (file mode / an over-return).
+    monkeypatch.setattr(syn, "read_agent_journal_entries", lambda *_a, **_kw: entries)
 
     live = syn._scan_journal("support-client", None)
     assert live["in"] == 2
