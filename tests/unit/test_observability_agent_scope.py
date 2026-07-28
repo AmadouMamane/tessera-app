@@ -16,6 +16,7 @@ from tessera.observability import replay as replay_mod
 from tessera.observability.conformance import compute_conformance
 from tessera.observability.eval import scores as scores_mod
 from tessera.observability.tool_validity import compute_tool_validity
+from tests.unit._route_helpers import call_route
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -237,9 +238,9 @@ class TestRouteContract:
         try:
             scores_mod._RECENT.clear()
             monkeypatch.setattr(scores_mod, "_WARMED", False)
-            org = await obs.observability_slo(agent="all")
-            support = await obs.observability_slo(agent="support-client")
-            absent = await obs.observability_slo(agent="nonexistent")
+            org = await call_route(obs.observability_slo, agent="all")
+            support = await call_route(obs.observability_slo, agent="support-client")
+            absent = await call_route(obs.observability_slo, agent="nonexistent")
             assert org["n"] == 3
             assert support["n"] == 2 and support["agent"] == "support-client"
             # An agent with no scored turns reads honestly empty, never the org rows.

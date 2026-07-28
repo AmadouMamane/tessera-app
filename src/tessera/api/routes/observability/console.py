@@ -136,7 +136,7 @@ def _audit_timeline_events(at: str | None) -> list[dict[str, object]]:
 
 
 @router.get("/observability/timeline")
-async def observability_timeline(at: str | None = None) -> dict[str, object]:
+def observability_timeline(at: str | None = None) -> dict[str, object]:
     """Temporal control backbone — dated lineage events for the cockpit time rail.
 
     Every cockpit view reads at an instant T and compares to a baseline; this is
@@ -211,13 +211,13 @@ async def observability_span_propagation() -> dict[str, object]:
 
 
 @router.get("/observability/tail-sampling")
-async def observability_tail_sampling() -> dict[str, object]:
+def observability_tail_sampling() -> dict[str, object]:
     """Tail-sampling retention: 100% of slow/low-score traces, sampled head."""
     return asdict(tail_sampling_mod.analyze_sampling(replay_mod.recent_bundles()))
 
 
 @router.get("/observability/agent-console")
-async def observability_agent_console(
+def observability_agent_console(
     lang: str = "fr", agent: str = DEFAULT_AGENT_ID
 ) -> dict[str, object]:
     """Agent Console (Debug) surface (reference image agent-console-normative).
@@ -238,7 +238,7 @@ async def observability_agent_console(
 
 
 @router.get("/observability/assistant")
-async def observability_assistant(lang: str = "fr") -> dict[str, object]:
+def observability_assistant(lang: str = "fr") -> dict[str, object]:
     """Assistant overview (Chat and Console sub-tabs).
 
     Composes the session header, the grounded conversation, the session context,
@@ -277,7 +277,7 @@ async def observability_traces_obs(at: str | None = None) -> dict[str, object]:
 
 
 @router.get("/observability/replay-shadow")
-async def observability_replay_shadow(lang: str = "fr", at: str | None = None) -> dict[str, object]:
+def observability_replay_shadow(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Replay & shadow overview (page #11).
 
     Composes the replay posture, traffic and deviation series, recent / top
@@ -292,7 +292,7 @@ async def observability_replay_shadow(lang: str = "fr", at: str | None = None) -
 
 
 @router.get("/observability/graph-topology")
-async def observability_graph_topology() -> dict[str, object]:
+def observability_graph_topology() -> dict[str, object]:
     """Topology fingerprint of the live agent graph vs the golden pin (#87).
 
     ADR 0017 §1: the fingerprint is computed by the agent runtime (which imports

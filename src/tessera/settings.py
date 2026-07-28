@@ -289,6 +289,13 @@ class APISettings(BaseSettings):
     streaming_enabled: bool = True
     bearer_token: SecretStr | None = None
 
+    # Size of the threadpool Starlette runs synchronous (``def``) endpoints in. The
+    # observability READ handlers are synchronous so their blocking DB reads run OFF the
+    # event loop — a dashboard fires ~25 reads at once and they must run in parallel, not
+    # serialize behind one loop. This caps concurrent in-flight blocking reads (and thus
+    # transient DB connections); the anyio default is 40. Tune per env / DB max_connections.
+    read_threads: int = 40
+
     # HMAC key for the signed customer-session cookie (ADR 0008/0009). Resolved
     # from the environment — in production from GCP Secret Manager, mounted as
     # TESSERA_API_SESSION_SIGNING_KEY — and NEVER committed. When unset (local

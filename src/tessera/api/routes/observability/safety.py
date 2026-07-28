@@ -42,9 +42,7 @@ _inversion_cache: dict[str, object] | None = None
 
 
 @router.get("/observability/guardrail-catalogue")
-async def observability_guardrail_catalogue(
-    lang: str = "fr", agent: str = "all"
-) -> dict[str, object]:
+def observability_guardrail_catalogue(lang: str = "fr", agent: str = "all") -> dict[str, object]:
     """CONFIGURER platform guardrail catalogue (configurer/garde-fous).
 
     The guardrail profiles agents bind, with the real shared-policy composition,
@@ -61,7 +59,7 @@ async def observability_guardrail_catalogue(
 
 
 @router.get("/observability/incidents")
-async def observability_incidents(lang: str = "fr", at: str | None = None) -> dict[str, object]:
+def observability_incidents(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Incidents & playbooks overview (page #10).
 
     Composes the current incident posture, the triage queue with recommended
@@ -79,7 +77,7 @@ async def observability_incidents(lang: str = "fr", at: str | None = None) -> di
 
 
 @router.get("/observability/policies")
-async def observability_policies(lang: str = "fr") -> dict[str, object]:
+def observability_policies(lang: str = "fr") -> dict[str, object]:
     """Policies & guardrails overview (page #16-policies).
 
     Composes the version timeline, posture KPIs, critical active policies,
@@ -114,7 +112,7 @@ async def observability_embedding_inversion() -> dict[str, object]:
 
 
 @router.get("/observability/least-privilege")
-async def observability_least_privilege() -> dict[str, object]:
+def observability_least_privilege() -> dict[str, object]:
     """Tool least-privilege: granted vs actually-used tools from the audit (#101)."""
     # Exclude non-tool audit targets: the input guard ("user_input") and the
     # memory governance actions are audited too but are not tool invocations.
@@ -143,13 +141,13 @@ async def observability_least_privilege() -> dict[str, object]:
 
 
 @router.get("/observability/siem")
-async def observability_siem() -> dict[str, object]:
+def observability_siem() -> dict[str, object]:
     """Security audit events normalised to ECS/SIEM shape for the SOC (#172)."""
     return asdict(siem_mod.to_siem_events(_read_audit_entries()))
 
 
 @router.get("/observability/playbooks")
-async def observability_playbooks(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_playbooks(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Incident playbooks triggered by the live (or as-of-T) signals (#115).
 
     Bundle- and score-derived inputs honour T; the jailbreak rate is the latest
@@ -185,14 +183,14 @@ async def observability_playbooks(at: str | None = None, agent: str = "all") -> 
 
 
 @router.get("/observability/cross-tenant")
-async def observability_cross_tenant() -> dict[str, object]:
+def observability_cross_tenant() -> dict[str, object]:
     """Cross-tenant leakage: foreign subject ids in a turn's context (#74)."""
     turns = [(b.conversation_id or "", b.context) for b in replay_mod.recent_bundles()]
     return asdict(cross_tenant_mod.detect_cross_tenant(turns))
 
 
 @router.get("/observability/toxicity")
-async def observability_toxicity(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_toxicity(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Toxicity / harmful-output rate over captured answers (#60), live or as of T.
 
     ``agent`` scopes to one agent's captured turns (``all`` = org view).
@@ -205,7 +203,7 @@ async def observability_toxicity(at: str | None = None, agent: str = "all") -> d
 
 
 @router.get("/observability/embedding-skew")
-async def observability_embedding_skew() -> dict[str, object]:
+def observability_embedding_skew() -> dict[str, object]:
     """Embedding-version skew between the query-time and corpus embedders (#64)."""
     from tessera.observability.embedding_skew import EmbeddingFingerprint
     from tessera.retrieval.embeddings import embedding_dimension
@@ -226,7 +224,7 @@ async def observability_embedding_skew() -> dict[str, object]:
 
 
 @router.get("/observability/firewall-efficacy")
-async def observability_firewall_efficacy() -> dict[str, object]:
+def observability_firewall_efficacy() -> dict[str, object]:
     """Detection efficacy of the guard over injection vs benign inputs.
 
     The report is a deterministic fixed-corpus probe; the ``observed_at`` stamp is
@@ -239,19 +237,19 @@ async def observability_firewall_efficacy() -> dict[str, object]:
 
 
 @router.get("/observability/redteam")
-async def observability_redteam() -> dict[str, object]:
+def observability_redteam() -> dict[str, object]:
     """Return the recorded jailbreak-drift snapshots (newest last)."""
     return {"snapshots": [asdict(s) for s in redteam_mod.recent_snapshots()]}
 
 
 @router.get("/observability/refusal")
-async def observability_refusal() -> dict[str, object]:
+def observability_refusal() -> dict[str, object]:
     """Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden)."""
     return asdict(refusal_mod.compute_refusal_calibration())
 
 
 @router.get("/observability/guard-retraction")
-async def observability_guard_retraction() -> dict[str, object]:
+def observability_guard_retraction() -> dict[str, object]:
     """Streamed-token exposure before an output-guard trigger fires (#90)."""
     from tessera.guard.decisions import load_policy
 
@@ -260,13 +258,13 @@ async def observability_guard_retraction() -> dict[str, object]:
 
 
 @router.get("/observability/guard-explain")
-async def observability_guard_explain() -> dict[str, object]:
+def observability_guard_explain() -> dict[str, object]:
     """Ranked breakdown of which guard rules fired across the audit trail."""
     return asdict(guard_explain_mod.compute_guard_explain())
 
 
 @router.get("/observability/tool-loops")
-async def observability_tool_loops() -> dict[str, object]:
+def observability_tool_loops() -> dict[str, object]:
     """Tool-call loop/oscillation detection over the audit invocation stream (#88)."""
     non_tools = {"user_input"}
     ordered: list[tuple[str, str]] = []  # (occurred_at, tool)
@@ -285,9 +283,7 @@ async def observability_tool_loops() -> dict[str, object]:
 
 
 @router.get("/observability/tool-validity")
-async def observability_tool_validity(
-    at: str | None = None, agent: str = "all"
-) -> dict[str, object]:
+def observability_tool_validity(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Validity of tool calls (allowed vs denied, argument failures), live or as of T.
 
     ``agent`` scopes to one agent's tool calls (``all`` = org view).
@@ -296,7 +292,7 @@ async def observability_tool_validity(
 
 
 @router.get("/observability/pii-leak")
-async def observability_pii_leak(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_pii_leak(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Output PII-leak rate: PII in answers absent from their grounding, live or as of T.
 
     ``agent`` scopes to one agent's captured turns (``all`` = org view).
@@ -309,7 +305,7 @@ async def observability_pii_leak(at: str | None = None, agent: str = "all") -> d
 
 
 @router.get("/observability/steganography/{bundle_id}")
-async def observability_steganography(bundle_id: str) -> dict[str, object]:
+def observability_steganography(bundle_id: str) -> dict[str, object]:
     """Detect hidden unicode (zero-width/bidi/tag) in a captured turn."""
     bundle = replay_mod.get_bundle(bundle_id)
     if bundle is None:

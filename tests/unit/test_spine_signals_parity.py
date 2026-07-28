@@ -19,6 +19,7 @@ from tessera.observability.eval import scores as scores_mod
 from tessera.observability.spine.adapters import set_reader
 from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot, reset_snapshot_cache
+from tests.unit._route_helpers import call_route
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -112,7 +113,7 @@ async def test_snapshot_signals_match_routes(agent: str) -> None:
     reset_snapshot_cache()
     snap = await compute_snapshot(scope, list(_SCORE_SIGNALS) + list(_BUNDLE_SIGNALS))
     for signal_id, route in {**_SCORE_SIGNALS, **_BUNDLE_SIGNALS}.items():
-        expected = await route(at=_ASOF, agent=agent)
+        expected = await call_route(route, at=_ASOF, agent=agent)
         assert snap["signals"][signal_id]["data"] == expected, signal_id
 
 
@@ -120,8 +121,8 @@ async def test_funnel_route_takes_no_agent_kw_but_matches_org() -> None:
     # funnel's route accepts (at, agent); confirm the snapshot's org read matches it.
     reset_snapshot_cache()
     snap = await compute_snapshot(Scope.from_query({"at": _ASOF, "agent": "all"}), ["funnel"])
-    assert snap["signals"]["funnel"]["data"] == await obs.observability_funnel(
-        at=_ASOF, agent="all"
+    assert snap["signals"]["funnel"]["data"] == await call_route(
+        obs.observability_funnel, at=_ASOF, agent="all"
     )
 
 
@@ -133,5 +134,5 @@ async def test_business_capabilities_snapshot_matches_route(agent: str) -> None:
     scope = Scope.from_query({"at": _ASOF, "agent": agent})
     reset_snapshot_cache()
     snap = await compute_snapshot(scope, ["business_capabilities"])
-    expected = await obs.observability_business_capabilities(at=_ASOF, agent=agent)
+    expected = await call_route(obs.observability_business_capabilities, at=_ASOF, agent=agent)
     assert snap["signals"]["business_capabilities"]["data"] == expected

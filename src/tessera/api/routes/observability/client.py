@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 @router.get("/observability/client/documents")
-async def observability_client_documents(locale: str = "fr") -> dict[str, object]:
+def observability_client_documents(locale: str = "fr") -> dict[str, object]:
     """Customer documents, sourced from the real Crédit Aurore corpus (locale-aware)."""
     try:
         return {"available": True, **client_space_mod.compute_documents(locale)}
@@ -24,7 +24,7 @@ async def observability_client_documents(locale: str = "fr") -> dict[str, object
 
 
 @router.get("/observability/client/requests")
-async def observability_client_requests(lang: str = "fr") -> dict[str, object]:
+def observability_client_requests(lang: str = "fr") -> dict[str, object]:
     """Customer support requests (escalation tickets)."""
     try:
         return {"available": True, **client_space_mod.compute_requests(lang)}
@@ -34,7 +34,7 @@ async def observability_client_requests(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/client/alerts")
-async def observability_client_alerts(lang: str = "fr") -> dict[str, object]:
+def observability_client_alerts(lang: str = "fr") -> dict[str, object]:
     """Account alerts with the durable read-state applied."""
     try:
         return {"available": True, **client_space_mod.compute_alerts(lang)}
@@ -44,7 +44,7 @@ async def observability_client_alerts(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/client/settings")
-async def observability_client_settings(lang: str = "fr") -> dict[str, object]:
+def observability_client_settings(lang: str = "fr") -> dict[str, object]:
     """Customer preferences (notifications, privacy/consent, security)."""
     try:
         return {"available": True, **client_space_mod.compute_settings(lang)}

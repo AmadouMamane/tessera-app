@@ -22,6 +22,7 @@ punctuation is not).
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -647,10 +648,11 @@ async def build_agent_garde_fous(lang: str = "fr") -> dict[str, object]:
     settings = get_settings()
     now = datetime.now(UTC)
     policy = load_policy()
-    scan = _scan_audit(settings.guard.audit_file, now)
+    # Offload the blocking ledger walk + verdict to a thread so concurrent reads keep the loop.
+    scan = await asyncio.to_thread(_scan_audit, settings.guard.audit_file, now)
     # Health-dot integrity for the panel: the cheap checkpointed verdict, not the full ~2s
     # opposability re-walk (which stays on État à date / audit-integrity).
-    chain = verify_active_ledger_checkpointed()
+    chain = await asyncio.to_thread(verify_active_ledger_checkpointed)
     policy_mtime = _policy_mtime(settings.guard.policy_path)
     return _assemble(policy, scan, chain, _load_state(), policy_mtime, lang, now)
 

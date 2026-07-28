@@ -127,7 +127,9 @@ def _returns_a_raw_available_dict(route: str) -> bool:
     """
     tree = ast.parse(Path(fleet_routes.__file__).read_text(encoding="utf-8"))
     for node in ast.walk(tree):
-        if not isinstance(node, ast.AsyncFunctionDef):
+        # A read handler is either shape: ``async def`` (async psycopg) or ``def`` (the blocking
+        # reads, now synchronous so Starlette threadpools them). The witness must see both.
+        if not isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef):
             continue
         if not any(
             isinstance(dec, ast.Call)

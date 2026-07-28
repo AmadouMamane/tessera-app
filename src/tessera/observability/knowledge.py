@@ -16,6 +16,7 @@ Free-text data is verbatim French with ASCII-only punctuation.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -496,7 +497,10 @@ async def build_connaissances(lang: str = "fr") -> dict[str, object]:
     unavailable", never an empty trace it did not witness (ADR 0026).
     """
     try:
-        trace: dict[str, list[dict[str, object]]] | None = source_state_traces()
+        # Offload the blocking ledger fold off the event loop for concurrent reads.
+        trace: dict[str, list[dict[str, object]]] | None = await asyncio.to_thread(
+            source_state_traces
+        )
     except Exception:
         trace = None
     return _assemble(

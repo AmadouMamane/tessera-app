@@ -85,7 +85,7 @@ router = APIRouter(dependencies=[Depends(require_subject_reader)])
 
 
 @router.get("/observability/recouvrement-queue")
-async def observability_recouvrement_queue() -> dict[str, object]:
+def observability_recouvrement_queue() -> dict[str, object]:
     """The REAL collection-case queue + per-status counters (RC product, lot 9).
 
     Subject-scoped by nature: a dossier names a client and a debt. The router's
@@ -103,7 +103,7 @@ async def observability_recouvrement_queue() -> dict[str, object]:
 
 
 @router.get("/observability/recouvrement-case/{case_id}")
-async def observability_recouvrement_case(case_id: str) -> dict[str, object]:
+def observability_recouvrement_case(case_id: str) -> dict[str, object]:
     """One collection dossier by id — 404 loudly on an id nobody holds."""
     from fastapi import HTTPException
 
@@ -188,7 +188,7 @@ async def observability_session_detail(
 
 
 @router.get("/observability/agent-console/feedback")
-async def observability_agent_console_feedback(conversation_id: str) -> dict[str, object]:
+def observability_agent_console_feedback(conversation_id: str) -> dict[str, object]:
     """Return the persisted ``{turn: rating}`` operator feedback for a conversation.
 
     The payload is ratings, not content — but it is keyed by a named conversation, so a
@@ -199,7 +199,7 @@ async def observability_agent_console_feedback(conversation_id: str) -> dict[str
 
 
 @router.get("/observability/replays")
-async def observability_replays() -> dict[str, object]:
+def observability_replays() -> dict[str, object]:
     """List the captured turns available for regression replay (newest last).
 
     Subject-scoped, and the bulkiest of them all: a ``ReplayBundle`` carries ``question``,
@@ -210,7 +210,7 @@ async def observability_replays() -> dict[str, object]:
 
 
 @router.get("/observability/trace-snapshot")
-async def observability_trace_snapshot() -> dict[str, object]:
+def observability_trace_snapshot() -> dict[str, object]:
     """Golden-trace snapshot diff of executed-node shapes across turns (#41).
 
     Reads as an aggregate and is not one: ``drifts[].question`` carries the verbatim user
@@ -222,7 +222,7 @@ async def observability_trace_snapshot() -> dict[str, object]:
 
 
 @router.get("/observability/trajectory/{bundle_id}")
-async def observability_trajectory(bundle_id: str) -> dict[str, object]:
+def observability_trajectory(bundle_id: str) -> dict[str, object]:
     """Step-by-step trajectory of a captured turn (session theater).
 
     Subject-scoped: the ``input`` step's detail is the customer's question and the
@@ -251,7 +251,7 @@ async def observability_provenance(bundle_id: str) -> dict[str, object]:
 
 
 @router.get("/observability/erasure/{conversation_id}")
-async def observability_erasure_preview(conversation_id: str) -> dict[str, object]:
+def observability_erasure_preview(conversation_id: str) -> dict[str, object]:
     """Preview the telemetry that a GDPR erasure of this subject would purge (#180).
 
     Subject-scoped: it carries no free text, but it answers *"how much do you hold about
@@ -268,7 +268,7 @@ async def observability_erasure_preview(conversation_id: str) -> dict[str, objec
 
 
 @router.get("/observability/handoffs")
-async def observability_handoffs() -> dict[str, object]:
+def observability_handoffs() -> dict[str, object]:
     """Delegation-chain handoff tracing and broken-handoff detection (#189).
 
     Subject-scoped, and NOT found by reading the code — found by the canary sweep. It reads
@@ -281,7 +281,7 @@ async def observability_handoffs() -> dict[str, object]:
 
 
 @router.get("/observability/context-overflow")
-async def observability_context_overflow() -> dict[str, object]:
+def observability_context_overflow() -> dict[str, object]:
     """Context truncation/overflow vs the input window across captured turns (#89).
 
     Subject-scoped: ``analyze_overflow`` receives each turn's question *and* its retrieved

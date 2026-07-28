@@ -94,7 +94,7 @@ async def observability_fleet(
 
 
 @router.get("/observability/rbac-matrix", response_model=RbacMatrixPayload | RbacMatrixUnavailable)
-async def observability_rbac_matrix(agent: str = "all") -> dict[str, object]:
+def observability_rbac_matrix(agent: str = "all") -> dict[str, object]:
     """RBAC role x agent matrix (real roles x real agents). Global, filterable.
 
     The enforced roles are currently org-wide; the matrix states that truthfully
@@ -110,7 +110,7 @@ async def observability_rbac_matrix(agent: str = "all") -> dict[str, object]:
 
 
 @router.get("/observability/release-control")
-async def observability_release_control(agent: str = "all", lang: str = "fr") -> dict[str, object]:
+def observability_release_control(agent: str = "all", lang: str = "fr") -> dict[str, object]:
     """Release Control (AGIR): per-agent release pipeline + eval-gate verdict.
 
     Global, filterable by agent (``?agent=all|<id>``) — distinct from the AGENT
@@ -127,7 +127,7 @@ async def observability_release_control(agent: str = "all", lang: str = "fr") ->
 
 
 @router.get("/observability/agent-lifecycle")
-async def observability_agent_lifecycle(
+def observability_agent_lifecycle(
     agent_id: str = DEFAULT_AGENT_ID,
     lang: str = "fr",
 ) -> dict[str, object]:
@@ -149,7 +149,7 @@ async def observability_agent_lifecycle(
     "/observability/agent-evaluations",
     response_model=AgentEvaluationsPayload | AgentEvaluationsUnavailable,
 )
-async def observability_agent_evaluations(
+def observability_agent_evaluations(
     agent_id: str = DEFAULT_AGENT_ID,
     lang: str = "fr",
 ) -> dict[str, object]:
@@ -201,7 +201,7 @@ async def observability_agent_prompts(
 @router.get(
     "/observability/sandbox-config", response_model=SandboxConfigPayload | SandboxConfigUnavailable
 )
-async def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
+def observability_sandbox_config(lang: str = "fr") -> dict[str, object]:
     """Defaults for the Console sandbox playground (model/prompt/guardrails).
 
     Returns the *live* system prompt for ``lang`` (the YAML bundle the agent
@@ -295,7 +295,7 @@ async def observability_guard_activity() -> dict[str, object]:
 
 
 @router.get("/observability/agent-a-faire")
-async def observability_agent_a_faire(lang: str = "fr") -> dict[str, object]:
+def observability_agent_a_faire(lang: str = "fr") -> dict[str, object]:
     """Agent "A faire" personal action queue (reference image 23).
 
     Backed by the real operator backlog (failed eval cases with durable
@@ -382,7 +382,7 @@ async def observability_agent_synthese(
 
 
 @router.get("/observability/chrome", response_model=ChromePayload | ChromeUnavailable)
-async def observability_chrome(lang: str = "fr") -> dict[str, object]:
+def observability_chrome(lang: str = "fr") -> dict[str, object]:
     """Sidebar badges and bell notifications — every number a count, every count a page.
 
     Composes the reads the destination pages already perform; it opens no store of its own.
@@ -397,7 +397,7 @@ async def observability_chrome(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/access", response_model=AccessPayload | AccessUnavailable)
-async def observability_access(lang: str = "fr") -> dict[str, object]:
+def observability_access(lang: str = "fr") -> dict[str, object]:
     """Roles & access overview (page #18).
 
     Composes the access posture, the role table, the selected-role detail and
@@ -411,7 +411,7 @@ async def observability_access(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/roadmap")
-async def observability_roadmap(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_roadmap(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Mine telemetry signals into a ranked product backlog (#124), live or as of T.
 
     Score- and bundle-derived inputs honour T; corpus freshness is a property of
@@ -453,7 +453,7 @@ async def observability_roadmap(at: str | None = None, agent: str = "all") -> di
 
 
 @router.get("/observability/release-status")
-async def observability_release_status() -> dict[str, object]:
+def observability_release_status() -> dict[str, object]:
     """Current release + real open quality regressions (Vue d'ensemble rail).
 
     Releases are parsed from ``CHANGELOG.md``; regressions are derived from the
@@ -467,7 +467,7 @@ async def observability_release_status() -> dict[str, object]:
 
 
 @router.get("/observability/users")
-async def observability_users(lang: str = "fr") -> dict[str, object]:
+def observability_users(lang: str = "fr") -> dict[str, object]:
     """Users overview from the real seeded operator accounts (admin/utilisateurs)."""
     try:
         return {"available": True, **users_mod.compute_users(lang)}

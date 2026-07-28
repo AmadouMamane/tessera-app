@@ -33,7 +33,7 @@ router = APIRouter()
 
 
 @router.get("/observability/business-events", dependencies=[Depends(require_bearer)])
-async def observability_business_events(
+def observability_business_events(
     at: str | None = None,
     agent: str = "all",
     workflow_id: str | None = None,
@@ -75,7 +75,7 @@ async def observability_business_events(
 
 
 @router.get("/observability/business/capabilities", dependencies=[Depends(require_bearer)])
-async def observability_business_capabilities(
+def observability_business_capabilities(
     at: str | None = None,
     agent: str = "all",
     workflow_id: str | None = None,
@@ -95,7 +95,7 @@ async def observability_business_capabilities(
 
 
 @router.get("/observability/business/runs", dependencies=[Depends(require_bearer)])
-async def observability_business_runs(
+def observability_business_runs(
     at: str | None = None,
     agent: str = "all",
     workflow_id: str | None = None,
@@ -125,7 +125,7 @@ async def observability_business_runs(
 
 
 @router.get("/observability/improvement")
-async def observability_improvement(lang: str = "fr", at: str | None = None) -> dict[str, object]:
+def observability_improvement(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Continuous-improvement posture mined from the telemetry roadmap (#09).
 
     Turns the real roadmap backlog (low-faithfulness turns, unknown intents,
@@ -172,7 +172,7 @@ async def observability_etat_a_date(
 
 
 @router.get("/observability/inbox")
-async def observability_inbox(lang: str = "fr", agent: str = "all") -> dict[str, object]:
+def observability_inbox(lang: str = "fr", agent: str = "all") -> dict[str, object]:
     """Inbox / À traiter overview (page #24).
 
     Composes the queue posture, the task queue, the by-type distribution and the
@@ -189,7 +189,7 @@ async def observability_inbox(lang: str = "fr", agent: str = "all") -> dict[str,
 
 
 @router.get("/observability/automations")
-async def observability_automations(lang: str = "fr", at: str | None = None) -> dict[str, object]:
+def observability_automations(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Automations overview (page #13).
 
     Composes the automation posture, rule catalogue, execution pipeline, type /
@@ -207,7 +207,7 @@ async def observability_automations(lang: str = "fr", at: str | None = None) -> 
 
 
 @router.get("/observability/curation")
-async def observability_curation(lang: str = "fr", at: str | None = None) -> dict[str, object]:
+def observability_curation(lang: str = "fr", at: str | None = None) -> dict[str, object]:
     """Curation eval-set overview (page #12).
 
     Composes the backlog posture, priority curation lots, workflow stages,
@@ -223,7 +223,7 @@ async def observability_curation(lang: str = "fr", at: str | None = None) -> dic
 
 
 @router.get("/observability/journey")
-async def observability_journey() -> dict[str, object]:
+def observability_journey() -> dict[str, object]:
     """Cross-session customer journeys mined from the memory audit trail (#99)."""
     events: list[tuple[str, str, str]] = []
     for entry in _read_audit_entries():
@@ -239,7 +239,7 @@ async def observability_journey() -> dict[str, object]:
 
 
 @router.get("/observability/funnel")
-async def observability_funnel(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_funnel(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Per-language conversation funnel from scored turns, live or as of T.
 
     ``agent`` scopes the funnel to one agent's scored turns (``all`` = org view).
@@ -260,7 +260,7 @@ async def observability_funnel(at: str | None = None, agent: str = "all") -> dic
 
 
 @router.get("/observability/sessions")
-async def observability_sessions(agent: str = "all") -> dict[str, object]:
+def observability_sessions(agent: str = "all") -> dict[str, object]:
     """Session-level goal-completion analytics from scored turns.
 
     ``agent`` scopes to one agent's scored turns (``all`` = org view).

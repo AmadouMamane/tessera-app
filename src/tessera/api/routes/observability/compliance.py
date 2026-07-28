@@ -37,7 +37,7 @@ router = APIRouter()
 
 
 @router.get("/observability/compliance")
-async def observability_compliance(lang: str = "fr") -> dict[str, object]:
+def observability_compliance(lang: str = "fr") -> dict[str, object]:
     """Regulatory compliance posture derived from the real runtime signals (#07).
 
     Maps the live AI-Act, conformance, citation, disclosure, PII, refusal,
@@ -54,7 +54,7 @@ async def observability_compliance(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/catalogue-consumers")
-async def observability_catalogue_consumers(
+def observability_catalogue_consumers(
     kind: str, agent: str = "all", lang: str = "fr"
 ) -> dict[str, object]:
     """CONFIGURER "used-by": which agents consume each catalogue item of ``kind``.
@@ -79,7 +79,7 @@ async def observability_catalogue_consumers(
 
 
 @router.get("/observability/governance")
-async def observability_governance(
+def observability_governance(
     at: str | None = None, limit: int = 8, agent: str = "all"
 ) -> dict[str, object]:
     """Governed-activity feed — real S1 governance events + lineage deploys (≤ T).
@@ -171,7 +171,7 @@ async def observability_parameters(lang: str = "fr", asof: str | None = None) ->
 
 
 @router.get("/observability/system-profile")
-async def observability_system_profile(lang: str = "fr") -> dict[str, object]:
+def observability_system_profile(lang: str = "fr") -> dict[str, object]:
     """System profile overview (page #20).
 
     Composes the operational posture, architecture, topology, resource
@@ -186,7 +186,7 @@ async def observability_system_profile(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/integrations")
-async def observability_integrations(lang: str = "fr") -> dict[str, object]:
+def observability_integrations(lang: str = "fr") -> dict[str, object]:
     """Integrations overview (page #19).
 
     Composes the integration posture, the catalogue table, the
@@ -217,7 +217,7 @@ async def observability_sources(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/evidence-packs/{pack_id}/manifest")
-async def observability_evidence_pack_manifest(pack_id: str) -> dict[str, object]:
+def observability_evidence_pack_manifest(pack_id: str) -> dict[str, object]:
     """One stored evidence-pack manifest, verbatim (the downloadable artifact).
 
     404 on an id nobody created — never an empty manifest that looks real.
@@ -233,7 +233,7 @@ async def observability_evidence_pack_manifest(pack_id: str) -> dict[str, object
 
 
 @router.get("/observability/evidence-packs/{pack_id}/verify")
-async def observability_evidence_pack_verify(pack_id: str) -> dict[str, object]:
+def observability_evidence_pack_verify(pack_id: str) -> dict[str, object]:
     """Re-derive the pack digest + re-verify the live chain — a real verdict.
 
     Two independent facts (manifest_ok, chain_verified_now), never folded into
@@ -250,7 +250,7 @@ async def observability_evidence_pack_verify(pack_id: str) -> dict[str, object]:
 
 
 @router.get("/observability/proofs")
-async def observability_proofs(lang: str = "fr", asof: str | None = None) -> dict[str, object]:
+def observability_proofs(lang: str = "fr", asof: str | None = None) -> dict[str, object]:
     """Proofs & exporter overview (page #15), live or as-of ``asof``.
 
     Composes the proof posture, assembly pipeline, current evidence pack,
@@ -267,7 +267,7 @@ async def observability_proofs(lang: str = "fr", asof: str | None = None) -> dic
 
 
 @router.get("/observability/corpus-freshness")
-async def observability_corpus_freshness() -> dict[str, object]:
+def observability_corpus_freshness() -> dict[str, object]:
     """Staleness of the ingested regulatory corpora vs their review horizon (#50)."""
     from importlib import resources
     from pathlib import Path
@@ -277,7 +277,7 @@ async def observability_corpus_freshness() -> dict[str, object]:
 
 
 @router.get("/observability/citation-links")
-async def observability_citation_links() -> dict[str, object]:
+def observability_citation_links() -> dict[str, object]:
     """Resolve answer citations to verifiable corpus sources (clickable, #132)."""
     sources = _corpus_sources()
     citations: list[str] = []
@@ -289,13 +289,13 @@ async def observability_citation_links() -> dict[str, object]:
 
 
 @router.get("/observability/disclosure")
-async def observability_disclosure() -> dict[str, object]:
+def observability_disclosure() -> dict[str, object]:
     """AI-interaction disclosure status and per-locale text (Art. 50, #134)."""
     return asdict(disclosure_mod.disclosure_status())
 
 
 @router.get("/observability/ai-act")
-async def observability_ai_act(at: str | None = None) -> dict[str, object]:
+def observability_ai_act(at: str | None = None) -> dict[str, object]:
     """EU AI Act compliance posture: transparency, oversight, traceability (#76).
 
     Turn and oversight counts honour T; the audit-chain integrity check is a
@@ -323,7 +323,7 @@ async def observability_ai_act(at: str | None = None) -> dict[str, object]:
 
 
 @router.get("/observability/localization")
-async def observability_localization() -> dict[str, object]:
+def observability_localization() -> dict[str, object]:
     """Per-locale message completeness vs the default locale (#77)."""
     import json
     from pathlib import Path
@@ -340,21 +340,21 @@ async def observability_localization() -> dict[str, object]:
 
 
 @router.get("/observability/citations")
-async def observability_citations() -> dict[str, object]:
+def observability_citations() -> dict[str, object]:
     """Regulatory citation validity: cited articles absent from the grounding."""
     turns = [(b.original_answer, b.context) for b in replay_mod.recent_bundles()]
     return asdict(citation_validity_mod.aggregate_citations(turns))
 
 
 @router.get("/observability/locale-format")
-async def observability_locale_format() -> dict[str, object]:
+def observability_locale_format() -> dict[str, object]:
     """Locale-formatting correctness: amounts whose style mismatches the locale."""
     turns = [(b.original_answer, b.language) for b in replay_mod.recent_bundles()]
     return asdict(locale_format_mod.aggregate_formatting(turns))
 
 
 @router.get("/observability/corpus-scan/{bundle_id}")
-async def observability_corpus_scan(bundle_id: str) -> dict[str, object]:
+def observability_corpus_scan(bundle_id: str) -> dict[str, object]:
     """Screen a captured turn's retrieved chunks for indirect injection."""
     bundle = replay_mod.get_bundle(bundle_id)
     if bundle is None:
@@ -364,7 +364,7 @@ async def observability_corpus_scan(bundle_id: str) -> dict[str, object]:
 
 
 @router.get("/observability/connectors")
-async def observability_connectors(lang: str = "fr") -> dict[str, object]:
+def observability_connectors(lang: str = "fr") -> dict[str, object]:
     """Connectors overview for the real Tessera stack (configurer/connecteurs)."""
     try:
         return {"available": True, **connectors_mod.compute_connectors(lang)}

@@ -43,7 +43,7 @@ _obs_cost_cache: dict[str, object] | None = None
 
 
 @router.get("/observability/scores")
-async def observability_scores(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_scores(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Online-eval scores — live (newest last), or as of instant ``at`` (ISO).
 
     ``agent`` scopes the scores to one agent's turns (``all`` = org view).
@@ -117,7 +117,7 @@ async def observability_fleet_snapshot(
 
 
 @router.get("/observability/data-range")
-async def observability_data_range() -> dict[str, object]:
+def observability_data_range() -> dict[str, object]:
     """Earliest → latest instant for which the cockpit holds real as-of-T data.
 
     This bounds the time-rail "Aller à une date" calendar honestly: picking a
@@ -152,7 +152,7 @@ async def observability_data_range() -> dict[str, object]:
 
 
 @router.get("/observability/availability")
-async def observability_availability() -> dict[str, object]:
+def observability_availability() -> dict[str, object]:
     """Per-dimension "data available since" boundaries (ADR 0015 §Testing 2).
 
     Generalises ``/observability/data-range`` to every :class:`Scope` dimension. Because
@@ -170,7 +170,7 @@ async def observability_availability() -> dict[str, object]:
 
 
 @router.get("/observability/slo")
-async def observability_slo(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_slo(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Quality SLO + error-budget burn-rate over the faithfulness scores.
 
     Live by default; with ``?at=`` the SLO is recomputed over the durable score
@@ -187,7 +187,7 @@ async def observability_slo(at: str | None = None, agent: str = "all") -> dict[s
 
 
 @router.get("/observability/trend")
-async def observability_trend(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_trend(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Long-horizon faithfulness trend over the score series (#150).
 
     Live by default; with ``?at=`` the trend is recomputed over the durable
@@ -209,7 +209,7 @@ async def observability_trend(at: str | None = None, agent: str = "all") -> dict
 
 
 @router.get("/observability/score-series")
-async def observability_score_series(
+def observability_score_series(
     at: str | None = None,
     metric: str = "faithfulness",
     days: int = 7,
@@ -243,7 +243,7 @@ async def observability_score_series(
 
 
 @router.get("/observability/signal-status-trend")
-async def observability_signal_status_trend(
+def observability_signal_status_trend(
     at: str | None = None,
     metric: str = "faithfulness",
     days: int = 7,
@@ -271,7 +271,7 @@ async def observability_signal_status_trend(
 
 
 @router.get("/observability/metric-pairs")
-async def observability_metric_pairs(
+def observability_metric_pairs(
     x: str = "faithfulness",
     y: str = "grounding",
     at: str | None = None,
@@ -288,7 +288,7 @@ async def observability_metric_pairs(
 
 
 @router.get("/observability/obs-cost")
-async def observability_obs_cost() -> dict[str, object]:
+def observability_obs_cost() -> dict[str, object]:
     """Measured instrumentation overhead vs the turn budget (#84), cached."""
     global _obs_cost_cache
     if _obs_cost_cache is None:
@@ -297,7 +297,7 @@ async def observability_obs_cost() -> dict[str, object]:
 
 
 @router.get("/observability/quality-nets", dependencies=[Depends(require_bearer)])
-async def observability_quality_nets(agent: str) -> dict[str, object]:
+def observability_quality_nets(agent: str) -> dict[str, object]:
     """Manifest-generated quality nets for one agent (ADR 0017 §4).
 
     Instrumentation coverage (signal 92, measured from the agent's most recent telemetry)
@@ -317,7 +317,7 @@ async def observability_quality_nets(agent: str) -> dict[str, object]:
 
 
 @router.get("/observability/control-signals")
-async def observability_control_signals(lang: str = "fr") -> dict[str, object]:
+def observability_control_signals(lang: str = "fr") -> dict[str, object]:
     """Resolve the overview controls to their real catalogue signal + drill-down.
 
     Grounds each "Contrôles critiques" row in the LIVE signal catalogue (signal id /
@@ -335,7 +335,7 @@ async def observability_control_signals(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/signal-catalogue")
-async def observability_signal_catalogue(lang: str = "fr") -> dict[str, object]:
+def observability_signal_catalogue(lang: str = "fr") -> dict[str, object]:
     """Signal catalogue overview (page #16).
 
     Composes the catalogue posture and the filterable signal table from the real
@@ -351,7 +351,7 @@ async def observability_signal_catalogue(lang: str = "fr") -> dict[str, object]:
 
 
 @router.get("/observability/reliability")
-async def observability_reliability(
+def observability_reliability(
     days: int = 14, anchor: str | None = None, lang: str = "fr"
 ) -> dict[str, object]:
     """Operational reliability & cost posture from the real signals (#08).
@@ -372,7 +372,7 @@ async def observability_reliability(
 
 
 @router.get("/observability/conformance")
-async def observability_conformance(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_conformance(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Schema/format conformance of tool-call arguments from the audit trail, live or as of T.
 
     ``agent`` scopes to one agent's tool calls (``all`` = org view).
@@ -381,7 +381,7 @@ async def observability_conformance(at: str | None = None, agent: str = "all") -
 
 
 @router.get("/observability/cost")
-async def observability_cost(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_cost(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Token-cost distribution and token-burn anomalies over captured turns, live or as of T.
 
     ``agent`` scopes to one agent's captured turns (``all`` = org view).
@@ -394,21 +394,21 @@ async def observability_cost(at: str | None = None, agent: str = "all") -> dict[
 
 
 @router.get("/observability/routing")
-async def observability_routing() -> dict[str, object]:
+def observability_routing() -> dict[str, object]:
     """Language-routing health: served vs detected language, code-switching."""
     turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
     return asdict(language_routing_mod.aggregate_routing(turns))
 
 
 @router.get("/observability/intent")
-async def observability_intent() -> dict[str, object]:
+def observability_intent() -> dict[str, object]:
     """Business-intent mix and routing confidence over captured questions."""
     questions = [b.question for b in replay_mod.recent_bundles()]
     return asdict(routing_intent_mod.aggregate_intents(questions))
 
 
 @router.get("/observability/anomalies")
-async def observability_anomalies(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_anomalies(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Detect long/looping/repetitive sessions among captured turns, live or as of T.
 
     ``agent`` scopes to one agent's captured turns (``all`` = org view).
@@ -421,9 +421,7 @@ async def observability_anomalies(at: str | None = None, agent: str = "all") -> 
 
 
 @router.get("/observability/what-changed")
-async def observability_what_changed(
-    at: str | None = None, agent: str = "all"
-) -> dict[str, object]:
+def observability_what_changed(at: str | None = None, agent: str = "all") -> dict[str, object]:
     """Attribute a score change to the lineage diff of the last two turns, live or as of T.
 
     ``agent`` scopes to one agent's captured turns (``all`` = org view).

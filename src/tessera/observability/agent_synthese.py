@@ -38,6 +38,7 @@ verbatim French.
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from collections import Counter, deque
 from datetime import UTC, datetime, timedelta
@@ -947,11 +948,13 @@ async def compute_agent_synthese(
     tx["csat"] = await _fetch_csat(agent.id, period_days, until=at_dt)
     anchor = at_dt if at_dt is not None else datetime.now(UTC)
     since = anchor - timedelta(days=period_days) if period_days else None
-    journal = _scan_journal(agent.id, since, until=at_dt)
+    # Offload the blocking ledger reads to a thread so a concurrent dashboard's other reads
+    # keep running on the event loop instead of serializing behind this one.
+    journal = await asyncio.to_thread(_scan_journal, agent.id, since, until=at_dt)
     try:
         # A health-dot badge: the cheap checkpointed verdict ("no proven break"), not the full
         # opposability re-walk (~2s). The chain-INTEGRITY claim on État à date keeps the full walk.
-        chain = verify_active_ledger_checkpointed()
+        chain = await asyncio.to_thread(verify_active_ledger_checkpointed)
         chain_ok = chain.verified
     except (OSError, ValueError):
         # Fail CLOSED, never open: an unverifiable chain (Postgres unreachable, a decode

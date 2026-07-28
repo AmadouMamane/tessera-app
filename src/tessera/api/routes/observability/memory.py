@@ -31,13 +31,13 @@ router = APIRouter()
 
 
 @router.get("/observability/memory")
-async def observability_memory() -> dict[str, object]:
+def observability_memory() -> dict[str, object]:
     """Memory-layer activity: writes, recall hit/miss, stored-injection caught (#23)."""
     return asdict(memory_obs_mod.aggregate_memory_audit(_read_audit_entries()))
 
 
 @router.get("/observability/erasure-coverage")
-async def observability_erasure_coverage() -> dict[str, object]:
+def observability_erasure_coverage() -> dict[str, object]:
     """The telemetry-erasure surface: conversations, bundles, scores in scope (#180).
 
     Aggregate: ``ErasureCoverage`` is ``(n_conversations, n_bundles, n_scores)``. The

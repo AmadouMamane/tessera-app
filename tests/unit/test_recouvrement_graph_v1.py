@@ -39,6 +39,7 @@ from tessera.observability.spine.scope import Scope
 from tessera.observability.spine.snapshot import compute_snapshot, reset_snapshot_cache
 from tessera.recouvrement.scoring import RecouvrementBusinessScorer
 from tessera.settings import get_settings
+from tests.unit._route_helpers import call_route
 
 #: The verified collections officer. Not a default, not a literal: a real principal a
 #: server-side assertion could actually have carried.
@@ -172,7 +173,8 @@ async def test_recouvrement_graph_projects_business_events_replay_audit_and_metr
         "message.generated",
     ]
     assert output["businessEvents"] == rows
-    route_payload = await obs.observability_business_events(
+    route_payload = await call_route(
+        obs.observability_business_events,
         agent=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
         case_id="RC-2048",
@@ -185,7 +187,8 @@ async def test_recouvrement_graph_projects_business_events_replay_audit_and_metr
     assert route_payload["events"][0]["case_id"] == "RC-2048"
     assert route_payload["events"][0]["decision"] == "blocked"
     assert route_payload["workflow_id"] == RECOUVREMENT_WORKFLOW_ID
-    unfiltered_route_payload = await obs.observability_business_events(
+    unfiltered_route_payload = await call_route(
+        obs.observability_business_events,
         agent=RECOUVREMENT_AGENT_ID,
         conversation_id="conv-rc-observed",
         turn_id="turn-21h-observed",
@@ -1094,7 +1097,8 @@ async def test_business_capability_aggregate_is_server_side_and_keeps_unknown_ho
         payload={"intent": "legacy", "confidence": 0.4, "active_task": ""},
     )
 
-    payload = await obs.observability_business_capabilities(
+    payload = await call_route(
+        obs.observability_business_capabilities,
         agent=RECOUVREMENT_AGENT_ID,
         workflow_id=RECOUVREMENT_WORKFLOW_ID,
         conversation_id="conv-rc-capability-aggregate",
@@ -1486,7 +1490,8 @@ async def test_observability_business_runs_groups_turns_artifacts_actions_and_sc
         turn_id="turn-insertion-prepared",
     )
 
-    payload = await obs.observability_business_runs(
+    payload = await call_route(
+        obs.observability_business_runs,
         agent="recouvrement",
         workflow_id="recouvrement_collections_v1",
         conversation_id="conv-rc-cockpit",

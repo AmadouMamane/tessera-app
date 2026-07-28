@@ -34,14 +34,14 @@ _clustering_cache: dict[str, object] | None = None
 
 
 @router.get("/observability/reproducibility")
-async def observability_reproducibility() -> dict[str, object]:
+def observability_reproducibility() -> dict[str, object]:
     """Trace-shape reproducibility / non-determinism across repeated questions (#86)."""
     turns = [(b.question, list((b.latency_ms or {}).keys())) for b in replay_mod.recent_bundles()]
     return asdict(reproducibility_mod.detect_nondeterminism(turns))
 
 
 @router.get("/observability/judge-drift")
-async def observability_judge_drift(
+def observability_judge_drift(
     at: str | None = None,
     metric: str = "faithfulness",
     days: int = 7,
@@ -71,7 +71,7 @@ async def observability_judge_drift(
 
 
 @router.get("/observability/regression-risk")
-async def observability_regression_risk(
+def observability_regression_risk(
     at: str | None = None,
     metric: str = "faithfulness",
     days: int = 7,
@@ -207,9 +207,7 @@ async def observability_failure_clusters() -> dict[str, object]:
 
 
 @router.get("/observability/failed-cases")
-async def observability_failed_cases(
-    language: str = "fr", limit: int | None = None
-) -> dict[str, object]:
+def observability_failed_cases(language: str = "fr", limit: int | None = None) -> dict[str, object]:
     """Structured failed-case catalogue + category/severity distributions (image 03).
 
     Reads the documented-failure corpus (``eval/failures``) — real in-repo cases.
@@ -224,7 +222,7 @@ async def observability_failed_cases(
 
 
 @router.get("/observability/runs")
-async def observability_runs() -> dict[str, object]:
+def observability_runs() -> dict[str, object]:
     """Eval run registry from the report archive (Runs & datasets tab, image 02).
 
     One row per real report under ``eval/reports`` (model, language, pass rate,
@@ -237,7 +235,7 @@ async def observability_runs() -> dict[str, object]:
 
 
 @router.get("/observability/failed-runs")
-async def observability_failed_runs() -> dict[str, object]:
+def observability_failed_runs() -> dict[str, object]:
     """Real failed cases from the run archive (Cas échoués tab, image 03).
 
     Every ``passed: false`` result in each model/language's most recent
@@ -252,7 +250,7 @@ async def observability_failed_runs() -> dict[str, object]:
 
 
 @router.get("/observability/eval-datasets")
-async def observability_eval_datasets() -> dict[str, object]:
+def observability_eval_datasets() -> dict[str, object]:
     """Themed quality datasets from the failure catalogue joined to runs (image 02).
 
     Tessera's real "eval datasets" are the failure-catalogue **themes** (categories):
@@ -268,7 +266,7 @@ async def observability_eval_datasets() -> dict[str, object]:
 
 
 @router.get("/observability/model-comparison")
-async def observability_model_comparison() -> dict[str, object]:
+def observability_model_comparison() -> dict[str, object]:
     """Per-model comparison from the latest run of each model (image 04).
 
     Aggregates the real report archive: pass rate, cost, latency and a documented
@@ -319,7 +317,7 @@ async def observability_model_comparison() -> dict[str, object]:
 
 
 @router.get("/observability/sft-dataset")
-async def observability_sft_dataset() -> dict[str, object]:
+def observability_sft_dataset() -> dict[str, object]:
     """Distil high-scoring captured turns into an SFT dataset (#122)."""
     turns = [
         (b.question, b.context, b.original_answer, b.language, b.original_score)
@@ -329,7 +327,7 @@ async def observability_sft_dataset() -> dict[str, object]:
 
 
 @router.get("/observability/failure-predictor")
-async def observability_failure_predictor() -> dict[str, object]:
+def observability_failure_predictor() -> dict[str, object]:
     """Back-test the pre-judge failure predictor against captured turns (#121)."""
     turns = [(b.question, b.context, b.original_score) for b in replay_mod.recent_bundles()]
     return asdict(failure_predictor_mod.evaluate_predictor(turns))

@@ -320,6 +320,13 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     obs_logging.configure()
     traces.configure()
     metrics.configure()
+    # Starlette runs synchronous (`def`) endpoints in this threadpool. The observability
+    # READ handlers are synchronous so their blocking DB reads run off the event loop and
+    # concurrent dashboard reads run in PARALLEL instead of serializing behind one loop.
+    # Size it from settings (anyio's default is 40).
+    import anyio.to_thread
+
+    anyio.to_thread.current_default_thread_limiter().total_tokens = get_settings().api.read_threads
     pool = get_pool()
     seal_task: asyncio.Task[None] | None = None
     purge_task: asyncio.Task[None] | None = None
