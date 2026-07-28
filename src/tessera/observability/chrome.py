@@ -30,6 +30,8 @@ absent here rather than replaced, and that absence is the point.
 
 from __future__ import annotations
 
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final, Literal
@@ -51,7 +53,27 @@ _UNSET: Final = object()
 #: integrity guarantee is already broken; ``warning`` means it is about to be.
 Tone = Literal["danger", "warning", "neutral"]
 
-__all__ = ["compute_chrome"]
+#: Single-flight + short-TTL memo for the whole chrome result (ADR 0044 follow-up). The bell
+#: hangs on ALL 32 cockpit pages and is IDENTICAL for every viewer at a given moment, yet every
+#: page load fired its own six-read fan-out — and each fan-out spawns a 6-thread pool, so under
+#: the page's own ~14 concurrent requests (times N operators, times N workers) the chrome threads
+#: thrash the worker's GIL and postgres. Browser-measured end-to-end this was the #1 settle-variance
+#: driver (1.6 s typical, 7.6 s under contention through the tunnel). The memo collapses a burst
+#: of chrome requests — rapid navigation between pages, the 15 s client poll, several operators —
+#: to ONE compute per worker per window. The TTL is short: the counts (incidents, pending
+#: validations, curation) stay fresh well inside the client's own 15 s poll interval, and the SLA
+#: tones can lag at most this long — imperceptible for a header bell.
+_CHROME_TTL_S: Final = 3.0
+_chrome_lock = threading.Lock()
+_chrome_cache: dict[str, tuple[float, dict[str, object]]] = {}
+
+__all__ = ["compute_chrome", "reset_chrome_cache"]
+
+
+def reset_chrome_cache() -> None:
+    """Drop the memoised chrome result (tests, and any caller that must force a recompute)."""
+    with _chrome_lock:
+        _chrome_cache.clear()
 
 
 def _t(key: str, lang: str) -> str:
@@ -351,11 +373,13 @@ def _queue_notifications(lang: str, now: datetime, halves: Any = _UNSET) -> list
 
 
 def compute_chrome(lang: str = "fr") -> dict[str, object]:
-    """Badges and notifications for the cockpit chrome, composed from existing reads.
+    """Badges and notifications for the cockpit chrome, memoised per language (single-flight).
 
-    No new store, no new fact: every number below is produced by the function that also
-    produces the page it deep-links to. An unreadable source contributes nothing rather
-    than a zero — the chrome then shows less, never something false.
+    Delegates to :func:`_compute_chrome_uncached`, but serves a result computed within the last
+    ``_CHROME_TTL_S`` seconds instead of recomputing. A cache hit is lock-free (an immutable
+    tuple read under the GIL); a miss takes ``_chrome_lock`` so a burst of concurrent callers
+    for the same language yields exactly ONE fan-out (the rest wait, then read the fresh value)
+    rather than N six-thread fan-outs contending on the worker's GIL. See ``_chrome_cache``.
 
     Args:
         lang: Locale for the notification sentences. Badge counts are language-free.
@@ -364,6 +388,26 @@ def compute_chrome(lang: str = "fr") -> dict[str, object]:
         ``badges``: id → ``{count, tone}``, present only where a real count exists.
         ``notifications``: ``{count, items}``, each item deep-linking to where the act is
         performed. A ``count`` of zero means the bell shows no dot.
+    """
+    cached = _chrome_cache.get(lang)
+    if cached is not None and time.monotonic() - cached[0] < _CHROME_TTL_S:
+        return cached[1]
+    with _chrome_lock:
+        # Double-check under the lock: a caller that raced us here may have just refreshed it.
+        cached = _chrome_cache.get(lang)
+        if cached is not None and time.monotonic() - cached[0] < _CHROME_TTL_S:
+            return cached[1]
+        result = _compute_chrome_uncached(lang)
+        _chrome_cache[lang] = (time.monotonic(), result)
+        return result
+
+
+def _compute_chrome_uncached(lang: str = "fr") -> dict[str, object]:
+    """Compose the chrome from existing reads, with no caching (the cold path of the memo).
+
+    No new store, no new fact: every number below is produced by the function that also
+    produces the page it deep-links to. An unreadable source contributes nothing rather
+    than a zero — the chrome then shows less, never something false.
     """
     now = datetime.now(UTC)
 
