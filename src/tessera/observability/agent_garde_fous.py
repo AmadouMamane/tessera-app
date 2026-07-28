@@ -29,7 +29,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
 from tessera.guard.decisions import Policy, load_policy
-from tessera.guard.ledger_store import read_ledger_entries, verify_active_ledger
+from tessera.guard.ledger_store import read_ledger_entries, verify_active_ledger_checkpointed
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -648,7 +648,9 @@ async def build_agent_garde_fous(lang: str = "fr") -> dict[str, object]:
     now = datetime.now(UTC)
     policy = load_policy()
     scan = _scan_audit(settings.guard.audit_file, now)
-    chain = verify_active_ledger()
+    # Health-dot integrity for the panel: the cheap checkpointed verdict, not the full ~2s
+    # opposability re-walk (which stays on État à date / audit-integrity).
+    chain = verify_active_ledger_checkpointed()
     policy_mtime = _policy_mtime(settings.guard.policy_path)
     return _assemble(policy, scan, chain, _load_state(), policy_mtime, lang, now)
 

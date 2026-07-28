@@ -85,6 +85,7 @@ __all__ = [
     "read_ledger_entries_by_target_prefix",
     "shadow_verify_ledger",
     "verify_active_ledger",
+    "verify_active_ledger_checkpointed",
     "verify_ledger_rows",
     "verify_ledger_tree",
 ]
@@ -256,6 +257,14 @@ async def ensure_audit_ledger_schema() -> None:
                 f"CREATE UNIQUE INDEX {_FORK_GUARD_INDEX} ON {LEDGER_TABLE} "
                 f"(prev_hash) WHERE seq > {anchor}"
             )
+        # Refresh planner statistics so a FRESH deploy uses audit_ledger_type_agent_seq for
+        # selective per-agent counts from the first read — the index alone is not the fix, the
+        # statistics are part of it (see CREATE_LEDGER_INDEXES). Best effort: a stats refresh is
+        # advisory (autovacuum catches up regardless) and must never fail schema init / boot.
+        try:
+            await cur.execute(f"ANALYZE {LEDGER_TABLE}")
+        except Exception as exc:  # a stats refresh must never block schema init
+            sys.stderr.write(f"tessera.ledger: ANALYZE {LEDGER_TABLE} skipped: {exc}\n")
         await conn.commit()
 
 
@@ -1180,6 +1189,31 @@ def verify_active_ledger(path: Path | None = None) -> ChainStatus:
 
     if ledger_source() == "postgres":
         tree = verify_ledger_tree(load_ledger_payloads_sync())
+        return ChainStatus(
+            verified=tree.content_integrity, length=tree.length, broken_at=tree.broken_at
+        )
+    return verify_audit_chain(path if path is not None else get_settings().guard.audit_file)
+
+
+def verify_active_ledger_checkpointed(path: Path | None = None) -> ChainStatus:
+    """CONTENT integrity of the active ledger for a HEALTH BADGE — checkpoint-incremental.
+
+    Same ``ChainStatus`` shape and same verdict as :func:`verify_active_ledger`, but served by the
+    checkpointed incremental verifier (:func:`ledger_checkpoint.verify_ledger_incremental`, which
+    re-hashes only the rows above a stored, already-verified anchor) instead of re-walking the
+    whole chain. A dashboard health dot needs "no proven break", not an opposability re-read —
+    measured ~15 ms vs ~2 s on the 65k-row chain — so the Synthèse and Garde-fous badges ask this
+    (the intent already stated in :func:`active_ledger_tree_status`'s docstring). The full walk
+    :func:`verify_active_ledger` stays for the callers that CLAIM to a regulator (État à date,
+    audit-integrity). File mode has no checkpoint, so it falls back to the SAME
+    :func:`verify_audit_chain` the full path uses — byte-identical there.
+    """
+    from tessera.settings import get_settings
+
+    if ledger_source() == "postgres":
+        from tessera.guard.ledger_checkpoint import verify_ledger_incremental
+
+        tree = verify_ledger_incremental().tree
         return ChainStatus(
             verified=tree.content_integrity, length=tree.length, broken_at=tree.broken_at
         )

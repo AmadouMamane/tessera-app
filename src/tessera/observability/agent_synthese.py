@@ -49,7 +49,10 @@ from psycopg.rows import dict_row
 
 from tessera.agent.identity import DEFAULT_AGENT_ID
 from tessera.agent.registry import Agent, get_agent
-from tessera.guard.ledger_store import read_agent_journal_entries, verify_active_ledger
+from tessera.guard.ledger_store import (
+    read_agent_journal_entries,
+    verify_active_ledger_checkpointed,
+)
 from tessera.observability.agent_configurations import _effective
 from tessera.retrieval.store import _connection
 
@@ -946,7 +949,9 @@ async def compute_agent_synthese(
     since = anchor - timedelta(days=period_days) if period_days else None
     journal = _scan_journal(agent.id, since, until=at_dt)
     try:
-        chain = verify_active_ledger()
+        # A health-dot badge: the cheap checkpointed verdict ("no proven break"), not the full
+        # opposability re-walk (~2s). The chain-INTEGRITY claim on État à date keeps the full walk.
+        chain = verify_active_ledger_checkpointed()
         chain_ok = chain.verified
     except (OSError, ValueError):
         # Fail CLOSED, never open: an unverifiable chain (Postgres unreachable, a decode
