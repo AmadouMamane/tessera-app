@@ -846,14 +846,19 @@ image-preflight:
 FL_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.unix.yml \
 	-f docker-compose.cutover.yml -f docker-compose.fulllocal.yml
 
-# Front + agent, LOCAL only. Builds the front image, brings the pair up (the agent unchanged
-# from the cutover), waits for the front to report healthy. NO tunnel is started — nothing
-# touches your domain. Requires frontend.secret.env (the 3 matching secrets) and, like the
-# cutover, TESSERA_AGENT_STATE pointing at the durable state dir.
+# Front + agent, LOCAL only. Builds the front image, brings the pair up, waits for the front
+# to report healthy. NO tunnel is started — nothing touches your domain.
+#
+# `--no-deps` is load-bearing: the agent's compose-declared dependency is the BASE `postgres`
+# service, but the cutover agent uses the LIVE external Postgres — starting the base one clashes
+# on 5432. And `TESSERA_AGENT_STATE` is REQUIRED (as for the cutover): unset, the agent's durable
+# volume resolves to a different default path, so compose would recreate the running agent onto
+# an empty state dir. Guarded, then the already-running agent's config matches → it is untouched.
 fulllocal-up:
 	@test -f frontend.secret.env || { echo "missing frontend.secret.env — cp frontend.secret.env.example frontend.secret.env and fill it"; exit 2; }
+	@test -n "$(TESSERA_AGENT_STATE)" || { echo "export TESSERA_AGENT_STATE=<durable state dir> first (same value as the cutover), else the agent would be recreated onto an empty volume"; exit 2; }
 	@$(FL_COMPOSE) --profile full build frontend
-	@$(FL_COMPOSE) --profile full up -d agent frontend
+	@$(FL_COMPOSE) --profile full up -d --no-deps agent frontend
 	@printf 'waiting for the front to report healthy'; \
 	for i in $$(seq 1 40); do \
 	  st=$$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-frontend 2>/dev/null); \
@@ -882,7 +887,7 @@ fulllocal-status:
 fulllocal-tunnel:
 	@test -f infra/docker/fulllocal.env || { echo "missing infra/docker/fulllocal.env — cp infra/docker/fulllocal.env.example infra/docker/fulllocal.env and set TUNNEL_TOKEN"; exit 2; }
 	@echo "FLIP: publishing the local front on your domain via Cloudflare Tunnel."
-	@$(FL_COMPOSE) --profile flip up -d cloudflared
+	@$(FL_COMPOSE) --profile flip up -d --no-deps cloudflared
 	@echo "tunnel up. Verify your domain serves, then it is live. Rollback: make fulllocal-tunnel-down"
 
 # Rollback the flip: stop the tunnel. The domain stops resolving to this front (point DNS

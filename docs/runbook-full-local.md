@@ -24,8 +24,12 @@ cutover container on the same live data + obs stacks and the same durable state 
 
 ## 0. Prerequisites
 
-- The cutover agent is running (`make fulllocal-up` starts it if not), with `TESSERA_AGENT_STATE`
-  exported to the durable state dir, exactly as for the cutover.
+- The live **data + obs stacks are up** (Postgres, ClickHouse, …) — the same ones the cutover
+  agent joins. `make fulllocal-up` runs with `--no-deps`, so it never starts the base `postgres`
+  service (which would clash on 5432); it relies on the live one already running.
+- **`TESSERA_AGENT_STATE` exported** to the durable state dir, exactly as for the cutover —
+  `make fulllocal-up` refuses without it, because an unset value would recreate the running agent
+  onto an empty volume.
 - **`frontend.secret.env`** — copy the example and fill the **three** secrets, each of which
   must MATCH the agent's side (or operator pages 401):
 
