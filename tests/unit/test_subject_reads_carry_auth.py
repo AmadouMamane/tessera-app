@@ -354,7 +354,10 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # 128 (2026-07-28): GET /observability/fleet-snapshot — the per-agent snapshot
     # fan-out collapsed into one bulk read; the same aggregate signal envelopes as
     # /observability/snapshot, one per registered agent, no customer subject data.
-    assert len(public) == 128
+    # 129 (2026-07-28): GET /observability/batch — a page's public-aggregate card reads
+    # multiplexed into one response (same handlers, byte-identical panels, public
+    # allowlist only; subject-scoped reads excluded by design).
+    assert len(public) == 129
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

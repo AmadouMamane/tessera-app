@@ -23,6 +23,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from tessera.api.routes.observability import (
+    batch,
     business,
     client,
     compliance,
@@ -46,6 +47,7 @@ from tessera.api.routes.observability._common import (
     _data_availability_start,
     _load_failure_items,
 )
+from tessera.api.routes.observability.batch import observability_batch
 from tessera.api.routes.observability.business import (
     observability_automations,
     observability_business_capabilities,
@@ -226,6 +228,7 @@ from tessera.api.routes.observability.signals import (
 router = APIRouter()
 
 # Reads: public cockpit surface.
+router.include_router(batch.router)
 router.include_router(business.router)
 router.include_router(client.router)
 router.include_router(compliance.router)

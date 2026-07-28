@@ -30,22 +30,23 @@ import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { isAccessDenied } from "@/lib/api/access";
 import {
-  fetchCrossTenant,
-  fetchEmbeddingInversion,
-  fetchErasureCoverage,
-  fetchFailedCases,
-  fetchFirewallEfficacy,
-  fetchLeastPrivilege,
+  fetchBatch,
   fetchMemoryInventory,
   fetchOverviewSnapshot,
-  fetchRefusal,
-  fetchRegressionRisk,
   fetchScoreSeries,
 } from "@/lib/api/client";
 import {
   AnomalyReportSchema,
   ConformanceReportSchema,
+  CrossTenantReportSchema,
+  ErasureCoverageSchema,
+  FailedCasesReportSchema,
+  FirewallEfficacySchema,
+  InversionReportSchema,
   PIILeakSummarySchema,
+  PrivilegeReportSchema,
+  RefusalReportSchema,
+  RegressionRiskSchema,
   ToxicityReportSchema,
   WhatChangedSchema,
 } from "@/lib/api/schemas";
@@ -56,7 +57,7 @@ import type {
   FirewallEfficacy,
   PrivilegeReport,
 } from "@/lib/api/schemas";
-import { signalOf } from "@/lib/overview-snapshot";
+import { panelOf, signalOf } from "@/lib/overview-snapshot";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
@@ -495,6 +496,20 @@ const SEC_SNAPSHOT_SIGNALS = [
   "what_changed",
 ] as const;
 
+// The eight individual public safety-card reads, fetched in ONE `/observability/batch` request
+// instead of eight tunnel round-trips. Each panel is byte-identical to its own endpoint. The
+// subject-scoped memory inventory and the per-metric score-series stay on their own fetches.
+const SEC_BATCH_KEYS = [
+  "firewall-efficacy",
+  "least-privilege",
+  "refusal",
+  "cross-tenant",
+  "embedding-inversion",
+  "erasure-coverage",
+  "regression-risk",
+  "failed-cases",
+] as const;
+
 // The 8 normative sub-views (32-1..32-8): overview stays comprehensive; the seven
 // focused tabs are curated REAL views over the same live security signals.
 const SEC_TABS = [
@@ -521,11 +536,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
-  const firewall = useQuery({
-    queryKey: ["firewall-efficacy"],
-    queryFn: ({ signal }) => fetchFirewallEfficacy(signal),
-    staleTime: Number.POSITIVE_INFINITY,
+  // One batched read for the eight individual public safety signals (was eight fetches).
+  const secBatch = useQuery({
+    queryKey: ["sec-batch", asOf, locale],
+    queryFn: ({ signal }) =>
+      fetchBatch(signal, SEC_BATCH_KEYS, { at: asOf ?? undefined, lang: locale }),
+    placeholderData: keepPreviousData,
+    refetchInterval: historyMode ? false : POLL,
   });
+  const firewall = panelOf(secBatch, "firewall-efficacy", FirewallEfficacySchema);
   // One batched snapshot for the five snapshot-eligible safety signals (was five fetches).
   const secSnap = useQuery({
     queryKey: ["sec-snapshot", asOf, scope],
@@ -539,31 +558,11 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const anomalies = signalOf(secSnap, "anomalies", AnomalyReportSchema);
   const conformance = signalOf(secSnap, "conformance", ConformanceReportSchema);
   const whatChanged = signalOf(secSnap, "what_changed", WhatChangedSchema);
-  const lp = useQuery({
-    queryKey: ["least-privilege"],
-    queryFn: ({ signal }) => fetchLeastPrivilege(signal),
-    refetchInterval: POLL,
-  });
-  const refusal = useQuery({
-    queryKey: ["refusal"],
-    queryFn: ({ signal }) => fetchRefusal(signal),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-  const crossTenant = useQuery({
-    queryKey: ["cross-tenant"],
-    queryFn: ({ signal }) => fetchCrossTenant(signal),
-    refetchInterval: POLL,
-  });
-  const inversion = useQuery({
-    queryKey: ["embedding-inversion"],
-    queryFn: ({ signal }) => fetchEmbeddingInversion(signal),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-  const erasure = useQuery({
-    queryKey: ["erasure-coverage"],
-    queryFn: ({ signal }) => fetchErasureCoverage(signal),
-    refetchInterval: POLL,
-  });
+  const lp = panelOf(secBatch, "least-privilege", PrivilegeReportSchema);
+  const refusal = panelOf(secBatch, "refusal", RefusalReportSchema);
+  const crossTenant = panelOf(secBatch, "cross-tenant", CrossTenantReportSchema);
+  const inversion = panelOf(secBatch, "embedding-inversion", InversionReportSchema);
+  const erasure = panelOf(secBatch, "erasure-coverage", ErasureCoverageSchema);
   const inventory = useQuery({
     queryKey: ["memory-inventory"],
     queryFn: ({ signal }) => fetchMemoryInventory(signal),
@@ -580,12 +579,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const inventoryExpiring = inventoryDenied
     ? ts("accessDenied")
     : `${inventory.data?.n_expiring_soon ?? 0}`;
-  const regression = useQuery({
-    queryKey: ["regression-risk", asOf],
-    queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : POLL,
-  });
+  const regression = panelOf(secBatch, "regression-risk", RegressionRiskSchema);
   const faith = useQuery({
     queryKey: ["score-series", "faithfulness", asOf, scope],
     queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope),
@@ -598,11 +592,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
-  const failed = useQuery({
-    queryKey: ["failed-cases", locale],
-    queryFn: ({ signal }) => fetchFailedCases(signal, locale),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const failed = panelOf(secBatch, "failed-cases", FailedCasesReportSchema);
 
   const fw = firewall.data;
   const attackRate = fw && fw.n_positive > 0 ? fw.false_negative / fw.n_positive : null;

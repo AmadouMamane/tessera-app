@@ -20,7 +20,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { z } from "zod";
 
-import type { OverviewSnapshotEnvelope } from "./api/schemas";
+import type { BatchEnvelope, OverviewSnapshotEnvelope } from "./api/schemas";
 import type { Dimension } from "./scope";
 
 /** The signal ids the backend's snapshot set actually carries (`snapshot_signal_ids()`). */
@@ -109,6 +109,37 @@ export function signalOf<TSchema extends z.ZodTypeAny>(
 } {
   return {
     data: selectSignal(query.data, id, schema),
+    isLoading: query.isLoading,
+    isPending: query.isPending,
+    isError: query.isError,
+    isFetching: query.isFetching,
+    error: query.error,
+  };
+}
+
+/**
+ * Select ONE panel from a `/observability/batch` query result and re-validate it with the card's
+ * own schema — the batch analogue of {@link signalOf}. Returns the same shape a `useQuery` result
+ * exposes to a card, so a card switches from its own fetch to a shared batch with a one-line swap.
+ * An absent panel (its handler failed → omitted) yields `data: undefined`, so the card renders its
+ * honest-empty exactly as a failed individual fetch did.
+ */
+export function panelOf<TSchema extends z.ZodTypeAny>(
+  query: UseQueryResult<BatchEnvelope>,
+  key: string,
+  schema: TSchema,
+): {
+  data: z.infer<TSchema> | undefined;
+  isLoading: boolean;
+  isPending: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  error: unknown;
+} {
+  const raw = query.data?.panels?.[key];
+  const parsed = raw === undefined ? undefined : schema.safeParse(raw);
+  return {
+    data: parsed?.success ? parsed.data : undefined,
     isLoading: query.isLoading,
     isPending: query.isPending,
     isError: query.isError,

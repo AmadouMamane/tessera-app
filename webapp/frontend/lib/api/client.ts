@@ -53,6 +53,8 @@ import {
   AuditPageSchema,
   type AutomationsOverview,
   AutomationsOverviewSchema,
+  type BatchEnvelope,
+  BatchSchema,
   type BudgetSnapshot,
   BudgetSnapshotSchema,
   type BusinessCapabilitiesResponse,
@@ -569,6 +571,24 @@ export async function fetchOverviewSnapshot(
       ? `${path}${path.includes("?") ? "&" : "?"}signals=${signals.join(",")}`
       : path;
   return request(scoped, { signal }, OverviewSnapshotSchema);
+}
+
+/**
+ * Several card reads in ONE round-trip (`/observability/batch`). Each requested key's panel is
+ * byte-identical to that key's own endpoint (the backend dispatches to the same handler); the
+ * card selects + re-validates its panel. Collapses a page's individual fetch fan-out through the
+ * tunnel into a single request.
+ */
+export async function fetchBatch(
+  signal: AbortSignal | undefined,
+  keys: readonly string[],
+  opts: { at?: string; agent?: string; lang?: string } = {},
+): Promise<BatchEnvelope> {
+  const params = new URLSearchParams({ keys: keys.join(",") });
+  if (opts.at) params.set("at", opts.at);
+  if (opts.agent && opts.agent !== "all") params.set("agent", opts.agent);
+  if (opts.lang) params.set("lang", opts.lang);
+  return request(`/observability/batch?${params.toString()}`, { signal }, BatchSchema);
 }
 
 /** Mirror recent captured turns to a candidate model and compare (shadow, #16). */

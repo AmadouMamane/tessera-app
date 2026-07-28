@@ -39,33 +39,34 @@ import { Truncate } from "@/components/ui/truncate";
 import { Link, useRouter } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, isScopedToAgent, parseAgentScope } from "@/lib/agent-scope";
 import {
-  fetchAIAct,
   fetchAuditIntegrity,
-  fetchConformance,
-  fetchControlSignals,
-  fetchFirewallEfficacy,
-  fetchGovernance,
+  fetchBatch,
   fetchHealth,
   fetchOverviewCases,
   fetchOverviewSnapshot,
-  fetchPlaybooks,
   fetchReadiness,
-  fetchRefusal,
-  fetchRoadmap,
   fetchTimeline,
-  fetchToolValidity,
-  fetchTracesObs,
   runRedteam,
 } from "@/lib/api/client";
 import type { Fleet } from "@/lib/api/schemas";
 import {
+  AIActReportSchema,
   AnomalyReportSchema,
+  ConformanceReportSchema,
+  ControlSignalsSchema,
   CostReportSchema,
   EvalScoresResponseSchema,
+  FirewallEfficacySchema,
   FunnelReportSchema,
+  GovernanceFeedSchema,
   PIILeakSummarySchema,
+  PlaybookReportSchema,
+  RefusalReportSchema,
+  RoadmapReportSchema,
   SLOReportSchema,
+  ToolValiditySchema,
   ToxicityReportSchema,
+  TracesObsSchema,
   TrendReportSchema,
   WhatChangedSchema,
 } from "@/lib/api/schemas";
@@ -99,7 +100,7 @@ import {
   toneBg,
   toneText,
 } from "@/lib/overview";
-import { signalOf } from "@/lib/overview-snapshot";
+import { panelOf, signalOf } from "@/lib/overview-snapshot";
 import { isOrgWide, signalSupports } from "@/lib/signal-registry";
 
 /**
@@ -113,6 +114,22 @@ const SNAPSHOT_FAST = ["slo", "trend", "toxicity", "pii_leak", "cost", "funnel",
 const SNAPSHOT_SLOW = ["anomalies", "what_changed"] as const;
 
 const POLL_MS = 15_000;
+
+// The ten individual public-aggregate card reads, fetched in ONE `/observability/batch` request
+// instead of ten tunnel round-trips. Each panel is byte-identical to its own endpoint. The
+// audit-integrity, the live scrubber timeline and the operator inbox stay on their own fetches.
+const OV_BATCH_KEYS = [
+  "refusal",
+  "conformance",
+  "tool-validity",
+  "firewall-efficacy",
+  "playbooks",
+  "roadmap",
+  "ai-act",
+  "governance",
+  "traces-obs",
+  "control-signals",
+] as const;
 const POLL_FAST_MS = 10_000;
 
 export function OverviewDashboard({
@@ -226,53 +243,32 @@ export function OverviewDashboard({
   // --- Safety / guard signals ---------------------------------------------
   // refusal + firewall measure a FIXED corpus through the guard "now" — a
   // property of the current policy, identical at any T — so they stay live.
-  const refusal = useQuery({
-    queryKey: ["ov-refusal"],
-    queryFn: ({ signal }) => fetchRefusal(signal),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-  const conformance = useQuery({
-    queryKey: ["ov-conformance", secondaryAsOf, scope],
-    queryFn: ({ signal }) => fetchConformance(signal, secondaryAsOf ?? undefined, scope),
+  // The individual public-aggregate cards, fetched in ONE batch request (was ten fetches).
+  const ovBatch = useQuery({
+    queryKey: ["ov-batch", secondaryAsOf, scope, locale],
+    queryFn: ({ signal }) =>
+      fetchBatch(signal, OV_BATCH_KEYS, {
+        at: secondaryAsOf ?? undefined,
+        agent: scope,
+        lang: locale,
+      }),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
-  const tools = useQuery({
-    queryKey: ["ov-tools", secondaryAsOf, scope],
-    queryFn: ({ signal }) => fetchToolValidity(signal, secondaryAsOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
-  const firewall = useQuery({
-    queryKey: ["ov-firewall"],
-    queryFn: ({ signal }) => fetchFirewallEfficacy(signal),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const refusal = panelOf(ovBatch, "refusal", RefusalReportSchema);
+  const conformance = panelOf(ovBatch, "conformance", ConformanceReportSchema);
+  const tools = panelOf(ovBatch, "tool-validity", ToolValiditySchema);
+  const firewall = panelOf(ovBatch, "firewall-efficacy", FirewallEfficacySchema);
 
   // --- Incidents / risk ----------------------------------------------------
-  const playbooks = useQuery({
-    queryKey: ["ov-playbooks", secondaryAsOf, scope],
-    queryFn: ({ signal }) => fetchPlaybooks(signal, secondaryAsOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : POLL_MS,
-    placeholderData: keepPreviousData,
-  });
-  const roadmap = useQuery({
-    queryKey: ["ov-roadmap", secondaryAsOf, scope],
-    queryFn: ({ signal }) => fetchRoadmap(signal, secondaryAsOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : 20_000,
-    placeholderData: keepPreviousData,
-  });
+  const playbooks = panelOf(ovBatch, "playbooks", PlaybookReportSchema);
+  const roadmap = panelOf(ovBatch, "roadmap", RoadmapReportSchema);
 
   // --- Cost / compliance / audit ------------------------------------------
   // The audit COUNT honours T (append-only log → entries up to the instant); the
   // chain VERIFICATION stays a structural "now" check (server-side), so the card
   // reads "à T" like every other point-in-time signal instead of a lone "live".
-  const aiAct = useQuery({
-    queryKey: ["ov-ai-act", secondaryAsOf],
-    queryFn: ({ signal }) => fetchAIAct(signal, secondaryAsOf ?? undefined),
-    refetchInterval: historyMode ? false : 30_000,
-    placeholderData: keepPreviousData,
-  });
+  const aiAct = panelOf(ovBatch, "ai-act", AIActReportSchema);
   const audit = useQuery({
     queryKey: ["ov-audit", secondaryAsOf],
     queryFn: ({ signal }) => fetchAuditIntegrity(signal, secondaryAsOf ?? undefined),
@@ -290,19 +286,10 @@ export function OverviewDashboard({
   // --- Enrichments (real data) --------------------------------------------
   // Control → catalogue-signal resolver: static reference metadata (the mapping
   // does not vary with T), so it is cached hard and carries no temporal chip.
-  const controlSignals = useQuery({
-    queryKey: ["ov-control-signals", locale],
-    queryFn: ({ signal }) => fetchControlSignals(locale, signal),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const controlSignals = panelOf(ovBatch, "control-signals", ControlSignalsSchema);
   // Governed-activity feed — real S1 governance events, projected as-of-T like the
   // rest of the page (so it earns the provenance chip honestly).
-  const governance = useQuery({
-    queryKey: ["ov-governance", secondaryAsOf, scope],
-    queryFn: ({ signal }) => fetchGovernance(signal, secondaryAsOf ?? undefined, scope),
-    refetchInterval: historyMode ? false : 20_000,
-    placeholderData: keepPreviousData,
-  });
+  const governance = panelOf(ovBatch, "governance", GovernanceFeedSchema);
   // Operator control-cases queue — a LIVE operational backlog (no as-of substrate),
   // so it is never scoped to T; in a temporal reading it wears an honest live marker.
   const inbox = useQuery({
@@ -312,12 +299,7 @@ export function OverviewDashboard({
   });
   // Trace observability read back from the running Langfuse stack (the OTel traces);
   // projects as-of-T via Langfuse toTimestamp, so it earns the provenance chip.
-  const tracesObs = useQuery({
-    queryKey: ["ov-traces-obs", secondaryAsOf],
-    queryFn: ({ signal }) => fetchTracesObs(signal, secondaryAsOf ?? undefined),
-    refetchInterval: historyMode ? false : 30_000,
-    placeholderData: keepPreviousData,
-  });
+  const tracesObs = panelOf(ovBatch, "traces-obs", TracesObsSchema);
 
   const liveStatus = useMemo(() => {
     if (health.isError || readiness.isError) return t("status.degraded");

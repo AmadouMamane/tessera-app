@@ -6444,6 +6444,20 @@ export const FleetSnapshotSchema = z.object({
 });
 export type FleetSnapshot = z.infer<typeof FleetSnapshotSchema>;
 
+/**
+ * The multiplex read (`/observability/batch`): several card reads in one response.
+ *
+ * `panels` maps each requested key to the SAME payload that key's individual endpoint returns —
+ * left as `unknown` here and re-validated by each card with the very schema its own route used, so
+ * a panel is byte-identical to the standalone fetch (`tests/unit/test_obs_batch_parity.py`). A key
+ * whose compute failed is simply absent; the card then renders its honest-empty, exactly as a
+ * failed individual fetch did. Collapses a page's fan-out of tunnel round-trips into one.
+ */
+export const BatchSchema = z.object({
+  panels: z.record(z.string(), z.unknown()),
+});
+export type BatchEnvelope = z.infer<typeof BatchSchema>;
+
 // ---------------------------------------------------------------------------
 // Public `/comprendre` proof facts — one backend aggregate, tile-level empties
 // ---------------------------------------------------------------------------
