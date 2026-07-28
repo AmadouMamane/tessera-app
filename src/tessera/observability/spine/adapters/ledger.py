@@ -19,7 +19,29 @@ from tessera.observability._asof import occurred_before
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
 
-__all__ = ["events_for_scope"]
+__all__ = ["count_for_scope", "events_for_scope"]
+
+
+def count_for_scope(scope: Scope) -> int | None:
+    """A bounded COUNT of guard-audit entries for ``scope``, or ``None`` to fall back.
+
+    ``None`` means the bounded path does not apply and the caller must materialise —
+    ``len(events_for_scope(...))``. It applies only to a LIVE read (``scope.at is None``)
+    against the postgres ledger:
+    there, :func:`events_for_scope` keeps every entry of the right ``agent_id`` with no time
+    filter (``occurred_before(_, None)`` is always True), so a ``count(*)`` on the same
+    ``type`` + ``agent_id`` predicates is byte-identical — and reads one aggregate row
+    instead of materialising 94 % of the chain. An as-of read keeps ``occurred_before``'s
+    fail-open-on-malformed-``occurred_at`` semantics, and the flat-file source has no SQL:
+    both return ``None`` so the caller materialises and filters in Python, unchanged.
+    """
+    if scope.at is not None:
+        return None
+    from tessera.guard.ledger_store import count_ledger_entries_of_type, ledger_source
+
+    if ledger_source() != "postgres":
+        return None
+    return count_ledger_entries_of_type("tessera.guard.audit", agent_id=scope.agent_id)
 
 
 def events_for_scope(entries: list[dict[str, object]], scope: Scope) -> list[dict[str, object]]:

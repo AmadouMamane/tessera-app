@@ -216,8 +216,14 @@ async def _read_business_capabilities(scope: Scope) -> dict[str, object]:
 
 
 async def _read_audit_count(scope: Scope) -> dict[str, object]:
-    entries = ledger.events_for_scope(current_context().audit_entries(scope), scope)
-    return {"entry_count": len(entries), "as_of": scope.at, "agent": scope.agent_param}
+    # A live read needs only the COUNT: ask the database for it (one aggregate row) instead
+    # of materialising 94 % of the chain to take its length — six times per fleet snapshot.
+    # `count_for_scope` returns None for an as-of read or the flat-file source, where the
+    # Python materialise+filter preserves `occurred_before`'s fail-open semantics exactly.
+    count = ledger.count_for_scope(scope)
+    if count is None:
+        count = len(ledger.events_for_scope(current_context().audit_entries(scope), scope))
+    return {"entry_count": count, "as_of": scope.at, "agent": scope.agent_param}
 
 
 async def _read_audit_integrity(_scope: Scope) -> dict[str, object]:

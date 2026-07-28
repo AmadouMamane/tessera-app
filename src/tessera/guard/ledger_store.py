@@ -829,6 +829,37 @@ def load_ledger_payloads_of_type(entry_type: str, at: str | None = None) -> list
     return [row[0] for row in rows if isinstance(row[0], dict)]
 
 
+def count_ledger_entries_of_type(entry_type: str, agent_id: str | None = None) -> int:
+    """COUNT of ledger entries of one ``type`` (optionally one agent) — a bounded aggregate.
+
+    The database answers the count; nothing is materialised. This is the bounded twin of
+    :func:`load_ledger_payloads_of_type` for callers that only need ``len(...)``: the
+    guard-audit type is 94 % of the chain, so materialising it just to take its length cost
+    the fleet snapshot ~1.6 s per agent (six per request). A ``count(*)`` costs one row.
+
+    The scope filter reproduces :func:`events_for_scope`'s LIVE semantics exactly — the
+    ``type`` predicate matches ``_read_audit_ledger``'s postgres filter, and ``agent_id`` is
+    the same ``payload->>'agent_id'`` equality :func:`latest_entry_of_type_for_agent` uses.
+    It carries NO as-of bound on purpose: ``occurred_before(_, None)`` keeps every entry, so
+    this is byte-identical for a live read; an as-of caller needing ``occurred_before``'s
+    fail-open-on-malformed-timestamp semantics must stay on the Python path.
+    """
+    query = f"SELECT count(*) FROM {LEDGER_TABLE} WHERE payload->>'type' = %s"  # noqa: S608
+    params: list[object] = [entry_type]
+    if agent_id is not None:
+        query += " AND payload->>'agent_id' = %s"
+        params.append(agent_id)
+    with (
+        store_read("postgres", "audit_ledger.count_of_type", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, params)
+        row = cur.fetchone()
+        read.rows_read(1)
+    return int(row[0]) if row and row[0] is not None else 0
+
+
 def latest_entry_of_type_for_agent(entry_type: str, agent_id: str) -> dict[str, Any] | None:
     """The most recent entry of ``entry_type`` for one agent — ONE indexed row, ~1 ms.
 
