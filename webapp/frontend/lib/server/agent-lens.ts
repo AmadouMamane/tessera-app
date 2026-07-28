@@ -14,7 +14,7 @@ import {
   buildSecurityLens,
   planLens,
 } from "@/lib/agent-lens";
-import { type Fleet, OverviewSnapshotSchema } from "@/lib/api/schemas";
+import { type Fleet, FleetSnapshotSchema, OverviewSnapshotSchema } from "@/lib/api/schemas";
 import type { OverviewSnapshot } from "@/lib/overview-snapshot";
 import { type AgentBreakdownDomain, type DeclaredLensRoute, PAGE_NATURE } from "@/lib/page-nature";
 
@@ -63,6 +63,41 @@ function fetchSnapshot(params: {
   return fetchSnapshotByUrl(`${backendUrl()}/observability/snapshot?${qs.toString()}`);
 }
 
+/**
+ * The URL-keyed bulk fleet-snapshot read behind `fetchFleetSnapshot`, in React `cache()`.
+ *
+ * Every GOUVERNER breakdown asked one `?agent=<id>` snapshot per fleet agent — N tunnel
+ * round-trips whose intermittent tail was the free tunnel serialising them. `/fleet-snapshot`
+ * returns them all in ONE round-trip; the backend reuses the SAME per-agent builder, so each
+ * slice is byte-identical to the single-agent route it replaces. Keyed on the URL string
+ * (request-scoped; an object key would never dedupe); a failed read yields an empty Map, so
+ * every agent resolves to `undefined` and renders its honest refusal — same as an outage today.
+ */
+const fetchFleetSnapshotByUrl = cache(
+  async (url: string): Promise<Map<string, OverviewSnapshot>> => {
+    try {
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: backendHeaders({ Accept: "application/json" }),
+      });
+      if (!res.ok) return new Map();
+      const parsed = FleetSnapshotSchema.parse(await res.json());
+      return new Map(
+        parsed.agents.map((a): [string, OverviewSnapshot] => [a.agent_id, a.snapshot]),
+      );
+    } catch {
+      return new Map();
+    }
+  },
+);
+
+/** Fetch every fleet agent's snapshot for `signals` in one round-trip, keyed by agent id. */
+function fetchFleetSnapshot(signals: string): Promise<Map<string, OverviewSnapshot>> {
+  const qs = new URLSearchParams();
+  qs.set("signals", signals);
+  return fetchFleetSnapshotByUrl(`${backendUrl()}/observability/fleet-snapshot?${qs.toString()}`);
+}
+
 export async function loadBreakdownLens(
   fleet: Fleet | null,
   signalId?: string,
@@ -74,12 +109,11 @@ export async function loadBreakdownLens(
   // An org-wide signal is settled by its declared capability alone: no per-agent fan-out at all.
   if (plan.kind === "masked") return { kind: "masked", signalId: plan.signalId };
   const signals = plan.kind === "alarm" ? "slo" : "slo,scores";
-  const perAgent: AgentSnapshot[] = await Promise.all(
-    agents.map(async (a) => ({
-      agentId: a.id,
-      snapshot: await fetchSnapshot({ agent: a.id, signals }),
-    })),
-  );
+  const snapshots = await fetchFleetSnapshot(signals);
+  const perAgent: AgentSnapshot[] = agents.map((a) => ({
+    agentId: a.id,
+    snapshot: snapshots.get(a.id),
+  }));
   return plan.kind === "alarm"
     ? buildAlarmLens(plan.signalId, org, perAgent)
     : buildQualityLens(perAgent);
@@ -129,12 +163,11 @@ export async function loadDomainLens(
 ): Promise<BreakdownLens> {
   const agents = fleet?.agents ?? [];
   if (agents.length === 0) return { kind: "monitoring" };
-  const perAgent: AgentSnapshot[] = await Promise.all(
-    agents.map(async (a) => ({
-      agentId: a.id,
-      snapshot: await fetchSnapshot({ agent: a.id, signals: DOMAIN_SIGNALS[domain] }),
-    })),
-  );
+  const snapshots = await fetchFleetSnapshot(DOMAIN_SIGNALS[domain]);
+  const perAgent: AgentSnapshot[] = agents.map((a) => ({
+    agentId: a.id,
+    snapshot: snapshots.get(a.id),
+  }));
   switch (domain) {
     case "security":
       return buildSecurityLens(perAgent);

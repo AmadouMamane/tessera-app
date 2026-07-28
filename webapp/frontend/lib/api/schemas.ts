@@ -6429,6 +6429,21 @@ export const OverviewSnapshotSchema = z.object({
 });
 export type OverviewSnapshotEnvelope = z.infer<typeof OverviewSnapshotSchema>;
 
+/**
+ * Every fleet agent's snapshot in one response (`/observability/fleet-snapshot`).
+ *
+ * Collapses the GOUVERNER breakdown's per-agent snapshot fan-out into a single round-trip.
+ * Each element's `snapshot` is the SAME `OverviewSnapshotSchema` a single-agent read returns —
+ * the backend reuses the same builder per agent, so a slice here is byte-identical to
+ * `/observability/snapshot?agent=<id>` (pinned by `tests/unit/test_fleet_snapshot_parity.py`).
+ * An agent whose compute failed is simply absent — the loader resolves it to `undefined` and
+ * the row renders its honest refusal, exactly as a failed individual fetch did.
+ */
+export const FleetSnapshotSchema = z.object({
+  agents: z.array(z.object({ agent_id: z.string(), snapshot: OverviewSnapshotSchema })),
+});
+export type FleetSnapshot = z.infer<typeof FleetSnapshotSchema>;
+
 // ---------------------------------------------------------------------------
 // Public `/comprendre` proof facts — one backend aggregate, tile-level empties
 // ---------------------------------------------------------------------------

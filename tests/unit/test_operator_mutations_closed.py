@@ -133,13 +133,16 @@ def test_the_public_reads_are_untouched() -> None:
     midnight — ADR 0009 showcase-safe day counters, no subject data).
     +1 on 2026-07-22: the `/comprendre` proof aggregate (fleet witnesses,
     day guard totals, release buckets and chain freshness; no subject data).
+    +1 on 2026-07-28: GET /observability/fleet-snapshot — the per-agent snapshot
+    fan-out collapsed into one bulk read; the SAME aggregate envelopes as
+    /observability/snapshot, one per registered agent, no subject data.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 132
+    assert len(read_routes) == 133
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

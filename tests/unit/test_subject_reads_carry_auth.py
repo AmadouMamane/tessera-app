@@ -351,7 +351,10 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # day counters (messages checked/blocked, ADR 0009); no customer subject data.
     # 127 (2026-07-22): GET /observability/comprendre — public proof-tile facts;
     # fleet counts, guard totals, release buckets and chain freshness only.
-    assert len(public) == 127
+    # 128 (2026-07-28): GET /observability/fleet-snapshot — the per-agent snapshot
+    # fan-out collapsed into one bulk read; the same aggregate signal envelopes as
+    # /observability/snapshot, one per registered agent, no customer subject data.
+    assert len(public) == 128
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

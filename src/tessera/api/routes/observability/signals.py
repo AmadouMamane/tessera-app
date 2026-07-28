@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from dataclasses import asdict
 
@@ -30,6 +31,7 @@ from tessera.observability import (
     trends as trends_mod,
     whatchanged as whatchanged_mod,
 )
+from tessera.observability.fleet import registered_agent_ids
 from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
 from tessera.observability.spine.scope import Scope
@@ -70,6 +72,48 @@ async def observability_snapshot(
     scope = Scope.from_query({"at": at, "agent": agent, "language": language, "model": model})
     ids = tuple(part.strip() for part in signals.split(",") if part.strip()) if signals else None
     return await compute_snapshot(scope, ids)
+
+
+@router.get("/observability/fleet-snapshot", dependencies=[Depends(require_bearer)])
+async def observability_fleet_snapshot(
+    at: str | None = None,
+    language: str | None = None,
+    model: str | None = None,
+    signals: str | None = None,
+) -> dict[str, object]:
+    """Every fleet agent's snapshot in ONE round-trip — the per-agent fan-out, collapsed.
+
+    The GOUVERNER breakdown pages asked ``/observability/snapshot?agent=<id>`` once per fleet
+    agent — N tunnel round-trips for the operator front, whose intermittent tail is the free
+    tunnel serialising them. This returns them all in a single response: for each registered
+    agent it calls the SAME :func:`compute_snapshot` builder the single-agent route calls, so
+    every per-agent slice is byte-identical to what that route returns — the collapse buys
+    round-trips, never trust (``tests/unit/test_fleet_snapshot_parity.py`` pins it). It rides
+    the same ``(scope, signal-set)`` read-through/single-flight cache, so a key already warmed
+    by the single-agent route is a cache hit here.
+
+    An agent whose compute raises is OMITTED (not zero-filled): the frontend then resolves it
+    to ``undefined`` and renders that agent's honest refusal cell, exactly as a failed
+    individual fetch does today. ``?signals=`` selects the same comma-separated subset.
+    """
+    ids = tuple(part.strip() for part in signals.split(",") if part.strip()) if signals else None
+    agent_ids = sorted(registered_agent_ids())
+    envelopes = await asyncio.gather(
+        *(
+            compute_snapshot(
+                Scope.from_query({"at": at, "agent": aid, "language": language, "model": model}),
+                ids,
+            )
+            for aid in agent_ids
+        ),
+        return_exceptions=True,
+    )
+    agents: list[dict[str, object]] = [
+        {"agent_id": aid, "snapshot": envelope}
+        for aid, envelope in zip(agent_ids, envelopes, strict=True)
+        if not isinstance(envelope, BaseException)
+    ]
+    return {"agents": agents}
 
 
 @router.get("/observability/data-range")

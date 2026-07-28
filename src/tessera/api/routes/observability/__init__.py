@@ -206,6 +206,7 @@ from tessera.api.routes.observability.signals import (
     observability_control_signals,
     observability_cost,
     observability_data_range,
+    observability_fleet_snapshot,
     observability_intent,
     observability_metric_pairs,
     observability_obs_cost,
