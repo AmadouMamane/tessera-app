@@ -35,6 +35,11 @@ from tessera.observability import (
     tool_validity as tool_validity_mod,
     toxicity as toxicity_mod,
 )
+from tessera.observability.read_snapshot import (
+    SNAPSHOT_TTL_S,
+    incidents_snapshot_key,
+    read_snapshot,
+)
 
 router = APIRouter()
 
@@ -68,7 +73,16 @@ def observability_incidents(lang: str = "fr", at: str | None = None) -> dict[str
     per-tab operational catalogues. ``at`` (ISO instant) reads the posture as
     of T: deny window ending at T, bundles ≤ T, durable incidents replayed from
     their journals (registre §6 — AGIR As-of). Degrades to ``available: false``.
+
+    The DEFAULT live view (``at=None``) is served from the leader-computed shared
+    snapshot (ADR 0046): clustering the deny ledger is seconds cold and its
+    per-worker memo expires between page visits, so a fresh visit recurrently hit
+    a cold worker and waited. An as-of-T read, or a snapshot miss, computes fresh.
     """
+    if at is None:
+        snap = read_snapshot(incidents_snapshot_key(lang), SNAPSHOT_TTL_S)
+        if snap is not None:
+            return snap
     try:
         return {"available": True, **incidents_mod.compute_incidents_overview(lang, at)}
     except Exception as exc:  # never break the dashboard

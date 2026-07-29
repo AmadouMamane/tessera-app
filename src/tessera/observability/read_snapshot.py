@@ -43,6 +43,7 @@ __all__ = [
     "compute_snapshot_entries",
     "fleet_snapshot_key",
     "inbox_snapshot_key",
+    "incidents_snapshot_key",
     "read_snapshot",
     "reset_read_snapshot",
     "write_snapshot",
@@ -85,6 +86,11 @@ def batch_snapshot_key(lang: str) -> str:
 def inbox_snapshot_key(lang: str, agent: str) -> str:
     """Snapshot key for the inbox overview of one locale + agent scope (default agent = ``all``)."""
     return f"inbox:{lang}:{agent}"
+
+
+def incidents_snapshot_key(lang: str) -> str:
+    """Snapshot key for the live (at=None) incidents & playbooks overview of one locale."""
+    return f"incidents:{lang}"
 
 
 def audit_overview_snapshot_key() -> str:
@@ -176,6 +182,20 @@ async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:
         entries[inbox_key] = {"available": True, "agent": "all", **overview}
     except Exception as exc:
         _LOG.warning("read_snapshot.entry_omitted", entry=inbox_key, error=str(exc))
+    # The AGIR incidents & playbooks overview per locale (live, at=None): clustering the deny
+    # ledger is ~2.9 s cold and ~180 ms even warm, and its per-worker 30 s memo expires between
+    # the operator's page visits — so a fresh visit recurrently lands on a cold worker and waits
+    # seconds. The leader clusters it once per cycle and publishes the whole payload; workers read
+    # the file. Only the default (at=None) is snapshotted — an as-of-T read computes fresh.
+    from tessera.observability.incidents import compute_incidents_overview
+
+    for lang in _SNAPSHOT_LOCALES:
+        incidents_key = incidents_snapshot_key(lang)
+        try:
+            overview = await asyncio.to_thread(compute_incidents_overview, lang, None)
+            entries[incidents_key] = {"available": True, **overview}
+        except Exception as exc:
+            _LOG.warning("read_snapshot.entry_omitted", entry=incidents_key, error=str(exc))
     # The audit cockpit's org-wide default overview + newest page (locale-independent): both walk
     # the whole 126 k-row chain, so the leader precomputes them once instead of every worker
     # re-validating the chain under the operator's page load.

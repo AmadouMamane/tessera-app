@@ -53,6 +53,7 @@ def test_snapshot_keys() -> None:
     assert rs.fleet_snapshot_key("fr", None) == "fleet:fr:all"
     assert rs.batch_snapshot_key("fr") == "batch:fr"
     assert rs.inbox_snapshot_key("fr", "all") == "inbox:fr:all"
+    assert rs.incidents_snapshot_key("fr") == "incidents:fr"
 
 
 def _stub_all_computes(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -73,6 +74,10 @@ def _stub_all_computes(monkeypatch: pytest.MonkeyPatch) -> None:
         "tessera.observability.inbox.compute_inbox_overview", lambda **_kw: {"queue": 3}
     )
     monkeypatch.setattr(
+        "tessera.observability.incidents.compute_incidents_overview",
+        lambda lang, at: {"posture": lang, "at": at},
+    )
+    monkeypatch.setattr(
         "tessera.api.routes.audit.compute_default_overview", lambda: {"total_events": 12}
     )
     monkeypatch.setattr(
@@ -90,6 +95,9 @@ async def test_compute_entries_composes_every_hot_read(monkeypatch: pytest.Monke
     assert entries["fleet:fr:d7"] == {"available": False}
     assert entries["batch:fr"] == {"ai-act": {"x": 1}, "refusal": {"y": 2}}
     assert entries["inbox:fr:all"] == {"available": True, "agent": "all", "queue": 3}
+    assert entries["incidents:fr"] == {"available": True, "posture": "fr", "at": None}
+    assert entries["incidents:de"] == {"available": True, "posture": "de", "at": None}
+    assert entries["incidents:en"] == {"available": True, "posture": "en", "at": None}
     assert entries["audit:overview"] == {"total_events": 12}
     assert entries["audit:page"] == {"entries": [], "cursor": 0}
 
