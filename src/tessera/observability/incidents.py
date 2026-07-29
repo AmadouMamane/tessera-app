@@ -41,21 +41,24 @@ __all__ = ["compute_incidents_overview", "open_incidents", "reset_open_incidents
 
 _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
 
-# The live sidebar badge (chrome bell, on all 32 cockpit pages) asks open_incidents() with no
-# args, and that call is ~0.83 s of incident-CLUSTERING compute — not an uncached read (its
-# ledger read is already windowed), so it is memoised, single-flight, on a 30 s TTL. Incidents
-# change on a human timescale, so a 30 s lag on the count badge is invisible; an as-of-T or
-# explicit-``now`` call (the incidents page) bypasses the cache and computes fresh.
+# The live incident CORE (the ~2.9 s ledger clustering) is memoised single-flight on a 30 s TTL
+# and SHARED by both live surfaces: the sidebar badge (chrome bell, on all 32 cockpit pages) and
+# the incidents page itself. Both used to build the core independently — the page built it once for
+# its body and a SECOND time for the KPI count (via open_incidents), and the badge a third — so a
+# single page load clustered the ledger twice and the bell a third. Caching the core, not the
+# derived count, collapses all of that to one clustering per TTL per worker; the count is a cheap
+# derivation both surfaces run on the same object, so they agree by construction. Incidents change
+# on a human timescale, so a 30 s lag is invisible; an as-of-T call computes a fresh, exact core.
 _OPEN_INCIDENTS_TTL_S: Final = 30.0
 _open_incidents_lock = threading.Lock()
-_open_incidents_cache: tuple[float, tuple[int, int]] | None = None
+_live_core_cache: tuple[float, _RealIncidents] | None = None
 
 
 def reset_open_incidents_cache() -> None:
-    """Drop the memoised live open-incidents count (used by tests for isolation)."""
-    global _open_incidents_cache
+    """Drop the memoised live incident core (used by tests for isolation)."""
+    global _live_core_cache
     with _open_incidents_lock:
-        _open_incidents_cache = None
+        _live_core_cache = None
 
 
 def _loc(lang: str, fr: str, de: str, en: str) -> str:
@@ -164,6 +167,8 @@ class _RealIncidents:
     """
 
     def __init__(self, now: datetime, asof: str | None = None) -> None:
+        self.now = now  # the reference instant this core was built for (live: build time; as-of: T)
+        self.asof = asof
         window = now - timedelta(days=7)
         day_keys = [(now - timedelta(days=d)).date().isoformat() for d in range(6, -1, -1)]
         self.day_denies: dict[str, int] = dict.fromkeys(day_keys, 0)
@@ -265,10 +270,10 @@ def open_incidents(now: datetime | None = None, *, at: str | None = None) -> tup
     ``at`` set = the state as of T: the deny window ends at T and the durable
     incidents are replayed from their journals (``incidents_as_of``).
 
-    The LIVE badge call (no ``now``, no ``at``) is memoised single-flight on a 30 s TTL: it
-    hangs on the chrome bell of all 32 cockpit pages and is ~0.83 s of clustering compute, so a
-    burst of callers yields ONE computation and the rest read the fresh value. An as-of-T or
-    explicit-``now`` caller (the incidents page) always computes fresh — its moment is exact.
+    The LIVE call (no ``now``, no ``at``) reads the memoised live core (single-flight, 30 s TTL) —
+    the SAME core the incidents page renders, so the badge on all 32 cockpit pages and the page
+    KPI cluster the ledger once between them, not once each. An as-of-T or explicit-``now`` caller
+    always clusters fresh — its moment is exact.
     """
     if now is None and at is None:
         return _open_incidents_live()
@@ -276,39 +281,69 @@ def open_incidents(now: datetime | None = None, *, at: str | None = None) -> tup
 
 
 def _open_incidents_live() -> tuple[int, int]:
-    """The memoised live badge count (single-flight, ``_OPEN_INCIDENTS_TTL_S``). See caller."""
-    global _open_incidents_cache
-    cached = _open_incidents_cache
+    """The live badge count, derived from the memoised live core (single-flight). See caller."""
+    return _counts_from_core(_live_core(), None)
+
+
+def _live_core() -> _RealIncidents:
+    """The live incident core, memoised single-flight on ``_OPEN_INCIDENTS_TTL_S``.
+
+    Built once and shared by the sidebar badge AND the incidents page, so the ~2.9 s ledger
+    clustering runs at most once per TTL per worker instead of two or three times per page load.
+    An as-of-T reading never comes through here — its instant is exact, so it clusters fresh.
+    """
+    global _live_core_cache
+    cached = _live_core_cache
     if cached is not None and time.monotonic() - cached[0] < _OPEN_INCIDENTS_TTL_S:
         return cached[1]
     with _open_incidents_lock:
         # Double-check under the lock: a caller that raced us may have just refreshed it.
-        cached = _open_incidents_cache
+        cached = _live_core_cache
         if cached is not None and time.monotonic() - cached[0] < _OPEN_INCIDENTS_TTL_S:
             return cached[1]
-        result = _compute_open_incidents(None, None)
-        _open_incidents_cache = (time.monotonic(), result)
-        return result
+        core = _RealIncidents(datetime.now(UTC), asof=None)
+        _live_core_cache = (time.monotonic(), core)
+        return core
 
 
-def _compute_open_incidents(now: datetime | None, at: str | None) -> tuple[int, int]:
-    """Compose ``(open, critical)`` from the incident core — the uncached path of the memo."""
+def _counts_from_core(core: _RealIncidents, at: str | None) -> tuple[int, int]:
+    """``(open, critical)`` derived from an already-built core — the ONE formula both surfaces use.
+
+    The sidebar badge and the incidents-page KPI must agree by construction, so both derive the
+    count from the same core object with this same expression rather than re-clustering the ledger.
+    ``at`` set = an as-of-T reading: the durable incidents are replayed from their journals at T.
+    """
     from tessera.observability.incident_store import incidents_as_of, open_durable_counts
 
-    moment = now or _parse_when(at) or datetime.now(UTC)
-    core = _RealIncidents(moment, asof=at)
     n_open = len(core.clusters) + (1 if core.low_score else 0)
     n_critical = sum(1 for cluster in core.clusters if cluster.severity == "critique")
     # Lot 10 — the durable incidents an operator actually opened count too;
     # the sidebar badge stays the ONE source both surfaces ask.
     if at is not None:
-        folded = incidents_as_of(moment)
+        folded = incidents_as_of(core.now)
         open_ones = [i for i in folded if i.get("status") != "resolu"]
         durable_open = len(open_ones)
         durable_critical = sum(1 for i in open_ones if i.get("severity") == "critique")
     else:
         durable_open, durable_critical = open_durable_counts()
     return n_open + durable_open, n_critical + durable_critical
+
+
+def _compute_open_incidents(now: datetime | None, at: str | None) -> tuple[int, int]:
+    """``(open, critical)`` clustered fresh — the uncached as-of-T / explicit-``now`` path."""
+    moment = now or _parse_when(at) or datetime.now(UTC)
+    return _counts_from_core(_RealIncidents(moment, asof=at), at)
+
+
+def _core_for_overview(at: str | None, at_dt: datetime | None) -> _RealIncidents:
+    """The core the overview renders: the shared live memo, or a fresh as-of-T clustering.
+
+    Split out of ``compute_incidents_overview`` so its live/as-of branch narrows ``at_dt`` for the
+    type checker without adding statements to that already-long function.
+    """
+    if at_dt is None:
+        return _live_core()
+    return _RealIncidents(at_dt, asof=at)
 
 
 def _durable_incident_rows(at_dt: datetime | None = None) -> list[dict[str, object]]:
@@ -346,8 +381,11 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
     at_dt = _parse_when(at)
     if at_dt is None:
         at = None  # malformed instant reads live, never raises
-    now = at_dt or datetime.now(UTC)
-    core = _RealIncidents(now, asof=at)
+    # Live (no as-of): the memoised core the sidebar badge also reads — one clustering per TTL,
+    # shared. As-of-T: an exact instant, clustered fresh. ``now`` follows the core so the page
+    # timestamps report when THIS data was computed, not an unrelated wall clock.
+    core = _core_for_overview(at, at_dt)
+    now = core.now
 
     # Recurring playbook names, localized once and reused across the page so the
     # triage queue, catalogue and resolution chart stay consistent.
@@ -362,9 +400,10 @@ def compute_incidents_overview(lang: str = "fr", at: str | None = None) -> dict[
     # REAL posture: clusters from the ledger + the low-faithfulness cluster; the
     # lifecycle metrics (MTTA/MTTR/auto-resolution/SLA/evidence packs) have no
     # store in this build -> honest dashes, never invented numbers.
-    # The sidebar badge reads these through `open_incidents()`. Compute them there once,
-    # so a change to what "open" means cannot land on one surface and not the other.
-    n_open, n_critical = open_incidents(now, at=at)
+    # The sidebar badge reads these through `open_incidents()` → `_counts_from_core`; the page
+    # derives them from the SAME core with the SAME helper, so a change to what "open" means
+    # cannot land on one surface and not the other — and the ledger is clustered only once.
+    n_open, n_critical = _counts_from_core(core, at)
     deny_series = list(core.day_denies.values())
     kpis = [
         _kpi("open", str(n_open), "0", False, deny_series or [0] * 7),
