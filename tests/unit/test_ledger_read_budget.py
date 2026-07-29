@@ -265,14 +265,15 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
     "tessera/observability/integrations.py": "OWED",
     "tessera/observability/policies.py": "OWED",
     "tessera/observability/session_detail.py": "OWED",
-    "tessera/observability/system_profile.py": "OWED",
     "tessera/observability/tool_validity.py": "OWED",
 }
 
 #: How many of them are a request path that still loads the ledger. **This may only go down.**
 #: 2026-07-22: agent_synthese, then incidents, paid their debt — both journal scans are
 #: bounded at the seam (``read_ledger_entries(since=, until=)``, SQL-side in postgres mode).
-OWED_COUNT = 15
+#: 2026-07-29: system_profile paid its debt — the runtime panel's ``audit_lines`` is a bounded
+#: ``count_ledger_entries()`` (SQL ``count(*)``) instead of ``len(read_ledger_entries())``.
+OWED_COUNT = 14
 
 #: The readers that cannot promise a bound. ``load_ledger_payloads_of_type`` is here ON PURPOSE:
 #: it is bounded only when the type is rare, and the type the cockpit reads most is 94 % of the
@@ -334,11 +335,11 @@ class TestTheFreeze:
         )
 
     def test_the_debt_is_a_number_and_it_only_goes_down(self) -> None:
-        """17 request paths still materialise the chain. Naming them is what makes them payable.
+        """14 request paths still materialise the chain. Naming them is what makes them payable.
 
         The honest claim of this lot is NOT "the class is closed everywhere". It is: no NEW
         full-ledger read can appear, the fleet and the header no longer perform one, and the
-        seventeen that remain are named, counted, and cannot multiply while nobody is looking.
+        fourteen that remain are named, counted, and cannot multiply while nobody is looking.
         """
         owed = sum(1 for reason in _UNBOUNDED_CAPABLE.values() if reason.startswith("OWED"))
         assert owed == OWED_COUNT, (

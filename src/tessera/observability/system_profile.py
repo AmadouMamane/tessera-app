@@ -21,7 +21,11 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import tessera
-from tessera.guard.ledger_store import ledger_available, read_ledger_entries, verify_active_ledger
+from tessera.guard.ledger_store import (
+    count_ledger_entries,
+    ledger_available,
+    verify_active_ledger,
+)
 from tessera.observability import firewall_efficacy
 from tessera.observability.eval.report_paths import iter_report_files
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
@@ -324,7 +328,7 @@ def compute_system_profile(lang: str = "fr") -> dict[str, object]:
         "support": str(settings.environment),
     }
 
-    audit_lines = len(read_ledger_entries())
+    audit_lines = count_ledger_entries()
     chain_label = next((h["status"] for h in health_checks if h["key"] == "audit_chain"), "warn")
     runtime = {
         "uptime": _uptime(now, lang),

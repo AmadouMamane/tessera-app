@@ -874,6 +874,28 @@ def count_ledger_entries_of_type(entry_type: str, agent_id: str | None = None) -
     return int(row[0]) if row and row[0] is not None else 0
 
 
+def count_ledger_entries() -> int:
+    """COUNT of every ledger entry — the whole chain's length as one bounded aggregate.
+
+    The bounded twin of ``len(read_ledger_entries())`` for a caller that needs only the row count.
+    ``system_profile`` shows ``audit_lines`` (the chain length) in its runtime panel and used to
+    take it by materialising the entire 38 MB chain to call ``len``. ``count(*)`` is byte-identical
+    — ``read_ledger_entries()`` returns every row, so its length IS the row count — and costs one
+    row. File mode has no index: it stays on the materialise-then-``len`` path, identical both ways.
+    """
+    if ledger_source() != "postgres":
+        return len(read_ledger_entries())
+    with (
+        store_read("postgres", "audit_ledger.count_all", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(f"SELECT count(*) FROM {LEDGER_TABLE}")  # noqa: S608 — fixed identifier
+        row = cur.fetchone()
+        read.rows_read(1)
+    return int(row[0]) if row and row[0] is not None else 0
+
+
 def ledger_head_seq() -> int:
     """The active ledger's high-water ``seq`` (0 when empty) — one indexed row.
 
