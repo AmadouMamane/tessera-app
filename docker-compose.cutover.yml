@@ -24,6 +24,16 @@
 services:
   agent:
     restart: unless-stopped
+    # Memory backstop (P5). The base compose sets no limit (mem_limit=0 = unbounded), so one
+    # unbounded whole-ledger read materialising the entire chain × N workers once took the entire
+    # ~15.6 GB Docker VM: the kernel OOM-killed the agent AND starved postgres, taking the stack
+    # down. Cap the container instead — a runaway read now trips THIS ceiling, only the agent is
+    # OOM-killed, and `restart: unless-stopped` above brings it straight back while postgres and the
+    # front keep serving. Normal 4-worker load is ~1 GB, so 8 GB is ~8× headroom yet stays well
+    # under the VM total so the host survives. A BACKSTOP, not the cure: P1 (bounded SQL reads)
+    # removes the unbounded materialisation itself. Override per machine with TESSERA_AGENT_MEM_LIMIT
+    # (a larger VM can afford more; set 0 to disable).
+    mem_limit: ${TESSERA_AGENT_MEM_LIMIT:-8g}
     networks:
       - data # live data: tessera-postgres reachable as `postgres`
       - obs # observability: clickhouse / prometheus / otel-collector by name
