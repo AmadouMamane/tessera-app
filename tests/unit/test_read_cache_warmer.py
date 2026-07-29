@@ -28,10 +28,10 @@ async def test_warmer_is_a_noop_in_file_mode(monkeypatch: pytest.MonkeyPatch) ->
     assert await main._start_read_cache_warmer() is None
 
 
-async def test_warmer_warms_both_persistent_caches_in_order(
+async def test_warmer_warms_all_persistent_caches_in_order(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Postgres mode warms the whole-ledger read (ai-act/guard-audit) then the timeline rail."""
+    """Postgres mode warms the whole-ledger read, the timeline rail, then the audit chain."""
     called: list[str] = []
     monkeypatch.setattr("tessera.guard.ledger_store.ledger_source", lambda: "postgres")
     monkeypatch.setattr(
@@ -42,10 +42,14 @@ async def test_warmer_warms_both_persistent_caches_in_order(
         "tessera.api.routes.observability.console.observability_timeline",
         lambda: (called.append("timeline"), {})[1],
     )
+    monkeypatch.setattr(
+        "tessera.api.routes.audit._read_entries_full_cached",
+        lambda: (called.append("audit_entries"), [])[1],
+    )
     task = await main._start_read_cache_warmer()
     assert task is not None
     await task
-    assert called == ["ledger", "timeline"]
+    assert called == ["ledger", "timeline", "audit_entries"]
 
 
 async def test_a_warmup_failure_never_propagates(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -343,6 +343,7 @@ async def _start_read_cache_warmer() -> asyncio.Task[None] | None:
     async def _warm() -> None:
         import time
 
+        from tessera.api.routes.audit import _read_entries_full_cached
         from tessera.api.routes.observability.console import observability_timeline
         from tessera.guard.ledger_store import load_ledger_payloads_sync
 
@@ -350,9 +351,13 @@ async def _start_read_cache_warmer() -> asyncio.Task[None] | None:
         warmed: list[str] = []
         # The whole-ledger cache first: the timeline rail's own read is cheaper once the shared
         # connection path is warm, and this is the read the ai-act / guard-audit panels reuse.
+        # audit_entries is the ~2 s Pydantic validation of the whole chain that the audit-log page
+        # (overview + windowed page) filters — warm it too, else that page's first hit on each
+        # worker pays the full validation.
         for label, fn in (
             ("ledger_payloads", load_ledger_payloads_sync),
             ("timeline", observability_timeline),
+            ("audit_entries", _read_entries_full_cached),
         ):
             try:
                 await asyncio.to_thread(fn)

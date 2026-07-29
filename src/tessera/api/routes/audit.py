@@ -461,21 +461,25 @@ def _read_entries_uncached(
 def _read_entries(
     path: Path, *, since: datetime | None = None, until: datetime | None = None
 ) -> list[AuditEntry]:
-    """Entries from the active source, optionally bounded to a time window IN SQL.
+    """Entries from the active source, optionally bounded to a time window.
 
-    The window is the one filter that can be pushed down honestly (it is the ``occurred_at``
-    index). Without it, listing a 50-row page materialised all 25 634 rows and Pydantic-validated
-    every one of them — an unbounded read on a table that only grows.
+    Both the full read and a windowed read are served from the head-cached, fully-validated chain
+    (postgres): the ~2 s Pydantic validation of ~126 k payloads happens once per append, and a
+    window is then a cheap Python filter over that cached list. ``AuditEntry.occurred_at`` derives
+    from the same payload field the SQL ``occurred_at`` column does, so the filter reproduces the
+    SQL window exactly — no per-request re-read.
     """
     global _ENTRIES_CACHE
 
-    # Postgres has no file mtime/size to key on. A windowed read is already bounded IN SQL, so it
-    # stays uncached; the FULL read (no window) — the overview and default log page — is memoised on
-    # the chain head, so the ~2 s Pydantic validation happens once per append, not once per call.
+    # Postgres has no file mtime/size to key on. The audit-log page sends a rolling 7-day window
+    # (until=now) that changes every load, so an SQL-bounded windowed read here NEVER hit a cache
+    # and paid the full ~2 s validation on every request (seconds more under the leader snapshot
+    # cycle's DB contention). Filtering the head-cached full chain instead is fast and correct.
     if ledger_source() == "postgres":
+        entries = _read_entries_full_cached()
         if since is None and until is None:
-            return _read_entries_full_cached()
-        return _read_entries_uncached(path, since=since, until=until)
+            return entries
+        return [entry for entry in entries if _within(entry, since, until)]
     state = _audit_file_state(path)
     with _ENTRIES_CACHE_LOCK:
         if _ENTRIES_CACHE is not None and _ENTRIES_CACHE.state == state:
