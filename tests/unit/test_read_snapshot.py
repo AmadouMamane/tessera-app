@@ -47,6 +47,27 @@ def test_reset_removes_the_file() -> None:
     assert rs.read_snapshot("k", rs.SNAPSHOT_TTL_S) is None
 
 
+def test_document_is_parsed_once_per_file_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A page's ~14 reads share ONE parse of the ~300 KB file; a re-publish re-parses (P8)."""
+    rs.reset_read_snapshot()
+    parses = [0]
+    real_loads = rs.json.loads
+
+    def _counting_loads(payload: str, **kw: object) -> object:
+        parses[0] += 1
+        return real_loads(payload, **kw)
+
+    monkeypatch.setattr(rs.json, "loads", _counting_loads)
+    rs.write_snapshot({"chrome:fr": {"a": 1}, "chrome:de": {"b": 2}})
+    for _ in range(5):  # many reads across different keys within one "page"
+        assert rs.read_snapshot("chrome:fr", rs.SNAPSHOT_TTL_S) == {"a": 1}
+        assert rs.read_snapshot("chrome:de", rs.SNAPSHOT_TTL_S) == {"b": 2}
+    assert parses[0] == 1  # the whole file was parsed once, not once per read
+    rs.write_snapshot({"chrome:fr": {"a": 9}})  # a fresh publish is a new version
+    assert rs.read_snapshot("chrome:fr", rs.SNAPSHOT_TTL_S) == {"a": 9}
+    assert parses[0] == 2  # re-parsed exactly once after the re-publish
+
+
 def test_snapshot_keys() -> None:
     assert rs.chrome_snapshot_key("fr") == "chrome:fr"
     assert rs.fleet_snapshot_key("fr", "d7") == "fleet:fr:d7"

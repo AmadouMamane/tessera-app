@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import time
+from threading import Lock
 from typing import TYPE_CHECKING, Any, Final
 
 from tessera.fsutil import atomic_write_text
@@ -68,6 +69,54 @@ def _snapshot_path() -> Path:
     return get_settings().state_dir / _SNAPSHOT_NAME
 
 
+# A cockpit page fires ~14 reads at once, each its own `read_snapshot` call, and the file is one
+# ~300 KB JSON document — so parsing it per read meant ~14 full parses for a single page. Parse it
+# once per file VERSION and share the parsed document across those reads. The version key is
+# (path, mtime_ns, size): the leader publishes via an atomic rename every cycle, which bumps mtime,
+# so a new snapshot is always re-parsed; the path guards against an isolated test's tmp file reusing
+# a stale entry. Freshness stays PER ENTRY — each entry carries its own `ts`, checked against the
+# wall clock below — so a cached parse never serves a stale entry as fresh. Process-local: every
+# worker parses once per version; the writer (write_snapshot) invalidates its own copy.
+_PARSE_CACHE_LOCK = Lock()
+_PARSE_CACHE: tuple[tuple[str, int, int], dict[str, Any]] | None = None  # (version, doc)
+
+
+def _reset_parse_cache() -> None:
+    """Drop the parsed-document memo (writer invalidation + test isolation)."""
+    global _PARSE_CACHE
+    with _PARSE_CACHE_LOCK:
+        _PARSE_CACHE = None
+
+
+def _load_snapshot_doc() -> dict[str, Any] | None:
+    """Parse the snapshot file once per version, shared across a page's reads.
+
+    Returns the parsed top-level document, or ``None`` on any miss — absent file, unreadable,
+    corrupt, or not a dict. A version-key collision (coarse mtime resolution) could only ever serve
+    a document a few seconds older, which the caller's per-entry TTL check still bounds.
+    """
+    path = _snapshot_path()
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    version = (str(path), st.st_mtime_ns, st.st_size)
+    global _PARSE_CACHE
+    with _PARSE_CACHE_LOCK:
+        cached = _PARSE_CACHE
+        if cached is not None and cached[0] == version:
+            return cached[1]
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(doc, dict):
+        return None
+    with _PARSE_CACHE_LOCK:
+        _PARSE_CACHE = (version, doc)
+    return doc
+
+
 def chrome_snapshot_key(lang: str) -> str:
     """Snapshot key for the chrome badges/notifications of one locale."""
     return f"chrome:{lang}"
@@ -109,11 +158,8 @@ def read_snapshot(key: str, ttl_s: float) -> dict[str, Any] | None:
     ``None`` on every miss — no file, no such key, a stale entry, or an unreadable/corrupt file —
     is the signal for the caller to compute. Never raises into the request path.
     """
-    try:
-        doc = json.loads(_snapshot_path().read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(doc, dict):
+    doc = _load_snapshot_doc()
+    if doc is None:
         return None
     entry = doc.get(key)
     if not isinstance(entry, dict):
@@ -130,11 +176,16 @@ def write_snapshot(entries: dict[str, dict[str, Any]]) -> None:
     now = time.time()
     doc = {key: {"ts": now, "payload": payload} for key, payload in entries.items()}
     atomic_write_text(_snapshot_path(), json.dumps(doc, ensure_ascii=False))
+    # The writer invalidates its OWN parsed-document memo: on some filesystems mtime resolution is
+    # coarse enough that two writes within the same tick share a version key, so clearing here is
+    # what guarantees this process re-parses the content it just published.
+    _reset_parse_cache()
 
 
 def reset_read_snapshot() -> None:
     """Remove the snapshot file (test isolation; a no-op when it does not exist)."""
     _snapshot_path().unlink(missing_ok=True)
+    _reset_parse_cache()
 
 
 async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:
