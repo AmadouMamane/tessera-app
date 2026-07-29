@@ -276,8 +276,12 @@ def check_user_input(
             same guard to score it; those are not real user traffic, so they pass ``audit=False``
             to keep their probe inputs out of the tamper-evident audit trail (and out of the
             append-only ledger, which they were otherwise flooding on every batch-snapshot cycle).
-            The decision itself — allow/deny — is identical either way; only the ledger write is
-            skipped.
+            The decision itself — allow/deny — is identical either way; only the two RECORDING
+            side effects are skipped: the ledger write (``emit_audit``) AND the
+            ``GUARD_DECISIONS_TOTAL`` counter increment. The latter feeds the ops dashboards'
+            guard-decision *rate* (``rate(tessera_guard_decisions_total[5m])`` in
+            ``tessera-ops.json`` / the per-agent Prometheus rule); a fixed measurement corpus
+            replayed through the guard must not surface there as fake "traffic".
     """
     from tessera.agent.state import GuardDecisionRecord
 
@@ -306,7 +310,7 @@ def check_user_input(
                 actor=actor,
                 outcome="denied",
             )
-        _record_guard_decision("user_input", "denied")
+            _record_guard_decision("user_input", "denied")
         return InputCheckResult(
             allowed=False,
             sanitised_text=text,
@@ -349,7 +353,7 @@ def check_user_input(
             actor=actor,
             outcome="allowed",
         )
-    _record_guard_decision("user_input", "allowed")
+        _record_guard_decision("user_input", "allowed")
 
     return InputCheckResult(
         allowed=True,

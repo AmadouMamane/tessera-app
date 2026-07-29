@@ -123,11 +123,13 @@ class TestInjectionDenyFloor:
 
 
 class TestAuditFlag:
-    """`audit=False` runs the identical decision but skips the opposability-ledger write.
+    """`audit=False` runs the identical decision but skips both RECORDING side effects.
 
     The cockpit's guard-measurement panels (firewall efficacy, refusal calibration, red-team)
     replay fixed synthetic corpora through this guard to score it; those are not real traffic, so
-    they must not append to the append-only audit chain (they were flooding it every batch cycle).
+    they must not append to the append-only audit chain (they were flooding it every batch cycle)
+    NOR increment ``GUARD_DECISIONS_TOTAL`` (which feeds the ops dashboards' guard-decision rate —
+    a measurement corpus must not surface there as fake traffic).
     """
 
     _BENIGN = "Quel est le solde de mon compte ?"
@@ -155,6 +157,31 @@ class TestAuditFlag:
         assert calls == []  # neither the allow nor the deny path touched the ledger
         assert allow.allowed is True  # the decision itself is unchanged
         assert deny.allowed is False
+
+    def _metric_spy(self, monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+        from tessera.guard import adapter
+
+        recorded: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            adapter,
+            "_record_guard_decision",
+            lambda target, decision: recorded.append((target, decision)),
+        )
+        return recorded
+
+    def test_default_records_the_prometheus_counter(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        recorded = self._metric_spy(monkeypatch)
+        check_user_input(self._BENIGN, actor=GUARD_ACTOR)
+        check_user_input(self._INJECTION, actor=GUARD_ACTOR)
+        assert recorded == [("user_input", "allowed"), ("user_input", "denied")]
+
+    def test_audit_false_skips_the_prometheus_counter(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded = self._metric_spy(monkeypatch)
+        check_user_input(self._BENIGN, actor=GUARD_ACTOR, audit=False)
+        check_user_input(self._INJECTION, actor=GUARD_ACTOR, audit=False)
+        assert recorded == []  # measurement corpus must not inflate the guard-decision rate
 
 
 class TestGuardedInvoke:
