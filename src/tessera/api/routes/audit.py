@@ -22,8 +22,15 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from tessera.authz import SYSTEM_ROLE
 from tessera.guard.ledger_store import (
     active_ledger_tree_status,
+    ledger_head_seq,
     ledger_source,
     read_ledger_entries,
+)
+from tessera.observability.read_snapshot import (
+    SNAPSHOT_TTL_S,
+    audit_overview_snapshot_key,
+    audit_page_snapshot_key,
+    read_snapshot,
 )
 
 router = APIRouter(tags=["audit"])
@@ -237,6 +244,21 @@ _INTEGRITY_CACHE_LOCK = RLock()
 _ENTRIES_CACHE: _EntriesCache | None = None
 _INTEGRITY_CACHE: _IntegrityCache | None = None
 
+# Postgres mode has no file mtime/size to key on, so the promoted table was RE-READ and every
+# payload RE-VALIDATED into an AuditEntry on every request — ~2 s of Pydantic over ~126 k rows that
+# both the overview (polled every 15 s) and the default log page paid each call. The append-only
+# chain's head (`max(seq)`) is a complete cache key: an unchanged head proves every row is
+# byte-identical, so the whole validated list is safe to reuse until the head moves.
+_PG_ENTRIES_CACHE_LOCK = RLock()
+_PG_ENTRIES_CACHE: tuple[int, list[AuditEntry]] | None = None  # (head_seq, validated entries)
+
+
+def reset_audit_entries_cache() -> None:
+    """Drop the postgres validated-entries memo (test isolation; harmless in file mode)."""
+    global _PG_ENTRIES_CACHE
+    with _PG_ENTRIES_CACHE_LOCK:
+        _PG_ENTRIES_CACHE = None
+
 
 def _resolve_audit_path() -> Path:
     from tessera.settings import get_settings
@@ -447,9 +469,12 @@ def _read_entries(
     """
     global _ENTRIES_CACHE
 
-    # The stat-keyed cache is a file-mode optimisation; after the cut the promoted
-    # table is the source (no file mtime/size to key on), so read it fresh each call.
+    # Postgres has no file mtime/size to key on. A windowed read is already bounded IN SQL, so it
+    # stays uncached; the FULL read (no window) — the overview and default log page — is memoised on
+    # the chain head, so the ~2 s Pydantic validation happens once per append, not once per call.
     if ledger_source() == "postgres":
+        if since is None and until is None:
+            return _read_entries_full_cached()
         return _read_entries_uncached(path, since=since, until=until)
     state = _audit_file_state(path)
     with _ENTRIES_CACHE_LOCK:
@@ -457,6 +482,26 @@ def _read_entries(
             return _ENTRIES_CACHE.entries
         entries = _read_entries_uncached(path)
         _ENTRIES_CACHE = _EntriesCache(state=state, entries=entries)
+        return entries
+
+
+def _read_entries_full_cached() -> list[AuditEntry]:
+    """The whole validated chain (postgres), memoised on the append-only head ``max(seq)``.
+
+    The underlying payload read is already head-cached; what this adds is caching the VALIDATION —
+    mapping ~126 k payloads into ``AuditEntry`` — the ~2 s cost the overview and log page paid on
+    every request. The head is read first as the key; if a row lands mid-read the
+    freshly validated (newer) list is simply cached under the older key and re-validated once on the
+    next request — never a stale entry served.
+    """
+    global _PG_ENTRIES_CACHE
+    head = ledger_head_seq()
+    with _PG_ENTRIES_CACHE_LOCK:
+        cached = _PG_ENTRIES_CACHE
+        if cached is not None and cached[0] == head:
+            return cached[1]
+        entries = _read_entries_uncached(_resolve_audit_path())
+        _PG_ENTRIES_CACHE = (head, entries)
         return entries
 
 
@@ -858,6 +903,26 @@ def _build_overview(
     )
 
 
+def compute_default_overview() -> dict[str, object]:
+    """The unfiltered, full-window audit overview — the org-wide default the snapshot precomputes.
+
+    Locale-independent (the overview carries no free text), so one snapshot entry serves every
+    operator. Shared by the leader's snapshot writer and by the route's own miss fallback.
+    """
+    path = _resolve_audit_path()
+    integrity = _audit_integrity(path)
+    overview = _build_overview(_read_entries(path), integrity, since=None, until=None)
+    return overview.model_dump(mode="json")
+
+
+def compute_default_page() -> dict[str, object]:
+    """The newest default page of the audit log (no filters, cursor 0) — the snapshot's list."""
+    entries = _newest_first(_read_entries(_resolve_audit_path()))
+    slice_ = entries[:_PAGE_DEFAULT]
+    page = AuditPage(entries=slice_, cursor=len(slice_), has_more=len(slice_) < len(entries))
+    return page.model_dump(mode="json")
+
+
 @router.get("/audit", response_model=AuditPage)
 async def audit_list(
     cursor: Annotated[int, Query(ge=0)] = 0,
@@ -874,6 +939,14 @@ async def audit_list(
     agent: Annotated[str | None, Query()] = None,
 ) -> AuditPage:
     """Return a paged slice of the audit log."""
+    # The default landing view (newest page, no filters) is the same for every operator and walks
+    # the whole chain, so it is served from the leader's shared snapshot when fresh; any filter,
+    # window or deeper page falls through to a live read.
+    _filters = (target, outcome, event_type, actor_role, scope, policy_rule, q, since, until, agent)
+    if cursor == 0 and limit == _PAGE_DEFAULT and all(f is None for f in _filters):
+        snap = read_snapshot(audit_page_snapshot_key(), SNAPSHOT_TTL_S)
+        if snap is not None:
+            return AuditPage.model_validate(snap)
     path = _resolve_audit_path()
     since_at, until_at = _parse_datetime(since), _parse_datetime(until)
     entries = _filter_entries(
@@ -914,6 +987,13 @@ async def audit_overview(
     agent: Annotated[str | None, Query()] = None,
 ) -> AuditOverview:
     """Return aggregate audit cockpit data for the selected window."""
+    # The unfiltered org-wide overview is polled every 15 s and walks the whole chain; serve it from
+    # the leader's shared snapshot when fresh, so it is computed once, not once per worker per poll.
+    _filters = (target, outcome, event_type, actor_role, scope, policy_rule, q, since, until, agent)
+    if all(f is None for f in _filters):
+        snap = read_snapshot(audit_overview_snapshot_key(), SNAPSHOT_TTL_S)
+        if snap is not None:
+            return AuditOverview.model_validate(snap)
     path = _resolve_audit_path()
     integrity = _audit_integrity(path)
     return _build_overview(

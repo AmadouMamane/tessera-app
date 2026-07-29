@@ -72,6 +72,12 @@ def _stub_all_computes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "tessera.observability.inbox.compute_inbox_overview", lambda **_kw: {"queue": 3}
     )
+    monkeypatch.setattr(
+        "tessera.api.routes.audit.compute_default_overview", lambda: {"total_events": 12}
+    )
+    monkeypatch.setattr(
+        "tessera.api.routes.audit.compute_default_page", lambda: {"entries": [], "cursor": 0}
+    )
 
 
 async def test_compute_entries_composes_every_hot_read(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,6 +90,8 @@ async def test_compute_entries_composes_every_hot_read(monkeypatch: pytest.Monke
     assert entries["fleet:fr:d7"] == {"available": False}
     assert entries["batch:fr"] == {"ai-act": {"x": 1}, "refusal": {"y": 2}}
     assert entries["inbox:fr:all"] == {"available": True, "agent": "all", "queue": 3}
+    assert entries["audit:overview"] == {"total_events": 12}
+    assert entries["audit:page"] == {"entries": [], "cursor": 0}
 
 
 async def test_compute_entries_omits_a_failing_compute(monkeypatch: pytest.MonkeyPatch) -> None:

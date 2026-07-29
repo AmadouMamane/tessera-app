@@ -36,6 +36,8 @@ _LOG = get_logger("tessera.snapshot")
 __all__ = [
     "SNAPSHOT_INTERVAL_S",
     "SNAPSHOT_TTL_S",
+    "audit_overview_snapshot_key",
+    "audit_page_snapshot_key",
     "batch_snapshot_key",
     "chrome_snapshot_key",
     "compute_snapshot_entries",
@@ -83,6 +85,16 @@ def batch_snapshot_key(lang: str) -> str:
 def inbox_snapshot_key(lang: str, agent: str) -> str:
     """Snapshot key for the inbox overview of one locale + agent scope (default agent = ``all``)."""
     return f"inbox:{lang}:{agent}"
+
+
+def audit_overview_snapshot_key() -> str:
+    """Snapshot key for the unfiltered, full-window audit overview (org-wide, locale-neutral)."""
+    return "audit:overview"
+
+
+def audit_page_snapshot_key() -> str:
+    """Snapshot key for the newest default page of the audit log (no filters, cursor 0)."""
+    return "audit:page"
 
 
 def read_snapshot(key: str, ttl_s: float) -> dict[str, Any] | None:
@@ -164,4 +176,19 @@ async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:
         entries[inbox_key] = {"available": True, "agent": "all", **overview}
     except Exception as exc:
         _LOG.warning("read_snapshot.entry_omitted", entry=inbox_key, error=str(exc))
+    # The audit cockpit's org-wide default overview + newest page (locale-independent): both walk
+    # the whole 126 k-row chain, so the leader precomputes them once instead of every worker
+    # re-validating the chain under the operator's page load.
+    from tessera.api.routes.audit import compute_default_overview, compute_default_page
+
+    audit_overview_key = audit_overview_snapshot_key()
+    try:
+        entries[audit_overview_key] = await asyncio.to_thread(compute_default_overview)
+    except Exception as exc:
+        _LOG.warning("read_snapshot.entry_omitted", entry=audit_overview_key, error=str(exc))
+    audit_page_key = audit_page_snapshot_key()
+    try:
+        entries[audit_page_key] = await asyncio.to_thread(compute_default_page)
+    except Exception as exc:
+        _LOG.warning("read_snapshot.entry_omitted", entry=audit_page_key, error=str(exc))
     return entries

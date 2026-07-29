@@ -120,6 +120,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # drove it to a head must not leave those rows visible to the next test's fresh chain.
     # The chrome memo is a short-TTL singleton (ADR 0044 follow-up): a test that populated it
     # must not serve its stale result to the next test's patched reads.
+    from tessera.api.routes.audit import reset_audit_entries_cache
     from tessera.api.routes.observability.console import reset_timeline_audit_cache
     from tessera.api.routes.observability.fleet import reset_fleet_cache
     from tessera.guard.ledger_store import reset_ledger_payloads_cache
@@ -129,6 +130,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
 
     reset_ledger_payloads_cache()
     reset_timeline_audit_cache()
+    reset_audit_entries_cache()
     reset_chrome_cache()
     reset_fleet_cache()
     reset_open_incidents_cache()
@@ -138,6 +140,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     yield
     reset_ledger_payloads_cache()
     reset_timeline_audit_cache()
+    reset_audit_entries_cache()
     reset_chrome_cache()
     reset_fleet_cache()
     reset_open_incidents_cache()
