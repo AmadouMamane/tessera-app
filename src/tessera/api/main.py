@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import os
 from contextlib import asynccontextmanager, suppress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -421,6 +421,40 @@ async def _start_singleton_work() -> list[asyncio.Task[None]]:
     return [task for task in started if task is not None]
 
 
+#: Upper bound on how long the LEADER blocks its own boot waiting for its read-cache warm-up before
+#: proceeding. A normal warm-up is ~4 s; a slow/unreachable DB must never wedge boot, so an overrun
+#: leaves the warmer running in the background (shielded) and the leader carries on.
+_LEADER_WARM_BUDGET_S: Final = 15.0
+
+
+async def _start_boot_background_work(
+    is_leader: bool,
+) -> tuple[asyncio.Task[None] | None, list[asyncio.Task[None]]]:
+    """Start each worker's boot background work in the order that avoids leader warm-up contention.
+
+    Every worker warms its own per-process read caches at boot (fire-and-forget on followers —
+    nothing on them competes). On the LEADER we FINISH warming BEFORE starting the singleton
+    snapshot writer: that writer's first cycle is heavy — it clusters the incidents core, validates
+    the audit chain and fans out the batch panels — and, run concurrently with the warmer, contends
+    for the read threadpool and the DB, stretching the leader's warm-up from ~4 s to ~20 s. During
+    that window a per-agent SURVEILLER read landing on the still-cold leader re-materialises the
+    whole 195 k-row ledger under the page's concurrent burst — the "sometimes several seconds" the
+    operator sees after a restart. Warming first collapses that window to the warm-up itself, and
+    also hands the snapshot writer an already-warm ledger cache. A warm-up that overruns the budget
+    is left to finish in the background (shielded) so a slow DB can never wedge boot.
+
+    Returns ``(warm_task, leader_tasks)`` for the lifespan to cancel on shutdown.
+    """
+    warm_task = await _start_read_cache_warmer()
+    leader_tasks: list[asyncio.Task[None]] = []
+    if is_leader:
+        if warm_task is not None:
+            with suppress(Exception):  # timeout or a warm-up error must never block boot
+                await asyncio.wait_for(asyncio.shield(warm_task), _LEADER_WARM_BUDGET_S)
+        leader_tasks = await _start_singleton_work()
+    return warm_task, leader_tasks
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -473,12 +507,10 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # The one-time convergence SWEEPS and the off-chrono BACKGROUND LOOPS run on the
         # singleton leader ONLY (ADR 0044): N concurrent sealers / purge loops / archive
         # sweeps are a correctness bug, not a scaling win. Non-leader workers serve request
-        # traffic against the schema the leader (and their own ensure block) materialised.
-        if is_leader:
-            leader_tasks = await _start_singleton_work()
-        # EVERY worker, not just the leader: the read caches are per-process, so each worker warms
-        # its own once at boot (fire-and-forget — readiness is not delayed). See its docstring.
-        warm_task = await _start_read_cache_warmer()
+        # traffic against the schema the leader (and their own ensure block) materialised. The
+        # helper also warms each worker's read caches — on the leader BEFORE the singleton
+        # snapshot writer, so the two do not contend and stretch the leader's warm-up window.
+        warm_task, leader_tasks = await _start_boot_background_work(is_leader)
         yield
     finally:
         for task in (warm_task, *leader_tasks):
