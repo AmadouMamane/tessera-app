@@ -48,6 +48,11 @@ from tessera.observability import (
     routing_intent as routing_intent_mod,
     users as users_mod,
 )
+from tessera.observability.read_snapshot import (
+    SNAPSHOT_TTL_S,
+    fleet_snapshot_key,
+    read_snapshot,
+)
 from tessera.observability.spine.runtime import get_runtime_provider
 
 router = APIRouter()
@@ -85,6 +90,17 @@ async def observability_fleet(
     """
     if at is not None:
         return await _compute_fleet(lang, period, at)
+    # Shared read-snapshot first (ADR 0046): the leader precomputes the default-locale rollup and
+    # every worker reads it, so the fleet aggregation leaves the request path. A miss (leader not
+    # up, stale, unreadable, or a non-precomputed locale/period) falls through to the per-worker
+    # memo + compute below.
+    shared = read_snapshot(fleet_snapshot_key(lang, period), SNAPSHOT_TTL_S)
+    if shared is not None:
+        return (
+            FleetPayload.model_validate(shared)
+            if shared.get("available")
+            else FleetUnavailable.model_validate(shared)
+        )
     key = (lang, period)
     cached = _fleet_cache.get(key)
     if cached is not None and time.monotonic() - cached[0] < _FLEET_TTL_S:

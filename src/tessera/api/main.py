@@ -368,6 +368,59 @@ async def _start_read_cache_warmer() -> asyncio.Task[None] | None:
     return asyncio.create_task(_warm())
 
 
+async def _start_read_snapshot_writer() -> asyncio.Task[None] | None:
+    """LEADER-only loop: compute the hottest cockpit reads once and publish a shared snapshot.
+
+    ADR 0046. chrome and fleet recomputed independently on every worker under the page's concurrent
+    read burst, contending on each worker's GIL (~2.4 s each, though ~6 ms warm in isolation). The
+    leader now computes them off every request path and writes ONE JSON snapshot to the shared state
+    dir; every worker reads it. Leader-gated because it is a singleton background loop (ADR 0044): N
+    workers writing the same file would be N times the compute for one file. Publishes FIRST then
+    sleeps, so a freshly-elected leader does not serve an empty snapshot window longer than needed.
+    Best-effort: a cycle failure warns and the loop survives; readers degrade to their own compute.
+    """
+    from tessera.observability.read_snapshot import (
+        SNAPSHOT_INTERVAL_S,
+        compute_snapshot_entries,
+        write_snapshot,
+    )
+
+    log = obs_logging.get_logger("tessera.snapshot")
+    log.info("read_snapshot.posture", interval_s=SNAPSHOT_INTERVAL_S)
+
+    async def _loop() -> None:
+        while True:
+            try:
+                entries = await compute_snapshot_entries()
+                await asyncio.to_thread(write_snapshot, entries)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # a cycle failure must never kill the loop
+                log.warning("read_snapshot.cycle_failed", error=str(exc))
+            await asyncio.sleep(SNAPSHOT_INTERVAL_S)
+
+    return asyncio.create_task(_loop())
+
+
+async def _start_singleton_work() -> list[asyncio.Task[None]]:
+    """LEADER-only (ADR 0044): the one-time convergence sweeps + every off-chrono background loop.
+
+    N concurrent sealers / purge loops / archive sweeps / snapshot writers are a correctness bug,
+    not a scaling win, so they run on the single elected leader. Returns the started tasks — the
+    schedulers that are a no-op under their posture return ``None`` and are dropped — for shutdown.
+    """
+    await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
+    await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
+    started: list[asyncio.Task[None] | None] = [
+        await _start_seal_scheduler(),  # ADR 0015 §Corr.3c — off-chrono
+        *await _start_canary_scheduler(),  # ADR 0019 §I4 — off-chrono
+        await _start_memory_purge_scheduler(),  # ADR 0007 §Retention — off-chrono
+        await _start_ledger_verification_scheduler(),  # off-chrono chain walk
+        await _start_read_snapshot_writer(),  # ADR 0046 — shared hot-read cache
+    ]
+    return [task for task in started if task is not None]
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -395,11 +448,8 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     anyio.to_thread.current_default_thread_limiter().total_tokens = get_settings().api.read_threads
     pool = get_pool()
-    seal_task: asyncio.Task[None] | None = None
-    purge_task: asyncio.Task[None] | None = None
-    verify_task: asyncio.Task[None] | None = None
     warm_task: asyncio.Task[None] | None = None
-    canary_tasks: list[asyncio.Task[None]] = []
+    leader_tasks: list[asyncio.Task[None]] = []
     try:
         await pool.open()
         # Materialise every durable table in the active env schema at boot so a read never
@@ -425,18 +475,13 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # sweeps are a correctness bug, not a scaling win. Non-leader workers serve request
         # traffic against the schema the leader (and their own ensure block) materialised.
         if is_leader:
-            await _reconcile_gating_archive()  # ADR 0015 G4 — idempotent file→porteur sweep
-            await _reconcile_audit_ledger()  # ADR 0015 §Amendment 3 — verified file→table copy
-            seal_task = await _start_seal_scheduler()  # ADR 0015 §Corr.3c — off-chrono
-            canary_tasks = await _start_canary_scheduler()  # ADR 0019 §I4 — off-chrono
-            purge_task = await _start_memory_purge_scheduler()  # ADR 0007 §Retention — off-chrono
-            verify_task = await _start_ledger_verification_scheduler()  # off-chrono chain walk
+            leader_tasks = await _start_singleton_work()
         # EVERY worker, not just the leader: the read caches are per-process, so each worker warms
         # its own once at boot (fire-and-forget — readiness is not delayed). See its docstring.
         warm_task = await _start_read_cache_warmer()
         yield
     finally:
-        for task in (seal_task, purge_task, verify_task, warm_task, *canary_tasks):
+        for task in (warm_task, *leader_tasks):
             if task is not None:
                 task.cancel()
                 with suppress(asyncio.CancelledError):

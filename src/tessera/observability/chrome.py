@@ -37,6 +37,11 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 from tessera.observability.logging import get_logger
+from tessera.observability.read_snapshot import (
+    SNAPSHOT_TTL_S,
+    chrome_snapshot_key,
+    read_snapshot,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -389,6 +394,13 @@ def compute_chrome(lang: str = "fr") -> dict[str, object]:
         ``notifications``: ``{count, items}``, each item deep-linking to where the act is
         performed. A ``count`` of zero means the bell shows no dot.
     """
+    # Shared read-snapshot first (ADR 0046): the leader precomputes this and every worker reads
+    # it, so chrome's 6-thread fan-out leaves the request path entirely. A miss (leader not up,
+    # stale, or unreadable) falls through to the per-worker memo + compute below — the fallback is
+    # why this is purely additive.
+    shared = read_snapshot(chrome_snapshot_key(lang), SNAPSHOT_TTL_S)
+    if shared is not None:
+        return shared
     cached = _chrome_cache.get(lang)
     if cached is not None and time.monotonic() - cached[0] < _CHROME_TTL_S:
         return cached[1]
