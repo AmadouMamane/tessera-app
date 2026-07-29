@@ -51,33 +51,50 @@ def test_snapshot_keys() -> None:
     assert rs.chrome_snapshot_key("fr") == "chrome:fr"
     assert rs.fleet_snapshot_key("fr", "d7") == "fleet:fr:d7"
     assert rs.fleet_snapshot_key("fr", None) == "fleet:fr:all"
+    assert rs.batch_snapshot_key("fr") == "batch:fr"
+    assert rs.inbox_snapshot_key("fr", "all") == "inbox:fr:all"
 
 
-async def test_compute_entries_composes_chrome_and_fleet(monkeypatch: pytest.MonkeyPatch) -> None:
+def _stub_all_computes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stub every hot-read compute so compute_snapshot_entries is hermetic (no DB)."""
+
     async def _fake_fleet(lang: str, period: str | None, at: str | None) -> FleetUnavailable:
         return FleetUnavailable(available=False)
+
+    async def _fake_panels(_lang: str) -> dict[str, object]:
+        return {"ai-act": {"x": 1}, "refusal": {"y": 2}}
 
     monkeypatch.setattr(
         "tessera.observability.chrome._compute_chrome_uncached", lambda lang: {"lang": lang}
     )
     monkeypatch.setattr("tessera.api.routes.observability.fleet._compute_fleet", _fake_fleet)
+    monkeypatch.setattr("tessera.api.routes.observability.batch.compute_all_panels", _fake_panels)
+    monkeypatch.setattr(
+        "tessera.observability.inbox.compute_inbox_overview", lambda **_kw: {"queue": 3}
+    )
+
+
+async def test_compute_entries_composes_every_hot_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_all_computes(monkeypatch)
     entries = await rs.compute_snapshot_entries()
     assert entries["chrome:fr"] == {"lang": "fr"}
     assert entries["chrome:de"] == {"lang": "de"}
     assert entries["chrome:en"] == {"lang": "en"}
     assert entries["fleet:fr:all"] == {"available": False}
     assert entries["fleet:fr:d7"] == {"available": False}
+    assert entries["batch:fr"] == {"ai-act": {"x": 1}, "refusal": {"y": 2}}
+    assert entries["inbox:fr:all"] == {"available": True, "agent": "all", "queue": 3}
 
 
 async def test_compute_entries_omits_a_failing_compute(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_all_computes(monkeypatch)
+
     def _boom(lang: str) -> dict[str, object]:
         raise RuntimeError("postgres down")
 
-    async def _fake_fleet(lang: str, period: str | None, at: str | None) -> FleetUnavailable:
-        return FleetUnavailable(available=False)
-
     monkeypatch.setattr("tessera.observability.chrome._compute_chrome_uncached", _boom)
-    monkeypatch.setattr("tessera.api.routes.observability.fleet._compute_fleet", _fake_fleet)
     entries = await rs.compute_snapshot_entries()
     assert not any(k.startswith("chrome:") for k in entries)  # every chrome entry omitted
-    assert entries["fleet:fr:all"] == {"available": False}  # fleet still published
+    assert entries["fleet:fr:all"] == {"available": False}  # the others still published
+    assert entries["batch:fr"] == {"ai-act": {"x": 1}, "refusal": {"y": 2}}
+    assert entries["inbox:fr:all"] == {"available": True, "agent": "all", "queue": 3}

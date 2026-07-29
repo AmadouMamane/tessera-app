@@ -27,6 +27,11 @@ from tessera.observability import (
     journey as journey_mod,
     sessions as sessions_mod,
 )
+from tessera.observability.read_snapshot import (
+    SNAPSHOT_TTL_S,
+    inbox_snapshot_key,
+    read_snapshot,
+)
 from tessera.observability.spine.adapters import read_scores
 
 router = APIRouter()
@@ -179,10 +184,19 @@ def observability_inbox(lang: str = "fr", agent: str = "all") -> dict[str, objec
     SLA buckets. ``agent`` ventilates the shared queue to one agent's own failed
     cases (ADR 0015 §Migration E); ``all`` aggregates the fleet. Degrades to
     ``available: false`` on failure.
+
+    The default fleet-wide overview (``agent=all``) is served from the leader-computed shared
+    snapshot (ADR 0046) — a file read instead of recomputing the queue/SLA/distribution. An
+    agent-scoped read, or a snapshot miss, computes fresh below.
     """
+    agent_id = _agent_or_none(agent)
+    if agent_id is None:
+        snap = read_snapshot(inbox_snapshot_key(lang, "all"), SNAPSHOT_TTL_S)
+        if snap is not None:
+            return snap
     try:
-        payload = inbox_mod.compute_inbox_overview(lang=lang, agent_id=_agent_or_none(agent))
-        return {"available": True, "agent": _agent_or_none(agent) or "all", **payload}
+        payload = inbox_mod.compute_inbox_overview(lang=lang, agent_id=agent_id)
+        return {"available": True, "agent": agent_id or "all", **payload}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.inbox: failed: {exc}\n")
         return {"available": False}

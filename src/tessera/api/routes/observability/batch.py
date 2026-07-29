@@ -35,6 +35,11 @@ from tessera.api.routes.observability import (
     signals,
 )
 from tessera.api.security import require_bearer
+from tessera.observability.read_snapshot import (
+    SNAPSHOT_TTL_S,
+    batch_snapshot_key,
+    read_snapshot,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -87,6 +92,30 @@ async def _run_one(handler: Any, kwargs: dict[str, Any]) -> dict[str, object]:
     return await asyncio.to_thread(handler, **kwargs)
 
 
+async def _compute_panels(scope: _BatchScope, keys: list[str]) -> dict[str, object]:
+    """Compute the requested panels concurrently; a panel whose compute raises is omitted."""
+
+    async def _panel(key: str) -> tuple[str, dict[str, object] | None]:
+        handler, build_kwargs = _BATCH_KEYS[key]
+        try:
+            return key, await _run_one(handler, build_kwargs(scope))
+        except Exception:  # a failing panel is omitted, never fabricated
+            return key, None
+
+    settled = await asyncio.gather(*(_panel(key) for key in keys))
+    return {key: payload for key, payload in settled if payload is not None}
+
+
+async def compute_all_panels(lang: str) -> dict[str, object]:
+    """Every batch panel for the default org-wide scope (agent=all, at=None) — the snapshot input.
+
+    The leader (ADR 0046) computes this once per cycle and publishes it; the endpoint below then
+    serves any requested subset of it from the shared file instead of re-fanning-out the panels.
+    """
+    scope = _BatchScope(agent="all", at=None, lang=lang)
+    return await _compute_panels(scope, list(_BATCH_KEYS))
+
+
 @router.get("/observability/batch", dependencies=[Depends(require_bearer)])
 async def observability_batch(
     keys: str,
@@ -97,20 +126,19 @@ async def observability_batch(
     """Return ``{"panels": {key: <that key's standalone payload>}}`` for the requested keys.
 
     ``keys`` is a comma-separated allowlist subset; unknown keys are ignored. The panels are
-    computed concurrently server-side and are byte-identical to each key's individual route. A key
-    whose compute raises is omitted so the card renders its honest-empty (parity with a failed
-    individual fetch). ``agent``/``at``/``lang`` are the shared scope; each handler takes only what
-    it accepts.
+    byte-identical to each key's individual route. A key whose compute raises is omitted so the card
+    renders its honest-empty (parity with a failed individual fetch). ``agent``/``at``/``lang`` are
+    the shared scope; each handler takes only what it accepts.
+
+    For the DEFAULT org-wide scope (agent=all, at=None) the whole panel set is served from the
+    leader-computed shared snapshot (ADR 0046) — a file read instead of re-fanning-out 16 panels
+    concurrently, which cold would stampede the shared ledger read. Any other scope (an agent
+    filter, an as-of-T read) computes fresh, and so does a snapshot miss.
     """
-    scope = _BatchScope(agent=agent, at=at, lang=lang)
     requested = [k for k in (part.strip() for part in keys.split(",")) if k in _BATCH_KEYS]
-
-    async def _panel(key: str) -> tuple[str, dict[str, object] | None]:
-        handler, build_kwargs = _BATCH_KEYS[key]
-        try:
-            return key, await _run_one(handler, build_kwargs(scope))
-        except Exception:  # a failing panel is omitted, never fabricated
-            return key, None
-
-    settled = await asyncio.gather(*(_panel(key) for key in requested))
-    return {"panels": {key: payload for key, payload in settled if payload is not None}}
+    if agent == "all" and at is None:
+        snap = read_snapshot(batch_snapshot_key(lang), SNAPSHOT_TTL_S)
+        if snap is not None:
+            return {"panels": {key: snap[key] for key in requested if key in snap}}
+    scope = _BatchScope(agent=agent, at=at, lang=lang)
+    return {"panels": await _compute_panels(scope, requested)}

@@ -20,6 +20,7 @@ them; the same machine's wall clock is.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from typing import TYPE_CHECKING, Any, Final
@@ -33,9 +34,11 @@ if TYPE_CHECKING:
 __all__ = [
     "SNAPSHOT_INTERVAL_S",
     "SNAPSHOT_TTL_S",
+    "batch_snapshot_key",
     "chrome_snapshot_key",
     "compute_snapshot_entries",
     "fleet_snapshot_key",
+    "inbox_snapshot_key",
     "read_snapshot",
     "reset_read_snapshot",
     "write_snapshot",
@@ -68,6 +71,16 @@ def chrome_snapshot_key(lang: str) -> str:
 def fleet_snapshot_key(lang: str, period: str | None) -> str:
     """Snapshot key for one locale + period fleet rollup (``None`` = the all-history read)."""
     return f"fleet:{lang}:{period or 'all'}"
+
+
+def batch_snapshot_key(lang: str) -> str:
+    """Snapshot key for the whole batch panel set of one locale (default scope, agent all)."""
+    return f"batch:{lang}"
+
+
+def inbox_snapshot_key(lang: str, agent: str) -> str:
+    """Snapshot key for the inbox overview of one locale + agent scope (default agent = ``all``)."""
+    return f"inbox:{lang}:{agent}"
 
 
 def read_snapshot(key: str, ttl_s: float) -> dict[str, Any] | None:
@@ -107,13 +120,18 @@ def reset_read_snapshot() -> None:
 async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:
     """Compute the default-locale hot reads for the leader to publish (best-effort per entry).
 
-    chrome for every locale (it is cheap now that its incident sub-read is memoised), and the fleet
-    rollup for the default locale over the precomputed periods. A single compute that raises omits
-    only its own entry — the worker then computes that one itself, exactly as before.
+    chrome for every locale (cheap now its incident sub-read is memoised); the fleet rollup for the
+    default locale over the precomputed periods; the WHOLE batch panel set for the default locale
+    (default scope agent=all, at=None — computing it here also keeps the underlying ledger/score
+    caches warm on the leader, which is what stops a cold request-path fan-out from stampeding); and
+    the default inbox overview. A single compute that raises omits only its own entry — the worker
+    then computes that one itself, exactly as before.
     """
     import asyncio
 
+    from tessera.api.routes.observability.batch import compute_all_panels
     from tessera.api.routes.observability.fleet import _compute_fleet
+    from tessera.observability import inbox as inbox_mod
     from tessera.observability.chrome import _compute_chrome_uncached
 
     entries: dict[str, dict[str, Any]] = {}
@@ -130,4 +148,17 @@ async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:
             entries[fleet_snapshot_key(_DEFAULT_LOCALE, period)] = payload.model_dump(mode="json")
         except Exception:  # noqa: S112 — best-effort: omit this entry; the worker computes it
             continue
+    # best-effort: on failure the batch endpoint computes its own subset from the live handlers
+    with contextlib.suppress(Exception):
+        entries[batch_snapshot_key(_DEFAULT_LOCALE)] = await compute_all_panels(_DEFAULT_LOCALE)
+    # best-effort: on failure the inbox endpoint computes its own overview
+    with contextlib.suppress(Exception):
+        overview = await asyncio.to_thread(
+            inbox_mod.compute_inbox_overview, lang=_DEFAULT_LOCALE, agent_id=None
+        )
+        entries[inbox_snapshot_key(_DEFAULT_LOCALE, "all")] = {
+            "available": True,
+            "agent": "all",
+            **overview,
+        }
     return entries
