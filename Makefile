@@ -554,7 +554,7 @@ LEDGER_DB           ?= tessera
 LEDGER_SCHEMA       ?= tessera_local
 LEDGER_BACKUP_DIR   ?= backups/ledger
 
-.PHONY: ledger-backup ledger-restore-drill
+.PHONY: ledger-backup ledger-restore-drill ledger-reset
 
 # A BACKUP THAT CANNOT FAIL IS NOT A BACKUP. This recipe used to be three laundered exit
 # codes stacked on one line — a `pg_dump | gzip` pipeline (exit = gzip's), a `;`-chain with
@@ -573,6 +573,18 @@ ledger-restore-drill: install
 	@LEDGER_PG_CONTAINER=$(LEDGER_PG_CONTAINER) LEDGER_DB=$(LEDGER_DB) \
 	 LEDGER_SCHEMA=$(LEDGER_SCHEMA) LEDGER_BACKUP_DIR=$(LEDGER_BACKUP_DIR) \
 	 uv run python scripts/ledger_restore_drill.py
+
+# Reset the LOCAL demo ledger (a bloated demo ledger was the OOM trigger; this makes the manual
+# backup+TRUNCATE+restart safe and repeatable). A VERIFIED backup goes FIRST — ledger_backup.py's
+# own verdict gates the wipe — then TRUNCATE … RESTART IDENTITY, a re-read proving the tables are
+# empty, and an agent restart. Refuses any non-`_local` schema and needs CONFIRM=<schema> so it
+# cannot be fat-fingered. See scripts/ledger_reset.py.
+ledger-reset: install
+	@LEDGER_PG_CONTAINER=$(LEDGER_PG_CONTAINER) LEDGER_DB=$(LEDGER_DB) \
+	 LEDGER_SCHEMA=$(LEDGER_SCHEMA) LEDGER_BACKUP_DIR=$(LEDGER_BACKUP_DIR) \
+	 AGENT_CONTAINER=$(or $(AGENT_CONTAINER),tessera-$(or $(TESSERA_ENV),local)-agent) \
+	 LEDGER_RESET_CONFIRM=$(CONFIRM) \
+	 uv run python scripts/ledger_reset.py
 
 # Full local setup: boot Postgres, ingest all corpora, populate eval demo data
 bootstrap: install

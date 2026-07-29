@@ -146,6 +146,7 @@ _EXIT_WITNESSES: dict[str, str] = {
     # ── the ledger ─────────────────────────────────────────────────────────────────────────────
     "Makefile::ledger-backup": "delegate",  # → scripts/ledger_backup.py  (was a live false green)
     "Makefile::ledger-restore-drill": "delegate",  # → scripts/ledger_restore_drill.py
+    "Makefile::ledger-reset": "delegate",  # → scripts/ledger_reset.py
     # ── worktree ownership: all four publish a Verdict and exit 2 on a refusal ──────────────────
     "Makefile::claim": "delegate",  # → scripts/worktree_owner.py
     "Makefile::release": "delegate",
@@ -217,6 +218,10 @@ _EXIT_WITNESSES: dict[str, str] = {
     # passes RAN, never whether they were good — the judging is check_discrimination.py's job.
     "scripts/measure_contribution_noise.py": "action",
     "scripts/ledger_backup.py": "VERDICT",  # new: it interrogates the artefact it wrote
+    # Gates the wipe on ledger_backup.py's OWN verdict, then RE-READS the row counts to prove the
+    # tables are empty — never trusts psql's exit code. Refuses a non-`_local` schema (NotOk) and a
+    # missing/mismatched confirmation (CannotSay), exit 2.
+    "scripts/ledger_reset.py": "VERDICT",
     "scripts/check_ratchet.py": "VERDICT",  # fixed: a missing report is a named red
     "scripts/landed.py": "VERDICT",  # EXIT_NOT_LANDED=4, distinct from a crash
     "scripts/seed_fixture.py": "VERDICT",  # --check; refuses a dump with no `vector(N)` column
