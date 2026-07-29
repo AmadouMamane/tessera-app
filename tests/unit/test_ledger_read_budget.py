@@ -262,7 +262,7 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
     "tessera/observability/etat_a_date.py": "OWED",
     "tessera/observability/governance_feed.py": "OWED",
     "tessera/observability/guard_explain.py": "file — postgres unnests decisions in SQL",
-    "tessera/observability/integrations.py": "OWED",
+    "tessera/observability/integrations.py": "file — postgres unnests tool decisions in SQL",
     "tessera/observability/policies.py": "OWED",
     "tessera/observability/session_detail.py": "OWED",
     "tessera/observability/tool_validity.py": "OWED",
@@ -276,7 +276,10 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
 #: 2026-07-29: guard_explain paid its debt — the (rule, kind) rollup is a bounded SQL ``GROUP BY``
 #: over unnested decisions (``guard_explain_scan``); it drops to a ``file``-only capability (the
 #: flat-journal fallback still scans), so it stays frozen but leaves the OWED count.
-OWED_COUNT = 13
+#: 2026-07-29: integrations paid its debt — the per-tool stats (decisions/denials/24h/last) are a
+#: bounded SQL ``GROUP BY`` over the unnested ``tool.<name>.allow`` decisions
+#: (``integrations_tool_scan``); ``file``-only fallback, same as guard_explain.
+OWED_COUNT = 12
 
 #: The readers that cannot promise a bound. ``load_ledger_payloads_of_type`` is here ON PURPOSE:
 #: it is bounded only when the type is rare, and the type the cockpit reads most is 94 % of the
@@ -338,11 +341,11 @@ class TestTheFreeze:
         )
 
     def test_the_debt_is_a_number_and_it_only_goes_down(self) -> None:
-        """13 request paths still materialise the chain. Naming them is what makes them payable.
+        """12 request paths still materialise the chain. Naming them is what makes them payable.
 
         The honest claim of this lot is NOT "the class is closed everywhere". It is: no NEW
         full-ledger read can appear, the fleet and the header no longer perform one, and the
-        thirteen that remain are named, counted, and cannot multiply while nobody is looking.
+        twelve that remain are named, counted, and cannot multiply while nobody is looking.
         """
         owed = sum(1 for reason in _UNBOUNDED_CAPABLE.values() if reason.startswith("OWED"))
         assert owed == OWED_COUNT, (

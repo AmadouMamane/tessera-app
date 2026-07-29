@@ -25,11 +25,15 @@ ae/oe/ue/ss); enum keys (category/status/criticality) stay stable.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from tessera.guard.decisions import Policy, ToolPolicy, load_policy
-from tessera.guard.ledger_store import read_ledger_entries
+from tessera.guard.ledger_store import (
+    integrations_tool_scan,
+    ledger_source,
+    read_ledger_entries,
+)
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
 
@@ -233,7 +237,23 @@ def _record(scan: _Scan, decision: dict[str, object], now: datetime) -> None:
 
 
 def _scan_audit(path: Path, now: datetime) -> _Scan:
-    """Aggregate per-tool decision stats from the guard audit log."""
+    """Aggregate per-tool decision stats from the guard audit trail.
+
+    Postgres: one bounded ``GROUP BY`` over the unnested ``tool.<name>.allow`` decisions
+    (:func:`integrations_tool_scan`) — one row per tool, never the chain. File source: the flat
+    journal has no index, so it keeps the Python fold; both build a byte-identical ``_Scan``
+    (verified against the real Postgres engine over synthetic edge cases).
+    """
+    if ledger_source() == "postgres":
+        scan = _Scan()
+        for name, n_dec, n_den, n_c24, last_seen in integrations_tool_scan(now - timedelta(days=1)):
+            stat = scan.stat(name)
+            stat.decisions = n_dec
+            stat.denials = n_den
+            stat.c24 = n_c24
+            stat.last = _parse_dt(last_seen)
+        return scan
+
     scan = _Scan()
     for obj in read_ledger_entries(path):
         if obj.get("type") != "tessera.guard.audit":

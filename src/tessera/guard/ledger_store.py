@@ -954,6 +954,59 @@ def guard_explain_scan() -> tuple[int, list[tuple[str, str, int, int]]]:
     return n_entries, groups
 
 
+def integrations_tool_scan(cutoff: datetime) -> list[tuple[str, int, int, int, str | None]]:
+    """Per-tool guard-decision stats as bounded SQL: ``[(name, decisions, denials, c24, last)]``.
+
+    ``integrations._scan_audit`` materialised every ``tessera.guard.audit`` entry and folded a
+    per-tool ``_ToolStat`` in Python. This unnests the decisions, keeps only ``tool.<name>.allow``
+    rules, and ``GROUP BY`` the extracted tool name — one row per tool (a handful), never the chain.
+
+    Byte-identical to the Python fold (verified on the real Postgres engine over synthetic edge
+    cases):
+
+    * ``name`` = ``substring(rule from 6 for GREATEST(len-11, 0))`` reproduces ``rule[5:-6]``
+      (``GREATEST(..,0)`` matches Python's empty slice on the ``tool.allow`` overlap, no crash).
+      The pair of ``LIKE`` clauses is ``startswith('tool.') and endswith('.allow')`` (overlap
+      allowed, unlike a single ``'tool.%.allow'``).
+    * ``c24`` counts decisions strictly newer than ``cutoff`` (= ``now - 1 day``), matching
+      ``(now - when).total_seconds() < 86400``. The caller passes the cutoff so the boundary is its
+      own clock, not the database's.
+    * ``last`` = ``max`` of the raw ``occurred_at`` TEXT — for the consistent UTC-ISO stamps
+      ``emit_audit`` writes, lexicographic max IS chronological max, and returning the string (the
+      caller re-parses it) avoids any timestamptz→session-tz display drift.
+
+    Non-object array elements and null occurred_at are dropped (mirroring ``isinstance(dict)`` and
+    the ``when is None`` skip). Postgres only; a file-source caller keeps the Python loop.
+    """
+    # The only interpolation is the fixed LEDGER_TABLE identifier — no user input reaches the SQL.
+    query = (
+        "SELECT substring(rule from 6 for GREATEST(length(rule) - 11, 0)) AS name, "  # noqa: S608
+        "count(*), count(*) FILTER (WHERE kind = 'deny'), "
+        "count(*) FILTER (WHERE occ IS NOT NULL AND occ::timestamptz > %s), "
+        "max(occ) FROM ("
+        "  SELECT d->>'policy_rule' AS rule, d->>'decision' AS kind, d->>'occurred_at' AS occ "
+        f"  FROM {LEDGER_TABLE} a, "
+        "       LATERAL jsonb_array_elements(a.payload->'decisions') AS d "
+        "  WHERE a.payload->>'type' = 'tessera.guard.audit' "
+        "    AND jsonb_typeof(a.payload->'decisions') = 'array' "
+        "    AND jsonb_typeof(d) = 'object' "
+        "    AND d->>'policy_rule' LIKE 'tool.%%' AND d->>'policy_rule' LIKE '%%.allow'"
+        ") s GROUP BY name"
+    )
+    with (
+        store_read("postgres", "audit_ledger.integrations_tool_scan", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, [cutoff])
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    return [
+        (str(r[0]), int(r[1]), int(r[2]), int(r[3]), str(r[4]) if r[4] is not None else None)
+        for r in rows
+    ]
+
+
 def ledger_head_seq() -> int:
     """The active ledger's high-water ``seq`` (0 when empty) — one indexed row.
 
