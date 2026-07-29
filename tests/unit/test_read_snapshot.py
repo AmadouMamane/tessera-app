@@ -98,3 +98,37 @@ async def test_compute_entries_omits_a_failing_compute(monkeypatch: pytest.Monke
     assert entries["fleet:fr:all"] == {"available": False}  # the others still published
     assert entries["batch:fr"] == {"ai-act": {"x": 1}, "refusal": {"y": 2}}
     assert entries["inbox:fr:all"] == {"available": True, "agent": "all", "queue": 3}
+
+
+class _RecordingLogger:
+    """Captures ``warning(event, **fields)`` calls so a test can assert what was logged."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, object]]] = []
+
+    def warning(self, event: str, **fields: object) -> None:
+        self.calls.append((event, fields))
+
+
+async def test_an_omitted_entry_names_its_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A compute that raises is not a silent hole: it logs ``entry_omitted`` with key + error."""
+    _stub_all_computes(monkeypatch)
+    recorder = _RecordingLogger()
+    monkeypatch.setattr(rs, "_LOG", recorder)
+
+    def _boom(lang: str) -> dict[str, object]:
+        raise RuntimeError("postgres down")
+
+    monkeypatch.setattr("tessera.observability.chrome._compute_chrome_uncached", _boom)
+    await rs.compute_snapshot_entries()
+    omitted = {
+        fields["entry"]
+        for event, fields in recorder.calls
+        if event == "read_snapshot.entry_omitted"
+    }
+    assert omitted == {"chrome:fr", "chrome:de", "chrome:en"}
+    assert all(
+        "postgres down" in str(fields["error"])
+        for event, fields in recorder.calls
+        if event == "read_snapshot.entry_omitted"
+    )

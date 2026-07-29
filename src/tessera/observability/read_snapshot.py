@@ -20,16 +20,18 @@ them; the same machine's wall clock is.
 
 from __future__ import annotations
 
-import contextlib
 import json
 import time
 from typing import TYPE_CHECKING, Any, Final
 
 from tessera.fsutil import atomic_write_text
+from tessera.observability.logging import get_logger
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+_LOG = get_logger("tessera.snapshot")
 
 __all__ = [
     "SNAPSHOT_INTERVAL_S",
@@ -124,8 +126,9 @@ async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:
     default locale over the precomputed periods; the WHOLE batch panel set for the default locale
     (default scope agent=all, at=None — computing it here also keeps the underlying ledger/score
     caches warm on the leader, which is what stops a cold request-path fan-out from stampeding); and
-    the default inbox overview. A single compute that raises omits only its own entry — the worker
-    then computes that one itself, exactly as before.
+    the default inbox overview. A compute that raises omits only its OWN entry — the worker then
+    computes that one itself, exactly as before — and it is LOGGED (``read_snapshot.entry_omitted``,
+    with the error) so a panel that fails persistently is loud, not a silent hole in the snapshot.
     """
     import asyncio
 
@@ -136,29 +139,29 @@ async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:
 
     entries: dict[str, dict[str, Any]] = {}
     for lang in _SNAPSHOT_LOCALES:
+        chrome_key = chrome_snapshot_key(lang)
         try:
-            entries[chrome_snapshot_key(lang)] = await asyncio.to_thread(
-                _compute_chrome_uncached, lang
-            )
-        except Exception:  # noqa: S112 — best-effort: omit this entry; the leader loop logs health
-            continue
+            entries[chrome_key] = await asyncio.to_thread(_compute_chrome_uncached, lang)
+        except Exception as exc:
+            _LOG.warning("read_snapshot.entry_omitted", entry=chrome_key, error=str(exc))
     for period in _SNAPSHOT_FLEET_PERIODS:
+        fleet_key = fleet_snapshot_key(_DEFAULT_LOCALE, period)
         try:
             payload = await _compute_fleet(_DEFAULT_LOCALE, period, None)
-            entries[fleet_snapshot_key(_DEFAULT_LOCALE, period)] = payload.model_dump(mode="json")
-        except Exception:  # noqa: S112 — best-effort: omit this entry; the worker computes it
-            continue
-    # best-effort: on failure the batch endpoint computes its own subset from the live handlers
-    with contextlib.suppress(Exception):
-        entries[batch_snapshot_key(_DEFAULT_LOCALE)] = await compute_all_panels(_DEFAULT_LOCALE)
-    # best-effort: on failure the inbox endpoint computes its own overview
-    with contextlib.suppress(Exception):
+            entries[fleet_key] = payload.model_dump(mode="json")
+        except Exception as exc:
+            _LOG.warning("read_snapshot.entry_omitted", entry=fleet_key, error=str(exc))
+    batch_key = batch_snapshot_key(_DEFAULT_LOCALE)
+    try:
+        entries[batch_key] = await compute_all_panels(_DEFAULT_LOCALE)
+    except Exception as exc:
+        _LOG.warning("read_snapshot.entry_omitted", entry=batch_key, error=str(exc))
+    inbox_key = inbox_snapshot_key(_DEFAULT_LOCALE, "all")
+    try:
         overview = await asyncio.to_thread(
             inbox_mod.compute_inbox_overview, lang=_DEFAULT_LOCALE, agent_id=None
         )
-        entries[inbox_snapshot_key(_DEFAULT_LOCALE, "all")] = {
-            "available": True,
-            "agent": "all",
-            **overview,
-        }
+        entries[inbox_key] = {"available": True, "agent": "all", **overview}
+    except Exception as exc:
+        _LOG.warning("read_snapshot.entry_omitted", entry=inbox_key, error=str(exc))
     return entries
