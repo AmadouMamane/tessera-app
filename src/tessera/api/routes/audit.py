@@ -252,12 +252,18 @@ _INTEGRITY_CACHE: _IntegrityCache | None = None
 _PG_ENTRIES_CACHE_LOCK = RLock()
 _PG_ENTRIES_CACHE: tuple[int, list[AuditEntry]] | None = None  # (head_seq, validated entries)
 
+_OVERVIEW_CACHE_LOCK = RLock()
+# (head_seq, {filter-key: AuditOverview}) — the ~1 s aggregation memoised per chain head.
+_OVERVIEW_CACHE: tuple[int, dict[tuple[object, ...], AuditOverview]] | None = None
+
 
 def reset_audit_entries_cache() -> None:
-    """Drop the postgres validated-entries memo (test isolation; harmless in file mode)."""
-    global _PG_ENTRIES_CACHE
+    """Drop the postgres validated-entries + overview memos (test isolation; no-op in file mode)."""
+    global _PG_ENTRIES_CACHE, _OVERVIEW_CACHE
     with _PG_ENTRIES_CACHE_LOCK:
         _PG_ENTRIES_CACHE = None
+    with _OVERVIEW_CACHE_LOCK:
+        _OVERVIEW_CACHE = None
 
 
 def _resolve_audit_path() -> Path:
@@ -907,15 +913,85 @@ def _build_overview(
     )
 
 
+def _overview_cached(
+    path: Path,
+    *,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    target: str | None = None,
+    outcome: AuditOutcome | None = None,
+    event_type: AuditEventType | None = None,
+    actor_role: AuditActorRole | None = None,
+    scope: str | None = None,
+    policy_rule: str | None = None,
+    q: str | None = None,
+    agent: str | None = None,
+) -> AuditOverview:
+    """The overview, memoised on the append-only chain head (postgres only).
+
+    ``_build_overview`` aggregates the whole chain (~1 s over ~160 k entries — the 7-day window the
+    audit-log page sends captures essentially all of it) and it was recomputed on every 15 s poll
+    AND on every leader snapshot cycle. The head is a complete key (an unchanged ``max(seq)`` proves
+    every row is byte-identical), so the aggregation now runs once per (head, window, filters). File
+    mode has no head to key on, so it builds directly (the entries memo already covers dev/test).
+    """
+
+    def build() -> AuditOverview:
+        return _build_overview(
+            _read_entries(path),
+            _audit_integrity(path),
+            since=since,
+            until=until,
+            target=target,
+            outcome=outcome,
+            event_type=event_type,
+            actor_role=actor_role,
+            scope=scope,
+            policy_rule=policy_rule,
+            q=q,
+            agent=agent,
+        )
+
+    if ledger_source() != "postgres":
+        return build()
+
+    global _OVERVIEW_CACHE
+    head = ledger_head_seq()
+    key: tuple[object, ...] = (
+        since.isoformat() if since is not None else None,
+        until.isoformat() if until is not None else None,
+        target,
+        outcome,
+        event_type,
+        actor_role,
+        scope,
+        policy_rule,
+        q,
+        agent,
+    )
+    with _OVERVIEW_CACHE_LOCK:
+        cached = _OVERVIEW_CACHE
+        if cached is not None and cached[0] == head and key in cached[1]:
+            return cached[1][key]
+    # Built OUTSIDE the lock: the ~1 s aggregation must not serialise every overview request behind
+    # one build. A rare concurrent double-build at the same head is harmless (same result, cached).
+    overview = build()
+    with _OVERVIEW_CACHE_LOCK:
+        cached = _OVERVIEW_CACHE
+        if cached is None or cached[0] != head:
+            _OVERVIEW_CACHE = (head, {key: overview})
+        else:
+            cached[1][key] = overview
+    return overview
+
+
 def compute_default_overview() -> dict[str, object]:
     """The unfiltered, full-window audit overview — the org-wide default the snapshot precomputes.
 
     Locale-independent (the overview carries no free text), so one snapshot entry serves every
     operator. Shared by the leader's snapshot writer and by the route's own miss fallback.
     """
-    path = _resolve_audit_path()
-    integrity = _audit_integrity(path)
-    overview = _build_overview(_read_entries(path), integrity, since=None, until=None)
+    overview = _overview_cached(_resolve_audit_path())
     return overview.model_dump(mode="json")
 
 
@@ -998,11 +1074,11 @@ async def audit_overview(
         snap = read_snapshot(audit_overview_snapshot_key(), SNAPSHOT_TTL_S)
         if snap is not None:
             return AuditOverview.model_validate(snap)
-    path = _resolve_audit_path()
-    integrity = _audit_integrity(path)
-    return _build_overview(
-        _read_entries(path),
-        integrity,
+    # A windowed/filtered overview (the audit-log page's rolling 7-day view, polled every 15 s) is
+    # memoised on the chain head, so the ~1 s aggregation runs once per (head, window, filters) —
+    # not on every poll — and cannot pile up under the leader snapshot cycle's contention.
+    return _overview_cached(
+        _resolve_audit_path(),
         since=_parse_datetime(since),
         until=_parse_datetime(until),
         target=target,

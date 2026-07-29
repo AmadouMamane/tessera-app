@@ -95,3 +95,56 @@ def test_reset_drops_the_memo(monkeypatch: pytest.MonkeyPatch) -> None:
     audit.reset_audit_entries_cache()
     audit._read_entries(audit._resolve_audit_path())
     assert len(calls) == 2
+
+
+def _install_overview(monkeypatch: pytest.MonkeyPatch, head: list[int], builds: list[int]) -> None:
+    """Drive _overview_cached with a controllable head and a build-call counter (postgres)."""
+    monkeypatch.setattr(audit, "ledger_source", lambda: "postgres")
+    monkeypatch.setattr(audit, "ledger_head_seq", lambda: head[0])
+    monkeypatch.setattr(audit, "_read_entries", lambda *_a, **_k: [])
+    monkeypatch.setattr(audit, "_audit_integrity", lambda *_a, **_k: object())
+
+    def _build(*_a: object, **_k: object) -> object:
+        builds.append(1)
+        return SimpleNamespace(tag=len(builds))
+
+    monkeypatch.setattr(audit, "_build_overview", _build)
+
+
+def test_overview_is_cached_on_the_head(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The ~1 s aggregation runs ONCE per head — the 15 s poll + leader cycle reuse the memo."""
+    audit.reset_audit_entries_cache()
+    head, builds = [5], []
+    _install_overview(monkeypatch, head, builds)
+    path = audit._resolve_audit_path()
+    first = audit._overview_cached(path)
+    second = audit._overview_cached(path)
+    assert len(builds) == 1 and first is second  # same head → built once, same object
+    head[0] = 6
+    third = audit._overview_cached(path)
+    assert len(builds) == 2 and third is not first  # a row landed → rebuilt
+
+
+def test_overview_keys_each_window_separately(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default vs windowed are distinct keys; a repeated window hits the memo."""
+    audit.reset_audit_entries_cache()
+    head, builds = [5], []
+    _install_overview(monkeypatch, head, builds)
+    path = audit._resolve_audit_path()
+    since = datetime(2026, 7, 1, tzinfo=UTC)
+    audit._overview_cached(path)  # default
+    audit._overview_cached(path, since=since)  # windowed — a new key
+    audit._overview_cached(path, since=since)  # windowed — hits
+    assert len(builds) == 2
+
+
+def test_overview_not_cached_in_file_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    """File mode has no head to key on — it builds directly (the entries memo covers it)."""
+    audit.reset_audit_entries_cache()
+    head, builds = [5], []
+    _install_overview(monkeypatch, head, builds)
+    monkeypatch.setattr(audit, "ledger_source", lambda: "file")
+    path = audit._resolve_audit_path()
+    audit._overview_cached(path)
+    audit._overview_cached(path)
+    assert len(builds) == 2
