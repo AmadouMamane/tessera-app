@@ -228,6 +228,9 @@ def _obs_over_refusal(payload: object) -> float:
 
 
 def _refusal_reactive_compute(policy: InjectionPolicy) -> object:
+    # Memoised on policy_hash; this probe patches `_detector` below that seam and keeps the same
+    # hash across the perturbation (a rules-only change), so bust the memo to actually recompute.
+    refusal_mod.reset_refusal_cache()
     with patch.object(limes_backend, "_detector", lambda: _detector_from(policy)):
         return refusal_mod.compute_refusal_calibration()
 

@@ -77,7 +77,9 @@ def run_redteam(
     bypassed = [
         text
         for text in attacks
-        if check_user_input(text, policy=active_policy, actor=GUARD_ACTOR).allowed
+        # audit=False: replaying an adversarial corpus to MEASURE the guard is not real traffic —
+        # it must not append synthetic "attacks" to the opposability ledger. Decision is unchanged.
+        if check_user_input(text, policy=active_policy, actor=GUARD_ACTOR, audit=False).allowed
     ]
     n_attacks = len(attacks)
     snapshot = RedTeamSnapshot(

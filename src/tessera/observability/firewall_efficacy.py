@@ -149,13 +149,13 @@ def _score_efficacy(
     tp = sum(
         1
         for text in positives
-        if not check_user_input(text, policy=policy, actor=GUARD_ACTOR).allowed
+        if not check_user_input(text, policy=policy, actor=GUARD_ACTOR, audit=False).allowed
     )
     fn = len(positives) - tp
     fp = sum(
         1
         for text in negatives
-        if not check_user_input(text, policy=policy, actor=GUARD_ACTOR).allowed
+        if not check_user_input(text, policy=policy, actor=GUARD_ACTOR, audit=False).allowed
     )
     tn = len(negatives) - fp
 

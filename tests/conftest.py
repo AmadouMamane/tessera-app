@@ -48,6 +48,36 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
             session.exitstatus = 1
 
 
+def _reset_process_caches() -> None:
+    """Drop every process-singleton read cache/memo so no test leaks state into the next.
+
+    These are keyed on a head/policy/TTL that a test can drive; an unreset memo would serve one
+    test's result to the next test's freshly-patched reads. Imported lazily so importing conftest
+    never pulls the app graph.
+    """
+    from tessera.api.routes.audit import reset_audit_entries_cache
+    from tessera.api.routes.observability.console import reset_timeline_audit_cache
+    from tessera.api.routes.observability.fleet import reset_fleet_cache
+    from tessera.guard.ledger_store import reset_ledger_payloads_cache
+    from tessera.observability.chrome import reset_chrome_cache
+    from tessera.observability.firewall_efficacy import reset_efficacy_cache
+    from tessera.observability.incidents import reset_open_incidents_cache
+    from tessera.observability.read_snapshot import reset_read_snapshot
+    from tessera.observability.refusal import reset_refusal_cache
+
+    reset_ledger_payloads_cache()
+    reset_timeline_audit_cache()
+    reset_audit_entries_cache()
+    reset_chrome_cache()
+    reset_fleet_cache()
+    reset_efficacy_cache()
+    reset_refusal_cache()
+    reset_open_incidents_cache()
+    reset_read_snapshot()
+    get_settings.cache_clear()
+    get_memory_backend.cache_clear()
+
+
 @pytest.fixture(autouse=True)
 def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Force every test to run against a deterministic, isolated settings."""
@@ -120,36 +150,9 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     # drove it to a head must not leave those rows visible to the next test's fresh chain.
     # The chrome memo is a short-TTL singleton (ADR 0044 follow-up): a test that populated it
     # must not serve its stale result to the next test's patched reads.
-    from tessera.api.routes.audit import reset_audit_entries_cache
-    from tessera.api.routes.observability.console import reset_timeline_audit_cache
-    from tessera.api.routes.observability.fleet import reset_fleet_cache
-    from tessera.guard.ledger_store import reset_ledger_payloads_cache
-    from tessera.observability.chrome import reset_chrome_cache
-    from tessera.observability.firewall_efficacy import reset_efficacy_cache
-    from tessera.observability.incidents import reset_open_incidents_cache
-    from tessera.observability.read_snapshot import reset_read_snapshot
-
-    reset_ledger_payloads_cache()
-    reset_timeline_audit_cache()
-    reset_audit_entries_cache()
-    reset_chrome_cache()
-    reset_fleet_cache()
-    reset_efficacy_cache()
-    reset_open_incidents_cache()
-    reset_read_snapshot()
-    get_settings.cache_clear()
-    get_memory_backend.cache_clear()
+    _reset_process_caches()
     yield
-    reset_ledger_payloads_cache()
-    reset_timeline_audit_cache()
-    reset_audit_entries_cache()
-    reset_chrome_cache()
-    reset_fleet_cache()
-    reset_efficacy_cache()
-    reset_open_incidents_cache()
-    reset_read_snapshot()
-    get_settings.cache_clear()
-    get_memory_backend.cache_clear()
+    _reset_process_caches()
 
 
 @pytest.fixture

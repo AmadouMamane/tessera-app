@@ -18,18 +18,26 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from typing import TYPE_CHECKING
 
 from tessera.guard.adapter import check_user_input
 from tessera.guard.audit import GUARD_ACTOR
 from tessera.guard.decisions import load_policy
+from tessera.guard.limes_backend import injection_witness
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from tessera.guard.decisions import Policy
 
-__all__ = ["RefusalReport", "compute_refusal_calibration", "load_forbidden", "load_legit"]
+__all__ = [
+    "RefusalReport",
+    "compute_refusal_calibration",
+    "load_forbidden",
+    "load_legit",
+    "reset_refusal_cache",
+]
 
 # src/tessera/observability/refusal.py → parents[3] is the repo root.
 _REPO = Path(__file__).resolve().parents[3]
@@ -61,8 +69,26 @@ def load_forbidden() -> list[str]:
     return data
 
 
+# The default-corpus report is deterministic given the live policy, but scoring it runs the whole
+# corpus through the guard (llama inferences). It is a batch-snapshot panel the leader recomputes
+# every cycle, so uncached it burned that CPU continuously; memoise it on the policy hash so the
+# corpus runs once per policy change. A custom corpus (tests) bypasses the cache.
+_REFUSAL_CACHE_LOCK = Lock()
+_REFUSAL_CACHE: tuple[str, RefusalReport] | None = None  # (policy_hash, report)
+
+
+def reset_refusal_cache() -> None:
+    """Drop the memoised default-corpus refusal report (test isolation)."""
+    global _REFUSAL_CACHE
+    with _REFUSAL_CACHE_LOCK:
+        _REFUSAL_CACHE = None
+
+
 def _refused(text: str, policy: Policy) -> bool:
-    return not check_user_input(text, policy=policy, actor=GUARD_ACTOR).allowed
+    # audit=False: this is a calibration MEASUREMENT over a fixed corpus, not real user traffic —
+    # it must not append to the opposability ledger (it is a batch-snapshot panel, so auditing it
+    # flooded the append-only chain every cycle). The allow/deny decision is unchanged.
+    return not check_user_input(text, policy=policy, actor=GUARD_ACTOR, audit=False).allowed
 
 
 def compute_refusal_calibration(
@@ -73,6 +99,10 @@ def compute_refusal_calibration(
 ) -> RefusalReport:
     """Measure over- and under-refusal of the guard.
 
+    The default corpus is memoised on the live policy hash (scoring it runs the whole corpus
+    through the guard, and it is a batch-snapshot panel recomputed every cycle). A custom corpus
+    or policy (tests) always scores fresh.
+
     Args:
         legit: Legitimate questions; the bundled set is loaded if omitted.
         forbidden: Forbidden requests; the bundled set is loaded if omitted.
@@ -81,6 +111,28 @@ def compute_refusal_calibration(
     Returns:
         A :class:`RefusalReport`.
     """
+    if legit is not None or forbidden is not None or policy is not None:
+        return _score_refusal(legit=legit, forbidden=forbidden, policy=policy)
+
+    _, _, policy_hash = injection_witness()  # cheap: detector metadata, runs no guard checks
+    global _REFUSAL_CACHE
+    with _REFUSAL_CACHE_LOCK:
+        cached = _REFUSAL_CACHE
+        if cached is not None and cached[0] == policy_hash:
+            return cached[1]
+    report = _score_refusal(legit=None, forbidden=None, policy=None)
+    with _REFUSAL_CACHE_LOCK:
+        _REFUSAL_CACHE = (policy_hash, report)
+    return report
+
+
+def _score_refusal(
+    *,
+    legit: Sequence[str] | None = None,
+    forbidden: Sequence[str] | None = None,
+    policy: Policy | None = None,
+) -> RefusalReport:
+    """Run the guard over legit + forbidden corpora and score over/under-refusal (uncached)."""
     legit_inputs = list(legit) if legit is not None else load_legit()
     forbidden_inputs = list(forbidden) if forbidden is not None else load_forbidden()
     active_policy = policy or load_policy()

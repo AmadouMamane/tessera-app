@@ -249,6 +249,7 @@ def check_user_input(
     *,
     policy: Policy | None = None,
     actor: Actor,
+    audit: bool = True,
 ) -> InputCheckResult:
     """Check raw user input for prompt injection (limes) and role-play sanitisation.
 
@@ -269,6 +270,14 @@ def check_user_input(
         policy: Optional compiled policy override for tests and offline evaluations.
         actor: Verified principal behind the input, or the named guard actor when no human
             principal exists at the call site.
+        audit: Whether to record this decision to the opposability ledger. ``True`` for every
+            real turn (the default). The cockpit's guard-MEASUREMENT panels (firewall efficacy,
+            refusal calibration, red-team) run fixed corpora of synthetic prompts through this
+            same guard to score it; those are not real user traffic, so they pass ``audit=False``
+            to keep their probe inputs out of the tamper-evident audit trail (and out of the
+            append-only ledger, which they were otherwise flooding on every batch-snapshot cycle).
+            The decision itself — allow/deny — is identical either way; only the ledger write is
+            skipped.
     """
     from tessera.agent.state import GuardDecisionRecord
 
@@ -288,14 +297,15 @@ def check_user_input(
             rationale=outcome.rationale,
         )
         records.append(record)
-        emit_audit(
-            target="user_input",
-            arguments={"text": "[redacted — injection refused by limes]"},
-            decisions=records,
-            sink=settings.guard.audit_sink,
-            actor=actor,
-            outcome="denied",
-        )
+        if audit:
+            emit_audit(
+                target="user_input",
+                arguments={"text": "[redacted — injection refused by limes]"},
+                decisions=records,
+                sink=settings.guard.audit_sink,
+                actor=actor,
+                outcome="denied",
+            )
         _record_guard_decision("user_input", "denied")
         return InputCheckResult(
             allowed=False,
@@ -330,14 +340,15 @@ def check_user_input(
             )
         )
 
-    emit_audit(
-        target="user_input",
-        arguments={"text": "[redacted — input checked]"},
-        decisions=records,
-        sink=settings.guard.audit_sink,
-        actor=actor,
-        outcome="allowed",
-    )
+    if audit:
+        emit_audit(
+            target="user_input",
+            arguments={"text": "[redacted — input checked]"},
+            decisions=records,
+            sink=settings.guard.audit_sink,
+            actor=actor,
+            outcome="allowed",
+        )
     _record_guard_decision("user_input", "allowed")
 
     return InputCheckResult(
