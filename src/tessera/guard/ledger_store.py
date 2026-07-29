@@ -896,6 +896,64 @@ def count_ledger_entries() -> int:
     return int(row[0]) if row and row[0] is not None else 0
 
 
+def guard_explain_scan() -> tuple[int, list[tuple[str, str, int, int]]]:
+    """Guard-explain rollup as bounded SQL: ``(n_entries, [(rule, kind, count, first_seen)])``.
+
+    ``compute_guard_explain`` materialised every ``tessera.guard.audit`` entry (94 % of the chain)
+    and rolled up ``Counter[(policy_rule, decision)]`` in Python. This asks the database instead:
+    ``jsonb_array_elements(payload->'decisions')`` unnests each entry's decisions and a ``GROUP BY``
+    returns ONE row per distinct ``(rule, kind)`` pair (a few dozen), never the chain.
+
+    Byte-identical to the Python path (verified against the live ledger):
+
+    * ``rule``/``kind`` reproduce ``str(decision.get(k, 'unknown'))`` — a ``CASE`` distinguishes an
+      absent key ('unknown') from a JSON ``null`` value ('None'); a present string/number yields its
+      text, exactly as ``str()`` does. (policy_rule/decision are always strings in real data.)
+    * ``first_seen`` = ``min(seq * 1_000_000 + ordinality)`` per pair, i.e. the smallest
+      (entry seq, array index) at which the pair appears. ``Counter.most_common`` breaks count ties
+      by first-insertion order = first-encountered = this value, so the caller's
+      ``sorted(key=(-count, first_seen))[:N]`` matches ``most_common(N)``.
+
+    ``n_entries`` counts audit entries carrying a ``decisions`` ARRAY (empty arrays included,
+    matching ``isinstance(decisions, list)``); non-object array elements are dropped
+    (``jsonb_typeof = 'object'`` mirrors ``isinstance(decision, dict)``). Postgres only; a
+    file-source caller keeps the Python loop.
+    """
+    entries_q = (
+        f"SELECT count(*) FROM {LEDGER_TABLE} "  # noqa: S608 — fixed identifier
+        "WHERE payload->>'type' = 'tessera.guard.audit' "
+        "AND jsonb_typeof(payload->'decisions') = 'array'"
+    )
+    groups_q = (
+        "SELECT rule, kind, count(*), min(ord_key) FROM ("  # noqa: S608 — fixed identifier
+        "  SELECT"
+        "    CASE WHEN d ? 'policy_rule' THEN COALESCE(d->>'policy_rule', 'None')"
+        "         ELSE 'unknown' END AS rule,"
+        "    CASE WHEN d ? 'decision' THEN COALESCE(d->>'decision', 'None')"
+        "         ELSE 'unknown' END AS kind,"
+        "    a.seq * 1000000 + t.ord AS ord_key"
+        f"  FROM {LEDGER_TABLE} a,"
+        "       LATERAL jsonb_array_elements(a.payload->'decisions') WITH ORDINALITY AS t(d, ord)"
+        "  WHERE a.payload->>'type' = 'tessera.guard.audit'"
+        "    AND jsonb_typeof(a.payload->'decisions') = 'array'"
+        "    AND jsonb_typeof(t.d) = 'object'"
+        ") s GROUP BY rule, kind"
+    )
+    with (
+        store_read("postgres", "audit_ledger.guard_explain_scan", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(entries_q)
+        head = cur.fetchone()
+        n_entries = int(head[0]) if head and head[0] is not None else 0
+        cur.execute(groups_q)
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    groups = [(str(r[0]), str(r[1]), int(r[2]), int(r[3])) for r in rows]
+    return n_entries, groups
+
+
 def ledger_head_seq() -> int:
     """The active ledger's high-water ``seq`` (0 when empty) — one indexed row.
 
