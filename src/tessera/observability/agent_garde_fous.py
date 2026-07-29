@@ -26,12 +26,17 @@ import asyncio
 import json
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, cast
 
 from tessera.fsutil import atomic_write_text
 from tessera.guard.decisions import Policy, load_policy
-from tessera.guard.ledger_store import read_ledger_entries, verify_active_ledger_checkpointed
+from tessera.guard.ledger_store import (
+    audit_rule_scan,
+    ledger_source,
+    read_ledger_entries,
+    verify_active_ledger_checkpointed,
+)
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -317,7 +322,19 @@ def _parse_dt(value: object) -> datetime | None:
 
 
 def _scan_audit(path: Path, now: datetime) -> _AuditScan:
-    """Aggregate per-rule and global decision stats from the JSON-Lines log."""
+    """Aggregate per-rule and global decision stats from the active audit source.
+
+    Postgres unnests the decisions and rolls them up in SQL (one row per rule, never the chain);
+    the flat journal has no index, so file mode keeps the whole-log Python fold. The two paths are
+    byte-identical (verified against the live ledger and a synthetic boundary CTE).
+    """
+    if ledger_source() == "postgres":
+        return _scan_audit_postgres(now)
+    return _scan_audit_file(path, now)
+
+
+def _scan_audit_file(path: Path, now: datetime) -> _AuditScan:
+    """Whole-log Python fold over the flat journal — no index to push the rollup down to."""
     scan = _AuditScan()
     for obj in read_ledger_entries(path):
         if obj.get("type") != "tessera.guard.audit":
@@ -328,6 +345,31 @@ def _scan_audit(path: Path, now: datetime) -> _AuditScan:
         for decision in decisions:
             if isinstance(decision, dict):
                 _record_decision(scan, decision, now)
+    return scan
+
+
+def _scan_audit_postgres(now: datetime) -> _AuditScan:
+    """The same aggregates as :func:`_scan_audit_file`, rolled up in bounded SQL (one row/rule).
+
+    ``audit_rule_scan`` returns one grouped row per ``policy_rule``; the four whole-log totals are
+    the column sums (``total_24h`` = sum of ``c24``, ``denials_24h`` = sum of the deny-in-24h
+    subset). ``last_fired`` re-parses the raw ``occurred_at`` string the aggregate carried back.
+    """
+    scan = _AuditScan()
+    cutoff24 = now - timedelta(days=1)
+    cutoff48 = now - timedelta(days=2)
+    for rule, decisions, denials, den_c24, c24, cprev, last in audit_rule_scan(cutoff24, cutoff48):
+        scan.per_rule[rule] = _RuleStat(
+            decisions=decisions,
+            denials=denials,
+            last_fired=_parse_dt(last),
+            c24=c24,
+            cprev=cprev,
+        )
+        scan.total += decisions
+        scan.denials += denials
+        scan.total_24h += c24
+        scan.denials_24h += den_c24
     return scan
 
 

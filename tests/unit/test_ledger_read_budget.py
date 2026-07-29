@@ -254,7 +254,7 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
     "tessera/api/routes/observability/_common.py": "OWED — audit 94 %, cached sync + filter",
     "tessera/observability/spine/adapters/current.py": "OWED — same 94 % read, via the spine",
     # ── OWED: request paths that still read the whole chain and filter in Python ─
-    "tessera/observability/agent_garde_fous.py": "OWED",
+    "tessera/observability/agent_garde_fous.py": "file — postgres unnests decisions in SQL",
     "tessera/observability/agent_lifecycle.py": "OWED",
     "tessera/observability/automation_store.py": "OWED",
     "tessera/observability/automations.py": "OWED",
@@ -279,7 +279,11 @@ _UNBOUNDED_CAPABLE: dict[str, str] = {
 #: 2026-07-29: integrations paid its debt — the per-tool stats (decisions/denials/24h/last) are a
 #: bounded SQL ``GROUP BY`` over the unnested ``tool.<name>.allow`` decisions
 #: (``integrations_tool_scan``); ``file``-only fallback, same as guard_explain.
-OWED_COUNT = 12
+#: 2026-07-30: agent_garde_fous paid its debt — the per-rule stats + four whole-log totals
+#: (decisions/denials, 24h, prior-24h, last-fired) are a bounded SQL ``GROUP BY`` over the unnested
+#: decisions (``audit_rule_scan``, cutoffs passed so the boundary is the caller's clock);
+#: ``file``-only fallback, same as guard_explain.
+OWED_COUNT = 11
 
 #: The readers that cannot promise a bound. ``load_ledger_payloads_of_type`` is here ON PURPOSE:
 #: it is bounded only when the type is rare, and the type the cockpit reads most is 94 % of the
@@ -341,11 +345,11 @@ class TestTheFreeze:
         )
 
     def test_the_debt_is_a_number_and_it_only_goes_down(self) -> None:
-        """12 request paths still materialise the chain. Naming them is what makes them payable.
+        """11 request paths still materialise the chain. Naming them is what makes them payable.
 
         The honest claim of this lot is NOT "the class is closed everywhere". It is: no NEW
         full-ledger read can appear, the fleet and the header no longer perform one, and the
-        twelve that remain are named, counted, and cannot multiply while nobody is looking.
+        eleven that remain are named, counted, and cannot multiply while nobody is looking.
         """
         owed = sum(1 for reason in _UNBOUNDED_CAPABLE.values() if reason.startswith("OWED"))
         assert owed == OWED_COUNT, (

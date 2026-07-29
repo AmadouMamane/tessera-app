@@ -1007,6 +1007,79 @@ def integrations_tool_scan(cutoff: datetime) -> list[tuple[str, int, int, int, s
     ]
 
 
+def audit_rule_scan(
+    cutoff24: datetime, cutoff48: datetime
+) -> list[tuple[str, int, int, int, int, int, str | None]]:
+    """Per-rule guard-decision stats as bounded SQL: one row per policy_rule, never the chain.
+
+    ``agent_garde_fous._scan_audit`` materialised every ``tessera.guard.audit`` entry (94 % of the
+    chain) and folded a per-rule ``_RuleStat`` plus four whole-log totals in Python. This unnests
+    the decisions and ``GROUP BY`` the ``policy_rule`` — one row per rule (a few dozen). It returns
+    ``[(rule, decisions, denials, den_c24, c24, cprev, last)]``; the caller sums the columns for the
+    four whole-log totals and keeps ``den_c24`` only to build ``denials_24h``.
+
+    Byte-identical to the Python fold (verified on the live ledger for the counts, and on the real
+    Postgres engine over a synthetic CTE for the time boundaries the live data does not carry):
+
+    * ``rule`` reproduces ``str(decision.get('policy_rule', 'unknown'))`` — a ``CASE`` distinguishes
+      an absent key ('unknown') from a JSON ``null`` value ('None'); ``kind`` does the same for
+      ``decision``. (Both are always strings in real ``GuardDecisionRecord`` data.)
+    * ``c24`` counts decisions strictly newer than ``cutoff24`` (= ``now - 1 day``), matching
+      ``age < 86400``; ``cprev`` counts ``cutoff48 < occ <= cutoff24`` (= ``86400 <= age < 172800``,
+      the DAY boundary inclusive, exactly as the Python ``if/elif``); ``den_c24`` is the ``deny``
+      subset of ``c24``. The caller passes the cutoffs so the boundary is its own clock.
+    * ``last`` = ``max`` of the raw ``occurred_at`` TEXT — for the consistent UTC-ISO stamps
+      ``emit_audit`` writes, lexicographic max IS chronological max (a stamp with no fractional part
+      sorts before one with, and .000000 is chronologically first), so returning the string (the
+      caller re-parses it) matches ``max(when)`` while avoiding timestamptz→session-tz drift.
+
+    Non-object array elements and null occurred_at are dropped (mirroring ``isinstance(dict)`` and
+    the ``when is None`` skip). Postgres only; a file-source caller keeps the Python loop.
+    """
+    # The only interpolation is the fixed LEDGER_TABLE identifier — no user input reaches the SQL.
+    query = (
+        "SELECT rule, count(*), "  # noqa: S608
+        "count(*) FILTER (WHERE kind = 'deny'), "
+        "count(*) FILTER (WHERE kind = 'deny' AND occ IS NOT NULL AND occ::timestamptz > %s), "
+        "count(*) FILTER (WHERE occ IS NOT NULL AND occ::timestamptz > %s), "
+        "count(*) FILTER (WHERE occ IS NOT NULL AND occ::timestamptz > %s "
+        "                   AND occ::timestamptz <= %s), "
+        "max(occ) FROM ("
+        "  SELECT"
+        "    CASE WHEN d ? 'policy_rule' THEN COALESCE(d->>'policy_rule', 'None')"
+        "         ELSE 'unknown' END AS rule,"
+        "    CASE WHEN d ? 'decision' THEN COALESCE(d->>'decision', 'None')"
+        "         ELSE 'unknown' END AS kind,"
+        "    d->>'occurred_at' AS occ"
+        f"  FROM {LEDGER_TABLE} a,"
+        "       LATERAL jsonb_array_elements(a.payload->'decisions') AS d"
+        "  WHERE a.payload->>'type' = 'tessera.guard.audit'"
+        "    AND jsonb_typeof(a.payload->'decisions') = 'array'"
+        "    AND jsonb_typeof(d) = 'object'"
+        ") s GROUP BY rule"
+    )
+    with (
+        store_read("postgres", "audit_ledger.audit_rule_scan", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, [cutoff24, cutoff24, cutoff48, cutoff24])
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    return [
+        (
+            str(r[0]),
+            int(r[1]),
+            int(r[2]),
+            int(r[3]),
+            int(r[4]),
+            int(r[5]),
+            str(r[6]) if r[6] is not None else None,
+        )
+        for r in rows
+    ]
+
+
 def ledger_head_seq() -> int:
     """The active ledger's high-water ``seq`` (0 when empty) — one indexed row.
 
