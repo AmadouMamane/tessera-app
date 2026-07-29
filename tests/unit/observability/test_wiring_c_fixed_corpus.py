@@ -167,6 +167,10 @@ def _drop_limes_origin_rules(policy: InjectionPolicy) -> InjectionPolicy:
 
 
 def _firewall_reactive_compute(policy: InjectionPolicy) -> object:
+    # The efficacy report is memoised on the detector's policy_hash; this probe patches `_detector`
+    # BELOW that seam and deliberately keeps the same hash across the perturbation (a rules-only
+    # change), so the memo must be busted for the recompute to actually re-run the corpus.
+    firewall_mod.reset_efficacy_cache()
     with patch.object(limes_backend, "_detector", lambda: _detector_from(policy)):
         return firewall_mod.compute_efficacy()
 
@@ -186,6 +190,7 @@ _firewall_reactive_probe: Probe[InjectionPolicy] = Probe(
 def _firewall_invariant_compute(traffic_perturbed: bool) -> object:
     if traffic_perturbed:
         _emit_noise_score()
+    firewall_mod.reset_efficacy_cache()  # recompute both sides so the invariant tests the corpus
     return firewall_mod.compute_efficacy()
 
 

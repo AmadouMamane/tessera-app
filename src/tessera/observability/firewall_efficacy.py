@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from typing import TYPE_CHECKING
 
 from tessera.guard.adapter import check_user_input
@@ -36,6 +37,7 @@ __all__ = [
     "compute_efficacy",
     "load_benign",
     "load_injection_prompts",
+    "reset_efficacy_cache",
 ]
 
 # src/tessera/observability/firewall_efficacy.py → parents[3] is the repo root.
@@ -45,6 +47,22 @@ _BENIGN_PATH = _REPO / "eval" / "calibration" / "benign_inputs.json"
 
 #: The limes detector id the badge requires to see before it reports "active".
 LIMES_INJECTION_DETECTOR_ID = "injection"
+
+# The default-corpus efficacy report is deterministic given the live policy, but scoring it runs the
+# whole corpus (~59 prompts) through the AUDITED guard — each call appends a `user_input` row to the
+# opposability ledger. It is a batch-snapshot panel the leader recomputes every cycle, so uncached
+# it wrote ~59 audit rows per cycle: unbounded ledger growth, constant head-cache churn, and fake
+# "attacks" polluting the real audit trail. Memoise it on the policy hash so the corpus runs once
+# per policy change, not once per read. A custom corpus (tests) bypasses the cache.
+_EFFICACY_CACHE_LOCK = Lock()
+_EFFICACY_CACHE: tuple[str, EfficacyReport] | None = None  # (policy_hash, report)
+
+
+def reset_efficacy_cache() -> None:
+    """Drop the memoised default-corpus efficacy report (test isolation)."""
+    global _EFFICACY_CACHE
+    with _EFFICACY_CACHE_LOCK:
+        _EFFICACY_CACHE = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,7 +115,33 @@ def compute_efficacy(
     injections: Sequence[str] | None = None,
     benign: Sequence[str] | None = None,
 ) -> EfficacyReport:
-    """Run the guard over positives + negatives and score detection efficacy."""
+    """Score the guard's detection efficacy over positives + negatives.
+
+    The default corpus is memoised on the live policy hash: scoring it runs ~59 prompts through the
+    AUDITED guard, so an uncached recompute on every batch-snapshot cycle churned the audit ledger.
+    A custom corpus (tests) always runs fresh — it is neither read nor written to the cache.
+    """
+    if injections is not None or benign is not None:
+        return _score_efficacy(injections=injections, benign=benign)
+
+    _, _, policy_hash = injection_witness()  # cheap: detector metadata, runs no guard checks
+    global _EFFICACY_CACHE
+    with _EFFICACY_CACHE_LOCK:
+        cached = _EFFICACY_CACHE
+        if cached is not None and cached[0] == policy_hash:
+            return cached[1]
+    report = _score_efficacy(injections=None, benign=None)
+    with _EFFICACY_CACHE_LOCK:
+        _EFFICACY_CACHE = (policy_hash, report)
+    return report
+
+
+def _score_efficacy(
+    *,
+    injections: Sequence[str] | None = None,
+    benign: Sequence[str] | None = None,
+) -> EfficacyReport:
+    """Run the guard over positives + negatives and score detection efficacy (uncached)."""
     positives = list(injections) if injections is not None else load_injection_prompts()
     negatives = list(benign) if benign is not None else load_benign()
     policy = load_policy()

@@ -125,6 +125,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     from tessera.api.routes.observability.fleet import reset_fleet_cache
     from tessera.guard.ledger_store import reset_ledger_payloads_cache
     from tessera.observability.chrome import reset_chrome_cache
+    from tessera.observability.firewall_efficacy import reset_efficacy_cache
     from tessera.observability.incidents import reset_open_incidents_cache
     from tessera.observability.read_snapshot import reset_read_snapshot
 
@@ -133,6 +134,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     reset_audit_entries_cache()
     reset_chrome_cache()
     reset_fleet_cache()
+    reset_efficacy_cache()
     reset_open_incidents_cache()
     reset_read_snapshot()
     get_settings.cache_clear()
@@ -143,6 +145,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[N
     reset_audit_entries_cache()
     reset_chrome_cache()
     reset_fleet_cache()
+    reset_efficacy_cache()
     reset_open_incidents_cache()
     reset_read_snapshot()
     get_settings.cache_clear()
