@@ -27,16 +27,35 @@ The page has a REAL incident feed and a demonstration lifecycle subsystem:
 
 from __future__ import annotations
 
+import threading
+import time
 import zlib
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Final
 
 from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.incidents_tabs import build_tabs
 
-__all__ = ["compute_incidents_overview"]
+__all__ = ["compute_incidents_overview", "open_incidents", "reset_open_incidents_cache"]
 
 _LANG_IDX = {"fr": 0, "de": 1, "en": 2}
+
+# The live sidebar badge (chrome bell, on all 32 cockpit pages) asks open_incidents() with no
+# args, and that call is ~0.83 s of incident-CLUSTERING compute — not an uncached read (its
+# ledger read is already windowed), so it is memoised, single-flight, on a 30 s TTL. Incidents
+# change on a human timescale, so a 30 s lag on the count badge is invisible; an as-of-T or
+# explicit-``now`` call (the incidents page) bypasses the cache and computes fresh.
+_OPEN_INCIDENTS_TTL_S: Final = 30.0
+_open_incidents_lock = threading.Lock()
+_open_incidents_cache: tuple[float, tuple[int, int]] | None = None
+
+
+def reset_open_incidents_cache() -> None:
+    """Drop the memoised live open-incidents count (used by tests for isolation)."""
+    global _open_incidents_cache
+    with _open_incidents_lock:
+        _open_incidents_cache = None
 
 
 def _loc(lang: str, fr: str, de: str, en: str) -> str:
@@ -245,7 +264,35 @@ def open_incidents(now: datetime | None = None, *, at: str | None = None) -> tup
     are the exact expressions ``compute_incidents_overview`` puts in its KPI strip.
     ``at`` set = the state as of T: the deny window ends at T and the durable
     incidents are replayed from their journals (``incidents_as_of``).
+
+    The LIVE badge call (no ``now``, no ``at``) is memoised single-flight on a 30 s TTL: it
+    hangs on the chrome bell of all 32 cockpit pages and is ~0.83 s of clustering compute, so a
+    burst of callers yields ONE computation and the rest read the fresh value. An as-of-T or
+    explicit-``now`` caller (the incidents page) always computes fresh — its moment is exact.
     """
+    if now is None and at is None:
+        return _open_incidents_live()
+    return _compute_open_incidents(now, at)
+
+
+def _open_incidents_live() -> tuple[int, int]:
+    """The memoised live badge count (single-flight, ``_OPEN_INCIDENTS_TTL_S``). See caller."""
+    global _open_incidents_cache
+    cached = _open_incidents_cache
+    if cached is not None and time.monotonic() - cached[0] < _OPEN_INCIDENTS_TTL_S:
+        return cached[1]
+    with _open_incidents_lock:
+        # Double-check under the lock: a caller that raced us may have just refreshed it.
+        cached = _open_incidents_cache
+        if cached is not None and time.monotonic() - cached[0] < _OPEN_INCIDENTS_TTL_S:
+            return cached[1]
+        result = _compute_open_incidents(None, None)
+        _open_incidents_cache = (time.monotonic(), result)
+        return result
+
+
+def _compute_open_incidents(now: datetime | None, at: str | None) -> tuple[int, int]:
+    """Compose ``(open, critical)`` from the incident core — the uncached path of the memo."""
     from tessera.observability.incident_store import incidents_as_of, open_durable_counts
 
     moment = now or _parse_when(at) or datetime.now(UTC)
