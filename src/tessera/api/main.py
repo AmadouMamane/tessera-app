@@ -317,6 +317,57 @@ async def _start_memory_purge_scheduler() -> asyncio.Task[None] | None:
     return asyncio.create_task(_loop())
 
 
+async def _start_read_cache_warmer() -> asyncio.Task[None] | None:
+    """Warm the per-worker read caches once at boot so the FIRST request never pays cold.
+
+    The cockpit's heaviest reads build an in-process, head-invalidated cache on first touch:
+    ``load_ledger_payloads_sync`` (~1 s cold → ~24 ms, the whole-ledger read the ai-act /
+    guard-audit panels derive from) and the timeline rail (~2.1 s cold → ~30 ms). Those caches
+    PERSIST across the 3 s memo TTL because the ledger is append-only (an unchanged ``max(seq)``
+    guarantees an unchanged result), so ONE warm-up per worker is enough — after it, every request
+    is warm. With N workers each holding its own in-process cache, a user's requests scatter across
+    still-cold workers until all N are warm; this pays that cost off the request path at boot.
+
+    Runs in EVERY worker — the cache is per-process, so unlike the singleton background loops (which
+    are leader-gated per ADR 0044) this MUST NOT be. It is a one-shot, not a loop. Best-effort: a
+    warm-up failure warns and is simply re-earned by the next real request. Postgres only — file
+    mode has no such cache and re-walks the journal on every read regardless.
+    """
+    from tessera.guard.ledger_store import ledger_source
+
+    if ledger_source() != "postgres":
+        return None
+
+    log = obs_logging.get_logger("tessera.warmup")
+
+    async def _warm() -> None:
+        import time
+
+        from tessera.api.routes.observability.console import observability_timeline
+        from tessera.guard.ledger_store import load_ledger_payloads_sync
+
+        started = time.perf_counter()
+        warmed: list[str] = []
+        # The whole-ledger cache first: the timeline rail's own read is cheaper once the shared
+        # connection path is warm, and this is the read the ai-act / guard-audit panels reuse.
+        for label, fn in (
+            ("ledger_payloads", load_ledger_payloads_sync),
+            ("timeline", observability_timeline),
+        ):
+            try:
+                await asyncio.to_thread(fn)
+                warmed.append(label)
+            except (
+                Exception
+            ) as exc:  # a warm-up failure must never matter — the request re-earns it
+                log.warning("warmup.failed", cache=label, error=str(exc))
+        log.info(
+            "warmup.done", warmed=warmed, elapsed_ms=round((time.perf_counter() - started) * 1000)
+        )
+
+    return asyncio.create_task(_warm())
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Open + close the resources that outlive a single request."""
@@ -347,6 +398,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     seal_task: asyncio.Task[None] | None = None
     purge_task: asyncio.Task[None] | None = None
     verify_task: asyncio.Task[None] | None = None
+    warm_task: asyncio.Task[None] | None = None
     canary_tasks: list[asyncio.Task[None]] = []
     try:
         await pool.open()
@@ -379,9 +431,12 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
             canary_tasks = await _start_canary_scheduler()  # ADR 0019 §I4 — off-chrono
             purge_task = await _start_memory_purge_scheduler()  # ADR 0007 §Retention — off-chrono
             verify_task = await _start_ledger_verification_scheduler()  # off-chrono chain walk
+        # EVERY worker, not just the leader: the read caches are per-process, so each worker warms
+        # its own once at boot (fire-and-forget — readiness is not delayed). See its docstring.
+        warm_task = await _start_read_cache_warmer()
         yield
     finally:
-        for task in (seal_task, purge_task, verify_task, *canary_tasks):
+        for task in (seal_task, purge_task, verify_task, warm_task, *canary_tasks):
             if task is not None:
                 task.cancel()
                 with suppress(asyncio.CancelledError):
