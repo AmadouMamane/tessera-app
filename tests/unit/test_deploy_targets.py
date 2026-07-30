@@ -13,6 +13,7 @@ from scripts.deploy_diff import (
     EXIT_BLIND,
     EXIT_DIVERGENT,
     EXIT_OK,
+    _build_request,
     hosts_for,
     load_targets,
     verdict,
@@ -26,6 +27,14 @@ def test_shipped_targets_yaml_parses_and_has_the_assumed_shape() -> None:
     assert {"onprem", "gcp"} <= set(cfg.targets)
     for spec in cfg.targets.values():
         assert {"subdomain", "front", "agent_url"} <= set(spec)
+
+
+def test_request_carries_a_real_user_agent_not_python_urllib() -> None:
+    # Cloudflare 403s the default Python-urllib UA; without a real one the witness goes blind.
+    req = _build_request("onprem.amadoumamane.fr")
+    assert req.full_url == "https://onprem.amadoumamane.fr/api/version"
+    ua = req.get_header("User-agent") or ""
+    assert ua and "python-urllib" not in ua.lower()
 
 
 def test_hosts_include_both_targets_and_the_canonical_switch() -> None:

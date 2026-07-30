@@ -897,16 +897,22 @@ fulllocal-status:
 # run ONLY when you have validated locally, set real operator passwords, created the tunnel
 # in the Cloudflare dashboard (hostname → http://frontend:3000) and put its token in
 # infra/docker/fulllocal.env. Reversible with `make fulllocal-tunnel-down`.
+#
+# BOTH profiles are activated: `cloudflared` (profile `flip`) declares `depends_on: frontend`,
+# and `frontend` lives in profile `full` — with only `--profile flip`, compose rejects the
+# project ("service cloudflared depends on undefined service frontend"). `--no-deps` still keeps
+# it from starting/restarting the front; the `full` profile only makes it DEFINED so the
+# dependency resolves. Same reason on `-down`.
 fulllocal-tunnel:
 	@test -f infra/docker/fulllocal.env || { echo "missing infra/docker/fulllocal.env — cp infra/docker/fulllocal.env.example infra/docker/fulllocal.env and set TUNNEL_TOKEN"; exit 2; }
 	@echo "FLIP: publishing the local front on your domain via Cloudflare Tunnel."
-	@$(FL_COMPOSE) --profile flip up -d --no-deps cloudflared
+	@$(FL_COMPOSE) --profile full --profile flip up -d --no-deps cloudflared
 	@echo "tunnel up. Verify your domain serves, then it is live. Rollback: make fulllocal-tunnel-down"
 
 # Rollback the flip: stop the tunnel. The domain stops resolving to this front (point DNS
 # back to Cloud Run / the previous target as needed).
 fulllocal-tunnel-down:
-	@$(FL_COMPOSE) --profile flip rm -sf cloudflared 2>/dev/null || true
+	@$(FL_COMPOSE) --profile full --profile flip rm -sf cloudflared 2>/dev/null || true
 	@echo "tunnel stopped — the domain no longer resolves to the local front."
 
 # Anti-divergence witness (ADR 0048): fetch /api/version on every host declared in

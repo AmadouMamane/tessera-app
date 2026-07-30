@@ -34,6 +34,11 @@ EXIT_BLIND = 2
 #: A parity claim needs at least two hosts to compare — one host proves nothing about divergence.
 _MIN_HOSTS_TO_COMPARE = 2
 
+#: Cloudflare (and many edges) return 403 to the default ``Python-urllib`` User-Agent — a bot
+#: signature. Without a real UA the witness would read every proxied host as unreachable and go
+#: permanently blind. Send an explicit identifying UA so it can actually see.
+_USER_AGENT = "tessera-deploy-diff/1.0"
+
 
 @dataclass(frozen=True)
 class Targets:
@@ -83,11 +88,17 @@ def hosts_for(cfg: Targets) -> dict[str, str]:
     return hosts
 
 
+def _build_request(host: str) -> urllib.request.Request:
+    """The ``/api/version`` GET for ``host``, carrying a real User-Agent (else Cloudflare 403s)."""
+    return urllib.request.Request(
+        f"https://{host}/api/version", headers={"User-Agent": _USER_AGENT}
+    )
+
+
 def _fetch_sha(host: str, timeout: float = 5.0) -> str | None:
     """Return the ``sha`` from ``https://<host>/api/version``, or ``None`` if unreachable."""
-    url = f"https://{host}/api/version"
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 — https to our host
+        with urllib.request.urlopen(_build_request(host), timeout=timeout) as resp:  # noqa: S310
             payload: Any = json.loads(resp.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, ValueError, OSError):
         return None
