@@ -760,7 +760,8 @@ DEV_FRONT_LOG   ?= /tmp/tessera-front.log
 _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 
 .PHONY: dev-up dev-down dev-status dev-preview preflight image-preflight \
-        fulllocal-up fulllocal-down fulllocal-status fulllocal-tunnel fulllocal-tunnel-down
+        fulllocal-up fulllocal-down fulllocal-status fulllocal-tunnel fulllocal-tunnel-down \
+        deploy-diff
 
 # Start backend + frontend from THIS checkout, detached; wait for health.
 dev-up: dev-secrets
@@ -907,6 +908,13 @@ fulllocal-tunnel:
 fulllocal-tunnel-down:
 	@$(FL_COMPOSE) --profile flip rm -sf cloudflared 2>/dev/null || true
 	@echo "tunnel stopped — the domain no longer resolves to the local front."
+
+# Anti-divergence witness (ADR 0048): fetch /api/version on every host declared in
+# infra/deploy/targets.yaml (the two targets + the canonical) and REFUSE if the served build
+# SHAs differ. Exit 0 = match · 1 = divergent · 2 = blind (unreachable / un-stamped / domain
+# unset). Its exit code is its own verdict — pass-through, unlaundered.
+deploy-diff:
+	@uv run python scripts/deploy_diff.py
 
 # ── CI simulation ───────────────────────────────────────────────────────────
 

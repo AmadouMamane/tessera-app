@@ -1,0 +1,41 @@
+# Deployment targets — the single source of truth for the two ways to run the cockpit (ADR 0048).
+#
+# DNS is at OVH. Each host below is ONE CNAME you add at OVH (see docs/runbook-two-targets.md):
+#   onprem.<domain>   ->  your ngrok custom-domain edge     (full-local front, ADR 0045)
+#   gcp.<domain>      ->  ghs.googlehosted.com              (Cloud Run domain mapping)
+#   <canonical>.<domain>  ->  the `primary` target's host   (the switch — the public URL people use;
+#                                                            a bare-apex CNAME is invalid DNS, so the
+#                                                            switch lives on this subdomain)
+#
+# This file carries NON-SECRET wiring only. Tokens/keys stay in the gitignored env files
+# (frontend.secret.env, infra/docker/fulllocal.env, infra/docker/cutover.env).
+#
+# `make deploy-diff` reads this file, fetches https://<host>/api/version on every host (the two
+# targets AND the canonical), and refuses if the served build SHAs differ or a host is unreachable.
+
+# The OVH apex domain. Hosts derive as <subdomain>.<domain>.
+domain: amadoumamane.fr
+
+# The public host people use — where the canonical CNAME lives (the switch). It currently serves an
+# OLD build; deploy-diff exists precisely to make that staleness a loud verdict.
+canonical: tessera
+
+# Which target the canonical host points at. The one-field switch. Must be a key of `targets`.
+primary: onprem
+
+# The ONE frontend image both targets run, tagged by commit SHA. CI builds+pushes
+# tessera-frontend:<sha>; full-local pulls this exact tag (export TESSERA_FRONTEND_IMAGE=<...>).
+# `deploy-diff` confirms every live host serves this SHA. CHANGE-ME until the first parity deploy.
+image: tessera-frontend:CHANGE-ME
+
+targets:
+  onprem:
+    # Full-local: front co-located with the agent (ADR 0045), reached over the local Docker network.
+    subdomain: onprem
+    front: ngrok-custom-domain # OVH CNAME -> ngrok edge; run: ngrok http --domain=onprem.<domain> 3090
+    agent_url: http://agent:8080 # local Docker network — no tunnel in the hot path (the point of 0045)
+  gcp:
+    # Cloud Run: front on GCP, reaching the on-prem agent across the public tunnel.
+    subdomain: gcp
+    front: cloud-run-domain-mapping # OVH CNAME -> ghs.googlehosted.com
+    agent_url: https://CHANGE-ME.ngrok-free.dev # the public tunnel to the on-prem agent (:8099)

@@ -83,6 +83,13 @@ jobs:
           context: .
           file: infra/docker/Dockerfile.frontend
           push: true
+          # Bake build provenance into the image so /api/version reports it and `make deploy-diff`
+          # can confirm both targets run this exact commit (ADR 0048). TESSERA_TARGET=gcp labels
+          # where THIS image runs; full-local overrides the label at runtime, the SHA is shared.
+          build-args: |
+            TESSERA_BUILD_SHA=${{ steps.image.outputs.tag }}
+            TESSERA_BUILD_TIME=${{ github.event.repository.updated_at }}
+            TESSERA_TARGET=gcp
           tags: |
             ${{ steps.image.outputs.frontend_image }}
             ${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/tessera-frontend:latest

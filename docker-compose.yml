@@ -114,7 +114,16 @@ services:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.frontend
-    image: tessera-frontend:local
+      # Bake build provenance into the image so /api/version can report it (ADR 0048).
+      # Defaults keep an un-stamped local build honest (sha=dev). For a parity build,
+      # pass the real SHA: TESSERA_BUILD_SHA=$(git rev-parse --short HEAD).
+      args:
+        TESSERA_BUILD_SHA: ${TESSERA_BUILD_SHA:-dev}
+        TESSERA_BUILD_TIME: ${TESSERA_BUILD_TIME:-unknown}
+        TESSERA_TARGET: ${TESSERA_TARGET:-onprem}
+    # The ONE image both targets run (ADR 0048). Unset → the local-build tag; set to the registry
+    # SHA tag Cloud Run runs to pull the SAME bytes instead of building locally (parity mode).
+    image: ${TESSERA_FRONTEND_IMAGE:-tessera-frontend:local}
     container_name: tessera-${TESSERA_ENV:-local}-frontend
     depends_on:
       agent:

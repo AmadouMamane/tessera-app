@@ -37,6 +37,10 @@ services:
       TESSERA_ENVIRONMENT: local
       # Belt-and-braces (the base already sets it): the agent is LOCAL, by service name.
       TESSERA_BACKEND_URL: http://agent:8080
+      # This target's label for /api/version (ADR 0048). Overrides whatever the image baked, so a
+      # pulled CI image (baked TESSERA_TARGET=gcp) reports where it RUNS. The SHA stays the image's
+      # own — deploy-diff compares the SHA across hosts, never this label.
+      TESSERA_TARGET: onprem
 
   cloudflared:
     # THE FLIP, gated behind the `flip` profile: `up` never starts it. It publishes the

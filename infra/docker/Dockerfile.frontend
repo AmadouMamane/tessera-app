@@ -39,6 +39,17 @@ ENV NODE_ENV=production \
     # Cloud Run's 0.0.0.0:$PORT routing both fail. Pin it to all interfaces.
     HOSTNAME=0.0.0.0
 
+# Build provenance baked into the image (ADR 0048). /api/version serves these so
+# `make deploy-diff` can confirm both deployment targets run the same commit. The
+# defaults keep an un-stamped local build honest — it reports sha=dev, which the
+# witness treats as a divergence against a real SHA rather than a false match.
+ARG TESSERA_BUILD_SHA=dev
+ARG TESSERA_BUILD_TIME=unknown
+ARG TESSERA_TARGET=unknown
+ENV TESSERA_BUILD_SHA=$TESSERA_BUILD_SHA \
+    TESSERA_BUILD_TIME=$TESSERA_BUILD_TIME \
+    TESSERA_TARGET=$TESSERA_TARGET
+
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 

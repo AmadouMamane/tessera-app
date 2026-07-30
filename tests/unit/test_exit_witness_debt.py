@@ -179,6 +179,9 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::fulllocal-tunnel": "action",
     "Makefile::fulllocal-tunnel-down": "action",
     "Makefile::fulllocal-status": "report",
+    # deploy-diff (ADR 0048): fetches /api/version on every declared host and refuses on a SHA
+    # mismatch. A thin shim over the script whose exit code IS the verdict.
+    "Makefile::deploy-diff": "delegate",  # → scripts/deploy_diff.py
     # ── preflight: assert every declared container input, or refuse (ADR 0043) ─────────────────
     # Its exit code IS the verdict (0 clear / 1 FAIL / 2 BLIND), passed through unlaundered:
     # `docker exec … tessera-preflight` returns the command's OWN code, and a missing container
@@ -202,6 +205,9 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::help": "report",
     # ══ scripts/ ═══════════════════════════════════════════════════════════════════════════════
     # ── witnesses that publish a Verdict, or their own unlaundered code ────────────────────────
+    # Fetches /api/version on every declared host and returns 0 match / 1 divergent / 2 blind
+    # (unreachable, un-stamped, or domain unset). A blind witness never says ok (ADR 0026).
+    "scripts/deploy_diff.py": "VERDICT",
     "scripts/gate_witness.py": "VERDICT",  # EXIT_VOID=3: "unusable" is not "failed"
     "scripts/worktree_owner.py": "VERDICT",  # Ok | NotOk | CannotSay
     # It asks the REMOTE (`git ls-remote`), never `refs/remotes/origin/main` — which is a
