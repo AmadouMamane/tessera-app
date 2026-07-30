@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from tessera.guard.ledger_store import read_ledger_entries
+from tessera.guard.ledger_store import ledger_source, read_ledger_entries, tool_validity_scan
 from tessera.observability._asof import occurred_before
 
 if TYPE_CHECKING:
@@ -46,7 +46,50 @@ def compute_tool_validity(
     With ``at`` set, only entries that occurred at or before instant T are
     counted — the as-of-T read for the cockpit time rail (ADR 0011). With
     ``agent_id`` set, only that agent's tool calls (audit entries are tagged).
+
+    Postgres tallies the outcomes in SQL (one row per outcome, never the chain); the flat journal
+    has no index, so file mode keeps the whole-log Python fold. The two are byte-identical (verified
+    on the live ledger and a synthetic boundary CTE); the only divergence is a malformed non-null
+    ``occurred_at``, which ``emit_audit`` never writes and the hash chain forbids.
     """
+    if ledger_source() == "postgres":
+        allowed, denied, errored, arg_failures = _scan_postgres(at, agent_id)
+    else:
+        allowed, denied, errored, arg_failures = _scan_file(path, at, agent_id)
+
+    total = allowed + denied + errored
+    return ToolValidityReport(
+        total=total,
+        allowed=allowed,
+        denied=denied,
+        errored=errored,
+        arg_failures=arg_failures,
+        validity_rate=(allowed / total if total else 1.0),
+    )
+
+
+def _scan_postgres(at: str | None, agent_id: str | None) -> tuple[int, int, int, int]:
+    """Outcome tallies rolled up in bounded SQL (one row per outcome).
+
+    ``arg_failures`` is the ``denied`` group's arg-failure filter count — a denied subset, exactly
+    as the Python ``elif``; every other outcome's filter count is ignored.
+    """
+    allowed = denied = errored = arg_failures = 0
+    for outcome, count, arg_fail in tool_validity_scan(at, agent_id):
+        if outcome == "allowed":
+            allowed = count
+        elif outcome == "denied":
+            denied = count
+            arg_failures = arg_fail
+        elif outcome == "error":
+            errored = count
+    return allowed, denied, errored, arg_failures
+
+
+def _scan_file(
+    path: Path | None, at: str | None, agent_id: str | None
+) -> tuple[int, int, int, int]:
+    """Whole-log Python fold over the flat journal — no index to push the tally down to."""
     allowed = denied = errored = arg_failures = 0
     for obj in read_ledger_entries(path):
         if obj.get("type") != "tessera.guard.audit" or obj.get("target") == "user_input":
@@ -64,13 +107,4 @@ def compute_tool_validity(
                 arg_failures += 1
         elif outcome == "error":
             errored += 1
-
-    total = allowed + denied + errored
-    return ToolValidityReport(
-        total=total,
-        allowed=allowed,
-        denied=denied,
-        errored=errored,
-        arg_failures=arg_failures,
-        validity_rate=(allowed / total if total else 1.0),
-    )
+    return allowed, denied, errored, arg_failures

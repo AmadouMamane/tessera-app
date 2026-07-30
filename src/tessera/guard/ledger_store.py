@@ -1080,6 +1080,85 @@ def audit_rule_scan(
     ]
 
 
+def tool_validity_scan(
+    at: str | None = None, agent_id: str | None = None
+) -> list[tuple[str | None, int, int]]:
+    """Tool-call outcome tallies as bounded SQL: ``[(outcome, count, arg_failures)]`` per outcome.
+
+    ``compute_tool_validity`` materialised every ``tessera.guard.audit`` entry (94 % of the chain)
+    and folded outcome tallies in Python. This ``GROUP BY`` the ``outcome`` — at most a handful of
+    rows (allowed/denied/error/…), never the chain. Each group also carries ``count(*) FILTER
+    (WHERE has_arg_failure)``; the caller reads it only from the ``denied`` group (``arg_failures``
+    is a denied subset, exactly as the Python ``elif``).
+
+    Byte-identical to the Python fold (verified on the live ledger and, since the demo carries no
+    tool decisions, on the real Postgres engine over a synthetic ``VALUES`` CTE across every as-of
+    and agent scenario):
+
+    * The ``target = 'user_input'`` skip is ``IS DISTINCT FROM`` so a NULL target is KEPT (matching
+      ``obj.get('target') == 'user_input'`` → ``None != 'user_input'`` → not skipped).
+    * ``has_arg_failure`` is ``position('.argument.' in policy_rule) > 0`` over the entry's
+      decisions — reproducing ``'.argument.' in str(d.get('policy_rule', ''))`` (absent/null → '',
+      no match). The array is guarded so a non-array ``decisions`` yields no failure rather than
+      raising, and the unnest never sees a non-array.
+    * The as-of matches :func:`occurred_before` for the cases the ledger can produce: ``at`` None or
+      unparseable → no cutoff (fail-open); a NULL ``occurred_at`` → kept (a non-string fails open);
+      a valid ``occurred_at`` is compared as an instant (``::timestamptz`` parses both ``Z`` and
+      ``+00:00``, exactly as ``datetime.fromisoformat``). The ONE case it does not reproduce is a
+      malformed NON-null ``occurred_at`` — ``occurred_before`` fails open (keeps it) while the cast
+      would raise; ``emit_audit`` only ever writes ``datetime.isoformat()`` and the chain is
+      hash-verified, so that value cannot occur, and file mode keeps the full Python fail-open.
+
+    Postgres only; a file-source caller keeps the Python loop.
+    """
+    clauses = [
+        "a.payload->>'type' = 'tessera.guard.audit'",
+        "a.payload->>'target' IS DISTINCT FROM 'user_input'",
+    ]
+    params: list[object] = []
+    at_dt: datetime | None = None
+    if at is not None:
+        try:
+            at_dt = datetime.fromisoformat(at)
+        except ValueError:
+            at_dt = None  # malformed cutoff → occurred_before keeps every row → no filter
+    if at_dt is not None:
+        clauses.append(
+            "(a.payload->>'occurred_at' IS NULL "
+            "OR (a.payload->>'occurred_at')::timestamptz <= %s)"
+        )
+        params.append(at_dt)
+    if agent_id is not None:
+        clauses.append("a.payload->>'agent_id' = %s")
+        params.append(agent_id)
+    where = " AND ".join(clauses)
+    # The only interpolation is the fixed LEDGER_TABLE identifier + the assembled clause list, whose
+    # every value comes from a %s placeholder — no caller string reaches the SQL text.
+    query = (
+        "SELECT outcome, count(*), count(*) FILTER (WHERE has_arg_failure) FROM ("  # noqa: S608
+        "  SELECT a.payload->>'outcome' AS outcome,"
+        "    EXISTS ("
+        "      SELECT 1 FROM jsonb_array_elements("
+        "        CASE WHEN jsonb_typeof(a.payload->'decisions') = 'array'"
+        "             THEN a.payload->'decisions' ELSE '[]'::jsonb END"
+        "      ) AS dd"
+        "      WHERE position('.argument.' IN COALESCE(dd->>'policy_rule', '')) > 0"
+        "    ) AS has_arg_failure"
+        f"  FROM {LEDGER_TABLE} a"
+        f"  WHERE {where}"
+        ") s GROUP BY outcome"
+    )
+    with (
+        store_read("postgres", "audit_ledger.tool_validity_scan", target=LEDGER_TABLE) as read,
+        _connect_sync() as conn,
+        conn.cursor() as cur,
+    ):
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        read.rows_read(len(rows))
+    return [(str(r[0]) if r[0] is not None else None, int(r[1]), int(r[2])) for r in rows]
+
+
 def ledger_head_seq() -> int:
     """The active ledger's high-water ``seq`` (0 when empty) — one indexed row.
 
