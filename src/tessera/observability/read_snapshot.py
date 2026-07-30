@@ -36,6 +36,7 @@ _LOG = get_logger("tessera.snapshot")
 
 __all__ = [
     "SNAPSHOT_INTERVAL_S",
+    "SNAPSHOT_REFRESH_CEILING_S",
     "SNAPSHOT_TTL_S",
     "audit_overview_snapshot_key",
     "audit_page_snapshot_key",
@@ -47,6 +48,8 @@ __all__ = [
     "incidents_snapshot_key",
     "read_snapshot",
     "reset_read_snapshot",
+    "snapshot_fingerprint",
+    "snapshot_needs_recompute",
     "write_snapshot",
 ]
 
@@ -55,6 +58,18 @@ SNAPSHOT_INTERVAL_S: Final = 3.0
 #: How old a snapshot entry a reader will still serve before falling through to compute. A small
 #: multiple of the interval, so one slow/missed leader cycle does not blank the cards.
 SNAPSHOT_TTL_S: Final = 10.0
+#: The leader recomputes the (expensive ~2.8 s) snapshot content only when its cheap fingerprint
+#: moves — the ledger head advanced or this ceiling elapsed — never on the blind interval alone. The
+#: content is derived from an append-only chain, so an unchanged head proves it byte-identical
+#: (``ledger_store.ledger_head_seq``: an unchanged ``max(seq)`` guarantees an unchanged result);
+#: recomputing it every interval was pure waste that pinned the leader at ~100 % CPU on a STABLE
+#: ledger and produced an intermittent flash on the client fleet card. This ceiling is the backstop
+#: for the two things the head does NOT witness — wall-clock windows (fleet ``d7``, incidents
+#: ``until=now``) and any non-ledger mutation (business_events, operator items) — forcing a periodic
+#: recompute so neither can drift unbounded. Between recomputes the leader RE-STAMPS the last
+#: snapshot every interval, so readers' :data:`SNAPSHOT_TTL_S` never expires and they never fall
+#: through to a per-worker compute.
+SNAPSHOT_REFRESH_CEILING_S: Final = 60.0
 
 _SNAPSHOT_NAME: Final = "read_snapshot.json"
 _DEFAULT_LOCALE: Final = "fr"
@@ -186,6 +201,51 @@ def reset_read_snapshot() -> None:
     """Remove the snapshot file (test isolation; a no-op when it does not exist)."""
     _snapshot_path().unlink(missing_ok=True)
     _reset_parse_cache()
+
+
+def snapshot_fingerprint() -> tuple[int, int] | None:
+    """A cheap witness of whether the snapshot content could have changed since the last compute.
+
+    Returns ``(ledger_head_seq, ceiling_bucket)`` in postgres mode. Every governed act appends to
+    the append-only ledger, so the head (``max(seq)``, one indexed row, sub-millisecond) moves
+    whenever the ledger-derived cards could change, and an unchanged head proves them unchanged.
+    The ``ceiling_bucket`` is ``int(time.time() // SNAPSHOT_REFRESH_CEILING_S)``: it rolls over
+    every ceiling and forces a recompute so wall-clock windows and non-ledger mutations cannot
+    drift unbounded.
+
+    Returns ``None`` when there is no cheap head — a file ledger source has none, and a probe
+    failure is treated the same — which signals the caller to recompute this cycle (the exact
+    pre-head-key behavior). Never raises: the leader loop must not die on a transient head-probe
+    error.
+    """
+    from tessera.guard.ledger_store import ledger_head_seq, ledger_source
+
+    try:
+        if ledger_source() != "postgres":
+            return None
+        head = ledger_head_seq()
+    except Exception:
+        # Any probe failure degrades to "recompute" (fingerprint None), never crashes the loop.
+        return None
+    return head, int(time.time() // SNAPSHOT_REFRESH_CEILING_S)
+
+
+def snapshot_needs_recompute(
+    last_fingerprint: tuple[int, int] | None,
+    current_fingerprint: tuple[int, int] | None,
+    have_snapshot: bool,
+) -> bool:
+    """Whether the leader must run the expensive recompute this cycle, rather than only re-stamp.
+
+    Recompute when nothing has been published yet (``not have_snapshot``), when there is no reliable
+    fingerprint (``current_fingerprint is None`` — a file source or a probe failure, so we cannot
+    prove the content unchanged and must fall back to the pre-head-key behavior), or when the
+    fingerprint moved (the ledger head advanced or the refresh ceiling elapsed). Otherwise the last
+    snapshot is still valid and the leader only re-stamps it — the win that unpins the CPU.
+    """
+    return (
+        not have_snapshot or current_fingerprint is None or current_fingerprint != last_fingerprint
+    )
 
 
 async def compute_snapshot_entries() -> dict[str, dict[str, Any]]:

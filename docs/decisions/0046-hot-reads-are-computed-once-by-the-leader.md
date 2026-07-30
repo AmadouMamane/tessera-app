@@ -74,3 +74,32 @@ bind-mounted state dir already does the job. If a future deployment splits worke
   Timeline and the ai-act/guard-audit reads are already served fast by their own persistent
   incremental caches + the boot warmer, so they stay as they are; they can be added to the snapshot
   behind the same seam if a future measurement shows them scattering.
+
+## Amendment (2026-07-30) — the writer recomputes only when the content could have changed
+
+The first increment ran the leader loop on a **blind interval**: it recomputed the whole snapshot
+every `SNAPSHOT_INTERVAL_S` (3 s) unconditionally. As the snapshot grew to also carry the batch
+panels, the inbox, the incidents overview (deny-ledger clustering) and the audit overview/page, one
+full recompute measured **~2.8 s warm** — longer than the interval itself. On a STABLE ledger the
+leader was therefore pinned at ~100 % CPU recomputing byte-identical content, and that contention
+delayed the client fleet card's fetch enough to reintroduce an intermittent **flash** — the very
+scatter/storm this ADR set out to remove, now moved from the request path onto the leader.
+
+The fix keeps the mechanism and refines *when* it fires. The snapshot content is derived from the
+append-only ledger, so an unchanged head (`ledger_store.ledger_head_seq` — one indexed `max(seq)`
+row, sub-millisecond) proves it byte-identical. The leader now takes a cheap **fingerprint**
+`(ledger_head_seq, ceiling_bucket)` each cycle and recomputes only when it moves — the head
+advanced, or a refresh **ceiling** (`SNAPSHOT_REFRESH_CEILING_S`, 60 s) elapsed. The ceiling is the
+backstop for the two things the head does not witness: wall-clock windows (fleet `d7`, incidents
+`until=now`) and any non-ledger mutation (business_events, operator items). When the fingerprint is
+stable the leader does NOT recompute — it only **re-stamps** the last snapshot's timestamp so
+readers' `SNAPSHOT_TTL_S` never expires and they never fall through to a per-worker compute. A file
+ledger source (no cheap head) or a probe failure yields a `None` fingerprint, which forces the
+pre-amendment behavior (recompute every cycle): the change is purely additive and fail-open.
+
+Result: on a stable ledger the leader recomputes at most once per ceiling instead of every interval
+(a ~20× cut) and stays near-idle rather than pinned. It also improves the scaling shape — a blind
+interval recompute fires regardless of activity, a head-keyed one does not fire at all while the
+ledger is quiet. Honesty on what this does NOT fix: when the head *does* move, one recompute is
+still O(ledger); bounding the individual reads (fleet, chrome, incidents) in SQL is the separate
+read-budget chantier (ADR 0047 + the P1 conversions), which makes each recompute cheap too.

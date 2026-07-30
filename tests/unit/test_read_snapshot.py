@@ -169,3 +169,72 @@ async def test_an_omitted_entry_names_its_error(monkeypatch: pytest.MonkeyPatch)
         for event, fields in recorder.calls
         if event == "read_snapshot.entry_omitted"
     )
+
+
+# --- head-keyed writer: recompute only when the cheap fingerprint moves, else re-stamp ---------
+
+
+def test_needs_recompute_when_nothing_has_been_published() -> None:
+    # First cycle: nothing to re-stamp, must compute regardless of the fingerprint.
+    assert rs.snapshot_needs_recompute(None, (7, 1), have_snapshot=False) is True
+
+
+def test_needs_recompute_when_the_fingerprint_is_unavailable() -> None:
+    # None = no cheap head (file source or probe failure) -> fall back to pre-head-key behavior.
+    assert rs.snapshot_needs_recompute((7, 1), None, have_snapshot=True) is True
+
+
+def test_needs_recompute_when_the_fingerprint_moved() -> None:
+    # A moved head (or a rolled ceiling bucket) means the content could have changed.
+    assert rs.snapshot_needs_recompute((7, 1), (8, 1), have_snapshot=True) is True
+    assert rs.snapshot_needs_recompute((7, 1), (7, 2), have_snapshot=True) is True
+
+
+def test_only_restamps_when_the_fingerprint_is_stable() -> None:
+    # The CPU-saving case: same head, same ceiling bucket, already published -> DO NOT recompute.
+    assert rs.snapshot_needs_recompute((7, 1), (7, 1), have_snapshot=True) is False
+
+
+def _stub_ledger_head(monkeypatch: pytest.MonkeyPatch, *, source: str, head: int) -> None:
+    monkeypatch.setattr("tessera.guard.ledger_store.ledger_source", lambda: source)
+    monkeypatch.setattr("tessera.guard.ledger_store.ledger_head_seq", lambda: head)
+
+
+def test_fingerprint_is_none_for_a_file_ledger_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A file source has no cheap head; the writer must recompute every cycle, not cache on nothing.
+    _stub_ledger_head(monkeypatch, source="file", head=42)
+    assert rs.snapshot_fingerprint() is None
+
+
+def test_fingerprint_is_none_when_the_head_probe_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("tessera.guard.ledger_store.ledger_source", lambda: "postgres")
+
+    def _boom() -> int:
+        raise RuntimeError("connection refused")
+
+    monkeypatch.setattr("tessera.guard.ledger_store.ledger_head_seq", _boom)
+    assert rs.snapshot_fingerprint() is None  # degrades to recompute, never raises into the loop
+
+
+def test_fingerprint_tracks_the_ledger_head(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(rs.time, "time", lambda: 100.0)  # fixed ceiling bucket
+    _stub_ledger_head(monkeypatch, source="postgres", head=5)
+    assert rs.snapshot_fingerprint() == (5, int(100.0 // rs.SNAPSHOT_REFRESH_CEILING_S))
+    _stub_ledger_head(monkeypatch, source="postgres", head=6)  # an append moved the head
+    assert rs.snapshot_fingerprint() == (6, int(100.0 // rs.SNAPSHOT_REFRESH_CEILING_S))
+
+
+def test_fingerprint_ceiling_bucket_rolls_only_past_the_ceiling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Buckets are absolute multiples of the ceiling, so pick times that share / cross a boundary.
+    c = rs.SNAPSHOT_REFRESH_CEILING_S
+    _stub_ledger_head(monkeypatch, source="postgres", head=5)  # frozen ledger
+    monkeypatch.setattr(rs.time, "time", lambda: c)  # t=C -> bucket 1
+    early = rs.snapshot_fingerprint()
+    monkeypatch.setattr(rs.time, "time", lambda: c * 1.5)  # t=1.5C -> still bucket 1
+    assert rs.snapshot_fingerprint() == early  # same bucket: stable -> only re-stamp
+    monkeypatch.setattr(rs.time, "time", lambda: c * 2 + 1)  # t=2C+1 -> bucket 2
+    later = rs.snapshot_fingerprint()
+    assert later is not None and early is not None
+    assert later != early and later[0] == early[0]  # same head, rolled bucket -> forced recompute

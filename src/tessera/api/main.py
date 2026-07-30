@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import os
 from contextlib import asynccontextmanager, suppress
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -386,18 +386,42 @@ async def _start_read_snapshot_writer() -> asyncio.Task[None] | None:
     """
     from tessera.observability.read_snapshot import (
         SNAPSHOT_INTERVAL_S,
+        SNAPSHOT_REFRESH_CEILING_S,
         compute_snapshot_entries,
+        snapshot_fingerprint,
+        snapshot_needs_recompute,
         write_snapshot,
     )
 
     log = obs_logging.get_logger("tessera.snapshot")
-    log.info("read_snapshot.posture", interval_s=SNAPSHOT_INTERVAL_S)
+    log.info(
+        "read_snapshot.posture",
+        interval_s=SNAPSHOT_INTERVAL_S,
+        refresh_ceiling_s=SNAPSHOT_REFRESH_CEILING_S,
+    )
 
     async def _loop() -> None:
+        # Recompute the expensive (~2.8 s) snapshot only when its cheap fingerprint moves — the
+        # ledger head advanced or the refresh ceiling elapsed — never on the blind interval alone
+        # (ADR 0046). On a STABLE ledger this takes the leader from ~100 % CPU (a full recompute
+        # every 3 s) to near-idle, which is what removes the intermittent flash on the fleet card.
+        # Every cycle still RE-STAMPS the last snapshot so readers' TTL never expires and they never
+        # fall through to a per-worker compute.
+        last_fingerprint: tuple[int, int] | None = None
+        last_entries: dict[str, dict[str, Any]] | None = None
         while True:
             try:
-                entries = await compute_snapshot_entries()
-                await asyncio.to_thread(write_snapshot, entries)
+                fingerprint = await asyncio.to_thread(snapshot_fingerprint)
+                if snapshot_needs_recompute(
+                    last_fingerprint, fingerprint, last_entries is not None
+                ):
+                    last_entries = await compute_snapshot_entries()
+                    last_fingerprint = fingerprint
+                    log.info("read_snapshot.recomputed", fingerprint=fingerprint)
+                # snapshot_needs_recompute returns True whenever last_entries is None, so past the
+                # gate it is always populated — assert it for the type checker, never at runtime.
+                assert last_entries is not None
+                await asyncio.to_thread(write_snapshot, last_entries)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # a cycle failure must never kill the loop

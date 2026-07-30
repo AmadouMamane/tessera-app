@@ -194,6 +194,10 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/observability/connectors.py::_on_prem": "config",
     "src/tessera/observability/eval/failed_runs.py::_is_full": "data",
     "src/tessera/observability/langfuse_scores.py::_enabled": "config",
+    # A cache-freshness control decision, not a verdict: it selects whether the leader recomputes
+    # the snapshot or only re-stamps it (ADR 0046 amendment). Nothing PASSES — a wrong answer costs
+    # only a slightly stale card or a wasted recompute, never a governance or safety outcome.
+    "src/tessera/observability/read_snapshot.py::snapshot_needs_recompute": "data",
     "src/tessera/observability/reliability.py::_in_window": "data",
     "src/tessera/observability/spine/adapters/__init__.py::_has_fact_overrides": "config",
     "src/tessera/observability/spine/adapters/langfuse.py::_matches_agent": "filter",
