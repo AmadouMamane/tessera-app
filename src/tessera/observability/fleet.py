@@ -475,8 +475,37 @@ def _canary_verdicts() -> dict[str, str]:
         return {}
 
 
-def _business_card_facts(aid: str, record: Agent | None) -> BusinessCardFacts:
-    """Manifest-derived business chip + pending operator items for one fleet card."""
+def _pending_items_by_agent() -> dict[str, int]:
+    """Pending operator items (``status != "done"``) per agent, from ONE whole-fleet load.
+
+    ``_business_card_facts`` counted this over ``load_items_for(NATURE_A_TRAITER, aid)``, which
+    re-reads the durable queue state from disk once PER agent — for a 6-agent fleet, six loads of
+    the same file, ~570 ms warm and the dominant cost of the whole rollup. The queue is one
+    whole-fleet read filtered by agent (still through the ONE declared partition rule, ADR 0038 —
+    ``NATURE_A_TRAITER``, never a hand-rolled ``source_kind`` filter), so loading it once and
+    grouping by ``item.agent_id`` gives the identical per-agent count (verified live) at a single
+    read. On a load failure the map is empty and the caller reads 0 for every agent — the same
+    honest-zero the per-agent ``try/except`` gave, now shared.
+    """
+    try:
+        items = load_items_for(NATURE_A_TRAITER, None)
+    except Exception:
+        return {}
+    pending: dict[str, int] = {}
+    for item in items:
+        if item.status != "done":
+            pending[item.agent_id] = pending.get(item.agent_id, 0) + 1
+    return pending
+
+
+def _business_card_facts(
+    aid: str, record: Agent | None, pending_business_items: int
+) -> BusinessCardFacts:
+    """Manifest-derived business chip + pending operator items for one fleet card.
+
+    ``pending_business_items`` is precomputed once for the whole fleet by
+    :func:`_pending_items_by_agent` rather than re-loaded per card.
+    """
     if record is None or record.observability is None:
         return {"north_star": None, "pending_business_items": 0}
     try:
@@ -493,13 +522,7 @@ def _business_card_facts(aid: str, record: Agent | None) -> BusinessCardFacts:
         ),
         None,
     )
-    try:
-        # ADR 0038 — the business half through the ONE declared partition rule,
-        # never a hand-rolled source_kind filter (a second copy of the rule).
-        pending = sum(1 for item in load_items_for(NATURE_A_TRAITER, aid) if item.status != "done")
-    except Exception:
-        pending = 0
-    return {"north_star": north_star, "pending_business_items": pending}
+    return {"north_star": north_star, "pending_business_items": pending_business_items}
 
 
 def _window_bounds(
@@ -640,13 +663,21 @@ async def compute_fleet(
 
     registry = _registry_agents()
     # The per-card business facts are per-agent reads (ClickHouse + the operator queue) and were
-    # also inline. Same rule: off the loop, and concurrently with each other.
+    # also inline. Same rule: off the loop, and concurrently with each other. The operator-queue
+    # pending count is one whole-fleet read filtered by agent, so it is loaded ONCE here and grouped
+    # (byte-identical to the per-card load, but ~6x fewer disk reads) instead of reloaded per card.
+    pending_items = await asyncio.to_thread(_pending_items_by_agent)
     business_by_agent = dict(
         zip(
             [reg["id"] for reg in registry],
             await asyncio.gather(
                 *(
-                    asyncio.to_thread(_business_card_facts, reg["id"], records.get(reg["id"]))
+                    asyncio.to_thread(
+                        _business_card_facts,
+                        reg["id"],
+                        records.get(reg["id"]),
+                        pending_items.get(reg["id"], 0),
+                    )
                     for reg in registry
                 )
             ),

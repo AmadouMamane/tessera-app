@@ -11,10 +11,20 @@ operator can send it a turn. Both are read from declarations (``telemetry_capabi
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import TYPE_CHECKING
+
 from tessera.agent.registry import list_agents
 from tessera.observability.agent_console import compute_agent_console
 from tessera.observability.agentspec_projection import declares_telemetry, is_invocable
-from tessera.observability.fleet import _registry_agents
+from tessera.observability.fleet import (
+    _business_card_facts,
+    _pending_items_by_agent,
+    _registry_agents,
+)
+
+if TYPE_CHECKING:
+    import pytest
 
 _WITNESSES = frozenset({"hello-agent", "turn-agent", "duplex-agent"})
 
@@ -98,3 +108,59 @@ def test_the_testable_chip_and_the_console_agree() -> None:
         assert invocation["invocable"] is is_invocable(
             agent
         ), f"{agent.id}: the card and the Console disagree about invocability"
+
+
+# --- the pending-items dedup: one whole-fleet load, grouped, instead of one load per card --------
+
+
+def _item(agent_id: str, status: str) -> object:
+    """A stand-in operator item — _pending_items_by_agent reads only .agent_id and .status."""
+    return SimpleNamespace(agent_id=agent_id, status=status)
+
+
+def test_pending_items_grouped_from_one_whole_fleet_load(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ONE load_items_for(nature, None), grouped by agent, counting status != 'done'.
+
+    This is the dedup that replaced six per-agent loads (~570 ms warm); the grouped count must be
+    the same a per-agent filter would give, and the read must happen exactly once.
+    """
+    calls: list[str | None] = []
+
+    def _fake_load(nature: str, agent_id: str | None = None) -> list[object]:
+        calls.append(agent_id)
+        return [
+            _item("recouvrement", "todo"),
+            _item("recouvrement", "progress"),
+            _item("recouvrement", "done"),  # excluded — already handled
+            _item("support-client", "todo"),
+            _item("onboarding", "done"),  # excluded → onboarding absent from the map
+        ]
+
+    monkeypatch.setattr("tessera.observability.fleet.load_items_for", _fake_load)
+    by_agent = _pending_items_by_agent()
+    assert by_agent == {"recouvrement": 2, "support-client": 1}
+    assert calls == [None]  # loaded ONCE, whole-fleet, not once per agent
+
+
+def test_pending_items_empty_on_load_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A load failure is an empty map → the caller reads 0 for every agent, and never raises."""
+
+    def _boom(nature: str, agent_id: str | None = None) -> list[object]:
+        raise RuntimeError("disk gone")
+
+    monkeypatch.setattr("tessera.observability.fleet.load_items_for", _boom)
+    assert _pending_items_by_agent() == {}
+
+
+def test_business_card_facts_takes_the_precomputed_count_and_never_reloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The card no longer loads the operator queue itself — the dedup moved that read out."""
+
+    def _must_not_load(*_a: object, **_k: object) -> list[object]:
+        raise AssertionError("_business_card_facts must not load operator items")
+
+    monkeypatch.setattr("tessera.observability.fleet.load_items_for", _must_not_load)
+    # A record-less agent keeps its unchanged contract: pending is 0, no load attempted.
+    facts = _business_card_facts("recouvrement", None, 9)
+    assert facts["pending_business_items"] == 0
