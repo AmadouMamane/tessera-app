@@ -8,6 +8,7 @@ import { IBM_Plex_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { auth } from "@/auth";
 import { Providers } from "@/components/providers";
 import { type Locale, routing } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
@@ -45,6 +46,13 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   if (!(routing.locales as readonly string[]).includes(locale)) notFound();
   setRequestLocale(locale);
   const messages = await getMessages();
+  // Resolve the operator session SERVER-SIDE and seed SessionProvider, so the cockpit's client
+  // `CockpitAuthGate` sees "authenticated" on the first (server) render and renders the cockpit in
+  // the SSR HTML — instead of blanking to the "Accès opérateur requis" placeholder and only
+  // rendering client-side after a `useSession()` fetch (the shell-then-content flash). `auth()`
+  // reads the request cookie, so this segment renders per-request (dynamic) — correct for a gated,
+  // per-user cockpit; anonymous requests get `null` and the public pages render as before.
+  const session = await auth();
 
   return (
     <html
@@ -54,7 +62,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     >
       <body className="h-screen overflow-hidden font-sans antialiased">
         <NextIntlClientProvider locale={locale as Locale} messages={messages}>
-          <Providers>{children}</Providers>
+          <Providers session={session}>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider, isServer } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
@@ -41,10 +42,20 @@ function getQueryClient(): QueryClient {
   return browserClient;
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  // The session resolved SERVER-SIDE (layout `auth()`), seeded here so `useSession()` returns
+  // "authenticated" on the FIRST render (SSR) instead of "loading". Without it the cockpit's
+  // client `CockpitAuthGate` blanks the whole tree on the server and only renders after a client
+  // session fetch — the "shell then card appears" flash. `null` for anonymous / public pages.
+  session: Session | null;
+}) {
   const [queryClient] = useState(getQueryClient);
   return (
-    <SessionProvider>
+    <SessionProvider session={session}>
       <ThemeProvider
         attribute="class"
         defaultTheme="dark"
