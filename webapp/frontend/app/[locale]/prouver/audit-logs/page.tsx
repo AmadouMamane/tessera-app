@@ -96,8 +96,9 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
     }
     // The page's own per-agent question: each agent's proof — governed acts and ledger
     // entries (measured to deposit per agent). Chain INTEGRITY stays org-wide in the body.
-    // The breakdown STREAMS behind Suspense (fleet + lens fan-out) so the audit table paints
-    // first; no `searchParams` here keeps the deliberate all-history proof-fleet contract.
+    // The breakdown renders INLINE (blocking SSR): it streamed behind Suspense until 65538aeb,
+    // which cost a skeleton flash on every client navigation. Its fleet + lens reads travel in
+    // ONE request; no `searchParams` here keeps the deliberate all-history proof-fleet contract.
     scope = readAgentScope(await searchParams);
     proofSection = (
       <StreamedAgentBreakdown route="/prouver/audit-logs" scope={scope} locale={locale} />
