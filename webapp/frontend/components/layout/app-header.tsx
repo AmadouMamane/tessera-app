@@ -480,7 +480,9 @@ function NotificationsPanel({
                   className={cn(
                     HEADER_TOOL_ICON_CLASS,
                     "mt-0.5 shrink-0",
-                    group.tone === "danger" ? "text-red-400" : "text-[var(--tessera-text-muted)]",
+                    group.tone === "danger"
+                      ? "text-[var(--tessera-fg-danger)]"
+                      : "text-[var(--tessera-text-muted)]",
                   )}
                   strokeWidth={1.75}
                   aria-hidden

@@ -400,7 +400,7 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
             <p
               className={cn(
                 "text-[0.6rem] tabular-nums",
-                kpi.good ? "text-emerald-400" : "text-red-400",
+                kpi.good ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]",
               )}
             >
               {kpi.delta}

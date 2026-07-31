@@ -46,7 +46,7 @@ export function LedgerIntegrityText({ data, t }: LedgerIntegrityTextProps) {
 
   if (!contentIntact) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-red-400">
+      <span className="inline-flex items-center gap-1.5 text-[var(--tessera-fg-danger)]">
         <ShieldX className="h-3 w-3" />
         {t("integrityBroken")}
       </span>
@@ -55,7 +55,7 @@ export function LedgerIntegrityText({ data, t }: LedgerIntegrityTextProps) {
 
   if (linear) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-emerald-400">
+      <span className="inline-flex items-center gap-1.5 text-[var(--tessera-fg-success)]">
         <ShieldCheck className="h-3 w-3" />
         {t("integrityOk", { n: length ?? 0 })}
         {freshness ? <span className="text-muted-foreground">{freshness}</span> : null}
@@ -64,7 +64,7 @@ export function LedgerIntegrityText({ data, t }: LedgerIntegrityTextProps) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-amber-400">
+    <span className="inline-flex items-center gap-1.5 text-[var(--tessera-fg-warning)]">
       <GitBranch className="h-3 w-3" />
       {t(attested ? "integrityForkedAttested" : "integrityForkedPending", { forks, orphans })}
       {freshness ? <span className="text-muted-foreground">{freshness}</span> : null}

@@ -60,7 +60,7 @@ export function CustomerSessionBar() {
     >
       <span className="flex min-w-0 items-center gap-1.5 text-[var(--muted-foreground)]">
         {authenticated ? (
-          <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-success)]" />
         ) : (
           <User className="h-3.5 w-3.5 shrink-0" />
         )}

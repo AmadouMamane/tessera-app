@@ -157,7 +157,7 @@ function SystemKpi({
       </p>
       {kpi.kind === "status" ? (
         <div className="mt-1 flex items-center gap-1.5">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          <CheckCircle2 className="h-4 w-4 text-[var(--tessera-fg-success)]" />
           <span className="text-[0.95rem] font-semibold text-[var(--tessera-fg-success)]">
             {kpi.value}
           </span>

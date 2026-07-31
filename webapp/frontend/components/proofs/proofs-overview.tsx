@@ -670,7 +670,7 @@ function Crypto({ t, data }: { t: T; data: Data }) {
     <Panel title="">
       <div className="flex items-center gap-4">
         <div className="flex flex-col items-center">
-          <KeyRound className="h-7 w-7 text-emerald-400" />
+          <KeyRound className="h-7 w-7 text-[var(--tessera-fg-success)]" />
           <span className="mt-1 text-lg font-semibold text-[var(--tessera-text-strong)]">
             {c.valid_signatures}
           </span>
@@ -828,7 +828,9 @@ function ProofsRail({
           <ShieldCheck
             className={cn(
               "h-9 w-9 shrink-0",
-              data.chain_verified ? "text-emerald-400" : "text-red-400",
+              data.chain_verified
+                ? "text-[var(--tessera-fg-success)]"
+                : "text-[var(--tessera-fg-danger)]",
             )}
           />
           <div>

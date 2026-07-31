@@ -455,7 +455,7 @@ function ActionCard({
   return (
     <Card className="flex h-full min-w-0 flex-col gap-2 p-3">
       <div className="flex items-start gap-2">
-        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--tessera-fg-warning)]" />
         <span className="min-w-0 text-[0.78rem] font-medium leading-snug">{title}</span>
       </div>
       <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">{desc}</p>
@@ -805,7 +805,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-semibold tabular-nums">{blocked}</span>
           <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
-          <span className="ml-auto font-semibold tabular-nums text-amber-500">
+          <span className="ml-auto font-semibold tabular-nums text-[var(--tessera-fg-warning)]">
             {fw?.false_negative ?? 0} {ts("panel.bypasses")}
           </span>
         </div>
@@ -1669,7 +1669,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <div className="flex items-baseline gap-2">
                       <span className="text-xl font-semibold tabular-nums">{blocked}</span>
                       <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
-                      <span className="ml-auto font-semibold tabular-nums text-amber-500">
+                      <span className="ml-auto font-semibold tabular-nums text-[var(--tessera-fg-warning)]">
                         {fw?.false_negative ?? 0} {ts("panel.bypasses")}
                       </span>
                     </div>

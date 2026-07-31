@@ -389,9 +389,9 @@ function ToolRow({
         <CornerDownRight className="h-3 w-3 shrink-0 text-[var(--tessera-text-muted)]" />
       ) : null}
       {tool.succeeded ? (
-        <Check className="h-3 w-3 shrink-0 text-emerald-400" />
+        <Check className="h-3 w-3 shrink-0 text-[var(--tessera-fg-success)]" />
       ) : (
-        <AlertTriangle className="h-3 w-3 shrink-0 text-red-400" />
+        <AlertTriangle className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" />
       )}
       <span className="min-w-0 truncate">{tool.name}</span>
       {label ? <span className="text-[var(--tessera-text-muted)]">{label}</span> : null}
@@ -444,7 +444,9 @@ function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: s
           </span>
         ) : null}
         {mutation.isError ? (
-          <span className="text-[0.64rem] text-red-400">{t("cassette.replayFailed")}</span>
+          <span className="text-[0.64rem] text-[var(--tessera-fg-danger)]">
+            {t("cassette.replayFailed")}
+          </span>
         ) : null}
       </div>
       {result ? (
@@ -454,7 +456,9 @@ function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: s
             <span
               className={cn(
                 "font-medium",
-                result.score_delta >= 0 ? "text-[var(--tessera-fg-success)]" : "text-red-400",
+                result.score_delta >= 0
+                  ? "text-[var(--tessera-fg-success)]"
+                  : "text-[var(--tessera-fg-danger)]",
               )}
             >
               Δ {result.score_delta >= 0 ? "+" : ""}

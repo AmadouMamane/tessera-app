@@ -968,7 +968,7 @@ function Activity({ t, data }: { t: T; data: Data }) {
       <ul className="flex flex-col gap-1.5">
         {data.recent_activity.map((a, i) => (
           <li key={`${a.time}-${a.action}-${i}`} className="flex items-center gap-2 text-[0.66rem]">
-            <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
+            <CheckCircle2 className="h-3 w-3 shrink-0 text-[var(--tessera-fg-success)]" />
             <span className="font-medium text-[var(--tessera-text)]">{a.actor}</span>
             <Truncate className="min-w-0 flex-1 text-[var(--tessera-text-muted)]">
               {a.action}

@@ -80,7 +80,7 @@ export function SessionTheater() {
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-2">
-            <Clapperboard className="h-4 w-4 text-blue-500" />
+            <Clapperboard className="h-4 w-4 text-[var(--tessera-fg-info)]" />
             {t("theater.title")}
           </span>
           {bundles.length > 0 ? (

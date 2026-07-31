@@ -54,8 +54,8 @@ const SPARK_TONE: Record<string, string> = {
   amber: "#e0a23a",
 };
 const TONE_TEXT: Record<string, string> = {
-  good: "text-emerald-400",
-  bad: "text-red-400",
+  good: "text-[var(--tessera-fg-success)]",
+  bad: "text-[var(--tessera-fg-danger)]",
   muted: "text-[var(--tessera-text-muted)]",
 };
 const SCORE_TEXT: Record<string, string> = {

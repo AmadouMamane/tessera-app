@@ -578,7 +578,7 @@ function Compliance({ t, data }: { t: T; data: Data }) {
       <ul className="flex flex-col gap-1.5">
         {data.compliance.map((c) => (
           <li key={c.key} className="flex items-center gap-2 text-[0.7rem]">
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-success)]" />
             <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
               {t(`compliance.${c.key}`)}
             </span>

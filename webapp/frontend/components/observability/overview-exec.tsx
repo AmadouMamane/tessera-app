@@ -545,10 +545,10 @@ export function RootCauseDiagnostic({
                 </li>
               ))}
               {docsAdded.length ? (
-                <li className="text-emerald-500">+{docsAdded.length} docs</li>
+                <li className="text-[var(--tessera-fg-success)]">+{docsAdded.length} docs</li>
               ) : null}
               {docsRemoved.length ? (
-                <li className="text-red-500">−{docsRemoved.length} docs</li>
+                <li className="text-[var(--tessera-fg-danger)]">−{docsRemoved.length} docs</li>
               ) : null}
             </ul>
           </section>
@@ -576,7 +576,7 @@ export function RootCauseDiagnostic({
             </Badge>
           ) : null}
           {regressions.map((r) => (
-            <span key={r.model} className="text-red-500">
+            <span key={r.model} className="text-[var(--tessera-fg-danger)]">
               {r.model} {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
             </span>
           ))}
@@ -1370,7 +1370,7 @@ export function RegressionsByRelease({
               <li key={r.model} className="flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-2">
                   <Truncate className="font-medium">{r.model}</Truncate>
-                  <span className="shrink-0 tabular-nums text-red-500">
+                  <span className="shrink-0 tabular-nums text-[var(--tessera-fg-danger)]">
                     {Math.round(r.delta * 100)} pts
                   </span>
                 </div>

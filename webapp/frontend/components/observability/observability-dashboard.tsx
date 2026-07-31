@@ -618,7 +618,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 <Zone
                   label={tq("sec.etat")}
                   icon={Gauge}
-                  iconClassName="text-sky-400"
+                  iconClassName="text-[var(--tessera-fg-info)]"
                   info={<SectionInfo title={tq("sec.etat")} explainKey="etat" />}
                 >
                   <EtatActuel
@@ -633,7 +633,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 <Zone
                   label={tq("sec.diagnostic")}
                   icon={Stethoscope}
-                  iconClassName="text-amber-400"
+                  iconClassName="text-[var(--tessera-fg-warning)]"
                   info={<SectionInfo title={tq("sec.diagnostic")} explainKey="diagnostic" />}
                 >
                   <div className="grid items-start gap-2 xl:grid-cols-3">
@@ -666,7 +666,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 <Zone
                   label={tq("sec.predictive")}
                   icon={TrendingUp}
-                  iconClassName="text-violet-400"
+                  iconClassName="text-[var(--tessera-fg-accent)]"
                   info={<SectionInfo title={tq("sec.predictive")} explainKey="predictive" />}
                 >
                   <PredictiveSignals
@@ -683,7 +683,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 <Zone
                   label={tq("sec.actions")}
                   icon={ListChecks}
-                  iconClassName="text-emerald-400"
+                  iconClassName="text-[var(--tessera-fg-success)]"
                   info={<SectionInfo title={tq("sec.actions")} explainKey="actions" />}
                 >
                   <RecommendedActions
@@ -1015,9 +1015,9 @@ function RightRail({
                 <span
                   className={
                     impact === "high"
-                      ? "text-red-500"
+                      ? "text-[var(--tessera-fg-danger)]"
                       : impact === "medium"
-                        ? "text-amber-500"
+                        ? "text-[var(--tessera-fg-warning)]"
                         : "text-[var(--muted-foreground)]"
                   }
                 >

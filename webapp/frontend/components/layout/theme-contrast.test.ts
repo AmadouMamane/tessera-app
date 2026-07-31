@@ -71,34 +71,37 @@ const FROZEN_ANCESTOR_BACKED: ReadonlyMap<string, number> = new Map([
   ["components/recouvrement/recouvrement-logo.tsx", 1],
 ]);
 
-/** The pale end of the Tailwind palette — the shades ever used as a foreground here. */
-const PALETTE: Readonly<Record<string, readonly [string, string, string]>> = {
-  slate: ["#f1f5f9", "#e2e8f0", "#cbd5e1"],
-  gray: ["#f3f4f6", "#e5e7eb", "#d1d5db"],
-  zinc: ["#f4f4f5", "#e4e4e7", "#d4d4d8"],
-  neutral: ["#f5f5f5", "#e5e5e5", "#d4d4d4"],
-  stone: ["#f5f5f4", "#e7e5e4", "#d6d3d1"],
-  red: ["#fee2e2", "#fecaca", "#fca5a5"],
-  orange: ["#ffedd5", "#fed7aa", "#fdba74"],
-  amber: ["#fef3c7", "#fde68a", "#fcd34d"],
-  yellow: ["#fef9c3", "#fef08a", "#fde047"],
-  lime: ["#ecfccb", "#d9f99d", "#bef264"],
-  green: ["#dcfce7", "#bbf7d0", "#86efac"],
-  emerald: ["#d1fae5", "#a7f3d0", "#6ee7b7"],
-  teal: ["#ccfbf1", "#99f6e4", "#5eead4"],
-  cyan: ["#cffafe", "#a5f3fc", "#67e8f9"],
-  sky: ["#e0f2fe", "#bae6fd", "#7dd3fc"],
-  blue: ["#dbeafe", "#bfdbfe", "#93c5fd"],
-  indigo: ["#e0e7ff", "#c7d2fe", "#a5b4fc"],
-  violet: ["#ede9fe", "#ddd6fe", "#c4b5fd"],
-  purple: ["#f3e8ff", "#e9d5ff", "#d8b4fe"],
-  fuchsia: ["#fae8ff", "#f5d0fe", "#f0abfc"],
-  pink: ["#fce7f3", "#fbcfe8", "#f9a8d4"],
-  rose: ["#ffe4e6", "#fecdd3", "#fda4af"],
+/** The Tailwind shades ever used as a foreground here, 100 → 600. The 400/500 band matters
+ *  as much as the pale end: `emerald-400` is 1.92:1 on a white card, `amber-500` 2.15:1. */
+const SHADES = ["100", "200", "300", "400", "500", "600"] as const;
+type Ramp = readonly [string, string, string, string, string, string];
+const PALETTE: Readonly<Record<string, Ramp>> = {
+  slate: ["#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b", "#475569"],
+  gray: ["#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#6b7280", "#4b5563"],
+  zinc: ["#f4f4f5", "#e4e4e7", "#d4d4d8", "#a1a1aa", "#71717a", "#52525b"],
+  neutral: ["#f5f5f5", "#e5e5e5", "#d4d4d4", "#a3a3a3", "#737373", "#525252"],
+  stone: ["#f5f5f4", "#e7e5e4", "#d6d3d1", "#a8a29e", "#78716c", "#57534e"],
+  red: ["#fee2e2", "#fecaca", "#fca5a5", "#f87171", "#ef4444", "#dc2626"],
+  orange: ["#ffedd5", "#fed7aa", "#fdba74", "#fb923c", "#f97316", "#ea580c"],
+  amber: ["#fef3c7", "#fde68a", "#fcd34d", "#fbbf24", "#f59e0b", "#d97706"],
+  yellow: ["#fef9c3", "#fef08a", "#fde047", "#facc15", "#eab308", "#ca8a04"],
+  lime: ["#ecfccb", "#d9f99d", "#bef264", "#a3e635", "#84cc16", "#65a30d"],
+  green: ["#dcfce7", "#bbf7d0", "#86efac", "#4ade80", "#22c55e", "#16a34a"],
+  emerald: ["#d1fae5", "#a7f3d0", "#6ee7b7", "#34d399", "#10b981", "#059669"],
+  teal: ["#ccfbf1", "#99f6e4", "#5eead4", "#2dd4bf", "#14b8a6", "#0d9488"],
+  cyan: ["#cffafe", "#a5f3fc", "#67e8f9", "#22d3ee", "#06b6d4", "#0891b2"],
+  sky: ["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9", "#0284c7"],
+  blue: ["#dbeafe", "#bfdbfe", "#93c5fd", "#60a5fa", "#3b82f6", "#2563eb"],
+  indigo: ["#e0e7ff", "#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1", "#4f46e5"],
+  violet: ["#ede9fe", "#ddd6fe", "#c4b5fd", "#a78bfa", "#8b5cf6", "#7c3aed"],
+  purple: ["#f3e8ff", "#e9d5ff", "#d8b4fe", "#c084fc", "#a855f7", "#9333ea"],
+  fuchsia: ["#fae8ff", "#f5d0fe", "#f0abfc", "#e879f9", "#d946ef", "#c026d3"],
+  pink: ["#fce7f3", "#fbcfe8", "#f9a8d4", "#f472b6", "#ec4899", "#db2777"],
+  rose: ["#ffe4e6", "#fecdd3", "#fda4af", "#fb7185", "#f43f5e", "#e11d48"],
 };
 
 const FOREGROUND =
-  /(?<![\w:-])(?:group-hover:|hover:|focus:|focus-visible:|active:)?text-(?:\[#([0-9a-fA-F]{6})\]|([a-z]+)-(100|200|300)|(white))(?![\w/-])/g;
+  /(?<![\w:-])(?:group-hover:|hover:|focus:|focus-visible:|active:)?text-(?:\[#([0-9a-fA-F]{6})\]|([a-z]+)-(100|200|300|400|500|600)|(white))(?![\w/-])/g;
 
 const OPAQUE_BACKGROUND =
   /bg-(?:blue|red|amber|emerald|green|sky|violet|rose|orange|cyan|indigo|fuchsia|slate|zinc|neutral|gray|navy|danger|success|warning|info)-\d{2,3}(?!\/)|bg-\[#[0-9a-fA-F]{6}\](?!\/)|bg-\[linear-gradient|bg-gradient-to|bg-\[var\(--tessera-danger|bg-black/;
@@ -137,13 +140,19 @@ function scanSource(file: string, source: string): { failing: Finding[]; resolve
   for (const literal of source.matchAll(STRING_LITERAL)) {
     const body = literal[0];
     if (OPAQUE_BACKGROUND.test(body)) continue;
+    // A literal that already pairs a base colour with a `dark:` variant is theme-aware:
+    // the base IS the light value and the variant IS the dark one. Tokenising it would
+    // throw away a correct answer the repo already wrote (`text-emerald-600
+    // dark:text-emerald-400`). 57 literals are in that shape; they are not defects.
+    if (body.includes("dark:text-")) continue;
     for (const match of body.matchAll(FOREGROUND)) {
       const [utility, hex, family, shade, white] = match;
       const colour = white
         ? "#ffffff"
         : hex
           ? `#${hex}`
-          : (PALETTE[family ?? ""]?.[["100", "200", "300"].indexOf(shade ?? "")] ?? "");
+          : (PALETTE[family ?? ""]?.[SHADES.indexOf((shade ?? "") as (typeof SHADES)[number])] ??
+            "");
       if (!colour) continue;
       resolved += 1;
       const ratio = contrast(colour, LIGHT_CARD);

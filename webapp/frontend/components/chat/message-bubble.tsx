@@ -184,7 +184,7 @@ export function MessageBubble({
             <div className="self-end flex flex-col items-end gap-1">
               {/* Truncation warning — only when this is not the last user message */}
               {!isLastUserMessage && (
-                <p className="text-[0.6rem] text-amber-500 font-medium select-none">
+                <p className="text-[0.6rem] text-[var(--tessera-fg-warning)] font-medium select-none">
                   ⚠ {t("editWillTruncate")}
                 </p>
               )}
@@ -217,7 +217,7 @@ export function MessageBubble({
                 className={cn(
                   "flex items-center gap-1 text-[0.62rem] transition-colors duration-150",
                   "text-slate-600 hover:text-slate-800",
-                  userCopied && "!opacity-100 text-green-600 ",
+                  userCopied && "!opacity-100 text-[var(--tessera-fg-success)] ",
                 )}
               >
                 {userCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -248,7 +248,7 @@ export function MessageBubble({
               "self-start flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
               "text-slate-600 hover:text-slate-800",
               "opacity-60 group-hover:opacity-100",
-              copied && "!opacity-100 text-green-600 ",
+              copied && "!opacity-100 text-[var(--tessera-fg-success)] ",
             )}
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -310,7 +310,9 @@ function AssistantFeedback({ turnId }: { turnId: string }) {
         aria-pressed={rating === "up"}
         className={cn(
           "flex items-center transition-colors duration-150 disabled:cursor-not-allowed",
-          rating === "up" ? "text-green-600" : "text-slate-500 hover:text-slate-800",
+          rating === "up"
+            ? "text-[var(--tessera-fg-success)]"
+            : "text-slate-500 hover:text-slate-800",
         )}
       >
         <ThumbsUp className="h-3.5 w-3.5" />

@@ -525,7 +525,7 @@ export function QualityGauge({ summary }: { summary: ReturnType<typeof summarize
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-          <span className="max-w-[88px] truncate font-serif text-4xl font-semibold leading-none tabular-nums text-emerald-500">
+          <span className="max-w-[88px] truncate font-serif text-4xl font-semibold leading-none tabular-nums text-[var(--tessera-fg-success)]">
             {summary.ok}
           </span>
           <span className="line-clamp-2 max-w-[88px] break-words text-center text-[0.7rem] leading-tight text-[var(--muted-foreground)]">
@@ -700,11 +700,11 @@ export function SignalsTable({
                   const open = !collapsed.has(g.status);
                   const tone =
                     g.status === "crit"
-                      ? "text-red-500"
+                      ? "text-[var(--tessera-fg-danger)]"
                       : g.status === "warn"
-                        ? "text-amber-500"
+                        ? "text-[var(--tessera-fg-warning)]"
                         : g.status === "ok"
-                          ? "text-emerald-500"
+                          ? "text-[var(--tessera-fg-success)]"
                           : "text-[var(--muted-foreground)]";
                   return (
                     <Fragment key={g.status}>
@@ -1413,7 +1413,7 @@ export function SignalsRail({
             <RailAction onClick={() => onOpen("signals")}>{tq("reco.catalog")}</RailAction>
             <RailAction onClick={onEvidence}>{tq("reco.seeEvidence")}</RailAction>
             <div className="mt-0.5 flex items-center justify-between gap-2 rounded-md border border-red-500/40 px-2 py-1 text-[0.7rem]">
-              <span className="text-red-400">{tq("reco.block")}</span>
+              <span className="text-[var(--tessera-fg-danger)]">{tq("reco.block")}</span>
               <Badge tone="warning">{tq("signalsRail.dualControl")}</Badge>
             </div>
           </CardContent>

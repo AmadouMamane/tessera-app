@@ -174,7 +174,7 @@ export async function FailureSynthesis({
       <CardContent className="pt-0">
         {failed.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-            <ShieldCheck className="h-4 w-4 text-green-600" />
+            <ShieldCheck className="h-4 w-4 text-[var(--tessera-fg-success)]" />
             {t("failureSynthesis.none")}
           </div>
         ) : (

@@ -97,9 +97,9 @@ const SCORE_TONE: Record<string, string> = {
   crit: "text-[var(--tessera-fg-danger)]",
 };
 const STATUS_TONE: Record<string, string> = {
-  good: "text-emerald-400",
+  good: "text-[var(--tessera-fg-success)]",
   warn: "text-[var(--tessera-fg-warning)]",
-  crit: "text-red-400",
+  crit: "text-[var(--tessera-fg-danger)]",
 };
 const BADGE_TONE: Record<string, string> = {
   good: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
@@ -1108,9 +1108,9 @@ function LiveAssistantMsg({
 // ── XT-01 — persistent execution-trace waterfall (normative 05) ─────────────
 
 const SPAN_STATUS_TONE: Record<string, string> = {
-  ok: "text-emerald-400",
+  ok: "text-[var(--tessera-fg-success)]",
   warn: "text-[var(--tessera-fg-warning)]",
-  crit: "text-red-400",
+  crit: "text-[var(--tessera-fg-danger)]",
 };
 const SPAN_BAR_TONE: Record<string, string> = {
   ok: "bg-emerald-400/70",

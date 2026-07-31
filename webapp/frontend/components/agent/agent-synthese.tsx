@@ -285,7 +285,7 @@ function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
           <span
             className={cn(
               "mt-1 line-clamp-1 text-[0.6rem] tabular-nums",
-              kpi.good ? "text-emerald-400" : "text-red-400",
+              kpi.good ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]",
             )}
           >
             {kpi.delta}
@@ -448,7 +448,7 @@ function Capabilities({ data, className }: { data: Data; className?: string }) {
             key={it}
             className="flex items-center gap-2 text-[0.74rem] text-[var(--tessera-text)]"
           >
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--tessera-fg-success)]" />
             <span title={it} className="min-w-0 truncate">
               {it}
             </span>
@@ -514,7 +514,7 @@ function Performance({ data, className }: { data: Data; className?: string }) {
               <span
                 className={cn(
                   "text-[0.6rem] tabular-nums",
-                  r.good ? "text-emerald-400" : "text-red-400",
+                  r.good ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]",
                 )}
               >
                 {r.delta}

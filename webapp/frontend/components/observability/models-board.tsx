@@ -68,9 +68,9 @@ function scoreBand(rate: number): string {
   return "#f87171";
 }
 function scoreToneClass(rate: number): string {
-  if (rate >= 0.8) return "text-emerald-500";
-  if (rate >= 0.5) return "text-amber-500";
-  return "text-red-500";
+  if (rate >= 0.8) return "text-[var(--tessera-fg-success)]";
+  if (rate >= 0.5) return "text-[var(--tessera-fg-warning)]";
+  return "text-[var(--tessera-fg-danger)]";
 }
 function fmtScore(rate: number): string {
   return String(Math.round(rate * 100));
@@ -129,7 +129,8 @@ function DeltaSub({ delta }: { delta: number | null }) {
   const tq = useTranslations("quality");
   if (delta == null) return <>{tq("models.kpi.vsPrev", { d: DASH })}</>;
   const pts = Math.round(delta * 100);
-  const tone = pts > 0 ? "text-emerald-500" : pts < 0 ? "text-red-500" : "";
+  const tone =
+    pts > 0 ? "text-[var(--tessera-fg-success)]" : pts < 0 ? "text-[var(--tessera-fg-danger)]" : "";
   return (
     <span className={tone}>
       {pts > 0 ? "+" : ""}
@@ -198,7 +199,7 @@ function ModelsKpis({
         label={tq("models.kpi.hallucination")}
         explainKey="modelHallucination"
         value={ref?.hallucination != null ? `${Math.round((1 - ref.hallucination) * 100)}%` : DASH}
-        tone="text-amber-500"
+        tone="text-[var(--tessera-fg-warning)]"
       />
       <Kpi
         icon={<Sparkles className="h-3.5 w-3.5" />}
@@ -580,7 +581,7 @@ function RegressionsByModel({ release }: { release: ReleaseStatus | undefined })
   const regs = release?.regressions ?? [];
   if (regs.length === 0)
     return (
-      <p className="py-4 text-center text-[0.7rem] text-emerald-500">
+      <p className="py-4 text-center text-[0.7rem] text-[var(--tessera-fg-success)]">
         {tq("models.noRegressions")}
       </p>
     );
@@ -601,7 +602,7 @@ function RegressionsByModel({ release }: { release: ReleaseStatus | undefined })
               style={{ width: `${(Math.abs(r.delta) / max) * 100}%` }}
             />
           </div>
-          <span className="w-20 shrink-0 text-right tabular-nums text-red-500">
+          <span className="w-20 shrink-0 text-right tabular-nums text-[var(--tessera-fg-danger)]">
             {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
           </span>
         </div>
@@ -618,10 +619,10 @@ function DriftKpi({ label, value, level }: { label: string; value: string; level
     level == null
       ? ""
       : ["high", "critical"].includes(level)
-        ? "text-red-500"
+        ? "text-[var(--tessera-fg-danger)]"
         : level === "moderate"
-          ? "text-amber-500"
-          : "text-emerald-500";
+          ? "text-[var(--tessera-fg-warning)]"
+          : "text-[var(--tessera-fg-success)]";
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-[0.58rem] text-[var(--muted-foreground)]">{label}</span>

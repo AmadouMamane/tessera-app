@@ -620,7 +620,7 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
                   key={tool}
                   className="flex items-center gap-2 rounded px-2 py-1.5 text-[0.72rem] text-[var(--tessera-text)]"
                 >
-                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-success)]" />
                   {tool}
                 </li>
               ))}

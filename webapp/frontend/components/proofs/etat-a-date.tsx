@@ -61,9 +61,9 @@ const DIFF_GLYPH: Record<string, string> = {
   unchanged: "=",
 };
 const DIFF_TONE: Record<string, string> = {
-  added: "text-emerald-400",
-  removed: "text-red-400",
-  changed: "text-amber-400",
+  added: "text-[var(--tessera-fg-success)]",
+  removed: "text-[var(--tessera-fg-danger)]",
+  changed: "text-[var(--tessera-fg-warning)]",
   unchanged: "text-[var(--tessera-text-muted)]",
 };
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
@@ -396,15 +396,20 @@ export function EtatADate() {
                 t={t}
                 card={data.guardrails}
                 icon={ShieldCheck}
-                iconClass="text-emerald-400"
+                iconClass="text-[var(--tessera-fg-success)]"
               />
               <GovCardView
                 t={t}
                 card={data.prompt_model}
                 icon={Terminal}
-                iconClass="text-amber-400"
+                iconClass="text-[var(--tessera-fg-warning)]"
               />
-              <GovCardView t={t} card={data.release} icon={Package} iconClass="text-cyan-400" />
+              <GovCardView
+                t={t}
+                card={data.release}
+                icon={Package}
+                iconClass="text-[var(--tessera-fg-teal)]"
+              />
             </div>
             <SourcesTable
               t={t}
@@ -844,7 +849,7 @@ function Original({ data, className }: { data: Data; className?: string }) {
     <Panel
       title={o.title}
       icon={MessageSquare}
-      iconClass="text-sky-400"
+      iconClass="text-[var(--tessera-fg-info)]"
       info={<SectionInfo title={o.title} explainKey="original" />}
       className={className}
     >
@@ -966,7 +971,7 @@ function Chronology({ data, className }: { data: Data; className?: string }) {
     <Panel
       title={tl.title}
       icon={History}
-      iconClass="text-fuchsia-400"
+      iconClass="text-[var(--tessera-fg-accent)]"
       info={<SectionInfo title={tl.title} explainKey="chronology" />}
       className={className}
     >
@@ -1031,7 +1036,7 @@ function Integrity({ data }: { data: Data }) {
     <Panel
       title={it.title}
       icon={ShieldCheck}
-      iconClass="text-emerald-400"
+      iconClass="text-[var(--tessera-fg-success)]"
       info={<SectionInfo title={it.title} explainKey="integrity" />}
     >
       <dl className="flex flex-col gap-1.5 text-[0.72rem]">
@@ -1058,7 +1063,7 @@ function AuditPieces({ data, className }: { data: Data; className?: string }) {
     <Panel
       title={a.title}
       icon={FileText}
-      iconClass="text-blue-400"
+      iconClass="text-[var(--tessera-fg-info)]"
       info={<SectionInfo title={a.title} explainKey="auditPieces" />}
       className={className}
     >
@@ -1086,7 +1091,7 @@ function Handoffs({ data, className }: { data: Data; className?: string }) {
     <Panel
       title={h.title}
       icon={ArrowRight}
-      iconClass="text-emerald-400"
+      iconClass="text-[var(--tessera-fg-success)]"
       info={<SectionInfo title={h.title} explainKey="handoffs" />}
       className={className}
     >
@@ -1105,7 +1110,8 @@ function Handoffs({ data, className }: { data: Data; className?: string }) {
               className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.72rem]"
             >
               <span className="flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
-                {r.from} <ArrowRight className="h-3.5 w-3.5 text-emerald-400" /> {r.to}
+                {r.from} <ArrowRight className="h-3.5 w-3.5 text-[var(--tessera-fg-success)]" />{" "}
+                {r.to}
               </span>
               <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
                 {r.at} · {r.reason}
@@ -1417,7 +1423,9 @@ function FilterDropdown({
               )}
             >
               {lbl}
-              {value === k ? <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> : null}
+              {value === k ? (
+                <ShieldCheck className="h-3.5 w-3.5 text-[var(--tessera-fg-success)]" />
+              ) : null}
             </button>
           ))}
         </div>
@@ -1610,7 +1618,7 @@ function Snapshots({ data, onReload }: { data: Data; onReload: (asOf: string | n
     <Panel
       title={s.title}
       icon={Bookmark}
-      iconClass="text-rose-400"
+      iconClass="text-[var(--tessera-fg-danger)]"
       info={<SectionInfo title={s.title} explainKey="snapshots" />}
     >
       {s.rows.length === 0 ? (

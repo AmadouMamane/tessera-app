@@ -30,7 +30,9 @@ function RateBar({ rate }: { rate: number }) {
     tone === "success" ? "bg-emerald-500" : tone === "warning" ? "bg-amber-500" : "bg-red-500";
   return (
     <div className="flex items-center gap-2">
-      <span className={`tabular-nums ${tone === "danger" ? "text-red-500" : ""}`}>
+      <span
+        className={`tabular-nums ${tone === "danger" ? "text-[var(--tessera-fg-danger)]" : ""}`}
+      >
         {Math.round(rate * 100)}%
       </span>
       <span className="hidden h-[4px] w-16 overflow-hidden rounded-full bg-[var(--tessera-border)] sm:block">

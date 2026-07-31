@@ -9,11 +9,11 @@ interface MetricSparklineProps {
 }
 
 const toneClasses: Record<OverviewTone, string> = {
-  success: "text-emerald-400",
-  warning: "text-orange-400",
-  danger: "text-red-400",
-  info: "text-blue-400",
-  neutral: "text-slate-400",
+  success: "text-[var(--tessera-fg-success)]",
+  warning: "text-[var(--tessera-fg-warning)]",
+  danger: "text-[var(--tessera-fg-danger)]",
+  info: "text-[var(--tessera-fg-info)]",
+  neutral: "text-[var(--tessera-text-muted)]",
   gold: "text-gold-400",
 };
 

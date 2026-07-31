@@ -89,7 +89,7 @@ function RbacAgentMatrixInner() {
                 {r.cells.map((c) => (
                   <td key={c.agent_id} className="py-2 pr-3 text-center">
                     <span className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.58rem]">
-                      <Check className="h-3 w-3 text-emerald-400" />
+                      <Check className="h-3 w-3 text-[var(--tessera-fg-success)]" />
                       {t("scopeOrg")}
                     </span>
                   </td>

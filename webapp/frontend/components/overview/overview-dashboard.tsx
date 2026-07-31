@@ -1230,7 +1230,7 @@ function ControlCasesTriage({
         {loading ? (
           <Skeleton className="h-24 w-full" />
         ) : shown.length === 0 ? (
-          <p className="py-6 text-center text-sm text-emerald-400">{t("empty")}</p>
+          <p className="py-6 text-center text-sm text-[var(--tessera-fg-success)]">{t("empty")}</p>
         ) : (
           <ul className="flex flex-col gap-1.5">
             {shown.map((it) => (
@@ -1590,7 +1590,9 @@ function ControlCasesSection({
         {loading ? (
           <Skeleton className="h-28 w-full sm:col-span-2" />
         ) : !playbooks || playbooks.n_triggered === 0 ? (
-          <p className="py-6 text-center text-sm text-emerald-400 sm:col-span-2">{t("clear")}</p>
+          <p className="py-6 text-center text-sm text-[var(--tessera-fg-success)] sm:col-span-2">
+            {t("clear")}
+          </p>
         ) : (
           playbooks.playbooks.map((p) => {
             const tone = playbookTone[p.severity] ?? "neutral";
@@ -1675,7 +1677,9 @@ function IncidentsCard({
         {loading ? (
           <Skeleton className="h-16 w-full" />
         ) : items.length === 0 ? (
-          <p className="py-4 text-center text-xs text-emerald-400">{t("noIncidents")}</p>
+          <p className="py-4 text-center text-xs text-[var(--tessera-fg-success)]">
+            {t("noIncidents")}
+          </p>
         ) : (
           items.slice(0, 6).map((it, i) => (
             <div

@@ -346,7 +346,7 @@ function Kpi({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
       <p
         className={cn(
           "mt-0.5 text-[0.56rem] font-medium",
-          kpi.good ? "text-emerald-400" : "text-[var(--tessera-fg-danger)]",
+          kpi.good ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]",
         )}
       >
         {kpi.delta}
@@ -1337,7 +1337,7 @@ function Activity({ data }: { data: Data }) {
             key={`${it.time}-${it.action}-${i}`}
             className="flex items-center gap-2 text-[0.64rem]"
           >
-            <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
+            <CheckCircle2 className="h-3 w-3 shrink-0 text-[var(--tessera-fg-success)]" />
             <span className="shrink-0 font-medium text-[var(--tessera-text)]">{it.actor}</span>
             <Truncate full={it.action} className="min-w-0 flex-1 text-[var(--tessera-text-muted)]">
               {it.action}

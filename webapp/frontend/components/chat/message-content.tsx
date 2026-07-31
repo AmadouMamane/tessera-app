@@ -67,7 +67,7 @@ export function CitationList({
                   </span>
                   <span className="min-w-0">
                     <span className="flex items-center gap-1 font-medium text-slate-800">
-                      <FileText className="h-3 w-3 shrink-0 text-gray-400" />
+                      <FileText className="h-3 w-3 shrink-0 text-[var(--tessera-text-muted)]" />
                       <span className="truncate">{title}</span>
                     </span>
                     {hasTitle && (
@@ -80,7 +80,7 @@ export function CitationList({
                     <span className="rounded border border-gray-200 px-1 py-px text-[0.55rem] font-medium text-gray-500 uppercase tracking-wide">
                       {c.language}
                     </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-180" />
+                    <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)] transition-transform group-open:rotate-180" />
                   </span>
                 </summary>
                 <p className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words border-gray-200 border-t px-2.5 py-2 text-gray-600 text-xs leading-relaxed [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:border-white hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">

@@ -71,11 +71,11 @@ const WATCH_DOT: Record<string, string> = {
   crit: "bg-red-400",
 };
 const FIELD_DOT: Record<string, string> = {
-  crit: "text-red-400",
+  crit: "text-[var(--tessera-fg-danger)]",
   high: "text-[var(--tessera-fg-warning)]",
   mod: "text-[var(--tessera-fg-warning)]",
   low: "text-[var(--tessera-fg-info)]",
-  good: "text-emerald-400",
+  good: "text-[var(--tessera-fg-success)]",
 };
 
 const ALL = "all" as const;
@@ -420,7 +420,7 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
         <p
           className={cn(
             "truncate text-[0.6rem] tabular-nums",
-            kpi.good ? "text-emerald-400" : "text-red-400",
+            kpi.good ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]",
           )}
         >
           {kpi.delta}

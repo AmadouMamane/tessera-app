@@ -1200,7 +1200,7 @@ function RailMarker({
             <Database
               className={cn(
                 "h-2.5 w-2.5",
-                signal ? "text-[rgba(124,188,220,0.9)]" : "text-slate-400",
+                signal ? "text-[rgba(124,188,220,0.9)]" : "text-[var(--tessera-text-muted)]",
               )}
               aria-hidden
             />

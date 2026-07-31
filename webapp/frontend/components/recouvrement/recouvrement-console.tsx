@@ -226,7 +226,7 @@ export function RecouvrementConsole() {
           chromeClassName="border-[var(--border)] border-b"
           lead={
             <>
-              <ShieldAlert className="h-5 w-5 shrink-0 text-amber-500" />
+              <ShieldAlert className="h-5 w-5 shrink-0 text-[var(--tessera-fg-warning)]" />
               <p className="truncate text-sm text-[var(--tessera-text)]">{t("subtitle")}</p>
             </>
           }
