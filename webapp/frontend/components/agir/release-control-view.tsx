@@ -79,7 +79,7 @@ export async function ReleaseControlView({
         <div className="flex items-center justify-end">
           <Link
             href="/agents"
-            className="inline-flex items-center gap-0.5 text-[0.66rem] text-[#b9a6ff] hover:underline"
+            className="inline-flex items-center gap-0.5 text-[0.66rem] text-[var(--tessera-fg-accent)] hover:underline"
           >
             {t("viewFleet")}
             <ChevronRight className="h-3 w-3" />
@@ -218,14 +218,14 @@ export async function ReleaseControlView({
                   The source diagnosis remains verbatim and available one click below it. */}
               {rel.available && !rel.passed && rel.floor_block ? (
                 <div className="rounded-md border border-red-500/30 bg-red-500/5 px-2.5 py-1.5">
-                  <p className="text-[0.6rem] font-medium uppercase tracking-wide text-red-300">
+                  <p className="text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-danger)]">
                     {t("floorReason")}
                   </p>
                   <p className="mt-1 text-[0.68rem] leading-relaxed text-[var(--tessera-text)]">
                     {floorParams ? t("floorSummary", floorParams) : t("floorSummaryGeneric")}
                   </p>
                   <details className="mt-1.5 text-[0.6rem] text-[var(--tessera-text-muted)]">
-                    <summary className="cursor-pointer text-[#b9a6ff] hover:underline">
+                    <summary className="cursor-pointer text-[var(--tessera-fg-accent)] hover:underline">
                       {t("floorTechnicalDetail")}
                     </summary>
                     <p className="mt-1 leading-relaxed">{rel.floor_block}</p>
@@ -243,7 +243,7 @@ export async function ReleaseControlView({
                       <span
                         className={`rounded px-1.5 py-0.5 ${
                           reached
-                            ? "bg-[#7c5cf5]/20 text-[#b9a6ff]"
+                            ? "bg-[#7c5cf5]/20 text-[var(--tessera-fg-accent)]"
                             : "bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)]"
                         }`}
                       >
@@ -265,7 +265,7 @@ export async function ReleaseControlView({
               {/* Drill into the agent's own surface (release/eval detail). */}
               <Link
                 href={`/agents/${a.agent_id}` as Route}
-                className="mt-auto inline-flex items-center gap-0.5 self-start text-[0.62rem] text-[#b9a6ff] hover:underline"
+                className="mt-auto inline-flex items-center gap-0.5 self-start text-[0.62rem] text-[var(--tessera-fg-accent)] hover:underline"
               >
                 {t("viewAgent")}
                 <ChevronRight className="h-3 w-3" />
@@ -293,9 +293,9 @@ function Kpi({
 }) {
   const color =
     tone === "good"
-      ? "text-emerald-300"
+      ? "text-[var(--tessera-fg-success)]"
       : tone === "bad"
-        ? "text-red-300"
+        ? "text-[var(--tessera-fg-danger)]"
         : "text-[var(--tessera-text)]";
   const Icon =
     icon === "ok"
@@ -330,9 +330,9 @@ function Cell({
 }) {
   const color =
     tone === "good"
-      ? "text-emerald-300"
+      ? "text-[var(--tessera-fg-success)]"
       : tone === "bad"
-        ? "text-red-300"
+        ? "text-[var(--tessera-fg-danger)]"
         : "text-[var(--tessera-text)]";
   return (
     <div>

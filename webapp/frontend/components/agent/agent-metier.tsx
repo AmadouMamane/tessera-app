@@ -306,7 +306,7 @@ function SignalKpiStrip({
     <section className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <BriefcaseBusiness className="h-4 w-4 text-[#b9a6ff]" />
+          <BriefcaseBusiness className="h-4 w-4 text-[var(--tessera-fg-accent)]" />
           <h2 className="text-sm font-semibold">{t("signals.title")}</h2>
           <CardInfo ns="agentMetier" k="signals" title={t("signals.title")} />
         </div>
@@ -393,7 +393,7 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
       <CardContent className="flex h-full min-h-[108px] flex-col justify-between p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[#c4b5fd]">
+            <div className="mb-1 flex items-center gap-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
               <Target className="h-3.5 w-3.5" />
               {t("signals.northStar")}
               <CardInfo ns="agentMetier" k="northStar" title={label} />
@@ -409,7 +409,7 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
             </p>
           ) : observedRuns > 0 ? (
             // Not decisive, but not empty either: name the state instead of drawing a dash.
-            <p className="text-[1.05rem] font-semibold leading-none text-[#c4b5fd]">
+            <p className="text-[1.05rem] font-semibold leading-none text-[var(--tessera-fg-accent)]">
               {t("hero.accumulating")}
             </p>
           ) : (
@@ -420,7 +420,9 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
           <TrendHint trend={signal.trend} />
         </div>
         {provenance.length > 0 ? (
-          <p className="text-[0.64rem] leading-snug text-[#cfc6ff]">{provenance.join(" · ")}</p>
+          <p className="text-[0.64rem] leading-snug text-[var(--tessera-fg-info)]">
+            {provenance.join(" · ")}
+          </p>
         ) : null}
         <p className="text-[0.64rem] leading-snug text-[var(--tessera-text-muted)]">
           {signal.reason.replaceAll("_", " ")}
@@ -683,12 +685,12 @@ function PercentCell({
       ? "text-[var(--tessera-text)]"
       : tone === "conformity"
         ? value >= 100
-          ? "text-[#7ee2a8]"
+          ? "text-[var(--tessera-fg-success)]"
           : value < 90
-            ? "text-[#ff9d9d]"
+            ? "text-[var(--tessera-fg-danger)]"
             : "text-[var(--tessera-text)]"
         : value > 0
-          ? "text-[#7ee2a8]"
+          ? "text-[var(--tessera-fg-success)]"
           : "text-[var(--tessera-text)]";
   const bar =
     tone === "blocked"

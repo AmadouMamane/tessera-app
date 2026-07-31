@@ -31,16 +31,16 @@ export type TabStripItem<K extends string> = {
 // into the page instead of grabbing the eye.
 const ACCENTS: Record<TabAccent, { active: string; activeIcon: string }> = {
   green: {
-    active: "border-[#0c9a6f]/40 bg-[#0c9a6f]/15 text-[#9ff0c6]",
-    activeIcon: "text-[#5fe0a4]",
+    active: "border-[#0c9a6f]/40 bg-[#0c9a6f]/15 text-[var(--tessera-fg-success)]",
+    activeIcon: "text-[var(--tessera-fg-success)]",
   },
   blue: {
-    active: "border-[#2e72d2]/40 bg-[#2e72d2]/15 text-[#a9d0ff]",
-    activeIcon: "text-[#6fb0ff]",
+    active: "border-[#2e72d2]/40 bg-[#2e72d2]/15 text-[var(--tessera-fg-info)]",
+    activeIcon: "text-[var(--tessera-fg-info)]",
   },
   violet: {
-    active: "border-[#7c5cf5]/40 bg-[#7c5cf5]/15 text-[#cabbff]",
-    activeIcon: "text-[#a48dff]",
+    active: "border-[#7c5cf5]/40 bg-[#7c5cf5]/15 text-[var(--tessera-fg-accent)]",
+    activeIcon: "text-[var(--tessera-fg-accent)]",
   },
 };
 

@@ -738,7 +738,7 @@ function ImprovementRail({
           size="sm"
           type="button"
           onClick={onOpenPlan}
-          className="h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/60"
+          className="h-8 w-full justify-center gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[var(--tessera-fg-accent)] hover:bg-[#4c3fb0]/60"
         >
           {ti("rail.planCta")}
         </Button>

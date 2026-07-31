@@ -796,7 +796,7 @@ export function SignalsTable({
                               </Badge>
                             </td>
                             <td className="py-2 pr-4 pl-2">
-                              <span className="flex items-center justify-end gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#7ff0b6]">
+                              <span className="flex items-center justify-end gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
                                 <span className="opacity-0 transition-opacity group-hover:opacity-100">
                                   {tt("rowOpen")}
                                 </span>

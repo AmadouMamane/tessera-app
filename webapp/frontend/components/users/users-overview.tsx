@@ -39,9 +39,9 @@ const BADGE: Record<string, string> = {
   slate: "border-slate-500/30 bg-slate-500/15 text-slate-300",
 };
 const STATUS: Record<string, { dot: string; text: string }> = {
-  active: { dot: "bg-emerald-400", text: "text-emerald-300" },
-  provisioned_on_demand: { dot: "bg-slate-400", text: "text-slate-300" },
-  disabled: { dot: "bg-red-400", text: "text-red-300" },
+  active: { dot: "bg-emerald-400", text: "text-[var(--tessera-fg-success)]" },
+  provisioned_on_demand: { dot: "bg-slate-400", text: "text-[var(--tessera-text-muted)]" },
+  disabled: { dot: "bg-red-400", text: "text-[var(--tessera-fg-danger)]" },
 };
 type SortKey = "display" | "role" | "team" | "status";
 
@@ -161,7 +161,7 @@ export function UsersOverview() {
               </option>
             ))}
           </select>
-          <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
+          <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--tessera-fg-info)]" />
         </label>
         <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
           {rows.length}/{users.length}
@@ -253,9 +253,9 @@ function UsersTable({
                       {t(`col.${c.key}`)}
                       {sort.key === c.sort ? (
                         sort.dir === 1 ? (
-                          <SortAsc className="h-3 w-3 text-[#87bfff]" />
+                          <SortAsc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
                         ) : (
-                          <SortDesc className="h-3 w-3 text-[#87bfff]" />
+                          <SortDesc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
                         )
                       ) : (
                         <ChevronsUpDown className="h-3 w-3 opacity-40" />
@@ -293,7 +293,7 @@ function UsersTable({
                 >
                   <td className="py-1.5 pl-5 pr-2">
                     <span className="flex items-center gap-2">
-                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-muted)] text-[0.62rem] font-semibold text-[#d6f0e3]">
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-muted)] text-[0.62rem] font-semibold text-[var(--tessera-fg-success)]">
                         {u.display.charAt(0).toUpperCase()}
                       </span>
                       <span className="min-w-0">
@@ -334,10 +334,10 @@ function UsersTable({
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {tt("rowOpen")}
                       </span>
-                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
                     </span>
                   </td>
                 </tr>
@@ -546,7 +546,7 @@ function UserDrawer({ t, user, onClose }: { t: T; user: User; onClose: () => voi
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-muted)] text-base font-semibold text-[#d6f0e3]">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-muted)] text-base font-semibold text-[var(--tessera-fg-success)]">
                 {user.display.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">

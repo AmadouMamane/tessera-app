@@ -28,9 +28,9 @@ const fmtPp = (pp: number) => `${pp > 0 ? "+" : ""}${pp.toFixed(1).replace(".", 
 const fmtDate = (iso: string | undefined) => (iso ? iso.slice(0, 10) : "—");
 
 const RELEASE_TONE: Record<string, string> = {
-  good: "text-emerald-300",
-  crit: "text-red-300",
-  bad: "text-amber-300",
+  good: "text-[var(--tessera-fg-success)]",
+  crit: "text-[var(--tessera-fg-danger)]",
+  bad: "text-[var(--tessera-fg-warning)]",
   muted: "text-[var(--tessera-text-muted)]",
 };
 
@@ -232,10 +232,12 @@ function MonitoringTable({
       <tfoot>
         {/* Total org — DISTINCT entities, never the sum of the rows above. */}
         <tr className="border-t-2 border-[#7c5cf5]/40">
-          <td className="py-2 pr-3 font-semibold text-[#b9a6ff]">{t("orgTotal")}</td>
+          <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
+            {t("orgTotal")}
+          </td>
           <td
             data-testid="fleet-org-total"
-            className="py-2 pr-3 text-right font-semibold tabular-nums text-[#b9a6ff]"
+            className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
           >
             {fmtInt(fleet.org?.conversations ?? 0)}
           </td>
@@ -347,7 +349,7 @@ function AlarmTable({
                 <Link
                   href={agentPath(a.id, "evaluations") as Route}
                   title={t("openEvaluations")}
-                  className="hover:text-[#b9a6ff] hover:underline"
+                  className="hover:text-[var(--tessera-fg-accent)] hover:underline"
                 >
                   {a.name}
                 </Link>
@@ -357,7 +359,7 @@ function AlarmTable({
               </td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row.gapPp !== null && row.gapPp < 0 ? "text-red-300" : ""
+                  row.gapPp !== null && row.gapPp < 0 ? "text-[var(--tessera-fg-danger)]" : ""
                 }`}
               >
                 {row.gapPp === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtPp(row.gapPp)}
@@ -378,9 +380,11 @@ function AlarmTable({
       </tbody>
       <tfoot>
         <tr className="border-t-2 border-[#7c5cf5]/40">
-          <td className="py-2 pr-3 font-semibold text-[#b9a6ff]">{t("orgTotal")}</td>
+          <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
+            {t("orgTotal")}
+          </td>
           <td colSpan={2} className="py-2" />
-          <td className="py-2 pr-3 text-right font-semibold tabular-nums text-[#b9a6ff]">
+          <td className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]">
             {lens.orgNBad === null || lens.orgN === null
               ? "—"
               : `${fmtInt(lens.orgNBad)} / ${fmtInt(lens.orgN)}`}
@@ -467,7 +471,7 @@ function QualityTable({
                 <Link
                   href={agentPath(a.id, "evaluations") as Route}
                   title={t("openEvaluations")}
-                  className="hover:text-[#b9a6ff] hover:underline"
+                  className="hover:text-[var(--tessera-fg-accent)] hover:underline"
                 >
                   {a.name}
                 </Link>
@@ -488,7 +492,7 @@ function QualityTable({
               </td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  rel && rel.blocking_t1 > 0 ? "text-red-300" : ""
+                  rel && rel.blocking_t1 > 0 ? "text-[var(--tessera-fg-danger)]" : ""
                 }`}
               >
                 {rel ? fmtInt(rel.blocking_t1) : "—"}
@@ -500,7 +504,7 @@ function QualityTable({
               </td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  rel?.verdict_stale ? "text-amber-300" : ""
+                  rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
                 }`}
                 title={rel?.verdict_stale ? t("staleEval") : undefined}
               >
@@ -515,7 +519,9 @@ function QualityTable({
       </tbody>
       <tfoot>
         <tr className="border-t-2 border-[#7c5cf5]/40">
-          <td className="py-2 pr-3 font-semibold text-[#b9a6ff]">{t("orgTotal")}</td>
+          <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
+            {t("orgTotal")}
+          </td>
           <td
             colSpan={6}
             className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
@@ -575,7 +581,7 @@ function DomainFoot({ fleet, t, span }: { fleet: Fleet; t: Translator; span: num
   return (
     <tfoot>
       <tr className="border-t-2 border-[#7c5cf5]/40">
-        <td className="py-2 pr-3 font-semibold text-[#b9a6ff]">{t("orgTotal")}</td>
+        <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">{t("orgTotal")}</td>
         <td
           colSpan={span}
           className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
@@ -633,7 +639,7 @@ function SecurityTable({
               <td className="py-1.5 pr-3 font-medium">{a.name}</td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.piiLeaks ? "text-red-300" : ""
+                  row?.piiLeaks ? "text-[var(--tessera-fg-danger)]" : ""
                 }`}
               >
                 <PairCell
@@ -645,7 +651,7 @@ function SecurityTable({
               </td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.toxCount ? "text-red-300" : ""
+                  row?.toxCount ? "text-[var(--tessera-fg-danger)]" : ""
                 }`}
               >
                 <PairCell
@@ -781,7 +787,7 @@ function ObservabilityTable({
               <td className="py-1.5 pr-3 font-medium">{a.name}</td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.anomalous ? "text-red-300" : ""
+                  row?.anomalous ? "text-[var(--tessera-fg-danger)]" : ""
                 }`}
               >
                 <PairCell
@@ -793,7 +799,7 @@ function ObservabilityTable({
               </td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.violations ? "text-red-300" : ""
+                  row?.violations ? "text-[var(--tessera-fg-danger)]" : ""
                 }`}
               >
                 <PairCell
@@ -855,7 +861,7 @@ function ReliabilityTable({
               <td className="py-1.5 pr-3 font-medium">{a.name}</td>
               <td
                 className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.toolErrors ? "text-red-300" : ""
+                  row?.toolErrors ? "text-[var(--tessera-fg-danger)]" : ""
                 }`}
               >
                 <PairCell

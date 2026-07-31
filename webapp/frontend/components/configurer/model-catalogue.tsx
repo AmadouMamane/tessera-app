@@ -153,7 +153,7 @@ export function ModelCatalogue() {
                 >
                   <td className="px-2.5 py-1.5">
                     <span className="inline-flex items-center gap-1.5 font-mono text-[var(--tessera-text)]">
-                      <Cpu className="h-3 w-3 text-[#87bfff]" /> {m.name}
+                      <Cpu className="h-3 w-3 text-[var(--tessera-fg-info)]" /> {m.name}
                     </span>
                   </td>
                   <td className="px-2.5 py-1.5 text-[var(--tessera-text-muted)]">
@@ -278,7 +278,9 @@ function ServingModels() {
                 <span className="min-w-[180px] text-[0.7rem] font-medium text-[var(--tessera-text)]">
                   {rowLabel}
                 </span>
-                <span className="font-mono text-[0.68rem] text-[#87bfff]">{effective}</span>
+                <span className="font-mono text-[0.68rem] text-[var(--tessera-fg-info)]">
+                  {effective}
+                </span>
                 <span
                   className={cn(
                     "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
@@ -312,7 +314,7 @@ function ServingModels() {
                                   : effective),
                           )
                         }
-                        className="text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff] disabled:opacity-50"
+                        className="text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)] disabled:opacity-50"
                       >
                         {t("change")}
                       </button>
@@ -321,7 +323,7 @@ function ServingModels() {
                           type="button"
                           disabled={busy}
                           onClick={() => startEdit(k.key, "revert", effective)}
-                          className="text-[0.62rem] font-medium text-amber-300 hover:text-amber-200 disabled:opacity-50"
+                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-fg-warning)] disabled:opacity-50"
                         >
                           {t("revert")}
                         </button>
@@ -425,7 +427,7 @@ function ServingModels() {
                     {t("cancel")}
                   </button>
                   {error ? (
-                    <p role="alert" className="text-[0.62rem] text-red-300">
+                    <p role="alert" className="text-[0.62rem] text-[var(--tessera-fg-danger)]">
                       {error}
                     </p>
                   ) : null}
@@ -491,10 +493,10 @@ function ModelDetail({
       <div className="border-t border-[var(--tessera-border)] pt-2">
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-            <Users className="h-3.5 w-3.5 text-[#87bfff]" /> {d.consumers.title}
+            <Users className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {d.consumers.title}
           </span>
           {d.consumers.regate_count > 0 ? (
-            <span className="inline-flex items-center gap-1 text-[0.6rem] text-amber-300">
+            <span className="inline-flex items-center gap-1 text-[0.6rem] text-[var(--tessera-fg-warning)]">
               <AlertTriangle className="h-3 w-3" /> {d.consumers.regate_label}
             </span>
           ) : null}
@@ -528,7 +530,9 @@ function ModelDetail({
             href={REVALIDATE_HREF}
             className={cn(
               "mt-1.5 inline-flex items-center gap-1 text-[0.6rem] font-medium hover:underline",
-              d.consumers.regate_count > 0 ? "text-amber-300" : "text-[#87bfff]",
+              d.consumers.regate_count > 0
+                ? "text-[var(--tessera-fg-warning)]"
+                : "text-[var(--tessera-fg-info)]",
             )}
           >
             <GitBranch className="h-3 w-3" /> {d.consumers.revalidate_label}

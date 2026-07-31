@@ -198,8 +198,8 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
 
               <div className="relative z-10 mx-auto mb-8 grid size-28 place-items-center rounded-full border border-emerald-300/35 bg-[radial-gradient(circle_at_35%_30%,rgba(16,185,129,0.2),rgba(3,19,25,0.96)_68%)] text-center shadow-[0_0_42px_rgba(0,200,120,0.12)] sm:absolute sm:top-1/2 sm:left-1/2 sm:mb-0 sm:-translate-x-1/2 sm:-translate-y-1/2">
                 <div>
-                  <Radar className="mx-auto size-5 text-emerald-200" aria-hidden />
-                  <p className="mt-2 text-xs font-semibold tracking-[0.14em] text-emerald-100 uppercase">
+                  <Radar className="mx-auto size-5 text-[var(--tessera-fg-success)]" aria-hidden />
+                  <p className="mt-2 text-xs font-semibold tracking-[0.14em] text-[var(--tessera-fg-success)] uppercase">
                     {t("hero.orbitCenter")}
                   </p>
                 </div>
@@ -297,7 +297,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
 
           <div className="grid gap-6 border-[var(--tessera-border)] border-t bg-[linear-gradient(135deg,rgba(139,183,255,0.07),transparent_58%)] p-5 sm:p-7 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
-              <p className="font-mono text-[0.62rem] font-semibold tracking-[0.14em] text-[#8bb7ff] uppercase">
+              <p className="font-mono text-[0.62rem] font-semibold tracking-[0.14em] text-[var(--tessera-fg-info)] uppercase">
                 {journey.illustrative.label}
               </p>
               <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-[rgba(229,147,8,0.28)] bg-[rgba(229,147,8,0.1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-warning-500)]">

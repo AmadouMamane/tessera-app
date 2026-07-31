@@ -41,7 +41,7 @@ import { useUrlBackedView } from "@/lib/use-url-backed-view";
 const SEV_BADGE: Record<string, string> = {
   critique: "border-red-500/30 bg-red-500/15 text-red-300",
   eleve: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  moyen: "border-yellow-500/30 bg-yellow-500/15 text-yellow-300",
+  moyen: "border-yellow-500/30 bg-yellow-500/15 text-[var(--tessera-fg-warning)]",
   faible: "border-sky-500/30 bg-sky-500/15 text-sky-300",
 };
 const RESULT_BADGE: Record<string, string> = {
@@ -118,7 +118,9 @@ export function AutomationsOverview() {
           signal scrubber (SR-01) this page wrongly rendered before lot 5. */}
       <AgirRail />
       {frozen ? (
-        <output className="text-[0.66rem] text-amber-300">{tr("frozenTitle")}</output>
+        <output className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+          {tr("frozenTitle")}
+        </output>
       ) : null}
 
       <div id="automations-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
@@ -443,7 +445,9 @@ function Catalogue({
                 <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-text-muted)]">
                   {row.last_run}
                 </td>
-                <td className="px-2 py-1.5 tabular-nums text-emerald-300">{row.success}</td>
+                <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-fg-success)]">
+                  {row.success}
+                </td>
                 <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{row.role}</td>
                 <td className="px-2 py-1.5">
                   <button
@@ -489,7 +493,9 @@ function Pipeline({ t, data }: { t: T; data: Data }) {
                 <span className="text-[0.95rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                   {step.count}
                 </span>
-                <span className="text-[0.6rem] tabular-nums text-[#87bfff]">{step.pct}%</span>
+                <span className="text-[0.6rem] tabular-nums text-[var(--tessera-fg-info)]">
+                  {step.pct}%
+                </span>
               </div>
               {i < data.pipeline.length - 1 ? (
                 <ChevronRight className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
@@ -560,7 +566,7 @@ function Journal({ t, data }: { t: T; data: Data }) {
                 </td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.trigger}</td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.actor}</td>
-                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[#87bfff]">
+                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[var(--tessera-fg-info)]">
                   {r.evidence}
                 </td>
                 <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
@@ -605,7 +611,9 @@ function AutomationsRail({
           {data.recent_incidents.map((inc, i) => (
             <li key={`${inc.id}-${i}`} className="flex items-center gap-2 text-[0.72rem]">
               <Badge className={SEV_BADGE[inc.severity]}>{t(`severity.${inc.severity}`)}</Badge>
-              <span className="font-mono text-[0.64rem] text-[#87bfff]">{inc.id}</span>
+              <span className="font-mono text-[0.64rem] text-[var(--tessera-fg-info)]">
+                {inc.id}
+              </span>
               <Truncate full={inc.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {inc.label}
               </Truncate>
@@ -761,7 +769,7 @@ function Approvals({
                 type="button"
                 disabled={deciding}
                 onClick={() => onDecide(a.id, false)}
-                className="shrink-0 text-[0.62rem] font-medium text-red-300 hover:text-red-200 disabled:opacity-50"
+                className="shrink-0 text-[0.62rem] font-medium text-[var(--tessera-fg-danger)] hover:text-[var(--tessera-fg-danger)] disabled:opacity-50"
               >
                 {t("approve.reject")}
               </button>
@@ -1018,7 +1026,7 @@ function KpiTile({
         />
       </div>
       <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
-        <span className={good ? "text-[var(--tessera-green)]" : "text-red-300"}>
+        <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
         <span className="text-[var(--tessera-text-muted)]">{vs}</span>
@@ -1127,7 +1135,7 @@ function Legend({ color, label }: { color: string; label: string }) {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>

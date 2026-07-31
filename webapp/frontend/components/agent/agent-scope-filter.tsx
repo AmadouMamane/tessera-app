@@ -84,7 +84,9 @@ function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string
           className="flex items-center justify-between gap-3"
         >
           <span className="truncate">{t("all")}</span>
-          {scope === AGENT_SCOPE_ALL ? <Check className="h-3.5 w-3.5 text-[#b9a6ff]" /> : null}
+          {scope === AGENT_SCOPE_ALL ? (
+            <Check className="h-3.5 w-3.5 text-[var(--tessera-fg-accent)]" />
+          ) : null}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {agents.map((a) => (
@@ -94,7 +96,9 @@ function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string
             className="flex items-center justify-between gap-3"
           >
             <Truncate full={a.name}>{a.name}</Truncate>
-            {a.id === scope ? <Check className="h-3.5 w-3.5 text-[#b9a6ff]" /> : null}
+            {a.id === scope ? (
+              <Check className="h-3.5 w-3.5 text-[var(--tessera-fg-accent)]" />
+            ) : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

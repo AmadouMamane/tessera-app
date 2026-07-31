@@ -650,7 +650,7 @@ function AuditEventsTable({
               <TableCell>
                 <OutcomeBadge outcome={entry.outcome} />
               </TableCell>
-              <TableCell className="font-mono text-[0.68rem] text-[#87bfff]">
+              <TableCell className="font-mono text-[0.68rem] text-[var(--tessera-fg-info)]">
                 {entry.proof_ref ? (
                   <span className="inline-flex items-center gap-1">
                     {entry.proof_ref}

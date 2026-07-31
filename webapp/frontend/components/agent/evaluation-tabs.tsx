@@ -157,7 +157,7 @@ export function SetsTab({ data }: { data: Data }) {
       sortValue: (r) => r.name,
       render: (r) => (
         <div className="flex min-w-0 items-center gap-2">
-          <Boxes className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+          <Boxes className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
           <Truncate full={r.name} className="font-medium text-[var(--tessera-text)]">
             {r.name}
           </Truncate>
@@ -211,7 +211,7 @@ export function SetsTab({ data }: { data: Data }) {
       width: "12%",
       numeric: true,
       sortValue: (r) => r.critical_count,
-      render: (r) => <span className="text-[#ff9bb0]">{r.critical_count}</span>,
+      render: (r) => <span className="text-[var(--tessera-fg-danger)]">{r.critical_count}</span>,
     },
     {
       key: "categories",
@@ -242,7 +242,7 @@ export function SetsTab({ data }: { data: Data }) {
         <Stat
           label={pick(locale, "Cas critiques", "Kritische Fälle", "Critical cases")}
           value={String(cases.filter((c) => c.severity === "critical").length)}
-          tone="text-[#ff9bb0]"
+          tone="text-[var(--tessera-fg-danger)]"
         />
       </div>
       <FilterBar>
@@ -321,7 +321,7 @@ function SetDrawer({
     <EvalDrawer
       title={row.name}
       subtitle={row.bound ? `${labels.bound_label} · ${row.agent_id}` : labels.shared_label}
-      icon={<Boxes className="h-4 w-4 text-[#8b7cf0]" />}
+      icon={<Boxes className="h-4 w-4 text-[var(--tessera-fg-info)]" />}
       onClose={onClose}
     >
       {row.active ? (
@@ -512,7 +512,11 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
       numeric: true,
       sortValue: (r) => r.tool_count,
       render: (r) => (
-        <span className={r.tool_count > 0 ? "text-sky-300" : "text-[var(--tessera-text-muted)]"}>
+        <span
+          className={
+            r.tool_count > 0 ? "text-[var(--tessera-fg-info)]" : "text-[var(--tessera-text-muted)]"
+          }
+        >
           {r.tool_count}
         </span>
       ),
@@ -530,12 +534,12 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
         <Stat
           label={pick(locale, "Réussis", "Bestanden", "Passed")}
           value={String(results.passed)}
-          tone="text-emerald-300"
+          tone="text-[var(--tessera-fg-success)]"
         />
         <Stat
           label={pick(locale, "Échoués", "Fehlgeschlagen", "Failed")}
           value={String(results.failed)}
-          tone={results.failed > 0 ? "text-[#ff9bb0]" : undefined}
+          tone={results.failed > 0 ? "text-[var(--tessera-fg-danger)]" : undefined}
         />
         <Stat
           label={pick(locale, "Escalades", "Eskalationen", "Escalations")}
@@ -545,7 +549,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
       {mode === "failed" ? (
         <Link
           href={agentPath(agentId, "evaluations") as Route}
-          className="flex items-center gap-1.5 self-start text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+          className="flex items-center gap-1.5 self-start text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           <ShieldAlert className="h-3.5 w-3.5" />
           {pick(
@@ -631,7 +635,7 @@ function ResultDrawer({
     <EvalDrawer
       title={row.title}
       subtitle={`${row.case_id} · ${row.language.toUpperCase()}`}
-      icon={<Beaker className="h-4 w-4 text-[#8b7cf0]" />}
+      icon={<Beaker className="h-4 w-4 text-[var(--tessera-fg-info)]" />}
       onClose={onClose}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -640,7 +644,7 @@ function ResultDrawer({
             "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.62rem] font-medium",
             row.passed
               ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-              : "border-[#e0566f]/50 bg-[#e0566f]/10 text-[#ff9bb0]",
+              : "border-[#e0566f]/50 bg-[#e0566f]/10 text-[var(--tessera-fg-danger)]",
           )}
         >
           <span className={cn("h-1.5 w-1.5 rounded-full", PASS_DOT[row.status_tone])} />
@@ -730,8 +734,14 @@ function verdict(gatePassed: boolean | null, locale: string): { label: string; t
       tone: "text-[var(--tessera-text-muted)]",
     };
   return gatePassed
-    ? { label: pick(locale, "PASSE", "BESTANDEN", "PASS"), tone: "text-emerald-300" }
-    : { label: pick(locale, "BLOQUÉ", "BLOCKIERT", "BLOCKED"), tone: "text-red-300" };
+    ? {
+        label: pick(locale, "PASSE", "BESTANDEN", "PASS"),
+        tone: "text-[var(--tessera-fg-success)]",
+      }
+    : {
+        label: pick(locale, "BLOQUÉ", "BLOCKIERT", "BLOCKED"),
+        tone: "text-[var(--tessera-fg-danger)]",
+      };
 }
 
 function RunSelect({
@@ -825,9 +835,9 @@ export function ComparaisonsTab({ data }: { data: Data }) {
           className={cn(
             "tabular-nums",
             deltaPts > 0
-              ? "text-emerald-300"
+              ? "text-[var(--tessera-fg-success)]"
               : deltaPts < 0
-                ? "text-red-300"
+                ? "text-[var(--tessera-fg-danger)]"
                 : "text-[var(--tessera-text-muted)]",
           )}
         >
@@ -959,7 +969,7 @@ export function VersionsTab({ data }: { data: Data }) {
       sortValue: (r) => r.run_at,
       render: (r) => (
         <div className="flex items-center gap-2">
-          <History className="h-3.5 w-3.5 shrink-0 text-[#8b7cf0]" />
+          <History className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" />
           <span className="font-medium text-[var(--tessera-text)]">{r.label}</span>
         </div>
       ),
@@ -1024,9 +1034,9 @@ export function VersionsTab({ data }: { data: Data }) {
           <span
             className={cn(
               r.delta_pass_rate > 0
-                ? "text-emerald-300"
+                ? "text-[var(--tessera-fg-success)]"
                 : r.delta_pass_rate < 0
-                  ? "text-red-300"
+                  ? "text-[var(--tessera-fg-danger)]"
                   : "text-[var(--tessera-text-muted)]",
             )}
           >
@@ -1071,7 +1081,7 @@ function VersionDrawer({ row, onClose }: { row: RunItem; onClose: () => void }) 
     <EvalDrawer
       title={`${pick(locale, "Run du", "Lauf vom", "Run of")} ${row.label}`}
       subtitle={row.eval_set || undefined}
-      icon={<History className="h-4 w-4 text-[#8b7cf0]" />}
+      icon={<History className="h-4 w-4 text-[var(--tessera-fg-info)]" />}
       onClose={onClose}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -1117,7 +1127,7 @@ function VersionDrawer({ row, onClose }: { row: RunItem; onClose: () => void }) 
       </DrawerBlock>
       <Link
         href={`${agentPath(agentId, "evaluations")}?run=${encodeURIComponent(row.run_at)}` as Route}
-        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {pick(
           locale,
@@ -1150,7 +1160,7 @@ export function ExportsTab({ data }: { data: Data }) {
   }[] = [
     {
       key: "results",
-      icon: <ListChecks className="h-5 w-5 text-emerald-300" />,
+      icon: <ListChecks className="h-5 w-5 text-[var(--tessera-fg-success)]" />,
       title: pick(locale, "Résultats du run", "Ergebnisse des Laufs", "Run results"),
       desc: pick(
         locale,
@@ -1192,7 +1202,7 @@ export function ExportsTab({ data }: { data: Data }) {
     },
     {
       key: "dimensions",
-      icon: <Table2 className="h-5 w-5 text-sky-300" />,
+      icon: <Table2 className="h-5 w-5 text-[var(--tessera-fg-info)]" />,
       title: pick(locale, "Dimensions", "Dimensionen", "Dimensions"),
       desc: pick(
         locale,
@@ -1220,7 +1230,7 @@ export function ExportsTab({ data }: { data: Data }) {
     },
     {
       key: "runs",
-      icon: <History className="h-5 w-5 text-violet-300" />,
+      icon: <History className="h-5 w-5 text-[var(--tessera-fg-accent)]" />,
       title: pick(locale, "Historique des runs", "Lauf-Verlauf", "Run history"),
       desc: pick(
         locale,
@@ -1262,7 +1272,7 @@ export function ExportsTab({ data }: { data: Data }) {
     },
     {
       key: "sets",
-      icon: <Boxes className="h-5 w-5 text-amber-300" />,
+      icon: <Boxes className="h-5 w-5 text-[var(--tessera-fg-warning)]" />,
       title: pick(locale, "Jeux d'évaluations", "Evaluierungssets", "Evaluation sets"),
       desc: pick(
         locale,
@@ -1282,7 +1292,7 @@ export function ExportsTab({ data }: { data: Data }) {
     },
     {
       key: "gate",
-      icon: <FileJson className="h-5 w-5 text-[#ff9bb0]" />,
+      icon: <FileJson className="h-5 w-5 text-[var(--tessera-fg-danger)]" />,
       title: pick(locale, "Rapport de gate", "Gate-Bericht", "Gate report"),
       desc: pick(
         locale,

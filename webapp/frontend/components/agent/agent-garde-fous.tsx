@@ -72,9 +72,9 @@ const WATCH_DOT: Record<string, string> = {
 };
 const FIELD_DOT: Record<string, string> = {
   crit: "text-red-400",
-  high: "text-orange-300",
-  mod: "text-amber-300",
-  low: "text-sky-300",
+  high: "text-[var(--tessera-fg-warning)]",
+  mod: "text-[var(--tessera-fg-warning)]",
+  low: "text-[var(--tessera-fg-info)]",
   good: "text-emerald-400",
 };
 
@@ -261,7 +261,7 @@ export function AgentGardeFous() {
               <button
                 type="button"
                 onClick={resetAll}
-                className="text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+                className="text-[0.66rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
               >
                 {t("clearAll")}
               </button>
@@ -327,7 +327,7 @@ function Snapshot({ data }: { data: Data }) {
       <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
         <Field>
           <span className="flex items-center gap-1.5 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <Clock className="h-3.5 w-3.5 text-[#8b7cf0]" /> {s.tag}
+            <Clock className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {s.tag}
           </span>
           <span className="flex items-center gap-1 text-[0.92rem] font-semibold text-[var(--tessera-text)]">
             {s.label}
@@ -344,7 +344,9 @@ function Snapshot({ data }: { data: Data }) {
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.version_label}</span>
           <span className="text-[0.82rem] font-medium text-[var(--tessera-text)]">{s.version}</span>
-          <span className="text-[0.58rem] text-emerald-300">{s.version_status}</span>
+          <span className="text-[0.58rem] text-[var(--tessera-fg-success)]">
+            {s.version_status}
+          </span>
         </Field>
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.evalset_label}</span>
@@ -356,7 +358,9 @@ function Snapshot({ data }: { data: Data }) {
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.coverage_label}</span>
           <span className="flex items-center gap-2">
             <Gauge pct={s.coverage} />
-            <span className="text-[0.7rem] text-emerald-300">{s.coverage_tone}</span>
+            <span className="text-[0.7rem] text-[var(--tessera-fg-success)]">
+              {s.coverage_tone}
+            </span>
           </span>
         </Field>
       </div>
@@ -478,7 +482,9 @@ function FilterDropdown({
               )}
             >
               {o.label}
-              {o.value === value ? <span className="text-[#5fd0c6]">&bull;</span> : null}
+              {o.value === value ? (
+                <span className="text-[var(--tessera-fg-teal)]">&bull;</span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -614,7 +620,9 @@ function Filters({
                   )}
                 >
                   {o.label}
-                  {o.value === mode ? <span className="text-[#5fd0c6]">&bull;</span> : null}
+                  {o.value === mode ? (
+                    <span className="text-[var(--tessera-fg-teal)]">&bull;</span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -704,7 +712,7 @@ function RulesTable({
                   >
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+                        <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
                         <Truncate
                           full={r.name}
                           className="text-[0.74rem] font-medium text-[var(--tessera-text)]"
@@ -730,7 +738,9 @@ function RulesTable({
                       <span
                         className={cn(
                           "inline-flex items-center gap-1.5 text-[0.68rem]",
-                          r.status_tone === "good" ? "text-emerald-300" : "text-red-300",
+                          r.status_tone === "good"
+                            ? "text-[var(--tessera-fg-success)]"
+                            : "text-[var(--tessera-fg-danger)]",
                         )}
                       >
                         <span
@@ -786,7 +796,7 @@ function RulesTable({
                         className={cn(
                           "inline-flex items-center gap-1 text-[0.68rem]",
                           r.test_tone === "good"
-                            ? "text-emerald-300"
+                            ? "text-[var(--tessera-fg-success)]"
                             : "text-[var(--tessera-text-muted)]",
                         )}
                       >
@@ -862,7 +872,7 @@ function Watch({ data }: { data: Data }) {
       </ul>
       <Link
         href={"/prouver/audit-logs" as Route}
-        className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+        className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {w.cta} <ChevronRight className="h-3.5 w-3.5" />
       </Link>
@@ -882,7 +892,7 @@ function Quick({ data }: { data: Data }) {
             href={it.href as Route}
             className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.72rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
           >
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-accent)]" />
             <Truncate full={it.label} className="min-w-0">
               {it.label}
             </Truncate>
@@ -1047,7 +1057,7 @@ function Detail({
         </p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <ShieldCheck className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+            <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
             <span className="min-w-0">
               <Truncate
                 full={d.name}
@@ -1219,7 +1229,7 @@ function DetailBlock({
         <h3 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
         <Link
           href={href}
-          className="text-[0.64rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+          className="text-[0.64rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           {cta}
         </Link>

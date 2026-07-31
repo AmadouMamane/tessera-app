@@ -29,7 +29,9 @@ export function SyntheticNotice({
     >
       <FlaskConical
         className={
-          compact ? "h-3 w-3 shrink-0 text-amber-300" : "h-3.5 w-3.5 shrink-0 text-amber-300"
+          compact
+            ? "h-3 w-3 shrink-0 text-[var(--tessera-fg-warning)]"
+            : "h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-warning)]"
         }
       />
       <span className="min-w-0 truncate">

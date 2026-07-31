@@ -360,7 +360,7 @@ function LevelBadge({ agent, t }: { agent: FleetAgent; t: T }) {
   return (
     <span
       title={t("observabilityLevel", { level: view.level })}
-      className="inline-flex items-center rounded-full border border-[#7c5cf5]/40 bg-[#7c5cf5]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[#b9a6ff]"
+      className="inline-flex items-center rounded-full border border-[#7c5cf5]/40 bg-[#7c5cf5]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[var(--tessera-fg-accent)]"
     >
       {view.level}
     </span>
@@ -374,9 +374,11 @@ function FavButton({ favorite, onToggle, t }: { favorite: boolean; onToggle: () 
       onClick={onToggle}
       aria-label={favorite ? t("unfavorite") : t("favorite")}
       aria-pressed={favorite}
-      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[var(--tessera-text-muted)] transition-colors hover:text-amber-300"
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[var(--tessera-text-muted)] transition-colors hover:text-[var(--tessera-fg-warning)]"
     >
-      <Star className={cn("h-3.5 w-3.5", favorite && "fill-amber-300 text-amber-300")} />
+      <Star
+        className={cn("h-3.5 w-3.5", favorite && "fill-amber-300 text-[var(--tessera-fg-warning)]")}
+      />
     </button>
   );
 }
@@ -410,7 +412,7 @@ function BusinessSignalLabel({ agent, tBusiness }: { agent: FleetAgent; tBusines
       title={`${label} · ${value}`}
     >
       <span className="truncate">{label}</span>
-      <span className="shrink-0 tabular-nums text-emerald-100">{value}</span>
+      <span className="shrink-0 tabular-nums text-[var(--tessera-fg-success)]">{value}</span>
     </span>
   );
 }
@@ -427,7 +429,7 @@ function PendingBusinessChip({ agent, t }: { agent: FleetAgent; t: T }) {
 
 function StaleChip({ t }: { t: T }) {
   return (
-    <span className="inline-flex items-center rounded-md border border-amber-500/45 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.04em] text-amber-300">
+    <span className="inline-flex items-center rounded-md border border-amber-500/45 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.04em] text-[var(--tessera-fg-warning)]">
       {t("stale")}
     </span>
   );
@@ -473,7 +475,7 @@ function AgentCard({
     <div className="group flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 transition-colors hover:border-[#7c5cf5]/50">
       <div className="flex items-start justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2">
-          <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+          <Icon className="h-4 w-4 shrink-0 text-[var(--tessera-fg-accent)]" />
           <Truncate full={agent.name} className="font-semibold">
             {agent.name}
           </Truncate>
@@ -542,7 +544,7 @@ function AgentCard({
           <Link
             href={agentPath(agent.id, "synthese")}
             onClick={onOpen}
-            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
           >
             {t("govern")} <ArrowRight className="h-3 w-3" />
           </Link>
@@ -575,7 +577,7 @@ function AgentRow({
       <span
         className={cn("h-2 w-2 shrink-0 rounded-full", HEALTH_DOT[agent.health] ?? "bg-amber-400")}
       />
-      <Icon className="h-4 w-4 shrink-0 text-[#b9a6ff]" />
+      <Icon className="h-4 w-4 shrink-0 text-[var(--tessera-fg-accent)]" />
       <Truncate full={agent.name} className="w-[160px] shrink-0 font-semibold">
         {agent.name}
       </Truncate>
@@ -618,7 +620,7 @@ function AgentRow({
       <Link
         href={agentPath(agent.id, "synthese")}
         onClick={onOpen}
-        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {t("govern")} <ArrowRight className="h-3 w-3" />
       </Link>

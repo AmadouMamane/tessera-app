@@ -560,7 +560,7 @@ export function SignalCommandBar({
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Link
                     href={`/prouver/etat-a-date?asof=${encodeURIComponent(temporal.activeAt)}`}
-                    className="flex h-8 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-blue-300 hover:bg-[var(--tessera-muted)]"
+                    className="flex h-8 items-center gap-2 rounded-md border border-[var(--tessera-border)] px-3 text-xs font-medium text-[var(--tessera-fg-info)] hover:bg-[var(--tessera-muted)]"
                   >
                     <CalendarClock className="h-4 w-4" />
                     {t("openInProofs")}

@@ -141,7 +141,7 @@ export function GuardrailCatalogue() {
                 >
                   <td className="px-2.5 py-1.5">
                     <span className="inline-flex items-center gap-1.5 font-mono text-[var(--tessera-text)]">
-                      <ShieldCheck className="h-3 w-3 text-[#87bfff]" /> {b.name}
+                      <ShieldCheck className="h-3 w-3 text-[var(--tessera-fg-info)]" /> {b.name}
                     </span>
                   </td>
                   <td className="px-2.5 py-1.5 text-[var(--tessera-text-muted)]">{b.scope}</td>
@@ -226,10 +226,10 @@ function GuardrailDetail({
         <div className="border-t border-[var(--tessera-border)] pt-2">
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-              <Users className="h-3.5 w-3.5 text-[#87bfff]" /> {d.consumers.title}
+              <Users className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {d.consumers.title}
             </span>
             {d.consumers.regate_count > 0 ? (
-              <span className="inline-flex items-center gap-1 text-[0.6rem] text-amber-300">
+              <span className="inline-flex items-center gap-1 text-[0.6rem] text-[var(--tessera-fg-warning)]">
                 <AlertTriangle className="h-3 w-3" /> {d.consumers.regate_label}
               </span>
             ) : null}
@@ -263,7 +263,9 @@ function GuardrailDetail({
               href={REVALIDATE_HREF}
               className={cn(
                 "mt-1.5 inline-flex items-center gap-1 text-[0.6rem] font-medium hover:underline",
-                d.consumers.regate_count > 0 ? "text-amber-300" : "text-[#87bfff]",
+                d.consumers.regate_count > 0
+                  ? "text-[var(--tessera-fg-warning)]"
+                  : "text-[var(--tessera-fg-info)]",
               )}
             >
               <GitBranch className="h-3 w-3" /> {d.consumers.revalidate_label}

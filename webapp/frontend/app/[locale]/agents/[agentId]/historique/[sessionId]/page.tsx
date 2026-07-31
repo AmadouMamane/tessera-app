@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 // Per-turn agent accent: a conversation that spans agents reads as a hand-over.
 const AGENT_ACCENT: Record<string, string> = {
-  "support-client": "border-[#6d4aed]/40 bg-[#6d4aed]/15 text-[#b9a6ff]",
+  "support-client": "border-[#6d4aed]/40 bg-[#6d4aed]/15 text-[var(--tessera-fg-accent)]",
   onboarding: "border-cyan-500/40 bg-cyan-500/15 text-cyan-300",
   recouvrement: "border-amber-500/40 bg-amber-500/15 text-amber-300",
 };
@@ -140,7 +140,7 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
   const chip = (active: boolean) =>
     `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.66rem] transition-colors ${
       active
-        ? "border-[#7c5cf5] bg-[#6d4aed]/25 text-[#c9b8ff]"
+        ? "border-[#7c5cf5] bg-[#6d4aed]/25 text-[var(--tessera-fg-accent)]"
         : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
     }`;
 
@@ -175,7 +175,9 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
           key={`${h.from}-${h.to}-${i}`}
           className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-[0.78rem]"
         >
-          <span className="font-medium text-emerald-300">{t("sessionDetail.handoff")}</span>
+          <span className="font-medium text-[var(--tessera-fg-success)]">
+            {t("sessionDetail.handoff")}
+          </span>
           <span className="inline-flex items-center gap-1.5">
             {h.from_name} <ArrowRight className="h-3.5 w-3.5" /> {h.to_name}
           </span>

@@ -238,7 +238,7 @@ export function AgentPrompts() {
                   <button
                     type="button"
                     onClick={resetAll}
-                    className="text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+                    className="text-[0.66rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
                   >
                     {t("clearAll")}
                   </button>
@@ -317,7 +317,9 @@ function Snapshot({ data }: { data: Data }) {
           <span className="font-mono text-[0.8rem] font-medium text-[var(--tessera-text)]">
             {s.version}
           </span>
-          <span className="text-[0.58rem] text-emerald-300">{s.version_status}</span>
+          <span className="text-[0.58rem] text-[var(--tessera-fg-success)]">
+            {s.version_status}
+          </span>
         </Field>
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.evalset_label}</span>
@@ -327,7 +329,9 @@ function Snapshot({ data }: { data: Data }) {
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.coverage_label}</span>
           <span className="flex items-center gap-2">
             <Gauge pct={s.coverage} />
-            <span className="text-[0.7rem] text-emerald-300">{s.coverage_tone}</span>
+            <span className="text-[0.7rem] text-[var(--tessera-fg-success)]">
+              {s.coverage_tone}
+            </span>
           </span>
         </Field>
       </div>
@@ -383,7 +387,9 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
       {kpi.gauge !== null ? (
         <div className="flex items-center gap-2">
           <Gauge pct={kpi.gauge} />
-          <span className="text-[0.78rem] font-medium text-emerald-300">{kpi.value}</span>
+          <span className="text-[0.78rem] font-medium text-[var(--tessera-fg-success)]">
+            {kpi.value}
+          </span>
         </div>
       ) : (
         <div>
@@ -458,7 +464,9 @@ function FilterDropdown({
               )}
             >
               {o.label}
-              {o.value === value ? <span className="text-[#5fd0c6]">&bull;</span> : null}
+              {o.value === value ? (
+                <span className="text-[var(--tessera-fg-teal)]">&bull;</span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -606,7 +614,7 @@ function PromptsTable({
                   >
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+                        <FileCode2 className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
                         <Truncate
                           full={r.name}
                           className="text-[0.74rem] font-medium text-[var(--tessera-text)]"
@@ -626,7 +634,7 @@ function PromptsTable({
                       </span>
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className="inline-flex items-center gap-1.5 text-[0.68rem] text-emerald-300">
+                      <span className="inline-flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-fg-success)]">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                         {r.status}
                       </span>
@@ -691,7 +699,7 @@ function PanelCard({
       {cta && href ? (
         <Link
           href={href}
-          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           {cta} <ChevronRight className="h-3.5 w-3.5" />
         </Link>
@@ -747,7 +755,7 @@ function Quick({ data }: { data: Data }) {
               href={it.href as Route}
               className="flex flex-col items-start gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
-              <Icon className="h-4 w-4 text-[#b9a6ff]" />
+              <Icon className="h-4 w-4 text-[var(--tessera-fg-accent)]" />
               <Truncate full={it.label} className="min-w-0">
                 {it.label}
               </Truncate>
@@ -804,7 +812,7 @@ function Detail({ detail, className }: { detail: DetailT | null; className?: str
         </p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+            <FileCode2 className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
             <span className="min-w-0">
               <Truncate
                 full={d.name}
@@ -958,7 +966,7 @@ function Content({ content }: { content: DetailT["content"] }) {
             <button
               type="button"
               onClick={() => copy(c.lang, c.text)}
-              className="flex items-center gap-1 text-[0.62rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+              className="flex items-center gap-1 text-[0.62rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
             >
               {copied === c.lang ? (
                 <>
@@ -1070,7 +1078,10 @@ function OverlayPanel({
                 type="button"
                 disabled={!isSuper || busy}
                 onClick={() => run(() => reviewPromptOverlay(agentId, "revoke"))}
-                className={cn(reviewBtn, "mt-1.5 border-amber-400/40 text-amber-300")}
+                className={cn(
+                  reviewBtn,
+                  "mt-1.5 border-amber-400/40 text-[var(--tessera-fg-warning)]",
+                )}
               >
                 {L.revoke}
               </button>
@@ -1083,7 +1094,9 @@ function OverlayPanel({
 
       {overlay.draft ? (
         <div className="mt-2 rounded-md border border-sky-500/30 bg-sky-500/5 px-2.5 py-2">
-          <span className="text-[0.68rem] font-medium text-sky-300">{L.pending}</span>
+          <span className="text-[0.68rem] font-medium text-[var(--tessera-fg-info)]">
+            {L.pending}
+          </span>
           <pre className="mt-1 whitespace-pre-wrap font-mono text-[0.68rem] text-[var(--tessera-text)]">
             {overlay.draft.text || "∅"}
           </pre>
@@ -1102,7 +1115,7 @@ function OverlayPanel({
               type="button"
               disabled={!isSuper || busy}
               onClick={() => run(() => reviewPromptOverlay(agentId, "approve"))}
-              className={cn(reviewBtn, "border-emerald-400/40 text-emerald-300")}
+              className={cn(reviewBtn, "border-emerald-400/40 text-[var(--tessera-fg-success)]")}
             >
               {L.approve}
             </button>
@@ -1110,7 +1123,7 @@ function OverlayPanel({
               type="button"
               disabled={!isSuper || busy}
               onClick={() => run(() => reviewPromptOverlay(agentId, "reject"))}
-              className={cn(reviewBtn, "border-rose-400/40 text-rose-300")}
+              className={cn(reviewBtn, "border-rose-400/40 text-[var(--tessera-fg-danger)]")}
             >
               {L.reject}
             </button>
@@ -1172,7 +1185,9 @@ function OverlayPanel({
           <span className="text-[0.6rem] tabular-nums text-[var(--tessera-text-muted)]">
             {text.length}/{overlay.max_chars}
           </span>
-          {error ? <span className="text-[0.62rem] text-rose-300">{error}</span> : null}
+          {error ? (
+            <span className="text-[0.62rem] text-[var(--tessera-fg-danger)]">{error}</span>
+          ) : null}
         </div>
       </div>
     </section>

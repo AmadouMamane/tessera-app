@@ -416,7 +416,7 @@ function ActionCard({
 }) {
   const ctaCls = `mt-auto h-7 justify-center text-[0.7rem] ${
     ctaTone === "danger"
-      ? "border-[#b45309] bg-[#78350f]/40 text-amber-200 hover:bg-[#78350f]/60"
+      ? "border-[#b45309] bg-[#78350f]/40 text-[var(--tessera-fg-warning)] hover:bg-[#78350f]/60"
       : ""
   }`;
   return (
@@ -1010,7 +1010,7 @@ export function JudgeRail({
           onClick={onEvidence}
           className="flex items-center gap-3 rounded-lg border border-[#5b4bbd] bg-gradient-to-br from-[#4c3fb0]/40 to-[#3a2f8a]/30 px-3 py-3 text-left transition-colors hover:from-[#4c3fb0]/60"
         >
-          <GitCompareArrows className="h-5 w-5 shrink-0 text-[#c4b5fd]" />
+          <GitCompareArrows className="h-5 w-5 shrink-0 text-[var(--tessera-fg-accent)]" />
           <span className="flex min-w-0 flex-col">
             <span className="text-[0.8rem] font-medium">{tq("judge.evidencePack")}</span>
             <span className="text-[0.65rem] text-[var(--muted-foreground)]">

@@ -555,7 +555,7 @@ function EmptyWithSuggestions({
         )}
       >
         <div className="absolute inset-px rounded-[1.25rem] bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_38%)]" />
-        {icon ?? <Sparkles className="relative h-7 w-7 text-[#F1D899]" />}
+        {icon ?? <Sparkles className="relative h-7 w-7 text-[var(--tessera-fg-warning)]" />}
       </div>
 
       {/* Description + regulatory trust badges — premium trust layer */}

@@ -385,7 +385,7 @@ export function TemporalRail({
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 border-[#9a5f18] bg-transparent px-4 text-[#f0a23a] hover:bg-[#3e260c]/35"
+          className="h-8 border-[#9a5f18] bg-transparent px-4 text-[var(--tessera-fg-warning)] hover:bg-[#3e260c]/35"
           onClick={() => onModeChange("history")}
         >
           <History className="h-4 w-4" />

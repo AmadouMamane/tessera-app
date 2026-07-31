@@ -60,7 +60,7 @@ export function CockpitPageGuide({
       <nav className="flex flex-wrap items-center justify-between gap-3 pb-5">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-[var(--tessera-fg-teal)] transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t("sharedGuide.back", { page: t(`guides.${guideKey}.title`) })}
@@ -73,7 +73,7 @@ export function CockpitPageGuide({
       <section className="relative overflow-hidden border-[var(--tessera-border)] border-y px-5 py-10 lg:grid lg:grid-cols-[minmax(0,0.82fr)_minmax(26rem,1.18fr)] lg:gap-16 lg:py-14">
         <div className="pointer-events-none absolute inset-0 opacity-70" style={GUIDE_BACKGROUND} />
         <div className="relative">
-          <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/30 text-cyan-200">
+          <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/30 text-[var(--tessera-fg-teal)]">
             <Sparkles className="h-[18px] w-[18px]" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
           </div>
           <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
@@ -115,7 +115,7 @@ export function CockpitPageGuide({
                 <section key={group.key} aria-labelledby={`guide-group-${guideKey}-${group.key}`}>
                   <div className="mb-2 flex items-center gap-3 border-[var(--tessera-border)] border-b pb-3">
                     <BookOpenCheck
-                      className="h-4 w-4 text-violet-200"
+                      className="h-4 w-4 text-[var(--tessera-fg-accent)]"
                       strokeWidth={ICON_STROKE_WIDTH}
                       aria-hidden
                     />
@@ -143,7 +143,7 @@ export function CockpitPageGuide({
                               {all(view.labelKey)}
                             </h4>
                             {current ? (
-                              <span className="mt-1 inline-block font-mono text-[0.58rem] uppercase tracking-[0.16em] text-cyan-200">
+                              <span className="mt-1 inline-block font-mono text-[0.58rem] uppercase tracking-[0.16em] text-[var(--tessera-fg-teal)]">
                                 {t("viewAtlas.current")}
                               </span>
                             ) : null}
@@ -154,7 +154,7 @@ export function CockpitPageGuide({
                           <Link
                             href={sourceHrefForHelpView(backHref, group, view.key)}
                             aria-label={t("viewAtlas.open", { view: all(view.labelKey) })}
-                            className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-violet-200 transition-colors hover:text-[var(--tessera-text-strong)]"
+                            className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[var(--tessera-fg-accent)] transition-colors hover:text-[var(--tessera-text-strong)]"
                           >
                             {t("viewAtlas.see")}
                             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
@@ -189,7 +189,7 @@ export function CockpitPageGuide({
                 key={step.title}
                 className="relative border-[var(--tessera-border)] border-t py-5 lg:border-t-0 lg:px-6 lg:py-0"
               >
-                <span className="relative z-10 mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/35 bg-[var(--tessera-bg)] text-cyan-200">
+                <span className="relative z-10 mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/35 bg-[var(--tessera-bg)] text-[var(--tessera-fg-teal)]">
                   <Icon className="h-4 w-4" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
                 </span>
                 <h3 className="text-[0.88rem] font-semibold text-[var(--tessera-text)]">
@@ -223,7 +223,7 @@ export function CockpitPageGuide({
           <summary className="flex cursor-pointer list-none items-center justify-between gap-5 py-6 text-[0.86rem] font-medium text-[var(--tessera-text)] marker:content-none">
             <span className="inline-flex items-center gap-3">
               <Database
-                className="h-[18px] w-[18px] text-cyan-200"
+                className="h-[18px] w-[18px] text-[var(--tessera-fg-teal)]"
                 strokeWidth={ICON_STROKE_WIDTH}
                 aria-hidden
               />
@@ -246,7 +246,7 @@ export function CockpitPageGuide({
                   className={`${key === "limit" ? "border-amber-200/25" : "border-cyan-200/20"} border-l pl-4`}
                 >
                   <Icon
-                    className={`h-4 w-4 ${key === "limit" ? "text-amber-200" : "text-cyan-200"}`}
+                    className={`h-4 w-4 ${key === "limit" ? "text-[var(--tessera-fg-warning)]" : "text-[var(--tessera-fg-teal)]"}`}
                     strokeWidth={ICON_STROKE_WIDTH}
                     aria-hidden
                   />
@@ -298,11 +298,11 @@ export function CockpitPageGuide({
           <details className="group/contract border-[var(--tessera-border)] border-t">
             <summary className="flex cursor-pointer list-none items-center gap-3 py-5 marker:content-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-300/60">
               <Code2
-                className="h-4 w-4 text-violet-200"
+                className="h-4 w-4 text-[var(--tessera-fg-accent)]"
                 strokeWidth={ICON_STROKE_WIDTH}
                 aria-hidden
               />
-              <span className="flex-1 text-[0.78rem] font-medium text-violet-100">
+              <span className="flex-1 text-[0.78rem] font-medium text-[var(--tessera-fg-accent)]">
                 {t("sharedGuide.contract.title")}
               </span>
               <ChevronDown
@@ -353,13 +353,16 @@ export function CockpitPageGuide({
             })}
           </p>
           <p className="mt-2 flex items-start gap-2 text-[0.76rem] leading-6 text-[var(--tessera-text-muted)]">
-            <FileCheck2 className="mt-1 h-3.5 w-3.5 shrink-0 text-emerald-200" aria-hidden />
+            <FileCheck2
+              className="mt-1 h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-success)]"
+              aria-hidden
+            />
             {t(`guides.${guideKey}.action`)}
           </p>
         </div>
         <Link
           href="/comprendre"
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-[var(--tessera-fg-teal)] transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           {t("sharedGuide.closing.global")}
           <ArrowUpRight className="h-4 w-4" aria-hidden />

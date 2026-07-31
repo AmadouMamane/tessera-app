@@ -48,7 +48,7 @@ export function AgentSwitcher() {
           type="button"
           className="flex h-9 items-center gap-2 rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] px-3 text-[0.78rem] font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
         >
-          <CurrentIcon className="h-4 w-4 text-[#b9a6ff]" />
+          <CurrentIcon className="h-4 w-4 text-[var(--tessera-fg-accent)]" />
           <Truncate full={current?.name ?? agentId} className="max-w-[12rem]">
             {current?.name ?? agentId}
           </Truncate>
@@ -68,7 +68,9 @@ export function AgentSwitcher() {
                 <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
                 <Truncate full={a.name}>{a.name}</Truncate>
               </span>
-              {a.id === agentId ? <Check className="h-3.5 w-3.5 text-[#b9a6ff]" /> : null}
+              {a.id === agentId ? (
+                <Check className="h-3.5 w-3.5 text-[var(--tessera-fg-accent)]" />
+              ) : null}
             </DropdownMenuItem>
           );
         })}

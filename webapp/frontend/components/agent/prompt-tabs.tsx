@@ -149,7 +149,7 @@ export function VariablesTab({ data }: { data: Data }) {
       sortValue: (r) => r.name,
       render: (r) => (
         <div className="flex min-w-0 items-center gap-2">
-          <Braces className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+          <Braces className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
           <Truncate
             full={`{${r.name}}`}
             className="font-mono font-medium text-[var(--tessera-text)]"
@@ -237,7 +237,7 @@ export function VariablesTab({ data }: { data: Data }) {
             `${selectedRow.count} Prompt(s)`,
             `${selectedRow.count} prompt(s)`,
           )}
-          icon={<Braces className="h-4 w-4 text-[#8b7cf0]" />}
+          icon={<Braces className="h-4 w-4 text-[var(--tessera-fg-info)]" />}
           onClose={() => setSelected(null)}
         >
           <ul className="flex flex-col gap-1.5">
@@ -317,7 +317,7 @@ export function I18nTab({ data }: { data: Data }) {
           {r.len[lang].toLocaleString(locale)}
         </span>
       ) : (
-        <span className="text-[#ff9bb0]">-</span>
+        <span className="text-[var(--tessera-fg-danger)]">-</span>
       ),
   });
 
@@ -330,7 +330,7 @@ export function I18nTab({ data }: { data: Data }) {
       sortValue: (r) => r.name,
       render: (r) => (
         <div className="flex min-w-0 items-center gap-2">
-          <FileCode2 className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+          <FileCode2 className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
           <Truncate full={r.name} className="font-medium text-[var(--tessera-text)]">
             {r.name}
           </Truncate>
@@ -346,7 +346,7 @@ export function I18nTab({ data }: { data: Data }) {
         r.missing.length === 0 ? (
           <LangBadges langs={r.langs} />
         ) : (
-          <span className="text-[0.62rem] text-[#ff9bb0]">
+          <span className="text-[0.62rem] text-[var(--tessera-fg-danger)]">
             {pick(locale, "manque", "fehlt", "missing")} {r.missing.join(", ").toUpperCase()}
           </span>
         ),
@@ -364,10 +364,10 @@ export function I18nTab({ data }: { data: Data }) {
         <span
           className={cn(
             r.missing.length > 0
-              ? "text-[#ff9bb0]"
+              ? "text-[var(--tessera-fg-danger)]"
               : r.balance >= BALANCE_WARN
-                ? "text-amber-300"
-                : "text-emerald-300",
+                ? "text-[var(--tessera-fg-warning)]"
+                : "text-[var(--tessera-fg-success)]",
           )}
         >
           {`${r.balance.toFixed(1)}x`}
@@ -384,12 +384,16 @@ export function I18nTab({ data }: { data: Data }) {
         <Stat
           label={pick(locale, "Trilingues", "Dreisprachig", "Trilingual")}
           value={`${complete}/${rows.length}`}
-          tone={complete === rows.length ? "text-emerald-300" : "text-[#ff9bb0]"}
+          tone={
+            complete === rows.length
+              ? "text-[var(--tessera-fg-success)]"
+              : "text-[var(--tessera-fg-danger)]"
+          }
         />
         <Stat
           label={pick(locale, "Écart de longueur", "Längendrift", "Length drift")}
           value={String(drifted)}
-          tone={drifted > 0 ? "text-amber-300" : undefined}
+          tone={drifted > 0 ? "text-[var(--tessera-fg-warning)]" : undefined}
         />
       </div>
       <FilterBar>
@@ -421,7 +425,7 @@ export function I18nTab({ data }: { data: Data }) {
             `${selectedRow.langs.length}/3 Sprachen · Abweichung ${selectedRow.balance.toFixed(1)}x`,
             `${selectedRow.langs.length}/3 languages · spread ${selectedRow.balance.toFixed(1)}x`,
           )}
-          icon={<Languages className="h-4 w-4 text-[#8b7cf0]" />}
+          icon={<Languages className="h-4 w-4 text-[var(--tessera-fg-info)]" />}
           onClose={() => setSelected(null)}
         >
           {selectedRow.detail.content.map((c) => (

@@ -986,7 +986,7 @@ function CriticalControlsTable({
           </span>
           <Link
             href="/surveiller/qualite-ia"
-            className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+            className="flex items-center gap-1 whitespace-nowrap text-xs text-[var(--tessera-fg-info)] hover:underline"
           >
             {t("viewAll")}
             <ChevronRight className="h-3.5 w-3.5" />
@@ -1126,7 +1126,7 @@ function CriticalControlsTable({
                           <Link
                             href={sig.route}
                             title={t("investigate")}
-                            className="inline-flex items-center gap-0.5 whitespace-nowrap text-xs text-blue-300 hover:underline"
+                            className="inline-flex items-center gap-0.5 whitespace-nowrap text-xs text-[var(--tessera-fg-info)] hover:underline"
                           >
                             {t("investigate")}
                             <ChevronRight className="h-3.5 w-3.5" />
@@ -1203,7 +1203,7 @@ function ControlCasesTriage({
         </CardTitle>
         <Link
           href="/a-traiter"
-          className="flex items-center gap-1 text-xs text-blue-300 hover:underline"
+          className="flex items-center gap-1 text-xs text-[var(--tessera-fg-info)] hover:underline"
         >
           <Inbox className="h-3.5 w-3.5" />
           {t("viewAll", { n: inbox?.total_items ?? items.length })}
@@ -1365,7 +1365,7 @@ function GovernedActivityCard({
           </span>
           <Link
             href="/prouver/audit-logs"
-            className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+            className="flex items-center gap-1 whitespace-nowrap text-xs text-[var(--tessera-fg-info)] hover:underline"
           >
             {t("viewAll")}
             <ChevronRight className="h-3.5 w-3.5" />
@@ -1442,7 +1442,7 @@ function TraceLink({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[0.7rem] text-blue-300 transition-colors hover:bg-[var(--muted)]/40"
+      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[0.7rem] text-[var(--tessera-fg-info)] transition-colors hover:bg-[var(--muted)]/40"
     >
       <ExternalLink className="h-3 w-3" />
       {label}
@@ -1472,7 +1472,7 @@ function ObservabilityTracesCard({
     <Card className="rounded-lg">
       <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <Network className="h-4 w-4 text-blue-300" />
+          <Network className="h-4 w-4 text-[var(--tessera-fg-info)]" />
           {t("title")}
           <SectionInfo title={t("title")} explainKey="traces" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
@@ -1576,7 +1576,7 @@ function ControlCasesSection({
           </span>
           <Link
             href="/agir/incidents-playbooks"
-            className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+            className="flex items-center gap-1 whitespace-nowrap text-xs text-[var(--tessera-fg-info)] hover:underline"
           >
             {t("viewAll")}
             <ChevronRight className="h-3.5 w-3.5" />
@@ -1665,7 +1665,7 @@ function IncidentsCard({
         </CardTitle>
         <Link
           href="/agir/incidents-playbooks"
-          className="flex items-center gap-1 whitespace-nowrap text-xs text-blue-300 hover:underline"
+          className="flex items-center gap-1 whitespace-nowrap text-xs text-[var(--tessera-fg-info)] hover:underline"
         >
           {t("viewIncidents")}
           <ChevronRight className="h-3.5 w-3.5" />
@@ -2184,7 +2184,10 @@ function TrustFooter({
         {systemsOk ? t("systemsOk") : t("systemsDegraded")}
         {provTag ? <TimeTagChip kind="live" /> : null}
       </span>
-      <Link href="/surveiller/observabilite" className="ml-auto text-blue-300 hover:underline">
+      <Link
+        href="/surveiller/observabilite"
+        className="ml-auto text-[var(--tessera-fg-info)] hover:underline"
+      >
         {t("viewHealth")} →
       </Link>
     </footer>

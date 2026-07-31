@@ -22,7 +22,7 @@ export function ComprendreDiagram() {
       <div className="grid gap-3 sm:grid-cols-[1fr_minmax(11rem,1.15fr)_1fr] sm:gap-0">
         {/* The bank, with its agents inside it. */}
         <section className="flex flex-col rounded-xl border border-sky-500/35 bg-sky-500/[0.06]">
-          <p className="border-sky-500/25 border-b px-4 py-2.5 text-center font-semibold text-[0.9rem] text-sky-200">
+          <p className="border-sky-500/25 border-b px-4 py-2.5 text-center font-semibold text-[0.9rem] text-[var(--tessera-fg-info)]">
             {t("bank")}
           </p>
           <div className="flex flex-1 items-center justify-center px-4 py-6">
@@ -46,7 +46,7 @@ export function ComprendreDiagram() {
 
         {/* The cockpit, with the two records inside it. */}
         <section className="flex flex-col rounded-xl border border-[#7c5cf5]/40 bg-[#7c5cf5]/[0.07]">
-          <p className="border-[#7c5cf5]/30 border-b px-4 py-2.5 text-center font-semibold text-[#c9b8ff] text-[0.9rem]">
+          <p className="border-[#7c5cf5]/30 border-b px-4 py-2.5 text-center font-semibold text-[var(--tessera-fg-accent)] text-[0.9rem]">
             {t("cockpit")}
           </p>
           <div className="flex flex-1 flex-col justify-center gap-2.5 px-4 py-5">

@@ -358,7 +358,7 @@ function EmptyRow({ label }: { label?: string }) {
 
 function CtaLink({ label, href }: { label: string; href?: string }) {
   const classes =
-    "mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]";
+    "mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]";
   if (href) {
     return (
       <Link href={href as never} className={classes}>
@@ -412,7 +412,7 @@ function Profile({ data, className }: { data: Data; className?: string }) {
           >
             {p.name}
           </p>
-          <span className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-[0.7rem] text-emerald-300">
+          <span className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-[0.7rem] text-[var(--tessera-fg-success)]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {p.status}
           </span>
         </div>
@@ -781,7 +781,7 @@ function QuickAccess({ data }: { data: Data }) {
               href={it.href as never}
               className="flex flex-col gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2.5 text-left hover:border-[#7c5cf5]/50"
             >
-              <Icon className="h-4 w-4 text-[#b9a6ff]" />
+              <Icon className="h-4 w-4 text-[var(--tessera-fg-accent)]" />
               <span
                 title={it.label}
                 className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]"

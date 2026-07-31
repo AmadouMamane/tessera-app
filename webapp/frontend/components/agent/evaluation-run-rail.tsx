@@ -46,8 +46,8 @@ function verdictLabel(gatePassed: boolean | null, locale: string): string {
 }
 
 const VERDICT_TEXT: Record<string, string> = {
-  true: "text-emerald-300",
-  false: "text-red-300",
+  true: "text-[var(--tessera-fg-success)]",
+  false: "text-[var(--tessera-fg-danger)]",
   null: "text-[var(--tessera-text-muted)]",
 };
 
@@ -173,7 +173,7 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
           </div>
 
           {requestedUnknown ? (
-            <p className="text-[10px] text-amber-300">
+            <p className="text-[10px] text-[var(--tessera-fg-warning)]">
               {pick(
                 locale,
                 "Run demandé introuvable — dernier run affiché.",
@@ -239,9 +239,9 @@ function SelectedRunFacts({
           className={cn(
             "text-[11px] tabular-nums",
             run.delta_pass_rate > 0
-              ? "text-emerald-300"
+              ? "text-[var(--tessera-fg-success)]"
               : run.delta_pass_rate < 0
-                ? "text-red-300"
+                ? "text-[var(--tessera-fg-danger)]"
                 : "text-[var(--tessera-text-muted)]",
           )}
         >

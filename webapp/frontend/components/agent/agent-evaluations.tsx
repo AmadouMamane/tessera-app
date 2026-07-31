@@ -57,8 +57,8 @@ const TYPE_TONE: Record<string, string> = {
   agt: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
 };
 const STATUS_TONE: Record<string, string> = {
-  good: "text-emerald-300",
-  info: "text-sky-300",
+  good: "text-[var(--tessera-fg-success)]",
+  info: "text-[var(--tessera-fg-info)]",
   off: "text-[var(--tessera-text-muted)]",
 };
 const STATUS_DOT: Record<string, string> = {
@@ -504,7 +504,7 @@ function LifecycleBar({ data }: { data: Data }) {
   const title = pick(locale, "Cycle de vie", "Lebenszyklus", "Lifecycle");
   return (
     <section className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#b9a6ff]">
+      <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--tessera-fg-accent)]">
         {title}
         <CardInfo ns="agentEvaluations" k="lifecycle" title={title} />
       </span>
@@ -629,7 +629,11 @@ function ContributionTile({
       </span>
       <p className="mt-0.5 font-medium text-[var(--tessera-text)]">
         +{contribution.contribution}/{contribution.contribution_population}{" "}
-        <span className={breaks > 0 ? "text-[#ffce8a]" : "text-[#7fe3b3]"}>
+        <span
+          className={
+            breaks > 0 ? "text-[var(--tessera-fg-warning)]" : "text-[var(--tessera-fg-success)]"
+          }
+        >
           ·{" "}
           {breaks > 0
             ? `${breaks} ${pick(locale, "régression candidate", "Regressionskandidat", "candidate regression")}${breaks > 1 ? "s" : ""}`
@@ -660,9 +664,9 @@ function VerdictBanner({ data }: { data: Data }) {
       ? "border-[#3fb37f] bg-[#10231b]"
       : "border-[var(--tessera-border)] bg-[var(--tessera-surface)]";
   const labelColor = blocked
-    ? "text-[#ff9bb0]"
+    ? "text-[var(--tessera-fg-danger)]"
     : passed
-      ? "text-[#7fe3b3]"
+      ? "text-[var(--tessera-fg-success)]"
       : "text-[var(--tessera-text)]";
   const bd = gate.breakdown;
   const bg = gate.breakdown_grain;
@@ -671,9 +675,9 @@ function VerdictBanner({ data }: { data: Data }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           {blocked ? (
-            <ShieldAlert className="h-6 w-6 shrink-0 text-[#ff9bb0]" />
+            <ShieldAlert className="h-6 w-6 shrink-0 text-[var(--tessera-fg-danger)]" />
           ) : passed ? (
-            <ShieldCheck className="h-6 w-6 shrink-0 text-[#7fe3b3]" />
+            <ShieldCheck className="h-6 w-6 shrink-0 text-[var(--tessera-fg-success)]" />
           ) : (
             <Shield className="h-6 w-6 shrink-0 text-[var(--tessera-text-muted)]" />
           )}
@@ -696,7 +700,7 @@ function VerdictBanner({ data }: { data: Data }) {
               <p className="mt-0.5 text-[11px] text-[var(--tessera-text-muted)]">{gate.reason}</p>
             ) : null}
             {blocked && socleFails.length > 0 ? (
-              <p className="mt-1 text-[11px] text-[#ff9bb0]">
+              <p className="mt-1 text-[11px] text-[var(--tessera-fg-danger)]">
                 <span className="text-[var(--tessera-text-muted)]">
                   {pick(
                     locale,
@@ -744,7 +748,7 @@ function VerdictBanner({ data }: { data: Data }) {
             )}
           </span>
           <p
-            className={`mt-0.5 font-medium ${gate.socle?.ok ? "text-[#7fe3b3]" : "text-[#ff9bb0]"}`}
+            className={`mt-0.5 font-medium ${gate.socle?.ok ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]"}`}
           >
             {gate.socle
               ? gate.socle.ok
@@ -870,12 +874,12 @@ function ActionsRequises({
 }
 
 const VENN_TONE: Record<string, string> = {
-  crit: "border-[#e0566f]/50 bg-[#e0566f]/12 text-[#ff9bb0]",
+  crit: "border-[#e0566f]/50 bg-[#e0566f]/12 text-[var(--tessera-fg-danger)]",
   warn: "border-amber-500/40 bg-amber-500/12 text-amber-200",
   muted: "border-[var(--tessera-border)] bg-black/15 text-[var(--tessera-text-muted)]",
 };
 const STATUS_PILL: Record<string, string> = {
-  crit: "border-[#e0566f]/50 bg-[#e0566f]/15 text-[#ff9bb0]",
+  crit: "border-[#e0566f]/50 bg-[#e0566f]/15 text-[var(--tessera-fg-danger)]",
   warn: "border-amber-500/40 bg-amber-500/15 text-amber-200",
   bad: "border-orange-500/40 bg-orange-500/15 text-orange-200",
   good: "border-emerald-500/40 bg-emerald-500/15 text-emerald-200",
@@ -912,7 +916,9 @@ function GatePolicySection({ data }: { data: Data }) {
             <span
               className={cn(
                 "rounded px-1.5 py-0.5 text-[10px]",
-                v.reconciles ? "text-emerald-300" : "text-red-300",
+                v.reconciles
+                  ? "text-[var(--tessera-fg-success)]"
+                  : "text-[var(--tessera-fg-danger)]",
               )}
             >
               {v.socle} + {v.t1} + {v.domaine} = {v.universe}
@@ -920,7 +926,7 @@ function GatePolicySection({ data }: { data: Data }) {
           </div>
           {/* Nested: Critiques contains Socle; dérogations ⊂ T1, jamais socle */}
           <div className="rounded-md border border-[#e0566f]/40 bg-[#e0566f]/[0.06] p-2">
-            <div className="mb-1 flex items-center justify-between text-[10px] text-[#ff9bb0]">
+            <div className="mb-1 flex items-center justify-between text-[10px] text-[var(--tessera-fg-danger)]">
               <span>
                 {pick(locale, "Critiques (T0 ∪ T1)", "Kritische (T0 ∪ T1)", "Critical (T0 ∪ T1)")}
               </span>
@@ -1058,7 +1064,7 @@ function GatePolicySection({ data }: { data: Data }) {
               </span>
             </div>
             {cc.rows.length === 0 ? (
-              <span className="text-[11px] text-emerald-300">
+              <span className="text-[11px] text-[var(--tessera-fg-success)]">
                 {pick(
                   locale,
                   "Aucun cas critique non concluant.",
@@ -1135,7 +1141,9 @@ function GatePolicySection({ data }: { data: Data }) {
               <span
                 className={cn(
                   "rounded px-1.5 py-0.5 text-[10px]",
-                  wv.chain_verified ? "text-emerald-300" : "text-red-300",
+                  wv.chain_verified
+                    ? "text-[var(--tessera-fg-success)]"
+                    : "text-[var(--tessera-fg-danger)]",
                 )}
                 title={pick(
                   locale,
@@ -1290,7 +1298,9 @@ function Snapshot({ data, onAsof }: { data: Data; onAsof: () => void }) {
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.version_label}</span>
           <span className="text-[0.82rem] font-medium text-[var(--tessera-text)]">{s.version}</span>
-          <span className="text-[0.58rem] text-emerald-300">{s.version_status}</span>
+          <span className="text-[0.58rem] text-[var(--tessera-fg-success)]">
+            {s.version_status}
+          </span>
         </Field>
         <Field>
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.evalset_label}</span>
@@ -1300,7 +1310,9 @@ function Snapshot({ data, onAsof }: { data: Data; onAsof: () => void }) {
           <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.coverage_label}</span>
           <span className="flex items-center gap-2">
             <Gauge pct={s.coverage} />
-            <span className="text-[0.7rem] text-emerald-300">{s.coverage_tone}</span>
+            <span className="text-[0.7rem] text-[var(--tessera-fg-success)]">
+              {s.coverage_tone}
+            </span>
           </span>
         </Field>
       </div>
@@ -1308,7 +1320,7 @@ function Snapshot({ data, onAsof }: { data: Data; onAsof: () => void }) {
         <button
           type="button"
           onClick={onAsof}
-          className="inline-flex items-center gap-1 text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+          className="inline-flex items-center gap-1 text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           <CalendarClock className="h-3.5 w-3.5" /> {s.asof}
         </button>
@@ -1367,7 +1379,9 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
       {kpi.gauge !== null ? (
         <div className="flex items-center gap-2">
           <Gauge pct={kpi.gauge} />
-          <span className="text-[0.78rem] font-medium text-emerald-300">{kpi.note}</span>
+          <span className="text-[0.78rem] font-medium text-[var(--tessera-fg-success)]">
+            {kpi.note}
+          </span>
         </div>
       ) : (
         <div>
@@ -1383,7 +1397,9 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
             <p
               className={cn(
                 "text-[0.62rem]",
-                kpi.note_tone === "good" ? "text-emerald-300" : "text-[var(--tessera-text-muted)]",
+                kpi.note_tone === "good"
+                  ? "text-[var(--tessera-fg-success)]"
+                  : "text-[var(--tessera-text-muted)]",
               )}
             >
               {kpi.note}
@@ -1457,7 +1473,9 @@ function FilterDropdown({
               )}
             >
               {o.label}
-              {o.value === value ? <span className="text-[#b9a6ff]">&bull;</span> : null}
+              {o.value === value ? (
+                <span className="text-[var(--tessera-fg-accent)]">&bull;</span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -1615,7 +1633,7 @@ function RunsTable(p: TableProps) {
                 >
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+                      <Sparkles className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
                       <Truncate
                         full={r.name}
                         className="text-[0.72rem] font-medium text-[var(--tessera-text)]"
@@ -1656,7 +1674,7 @@ function RunsTable(p: TableProps) {
                   <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text)]">
                     {r.score === "-" ? "-" : `${r.score} / 10`}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-emerald-300">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-fg-success)]">
                     {r.success}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
@@ -1825,7 +1843,7 @@ function PanelCard({
       {cta && ctaHref ? (
         <Link
           href={ctaHref as Route}
-          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           {cta} <ChevronRight className="h-3.5 w-3.5" />
         </Link>
@@ -1888,7 +1906,7 @@ function Quick({ data }: { data: Data }) {
               href={hrefs[it.key] ?? (agentPath(agentId, "evaluations") as Route)}
               className="flex flex-col items-start gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50"
             >
-              <Icon className="h-4 w-4 text-[#b9a6ff]" />
+              <Icon className="h-4 w-4 text-[var(--tessera-fg-accent)]" />
               <Truncate full={it.label} className="min-w-0">
                 {it.label}
               </Truncate>
@@ -2074,7 +2092,7 @@ function Detail({
         </p>
         <div className="mt-1 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <Sparkles className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+            <Sparkles className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
             <Truncate
               full={row.name}
               className="min-w-0 text-[0.85rem] font-semibold text-[var(--tessera-text)]"
@@ -2127,7 +2145,9 @@ function Detail({
                   <span
                     className={cn(
                       "font-medium",
-                      f.tone === "good" ? "text-emerald-300" : "text-[var(--tessera-text)]",
+                      f.tone === "good"
+                        ? "text-[var(--tessera-fg-success)]"
+                        : "text-[var(--tessera-text)]",
                     )}
                   >
                     {f.value}
@@ -2177,7 +2197,7 @@ function Detail({
             </ul>
             <Link
               href={agentPath(agentId, "historique") as Route}
-              className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+              className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
             >
               {labels.results_cta} <ChevronRight className="h-3.5 w-3.5" />
             </Link>

@@ -133,6 +133,26 @@
      chip (a red badge, a violet button): that background is the same under every
      theme, so its foreground stays `text-white`. */
   --tessera-text-strong: #ffffff;
+
+  /* -- Semantic FOREGROUNDS on a theme surface ----------------------------- *
+   * Same disease as --tessera-text-strong, same cure. A status was written as a pale
+   * literal (`text-emerald-300`, `text-[#87bfff]`) because it had to read on a dark
+   * card; on the white card of "Clair" the very same colour scores 1.5:1, under half
+   * the 4.5:1 WCAG AA asks. These six roles hold the CURRENT dark value, so the dark
+   * cockpit is untouched, and a 700-shade of the same hue under "Clair". Measured both
+   * ways: every pair clears AA on its own card (5.0:1 → 12.8:1).
+   *
+   * The role is chosen by HUE, not by site: mint, emerald-200 and emerald-300 all say
+   * "the good outcome", so all three are `success`. A pale GREY foreground is not a
+   * status at all — it is muted body text, and it uses --tessera-text-muted.
+   * These are for text on a CARD. Text on its own opaque coloured chip keeps its
+   * literal: that chip is the same colour under every theme. */
+  --tessera-fg-success: #6ee7b7;
+  --tessera-fg-danger: #fca5a5;
+  --tessera-fg-warning: #fcd34d;
+  --tessera-fg-info: #87bfff;
+  --tessera-fg-accent: #b9a6ff;
+  --tessera-fg-teal: #5fd0c6;
   /* Tooltips / ⓘ popovers — a neutral dark-charcoal box with near-white text,
      matching the native macOS/Chrome tooltip in dark mode (the roles/access
      Description reference). Deliberately OFF the navy scale — a real grey, not
@@ -239,6 +259,15 @@
   --tessera-text-subtle: #6b7689;
   /* Brightest-on-surface becomes darkest-on-surface: the same role, the other end. */
   --tessera-text-strong: #0f172a;
+  /* Each status keeps its hue and drops to the 700 shade, which clears WCAG AA on white
+     (5.02:1 for the weakest, warning) exactly as the pale value clears it on the dark
+     card (12.76:1). Same meaning, same family, readable on the surface it lands on. */
+  --tessera-fg-success: #047857;
+  --tessera-fg-danger: #b91c1c;
+  --tessera-fg-warning: #b45309;
+  --tessera-fg-info: #1d4ed8;
+  --tessera-fg-accent: #6d28d9;
+  --tessera-fg-teal: #0f766e;
   /* Light theme: the native tooltip is a light box with dark text. */
   --tessera-tooltip-bg: #f4f4f6;
   --tessera-tooltip-fg: #1f242b;

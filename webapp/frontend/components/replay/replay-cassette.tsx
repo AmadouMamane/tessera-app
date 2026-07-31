@@ -252,7 +252,9 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
         ) : (
           <>
             {!trace.positioned ? (
-              <p className="text-[0.66rem] text-amber-300">{t("cassette.traceUnpositioned")}</p>
+              <p className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+                {t("cassette.traceUnpositioned")}
+              </p>
             ) : null}
             <div className="flex flex-col gap-1.5">
               {trace.spans.map((span) => (
@@ -287,7 +289,7 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
                 key={`${m.role}-${i}`}
                 className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
               >
-                <span className="text-[0.62rem] font-medium uppercase text-[#c9b8ff]">
+                <span className="text-[0.62rem] font-medium uppercase text-[var(--tessera-fg-accent)]">
                   {m.role}
                 </span>
                 <p className="mt-1 whitespace-pre-wrap text-[0.68rem] leading-relaxed text-[var(--tessera-text)]">
@@ -431,13 +433,15 @@ function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: s
           type="button"
           disabled={frozen || mutation.isPending}
           onClick={() => mutation.mutate()}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[#7c5cf5]/60 bg-[#7c5cf5]/10 px-2.5 text-[0.68rem] font-medium text-[#c9b8ff] transition-colors hover:bg-[#7c5cf5]/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[#7c5cf5]/60 bg-[#7c5cf5]/10 px-2.5 text-[0.68rem] font-medium text-[var(--tessera-fg-accent)] transition-colors hover:bg-[#7c5cf5]/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Play className="h-3 w-3" />
           {mutation.isPending ? t("cassette.replayRunning") : t("cassette.replayRun")}
         </button>
         {frozen ? (
-          <span className="text-[0.64rem] text-amber-300">{t("cassette.replayFrozen")}</span>
+          <span className="text-[0.64rem] text-[var(--tessera-fg-warning)]">
+            {t("cassette.replayFrozen")}
+          </span>
         ) : null}
         {mutation.isError ? (
           <span className="text-[0.64rem] text-red-400">{t("cassette.replayFailed")}</span>
@@ -450,7 +454,7 @@ function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: s
             <span
               className={cn(
                 "font-medium",
-                result.score_delta >= 0 ? "text-emerald-300" : "text-red-400",
+                result.score_delta >= 0 ? "text-[var(--tessera-fg-success)]" : "text-red-400",
               )}
             >
               Δ {result.score_delta >= 0 ? "+" : ""}

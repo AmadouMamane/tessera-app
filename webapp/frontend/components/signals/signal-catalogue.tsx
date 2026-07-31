@@ -32,7 +32,7 @@ import { cn } from "@/lib/cn";
 const SEV_BADGE: Record<string, string> = {
   critical: "border-red-500/30 bg-red-500/15 text-red-300",
   high: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  medium: "border-yellow-500/30 bg-yellow-500/15 text-yellow-300",
+  medium: "border-yellow-500/30 bg-yellow-500/15 text-[var(--tessera-fg-warning)]",
   low: "border-sky-500/30 bg-sky-500/15 text-sky-300",
 };
 const STATUS_BADGE: Record<string, string> = {
@@ -357,7 +357,7 @@ function FilterSelect({
           </option>
         ))}
       </select>
-      <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
+      <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--tessera-fg-info)]" />
     </label>
   );
 }
@@ -421,9 +421,9 @@ function SignalTable({
                       {t(`col.${c.key}`)}
                       {sort.key === c.sort ? (
                         sort.dir === 1 ? (
-                          <SortAsc className="h-3 w-3 text-[#87bfff]" />
+                          <SortAsc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
                         ) : (
-                          <SortDesc className="h-3 w-3 text-[#87bfff]" />
+                          <SortDesc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
                         )
                       ) : (
                         <ChevronsUpDown className="h-3 w-3 opacity-40" />
@@ -515,10 +515,10 @@ function SignalTable({
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {tt("rowOpen")}
                       </span>
-                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
                     </span>
                   </td>
                 </tr>

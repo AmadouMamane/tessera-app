@@ -414,7 +414,7 @@ function ActiveFilterChips({
       <button
         type="button"
         onClick={onClear}
-        className="ml-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+        className="ml-1 text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {t("clearAll")}
       </button>
@@ -447,7 +447,7 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
   return (
     <div className="flex h-[112px] flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#e0a23a]/30 bg-[#e0a23a]/10 text-[#e0a23a]">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#e0a23a]/30 bg-[#e0a23a]/10 text-[var(--tessera-fg-warning)]">
           <Icon className="h-3.5 w-3.5" />
         </span>
         <Truncate full={kpi.label} className="text-[0.66rem] text-[var(--tessera-text-muted)]">
@@ -517,7 +517,9 @@ function FilterDropdown({
               )}
             >
               {o.label}
-              {o.value === value ? <span className="text-[#5fd0c6]">&bull;</span> : null}
+              {o.value === value ? (
+                <span className="text-[var(--tessera-fg-teal)]">&bull;</span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -769,7 +771,7 @@ function AdvancedFilters({
             <button
               type="button"
               onClick={onReset}
-              className="mt-3 w-full text-center text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+              className="mt-3 w-full text-center text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
             >
               {t("reset")}
             </button>
@@ -1137,7 +1139,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
   return (
     <li className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-2.5">
       <div className="flex items-start gap-2">
-        <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5fd0c6]" />
+        <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-teal)]" />
         <span className="min-w-0 flex-1 text-[0.72rem] font-medium text-[var(--tessera-text)]">
           {ans.text}
         </span>
@@ -1162,7 +1164,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
             <button
               type="button"
               onClick={() => setOpen((o) => !o)}
-              className="mt-1 text-[0.64rem] font-medium text-[#5fd0c6] hover:text-[#8fe3db]"
+              className="mt-1 text-[0.64rem] font-medium text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-fg-teal)]"
             >
               {open ? t("showLess") : t("showMore")}
             </button>
@@ -1446,7 +1448,7 @@ function DetailPanel({
                     </p>
                   )
                 ) : (
-                  <p className="text-[0.68rem] text-amber-300">
+                  <p className="text-[0.68rem] text-[var(--tessera-fg-warning)]">
                     {d.attachment.journal_unavailable}
                   </p>
                 )}
@@ -1484,7 +1486,7 @@ function DetailPanel({
           </button>
           <Link
             href={{ pathname: MEMORY_HREF, query: { source: d.key } }}
-            className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+            className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
           >
             {d.full_sheet}
             <ChevronRight className="h-3.5 w-3.5" />

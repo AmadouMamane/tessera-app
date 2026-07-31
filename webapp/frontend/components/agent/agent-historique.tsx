@@ -59,9 +59,9 @@ const TONE_TEXT: Record<string, string> = {
   muted: "text-[var(--tessera-text-muted)]",
 };
 const SCORE_TEXT: Record<string, string> = {
-  good: "text-emerald-300",
-  warn: "text-amber-300",
-  crit: "text-red-300",
+  good: "text-[var(--tessera-fg-success)]",
+  warn: "text-[var(--tessera-fg-warning)]",
+  crit: "text-[var(--tessera-fg-danger)]",
 };
 const STATUS_BADGE: Record<string, string> = {
   good: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
@@ -539,7 +539,9 @@ function FilterDropdown({
               )}
             >
               {o.label}
-              {o.value === value ? <span className="text-[#b9a6ff]">&bull;</span> : null}
+              {o.value === value ? (
+                <span className="text-[var(--tessera-fg-accent)]">&bull;</span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -704,12 +706,12 @@ function SessionsTable(p: TableProps) {
                     on ? "bg-[#6d4aed]/10" : "hover:bg-[var(--tessera-bg)]/40",
                   )}
                 >
-                  <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[0.66rem] text-[#b9a6ff]">
+                  <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[0.66rem] text-[var(--tessera-fg-accent)]">
                     {r.sid}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
                     <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--tessera-text)]">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6d4aed]/20 text-[0.52rem] font-medium text-[#b9a6ff]">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6d4aed]/20 text-[0.52rem] font-medium text-[var(--tessera-fg-accent)]">
                         {initials(r.user)}
                       </span>
                       {r.user}
@@ -917,7 +919,7 @@ function PanelCard({
       {cta && ctaHref ? (
         <Link
           href={ctaHref as Route}
-          className="mt-2.5 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+          className="mt-2.5 flex items-center gap-1 self-start text-[0.64rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           {cta} <ChevronRight className="h-3 w-3" />
         </Link>
@@ -1135,7 +1137,7 @@ function SuccessCard({ data }: { data: Data }) {
             {s.value}
           </span>
         </span>
-        <span className="text-[0.66rem] text-emerald-300">{s.note}</span>
+        <span className="text-[0.66rem] text-[var(--tessera-fg-success)]">{s.note}</span>
       </div>
     </PanelCard>
   );
@@ -1204,7 +1206,7 @@ function Quick({
           const Icon = icons[i % icons.length] ?? Play;
           const inner = (
             <>
-              <Icon className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
+              <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-accent)]" />
               <Truncate full={it.label} className="min-w-0">
                 {it.label}
               </Truncate>
@@ -1300,7 +1302,7 @@ function Detail({
           {labels.eyebrow}
         </p>
         <div className="mt-1 flex items-center gap-2">
-          <MessagesSquare className="h-4 w-4 shrink-0 text-[#8b7cf0]" />
+          <MessagesSquare className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
           <Truncate
             full={row.sid}
             className="font-mono text-[0.82rem] font-semibold text-[var(--tessera-text)]"
@@ -1342,9 +1344,9 @@ function Detail({
                     className={cn(
                       "font-medium tabular-nums",
                       f.tone === "good"
-                        ? "text-emerald-300"
+                        ? "text-[var(--tessera-fg-success)]"
                         : f.tone === "bad"
-                          ? "text-red-300"
+                          ? "text-[var(--tessera-fg-danger)]"
                           : "text-[var(--tessera-text)]",
                     )}
                   >
@@ -1424,7 +1426,9 @@ function Detail({
                     <span
                       className={cn(
                         "font-semibold",
-                        e.lead ? "text-[1rem] text-emerald-300" : "text-[var(--tessera-text)]",
+                        e.lead
+                          ? "text-[1rem] text-[var(--tessera-fg-success)]"
+                          : "text-[var(--tessera-text)]",
                       )}
                     >
                       {e.value}
@@ -1438,7 +1442,7 @@ function Detail({
             </ul>
             <Link
               href={agentPath(agentId, "evaluations") as Route}
-              className="mt-2 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+              className="mt-2 flex items-center gap-1 self-start text-[0.64rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
             >
               {labels.eval_cta} <ChevronRight className="h-3 w-3" />
             </Link>

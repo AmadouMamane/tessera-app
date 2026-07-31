@@ -420,7 +420,7 @@ function TimelinePanel({ run }: { run: RecouvrementRun }) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <ListChecks className="h-4 w-4 text-sky-300" />
+          <ListChecks className="h-4 w-4 text-[var(--tessera-fg-info)]" />
           Chronologie métier
         </CardTitle>
       </CardHeader>
@@ -499,7 +499,7 @@ function ArtifactsPanel({ artifacts }: { artifacts: RecouvrementRunArtifact[] })
     <Card className="min-w-0">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <FileText className="h-4 w-4 text-amber-300" />
+          <FileText className="h-4 w-4 text-[var(--tessera-fg-warning)]" />
           Artefacts
         </CardTitle>
       </CardHeader>
@@ -605,7 +605,7 @@ function SensitiveActionsPanel({ run }: { run: RecouvrementRun }) {
     <Card className="min-w-0">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <AlertTriangle className="h-4 w-4 text-amber-300" />
+          <AlertTriangle className="h-4 w-4 text-[var(--tessera-fg-warning)]" />
           Actions sensibles
         </CardTitle>
       </CardHeader>
@@ -659,7 +659,7 @@ function ScoresPanel({ scores }: { scores: BusinessScore[] }) {
     <Card className="min-w-0">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
-          <BadgeCheck className="h-4 w-4 text-sky-300" />
+          <BadgeCheck className="h-4 w-4 text-[var(--tessera-fg-info)]" />
           Scores métier
         </CardTitle>
       </CardHeader>

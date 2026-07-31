@@ -67,7 +67,7 @@ export function SchemaForm({
       ))}
 
       {showErrors && errors.length > 0 ? (
-        <ul className="list-inside list-disc text-[0.72rem] text-red-300">
+        <ul className="list-inside list-disc text-[0.72rem] text-[var(--tessera-fg-danger)]">
           {errors.map((message) => (
             <li key={message}>{message}</li>
           ))}

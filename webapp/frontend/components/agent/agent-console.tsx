@@ -92,13 +92,13 @@ const TAB_LABEL: Record<string, Record<string, string>> = {
 };
 
 const SCORE_TONE: Record<string, string> = {
-  good: "text-emerald-300",
-  warn: "text-amber-300",
-  crit: "text-red-300",
+  good: "text-[var(--tessera-fg-success)]",
+  warn: "text-[var(--tessera-fg-warning)]",
+  crit: "text-[var(--tessera-fg-danger)]",
 };
 const STATUS_TONE: Record<string, string> = {
   good: "text-emerald-400",
-  warn: "text-amber-300",
+  warn: "text-[var(--tessera-fg-warning)]",
   crit: "text-red-400",
 };
 const BADGE_TONE: Record<string, string> = {
@@ -628,9 +628,11 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
             </div>
           ) : null}
 
-          {outcome.error ? <p className="text-[0.8rem] text-red-300">{outcome.error}</p> : null}
+          {outcome.error ? (
+            <p className="text-[0.8rem] text-[var(--tessera-fg-danger)]">{outcome.error}</p>
+          ) : null}
           {outcome.conformance.length > 0 ? (
-            <ul className="list-inside list-disc text-[0.75rem] text-amber-300">
+            <ul className="list-inside list-disc text-[0.75rem] text-[var(--tessera-fg-warning)]">
               {outcome.conformance.map((v) => (
                 <li key={v}>{v}</li>
               ))}
@@ -701,7 +703,7 @@ function SandboxControls({
     <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.7rem]">
         <span className="inline-flex items-center gap-1">
-          <span className="inline-flex items-center rounded-md border border-[#d98b1f]/40 bg-[#3a2a14]/40 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-[#f4c76a]">
+          <span className="inline-flex items-center rounded-md border border-[#d98b1f]/40 bg-[#3a2a14]/40 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-warning)]">
             env Sandbox
           </span>
           <CardInfo ns="agentConsole" k="sandbox" title="env Sandbox" />
@@ -737,7 +739,7 @@ function SandboxControls({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[0.7rem] transition-colors hover:bg-[var(--tessera-muted)]",
               promptDirty
-                ? "border-[#d98b1f]/55 bg-[#3a2a14]/40 text-[#f4c76a]"
+                ? "border-[#d98b1f]/55 bg-[#3a2a14]/40 text-[var(--tessera-fg-warning)]"
                 : "border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text)]",
             )}
           >
@@ -852,7 +854,7 @@ function ChatCard({
   return (
     <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] h-[calc(100dvh-21rem)]">
       <div className="flex items-start gap-3 border-b border-[var(--tessera-border)] p-3.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#d98b1f]/45 bg-[#d98b1f]/12 text-[#f4c76a]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#d98b1f]/45 bg-[#d98b1f]/12 text-[var(--tessera-fg-warning)]">
           <MessageSquare className="h-4.5 w-4.5" />
         </span>
         <div className="min-w-0">
@@ -912,7 +914,7 @@ function ChatCard({
             <button
               type="button"
               onClick={onAbort}
-              className="h-8 rounded-md border border-red-500/35 px-3 text-[0.7rem] text-red-300"
+              className="h-8 rounded-md border border-red-500/35 px-3 text-[0.7rem] text-[var(--tessera-fg-danger)]"
             >
               {t("stop")}
             </button>
@@ -963,7 +965,7 @@ function ChatCard({
       {f ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.66rem] text-[var(--tessera-text-muted)]">
           <span>{f.started}</span>
-          <span className="inline-flex items-center gap-1.5 text-emerald-300">
+          <span className="inline-flex items-center gap-1.5 text-[var(--tessera-fg-success)]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
           </span>
           <span>Contexte : {f.context}</span>
@@ -1019,8 +1021,8 @@ function FeedbackButtons({
         aria-pressed={rating === "up"}
         onClick={() => onRate("up")}
         className={cn(
-          "inline-flex items-center gap-1 hover:text-emerald-300",
-          rating === "up" && "font-medium text-emerald-300",
+          "inline-flex items-center gap-1 hover:text-[var(--tessera-fg-success)]",
+          rating === "up" && "font-medium text-[var(--tessera-fg-success)]",
         )}
       >
         <ThumbsUp className="h-3.5 w-3.5" /> Utile
@@ -1030,8 +1032,8 @@ function FeedbackButtons({
         aria-pressed={rating === "down"}
         onClick={() => onRate("down")}
         className={cn(
-          "inline-flex items-center gap-1 hover:text-red-300",
-          rating === "down" && "font-medium text-red-300",
+          "inline-flex items-center gap-1 hover:text-[var(--tessera-fg-danger)]",
+          rating === "down" && "font-medium text-[var(--tessera-fg-danger)]",
         )}
       >
         <ThumbsDown className="h-3.5 w-3.5" /> Pas utile
@@ -1107,7 +1109,7 @@ function LiveAssistantMsg({
 
 const SPAN_STATUS_TONE: Record<string, string> = {
   ok: "text-emerald-400",
-  warn: "text-amber-300",
+  warn: "text-[var(--tessera-fg-warning)]",
   crit: "text-red-400",
 };
 const SPAN_BAR_TONE: Record<string, string> = {
@@ -1152,7 +1154,7 @@ function TraceColumn({
   return (
     <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] h-[460px] overflow-y-auto">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
-        <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[#e0a23a]">
+        <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[var(--tessera-fg-warning)]">
           <Activity className="h-4 w-4" /> {t("traceTitle")}
           <CardInfo ns="agentConsole" k="trace" title={t("traceTitle")} />
         </span>
@@ -1173,7 +1175,7 @@ function TraceColumn({
             <button
               type="button"
               onClick={exportJsonl}
-              className="inline-flex items-center gap-1 text-[#f4c76a] hover:text-[var(--tessera-text-strong)]"
+              className="inline-flex items-center gap-1 text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-text-strong)]"
             >
               <Download className="h-3.5 w-3.5" /> {t("traceExport")}
             </button>
@@ -1314,7 +1316,7 @@ function ResponseSummary({
               className={cn(
                 "-mb-px border-b-2 py-2.5 text-[0.72rem] transition-colors",
                 on
-                  ? "border-[#e0a23a] font-medium text-[#e0a23a]"
+                  ? "border-[#e0a23a] font-medium text-[var(--tessera-fg-warning)]"
                   : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
               )}
             >
@@ -1373,7 +1375,7 @@ function PanelHead({
   href?: string;
 }) {
   const cls =
-    "inline-flex items-center gap-0.5 text-[0.64rem] text-[#f4c76a] hover:text-[var(--tessera-text-strong)]";
+    "inline-flex items-center gap-0.5 text-[0.64rem] text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-text-strong)]";
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
       <h3 className="flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">

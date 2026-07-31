@@ -105,7 +105,7 @@ export function SignalBreachHero({
   const remediate = (
     <Link
       href={"/agir/incidents-playbooks" as Route}
-      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[#e0566f]/55 bg-[#e0566f]/15 px-3 text-[11px] font-medium text-[#ffb3c2] transition-colors hover:bg-[#e0566f]/25 hover:text-[var(--tessera-text-strong)]"
+      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[#e0566f]/55 bg-[#e0566f]/15 px-3 text-[11px] font-medium text-[var(--tessera-fg-danger)] transition-colors hover:bg-[#e0566f]/25 hover:text-[var(--tessera-text-strong)]"
     >
       {t("remediate")} →
     </Link>
@@ -121,7 +121,7 @@ export function SignalBreachHero({
         title={title}
         meta={
           <span className="inline-flex items-center gap-1.5 tabular-nums">
-            <Flame className="h-3 w-3 shrink-0 text-[#ff9bb0]" aria-hidden />
+            <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
             {burn}
           </span>
         }
@@ -145,7 +145,7 @@ export function SignalBreachHero({
         thresholdLabel: pctTight(data.target),
         caption: (
           <span className="inline-flex items-center gap-1.5">
-            <Flame className="h-3 w-3 shrink-0 text-[#ff9bb0]" aria-hidden />
+            <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
             {burn}
           </span>
         ),

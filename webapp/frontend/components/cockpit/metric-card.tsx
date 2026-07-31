@@ -30,7 +30,10 @@ export function DeltaBadge({
   const good = up === goodIsUp;
   return (
     <span
-      className={cn("text-xs font-medium", good ? "text-[var(--tessera-green)]" : "text-red-300")}
+      className={cn(
+        "text-xs font-medium",
+        good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]",
+      )}
     >
       {up ? "+" : ""}
       {deltaPct.toFixed(1)}%

@@ -14,9 +14,9 @@ const fmtSecs = (ms: number | null) =>
   ms === null ? "—" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
 
 const RELEASE_TONE: Record<string, string> = {
-  good: "text-emerald-300",
-  crit: "text-red-300",
-  bad: "text-amber-300",
+  good: "text-[var(--tessera-fg-success)]",
+  crit: "text-[var(--tessera-fg-danger)]",
+  bad: "text-[var(--tessera-fg-warning)]",
   muted: "text-[var(--tessera-text-muted)]",
 };
 
@@ -175,10 +175,12 @@ export function MonitoringFleetTable({
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-[#7c5cf5]/40">
-              <td className="py-2 pr-3 font-semibold text-[#b9a6ff]">{t("orgTotal")}</td>
+              <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
+                {t("orgTotal")}
+              </td>
               <td
                 data-testid="fleet-org-total"
-                className="py-2 pr-3 text-right font-semibold tabular-nums text-[#b9a6ff]"
+                className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
               >
                 {fmtInt(fleet.org?.conversations ?? 0)}
               </td>

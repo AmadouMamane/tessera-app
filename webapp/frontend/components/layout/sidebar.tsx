@@ -631,7 +631,7 @@ function Badge({ tone, active, value }: { tone: ChromeTone; active: boolean; val
           : tone === "warning"
             ? "bg-amber-500 text-white"
             : active
-              ? "bg-[var(--tessera-green-soft)] text-[#d6f0e3]"
+              ? "bg-[var(--tessera-green-soft)] text-[var(--tessera-fg-success)]"
               : "bg-[var(--tessera-muted)] text-[var(--tessera-text-muted)]",
       )}
     >

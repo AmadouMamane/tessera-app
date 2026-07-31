@@ -81,7 +81,7 @@ function CatalogueConsumersInner({ kind }: { kind: string }) {
                 {t("consumers", { count: it.consumer_count })}
               </span>
               {it.regate_count > 0 ? (
-                <span className="inline-flex items-center gap-1 text-amber-300">
+                <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-warning)]">
                   <AlertTriangle className="h-3.5 w-3.5" />
                   {t("regate", { count: it.regate_count })}
                 </span>

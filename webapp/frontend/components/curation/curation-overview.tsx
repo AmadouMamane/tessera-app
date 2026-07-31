@@ -43,8 +43,8 @@ const RISK_BADGE: Record<string, string> = {
   bas: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
 };
 const WF_TEXT: Record<string, string> = {
-  termine: "text-emerald-300",
-  encours: "text-sky-300",
+  termine: "text-[var(--tessera-fg-success)]",
+  encours: "text-[var(--tessera-fg-info)]",
   attente: "text-[var(--tessera-text-muted)]",
 };
 const LEVEL_BADGE: Record<string, string> = {
@@ -379,7 +379,7 @@ function PriorityLots({
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
                 <td
-                  className="max-w-[130px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[#87bfff]"
+                  className="max-w-[130px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[var(--tessera-fg-info)]"
                   title={lot.id}
                 >
                   {lot.id}
@@ -494,7 +494,7 @@ function CandidateRows({
               className="border-b border-[var(--tessera-border)]/60 last:border-0"
             >
               <td
-                className="max-w-[170px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[#87bfff]"
+                className="max-w-[170px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[var(--tessera-fg-info)]"
                 title={lot.title}
               >
                 {lot.id}
@@ -660,7 +660,7 @@ function HistoryTab({ t, data }: { t: T; data: Data }) {
                       {fmtDecidedAt(lot.decided_at, locale)}
                     </td>
                     <td
-                      className="max-w-[190px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[#87bfff]"
+                      className="max-w-[190px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[var(--tessera-fg-info)]"
                       title={lot.title}
                     >
                       {lot.id}
@@ -919,7 +919,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
       >
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2 text-[0.72rem]">
-            <span className="font-mono text-[#87bfff]">{data.release.id}</span>
+            <span className="font-mono text-[var(--tessera-fg-info)]">{data.release.id}</span>
             <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-300">
               {data.release.status}
             </Badge>
@@ -954,7 +954,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
           </div>
           <Link
             href="/prouver/evidence-store"
-            className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] transition-colors hover:bg-[#4c3fb0]/60"
+            className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[var(--tessera-fg-accent)] transition-colors hover:bg-[#4c3fb0]/60"
           >
             <FileSearch className="h-3.5 w-3.5" /> {t("evidence.openPack")}
           </Link>
@@ -985,7 +985,13 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
                   {o.assigned}
                 </td>
                 <td className="py-0.5 text-right">
-                  <span className={o.status === "ok" ? "text-emerald-300" : "text-amber-300"}>
+                  <span
+                    className={
+                      o.status === "ok"
+                        ? "text-[var(--tessera-fg-success)]"
+                        : "text-[var(--tessera-fg-warning)]"
+                    }
+                  >
                     {t(`ownerStatus.${o.status}`)}
                   </span>
                 </td>
@@ -1215,7 +1221,11 @@ function ImpactPanel({ t, data, className }: { t: T; data: Data; className?: str
         <dl className="flex w-[42%] shrink-0 flex-col justify-center gap-1.5 border-l border-[var(--tessera-border)] pl-3 text-[0.68rem]">
           <KV label={t("impact.currentRate")} value={im.current} />
           <KV label={t("impact.projectedRate")} value={im.projected} />
-          <KV label={t("impact.expectedDelta")} value={im.delta} tone="text-emerald-300" />
+          <KV
+            label={t("impact.expectedDelta")}
+            value={im.delta}
+            tone="text-[var(--tessera-fg-success)]"
+          />
         </dl>
       </div>
     </Panel>
@@ -1319,7 +1329,7 @@ function KpiTile({
         />
       </div>
       <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
-        <span className={good ? "text-[var(--tessera-green)]" : "text-red-300"}>
+        <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
         <span className="text-[var(--tessera-text-muted)]">{vs}</span>
@@ -1408,15 +1418,15 @@ function Donut({
 const DECIDE_TONE: Record<"emerald" | "amber" | "red", { active: string; idle: string }> = {
   emerald: {
     active: "border-emerald-500/50 bg-emerald-500/25 text-emerald-200",
-    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-emerald-500/40 hover:text-emerald-300",
+    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-emerald-500/40 hover:text-[var(--tessera-fg-success)]",
   },
   amber: {
     active: "border-amber-500/50 bg-amber-500/25 text-amber-200",
-    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-amber-500/40 hover:text-amber-300",
+    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-amber-500/40 hover:text-[var(--tessera-fg-warning)]",
   },
   red: {
     active: "border-red-500/50 bg-red-500/25 text-red-200",
-    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-red-500/40 hover:text-red-300",
+    idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-red-500/40 hover:text-[var(--tessera-fg-danger)]",
   },
 };
 
@@ -1488,7 +1498,7 @@ function Legend({ color, label }: { color: string; label: string }) {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>

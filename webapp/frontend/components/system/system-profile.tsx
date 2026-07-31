@@ -118,7 +118,7 @@ function CommandBar({
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <span className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--tessera-text)]">
-        <Server className="h-4 w-4 text-[#87bfff]" /> {t("subtitle")}
+        <Server className="h-4 w-4 text-[var(--tessera-fg-info)]" /> {t("subtitle")}
       </span>
       <div className="flex shrink-0 items-center gap-2">
         <Button
@@ -158,7 +158,9 @@ function SystemKpi({
       {kpi.kind === "status" ? (
         <div className="mt-1 flex items-center gap-1.5">
           <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          <span className="text-[0.95rem] font-semibold text-emerald-300">{kpi.value}</span>
+          <span className="text-[0.95rem] font-semibold text-[var(--tessera-fg-success)]">
+            {kpi.value}
+          </span>
         </div>
       ) : (
         <div className="mt-1 flex items-center gap-2">
@@ -166,7 +168,9 @@ function SystemKpi({
             {kpi.value}
           </span>
           {kpi.delta ? (
-            <span className="text-[0.62rem] font-medium text-emerald-300">{kpi.delta}</span>
+            <span className="text-[0.62rem] font-medium text-[var(--tessera-fg-success)]">
+              {kpi.delta}
+            </span>
           ) : null}
         </div>
       )}
@@ -178,7 +182,7 @@ function SystemKpi({
       ) : (
         <div className="mt-auto">
           {kpi.link ? (
-            <span className="text-[0.6rem] text-[#87bfff]">{kpi.link} →</span>
+            <span className="text-[0.6rem] text-[var(--tessera-fg-info)]">{kpi.link} →</span>
           ) : kpi.extra ? (
             <span className="text-[0.58rem] text-[var(--tessera-text-muted)]">{kpi.extra}</span>
           ) : null}
@@ -251,7 +255,9 @@ function Row({ nodes }: { nodes: { key: string; label: string; nodes: number }[]
           key={n.key}
           className="flex items-center justify-center gap-1.5 rounded-md border border-[#2e72d2]/40 bg-[#0d3561]/40 px-2 py-1.5 text-center"
         >
-          <span className="text-[0.68rem] font-medium text-[#d8eaff]">{n.label}</span>
+          <span className="text-[0.68rem] font-medium text-[var(--tessera-fg-info)]">
+            {n.label}
+          </span>
           <span className="rounded bg-[var(--tessera-bg)] px-1 text-[0.54rem] tabular-nums text-[var(--tessera-text-muted)]">
             ×{n.nodes}
           </span>
@@ -401,11 +407,11 @@ function Health({ t, data, className }: { t: T; data: Data; className?: string }
               {t(`health.${h.key}`)}
             </span>
             {h.status === "ok" ? (
-              <span className="inline-flex items-center gap-1 text-emerald-300">
+              <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-success)]">
                 <CheckCircle2 className="h-3 w-3" /> {t("status.ok")}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-amber-300">
+              <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-warning)]">
                 <TriangleAlert className="h-3 w-3" /> {t("status.warn")}
               </span>
             )}
@@ -434,11 +440,11 @@ function Services({ t, data, className }: { t: T; data: Data; className?: string
               <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.name}</td>
               <td className="px-1.5 py-1">
                 {s.status === "ok" ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-300">
+                  <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-success)]">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {t("status.ok")}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-amber-300">
+                  <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-warning)]">
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> {t("status.warn")}
                   </span>
                 )}
@@ -546,7 +552,7 @@ function ViewAll({ label, href }: { label: string; href: typeof AUDIT_HREF }) {
   return (
     <Link
       href={href}
-      className="flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+      className="flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
     >
       {label} <ChevronRight className="h-3 w-3" />
     </Link>

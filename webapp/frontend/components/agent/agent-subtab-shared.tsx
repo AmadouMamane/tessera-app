@@ -53,13 +53,13 @@ export const TYPE_TONE: Record<string, string> = {
 };
 
 export const SEVERITY_PILL: Record<string, string> = {
-  crit: "border-[#e0566f]/50 bg-[#e0566f]/15 text-[#ff9bb0]",
+  crit: "border-[#e0566f]/50 bg-[#e0566f]/15 text-[var(--tessera-fg-danger)]",
   muted: "border-[var(--tessera-border)] bg-black/15 text-[var(--tessera-text-muted)]",
 };
 
 export const PASS_TONE: Record<string, string> = {
-  good: "text-emerald-300",
-  bad: "text-red-300",
+  good: "text-[var(--tessera-fg-success)]",
+  bad: "text-[var(--tessera-fg-danger)]",
   muted: "text-[var(--tessera-text-muted)]",
 };
 
@@ -155,7 +155,9 @@ export function FilterDropdown({
               )}
             >
               {o.label}
-              {o.value === value ? <span className="text-[#b9a6ff]">&bull;</span> : null}
+              {o.value === value ? (
+                <span className="text-[var(--tessera-fg-accent)]">&bull;</span>
+              ) : null}
             </button>
           ))}
         </div>

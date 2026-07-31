@@ -79,9 +79,9 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
                 (item) => (
                   <span
                     key={item}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-[12px] text-slate-300"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-[12px] text-[var(--tessera-text-muted)]"
                   >
-                    <Check className="h-3.5 w-3.5 text-emerald-300" />
+                    <Check className="h-3.5 w-3.5 text-[var(--tessera-fg-success)]" />
                     {item}
                   </span>
                 ),
@@ -99,16 +99,16 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
               <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 grid h-[88px] w-[88px] place-items-center rounded-[26px] border border-emerald-300/30 bg-[#041b28]/90 shadow-[0_0_44px_rgba(45,212,191,0.16)]">
                 <TesseraMark className="h-[48px] w-[48px]" />
               </div>
-              <div className="absolute top-[30px] left-[112px] grid h-11 w-11 place-items-center rounded-[14px] border border-cyan-300/25 bg-[#062239]/90 text-cyan-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute top-[30px] left-[112px] grid h-11 w-11 place-items-center rounded-[14px] border border-cyan-300/25 bg-[#062239]/90 text-[var(--tessera-fg-teal)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <Fingerprint className="h-5 w-5" />
               </div>
-              <div className="absolute right-[94px] bottom-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-emerald-300/25 bg-[#062a2b]/90 text-emerald-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute right-[94px] bottom-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-emerald-300/25 bg-[#062a2b]/90 text-[var(--tessera-fg-success)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <ShieldCheck className="h-5 w-5" />
               </div>
-              <div className="absolute right-[86px] top-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-violet-300/20 bg-[#171a38]/90 text-violet-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute right-[86px] top-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-violet-300/20 bg-[#171a38]/90 text-[var(--tessera-fg-accent)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <LockKeyhole className="h-5 w-5" />
               </div>
-              <div className="absolute bottom-[34px] left-[96px] grid h-11 w-11 place-items-center rounded-[14px] border border-amber-200/20 bg-[#2a2113]/90 text-amber-200 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute bottom-[34px] left-[96px] grid h-11 w-11 place-items-center rounded-[14px] border border-amber-200/20 bg-[#2a2113]/90 text-[var(--tessera-fg-warning)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <KeyRound className="h-5 w-5" />
               </div>
             </div>

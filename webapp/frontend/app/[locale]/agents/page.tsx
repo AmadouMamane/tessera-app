@@ -89,7 +89,7 @@ export default async function FleetPage({ params }: PageProps) {
                 source={t("explain.dedupSaved.source")}
               />
             </p>
-            <p className="text-[1.3rem] font-semibold tabular-nums text-emerald-300">
+            <p className="text-[1.3rem] font-semibold tabular-nums text-[var(--tessera-fg-success)]">
               {fmtInt(data?.dedup_saved ?? 0)}
             </p>
             <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">

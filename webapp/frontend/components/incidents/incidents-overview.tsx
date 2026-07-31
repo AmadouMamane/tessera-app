@@ -57,14 +57,14 @@ const SEV_DOT: Record<string, string> = {
   moyen: "bg-sky-400",
 };
 const STATUS_TEXT: Record<string, string> = {
-  ouvert: "text-amber-300",
-  encours: "text-sky-300",
-  resolu: "text-emerald-300",
+  ouvert: "text-[var(--tessera-fg-warning)]",
+  encours: "text-[var(--tessera-fg-info)]",
+  resolu: "text-[var(--tessera-fg-success)]",
 };
 const TONE_TEXT: Record<string, string> = {
-  crit: "text-red-300",
-  warn: "text-amber-300",
-  ok: "text-emerald-300",
+  crit: "text-[var(--tessera-fg-danger)]",
+  warn: "text-[var(--tessera-fg-warning)]",
+  ok: "text-[var(--tessera-fg-success)]",
 };
 
 const TABS = [
@@ -156,7 +156,9 @@ export function IncidentsOverview() {
           ending at T, bundles ≤ T, durable incidents replayed at T. */}
       <AgirRail />
       {frozen ? (
-        <output className="text-[0.66rem] text-amber-300">{tr("frozenTitle")}</output>
+        <output className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+          {tr("frozenTitle")}
+        </output>
       ) : null}
       {showCreate && !frozen ? (
         <CreateIncidentForm
@@ -406,7 +408,7 @@ function DurableIncidents({
                   key={inc.incident_id}
                   className="border-b border-[var(--tessera-border)]/60 last:border-0"
                 >
-                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[#87bfff]">
+                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">
                     {inc.incident_id}
                   </td>
                   <td className="max-w-[22rem] truncate px-2 py-1.5 text-[var(--tessera-text)]">
@@ -460,7 +462,7 @@ function DurableIncidents({
                           type="button"
                           disabled={busy}
                           onClick={() => onTransition(inc.incident_id, "en_cours")}
-                          className="text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff] disabled:opacity-50"
+                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)] disabled:opacity-50"
                         >
                           {t("durable.takeCharge")}
                         </button>
@@ -470,7 +472,7 @@ function DurableIncidents({
                           type="button"
                           disabled={busy}
                           onClick={() => onTransition(inc.incident_id, "resolu")}
-                          className="text-[0.62rem] font-medium text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-success)] hover:text-[var(--tessera-fg-success)] disabled:opacity-50"
                         >
                           {t("durable.resolve")}
                         </button>
@@ -479,7 +481,7 @@ function DurableIncidents({
                           type="button"
                           disabled={busy}
                           onClick={() => onTransition(inc.incident_id, "ouvert")}
-                          className="text-[0.62rem] font-medium text-amber-300 hover:text-amber-200 disabled:opacity-50"
+                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-fg-warning)] disabled:opacity-50"
                         >
                           {t("durable.reopen")}
                         </button>
@@ -582,7 +584,9 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
           <tbody>
             {data.priority_incidents.map((inc) => (
               <tr key={inc.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-2 py-1.5 font-mono text-[0.7rem] text-[#87bfff]">{inc.id}</td>
+                <td className="px-2 py-1.5 font-mono text-[0.7rem] text-[var(--tessera-fg-info)]">
+                  {inc.id}
+                </td>
                 <td className="px-2 py-1.5">
                   <SevBadge severity={inc.severity} t={t} />
                 </td>
@@ -632,7 +636,7 @@ function Catalog({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: () => v
             className="flex flex-col gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
           >
             <div className="flex items-center gap-1.5">
-              <PlayCircle className="h-3.5 w-3.5 shrink-0 text-[#87bfff]" />
+              <PlayCircle className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" />
               <Truncate
                 full={pb.name}
                 className="text-[0.72rem] font-medium text-[var(--tessera-text)]"
@@ -663,7 +667,7 @@ function RecentIncidents({ t, data }: { t: T; data: Data }) {
         {data.recent_incidents.map((inc) => (
           <li key={inc.id} className="flex items-center gap-2 text-[0.72rem]">
             <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", SEV_DOT[inc.severity])} />
-            <span className="font-mono text-[0.66rem] text-[#87bfff]">{inc.id}</span>
+            <span className="font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">{inc.id}</span>
             <Truncate full={inc.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
               {inc.label}
             </Truncate>
@@ -692,7 +696,7 @@ function SlaEscalations({ t, data }: { t: T; data: Data }) {
         {data.sla_escalations.map((e) => (
           <li key={e.id} className="flex items-center gap-2 text-[0.72rem]">
             <Timer className={cn("h-3.5 w-3.5 shrink-0", TONE_TEXT[e.tone])} />
-            <span className="font-mono text-[0.66rem] text-[#87bfff]">{e.id}</span>
+            <span className="font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">{e.id}</span>
             <span className={cn("ml-auto shrink-0 tabular-nums font-medium", TONE_TEXT[e.tone])}>
               {e.remaining}
             </span>
@@ -826,7 +830,7 @@ function ResponseJournal({
               <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">
                 {r.time}
               </td>
-              <td className="px-1.5 py-1 font-mono text-[#87bfff]">{r.incident}</td>
+              <td className="px-1.5 py-1 font-mono text-[var(--tessera-fg-info)]">{r.incident}</td>
               <td className="px-1.5 py-1 text-[var(--tessera-text)]">{r.action}</td>
               <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.actor}</td>
             </tr>
@@ -1023,11 +1027,13 @@ function Postmortems({
             className="flex flex-col gap-0.5 border-b border-[var(--tessera-border)]/60 pb-1.5 last:border-0 last:pb-0"
           >
             <div className="flex items-center gap-2 text-[0.7rem]">
-              <span className="font-mono text-[0.64rem] text-[#87bfff]">{p.id}</span>
+              <span className="font-mono text-[0.64rem] text-[var(--tessera-fg-info)]">{p.id}</span>
               <Truncate full={p.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {p.label}
               </Truncate>
-              <span className="shrink-0 text-[0.6rem] text-emerald-300">{p.resolved}</span>
+              <span className="shrink-0 text-[0.6rem] text-[var(--tessera-fg-success)]">
+                {p.resolved}
+              </span>
             </div>
             <Truncate
               as="p"
@@ -1049,8 +1055,16 @@ function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
     <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-      <Chip icon={Activity} tone="text-red-300" label={t("footer.critical", { n: f.critical })} />
-      <Chip icon={Timer} tone="text-amber-300" label={t("footer.atRisk", { n: f.at_risk })} />
+      <Chip
+        icon={Activity}
+        tone="text-[var(--tessera-fg-danger)]"
+        label={t("footer.critical", { n: f.critical })}
+      />
+      <Chip
+        icon={Timer}
+        tone="text-[var(--tessera-fg-warning)]"
+        label={t("footer.atRisk", { n: f.at_risk })}
+      />
       <Chip
         icon={PlayCircle}
         tone="text-[var(--tessera-green)]"
@@ -1150,7 +1164,7 @@ function KpiTile({
         />
       </div>
       <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
-        <span className={good ? "text-[var(--tessera-green)]" : "text-red-300"}>
+        <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
         <span className="text-[var(--tessera-text-muted)]">{vs}</span>
@@ -1287,7 +1301,7 @@ function Legend({ color, label }: { color: string; label: string }) {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>

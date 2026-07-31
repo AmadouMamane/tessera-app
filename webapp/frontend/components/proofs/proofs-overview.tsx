@@ -398,7 +398,7 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
           {data.pipeline.map((step, i) => (
             <li key={step.key} className="flex min-w-0 flex-1 items-center gap-1">
               <div className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-2 text-center">
-                <PackageCheck className="h-3.5 w-3.5 text-[#87bfff]" />
+                <PackageCheck className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" />
                 <span className="truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {t(`pipeline.${step.key}`)}
                 </span>
@@ -408,7 +408,9 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
                 <span
                   className={cn(
                     "inline-flex items-center gap-0.5 text-[0.58rem]",
-                    step.status === "ok" ? "text-emerald-300" : "text-red-300",
+                    step.status === "ok"
+                      ? "text-[var(--tessera-fg-success)]"
+                      : "text-[var(--tessera-fg-danger)]",
                   )}
                 >
                   <ShieldCheck className="h-2.5 w-2.5" /> {step.status === "ok" ? "OK" : "KO"}
@@ -423,7 +425,7 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
         <p
           className={cn(
             "inline-flex items-center gap-1.5 text-[0.7rem]",
-            data.chain_verified ? "text-[var(--tessera-green)]" : "text-red-300",
+            data.chain_verified ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]",
           )}
         >
           <ShieldCheck className="h-3.5 w-3.5" />{" "}
@@ -490,7 +492,7 @@ function CurrentPack({
     >
       <div className="flex flex-col gap-2 text-[0.72rem]">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-[#87bfff]">{p.id}</span>
+          <span className="font-mono text-[var(--tessera-fg-info)]">{p.id}</span>
           <span className="text-[var(--tessera-text-muted)]">{p.period}</span>
         </div>
         <KV label={t("packCol.scope")} value={p.scope} />
@@ -524,10 +526,22 @@ function CurrentPack({
         </div>
         {verdict && verdict.pack_id === p.id ? (
           <output className="flex flex-col gap-0.5 text-[0.64rem]">
-            <span className={verdict.manifest_ok ? "text-emerald-300" : "text-red-300"}>
+            <span
+              className={
+                verdict.manifest_ok
+                  ? "text-[var(--tessera-fg-success)]"
+                  : "text-[var(--tessera-fg-danger)]"
+              }
+            >
               {verdict.manifest_ok ? t("pack.manifestOk") : t("pack.manifestBad")}
             </span>
-            <span className={verdict.chain_verified_now ? "text-emerald-300" : "text-red-300"}>
+            <span
+              className={
+                verdict.chain_verified_now
+                  ? "text-[var(--tessera-fg-success)]"
+                  : "text-[var(--tessera-fg-danger)]"
+              }
+            >
               {verdict.chain_verified_now ? t("pack.chainOkNow") : t("pack.chainBadNow")} (
               {verdict.chain_length_now})
             </span>
@@ -571,14 +585,16 @@ function RecentPacks({ t, data, className }: { t: T; data: Data; className?: str
           <tbody>
             {data.recent_packs.map((p) => (
               <tr key={p.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[#87bfff]">{p.id}</td>
+                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[var(--tessera-fg-info)]">
+                  {p.id}
+                </td>
                 <td className="max-w-[150px] truncate px-1.5 py-1 text-[var(--tessera-text-muted)]">
                   {p.scope}
                 </td>
                 <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text)]">
                   {p.artifacts}
                 </td>
-                <td className="px-1.5 py-1 text-emerald-300">
+                <td className="px-1.5 py-1 text-[var(--tessera-fg-success)]">
                   <ShieldCheck className="h-3.5 w-3.5" />
                 </td>
                 <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
@@ -668,7 +684,11 @@ function Crypto({ t, data }: { t: T; data: Data }) {
           <KV
             label={t("crypto.anomalies")}
             value={String(c.anomalies)}
-            tone={c.anomalies === 0 ? "text-emerald-300" : "text-red-300"}
+            tone={
+              c.anomalies === 0
+                ? "text-[var(--tessera-fg-success)]"
+                : "text-[var(--tessera-fg-danger)]"
+            }
           />
         </dl>
       </div>
@@ -706,7 +726,13 @@ function ControlCases({ t, data }: { t: T; data: Data }) {
               </td>
               <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{c.owner}</td>
               <td className="px-1.5 py-1">
-                <span className={c.status === "ok" ? "text-emerald-300" : "text-amber-300"}>
+                <span
+                  className={
+                    c.status === "ok"
+                      ? "text-[var(--tessera-fg-success)]"
+                      : "text-[var(--tessera-fg-warning)]"
+                  }
+                >
                   {t(`ccStatus.${c.status}`)}
                 </span>
               </td>
@@ -757,7 +783,9 @@ function Retention({ t, data }: { t: T; data: Data }) {
                     {r.obligation}
                   </Badge>
                 </td>
-                <td className="px-2 py-1.5 tabular-nums text-emerald-300">{r.coverage}%</td>
+                <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-fg-success)]">
+                  {r.coverage}%
+                </td>
                 <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
                   {r.expiry}
                 </td>
@@ -807,7 +835,9 @@ function ProofsRail({
             <p
               className={cn(
                 "text-sm font-semibold",
-                data.chain_verified ? "text-emerald-300" : "text-red-300",
+                data.chain_verified
+                  ? "text-[var(--tessera-fg-success)]"
+                  : "text-[var(--tessera-fg-danger)]",
               )}
             >
               {data.chain_verified ? t("integrity.intact") : t("integrity.broken")}
@@ -1045,7 +1075,7 @@ function KpiTile({
               ? "text-[var(--tessera-text-muted)]"
               : good
                 ? "text-[var(--tessera-green)]"
-                : "text-red-300"
+                : "text-[var(--tessera-fg-danger)]"
           }
         >
           {neutral ? "" : up ? "▲ " : "▼ "}
@@ -1172,7 +1202,7 @@ function ViewAll({ label, href }: { label: string; href: Route }) {
   return (
     <Link
       href={href}
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
     >
       {label} <ChevronRight className="h-3 w-3" />
     </Link>

@@ -53,39 +53,39 @@ const agentTones = [
     border: "border-sky-400/30",
     glow: "from-sky-400/18",
     icon: "border-sky-300/35 bg-sky-400/15 text-sky-200",
-    text: "text-sky-200",
+    text: "text-[var(--tessera-fg-info)]",
   },
   {
     border: "border-cyan-400/25",
     glow: "from-cyan-400/16",
     icon: "border-cyan-300/35 bg-cyan-400/15 text-cyan-200",
-    text: "text-cyan-200",
+    text: "text-[var(--tessera-fg-teal)]",
   },
   {
     border: "border-emerald-400/25",
     glow: "from-emerald-400/16",
     icon: "border-emerald-300/35 bg-emerald-400/15 text-emerald-200",
-    text: "text-emerald-200",
+    text: "text-[var(--tessera-fg-success)]",
   },
   {
     border: "border-violet-400/25",
     glow: "from-violet-400/16",
     icon: "border-violet-300/35 bg-violet-400/15 text-violet-200",
-    text: "text-violet-200",
+    text: "text-[var(--tessera-fg-accent)]",
   },
 ] satisfies VisualTone[];
 
 const flowVisuals = [
-  { icon: KeyRound, text: "text-sky-200", line: "bg-sky-400/60" },
-  { icon: Activity, text: "text-cyan-200", line: "bg-cyan-400/60" },
+  { icon: KeyRound, text: "text-[var(--tessera-fg-info)]", line: "bg-sky-400/60" },
+  { icon: Activity, text: "text-[var(--tessera-fg-teal)]", line: "bg-cyan-400/60" },
   {
     icon: FlaskConical,
-    text: "text-violet-200",
+    text: "text-[var(--tessera-fg-accent)]",
     line: "bg-violet-400/60",
   },
   {
     icon: ScrollText,
-    text: "text-amber-200",
+    text: "text-[var(--tessera-fg-warning)]",
     line: "bg-amber-400/60",
   },
 ];
@@ -131,7 +131,7 @@ export function ComprendreV2Diagram() {
             <Orbit className="size-6" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="font-mono text-[0.66rem] tracking-[0.17em] text-cyan-300 uppercase">
+            <p className="font-mono text-[0.66rem] tracking-[0.17em] text-[var(--tessera-fg-teal)] uppercase">
               {app("title")}
             </p>
             <p className="mt-1 max-w-[48rem] text-sm font-medium leading-6 text-[var(--tessera-text)]">
@@ -154,7 +154,7 @@ export function ComprendreV2Diagram() {
           <div className="xl:col-start-3">
             <div className="relative mx-auto h-8 w-px bg-gradient-to-b from-emerald-300/65 to-amber-300/80">
               <ArrowDown
-                className="absolute -bottom-1 left-1/2 size-4 -translate-x-1/2 text-amber-300"
+                className="absolute -bottom-1 left-1/2 size-4 -translate-x-1/2 text-[var(--tessera-fg-warning)]"
                 aria-hidden="true"
               />
             </div>
@@ -180,7 +180,7 @@ export function ComprendreV2Diagram() {
                   />
                   <div className="flex items-start gap-3">
                     <span
-                      className={`grid size-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.035] ${visual?.text ?? "text-slate-300"}`}
+                      className={`grid size-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.035] ${visual?.text ?? "text-[var(--tessera-text-muted)]"}`}
                     >
                       <FlowIcon className="size-4" aria-hidden="true" />
                     </span>
@@ -293,7 +293,10 @@ function AgentPanel({ column, foundations }: { column: DiagramColumn; foundation
                 data-agent-foundation="true"
                 className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.055] px-3 py-2 text-center text-[0.68rem] font-medium text-emerald-100/85"
               >
-                <FoundationIcon className="size-4 shrink-0 text-emerald-200" aria-hidden="true" />
+                <FoundationIcon
+                  className="size-4 shrink-0 text-[var(--tessera-fg-success)]"
+                  aria-hidden="true"
+                />
                 <span>{foundation}</span>
               </li>
             );
@@ -354,9 +357,9 @@ function PanelHeading({
     violet: "border-violet-300/25 bg-violet-400/10 text-violet-200",
   };
   const textStyles = {
-    sky: "text-sky-200",
-    emerald: "text-emerald-200",
-    violet: "text-violet-200",
+    sky: "text-[var(--tessera-fg-info)]",
+    emerald: "text-[var(--tessera-fg-success)]",
+    violet: "text-[var(--tessera-fg-accent)]",
   };
 
   return (
@@ -386,7 +389,10 @@ function GuardBridge({ label }: { label: string }) {
           aria-hidden="true"
           className="absolute inset-x-2 top-1/2 h-px bg-gradient-to-r from-sky-400/65 via-emerald-300/85 to-emerald-400/65"
         />
-        <ArrowRight className="absolute right-0 size-4 text-emerald-300" aria-hidden="true" />
+        <ArrowRight
+          className="absolute right-0 size-4 text-[var(--tessera-fg-success)]"
+          aria-hidden="true"
+        />
         <span className="relative z-10 grid size-11 place-items-center rounded-xl border border-emerald-300/45 bg-[#09261f] text-emerald-200 shadow-[0_0_28px_rgba(52,211,153,0.2)]">
           <ShieldCheck className="size-5" aria-hidden="true" />
         </span>
@@ -424,7 +430,8 @@ function FlowRail({
 }) {
   if (!flow) return null;
   const Icon = direction === "right" ? ArrowRight : ArrowLeft;
-  const tone = variant === "telemetry" ? "text-cyan-200" : "text-violet-200";
+  const tone =
+    variant === "telemetry" ? "text-[var(--tessera-fg-teal)]" : "text-[var(--tessera-fg-accent)]";
   const line = variant === "telemetry" ? "bg-cyan-400/65" : "bg-violet-400/65";
 
   return (
@@ -452,7 +459,7 @@ function AuditLedger({ title, body }: { title: string; body: string }) {
           <ScrollText className="size-4" aria-hidden="true" />
         </span>
         <div>
-          <h3 className="text-xs font-semibold text-amber-100">{title}</h3>
+          <h3 className="text-xs font-semibold text-[var(--tessera-fg-warning)]">{title}</h3>
           <p className="mt-1 text-[0.66rem] leading-5 text-[var(--tessera-text-muted)]">{body}</p>
         </div>
       </div>

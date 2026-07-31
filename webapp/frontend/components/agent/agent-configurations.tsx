@@ -250,9 +250,9 @@ function Header({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {error ? (
-          <span className="text-[0.72rem] text-red-300">{t("saveError")}</span>
+          <span className="text-[0.72rem] text-[var(--tessera-fg-danger)]">{t("saveError")}</span>
         ) : !dirty ? (
-          <span className="text-[0.72rem] text-emerald-300">{actions?.saved}</span>
+          <span className="text-[0.72rem] text-[var(--tessera-fg-success)]">{actions?.saved}</span>
         ) : null}
         {dirty ? (
           <button
@@ -319,7 +319,7 @@ function FieldSection({
         {block.link ? (
           <Link
             href={block.link.href as "/configurer/modeles"}
-            className="inline-flex items-center gap-1 text-[0.68rem] text-[#5fd0c6] hover:text-[var(--tessera-text-strong)]"
+            className="inline-flex items-center gap-1 text-[0.68rem] text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-text-strong)]"
           >
             {block.link.label} <ChevronRight className="h-3 w-3" />
           </Link>
@@ -396,7 +396,7 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none ml-auto h-3.5 w-3.5 shrink-0 text-[#5fd0c6]" />
+        <ChevronDown className="pointer-events-none ml-auto h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-teal)]" />
       </span>
     );
   } else if (editable && field.kind === "toggle") {
@@ -449,7 +449,7 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
             type="button"
             aria-label="Copier l'identifiant"
             onClick={() => navigator.clipboard?.writeText(current)}
-            className="ml-auto flex shrink-0 items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text-muted)] transition-colors hover:border-[#5fd0c6]/50 hover:text-[#5fd0c6]"
+            className="ml-auto flex shrink-0 items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text-muted)] transition-colors hover:border-[#5fd0c6]/50 hover:text-[var(--tessera-fg-teal)]"
           >
             <Copy className="h-3.5 w-3.5" /> Copier
           </button>
@@ -576,7 +576,7 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
         </div>
       ) : null}
       <p className="mt-2 flex items-center gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-        <Info className="h-3.5 w-3.5 text-cyan-300" />
+        <Info className="h-3.5 w-3.5 text-[var(--tessera-fg-teal)]" />
         {b.note}
       </p>
     </div>
@@ -603,7 +603,10 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
         >
           {tools.value}
           <ChevronDown
-            className={cn("h-3.5 w-3.5 text-[#5fd0c6] transition-transform", open && "rotate-180")}
+            className={cn(
+              "h-3.5 w-3.5 text-[var(--tessera-fg-teal)] transition-transform",
+              open && "rotate-180",
+            )}
           />
         </button>
         {open ? (
@@ -630,7 +633,7 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
             {tools.href ? (
               <Link
                 href={tools.href as Route}
-                className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-[0.68rem] text-[#5fd0c6] hover:text-[var(--tessera-text-strong)]"
+                className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-[0.68rem] text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-text-strong)]"
               >
                 Gérer dans les garde-fous <ChevronRight className="h-3 w-3" />
               </Link>
@@ -896,7 +899,9 @@ function Status({ data }: { data: Data }) {
                 {row.badge ? (
                   <Badge>{value}</Badge>
                 ) : (
-                  <span className={cn(row.live && !online && "text-red-300")}>{value}</span>
+                  <span className={cn(row.live && !online && "text-[var(--tessera-fg-danger)]")}>
+                    {value}
+                  </span>
                 )}
                 {online ? <span className="h-2 w-2 rounded-full bg-emerald-400" /> : null}
                 {row.live && !online && !readiness.isLoading ? (
@@ -974,7 +979,7 @@ function History({ data }: { data: Data }) {
         </h2>
         <Link
           href="/prouver/audit-logs"
-          className="text-[0.76rem] font-medium text-cyan-300 hover:text-cyan-200"
+          className="text-[0.76rem] font-medium text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-fg-teal)]"
         >
           {h.cta}
         </Link>
@@ -986,7 +991,7 @@ function History({ data }: { data: Data }) {
             className="relative grid grid-cols-[34px_1fr] gap-2"
           >
             <span className="relative flex justify-center">
-              <span className="grid h-7 w-7 place-items-center rounded-full border border-[#d98b1f] text-[#d98b1f]">
+              <span className="grid h-7 w-7 place-items-center rounded-full border border-[#d98b1f] text-[var(--tessera-fg-warning)]">
                 <Save className="h-3.5 w-3.5" />
               </span>
               {index < h.items.length - 1 ? (
@@ -1026,14 +1031,14 @@ function LinksPanel({ data }: { data: Data }) {
             className="group grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2 text-left transition-colors hover:border-[#5fd0c6]/50 hover:bg-[rgba(95,208,198,0.06)]"
           >
             <span className="min-w-0">
-              <span className="block text-[0.76rem] font-medium text-[var(--tessera-text)] group-hover:text-[#5fd0c6]">
+              <span className="block text-[0.76rem] font-medium text-[var(--tessera-text)] group-hover:text-[var(--tessera-fg-teal)]">
                 {link.title}
               </span>
               <span className="mt-0.5 block text-[0.68rem] leading-snug text-[var(--tessera-text-muted)]">
                 {link.desc}
               </span>
             </span>
-            <ExternalLink className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)] transition-colors group-hover:text-[#5fd0c6]" />
+            <ExternalLink className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-fg-teal)]" />
           </Link>
         ))}
       </div>

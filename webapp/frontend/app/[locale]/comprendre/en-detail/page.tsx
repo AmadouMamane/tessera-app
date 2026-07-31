@@ -54,7 +54,7 @@ export default async function ComprendreDetailPage({ params }: PageProps) {
                   <p className="mt-4 border-[#7c5cf5]/50 border-l-2 pl-3 text-[0.82rem] text-[var(--tessera-text-muted)] italic">
                     <Link
                       href={section.proof.href}
-                      className="font-medium text-[#b9a6ff] not-italic hover:text-[var(--tessera-text-strong)]"
+                      className="font-medium text-[var(--tessera-fg-accent)] not-italic hover:text-[var(--tessera-text-strong)]"
                     >
                       {t("proofLabel")}
                     </Link>

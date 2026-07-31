@@ -275,7 +275,7 @@ function ConfigVersionBar({ t, data }: { t: T; data: Data }) {
       <Sep />
       <KvInline label={t("version.modifiedBy")} value={c.modified_by} />
       <Sep />
-      <span className="inline-flex items-center gap-1 text-emerald-300">
+      <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-success)]">
         <CheckCircle2 className="h-3.5 w-3.5" /> {c.validation}
       </span>
       <span className="ml-auto text-[var(--tessera-text-muted)]">
@@ -330,7 +330,7 @@ function QuickConfig({
               className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
             >
               <div className="flex items-center gap-1.5">
-                <Icon className="h-3.5 w-3.5 shrink-0 text-[#87bfff]" />
+                <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" />
                 <span className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
                   {t(`cat.${c.key}`)}
                 </span>
@@ -341,7 +341,7 @@ function QuickConfig({
               <button
                 type="button"
                 onClick={() => onConfigure(CAT_TAB[c.key] ?? "general")}
-                className="mt-auto self-start text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+                className="mt-auto self-start text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
               >
                 {t("quick.configure")} →
               </button>
@@ -402,7 +402,9 @@ function RecentParams({
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
                     {t(`tabs.${p.category}`)}
                   </td>
-                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[#87bfff]">{p.value}</td>
+                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">
+                    {p.value}
+                  </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{p.modified_by}</td>
                   <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
                     {p.date}
@@ -432,7 +434,9 @@ function UsagePolicies({ t, data }: { t: T; data: Data }) {
             <Truncate full={p.name} className="min-w-0 text-[var(--tessera-text)]">
               {p.name}
             </Truncate>
-            <span className="shrink-0 font-mono text-[0.62rem] text-[#87bfff]">{p.value}</span>
+            <span className="shrink-0 font-mono text-[0.62rem] text-[var(--tessera-fg-info)]">
+              {p.value}
+            </span>
           </li>
         ))}
       </ul>
@@ -578,10 +582,12 @@ function Compliance({ t, data }: { t: T; data: Data }) {
             <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
               {t(`compliance.${c.key}`)}
             </span>
-            <span className="shrink-0 text-emerald-300">{t("compliance.conform")}</span>
+            <span className="shrink-0 text-[var(--tessera-fg-success)]">
+              {t("compliance.conform")}
+            </span>
             <Link
               href="/surveiller/conformite"
-              className="shrink-0 text-[#87bfff] hover:text-[#a9d2ff]"
+              className="shrink-0 text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
             >
               {t("compliance.view")}
             </Link>
@@ -676,7 +682,7 @@ function Sep() {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+    "flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>

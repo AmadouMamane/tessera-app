@@ -59,7 +59,7 @@ const CLASS_BADGE: Record<string, string> = {
   confidential: "border-violet-500/30 bg-violet-500/15 text-violet-300",
 };
 const STATUS: Record<"active" | "disabled", { dot: string; text: string }> = {
-  active: { dot: "bg-emerald-400", text: "text-emerald-300" },
+  active: { dot: "bg-emerald-400", text: "text-[var(--tessera-fg-success)]" },
   disabled: { dot: "bg-[var(--tessera-text-muted)]", text: "text-[var(--tessera-text-muted)]" },
 };
 // Source-type icon: regulation (law), product (package), memory (brain), transcript (chat).
@@ -71,10 +71,10 @@ const TYPE_ICON: Record<string, LucideIcon> = {
 };
 // Per-type icon colour so the source kind reads at a glance.
 const TYPE_ICON_TONE: Record<string, string> = {
-  regulation: "text-amber-300",
-  product: "text-[#87bfff]",
-  memory: "text-fuchsia-300",
-  transcript: "text-emerald-300",
+  regulation: "text-[var(--tessera-fg-warning)]",
+  product: "text-[var(--tessera-fg-info)]",
+  memory: "text-[var(--tessera-fg-accent)]",
+  transcript: "text-[var(--tessera-fg-success)]",
 };
 const ASOF_HREF = "/prouver/etat-a-date";
 const REVALIDATE_HREF = "/agir/release-control";
@@ -422,7 +422,7 @@ function FilterStrip({
             </option>
           ))}
         </select>
-        <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#87bfff]" />
+        <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--tessera-fg-info)]" />
       </label>
       <AgentScopeFilter />
       <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
@@ -722,9 +722,9 @@ function SourceTable({
                       {t(`col.${c.key}`)}
                       {sortKey === c.sort ? (
                         sortDir === "asc" ? (
-                          <SortAsc className="h-3 w-3 text-[#87bfff]" />
+                          <SortAsc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
                         ) : (
-                          <SortDesc className="h-3 w-3 text-[#87bfff]" />
+                          <SortDesc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
                         )
                       ) : (
                         <ChevronsUpDown className="h-3 w-3 opacity-40" />
@@ -766,7 +766,7 @@ function SourceTable({
                       <Icon
                         className={cn(
                           "h-3 w-3 shrink-0",
-                          TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]",
+                          TYPE_ICON_TONE[s.type] ?? "text-[var(--tessera-fg-info)]",
                         )}
                       />
                       <Truncate full={s.name}>{s.name}</Truncate>
@@ -793,16 +793,16 @@ function SourceTable({
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
                     <span className="flex items-center gap-1.5">
-                      <Users className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <Users className="h-3 w-3 shrink-0 text-[var(--tessera-fg-info)]" />
                       <Truncate full={s.used_by}>{s.used_by}</Truncate>
                     </span>
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {t("detail.open")}
                       </span>
-                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
                     </span>
                   </td>
                 </tr>
@@ -947,7 +947,10 @@ function AccessView({
             >
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 <Icon
-                  className={cn("h-3 w-3 shrink-0", TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]")}
+                  className={cn(
+                    "h-3 w-3 shrink-0",
+                    TYPE_ICON_TONE[s.type] ?? "text-[var(--tessera-fg-info)]",
+                  )}
                 />
                 <Truncate full={s.name} className="text-[var(--tessera-text)]">
                   {s.name}
@@ -969,7 +972,7 @@ function AccessView({
                     {c.name}
                   </span>
                 ))}
-                <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
               </span>
             </li>
           );
@@ -1021,7 +1024,7 @@ function RetentionView({
               </td>
               <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
                 <span className="inline-flex items-center gap-1.5">
-                  <Clock className="h-3 w-3 text-[#87bfff]" /> {s.retention}
+                  <Clock className="h-3 w-3 text-[var(--tessera-fg-info)]" /> {s.retention}
                 </span>
               </td>
               <td className="px-2 py-1.5">
@@ -1030,7 +1033,7 @@ function RetentionView({
                 </Badge>
               </td>
               <td className="px-2 py-1.5 text-right">
-                <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
               </td>
             </tr>
           ))}
@@ -1062,7 +1065,7 @@ function LineageView({ t, data }: { t: T; data: Data }) {
             className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
           >
             <span className="inline-flex items-center gap-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-              <GitBranch className="h-3.5 w-3.5 text-[#87bfff]" /> {p.name}
+              <GitBranch className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {p.name}
             </span>
             <ul className="flex flex-col gap-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
               {p.sources.map((name) => (
@@ -1122,7 +1125,7 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
     <div className="flex flex-col gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-          <Database className="h-3.5 w-3.5 shrink-0 text-[#87bfff]" />
+          <Database className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" />
           <Truncate full={source.name}>{source.name}</Truncate>
         </span>
         <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
@@ -1417,7 +1420,9 @@ function QualitySignals({ t, rows }: { t: T; rows: Row[] }) {
           <p
             className={cn(
               "mt-1 font-mono text-[0.95rem] font-semibold",
-              c.tone === "warn" ? "text-amber-300" : "text-[var(--tessera-text-strong)]",
+              c.tone === "warn"
+                ? "text-[var(--tessera-fg-warning)]"
+                : "text-[var(--tessera-text-strong)]",
             )}
           >
             {c.value}
@@ -1496,9 +1501,9 @@ function QualityTable({
         {label}
         {sortKey === key ? (
           dir === "asc" ? (
-            <SortAsc className="h-3 w-3 text-[#87bfff]" />
+            <SortAsc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
           ) : (
-            <SortDesc className="h-3 w-3 text-[#87bfff]" />
+            <SortDesc className="h-3 w-3 text-[var(--tessera-fg-info)]" />
           )
         ) : (
           <ChevronsUpDown className="h-3 w-3 opacity-40" />
@@ -1559,7 +1564,7 @@ function QualityTable({
                       <Icon
                         className={cn(
                           "h-3 w-3 shrink-0",
-                          TYPE_ICON_TONE[s.type] ?? "text-[#87bfff]",
+                          TYPE_ICON_TONE[s.type] ?? "text-[var(--tessera-fg-info)]",
                         )}
                       />
                       <Truncate full={s.name}>{s.name}</Truncate>
@@ -1591,7 +1596,7 @@ function QualityTable({
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
                     <span className="inline-flex items-center gap-1.5">
-                      <Tag className="h-3 w-3 shrink-0 text-[#87bfff]" />
+                      <Tag className="h-3 w-3 shrink-0 text-[var(--tessera-fg-info)]" />
                       <Truncate full={s.version}>{s.version}</Truncate>
                     </span>
                   </td>
@@ -1614,10 +1619,10 @@ function QualityTable({
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {t("detail.open")}
                       </span>
-                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
                     </span>
                   </td>
                 </tr>
@@ -1822,7 +1827,7 @@ function VersionsBlock({
   return (
     <div className="border-t border-[var(--tessera-border)] pt-2" data-testid="source-versions">
       <div className="mb-1.5 inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-        <History className="h-3.5 w-3.5 text-[#87bfff]" /> {versions.title}
+        <History className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {versions.title}
       </div>
       {versions.drift?.changed ? (
         <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.64rem] text-amber-300">
@@ -1849,7 +1854,7 @@ function VersionsBlock({
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
-                  <GitBranch className="h-3 w-3 text-[#87bfff]" /> {run.run_id}
+                  <GitBranch className="h-3 w-3 text-[var(--tessera-fg-info)]" /> {run.run_id}
                   {run.language !== "-" ? (
                     <span className="rounded border border-[var(--tessera-border)] px-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
                       {run.language}
@@ -1882,10 +1887,10 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
     <div className="border-t border-[var(--tessera-border)] pt-2">
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-          <Users className="h-3.5 w-3.5 text-[#87bfff]" /> {consumers.title}
+          <Users className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {consumers.title}
         </span>
         {consumers.regate_count > 0 ? (
-          <span className="inline-flex items-center gap-1 text-[0.64rem] text-amber-300">
+          <span className="inline-flex items-center gap-1 text-[0.64rem] text-[var(--tessera-fg-warning)]">
             <AlertTriangle className="h-3 w-3" /> {consumers.regate_label}
           </span>
         ) : null}
@@ -1912,7 +1917,9 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
           href={REVALIDATE_HREF}
           className={cn(
             "mt-1.5 inline-flex items-center gap-1 text-[0.64rem] font-medium hover:underline",
-            consumers.model_changed ? "text-amber-300" : "text-[#87bfff]",
+            consumers.model_changed
+              ? "text-[var(--tessera-fg-warning)]"
+              : "text-[var(--tessera-fg-info)]",
           )}
         >
           <GitBranch className="h-3 w-3" /> {consumers.revalidate_label}
@@ -1927,7 +1934,7 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
 function Note({ text, icon }: { text: string; icon: ReactNode }) {
   return (
     <p className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 text-[0.66rem] text-[var(--tessera-text-muted)]">
-      <span className="text-[#87bfff]">{icon}</span> {text}
+      <span className="text-[var(--tessera-fg-info)]">{icon}</span> {text}
     </p>
   );
 }
@@ -1936,7 +1943,7 @@ function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: s
   return (
     <div className="min-w-0">
       <dt className="flex items-center gap-1.5 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-        <span className="shrink-0 text-[#87bfff]">{icon}</span>
+        <span className="shrink-0 text-[var(--tessera-fg-info)]">{icon}</span>
         <span className="truncate">{label}</span>
       </dt>
       <dd className="mt-1 truncate text-[0.82rem] font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">

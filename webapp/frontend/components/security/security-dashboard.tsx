@@ -1916,7 +1916,7 @@ function SecurityRail({
             ))}
             <Link
               href="/prouver/evidence-store"
-              className="mt-1 inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[#c4b5fd] transition-colors hover:bg-[#4c3fb0]/60"
+              className="mt-1 inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 text-xs text-[var(--tessera-fg-accent)] transition-colors hover:bg-[#4c3fb0]/60"
             >
               {ts("rail.evidenceCta")}
             </Link>

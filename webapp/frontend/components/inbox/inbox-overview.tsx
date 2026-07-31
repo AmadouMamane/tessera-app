@@ -60,9 +60,9 @@ const STATUS: Record<string, string> = {
   resolved: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
 };
 const SLA_TONE: Record<string, string> = {
-  crit: "text-red-300",
-  warn: "text-amber-300",
-  ok: "text-emerald-300",
+  crit: "text-[var(--tessera-fg-danger)]",
+  warn: "text-[var(--tessera-fg-warning)]",
+  ok: "text-[var(--tessera-fg-success)]",
 };
 
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
@@ -238,7 +238,7 @@ function Rail({ t, data }: { t: T; data: Data }) {
           <Button
             size="sm"
             disabled
-            className="h-8 gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-xs text-[#c4b5fd]"
+            className="h-8 gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-xs text-[var(--tessera-fg-accent)]"
           >
             <Layers className="h-3.5 w-3.5" /> {t("rail.bulk")}
           </Button>
@@ -272,7 +272,7 @@ function CompactKpi({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: stri
       <p
         className={cn(
           "mt-0.5 text-[0.58rem] font-medium",
-          good ? "text-[var(--tessera-green)]" : "text-red-300",
+          good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]",
         )}
       >
         {kpi.delta_label} {vs}
@@ -555,10 +555,10 @@ function TaskTable({
                   </td>
                   <td className="px-2 py-2">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[#87bfff] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {t("rowOpen")}
                       </span>
-                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[#87bfff]" />
+                      <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
                     </span>
                   </td>
                 </tr>
@@ -862,7 +862,7 @@ function InboxDrawer({
             {item.href ? (
               <Link
                 href={item.href}
-                className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[#87bfff] hover:text-[var(--tessera-text-strong)]"
+                className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-text-strong)]"
               >
                 {t("openBusinessRun")} <ChevronRight className="h-3.5 w-3.5" />
               </Link>

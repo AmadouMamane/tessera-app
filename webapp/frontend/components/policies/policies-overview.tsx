@@ -48,9 +48,9 @@ const ACTION_BADGE: Record<string, string> = {
   warn: "border-amber-500/30 bg-amber-500/15 text-amber-300",
 };
 const TONE_TEXT: Record<string, string> = {
-  ok: "text-emerald-300",
-  warn: "text-amber-300",
-  bad: "text-red-300",
+  ok: "text-[var(--tessera-fg-success)]",
+  warn: "text-[var(--tessera-fg-warning)]",
+  bad: "text-[var(--tessera-fg-danger)]",
   neutral: "text-[var(--tessera-text-muted)]",
 };
 const TABS = [
@@ -242,7 +242,7 @@ function CommandBar({
         <Button
           asChild
           size="sm"
-          className="h-9 gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-xs text-[#c4b5fd] hover:bg-[#4c3fb0]/80"
+          className="h-9 gap-2 border border-[#5b4bbd] bg-[#4c3fb0]/60 px-3 text-xs text-[var(--tessera-fg-accent)] hover:bg-[#4c3fb0]/80"
         >
           <Link href="/agir/release-control">
             <ShieldCheck className="h-4 w-4" /> {t("actions.requestApproval")}
@@ -259,7 +259,9 @@ function VersionRail({ t, data }: { t: T; data: Data }) {
       <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span>
           {t("version.active")}{" "}
-          <span className="font-semibold text-emerald-300">{data.active_version}</span>
+          <span className="font-semibold text-[var(--tessera-fg-success)]">
+            {data.active_version}
+          </span>
         </span>
         <PolInfo k="versionRail" title={t("version.active")} />
       </span>
@@ -335,7 +337,9 @@ function ActivePolicies({
           <tbody>
             {data.active_policies.map((p) => (
               <tr key={p.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-1.5 py-1.5 font-mono text-[0.64rem] text-[#87bfff]">{p.id}</td>
+                <td className="px-1.5 py-1.5 font-mono text-[0.64rem] text-[var(--tessera-fg-info)]">
+                  {p.id}
+                </td>
                 <td className="max-w-[140px] truncate px-1.5 py-1.5 text-[var(--tessera-text)]">
                   {p.name}
                 </td>
@@ -358,7 +362,7 @@ function ActivePolicies({
                     className={cn(
                       "inline-flex items-center gap-1",
                       p.status === "active"
-                        ? "text-emerald-300"
+                        ? "text-[var(--tessera-fg-success)]"
                         : "text-[var(--tessera-text-muted)]",
                     )}
                   >
@@ -574,7 +578,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
                 type="button"
                 className="flex w-full items-center gap-2 rounded-md border border-red-500/25 bg-red-500/5 px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-red-500/10"
               >
-                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-red-300" />
+                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-danger)]" />
                 <Truncate className="min-w-0 flex-1 text-[var(--tessera-text)]">
                   {t(`sensitive.${a.key}`, {
                     v: a.key === "rollback" ? data.compare_to : data.active_version,
@@ -600,7 +604,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
               <li key={link}>
                 <Link
                   href={LINK_ROUTES[link] ?? "/prouver/audit-logs"}
-                  className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.68rem] text-[#87bfff] transition-colors hover:bg-[var(--tessera-muted)]"
+                  className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.68rem] text-[var(--tessera-fg-info)] transition-colors hover:bg-[var(--tessera-muted)]"
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <Truncate className="min-w-0 flex-1">{t(`links.${link}`)}</Truncate>
@@ -740,7 +744,7 @@ function KpiTile({
               ? "text-[var(--tessera-text-muted)]"
               : good
                 ? "text-[var(--tessera-green)]"
-                : "text-red-300"
+                : "text-[var(--tessera-fg-danger)]"
           }
         >
           {neutral ? "" : up ? "▲ " : "▼ "}
@@ -790,7 +794,7 @@ function ViewAll({ label, onClick }: { label: string; onClick?: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
     >
       {label} <ChevronRight className="h-3 w-3" />
     </button>

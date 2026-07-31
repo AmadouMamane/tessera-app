@@ -45,8 +45,8 @@ type GovCard = NonNullable<Data["guardrails"]>;
 type SortDir = "asc" | "desc";
 
 const TYPE_TONE: Record<string, string> = {
-  violet: "border-[#8b7cf0]/30 bg-[#8b7cf0]/15 text-[#c4b5fd]",
-  blue: "border-[#4c8bf5]/30 bg-[#4c8bf5]/15 text-[#93c5fd]",
+  violet: "border-[#8b7cf0]/30 bg-[#8b7cf0]/15 text-[var(--tessera-fg-accent)]",
+  blue: "border-[#4c8bf5]/30 bg-[#4c8bf5]/15 text-[var(--tessera-fg-info)]",
 };
 const KIND_DOT: Record<string, string> = {
   info: "bg-sky-400",
@@ -446,11 +446,11 @@ function Banner({ text, className }: { text: string; className?: string }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-2 rounded-lg border border-[#9a5f18]/50 bg-[#3e260c]/30 p-2.5 text-[0.72rem] text-[#f0c89a]",
+        "flex items-start gap-2 rounded-lg border border-[#9a5f18]/50 bg-[#3e260c]/30 p-2.5 text-[0.72rem] text-[var(--tessera-fg-warning)]",
         className,
       )}
     >
-      <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#f0a23a]" />
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--tessera-fg-warning)]" />
       <span>{text}</span>
     </div>
   );
@@ -462,7 +462,7 @@ type Scope = NonNullable<NonNullable<Data["meta"]>["scope"]>;
 function ScopeBar({ t, scope }: { t: T; scope: Scope }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#7c5cf5]/40 bg-[#6d4aed]/10 px-3 py-2 text-[0.72rem]">
-      <Filter className="h-3.5 w-3.5 shrink-0 text-[#b9a6ff]" />
+      <Filter className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-accent)]" />
       <span className="text-[var(--tessera-text-muted)]">{t("scopeLabel")}</span>
       <span className="font-medium text-[var(--tessera-text)]">{scope.labels.join(" · ")}</span>
       <Link
@@ -701,7 +701,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Panel({
   title,
   icon: Icon,
-  iconClass = "text-[#b9a6ff]",
+  iconClass = "text-[var(--tessera-fg-accent)]",
   info,
   right,
   children,
@@ -822,7 +822,7 @@ function Reconstructed({ data, className }: { data: Data; className?: string }) 
     <Panel
       title={r.title}
       icon={FileText}
-      iconClass="text-violet-300"
+      iconClass="text-[var(--tessera-fg-accent)]"
       info={<SectionInfo title={r.title} explainKey="reconstructed" />}
       right={<VerifiedBadge ok={r.verified} label={r.verified_label} />}
       className={className}
@@ -950,7 +950,7 @@ function GovCardView({
       </div>
       <Link
         href={card.cta_href as never}
-        className="mt-auto flex items-center gap-1 self-start pt-2.5 text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+        className="mt-auto flex items-center gap-1 self-start pt-2.5 text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {card.cta} <ChevronRight className="h-3.5 w-3.5" />
       </Link>
@@ -1010,7 +1010,7 @@ function CtaLink({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href as never}
-      className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+      className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
     >
       {label} <ChevronRight className="h-3.5 w-3.5" />
     </Link>
@@ -1639,7 +1639,7 @@ function Snapshots({ data, onReload }: { data: Data; onReload: (asOf: string | n
               <button
                 type="button"
                 onClick={() => onReload(r.as_of)}
-                className="flex shrink-0 items-center gap-1 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-[0.62rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+                className="flex shrink-0 items-center gap-1 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-[0.62rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
               >
                 <RotateCcw className="h-3 w-3" /> {t("reload")}
               </button>

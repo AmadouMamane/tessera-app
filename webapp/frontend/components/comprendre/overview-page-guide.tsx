@@ -32,12 +32,27 @@ const INTRO_BACKGROUND = {
 } as const;
 
 const ZONES = [
-  { key: "objective", icon: Gauge, tone: "text-rose-300", dot: "bg-rose-300" },
-  { key: "rail", icon: CalendarRange, tone: "text-amber-300", dot: "bg-amber-300" },
-  { key: "agents", icon: UsersRound, tone: "text-cyan-300", dot: "bg-cyan-300" },
-  { key: "signals", icon: Activity, tone: "text-emerald-300", dot: "bg-emerald-300" },
-  { key: "detail", icon: ScanSearch, tone: "text-blue-300", dot: "bg-blue-300" },
-  { key: "decision", icon: FileCheck2, tone: "text-violet-300", dot: "bg-violet-300" },
+  { key: "objective", icon: Gauge, tone: "text-[var(--tessera-fg-danger)]", dot: "bg-rose-300" },
+  {
+    key: "rail",
+    icon: CalendarRange,
+    tone: "text-[var(--tessera-fg-warning)]",
+    dot: "bg-amber-300",
+  },
+  { key: "agents", icon: UsersRound, tone: "text-[var(--tessera-fg-teal)]", dot: "bg-cyan-300" },
+  {
+    key: "signals",
+    icon: Activity,
+    tone: "text-[var(--tessera-fg-success)]",
+    dot: "bg-emerald-300",
+  },
+  { key: "detail", icon: ScanSearch, tone: "text-[var(--tessera-fg-info)]", dot: "bg-blue-300" },
+  {
+    key: "decision",
+    icon: FileCheck2,
+    tone: "text-[var(--tessera-fg-accent)]",
+    dot: "bg-violet-300",
+  },
 ] as const;
 
 const MODES = [
@@ -80,7 +95,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
       <nav className="flex flex-wrap items-center justify-between gap-3 pb-5">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-[var(--tessera-fg-teal)] transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t("back")}
@@ -93,7 +108,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
       <section className="relative overflow-hidden border-[var(--tessera-border)] border-y py-9 lg:grid lg:grid-cols-[minmax(0,0.82fr)_minmax(34rem,1.18fr)] lg:gap-14 lg:py-12">
         <div className="pointer-events-none absolute inset-0 opacity-60" style={INTRO_BACKGROUND} />
         <div className="relative flex flex-col justify-center">
-          <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/30 text-cyan-200">
+          <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/30 text-[var(--tessera-fg-teal)]">
             <Sparkles className="h-[18px] w-[18px]" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
           </div>
           <h2 className="max-w-[34rem] font-semibold text-[1.35rem] leading-snug text-[var(--tessera-text)]">
@@ -118,7 +133,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
                 key={key}
                 className="relative border-[var(--tessera-border)] border-t py-4 sm:border-t-0 sm:px-4 sm:py-0"
               >
-                <span className="relative z-10 mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/35 bg-[var(--tessera-bg)] font-mono text-[0.68rem] text-cyan-100">
+                <span className="relative z-10 mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/35 bg-[var(--tessera-bg)] font-mono text-[0.68rem] text-[var(--tessera-fg-teal)]">
                   <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.7)]" />
                 </span>
                 <h3 className="text-[0.86rem] font-semibold text-[var(--tessera-text)]">
@@ -189,7 +204,9 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
             {t("time.lead")}
           </p>
           <div className="mt-6 border-amber-300/40 border-l pl-4">
-            <p className="text-[0.78rem] font-medium text-amber-100">{t("time.scopeTitle")}</p>
+            <p className="text-[0.78rem] font-medium text-[var(--tessera-fg-warning)]">
+              {t("time.scopeTitle")}
+            </p>
             <p className="mt-2 text-[0.76rem] leading-5 text-[var(--tessera-text-muted)]">
               {t("time.scopeBody")}
             </p>
@@ -203,7 +220,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
               className="grid gap-3 py-5 md:grid-cols-[2.5rem_minmax(10rem,0.34fr)_minmax(0,1fr)] md:items-start md:gap-5"
             >
               <Icon
-                className="h-[18px] w-[18px] text-amber-200"
+                className="h-[18px] w-[18px] text-[var(--tessera-fg-warning)]"
                 strokeWidth={ICON_STROKE_WIDTH}
                 aria-hidden
               />
@@ -235,7 +252,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
           {HONESTY_NOTES.map(({ key, icon: Icon }) => (
             <div key={key} className="border-emerald-200/20 border-l pl-4">
               <Icon
-                className="h-4 w-4 text-emerald-200"
+                className="h-4 w-4 text-[var(--tessera-fg-success)]"
                 strokeWidth={ICON_STROKE_WIDTH}
                 aria-hidden
               />
@@ -271,7 +288,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
               className="group grid gap-3 py-4 first:pt-0 last:pb-0 md:grid-cols-[2.5rem_minmax(11rem,0.38fr)_minmax(0,1fr)_auto] md:items-center md:gap-5"
             >
               <Icon
-                className="h-[18px] w-[18px] text-violet-200"
+                className="h-[18px] w-[18px] text-[var(--tessera-fg-accent)]"
                 strokeWidth={ICON_STROKE_WIDTH}
                 aria-hidden
               />
@@ -282,7 +299,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
                 {t(`decisions.items.${key}.body`)}
               </span>
               <ArrowUpRight
-                className="h-4 w-4 text-[var(--tessera-text-muted)] transition-colors group-hover:text-violet-200"
+                className="h-4 w-4 text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-fg-accent)]"
                 aria-hidden
               />
             </Link>
@@ -292,7 +309,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
 
       <details className="group border-[var(--tessera-border)] border-y">
         <summary className="flex cursor-pointer list-none items-center gap-4 py-6 marker:content-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/60">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-300/30 text-cyan-200">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-300/30 text-[var(--tessera-fg-teal)]">
             <Database className="h-4 w-4" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
           </span>
           <span className="min-w-0 flex-1">
@@ -315,7 +332,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
             {DATA_FOUNDATIONS.map(({ key, icon: Icon }) => (
               <div key={key} className="border-cyan-200/20 border-l pl-4">
                 <Icon
-                  className="h-4 w-4 text-cyan-200"
+                  className="h-4 w-4 text-[var(--tessera-fg-teal)]"
                   strokeWidth={ICON_STROKE_WIDTH}
                   aria-hidden
                 />
@@ -361,11 +378,11 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
           <details className="group/contract mt-9 border-[var(--tessera-border)] border-t">
             <summary className="flex cursor-pointer list-none items-center gap-3 py-5 marker:content-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-300/60">
               <Code2
-                className="h-4 w-4 text-violet-200"
+                className="h-4 w-4 text-[var(--tessera-fg-accent)]"
                 strokeWidth={ICON_STROKE_WIDTH}
                 aria-hidden
               />
-              <span className="flex-1 text-[0.78rem] font-medium text-violet-100">
+              <span className="flex-1 text-[0.78rem] font-medium text-[var(--tessera-fg-accent)]">
                 {t("data.contract.title")}
               </span>
               <ChevronDown
@@ -402,7 +419,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
         </div>
         <Link
           href="/comprendre"
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-[var(--tessera-fg-teal)] transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           {t("closing.global")}
           <ArrowUpRight className="h-4 w-4" aria-hidden />

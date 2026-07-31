@@ -36,10 +36,10 @@ import { cn } from "@/lib/cn";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const SEV_TEXT: Record<string, string> = {
-  critique: "text-red-300",
-  eleve: "text-amber-300",
-  moyen: "text-yellow-300",
-  faible: "text-sky-300",
+  critique: "text-[var(--tessera-fg-danger)]",
+  eleve: "text-[var(--tessera-fg-warning)]",
+  moyen: "text-[var(--tessera-fg-warning)]",
+  faible: "text-[var(--tessera-fg-info)]",
 };
 const STATUS_BADGE: Record<string, string> = {
   rejouee: "border-sky-500/30 bg-sky-500/15 text-sky-300",
@@ -523,7 +523,7 @@ function RecentSessions({
           <tbody>
             {data.recent_sessions.map((s) => (
               <tr key={s.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-1.5 py-1 font-mono text-[#87bfff]">{s.id}</td>
+                <td className="px-1.5 py-1 font-mono text-[var(--tessera-fg-info)]">{s.id}</td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.service}</td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{s.model}</td>
                 <td className="px-1.5 py-1">
@@ -574,7 +574,7 @@ function TopDeviations({
                 key={`${d.id}-${d.type}`}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
-                <td className="px-1.5 py-1 font-mono text-[#87bfff]">{d.id}</td>
+                <td className="px-1.5 py-1 font-mono text-[var(--tessera-fg-info)]">{d.id}</td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text)]">{d.service}</td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">
                   {t(`type.${d.type}`)}
@@ -585,7 +585,7 @@ function TopDeviations({
                 <td className={cn("px-1.5 py-1 font-medium", SEV_TEXT[d.severity])}>
                   {t(`severity.${d.severity}`)}
                 </td>
-                <td className="px-1.5 py-1 text-right font-mono tabular-nums text-red-300">
+                <td className="px-1.5 py-1 text-right font-mono tabular-nums text-[var(--tessera-fg-danger)]">
                   {d.delta}
                 </td>
               </tr>
@@ -631,7 +631,7 @@ function Comparisons({
                 <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
                   {c.sessions}
                 </td>
-                <td className="px-1.5 py-1 text-right tabular-nums text-amber-300">
+                <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-fg-warning)]">
                   {c.deviations}
                 </td>
               </tr>
@@ -665,7 +665,9 @@ function Regressions({ t, data, className }: { t: T; data: Data; className?: str
             <Truncate full={r.service} className="min-w-0 flex-1 text-[var(--tessera-text)]">
               {r.service}
             </Truncate>
-            <span className="font-mono tabular-nums text-red-300">{r.delta}</span>
+            <span className="font-mono tabular-nums text-[var(--tessera-fg-danger)]">
+              {r.delta}
+            </span>
             <MetricSparkline className="h-4 w-12" values={r.spark} tone="danger" />
             <span className="w-7 text-right tabular-nums text-[var(--tessera-text-muted)]">
               {r.critical}
@@ -856,12 +858,14 @@ function ReplayRail({
           {shadow.isError ? (
             // A failed mirror must SAY so (e.g. a candidate the local serving
             // path cannot serve) — a silent error reads as "still running".
-            <output className="text-[0.64rem] text-red-300">{t("rail.error")}</output>
+            <output className="text-[0.64rem] text-[var(--tessera-fg-danger)]">
+              {t("rail.error")}
+            </output>
           ) : null}
           <button
             type="button"
             onClick={onOpenComparisons}
-            className="self-start text-[0.62rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]"
+            className="self-start text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
           >
             {t("rail.openComparisons")} →
           </button>
@@ -886,7 +890,7 @@ function ReplayRail({
                       : "bg-sky-400",
                 )}
               />
-              <span className="font-mono text-[0.66rem] text-[#87bfff]">{a.id}</span>
+              <span className="font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">{a.id}</span>
               <span className="ml-auto tabular-nums text-[var(--tessera-text-muted)]">
                 {a.time}
               </span>
@@ -1012,7 +1016,7 @@ function KpiTile({
         />
       </div>
       <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
-        <span className={good ? "text-[var(--tessera-green)]" : "text-red-300"}>
+        <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
         <span className="text-[var(--tessera-text-muted)]">{vs}</span>
@@ -1174,7 +1178,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[#87bfff] hover:text-[#a9d2ff]";
+    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>
