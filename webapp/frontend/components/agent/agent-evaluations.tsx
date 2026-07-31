@@ -568,7 +568,7 @@ function LiensUtiles() {
         <Link
           key={it.label}
           href={it.href}
-          className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[11px] text-[var(--tessera-text)] transition-colors hover:border-[#7c5cf5]/50 hover:text-white"
+          className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[11px] text-[var(--tessera-text)] transition-colors hover:border-[#7c5cf5]/50 hover:text-[var(--tessera-text-strong)]"
         >
           {it.label} →
         </Link>
@@ -709,7 +709,7 @@ function VerdictBanner({ data }: { data: Data }) {
                 {" — "}
                 <Link
                   href={`/agir/release-control?agent=${agentId}` as Route}
-                  className="underline underline-offset-2 hover:text-white"
+                  className="underline underline-offset-2 hover:text-[var(--tessera-text-strong)]"
                 >
                   {pick(
                     locale,
@@ -1308,7 +1308,7 @@ function Snapshot({ data, onAsof }: { data: Data; onAsof: () => void }) {
         <button
           type="button"
           onClick={onAsof}
-          className="inline-flex items-center gap-1 text-[#b9a6ff] hover:text-white"
+          className="inline-flex items-center gap-1 text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
         >
           <CalendarClock className="h-3.5 w-3.5" /> {s.asof}
         </button>
@@ -1743,7 +1743,7 @@ function Pagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-white"
+                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -1825,7 +1825,7 @@ function PanelCard({
       {cta && ctaHref ? (
         <Link
           href={ctaHref as Route}
-          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
+          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
         >
           {cta} <ChevronRight className="h-3.5 w-3.5" />
         </Link>
@@ -2177,7 +2177,7 @@ function Detail({
             </ul>
             <Link
               href={agentPath(agentId, "historique") as Route}
-              className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
+              className="mt-2 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
             >
               {labels.results_cta} <ChevronRight className="h-3.5 w-3.5" />
             </Link>

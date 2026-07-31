@@ -455,7 +455,7 @@ function Pagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-white"
+                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >

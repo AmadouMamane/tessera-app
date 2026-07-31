@@ -64,7 +64,17 @@ Loading must not change any height. Two rules:
    delta `h-4 w-12`, sparkline `h-5 w-full`, range readout `h-4 w-64`. Never swap a
    short skeleton for a taller value.
 
-KPI value typography: `text-[1.55rem] font-semibold leading-none text-white`.
+KPI value typography: `text-[1.55rem] font-semibold leading-none
+text-[var(--tessera-text-strong)]`.
+
+> **Never `text-white` on a theme surface.** `--tessera-text-strong` IS white on the two
+> dark themes, so the cockpit looks identical — but it flips to ink under "Clair", where a
+> hardcoded white value on a white card was simply invisible. `text-white` stays legal only
+> on an element carrying its **own opaque coloured background** (a red count badge, the
+> violet primary button, the navy customer-portal header): that background does not change
+> with the theme, so its foreground must not either. A **translucent** tint
+> (`bg-[#b9a6ff]/15`) does *not* count — at 15 % over a white card the result is white.
+> Policed by `webapp/frontend/components/layout/theme-contrast.test.ts`.
 
 ## 5. Charts stretch, strokes don't
 

@@ -261,7 +261,7 @@ export function AgentGardeFous() {
               <button
                 type="button"
                 onClick={resetAll}
-                className="text-[0.66rem] text-[#b9a6ff] hover:text-white"
+                className="text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
               >
                 {t("clearAll")}
               </button>
@@ -862,7 +862,7 @@ function Watch({ data }: { data: Data }) {
       </ul>
       <Link
         href={"/prouver/audit-logs" as Route}
-        className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
+        className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
       >
         {w.cta} <ChevronRight className="h-3.5 w-3.5" />
       </Link>
@@ -1217,7 +1217,10 @@ function DetailBlock({
     <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">{title}</h3>
-        <Link href={href} className="text-[0.64rem] text-[#b9a6ff] hover:text-white">
+        <Link
+          href={href}
+          className="text-[0.64rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
+        >
           {cta}
         </Link>
       </div>

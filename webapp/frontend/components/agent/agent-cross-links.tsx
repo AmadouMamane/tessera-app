@@ -87,7 +87,7 @@ export function AgentCrossLinks({ page }: { page: AgentLinkPage }) {
         <Link
           key={it.label}
           href={it.href}
-          className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[11px] text-[var(--tessera-text)] transition-colors hover:border-[#7c5cf5]/50 hover:text-white"
+          className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[11px] text-[var(--tessera-text)] transition-colors hover:border-[#7c5cf5]/50 hover:text-[var(--tessera-text-strong)]"
         >
           {it.label} →
         </Link>

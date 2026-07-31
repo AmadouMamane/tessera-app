@@ -535,14 +535,14 @@ function AgentCard({
           <Link
             href={agentPath(agent.id, "evaluations") as Route}
             onClick={onOpen}
-            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-white"
+            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text-strong)]"
           >
             {t("evaluations")}
           </Link>
           <Link
             href={agentPath(agent.id, "synthese")}
             onClick={onOpen}
-            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
           >
             {t("govern")} <ArrowRight className="h-3 w-3" />
           </Link>
@@ -611,14 +611,14 @@ function AgentRow({
       <Link
         href={agentPath(agent.id, "evaluations") as Route}
         onClick={onOpen}
-        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-white"
+        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text-strong)]"
       >
         {t("evaluations")}
       </Link>
       <Link
         href={agentPath(agent.id, "synthese")}
         onClick={onOpen}
-        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
       >
         {t("govern")} <ArrowRight className="h-3 w-3" />
       </Link>

@@ -243,7 +243,9 @@ function CompactKpi({
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
-      <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
+      <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+        {kpi.value}
+      </p>
       <Truncate as="p" className="mt-0.5 text-[0.56rem] text-[var(--tessera-text-muted)]">
         {kpi.sub}
       </Truncate>
@@ -550,7 +552,7 @@ function TablePagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "font-medium text-white"
+                ? "font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -737,7 +739,7 @@ function IntegrationsDrawer({
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Truncate as="p" className="text-sm font-semibold text-white">
+              <Truncate as="p" className="text-sm font-semibold text-[var(--tessera-text-strong)]">
                 {detail.name}
               </Truncate>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -854,7 +856,9 @@ function IntegrationsDrawer({
                     <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
                       {t(`detail.${k}`)}
                     </p>
-                    <p className="text-[0.82rem] font-semibold text-white">{m.value}</p>
+                    <p className="text-[0.82rem] font-semibold text-[var(--tessera-text-strong)]">
+                      {m.value}
+                    </p>
                     <p className="text-[0.56rem] text-[var(--tessera-text-muted)]">{m.delta}</p>
                   </div>
                 ))}
@@ -912,7 +916,7 @@ function Stat({
       <p className="truncate text-[0.54rem] text-[var(--tessera-text-muted)]">{label}</p>
       <p
         className={cn(
-          "truncate font-semibold text-white",
+          "truncate font-semibold text-[var(--tessera-text-strong)]",
           small ? "text-[0.62rem]" : "text-[0.82rem]",
           tone,
         )}
@@ -968,7 +972,9 @@ function Donut({
           })}
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-base font-semibold tabular-nums text-white">{total}</span>
+          <span className="text-base font-semibold tabular-nums text-[var(--tessera-text-strong)]">
+            {total}
+          </span>
         </div>
       </div>
       <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.62rem]">

@@ -162,7 +162,7 @@ function SystemKpi({
         </div>
       ) : (
         <div className="mt-1 flex items-center gap-2">
-          <span className="whitespace-nowrap text-[1.25rem] font-semibold leading-none text-white">
+          <span className="whitespace-nowrap text-[1.25rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
             {kpi.value}
           </span>
           {kpi.delta ? (
@@ -307,7 +307,7 @@ function Resources({ t, data, className }: { t: T; data: Data; className?: strin
             <span className="line-clamp-2 max-w-[54px] break-words text-[0.62rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
               Total
             </span>
-            <span className="max-w-[44px] truncate text-[0.78rem] font-semibold leading-none text-white">
+            <span className="max-w-[44px] truncate text-[0.78rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
               {r.total}
             </span>
           </div>

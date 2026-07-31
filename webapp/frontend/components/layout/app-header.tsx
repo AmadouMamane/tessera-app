@@ -694,7 +694,7 @@ function HelpLinkInner({
           <Link
             href={href}
             onClick={openGuide}
-            className="mt-3 inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-cyan-200 transition-colors hover:text-white"
+            className="mt-3 inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
           >
             {t("coachmark.open")}
             <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />

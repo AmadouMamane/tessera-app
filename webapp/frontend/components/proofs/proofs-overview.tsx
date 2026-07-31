@@ -402,7 +402,7 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
                 <span className="truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
                   {t(`pipeline.${step.key}`)}
                 </span>
-                <span className="text-[0.9rem] font-semibold tabular-nums text-white">
+                <span className="text-[0.9rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                   {step.count}
                 </span>
                 <span
@@ -655,7 +655,9 @@ function Crypto({ t, data }: { t: T; data: Data }) {
       <div className="flex items-center gap-4">
         <div className="flex flex-col items-center">
           <KeyRound className="h-7 w-7 text-emerald-400" />
-          <span className="mt-1 text-lg font-semibold text-white">{c.valid_signatures}</span>
+          <span className="mt-1 text-lg font-semibold text-[var(--tessera-text-strong)]">
+            {c.valid_signatures}
+          </span>
           <span className="text-[0.58rem] text-[var(--tessera-text-muted)]">
             {t("crypto.validSignatures")}
           </span>
@@ -1027,7 +1029,7 @@ function KpiTile({
         {info}
       </p>
       <div className="mt-1 flex items-center gap-2">
-        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
+        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
           {kpi.value}
         </span>
         <MetricSparkline
@@ -1104,7 +1106,7 @@ function Donut({
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-          <span className="max-w-[52px] truncate text-base font-semibold leading-none tabular-nums text-white">
+          <span className="max-w-[52px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
           <span className="line-clamp-2 max-w-[52px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">

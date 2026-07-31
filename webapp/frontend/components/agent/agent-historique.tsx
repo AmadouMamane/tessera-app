@@ -822,7 +822,7 @@ function Pagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-white"
+                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -917,7 +917,7 @@ function PanelCard({
       {cta && ctaHref ? (
         <Link
           href={ctaHref as Route}
-          className="mt-2.5 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-white"
+          className="mt-2.5 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
         >
           {cta} <ChevronRight className="h-3 w-3" />
         </Link>
@@ -1438,7 +1438,7 @@ function Detail({
             </ul>
             <Link
               href={agentPath(agentId, "evaluations") as Route}
-              className="mt-2 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-white"
+              className="mt-2 flex items-center gap-1 self-start text-[0.64rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
             >
               {labels.eval_cta} <ChevronRight className="h-3 w-3" />
             </Link>

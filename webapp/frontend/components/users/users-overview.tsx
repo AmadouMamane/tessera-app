@@ -120,7 +120,9 @@ export function UsersOverview() {
               <Truncate full={t(`kpi.${k.key}`)}>{t(`kpi.${k.key}`)}</Truncate>
               <ExplainInfo k={k.key} title={t(`kpi.${k.key}`)} />
             </p>
-            <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{k.value}</p>
+            <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+              {k.value}
+            </p>
             <Truncate
               as="p"
               full={k.sub}
@@ -428,7 +430,7 @@ function TablePagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "font-medium text-white"
+                ? "font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -548,7 +550,9 @@ function UserDrawer({ t, user, onClose }: { t: T; user: User; onClose: () => voi
                 {user.display.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">
-                <h2 className="truncate text-lg font-semibold text-white">{user.display}</h2>
+                <h2 className="truncate text-lg font-semibold text-[var(--tessera-text-strong)]">
+                  {user.display}
+                </h2>
                 <Truncate
                   as="p"
                   full={user.email}

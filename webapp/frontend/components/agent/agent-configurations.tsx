@@ -319,7 +319,7 @@ function FieldSection({
         {block.link ? (
           <Link
             href={block.link.href as "/configurer/modeles"}
-            className="inline-flex items-center gap-1 text-[0.68rem] text-[#5fd0c6] hover:text-white"
+            className="inline-flex items-center gap-1 text-[0.68rem] text-[#5fd0c6] hover:text-[var(--tessera-text-strong)]"
           >
             {block.link.label} <ChevronRight className="h-3 w-3" />
           </Link>
@@ -630,7 +630,7 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
             {tools.href ? (
               <Link
                 href={tools.href as Route}
-                className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-[0.68rem] text-[#5fd0c6] hover:text-white"
+                className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-[0.68rem] text-[#5fd0c6] hover:text-[var(--tessera-text-strong)]"
               >
                 Gérer dans les garde-fous <ChevronRight className="h-3 w-3" />
               </Link>

@@ -947,7 +947,7 @@ export function ModelsPeriodRail({
                       onClick={() => setAnchor(it.stamp)}
                       className={`mb-1.5 flex-1 rounded-md px-2 py-1 text-left text-[0.72rem] tabular-nums ${
                         sel
-                          ? "bg-[var(--primary)] font-medium text-white"
+                          ? "bg-[var(--primary)] font-medium text-[var(--tessera-text-strong)]"
                           : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]/40"
                       }`}
                     >
@@ -969,7 +969,7 @@ export function ModelsPeriodRail({
           <button
             type="button"
             onClick={() => onApply({ days, anchor })}
-            className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-[0.72rem] font-medium text-white hover:brightness-110"
+            className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-[0.72rem] font-medium text-[var(--tessera-text-strong)] hover:brightness-110"
           >
             {tq("models.period.apply")}
           </button>

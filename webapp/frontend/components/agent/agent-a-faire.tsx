@@ -340,7 +340,7 @@ function Kpi({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
         </Truncate>
         <ExplainInfo k={kpi.key} title={kpi.label} />
       </p>
-      <p className="mt-0.5 whitespace-nowrap text-[1.3rem] font-semibold leading-none text-white">
+      <p className="mt-0.5 whitespace-nowrap text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
         {kpi.value}
       </p>
       <p
@@ -742,7 +742,7 @@ function Pagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-white"
+                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -1179,7 +1179,7 @@ function Donut({ data }: { data: Data }) {
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-            <span className="max-w-[54px] truncate text-base font-semibold leading-none tabular-nums text-white">
+            <span className="max-w-[54px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
               {d.center}
             </span>
             <Truncate

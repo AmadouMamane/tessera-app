@@ -119,7 +119,7 @@ export function PeriodRail({
             <button
               type="button"
               onClick={() => onApply({ days, anchor })}
-              className="rounded-md bg-[var(--tessera-green)] px-3 py-1.5 text-[0.72rem] font-medium text-white hover:brightness-110"
+              className="rounded-md bg-[var(--tessera-green)] px-3 py-1.5 text-[0.72rem] font-medium text-[var(--tessera-text-strong)] hover:brightness-110"
             >
               {labels.apply}
             </button>

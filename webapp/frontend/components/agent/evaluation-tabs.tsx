@@ -545,7 +545,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
       {mode === "failed" ? (
         <Link
           href={agentPath(agentId, "evaluations") as Route}
-          className="flex items-center gap-1.5 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white"
+          className="flex items-center gap-1.5 self-start text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
         >
           <ShieldAlert className="h-3.5 w-3.5" />
           {pick(
@@ -1117,7 +1117,7 @@ function VersionDrawer({ row, onClose }: { row: RunItem; onClose: () => void }) 
       </DrawerBlock>
       <Link
         href={`${agentPath(agentId, "evaluations")}?run=${encodeURIComponent(row.run_at)}` as Route}
-        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[#b9a6ff] hover:text-white"
+        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
       >
         {pick(
           locale,

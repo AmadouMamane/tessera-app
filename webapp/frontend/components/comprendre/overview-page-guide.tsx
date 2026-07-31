@@ -80,7 +80,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
       <nav className="flex flex-wrap items-center justify-between gap-3 pb-5">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-white"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t("back")}
@@ -402,7 +402,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
         </div>
         <Link
           href="/comprendre"
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-white"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           {t("closing.global")}
           <ArrowUpRight className="h-4 w-4" aria-hidden />

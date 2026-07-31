@@ -263,7 +263,9 @@ function CompactKpi({
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
-      <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
+      <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+        {kpi.value}
+      </p>
       <Truncate
         as="p"
         full={kpi.sub}
@@ -571,7 +573,7 @@ function TablePagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#87bfff]/60 bg-[#87bfff]/15 font-medium text-white"
+                ? "border-[#87bfff]/60 bg-[#87bfff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -851,7 +853,11 @@ function RoleDrawer({
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Truncate as="p" full={role.name} className="text-sm font-semibold text-white">
+              <Truncate
+                as="p"
+                full={role.name}
+                className="text-sm font-semibold text-[var(--tessera-text-strong)]"
+              >
                 {role.name}
               </Truncate>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -947,7 +953,10 @@ function RoleDrawer({
                 <p className="text-[0.66rem] font-semibold text-[var(--tessera-text)]">
                   {t("detail.members")} ({role.members.length})
                 </p>
-                <Link href={USERS_HREF} className="text-[0.62rem] text-[#87bfff] hover:text-white">
+                <Link
+                  href={USERS_HREF}
+                  className="text-[0.62rem] text-[#87bfff] hover:text-[var(--tessera-text-strong)]"
+                >
                   {t("detail.viewAll")} →
                 </Link>
               </div>

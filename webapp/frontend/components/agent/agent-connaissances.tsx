@@ -257,7 +257,7 @@ function AgentConnaissancesInner() {
             type="button"
             aria-label={tCommon("close")}
             onClick={() => setMutError(null)}
-            className="flex h-5 w-5 items-center justify-center rounded text-red-200/80 hover:text-white"
+            className="flex h-5 w-5 items-center justify-center rounded text-red-200/80 hover:text-[var(--tessera-text-strong)]"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -414,7 +414,7 @@ function ActiveFilterChips({
       <button
         type="button"
         onClick={onClear}
-        className="ml-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+        className="ml-1 text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
       >
         {t("clearAll")}
       </button>
@@ -455,7 +455,7 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
         </Truncate>
         <CardInfo ns="agentConnaissances" k={kpi.key} title={kpi.label} />
       </div>
-      <p className="mt-1.5 text-[1.5rem] font-semibold leading-none tabular-nums text-white">
+      <p className="mt-1.5 text-[1.5rem] font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
         {kpi.value}
       </p>
       <div className="mt-auto pt-1">
@@ -769,7 +769,7 @@ function AdvancedFilters({
             <button
               type="button"
               onClick={onReset}
-              className="mt-3 w-full text-center text-[0.66rem] font-medium text-[#b9a6ff] hover:text-white"
+              className="mt-3 w-full text-center text-[0.66rem] font-medium text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
             >
               {t("reset")}
             </button>
@@ -1051,7 +1051,7 @@ function Pagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-white"
+                ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -1484,7 +1484,7 @@ function DetailPanel({
           </button>
           <Link
             href={{ pathname: MEMORY_HREF, query: { source: d.key } }}
-            className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white"
+            className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
           >
             {d.full_sheet}
             <ChevronRight className="h-3.5 w-3.5" />

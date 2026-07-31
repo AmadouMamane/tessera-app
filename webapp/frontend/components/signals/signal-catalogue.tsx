@@ -225,7 +225,9 @@ function CompactKpi({ kpi, label }: { kpi: Data["kpis"][number]; label: string }
         </Truncate>
         <ExplainInfo k={kpi.key} title={label} />
       </p>
-      <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{kpi.value}</p>
+      <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+        {kpi.value}
+      </p>
       <Truncate
         as="p"
         full={kpi.sub}
@@ -609,7 +611,7 @@ function TablePagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "font-medium text-white"
+                ? "font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -730,7 +732,7 @@ function SignalDrawer({ t, signal, onClose }: { t: T; signal: ScSignal; onClose:
               <Truncate
                 as="p"
                 full={translated(t, "name", d.name)}
-                className="text-sm font-semibold text-white"
+                className="text-sm font-semibold text-[var(--tessera-text-strong)]"
               >
                 {translated(t, "name", d.name)}
               </Truncate>

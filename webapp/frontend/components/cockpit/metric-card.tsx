@@ -75,7 +75,9 @@ export function MetricCard({
         </div>
       ) : (
         <div className="mt-1 flex h-8 items-baseline gap-2">
-          <p className="text-[1.55rem] font-semibold leading-none text-white">{value}</p>
+          <p className="text-[1.55rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+            {value}
+          </p>
           {delta}
         </div>
       )}

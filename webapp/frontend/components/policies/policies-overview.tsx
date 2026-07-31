@@ -724,7 +724,7 @@ function KpiTile({
         {info ? <span className={href ? "pointer-events-auto" : undefined}>{info}</span> : null}
       </div>
       <div className="mt-1 flex items-center gap-2">
-        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
+        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
           {kpi.value}
         </span>
         <MetricSparkline

@@ -125,7 +125,9 @@ export function ConnectorsOverview() {
               <span className="truncate">{t(`kpi.${k.key}`)}</span>
               <ExplainInfo k={k.key} title={t(`kpi.${k.key}`)} />
             </p>
-            <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-white">{k.value}</p>
+            <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+              {k.value}
+            </p>
             <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
               {k.sub}
             </p>
@@ -469,7 +471,7 @@ function TablePagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "font-medium text-white"
+                ? "font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -633,7 +635,9 @@ function CxDrawer({ t, cx, onClose }: { t: T; cx: Cx; onClose: () => void }) {
                   {t(`status.${cx.status}`)}
                 </span>
               </div>
-              <h2 className="mt-2 truncate text-lg font-semibold text-white">{cx.name}</h2>
+              <h2 className="mt-2 truncate text-lg font-semibold text-[var(--tessera-text-strong)]">
+                {cx.name}
+              </h2>
               <p className="mt-1 truncate font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
                 {cx.id}
               </p>

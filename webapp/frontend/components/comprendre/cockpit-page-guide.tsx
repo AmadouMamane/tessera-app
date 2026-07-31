@@ -60,7 +60,7 @@ export function CockpitPageGuide({
       <nav className="flex flex-wrap items-center justify-between gap-3 pb-5">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-white"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {t("sharedGuide.back", { page: t(`guides.${guideKey}.title`) })}
@@ -154,7 +154,7 @@ export function CockpitPageGuide({
                           <Link
                             href={sourceHrefForHelpView(backHref, group, view.key)}
                             aria-label={t("viewAtlas.open", { view: all(view.labelKey) })}
-                            className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-violet-200 transition-colors hover:text-white"
+                            className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-violet-200 transition-colors hover:text-[var(--tessera-text-strong)]"
                           >
                             {t("viewAtlas.see")}
                             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
@@ -359,7 +359,7 @@ export function CockpitPageGuide({
         </div>
         <Link
           href="/comprendre"
-          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-white"
+          className="inline-flex items-center gap-2 text-[0.78rem] font-medium text-cyan-200 transition-colors hover:text-[var(--tessera-text-strong)]"
         >
           {t("sharedGuide.closing.global")}
           <ArrowUpRight className="h-4 w-4" aria-hidden />

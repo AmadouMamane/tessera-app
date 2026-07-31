@@ -486,7 +486,7 @@ function Pipeline({ t, data }: { t: T; data: Data }) {
                 <span className="truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
                   {t(`pipeline.${step.key}`)}
                 </span>
-                <span className="text-[0.95rem] font-semibold tabular-nums text-white">
+                <span className="text-[0.95rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                   {step.count}
                 </span>
                 <span className="text-[0.6rem] tabular-nums text-[#87bfff]">{step.pct}%</span>
@@ -513,7 +513,9 @@ function EnvBars({ t, data }: { t: T; data: Data }) {
       <div className="flex h-[120px] items-end justify-around gap-3">
         {data.by_env.map((e) => (
           <div key={e.key} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-            <span className="text-[0.7rem] font-semibold tabular-nums text-white">{e.count}</span>
+            <span className="text-[0.7rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
+              {e.count}
+            </span>
             <div
               className="w-full max-w-[42px] rounded-t-sm"
               style={{ height: `${(e.count / max) * 100}%`, background: e.color }}
@@ -851,7 +853,7 @@ function Savings({ t, data, className }: { t: T; data: Data; className?: string 
               {t(`savings.${s.key}`)}
             </dt>
             <dd className="flex items-baseline gap-1.5">
-              <span className="text-[0.82rem] font-semibold tabular-nums text-white">
+              <span className="text-[0.82rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                 {s.value}
               </span>
               <span className="text-[0.6rem] font-medium text-[var(--tessera-green)]">
@@ -1006,7 +1008,7 @@ function KpiTile({
         {info}
       </p>
       <div className="mt-1 flex items-center gap-2">
-        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
+        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
           {kpi.value}
         </span>
         <MetricSparkline
@@ -1074,7 +1076,7 @@ function Donut({
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-          <span className="max-w-[52px] truncate text-base font-semibold leading-none tabular-nums text-white">
+          <span className="max-w-[52px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
           <span className="line-clamp-2 max-w-[52px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">

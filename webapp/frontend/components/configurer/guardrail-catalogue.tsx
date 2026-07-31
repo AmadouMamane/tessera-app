@@ -91,7 +91,7 @@ export function GuardrailCatalogue() {
                 </p>
                 <KpiInfo k={kpi.key} title={kpi.label} />
               </div>
-              <p className="mt-1 truncate font-mono text-[0.82rem] font-semibold text-white">
+              <p className="mt-1 truncate font-mono text-[0.82rem] font-semibold text-[var(--tessera-text-strong)]">
                 {kpi.value}
               </p>
             </div>
@@ -195,7 +195,9 @@ function GuardrailDetail({
       className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="truncate font-mono text-sm font-semibold text-white">{d.name}</p>
+        <p className="truncate font-mono text-sm font-semibold text-[var(--tessera-text-strong)]">
+          {d.name}
+        </p>
         <button
           type="button"
           onClick={onClose}

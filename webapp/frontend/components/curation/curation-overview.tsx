@@ -1201,7 +1201,9 @@ function ImpactPanel({ t, data, className }: { t: T; data: Data; className?: str
               key={bar.label}
               className="flex h-[90px] flex-1 flex-col items-center justify-end gap-1"
             >
-              <span className="text-[0.7rem] font-semibold tabular-nums text-white">{bar.val}</span>
+              <span className="text-[0.7rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
+                {bar.val}
+              </span>
               <div
                 className="w-full rounded-t-sm"
                 style={{ height: `${bar.v}%`, background: bar.color }}
@@ -1307,7 +1309,7 @@ function KpiTile({
         {info}
       </p>
       <div className="mt-1 flex items-center gap-2">
-        <span className="whitespace-nowrap text-[1.5rem] font-semibold leading-none text-white">
+        <span className="whitespace-nowrap text-[1.5rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
           {kpi.value}
         </span>
         <MetricSparkline
@@ -1375,7 +1377,7 @@ function Donut({
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-          <span className="max-w-[49px] truncate text-base font-semibold leading-none tabular-nums text-white">
+          <span className="max-w-[49px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
           <span className="line-clamp-2 max-w-[49px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">

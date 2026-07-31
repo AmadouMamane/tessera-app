@@ -1173,7 +1173,7 @@ function TraceColumn({
             <button
               type="button"
               onClick={exportJsonl}
-              className="inline-flex items-center gap-1 text-[#f4c76a] hover:text-white"
+              className="inline-flex items-center gap-1 text-[#f4c76a] hover:text-[var(--tessera-text-strong)]"
             >
               <Download className="h-3.5 w-3.5" /> {t("traceExport")}
             </button>
@@ -1372,7 +1372,8 @@ function PanelHead({
   cta?: string;
   href?: string;
 }) {
-  const cls = "inline-flex items-center gap-0.5 text-[0.64rem] text-[#f4c76a] hover:text-white";
+  const cls =
+    "inline-flex items-center gap-0.5 text-[0.64rem] text-[#f4c76a] hover:text-[var(--tessera-text-strong)]";
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
       <h3 className="flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">

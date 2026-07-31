@@ -358,7 +358,7 @@ function EmptyRow({ label }: { label?: string }) {
 
 function CtaLink({ label, href }: { label: string; href?: string }) {
   const classes =
-    "mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-white";
+    "mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]";
   if (href) {
     return (
       <Link href={href as never} className={classes}>

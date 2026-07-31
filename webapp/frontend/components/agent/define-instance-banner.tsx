@@ -45,7 +45,7 @@ export function DefineInstanceBanner({
             </h2>
             <Link
               href={definition.link.href as Route}
-              className="flex items-center gap-1 text-[0.7rem] text-[#b9a6ff] hover:text-white"
+              className="flex items-center gap-1 text-[0.7rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
             >
               {definition.link.label} <ExternalLink className="h-3.5 w-3.5" />
             </Link>

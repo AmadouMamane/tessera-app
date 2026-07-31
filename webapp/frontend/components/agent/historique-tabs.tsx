@@ -458,7 +458,7 @@ export function EvaluationsTab({ data }: { data: Data }) {
       />
       <Link
         href={agentPath(agentId, "evaluations") as Route}
-        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[#b9a6ff] hover:text-white"
+        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
       >
         {pick(
           locale,
@@ -805,7 +805,7 @@ export function ContentTab() {
         </p>
         <Link
           href={agentPath(agentId, "connaissances") as Route}
-          className="flex items-center gap-1.5 text-[0.72rem] text-[#b9a6ff] hover:text-white"
+          className="flex items-center gap-1.5 text-[0.72rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
         >
           {pick(
             locale,

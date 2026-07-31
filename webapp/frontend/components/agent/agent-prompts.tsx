@@ -238,7 +238,7 @@ export function AgentPrompts() {
                   <button
                     type="button"
                     onClick={resetAll}
-                    className="text-[0.66rem] text-[#b9a6ff] hover:text-white"
+                    className="text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
                   >
                     {t("clearAll")}
                   </button>
@@ -691,7 +691,7 @@ function PanelCard({
       {cta && href ? (
         <Link
           href={href}
-          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-white"
+          className="mt-2.5 flex items-center gap-1 self-start text-[0.66rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
         >
           {cta} <ChevronRight className="h-3.5 w-3.5" />
         </Link>
@@ -958,7 +958,7 @@ function Content({ content }: { content: DetailT["content"] }) {
             <button
               type="button"
               onClick={() => copy(c.lang, c.text)}
-              className="flex items-center gap-1 text-[0.62rem] text-[#b9a6ff] hover:text-white"
+              className="flex items-center gap-1 text-[0.62rem] text-[#b9a6ff] hover:text-[var(--tessera-text-strong)]"
             >
               {copied === c.lang ? (
                 <>

@@ -124,6 +124,15 @@
   --tessera-text: #e1e3e3;
   --tessera-text-muted: #9a9fa1;
   --tessera-text-subtle: #595f65;
+  /* The BRIGHTEST foreground on a theme surface — KPI values, active nav items,
+     super-section headers, the hover peak of a link. On the dark themes it is pure
+     white; "Clair" flips it to ink. It exists because `text-white` was hardcoded on
+     ~120 of those spots: white on a white card is invisible, and the light theme was
+     unreadable wherever a page stated its biggest number. A literal cannot flip with
+     the theme — only a token can. NOT for text that carries its own opaque coloured
+     chip (a red badge, a violet button): that background is the same under every
+     theme, so its foreground stays `text-white`. */
+  --tessera-text-strong: #ffffff;
   /* Tooltips / ⓘ popovers — a neutral dark-charcoal box with near-white text,
      matching the native macOS/Chrome tooltip in dark mode (the roles/access
      Description reference). Deliberately OFF the navy scale — a real grey, not
@@ -228,6 +237,8 @@
   --tessera-text: #0f172a;
   --tessera-text-muted: #475569;
   --tessera-text-subtle: #6b7689;
+  /* Brightest-on-surface becomes darkest-on-surface: the same role, the other end. */
+  --tessera-text-strong: #0f172a;
   /* Light theme: the native tooltip is a light box with dark text. */
   --tessera-tooltip-bg: #f4f4f6;
   --tessera-tooltip-fg: #1f242b;

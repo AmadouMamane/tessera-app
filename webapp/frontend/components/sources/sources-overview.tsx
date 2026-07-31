@@ -366,7 +366,9 @@ function CompactKpi({ kpi }: { kpi: Data["kpis"][number] }) {
         </Truncate>
         <ExplainInfo k={kpi.key} title={kpi.label} />
       </p>
-      <p className="mt-0.5 text-[1.25rem] font-semibold leading-none text-white">{kpi.value}</p>
+      <p className="mt-0.5 text-[1.25rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+        {kpi.value}
+      </p>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
     </div>
   );
@@ -506,7 +508,7 @@ function Pagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#5b8def]/60 bg-[#5b8def]/15 font-medium text-white"
+                ? "border-[#5b8def]/60 bg-[#5b8def]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -1125,7 +1127,9 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
         </span>
         <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
           {t("view.total")}:{" "}
-          <span className="tabular-nums text-white">{total.toLocaleString("fr-FR")}</span>
+          <span className="tabular-nums text-[var(--tessera-text-strong)]">
+            {total.toLocaleString("fr-FR")}
+          </span>
         </span>
       </div>
       <MetricSparkline
@@ -1413,7 +1417,7 @@ function QualitySignals({ t, rows }: { t: T; rows: Row[] }) {
           <p
             className={cn(
               "mt-1 font-mono text-[0.95rem] font-semibold",
-              c.tone === "warn" ? "text-amber-300" : "text-white",
+              c.tone === "warn" ? "text-amber-300" : "text-[var(--tessera-text-strong)]",
             )}
           >
             {c.value}
@@ -1676,7 +1680,11 @@ function DetailPanel({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <Truncate as="p" full={detail.name} className="text-sm font-semibold text-white">
+          <Truncate
+            as="p"
+            full={detail.name}
+            className="text-sm font-semibold text-[var(--tessera-text-strong)]"
+          >
             {detail.name}
           </Truncate>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -1931,7 +1939,7 @@ function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: s
         <span className="shrink-0 text-[#87bfff]">{icon}</span>
         <span className="truncate">{label}</span>
       </dt>
-      <dd className="mt-1 truncate text-[0.82rem] font-semibold leading-none tabular-nums text-white">
+      <dd className="mt-1 truncate text-[0.82rem] font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
         {value}
       </dd>
     </div>
@@ -1963,7 +1971,7 @@ function ScoreRing({ value }: { value: string }) {
         ) : null}
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-[1.05rem] font-semibold tabular-nums text-white">
+        <span className="text-[1.05rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
           {has ? `${Math.round(pct)}%` : "-"}
         </span>
       </div>
@@ -2035,7 +2043,9 @@ function Donut({
           })}
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-base font-semibold tabular-nums text-white">{total}</span>
+          <span className="text-base font-semibold tabular-nums text-[var(--tessera-text-strong)]">
+            {total}
+          </span>
         </div>
       </div>
       <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.62rem]">

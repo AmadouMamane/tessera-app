@@ -404,7 +404,7 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
         </div>
         <div className="flex items-end justify-between gap-2">
           {hasValue ? (
-            <p className="text-[1.75rem] font-semibold leading-none text-white">
+            <p className="text-[1.75rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
               {pct(signal.value_pct)}
             </p>
           ) : observedRuns > 0 ? (
@@ -413,7 +413,9 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
               {t("hero.accumulating")}
             </p>
           ) : (
-            <p className="text-[1.75rem] font-semibold leading-none text-white">—</p>
+            <p className="text-[1.75rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+              —
+            </p>
           )}
           <TrendHint trend={signal.trend} />
         </div>

@@ -1002,7 +1002,7 @@ function KpiTile({
         {info}
       </p>
       <div className="mt-1 flex items-center gap-2">
-        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-white">
+        <span className="whitespace-nowrap text-[1.4rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
           {kpi.value}
         </span>
         <MetricSparkline
@@ -1070,7 +1070,7 @@ function Donut({
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden text-center">
-          <span className="max-w-[52px] truncate text-sm font-semibold leading-none tabular-nums text-white">
+          <span className="max-w-[52px] truncate text-sm font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
           <span className="line-clamp-2 max-w-[52px] break-words px-1 text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">

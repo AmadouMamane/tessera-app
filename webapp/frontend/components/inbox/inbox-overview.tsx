@@ -266,7 +266,7 @@ function CompactKpi({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: stri
           />
         ) : null}
       </p>
-      <p className="mt-0.5 whitespace-nowrap text-[1.35rem] font-semibold leading-none text-white">
+      <p className="mt-0.5 whitespace-nowrap text-[1.35rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
         {kpi.value}
       </p>
       <p
@@ -644,7 +644,7 @@ function Pagination({
             className={cn(
               "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
               n === page
-                ? "border-[#87bfff]/60 bg-[#87bfff]/15 font-medium text-white"
+                ? "border-[#87bfff]/60 bg-[#87bfff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
@@ -862,7 +862,7 @@ function InboxDrawer({
             {item.href ? (
               <Link
                 href={item.href}
-                className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[#87bfff] hover:text-white"
+                className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[#87bfff] hover:text-[var(--tessera-text-strong)]"
               >
                 {t("openBusinessRun")} <ChevronRight className="h-3.5 w-3.5" />
               </Link>
@@ -914,7 +914,7 @@ function ByType({ t, data }: { t: T; data: Data }) {
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-base font-semibold tabular-nums text-white">
+            <span className="text-base font-semibold tabular-nums text-[var(--tessera-text-strong)]">
               {data.by_type_total}
             </span>
             <span className="text-[0.46rem] uppercase text-[var(--tessera-text-muted)]">Total</span>

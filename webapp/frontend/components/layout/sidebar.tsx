@@ -539,7 +539,7 @@ function NavTreeNode({
               className={cn(
                 "h-4 w-4 shrink-0 transition-colors",
                 active
-                  ? "text-white"
+                  ? "text-[var(--tessera-text-strong)]"
                   : "text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]",
               )}
             />
@@ -560,7 +560,7 @@ function NavTreeNode({
     "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
     isSuper
       ? cn(
-          "border-l-2 text-[0.7rem] uppercase tracking-[0.1em] text-white",
+          "border-l-2 text-[0.7rem] uppercase tracking-[0.1em] text-[var(--tessera-text-strong)]",
           ACCENT[node.accent ?? "green"],
         )
       : cn(

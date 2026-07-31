@@ -297,7 +297,9 @@ function CompactKpi({
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
-      <p className="mt-0.5 text-[1.4rem] font-semibold leading-none text-white">{kpi.value}</p>
+      <p className="mt-0.5 text-[1.4rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+        {kpi.value}
+      </p>
       <Truncate
         as="p"
         full={kpi.sub}
@@ -531,7 +533,7 @@ function ConfigState({ t, data, onViewDetail }: { t: T; data: Data; onViewDetail
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-            <span className="max-w-[54px] truncate text-base font-semibold leading-none tabular-nums text-white">
+            <span className="max-w-[54px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
               {cs.total}
             </span>
             <span className="line-clamp-2 max-w-[54px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
