@@ -85,7 +85,7 @@ export function TemporalMonitoringBreakdown({
     <MonitoringFleetTable
       fleet={fleetQuery.data ?? initialFleet}
       scope={scope}
-      busy={fleetQuery.isFetching}
+      busy={fleetQuery.isPlaceholderData}
     />
   );
 }
