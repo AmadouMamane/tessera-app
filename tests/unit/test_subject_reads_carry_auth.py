@@ -357,7 +357,11 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # 129 (2026-07-28): GET /observability/batch — a page's public-aggregate card reads
     # multiplexed into one response (same handlers, byte-identical panels, public
     # allowlist only; subject-scoped reads excluded by design).
-    assert len(public) == 129
+    # 130 (2026-07-31): GET /observability/fleet-batch — the two FLEET-WIDE reads a GOUVERNER
+    # breakdown makes (/observability/fleet + /observability/fleet-snapshot) returned in one
+    # round-trip by the SAME handlers; both halves are already on this public surface and
+    # neither carries customer subject data.
+    assert len(public) == 130
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

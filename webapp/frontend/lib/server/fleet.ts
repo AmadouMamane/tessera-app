@@ -18,10 +18,31 @@ import { backendHeaders, backendUrl } from "./backend";
  * Returns `null` on any failure so callers render an honest empty state rather
  * than a fabricated one — never a fixture.
  */
-type SearchParams = Record<string, string | string[] | undefined>;
+export type SearchParams = Record<string, string | string[] | undefined>;
 
 const first = (value: string | string[] | undefined): string | undefined =>
   Array.isArray(value) ? value[0] : value;
+
+/**
+ * The fleet aggregate's query params for a locale + window — the ONE place they are built.
+ *
+ * Two reads now ask for that window: `loadFleet` on its own route, and the coalesced
+ * `/observability/fleet-batch` a domain breakdown uses. They must ask for the SAME window or a
+ * page's rollup would silently disagree with itself, so the builder is shared rather than
+ * copied — a convention two call sites have to remember is a convention that drifts.
+ *
+ * Passing `searchParams` opts into the shared SURVEILLER window (period defaulting to `d7`);
+ * omitting it keeps the all-history fleet contract.
+ */
+export function fleetQuery(locale: string, searchParams?: SearchParams): URLSearchParams {
+  const params = new URLSearchParams({ lang: locale });
+  if (searchParams) {
+    params.set("period", first(searchParams.period) ?? "d7");
+    const at = first(searchParams.asof) ?? first(searchParams.at) ?? first(searchParams.to);
+    if (at) params.set("at", at);
+  }
+  return params;
+}
 
 /**
  * The URL-keyed backend read behind `loadFleet`, wrapped in React `cache()`.
@@ -54,13 +75,7 @@ const fetchFleetByUrl = cache(async (url: string): Promise<Fleet | null> => {
  * keeps the all-history fleet contract.
  */
 export async function loadFleet(locale = "fr", searchParams?: SearchParams): Promise<Fleet | null> {
-  const params = new URLSearchParams({ lang: locale });
-  if (searchParams) {
-    params.set("period", first(searchParams.period) ?? "d7");
-    const at = first(searchParams.asof) ?? first(searchParams.at) ?? first(searchParams.to);
-    if (at) params.set("at", at);
-  }
-  return fetchFleetByUrl(`${backendUrl()}/observability/fleet?${params}`);
+  return fetchFleetByUrl(`${backendUrl()}/observability/fleet?${fleetQuery(locale, searchParams)}`);
 }
 
 /** The URL-keyed backend read behind `loadReleaseControl` (same request-scoped dedup). */

@@ -6445,6 +6445,26 @@ export const FleetSnapshotSchema = z.object({
 export type FleetSnapshot = z.infer<typeof FleetSnapshotSchema>;
 
 /**
+ * The coalesced fleet read (`/observability/fleet-batch`): the fleet rollup AND the per-agent
+ * snapshot fan-out in ONE round-trip — the two independent reads a GOUVERNER breakdown used to
+ * await in series, each one a full tunnel round-trip.
+ *
+ * Each half is `unknown` here on purpose and re-validated by the loader with the very schema its
+ * own route used (`FleetSchema`, `FleetSnapshotSchema`), so a half is byte-identical to the
+ * standalone fetch (`tests/unit/test_fleet_batch_parity.py` pins that at the wire) and one half's
+ * refusal cannot empty the other: a rollup that came back unavailable still leaves every agent's
+ * snapshot readable, and vice versa — the same two independent degradations as before.
+ */
+export const FleetBatchSchema = z.object({
+  fleet: z.unknown(),
+  /** Present only when the caller asked for the per-agent fan-out (`?signals=`). */
+  fleet_snapshot: z.unknown(),
+  /** The org-wide snapshot, present only when asked for (`?org_signals=`) — the quality plan. */
+  snapshot: z.unknown(),
+});
+export type FleetBatch = z.infer<typeof FleetBatchSchema>;
+
+/**
  * The multiplex read (`/observability/batch`): several card reads in one response.
  *
  * `panels` maps each requested key to the SAME payload that key's individual endpoint returns —

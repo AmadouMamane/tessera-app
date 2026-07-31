@@ -14,6 +14,11 @@ lookup. A key whose compute raises is OMITTED from ``panels`` (never a fabricate
 frontend then renders that card's honest-empty, exactly as a failed individual fetch does.
 Subject-scoped reads (memory inventory, transcripts) are deliberately absent — this is the public
 surface, not the GDPR one.
+
+``/observability/batch`` is scoped to ONE agent, so it cannot carry the two FLEET-WIDE reads a
+GOUVERNER breakdown page makes (the fleet rollup and the per-agent snapshot fan-out).
+``/observability/fleet-batch`` below is the same idea for those two: same handlers, one
+round-trip.
 """
 
 from __future__ import annotations
@@ -34,6 +39,11 @@ from tessera.api.routes.observability import (
     safety,
     signals,
 )
+from tessera.api.routes.observability.fleet import observability_fleet
+from tessera.api.routes.observability.signals import (
+    observability_fleet_snapshot,
+    observability_snapshot,
+)
 from tessera.api.security import require_bearer
 from tessera.observability.read_snapshot import (
     SNAPSHOT_TTL_S,
@@ -42,7 +52,7 @@ from tessera.observability.read_snapshot import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable, Callable, Coroutine
 
 router = APIRouter()
 
@@ -142,3 +152,60 @@ async def observability_batch(
             return {"panels": {key: snap[key] for key in requested if key in snap}}
     scope = _BatchScope(agent=agent, at=at, lang=lang)
     return {"panels": await _compute_panels(scope, requested)}
+
+
+@router.get("/observability/fleet-batch", dependencies=[Depends(require_bearer)])
+async def observability_fleet_batch(
+    lang: str = "fr",
+    period: str | None = None,
+    at: str | None = None,
+    signals: str | None = None,
+    org_signals: str | None = None,
+) -> dict[str, object]:
+    """The FLEET-WIDE reads a GOUVERNER breakdown makes, in ONE round-trip.
+
+    A domain page's "Vue par agent" card needs the fleet rollup (``/observability/fleet``: the
+    agents, their KPIs, the deduplicated org total) and then one snapshot per fleet agent
+    (``/observability/fleet-snapshot``, itself already a collapsed fan-out). The two are
+    INDEPENDENT — the second's ``?signals=`` comes from the page's declared domain, not from the
+    first — yet the front had to await them in series, and each await is a full tunnel round-trip
+    when the frontend runs on Cloud Run and the agent on-prem. This returns them at once and
+    computes them CONCURRENTLY server-side. 2 round-trips become 1.
+
+    ``?org_signals=`` adds the ORG-WIDE snapshot (``/observability/snapshot?agent=all``) as a
+    third half. That is the Qualité IA page, whose first read decides the *plan* (org breach →
+    alarm columns; quiet → quality columns; org-wide breach → no per-agent fan-out at all) and
+    therefore cannot be coalesced with the fan-out itself — but its rollup and its org read are
+    as independent as the domain pages' pair, so they travel together and that page pays 2
+    round-trips instead of 3 (1 when the plan settles it org-wide).
+
+    It invents nothing: each half is produced by the SAME handler its own route registers
+    (``tests/unit/test_fleet_batch_parity.py`` pins every half against those routes at the wire),
+    so the halves are byte-identical to the responses they replace. Each already degrades
+    honestly on its own — the fleet to ``available: false``, the snapshot by OMITTING an agent
+    whose compute raised — and those degradations are passed through untouched and
+    independently: a failed fleet does not empty the snapshot, and vice versa.
+
+    A half is computed ONLY when its parameter is present, and omitted from the body otherwise —
+    so a caller never pays for a read it will not render. Note the difference from the standalone
+    route this mirrors: there, an absent ``?signals=`` means *every* hot-path signal; here it
+    means *no fan-out*. The caller that omits it (the quality page's first read) does not yet
+    know which signals its plan will want, and defaulting to all of them would fan every agent
+    out over the whole catalogue to throw most of it away.
+
+    ``lang``/``period``/``at`` scope the fleet rollup exactly as its own route does. The two
+    snapshot halves' own ``at``/``language``/``model`` dimensions are deliberately NOT exposed
+    and NOT derived from ``at``: the breakdown has never sent them (its reads are live even
+    inside an as-of-T window), and quietly forwarding ``at`` here would change what the page
+    renders — that is a behaviour change to argue for on its own merits, not something a
+    round-trip collapse may smuggle in.
+    """
+    halves: dict[str, Coroutine[Any, Any, object]] = {
+        "fleet": observability_fleet(lang=lang, period=period, at=at)
+    }
+    if signals:
+        halves["fleet_snapshot"] = observability_fleet_snapshot(signals=signals)
+    if org_signals:
+        halves["snapshot"] = observability_snapshot(agent="all", signals=org_signals)
+    computed = await asyncio.gather(*halves.values())
+    return dict(zip(halves, computed, strict=True))

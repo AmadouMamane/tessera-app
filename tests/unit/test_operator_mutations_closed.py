@@ -139,13 +139,16 @@ def test_the_public_reads_are_untouched() -> None:
     +1 on 2026-07-28: GET /observability/batch — a page's individual public-aggregate
     card reads multiplexed into one response (the SAME handlers, byte-identical panels,
     an allowlist of public keys only; subject-scoped reads deliberately excluded).
+    +1 on 2026-07-31: GET /observability/fleet-batch — the two FLEET-WIDE reads a GOUVERNER
+    breakdown makes (the fleet rollup + the per-agent snapshot fan-out) in one round-trip,
+    by the SAME handlers; both halves are already public reads, no subject data.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 134
+    assert len(read_routes) == 135
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

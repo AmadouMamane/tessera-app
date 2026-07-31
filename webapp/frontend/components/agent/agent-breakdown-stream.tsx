@@ -1,7 +1,6 @@
 import { AgentBreakdown } from "@/components/agent/agent-breakdown";
 import type { DeclaredLensRoute } from "@/lib/page-nature";
 import { loadDeclaredLens } from "@/lib/server/agent-lens";
-import { loadFleet } from "@/lib/server/fleet";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -24,10 +23,16 @@ interface StreamedAgentBreakdownProps {
 /**
  * The blocking part of the per-agent breakdown.
  *
- * It performs the two tunnel reads that dominate a GOUVERNER page's TTFB — the fleet
- * aggregate then the per-agent lens fan-out — and renders the SAME `<AgentBreakdown>`
- * with the SAME props the pages built inline before. `loadFleet`/`fetchSnapshot` are
- * `cache()`-deduped, so this never doubles a read the surrounding render already did.
+ * It performs the tunnel read that dominates a GOUVERNER page's TTFB — the fleet aggregate plus
+ * the per-agent lens fan-out — and renders the SAME `<AgentBreakdown>` with the SAME props the
+ * pages built inline before. On a domain page those were TWO serial reads although neither
+ * depended on the other; `loadDeclaredLens` now owns both and asks for them together, so the page
+ * pays ONE round-trip instead of two (the quality lens keeps its two: its org plan decides what
+ * the second read asks for). The reads are `cache()`-deduped by URL, so this never doubles a read
+ * the surrounding render already did.
+ *
+ * `fleetSearchParams` is passed straight through — `undefined` keeps the all-history fleet
+ * contract, exactly the distinction the pages made before this component existed.
  */
 async function BreakdownContent({
   route,
@@ -36,12 +41,7 @@ async function BreakdownContent({
   fleetSearchParams,
   signalId,
 }: StreamedAgentBreakdownProps) {
-  // Preserve the all-history vs windowed fleet distinction exactly: only pass the
-  // search params through when the caller provided them.
-  const fleet = fleetSearchParams
-    ? await loadFleet(locale, fleetSearchParams)
-    : await loadFleet(locale);
-  const lens = await loadDeclaredLens(route, fleet, { signalId });
+  const { fleet, lens } = await loadDeclaredLens(route, locale, { fleetSearchParams, signalId });
   return <AgentBreakdown fleet={fleet} scope={scope} locale={locale} lens={lens} />;
 }
 
