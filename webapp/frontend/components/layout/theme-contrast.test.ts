@@ -37,10 +37,13 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-/** The trees this ratchet governs: the whole rendered surface of both apps. */
-const SCANNED_DIRS = ["components", "app"] as const;
+/** The trees this ratchet governs: the whole rendered surface of both apps — and `lib`,
+ *  because a class map is not always in a component. `lib/overview.ts` holds the shared
+ *  tone table every fleet status pill reads; scanning only `.tsx` left it unpoliced. */
+const SCANNED_DIRS = ["components", "app", "lib"] as const;
+const SCANNED_EXTENSIONS = [".tsx", ".ts"] as const;
 
-/** Anti-vacuity: 238 `.tsx` were scanned on 2026-08-01; a floor just under it catches a
+/** Anti-vacuity: 238 `.tsx` were scanned on 2026-08-01 (more now that `.ts` and `lib` count); a floor just under it catches a
  *  scan pointed at nothing without going red because one component was deleted. */
 const EXPECTED_MIN_FILES = 230;
 /** ...and the resolver must still turn utilities into hexes, or "0 violations" would only
@@ -64,10 +67,10 @@ const LIGHT_CARD = "#ffffff";
  *   every cockpit theme; it never consumed the `--tessera-*` surface tokens.
  */
 const FROZEN_ANCESTOR_BACKED: ReadonlyMap<string, number> = new Map([
-  ["components/cockpit/alert-ribbon.tsx", 11],
+  ["components/cockpit/alert-ribbon.tsx", 15],
+  ["components/product/chat-widget.tsx", 6],
+  ["components/product/mes-comptes-host.tsx", 6],
   ["components/recouvrement/recouvrement-product-experience.tsx", 4],
-  ["components/product/chat-widget.tsx", 2],
-  ["components/product/mes-comptes-host.tsx", 1],
   ["components/recouvrement/recouvrement-logo.tsx", 1],
 ]);
 
@@ -98,10 +101,16 @@ const PALETTE: Readonly<Record<string, Ramp>> = {
   fuchsia: ["#fae8ff", "#f5d0fe", "#f0abfc", "#e879f9", "#d946ef", "#c026d3"],
   pink: ["#fce7f3", "#fbcfe8", "#f9a8d4", "#f472b6", "#ec4899", "#db2777"],
   rose: ["#ffe4e6", "#fecdd3", "#fda4af", "#fb7185", "#f43f5e", "#e11d48"],
+  // The Tessera brand ramp (declared in globals.css `@theme`), not a Tailwind default.
+  gold: ["#f6eed9", "#f2e7c4", "#e8d5a8", "#dfc89a", "#d7be8a", "#c5ab6a"],
 };
 
+// The trailing `(\/\d{1,3})?` is load-bearing: `text-amber-200/70` is amber-200 at 70 %,
+// which on a white card is WEAKER than the full-strength colour, not exempt from it. An
+// earlier version ended `(?![\w/-])` and so skipped every opacity-modified foreground —
+// 52 of them, including the ones in the `comprendre` guides.
 const FOREGROUND =
-  /(?<![\w:-])(?:group-hover:|hover:|focus:|focus-visible:|active:)?text-(?:\[#([0-9a-fA-F]{6})\]|([a-z]+)-(100|200|300|400|500|600)|(white))(?![\w/-])/g;
+  /(?<![\w:-])(?:group-hover:|hover:|focus:|focus-visible:|active:)?text-(?:\[#([0-9a-fA-F]{6})\]|([a-z]+)-(100|200|300|400|500|600)|(white))(\/\d{1,3})?(?![\w/-])/g;
 
 const OPAQUE_BACKGROUND =
   /bg-(?:blue|red|amber|emerald|green|sky|violet|rose|orange|cyan|indigo|fuchsia|slate|zinc|neutral|gray|navy|danger|success|warning|info)-\d{2,3}(?![\d\/])|bg-\[#[0-9a-fA-F]{6}\](?!\/)|bg-\[linear-gradient|bg-gradient-to|bg-\[var\(--tessera-danger|bg-black/;
@@ -147,6 +156,7 @@ function scanSource(file: string, source: string): { failing: Finding[]; resolve
     if (body.includes("dark:text-")) continue;
     for (const match of body.matchAll(FOREGROUND)) {
       const [utility, hex, family, shade, white] = match;
+      void match; // `match[5]` is the opacity modifier: captured to be consumed, not used.
       const colour = white
         ? "#ffffff"
         : hex
@@ -168,11 +178,15 @@ function scanSource(file: string, source: string): { failing: Finding[]; resolve
   return { failing, resolved };
 }
 
-function walkTsx(dir: string, acc: string[] = []): string[] {
+function walkSources(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkTsx(full, acc);
-    else if (entry.name.endsWith(".tsx") && !entry.name.includes(".test.")) acc.push(full);
+    if (entry.isDirectory()) walkSources(full, acc);
+    else if (
+      SCANNED_EXTENSIONS.some((ext) => entry.name.endsWith(ext)) &&
+      !entry.name.includes(".test.")
+    )
+      acc.push(full);
   }
   return acc;
 }
@@ -183,7 +197,7 @@ function scanTree(): { failing: Finding[]; resolved: number; files: number } {
   let resolved = 0;
   let files = 0;
   for (const dir of SCANNED_DIRS) {
-    for (const absolute of walkTsx(path.join(root, dir))) {
+    for (const absolute of walkSources(path.join(root, dir))) {
       files += 1;
       const found = scanSource(path.relative(root, absolute), readFileSync(absolute, "utf8"));
       failing.push(...found.failing);

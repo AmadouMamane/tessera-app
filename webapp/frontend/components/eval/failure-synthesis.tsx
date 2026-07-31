@@ -157,12 +157,12 @@ export async function FailureSynthesis({
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-gold-500" />
+          <AlertTriangle className="h-4 w-4 text-[var(--tessera-fg-gold)]" />
           <CardTitle>{t("failureSynthesis.title")}</CardTitle>
           <Badge tone="navy">{t("failureSynthesis.badge")}</Badge>
           {hasSynthesis ? (
             <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-[var(--muted-foreground)]">
-              <Sparkles className="h-3 w-3 text-gold-500" />
+              <Sparkles className="h-3 w-3 text-[var(--tessera-fg-gold)]" />
               {synthesis?.model && synthesis.model !== "manual"
                 ? t("failureSynthesis.generatedBy", { model: synthesis.model })
                 : t("failureSynthesis.manual")}

@@ -777,7 +777,7 @@ function TimeTagChip({ kind, className }: { kind: TimeTagKind; className?: strin
       label: t("atTLabel"),
       title: t("atTTooltip"),
       icon: Clock,
-      tone: "border border-gold-500/40 bg-gold-500/10 text-gold-300",
+      tone: "border border-gold-500/40 bg-gold-500/10 text-[var(--tessera-fg-gold)]",
     },
     period: {
       label: t("periodTagLabel"),
@@ -1061,7 +1061,7 @@ function CriticalControlsTable({
                           {historyMode && !c.noData && !signalSupports(c.id, "time") ? (
                             <span
                               title={t("currentPolicyHint")}
-                              className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-amber-300/90"
+                              className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--tessera-fg-warning)]/90"
                             >
                               <Activity className="h-2.5 w-2.5" />
                               {t("currentPolicy")}

@@ -775,7 +775,7 @@ function OpposabilityBadge({
     badge === "scelle_opposable"
       ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
       : badge === "scelle_non_qualifie"
-        ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200/80"
+        ? "border-emerald-500/30 bg-emerald-500/5 text-[var(--tessera-fg-success)]/80"
         : badge === "non_scelle"
           ? "border-red-500/40 bg-red-500/10 text-[var(--tessera-fg-danger)]"
           : badge === "integrite_partielle"

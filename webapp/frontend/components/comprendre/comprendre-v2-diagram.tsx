@@ -236,7 +236,7 @@ function BusinessPanel({ column }: { column: DiagramColumn }) {
         })}
       </ul>
       {column.caption ? (
-        <p className="relative border-sky-300/10 border-t px-4 py-3 text-center text-[0.66rem] leading-5 text-sky-100/55">
+        <p className="relative border-sky-300/10 border-t px-4 py-3 text-center text-[0.66rem] leading-5 text-[var(--tessera-fg-info)]/55">
           {column.caption}
         </p>
       ) : null}
@@ -291,7 +291,7 @@ function AgentPanel({ column, foundations }: { column: DiagramColumn; foundation
               <li
                 key={foundation}
                 data-agent-foundation="true"
-                className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.055] px-3 py-2 text-center text-[0.68rem] font-medium text-emerald-100/85"
+                className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.055] px-3 py-2 text-center text-[0.68rem] font-medium text-[var(--tessera-fg-success)]/85"
               >
                 <FoundationIcon
                   className="size-4 shrink-0 text-[var(--tessera-fg-success)]"
@@ -332,7 +332,7 @@ function CockpitPanel({ column }: { column: DiagramColumn }) {
         })}
       </ul>
       {column.caption ? (
-        <p className="relative border-violet-300/10 border-t px-4 py-3 text-center text-[0.66rem] leading-5 text-violet-100/55">
+        <p className="relative border-violet-300/10 border-t px-4 py-3 text-center text-[0.66rem] leading-5 text-[var(--tessera-fg-accent)]/55">
           {column.caption}
         </p>
       ) : null}
@@ -399,7 +399,7 @@ function GuardBridge({ label }: { label: string }) {
       </div>
       <p
         data-diagram-guard-label="true"
-        className="mt-2 max-w-[7.5rem] text-center text-[0.6rem] leading-4 text-emerald-100/80"
+        className="mt-2 max-w-[7.5rem] text-center text-[0.6rem] leading-4 text-[var(--tessera-fg-success)]/80"
       >
         {label}
       </p>

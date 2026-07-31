@@ -14,7 +14,7 @@ const toneClasses: Record<OverviewTone, string> = {
   danger: "text-[var(--tessera-fg-danger)]",
   info: "text-[var(--tessera-fg-info)]",
   neutral: "text-[var(--tessera-text-muted)]",
-  gold: "text-gold-400",
+  gold: "text-[var(--tessera-fg-gold)]",
 };
 
 export function MetricSparkline({

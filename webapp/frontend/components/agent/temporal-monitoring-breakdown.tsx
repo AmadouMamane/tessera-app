@@ -223,7 +223,7 @@ function DedupFooter({
 
   if (handoffGap > 0) {
     return (
-      <span className="block text-amber-300/90">
+      <span className="block text-[var(--tessera-fg-warning)]/90">
         {t("handoffGap", {
           events: fmtInt(fleet.handoff_events ?? 0),
           attested: fmtInt(attested),

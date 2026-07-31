@@ -39,7 +39,7 @@ export function AppFooter() {
       <span className="text-[var(--tessera-border-strong)]">·</span>
       <LedgerIntegrityText data={data} t={t} />
       {sealVerified && sealedAt ? (
-        <span className="inline-flex items-center gap-1 text-emerald-400/90">
+        <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-success)]/90">
           <Lock className="h-3 w-3" />
           {t("sealSuffix", { t: sealedAt.slice(0, 16).replace("T", " ") })}
         </span>

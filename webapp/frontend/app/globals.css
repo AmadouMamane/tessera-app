@@ -153,6 +153,10 @@
   --tessera-fg-info: #87bfff;
   --tessera-fg-accent: #b9a6ff;
   --tessera-fg-teal: #5fd0c6;
+  /* The BRAND accent, kept as its own role rather than folded into `warning`: gold means
+     "Tessera" here, not "careful". Dark holds gold-400 (11.3:1); "Clair" needs gold-800 to
+     clear AA (4.7:1) -- gold-700 only reaches 3.1:1, so the ramp has to go two steps. */
+  --tessera-fg-gold: #dfc89a;
   /* Tooltips / ⓘ popovers — a neutral dark-charcoal box with near-white text,
      matching the native macOS/Chrome tooltip in dark mode (the roles/access
      Description reference). Deliberately OFF the navy scale — a real grey, not
@@ -268,6 +272,7 @@
   --tessera-fg-info: #1d4ed8;
   --tessera-fg-accent: #6d28d9;
   --tessera-fg-teal: #0f766e;
+  --tessera-fg-gold: #877044;
   /* Light theme: the native tooltip is a light box with dark text. */
   --tessera-tooltip-bg: #f4f4f6;
   --tessera-tooltip-fg: #1f242b;

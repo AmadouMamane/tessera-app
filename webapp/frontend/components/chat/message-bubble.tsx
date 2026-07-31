@@ -201,7 +201,7 @@ export function MessageBubble({
                   type="button"
                   onClick={confirmEdit}
                   disabled={!draft.trim() || draft.trim() === message.content}
-                  className="flex items-center gap-1 text-[0.62rem] font-medium text-gold-600 hover:text-gold-700 :text-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                  className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-fg-gold)] hover:text-gold-700 :text-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   {t("confirm")}
                 </button>

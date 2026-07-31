@@ -844,7 +844,7 @@ function Chip({
       onClick={onClick}
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors ${
         active
-          ? "border-gold-500/50 bg-gold-500/10 text-gold-200"
+          ? "border-gold-500/50 bg-gold-500/10 text-[var(--tessera-fg-gold)]"
           : "border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
       }`}
     >

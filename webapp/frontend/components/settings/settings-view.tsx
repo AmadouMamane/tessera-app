@@ -293,13 +293,13 @@ export function SettingsView() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2 font-medium text-[var(--foreground)]">
-                      <Cpu className="h-4 w-4 text-gold-500" />
+                      <Cpu className="h-4 w-4 text-[var(--tessera-fg-gold)]" />
                       {m.label}
                     </span>
                     {locked ? (
                       <Lock className="h-3.5 w-3.5 text-[var(--muted-foreground)]" aria-hidden />
                     ) : active ? (
-                      <Check className="h-4 w-4 text-gold-500" />
+                      <Check className="h-4 w-4 text-[var(--tessera-fg-gold)]" />
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">

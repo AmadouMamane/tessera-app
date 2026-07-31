@@ -40,7 +40,7 @@ export function ModelBadge() {
       title={`Modèle actif : ${model.label} · ${model.params} · ${hosting}`}
       className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--muted)]/40 py-1 pl-2 pr-2.5 text-xs font-medium shadow-sm backdrop-blur transition-colors"
     >
-      <Cpu className="h-3.5 w-3.5 text-gold-500" aria-hidden />
+      <Cpu className="h-3.5 w-3.5 text-[var(--tessera-fg-gold)]" aria-hidden />
       <span className="text-[var(--foreground)]">{model.label}</span>
       <span
         aria-hidden

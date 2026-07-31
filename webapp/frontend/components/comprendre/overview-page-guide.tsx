@@ -117,13 +117,13 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
           <p className="mt-4 max-w-[42rem] text-[0.9rem] leading-7 text-[var(--tessera-text-muted)]">
             {t("intro.body")}
           </p>
-          <p className="mt-5 max-w-[40rem] border-cyan-300/50 border-l pl-4 text-[0.82rem] leading-6 text-cyan-100/80">
+          <p className="mt-5 max-w-[40rem] border-cyan-300/50 border-l pl-4 text-[0.82rem] leading-6 text-[var(--tessera-fg-teal)]/80">
             {t("intro.note")}
           </p>
         </div>
 
         <div className="relative mt-10 lg:mt-0">
-          <p className="mb-5 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="mb-5 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
             {t("flow.label")}
           </p>
           <div className="relative grid gap-0 sm:grid-cols-3">
@@ -150,7 +150,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
 
       <section className="grid gap-10 py-10 lg:grid-cols-[minmax(16rem,0.42fr)_minmax(0,1fr)] lg:gap-16 lg:py-14">
         <div>
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
             {t("journey.eyebrow")}
           </p>
           <h2 className="mt-3 font-semibold text-[1.2rem] text-[var(--tessera-text)]">
@@ -183,7 +183,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
                 <p className="text-[0.82rem] leading-6 text-[var(--tessera-text-muted)]">
                   {t(`journey.zones.${key}.body`)}
                 </p>
-                <p className="mt-2 text-[0.75rem] leading-5 text-cyan-100/75">
+                <p className="mt-2 text-[0.75rem] leading-5 text-[var(--tessera-fg-teal)]/75">
                   {t(`journey.zones.${key}.question`)}
                 </p>
               </div>
@@ -194,7 +194,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
 
       <section className="border-[var(--tessera-border)] border-y py-10 lg:grid lg:grid-cols-[minmax(16rem,0.42fr)_minmax(0,1fr)] lg:gap-16 lg:py-14">
         <div>
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-amber-200/70">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-warning)]/70">
             {t("time.eyebrow")}
           </p>
           <h2 className="mt-3 font-semibold text-[1.2rem] text-[var(--tessera-text)]">
@@ -237,7 +237,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
 
       <section className="grid gap-10 py-10 lg:grid-cols-[minmax(16rem,0.42fr)_minmax(0,1fr)] lg:gap-16 lg:py-14">
         <div>
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-emerald-200/70">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-success)]/70">
             {t("honesty.eyebrow")}
           </p>
           <h2 className="mt-3 font-semibold text-[1.2rem] text-[var(--tessera-text)]">
@@ -269,7 +269,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
 
       <section className="border-[var(--tessera-border)] border-y py-10 lg:grid lg:grid-cols-[minmax(16rem,0.42fr)_minmax(0,1fr)] lg:gap-16 lg:py-14">
         <div>
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-violet-200/70">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-accent)]/70">
             {t("decisions.eyebrow")}
           </p>
           <h2 className="mt-3 font-semibold text-[1.2rem] text-[var(--tessera-text)]">
@@ -348,7 +348,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
 
           <div className="mt-10 grid gap-8 border-[var(--tessera-border)] border-t pt-8 lg:grid-cols-[minmax(14rem,0.3fr)_minmax(0,1fr)] lg:gap-14">
             <div>
-              <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
                 {t("data.calculations.eyebrow")}
               </p>
               <h3 className="mt-3 text-[0.92rem] font-semibold text-[var(--tessera-text)]">
@@ -394,7 +394,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
             <div className="grid gap-x-10 gap-y-6 border-violet-200/20 border-l pb-2 pl-5 md:grid-cols-2">
               {TECHNICAL_CONTRACT.map((key) => (
                 <div key={key}>
-                  <h4 className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-violet-200/80">
+                  <h4 className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-[var(--tessera-fg-accent)]/80">
                     {t(`data.contract.items.${key}.title`)}
                   </h4>
                   <p className="mt-2 text-[0.74rem] leading-6 text-[var(--tessera-text-muted)]">
@@ -409,7 +409,7 @@ export function OverviewPageGuide({ backHref }: { backHref: string }) {
 
       <footer className="grid gap-6 pt-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="max-w-[58rem]">
-          <p className="flex items-center gap-2 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="flex items-center gap-2 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
             <ListChecks className="h-4 w-4" aria-hidden />
             {t("closing.eyebrow")}
           </p>

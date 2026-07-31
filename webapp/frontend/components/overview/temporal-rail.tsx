@@ -466,11 +466,13 @@ export function TemporalRail({
         {/* Active mode — always shown (registre §1/§5), so the page never sits in
             history without a visible indicator. */}
         {embedded ? null : (
-          <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs font-semibold text-gold-200">
-            <History className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+          <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-gold-500/50 bg-gold-500/10 px-3 text-xs font-semibold text-[var(--tessera-fg-gold)]">
+            <History className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-gold)]" />
             {modeLabel}
             {compare !== "none" ? (
-              <span className="font-medium text-gold-300/80">· {t("modeCompared")}</span>
+              <span className="font-medium text-[var(--tessera-fg-gold)]/80">
+                · {t("modeCompared")}
+              </span>
             ) : null}
           </span>
         )}
@@ -478,7 +480,7 @@ export function TemporalRail({
             toolbar control is the single owner (CONTRAT RAIL). */}
         {!embedded && onPeriodChange ? (
           <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
-            <Clock3 className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+            <Clock3 className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-gold)]" />
             {t("period")}
             <select
               value={periodKey}
@@ -505,10 +507,10 @@ export function TemporalRail({
               "flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 text-xs",
               selectedAt == null
                 ? "border-[var(--border)] bg-[var(--muted)]/30 text-[var(--muted-foreground)]"
-                : "border-gold-500/50 bg-gold-500/10 text-gold-200",
+                : "border-gold-500/50 bg-gold-500/10 text-[var(--tessera-fg-gold)]",
             )}
           >
-            <Flag className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+            <Flag className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-gold)]" />
             {t("viewingAt")}
             <b className="font-semibold tabular-nums text-[var(--foreground)]">
               {viewLabel ?? (selectedAt == null ? t("nowLive") : fmtStamp(currentT))}
@@ -517,7 +519,7 @@ export function TemporalRail({
         )}
         {embedded ? null : (
           <label className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[var(--border)] bg-[var(--muted)]/30 px-3 text-xs text-[var(--muted-foreground)]">
-            <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-gold-400" />
+            <ArrowLeftRight className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-gold)]" />
             {t("compareTo")}
             <select
               value={compare}
@@ -735,7 +737,7 @@ export function TemporalRail({
             <span className="text-[0.55rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {t("previewLabel")}
             </span>
-            <span className="tabular-nums text-[0.62rem] font-semibold text-gold-200/80">
+            <span className="tabular-nums text-[0.62rem] font-semibold text-[var(--tessera-fg-gold)]/80">
               {fmtInstant(previewAt)}
             </span>
           </span>
@@ -751,7 +753,7 @@ export function TemporalRail({
           >
             <span
               className={cn(
-                "text-[0.55rem] font-medium uppercase tracking-wide text-gold-400/80",
+                "text-[0.55rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-gold)]/80",
                 isSignal && "[text-shadow:0_0_12px_rgba(232,201,130,0.24)]",
               )}
             >
@@ -761,8 +763,8 @@ export function TemporalRail({
               className={cn(
                 "tabular-nums text-[0.62rem] font-semibold",
                 isSignal
-                  ? "text-gold-200 [text-shadow:0_0_16px_rgba(232,201,130,0.26)]"
-                  : "text-gold-300",
+                  ? "text-[var(--tessera-fg-gold)] [text-shadow:0_0_16px_rgba(232,201,130,0.26)]"
+                  : "text-[var(--tessera-fg-gold)]",
               )}
             >
               {fmtInstant(currentT)}
@@ -1007,7 +1009,7 @@ function SignalEventNavigation({
   return (
     <span className="ml-auto flex h-8 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-cyan-400/15 bg-cyan-400/[0.04] py-1 pl-3 pr-1 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[inset_0_1px_0_rgba(170,228,255,0.04)]">
       <span className="flex items-center gap-1.5 text-[var(--tessera-text-muted)]">
-        <Milestone className="h-3.5 w-3.5 text-cyan-300/55" />
+        <Milestone className="h-3.5 w-3.5 text-[var(--tessera-fg-teal)]/55" />
         {t("eventsBrowse")}
       </span>
       <span className="mx-1 h-3.5 w-px bg-cyan-400/10" />
@@ -1061,9 +1063,9 @@ function ExecutionReplayControls({
         onClick={onPlayPause}
       >
         {playing ? (
-          <Pause className="h-4 w-4 text-gold-400" />
+          <Pause className="h-4 w-4 text-[var(--tessera-fg-gold)]" />
         ) : (
-          <PlayCircle className="h-4 w-4 text-gold-400" />
+          <PlayCircle className="h-4 w-4 text-[var(--tessera-fg-gold)]" />
         )}
       </TransportButton>
       <TransportButton label={t("next")} onClick={onNext}>
@@ -1130,7 +1132,7 @@ function TransportButton({
       onClick={onClick}
       className={cn(
         "flex h-7 w-7 items-center justify-center rounded text-[var(--foreground)] transition-all hover:bg-[var(--muted)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent",
-        active && "bg-gold-500/20 text-gold-300",
+        active && "bg-gold-500/20 text-[var(--tessera-fg-gold)]",
       )}
     >
       {children}
@@ -1193,7 +1195,7 @@ function RailMarker({
             title={title}
             className={cn(
               "absolute top-[1.7rem] flex -translate-x-1/2 cursor-help items-center gap-1 whitespace-nowrap text-[0.6rem] font-medium",
-              signal ? "text-[rgba(150,200,228,0.85)]" : "text-slate-300/90",
+              signal ? "text-[rgba(150,200,228,0.85)]" : "text-[var(--tessera-text-muted)]/90",
             )}
             style={{ left: `${pos}%` }}
           >

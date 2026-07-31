@@ -23,8 +23,8 @@ export function SyntheticNotice({
       role="note"
       className={
         compact
-          ? "mb-2 flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[0.62rem] text-amber-200/90"
-          : "flex shrink-0 items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[0.72rem] text-amber-200/90"
+          ? "mb-2 flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[0.62rem] text-[var(--tessera-fg-warning)]/90"
+          : "flex shrink-0 items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[0.72rem] text-[var(--tessera-fg-warning)]/90"
       }
     >
       <FlaskConical
@@ -36,7 +36,7 @@ export function SyntheticNotice({
       />
       <span className="min-w-0 truncate">
         <span className="font-semibold">{t("title")}</span>
-        <span className="text-amber-200/70"> — {t("detail")}</span>
+        <span className="text-[var(--tessera-fg-warning)]/70"> — {t("detail")}</span>
       </span>
     </div>
   );

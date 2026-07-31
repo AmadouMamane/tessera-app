@@ -70,7 +70,7 @@ export function SelectChip({
           </span>
           {noteTitle ? (
             <span title={noteTitle} aria-label={noteTitle} className="flex shrink-0 cursor-help">
-              <Info className="h-3.5 w-3.5 text-amber-400/70" aria-hidden />
+              <Info className="h-3.5 w-3.5 text-[var(--tessera-fg-warning)]/70" aria-hidden />
             </span>
           ) : (
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gold-600/70 dark:text-gold-400/70" />

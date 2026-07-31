@@ -76,7 +76,7 @@ export function CockpitPageGuide({
           <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/30 text-[var(--tessera-fg-teal)]">
             <Sparkles className="h-[18px] w-[18px]" strokeWidth={ICON_STROKE_WIDTH} aria-hidden />
           </div>
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
             {t("sharedGuide.purpose")}
           </p>
           <h2 className="mt-3 max-w-[38rem] font-semibold text-[1.35rem] leading-snug text-[var(--tessera-text)]">
@@ -85,7 +85,7 @@ export function CockpitPageGuide({
         </div>
 
         <div className="relative mt-10 border-cyan-300/35 border-l pl-5 lg:mt-0 lg:self-end">
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
             {t("sharedGuide.start")}
           </p>
           <p className="mt-3 max-w-[48rem] text-[0.9rem] leading-7 text-[var(--tessera-text-muted)]">
@@ -97,7 +97,7 @@ export function CockpitPageGuide({
       {viewGroups.length ? (
         <section className="grid gap-10 py-11 lg:grid-cols-[minmax(16rem,0.34fr)_minmax(0,1fr)] lg:gap-16 lg:py-14">
           <div>
-            <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-violet-200/75">
+            <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-accent)]/75">
               {t("viewAtlas.eyebrow")}
             </p>
             <h2 className="mt-3 font-semibold text-[1.18rem] text-[var(--tessera-text)]">
@@ -172,7 +172,7 @@ export function CockpitPageGuide({
 
       <section className="py-11 lg:py-14">
         <div className="mb-8 max-w-[44rem]">
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
             {t("sharedGuide.readingEyebrow")}
           </p>
           <h2 className="mt-3 font-semibold text-[1.18rem] text-[var(--tessera-text)]">
@@ -206,7 +206,7 @@ export function CockpitPageGuide({
 
       <section className="grid gap-8 border-[var(--tessera-border)] border-y py-9 lg:grid-cols-[minmax(12rem,0.32fr)_minmax(0,1fr)] lg:gap-16">
         <div>
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-emerald-200/75">
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-success)]/75">
             {t("sharedGuide.actionEyebrow")}
           </p>
           <h2 className="mt-3 font-semibold text-[1.08rem] text-[var(--tessera-text)]">
@@ -260,7 +260,7 @@ export function CockpitPageGuide({
               );
             })}
             <div className="md:col-span-2 xl:col-span-4">
-              <p className="border-cyan-200/20 border-l pl-4 text-[0.76rem] leading-6 text-cyan-100/75">
+              <p className="border-cyan-200/20 border-l pl-4 text-[0.76rem] leading-6 text-[var(--tessera-fg-teal)]/75">
                 {t("sharedGuide.dataReadingRule")}
               </p>
             </div>
@@ -268,7 +268,7 @@ export function CockpitPageGuide({
 
           <div className="grid gap-8 border-[var(--tessera-border)] border-t py-9 lg:grid-cols-[minmax(14rem,0.3fr)_minmax(0,1fr)] lg:gap-14">
             <div>
-              <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-emerald-200/75">
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-success)]/75">
                 {t("sharedGuide.examples.eyebrow")}
               </p>
               <h3 className="mt-3 text-[0.94rem] font-semibold text-[var(--tessera-text)]">
@@ -327,7 +327,7 @@ export function CockpitPageGuide({
                             : t("sharedGuide.contract.validation.body");
                 return (
                   <div key={key}>
-                    <h4 className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-violet-200/80">
+                    <h4 className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-[var(--tessera-fg-accent)]/80">
                       {t(`sharedGuide.contract.items.${key}`)}
                     </h4>
                     <p className="mt-2 text-[0.74rem] leading-6 text-[var(--tessera-text-muted)]">
@@ -343,7 +343,7 @@ export function CockpitPageGuide({
 
       <footer className="grid gap-6 border-[var(--tessera-border)] border-t pt-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="max-w-[58rem]">
-          <p className="flex items-center gap-2 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-200/70">
+          <p className="flex items-center gap-2 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--tessera-fg-teal)]/70">
             <ListChecks className="h-4 w-4" aria-hidden />
             {t("sharedGuide.closing.eyebrow")}
           </p>

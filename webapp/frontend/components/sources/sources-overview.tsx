@@ -1090,7 +1090,7 @@ function HistoryView({ t, data }: { t: T; data: Data }) {
         title={t("view.memoryGrowth")}
         info={<ExplainInfo k="memoryGrowth" title={t("view.memoryGrowth")} />}
       >
-        <p className="mb-2 inline-flex items-center gap-1.5 text-[0.64rem] text-amber-300/90">
+        <p className="mb-2 inline-flex items-center gap-1.5 text-[0.64rem] text-[var(--tessera-fg-warning)]/90">
           <AlertTriangle className="h-3.5 w-3.5" /> {t("view.historyNote")}
         </p>
         <div className="grid gap-3 md:grid-cols-2">

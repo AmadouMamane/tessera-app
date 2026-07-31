@@ -257,7 +257,7 @@ function AgentConnaissancesInner() {
             type="button"
             aria-label={tCommon("close")}
             onClick={() => setMutError(null)}
-            className="flex h-5 w-5 items-center justify-center rounded text-red-200/80 hover:text-[var(--tessera-text-strong)]"
+            className="flex h-5 w-5 items-center justify-center rounded text-[var(--tessera-fg-danger)]/80 hover:text-[var(--tessera-text-strong)]"
           >
             <X className="h-3.5 w-3.5" />
           </button>

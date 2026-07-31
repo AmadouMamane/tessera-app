@@ -18,21 +18,21 @@ import { Flame, History, PlayCircle, ShieldAlert, Ticket } from "lucide-react";
 export type OverviewTone = "success" | "warning" | "danger" | "info" | "neutral" | "gold";
 
 export const toneText: Record<OverviewTone, string> = {
-  success: "text-emerald-400",
-  warning: "text-orange-400",
-  danger: "text-red-400",
-  info: "text-blue-400",
+  success: "text-[var(--tessera-fg-success)]",
+  warning: "text-[var(--tessera-fg-warning)]",
+  danger: "text-[var(--tessera-fg-danger)]",
+  info: "text-[var(--tessera-fg-info)]",
   neutral: "text-[var(--muted-foreground)]",
-  gold: "text-gold-400",
+  gold: "text-[var(--tessera-fg-gold)]",
 };
 
 export const toneBg: Record<OverviewTone, string> = {
-  success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-  warning: "border-orange-500/30 bg-orange-500/10 text-orange-300",
-  danger: "border-red-500/30 bg-red-500/10 text-red-300",
-  info: "border-blue-500/30 bg-blue-500/10 text-blue-300",
+  success: "border-emerald-500/30 bg-emerald-500/10 text-[var(--tessera-fg-success)]",
+  warning: "border-orange-500/30 bg-orange-500/10 text-[var(--tessera-fg-warning)]",
+  danger: "border-red-500/30 bg-red-500/10 text-[var(--tessera-fg-danger)]",
+  info: "border-blue-500/30 bg-blue-500/10 text-[var(--tessera-fg-info)]",
   neutral: "border-[var(--border)] bg-[var(--muted)]/50 text-[var(--foreground)]",
-  gold: "border-gold-500/30 bg-gold-500/10 text-gold-300",
+  gold: "border-gold-500/30 bg-gold-500/10 text-[var(--tessera-fg-gold)]",
 };
 
 export const dotBg: Record<OverviewTone, string> = {
