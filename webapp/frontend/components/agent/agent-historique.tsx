@@ -64,11 +64,11 @@ const SCORE_TEXT: Record<string, string> = {
   crit: "text-[var(--tessera-fg-danger)]",
 };
 const STATUS_BADGE: Record<string, string> = {
-  good: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  info: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  warn: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  bad: "border-red-500/30 bg-red-500/15 text-red-300",
-  crit: "border-red-500/30 bg-red-500/15 text-red-300",
+  good: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  info: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  warn: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  bad: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  crit: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 const SEG_FILL: Record<string, string> = {
   green: "#34d399",
@@ -395,7 +395,7 @@ function LiveConversations({ data, locale }: { data: Data; locale: string }) {
                       {c.title || t("live.untitled")}
                     </Truncate>
                     {i === 0 ? (
-                      <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-px text-[0.6rem] text-emerald-300">
+                      <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-px text-[0.6rem] text-[var(--tessera-fg-success)]">
                         {t("live.latest")}
                       </span>
                     ) : null}

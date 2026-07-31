@@ -773,13 +773,13 @@ function OpposabilityBadge({
   const badge = opp?.badge ?? "verification_en_cours";
   const tone =
     badge === "scelle_opposable"
-      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+      ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
       : badge === "scelle_non_qualifie"
         ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200/80"
         : badge === "non_scelle"
-          ? "border-red-500/40 bg-red-500/10 text-red-300"
+          ? "border-red-500/40 bg-red-500/10 text-[var(--tessera-fg-danger)]"
           : badge === "integrite_partielle"
-            ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+            ? "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]"
             : "border-[var(--tessera-border)] text-[var(--tessera-text-muted)]";
   const Icon =
     badge === "non_scelle" ? ShieldX : badge === "integrite_partielle" ? GitBranch : Lock;
@@ -809,8 +809,8 @@ function VerifiedBadge({ ok, label }: { ok: boolean; label: string }) {
       className={cn(
         "inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
         ok
-          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-          : "border-red-500/30 bg-red-500/15 text-red-300",
+          ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
+          : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
       )}
     >
       {ok ? <ShieldCheck className="h-3.5 w-3.5" /> : null}
@@ -1324,7 +1324,7 @@ function SourcesTable({
                       className={cn(
                         "rounded-full border px-2 py-0.5 text-[0.58rem]",
                         TYPE_TONE[r.type_tone] ??
-                          "border-slate-500/30 bg-slate-500/15 text-slate-300",
+                          "border-slate-500/30 bg-slate-500/15 text-[var(--tessera-text-muted)]",
                       )}
                     >
                       {r.type}
@@ -1344,8 +1344,8 @@ function SourcesTable({
                       className={cn(
                         "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.58rem] font-medium",
                         r.status === "accessible"
-                          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                          : "border-red-500/30 bg-red-500/15 text-red-300",
+                          ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
+                          : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
                       )}
                     >
                       {r.status_label}
@@ -1588,8 +1588,8 @@ function SourceDrawer({ t, row, onClose }: { t: T; row: Row; onClose: () => void
           className={cn(
             "mt-2 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
             row.status === "accessible"
-              ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-              : "border-red-500/30 bg-red-500/15 text-red-300",
+              ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
+              : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
           )}
         >
           {row.status_label}

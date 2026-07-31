@@ -102,9 +102,9 @@ const STATUS_TONE: Record<string, string> = {
   crit: "text-[var(--tessera-fg-danger)]",
 };
 const BADGE_TONE: Record<string, string> = {
-  good: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  warn: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  crit: "border-red-500/30 bg-red-500/15 text-red-300",
+  good: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  warn: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  crit: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 
 type LiveMessage = {
@@ -592,7 +592,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
       ) : null}
 
       {error ? (
-        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[0.8rem] text-red-300">
+        <p className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[0.8rem] text-[var(--tessera-fg-danger)]">
           {error}
         </p>
       ) : null}
@@ -774,7 +774,7 @@ function SandboxControls({
                 className={cn(
                   "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[0.66rem] transition-colors",
                   on
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
                     : "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)] line-through",
                 )}
               >
@@ -1061,7 +1061,9 @@ function LiveAssistantMsg({
         <span
           className={cn(
             "flex h-4 w-4 items-center justify-center rounded-full",
-            message.error ? "bg-red-500/20 text-red-300" : "bg-emerald-500/20 text-emerald-400",
+            message.error
+              ? "bg-red-500/20 text-[var(--tessera-fg-danger)]"
+              : "bg-emerald-500/20 text-[var(--tessera-fg-success)]",
           )}
         >
           <ShieldCheck className="h-3 w-3" />
@@ -1074,7 +1076,7 @@ function LiveAssistantMsg({
         className={cn(
           "whitespace-pre-wrap rounded-xl rounded-tl-sm border px-3.5 py-3 text-[0.78rem] leading-relaxed text-[var(--tessera-text)]",
           message.error
-            ? "border-red-500/35 bg-red-500/10 text-red-200"
+            ? "border-red-500/35 bg-red-500/10 text-[var(--tessera-fg-danger)]"
             : "border-[var(--tessera-border)] bg-[var(--tessera-bg)]",
         )}
       >
@@ -1087,7 +1089,7 @@ function LiveAssistantMsg({
             <span className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
               Outils ({tools})
             </span>
-            <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[0.64rem] text-amber-300">
+            <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[0.64rem] text-[var(--tessera-fg-warning)]">
               Garde-fous ({guardrails})
             </span>
             {typeof message.debug?.tokens === "number" ? (
@@ -1614,10 +1616,10 @@ function ScoreRow({ label, score }: { label: string; score: number | null }) {
 }
 
 const ROLE_TONE: Record<string, string> = {
-  system: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  user: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  assistant: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  tool: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  system: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  user: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  assistant: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  tool: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
 };
 
 /** Small inline pill used for plans, guard categories, language codes. */

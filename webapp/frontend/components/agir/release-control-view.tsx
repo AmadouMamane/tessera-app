@@ -8,9 +8,9 @@ import { Link } from "@/i18n/navigation";
 import type { ReleaseControl } from "@/lib/api/schemas";
 
 const VERDICT_TONE: Record<string, string> = {
-  good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-  crit: "border-red-500/40 bg-red-500/10 text-red-300",
-  bad: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+  good: "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]",
+  crit: "border-red-500/40 bg-red-500/10 text-[var(--tessera-fg-danger)]",
+  bad: "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]",
   muted:
     "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)]",
 };
@@ -150,7 +150,7 @@ export async function ReleaseControlView({
                     {rel.verdict_label}
                     {rel.verdict_stale ? (
                       <span
-                        className="rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium text-amber-300"
+                        className="rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium text-[var(--tessera-fg-warning)]"
                         title={t("staleTitle", {
                           was: rel.catalogue_version ?? "",
                           now: rel.current_catalogue_version ?? "",

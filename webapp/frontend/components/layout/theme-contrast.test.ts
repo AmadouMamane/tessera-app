@@ -64,7 +64,7 @@ const LIGHT_CARD = "#ffffff";
  *   every cockpit theme; it never consumed the `--tessera-*` surface tokens.
  */
 const FROZEN_ANCESTOR_BACKED: ReadonlyMap<string, number> = new Map([
-  ["components/cockpit/alert-ribbon.tsx", 10],
+  ["components/cockpit/alert-ribbon.tsx", 11],
   ["components/recouvrement/recouvrement-product-experience.tsx", 4],
   ["components/product/chat-widget.tsx", 2],
   ["components/product/mes-comptes-host.tsx", 1],
@@ -104,7 +104,7 @@ const FOREGROUND =
   /(?<![\w:-])(?:group-hover:|hover:|focus:|focus-visible:|active:)?text-(?:\[#([0-9a-fA-F]{6})\]|([a-z]+)-(100|200|300|400|500|600)|(white))(?![\w/-])/g;
 
 const OPAQUE_BACKGROUND =
-  /bg-(?:blue|red|amber|emerald|green|sky|violet|rose|orange|cyan|indigo|fuchsia|slate|zinc|neutral|gray|navy|danger|success|warning|info)-\d{2,3}(?!\/)|bg-\[#[0-9a-fA-F]{6}\](?!\/)|bg-\[linear-gradient|bg-gradient-to|bg-\[var\(--tessera-danger|bg-black/;
+  /bg-(?:blue|red|amber|emerald|green|sky|violet|rose|orange|cyan|indigo|fuchsia|slate|zinc|neutral|gray|navy|danger|success|warning|info)-\d{2,3}(?![\d\/])|bg-\[#[0-9a-fA-F]{6}\](?!\/)|bg-\[linear-gradient|bg-gradient-to|bg-\[var\(--tessera-danger|bg-black/;
 
 const STRING_LITERAL = /"[^"\n]*"|`[^`]*`|'[^'\n]*'/g;
 
@@ -237,6 +237,17 @@ describe("every foreground literal survives the light theme", () => {
     const chip = scanSource("x.tsx", '"rounded-full bg-red-500 px-1 text-white"');
     expect(chip.failing).toEqual([]);
     expect(chip.resolved).toBe(0);
+  });
+
+  // The exemption regex once ended `\d{2,3}(?!\/)`, and a quantifier BACKTRACKS: on
+  // `bg-amber-500/10` it matched `50`, saw `0` instead of `/`, and declared the tint an
+  // opaque background. 227 status pills -- PRET, BLOQUE, "57 metier en attente", the ones
+  // an operator actually reads on the fleet page -- were skipped by a lookahead that was
+  // never reached. The screen found it; the test had said green.
+  it("has teeth: a shade followed by an opacity modifier is still translucent", () => {
+    const pill = scanSource("x.tsx", '"border-amber-500/35 bg-amber-500/10 text-amber-200"');
+    expect(pill.failing).toHaveLength(1);
+    expect(pill.failing[0]?.utility).toBe("text-amber-200");
   });
 
   it("has teeth: a token passes, because a token is not a literal", () => {

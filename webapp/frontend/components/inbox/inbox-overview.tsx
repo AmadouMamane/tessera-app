@@ -46,18 +46,18 @@ const STATUS_TO_BACKEND: Record<string, string> = {
 };
 
 const PRIORITY: Record<string, string> = {
-  urgent: "border-red-500/30 bg-red-500/15 text-red-300",
-  high: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  medium: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  urgent: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  high: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  medium: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
   low: "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
 };
 // Severity rank so the Priority column sorts by urgency, not alphabetically.
 const PRIO_RANK: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 const STATUS: Record<string, string> = {
   todo: "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
-  in_progress: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  waiting: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  resolved: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  in_progress: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  waiting: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  resolved: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
 };
 const SLA_TONE: Record<string, string> = {
   crit: "text-[var(--tessera-fg-danger)]",

@@ -30,15 +30,15 @@ import type { ScSignal, SignalCatalogue as SignalData } from "@/lib/api/schemas"
 import { cn } from "@/lib/cn";
 
 const SEV_BADGE: Record<string, string> = {
-  critical: "border-red-500/30 bg-red-500/15 text-red-300",
-  high: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  critical: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  high: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
   medium: "border-yellow-500/30 bg-yellow-500/15 text-[var(--tessera-fg-warning)]",
-  low: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  low: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
 };
 const STATUS_BADGE: Record<string, string> = {
-  active: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  evaluation: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  deprecated: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  active: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  evaluation: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  deprecated: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
   disabled:
     "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
 };

@@ -285,7 +285,7 @@ function ServingModels() {
                   className={cn(
                     "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
                     k.override
-                      ? "border-sky-500/30 bg-sky-500/15 text-sky-300"
+                      ? "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]"
                       : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
                   )}
                 >

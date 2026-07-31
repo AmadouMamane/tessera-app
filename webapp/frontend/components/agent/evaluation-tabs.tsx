@@ -162,7 +162,7 @@ export function SetsTab({ data }: { data: Data }) {
             {r.name}
           </Truncate>
           {r.active ? (
-            <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-[0.5rem] font-medium uppercase text-emerald-300">
+            <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-[0.5rem] font-medium uppercase text-[var(--tessera-fg-success)]">
               {pick(locale, "Actif", "Aktiv", "Active")}
             </span>
           ) : null}
@@ -325,7 +325,7 @@ function SetDrawer({
       onClose={onClose}
     >
       {row.active ? (
-        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[0.68rem] text-emerald-300">
+        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-success)]">
           {labels.active_label}
         </div>
       ) : null}
@@ -427,7 +427,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
     return (
       <div className="flex flex-col gap-2.5">
         <TabHeader title={results.errors_title} subtitle={results.errors_subtitle} />
-        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 px-4 py-8 text-center text-[0.8rem] text-emerald-300">
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 px-4 py-8 text-center text-[0.8rem] text-[var(--tessera-fg-success)]">
           {results.empty_errors}
         </div>
       </div>
@@ -643,7 +643,7 @@ function ResultDrawer({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.62rem] font-medium",
             row.passed
-              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
               : "border-[#e0566f]/50 bg-[#e0566f]/10 text-[var(--tessera-fg-danger)]",
           )}
         >
@@ -659,7 +659,7 @@ function ResultDrawer({
           {row.category_label}
         </span>
         {row.escalated ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.56rem] font-medium text-amber-300">
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.56rem] font-medium text-[var(--tessera-fg-warning)]">
             <AlertTriangle className="h-3 w-3" /> {labels.escalated}
           </span>
         ) : null}
@@ -699,7 +699,7 @@ function ResultDrawer({
             {row.tools.map((tool) => (
               <span
                 key={tool}
-                className="inline-flex items-center gap-1 rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[0.6rem] font-mono text-sky-300"
+                className="inline-flex items-center gap-1 rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[0.6rem] font-mono text-[var(--tessera-fg-info)]"
               >
                 <Wrench className="h-2.5 w-2.5" /> {tool}
               </span>
@@ -892,7 +892,7 @@ export function ComparaisonsTab({ data }: { data: Data }) {
         />
       </div>
       {!sameCatalogue ? (
-        <p className="rounded-md border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[0.68rem] text-amber-300">
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-warning)]">
           {pick(
             locale,
             "Versions de catalogue différentes - l'écart de taux compare deux examens distincts.",

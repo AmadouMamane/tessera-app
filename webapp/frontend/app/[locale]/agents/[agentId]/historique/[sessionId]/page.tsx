@@ -29,11 +29,11 @@ export async function generateMetadata({ params }: PageProps) {
 // Per-turn agent accent: a conversation that spans agents reads as a hand-over.
 const AGENT_ACCENT: Record<string, string> = {
   "support-client": "border-[#6d4aed]/40 bg-[#6d4aed]/15 text-[var(--tessera-fg-accent)]",
-  onboarding: "border-cyan-500/40 bg-cyan-500/15 text-cyan-300",
-  recouvrement: "border-amber-500/40 bg-amber-500/15 text-amber-300",
+  onboarding: "border-cyan-500/40 bg-cyan-500/15 text-[var(--tessera-fg-teal)]",
+  recouvrement: "border-amber-500/40 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
 };
 const accent = (id: string) =>
-  AGENT_ACCENT[id] ?? "border-slate-500/40 bg-slate-500/15 text-slate-300";
+  AGENT_ACCENT[id] ?? "border-slate-500/40 bg-slate-500/15 text-[var(--tessera-text-muted)]";
 
 /**
  * Load one conversation's turn-by-turn detail — as a VERIFIED operator.
@@ -162,7 +162,7 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
             </span>
           ))}
           {data.spans_agents ? (
-            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 text-[0.7rem] text-emerald-300">
+            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 text-[0.7rem] text-[var(--tessera-fg-success)]">
               {t("sessionDetail.spansAgents")}
             </span>
           ) : null}

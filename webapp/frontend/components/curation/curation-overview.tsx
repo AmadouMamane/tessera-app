@@ -38,9 +38,9 @@ import { cn } from "@/lib/cn";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const RISK_BADGE: Record<string, string> = {
-  eleve: "border-red-500/30 bg-red-500/15 text-red-300",
-  moyen: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  bas: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  eleve: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  moyen: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  bas: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
 };
 const WF_TEXT: Record<string, string> = {
   termine: "text-[var(--tessera-fg-success)]",
@@ -48,9 +48,9 @@ const WF_TEXT: Record<string, string> = {
   attente: "text-[var(--tessera-text-muted)]",
 };
 const LEVEL_BADGE: Record<string, string> = {
-  bon: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  moyen: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  faible: "border-red-500/30 bg-red-500/15 text-red-300",
+  bon: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  moyen: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  faible: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 const COV_BG: Record<string, string> = {
   ok: "bg-emerald-500/70",
@@ -336,9 +336,9 @@ function CommandBar({
 
 const DECISION_BADGE: Record<string, string> = {
   pending: "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
-  promote: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  review: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  reject: "border-red-500/30 bg-red-500/15 text-red-300",
+  promote: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  review: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  reject: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 
 function PriorityLots({
@@ -920,7 +920,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2 text-[0.72rem]">
             <span className="font-mono text-[var(--tessera-fg-info)]">{data.release.id}</span>
-            <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-300">
+            <Badge className="border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]">
               {data.release.status}
             </Badge>
           </div>
@@ -1064,7 +1064,7 @@ function ActionCard({ action, t }: { action: Data["actions"][number]; t: T }) {
           </Badge>
         ) : null}
         {action.requirement ? (
-          <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-300">
+          <Badge className="border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]">
             {action.requirement === "dual" ? t("actCtrl.dualControl") : t("actCtrl.signature")}
           </Badge>
         ) : null}
@@ -1417,15 +1417,15 @@ function Donut({
 
 const DECIDE_TONE: Record<"emerald" | "amber" | "red", { active: string; idle: string }> = {
   emerald: {
-    active: "border-emerald-500/50 bg-emerald-500/25 text-emerald-200",
+    active: "border-emerald-500/50 bg-emerald-500/25 text-[var(--tessera-fg-success)]",
     idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-emerald-500/40 hover:text-[var(--tessera-fg-success)]",
   },
   amber: {
-    active: "border-amber-500/50 bg-amber-500/25 text-amber-200",
+    active: "border-amber-500/50 bg-amber-500/25 text-[var(--tessera-fg-warning)]",
     idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-amber-500/40 hover:text-[var(--tessera-fg-warning)]",
   },
   red: {
-    active: "border-red-500/50 bg-red-500/25 text-red-200",
+    active: "border-red-500/50 bg-red-500/25 text-[var(--tessera-fg-danger)]",
     idle: "border-[var(--tessera-border)] text-[var(--tessera-text-muted)] hover:border-red-500/40 hover:text-[var(--tessera-fg-danger)]",
   },
 };

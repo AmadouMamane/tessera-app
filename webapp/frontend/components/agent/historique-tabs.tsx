@@ -50,11 +50,11 @@ import {
 type Row = NonNullable<Data["table"]>["rows"][number];
 
 const STATUS_PILL: Record<string, string> = {
-  good: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  info: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  warn: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  bad: "border-red-500/30 bg-red-500/15 text-red-300",
-  crit: "border-red-500/30 bg-red-500/15 text-red-300",
+  good: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  info: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  warn: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  bad: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  crit: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 const SCORE_TEXT: Record<string, string> = {
   good: "text-[var(--tessera-fg-success)]",
@@ -845,7 +845,7 @@ export function ErrorsTab({ data }: { data: Data }) {
     return (
       <div className="flex flex-col gap-2.5">
         <TabHeader title={title} subtitle={subtitle} />
-        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[0.68rem] text-emerald-300">
+        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-success)]">
           {pick(
             locale,
             "Aucune session en échec sur ce run.",

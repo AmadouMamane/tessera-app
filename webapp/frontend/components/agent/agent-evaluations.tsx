@@ -52,9 +52,9 @@ function pick(locale: string, fr: string, de: string, en: string): string {
 
 const KPI_ICONS: LucideIcon[] = [Sparkles, Target, ShieldCheck, BarChart3, Layers, Target];
 const TYPE_TONE: Record<string, string> = {
-  sys: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  tpl: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  agt: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  sys: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  tpl: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  agt: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
 };
 const STATUS_TONE: Record<string, string> = {
   good: "text-[var(--tessera-fg-success)]",
@@ -875,14 +875,14 @@ function ActionsRequises({
 
 const VENN_TONE: Record<string, string> = {
   crit: "border-[#e0566f]/50 bg-[#e0566f]/12 text-[var(--tessera-fg-danger)]",
-  warn: "border-amber-500/40 bg-amber-500/12 text-amber-200",
+  warn: "border-amber-500/40 bg-amber-500/12 text-[var(--tessera-fg-warning)]",
   muted: "border-[var(--tessera-border)] bg-black/15 text-[var(--tessera-text-muted)]",
 };
 const STATUS_PILL: Record<string, string> = {
   crit: "border-[#e0566f]/50 bg-[#e0566f]/15 text-[var(--tessera-fg-danger)]",
-  warn: "border-amber-500/40 bg-amber-500/15 text-amber-200",
-  bad: "border-orange-500/40 bg-orange-500/15 text-orange-200",
-  good: "border-emerald-500/40 bg-emerald-500/15 text-emerald-200",
+  warn: "border-amber-500/40 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  bad: "border-orange-500/40 bg-orange-500/15 text-[var(--tessera-fg-warning)]",
+  good: "border-emerald-500/40 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
 };
 
 /** Policy gate detail (eval-gate-policy.md): three tiers + structural Venn, the
@@ -2100,7 +2100,7 @@ function Detail({
               {row.name}
             </Truncate>
           </div>
-          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-emerald-300">
+          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]">
             {row.status}
           </span>
         </div>

@@ -52,16 +52,16 @@ const KIND_DOT: Record<string, string> = {
   crit: "bg-red-400",
 };
 const BADGE_STYLE: Record<string, string> = {
-  Question: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  Réponse: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  "Handoff entrant": "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  "Handoff sortant": "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  "Garde-fou": "border-red-500/30 bg-red-500/15 text-red-300",
-  Outil: "border-cyan-500/30 bg-cyan-500/15 text-cyan-300",
+  Question: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  Réponse: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  "Handoff entrant": "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  "Handoff sortant": "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  "Garde-fou": "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  Outil: "border-cyan-500/30 bg-cyan-500/15 text-[var(--tessera-fg-teal)]",
 };
 const STATUS_BADGE: Record<string, string> = {
-  resolu: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  escalade: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  resolu: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  escalade: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
 };
 const STATUS_LABEL: Record<string, string> = { resolu: "Résolu", escalade: "Escalade" };
 const ALERT_TONE: Record<string, string> = {
@@ -69,8 +69,8 @@ const ALERT_TONE: Record<string, string> = {
   crit: "border-red-500/30 bg-red-500/10",
 };
 const ALERT_BADGE: Record<string, string> = {
-  warn: "border-amber-500/40 bg-amber-500/15 text-amber-300",
-  crit: "border-red-500/40 bg-red-500/15 text-red-300",
+  warn: "border-amber-500/40 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  crit: "border-red-500/40 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 
 export function AgentSynthese() {
@@ -657,7 +657,7 @@ function Prompts({ data, className }: { data: Data; className?: string }) {
                 {r.updated}
               </span>
             </span>
-            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.58rem] font-medium capitalize text-emerald-300">
+            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.58rem] font-medium capitalize text-[var(--tessera-fg-success)]">
               {r.status}
             </span>
           </li>
@@ -684,7 +684,7 @@ function Context({ data }: { data: Data }) {
           <span title={c.name} className="truncate">
             {c.name}
           </span>
-          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.55rem] font-medium capitalize text-emerald-300">
+          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.55rem] font-medium capitalize text-[var(--tessera-fg-success)]">
             {c.status}
           </span>
         </div>
@@ -723,7 +723,7 @@ function OpAlerts({ data }: { data: Data }) {
       ctaHref={a.ctaHref}
     >
       {a.items.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-[0.72rem] text-emerald-300">
+        <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-[0.72rem] text-[var(--tessera-fg-success)]">
           <CheckCircle2 className="h-4 w-4 shrink-0" /> Aucune alerte
         </div>
       ) : (

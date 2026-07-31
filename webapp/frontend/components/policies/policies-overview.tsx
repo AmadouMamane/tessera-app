@@ -29,9 +29,9 @@ import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const VSTATUS: Record<string, string> = {
   draft: "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
-  approved: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  active: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  canary: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  approved: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  active: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  canary: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
   archived:
     "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
 };
@@ -43,9 +43,9 @@ const VDOT: Record<string, string> = {
   archived: "bg-[var(--tessera-text-muted)]",
 };
 const ACTION_BADGE: Record<string, string> = {
-  deny: "border-red-500/30 bg-red-500/15 text-red-300",
-  allow: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  warn: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  deny: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  allow: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  warn: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
 };
 const TONE_TEXT: Record<string, string> = {
   ok: "text-[var(--tessera-fg-success)]",
@@ -443,8 +443,8 @@ function DiffYaml({ t, data, className }: { t: T; data: Data; className?: string
             key={`${i}-${l.text}`}
             className={cn(
               "px-1",
-              l.type === "added" && "bg-emerald-500/10 text-emerald-300",
-              l.type === "removed" && "bg-red-500/10 text-red-300",
+              l.type === "added" && "bg-emerald-500/10 text-[var(--tessera-fg-success)]",
+              l.type === "removed" && "bg-red-500/10 text-[var(--tessera-fg-danger)]",
               l.type === "context" && "text-[var(--tessera-text-muted)]",
             )}
           >

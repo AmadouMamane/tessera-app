@@ -25,8 +25,11 @@ const CELL_CLASS: Record<CellState, string> = {
   // Muted, outlined: green, but nothing to do with the model.
   "floor-pass":
     "border border-success-500/40 bg-transparent text-success-700/70 dark:text-success-400/60",
-  // Solid: the model earned this one.
-  "model-pass": "border border-transparent bg-success-500/80 font-semibold text-white",
+  // Solid: the model earned this one. OPAQUE and at the 700 shade, like the red cell
+  // below: at `success-500/80` the white glyph scored 1.9:1 on a light card — under even
+  // the 3:1 WCAG asks of non-text content — because 80 % of a bright green over white is
+  // a bright green. The darker, fully opaque fill reads on both themes.
+  "model-pass": "border border-transparent bg-success-700 font-semibold text-white",
   // Bright red, filled: a regression against having no model at all.
   "model-break": "border border-danger-500 bg-danger-500 font-semibold text-white",
   // Neither closes it.

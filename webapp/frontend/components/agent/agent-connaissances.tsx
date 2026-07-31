@@ -67,8 +67,8 @@ const KPI_TONE: Record<string, OverviewTone> = {
   hitrate: "success",
 };
 const STATUS_TONE: Record<string, string> = {
-  good: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  off: "border-red-500/30 bg-red-500/15 text-red-300",
+  good: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  off: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 
 // Tone keys are locale-stable; display labels come from i18n / the backend.
@@ -250,7 +250,7 @@ function AgentConnaissancesInner() {
       {mutError ? (
         <div
           role="alert"
-          className="flex items-center justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[0.74rem] text-red-200"
+          className="flex items-center justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[0.74rem] text-[var(--tessera-fg-danger)]"
         >
           <span>{mutError}</span>
           <button
@@ -1480,7 +1480,7 @@ function DetailPanel({
             type="button"
             disabled={pending || !key}
             onClick={() => key && onDetach(key)}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/5 px-3 py-2 text-[0.72rem] font-medium text-red-300 hover:bg-red-500/10 disabled:opacity-60"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/5 px-3 py-2 text-[0.72rem] font-medium text-[var(--tessera-fg-danger)] hover:bg-red-500/10 disabled:opacity-60"
           >
             {d.detach}
           </button>

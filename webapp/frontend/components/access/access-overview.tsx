@@ -34,8 +34,8 @@ import type { AccessOverviewPayload as AccessData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 const TYPE_BADGE: Record<string, string> = {
-  systeme: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  metier: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  systeme: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  metier: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
 };
 const STATUS_TEXT: Record<string, string> = {
   active: "text-[var(--tessera-fg-success)]",

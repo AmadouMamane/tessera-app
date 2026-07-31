@@ -42,10 +42,10 @@ const SEV_TEXT: Record<string, string> = {
   faible: "text-[var(--tessera-fg-info)]",
 };
 const STATUS_BADGE: Record<string, string> = {
-  rejouee: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  termine: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  encours: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  error: "border-red-500/30 bg-red-500/15 text-red-300",
+  rejouee: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  termine: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  encours: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  error: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 
 const TABS = [

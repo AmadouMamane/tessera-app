@@ -1219,7 +1219,7 @@ function ControlCasesTriage({
               className={cn(
                 "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
                 tab === k
-                  ? "border-blue-400/50 bg-blue-500/15 text-blue-200"
+                  ? "border-blue-400/50 bg-blue-500/15 text-[var(--tessera-fg-info)]"
                   : "border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]/40",
               )}
             >

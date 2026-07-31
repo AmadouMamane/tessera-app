@@ -34,9 +34,9 @@ type TT = ReturnType<typeof useTranslations<"table">>;
 type User = NonNullable<Data["users"]>[number];
 
 const BADGE: Record<string, string> = {
-  purple: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  blue: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  slate: "border-slate-500/30 bg-slate-500/15 text-slate-300",
+  purple: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  blue: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  slate: "border-slate-500/30 bg-slate-500/15 text-[var(--tessera-text-muted)]",
 };
 const STATUS: Record<string, { dot: string; text: string }> = {
   active: { dot: "bg-emerald-400", text: "text-[var(--tessera-fg-success)]" },

@@ -66,8 +66,8 @@ export function DemoCredentials({ accounts, selectedUsername, onSelect }: DemoCr
                 <span
                   className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl border ${
                     selected
-                      ? "border-emerald-300/30 bg-emerald-300/[0.1] text-emerald-200"
-                      : "border-white/[0.06] bg-[#00101f]/55 text-slate-300"
+                      ? "border-emerald-300/30 bg-emerald-300/[0.1] text-[var(--tessera-fg-success)]"
+                      : "border-white/[0.06] bg-[#00101f]/55 text-[var(--tessera-text-muted)]"
                   }`}
                 >
                   <RoleIcon className="h-3.5 w-3.5" />
@@ -75,7 +75,7 @@ export function DemoCredentials({ accounts, selectedUsername, onSelect }: DemoCr
                 <span
                   className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors ${
                     selected
-                      ? "border-emerald-300/35 bg-emerald-300/[0.12] text-emerald-200"
+                      ? "border-emerald-300/35 bg-emerald-300/[0.12] text-[var(--tessera-fg-success)]"
                       : "border-white/[0.06] text-transparent group-hover:border-white/[0.12]"
                   }`}
                 >

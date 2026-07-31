@@ -47,9 +47,9 @@ import { cn } from "@/lib/cn";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const SEV_BADGE: Record<string, string> = {
-  critique: "border-red-500/30 bg-red-500/15 text-red-300",
-  eleve: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  moyen: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  critique: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  eleve: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  moyen: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
 };
 const SEV_DOT: Record<string, string> = {
   critique: "bg-red-400",
@@ -352,9 +352,9 @@ function CreateIncidentForm({
 }
 
 const DUR_STATUS_BADGE: Record<string, string> = {
-  ouvert: "border-red-500/30 bg-red-500/15 text-red-300",
-  en_cours: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  resolu: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  ouvert: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  en_cours: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  resolu: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
 };
 
 /** Lot 10 — the declared incidents: durable rows, attributed lifecycle acts. */
@@ -1197,9 +1197,9 @@ function RoleBadge({ role }: { role: string }) {
 function AutoStatus({ status, t }: { status: string; t: T }) {
   const cls =
     status === "actif"
-      ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+      ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
       : status === "dryrun"
-        ? "border-amber-500/30 bg-amber-500/15 text-amber-300"
+        ? "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]"
         : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]";
   return (
     <span

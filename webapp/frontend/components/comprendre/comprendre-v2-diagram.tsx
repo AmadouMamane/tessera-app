@@ -52,25 +52,25 @@ const agentTones = [
   {
     border: "border-sky-400/30",
     glow: "from-sky-400/18",
-    icon: "border-sky-300/35 bg-sky-400/15 text-sky-200",
+    icon: "border-sky-300/35 bg-sky-400/15 text-[var(--tessera-fg-info)]",
     text: "text-[var(--tessera-fg-info)]",
   },
   {
     border: "border-cyan-400/25",
     glow: "from-cyan-400/16",
-    icon: "border-cyan-300/35 bg-cyan-400/15 text-cyan-200",
+    icon: "border-cyan-300/35 bg-cyan-400/15 text-[var(--tessera-fg-teal)]",
     text: "text-[var(--tessera-fg-teal)]",
   },
   {
     border: "border-emerald-400/25",
     glow: "from-emerald-400/16",
-    icon: "border-emerald-300/35 bg-emerald-400/15 text-emerald-200",
+    icon: "border-emerald-300/35 bg-emerald-400/15 text-[var(--tessera-fg-success)]",
     text: "text-[var(--tessera-fg-success)]",
   },
   {
     border: "border-violet-400/25",
     glow: "from-violet-400/16",
-    icon: "border-violet-300/35 bg-violet-400/15 text-violet-200",
+    icon: "border-violet-300/35 bg-violet-400/15 text-[var(--tessera-fg-accent)]",
     text: "text-[var(--tessera-fg-accent)]",
   },
 ] satisfies VisualTone[];
@@ -127,7 +127,7 @@ export function ComprendreV2Diagram() {
 
       <header className="relative flex items-center border-[var(--tessera-border)] border-b bg-[rgba(4,15,27,0.3)] px-5 py-5 sm:px-7">
         <div className="flex min-w-0 items-center gap-4">
-          <span className="relative grid size-11 shrink-0 place-items-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-200 shadow-[0_0_28px_rgba(34,211,238,0.12)]">
+          <span className="relative grid size-11 shrink-0 place-items-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-[var(--tessera-fg-teal)] shadow-[0_0_28px_rgba(34,211,238,0.12)]">
             <Orbit className="size-6" aria-hidden="true" />
           </span>
           <div className="min-w-0">
@@ -227,7 +227,7 @@ function BusinessPanel({ column }: { column: DiagramColumn }) {
               key={item}
               className="flex min-h-14 items-center gap-3 rounded-xl border border-sky-400/20 bg-sky-400/[0.055] px-3 py-3 text-xs leading-5 text-[var(--tessera-text)]"
             >
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-sky-300/25 bg-sky-400/10 text-sky-200">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-sky-300/25 bg-sky-400/10 text-[var(--tessera-fg-info)]">
                 <Icon className="size-4" aria-hidden="true" />
               </span>
               <span>{item}</span>
@@ -273,7 +273,7 @@ function AgentPanel({ column, foundations }: { column: DiagramColumn; foundation
                   className={`absolute inset-x-0 top-0 h-14 bg-gradient-to-b ${tone?.glow ?? "from-emerald-400/15"} to-transparent`}
                 />
                 <span
-                  className={`relative mx-auto grid size-12 place-items-center rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.2)] ${tone?.icon ?? "border-emerald-300/35 bg-emerald-400/15 text-emerald-200"}`}
+                  className={`relative mx-auto grid size-12 place-items-center rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.2)] ${tone?.icon ?? "border-emerald-300/35 bg-emerald-400/15 text-[var(--tessera-fg-success)]"}`}
                 >
                   <Icon className="size-6" aria-hidden="true" />
                 </span>
@@ -323,7 +323,7 @@ function CockpitPanel({ column }: { column: DiagramColumn }) {
               key={item}
               className="flex min-h-12 items-center gap-3 rounded-xl border border-violet-400/20 bg-violet-400/[0.055] px-3 py-2.5 text-xs leading-5 text-[var(--tessera-text)]"
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-violet-300/20 bg-violet-400/10 text-violet-200">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-violet-300/20 bg-violet-400/10 text-[var(--tessera-fg-accent)]">
                 <Icon className="size-4" aria-hidden="true" />
               </span>
               <span>{item}</span>
@@ -352,9 +352,9 @@ function PanelHeading({
   featured?: boolean;
 }) {
   const iconStyles = {
-    sky: "border-sky-300/25 bg-sky-400/10 text-sky-200",
-    emerald: "border-emerald-300/30 bg-emerald-400/12 text-emerald-200",
-    violet: "border-violet-300/25 bg-violet-400/10 text-violet-200",
+    sky: "border-sky-300/25 bg-sky-400/10 text-[var(--tessera-fg-info)]",
+    emerald: "border-emerald-300/30 bg-emerald-400/12 text-[var(--tessera-fg-success)]",
+    violet: "border-violet-300/25 bg-violet-400/10 text-[var(--tessera-fg-accent)]",
   };
   const textStyles = {
     sky: "text-[var(--tessera-fg-info)]",
@@ -455,7 +455,7 @@ function AuditLedger({ title, body }: { title: string; body: string }) {
         className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-amber-300 via-emerald-300 to-sky-400"
       />
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-amber-400/25 bg-amber-400/10 text-amber-200">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-amber-400/25 bg-amber-400/10 text-[var(--tessera-fg-warning)]">
           <ScrollText className="size-4" aria-hidden="true" />
         </span>
         <div>

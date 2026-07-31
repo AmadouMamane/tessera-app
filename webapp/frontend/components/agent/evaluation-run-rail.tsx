@@ -112,8 +112,8 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
           className={cn(
             "rounded-full border px-2 py-0.5 text-[10px] font-medium",
             live
-              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-              : "border-amber-500/40 bg-amber-500/10 text-amber-300",
+              ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
+              : "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]",
           )}
         >
           {live

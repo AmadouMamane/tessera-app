@@ -48,10 +48,10 @@ type DetailT = NonNullable<Data["details"]>[number];
 
 const KPI_ICONS: LucideIcon[] = [FileCode2, Boxes, Languages, Hash, Ruler, Languages];
 const TYPE_TONE: Record<string, string> = {
-  orch: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  syn: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  rep: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  mem: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  orch: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  syn: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  rep: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  mem: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
 };
 const QUALITY_DOT: Record<string, string> = {
   good: "bg-emerald-400",
@@ -828,7 +828,7 @@ function Detail({ detail, className }: { detail: DetailT | null; className?: str
               </Truncate>
             </span>
           </div>
-          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-emerald-300">
+          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]">
             {d.status}
           </span>
         </div>

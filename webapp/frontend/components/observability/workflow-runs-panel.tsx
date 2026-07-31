@@ -144,17 +144,17 @@ function codeLabel(code: string): string {
 
 function eventTone(event: BusinessEvent): string {
   if (event.event_name === "action.blocked" || event.decision === "blocked") {
-    return "border-red-500/35 bg-red-500/10 text-red-200";
+    return "border-red-500/35 bg-red-500/10 text-[var(--tessera-fg-danger)]";
   }
   if (
     event.event_name === "validation.requested" ||
     event.decision === "validation_required" ||
     event.artifact_status === "pending_validation"
   ) {
-    return "border-amber-400/35 bg-amber-400/10 text-amber-100";
+    return "border-amber-400/35 bg-amber-400/10 text-[var(--tessera-fg-warning)]";
   }
   if (event.event_name.includes("artifact") || event.event_name.includes("message")) {
-    return "border-sky-400/30 bg-sky-400/10 text-sky-100";
+    return "border-sky-400/30 bg-sky-400/10 text-[var(--tessera-fg-info)]";
   }
   return "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text)]";
 }

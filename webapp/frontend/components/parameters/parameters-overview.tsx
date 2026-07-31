@@ -29,10 +29,10 @@ import { cn } from "@/lib/cn";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const PARAM_STATUS: Record<string, string> = {
-  active: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  draft: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  deprecated: "border-red-500/30 bg-red-500/15 text-red-300",
-  override: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  active: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  draft: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  deprecated: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  override: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
 };
 const CAT_ICON: Record<string, typeof ShieldCheck> = {
   security_policies: ShieldCheck,
@@ -267,7 +267,7 @@ function ConfigVersionBar({ t, data }: { t: T; data: Data }) {
         {t("version.active")}{" "}
         <span className="font-mono font-semibold text-[var(--tessera-text)]">{c.version}</span>
       </span>
-      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/15 px-1.5 py-0.5 text-[0.62rem] text-emerald-300">
+      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/15 px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-fg-success)]">
         {c.env}
       </span>
       <Sep />
@@ -445,7 +445,7 @@ function UsagePolicies({ t, data }: { t: T; data: Data }) {
 }
 
 const MODEL_STATUS: Record<string, string> = {
-  active: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+  active: "border-emerald-500/30 bg-emerald-500/10 text-[var(--tessera-fg-success)]",
   available:
     "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
 };

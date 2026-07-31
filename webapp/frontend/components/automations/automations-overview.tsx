@@ -39,16 +39,16 @@ import { cn } from "@/lib/cn";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const SEV_BADGE: Record<string, string> = {
-  critique: "border-red-500/30 bg-red-500/15 text-red-300",
-  eleve: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+  critique: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  eleve: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
   moyen: "border-yellow-500/30 bg-yellow-500/15 text-[var(--tessera-fg-warning)]",
-  faible: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  faible: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
 };
 const RESULT_BADGE: Record<string, string> = {
-  success: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  fail: "border-red-500/30 bg-red-500/15 text-red-300",
-  blocked: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  approb: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  success: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  fail: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  blocked: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  approb: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
 };
 
 const TABS = ["overview", "rules", "executions", "approvals", "audit"] as const;
@@ -435,8 +435,8 @@ function Catalogue({
                   <Badge
                     className={
                       row.mode === "auto"
-                        ? "border-sky-500/30 bg-sky-500/15 text-sky-300"
-                        : "border-amber-500/30 bg-amber-500/15 text-amber-300"
+                        ? "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]"
+                        : "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]"
                     }
                   >
                     {t(`mode.${row.mode}`)}
@@ -680,7 +680,7 @@ function AutomationsRail({
         info={<KpiInfo k="zone.governance" title={t("zone.governance").replace(/^G · /, "")} />}
       >
         <div className="flex flex-col gap-2 text-[0.7rem]">
-          <span className="inline-flex w-fit items-center gap-1.5 rounded border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] text-emerald-300">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] text-[var(--tessera-fg-success)]">
             <ShieldCheck className="h-3 w-3" /> {t("gov.dualControl")}
           </span>
           <div>

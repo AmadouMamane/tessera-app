@@ -47,11 +47,11 @@ const KPI_ICONS: LucideIcon[] = [
   FlaskConical,
 ];
 const SEV_TONE: Record<string, string> = {
-  crit: "border-red-500/30 bg-red-500/15 text-red-300",
-  high: "border-orange-500/30 bg-orange-500/15 text-orange-300",
-  mod: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  maj: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  low: "border-sky-500/30 bg-sky-500/15 text-sky-300",
+  crit: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  high: "border-orange-500/30 bg-orange-500/15 text-[var(--tessera-fg-warning)]",
+  mod: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  maj: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  low: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
 };
 const MODE_DOT: Record<string, string> = {
   block: "bg-red-400",
@@ -198,7 +198,7 @@ export function AgentGardeFous() {
       />
 
       {mutError ? (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[0.72rem] text-red-300">
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[0.72rem] text-[var(--tessera-fg-danger)]">
           {t("mutationError")}
         </div>
       ) : null}
@@ -1015,7 +1015,7 @@ function Overrides({ data }: { data: Data }) {
                   {it.category} · {it.mode}
                 </span>
               </span>
-              <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[0.62rem] font-medium text-amber-200">
+              <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[0.62rem] font-medium text-[var(--tessera-fg-warning)]">
                 {it.status}
               </span>
             </li>
@@ -1077,8 +1077,8 @@ function Detail({
             className={cn(
               "shrink-0 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
               d.status_tone === "good"
-                ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                : "border-red-500/30 bg-red-500/15 text-red-300",
+                ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
+                : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
             )}
           >
             {d.status}

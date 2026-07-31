@@ -38,12 +38,12 @@ const STATUS: Record<string, { dot: string; text: string }> = {
   error: { dot: "bg-red-400", text: "text-[var(--tessera-fg-danger)]" },
 };
 const CAT_BADGE: Record<string, string> = {
-  llm: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  retrieval: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  guard: "border-red-500/30 bg-red-500/15 text-red-300",
-  secrets: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  observability: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  infra: "border-slate-500/30 bg-slate-500/15 text-slate-300",
+  llm: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  retrieval: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  guard: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+  secrets: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  observability: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  infra: "border-slate-500/30 bg-slate-500/15 text-[var(--tessera-text-muted)]",
 };
 type SortKey = "name" | "category" | "status" | "environment";
 

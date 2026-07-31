@@ -54,9 +54,9 @@ import type { SourcesOverview as SourcesData } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 const CLASS_BADGE: Record<string, string> = {
-  public: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  internal: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  confidential: "border-violet-500/30 bg-violet-500/15 text-violet-300",
+  public: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  internal: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  confidential: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
 };
 const STATUS: Record<"active" | "disabled", { dot: string; text: string }> = {
   active: { dot: "bg-emerald-400", text: "text-[var(--tessera-fg-success)]" },
@@ -1605,8 +1605,8 @@ function QualityTable({
                       className={cn(
                         "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.6rem]",
                         warn
-                          ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                          : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+                          ? "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]"
+                          : "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]",
                       )}
                     >
                       {warn ? (
@@ -1830,7 +1830,7 @@ function VersionsBlock({
         <History className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {versions.title}
       </div>
       {versions.drift?.changed ? (
-        <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.64rem] text-amber-300">
+        <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.64rem] text-[var(--tessera-fg-warning)]">
           <AlertTriangle className="h-3 w-3" /> {versions.drift.label}
         </p>
       ) : null}

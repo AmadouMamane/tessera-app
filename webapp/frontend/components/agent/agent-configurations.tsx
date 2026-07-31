@@ -506,7 +506,7 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
               {b.runtime.label}
             </span>
             <CardInfo ns="agentConfigurations" k="behavior_runtime" title={b.runtime.label} />
-            <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1.5 text-[0.62rem] text-cyan-300">
+            <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1.5 text-[0.62rem] text-[var(--tessera-fg-teal)]">
               {b.runtime.backend}
             </span>
             <span className="text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
@@ -654,7 +654,7 @@ function SelectRow({ field, ctx }: { field: Field; ctx: Ctx }) {
         {field.badge ? (
           // ADR 0032 — the select says HOW it takes effect (prompt injection /
           // hard token cap), next to the control — never silently cosmetic.
-          <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1 text-[0.58rem] text-cyan-300">
+          <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1 text-[0.58rem] text-[var(--tessera-fg-teal)]">
             {field.badge}
           </span>
         ) : null}
@@ -703,7 +703,7 @@ function SliderRow({ item, ctx, runtime }: { item: Slider; ctx: Ctx; runtime?: R
         {!applied && runtime ? (
           <span
             title={runtime.note}
-            className="rounded border border-amber-400/40 bg-amber-400/10 px-1 text-[0.58rem] text-amber-300"
+            className="rounded border border-amber-400/40 bg-amber-400/10 px-1 text-[0.58rem] text-[var(--tessera-fg-warning)]"
           >
             {t("notApplied", { backend: runtime.backend })}
           </span>
@@ -838,8 +838,8 @@ function Tags({
           className={cn(
             "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-[0.68rem] font-medium disabled:opacity-50",
             tags.archived
-              ? "border-emerald-500/45 bg-emerald-500/10 text-emerald-300"
-              : "border-red-500/45 bg-red-500/10 text-red-300",
+              ? "border-emerald-500/45 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
+              : "border-red-500/45 bg-red-500/10 text-[var(--tessera-fg-danger)]",
           )}
         >
           <Trash2 className="h-3.5 w-3.5" /> {tags.archive}
@@ -874,8 +874,8 @@ function Status({ data }: { data: Data }) {
           className={cn(
             "rounded-full px-2.5 py-1 text-[0.65rem] font-semibold",
             s.badge_tone === "crit"
-              ? "bg-red-500/15 text-red-300"
-              : "bg-emerald-500/15 text-emerald-300",
+              ? "bg-red-500/15 text-[var(--tessera-fg-danger)]"
+              : "bg-emerald-500/15 text-[var(--tessera-fg-success)]",
           )}
         >
           {s.badge}
@@ -1056,7 +1056,7 @@ function Panel({ children }: { children: ReactNode }) {
 
 function Badge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[0.62rem] font-semibold text-cyan-300">
+    <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[0.62rem] font-semibold text-[var(--tessera-fg-teal)]">
       {children}
     </span>
   );

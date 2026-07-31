@@ -126,7 +126,7 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
           />
           <div className="mx-auto w-full max-w-[460px]">
             <div className="mb-6 flex items-center gap-4 border-b border-[var(--border-subtle)] pb-6">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-emerald-300/25 bg-emerald-300/[0.08] text-emerald-200 shadow-[0_0_28px_rgba(45,212,191,0.08)]">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-emerald-300/25 bg-emerald-300/[0.08] text-[var(--tessera-fg-success)] shadow-[0_0_28px_rgba(45,212,191,0.08)]">
                 <ShieldCheck className="h-6 w-6" />
               </div>
               <div className="min-w-0">

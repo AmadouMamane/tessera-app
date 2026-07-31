@@ -38,15 +38,15 @@ import { cn } from "@/lib/cn";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const PACK_BADGE: Record<string, string> = {
-  signe: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  exporte: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  attente: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  echec: "border-red-500/30 bg-red-500/15 text-red-300",
+  signe: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  exporte: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  attente: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  echec: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 const EXP_BADGE: Record<string, string> = {
-  ok: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  degraded: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  down: "border-red-500/30 bg-red-500/15 text-red-300",
+  ok: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  degraded: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  down: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 const TABS = ["overview", "evidencePacks", "exporters", "chain", "destinations"] as const;
 type Tab = (typeof TABS)[number];

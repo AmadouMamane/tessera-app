@@ -47,9 +47,9 @@ export function useDismiss(open: boolean, onClose: () => void) {
 // ── Shared tone maps ─────────────────────────────────────────────────────────
 
 export const TYPE_TONE: Record<string, string> = {
-  sys: "border-violet-500/30 bg-violet-500/15 text-violet-300",
-  tpl: "border-sky-500/30 bg-sky-500/15 text-sky-300",
-  agt: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  sys: "border-violet-500/30 bg-violet-500/15 text-[var(--tessera-fg-accent)]",
+  tpl: "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]",
+  agt: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
 };
 
 export const SEVERITY_PILL: Record<string, string> = {

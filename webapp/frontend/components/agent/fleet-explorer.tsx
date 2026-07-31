@@ -41,9 +41,9 @@ const HEALTH_DOT: Record<string, string> = {
 
 // Release verdict tone — colour tied to gate conformity (eval-gate-policy §6).
 const RELEASE_TONE: Record<string, string> = {
-  good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-  crit: "border-red-500/40 bg-red-500/10 text-red-300",
-  bad: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+  good: "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]",
+  crit: "border-red-500/40 bg-red-500/10 text-[var(--tessera-fg-danger)]",
+  bad: "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]",
   muted:
     "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)]",
 };
@@ -276,8 +276,8 @@ function AudienceBadge({ external, t }: { external: boolean; t: T }) {
       className={cn(
         "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.05em]",
         external
-          ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
-          : "border-amber-500/40 bg-amber-500/10 text-amber-300",
+          ? "border-sky-500/40 bg-sky-500/10 text-[var(--tessera-fg-info)]"
+          : "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]",
       )}
     >
       {external ? <Users className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
@@ -408,7 +408,7 @@ function BusinessSignalLabel({ agent, tBusiness }: { agent: FleetAgent; tBusines
   const label = tBusiness.has(signal.key) ? tBusiness(signal.key) : signal.key;
   return (
     <span
-      className="inline-flex min-w-0 items-center gap-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-emerald-200"
+      className="inline-flex min-w-0 items-center gap-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]"
       title={`${label} · ${value}`}
     >
       <span className="truncate">{label}</span>
@@ -421,7 +421,7 @@ function PendingBusinessChip({ agent, t }: { agent: FleetAgent; t: T }) {
   const n = agent.pending_business_items ?? 0;
   if (n <= 0) return null;
   return (
-    <span className="inline-flex items-center rounded-md border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-amber-200">
+    <span className="inline-flex items-center rounded-md border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-warning)]">
       {t("pendingBusinessItems", { n })}
     </span>
   );

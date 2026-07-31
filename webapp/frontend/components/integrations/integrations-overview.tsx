@@ -39,9 +39,9 @@ const STATUS: Record<"active" | "warning" | "error" | "disabled", { dot: string;
   disabled: { dot: "bg-[var(--tessera-text-muted)]", text: "text-[var(--tessera-text-muted)]" },
 };
 const CRIT_BADGE: Record<string, string> = {
-  low: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
-  medium: "border-amber-500/30 bg-amber-500/15 text-amber-300",
-  high: "border-red-500/30 bg-red-500/15 text-red-300",
+  low: "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]",
+  medium: "border-amber-500/30 bg-amber-500/15 text-[var(--tessera-fg-warning)]",
+  high: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 const DETAIL_TABS = ["overview", "policy", "security", "usage"] as const;
 const POLICY_HREF = "/configurer/garde-fous";
