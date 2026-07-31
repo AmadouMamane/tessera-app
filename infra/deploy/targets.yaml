@@ -31,15 +31,20 @@ canonical: tessera
 
 # Which target the canonical host points at. The one-field switch. Must be a key of `targets`.
 #
-# `gcp` is what the DNS actually does today: tessera.<domain> CNAMEs to ghs.googlehosted.com and
-# has its own Cloud Run domain mapping to the SAME service as gcp.<domain> — two hostnames on one
-# service, hence identical by construction. Decided 2026-07-31: flip the canonical to `onprem`
-# (measured faster from the operator's network — the SSR reaches the agent locally instead of
-# across the ngrok tunnel). That flip is a Cloudflare change (add tessera.<domain> as a public
-# hostname on the tunnel, drop the ghs CNAME + the Cloud Run domain mapping); this field moves to
-# `onprem` in the same breath, not before — deploy-diff LABELS its output with it, and a label
-# that names a target the traffic does not take is exactly the kind of quiet lie ADR 0026 is about.
-primary: gcp
+# Flipped to `onprem` on 2026-07-31: tessera.<domain> is now a PUBLIC HOSTNAME on the Cloudflare
+# tunnel (CNAME -> 4121f86b-….cfargotunnel.com, proxied), so the canonical URL is served by the
+# full-local front sitting next to the agent. Verified at the edge before this line moved —
+# `server: cloudflare` and `/api/version` reporting `target: onprem` — because deploy-diff LABELS
+# its output with this field, and a label naming a target the traffic does not take is exactly the
+# kind of quiet lie ADR 0026 is about. It said `onprem` for weeks while the traffic went to Cloud
+# Run; the fix was to make the field follow the DNS, not to trust it.
+#
+# Why onprem: measured 2026-07-31 from the operator's network, onprem beats gcp on all 8 cockpit
+# pages (+23 to +307 ms of TTFB) because its SSR reaches the agent over the local Docker network
+# instead of the ngrok tunnel. The cost of the choice: the public canonical URL now depends on the
+# on-prem host being up. gcp.<domain> stays live as the second target, and deploy-diff keeps both
+# honest.
+primary: onprem
 
 # The frontend artifact, tagged by commit SHA. Cloud Run pulls exactly this; the full-local target
 # currently builds the SAME SOURCE SHA locally instead (arm64 native, tagged tessera-frontend:local),
