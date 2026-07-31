@@ -1,11 +1,21 @@
 # Deployment targets — the single source of truth for the two ways to run the cockpit (ADR 0048).
 #
-# DNS is at OVH. Each host below is ONE CNAME you add at OVH (see docs/runbook-two-targets.md):
-#   onprem.<domain>   ->  your ngrok custom-domain edge     (full-local front, ADR 0045)
-#   gcp.<domain>      ->  ghs.googlehosted.com              (Cloud Run domain mapping)
+# DNS is at CLOUDFLARE (nameservers jose/bella.ns.cloudflare.com; moved off OVH on 2026-07-30).
+# Each host below is ONE record in the Cloudflare zone:
+#   onprem.<domain>       ->  the Cloudflare TUNNEL (`cloudflared`, origin http://frontend:3000)
+#                             — the full-local front, ADR 0045. NOT ngrok: this file said ngrok
+#                             until 2026-07-31 and that stale line taught the wrong topology.
+#   gcp.<domain>          ->  ghs.googlehosted.com   (Cloud Run domain mapping, DNS-only)
 #   <canonical>.<domain>  ->  the `primary` target's host   (the switch — the public URL people use;
 #                                                            a bare-apex CNAME is invalid DNS, so the
 #                                                            switch lives on this subdomain)
+#
+# The two tunnels are on DIFFERENT LAYERS and must not be confused (verified 2026-07-31 by dig +
+# response headers + the ngrok agent's own API):
+#   * Cloudflare Tunnel = browser -> front, for the ONPREM target only.
+#   * ngrok             = front -> AGENT, used by Cloud Run to reach the on-prem agent. It serves
+#                         no front at all; it exposes :8099. Both gcp. and the canonical use it
+#                         whenever they are served by Cloud Run.
 #
 # This file carries NON-SECRET wiring only. Tokens/keys stay in the gitignored env files
 # (frontend.secret.env, infra/docker/fulllocal.env, infra/docker/cutover.env).
@@ -13,29 +23,43 @@
 # `make deploy-diff` reads this file, fetches https://<host>/api/version on every host (the two
 # targets AND the canonical), and refuses if the served build SHAs differ or a host is unreachable.
 
-# The OVH apex domain. Hosts derive as <subdomain>.<domain>.
+# The apex domain (zone hosted at Cloudflare). Hosts derive as <subdomain>.<domain>.
 domain: amadoumamane.fr
 
-# The public host people use — where the canonical CNAME lives (the switch). It currently serves an
-# OLD build; deploy-diff exists precisely to make that staleness a loud verdict.
+# The public host people use — where the canonical CNAME lives (the switch).
 canonical: tessera
 
 # Which target the canonical host points at. The one-field switch. Must be a key of `targets`.
-primary: onprem
+#
+# `gcp` is what the DNS actually does today: tessera.<domain> CNAMEs to ghs.googlehosted.com and
+# has its own Cloud Run domain mapping to the SAME service as gcp.<domain> — two hostnames on one
+# service, hence identical by construction. Decided 2026-07-31: flip the canonical to `onprem`
+# (measured faster from the operator's network — the SSR reaches the agent locally instead of
+# across the ngrok tunnel). That flip is a Cloudflare change (add tessera.<domain> as a public
+# hostname on the tunnel, drop the ghs CNAME + the Cloud Run domain mapping); this field moves to
+# `onprem` in the same breath, not before — deploy-diff LABELS its output with it, and a label
+# that names a target the traffic does not take is exactly the kind of quiet lie ADR 0026 is about.
+primary: gcp
 
-# The ONE frontend image both targets run, tagged by commit SHA. CI builds+pushes
-# tessera-frontend:<sha>; full-local pulls this exact tag (export TESSERA_FRONTEND_IMAGE=<...>).
-# `deploy-diff` confirms every live host serves this SHA. CHANGE-ME until the first parity deploy.
-image: tessera-frontend:CHANGE-ME
+# The frontend artifact, tagged by commit SHA. Cloud Run pulls exactly this; the full-local target
+# currently builds the SAME SOURCE SHA locally instead (arm64 native, tagged tessera-frontend:local),
+# because the registry image is linux/amd64 for Cloud Run. So the two targets share a SHA, not a
+# digest — and that is precisely what `deploy-diff` verifies: the SHA each host SERVES (/api/version),
+# never the image bytes. Bump on every parity deploy.
+image: europe-west1-docker.pkg.dev/tessera-aurore/tessera/frontend:e9f6c9fa
 
 targets:
   onprem:
     # Full-local: front co-located with the agent (ADR 0045), reached over the local Docker network.
     subdomain: onprem
-    front: ngrok-custom-domain # OVH CNAME -> ngrok edge; run: ngrok http --domain=onprem.<domain> 3090
+    front: cloudflare-tunnel # `tessera-cloudflared`, origin http://frontend:3000 (container :3090)
     agent_url: http://agent:8080 # local Docker network — no tunnel in the hot path (the point of 0045)
   gcp:
-    # Cloud Run: front on GCP, reaching the on-prem agent across the public tunnel.
+    # Cloud Run: front on GCP (project tessera-aurore, service tessera-frontend, europe-west1),
+    # reaching the on-prem agent across the public tunnel.
     subdomain: gcp
-    front: cloud-run-domain-mapping # OVH CNAME -> ghs.googlehosted.com
-    agent_url: https://CHANGE-ME.ngrok-free.dev # the public tunnel to the on-prem agent (:8099)
+    front: cloud-run-domain-mapping # Cloudflare CNAME (DNS-only) -> ghs.googlehosted.com
+    # The ngrok free-tier edge in front of the agent's :8099. It is a RESERVED free URL, but it is
+    # still tied to the running `ngrok http 8099 --url=...` process: if that process is replaced
+    # without the flag, this value goes stale and Cloud Run's SSR loses the agent.
+    agent_url: https://goatskin-bunkbed-tutu.ngrok-free.dev
