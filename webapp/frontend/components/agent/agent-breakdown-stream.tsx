@@ -1,7 +1,4 @@
-import { Suspense } from "react";
-
 import { AgentBreakdown } from "@/components/agent/agent-breakdown";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { DeclaredLensRoute } from "@/lib/page-nature";
 import { loadDeclaredLens } from "@/lib/server/agent-lens";
 import { loadFleet } from "@/lib/server/fleet";
@@ -25,23 +22,7 @@ interface StreamedAgentBreakdownProps {
 }
 
 /**
- * A fallback that reserves the breakdown card's footprint so the streamed content
- * causes no layout jump when it swaps in.
- */
-function BreakdownFallback() {
-  return (
-    <section
-      className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4"
-      aria-busy="true"
-    >
-      <Skeleton className="h-3.5 w-44" />
-      <Skeleton className="mt-3 h-28 w-full" />
-    </section>
-  );
-}
-
-/**
- * The blocking part of the per-agent breakdown, isolated so it can stream.
+ * The blocking part of the per-agent breakdown.
  *
  * It performs the two tunnel reads that dominate a GOUVERNER page's TTFB — the fleet
  * aggregate then the per-agent lens fan-out — and renders the SAME `<AgentBreakdown>`
@@ -65,18 +46,23 @@ async function BreakdownContent({
 }
 
 /**
- * The per-agent breakdown, streamed behind `<Suspense>`.
+ * The per-agent breakdown, rendered INLINE (blocking SSR) — deliberately NOT streamed.
  *
- * The page shell, the agent-scope filter and the client dashboards paint at the first
- * round-trip; the fleet + 6× snapshot fan-out arrives as a second chunk in place of the
- * skeleton. The rendered DOM — and therefore every asserted value — is identical to the
- * pre-streaming version; only the paint order changes. Nothing here caches across
- * requests, so a mutation is still reflected on the very next render.
+ * It used to stream behind `<Suspense>` with a skeleton fallback, so the shell painted
+ * first and the card swapped in a beat later. That cost a visible flash on CLIENT
+ * navigation: every soft nav to (or between) these pages mounted a FRESH Suspense
+ * boundary, so the card VANISHED into its skeleton for the ~0.3s of the fleet + lens
+ * fan-out, then reappeared. Blocking instead folds the fleet + lens read into the page's
+ * own render — exactly what `vue-ensemble` does with its `await loadFleet` — so the router
+ * holds the previous page until the new one is ready and the card is present, populated,
+ * at first paint. No skeleton, no flash. The read is fast enough post-snapshot (ADR 0046)
+ * to block on, and correctness is unchanged: the rendered DOM is identical to the streamed
+ * version, and nothing caches across requests, so a mutation is still reflected on the
+ * very next render.
+ *
+ * The name is retained on purpose: `page-nature` scans page source for the literal
+ * `<StreamedAgentBreakdown` token as the marker that a page declares a lens route.
  */
 export function StreamedAgentBreakdown(props: StreamedAgentBreakdownProps) {
-  return (
-    <Suspense fallback={<BreakdownFallback />}>
-      <BreakdownContent {...props} />
-    </Suspense>
-  );
+  return <BreakdownContent {...props} />;
 }

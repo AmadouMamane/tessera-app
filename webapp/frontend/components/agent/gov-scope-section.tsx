@@ -17,12 +17,13 @@ type SearchParams = Record<string, string | string[] | undefined>;
  * from the AGENT switcher. Pass `signalsNote={false}` where the page below is
  * already fully per-agent and the banner would be misleading.
  *
- * The filter, the hero and the note render at the first round-trip; the breakdown
+ * The filter, the hero and the note render from the page's own props; the breakdown
  * table — the fleet read plus the per-agent lens fan-out, the page's slowest tunnel
- * work — is STREAMED behind `<Suspense>` (see `StreamedAgentBreakdown`) so the section
- * paints immediately and the table fills in. The section takes the page's `route` and
- * search params rather than a pre-loaded `fleet`/`lens`, so the loads happen off the
- * page's critical TTFB path.
+ * work — is rendered INLINE by `<StreamedAgentBreakdown>` (blocking SSR, no `<Suspense>`
+ * skeleton). It once streamed behind a fallback, but that flashed the card into a
+ * skeleton on every CLIENT navigation; blocking folds the read into the page render (as
+ * `vue-ensemble` does) so the card is present, populated, at first paint. The section
+ * still takes the page's `route` and search params rather than a pre-loaded `fleet`/`lens`.
  *
  * `perAgent` declares whether the PAGE BODY responds to the agent filter:
  * - `true` (default): the dashboard below reads the selected agent's own signals
