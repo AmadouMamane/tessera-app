@@ -133,7 +133,7 @@ export function WindowControl({
           </button>
         ))}
       </div>
-      <div className="flex h-9 max-w-[520px] shrink-0 items-center gap-3 rounded-lg border border-[rgba(96,194,242,0.26)] bg-[rgba(96,194,242,0.05)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(160,220,250,0.09)]">
+      <div className="flex h-9 min-w-0 max-w-[520px] items-center gap-3 rounded-lg border border-[rgba(96,194,242,0.26)] bg-[rgba(96,194,242,0.05)] px-3 text-xs text-[var(--tessera-text)] shadow-[inset_0_1px_0_rgba(160,220,250,0.09)]">
         <CalendarDays className="h-4 w-4 shrink-0 text-gold-600 dark:text-gold-400" />
         {loading || !windowStart || !windowEnd ? (
           <Skeleton className="h-4 w-64" />

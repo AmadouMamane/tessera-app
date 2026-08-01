@@ -136,7 +136,9 @@ function Panel({
         </CardTitle>
         {action}
       </CardHeader>
-      <CardContent className="flex-1">{children}</CardContent>
+      {/* `overflow-x-auto`: a mapping table with five columns is 151px wider than
+          this panel at 768px, and the card clips. Scroll beats losing columns. */}
+      <CardContent className="flex-1 overflow-x-auto">{children}</CardContent>
     </Card>
   );
 }

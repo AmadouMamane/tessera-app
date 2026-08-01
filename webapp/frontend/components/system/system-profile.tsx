@@ -120,7 +120,7 @@ function CommandBar({
       <span className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--tessera-text)]">
         <Server className="h-4 w-4 text-[var(--tessera-fg-info)]" /> {t("subtitle")}
       </span>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button
           size="sm"
           variant="outline"
@@ -164,7 +164,7 @@ function SystemKpi({
         </div>
       ) : (
         <div className="mt-1 flex items-center gap-2">
-          <span className="whitespace-nowrap text-[1.25rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
+          <span className="text-[1.25rem] font-semibold leading-tight text-[var(--tessera-text-strong)]">
             {kpi.value}
           </span>
           {kpi.delta ? (

@@ -526,7 +526,7 @@ function CommandBar({
           icon: TAB_ICONS[tab],
         }))}
       />
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {/* Lot 10 — the durable incident store exists: creation is a real
             governed act. Playbooks attach PER incident (on each declared row),
             so the free-floating launch button is gone, not disabled. */}

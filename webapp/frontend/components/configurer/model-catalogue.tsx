@@ -112,7 +112,7 @@ export function ModelCatalogue() {
       <ServingModels />
 
       <div className={cn("grid gap-2.5", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
-        <div className="overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+        <div className="overflow-x-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           <table
             className="w-full border-collapse text-left text-[0.72rem]"
             data-testid="models-table"

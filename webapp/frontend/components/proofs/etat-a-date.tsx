@@ -314,7 +314,7 @@ export function EtatADate() {
         ) : (
           <div className="flex-1" />
         )}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* The active time-mode, always visible (registre §5): Live or the
               reconstruction instant, worded by the backend (`meta.as_of_label`). */}
           {data?.meta?.as_of_label ? (
@@ -386,7 +386,7 @@ export function EtatADate() {
       ) : (
         <div className="grid gap-2.5 xl:grid-cols-12">
           {/* Left content column: reconstruction + governance cards + sources */}
-          <div className="flex flex-col gap-2.5 xl:col-span-8">
+          <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
             <div className="grid gap-2.5 md:grid-cols-3">
               <Reconstructed data={data} className="md:col-span-1" />
               <Original data={data} className="md:col-span-2" />
@@ -428,7 +428,7 @@ export function EtatADate() {
           </div>
 
           {/* Right rail: chronology, integrity, audit pieces, snapshots */}
-          <div className="flex flex-col gap-2.5 xl:col-span-4">
+          <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-4">
             <Chronology data={data} />
             <Integrity data={data} />
             <Handoffs data={data} />
