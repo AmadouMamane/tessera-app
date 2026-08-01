@@ -1,4 +1,4 @@
-"""C1, corrected: which rendered strings have NO translation mechanism at all.
+"""Which rendered strings have NO translation mechanism at all.
 
 The first pass counted 780 and was wrong twice over: it split multi-line `pick(locale, fr, de,
 en)` calls across lines and flagged each argument, and it flagged the in-TS locale catalogues
@@ -6,16 +6,23 @@ en)` calls across lines and flagged each argument, and it flagged the in-TS loca
 
 This version strips both before counting, and carries its own controls: a string known to be
 inside a `pick()` must NOT be reported, and a string known to be hardcoded MUST be.
+
+This module is the SINGLE implementation of the detector. `tests/unit/test_i18n_mechanism.py`
+imports `scan()` from here rather than re-deriving it, because two copies of one derivation is
+the exact defect this whole chantier exists to remove — a ratchet that re-implements its probe
+would be the first thing to diverge from it.
 """
 
 from __future__ import annotations
 
 import json
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 
-FRONT = Path("/Users/amadou/local/apps/tessera-app/tessera/webapp/frontend")
+#: The frontend tree, derived from this file's location — never an absolute developer path.
+FRONT = Path(__file__).resolve().parents[2] / "webapp" / "frontend"
 
 # `pick(locale, "…", "…", "…")` — possibly spanning several lines.
 PICK = re.compile(r"pick\(\s*locale\s*,.*?\)\s*(?=[,;)\]}\n])", re.S)
@@ -31,12 +38,13 @@ SAFE = re.compile(r"(from \"|from '|import |// |describe\(|it\(|expect\(|console
 LITERAL = re.compile(r"(?:`[^`\n]{4,}`|\"[^\"\n]{4,}\"|'[^'\n]{4,}')")
 
 
-def sources() -> list[Path]:
+def sources(front: Path = FRONT) -> list[Path]:
+    """Every rendered `.ts`/`.tsx` under the frontend, tests and vendored trees excluded."""
     out: list[Path] = []
     for pat in ("*.tsx", "*.ts"):
         out += [
             p
-            for p in FRONT.rglob(pat)
+            for p in front.rglob(pat)
             if "node_modules" not in p.parts
             and ".next" not in p.parts
             and "e2e" not in p.parts
@@ -45,29 +53,45 @@ def sources() -> list[Path]:
     return sorted(out)
 
 
-def scan() -> tuple[list[dict[str, object]], list[str], int]:
+def scan_text(rel: str, raw: str) -> tuple[list[dict[str, object]], int]:
+    """Scan one source. Returns its bare French literals and its `pick()` count.
+
+    Exposed separately so the ratchet can mutation-test the detector on a synthetic source
+    instead of on the tree — a witness that cannot be shown a defect it must catch is not a
+    witness, it is a hope.
+    """
+    if CATALOGUE_PATH.search(rel):
+        return [], 0
+    picks = len(PICK.findall(raw))
+    # Blank out pick() calls so their arguments are not counted as hardcoded.
+    masked = PICK.sub(lambda m: " " * len(m.group(0)), raw)
+    hits: list[dict[str, object]] = []
+    for i, line in enumerate(masked.splitlines(), 1):
+        if COMMENTish.match(line) or SAFE.search(line):
+            continue
+        for lit in LITERAL.findall(line):
+            body = lit[1:-1]
+            if not FRENCH.search(body):
+                continue
+            if body.startswith(("http", "/", "var(", "--", "@/")):
+                continue
+            hits.append({"file": rel, "line": i, "literal": body[:90]})
+    return hits, picks
+
+
+def scan(front: Path = FRONT) -> tuple[list[dict[str, object]], list[str], int]:
+    """Scan the whole frontend. Returns (bare literals, catalogue files, `pick()` calls)."""
     hits: list[dict[str, object]] = []
     catalogues: list[str] = []
     pick_calls = 0
-    for path in sources():
-        raw = path.read_text(encoding="utf-8")
-        rel = str(path.relative_to(FRONT))
+    for path in sources(front):
+        rel = str(path.relative_to(front))
         if CATALOGUE_PATH.search(rel):
             catalogues.append(rel)
             continue
-        pick_calls += len(PICK.findall(raw))
-        # blank out pick() calls so their arguments are not counted as hardcoded
-        masked = PICK.sub(lambda m: " " * len(m.group(0)), raw)
-        for i, line in enumerate(masked.splitlines(), 1):
-            if COMMENTish.match(line) or SAFE.search(line):
-                continue
-            for lit in LITERAL.findall(line):
-                body = lit[1:-1]
-                if not FRENCH.search(body):
-                    continue
-                if body.startswith(("http", "/", "var(", "--", "@/")):
-                    continue
-                hits.append({"file": rel, "line": i, "literal": body[:90]})
+        file_hits, picks = scan_text(rel, path.read_text(encoding="utf-8"))
+        hits += file_hits
+        pick_calls += picks
     return hits, catalogues, pick_calls
 
 
@@ -75,9 +99,9 @@ def main() -> int:
     hits, catalogues, picks = scan()
 
     print("CONTRÔLES DE LA SONDE")
-    inside_pick = [h for h in hits if h["file"].endswith("historique-tabs.tsx") and h["line"] == 160]
-    print(f"  [-] ligne 160 de historique-tabs (DANS un pick) signalée ? {bool(inside_pick)}  → doit être False")
-    hard = [h for h in hits if h["file"].endswith("agent-console.tsx")]
+    inside = [h for h in hits if str(h["file"]).endswith("historique-tabs.tsx") and h["line"] == 160]
+    print(f"  [-] ligne 160 de historique-tabs (DANS un pick) signalée ? {bool(inside)}  → False")
+    hard = [h for h in hits if str(h["file"]).endswith("agent-console.tsx")]
     print(f"  [+] agent-console.tsx a des littéraux nus ? {bool(hard)}  → doit être True")
     print()
 
@@ -88,17 +112,15 @@ def main() -> int:
     print(f"APPELS pick(locale, fr, de, en) — 2e mécanisme de traduction : {picks}")
     print()
     print(f"CHAÎNES FRANÇAISES SANS AUCUN MÉCANISME : {len(hits)}")
-    for f, n in Counter(str(h["file"]) for h in hits).most_common(20):
+    for f, n in Counter(str(h["file"]) for h in hits).most_common():
         print(f"    {n:4d}  {f}")
     print()
     print("  échantillon :")
     for h in hits[:25]:
         print(f"    {h['file']}:{h['line']}  «{h['literal']}»")
 
-    Path(
-        "/private/tmp/claude-501/-Users-amadou-local-apps-tessera-app-tessera/"
-        "c6235f23-6ea3-4480-b157-384a6eb7f591/scratchpad/i18n_gaps.json"
-    ).write_text(json.dumps(hits, indent=1, ensure_ascii=False), encoding="utf-8")
+    if len(sys.argv) > 1:
+        Path(sys.argv[1]).write_text(json.dumps(hits, indent=1, ensure_ascii=False), "utf-8")
     return 0
 
 
