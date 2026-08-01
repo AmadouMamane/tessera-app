@@ -990,11 +990,17 @@ function CriticalControlsTable({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                  <th className="px-4 py-2 font-medium">{t("signal")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("state")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("current")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("target")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("trend")}</th>
+                  {/* Content-fitting means NOT wrapping. Once one column absorbs the card's
+                    leftover width, every other column collapses to its narrowest legal box —
+                    and for a text column that is "wrap at every space": «Fidélité (objectif de
+                    service)» over three lines, «≤ 0.10%» over two. A minimum on the identity
+                    column and `whitespace-nowrap` on the short ones is what "fits its content"
+                    actually means here. */}
+                  <th className="min-w-[13rem] px-4 py-2 font-medium">{t("signal")}</th>
+                  <th className="py-2 pr-4 font-medium whitespace-nowrap">{t("state")}</th>
+                  <th className="py-2 pr-4 font-medium whitespace-nowrap">{t("current")}</th>
+                  <th className="py-2 pr-4 font-medium whitespace-nowrap">{t("target")}</th>
+                  <th className="w-28 py-2 pr-4 font-medium">{t("trend")}</th>
                   {/* The slack column. Every other column here is sized by its content; this
                     one absorbs whatever the card has left over. It is the right one to carry it
                     because it holds a sentence — put the slack on the short "Action" link
@@ -1085,7 +1091,7 @@ function CriticalControlsTable({
                         historically (a live current-policy probe) keeps an honest
                         tooltip instead of a second visible badge. */}
                       <td
-                        className="py-2 pr-4 tabular-nums"
+                        className="py-2 pr-4 whitespace-nowrap tabular-nums"
                         title={
                           historyMode && !c.noData && !c.asOfCapable ? tt("liveTooltip") : undefined
                         }
@@ -1102,8 +1108,10 @@ function CriticalControlsTable({
                           </div>
                         ) : null}
                       </td>
-                      <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
-                      <td className="w-24 py-2 pr-4">
+                      <td className="py-2 pr-4 whitespace-nowrap text-[var(--muted-foreground)]">
+                        {c.target}
+                      </td>
+                      <td className="w-28 py-2 pr-4">
                         {/* Permanent axis on every row → constant cell height. Three distinct
                           states, and they are three different things to tell the operator: a
                           drawable curve; a control the window CANNOT reach, which says which
@@ -1117,13 +1125,21 @@ function CriticalControlsTable({
                           >
                             {tnc(c.noCurve)}
                           </span>
-                        ) : (
+                        ) : hasDrawableCurve(c.trend ?? []) ? (
                           <MetricSparkline
-                            values={hasDrawableCurve(c.trend ?? []) ? (c.trend ?? []) : []}
-                            tone={hasDrawableCurve(c.trend ?? []) ? c.state.tone : "neutral"}
+                            values={c.trend ?? []}
+                            tone={c.state.tone}
                             className="h-6"
                             height={26}
                           />
+                        ) : (
+                          // The third state, and the one that was rendering as a bare axis:
+                          // the control CAN be windowed, and the window simply does not hold
+                          // two measured buckets yet. An empty chart slot reads as "this metric
+                          // never moves"; saying "no history yet" is the same fact, legible.
+                          <span className="text-[0.6rem] text-[var(--muted-foreground)]">
+                            {tnc("tooShort")}
+                          </span>
                         )}
                       </td>
                       <td className="py-2 pr-4 text-[var(--muted-foreground)]">

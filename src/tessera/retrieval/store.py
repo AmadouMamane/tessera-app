@@ -21,7 +21,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from tessera.retrieval.embeddings import embedding_dimension
+from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 from tessera.settings import LanguageCode, get_settings
 from tessera.sql import safe_identifier
 
@@ -142,6 +142,21 @@ async def ensure_schema() -> None:
             );
             """
         )
+        # The embedding SPACE each row was built in, recorded at ingestion.
+        #
+        # Without these two columns `/observability/embedding-skew` had no corpus fingerprint
+        # to compare against, so it passed the ACTIVE embedder as both sides — a comparison of
+        # a thing with itself, which cannot fail. It reported `corpus_known: false` rather than
+        # a clean bill, which was honest, but it measured nothing. Now it can.
+        #
+        # Added with IF NOT EXISTS rather than in the CREATE above: the table already exists in
+        # every deployment, and rows ingested before this stay NULL — which is the truthful
+        # record of "we did not write it down at the time", and is what lets the probe say
+        # which part of the corpus it can and cannot vouch for.
+        await cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS embedding_model text;")
+        await cur.execute(
+            f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS embedding_dimension integer;"
+        )
         await cur.execute(
             f"""
             CREATE INDEX IF NOT EXISTS {table}_embedding_hnsw
@@ -162,6 +177,7 @@ async def insert_documents(records: Sequence[DocumentRecord]) -> int:
     if not records:
         return 0
     table = safe_identifier(get_settings().postgres.vector_table)
+    model = embedding_model_name()
     async with _connection() as conn, conn.cursor() as cur:
         rows = [
             (
@@ -172,14 +188,21 @@ async def insert_documents(records: Sequence[DocumentRecord]) -> int:
                 r.text,
                 r.embedding,
                 json.dumps(r.metadata),
+                model,
+                # The dimension comes from the VECTOR, not from the config. It is a fact about
+                # the row; the model name is a claim about how the row was made. Recording the
+                # config's dimension would make the two columns agree by construction and the
+                # skew check would go back to comparing a thing with itself.
+                len(r.embedding),
             )
             for r in records
         ]
         await cur.executemany(
             f"""
             INSERT INTO {table}
-                (corpus, source, chunk_id, language, text, embedding, metadata)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (corpus, source, chunk_id, language, text, embedding, metadata,
+                 embedding_model, embedding_dimension)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (corpus, source, chunk_id) DO NOTHING;
             """,
             rows,
@@ -239,3 +262,32 @@ async def knn_search(
         )
         for row in rows
     ]
+
+
+async def corpus_fingerprints() -> list[tuple[str | None, int | None, int]]:
+    """The embedding spaces the corpus actually holds: ``[(model, dimension, rows)]``.
+
+    This is what turns `/observability/embedding-skew` from a tautology into a measurement. It
+    reads what the STORE recorded, not what the process is configured to use — the whole point
+    being that those two can differ, silently, after a profile flip or a model swap.
+
+    A ``(None, None, n)`` group is rows ingested before the fingerprint columns existed. That
+    is neither a skew nor a clean bill: it is the part of the corpus the probe cannot vouch
+    for, and it travels separately so the surface can say exactly that (ADR 0026 — a witness
+    that cannot see reports where the blindness is).
+
+    Returns:
+        One tuple per distinct space, largest group first. Empty when the corpus is empty.
+    """
+    table = safe_identifier(get_settings().postgres.vector_table)
+    async with _connection() as conn, conn.cursor() as cur:
+        await cur.execute(
+            f"""
+            SELECT embedding_model, embedding_dimension, count(*)::int
+              FROM {table}
+             GROUP BY embedding_model, embedding_dimension
+             ORDER BY count(*) DESC;
+            """  # noqa: S608 — fixed, validated identifier; no caller string reaches the SQL
+        )
+        rows = await cur.fetchall()
+    return [(r[0], r[1], int(r[2])) for r in rows]

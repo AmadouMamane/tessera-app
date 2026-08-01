@@ -827,20 +827,20 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-              <th className="px-3 py-2 font-medium">{ts("col.signal")}</th>
-              <th className="px-3 py-2 font-medium">{ts("col.state")}</th>
-              <th className="px-3 py-2 font-medium">{ts("col.value")}</th>
-              <th className="px-3 py-2 font-medium">{ts("col.target")}</th>
-              {/* The slack column — the one holding a sentence, not the one holding a link.
-                See the note in `overview-dashboard.tsx`. */}
+              {/* One column absorbs the card's leftover width; every other column is sized by
+                its own content, which means it must not WRAP that content. Both halves are
+                needed: with only the first, the auto layout spread the slack over five of
+                these seven columns (gutters of 51, 26, 37, 30, 67 px under identical `px-3`);
+                with only the second, «≤ 0.10%» and «100% (3/3)» broke across two lines in
+                columns 69 px wide. Measured in `e2e/table-rhythm.spec.ts`. */}
+              <th className="min-w-[11rem] px-3 py-2 font-medium">{ts("col.signal")}</th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.state")}</th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.value")}</th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.target")}</th>
+              {/* The slack column — the one holding a sentence, not the one holding a link. */}
               <th className="w-full px-3 py-2 font-medium">{ts("col.action")}</th>
-              <th className="px-3 py-2 font-medium">{ts("col.role")}</th>
-              {/* The slack column — see the note in `agent-breakdown.tsx`. A `w-full` table
-                gives its leftover width to whichever columns the auto layout picks, and it
-                spread it over five of the seven here: gutters of 51, 26, 37, 30, 67 px under
-                identical `px-3` padding. Naming the last column as the one that absorbs it
-                makes every other column content-sized and every gutter equal. */}
-              <th className="px-3 py-2 font-medium">{ts("col.case")}</th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.role")}</th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.case")}</th>
             </tr>
           </thead>
           <tbody>
@@ -850,12 +850,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 <td className="px-3 py-2">
                   <Badge tone={TONE_BADGE[c.tone]}>{ts(`state.${c.tone}`)}</Badge>
                 </td>
-                <td className={`px-3 py-2 tabular-nums ${toneText(c.tone)}`}>{c.value}</td>
-                <td className="px-3 py-2 tabular-nums text-[var(--muted-foreground)]">
+                <td className={`px-3 py-2 tabular-nums whitespace-nowrap ${toneText(c.tone)}`}>
+                  {c.value}
+                </td>
+                <td className="px-3 py-2 tabular-nums whitespace-nowrap text-[var(--muted-foreground)]">
                   {c.target}
                 </td>
+                {/* The one column that MAY wrap: it holds a sentence. */}
                 <td className="px-3 py-2 text-[var(--muted-foreground)]">{c.action}</td>
-                <td className="px-3 py-2">{c.role}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{c.role}</td>
                 <td className="px-3 py-2 font-mono text-[0.7rem] text-[var(--tessera-green)]">
                   {c.case}
                 </td>

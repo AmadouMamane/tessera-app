@@ -164,6 +164,13 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/agent/recouvrement.py::_has_payment_options_intent": "intent",
     "src/tessera/agent/recouvrement.py::_has_schedule_intent": "intent",
     "src/tessera/agent/recouvrement.py::_has_summary_intent": "intent",
+    # Classifies what the customer ASKED FOR — "does this text request something irreversible" —
+    # in the same shape as the three intent predicates above it. It decides nothing that passes
+    # or fails: the turn is refused either way, and the escalation that follows is decided by
+    # `_blocked_turn`, which reads this the way the others are read. Its reasoning lives in
+    # `tests/unit/test_refusal_is_not_a_dead_end.py`, which holds BOTH directions with the
+    # catalogue's own prompts — case 55 must escalate, case 06 must not.
+    "src/tessera/agent/router.py::requests_irreversible_action": "intent",
     "src/tessera/api/routes/audit.py::_matches_text": "filter",
     "src/tessera/api/routes/audit.py::_within": "filter",
     # Row-level predicate over one timestamp: "is this inside the selected window". It decides

@@ -230,10 +230,22 @@ def observability_toxicity(
 
 
 @router.get("/observability/embedding-skew")
-def observability_embedding_skew() -> dict[str, object]:
-    """Embedding-version skew between the query-time and corpus embedders (#64)."""
+async def observability_embedding_skew() -> dict[str, object]:
+    """Embedding-version skew between the query-time and corpus embedders (#64).
+
+    The corpus side is now READ BACK from the store: every row ingested since 2026-08-01
+    records the model it was embedded with and the width of the vector it produced. Before
+    that the active embedder stood in as the corpus reference — equal by construction, a
+    comparison of a thing with itself that could not fail — and the report said so with
+    ``corpus_known: false`` rather than pretending to a clean bill.
+
+    Rows ingested before the columns existed carry no fingerprint. They are neither a skew nor
+    a clearance: they are counted as ``unfingerprinted`` and reported separately, because the
+    part of the corpus a witness cannot see is the part it must name.
+    """
     from tessera.observability.embedding_skew import EmbeddingFingerprint
     from tessera.retrieval.embeddings import embedding_dimension
+    from tessera.retrieval.store import corpus_fingerprints
     from tessera.settings import LLMProfile, get_settings
 
     settings = get_settings()
@@ -242,13 +254,40 @@ def observability_embedding_skew() -> dict[str, object]:
     else:
         query_model = settings.ollama.embedding_model
     query = EmbeddingFingerprint(model=query_model, dimension=embedding_dimension())
-    # Until the corpus records its own fingerprint at ingestion, the active embedder stands in
-    # as the corpus reference — equal by CONSTRUCTION, so this comparison cannot fail and its
-    # "no skew" was never a finding. `corpus_known=False` makes the report say so: severity
-    # reads "unknown", not "none". The endpoint still surfaces the live embedding identity and
-    # would still catch a query-side profile flip once the store records its own fingerprint.
-    corpus = query
-    return asdict(embedding_skew_mod.detect_skew(query, corpus, corpus_known=False))
+
+    groups: list[tuple[str | None, int | None, int]] = []
+    try:
+        groups = await corpus_fingerprints()
+    except Exception as exc:  # an unreachable store is a blind spot, never a clean bill
+        sys.stderr.write(f"tessera.observability.embedding_skew: corpus unreadable: {exc}\n")
+        report = asdict(embedding_skew_mod.detect_skew(query, query, corpus_known=False))
+        return {**report, "corpus_rows": 0, "unfingerprinted_rows": 0, "spaces": []}
+
+    known = [(m, d, n) for m, d, n in groups if m is not None and d is not None]
+    unfingerprinted = sum(n for m, d, n in groups if m is None or d is None)
+    if not known:
+        # An empty corpus and a wholly unfingerprinted one are both "cannot compare", and both
+        # must stay distinguishable from "compared, and fine".
+        report = asdict(embedding_skew_mod.detect_skew(query, query, corpus_known=False))
+        return {
+            **report,
+            "corpus_rows": unfingerprinted,
+            "unfingerprinted_rows": unfingerprinted,
+            "spaces": [],
+        }
+
+    # The LARGEST recorded space is the corpus reference — a partial re-ingestion under a new
+    # model leaves two spaces, and the majority one is what queries mostly land against. Every
+    # space travels in `spaces` so a split corpus is visible rather than averaged away.
+    model, dimension, _ = known[0]
+    corpus = EmbeddingFingerprint(model=str(model), dimension=int(dimension))
+    report = asdict(embedding_skew_mod.detect_skew(query, corpus, corpus_known=True))
+    return {
+        **report,
+        "corpus_rows": sum(n for _, _, n in groups),
+        "unfingerprinted_rows": unfingerprinted,
+        "spaces": [{"model": m, "dimension": d, "rows": n} for m, d, n in known],
+    }
 
 
 @router.get("/observability/firewall-efficacy")

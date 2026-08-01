@@ -734,7 +734,9 @@ export function SignalsTable({
                                   className="h-5"
                                   height={20}
                                 />
-                              ) : null}
+                              ) : (
+                                <span className="text-[0.6rem]">{tnc("tooShort")}</span>
+                              )}
                               <span className="block text-[0.6rem]">
                                 {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
                               </span>

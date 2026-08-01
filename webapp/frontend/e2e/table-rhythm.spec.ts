@@ -165,17 +165,26 @@ for (const path of PAGES) {
     ).toBeGreaterThan(0);
 
     for (const [index, cells] of tables.entries()) {
-      const gaps = gutters(cells);
-      // The LAST gap is excluded from the uniformity claim: the final column often carries an
-      // action link that is deliberately right-aligned, and its lead-in is a layout choice
-      // rather than a rhythm. Everything before it is rhythm.
-      const inner = gaps.slice(0, -1).filter((g) => g >= 0);
-      if (inner.length < 2) continue;
-      const spread = Math.max(...inner) - Math.min(...inner);
+      const gaps = gutters(cells).filter((g) => g >= 0);
+      if (gaps.length < 3) continue;
+      // ONE column may absorb the card's leftover width, and exactly one. That is the design
+      // rule: every column is sized by its content, and whatever the card has left over goes
+      // to a single named column — the one holding a sentence, so the slack reads as prose
+      // rather than as a hole. Drop the widest gutter (that column's); the rest must be one
+      // value.
+      //
+      // Written this way after a version that demanded the LAST gutter be the odd one. That
+      // forces the slack onto whichever column happens to be last: on Contrôles critiques
+      // that is a one-word "Investiguer" link, and giving it the leftover wrapped the impact
+      // sentence beside it onto three lines. On Sécurité the slack sits on "Action demandée",
+      // the fifth of seven columns, and the old rule reported a defect that was the design.
+      const rhythm = [...gaps].sort((a, b) => a - b).slice(0, -1);
+      const spread = Math.max(...rhythm) - Math.min(...rhythm);
       expect(
         spread,
-        `table ${index} on ${path}: gutters ${JSON.stringify(inner)} px between columns ` +
-          `[${cells.map((c) => c.text).join(" | ")}] — they should be one value, not ${new Set(inner).size}`,
+        `table ${index} on ${path}: gutters ${JSON.stringify(gaps)} px between columns ` +
+          `[${cells.map((c) => c.text).join(" | ")}] — one column may absorb the slack; the ` +
+          `other ${rhythm.length} should be one value, and they are ${new Set(rhythm).size}`,
       ).toBeLessThanOrEqual(TOLERANCE_PX);
     }
   });
@@ -206,3 +215,54 @@ test("the rhythm holds at a laptop width, not only at a wide desktop", async ({ 
     ).toBeLessThanOrEqual(TOLERANCE_PX);
   }
 });
+
+/**
+ * A short cell must not wrap.
+ *
+ * This is the other half of "widths fit their content", and the half that is easy to break
+ * while fixing the first: once ONE column absorbs the card's leftover width, every other
+ * column collapses to its narrowest legal box, and for a text column that box is "wrap at
+ * every space". The first pass at the slack column did exactly that — «≤ 0.10%» broke across
+ * two lines and «Fidélité (objectif de service)» across three.
+ *
+ * Twelve characters is the threshold because it separates the two cases cleanly: a threshold,
+ * a percentage, a state badge, a count are all shorter; a sentence in the impact column is
+ * far longer and SHOULD wrap. A two-word header like «Valeur actuelle» sits between them and
+ * is deliberately left alone — forcing it onto one line would widen the column past its data.
+ */
+const SHORT_TEXT_CHARS = 12;
+
+for (const path of PAGES) {
+  test(`${path} — no short cell is narrower than its own text`, async ({ page }) => {
+    await login(page);
+    await page.goto(path);
+    await page.waitForSelector("table thead tr th:nth-child(2)", { timeout: 30_000 });
+    await settle(page);
+
+    const wrapped = await page.evaluate((limit) => {
+      const offenders: string[] = [];
+      for (const cell of Array.from(document.querySelectorAll("table td, table th"))) {
+        const text = (cell.textContent ?? "").trim();
+        if (text.length === 0 || text.length > limit || !text.includes(" ")) continue;
+        // A cell that stacks BLOCK children is meant to be several lines — a value with its
+        // detail line beneath it. Only inline content can be said to have wrapped.
+        if (cell.querySelector("div, p, ul, table")) continue;
+        // Measure the TEXT, not the cell. A `<td>` is as tall as its ROW, so a threshold
+        // sitting beside a three-line signal name reports as wrapped while rendering on one
+        // line — which is what the first version of this probe did, on every page at once.
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        const ink = range.getBoundingClientRect();
+        const line = Number.parseFloat(getComputedStyle(cell).lineHeight) || 16;
+        if (ink.height > line * 1.6) {
+          offenders.push(
+            `«${text}» in a ${Math.round(cell.getBoundingClientRect().width)}px column`,
+          );
+        }
+      }
+      return offenders;
+    }, SHORT_TEXT_CHARS);
+
+    expect(wrapped, `short cells wrapped: ${wrapped.join("; ")}`).toEqual([]);
+  });
+}

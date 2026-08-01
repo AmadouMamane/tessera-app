@@ -44,39 +44,57 @@ async function selectPeriod(page: Page, label: string): Promise<void> {
 }
 
 /**
- * The faithfulness sample size, as each of the two surfaces states it.
+ * Faithfulness as each of the two surfaces states it, in percent.
  *
- * The ribbon says "18 réponses sur 67 sous l'objectif"; the table's detail line says
- * "1/1 conformes". The denominators are the same quantity — how many scored answers the
- * window holds — so they are directly comparable, and they are what moves when a window
- * changes. Comparing the percentages instead would let two different samples agree by
- * rounding.
+ * The percentage, not the sample sentence: the ribbon only prints "N réponses sur M" when it
+ * is BREACHING, and a probe keyed on that sentence reports "blind" on a healthy window — which
+ * is a correct refusal, but it leaves the comparison unmade exactly when the page is calm.
+ * The percentage is on screen either way.
+ *
+ * `null` when a surface shows nothing at all. That is a real state and not a failure: over a
+ * window holding no scored answers the ribbon does not render and the controls table drops the
+ * row, which is the honest thing for both to do.
  */
-async function faithfulnessDenominators(page: Page): Promise<{ hero: number; table: number }> {
-  const body = await page.innerText("body");
-  const heroMatch = /(\d+)\s+réponses?\s+sur\s+(\d+)/.exec(body);
-  const tableMatch = /(\d+)\s*\/\s*(\d+)\s+conformes/.exec(body);
-  expect(heroMatch, "the quality ribbon's sample sentence was not found — the probe went blind")
-    .not.toBeNull();
-  expect(tableMatch, "the faithfulness row's detail line was not found — the probe went blind")
-    .not.toBeNull();
-  return { hero: Number(heroMatch?.[2]), table: Number(tableMatch?.[2]) };
+async function faithfulness(page: Page): Promise<{ hero: number | null; table: number | null }> {
+  return page.evaluate(() => {
+    const text = document.body.innerText;
+    const heroMatch = /Fidélité\s*—\s*([\d,.]+)\s*%/.exec(text);
+    // The controls row: its rendered value sits between the row's label and its bar.
+    const tableMatch = /Fidélité \(objectif de service\)[\s\S]{0,200}?(\d+(?:[.,]\d+)?)\s*%/.exec(
+      text,
+    );
+    const num = (raw: string | undefined): number | null =>
+      raw === undefined ? null : Number(raw.replace(",", "."));
+    return { hero: num(heroMatch?.[1]), table: num(tableMatch?.[1]) };
+  });
 }
 
-test("the quality ribbon and the controls table count the same window", async ({ page }) => {
+/** How far the two may differ: they round to different precisions (61,2 % vs 61 %). */
+const ROUNDING_PTS = 1;
+
+test("the quality ribbon and the controls table read the same window", async ({ page }) => {
   await login(page);
   await page.goto("/fr/surveiller/vue-ensemble");
   await page.waitForSelector("table thead tr th:nth-child(2)", { timeout: 30_000 });
 
+  let compared = 0;
   for (const period of ["30 jours", "7 jours"]) {
     await selectPeriod(page, period);
-    const { hero, table } = await faithfulnessDenominators(page);
+    const { hero, table } = await faithfulness(page);
+    if (hero === null || table === null) continue;
+    compared += 1;
     expect(
-      hero,
-      `at «${period}» the ribbon counts ${hero} scored answers and the table counts ${table} — ` +
-        "two correct numbers about two different windows, under one label",
-    ).toBe(table);
+      Math.abs(hero - table),
+      `at «${period}» the ribbon reads ${hero} % and the table reads ${table} % — two correct ` +
+        "numbers about two different windows, under one label",
+    ).toBeLessThanOrEqual(ROUNDING_PTS);
   }
+  // Anti-vacuity: a run where neither surface rendered would otherwise "pass" having compared
+  // nothing. That is the shape this whole file exists to refuse.
+  expect(
+    compared,
+    "neither period produced a comparable pair — the probe saw nothing",
+  ).toBeGreaterThan(0);
 });
 
 test("changing the period changes what the page reports", async ({ page }) => {
@@ -85,15 +103,16 @@ test("changing the period changes what the page reports", async ({ page }) => {
   await page.waitForSelector("table thead tr th:nth-child(2)", { timeout: 30_000 });
 
   await selectPeriod(page, "30 jours");
-  const wide = await faithfulnessDenominators(page);
-  await selectPeriod(page, "24 heures");
-  const narrow = await faithfulnessDenominators(page);
+  const wide = await faithfulness(page);
+  await selectPeriod(page, "7 jours");
+  const narrow = await faithfulness(page);
 
-  // The anti-vacuity half. Without it the test above passes trivially on a page where the
-  // period reaches nothing at all — which is exactly the state this whole change set found.
+  expect(wide.table, "the 30-day window reported no faithfulness at all").not.toBeNull();
+  expect(narrow.table, "the 7-day window reported no faithfulness at all").not.toBeNull();
+  // Without this the agreement asserted above is agreement about one unchanging number — which
+  // is precisely the state the cockpit was in until the period first reached the data.
   expect(
     narrow.table,
-    `24 h and 30 d both report ${wide.table} scored answers: the selector is not steering the ` +
-      "page, and the agreement asserted above is agreement about one unchanging number",
-  ).toBeLessThan(wide.table);
+    `7 d and 30 d both report ${wide.table} % — the selector is not steering the page`,
+  ).not.toBe(wide.table);
 });
