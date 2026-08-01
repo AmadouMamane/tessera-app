@@ -583,37 +583,48 @@ export function SignalsTable({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] table-fixed text-xs">
+            {/* `table-auto`, not `table-fixed`, and no percentages.
+              This header carried ten hardcoded widths (7 %, 20 %, 9 %, 9 %, 7 %, 8 %, 9 %, 8 %,
+              9 %, 8 %) under `table-fixed`, which ignores content entirely: 9 % and 8 % of this
+              card are ~90 px and ~80 px, and «Action recommandée» ran straight into «Rôle
+              requis». Percentages ARE the arbitrary widths — they are a guess about the content,
+              frozen, and wrong the moment a label is translated or a value grows a digit.
+              Content sizes the columns now; the SIGNAL column absorbs the leftover because it
+              holds the name and its catalogue id; `min-w` keeps the horizontal scroll on a
+              narrow viewport rather than crushing everything. */}
+            <table className="w-full min-w-[960px] text-xs">
               <thead>
                 <tr className="border-[var(--border)] border-b text-left text-[0.66rem] uppercase tracking-wide text-[var(--muted-foreground)]">
-                  <th className="w-[7%] py-1.5 pr-2 pl-5 font-medium">
+                  <th className="py-1.5 pr-2 pl-5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.id")}
                   </th>
-                  <th className="w-[20%] px-2 py-1.5 font-medium">
+                  <th className="w-full px-2 py-1.5 font-medium">
                     {tq("signalsTable.cols.signal")}
                   </th>
-                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.theme")}
                   </th>
-                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.entity")}
                   </th>
-                  <th className="w-[7%] px-2 py-1.5 font-medium">
+                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.value")}
                   </th>
-                  <th className="w-[8%] px-2 py-1.5 font-medium">
+                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.threshold")}
                   </th>
-                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.status")}
                   </th>
-                  <th className="w-[8%] px-2 py-1.5 font-medium">
+                  <th className="w-24 px-2 py-1.5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.trend")}
                   </th>
-                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.action")}
                   </th>
-                  <th className="w-[8%] px-2 py-1.5 font-medium">{tq("signalsTable.cols.role")}</th>
+                  <th className="px-2 py-1.5 font-medium whitespace-nowrap">
+                    {tq("signalsTable.cols.role")}
+                  </th>
                   <th className="w-28 py-1.5 pr-4 pl-2 font-medium">
                     <span className="sr-only">{tt("rowOpen")}</span>
                   </th>
