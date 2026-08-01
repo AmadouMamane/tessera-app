@@ -840,6 +840,11 @@
   "fleet": [
     {
       "available": true,
+      "window": {
+        "period_days": null,
+        "since": null,
+        "until": null
+      },
       "agents": [
         {
           "id": "support-client",
@@ -1218,6 +1223,11 @@
     },
     {
       "available": true,
+      "window": {
+        "period_days": null,
+        "since": null,
+        "until": null
+      },
       "agents": [
         {
           "id": "support-client",
@@ -1596,6 +1606,11 @@
     },
     {
       "available": true,
+      "window": {
+        "period_days": null,
+        "since": null,
+        "until": null
+      },
       "agents": [
         {
           "id": "support-client",

@@ -93,6 +93,8 @@ NEVER_SCORED_AGENT: FleetAgent = {
 }
 
 VIRGIN_FLEET: FleetData = {
+    # All history — what the un-parameterised Flotte route answers.
+    "window": {"period_days": None, "since": None, "until": None},
     "agents": [VIRGIN_AGENT, NEVER_SCORED_AGENT],
     "org": {"conversations": 0, "turns": 0},
     "naive_sum_conversations": 0,

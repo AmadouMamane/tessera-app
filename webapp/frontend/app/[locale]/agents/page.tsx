@@ -4,9 +4,8 @@ import { FleetExplorer } from "@/components/agent/fleet-explorer";
 import { NewAgentButton } from "@/components/agent/new-agent-button";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { redirect } from "@/i18n/navigation";
-import { FleetSchema } from "@/lib/api/schemas";
 import { currentRole, hasCockpitAccess, isOperator } from "@/lib/auth/session";
-import { backendHeaders, backendUrl } from "@/lib/server/backend";
+import { loadFleet } from "@/lib/server/fleet";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -15,22 +14,6 @@ interface PageProps {
 export const dynamic = "force-dynamic";
 
 const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
-
-async function loadFleet(locale: string) {
-  try {
-    const res = await fetch(
-      `${backendUrl()}/observability/fleet?lang=${encodeURIComponent(locale)}`,
-      {
-        cache: "no-store",
-        headers: backendHeaders({ Accept: "application/json" }),
-      },
-    );
-    if (!res.ok) return null;
-    return FleetSchema.parse(await res.json());
-  } catch {
-    return null;
-  }
-}
 
 // The Flotte — the rich agent directory. Listing every agent is correct HERE
 // (this is the cockpit / control plane); a click opens the agent's governance
@@ -46,6 +29,9 @@ export default async function FleetPage({ params }: PageProps) {
   const data = await loadFleet(locale);
   const agents = data?.agents ?? [];
   const org = data?.org;
+  // `window` is a DOM global in a browser bundle; the trailing underscore keeps this a page
+  // fact rather than something that silently resolves to `globalThis.window` in a refactor.
+  const window_ = data?.window;
 
   return (
     <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
@@ -99,6 +85,23 @@ export default async function FleetPage({ params }: PageProps) {
         </div>
         {isOperator(role) ? <NewAgentButton /> : null}
       </section>
+
+      {/* Which interval these numbers are about.
+          This page reads ALL HISTORY; every SURVEILLER domain page reads a trailing 7 days.
+          Both render the same payload shape, so an operator moving between them was comparing
+          figures that were never the same measurement, with nothing on either screen saying
+          so. The window now travels in the payload and is stated here. */}
+      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+        {/* THREE states, not two. `window_ === undefined` means the payload did not say —
+            an older cached snapshot, or a server that stopped emitting the field. Collapsing
+            it into "all history" would rebuild, one level down, the very conflation this lot
+            exists to remove: an unstated interval read as a stated one. */}
+        {window_ === undefined
+          ? t("windowUnknown")
+          : window_.period_days === null
+            ? t("windowAllHistory")
+            : t("windowDays", { n: window_.period_days })}
+      </p>
 
       {/* Rich agent directory — search · audience filters + counters · grid/list. */}
       <FleetExplorer agents={agents} />

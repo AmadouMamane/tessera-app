@@ -350,10 +350,19 @@ class FleetUnavailable(BaseModel):
     available: Literal[False]
 
 
+class FleetWindow(BaseModel):
+    """The interval the payload answered. ``period_days: null`` means all history."""
+
+    period_days: int | None
+    since: str | None
+    until: str | None
+
+
 class FleetPayload(BaseModel):
     """`available: True` GUARANTEES every field below. That is the point of the union."""
 
     available: Literal[True]
+    window: FleetWindow
     agents: list[FleetAgentsItem]
     org: FleetOrg
     naive_sum_conversations: int

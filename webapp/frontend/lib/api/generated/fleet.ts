@@ -735,8 +735,15 @@ export const FleetOrgSchema = z.object({
   turns: z.number().int(),
 });
 
+export const FleetWindowSchema = z.object({
+  period_days: z.number().int().nullable(),
+  since: z.string().nullable(),
+  until: z.string().nullable(),
+});
+
 export const FleetPayloadSchema = z.object({
   available: z.literal(true),
+  window: FleetWindowSchema,
   agents: z.array(FleetAgentsItemSchema),
   org: FleetOrgSchema,
   naive_sum_conversations: z.number().int(),

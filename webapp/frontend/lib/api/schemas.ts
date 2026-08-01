@@ -6033,8 +6033,27 @@ export type Chrome = z.infer<typeof ChromeSchema>;
 export type ChromeBadgeId = string;
 
 // Fleet rollup — per-agent observable KPIs + deduplicated org totals.
+/**
+ * The interval a fleet payload answered.
+ *
+ * `period_days: null` means all history — a real answer, not a missing one. It exists because
+ * two callers asked for two different windows and got payloads of identical shape: the Flotte
+ * directory reads all history, every SURVEILLER domain page reads a trailing 7 days, and an
+ * operator moving between them was comparing numbers that were never the same measurement.
+ */
+export const FleetWindowSchema = z.object({
+  period_days: z.number().int().nullable(),
+  since: z.string().nullable(),
+  until: z.string().nullable(),
+});
+export type FleetWindow = z.infer<typeof FleetWindowSchema>;
+
 export const FleetSchema = z.object({
   available: z.boolean(),
+  // Optional in the SCHEMA, not in the contract: a cached payload minted before this field
+  // existed must still parse rather than blanking the page. The renderer says "unknown window"
+  // when it is absent, which is the honest reading and a visibly temporary one.
+  window: FleetWindowSchema.optional(),
   agents: z
     .array(
       z.object({

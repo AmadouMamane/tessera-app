@@ -7360,7 +7360,10 @@
     "testableChipHint": "Un opérateur peut lui envoyer un tour d'essai.",
     "levelDeclaredNoEvidence": "{level} déclaré · aucune preuve",
     "levelDormantHint": "Le manifeste déclare {level}, mais le cockpit n'a observé aucun tour de cet agent. Le niveau reste déclaré, jamais calculé.",
-    "levelUnverifiableHint": "Le manifeste déclare {level}, mais le magasin de métriques est désactivé ou injoignable : le niveau ne peut pas être vérifié."
+    "levelUnverifiableHint": "Le manifeste déclare {level}, mais le magasin de métriques est désactivé ou injoignable : le niveau ne peut pas être vérifié.",
+    "windowAllHistory": "Chiffres sur tout l'historique — les pages SURVEILLER lisent les 7 derniers jours.",
+    "windowDays": "Chiffres sur les {n} derniers jours.",
+    "windowUnknown": "Période de ces chiffres non précisée par le serveur."
   },
   "product": {
     "apercu": {

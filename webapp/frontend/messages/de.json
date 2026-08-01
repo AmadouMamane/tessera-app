@@ -7360,7 +7360,10 @@
     "testableChipHint": "Eine Bedienkraft kann ihm einen Testdurchlauf senden.",
     "levelDeclaredNoEvidence": "{level} deklariert · kein Nachweis",
     "levelDormantHint": "Das Manifest deklariert {level}, doch das Cockpit hat für diesen Agenten keinen Turn beobachtet. Die Stufe bleibt deklariert, nie berechnet.",
-    "levelUnverifiableHint": "Das Manifest deklariert {level}, doch der Metrik-Speicher ist deaktiviert oder nicht erreichbar: die Stufe lässt sich nicht überprüfen."
+    "levelUnverifiableHint": "Das Manifest deklariert {level}, doch der Metrik-Speicher ist deaktiviert oder nicht erreichbar: die Stufe lässt sich nicht überprüfen.",
+    "windowAllHistory": "Zahlen über die gesamte Historie — die SURVEILLER-Seiten lesen die letzten 7 Tage.",
+    "windowDays": "Zahlen über die letzten {n} Tage.",
+    "windowUnknown": "Der Server hat den Zeitraum dieser Zahlen nicht angegeben."
   },
   "product": {
     "apercu": {

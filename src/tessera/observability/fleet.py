@@ -121,9 +121,27 @@ class FleetOrgTotals(TypedDict):
     turns: int
 
 
+class FleetWindow(TypedDict):
+    """The interval this payload actually answered — stated, never inferred by the caller.
+
+    Every fleet figure is bounded by an interval the CALLER chose, and until 2026-08-01 the
+    answer never said which one. The Flotte directory asks for all history; every SURVEILLER
+    domain page asks for a trailing 7 days; both got a payload of identical shape carrying
+    incomparable numbers, and an operator moving between the two pages had no way to know the
+    counts were not the same measurement.
+
+    ``period_days: None`` means all history — a real answer, not a missing one.
+    """
+
+    period_days: int | None
+    since: str | None
+    until: str | None
+
+
 class FleetData(TypedDict):
     """Everything ``available: true`` promises. A missing key is now a mypy error, not a 500."""
 
+    window: FleetWindow
     agents: list[FleetAgent]
     org: FleetOrgTotals
     naive_sum_conversations: int
@@ -757,6 +775,13 @@ async def compute_fleet(
         )
 
     return {
+        # The interval this answer is about, taken from the SAME `_window_bounds` call every
+        # query below used — not re-derived, which would be one more copy of one derivation.
+        "window": {
+            "period_days": period_days,
+            "since": since.isoformat() if since is not None else None,
+            "until": until.isoformat() if until is not None else None,
+        },
         "agents": agents,
         "org": {"conversations": rollup.org, "turns": org_turns},
         "naive_sum_conversations": rollup.naive_sum,
