@@ -1275,7 +1275,13 @@ export function PredictiveSignals({
                 <span className="text-[0.65rem] font-medium text-[var(--muted-foreground)]">
                   {tq("pred.langs")}
                 </span>
-                {langs.length === 0 ? (
+                {/* An unmeasured localization report is NOT a complete one. The endpoint
+                    reported 100 % in production for its whole life because it could not open
+                    the catalogues and divided by an empty reference; the row must not turn
+                    that back into a reassuring dash. */}
+                {localization && localization.measured === false ? (
+                  <span className={`text-xs ${WARN}`}>{tq("pred.langsUnmeasured")}</span>
+                ) : langs.length === 0 ? (
                   <span className="text-xs text-[var(--muted-foreground)]">—</span>
                 ) : (
                   langs.map((l, i) => (

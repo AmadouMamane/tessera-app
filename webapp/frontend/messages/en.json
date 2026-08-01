@@ -3176,7 +3176,8 @@
       "predictor": "Failure predictor",
       "predictorUntrained": "untrained",
       "intents": "At-risk intents",
-      "langs": "At-risk languages"
+      "langs": "At-risk languages",
+      "langsUnmeasured": "Catalogues unreadable — not measured"
     },
     "signalsKpi": {
       "active": "Active signals",
@@ -7396,6 +7397,8 @@
         "subtitle": "Sourced answers · GDPR · DORA",
         "open": "Open the assistant",
         "close": "Minimize the assistant",
+        "minimize": "Collapse",
+        "maximize": "Expand",
         "session": {
           "anonymous": "Anonymous session",
           "anonymousHint": "Sign in (demo) to unlock account operations.",

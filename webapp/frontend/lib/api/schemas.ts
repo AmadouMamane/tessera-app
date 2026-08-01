@@ -2357,9 +2357,20 @@ export const LocaleCompletenessSchema = z.object({
 });
 
 export const LocalizationReportSchema = z.object({
-  default_locale: z.string(),
-  n_default_keys: z.number().int(),
-  locales: z.array(LocaleCompletenessSchema),
+  // `false` when NO catalogue could be read. Not cosmetic: the route reported 100 % complete
+  // in production for its whole life because it resolved the catalogues under `webapp/`, which
+  // the agent image does not ship, swallowed the failures into `{}`, and divided by an empty
+  // reference. A caller that renders a percentage without checking this is rendering that lie.
+  available: z.boolean().default(true),
+  reason: z.string().optional(),
+  /** Locales whose file was present but unparseable — EXCLUDED from the comparison. */
+  unreadable: z.array(z.string()).default([]),
+  default_locale: z.string().default("en"),
+  n_default_keys: z.number().int().default(0),
+  /** `false` when there was no reference set. The numbers below it mean nothing. */
+  measured: z.boolean().default(true),
+  n_locales: z.number().int().default(0),
+  locales: z.array(LocaleCompletenessSchema).default([]),
 });
 export type LocalizationReport = z.infer<typeof LocalizationReportSchema>;
 

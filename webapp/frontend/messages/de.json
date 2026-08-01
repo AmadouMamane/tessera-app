@@ -3176,7 +3176,8 @@
       "predictor": "Fehler-Prädiktor",
       "predictorUntrained": "nicht trainiert",
       "intents": "Risiko-Intents",
-      "langs": "Risiko-Sprachen"
+      "langs": "Risiko-Sprachen",
+      "langsUnmeasured": "Kataloge nicht lesbar — nicht gemessen"
     },
     "signalsKpi": {
       "active": "Aktive Signale",
@@ -7396,6 +7397,8 @@
         "subtitle": "Belegte Antworten · DSGVO · DORA",
         "open": "Assistent öffnen",
         "close": "Assistent minimieren",
+        "minimize": "Verkleinern",
+        "maximize": "Vergrößern",
         "session": {
           "anonymous": "Anonyme Sitzung",
           "anonymousHint": "Melden Sie sich (Demo) an, um Kontofunktionen freizuschalten.",

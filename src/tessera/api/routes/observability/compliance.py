@@ -25,6 +25,7 @@ from tessera.observability import (
     integrations as integrations_mod,
     locale_format as locale_format_mod,
     localization as localization_mod,
+    message_catalogues as message_catalogues_mod,
     parameters as parameters_mod,
     proofs as proofs_mod,
     replay as replay_mod,
@@ -329,19 +330,43 @@ def observability_ai_act(at: str | None = None) -> dict[str, object]:
 
 @router.get("/observability/localization")
 def observability_localization() -> dict[str, object]:
-    """Per-locale message completeness vs the default locale (#77)."""
-    import json
-    from pathlib import Path
+    """Per-locale message completeness, measured against the UNION of every locale's keys (#77).
 
-    messages_dir = Path(__file__).resolve().parents[5] / "webapp" / "frontend" / "messages"
-    catalogues: dict[str, dict[str, object]] = {}
-    for locale in ("en", "fr", "de"):
-        path = messages_dir / f"{locale}.json"
-        try:
-            catalogues[locale] = json.loads(path.read_text(encoding="utf-8"))
+    This route reported **100 % complete in production for its entire life**, and not because
+    the translations were complete. It resolved the catalogues at
+    ``<repo>/webapp/frontend/messages`` and swallowed every failure into ``{}``::
+
         except (OSError, ValueError):
             catalogues[locale] = {}
-    return asdict(localization_mod.assess_localization(catalogues))
+
+    ``Dockerfile.agent`` copies ``src`` and ``eval``; ``ls /app`` in the running container
+    returns exactly those two. So all three reads failed, the reference key set was empty, and
+    ``(n - 0) / n if n else 1.0`` returned 1.0 — a hundred percent over nothing, on a compliance
+    surface. ADR 0026's exact failure: a witness that cannot see, reporting "ok".
+
+    Two things changed. The catalogues now ship inside the package (see
+    :mod:`tessera.observability.message_catalogues`), and a directory that cannot be read is
+    reported as ``available: false`` naming the paths tried — because "I could not look" and
+    "everything is fine" are the two answers a compliance surface must never confuse.
+    """
+    load = message_catalogues_mod.load_catalogues()
+    if not load.found:
+        return {
+            "available": False,
+            "reason": "catalogues_unreadable",
+            "tried": load.tried,
+            "unreadable": load.unreadable,
+        }
+    report = asdict(localization_mod.assess_localization(load.catalogues))
+    return {
+        "available": True,
+        "source": load.source,
+        # Named even when empty: a locale whose file was present but unparseable is EXCLUDED
+        # from the comparison, so without this it would simply not appear — and a locale that
+        # vanishes from a completeness report reads as one that had nothing to report.
+        "unreadable": load.unreadable,
+        **report,
+    }
 
 
 @router.get("/observability/citations")

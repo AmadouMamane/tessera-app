@@ -3176,7 +3176,8 @@
       "predictor": "Prédicteur d'échec",
       "predictorUntrained": "non entraîné",
       "intents": "Intents à risque",
-      "langs": "Langues à risque"
+      "langs": "Langues à risque",
+      "langsUnmeasured": "Catalogues illisibles — non mesuré"
     },
     "signalsKpi": {
       "active": "Signaux actifs",

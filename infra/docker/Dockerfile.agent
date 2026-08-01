@@ -39,6 +39,14 @@ RUN uv sync --frozen --no-install-project --no-dev
 COPY src ./src
 COPY eval ./eval
 COPY README.md LICENSE ./
+# The trilingual message catalogues, authored under webapp/ and READ BY THE BACKEND.
+# `/observability/localization` resolved them at `<repo>/webapp/frontend/messages`, which does
+# not exist here — `ls /app` returns exactly `eval` and `src`. All three reads failed, the
+# handler swallowed the errors into `{}`, and the endpoint reported **100 % complete** on a
+# compliance surface for its entire life. Inside `src/` they are symlinks into webapp/ so the
+# repo keeps ONE copy; this COPY replaces them with the real files, which is the only reason
+# the container can answer at all.
+COPY webapp/frontend/messages ./src/tessera/observability/data/messages
 RUN uv sync --frozen --no-dev
 
 # ---- Stage 2: runtime ------------------------------------------------------

@@ -110,6 +110,9 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # A route-existence LOOKUP inside the orphan-link probe: it answers "is this path in the
     # app tree", which selects what to report. Nothing passes or fails on it.
     "scripts/audit/scan_ui_invariants.py::known": "filter",
+    # Whether any catalogue was read at all. A DATA question about a load result, not a
+    # verdict about the localization measurement — the route turns it into `available`.
+    "src/tessera/observability/message_catalogues.py::CatalogueLoad.found": "data",
     # ── authz & guard verdicts ────────────────────────────────────────────────────────────────
     "src/tessera/authz.py::auth_satisfies": "VERDICT",
     "src/tessera/agent/registry.py::can_handoff": "VERDICT",
