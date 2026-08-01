@@ -97,6 +97,14 @@ RUN rm -rf /opt/venv/bin/pip* /usr/local/bin/pip* \
 # audit sink is cloud_logging, so this is just a scratch dir there.
 RUN mkdir -p /tmp/tessera && chown tessera:tessera /tmp/tessera
 
+# The commit this image was built from, so the process can answer "is this the code I think it
+# is?" without a git tree — `tessera.code_identity` reads exactly this variable and reports
+# `code_sha_source: "env"`. Its default is EMPTY, not "dev": an empty value falls through to the
+# git probe and then to an honest `code_sha: null`, whereas a placeholder that looks like a
+# stamp would be a fabricated answer to the one question this endpoint exists for.
+ARG TESSERA_BUILD_SHA=
+ENV TESSERA_BUILD_SHA=$TESSERA_BUILD_SHA
+
 USER tessera:tessera
 EXPOSE 8080
 

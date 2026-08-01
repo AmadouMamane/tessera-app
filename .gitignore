@@ -98,3 +98,9 @@ scripts/_gen_*.py
 
 # The contribution-calibration scratch dir (passes, never a published result — see Makefile)
 .eval-noise*/
+
+# Durable agent state (the on-prem volume): runtime data, not source.
+# Tracking it also made the tree permanently dirty — a live agent rewrites
+# read_snapshot.json, so `make fulllocal-up` would stamp every image `-dirty`
+# and the suffix would stop meaning anything.
+.agent-state/

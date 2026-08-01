@@ -67,6 +67,12 @@ services:
     build:
       context: .
       dockerfile: infra/docker/Dockerfile.agent
+      # Same provenance stamp as the frontend, from the SAME variable. Both halves of a
+      # deployment must be able to name the commit they came from, or `/api/version` reports a
+      # SHA for a pair it has only half seen — a witness that says "match" about a front it
+      # checked and an agent it did not.
+      args:
+        TESSERA_BUILD_SHA: ${TESSERA_BUILD_SHA:-}
     image: tessera-agent:local
     container_name: tessera-${TESSERA_ENV:-local}-agent
     depends_on:

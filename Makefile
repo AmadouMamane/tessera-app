@@ -866,12 +866,22 @@ FL_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.unix.yml \
 # `--no-deps` is load-bearing: the agent's compose-declared dependency is the BASE `postgres`
 # service, but the cutover agent uses the LIVE external Postgres — starting the base one clashes
 # on 5432. And `TESSERA_AGENT_STATE` is REQUIRED (as for the cutover): unset, the agent's durable
+# The commit an image is built FROM, as the deploy path computes it — never typed by hand.
+#
+# `-dirty` is not decoration. A stamp is read as "this image contains that commit", and an image
+# built from a tree with uncommitted edits contains something else. Suffixing it keeps the claim
+# true and, because `deploy-diff` compares strings, makes a dirty build incapable of matching a
+# clean one — which is the correct verdict, not a nuisance.
+BUILD_SHA := $(shell git rev-parse --short=8 HEAD 2>/dev/null || echo unknown)$(shell git diff --quiet HEAD 2>/dev/null || echo -dirty)
+
 # volume resolves to a different default path, so compose would recreate the running agent onto
 # an empty state dir. Guarded, then the already-running agent's config matches → it is untouched.
 fulllocal-up:
 	@test -f frontend.secret.env || { echo "missing frontend.secret.env — cp frontend.secret.env.example frontend.secret.env and fill it"; exit 2; }
 	@test -n "$(TESSERA_AGENT_STATE)" || { echo "export TESSERA_AGENT_STATE=<durable state dir> first (same value as the cutover), else the agent would be recreated onto an empty volume"; exit 2; }
-	@$(FL_COMPOSE) --profile full build frontend
+	@echo "▶ stamping the pair with $(BUILD_SHA)"
+	@TESSERA_BUILD_SHA=$(BUILD_SHA) TESSERA_BUILD_TIME=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+	  $(FL_COMPOSE) --profile full build agent frontend
 	@$(FL_COMPOSE) --profile full up -d --no-deps agent frontend
 	@printf 'waiting for the front to report healthy'; \
 	for i in $$(seq 1 40); do \
