@@ -12,10 +12,16 @@
  * require it to equal the state the registry reported. Any derivation that reads a second
  * number fails it, whatever that number is.
  *
- * Lot 2 of `docs/status/coherence-mesuree-run.md` adds the cross-surface half — that the row
- * `overview-dashboard` renders and the row `signals-table` renders are equal field by field —
- * once both are wired onto `readControls()`. Today neither is, and asserting equality between
- * two things that do not yet exist would be a test of nothing.
+ * The cross-surface half is enforced STRUCTURALLY rather than here, by
+ * `control-coherence.test.ts`: all three surfaces now call `readControls()`, and no bar may be
+ * declared anywhere else in the tree. Asserting field-by-field equality between three callers
+ * of one pure function would test the language, not the cockpit. What is worth testing is that
+ * the function itself cannot produce a row whose colour and whose number come from different
+ * places — which is what the identity assertion below does.
+ *
+ * It has already earned that: it caught `calibration` (agreement shown under a κ bar, coloured
+ * by `lenient`) and `clusters` (a `—` bar still deciding a pill) during the relocation, both
+ * copied faithfully from `signals-table.tsx` and both previously unreported.
  */
 
 import { describe, expect, it } from "vitest";
@@ -81,6 +87,99 @@ const PAYLOAD: ControlPayload = {
     recall: 0.76,
     f1: 0.8636,
   },
+  crossTenant: { n_turns: 400, n_leaks: 1, leak_rate: 0.0025, leaks: [] },
+  privilege: {
+    n_granted: 40,
+    n_used: 31,
+    n_over_provisioned: 9,
+    n_violations: 2,
+    utilization_rate: 0.775,
+    over_provisioned: [],
+    violations: [],
+    usage: [],
+  },
+  inversion: {
+    available: true,
+    n_memories: 60,
+    n_recoverable: 3,
+    recovery_rate: 0.05,
+    threshold: 0.8,
+    matches: [],
+  },
+  calibration: { available: true, n: 40, kappa: 0.42, agreement: 0.71, lenient: true },
+  citations: {
+    n_turns: 120,
+    n_citations: 300,
+    n_unsupported: 21,
+    validity_rate: 0.93,
+    unsupported_examples: [],
+  },
+  contradiction: { n_sessions: 30, n_turns: 120, n_contradictions: 3, pairs: [] },
+  predictor: {
+    n: 80,
+    n_predicted_fail: 20,
+    n_actual_fail: 24,
+    true_positive: 12,
+    false_positive: 8,
+    false_negative: 12,
+    true_negative: 48,
+    precision: 0.6,
+    recall: 0.5,
+  },
+  clusters: { available: true, n_failures: 12, k: 4, mean_purity: 0.7, clusters: [] },
+  localeFormat: {
+    n_turns: 120,
+    n_amounts: 90,
+    n_violations: 4,
+    correctness_rate: 0.9556,
+    examples: [],
+  },
+  cost: {
+    n_turns: 120,
+    total_tokens: 96_000,
+    mean_tokens: 800,
+    max_tokens: 4000,
+    threshold_tokens: 600,
+    estimated_cost_eur: 1.44,
+    n_anomalies: 5,
+    anomalies: [],
+  },
+  routing: {
+    n: 120,
+    mismatches: 9,
+    code_switches: 2,
+    mismatch_rate: 0.075,
+    code_switch_rate: 0.017,
+  },
+  funnel: {
+    n_turns: 120,
+    languages: [
+      {
+        language: "fr",
+        n_turns: 60,
+        n_sessions: 20,
+        mean_score: 0.8,
+        single_turn_rate: 0.3,
+        low_score_rate: 0.1,
+      },
+      {
+        language: "de",
+        n_turns: 60,
+        n_sessions: 20,
+        mean_score: 0.6,
+        single_turn_rate: 0.4,
+        low_score_rate: 0.3,
+      },
+    ],
+  },
+  anomalies: { n_sessions: 30, n_anomalous: 4, sessions: [] },
+  intent: {
+    n: 120,
+    distribution: { balance: 60, loan: 60 },
+    unknown: 7,
+    low_confidence: 18,
+    low_confidence_rate: 0.15,
+  },
 };
 
 /** An empty-but-present payload: every source answered, nothing was measured. */
@@ -88,6 +187,9 @@ const EMPTY: ControlPayload = {
   toxicity: { n_turns: 0, n_toxic: 0, toxicity_rate: 0, flagged: [] },
   pii: { n_turns: 0, n_with_leak: 0, leak_rate: 0, total_leaked: 0, examples: [] },
   tools: { total: 0, allowed: 0, denied: 0, errored: 0, arg_failures: 0, validity_rate: 0 },
+  // The one source that can answer "I could not run": an unavailable probe is not a clean
+  // result, and `?? 0` used to make it look like one on `securite-privacy`.
+  inversion: { available: false },
 };
 
 /** Parse a rendered value or bar back to a ratio: `"73%"` → 0.73, `"F1 ≥ 0.90"` → 0.9. */
@@ -116,6 +218,9 @@ describe("the state of a control derives from the value the operator sees", () =
 
   it("recomputes to the SAME state from the rendered value and the rendered bar", () => {
     for (const row of readControls(PAYLOAD)) {
+      // A control with no bar renders "—" and makes no verdict; there is nothing to recompute,
+      // and the next test is the one that holds it neutral.
+      if (row.target === "—") continue;
       const recomputed = controlState(
         parseRatio(row.value),
         parseRatio(row.target),
@@ -128,9 +233,20 @@ describe("the state of a control derives from the value the operator sees", () =
     }
   });
 
+  it("makes no verdict where it shows no bar", () => {
+    // `clusters` counts failure THEMES. Twelve is not worse than four, so there is no
+    // threshold — and `signals-table` nonetheless coloured the row from one, rendering the bar
+    // as "—" while a hidden `n_failures === 0` decided the pill.
+    const clusters = readControl("clusters", PAYLOAD);
+    expect(clusters?.target).toBe("—");
+    expect(clusters?.state.tone).toBe("neutral");
+    expect(clusters?.severity).toBe(0);
+    expect(clusters?.value).toBe("12");
+  });
+
   it("never renders the self-contradiction that started this: honoured bar, failing state", () => {
     for (const row of readControls(PAYLOAD)) {
-      if (row.noData) continue;
+      if (row.noData || row.target === "—") continue;
       const meets =
         parseDirection(row.target) === "higher"
           ? parseRatio(row.value) >= parseRatio(row.target)
@@ -193,8 +309,9 @@ describe("the registry is the join key with the signal catalogue", () => {
   it("declares which bars are calibrated, and does not flatter the rest", () => {
     const rows = readControls(PAYLOAD);
     const calibrated = rows.filter((r) => r.calibrated).map((r) => r.id);
-    // Exactly one bar is read from the backend (`slo.target`). Every other bar is a number
-    // this repo chose — ADR 0021's lesson, applied on screen: a chosen bar must say so.
-    expect(calibrated).toEqual(["faithfulness"]);
+    // Two bars travel in the payload rather than being chosen here: `slo.target` and
+    // `cost.threshold_tokens`. Every other bar is a number this repo picked — ADR 0021's
+    // lesson applied on screen: a chosen bar must say it was chosen.
+    expect(calibrated).toEqual(["faithfulness", "cost"]);
   });
 });

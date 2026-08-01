@@ -39,27 +39,33 @@ const SCANNED_EXTENSIONS = [".tsx", ".ts"] as const;
 const REGISTRY = "lib/control-registry.ts";
 
 /**
- * Inline control rows still declaring their own bar + state, by file, at their exact measured
- * size on 2026-08-01. Each entry is scheduled for zero in Lot 2 of
- * `docs/status/coherence-mesuree-run.md`; the map exists so the debt shrinks ON THE RECORD
- * rather than being re-discovered by the next audit.
+ * Inline control rows still declaring their own bar + state, by file.
  *
- * · `signals-table.tsx` — the 18-row quality registry, every row hand-built.
- * · `overview-dashboard.tsx` — `buildControls()`, the seven critical controls.
- * · `security-dashboard.tsx` — six more, with a THIRD state rule (`tone(x, warn, crit)`).
+ * **Empty, and it was not empty when this file was written.** It held 23 across three files on
+ * 2026-08-01 — `signals-table.tsx` (10 of its 19 rows), `overview-dashboard.tsx` (the seven
+ * critical controls), `security-dashboard.tsx` (six more, with a THIRD state rule of its own,
+ * `tone(x, crit, warn)`). All three now read `readControls()`, so the map emptied on the way
+ * through Lot 2 rather than standing as a permanent exemption.
+ *
+ * It stays here, empty, on purpose: a new surface that hand-builds a control row lands in it,
+ * and an empty map makes that arrival loud instead of merely tolerated.
  */
-const FROZEN_INLINE_BARS: ReadonlyMap<string, number> = new Map([
-  ["components/observability/signals-table.tsx", 10],
-  ["components/overview/overview-dashboard.tsx", 7],
-  ["components/security/security-dashboard.tsx", 6],
-]);
+const FROZEN_INLINE_BARS: ReadonlyMap<string, number> = new Map();
 
 /**
- * Anti-vacuity. 23 inline bars stand on the tree today. A floor just under it is what
- * separates "the sweep found nothing" from "the regex stopped matching" — the failure mode
- * ADR 0026 names, and the one that let three guard-rails report success over a hole.
+ * Anti-vacuity, and the harder half of this file now that the offender count is zero.
+ *
+ * "No inline bars anywhere" and "the regex stopped matching" produce the identical green. The
+ * first version of this ratchet guarded against that with a floor on the OFFENDER count, which
+ * worked exactly as long as offenders existed — a witness whose sight is proven only by the
+ * defects it finds goes blind the moment the last one is fixed.
+ *
+ * So the floor moved onto the registry itself. `lib/control-registry.ts` declares 24 bars in
+ * the same syntactic shape the scan hunts; if the scan cannot find them there, it cannot find
+ * them anywhere, and the empty offender list means nothing. The teeth test below is the second
+ * witness: it shows the scanner a defect and requires it to be caught.
  */
-const EXPECTED_MIN_BARS = 20;
+const EXPECTED_MIN_REGISTRY_BARS = 20;
 
 interface InlineBar {
   readonly file: string;
@@ -81,8 +87,21 @@ const BAR_PROPERTY = /\b(?:target|threshold)\s*:\s*["'`]([^"'`\n]{1,32})["'`]/;
 /** A state posed beside the bar: the row's own opinion of what the number means. */
 const STATE_PROPERTY = /\b(?:tone|status|state|severity)\s*:\s*(.+)$/;
 
-/** Lines of context: an object literal's bar and state sit within a few lines of each other. */
-const WINDOW = 8;
+/**
+ * Lines of context between a bar and the state posed beside it.
+ *
+ * Was 8, and 8 was WRONG — a silent under-report, which is the failure mode this file exists
+ * to police, committed by the file itself. `signals-table.tsx` writes several of its statuses
+ * as four-level nested ternaries spanning a dozen lines, so the bar and its state sat further
+ * apart than the window and the row read as clean. The scan said 10 offenders in a file holding
+ * 18 rows; wiring seven of them away dropped it to 5, and the arithmetic did not close. That
+ * discrepancy is the only reason this was caught: a detector that under-reports produces a
+ * green ratchet over a hole, and nothing about the green says which.
+ *
+ * 20 covers the longest row in the tree with room to spare. The "no offender outside the frozen
+ * set" assertion is what keeps a wider window from being a licence to over-report.
+ */
+const WINDOW = 20;
 
 /** Full-line comments only — a `//` inside a URL literal must survive. */
 function stripComments(source: string): string {
@@ -131,29 +150,44 @@ function walkSources(dir: string, acc: string[] = []): string[] {
 interface TreeScan {
   readonly bars: InlineBar[];
   readonly files: number;
+  /** Bars found INSIDE the registry — the proof the scanner can still see one. */
+  readonly registryBars: number;
 }
 
 function scanTree(): TreeScan {
   const root = path.join(__dirname, "..");
   const bars: InlineBar[] = [];
   let files = 0;
+  let registryBars = 0;
   for (const dir of SCANNED_DIRS) {
     for (const full of walkSources(path.join(root, dir))) {
       const rel = path.relative(root, full).split(path.sep).join("/");
       files += 1;
-      if (rel === REGISTRY) continue;
-      bars.push(...scanSource(rel, readFileSync(full, "utf8")));
+      const source = readFileSync(full, "utf8");
+      if (rel === REGISTRY) {
+        // The registry declares bars beside `direction`, not beside a state — so the paired
+        // scan does not see them. Count the bars alone here: it is the regex that must be
+        // proven alive, and the pairing is proven by the teeth test.
+        for (const line of stripComments(source).split("\n")) {
+          if (/\btext:\s*["'`][^"'`\n]{1,32}["'`]/.test(line)) registryBars += 1;
+        }
+        continue;
+      }
+      bars.push(...scanSource(rel, source));
     }
   }
-  return { bars, files };
+  return { bars, files, registryBars };
 }
 
 describe("class A — a control bar is declared once, and its state derives from it", () => {
   const scan = scanTree();
 
-  it("sees the whole cockpit surface", () => {
+  it("sees the whole cockpit surface, and can still recognise a bar", () => {
     expect(scan.files).toBeGreaterThanOrEqual(230);
-    expect(scan.bars.length).toBeGreaterThanOrEqual(EXPECTED_MIN_BARS);
+    expect(
+      scan.registryBars,
+      "the scan found no bar even in the registry — an empty offender list proves nothing",
+    ).toBeGreaterThanOrEqual(EXPECTED_MIN_REGISTRY_BARS);
   });
 
   it("leaves no inline bar outside the frozen set", () => {

@@ -31,6 +31,8 @@ FIELD = re.compile(
 )
 
 WINDOW = 6  # lines of context on each side
+#: How many unattributed thresholds to print before summarising the rest.
+_SAMPLE = 40
 
 
 def scan() -> dict[str, list[dict[str, object]]]:
@@ -59,7 +61,7 @@ def scan() -> dict[str, list[dict[str, object]]]:
                 {
                     "file": str(path.relative_to(ROOT)),
                     "line": i + 1,
-                    "threshold": m.group(0).strip("\"`"),
+                    "threshold": m.group(0).strip('"`'),
                     "compares": compares,
                     "snippet": line.strip()[:110],
                 }
@@ -101,10 +103,10 @@ def main() -> int:
 
     print()
     print(f"SEUILS SANS CHAMP IDENTIFIÉ : {len(unknown)} (à lire à la main)")
-    for r in unknown[:40]:
+    for r in unknown[:_SAMPLE]:
         print(f"    {r['file']}:{r['line']}  «{r['threshold']}»  {r['snippet']}")
-    if len(unknown) > 40:
-        print(f"    … et {len(unknown) - 40} autres")
+    if len(unknown) > _SAMPLE:
+        print(f"    … et {len(unknown) - _SAMPLE} autres")
 
     Path(sys.argv[1] if len(sys.argv) > 1 else "/dev/null").write_text(
         json.dumps(hits, indent=1, ensure_ascii=False), encoding="utf-8"

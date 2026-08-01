@@ -127,6 +127,17 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   faithfulness: cap(AGENT_TIME),
   pii: cap(AGENT_TIME),
   tools: cap(AGENT_TIME),
+  // The SLO's second alarm — a multi-window burn rate over the same durable score log.
+  // It became its own row when the overview stopped colouring faithfulness by `breaching`,
+  // a number it judged with and never displayed.
+  error_budget: cap(AGENT_TIME),
+  // Refusal, split into its two OPPOSITE faces. Both org-wide: a fixed-corpus probe of the
+  // shared policy has no per-agent substrate, exactly like the `refusal` row they replace.
+  refusal_over: cap(ORG),
+  refusal_under: cap(ORG),
+  // The firewall probe read from the attacker's side (1 − recall) — the same report, declared
+  // as its own view rather than left to look like a rival number.
+  injection_bypass: cap(ORG),
 };
 
 /** The declared capability for `signalId`, or `undefined` if the signal is not declared. */

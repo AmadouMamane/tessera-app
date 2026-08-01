@@ -37,6 +37,12 @@ from scripts.audit.scan_i18n_mechanism import scan, scan_text
 #:
 #: The distinction is settled in Lot 7. Until then every one of them is held DOWNWARD-ONLY,
 #: which is the only property a ratchet needs to be worth having.
+#:
+#: 307 → 306 on the way through Lot 2: `signals-table.tsx` built its refusal detail as
+#: ``sous ${pct(under)}`` — a French literal in a trilingual component, read in French by a
+#: German operator. It is now a `controlDetail` key like every other supporting line. One
+#: string, and it only left because the row around it was being rewritten for another reason;
+#: that is the pace this debt actually moves at, which is why it is counted.
 _FROZEN_BARE_FRENCH: dict[str, int] = {
     "components/recouvrement/recouvrement-assistant-backend.ts": 109,
     "components/observability/workflow-runs-panel.tsx": 42,
@@ -56,7 +62,7 @@ _FROZEN_BARE_FRENCH: dict[str, int] = {
     "components/agent/evaluation-tabs.tsx": 3,
     "components/landing/landing-launcher.tsx": 3,
     "components/proofs/etat-a-date.tsx": 3,
-    "components/observability/signals-table.tsx": 2,
+    "components/observability/signals-table.tsx": 1,
     "lib/api/sse.ts": 2,
     "app/[locale]/produit/page.tsx": 1,
     "app/api/chat/route.ts": 1,

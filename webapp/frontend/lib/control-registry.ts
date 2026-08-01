@@ -24,9 +24,28 @@
  * reads Critique, because its *status* was computed from a number it did not display).
  *
  * A number rendered twice with two values is worse than a number rendered once: it teaches the
- * operator that the cockpit's figures are decorative. So the derivation moved HERE, both
- * surfaces read it, and `control-registry.test.ts` asserts — on one payload — that the row the
- * overview renders and the row the registry renders are **equal, field by field**.
+ * operator that the cockpit's figures are decorative. So the derivation moved HERE. All three
+ * surfaces now read it — `overview-dashboard`, `signals-table` and `security-dashboard` — and
+ * `control-coherence.test.ts` refuses any new inline bar anywhere in the tree.
+ *
+ * The eleven quality-only signals came too, though none of them had drifted. Having one reader
+ * is not a property, it is a moment: it is exactly the state all seven divergent controls were
+ * in the day before a second surface needed the same number and wrote it out again.
+ *
+ * ## What the identity assertion caught while this was being written
+ *
+ * Two more of the same defect, neither previously reported:
+ *
+ * · **calibration** displayed `agreement` (71 %) under a bar reading `κ ≥ 0.60`, coloured by a
+ *   third field entirely (`lenient`). Three numbers, one row, none judging another. It now
+ *   shows κ — the thing its bar is about — with agreement on the detail line.
+ * · **clusters** rendered its bar as `—` and still coloured the row from a hidden
+ *   `n_failures === 0`. Failure THEMES have no threshold (twelve is not worse than four), so it
+ *   is declared `informational`: no bar, no verdict, count still on screen.
+ *
+ * Both were copied faithfully from `signals-table.tsx` during the move and caught by
+ * `control-registry.test.ts` minutes later. That is the argument for the assertion: an auditor
+ * reading the same lines had already missed them twice.
  *
  * ## Two faces are never one number
  *
@@ -41,24 +60,39 @@
  *
  * `calibrated: false` marks a bar that is a *chosen number*, not a measured one. ADR 0021 paid
  * for that lesson at the eval gate (a bar nothing can fail is not a gate); the same honesty is
- * owed on screen, so the ⓘ can say "seuil déclaré" instead of implying a measurement. Only
- * `faithfulness` reads its target from the backend (`slo.target`) — it is the sole calibrated
- * one, and the registry says so rather than flattening the difference.
+ * owed on screen, so the ⓘ can say "seuil déclaré" instead of implying a measurement. Two bars
+ * travel in the payload rather than being picked here — `slo.target` and
+ * `cost.threshold_tokens`. Every other one is this repo's choice, and the registry says so
+ * rather than flattening the difference.
  */
 
 import { type ControlState, controlState } from "./overview";
 
 import type {
+  AnomalyReport,
+  Calibration,
+  CitationSummary,
+  ClusterReport,
   ConformanceReport,
+  ContradictionReport,
+  CostReport,
+  CrossTenantReport,
   FirewallEfficacy,
+  FunnelReport,
+  IntentReport,
+  InversionReport,
+  LocaleFormatSummary,
   PIILeakSummary,
+  PredictorEvaluation,
+  PrivilegeReport,
   RefusalReport,
+  RoutingReport,
   SLOReport,
   ToolValidity,
   ToxicityReport,
 } from "./api/schemas";
 
-/** The payload every control reads from — exactly what both surfaces already fetch. */
+/** The payload every control reads from — exactly what the three surfaces already fetch. */
 export interface ControlPayload {
   slo?: SLOReport;
   toxicity?: ToxicityReport;
@@ -67,11 +101,26 @@ export interface ControlPayload {
   conformance?: ConformanceReport;
   tools?: ToolValidity;
   firewall?: FirewallEfficacy;
+  crossTenant?: CrossTenantReport;
+  privilege?: PrivilegeReport;
+  inversion?: InversionReport;
+  calibration?: Calibration;
+  citations?: CitationSummary;
+  contradiction?: ContradictionReport;
+  predictor?: PredictorEvaluation;
+  clusters?: ClusterReport;
+  localeFormat?: LocaleFormatSummary;
+  cost?: CostReport;
+  routing?: RoutingReport;
+  funnel?: FunnelReport;
+  anomalies?: AnomalyReport;
+  intent?: IntentReport;
 }
 
 /** Canonical control ids. `refusalOver`/`refusalUnder` replace the collapsed `refusal`. */
 export type ControlId =
   | "faithfulness"
+  | "errorBudget"
   | "toxicity"
   | "pii"
   | "refusalOver"
@@ -79,10 +128,25 @@ export type ControlId =
   | "conformance"
   | "tools"
   | "firewall"
-  | "injectionBypass";
+  | "injectionBypass"
+  | "crossTenant"
+  | "leastPrivilege"
+  | "embeddingInversion"
+  | "calibration"
+  | "citations"
+  | "contradiction"
+  | "predictor"
+  | "clusters"
+  | "localeFormat"
+  | "cost"
+  | "routing"
+  | "funnel"
+  | "anomalies"
+  | "intent";
 
 export const CONTROL_IDS: readonly ControlId[] = [
   "faithfulness",
+  "errorBudget",
   "toxicity",
   "pii",
   "refusalOver",
@@ -91,6 +155,20 @@ export const CONTROL_IDS: readonly ControlId[] = [
   "tools",
   "firewall",
   "injectionBypass",
+  "crossTenant",
+  "leastPrivilege",
+  "embeddingInversion",
+  "calibration",
+  "citations",
+  "contradiction",
+  "predictor",
+  "clusters",
+  "localeFormat",
+  "cost",
+  "routing",
+  "funnel",
+  "anomalies",
+  "intent",
 ] as const;
 
 /** One control's measurement at a point in time, or its honest absence. */
@@ -135,8 +213,16 @@ interface ControlSpec {
   impactKey: string;
   asOfCapable: boolean;
   calibrated: boolean;
-  /** Absent target ⇒ read from the payload (only `faithfulness` does). */
+  /** Absent target ⇒ read from the payload (`faithfulness`, `cost`), or informational. */
   target?: { value: number; text: string; direction: "higher" | "lower" };
+  /**
+   * No bar, therefore no verdict. The value is reported and stays neutral.
+   *
+   * This is not the same as an uncalibrated bar. `calibrated: false` says "this threshold is a
+   * number we chose"; `informational` says "there is no threshold, and a coloured pill here
+   * would be inventing one". `clusters` is the only control in that position.
+   */
+  informational?: boolean;
   read: (d: ControlPayload) => ControlSample | null;
 }
 
@@ -156,6 +242,8 @@ interface ControlSample {
 }
 
 const pct = (v: number, digits = 0): string => `${(v * 100).toFixed(digits)}%`;
+/** A burn rate is a multiple of the error budget, not a share of anything. */
+const times = (v: number): string => `${v.toFixed(1)}×`;
 
 /**
  * The seven+one controls.
@@ -180,6 +268,41 @@ const SPECS: Record<ControlId, ControlSpec> = {
         severity: 1 - slo.good_rate,
         detail: { key: "sample", values: { good: String(slo.n_good), n: String(slo.n) } },
         target: { value: slo.target, text: `≥ ${pct(slo.target)}`, direction: "higher" },
+      };
+    },
+  },
+
+  // The SLO's second, genuinely different alarm — and the reason `faithfulness` above does NOT
+  // read `slo.breaching`. `breaching` is a multi-window burn-rate test (`burn_rate > 1` AND
+  // `burn_rate_fast > 1`, `observability/slo.py:117`), not a restatement of `good_rate ≥ target`.
+  // Vue d'ensemble used it to override the faithfulness state, which is precisely the shape this
+  // module forbids: a row showing 73 % against ≥ 95 % and coloured by a number nowhere on screen.
+  // It is a real signal, so it is not dropped — it becomes its own control, showing the value
+  // that actually decides. `breaching` is true exactly when `min(burn, burn_fast) > 1`, so the
+  // displayed number and the backend's verdict cannot disagree.
+  errorBudget: {
+    metric: "rag.slo.burn_rate",
+    impactKey: "rag",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 1, text: "≤ 1.0×", direction: "lower" },
+    read: (d) => {
+      const slo = d.slo;
+      if (!slo) return null;
+      const deciding = Math.min(slo.burn_rate, slo.burn_rate_fast);
+      return {
+        ratio: deciding,
+        text: times(deciding),
+        n: slo.n,
+        severity: Math.min(deciding / 4, 1),
+        detail: {
+          key: "burn",
+          values: {
+            slow: times(slo.burn_rate),
+            fast: times(slo.burn_rate_fast),
+            remaining: pct(slo.budget_remaining),
+          },
+        },
       };
     },
   },
@@ -371,9 +494,338 @@ const SPECS: Record<ControlId, ControlSpec> = {
       };
     },
   },
+
+  // The three controls `securite-privacy` derived alone. They are not duplicated anywhere yet,
+  // which is exactly why they belong here BEFORE they are: the divergence this module exists to
+  // undo began the same way — one surface, one derivation, then a second surface needing the
+  // same number and writing it again. Declaring them costs nothing and closes that path.
+  crossTenant: {
+    metric: "privacy.cross_tenant.rate",
+    impactKey: "privacy",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0, text: "= 0", direction: "lower" },
+    read: (d) => {
+      const x = d.crossTenant;
+      if (!x) return null;
+      return {
+        ratio: x.leak_rate,
+        text: pct(x.leak_rate, 2),
+        n: x.n_turns,
+        severity: Math.min(x.leak_rate * 20, 1),
+        detail: { key: "count", values: { hit: String(x.n_leaks), n: String(x.n_turns) } },
+      };
+    },
+  },
+
+  leastPrivilege: {
+    metric: "security.least_privilege.over_provisioned_rate",
+    impactKey: "tools",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0.05, text: "≤ 5%", direction: "lower" },
+    read: (d) => {
+      const p = d.privilege;
+      if (!p) return null;
+      const rate = p.n_granted > 0 ? p.n_over_provisioned / p.n_granted : 0;
+      return {
+        ratio: rate,
+        text: pct(rate),
+        n: p.n_granted,
+        detail: {
+          key: "count",
+          values: { hit: String(p.n_over_provisioned), n: String(p.n_granted) },
+        },
+      };
+    },
+  },
+
+  // `recovery_rate` is optional in the schema and `available` can be false — the one control
+  // here whose source can answer "I could not measure". It says so (`n: 0` ⇒ a `noData` reading)
+  // instead of rendering the `?? 0` that made an unread probe look like a clean result.
+  embeddingInversion: {
+    metric: "privacy.embedding_inversion.recovery_rate",
+    impactKey: "privacy",
+    asOfCapable: false,
+    calibrated: false,
+    target: { value: 0, text: "= 0", direction: "lower" },
+    read: (d) => {
+      const inv = d.inversion;
+      if (!inv) return null;
+      const n = inv.available ? (inv.n_memories ?? 0) : 0;
+      const rate = inv.recovery_rate ?? 0;
+      return {
+        ratio: rate,
+        text: pct(rate),
+        n,
+        severity: Math.min(rate * 5, 1),
+        detail: { key: "count", values: { hit: String(inv.n_recoverable ?? 0), n: String(n) } },
+      };
+    },
+  },
+
+  // ── The eleven quality-only signals ────────────────────────────────────────────────────
+  //
+  // These have ONE reader today — the Qualité IA registry table — so none of them had drifted.
+  // That is not a reason to leave them out; it is the state every one of the seven divergent
+  // controls was in before a second surface needed the same number and wrote it again. The
+  // divergence class has no cheap cure once it exists, and a very cheap one before.
+  //
+  // Their bars are unchanged from `signals-table.tsx`, deliberately: this move is about WHERE a
+  // bar is declared, not about revising any of them. Changing a threshold while relocating it
+  // would make the diff unreadable and the ratchet's "the debt shrank" claim unverifiable.
+
+  // The row that carried THREE numbers. `signals-table` displayed `agreement` (71 %) under a
+  // bar reading `κ ≥ 0.60`, coloured by a third field entirely (`lenient`), with κ relegated to
+  // the sample column. Nothing on the row judged anything else on the row. The relocation kept
+  // the bar and made the value match it: κ is what `κ ≥ 0.60` is about, so κ is what is shown,
+  // and agreement — a real, useful number — moves to the detail line.
+  //
+  // This was found by `control-registry.test.ts` while the move was being made, not before it:
+  // the identity assertion is what turns "these three surfaces disagree" from something an
+  // auditor has to notice into something the suite cannot pass without.
+  calibration: {
+    metric: "judge.cohen_kappa",
+    impactKey: "quality",
+    asOfCapable: false,
+    calibrated: false,
+    target: { value: 0.6, text: "κ ≥ 0.60", direction: "higher" },
+    read: (d) => {
+      const a = d.calibration;
+      if (!a) return null;
+      // `available: false` means the judge could not be scored at all, not "scored zero".
+      const n = a.available ? (a.n ?? 1) : 0;
+      const kappa = a.kappa ?? 0;
+      return {
+        ratio: kappa,
+        text: kappa.toFixed(2),
+        n,
+        severity: Math.max(0, 0.6 - kappa),
+        detail: { key: "agreement", values: { agreement: pct(a.agreement ?? 0) } },
+      };
+    },
+  },
+
+  citations: {
+    metric: "citation.validity",
+    impactKey: "rag",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0.95, text: "≥ 95%", direction: "higher" },
+    read: (d) => {
+      const c = d.citations;
+      if (!c) return null;
+      return {
+        ratio: c.validity_rate,
+        text: pct(c.validity_rate),
+        n: c.n_citations,
+        severity: 1 - c.validity_rate,
+        detail: {
+          key: "count",
+          values: { hit: String(c.n_unsupported), n: String(c.n_citations) },
+        },
+      };
+    },
+  },
+
+  // A count, not a rate: the bar is `= 0` and the displayed number is the count itself, so
+  // `controlState` compares like with like. Rendering `3` against `= 0` is honest; rendering
+  // `3` against `≤ 5%` would not be.
+  contradiction: {
+    metric: "answer.contradiction",
+    impactKey: "rag",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0, text: "= 0", direction: "lower" },
+    read: (d) => {
+      const c = d.contradiction;
+      if (!c) return null;
+      return {
+        ratio: c.n_contradictions,
+        text: String(c.n_contradictions),
+        n: c.n_turns,
+        severity: Math.min(c.n_contradictions / 5, 1),
+        detail: { key: "sessions", values: { n: String(c.n_sessions) } },
+      };
+    },
+  },
+
+  predictor: {
+    metric: "failure.predictor.precision",
+    impactKey: "quality",
+    asOfCapable: false,
+    calibrated: false,
+    target: { value: 0.7, text: "≥ 70%", direction: "higher" },
+    read: (d) => {
+      const p = d.predictor;
+      if (!p) return null;
+      return {
+        ratio: p.precision,
+        text: pct(p.precision),
+        n: p.n,
+        severity: 1 - p.precision,
+        detail: { key: "recall", values: { recall: pct(p.recall) } },
+      };
+    },
+  },
+
+  // The one control with no bar at all: clustering surfaces THEMES among failures. Twelve
+  // clusters is not worse than four, it is a different shape of the same failures, and there is
+  // no number at which it becomes a defect.
+  //
+  // `signals-table` rendered its threshold as `—` and still coloured the row (`!available ?
+  // "na" : n_failures === 0 ? "ok" : "warn"`), so a bar the operator could not see was deciding
+  // a verdict the operator could. Declaring it informational is the honest form: no bar, no
+  // verdict, and the count still on screen where it is useful.
+  clusters: {
+    metric: "failure.clusters",
+    impactKey: "quality",
+    asOfCapable: false,
+    calibrated: false,
+    informational: true,
+    read: (d) => {
+      const c = d.clusters;
+      if (!c) return null;
+      const n = c.available ? Math.max(c.n_failures ?? 0, 1) : 0;
+      return {
+        ratio: c.n_failures ?? 0,
+        text: String(c.n_failures ?? 0),
+        n,
+        detail: { key: "themes", values: { n: String(c.k ?? 0) } },
+      };
+    },
+  },
+
+  localeFormat: {
+    metric: "locale.format.rate",
+    impactKey: "quality",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 1, text: "= 100%", direction: "higher" },
+    read: (d) => {
+      const l = d.localeFormat;
+      if (!l) return null;
+      return {
+        ratio: l.correctness_rate,
+        text: pct(l.correctness_rate),
+        n: l.n_amounts,
+        severity: 1 - l.correctness_rate,
+        detail: { key: "count", values: { hit: String(l.n_violations), n: String(l.n_amounts) } },
+      };
+    },
+  },
+
+  // Tokens, against a threshold the backend computes and ships in the payload — so this is the
+  // SECOND calibrated bar in the table, and it says so.
+  cost: {
+    metric: "cost.tokens.mean",
+    impactKey: "quality",
+    asOfCapable: true,
+    calibrated: true,
+    read: (d) => {
+      const c = d.cost;
+      if (!c) return null;
+      return {
+        ratio: c.mean_tokens,
+        text: `${Math.round(c.mean_tokens)} tok`,
+        n: c.n_turns,
+        severity: c.n_anomalies > 0 ? 0.3 : 0,
+        detail: {
+          key: "cost",
+          values: { eur: c.estimated_cost_eur.toFixed(2), anomalies: String(c.n_anomalies) },
+        },
+        target: {
+          value: c.threshold_tokens,
+          text: `≤ ${Math.round(c.threshold_tokens)}`,
+          direction: "lower",
+        },
+      };
+    },
+  },
+
+  routing: {
+    metric: "routing.mismatch.rate",
+    impactKey: "quality",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0.95, text: "≥ 95%", direction: "higher" },
+    read: (d) => {
+      const r = d.routing;
+      if (!r) return null;
+      return {
+        ratio: 1 - r.mismatch_rate,
+        text: pct(1 - r.mismatch_rate),
+        n: r.n,
+        severity: r.mismatch_rate,
+        detail: { key: "count", values: { hit: String(r.mismatches), n: String(r.n) } },
+      };
+    },
+  },
+
+  funnel: {
+    metric: "funnel.low_score.rate",
+    impactKey: "quality",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0.9, text: "≥ 90%", direction: "higher" },
+    read: (d) => {
+      const f = d.funnel;
+      if (!f) return null;
+      const langs = f.languages ?? [];
+      // The WORST language, not the mean: an average hides the one locale that is broken.
+      const worst = langs.reduce((m, l) => Math.max(m, l.low_score_rate), 0);
+      return {
+        ratio: 1 - worst,
+        text: pct(1 - worst),
+        n: langs.length,
+        severity: worst,
+        detail: { key: "turns", values: { n: String(f.n_turns) } },
+      };
+    },
+  },
+
+  anomalies: {
+    metric: "session.anomaly.count",
+    impactKey: "quality",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0, text: "= 0", direction: "lower" },
+    read: (d) => {
+      const a = d.anomalies;
+      if (!a) return null;
+      return {
+        ratio: a.n_anomalous,
+        text: String(a.n_anomalous),
+        n: a.n_sessions,
+        severity: Math.min(a.n_anomalous / 5, 1),
+        detail: { key: "count", values: { hit: String(a.n_anomalous), n: String(a.n_sessions) } },
+      };
+    },
+  },
+
+  intent: {
+    metric: "intent.low_confidence.rate",
+    impactKey: "quality",
+    asOfCapable: true,
+    calibrated: false,
+    target: { value: 0.9, text: "≥ 90%", direction: "higher" },
+    read: (d) => {
+      const i = d.intent;
+      if (!i) return null;
+      return {
+        ratio: 1 - i.low_confidence_rate,
+        text: pct(1 - i.low_confidence_rate),
+        n: i.n,
+        severity: i.low_confidence_rate,
+        detail: { key: "unknown", values: { n: String(i.unknown) } },
+      };
+    },
+  },
 };
 
 const NEUTRAL: ControlState = { key: "ok", tone: "neutral" };
+/** How a control with no threshold renders its bar column. */
+const NO_BAR = "—";
 
 /**
  * Read one control from a payload.
@@ -389,14 +841,16 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
   if (sample === null) return null;
 
   const target = sample.target ?? spec.target;
-  if (target === undefined) return null;
+  if (target === undefined && !spec.informational) return null;
+
+  const bar = target?.text ?? NO_BAR;
 
   if (sample.n <= 0 || sample.ratio === null) {
     return {
       id,
       metric: spec.metric,
       value: "—",
-      target: target.text,
+      target: bar,
       state: NEUTRAL,
       severity: 0,
       detail: null,
@@ -411,12 +865,14 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
     id,
     metric: spec.metric,
     value: sample.text,
-    target: target.text,
+    target: bar,
     // The state is derived from the SAME ratio the `value` renders. That identity is the whole
     // point: the previous signals-table computed its status from `max(over, under)` while
-    // displaying `over`, so a row could read "0 % · seuil ≤ 10 % · Critique".
-    state: controlState(sample.ratio, target.value, target.direction),
-    severity: sample.severity ?? Math.min(Math.abs(sample.ratio - target.value), 1),
+    // displaying `over`, so a row could read "0 % · seuil ≤ 10 % · Critique". A control with no
+    // bar reaches neither branch of a verdict: it stays neutral rather than being coloured by a
+    // threshold the operator was never shown.
+    state: target ? controlState(sample.ratio, target.value, target.direction) : NEUTRAL,
+    severity: target ? (sample.severity ?? Math.min(Math.abs(sample.ratio - target.value), 1)) : 0,
     detail: sample.detail,
     impactKey: spec.impactKey,
     asOfCapable: spec.asOfCapable,
@@ -425,11 +881,19 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
   };
 }
 
-/** Every control the payload can answer, in canonical order. */
-export function readControls(payload: ControlPayload): ControlReading[] {
-  return CONTROL_IDS.map((id) => readControl(id, payload)).filter(
-    (row): row is ControlReading => row !== null,
-  );
+/**
+ * Every control the payload can answer, in canonical order.
+ *
+ * `ids` selects a surface's subset. A surface chooses WHICH controls it shows — that is an
+ * editorial decision and a legitimate one. It does not get to choose what any of them MEANS.
+ */
+export function readControls(
+  payload: ControlPayload,
+  ids: readonly ControlId[] = CONTROL_IDS,
+): ControlReading[] {
+  return ids
+    .map((id) => readControl(id, payload))
+    .filter((row): row is ControlReading => row !== null);
 }
 
 /** The metric id a control declares — the join key with the signal catalogue. */

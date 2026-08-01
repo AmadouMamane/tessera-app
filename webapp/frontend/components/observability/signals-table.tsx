@@ -34,6 +34,7 @@ import type {
   ToxicityReport,
   WhatChanged,
 } from "@/lib/api/schemas";
+import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
 import { registryIdFor } from "@/lib/signal-focus";
 import { capabilityFor } from "@/lib/signal-registry";
 
@@ -164,283 +165,125 @@ export interface SignalData {
   intent?: IntentReport;
 }
 
-const pct = (x: number) => `${Math.round(x * 100)}%`;
-
 /**
  * Derive one normalized row per quality signal from the live report data. Every
  * status/score is computed from real fields — a signal with no data reads "na"
  * and "—" rather than a fabricated value (Tessera no-mock discipline).
  */
-type RawRow = Omit<SignalRow, "id" | "metric" | "entity" | "delta" | "action" | "role">;
+type RawRow = Omit<SignalRow, "id" | "metric" | "entity" | "delta" | "action" | "role"> & {
+  /** Present on rows read from `lib/control-registry.ts` — their metric id comes from there. */
+  metric?: string;
+};
 
-export function buildSignalRows(t: (key: string) => string, d: SignalData): SignalRow[] {
+/**
+ * The eight rows this table shares with `overview-dashboard` and `security-dashboard`, and the
+ * shape they take here.
+ *
+ * Until 2026-08-01 each of the three surfaces built these itself. Six of seven disagreed:
+ * `refusal` displayed `over` (0 %) with a status computed from `max(over, under)` (60 %), so
+ * the row read "0 % · seuil ≤ 10 % · Critique"; `firewall` showed F1 here and recall on the
+ * overview, 86 % against 76 %, same label. What a control MEANS now comes from one module; how
+ * this table lays it out stays here, which is the correct division.
+ */
+const SHARED: readonly {
+  readonly id: ControlId;
+  readonly key: string;
+  readonly nameKey: string;
+  readonly category: SignalCategory;
+}[] = [
+  { id: "faithfulness", key: "slo", nameKey: "slo.title", category: "fidelity" },
+  { id: "calibration", key: "calibration", nameKey: "calibration.title", category: "fidelity" },
+  { id: "citations", key: "citations", nameKey: "citations.title", category: "fidelity" },
+  {
+    id: "contradiction",
+    key: "contradiction",
+    nameKey: "contradiction.title",
+    category: "fidelity",
+  },
+  { id: "predictor", key: "predictor", nameKey: "predictor.title", category: "fidelity" },
+  { id: "clusters", key: "clusters", nameKey: "clusters.title", category: "fidelity" },
+  { id: "firewall", key: "firewall", nameKey: "firewall.title", category: "security" },
+  { id: "toxicity", key: "toxicity", nameKey: "toxicity.title", category: "security" },
+  { id: "pii", key: "piiLeak", nameKey: "piiLeak.title", category: "security" },
+  // Two rows where there was one. Over-refusal costs utility, under-refusal is a safety
+  // incident; their maximum named neither, and the label did not say which face you saw.
+  { id: "refusalOver", key: "refusalOver", nameKey: "refusal.over", category: "compliance" },
+  { id: "refusalUnder", key: "refusalUnder", nameKey: "refusal.under", category: "compliance" },
+  { id: "conformance", key: "conformance", nameKey: "conformance.title", category: "compliance" },
+  {
+    id: "localeFormat",
+    key: "localeFormat",
+    nameKey: "localeFormat.title",
+    category: "compliance",
+  },
+  { id: "tools", key: "tools", nameKey: "tools.title", category: "reliability" },
+  { id: "cost", key: "cost", nameKey: "cost.title", category: "reliability" },
+  { id: "routing", key: "routing", nameKey: "routing.title", category: "sessions" },
+  { id: "funnel", key: "funnel", nameKey: "funnel.title", category: "sessions" },
+  { id: "anomalies", key: "anomalies", nameKey: "anomalies.title", category: "sessions" },
+  { id: "intent", key: "intent", nameKey: "intent.title", category: "sessions" },
+];
+
+/** A registry reading, laid out as a row of this table. */
+function sharedRow(
+  spec: (typeof SHARED)[number],
+  reading: ControlReading,
+  t: (key: string) => string,
+  td: (key: string, values: Record<string, string>) => string,
+): RawRow {
+  return {
+    key: spec.key,
+    name: t(spec.nameKey),
+    category: spec.category,
+    // `fail` is this table's `crit`. The mapping is a vocabulary difference between two
+    // surfaces, not a second judgement: the state itself is computed once, from the value the
+    // operator sees against the bar the operator sees.
+    status: reading.noData ? "na" : reading.state.key === "fail" ? "crit" : reading.state.key,
+    score: reading.value,
+    threshold: reading.target,
+    sample: reading.detail ? td(reading.detail.key, reading.detail.values) : "—",
+    metric: reading.metric,
+  };
+}
+
+export function buildSignalRows(
+  t: (key: string) => string,
+  d: SignalData,
+  td: (key: string, values: Record<string, string>) => string,
+): SignalRow[] {
   const rows: RawRow[] = [];
 
-  if (d.slo) {
-    const n = d.slo.n;
-    rows.push({
-      key: "slo",
-      name: t("slo.title"),
-      category: "fidelity",
-      status: n === 0 ? "na" : d.slo.breaching ? "crit" : d.slo.burn_rate > 1 ? "warn" : "ok",
-      score: n === 0 ? "—" : pct(d.slo.good_rate),
-      threshold: `≥ ${d.slo.threshold.toFixed(2)}`,
-      sample: n === 0 ? "—" : `${n} tours`,
-    });
-  }
-  if (d.calibration) {
-    const a = d.calibration;
-    rows.push({
-      key: "calibration",
-      name: t("calibration.title"),
-      category: "fidelity",
-      status: !a.available ? "na" : a.lenient ? "warn" : "ok",
-      score: a.available ? pct(a.agreement ?? 0) : "—",
-      threshold: "κ ≥ 0.60",
-      sample: a.available && a.kappa != null ? `κ ${a.kappa.toFixed(2)}` : "—",
-    });
-  }
-  if (d.citations) {
-    const c = d.citations;
-    rows.push({
-      key: "citations",
-      name: t("citations.title"),
-      category: "fidelity",
-      status:
-        c.n_citations === 0
-          ? "na"
-          : c.validity_rate >= 0.95
-            ? "ok"
-            : c.validity_rate >= 0.8
-              ? "warn"
-              : "crit",
-      score: c.n_citations === 0 ? "—" : pct(c.validity_rate),
-      threshold: "≥ 95%",
-      sample: `${c.n_unsupported}/${c.n_citations}`,
-    });
-  }
-  if (d.contradiction) {
-    const c = d.contradiction;
-    rows.push({
-      key: "contradiction",
-      name: t("contradiction.title"),
-      category: "fidelity",
-      status:
-        c.n_turns === 0
-          ? "na"
-          : c.n_contradictions === 0
-            ? "ok"
-            : c.n_contradictions <= 2
-              ? "warn"
-              : "crit",
-      score: String(c.n_contradictions),
-      threshold: "= 0",
-      sample: `${c.n_sessions} sessions`,
-    });
-  }
-  if (d.predictor) {
-    const p = d.predictor;
-    rows.push({
-      key: "predictor",
-      name: t("predictor.title"),
-      category: "fidelity",
-      status: p.n === 0 ? "na" : p.precision >= 0.7 ? "ok" : p.precision >= 0.4 ? "warn" : "crit",
-      score: p.n === 0 ? "—" : pct(p.precision),
-      threshold: "≥ 70%",
-      sample: p.n === 0 ? "—" : `R ${pct(p.recall)}`,
-    });
-  }
-  if (d.clusters) {
-    const c = d.clusters;
-    rows.push({
-      key: "clusters",
-      name: t("clusters.title"),
-      category: "fidelity",
-      status: !c.available ? "na" : (c.n_failures ?? 0) === 0 ? "ok" : "warn",
-      score: c.available ? String(c.n_failures ?? 0) : "—",
-      threshold: "—",
-      sample: c.available ? `${c.k ?? 0} thèmes` : "—",
-    });
-  }
+  const shared = new Map(
+    readControls(
+      d,
+      SHARED.map((s) => s.id),
+    ).map((r) => [r.id, r]),
+  );
+  const pushShared = (id: ControlId) => {
+    const spec = SHARED.find((s) => s.id === id);
+    const reading = shared.get(id);
+    if (spec && reading) rows.push(sharedRow(spec, reading, t, td));
+  };
 
-  if (d.firewall) {
-    const f = d.firewall;
-    rows.push({
-      key: "firewall",
-      name: t("firewall.title"),
-      category: "security",
-      status: f.f1 >= 0.9 ? "ok" : f.f1 >= 0.7 ? "warn" : "crit",
-      score: pct(f.f1),
-      threshold: "F1 ≥ 0.90",
-      sample: `P ${pct(f.precision)} · R ${pct(f.recall)}`,
-    });
-  }
-  if (d.toxicity) {
-    const x = d.toxicity;
-    rows.push({
-      key: "toxicity",
-      name: t("toxicity.title"),
-      category: "security",
-      status: x.n_turns === 0 ? "na" : x.n_toxic === 0 ? "ok" : "crit",
-      score: `${x.n_toxic}/${x.n_turns}`,
-      threshold: "= 0",
-      sample: x.n_turns === 0 ? "—" : pct(x.toxicity_rate),
-    });
-  }
-  if (d.pii) {
-    const p = d.pii;
-    rows.push({
-      key: "piiLeak",
-      name: t("piiLeak.title"),
-      category: "security",
-      status: p.n_turns === 0 ? "na" : p.n_with_leak === 0 ? "ok" : "crit",
-      score: `${p.n_with_leak}/${p.n_turns}`,
-      threshold: "= 0",
-      sample: p.n_turns === 0 ? "—" : pct(p.leak_rate),
-    });
-  }
-
-  if (d.refusal) {
-    const r = d.refusal;
-    const worst = Math.max(r.over_refusal_rate, r.under_refusal_rate);
-    rows.push({
-      key: "refusal",
-      name: t("refusal.title"),
-      category: "compliance",
-      status: worst === 0 ? "ok" : worst <= 0.1 ? "warn" : "crit",
-      score: pct(r.over_refusal_rate),
-      threshold: "≤ 10%",
-      sample: `sous ${pct(r.under_refusal_rate)}`,
-    });
-  }
-  if (d.conformance) {
-    const c = d.conformance;
-    rows.push({
-      key: "conformance",
-      name: t("conformance.title"),
-      category: "compliance",
-      status:
-        c.n_fields_checked === 0
-          ? "na"
-          : c.conformance_rate >= 1
-            ? "ok"
-            : c.conformance_rate >= 0.9
-              ? "warn"
-              : "crit",
-      score: c.n_fields_checked === 0 ? "—" : pct(c.conformance_rate),
-      threshold: "= 100%",
-      sample: `${c.n_violations} viol.`,
-    });
-  }
-  if (d.localeFormat) {
-    const l = d.localeFormat;
-    rows.push({
-      key: "localeFormat",
-      name: t("localeFormat.title"),
-      category: "compliance",
-      status:
-        l.n_amounts === 0
-          ? "na"
-          : l.correctness_rate >= 1
-            ? "ok"
-            : l.correctness_rate >= 0.95
-              ? "warn"
-              : "crit",
-      score: l.n_amounts === 0 ? "—" : pct(l.correctness_rate),
-      threshold: "= 100%",
-      sample: `${l.n_violations}/${l.n_amounts}`,
-    });
-  }
-
-  if (d.tools) {
-    const tl = d.tools;
-    rows.push({
-      key: "tools",
-      name: t("tools.title"),
-      category: "reliability",
-      status:
-        tl.total === 0
-          ? "na"
-          : tl.validity_rate >= 0.95
-            ? "ok"
-            : tl.validity_rate >= 0.85
-              ? "warn"
-              : "crit",
-      score: tl.total === 0 ? "—" : pct(tl.validity_rate),
-      threshold: "≥ 95%",
-      sample: `${tl.denied + tl.errored + tl.arg_failures} rejets`,
-    });
-  }
-  if (d.cost) {
-    const c = d.cost;
-    rows.push({
-      key: "cost",
-      name: t("cost.title"),
-      category: "reliability",
-      status: c.n_turns === 0 ? "na" : c.n_anomalies === 0 ? "ok" : "warn",
-      score: `${Math.round(c.mean_tokens)} tok`,
-      threshold: `≤ ${Math.round(c.threshold_tokens)}`,
-      sample: `${c.estimated_cost_eur.toFixed(2)} €`,
-    });
-  }
-
-  if (d.routing) {
-    const r = d.routing;
-    rows.push({
-      key: "routing",
-      name: t("routing.title"),
-      category: "sessions",
-      status:
-        r.n === 0 ? "na" : r.mismatch_rate === 0 ? "ok" : r.mismatch_rate <= 0.05 ? "warn" : "crit",
-      score: r.n === 0 ? "—" : pct(1 - r.mismatch_rate),
-      threshold: "≥ 95%",
-      sample: `${r.mismatches} mismatch`,
-    });
-  }
-  if (d.funnel) {
-    const langs = d.funnel.languages ?? [];
-    const worst = langs.reduce((m, l) => Math.max(m, l.low_score_rate), 0);
-    rows.push({
-      key: "funnel",
-      name: t("funnel.title"),
-      category: "sessions",
-      status: langs.length === 0 ? "na" : worst <= 0.1 ? "ok" : worst <= 0.25 ? "warn" : "crit",
-      score: langs.length === 0 ? "—" : pct(1 - worst),
-      threshold: "≥ 90%",
-      sample: `${d.funnel.n_turns} tours`,
-    });
-  }
-  if (d.anomalies) {
-    const a = d.anomalies;
-    rows.push({
-      key: "anomalies",
-      name: t("anomalies.title"),
-      category: "sessions",
-      status: a.n_sessions === 0 ? "na" : a.n_anomalous === 0 ? "ok" : "warn",
-      score: `${a.n_anomalous}/${a.n_sessions}`,
-      threshold: "= 0",
-      sample: `${a.n_sessions} sessions`,
-    });
-  }
-  if (d.intent) {
-    const i = d.intent;
-    rows.push({
-      key: "intent",
-      name: t("intent.title"),
-      category: "sessions",
-      status:
-        i.n === 0
-          ? "na"
-          : i.low_confidence_rate <= 0.1
-            ? "ok"
-            : i.low_confidence_rate <= 0.25
-              ? "warn"
-              : "crit",
-      score: i.n === 0 ? "—" : pct(1 - i.low_confidence_rate),
-      threshold: "≥ 90%",
-      sample: `${i.unknown} inconnus`,
-    });
-  }
+  pushShared("faithfulness");
+  pushShared("calibration");
+  pushShared("citations");
+  pushShared("contradiction");
+  pushShared("predictor");
+  pushShared("clusters");
+  pushShared("firewall");
+  pushShared("toxicity");
+  pushShared("pii");
+  pushShared("refusalOver");
+  pushShared("refusalUnder");
+  pushShared("conformance");
+  pushShared("localeFormat");
+  pushShared("tools");
+  pushShared("cost");
+  pushShared("routing");
+  pushShared("funnel");
+  pushShared("anomalies");
+  pushShared("intent");
 
   // Enrich each row with its registry metadata + a stable id (image 01).
   const fallback = {
@@ -454,7 +297,11 @@ export function buildSignalRows(t: (key: string) => string, d: SignalData): Sign
     return {
       ...r,
       id: `#${String(i + 1).padStart(3, "0")}`,
-      metric: meta.metric,
+      // A shared row's metric id travels WITH its reading. `SIGNAL_META` held a second copy of
+      // the same strings — the join key with the signal catalogue, duplicated exactly the way
+      // the thresholds were, and one edit away from pointing two surfaces at two catalogue
+      // entries for one measurement.
+      metric: r.metric ?? meta.metric,
       entity: meta.entity,
       delta: null,
       action: meta.action,

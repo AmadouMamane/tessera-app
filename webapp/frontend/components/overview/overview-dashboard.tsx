@@ -88,12 +88,10 @@ import type {
   TrendReport,
 } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
 import {
-  type ControlState,
   type OverviewTone,
-  controlState,
   dotBg,
-  pct,
   quickActions,
   rateTone,
   score100,
@@ -101,6 +99,7 @@ import {
   toneText,
 } from "@/lib/overview";
 import { panelOf, signalOf } from "@/lib/overview-snapshot";
+import { registryIdFor } from "@/lib/signal-focus";
 import { isOrgWide, signalSupports } from "@/lib/signal-registry";
 
 /**
@@ -585,41 +584,42 @@ export function OverviewDashboard({
 // Signal derivation
 // ---------------------------------------------------------------------------
 
-interface ControlRow {
-  id: string; // i18n key under overview.signals
-  value: string;
-  target: string;
-  state: ControlState;
-  /** 0..1 severity (higher = worse) for the impact bars. */
-  severity: number;
-  impactKey: string;
+/**
+ * A row of the critical-controls table.
+ *
+ * Every field but `trend` now comes from `lib/control-registry.ts`. Until 2026-08-01 this
+ * component derived all of them itself — value, bar and state — and so did
+ * `observability/signals-table.tsx` and `security/security-dashboard.tsx`, independently. Six
+ * of the seven shared controls disagreed. The trend stays local because it is genuinely this
+ * table's own column (a sparkline over the SLO buckets), not a second opinion about a number.
+ */
+interface ControlRow extends ControlReading {
   trend?: number[];
-  /** True when the row's source is persisted, so it can be read "à T" (ADR 0011). */
-  asOfCapable: boolean;
-  /** Placeholder row: the signal is tracked but has no data at the focused T. */
-  noData?: boolean;
 }
 
-const NEUTRAL_STATE: ControlState = { key: "ok", tone: "neutral" };
-
-/** Stable "—" placeholder so a tracked-but-empty-at-T signal keeps its row. */
-function noDataRow(
-  id: string,
-  target: string,
-  impactKey: string,
-  asOfCapable: boolean,
-): ControlRow {
-  return {
-    id,
-    value: "—",
-    target,
-    state: NEUTRAL_STATE,
-    severity: 0,
-    impactKey,
-    asOfCapable,
-    noData: true,
-  };
-}
+/**
+ * Which controls this page shows, in display order.
+ *
+ * `injectionBypass` is deliberately absent: it is the SAME firewall probe read from the
+ * attacker's side, and `securite-privacy` is where that reading belongs. Two views of one
+ * measurement side by side under two labels is how "24 %, 76 %, 86 %" happened.
+ *
+ * `errorBudget` is new here, and it is not decoration. The faithfulness row used to be
+ * coloured by `slo.breaching` — a multi-window burn-rate alarm — while displaying `good_rate`,
+ * so a row could read "97 % · ≥ 95 %" in red for reasons nowhere on the page. The alarm is
+ * real, so it did not disappear; it became a row that shows the number it judges.
+ */
+const OVERVIEW_CONTROLS: readonly ControlId[] = [
+  "faithfulness",
+  "errorBudget",
+  "toxicity",
+  "pii",
+  "refusalOver",
+  "refusalUnder",
+  "conformance",
+  "tools",
+  "firewall",
+];
 
 function buildControls(
   d: {
@@ -634,116 +634,15 @@ function buildControls(
   },
   historyMode: boolean,
 ): ControlRow[] {
-  const rows: ControlRow[] = [];
-
-  // Each signal: a real row when it has data; in history mode, a stable "—"
-  // placeholder when the source is present but empty at T, so the table keeps
-  // the same rows across the scrub (no pop-in/out → no page yoyo).
-  const { slo, toxicity, pii, refusal, conformance, tools, firewall } = d;
-
-  if (slo && slo.n > 0) {
-    rows.push({
-      id: "faithfulness",
-      value: pct(slo.good_rate),
-      target: `≥ ${pct(slo.target)}`,
-      state: slo.breaching
-        ? { key: "fail", tone: "danger" }
-        : controlState(slo.good_rate, slo.target, "higher"),
-      severity: 1 - slo.good_rate,
-      impactKey: "rag",
-      trend: d.trend?.buckets.map((b) => b.mean),
-      asOfCapable: true, // backed by the durable score log
-    });
-  } else if (historyMode && slo) {
-    rows.push(noDataRow("faithfulness", `≥ ${pct(slo.target)}`, "rag", true));
-  }
-
-  if (toxicity && toxicity.n_turns > 0) {
-    rows.push({
-      id: "toxicity",
-      value: pct(toxicity.toxicity_rate, 2),
-      target: "≤ 0.10%",
-      state: controlState(toxicity.toxicity_rate, 0.001, "lower"),
-      severity: Math.min(toxicity.toxicity_rate * 50, 1),
-      impactKey: "safety",
-      asOfCapable: true, // bundle-backed (captured_at filterable)
-    });
-  } else if (historyMode && toxicity) {
-    rows.push(noDataRow("toxicity", "≤ 0.10%", "safety", true));
-  }
-
-  if (pii && pii.n_turns > 0) {
-    rows.push({
-      id: "pii",
-      value: pct(pii.leak_rate, 2),
-      target: "≤ 0.50%",
-      state: controlState(pii.leak_rate, 0.005, "lower"),
-      severity: Math.min(pii.leak_rate * 20, 1),
-      impactKey: "privacy",
-      asOfCapable: true, // bundle-backed (captured_at filterable)
-    });
-  } else if (historyMode && pii) {
-    rows.push(noDataRow("pii", "≤ 0.50%", "privacy", true));
-  }
-
-  if (refusal && refusal.n_legit + refusal.n_forbidden > 0) {
-    const worst = Math.max(refusal.over_refusal_rate, refusal.under_refusal_rate);
-    rows.push({
-      id: "refusal",
-      value: pct(worst),
-      target: "≤ 5%",
-      state: controlState(worst, 0.05, "lower"),
-      severity: Math.min(worst, 1),
-      impactKey: "quality",
-      asOfCapable: false, // fixed-corpus probe of the current policy → live by nature
-    });
-  } else if (historyMode && refusal) {
-    rows.push(noDataRow("refusal", "≤ 5%", "quality", false));
-  }
-
-  if (conformance && conformance.n_calls > 0) {
-    rows.push({
-      id: "conformance",
-      value: pct(conformance.conformance_rate),
-      target: "≥ 95%",
-      state: controlState(conformance.conformance_rate, 0.95, "higher"),
-      severity: 1 - conformance.conformance_rate,
-      impactKey: "tools",
-      asOfCapable: true, // audit-log-backed (occurred_at filterable)
-    });
-  } else if (historyMode && conformance) {
-    rows.push(noDataRow("conformance", "≥ 95%", "tools", true));
-  }
-
-  if (tools && tools.total > 0) {
-    rows.push({
-      id: "tools",
-      value: pct(tools.validity_rate),
-      target: "≥ 95%",
-      state: controlState(tools.validity_rate, 0.95, "higher"),
-      severity: 1 - tools.validity_rate,
-      impactKey: "tools",
-      asOfCapable: true, // audit-log-backed (occurred_at filterable)
-    });
-  } else if (historyMode && tools) {
-    rows.push(noDataRow("tools", "≥ 95%", "tools", true));
-  }
-
-  if (firewall && firewall.n_positive > 0) {
-    rows.push({
-      id: "firewall",
-      value: pct(firewall.recall),
-      target: "≥ 90%",
-      state: controlState(firewall.recall, 0.9, "higher"),
-      severity: 1 - firewall.recall,
-      impactKey: "security",
-      asOfCapable: false, // fixed adversarial-corpus probe → live by nature
-    });
-  } else if (historyMode && firewall) {
-    rows.push(noDataRow("firewall", "≥ 90%", "security", false));
-  }
-
-  return rows;
+  // At live, only signals that returned data are shown. In history mode every tracked signal
+  // keeps a stable "—" row at T instead of vanishing, so scrubbing does not make the table
+  // jump. That is a presentation rule about THIS table, which is why it lives here; what each
+  // row means is not, which is why it does not.
+  return readControls(d, OVERVIEW_CONTROLS)
+    .filter((row) => historyMode || !row.noData)
+    .map((row) =>
+      row.id === "faithfulness" ? { ...row, trend: d.trend?.buckets.map((b) => b.mean) } : row,
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -973,6 +872,7 @@ function CriticalControlsTable({
   const ti = useTranslations("overview.impact");
   const tt = useTranslations("overview.time");
   const tci = useTranslations("overview.controlInfo");
+  const tcd = useTranslations("overview.controlDetail");
   const signalById = useMemo(() => new Map((signals ?? []).map((s) => [s.id, s])), [signals]);
 
   return (
@@ -1046,7 +946,7 @@ function CriticalControlsTable({
                           {/* A shared-policy probe does not vary by agent: under an
                             agent scope it carries an honest "org-wide" badge rather
                             than pretending to be that agent's own number. */}
-                          {agentScoped && isOrgWide(c.id) ? (
+                          {agentScoped && isOrgWide(registryIdFor(c.id)) ? (
                             <span
                               title={tas("orgWideHint")}
                               className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"
@@ -1061,7 +961,9 @@ function CriticalControlsTable({
                             as it stood at the chosen past instant. So the honest, plain-language
                             badge is "current policy", driven by the registry (`signalSupports`)
                             so it can never drift from the declaration. */}
-                          {historyMode && !c.noData && !signalSupports(c.id, "time") ? (
+                          {historyMode &&
+                          !c.noData &&
+                          !signalSupports(registryIdFor(c.id), "time") ? (
                             <span
                               title={t("currentPolicyHint")}
                               className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--tessera-fg-warning)]/90"
@@ -1106,6 +1008,16 @@ function CriticalControlsTable({
                         }
                       >
                         {c.value}
+                        {/* The supporting number, localised from DATA rather than pasted in.
+                          This is where the firewall's recall lives now: it used to BE the
+                          headline here (76 %) while the signals registry showed F1 (86 %) under
+                          the same label. One of the two had to stop being the headline; neither
+                          had to disappear. */}
+                        {c.detail ? (
+                          <div className="text-[0.6rem] font-normal text-[var(--muted-foreground)]">
+                            {tcd(c.detail.key, c.detail.values)}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
                       <td className="w-24 py-2 pr-4">

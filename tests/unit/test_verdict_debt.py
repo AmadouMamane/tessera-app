@@ -107,6 +107,9 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/observability/catalogue_consumers.py::_passing": "VERDICT",
     "scripts/check_contribution.py::_replay_once": "VERDICT",
     "scripts/check_contribution.py::_replay": "VERDICT",
+    # A route-existence LOOKUP inside the orphan-link probe: it answers "is this path in the
+    # app tree", which selects what to report. Nothing passes or fails on it.
+    "scripts/audit/scan_ui_invariants.py::known": "filter",
     # ── authz & guard verdicts ────────────────────────────────────────────────────────────────
     "src/tessera/authz.py::auth_satisfies": "VERDICT",
     "src/tessera/agent/registry.py::can_handoff": "VERDICT",

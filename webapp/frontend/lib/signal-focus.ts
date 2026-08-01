@@ -11,8 +11,27 @@
 
 export const SIGNAL_FOCUS_PARAM = "signal";
 
-/** UI row keys whose capability-registry id is spelled differently. */
-const REGISTRY_ID: Record<string, string> = { piiLeak: "pii_leak" };
+/**
+ * UI row keys whose capability-registry id is spelled differently.
+ *
+ * Two spellings for one signal is a small cost paid in ONE place. The alternative — letting a
+ * component call `capabilityFor("refusalOver")` and silently get `undefined`, which
+ * `signalSupports` turns into `false` — is how a filter affordance disappears without anyone
+ * noticing that the registry was never asked about the right thing.
+ *
+ * `crossTenant` / `leastPrivilege` / `embeddingInversion` are control VIEWS of signals already
+ * declared under their own names; they map onto those rather than minting new ids.
+ */
+const REGISTRY_ID: Record<string, string> = {
+  piiLeak: "pii_leak",
+  errorBudget: "error_budget",
+  refusalOver: "refusal_over",
+  refusalUnder: "refusal_under",
+  injectionBypass: "injection_bypass",
+  crossTenant: "cross_tenant",
+  leastPrivilege: "least_privilege",
+  embeddingInversion: "embedding_inversion",
+};
 
 /** The capability-registry id for a signal row's UI key. */
 export function registryIdFor(uiKey: string): string {

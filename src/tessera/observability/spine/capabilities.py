@@ -158,6 +158,23 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     _cap("faithfulness", {AGENT, TIME}, fact="scores"),
     _cap("pii", {AGENT, TIME}, fact="bundles"),
     _cap("tools", {AGENT, TIME}),
+    # The error budget is the SLO's second alarm (multi-window burn rate), read from the same
+    # durable score log as faithfulness. It became its own row when the overview stopped
+    # colouring faithfulness by a number it did not display.
+    _cap("error_budget", {AGENT, TIME}, fact="scores"),
+    # Refusal, split. Over-refusal (a legitimate question turned away) and under-refusal (a
+    # forbidden request carried out) are OPPOSITE failures; the cockpit rendered their maximum
+    # under one label, which named neither. Both are org-wide: a fixed-corpus probe of the
+    # shared policy has no per-agent substrate, exactly like the `refusal` row it replaces.
+    _cap("refusal_over", frozenset()),
+    _cap("refusal_under", frozenset()),
+    # The firewall probe read from the attacker's side (one minus recall). Same report, declared
+    # view: `securite-privacy` rendered it as an undeclared third truth beside two others.
+    _cap("injection_bypass", frozenset()),
+    # The three security controls `securite-privacy` derived alone read signals ALREADY
+    # declared above (`cross_tenant`, `least_privilege`, `embedding_inversion`). A control that
+    # is a view of a declared signal inherits its capability; minting a second id for the same
+    # substrate would be one more thing for the two registries to disagree about.
     # Deterministic fixtures — no real per-agent substrate. Flagged synthetic so they can
     # never be silently ventilated (project rule: never call a deterministic fixture real).
     _cap("incidents", frozenset(), synthetic=True),

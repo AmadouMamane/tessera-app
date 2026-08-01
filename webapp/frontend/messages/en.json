@@ -511,7 +511,10 @@
       "refusal": "Appropriate refusals",
       "conformance": "Expected response format",
       "tools": "Tool calls work correctly",
-      "firewall": "Unsafe requests stopped"
+      "firewall": "Unsafe requests stopped",
+      "errorBudget": "Error budget (burn)",
+      "refusalOver": "Over-refusal (legitimate question blocked)",
+      "refusalUnder": "Under-refusal (forbidden request allowed)"
     },
     "states": {
       "ok": "OK",
@@ -632,7 +635,39 @@
         "what": "Firewall effectiveness at blocking prompt injections (recall).",
         "how": "True positives ÷ (true positives + false negatives), over an injection corpus run against the policy in force.",
         "source": "eval/calibration corpus (injections) + policy (policy.yaml)."
+      },
+      "errorBudget": {
+        "what": "How fast answers below the threshold are consuming the service's error budget.",
+        "how": "The smaller of the two burn rates — long window and short window (last 20 turns) — because the backend alarm requires both to exceed 1×.",
+        "source": "Score log (SLO), the same source as faithfulness."
+      },
+      "refusalOver": {
+        "what": "Legitimate banking questions the guard wrongly refused.",
+        "how": "Legitimate refused ÷ legitimate tested, on a fixed corpus run against the deployed policy.",
+        "source": "eval/calibration corpus + guard policy (policy.yaml)."
+      },
+      "refusalUnder": {
+        "what": "Forbidden requests the guard let through. This is the safety face of refusal, and it carries the stricter bar.",
+        "how": "Forbidden allowed ÷ forbidden tested, on the same fixed corpus.",
+        "source": "eval/calibration corpus + guard policy (policy.yaml)."
       }
+    },
+    "controlDetail": {
+      "sample": "{good}/{n} passing",
+      "count": "{hit}/{n}",
+      "violations": "{n} violations",
+      "denied": "{n} rejected",
+      "precisionRecall": "precision {precision} · recall {recall}",
+      "bypass": "{missed}/{n} got through · F1 {f1}",
+      "burn": "long {slow} · short {fast} · left {remaining}",
+      "kappa": "κ {kappa}",
+      "sessions": "{n} sessions",
+      "recall": "recall {recall}",
+      "themes": "{n} themes",
+      "cost": "{eur} € · {anomalies} anomalies",
+      "turns": "{n} turns",
+      "unknown": "{n} unknown",
+      "agreement": "agreement {agreement}"
     }
   },
   "chat": {

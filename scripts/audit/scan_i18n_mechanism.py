@@ -37,6 +37,10 @@ COMMENTish = re.compile(r"^\s*(?://|\*|/\*)")
 SAFE = re.compile(r"(from \"|from '|import |// |describe\(|it\(|expect\(|console\.)")
 LITERAL = re.compile(r"(?:`[^`\n]{4,}`|\"[^\"\n]{4,}\"|'[^'\n]{4,}')")
 
+#: The probe's own negative control: this line IS inside a `pick()`, so it must NOT be
+#: reported. A detector with no case it must stay silent on will happily report everything.
+_PICKED_LINE = 160
+
 
 def sources(front: Path = FRONT) -> list[Path]:
     """Every rendered `.ts`/`.tsx` under the frontend, tests and vendored trees excluded."""
@@ -99,8 +103,12 @@ def main() -> int:
     hits, catalogues, picks = scan()
 
     print("CONTRÔLES DE LA SONDE")
-    inside = [h for h in hits if str(h["file"]).endswith("historique-tabs.tsx") and h["line"] == 160]
-    print(f"  [-] ligne 160 de historique-tabs (DANS un pick) signalée ? {bool(inside)}  → False")
+    inside = [
+        h
+        for h in hits
+        if str(h["file"]).endswith("historique-tabs.tsx") and h["line"] == _PICKED_LINE
+    ]
+    print(f"  [-] l.{_PICKED_LINE} historique-tabs (DANS un pick) vue ? {bool(inside)} → False")
     hard = [h for h in hits if str(h["file"]).endswith("agent-console.tsx")]
     print(f"  [+] agent-console.tsx a des littéraux nus ? {bool(hard)}  → doit être True")
     print()

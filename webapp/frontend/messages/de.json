@@ -511,7 +511,10 @@
       "refusal": "Angemessene Ablehnungen",
       "conformance": "Erwartetes Antwortformat",
       "tools": "Werkzeugaufrufe funktionieren",
-      "firewall": "Unsichere Anfragen gestoppt"
+      "firewall": "Unsichere Anfragen gestoppt",
+      "errorBudget": "Fehlerbudget (Verbrauch)",
+      "refusalOver": "Zu strenge Ablehnung (legitime Frage blockiert)",
+      "refusalUnder": "Zu lockere Ablehnung (verbotene Anfrage zugelassen)"
     },
     "states": {
       "ok": "OK",
@@ -632,7 +635,39 @@
         "what": "Wirksamkeit der Firewall beim Blockieren von Prompt-Injektionen (Recall).",
         "how": "Richtig Positive ÷ (richtig Positive + falsch Negative), auf einem Injektionskorpus gegen die geltende Richtlinie.",
         "source": "Korpus eval/calibration (Injektionen) + Richtlinie (policy.yaml)."
+      },
+      "errorBudget": {
+        "what": "Wie schnell Antworten unter der Schwelle das Fehlerbudget des Dienstes verbrauchen.",
+        "how": "Der kleinere der beiden Verbrauchsraten — langes Fenster und kurzes Fenster (letzte 20 Turns) — denn der Backend-Alarm verlangt, dass beide 1× überschreiten.",
+        "source": "Score-Protokoll (SLO), dieselbe Quelle wie die Quellentreue."
+      },
+      "refusalOver": {
+        "what": "Legitime Bankfragen, die der Schutzmechanismus zu Unrecht abgelehnt hat.",
+        "how": "Abgelehnte legitime ÷ getestete legitime, auf einem festen Korpus gegen die geltende Richtlinie.",
+        "source": "Korpus eval/calibration + Schutzrichtlinie (policy.yaml)."
+      },
+      "refusalUnder": {
+        "what": "Verbotene Anfragen, die der Schutzmechanismus durchgelassen hat. Das ist die Sicherheitsseite der Ablehnung und trägt die strengere Schwelle.",
+        "how": "Zugelassene verbotene ÷ getestete verbotene, auf demselben festen Korpus.",
+        "source": "Korpus eval/calibration + Schutzrichtlinie (policy.yaml)."
       }
+    },
+    "controlDetail": {
+      "sample": "{good}/{n} konform",
+      "count": "{hit}/{n}",
+      "violations": "{n} Verstöße",
+      "denied": "{n} Ablehnungen",
+      "precisionRecall": "Präzision {precision} · Trefferquote {recall}",
+      "bypass": "{missed}/{n} durchgelassen · F1 {f1}",
+      "burn": "lang {slow} · kurz {fast} · Rest {remaining}",
+      "kappa": "κ {kappa}",
+      "sessions": "{n} Sitzungen",
+      "recall": "Trefferquote {recall}",
+      "themes": "{n} Themen",
+      "cost": "{eur} € · {anomalies} Anomalien",
+      "turns": "{n} Turns",
+      "unknown": "{n} unbekannt",
+      "agreement": "Übereinstimmung {agreement}"
     }
   },
   "chat": {

@@ -57,6 +57,7 @@ import type {
   FirewallEfficacy,
   PrivilegeReport,
 } from "@/lib/api/schemas";
+import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
 import { panelOf, signalOf } from "@/lib/overview-snapshot";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
@@ -549,6 +550,9 @@ type SecTab = (typeof SEC_TABS)[number];
 
 export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const ts = useTranslations("security");
+  // The supporting line under a control value, localised from the SAME catalogue the other
+  // two surfaces read — the counts used to be pasted in as `(3/25)` beside every value.
+  const tcd = useTranslations("overview.controlDetail");
   const locale = useLocale();
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
@@ -647,8 +651,22 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     role: string;
     case: string;
   };
-  const tone = (rate: number | null, crit: number, warn: number): Tone =>
-    rate == null ? "warn" : rate > crit ? "crit" : rate > warn ? "high" : "ok";
+  /**
+   * This page's vocabulary for a control state.
+   *
+   * `high` is a tone this table has and the other two do not, so the mapping is one-way and
+   * lossy in one direction only: the registry's `warn` becomes `high` here. That is a
+   * presentation choice about a shared verdict, not a second verdict — the state itself is
+   * computed once, from the value shown against the bar shown.
+   */
+  const toneOf = (reading: ControlReading): Tone =>
+    reading.noData
+      ? "warn"
+      : reading.state.key === "fail"
+        ? "crit"
+        : reading.state.key === "warn"
+          ? "high"
+          : "ok";
   // Case refs come from the real failed-harness cases of the control's domain —
   // never an invented "CASE-02xx" id (same rule as the SIEM card in the rail).
   const caseRef = (cats: string[]): string => {
@@ -659,62 +677,102 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     if (!first) return "—";
     return ids.length === 1 ? first : `${first} +${ids.length - 1}`;
   };
-  const controls: Control[] = [
+  /**
+   * The six controls this page shows, read from `lib/control-registry.ts`.
+   *
+   * This surface was the THIRD independent copy of the same derivations, and the one that made
+   * the cost visible: it rendered `1 − recall` (24 %) as "Prompt injection" while
+   * `overview-dashboard` rendered `recall` (76 %) and `signals-table` rendered `f1` (86 %) —
+   * three numbers from one `FirewallEfficacy` report, each under a label naming firewall
+   * effectiveness, none of them saying which of the three it was. All three are still visible;
+   * each now says which view it is, and the bars come from one place.
+   *
+   * The `?? 0` that used to fill each value is gone with them: an unread probe rendered `0 %`,
+   * which reads as "nothing recoverable" — the best possible result — for a measurement that
+   * did not happen. It now reads `—` (ADR 0026: a witness that cannot see may not report ok).
+   */
+  const secControls: readonly {
+    readonly id: ControlId;
+    readonly key: string;
+    readonly action: string;
+    readonly role: string;
+    readonly cats: string[];
+  }[] = [
     {
+      id: "injectionBypass",
       key: "promptInjection",
-      tone: tone(attackRate, 0.2, 0.05),
-      value: `${pct(attackRate)} (${fw?.false_negative ?? 0}/${fw?.n_positive ?? 0})`,
-      target: "< 20%",
-      action: ts("ctrl.promptInjectionAction"),
-      role: ts("role.security"),
-      case: caseRef(["prompt_injection"]),
+      action: "ctrl.promptInjectionAction",
+      role: "role.security",
+      cats: ["prompt_injection"],
     },
     {
+      id: "pii",
       key: "piiLeak",
-      tone: tone(piiRate, 0.001, 0),
-      value: `${pct(piiRate)} (${pii.data?.n_with_leak ?? 0}/${pii.data?.n_turns ?? 0})`,
-      target: "0%",
-      action: ts("ctrl.piiLeakAction"),
-      role: ts("role.privacy"),
-      case: caseRef(["pii"]),
+      action: "ctrl.piiLeakAction",
+      role: "role.privacy",
+      cats: ["pii"],
     },
     {
+      id: "crossTenant",
       key: "crossTenant",
-      tone: tone(xtRate, 0.001, 0),
-      value: pct(xtRate),
-      target: "0%",
-      action: ts("ctrl.crossTenantAction"),
-      role: ts("role.security"),
-      case: caseRef(["cross_tenant", "tenant"]),
+      action: "ctrl.crossTenantAction",
+      role: "role.security",
+      cats: ["cross_tenant", "tenant"],
     },
     {
+      id: "leastPrivilege",
       key: "toolMisuse",
-      tone: tone(overProvRate, 0.4, 0.1),
-      value: `${pct(overProvRate)} (${lp.data?.n_over_provisioned ?? 0}/${lp.data?.n_granted ?? 0})`,
-      target: "< 5%",
-      action: ts("ctrl.toolMisuseAction"),
-      role: ts("role.security"),
-      case: caseRef(["tool"]),
+      action: "ctrl.toolMisuseAction",
+      role: "role.security",
+      cats: ["tool"],
     },
     {
+      id: "embeddingInversion",
       key: "inversion",
-      tone: tone(invRate, 0.2, 0.05),
-      value: `${pct(invRate)} (${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0})`,
-      target: "0%",
-      action: ts("ctrl.inversionAction"),
-      role: ts("role.ml"),
-      case: caseRef(["memory"]),
+      action: "ctrl.inversionAction",
+      role: "role.ml",
+      cats: ["memory"],
     },
     {
+      id: "toxicity",
       key: "toxicity",
-      tone: tone(toxRate, 0.001, 0),
-      value: pct(toxRate, 2),
-      target: "< 0.1%",
-      action: ts("ctrl.toxicityAction"),
-      role: ts("role.ml"),
-      case: caseRef(["toxicity"]),
+      action: "ctrl.toxicityAction",
+      role: "role.ml",
+      cats: ["toxicity"],
     },
   ];
+
+  const readings = new Map(
+    readControls(
+      {
+        firewall: fw ?? undefined,
+        pii: pii.data,
+        toxicity: toxicity.data,
+        crossTenant: crossTenant.data,
+        privilege: lp.data,
+        inversion: inversion.data,
+      },
+      secControls.map((c) => c.id),
+    ).map((r) => [r.id, r]),
+  );
+
+  const controls: Control[] = secControls.flatMap((spec) => {
+    const reading = readings.get(spec.id);
+    if (!reading) return [];
+    return [
+      {
+        key: spec.key,
+        tone: toneOf(reading),
+        value: reading.detail
+          ? `${reading.value} (${tcd(reading.detail.key, reading.detail.values)})`
+          : reading.value,
+        target: reading.target,
+        action: ts(spec.action),
+        role: ts(spec.role),
+        case: caseRef(spec.cats),
+      },
+    ];
+  });
 
   // Domain risk (real, normalised).
   const domainRisks = [

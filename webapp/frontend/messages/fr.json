@@ -511,7 +511,10 @@
       "refusal": "Calibration des refus",
       "conformance": "Conformité format",
       "tools": "Validité des outils",
-      "firewall": "Efficacité firewall"
+      "firewall": "Efficacité firewall",
+      "errorBudget": "Budget d'erreur (consommation)",
+      "refusalOver": "Sur-refus (question légitime bloquée)",
+      "refusalUnder": "Sous-refus (demande interdite acceptée)"
     },
     "states": {
       "ok": "OK",
@@ -632,7 +635,39 @@
         "what": "Efficacité du pare-feu à bloquer les injections de prompt (rappel).",
         "how": "Vrais positifs ÷ (vrais positifs + faux négatifs), sur un corpus d'injections passé contre la politique en vigueur.",
         "source": "Corpus eval/calibration (injections) + politique (policy.yaml)."
+      },
+      "errorBudget": {
+        "what": "Vitesse à laquelle les réponses sous le seuil consomment le budget d'erreur du service.",
+        "how": "Le plus petit des deux taux de consommation — fenêtre longue et fenêtre courte (20 derniers tours) — car l'alerte du backend exige que les deux dépassent 1×.",
+        "source": "Journal des scores (SLO), même source que la fidélité."
+      },
+      "refusalOver": {
+        "what": "Questions bancaires légitimes que le garde-fou a refusées à tort.",
+        "how": "Légitimes refusés ÷ légitimes testés, sur un corpus figé passé contre la politique en vigueur.",
+        "source": "Corpus eval/calibration + politique de garde (policy.yaml)."
+      },
+      "refusalUnder": {
+        "what": "Demandes interdites que le garde-fou a laissé passer. C'est la face sécurité du refus, et elle porte le seuil le plus strict.",
+        "how": "Interdits acceptés ÷ interdits testés, sur le même corpus figé.",
+        "source": "Corpus eval/calibration + politique de garde (policy.yaml)."
       }
+    },
+    "controlDetail": {
+      "sample": "{good}/{n} conformes",
+      "count": "{hit}/{n}",
+      "violations": "{n} violations",
+      "denied": "{n} rejets",
+      "precisionRecall": "précision {precision} · rappel {recall}",
+      "bypass": "{missed}/{n} passés · F1 {f1}",
+      "burn": "long {slow} · court {fast} · reste {remaining}",
+      "kappa": "κ {kappa}",
+      "sessions": "{n} sessions",
+      "recall": "rappel {recall}",
+      "themes": "{n} thèmes",
+      "cost": "{eur} € · {anomalies} anomalies",
+      "turns": "{n} tours",
+      "unknown": "{n} inconnus",
+      "agreement": "accord {agreement}"
     }
   },
   "chat": {

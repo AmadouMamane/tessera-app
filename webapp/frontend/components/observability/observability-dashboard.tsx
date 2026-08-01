@@ -123,7 +123,7 @@ import type {
   RunSummary,
   WhatChanged,
 } from "@/lib/api/schemas";
-import { SIGNAL_FOCUS_PARAM, registryIdFor } from "@/lib/signal-focus";
+import { SIGNAL_FOCUS_PARAM, readSignalFocus, registryIdFor } from "@/lib/signal-focus";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const POLL_MS = 5_000;
@@ -187,6 +187,7 @@ function SectionInfo({ title, explainKey }: { title: string; explainKey: string 
 export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
+  const tcd = useTranslations("overview.controlDetail");
   const locale = useLocale();
   const [tab, setTab] = useUrlBackedView(TAB_DEFS, "overview", "tab");
   const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
@@ -473,26 +474,50 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   // Newest first for display.
 
   // Unified signal catalogue derived from the live reports (reference image 01).
-  const signalRows = buildSignalRows(t, {
-    slo: slo.data,
-    calibration: calibration.data,
-    citations: citations.data,
-    contradiction: contradictions.data,
-    predictor: failurePredictor.data,
-    clusters: failureClusters.data,
-    firewall: firewall.data,
-    toxicity: toxicity.data,
-    pii: piiLeak.data,
-    refusal: refusal.data,
-    conformance: conformance.data,
-    localeFormat: localeFormat.data,
-    tools: tools.data,
-    cost: cost.data,
-    routing: routing.data,
-    funnel: funnel.data,
-    anomalies: anomalies.data,
-    intent: intent.data,
-  });
+  const signalRows = buildSignalRows(
+    t,
+    {
+      slo: slo.data,
+      calibration: calibration.data,
+      citations: citations.data,
+      contradiction: contradictions.data,
+      predictor: failurePredictor.data,
+      clusters: failureClusters.data,
+      firewall: firewall.data,
+      toxicity: toxicity.data,
+      pii: piiLeak.data,
+      refusal: refusal.data,
+      conformance: conformance.data,
+      localeFormat: localeFormat.data,
+      tools: tools.data,
+      cost: cost.data,
+      routing: routing.data,
+      funnel: funnel.data,
+      anomalies: anomalies.data,
+      intent: intent.data,
+    },
+    // The supporting line for the eight shared rows, localised from the SAME catalogue the
+    // overview reads. The previous version built `` `sous ${pct(...)}` `` inline — a French
+    // literal in a trilingual component, which a German operator read in French.
+    tcd,
+  );
+
+  /**
+   * The row `?signal=` names, if any — the URL is the source, not local click state.
+   *
+   * `?signal=` already drove the per-agent lens; it did NOT reach this table, so arriving from
+   * "Investiguer" on Vue d'ensemble opened the right tab with nothing selected. The operator's
+   * complaint was that the link landed on the wrong page; landing on the right page with the
+   * row unmarked is the same complaint one step later.
+   *
+   * Reading it from the URL rather than from `selectedSignal` is what makes the link work on a
+   * cold load and survive a refresh — click state does not exist yet when the page arrives.
+   */
+  const focusedSignal = readSignalFocus(searchParams);
+  const focusedKey =
+    signalRows.find((r) => registryIdFor(r.key) === focusedSignal)?.key ??
+    selectedSignal?.key ??
+    null;
 
   // --- Real derived headline metrics (no fabrication — null ⇒ "—") -----------
   const signalSummary = signalRows.reduce(
@@ -708,11 +733,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 trend={signalStatusTrend.data}
                 catalogue={QUALITY_CATALOGUE}
               />
-              <SignalsTable
-                rows={signalRows}
-                selectedKey={selectedSignal?.key ?? null}
-                onSelect={focusSignal}
-              />
+              <SignalsTable rows={signalRows} selectedKey={focusedKey} onSelect={focusSignal} />
               <div className="grid gap-2 lg:grid-cols-3">
                 <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
                 <ThemeDistribution rows={signalRows} />

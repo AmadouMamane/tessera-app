@@ -69,6 +69,10 @@ def c1_untranslated() -> list[dict[str, object]]:
 # C2 — dead controls: a <button> with no onClick / type=submit / asChild
 # --------------------------------------------------------------------------------------
 BUTTON_OPEN = re.compile(r"<(Button|button)\b")
+#: How far a JSX opening tag may span before the scan gives up joining it.
+_TAG_SPAN = 14
+#: How many findings to print before summarising the rest.
+_SAMPLE = 60
 
 
 def c2_dead_buttons() -> list[dict[str, object]]:
@@ -81,13 +85,13 @@ def c2_dead_buttons() -> list[dict[str, object]]:
                 continue
             # the element's opening tag may span lines — take until the first '>'
             chunk, j = line, i
-            while ">" not in chunk and j + 1 < len(lines) and j - i < 14:
+            while ">" not in chunk and j + 1 < len(lines) and j - i < _TAG_SPAN:
                 j += 1
                 chunk += " " + lines[j]
             head = chunk.split(">")[0]
             if any(
                 k in head
-                for k in ("onClick", "type=\"submit\"", "type='submit'", "asChild", "onSubmit")
+                for k in ("onClick", 'type="submit"', "type='submit'", "asChild", "onSubmit")
             ):
                 continue
             # a <Button> wrapping a <Link> is legitimate only with asChild; without it the
@@ -126,7 +130,7 @@ def c3_broken_links() -> list[dict[str, object]]:
             rp = r.strip("/").split("/")
             if len(rp) != len(tp):
                 continue
-            if all(rs.startswith("[") or rs == ts for rs, ts in zip(rp, tp)):
+            if all(rs.startswith("[") or rs == ts for rs, ts in zip(rp, tp, strict=False)):
                 return True
         return False
 
@@ -142,7 +146,9 @@ def c3_broken_links() -> list[dict[str, object]]:
 # --------------------------------------------------------------------------------------
 # C4 — the same payload field rendered under different time windows
 # --------------------------------------------------------------------------------------
-WINDOW_CALL = re.compile(r"(fleetQuery\([^)]*\)|period[\"']?\s*[:=]\s*[\"'][^\"']+[\"']|\"d7\"|\"d30\")")
+WINDOW_CALL = re.compile(
+    r"(fleetQuery\([^)]*\)|period[\"']?\s*[:=]\s*[\"'][^\"']+[\"']|\"d7\"|\"d30\")"
+)
 
 
 def c4_windows() -> dict[str, list[str]]:
@@ -170,10 +176,10 @@ def main() -> int:
         print("=" * 78)
 
     head("C1 · CHAÎNES EN LANGUE NATURELLE HORS i18n", len(c1))
-    for h in c1[:60]:
+    for h in c1[:_SAMPLE]:
         print(f"  {h['file']}:{h['line']}  «{h['literal']}»")
-    if len(c1) > 60:
-        print(f"  … et {len(c1) - 60} autres")
+    if len(c1) > _SAMPLE:
+        print(f"  … et {len(c1) - _SAMPLE} autres")
 
     head("C2 · BOUTONS SANS ACTION (ni onClick, ni submit, ni lien)", len(c2))
     by_file: dict[str, int] = defaultdict(int)

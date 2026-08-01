@@ -152,15 +152,20 @@ function scanUnexplainedNa(file: string, source: string): Unexplained[] {
 }
 
 /**
- * `na` posed without a reason, at its exact size on 2026-08-01.
+ * `na` posed without a reason.
  *
- * All sixteen are in the quality signals registry, and they already carry at least two
- * distinct causes in their conditions — `n === 0` (empty sample) and `!available` (the source
- * could not be read). The condition knows; the row does not. Lot 5 gives `SignalRow` a
- * `reason` and this map empties.
+ * Was 17, all in the quality signals registry, each hand-written beside its own condition and
+ * already carrying at least two distinct causes — `n === 0` (empty sample) versus `!available`
+ * (the source could not be read). The condition knew; the row did not.
+ *
+ * Wiring the table onto `lib/control-registry.ts` took it to 2: `readControl` decides
+ * emptiness in ONE place (`sample.n <= 0`), so nineteen hand-written conditions became one.
+ * The 2 that remain are the mapping from a registry reading to this table's vocabulary and the
+ * legend row. They still cannot say WHY, because `ControlReading` has one boolean where four
+ * distinguishable answers belong — Lot 5's job, and the reason this map is not yet empty.
  */
 const FROZEN_UNEXPLAINED_NA: ReadonlyMap<string, number> = new Map([
-  ["components/observability/signals-table.tsx", 17],
+  ["components/observability/signals-table.tsx", 2],
 ]);
 
 /* ------------------------------------------------------------------------------------ */

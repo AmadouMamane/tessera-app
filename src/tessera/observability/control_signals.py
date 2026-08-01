@@ -22,12 +22,20 @@ from tessera.observability.signal_catalogue import compute_signal_catalogue
 
 __all__ = ["compute_control_signals"]
 
-# Stable display order — mirrors buildControls() on the frontend.
+# Stable display order — mirrors OVERVIEW_CONTROLS in overview-dashboard.tsx.
+#
+# `refusal` became two rows on 2026-08-01: over-refusal (a legitimate question turned away,
+# a utility cost) and under-refusal (a forbidden request carried out, a safety incident) are
+# opposite failures, and the collapsed row rendered their maximum under a label naming neither.
+# `error_budget` joined them: the overview used to colour the faithfulness row from
+# `slo.breaching`, a multi-window burn-rate alarm it never displayed.
 _CONTROL_ORDER: tuple[str, ...] = (
     "faithfulness",
+    "errorBudget",
     "toxicity",
     "pii",
-    "refusal",
+    "refusalOver",
+    "refusalUnder",
     "conformance",
     "tools",
     "firewall",
@@ -43,22 +51,36 @@ _CONTROL_SIGNAL_NAME: dict[str, str] = {
     "firewall": "prompt_injection_bypass",
 }
 
-# Control → a REAL existing SURVEILLER investigation route (drill-down). Every
-# control gets one, even the non-catalogued probes (the page exists regardless).
+# Control → the REAL surface that INVESTIGATES it, down to the tab and the focused signal.
+#
+# Until 2026-08-01 these were bare page paths, and the operator's complaint was exact:
+# clicking "Investiguer" on *Calibration des refus* landed on Vue d'ensemble — the page the
+# alarm was raised FROM — with the refusal row nowhere in sight. A drill-down that returns you
+# to where you started is not navigation, it is a link that looks like one.
+#
+# Every route now names the tab (`?tab=`) and the signal to focus (`?signal=`, read by
+# `webapp/frontend/lib/signal-focus.ts`, which re-plans the per-agent breakdown around it). The
+# signal ids are the capability-registry spellings, the same strings `capabilities.py` declares
+# — not the camelCase UI keys, so a rename on one side cannot silently produce a dead anchor.
+_QUALITY = "/surveiller/qualite-ia?tab=signals&signal="
 _CONTROL_ROUTE: dict[str, str] = {
-    "faithfulness": "/surveiller/qualite-ia",
-    "toxicity": "/surveiller/securite-privacy",
-    "pii": "/surveiller/securite-privacy",
-    "refusal": "/surveiller/qualite-ia",
-    "conformance": "/surveiller/conformite",
-    "tools": "/surveiller/securite-privacy",
-    "firewall": "/surveiller/securite-privacy",
+    "faithfulness": f"{_QUALITY}slo",
+    "errorBudget": f"{_QUALITY}error_budget",
+    "toxicity": f"{_QUALITY}toxicity",
+    "pii": f"{_QUALITY}pii_leak",
+    "refusalOver": f"{_QUALITY}refusal_over",
+    "refusalUnder": f"{_QUALITY}refusal_under",
+    "conformance": f"{_QUALITY}conformance",
+    "tools": f"{_QUALITY}tool_validity",
+    "firewall": f"{_QUALITY}firewall",
 }
 
 # Why a control has no catalogue entry (honest, shown as a tooltip).
 _CONTROL_REASON: dict[str, str] = {
     "toxicity": "live_policy_probe",
-    "refusal": "live_calibration_probe",
+    "refusalOver": "live_calibration_probe",
+    "refusalUnder": "live_calibration_probe",
+    "errorBudget": "live_policy_probe",
 }
 
 
