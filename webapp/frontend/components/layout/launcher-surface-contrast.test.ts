@@ -135,7 +135,7 @@ const PAIRS: ReadonlyArray<{
 ];
 
 /** The pale ground each theme composites a translucent token over. */
-const OPAQUE_GROUND: Record<string, string> = { dark: "#020817", light: "#f6f8fc" };
+const OPAQUE_GROUND: Record<string, string> = { dark: "#020817", light: "#fafafa" };
 
 function measure(tokens: Map<string, string>, theme: "dark" | "light") {
   const ground = OPAQUE_GROUND[theme] ?? "#000000";

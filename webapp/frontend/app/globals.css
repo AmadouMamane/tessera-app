@@ -327,29 +327,42 @@
  * little more present (light surfaces separate by shadow, not by tone). next-themes
  * adds the .light class to <html>. */
 .light {
-  /* RE-TONED 2026-08-01, on Amadou's call. The light cockpit used to be a wash of
-   * near-whites in the wrong order: the left panel (#eef2f7) was DARKER than the
-   * content canvas (#f4f7fb), and the cards floated on a tint at a hairline of
-   * 1.23:1. Flipped to the arrangement Vercel, Linear and Stripe all use — the
-   * canvas is white, the panel carries the tint, and the card earns its edge from
-   * a border rather than from a tonal difference it no longer has.
+  /* NEUTRAL, on the Cloudflare reference Amadou named — second attempt, 2026-08-01.
    *
-   * Every value here was MEASURED against the surface it actually lands on, not
-   * chosen by eye (`light-chrome-contrast.test.ts` re-measures them):
-   *   panel #f1f5f9 on the white canvas ........ 1.10:1  (a tint, read as a region)
-   *   card border #d5dee9 on white ............. 1.36:1  (Vercel's is 1.17:1)
-   *   chrome line #aab8cc on white ............. 2.01:1  (was 1.23:1 — invisible)
-   *   chrome line on the panel ................. 1.84:1 */
-  --tessera-bg: #ffffff;
-  --tessera-bg-soft: #f1f5f9;
+   * The first attempt put the canvas at pure white and gave the left panel a tint.
+   * He called it "nul", and he was right for a reason worth writing down: every
+   * light value in this file was BLUE. #f1f5f9, #f4f7fb, #d5dee9, #aab8cc are all
+   * slate — a tinted family — and a cockpit whose neutrals carry a hue reads cheap
+   * next to one whose neutrals are actually neutral. Pure white for the canvas then
+   * flattened the hierarchy on top of that, because a white card on a white page
+   * has nothing but its border left.
+   *
+   * So the values below are MEASURED off dash.cloudflare.com's own light theme
+   * rather than recalled: page #fafafa, cards #ffffff, chrome bar #fbfbfb, rules
+   * #e2e2e2. Two things are borrowed, and one is deliberately not:
+   *   · the NEUTRALS and their arrangement — tinted canvas, white surfaces, and
+   *     structure carried by the LINE rather than by tone;
+   *   · NOT their line weight. Cloudflare's #e2e2e2 measures 1.24:1 on their own
+   *     page. That is the very faintness Amadou reported here, so the two rules
+   *     that carry the shell keep the stronger value he asked for.
+   *
+   * Measured against the surface each one lands on (`theme-contrast.test.ts` and
+   * `launcher-surface-contrast.test.ts` re-measure them, they are not comments):
+   *   canvas #fafafa .............................. Cloudflare's own page colour
+   *   card / panel #ffffff on the canvas .......... 1.04:1 (a tone, not a border)
+   *   card hairline #e0e0e0 on a card ............. 1.32:1 (Cloudflare's is 1.30:1)
+   *   chrome line #b4b4b4 on the canvas ........... 1.99:1 (theirs is 1.24:1)
+   *   chrome line on a card ....................... 2.07:1 */
+  --tessera-bg: #fafafa;
+  --tessera-bg-soft: #ffffff;
   --tessera-surface: #ffffff;
-  --tessera-surface-elevated: #e7ecf3;
-  --tessera-muted: #eef2f7;
-  --tessera-border: #d5dee9;
-  --tessera-border-strong: #b4c2d4;
-  --tessera-chrome-line: #aab8cc;
-  --tessera-scrollbar: #cbd5e1;
-  --tessera-scrollbar-hover: #aab6c6;
+  --tessera-surface-elevated: #f2f2f2;
+  --tessera-muted: #f4f4f4;
+  --tessera-border: #e0e0e0;
+  --tessera-border-strong: #c6c6c6;
+  --tessera-chrome-line: #b4b4b4;
+  --tessera-scrollbar: #cdcdcd;
+  --tessera-scrollbar-hover: #b0b0b0;
   --tessera-text: #0f172a;
   --tessera-text-muted: #475569;
   --tessera-text-subtle: #6b7689;
@@ -510,18 +523,19 @@
 /* The same surface under "Clair". Accents drop to the shade that reads on a pale
  * ground — the same move, and the same 600/700 steps, the cockpit tokens make. */
 .light .launcher-surface {
-  --bg-app: #f6f8fc;
-  --bg-deep: #eef2f8;
-  --bg-radial: rgba(148, 163, 184, 0.16);
-  --bg-panel: rgba(255, 255, 255, 0.88);
-  --bg-panel-soft: rgba(248, 250, 252, 0.8);
-  --panel: rgba(255, 255, 255, 0.88);
-  --panel-soft: rgba(248, 250, 252, 0.8);
-  /* 0.30, not the 0.12 the dark value transliterates to: this is the LINE under
-     the login header and between the launcher's sections — the same structural
-     role Amadou called invisible in the cockpit. At 0.12 it measured 1.28:1;
-     at 0.30 it is 1.93:1, which lands on the cockpit's own chrome line (2.01:1). */
-  --border-subtle: rgba(15, 23, 42, 0.3);
+  --bg-app: #fafafa;
+  --bg-deep: #f2f2f2;
+  --bg-radial: rgba(0, 0, 0, 0.04);
+  --bg-panel: #ffffff;
+  --bg-panel-soft: #fbfbfb;
+  --panel: #ffffff;
+  --panel-soft: #fbfbfb;
+  /* NEUTRAL black at 0.28 → #b4b4b4 over the page, 1.99:1 — the exact weight the
+     cockpit chrome line carries. It was slate-tinted before, and the tint was the
+     whole complaint: a neutral that carries a hue reads cheap next to one that
+     does not. Cloudflare's own rule is #e2e2e2, i.e. 1.24:1; the neutrals are
+     borrowed from them, the line weight deliberately is not. */
+  --border-subtle: rgba(0, 0, 0, 0.28);
   --border-gold: rgba(135, 112, 68, 0.4);
   --border-cyan: rgba(15, 118, 110, 0.34);
   --border-amber: rgba(180, 83, 9, 0.34);
@@ -540,21 +554,21 @@
   --danger: #b91c1c;
   --indigo: #4338ca;
   --violet: #6d28d9;
-  --shadow-gold: 0 10px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --shadow-cyan: 0 10px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --shadow-amber: 0 10px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --launcher-backdrop: radial-gradient(
-      circle at 50% 12%,
-      rgba(191, 214, 240, 0.55),
-      transparent 46%
-    ), linear-gradient(180deg, #f9fbfe 0%, #eff4fa 60%, #e7edf6 100%);
+  --shadow-gold: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-cyan: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-amber: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --launcher-backdrop: radial-gradient(circle at 50% 12%, rgba(0, 0, 0, 0.03), transparent 46%),
+    linear-gradient(180deg, #fdfdfd 0%, #fafafa 60%, #f4f4f4 100%);
   --launcher-backdrop-auth: radial-gradient(
       circle at 20% 18%,
-      rgba(186, 211, 236, 0.62),
+      rgba(0, 0, 0, 0.035),
       transparent 34%
     ), radial-gradient(circle at 78% 60%, rgba(16, 185, 129, 0.1), transparent 28%),
-    linear-gradient(180deg, #f9fbfe 0%, #eff4fa 58%, #e7edf6 100%);
-  --launcher-waves-opacity: 0.32;
+    linear-gradient(180deg, #fdfdfd 0%, #fafafa 58%, #f4f4f4 100%);
+  /* 0.12, down from 0.32. The band is night-blue artwork; at a third of its
+     strength it stopped being a dark slab and started being a grey haze across
+     the bottom of a neutral page — which is dirt, not brand. Kept as a whisper. */
+  --launcher-waves-opacity: 0.12;
   /* Cards become white panels on the pale ground; the CTAs keep their hue but
      land on the 700 step, so their white ink still clears AA. */
   --launcher-card-bg: linear-gradient(
