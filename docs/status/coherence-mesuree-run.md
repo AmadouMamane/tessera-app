@@ -1,3 +1,35 @@
+# Cohérence mesurée — chantier CLOS le 2026-08-01
+
+> **Les 12 lots sont faits.** `main` ← `claude/coherence-mesuree`, twice-green sur un seul arbre
+> (digest `be3f0cd9a207`). Ce qui suit est le plan d'origine, conservé tel quel : il porte les
+> constats avec leur preuve `fichier:ligne`, et les commits ci-dessous portent ce qui en a été
+> fait. Un plan réécrit après coup ne dit plus ce qu'on ignorait au départ.
+>
+> | lot | livré | commit |
+> |---|---|---|
+> | 1 · cliquets ×4 | 4 classes gelées, 5 mutations rouges | `4d6c5edd` |
+> | 2 · registre unique | 3 surfaces câblées, classe A **23 → 0** | `00926a3b` |
+> | 3 · routes propriétaires | `?tab=&signal=`, id vérifié contre `capabilities.py` | `00926a3b` |
+> | 4 · fenêtre temporelle | la charge utile flotte dit son intervalle | `b9bc4c5e` |
+> | 5 · entonnoir des signaux | « 42/200 » → funnel mesuré ; 4 raisons d'indisponibilité | `2591cad7` |
+> | 6 · registres de capacités | 3 divergences, dont une fixture rendue comme réelle | `05eb6659` |
+> | 7 · localisation | 100 % sur 0 catalogue lu → union + échec bruyant | `b6827cac` |
+> | 8 · sondes honnêtes | « 0 incident » sur 0 mesure ; 2 sondes tautologiques | `deed9e93` |
+> | 9 · effacement RGPD | 138 sujets hors portée, mesurés et outillés | `857b8c5b` |
+> | 10 · file opérateur | 77 lignes / 11 phrases → 77 / 77 | `d3e925bd`, `23bdbf82` |
+> | 11 · démo réamorcée | run du 01/08, `llama3.2:3b` — et **refusé** par la règle 1 | `b1f3610c` |
+> | 12 · orphelins | 14 classés, `catalogue-consumers` monté | `b1f3610c` |
+>
+> **Ce que le chantier a trouvé de plus lourd, et que l'audit page par page ne pouvait pas voir :**
+> `/observability/localization` annonçait **100 % de complétude** parce qu'il ne pouvait lire
+> aucun catalogue (le conteneur n'embarque pas `webapp/`), et l'effacement RGPD laissait
+> **138 sujets** dans un schéma qu'aucun chemin de suppression n'atteint.
+>
+> **Il reste UNE action opérateur** : purger `public` —
+> `uv run python scripts/purge_orphan_schema.py --schema public --apply`. Rien n'a été supprimé.
+
+---
+
 # Cohérence mesurée — plan d'exécution (ouvert)
 
 **Branche** `claude/coherence-mesuree`, coupée de `main = 1cbc965b`.
