@@ -71,8 +71,7 @@ test("a past instant moves the controls, not only the fleet card", async ({ page
   );
   expect(
     past.controls,
-    `the controls table reports ${past.controls} scored answers both live and at T-20d, under a ` +
-      "header reading «À un instant» — the instant is not reaching the card queries",
+    `the controls table reports ${past.controls} scored answers both live and at T-20d, under a header reading «À un instant» — the instant is not reaching the card queries`,
   ).not.toBe(live.controls);
 });
 
@@ -86,7 +85,6 @@ test("an instant before any data reads honestly empty rather than live", async (
   // indistinguishable from a working time machine until you check the date.
   expect(
     ancient.controls,
-    `at T-120d the controls table still reports ${ancient.controls} scored answers; the store ` +
-      "holds none that far back, so this is the live reading wearing a historical badge",
+    `at T-120d the controls table still reports ${ancient.controls} scored answers; the store holds none that far back, so this is the live reading wearing a historical badge`,
   ).toBeNull();
 });

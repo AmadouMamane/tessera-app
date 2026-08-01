@@ -85,8 +85,7 @@ test("the quality ribbon and the controls table read the same window", async ({ 
     compared += 1;
     expect(
       Math.abs(hero - table),
-      `at «${period}» the ribbon reads ${hero} % and the table reads ${table} % — two correct ` +
-        "numbers about two different windows, under one label",
+      `at «${period}» the ribbon reads ${hero} % and the table reads ${table} % — two correct numbers about two different windows, under one label`,
     ).toBeLessThanOrEqual(ROUNDING_PTS);
   }
   // Anti-vacuity: a run where neither surface rendered would otherwise "pass" having compared
