@@ -832,15 +832,15 @@ function Performance({
         <StretchChart
           title={t("zone.performance")}
           lines={[
-            { points: p.success, color: "#34d399" },
-            { points: p.average, color: "#60a5fa" },
+            { points: p.success, color: "var(--tessera-fg-success)" },
+            { points: p.average, color: "var(--tessera-fg-info)" },
           ]}
           ticks={p.labels}
         />
       </div>
       <div className="mt-1 flex gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
-        <Legend color="#34d399" label={t("perf.success")} />
-        <Legend color="#60a5fa" label={t("perf.average")} />
+        <Legend color="var(--tessera-fg-success)" label={t("perf.success")} />
+        <Legend color="var(--tessera-fg-info)" label={t("perf.average")} />
       </div>
     </Panel>
   );

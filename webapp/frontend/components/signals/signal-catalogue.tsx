@@ -72,7 +72,7 @@ const COLS: { key: string; sort?: SortKey; w: string }[] = [
   { key: "modified", w: "10%" },
 ];
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
-const ACCENT = "#87bfff";
+const ACCENT = "var(--tessera-fg-info)";
 
 export function SignalCatalogue() {
   const t = useTranslations("signalCatalogue");

@@ -35,11 +35,11 @@ const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
 
 const ERR_COLOR: Record<string, string> = {
-  token_spike: "#f59e0b",
-  tool_denied: "#60a5fa",
-  tool_error: "#ef4444",
-  arg_failure: "#a78bfa",
-  low_quality: "#f472b6",
+  token_spike: "var(--tessera-cat-1)",
+  tool_denied: "var(--tessera-cat-2)",
+  tool_error: "var(--tessera-cat-3)",
+  arg_failure: "var(--tessera-cat-4)",
+  low_quality: "var(--tessera-cat-5)",
 };
 
 const TABS = [
@@ -372,7 +372,7 @@ function MultiLine({
 /** Vertical bar chart, one bar per day. */
 function DayBars({
   values,
-  color = "#34d399",
+  color = "var(--tessera-fg-success)",
   format,
 }: {
   values: number[];
@@ -429,7 +429,7 @@ export function ReliabilityDashboard() {
   const errSlices = (d.error_breakdown ?? []).map((s) => ({
     label: tr(`err.${s.label}`),
     count: s.count,
-    color: ERR_COLOR[s.label] ?? "#94a3b8",
+    color: ERR_COLOR[s.label] ?? "var(--tessera-text-muted)",
   }));
   const budgetUsed = d.budget_monthly_eur ? (d.budget_spent_eur ?? 0) / d.budget_monthly_eur : 0;
   const daily = d.daily ?? [];
@@ -559,8 +559,8 @@ export function ReliabilityDashboard() {
     <Panel title={tr("panel.availErrors")} note={tr("panel.availNote")} infoKey="availErrors">
       <MultiLine
         lines={[
-          { label: tr("leg.availability"), color: "#34d399", values: availLine },
-          { label: tr("leg.error"), color: "#ef4444", values: errLine },
+          { label: tr("leg.availability"), color: "var(--tessera-fg-success)", values: availLine },
+          { label: tr("leg.error"), color: "var(--tessera-fg-danger)", values: errLine },
         ]}
         format={(v) => pct(v, 0)}
       />
@@ -596,7 +596,11 @@ export function ReliabilityDashboard() {
   );
   const panelVolumePerDay = (
     <Panel title={tr("panel.volumePerDay")} infoKey="volumePerDay">
-      <DayBars values={volumeDay} color="#60a5fa" format={(v) => `${Math.round(v)}`} />
+      <DayBars
+        values={volumeDay}
+        color="var(--tessera-fg-info)"
+        format={(v) => `${Math.round(v)}`}
+      />
     </Panel>
   );
   const panelCostByModel = (
@@ -727,7 +731,7 @@ export function ReliabilityDashboard() {
             </Truncate>
             <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
               <div
-                className="h-full rounded-sm bg-[#60a5fa]"
+                className="h-full rounded-sm bg-[var(--tessera-fg-info)]"
                 style={{ width: `${(p.n_requests / provTotal) * 100}%` }}
               />
             </div>

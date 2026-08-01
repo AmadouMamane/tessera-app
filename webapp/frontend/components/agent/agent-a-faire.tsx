@@ -48,10 +48,10 @@ type T = ReturnType<typeof useTranslations<"agentAFaire">>;
 type SortDir = "asc" | "desc";
 
 const SPARK: Record<string, string> = {
-  red: "#f87171",
-  teal: "#34d399",
-  amber: "#e0a23a",
-  green: "#34d399",
+  red: "var(--tessera-fg-danger)",
+  teal: "var(--tessera-fg-teal)",
+  amber: "var(--tessera-fg-warning)",
+  green: "var(--tessera-fg-success)",
 };
 const PRIO_TONE: Record<string, string> = {
   crit: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",

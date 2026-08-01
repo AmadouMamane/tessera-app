@@ -941,15 +941,15 @@ function MttrChart({
         <StretchChart
           title={t("impact.mttr")}
           lines={[
-            { points: s.mtta, color: "#2e72d2" },
-            { points: s.mttr, color: "#34d399" },
+            { points: s.mtta, color: "var(--tessera-cat-1)" },
+            { points: s.mttr, color: "var(--tessera-cat-2)" },
           ]}
           ticks={s.labels}
         />
       </div>
       <div className="mt-1 flex items-center gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
-        <Legend color="#2e72d2" label={t("impact.mttaLine")} />
-        <Legend color="#34d399" label={t("impact.mttrLine")} />
+        <Legend color="var(--tessera-cat-1)" label={t("impact.mttaLine")} />
+        <Legend color="var(--tessera-cat-2)" label={t("impact.mttrLine")} />
       </div>
     </Panel>
   );

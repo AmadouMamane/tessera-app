@@ -56,7 +56,7 @@ const COLS: { key: string; sort?: SortKey; w: string }[] = [
   { key: "lastCheck", w: "14%" },
 ];
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
-const ACCENT = "#87bfff";
+const ACCENT = "var(--tessera-fg-info)";
 
 /** ⓘ for a connectors KPI, reading connectors.explain.<k>.{what,how,source?} (null if none). */
 function ExplainInfo({ k, title }: { k: string; title: string }) {

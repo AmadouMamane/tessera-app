@@ -30,17 +30,18 @@ const SEV_TONE: Record<string, "danger" | "warning" | "neutral"> = {
 };
 const SEV_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
+/** Same ten failure categories as the board, same eight slots plus a muted tail. */
 const DONUT_COLORS = [
-  "#ef4444",
-  "#f59e0b",
-  "#3b82f6",
-  "#8b5cf6",
-  "#10b981",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
-  "#64748b",
-  "#a3a3a3",
+  "var(--tessera-cat-1)",
+  "var(--tessera-cat-2)",
+  "var(--tessera-cat-3)",
+  "var(--tessera-cat-4)",
+  "var(--tessera-cat-5)",
+  "var(--tessera-cat-6)",
+  "var(--tessera-cat-7)",
+  "var(--tessera-cat-8)",
+  "var(--tessera-text-muted)",
+  "var(--tessera-text-subtle)",
 ];
 
 function useCatLabel() {

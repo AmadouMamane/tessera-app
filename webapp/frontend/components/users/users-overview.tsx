@@ -54,7 +54,7 @@ const COLS: { key: string; sort?: SortKey; w: string }[] = [
   { key: "lastLogin", w: "13%" },
 ];
 const ROWS_PER_PAGE_OPTS = [10, 25, 50];
-const ACCENT = "#87bfff";
+const ACCENT = "var(--tessera-fg-info)";
 
 /** ⓘ for a users KPI, reading users.explain.<k>.{what,how,source?} (null if undocumented). */
 function ExplainInfo({ k, title }: { k: string; title: string }) {

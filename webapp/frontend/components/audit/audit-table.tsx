@@ -746,8 +746,8 @@ function TimelineChart({ overview }: { overview: AuditOverview }) {
     <StretchChart
       title={String(overview.total_events)}
       lines={[
-        { points: overview.timeline.map((bucket) => bucket.total), color: "#2e72d2" },
-        { points: overview.timeline.map((bucket) => bucket.denied), color: "#ff7a59" },
+        { points: overview.timeline.map((bucket) => bucket.total), color: "var(--tessera-cat-1)" },
+        { points: overview.timeline.map((bucket) => bucket.denied), color: "var(--tessera-cat-2)" },
       ]}
       ticks={sampleTicks(overview.timeline).map((bucket) => bucket.label)}
     />

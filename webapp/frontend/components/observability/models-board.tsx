@@ -47,7 +47,16 @@ const CATEGORIES = [
   "escalation_failure",
 ] as const;
 
-const LINE_COLORS = ["#34d399", "#60a5fa", "#f59e0b", "#a78bfa", "#f87171", "#22d3ee"];
+/** One line per MODEL — identity, never rank: dropping a model must not repaint the
+ *  survivors, so the slot follows the model's position in the list, fixed. */
+const LINE_COLORS = [
+  "var(--tessera-cat-1)",
+  "var(--tessera-cat-2)",
+  "var(--tessera-cat-3)",
+  "var(--tessera-cat-4)",
+  "var(--tessera-cat-5)",
+  "var(--tessera-cat-6)",
+];
 
 const VERDICT_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   best: "success",
@@ -63,9 +72,9 @@ function pctOrDash(v: number | null | undefined): string {
   return v == null ? DASH : `${Math.round(v * 100)}%`;
 }
 function scoreBand(rate: number): string {
-  if (rate >= 0.8) return "#34d399";
-  if (rate >= 0.5) return "#f59e0b";
-  return "#f87171";
+  if (rate >= 0.8) return "var(--tessera-fg-success)";
+  if (rate >= 0.5) return "var(--tessera-fg-warning)";
+  return "var(--tessera-fg-danger)";
 }
 function scoreToneClass(rate: number): string {
   if (rate >= 0.8) return "text-[var(--tessera-fg-success)]";
@@ -701,7 +710,12 @@ function Spark({ values }: { values: number[] | undefined }) {
       aria-hidden="true"
       preserveAspectRatio="none"
     >
-      <polyline points={pts} fill="none" stroke={up ? "#34d399" : "#f87171"} strokeWidth={1.5} />
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={up ? "var(--tessera-fg-success)" : "var(--tessera-fg-danger)"}
+        strokeWidth={1.5}
+      />
     </svg>
   );
 }

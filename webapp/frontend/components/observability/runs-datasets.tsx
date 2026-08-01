@@ -105,17 +105,17 @@ function coverageBand(c: number | null | undefined): "good" | "mid" | "low" | "n
 }
 
 const BAND_FILL: Record<"good" | "mid" | "low" | "none", string> = {
-  good: "#34d399",
-  mid: "#f59e0b",
-  low: "#f87171",
+  good: "var(--tessera-fg-success)",
+  mid: "var(--tessera-fg-warning)",
+  low: "var(--tessera-fg-danger)",
   none: "var(--muted)",
 };
 
-/** Drift magnitude colour: small=teal, moderate=amber, large=red (abs value). */
+/** Drift magnitude colour: small=good, moderate=amber, large=red (abs value). */
 function driftFill(absDrift: number): string {
-  if (absDrift >= 0.3) return "#f87171";
-  if (absDrift >= 0.15) return "#f59e0b";
-  return "#34d399";
+  if (absDrift >= 0.3) return "var(--tessera-fg-danger)";
+  if (absDrift >= 0.15) return "var(--tessera-fg-warning)";
+  return "var(--tessera-fg-success)";
 }
 
 /** Pass-rate band → status key for the datasets table. */
@@ -661,7 +661,7 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
  * by its value's quality band (value read as a 0–1 ratio), so weak runs stand out. */
 function MiniLine({
   values,
-  color = "#10b981",
+  color = "var(--tessera-fg-success)",
   band = false,
 }: {
   values: number[];
@@ -721,7 +721,7 @@ function MiniLine({
  * is read as a 0–100 percentage), so a weak model reads red, not green. */
 function MiniBars({
   items,
-  color = "#34d399",
+  color = "var(--tessera-fg-success)",
   band = false,
 }: {
   items: { label: string; value: number }[];
@@ -897,17 +897,21 @@ function DualLine({
   );
 }
 
+/** Identity, not verdict: which slice is this, never whether it is good. The ramp is
+ *  ordered for colour-blind separation and flips with the theme (see globals.css);
+ *  slots 9 and 10 fold into the muted tail, as the other two category donuts do — a
+ *  ninth distinguishable hue does not exist at this lightness. */
 const DONUT_COLORS = [
-  "#34d399", // emerald
-  "#60a5fa", // blue
-  "#f59e0b", // amber
-  "#a78bfa", // violet
-  "#f87171", // red
-  "#22d3ee", // cyan
-  "#a3e635", // lime
-  "#e879f9", // fuchsia
-  "#f472b6", // pink
-  "#fb923c", // orange
+  "var(--tessera-cat-1)",
+  "var(--tessera-cat-2)",
+  "var(--tessera-cat-3)",
+  "var(--tessera-cat-4)",
+  "var(--tessera-cat-5)",
+  "var(--tessera-cat-6)",
+  "var(--tessera-cat-7)",
+  "var(--tessera-cat-8)",
+  "var(--tessera-text-muted)",
+  "var(--tessera-text-subtle)",
 ];
 
 /** Donut of category shares with a center total and a compact legend. */

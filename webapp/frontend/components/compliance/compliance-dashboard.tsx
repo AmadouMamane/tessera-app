@@ -266,9 +266,9 @@ function StackBar({ c, p, n }: { c: number; p: number; n: number }) {
   const total = c + p + n || 1;
   return (
     <div className="flex h-[4px] w-24 overflow-hidden rounded-full">
-      <div style={{ width: `${(c / total) * 100}%`, background: "#10b981" }} />
-      <div style={{ width: `${(p / total) * 100}%`, background: "#f59e0b" }} />
-      <div style={{ width: `${(n / total) * 100}%`, background: "#ef4444" }} />
+      <div style={{ width: `${(c / total) * 100}%`, background: "var(--tessera-fg-success)" }} />
+      <div style={{ width: `${(p / total) * 100}%`, background: "var(--tessera-fg-warning)" }} />
+      <div style={{ width: `${(n / total) * 100}%`, background: "var(--tessera-fg-danger)" }} />
     </div>
   );
 }
@@ -277,7 +277,12 @@ function StackBar({ c, p, n }: { c: number; p: number; n: number }) {
 function EvidenceDonut({ completeness }: { completeness: number }) {
   const R = 30;
   const C = 2 * Math.PI * R;
-  const tone = completeness >= 0.9 ? "#10b981" : completeness >= 0.7 ? "#f59e0b" : "#ef4444";
+  const tone =
+    completeness >= 0.9
+      ? "var(--tessera-fg-success)"
+      : completeness >= 0.7
+        ? "var(--tessera-fg-warning)"
+        : "var(--tessera-fg-danger)";
   return (
     <div className="relative h-[96px] w-[96px]">
       <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90" aria-hidden="true">
@@ -497,17 +502,17 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                       <EvidenceDonut completeness={d.evidence_completeness ?? 0} />
                       <ul className="flex flex-col gap-1 text-[0.7rem]">
                         <EvRow
-                          color="#10b981"
+                          color="var(--tessera-fg-success)"
                           label={tc("evidence.valid")}
                           value={d.evidence_valid ?? 0}
                         />
                         <EvRow
-                          color="#f59e0b"
+                          color="var(--tessera-fg-warning)"
                           label={tc("evidence.missing")}
                           value={d.evidence_missing ?? 0}
                         />
                         <EvRow
-                          color="#ef4444"
+                          color="var(--tessera-fg-danger)"
                           label={tc("evidence.blocking")}
                           value={d.evidence_blocking ?? 0}
                         />

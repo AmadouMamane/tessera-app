@@ -461,7 +461,7 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
                   width={bw}
                   height={H - yy}
                   rx="1.5"
-                  fill="#2e72d2"
+                  fill="var(--tessera-fg-info)"
                   opacity="0.8"
                 />
               );
@@ -486,8 +486,8 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
           ))}
         </div>
         <div className="flex items-center gap-3 pl-8 text-[0.6rem] text-[var(--tessera-text-muted)]">
-          <Legend color="#2e72d2" label={t("legend.requests")} />
-          <Legend color="#34d399" label={t("legend.tokens")} />
+          <Legend color="var(--tessera-fg-info)" label={t("legend.requests")} />
+          <Legend color="var(--tessera-fg-success)" label={t("legend.tokens")} />
         </div>
       </div>
     </Panel>

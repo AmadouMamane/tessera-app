@@ -48,10 +48,10 @@ type RowT = NonNullable<Data["table"]>["rows"][number];
 
 const KPI_ICONS: LucideIcon[] = [MessagesSquare, MessagesSquare, Sparkles, Target, Clock, Coins];
 const SPARK_TONE: Record<string, string> = {
-  violet: "#8b7cf0",
-  blue: "#4c8bf5",
-  green: "#34d399",
-  amber: "#e0a23a",
+  violet: "var(--tessera-fg-accent)",
+  blue: "var(--tessera-fg-info)",
+  green: "var(--tessera-fg-success)",
+  amber: "var(--tessera-fg-warning)",
 };
 const TONE_TEXT: Record<string, string> = {
   good: "text-[var(--tessera-fg-success)]",
@@ -71,10 +71,10 @@ const STATUS_BADGE: Record<string, string> = {
   crit: "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
 };
 const SEG_FILL: Record<string, string> = {
-  green: "#34d399",
-  blue: "#4c8bf5",
-  amber: "#e0a23a",
-  red: "#f87171",
+  green: "var(--tessera-fg-success)",
+  blue: "var(--tessera-fg-info)",
+  amber: "var(--tessera-fg-warning)",
+  red: "var(--tessera-fg-danger)",
 };
 const SEG_DOT: Record<string, string> = {
   green: "bg-emerald-400",
@@ -1053,7 +1053,7 @@ function ScoreDonut({ data }: { data: Data }) {
                   cy="44"
                   r={R}
                   fill="none"
-                  stroke={SEG_FILL[seg.tone] ?? "#64748b"}
+                  stroke={SEG_FILL[seg.tone] ?? "var(--tessera-text-muted)"}
                   strokeWidth="3.4"
                   strokeDasharray={dash}
                   strokeDashoffset={off}

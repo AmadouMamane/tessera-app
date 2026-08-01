@@ -36,18 +36,18 @@ const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
 const MUTED = "text-[var(--muted-foreground)]";
-const MATCH = "#10b981";
-const MISS = "#ef4444";
+const MATCH = "var(--tessera-fg-success)";
+const MISS = "var(--tessera-fg-danger)";
 
 /** Stable colour per display category (donut, bars, top-disagreement list). */
 const CAT_COLOR: Record<string, string> = {
-  faithfulness: "#60a5fa",
-  grounding: "#34d399",
-  pii: "#f472b6",
-  citations: "#fbbf24",
-  style: "#a78bfa",
+  faithfulness: "var(--tessera-cat-1)",
+  grounding: "var(--tessera-cat-2)",
+  pii: "var(--tessera-cat-3)",
+  citations: "var(--tessera-cat-4)",
+  style: "var(--tessera-cat-5)",
 };
-const catColor = (c: string) => CAT_COLOR[c] ?? "#94a3b8";
+const catColor = (c: string) => CAT_COLOR[c] ?? "var(--tessera-text-muted)";
 
 // ── small shared atoms ───────────────────────────────────────────────────────
 
@@ -341,7 +341,8 @@ function GroupRows({
   return (
     <ul className="flex flex-col gap-1.5">
       {groups.map((g) => {
-        const tone = g.agreement >= 0.95 ? MATCH : g.agreement >= 0.8 ? "#f59e0b" : MISS;
+        const tone =
+          g.agreement >= 0.95 ? MATCH : g.agreement >= 0.8 ? "var(--tessera-fg-warning)" : MISS;
         return (
           <li key={g.label} className="flex items-center gap-2 text-[0.72rem]">
             <Truncate className="w-24 shrink-0">{labelKey ? labelKey(g.label) : g.label}</Truncate>

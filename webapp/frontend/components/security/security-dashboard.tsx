@@ -299,7 +299,12 @@ function Gauge({ value, label, tone }: { value: number; label?: string; tone: st
 
 /** Horizontal risk bar row. */
 function RiskBar({ label, value, sub }: { label: string; value: number; sub?: string }) {
-  const tone = value >= 0.5 ? "#ef4444" : value >= 0.25 ? "#f59e0b" : "#10b981";
+  const tone =
+    value >= 0.5
+      ? "var(--tessera-fg-danger)"
+      : value >= 0.25
+        ? "var(--tessera-fg-warning)"
+        : "var(--tessera-fg-success)";
   return (
     <div className="flex items-center gap-2 text-[0.72rem]">
       <span className="w-24 shrink-0 truncate">{label}</span>
@@ -429,7 +434,13 @@ function LineChart({
           strokeLinejoin="round"
         />
         {b.length >= 2 ? (
-          <path d={path(b)} fill="none" stroke="#ef4444" strokeWidth="1.4" strokeLinejoin="round" />
+          <path
+            d={path(b)}
+            fill="none"
+            stroke="var(--tessera-fg-danger)"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
         ) : null}
       </svg>
       <div className="flex gap-3 text-[0.6rem] text-[var(--muted-foreground)]">
@@ -438,7 +449,7 @@ function LineChart({
         </span>
         {b.length >= 2 ? (
           <span className="flex items-center gap-1">
-            <span className="h-1 w-3 rounded-full bg-[#ef4444]" /> {bLabel}
+            <span className="h-1 w-3 rounded-full bg-[var(--tessera-fg-danger)]" /> {bLabel}
           </span>
         ) : null}
       </div>
@@ -716,16 +727,18 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
 
   // Répartition des échecs (zone C donut) — real failure observations per family.
   const failureSlices = [
-    { key: "injection", count: fw?.false_negative ?? 0, color: "#f97316" },
-    { key: "toolMisuse", count: lp.data?.n_over_provisioned ?? 0, color: "#60a5fa" },
-    { key: "inversion", count: inversion.data?.n_recoverable ?? 0, color: "#a78bfa" },
+    // Failure FAMILIES — identity, not severity: every slice here is already a failure,
+    // so the categorical ramp separates them and the legend says which is which.
+    { key: "injection", count: fw?.false_negative ?? 0, color: "var(--tessera-cat-1)" },
+    { key: "toolMisuse", count: lp.data?.n_over_provisioned ?? 0, color: "var(--tessera-cat-2)" },
+    { key: "inversion", count: inversion.data?.n_recoverable ?? 0, color: "var(--tessera-cat-3)" },
     {
       key: "refusal",
       count: (refusal.data?.legit_refused ?? 0) + (refusal.data?.forbidden_allowed ?? 0),
-      color: "#fbbf24",
+      color: "var(--tessera-cat-4)",
     },
-    { key: "pii", count: pii.data?.n_with_leak ?? 0, color: "#f472b6" },
-    { key: "toxicity", count: toxicity.data?.n_toxic ?? 0, color: "#34d399" },
+    { key: "pii", count: pii.data?.n_with_leak ?? 0, color: "var(--tessera-cat-5)" },
+    { key: "toxicity", count: toxicity.data?.n_toxic ?? 0, color: "var(--tessera-cat-6)" },
   ].filter((s) => s.count > 0);
 
   const erasureComplete =
@@ -822,8 +835,13 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           </span>
         </div>
         <div className="flex h-[4px] w-full overflow-hidden rounded-full">
-          <div style={{ flexBasis: `${(blockRate ?? 0) * 100}%`, background: "#10b981" }} />
-          <div style={{ flexGrow: 1, background: "#f97316" }} />
+          <div
+            style={{
+              flexBasis: `${(blockRate ?? 0) * 100}%`,
+              background: "var(--tessera-fg-success)",
+            }}
+          />
+          <div style={{ flexGrow: 1, background: "var(--tessera-fg-warning)" }} />
         </div>
         <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
         <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
@@ -837,7 +855,11 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       info={<SecInfo k="erasureSurface" title={ts("panel.erasureSurface")} />}
     >
       <div className="flex items-center gap-3">
-        <Gauge value={erasureComplete ?? 0} label={ts("panel.completeness")} tone="#10b981" />
+        <Gauge
+          value={erasureComplete ?? 0}
+          label={ts("panel.completeness")}
+          tone="var(--tessera-fg-success)"
+        />
         <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
           <KV label={ts("panel.conversations")} value={`${erasure.data?.n_conversations ?? 0}`} />
           <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
@@ -1050,7 +1072,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 <Gauge
                   value={refusal.data?.over_refusal_rate ?? 0}
                   label={ts("panel.overRefusal")}
-                  tone="#f59e0b"
+                  tone="var(--tessera-fg-warning)"
                 />
                 <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
                   <KV
@@ -1353,7 +1375,11 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               <div className="flex items-center gap-3">
                 <Gauge
                   value={regression.data?.risk_score ?? 0}
-                  tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
+                  tone={
+                    (regression.data?.risk_score ?? 0) >= 0.5
+                      ? "var(--tessera-fg-danger)"
+                      : "var(--tessera-fg-warning)"
+                  }
                 />
                 <div className="flex flex-col gap-0.5 text-[0.7rem]">
                   <span
@@ -1561,7 +1587,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <Gauge
                       value={refusal.data?.over_refusal_rate ?? 0}
                       label={ts("panel.overRefusal")}
-                      tone="#f59e0b"
+                      tone="var(--tessera-fg-warning)"
                     />
                     <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
                       <KV
@@ -1622,7 +1648,11 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   <div className="flex items-center gap-3">
                     <Gauge
                       value={regression.data?.risk_score ?? 0}
-                      tone={(regression.data?.risk_score ?? 0) >= 0.5 ? "#ef4444" : "#f59e0b"}
+                      tone={
+                        (regression.data?.risk_score ?? 0) >= 0.5
+                          ? "var(--tessera-fg-danger)"
+                          : "var(--tessera-fg-warning)"
+                      }
                     />
                     <div className="flex flex-col gap-0.5 text-[0.7rem]">
                       <span
@@ -1687,9 +1717,12 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     </div>
                     <div className="flex h-[4px] w-full overflow-hidden rounded-full">
                       <div
-                        style={{ flexBasis: `${(blockRate ?? 0) * 100}%`, background: "#10b981" }}
+                        style={{
+                          flexBasis: `${(blockRate ?? 0) * 100}%`,
+                          background: "var(--tessera-fg-success)",
+                        }}
                       />
-                      <div style={{ flexGrow: 1, background: "#f97316" }} />
+                      <div style={{ flexGrow: 1, background: "var(--tessera-fg-warning)" }} />
                     </div>
                     <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
                     <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
@@ -1703,7 +1736,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <Gauge
                       value={erasureComplete ?? 0}
                       label={ts("panel.completeness")}
-                      tone="#10b981"
+                      tone="var(--tessera-fg-success)"
                     />
                     <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
                       <KV

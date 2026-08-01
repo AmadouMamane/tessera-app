@@ -60,17 +60,19 @@ const SEV_TONE: Record<string, "danger" | "warning" | "neutral"> = {
   low: "neutral",
 };
 
+/** One slot per failure CATEGORY — identity, not severity. Ten categories, eight
+ *  separable hues, and the tail already read grey; that stays, now as a token. */
 const DONUT_COLORS = [
-  "#ef4444",
-  "#f59e0b",
-  "#3b82f6",
-  "#8b5cf6",
-  "#10b981",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
-  "#64748b",
-  "#a3a3a3",
+  "var(--tessera-cat-1)",
+  "var(--tessera-cat-2)",
+  "var(--tessera-cat-3)",
+  "var(--tessera-cat-4)",
+  "var(--tessera-cat-5)",
+  "var(--tessera-cat-6)",
+  "var(--tessera-cat-7)",
+  "var(--tessera-cat-8)",
+  "var(--tessera-text-muted)",
+  "var(--tessera-text-subtle)",
 ];
 
 function useCatLabel() {
@@ -178,7 +180,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
         value={String(total)}
         tone="text-red-500 dark:text-red-400"
         spark={trend}
-        sparkColor="#ef4444"
+        sparkColor="var(--tessera-fg-danger)"
       />
       <KpiTile
         icon={<AlertCircle className="h-3.5 w-3.5" />}
@@ -188,7 +190,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
         sub={pct(report?.n_critical ?? 0, total)}
         tone="text-red-500 dark:text-red-400"
         spark={trend}
-        sparkColor="#f87171"
+        sparkColor="var(--tessera-fg-danger)"
       />
       <KpiTile
         icon={<Sparkles className="h-3.5 w-3.5" />}
@@ -198,7 +200,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
         sub={pct(report?.n_new ?? 0, total)}
         tone="text-amber-500 dark:text-amber-400"
         spark={trend}
-        sparkColor="#f59e0b"
+        sparkColor="var(--tessera-fg-warning)"
       />
       <KpiTile
         icon={<Repeat className="h-3.5 w-3.5" />}
@@ -208,7 +210,7 @@ function FailedKpis({ report }: { report: FailedRunsReport | undefined }) {
         sub={pct(report?.n_recurrent ?? 0, total)}
         tone="text-violet-500 dark:text-violet-400"
         spark={trend}
-        sparkColor="#8b5cf6"
+        sparkColor="var(--tessera-fg-accent)"
       />
     </div>
   );
@@ -304,10 +306,10 @@ function MiniDonut({
 
 // Severity stack order (bottom → top) + colours for the failures-over-time chart.
 const SEV_STACK = [
-  { key: "critical", color: "#ef4444" },
-  { key: "high", color: "#f59e0b" },
-  { key: "medium", color: "#3b82f6" },
-  { key: "low", color: "#64748b" },
+  { key: "critical", color: "var(--tessera-fg-danger)" },
+  { key: "high", color: "var(--tessera-fg-warning)" },
+  { key: "medium", color: "var(--tessera-fg-info)" },
+  { key: "low", color: "var(--tessera-text-muted)" },
 ] as const;
 
 type TrendPt = { date: string; n: number; by_severity: Record<string, number> };

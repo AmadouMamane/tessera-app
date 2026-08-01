@@ -479,11 +479,13 @@ export function summarizeSignals(
   return s;
 }
 
+/** A VERDICT, so it wears the status roles — not the categorical ramp, which is
+ *  reserved for identity and would say nothing about whether the signal is healthy. */
 const GAUGE_COLORS: Record<SignalStatus, string> = {
-  ok: "#10b981",
-  warn: "#f59e0b",
-  crit: "#ef4444",
-  na: "#64748b",
+  ok: "var(--tessera-fg-success)",
+  warn: "var(--tessera-fg-warning)",
+  crit: "var(--tessera-fg-danger)",
+  na: "var(--tessera-text-muted)",
 };
 
 /** Radial health gauge: green signals over total, ring split by status (image 00). */
@@ -861,12 +863,13 @@ const CATEGORY_LIST: SignalCategory[] = [
   "reliability",
   "sessions",
 ];
+/** IDENTITY: which theme a signal belongs to, not how it is doing. Categorical ramp. */
 const THEME_COLORS: Record<SignalCategory, string> = {
-  fidelity: "#3b82f6",
-  security: "#ef4444",
-  compliance: "#f59e0b",
-  reliability: "#10b981",
-  sessions: "#8b5cf6",
+  fidelity: "var(--tessera-cat-1)",
+  security: "var(--tessera-cat-2)",
+  compliance: "var(--tessera-cat-3)",
+  reliability: "var(--tessera-cat-4)",
+  sessions: "var(--tessera-cat-5)",
 };
 
 /** "Répartition par thème" — signal counts per category as a donut (image 01). */
@@ -1021,10 +1024,10 @@ export function SignalHeatmap({ rows }: { rows: SignalRow[] }) {
 }
 
 const STATUS_HEX: Record<SignalStatus, string> = {
-  ok: "#10b981",
-  warn: "#f59e0b",
-  crit: "#ef4444",
-  na: "#64748b",
+  ok: "var(--tessera-fg-success)",
+  warn: "var(--tessera-fg-warning)",
+  crit: "var(--tessera-fg-danger)",
+  na: "var(--tessera-text-muted)",
 };
 
 /** A filled-area sparkline over a band's per-bucket counts (signal KPI tiles, image 01). */
@@ -1081,7 +1084,7 @@ function DeltaVsYesterday({
       </span>
     );
   const up = delta > 0;
-  const tone = up === goodUp ? "#10b981" : color;
+  const tone = up === goodUp ? "var(--tessera-fg-success)" : color;
   return (
     <span className="flex items-center gap-1 text-[0.65rem] tabular-nums" style={{ color: tone }}>
       {up ? "▲" : "▼"} {up ? "+" : ""}

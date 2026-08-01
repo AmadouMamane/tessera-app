@@ -212,7 +212,7 @@ function MiniSpark({ series }: { series: ScoreSeries | undefined }) {
       <path
         d={d}
         fill="none"
-        stroke={rising ? "#10b981" : "#ef4444"}
+        stroke={rising ? "var(--tessera-fg-success)" : "var(--tessera-fg-danger)"}
         strokeWidth={1.5}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -491,14 +491,18 @@ export function TopProblems({ rows, limit = 6 }: { rows: SignalRow[]; limit?: nu
 }
 
 const VERDICT_COLOR: Record<string, string> = {
-  best: "#10b981",
-  balanced: "#3b82f6",
-  economic: "#10b981",
-  avoid: "#ef4444",
+  best: "var(--tessera-fg-success)",
+  balanced: "var(--tessera-fg-info)",
+  economic: "var(--tessera-fg-success)",
+  avoid: "var(--tessera-fg-danger)",
 };
 
 function rateColor(r: number): string {
-  return r >= 0.8 ? "#10b981" : r >= 0.5 ? "#f59e0b" : "#ef4444";
+  return r >= 0.8
+    ? "var(--tessera-fg-success)"
+    : r >= 0.5
+      ? "var(--tessera-fg-warning)"
+      : "var(--tessera-fg-danger)";
 }
 
 /** "Diagnostic racine (probable)" — what changed / probable causes / impact (image 00). */
@@ -742,7 +746,7 @@ export function CostQualityScatter({
                     cx={2 + ((m.est_cost_eur ?? 0) / maxCost) * 96}
                     cy={top + (1 - m.pass_rate) * H}
                     r={1.8}
-                    fill={VERDICT_COLOR[m.verdict] ?? "#64748b"}
+                    fill={VERDICT_COLOR[m.verdict] ?? "var(--tessera-text-muted)"}
                   />
                 ))}
               </svg>
@@ -759,7 +763,7 @@ export function CostQualityScatter({
                 >
                   <span
                     className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: VERDICT_COLOR[m.verdict] ?? "#64748b" }}
+                    style={{ background: VERDICT_COLOR[m.verdict] ?? "var(--tessera-text-muted)" }}
                   />
                   {m.model}
                 </li>
@@ -835,7 +839,12 @@ export function FaithGroundingScatter({
   const points = pairs?.points ?? [];
   const H = 56;
   const top = 4;
-  const bucketColor = (m: number) => (m >= 0.7 ? "#10b981" : m >= 0.4 ? "#f59e0b" : "#ef4444");
+  const bucketColor = (m: number) =>
+    m >= 0.7
+      ? "var(--tessera-fg-success)"
+      : m >= 0.4
+        ? "var(--tessera-fg-warning)"
+        : "var(--tessera-fg-danger)";
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-2">
@@ -917,15 +926,16 @@ export function FaithGroundingScatter({
   );
 }
 
+/** Identity per failure category — eight slots, exactly the ramp. */
 const CAT_COLORS = [
-  "#ef4444",
-  "#f59e0b",
-  "#3b82f6",
-  "#8b5cf6",
-  "#10b981",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
+  "var(--tessera-cat-1)",
+  "var(--tessera-cat-2)",
+  "var(--tessera-cat-3)",
+  "var(--tessera-cat-4)",
+  "var(--tessera-cat-5)",
+  "var(--tessera-cat-6)",
+  "var(--tessera-cat-7)",
+  "var(--tessera-cat-8)",
 ];
 const KNOWN_CATEGORIES = [
   "prompt_injection",
@@ -1249,7 +1259,7 @@ export function PredictiveSignals({
                       label={name}
                       value={String(n)}
                       pct={(n / intentMax) * 100}
-                      color={CAT_COLORS[i % CAT_COLORS.length] ?? "#64748b"}
+                      color={CAT_COLORS[i % CAT_COLORS.length] ?? "var(--tessera-text-muted)"}
                     />
                   ))
                 )}
@@ -1267,7 +1277,7 @@ export function PredictiveSignals({
                       label={l.locale.toUpperCase()}
                       value={`${Math.round(l.gap * 100)}%`}
                       pct={(l.gap / langMax) * 100}
-                      color={CAT_COLORS[(i + 3) % CAT_COLORS.length] ?? "#64748b"}
+                      color={CAT_COLORS[(i + 3) % CAT_COLORS.length] ?? "var(--tessera-text-muted)"}
                     />
                   ))
                 )}

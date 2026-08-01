@@ -35,11 +35,22 @@
 // 3:1, not 4.5:1 — WCAG 2.1 SC 1.4.11 asks 3:1 of a GRAPHICAL object; 4.5:1 is what body
 // text owes. Two thresholds because there are two kinds of thing, not to be lenient.
 //
-// AND THE HOLE THIS SECOND RULE STILL HAS, sized rather than hidden (ADR 0026): a paint fed
-// by an EXPRESSION — `stroke={s.color}`, `stroke={DONUT_COLORS[i]}` — keeps its colour in a
-// JS table or in the data, where a per-attribute scan cannot follow. 48 such sites today,
-// asserted downward-only, so the unseen population cannot quietly grow while the seen one
-// reports green.
+// THIRD RULE — THE COLOUR CONSTANT, which is where the second rule's blind spot lived. A
+// paint fed by an EXPRESSION — `stroke={s.color}`, `stroke={DONUT_COLORS[i]}` — keeps its
+// colour in a JS table, and a per-attribute scan cannot follow it there. That population was
+// counted (48 sites) rather than measured, and counting was too weak: behind those 48 sites
+// sat 142 hex constants below 3:1, one of which drew a 1.92:1 availability line on a white
+// card that an operator could see. So the witness now reads the constants themselves —
+// every bare `"#rrggbb"` in a `.ts`/`.tsx`, wherever it lives — and measures it.
+//
+// A STRONGER WITNESS REPLACING A WEAKER ONE IS NOT A LOOSENING. The count survives below as
+// a secondary bound, but it no longer stands in for the thing: the colours it used to hide
+// are now measured one by one.
+//
+// WHAT EVEN THIS CANNOT SEE, said plainly: a colour that arrives from the API — `c.color ??
+// "#2e72d2"` in the sources tree — is not in the source at all. The fallback is measured;
+// the served value is not. No number is offered for it, because a number nobody can compute
+// is worse than the admission.
 //
 // Mutation contract (each verified red before landing):
 //   · restore `text-white` on the sidebar's super-section header  → red, named by line;
@@ -48,7 +59,8 @@
 //   · lower a frozen count without removing the literal           → red;
 //   · point the scan at nothing                                   → red (anti-vacuity);
 //   · restore `stroke="#34d399"` on a real chart                  → red, named by line;
-//   · let the expression-fed population grow by one               → red.
+//   · let the expression-fed population grow by one               → red;
+//   · put a pale hex back in a colour TABLE                       → red, named by line.
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -112,11 +124,27 @@ const FROZEN_DECORATIVE_PAINT: ReadonlyMap<string, number> = new Map([
  *  that stopped matching, which would otherwise read as "no chart is broken". */
 const EXPECTED_MIN_PAINTS = 30;
 
-/** The blind spot, sized. `stroke={s.color}` / `fill={LINE_COLORS[i]}` keep their colour in
- *  a JS table or in the data; this witness cannot follow them there. Held downward-only:
- *  a NEW expression-fed chart is refused, so the unseen population cannot grow while the
- *  seen one reports green. Lowering this number is how that debt gets paid. */
+/** Sites whose paint is resolved at RUNTIME rather than written on the element. Their
+ *  constants are measured by the third rule now, so this is no longer the primary witness
+ *  — it is a secondary bound, held downward-only, on how much of the surface answers to a
+ *  value this scan reads indirectly. */
 const UNSEEN_EXPRESSION_FED = 48;
+
+/** Decorative colour CONSTANTS where the colour is the content, or where the component
+ *  carries its own painted ground. TWO-SIDED, so it can only shrink.
+ *
+ *  · `landing-launcher` declares a whole scoped design system as inline custom properties
+ *    over its own `rgba(6,20,38,.78)` panel — its foregrounds were chosen against that
+ *    ground and it never consumes the `--tessera-*` surface tokens;
+ *  · `theme-swatch` paints the disc that REPRESENTS a theme. Making the pale-neutral swatch
+ *    darker so it clears contrast would make it stop being the pale neutral theme. */
+const FROZEN_DECOR_CONSTANT: ReadonlyMap<string, number> = new Map([
+  ["components/landing/landing-launcher.tsx", 14],
+  ["components/layout/theme-swatch.tsx", 1],
+]);
+
+/** Anti-vacuity for the constant rule: 25 bare hex constants survive the sweep. */
+const EXPECTED_MIN_CONSTANTS = 20;
 
 /** The Tailwind shades ever used as a foreground here, 100 → 600. The 400/500 band matters
  *  as much as the pale end: `emerald-400` is 1.92:1 on a white card, `amber-500` 2.15:1. */
@@ -166,8 +194,16 @@ const STRING_LITERAL = /"[^"\n]*"|`[^`]*`|'[^'\n]*'/g;
  *  fill emerald-400 while the line it belongs to has become emerald-700. */
 const SVG_PAINT = /\b(?:stroke|fill|stopColor)="(#[0-9a-fA-F]{3,8})"/g;
 
-/** The same three attributes fed by an expression — the population declared above. */
+/** The same three attributes fed by an expression — the population bounded above. */
 const SVG_PAINT_EXPRESSION = /\b(?:stroke|fill|stopColor)=\{/g;
+
+/** A bare colour CONSTANT: a quoted hex that is a value in its own right — an entry in a
+ *  `DONUT_COLORS` table, a `color:` field, a ternary arm, an inline `background:`. The
+ *  `(?<!=)` is what keeps this rule distinct from the paint rule above: `stroke="#34d399"`
+ *  is an attribute and belongs to that one. A hex inside a class string never matches
+ *  either — `bg-[#0d3561]` has a bracket between the hex and the quote, and a chip that
+ *  paints its own opaque ground is not this rule's business. */
+const COLOUR_CONSTANT = /(?<![\w=])(['"])(#[0-9a-fA-F]{6})\1/g;
 
 interface Finding {
   readonly file: string;
@@ -270,6 +306,28 @@ function scanPaint(
   return { failing, resolved, unseen: [...source.matchAll(SVG_PAINT_EXPRESSION)].length };
 }
 
+/** Split one source into the bare colour constants that fail 3:1 on a white card. Same
+ *  threshold as the paint rule: a constant here ends up as a chart line, a donut arc or a
+ *  data bar — a graphical object either way, never body text. */
+function scanConstants(file: string, source: string): { failing: Finding[]; resolved: number } {
+  const failing: Finding[] = [];
+  let resolved = 0;
+  for (const match of source.matchAll(COLOUR_CONSTANT)) {
+    const colour = normaliseHex(match[2] ?? "");
+    if (!colour) continue;
+    resolved += 1;
+    const ratio = contrast(colour, LIGHT_CARD);
+    if (ratio >= AA_NON_TEXT) continue;
+    failing.push({
+      file,
+      line: source.slice(0, match.index ?? 0).split("\n").length,
+      utility: match[2] ?? "",
+      ratio: Math.round(ratio * 100) / 100,
+    });
+  }
+  return { failing, resolved };
+}
+
 function walkSources(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
@@ -290,14 +348,18 @@ interface TreeScan {
   readonly paintFailing: Finding[];
   readonly paintResolved: number;
   readonly unseen: number;
+  readonly constFailing: Finding[];
+  readonly constResolved: number;
 }
 
 function scanTree(): TreeScan {
   const root = process.cwd();
   const failing: Finding[] = [];
   const paintFailing: Finding[] = [];
+  const constFailing: Finding[] = [];
   let resolved = 0;
   let paintResolved = 0;
+  let constResolved = 0;
   let unseen = 0;
   let files = 0;
   for (const dir of SCANNED_DIRS) {
@@ -312,9 +374,21 @@ function scanTree(): TreeScan {
       paintFailing.push(...painted.failing);
       paintResolved += painted.resolved;
       unseen += painted.unseen;
+      const constants = scanConstants(relative, source);
+      constFailing.push(...constants.failing);
+      constResolved += constants.resolved;
     }
   }
-  return { failing, resolved, files, paintFailing, paintResolved, unseen };
+  return {
+    failing,
+    resolved,
+    files,
+    paintFailing,
+    paintResolved,
+    unseen,
+    constFailing,
+    constResolved,
+  };
 }
 
 describe("every foreground literal survives the light theme", () => {
@@ -449,5 +523,56 @@ describe("every SVG chart paint survives the light theme", () => {
     expect(expression.resolved).toBe(0);
     expect(expression.failing).toEqual([]);
     expect(expression.unseen).toBe(2);
+  });
+});
+
+describe("every colour constant survives the light theme", () => {
+  const scan = scanTree();
+
+  it("reads the constants at all, and actually resolves them", () => {
+    expect(scan.constResolved).toBeGreaterThanOrEqual(EXPECTED_MIN_CONSTANTS);
+  });
+
+  it("leaves no sub-3:1 colour constant outside the frozen decor", () => {
+    const offending = scan.constFailing.filter((f) => !FROZEN_DECOR_CONSTANT.has(f.file));
+    expect(
+      offending.map((f) => `${f.file}:${f.line}  ${f.utility}  ${f.ratio}:1 on a white card`),
+      "a colour table paints charts: use --tessera-cat-* for identity, --tessera-fg-* for a verdict",
+    ).toEqual([]);
+  });
+
+  it("holds the frozen decor at its exact measured size, so it can only shrink", () => {
+    const actual: Record<string, number> = {};
+    for (const finding of scan.constFailing) {
+      if (!FROZEN_DECOR_CONSTANT.has(finding.file)) continue;
+      actual[finding.file] = (actual[finding.file] ?? 0) + 1;
+    }
+    expect(actual).toEqual(Object.fromEntries(FROZEN_DECOR_CONSTANT));
+  });
+
+  it("has teeth: a pale hex back in a colour table is rejected, named and measured", () => {
+    const table = scanConstants("board.tsx", 'const DONUT_COLORS = ["#34d399", "#60a5fa"];');
+    expect(table.failing.map((f) => `${f.utility} ${f.ratio}`)).toEqual([
+      "#34d399 1.92",
+      "#60a5fa 2.54",
+    ]);
+
+    const ternary = scanConstants("x.tsx", 'const t = ok ? "#10b981" : "#ef4444";');
+    expect(ternary.failing.map((f) => f.utility)).toEqual(["#10b981"]);
+  });
+
+  it("has teeth: it does not poach the other two rules' territory", () => {
+    // An ATTRIBUTE belongs to the paint rule — counting it here would double-report it.
+    const attribute = scanConstants("x.tsx", '<path stroke="#34d399" />');
+    expect(attribute.resolved).toBe(0);
+
+    // A hex inside a class string belongs to the foreground rule, which knows about the
+    // opaque-background exemption this rule has no way to evaluate.
+    const utility = scanConstants("x.tsx", '"rounded bg-[#0d3561] text-[#d8eaff]"');
+    expect(utility.resolved).toBe(0);
+
+    // A token is not a literal, here as everywhere.
+    const token = scanConstants("x.tsx", 'const c = "var(--tessera-cat-1)";');
+    expect(token.resolved).toBe(0);
   });
 });

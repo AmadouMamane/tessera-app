@@ -46,7 +46,14 @@ const STATUS_BADGE: Record<string, "neutral" | "warning" | "success" | "danger">
   ready: "success",
   to_approve: "danger",
 };
-const CAUSE_COLOR = ["#60a5fa", "#34d399", "#fbbf24", "#f472b6", "#a78bfa"];
+/** One slot per root CAUSE — identity, not severity: no cause is "the good one". */
+const CAUSE_COLOR = [
+  "var(--tessera-cat-1)",
+  "var(--tessera-cat-2)",
+  "var(--tessera-cat-3)",
+  "var(--tessera-cat-4)",
+  "var(--tessera-cat-5)",
+];
 
 const TABS = ["overview", "plan", "curation", "experiments", "release"] as const;
 
@@ -244,7 +251,7 @@ export function ImprovementDashboard() {
   const causeSlices = Object.entries(d.causes ?? {}).map(([label, count], i) => ({
     label,
     count,
-    color: CAUSE_COLOR[i % CAUSE_COLOR.length] ?? "#94a3b8",
+    color: CAUSE_COLOR[i % CAUSE_COLOR.length] ?? "var(--tessera-text-muted)",
   }));
   const topProblems = [...(d.opportunities ?? [])].sort((a, b) => b.gain_pts - a.gain_pts);
 

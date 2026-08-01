@@ -488,7 +488,7 @@ function IntegrationTable({
         perPage={perPage}
         onPage={setPage}
         onPerPage={setPerPage}
-        accent="#87bfff"
+        accent="var(--tessera-fg-info)"
       />
     </div>
   );

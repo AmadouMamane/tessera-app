@@ -1127,19 +1127,19 @@ function BacklogTrend({ t, data, className }: { t: T; data: Data; className?: st
         <StretchChart
           title={t("panel.backlogTrend")}
           lines={[
-            { points: b.total, color: "#60a5fa" },
-            { points: b.to_curate, color: "#fbbf24" },
-            { points: b.promotable, color: "#34d399" },
-            { points: b.rejected, color: "#f87171" },
+            { points: b.total, color: "var(--tessera-fg-info)" },
+            { points: b.to_curate, color: "var(--tessera-fg-warning)" },
+            { points: b.promotable, color: "var(--tessera-fg-success)" },
+            { points: b.rejected, color: "var(--tessera-fg-danger)" },
           ]}
           ticks={b.labels}
         />
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]">
-        <Legend color="#60a5fa" label={t("backlogLegend.total")} />
-        <Legend color="#fbbf24" label={t("backlogLegend.toCurate")} />
-        <Legend color="#34d399" label={t("backlogLegend.promotable")} />
-        <Legend color="#f87171" label={t("backlogLegend.rejected")} />
+        <Legend color="var(--tessera-fg-info)" label={t("backlogLegend.total")} />
+        <Legend color="var(--tessera-fg-warning)" label={t("backlogLegend.toCurate")} />
+        <Legend color="var(--tessera-fg-success)" label={t("backlogLegend.promotable")} />
+        <Legend color="var(--tessera-fg-danger)" label={t("backlogLegend.rejected")} />
       </div>
     </Panel>
   );
@@ -1162,9 +1162,24 @@ function BalanceChart({ t, data, className }: { t: T; data: Data; className?: st
           return (
             <div key={l} className="flex h-full min-w-0 flex-1 flex-col justify-end">
               <div className="flex h-full flex-col overflow-hidden rounded-sm">
-                <div style={{ height: `${(promote / total) * 100}%`, background: "#34d399" }} />
-                <div style={{ height: `${(review / total) * 100}%`, background: "#fbbf24" }} />
-                <div style={{ height: `${(reject / total) * 100}%`, background: "#f87171" }} />
+                <div
+                  style={{
+                    height: `${(promote / total) * 100}%`,
+                    background: "var(--tessera-fg-success)",
+                  }}
+                />
+                <div
+                  style={{
+                    height: `${(review / total) * 100}%`,
+                    background: "var(--tessera-fg-warning)",
+                  }}
+                />
+                <div
+                  style={{
+                    height: `${(reject / total) * 100}%`,
+                    background: "var(--tessera-fg-danger)",
+                  }}
+                />
               </div>
             </div>
           );
@@ -1180,9 +1195,9 @@ function BalanceChart({ t, data, className }: { t: T; data: Data; className?: st
         </div>
       </div>
       <div className="mt-0.5 flex flex-wrap gap-x-3 text-[0.58rem] text-[var(--tessera-text-muted)]">
-        <Legend color="#34d399" label={t("balanceLegend.promote")} />
-        <Legend color="#fbbf24" label={t("balanceLegend.review")} />
-        <Legend color="#f87171" label={t("balanceLegend.reject")} />
+        <Legend color="var(--tessera-fg-success)" label={t("balanceLegend.promote")} />
+        <Legend color="var(--tessera-fg-warning)" label={t("balanceLegend.review")} />
+        <Legend color="var(--tessera-fg-danger)" label={t("balanceLegend.reject")} />
       </div>
     </Panel>
   );

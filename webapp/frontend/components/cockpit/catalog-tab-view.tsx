@@ -397,7 +397,12 @@ function MiniMultiline({
 function Donut({ value, label }: { value: number; label?: string | null }) {
   const R = 39;
   const C = 2 * Math.PI * R;
-  const t = value >= 0.9 ? "#10b981" : value >= 0.7 ? "#f59e0b" : "#ef4444";
+  const t =
+    value >= 0.9
+      ? "var(--tessera-fg-success)"
+      : value >= 0.7
+        ? "var(--tessera-fg-warning)"
+        : "var(--tessera-fg-danger)";
   return (
     <div className="relative h-[108px] w-[108px] shrink-0">
       <svg viewBox="0 0 108 108" className="h-full w-full -rotate-90" aria-hidden="true">

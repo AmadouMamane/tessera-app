@@ -157,6 +157,52 @@
      "Tessera" here, not "careful". Dark holds gold-400 (11.3:1); "Clair" needs gold-800 to
      clear AA (4.7:1) -- gold-700 only reaches 3.1:1, so the ramp has to go two steps. */
   --tessera-fg-gold: #dfc89a;
+
+  /* -- CATEGORICAL series ramp -------------------------------------------- *
+   * The roles above answer "what does this MEAN" — success, danger, warning. A donut
+   * of failure CAUSES or a multi-line chart of MODELS asks a different question: not
+   * "is this good" but "which one is this". Painting eight causes with six meanings
+   * would say the fourth cause is a warning; painting them all `success` would make
+   * them indistinguishable. So identity gets its own eight slots, held apart from the
+   * status roles on purpose.
+   *
+   * ASSIGNED IN FIXED ORDER, NEVER BY RANK. Slot 1 is the first series, always — a
+   * filter that drops a series must not repaint the survivors.
+   *
+   * The ORDER is the colour-blindness mechanism, not decoration. All 28 pairs were
+   * measured; eleven fail (blue↔violet is ΔE 0.3 under deuteranopia — indistinguishable,
+   * amber↔red 4.9, emerald↔pink 3.2), and this sequence is a path through the graph
+   * that touches none of them. Worst adjacent pair: fuchsia↔emerald, ΔE 14.1 CVD /
+   * cyan↔lime 19.5 normal, against floors of 8 and 15.
+   * Do not reorder without re-running the measurement.
+   *
+   * Dark holds the values the charts ALREADY used, so the dark cockpit is untouched;
+   * "Clair" takes the 600/700 shade of the same hue. Both sets clear 3:1 on their own
+   * card (SC 1.4.11) with chroma, CVD and normal-vision separation passing.
+   * ONE documented deviation: on dark these sit at OKLCH L 0.71–0.85, above the
+   * 0.48–0.67 band a coherent set wants. Stepping them down to 500 does not fix it
+   * (green, amber, cyan and lime are intrinsically light hues) and would repaint the
+   * dark cockpit for no legibility gain — contrast, chroma and separation all already
+   * pass there. Traded knowingly, recorded here rather than left to be rediscovered.
+   *
+   * It opens on BLUE, not green, and that is deliberate: the biggest consumers are
+   * donuts of failure CATEGORIES, and a green first slice reads as "the good one"
+   * before the legend is consulted. Blue says "category", not "verdict".
+   *
+   * EIGHT slots, and a ninth series is never a generated hue. The three ten-category
+   * donuts already fold their tail into grey; that stays, now as --tessera-text-muted
+   * / -subtle. A tenth distinguishable hue does not exist at this lightness — slate
+   * reads as grey (chroma 0.04, below the floor), every remaining chroma-bearing hue
+   * collides with one already in the ramp. Measured, not assumed. */
+  --tessera-cat-1: #60a5fa; /* blue    */
+  --tessera-cat-2: #f59e0b; /* amber   */
+  --tessera-cat-3: #a78bfa; /* violet  */
+  --tessera-cat-4: #34d399; /* emerald */
+  --tessera-cat-5: #e879f9; /* fuchsia */
+  --tessera-cat-6: #a3e635; /* lime    */
+  --tessera-cat-7: #22d3ee; /* cyan    */
+  --tessera-cat-8: #f87171; /* red     */
+
   /* Tooltips / ⓘ popovers — a neutral dark-charcoal box with near-white text,
      matching the native macOS/Chrome tooltip in dark mode (the roles/access
      Description reference). Deliberately OFF the navy scale — a real grey, not
@@ -273,6 +319,21 @@
   --tessera-fg-accent: #6d28d9;
   --tessera-fg-teal: #0f766e;
   --tessera-fg-gold: #877044;
+  /* The categorical ramp, same eight hues at their 600/700 step. This set passes all
+     five checks on a white card: worst adjacent pair lime↔cyan at ΔE 19.1 (CVD) /
+     19.5 (normal). See the :root block for why the order is load-bearing. */
+  --tessera-cat-1: #1d4ed8; /* blue    */
+  --tessera-cat-2: #b45309; /* amber   */
+  --tessera-cat-3: #6d28d9; /* violet  */
+  --tessera-cat-4: #047857; /* emerald */
+  --tessera-cat-5: #a21caf; /* fuchsia */
+  --tessera-cat-6: #4d7c0f; /* lime    */
+  --tessera-cat-7: #0891b2; /* cyan    */
+  --tessera-cat-8: #b91c1c; /* red     */
+  /* The brand green paints 26 chart traces and scores 2.20:1 on a white card. Same hue,
+     the step that clears a graphical object's 3:1 with room (5.48:1). Dark keeps #00c878
+     untouched — the cockpit's green is the cockpit's green. */
+  --tessera-green: #00794a;
   /* Light theme: the native tooltip is a light box with dark text. */
   --tessera-tooltip-bg: #f4f4f6;
   --tessera-tooltip-fg: #1f242b;
