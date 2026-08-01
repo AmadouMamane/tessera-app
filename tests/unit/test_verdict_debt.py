@@ -166,6 +166,10 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/agent/recouvrement.py::_has_summary_intent": "intent",
     "src/tessera/api/routes/audit.py::_matches_text": "filter",
     "src/tessera/api/routes/audit.py::_within": "filter",
+    # Row-level predicate over one timestamp: "is this inside the selected window". It decides
+    # nothing about the system — it is the `WHERE` clause the file-backed readers apply in
+    # Python because they have no index to push it down to.
+    "src/tessera/observability/spine/scope.py::Scope.within": "filter",
     "src/tessera/api/routes/chat.py::is_test_turn": "data",
     "src/tessera/api/routes/observability/_common.py::_bool_payload": "data",
     "src/tessera/api/settings_store.py::_get_flag": "config",

@@ -34,7 +34,12 @@ export const ChatDebugSchema = z.object({
       badge: z.string(),
       badge_tone: z.string(),
       rows: z.array(
-        z.object({ label: z.string(), value: z.string(), scale: z.string(), tone: z.string() }),
+        z.object({
+          label: z.string(),
+          value: z.string(),
+          scale: z.string(),
+          tone: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -49,7 +54,12 @@ export const ChatDebugSchema = z.object({
     .object({
       title: z.string(),
       rows: z.array(
-        z.object({ name: z.string(), status: z.string(), tone: z.string(), latency: z.string() }),
+        z.object({
+          name: z.string(),
+          status: z.string(),
+          tone: z.string(),
+          latency: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -57,7 +67,12 @@ export const ChatDebugSchema = z.object({
     .object({
       title: z.string(),
       rows: z.array(
-        z.object({ name: z.string(), status: z.string(), tone: z.string(), detail: z.string() }),
+        z.object({
+          name: z.string(),
+          status: z.string(),
+          tone: z.string(),
+          detail: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -971,7 +986,10 @@ export const CalibrationSchema = z.object({
 });
 export type Calibration = z.infer<typeof CalibrationSchema>;
 
-export const ReliabilityErrorSliceSchema = z.object({ label: z.string(), count: z.number().int() });
+export const ReliabilityErrorSliceSchema = z.object({
+  label: z.string(),
+  count: z.number().int(),
+});
 export const ReliabilityCostRowSchema = z.object({
   model: z.string(),
   provider: z.string(),
@@ -2916,7 +2934,11 @@ export const CurationOverviewSchema = z.object({
   candidate_lots: z.array(CurCandidateSchema),
   why_tours: z.array(CurWhySchema),
   workflow: z.array(CurWorkflowSchema),
-  release: z.object({ id: z.string(), status: z.string(), readiness: z.number().int() }),
+  release: z.object({
+    id: z.string(),
+    status: z.string(),
+    readiness: z.number().int(),
+  }),
   cohort: z.string(),
   coverage: z.object({
     rows: z.array(z.string()),
@@ -2950,7 +2972,11 @@ export const CurationOverviewSchema = z.object({
     current_val: z.number(),
     projected_val: z.number(),
   }),
-  footer: z.object({ release: z.string(), source: z.string(), sync: z.string() }),
+  footer: z.object({
+    release: z.string(),
+    source: z.string(),
+    sync: z.string(),
+  }),
 });
 export type CurationOverview = z.infer<typeof CurationOverviewSchema>;
 
@@ -2983,14 +3009,22 @@ const AuIncidentSchema = z.object({
   label: z.string(),
   time: z.string(),
 });
-const AuPipelineSchema = z.object({ key: z.string(), count: z.string(), pct: z.number() });
+const AuPipelineSchema = z.object({
+  key: z.string(),
+  count: z.string(),
+  pct: z.number(),
+});
 const AuSliceSchema = z.object({
   key: z.string(),
   count: z.number().int(),
   pct: z.number(),
   color: z.string(),
 });
-const AuEnvSchema = z.object({ key: z.string(), count: z.number().int(), color: z.string() });
+const AuEnvSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  color: z.string(),
+});
 const AuJournalSchema = z.object({
   time: z.string(),
   automation: z.string(),
@@ -3011,8 +3045,16 @@ const AuApprovalSchema = z.object({
   observed: z.string(),
   role: z.string(),
 });
-const AuGuardrailSchema = z.object({ key: z.string(), count: z.number().int(), pct: z.number() });
-const AuSavingSchema = z.object({ key: z.string(), value: z.string(), delta: z.string() });
+const AuGuardrailSchema = z.object({
+  key: z.string(),
+  count: z.number().int(),
+  pct: z.number(),
+});
+const AuSavingSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  delta: z.string(),
+});
 
 export const AutomationsOverviewSchema = z.object({
   available: z.boolean(),
@@ -3143,7 +3185,11 @@ export const ProofsOverviewSchema = z.object({
     }),
   ),
   export_journal: z.array(
-    z.object({ time: z.string(), label: z.string(), status: z.enum(["ok", "degraded", "down"]) }),
+    z.object({
+      time: z.string(),
+      label: z.string(),
+      status: z.enum(["ok", "degraded", "down"]),
+    }),
   ),
   queue: z.object({
     pending_signature: z.number().int(),
@@ -3321,7 +3367,12 @@ export const PoliciesOverviewSchema = z.object({
   ),
   diff: z.object({
     title: z.string(),
-    lines: z.array(z.object({ type: z.enum(["context", "added", "removed"]), text: z.string() })),
+    lines: z.array(
+      z.object({
+        type: z.enum(["context", "added", "removed"]),
+        text: z.string(),
+      }),
+    ),
   }),
   guardrails: z.array(z.object({ key: z.string(), value: z.string(), pct: z.number() })),
   impact: z.array(
@@ -3391,7 +3442,12 @@ const SmVersionsSchema = z.object({
   // Re-gate signal raised when the active embedding model drifts from the index
   // (added by Commit 3); optional so the schema is forward-compatible.
   drift: z
-    .object({ changed: z.boolean(), from: z.string(), to: z.string(), label: z.string() })
+    .object({
+      changed: z.boolean(),
+      from: z.string(),
+      to: z.string(),
+      label: z.string(),
+    })
     .optional(),
 });
 const SmDetailSchema = z.object({
@@ -3469,8 +3525,16 @@ export const SourcesOverviewSchema = z.object({
       color: z.string().optional(),
     }),
   ),
-  zones: z.object({ by_type: z.string(), by_env: z.string(), cost: z.string() }),
-  cost: z.object({ active: z.string(), frontier: z.string(), note: z.string() }),
+  zones: z.object({
+    by_type: z.string(),
+    by_env: z.string(),
+    cost: z.string(),
+  }),
+  cost: z.object({
+    active: z.string(),
+    frontier: z.string(),
+    note: z.string(),
+  }),
   lineage: z.object({
     title: z.string(),
     steps: z.array(
@@ -3734,7 +3798,11 @@ const IgDetailSchema = z.object({
   environment: z.string(),
   region: z.string(),
   criticality: z.enum(["low", "medium", "high"]),
-  usage: z.object({ read: IgMetricSchema, write: IgMetricSchema, cost: IgMetricSchema }),
+  usage: z.object({
+    read: IgMetricSchema,
+    write: IgMetricSchema,
+    cost: IgMetricSchema,
+  }),
   config_rows: z.array(IgRowSchema).default([]),
   security_rows: z.array(IgRowSchema).default([]),
 });
@@ -3899,7 +3967,12 @@ export const ParametersOverviewSchema = z.object({
   config_state: z.object({
     total: z.number().int(),
     slices: z.array(
-      z.object({ key: z.string(), count: z.number().int(), pct: z.number(), color: z.string() }),
+      z.object({
+        key: z.string(),
+        count: z.number().int(),
+        pct: z.number(),
+        color: z.string(),
+      }),
     ),
   }),
   compliance: z.array(z.object({ key: z.string(), status: z.enum(["ok", "warn", "bad"]) })),
@@ -3967,7 +4040,12 @@ const IbKpiSchema = z.object({
 export const InboxOverviewSchema = z.object({
   available: z.boolean(),
   generated_at: z.string(),
-  rail: z.object({ period: z.string(), sla: z.string(), updated: z.string(), compare: z.string() }),
+  rail: z.object({
+    period: z.string(),
+    sla: z.string(),
+    updated: z.string(),
+    compare: z.string(),
+  }),
   kpis: z.array(IbKpiSchema),
   agent: z.string().optional(),
   items: z.array(
@@ -3996,7 +4074,12 @@ export const InboxOverviewSchema = z.object({
   ),
   total_items: z.number().int(),
   by_type: z.array(
-    z.object({ key: z.string(), count: z.number().int(), pct: z.number(), color: z.string() }),
+    z.object({
+      key: z.string(),
+      count: z.number().int(),
+      pct: z.number(),
+      color: z.string(),
+    }),
   ),
   by_type_total: z.number().int(),
   sla_buckets: z.array(z.object({ key: z.string(), count: z.number().int(), color: z.string() })),
@@ -4123,7 +4206,11 @@ export const AssistantOverviewSchema = z.object({
   sources: z.array(z.object({ title: z.string() })),
   tools: z.array(z.object({ name: z.string() })),
   guardrails: z.array(
-    z.object({ name: z.string(), detail: z.string(), level: z.enum(["warn", "crit", "ok"]) }),
+    z.object({
+      name: z.string(),
+      detail: z.string(),
+      level: z.enum(["warn", "crit", "ok"]),
+    }),
   ),
   quality: z.array(z.object({ key: z.string(), value: z.number() })),
   trace: z.array(z.object({ key: z.string(), done: z.boolean() })),
@@ -4150,7 +4237,11 @@ const SynKpiSchema = z.object({
   explain: TabExplainSchema.nullable().optional(),
 });
 const SynLabelValueSchema = z.object({ label: z.string(), value: z.string() });
-const SynBarSchema = z.object({ label: z.string(), pct: z.number(), tone: z.string() });
+const SynBarSchema = z.object({
+  label: z.string(),
+  pct: z.number(),
+  tone: z.string(),
+});
 
 export const AgentSyntheseSchema = z.object({
   available: z.boolean(),
@@ -4471,7 +4562,14 @@ const AgentAFaireDetailSchema = z.object({
   transitions_title: z.string().optional(),
   transitions_empty: z.string().optional(),
   transition_rows: z
-    .array(z.object({ at: z.string(), label: z.string(), by: z.string(), kind: z.string() }))
+    .array(
+      z.object({
+        at: z.string(),
+        label: z.string(),
+        by: z.string(),
+        kind: z.string(),
+      }),
+    )
     .optional(),
   assign_title: z.string(),
   assign_label: z.string(),
@@ -4504,7 +4602,12 @@ export const AgentAFaireSchema = z.object({
       title: z.string(),
       cta: z.string(),
       events: z.array(
-        z.object({ time: z.string(), label: z.string(), ref: z.string(), tone: z.string() }),
+        z.object({
+          time: z.string(),
+          label: z.string(),
+          ref: z.string(),
+          tone: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -4871,7 +4974,12 @@ export const AgentConsoleSchema = z.object({
     .object({
       title: z.string(),
       rows: z.array(
-        z.object({ name: z.string(), status: z.string(), tone: z.string(), latency: z.string() }),
+        z.object({
+          name: z.string(),
+          status: z.string(),
+          tone: z.string(),
+          latency: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -4879,7 +4987,12 @@ export const AgentConsoleSchema = z.object({
     .object({
       title: z.string(),
       rows: z.array(
-        z.object({ name: z.string(), status: z.string(), tone: z.string(), detail: z.string() }),
+        z.object({
+          name: z.string(),
+          status: z.string(),
+          tone: z.string(),
+          detail: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -5002,7 +5115,11 @@ export const AgentConnaissancesSchema = z.object({
         usage: z.array(z.object({ label: z.string(), value: z.string() })),
         answers_title: z.string(),
         answers: z.array(
-          z.object({ text: z.string(), answer: z.string().optional(), time: z.string() }),
+          z.object({
+            text: z.string(),
+            answer: z.string().optional(),
+            time: z.string(),
+          }),
         ),
         params_title: z.string().optional(),
         params: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
@@ -5014,7 +5131,13 @@ export const AgentConnaissancesSchema = z.object({
             // S1 fold of the governed attach/detach acts: a list (possibly empty),
             // or null when the ledger could not be read — rendered as such.
             journal: z
-              .array(z.object({ at: z.string(), by: z.string(), action: z.string() }))
+              .array(
+                z.object({
+                  at: z.string(),
+                  by: z.string(),
+                  action: z.string(),
+                }),
+              )
               .nullable()
               .optional(),
             journal_empty: z.string().optional(),
@@ -5215,7 +5338,12 @@ export const PromptOverlaySchema = z.object({
     .nullable(),
   draft: z.object({ text: z.string(), author: z.string(), at: z.string() }).nullable(),
   history: z.array(
-    z.object({ at: z.string(), event: z.string(), author: z.string(), chars: z.number() }),
+    z.object({
+      at: z.string(),
+      event: z.string(),
+      author: z.string(),
+      chars: z.number(),
+    }),
   ),
   max_chars: z.number().int(),
   agent_id: z.string(),
@@ -5236,7 +5364,12 @@ export const PromptOverlayStateSchema = z.object({
     })
     .nullable(),
   history: z.array(
-    z.object({ at: z.string(), event: z.string(), author: z.string(), chars: z.number() }),
+    z.object({
+      at: z.string(),
+      event: z.string(),
+      author: z.string(),
+      chars: z.number(),
+    }),
   ),
 });
 export type PromptOverlayState = z.infer<typeof PromptOverlayStateSchema>;
@@ -5339,7 +5472,12 @@ export const AgentPromptsSchema = z.object({
       title: z.string(),
       cta: z.string(),
       items: z.array(
-        z.object({ label: z.string(), value: z.string(), pct: z.number(), tone: z.string() }),
+        z.object({
+          label: z.string(),
+          value: z.string(),
+          pct: z.number(),
+          tone: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -5354,7 +5492,11 @@ export const AgentPromptsSchema = z.object({
         tabs: z.array(z.string()),
         description: z.string(),
         fields: z.array(
-          z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
+          z.object({
+            label: z.string(),
+            value: z.string(),
+            tone: z.string().optional(),
+          }),
         ),
         content: z.array(z.object({ lang: z.string(), text: z.string() })),
         tags_label: z.string(),
@@ -5931,7 +6073,12 @@ export const AgentHistoriqueSchema = z.object({
       cta: z.string(),
       cta_href: z.string().optional(),
       items: z.array(
-        z.object({ label: z.string(), value: z.string(), pct: z.number(), share: z.string() }),
+        z.object({
+          label: z.string(),
+          value: z.string(),
+          pct: z.number(),
+          share: z.string(),
+        }),
       ),
     })
     .optional(),
@@ -6311,7 +6458,11 @@ export type ReleaseAgent = z.infer<typeof ReleaseAgentSchema>;
 // Client space (Produit) — documents / requests / alerts / settings
 // ---------------------------------------------------------------------------
 
-const ClientKpiSchema = z.object({ key: z.string(), value: z.string(), sub: z.string() });
+const ClientKpiSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  sub: z.string(),
+});
 const ClientSliceSchema = z.object({
   key: z.string(),
   count: z.number().int(),
@@ -6484,11 +6635,49 @@ export type UsersOverview = z.infer<typeof UsersOverviewSchema>;
 export const OverviewSnapshotSchema = z.object({
   scope: z.unknown().optional(),
   signals: z
-    .record(z.string(), z.object({ data: z.unknown().optional(), report: z.unknown().optional() }))
+    .record(
+      z.string(),
+      z.object({
+        data: z.unknown().optional(),
+        report: z.unknown().optional(),
+      }),
+    )
     .optional(),
   meta: z.unknown().optional(),
 });
 export type OverviewSnapshotEnvelope = z.infer<typeof OverviewSnapshotSchema>;
+
+/**
+ * A control's curve, as buckets of the payload the point value is computed from
+ * (`/observability/control-series`).
+ *
+ * `payload` is deliberately `z.unknown()` and not a restatement of `ControlPayload`. The
+ * bucket is fed straight to `readControls` — the same function, and the same per-source
+ * schemas, the live number goes through — so declaring the shape a second time here would
+ * create exactly the second contract this endpoint exists to avoid. Zod strips undeclared
+ * keys, so a narrower schema would also silently delete whichever source it had not heard
+ * of yet, and the curve for that control would go quietly flat.
+ *
+ * `unwindowed` maps a payload key to the reason it appears in no bucket. It is what lets a
+ * row say "no curve, and here is why" instead of leaving an empty chart slot that reads as
+ * a metric which never moves.
+ */
+export const ControlSeriesSchema = z.object({
+  days: z.number().nullable(),
+  n_buckets: z.number(),
+  since: z.string().nullable(),
+  until: z.string().nullable(),
+  buckets: z.array(
+    z.object({
+      index: z.number(),
+      since: z.string(),
+      until: z.string(),
+      payload: z.record(z.string(), z.unknown()),
+    }),
+  ),
+  unwindowed: z.record(z.string(), z.string()),
+});
+export type ControlSeries = z.infer<typeof ControlSeriesSchema>;
 
 /**
  * Every fleet agent's snapshot in one response (`/observability/fleet-snapshot`).

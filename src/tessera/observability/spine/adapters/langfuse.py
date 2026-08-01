@@ -88,10 +88,19 @@ class LangfuseAdapter:
         return [r for r in rows if _matches_agent(r.get("metadata"), scope.agent_id)]
 
     def traces(self, scope: Scope, *, limit: int = 100) -> list[dict[str, object]]:
-        """Recent traces for the scope, time- and ``limit``-bounded, agent-filtered."""
+        """Recent traces for the scope, time- and ``limit``-bounded, agent-filtered.
+
+        The window's lower bound is pushed to the API as ``fromTimestamp``, matching the
+        upper one it has always sent. Filtering it here instead would silently interact with
+        ``limit``: the newest ``limit`` traces get fetched first, so an in-Python floor would
+        return fewer rows than the window holds and never say so.
+        """
         params: dict[str, str] = {"limit": str(_clamp(limit)), "orderBy": "timestamp.desc"}
         if scope.at:
             params["toTimestamp"] = scope.at
+        since, _ = scope.window()
+        if since is not None:
+            params["fromTimestamp"] = since.isoformat()
         rows = _rows(self._get("/api/public/traces", params))
         return [r for r in rows if _matches_agent(r.get("metadata"), scope.agent_id)]
 

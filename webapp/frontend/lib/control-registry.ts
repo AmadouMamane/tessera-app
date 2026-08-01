@@ -196,6 +196,15 @@ export interface ControlReading {
   metric: string;
   /** The ONE displayed number, already formatted. `"—"` when unmeasured. */
   value: string;
+  /**
+   * The same number as `value`, unformatted — what a curve plots.
+   *
+   * Exposed so a sparkline reads the ratio the row DISPLAYS rather than re-deriving one from
+   * the payload. That is the identity the whole registry is built on, extended to the time
+   * axis: a curve drawn from a second derivation is exactly how a falling line came to sit
+   * above a rising number, with both defensible in isolation.
+   */
+  ratio: number | null;
   /** The threshold, formatted. Identical on every surface, by construction. */
   target: string;
   /** Derived from the DISPLAYED value against the DISPLAYED target — never from another. */
@@ -296,8 +305,15 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: pct(slo.good_rate),
         n: slo.n,
         severity: 1 - slo.good_rate,
-        detail: { key: "sample", values: { good: String(slo.n_good), n: String(slo.n) } },
-        target: { value: slo.target, text: `≥ ${pct(slo.target)}`, direction: "higher" },
+        detail: {
+          key: "sample",
+          values: { good: String(slo.n_good), n: String(slo.n) },
+        },
+        target: {
+          value: slo.target,
+          text: `≥ ${pct(slo.target)}`,
+          direction: "higher",
+        },
       };
     },
   },
@@ -353,7 +369,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: pct(x.toxicity_rate, 2),
         n: x.n_turns,
         severity: Math.min(x.toxicity_rate * 50, 1),
-        detail: { key: "count", values: { hit: String(x.n_toxic), n: String(x.n_turns) } },
+        detail: {
+          key: "count",
+          values: { hit: String(x.n_toxic), n: String(x.n_turns) },
+        },
       };
     },
   },
@@ -375,7 +394,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: pct(p.leak_rate, 2),
         n: p.n_turns,
         severity: Math.min(p.leak_rate * 20, 1),
-        detail: { key: "count", values: { hit: String(p.n_with_leak), n: String(p.n_turns) } },
+        detail: {
+          key: "count",
+          values: { hit: String(p.n_with_leak), n: String(p.n_turns) },
+        },
       };
     },
   },
@@ -396,7 +418,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         ratio: r.over_refusal_rate,
         text: pct(r.over_refusal_rate),
         n: r.n_legit,
-        detail: { key: "count", values: { hit: String(r.legit_refused), n: String(r.n_legit) } },
+        detail: {
+          key: "count",
+          values: { hit: String(r.legit_refused), n: String(r.n_legit) },
+        },
       };
     },
   },
@@ -419,7 +444,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         n: r.n_forbidden,
         detail: {
           key: "count",
-          values: { hit: String(r.forbidden_allowed), n: String(r.n_forbidden) },
+          values: {
+            hit: String(r.forbidden_allowed),
+            n: String(r.n_forbidden),
+          },
         },
       };
     },
@@ -543,7 +571,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: pct(x.leak_rate, 2),
         n: x.n_turns,
         severity: Math.min(x.leak_rate * 20, 1),
-        detail: { key: "count", values: { hit: String(x.n_leaks), n: String(x.n_turns) } },
+        detail: {
+          key: "count",
+          values: { hit: String(x.n_leaks), n: String(x.n_turns) },
+        },
       };
     },
   },
@@ -589,7 +620,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: pct(rate),
         n,
         severity: Math.min(rate * 5, 1),
-        detail: { key: "count", values: { hit: String(inv.n_recoverable ?? 0), n: String(n) } },
+        detail: {
+          key: "count",
+          values: { hit: String(inv.n_recoverable ?? 0), n: String(n) },
+        },
         unavailable: inv.available ? undefined : "read-failed",
       };
     },
@@ -632,7 +666,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: kappa.toFixed(2),
         n,
         severity: Math.max(0, 0.6 - kappa),
-        detail: { key: "agreement", values: { agreement: pct(a.agreement ?? 0) } },
+        detail: {
+          key: "agreement",
+          values: { agreement: pct(a.agreement ?? 0) },
+        },
         unavailable: a.available ? undefined : "read-failed",
       };
     },
@@ -743,7 +780,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: pct(l.correctness_rate),
         n: l.n_amounts,
         severity: 1 - l.correctness_rate,
-        detail: { key: "count", values: { hit: String(l.n_violations), n: String(l.n_amounts) } },
+        detail: {
+          key: "count",
+          values: { hit: String(l.n_violations), n: String(l.n_amounts) },
+        },
       };
     },
   },
@@ -765,7 +805,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         severity: c.n_anomalies > 0 ? 0.3 : 0,
         detail: {
           key: "cost",
-          values: { eur: c.estimated_cost_eur.toFixed(2), anomalies: String(c.n_anomalies) },
+          values: {
+            eur: c.estimated_cost_eur.toFixed(2),
+            anomalies: String(c.n_anomalies),
+          },
         },
         target: {
           value: c.threshold_tokens,
@@ -790,7 +833,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: pct(1 - r.mismatch_rate),
         n: r.n,
         severity: r.mismatch_rate,
-        detail: { key: "count", values: { hit: String(r.mismatches), n: String(r.n) } },
+        detail: {
+          key: "count",
+          values: { hit: String(r.mismatches), n: String(r.n) },
+        },
       };
     },
   },
@@ -831,7 +877,10 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: String(a.n_anomalous),
         n: a.n_sessions,
         severity: Math.min(a.n_anomalous / 5, 1),
-        detail: { key: "count", values: { hit: String(a.n_anomalous), n: String(a.n_sessions) } },
+        detail: {
+          key: "count",
+          values: { hit: String(a.n_anomalous), n: String(a.n_sessions) },
+        },
       };
     },
   },
@@ -883,6 +932,7 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
       id,
       metric: spec.metric,
       value: "—",
+      ratio: null,
       target: bar,
       state: NEUTRAL,
       severity: 0,
@@ -901,6 +951,7 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
     id,
     metric: spec.metric,
     value: sample.text,
+    ratio: sample.ratio,
     target: bar,
     // The state is derived from the SAME ratio the `value` renders. That identity is the whole
     // point: the previous signals-table computed its status from `max(over, under)` while
@@ -936,4 +987,46 @@ export function readControls(
 /** The metric id a control declares — the join key with the signal catalogue. */
 export function metricFor(id: ControlId): string {
   return SPECS[id].metric;
+}
+
+/** One bucket of a control series, as the backend sends it. */
+export interface ControlSeriesBucket {
+  index: number;
+  since: string;
+  until: string;
+  payload: Record<string, unknown>;
+}
+
+/**
+ * A control's curve: the ratio each bucket reports, in window order.
+ *
+ * Every point goes through `readControl` — the same function that produced the number the
+ * curve sits under, given that bucket's payload instead of the window's. Nothing is derived
+ * here, so the two cannot disagree; that is the entire design, and it is why this lives in
+ * the registry rather than in a chart component.
+ *
+ * A bucket the control cannot answer contributes `null`, and `MetricSparkline` draws that as
+ * a break in the line. Two different silences map to it and both must: a bucket whose window
+ * held no traffic (`noData`), and a bucket whose source is missing altogether (`readControl`
+ * returns `null`). Neither is a zero, and rendering either as one would turn a quiet week into
+ * a perfect score on exactly the controls where that reads best — a leak rate, a toxicity rate.
+ */
+export function readControlSeries(
+  buckets: readonly ControlSeriesBucket[],
+  id: ControlId,
+): (number | null)[] {
+  return buckets.map((bucket) => {
+    const reading = readControl(id, bucket.payload as ControlPayload);
+    return reading === null || reading.noData ? null : reading.ratio;
+  });
+}
+
+/**
+ * True when a curve is worth drawing: at least two measured points.
+ *
+ * One point is not a trend, and a flat line through a single measurement claims the value held
+ * for the whole window. The caller shows the honest "not enough history yet" label instead.
+ */
+export function hasDrawableCurve(values: readonly (number | null)[]): boolean {
+  return values.filter((v) => v !== null).length > 1;
 }

@@ -20,6 +20,7 @@ from tessera.observability.spine.adapters import read_scores
 
 if TYPE_CHECKING:
     from tessera.memory import transcript
+    from tessera.observability.replay import ReplayBundle
 
 _CALIBRATION_FILE = (
     Path(__file__).resolve().parents[5] / "eval" / "calibration" / "_calibration.json"
@@ -87,12 +88,39 @@ def _agent_or_none(agent: str) -> str | None:
     return None if not agent or agent == "all" else agent
 
 
-def _scores_for(at: str | None, agent_id: str | None = None) -> list[dict[str, object]]:
+def _scores_for(
+    at: str | None, agent_id: str | None = None, days: float | None = None
+) -> list[dict[str, object]]:
     """Scores to read: the live ring buffer, or the durable log as-of T (ADR 0011).
 
-    Scoped to ``agent_id`` when set (per-agent SLO / trend / funnel / scores).
+    Scoped to ``agent_id`` when set (per-agent SLO / trend / funnel / scores), and to the
+    last ``days`` when the cockpit's period rail asks for a window.
     """
-    return read_scores(at, agent_id)
+    return read_scores(at, agent_id, days=days)
+
+
+def _bundles_for(
+    at: str | None = None, agent_id: str | None = None, days: float | None = None
+) -> list[ReplayBundle]:
+    """Captured turn bundles for a scope — the bundle twin of :func:`_scores_for`.
+
+    Exists so the window is applied by :meth:`Scope.within` here exactly as it is inside
+    the batched snapshot. The alternative was each bundle-reading route filtering
+    ``captured_at`` for itself, which is how a route and its snapshot slice come to
+    disagree about the same week while both look right in isolation.
+    """
+    from tessera.observability import replay as replay_mod
+    from tessera.observability.spine.scope import Scope
+
+    if days is None:
+        return replay_mod.recent_bundles(at, agent_id)
+    # A period forces the DURABLE store, exactly as it does for scores. The live view is a
+    # deque bounded at 100 bundles — a bound on COUNT — so filtering it by time would answer
+    # "the last 30 days" with whatever those 100 turns happen to span, and would silently
+    # return the same rows as "24 hours" the moment traffic is thin.
+    rows = replay_mod.persisted_bundles(at, agent_id)
+    scope = Scope(at=at, agent_id=agent_id, period_days=days)
+    return [b for b in rows if scope.within(b.captured_at)]
 
 
 def _data_availability_start(

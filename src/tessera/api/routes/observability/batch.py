@@ -64,6 +64,7 @@ class _BatchScope:
     agent: str
     at: str | None
     lang: str
+    days: str | None = None
 
 
 # key -> (the individual route's handler, a builder for the kwargs that handler takes).
@@ -80,12 +81,18 @@ _BATCH_KEYS: dict[str, tuple[Any, Callable[[_BatchScope], dict[str, Any]]]] = {
     "regression-risk": (evals.observability_regression_risk, lambda s: {"at": s.at}),
     "failed-cases": (evals.observability_failed_cases, lambda s: {"language": s.lang}),
     # Qualité-IA — as-of + agent scoped reads
-    "conformance": (signals.observability_conformance, lambda s: {"at": s.at, "agent": s.agent}),
+    "conformance": (
+        signals.observability_conformance,
+        lambda s: {"at": s.at, "agent": s.agent, "days": s.days},
+    ),
     "tool-validity": (
         safety.observability_tool_validity,
-        lambda s: {"at": s.at, "agent": s.agent},
+        lambda s: {"at": s.at, "agent": s.agent, "days": s.days},
     ),
-    "playbooks": (safety.observability_playbooks, lambda s: {"at": s.at, "agent": s.agent}),
+    "playbooks": (
+        safety.observability_playbooks,
+        lambda s: {"at": s.at, "agent": s.agent, "days": s.days},
+    ),
     "roadmap": (fleet.observability_roadmap, lambda s: {"at": s.at, "agent": s.agent}),
     "ai-act": (compliance.observability_ai_act, lambda s: {"at": s.at}),
     "governance": (compliance.observability_governance, lambda s: {"at": s.at, "agent": s.agent}),
@@ -132,6 +139,7 @@ async def observability_batch(
     agent: str = "all",
     at: str | None = None,
     lang: str = "fr",
+    days: str | None = None,
 ) -> dict[str, object]:
     """Return ``{"panels": {key: <that key's standalone payload>}}`` for the requested keys.
 
@@ -146,11 +154,15 @@ async def observability_batch(
     filter, an as-of-T read) computes fresh, and so does a snapshot miss.
     """
     requested = [k for k in (part.strip() for part in keys.split(",")) if k in _BATCH_KEYS]
-    if agent == "all" and at is None:
+    # The shared snapshot is computed for the DEFAULT scope only, and a period is part of
+    # the scope: serving it to a caller that asked for 24 h would hand back the leader's
+    # all-history panels under a window the operator chose. A period computes fresh, for
+    # the same reason an agent filter or an as-of-T read does.
+    if agent == "all" and at is None and days is None:
         snap = read_snapshot(batch_snapshot_key(lang), SNAPSHOT_TTL_S)
         if snap is not None:
             return {"panels": {key: snap[key] for key in requested if key in snap}}
-    scope = _BatchScope(agent=agent, at=at, lang=lang)
+    scope = _BatchScope(agent=agent, at=at, lang=lang, days=days)
     return {"panels": await _compute_panels(scope, requested)}
 
 

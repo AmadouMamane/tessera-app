@@ -167,7 +167,11 @@ def get_reader() -> SpineReader:
 
 
 def read_scores(
-    at: str | None = None, agent_id: str | None = None, *, full: bool = False
+    at: str | None = None,
+    agent_id: str | None = None,
+    *,
+    full: bool = False,
+    days: float | None = None,
 ) -> list[dict[str, object]]:
     """Score rows through the active reader seam — the one door every consumer uses (G5).
 
@@ -177,13 +181,17 @@ def read_scores(
     ``persisted_scores()``); ``at`` ``None`` without ``full`` → the live ring cut
     (``recent_scores`` semantics). Routing through the seam is what lets a consumer follow
     the per-fact source flip without knowing any store exists.
+
+    ``days`` adds the window's lower bound. It is the one door for that too — a caller
+    that filtered ``scored_at`` itself would be writing the second copy of a subtraction
+    that already exists on :meth:`Scope.window`.
     """
     from datetime import UTC, datetime
 
     from tessera.observability.spine.scope import Scope
 
     cutoff = at if at is not None else (datetime.now(UTC).isoformat() if full else None)
-    return get_reader().scores(Scope(at=cutoff, agent_id=agent_id))
+    return get_reader().scores(Scope(at=cutoff, agent_id=agent_id, period_days=days))
 
 
 def set_reader(reader: SpineReader | None) -> None:

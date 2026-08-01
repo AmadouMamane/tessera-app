@@ -149,13 +149,16 @@ def test_the_public_reads_are_untouched() -> None:
     +1 on 2026-08-01: GET /observability/erasure-reach — which schemas hold subject-bearing
     tables and which of them GDPR erasure can reach. It COUNTS; it never deletes, and the
     counts it returns are cardinalities, never identifiers.
+    +1 on 2026-08-01: GET /observability/control-series — each control's curve as buckets of
+    the SAME payload its point value is computed from. It calls the same read handlers this
+    surface already exposes, once per bucket; it adds no source and no mutation.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 137
+    assert len(read_routes) == 138
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

@@ -91,6 +91,8 @@ import {
   ConsoleFeedbackSchema,
   type ContradictionReport,
   ContradictionReportSchema,
+  type ControlSeries,
+  ControlSeriesSchema,
   type ControlSignals,
   ControlSignalsSchema,
   type ConversationList,
@@ -447,15 +449,23 @@ function withAsOf(path: string, at?: string): string {
 }
 
 /**
- * Append the optional as-of-T instant (`?at=`) and the global agent scope
- * (`?agent=`) to an observability path. The agent scope rides the same `?agent=`
- * key the GOUVERNER/PLATEFORME surfaces use (lib/agent-scope); `"all"` (or empty)
+ * Append the optional as-of-T instant (`?at=`), the global agent scope (`?agent=`) and the
+ * selected period (`?days=`) to an observability path. The agent scope rides the same
+ * `?agent=` key the GOUVERNER/PLATEFORME surfaces use (lib/agent-scope); `"all"` (or empty)
  * is the org view and is omitted so the URL stays clean.
+ *
+ * `days` is the window LENGTH, the lower bound to `at`'s upper one. It was missing here
+ * until 2026-08-01, and its absence was invisible in exactly the way that matters: the
+ * header's 24 h / 7 d / 30 d selector wrote to a store that only the rail's axis read, so
+ * the picture changed shape and every number under it stayed put. FastAPI drops an
+ * undeclared query param without a word, so even sending it early would have been silent —
+ * `/observability/slo` answered `n=67` for all three.
  */
-function withScope(path: string, at?: string, agent?: string): string {
+function withScope(path: string, at?: string, agent?: string, days?: string): string {
   const params = new URLSearchParams();
   if (at) params.set("at", at);
   if (agent && agent !== "all") params.set("agent", agent);
+  if (days) params.set("days", days);
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
@@ -566,13 +576,38 @@ export async function fetchOverviewSnapshot(
   at?: string,
   agent?: string,
   signals?: readonly string[],
+  days?: string,
 ): Promise<OverviewSnapshotEnvelope> {
-  const path = withScope("/observability/snapshot", at, agent);
+  const path = withScope("/observability/snapshot", at, agent, days);
   const scoped =
     signals && signals.length > 0
       ? `${path}${path.includes("?") ? "&" : "?"}signals=${signals.join(",")}`
       : path;
   return request(scoped, { signal }, OverviewSnapshotSchema);
+}
+
+/**
+ * Every control's curve over the selected window (`/observability/control-series`).
+ *
+ * Each bucket carries the same payload shape the point value is computed from; the caller runs
+ * `readControls` over it, exactly as it does for the live payload. Nothing is derived here, so
+ * the curve and the number cannot drift apart.
+ */
+export async function fetchControlSeries(
+  signal?: AbortSignal,
+  opts: { days?: string; at?: string; agent?: string; buckets?: number } = {},
+): Promise<ControlSeries> {
+  const params = new URLSearchParams();
+  if (opts.days) params.set("days", opts.days);
+  if (opts.at) params.set("at", opts.at);
+  if (opts.agent && opts.agent !== "all") params.set("agent", opts.agent);
+  if (opts.buckets) params.set("buckets", String(opts.buckets));
+  const query = params.toString();
+  return request(
+    `/observability/control-series${query ? `?${query}` : ""}`,
+    { signal },
+    ControlSeriesSchema,
+  );
 }
 
 /**
@@ -584,12 +619,13 @@ export async function fetchOverviewSnapshot(
 export async function fetchBatch(
   signal: AbortSignal | undefined,
   keys: readonly string[],
-  opts: { at?: string; agent?: string; lang?: string } = {},
+  opts: { at?: string; agent?: string; lang?: string; days?: string } = {},
 ): Promise<BatchEnvelope> {
   const params = new URLSearchParams({ keys: keys.join(",") });
   if (opts.at) params.set("at", opts.at);
   if (opts.agent && opts.agent !== "all") params.set("agent", opts.agent);
   if (opts.lang) params.set("lang", opts.lang);
+  if (opts.days) params.set("days", opts.days);
   return request(`/observability/batch?${params.toString()}`, { signal }, BatchSchema);
 }
 
@@ -1820,7 +1856,9 @@ export async function fetchConsoleFeedback(
   conversationId: string,
   signal?: AbortSignal,
 ): Promise<ConsoleFeedback> {
-  const query = new URLSearchParams({ conversation_id: conversationId }).toString();
+  const query = new URLSearchParams({
+    conversation_id: conversationId,
+  }).toString();
   return request(
     `/observability/agent-console/feedback?${query}`,
     { signal },

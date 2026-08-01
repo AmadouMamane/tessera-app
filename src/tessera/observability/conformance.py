@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 from tessera.guard.decisions import load_policy
 from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability._asof import occurred_before
+from tessera.observability.spine.scope import Scope
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -75,15 +76,19 @@ def compute_conformance(
     policy: Policy | None = None,
     at: str | None = None,
     agent_id: str | None = None,
+    days: float | None = None,
 ) -> ConformanceReport:
     """Compute tool-argument conformance from the audit log at ``path``.
 
     With ``at`` set, only entries that occurred at or before instant T are
     counted — the as-of-T read for the cockpit time rail (ADR 0011). With
     ``agent_id`` set, only that agent's tool calls (the audit log tags each
-    entry's ``agent_id``).
+    entry's ``agent_id``). With ``days`` set, only entries inside the cockpit's
+    selected period.
     """
     active_policy = policy or load_policy()
+    scope = Scope(at=at, agent_id=agent_id, period_days=days)
+    windowed = days is not None
     n_calls = 0
     n_checked = 0
     n_conformant = 0
@@ -94,6 +99,8 @@ def compute_conformance(
         if obj.get("type") != "tessera.guard.audit" or tool == "user_input":
             continue
         if not occurred_before(obj.get("occurred_at"), at):
+            continue
+        if windowed and not scope.within(obj.get("occurred_at")):
             continue
         if agent_id is not None and obj.get("agent_id") != agent_id:
             continue

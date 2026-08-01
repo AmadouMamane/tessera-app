@@ -41,6 +41,7 @@ import { AGENT_SCOPE_PARAM, isScopedToAgent, parseAgentScope } from "@/lib/agent
 import {
   fetchAuditIntegrity,
   fetchBatch,
+  fetchControlSeries,
   fetchHealth,
   fetchOverviewCases,
   fetchOverviewSnapshot,
@@ -73,6 +74,7 @@ import {
 import type {
   AnomalyReport,
   ConformanceReport,
+  ControlSeries,
   ControlSignal,
   FirewallEfficacy,
   GovernanceEvent,
@@ -88,7 +90,13 @@ import type {
   TrendReport,
 } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
-import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
+import {
+  type ControlId,
+  type ControlReading,
+  hasDrawableCurve,
+  readControlSeries,
+  readControls,
+} from "@/lib/control-registry";
 import {
   type OverviewTone,
   dotBg,
@@ -101,6 +109,7 @@ import {
 import { panelOf, signalOf } from "@/lib/overview-snapshot";
 import { registryIdFor } from "@/lib/signal-focus";
 import { isOrgWide, signalSupports } from "@/lib/signal-registry";
+import { useWindowStore } from "@/lib/stores/window-store";
 
 /**
  * The two snapshot subsets, split by POLL CADENCE rather than by topic.
@@ -167,6 +176,9 @@ export function OverviewDashboard({
   // page reads asOf/historyMode to scope its queries (ADR 0011).
   const temporal = useTemporalState();
   const { historyMode, reading, selectedAt, changeMode } = temporal;
+  // The window LENGTH, owned by the header's period selector (`lib/stores/window-store`).
+  // Every read below is scoped by it; `lib/api/client` maps the rail's key to `?days=`.
+  const period = useWindowStore((st) => st.period);
   const [secondaryAsOf, setSecondaryAsOf] = useState<string | null>(null);
   // Returning to live releases every temporal key immediately.
   useEffect(() => {
@@ -211,17 +223,36 @@ export function OverviewDashboard({
   // TWO queries, not one, because two of the nine poll at a different cadence. Folding them
   // into a single key would silently change how often `anomalies` and `what_changed` refresh —
   // invisible on screen, and exactly the kind of "no behaviour change" that is not one.
+  // The period is part of the KEY, not just of the request. Sending `days` while keying on
+  // `[asOf, scope]` alone would leave the 7-day answer in the cache and hand it straight back
+  // for 24 h — the selector would look wired and still show one number, which is precisely the
+  // state it was already in.
   const snapshotFast = useQuery({
-    queryKey: ["ov-snapshot-fast", secondaryAsOf, scope],
+    queryKey: ["ov-snapshot-fast", secondaryAsOf, scope, period],
     queryFn: ({ signal }) =>
-      fetchOverviewSnapshot(signal, secondaryAsOf ?? undefined, scope, SNAPSHOT_FAST),
+      fetchOverviewSnapshot(signal, secondaryAsOf ?? undefined, scope, SNAPSHOT_FAST, period),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
   });
-  const snapshotSlow = useQuery({
-    queryKey: ["ov-snapshot-slow", secondaryAsOf, scope],
+  // The curve for every control, over the SAME window the numbers are read under. One request
+  // for the whole table: each bucket carries the payload `readControls` already knows how to
+  // read, so the curves cost one round-trip and no second derivation. It polls at the slow
+  // cadence — a sparkline that redraws every few seconds is noise, not information.
+  const controlSeries = useQuery({
+    queryKey: ["ov-control-series", secondaryAsOf, scope, period],
     queryFn: ({ signal }) =>
-      fetchOverviewSnapshot(signal, secondaryAsOf ?? undefined, scope, SNAPSHOT_SLOW),
+      fetchControlSeries(signal, {
+        days: period,
+        at: secondaryAsOf ?? undefined,
+        agent: scope,
+      }),
+    refetchInterval: historyMode ? false : 20_000,
+    placeholderData: keepPreviousData,
+  });
+  const snapshotSlow = useQuery({
+    queryKey: ["ov-snapshot-slow", secondaryAsOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchOverviewSnapshot(signal, secondaryAsOf ?? undefined, scope, SNAPSHOT_SLOW, period),
     refetchInterval: historyMode ? false : 20_000,
     placeholderData: keepPreviousData,
   });
@@ -324,8 +355,10 @@ export function OverviewDashboard({
           firewall: firewall.data,
         },
         historyMode,
+        controlSeries.data,
       ),
     [
+      controlSeries.data,
       historyMode,
       slo.data,
       trend.data,
@@ -402,7 +435,9 @@ export function OverviewDashboard({
           delta={
             sloReady
               ? historyMode
-                ? t("kpi.vsBaseline", { delta: signedPts(sloReady.good_rate - sloReady.target) })
+                ? t("kpi.vsBaseline", {
+                    delta: signedPts(sloReady.good_rate - sloReady.target),
+                  })
                 : t("kpi.qualityDelta", { burn: sloReady.burn_rate.toFixed(1) })
               : historyMode
                 ? t("kpi.noDataAtT")
@@ -477,7 +512,11 @@ export function OverviewDashboard({
           href="/surveiller/fiabilite-cout"
           value={cost.data ? `${cost.data.estimated_cost_eur.toFixed(2)} €` : "—"}
           delta={
-            cost.data ? t("kpi.costDelta", { tokens: cost.data.total_tokens.toLocaleString() }) : ""
+            cost.data
+              ? t("kpi.costDelta", {
+                  tokens: cost.data.total_tokens.toLocaleString(),
+                })
+              : ""
           }
           tone={cost.data && cost.data.n_anomalies > 0 ? "warning" : "info"}
           icon={Coins}
@@ -587,14 +626,25 @@ export function OverviewDashboard({
 /**
  * A row of the critical-controls table.
  *
- * Every field but `trend` now comes from `lib/control-registry.ts`. Until 2026-08-01 this
- * component derived all of them itself — value, bar and state — and so did
- * `observability/signals-table.tsx` and `security/security-dashboard.tsx`, independently. Six
- * of the seven shared controls disagreed. The trend stays local because it is genuinely this
- * table's own column (a sparkline over the SLO buckets), not a second opinion about a number.
+ * EVERY field now comes from `lib/control-registry.ts`, the curve included. Until 2026-08-01
+ * this component derived value, bar and state itself — and so did
+ * `observability/signals-table.tsx` and `security/security-dashboard.tsx`, independently; six
+ * of the seven shared controls disagreed. The curve was the last piece still derived here, and
+ * it was derived for exactly one row:
+ *
+ *     row.id === "faithfulness" ? { ...row, trend: d.trend?.buckets.map(b => b.mean) } : row
+ *
+ * Eight rows therefore showed a number beside an empty chart slot. `trend` now holds the ratio
+ * each bucket reports through the SAME `readControl` that produced the row's value, so adding a
+ * curve added no second opinion about any number.
+ *
+ * `noCurve` is the other half. A control the window cannot reach — a fixed-corpus probe, a
+ * whole-sample statistic — gets no line AND says which of those it is, because an empty chart
+ * slot and a metric that never moves look identical.
  */
 interface ControlRow extends ControlReading {
-  trend?: number[];
+  trend?: (number | null)[];
+  noCurve?: string;
 }
 
 /**
@@ -621,6 +671,25 @@ const OVERVIEW_CONTROLS: readonly ControlId[] = [
   "firewall",
 ];
 
+/**
+ * Which payload key a control reads — the join with the series report's `unwindowed` map.
+ *
+ * Two rows read one source (the two refusal faces, the SLO and its error budget), which is why
+ * this is a map and not an identity: a reason attached to `refusal` has to reach both rows that
+ * derive from it.
+ */
+const CONTROL_SOURCE: Partial<Record<ControlId, string>> = {
+  faithfulness: "slo",
+  errorBudget: "slo",
+  toxicity: "toxicity",
+  pii: "pii",
+  refusalOver: "refusal",
+  refusalUnder: "refusal",
+  conformance: "conformance",
+  tools: "tools",
+  firewall: "firewall",
+};
+
 function buildControls(
   d: {
     slo?: SLOReport;
@@ -633,16 +702,22 @@ function buildControls(
     firewall?: FirewallEfficacy;
   },
   historyMode: boolean,
+  series?: ControlSeries,
 ): ControlRow[] {
   // At live, only signals that returned data are shown. In history mode every tracked signal
   // keeps a stable "—" row at T instead of vanishing, so scrubbing does not make the table
   // jump. That is a presentation rule about THIS table, which is why it lives here; what each
   // row means is not, which is why it does not.
+  const buckets = series?.buckets ?? [];
   return readControls(d, OVERVIEW_CONTROLS)
     .filter((row) => historyMode || !row.noData)
-    .map((row) =>
-      row.id === "faithfulness" ? { ...row, trend: d.trend?.buckets.map((b) => b.mean) } : row,
-    );
+    .map((row) => {
+      const source = CONTROL_SOURCE[row.id];
+      const reason = source ? series?.unwindowed[source] : undefined;
+      if (reason) return { ...row, noCurve: reason };
+      if (buckets.length === 0) return row;
+      return { ...row, trend: readControlSeries(buckets, row.id) };
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -873,6 +948,8 @@ function CriticalControlsTable({
   const tt = useTranslations("overview.time");
   const tci = useTranslations("overview.controlInfo");
   const tcd = useTranslations("overview.controlDetail");
+  // Why a control has no curve — three distinct reasons, three distinct sentences.
+  const tnc = useTranslations("overview.noCurve");
   const signalById = useMemo(() => new Map((signals ?? []).map((s) => [s.id, s])), [signals]);
 
   return (
@@ -1021,14 +1098,27 @@ function CriticalControlsTable({
                       </td>
                       <td className="py-2 pr-4 text-[var(--muted-foreground)]">{c.target}</td>
                       <td className="w-24 py-2 pr-4">
-                        {/* permanent axis on every row → constant cell height; a
-                          curve only where there's a real trend to draw */}
-                        <MetricSparkline
-                          values={c.trend && c.trend.length > 1 ? c.trend : []}
-                          tone={c.trend && c.trend.length > 1 ? c.state.tone : "neutral"}
-                          className="h-6"
-                          height={26}
-                        />
+                        {/* Permanent axis on every row → constant cell height. Three distinct
+                          states, and they are three different things to tell the operator: a
+                          drawable curve; a control the window CANNOT reach, which says which
+                          reason; and a control that simply has not accumulated two measured
+                          buckets yet. Collapsing the last two into one blank cell is how a
+                          fixable gap gets read as a permanent one. */}
+                        {c.noCurve ? (
+                          <span
+                            className="text-[0.6rem] text-[var(--muted-foreground)]"
+                            title={tnc(`${c.noCurve}.why`)}
+                          >
+                            {tnc(c.noCurve)}
+                          </span>
+                        ) : (
+                          <MetricSparkline
+                            values={hasDrawableCurve(c.trend ?? []) ? (c.trend ?? []) : []}
+                            tone={hasDrawableCurve(c.trend ?? []) ? c.state.tone : "neutral"}
+                            className="h-6"
+                            height={26}
+                          />
+                        )}
                       </td>
                       <td className="py-2 pr-4 text-[var(--muted-foreground)]">
                         {ti(c.impactKey)}
@@ -1076,7 +1166,12 @@ const CASE_SLA_TONE: Record<string, OverviewTone> = {
   ok: "success",
 };
 const CASE_TABS = ["all", "urgent", "high", "medium", "low"] as const;
-const CASE_RANK: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+const CASE_RANK: Record<string, number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
 
 /**
  * A compact severity-tabbed triage of the REAL operator queue
@@ -1097,7 +1192,13 @@ function ControlCasesTriage({
   const [tab, setTab] = useState<(typeof CASE_TABS)[number]>("all");
   const items = inbox?.items ?? [];
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: items.length, urgent: 0, high: 0, medium: 0, low: 0 };
+    const c: Record<string, number> = {
+      all: items.length,
+      urgent: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+    };
     for (const it of items) c[it.priority] = (c[it.priority] ?? 0) + 1;
     return c;
   }, [items]);
@@ -1229,7 +1330,10 @@ function fmtGovTime(iso: string): string {
 function governanceLabel(ev: GovernanceEvent, t: ReturnType<typeof useTranslations>): string {
   switch (ev.kind) {
     case "handoff":
-      return t("handoff", { from: ev.from_agent ?? "?", to: ev.to_agent ?? ev.agent_id ?? "?" });
+      return t("handoff", {
+        from: ev.from_agent ?? "?",
+        to: ev.to_agent ?? ev.agent_id ?? "?",
+      });
     case "routing":
       return t("routing", { agent: ev.agent_id ?? "?" });
     case "proposed":

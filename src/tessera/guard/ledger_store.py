@@ -1081,7 +1081,7 @@ def audit_rule_scan(
 
 
 def tool_validity_scan(
-    at: str | None = None, agent_id: str | None = None
+    at: str | None = None, agent_id: str | None = None, since: datetime | None = None
 ) -> list[tuple[str | None, int, int]]:
     """Tool-call outcome tallies as bounded SQL: ``[(outcome, count, arg_failures)]`` per outcome.
 
@@ -1128,6 +1128,15 @@ def tool_validity_scan(
             "OR (a.payload->>'occurred_at')::timestamptz <= %s)"
         )
         params.append(at_dt)
+    if since is not None:
+        # Same fail-open shape as the upper bound, for the same reason: a NULL ``occurred_at``
+        # is KEPT, so the Python fold's ``Scope.within`` (which fails open on a non-string) and
+        # this clause agree row for row. An entry with no time is counted by both or neither.
+        clauses.append(
+            "(a.payload->>'occurred_at' IS NULL "
+            "OR (a.payload->>'occurred_at')::timestamptz >= %s)"
+        )
+        params.append(since)
     if agent_id is not None:
         clauses.append("a.payload->>'agent_id' = %s")
         params.append(agent_id)

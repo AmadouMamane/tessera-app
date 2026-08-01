@@ -669,6 +669,15 @@
       "turns": "{n} Turns",
       "unknown": "{n} unbekannt",
       "agreement": "Übereinstimmung {agreement}"
+    },
+    "noCurve": {
+      "fixed-corpus": "fester Korpus",
+      "fixed-corpus.why": "Eine Sonde mit festem Korpus: über ein schmaleres Fenster erneut ausgeführt liefert sie dieselbe Zahl. Eine flache Linie beschriebe hier eine einzige, wiederholte Messung, keine Stabilität.",
+      "no-timestamp": "über die ganze Stichprobe",
+      "no-timestamp.why": "Über die gesamte Stichprobe berechnet (Clustering, Beurteiler-Übereinstimmung): ein Achtel der Eingabe ist keine verkleinerte Fassung, sondern eine andere, verrauschtere Messung.",
+      "not-measured": "nicht gemessen",
+      "not-measured.why": "Für dieses Kontrollsignal ist auf der Zeitachse keine Quelle deklariert.",
+      "tooShort": "noch kein Verlauf"
     }
   },
   "chat": {

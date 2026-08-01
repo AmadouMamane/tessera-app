@@ -387,15 +387,28 @@ class ClickHouseAdapter:
         dimension filters applied *after* the cut, exactly like ``recent_scores``. An
         unparsable ``at`` falls back to no time bound (the jsonl reader ignores a bad
         cutoff rather than dropping data).
+
+        A ``period_days`` on the scope takes the query down the bounded branch even with no
+        ``at``, and for the same reason the jsonl reader leaves its ring buffer: the live cut
+        is the last 200 rows, a bound on COUNT, and answering "the last 24 hours" from it
+        would return whatever those 200 rows happen to span. Since scores default to this
+        reader (``_FACT_DEFAULTS``), a window applied only in the local adapter would have
+        left the deployed cockpit exactly as it was.
         """
         table = self.table
-        if scope.at:
-            cutoff = _ch_datetime(scope.at)
+        since, _ = scope.window()
+        if scope.at or since is not None:
+            cutoff = _ch_datetime(scope.at) if scope.at else None
             conditions: list[str] = []
             params: dict[str, str] = {}
             if cutoff is not None:
                 conditions.append("scored_at <= {at:DateTime64(3)}")
                 params["at"] = cutoff
+            if since is not None:
+                floor = _ch_datetime(since.isoformat())
+                if floor is not None:
+                    conditions.append("scored_at >= {since:DateTime64(3)}")
+                    params["since"] = floor
             if scope.agent_id is not None:
                 conditions.append("agent_id = {agent:String}")
                 params["agent"] = scope.agent_id

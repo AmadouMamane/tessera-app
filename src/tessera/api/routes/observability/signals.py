@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 
 from tessera.api.routes.observability._common import (
     _agent_or_none,
+    _bundles_for,
     _data_availability_start,
     _read_audit_entries,
     _scores_for,
@@ -32,10 +33,11 @@ from tessera.observability import (
     trends as trends_mod,
     whatchanged as whatchanged_mod,
 )
+from tessera.observability.control_series import compute_control_series
 from tessera.observability.fleet import registered_agent_ids
 from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
-from tessera.observability.spine.scope import Scope
+from tessera.observability.spine.scope import Scope, parse_period_days
 from tessera.observability.spine.snapshot import compute_snapshot
 
 router = APIRouter()
@@ -44,12 +46,21 @@ _obs_cost_cache: dict[str, object] | None = None
 
 
 @router.get("/observability/scores")
-def observability_scores(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_scores(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Online-eval scores — live (newest last), or as of instant ``at`` (ISO).
 
-    ``agent`` scopes the scores to one agent's turns (``all`` = org view).
+    ``agent`` scopes the scores to one agent's turns (``all`` = org view); ``days`` scopes
+    them to the cockpit's selected period.
     """
-    return {"scores": _scores_for(at, _agent_or_none(agent)), "as_of": at, "agent": agent}
+    window = parse_period_days(days)
+    return {
+        "scores": _scores_for(at, _agent_or_none(agent), window),
+        "as_of": at,
+        "agent": agent,
+        "days": window,
+    }
 
 
 @router.get("/observability/snapshot", dependencies=[Depends(require_bearer)])
@@ -59,6 +70,7 @@ async def observability_snapshot(
     language: str | None = None,
     model: str | None = None,
     signals: str | None = None,
+    days: str | None = None,
 ) -> dict[str, object]:
     """Batched, cached snapshot of every scope-varying signal in one pass (ADR 0015).
 
@@ -67,10 +79,15 @@ async def observability_snapshot(
     read-through cache with single-flight. Each signal carries a ``report`` of which
     dimensions it honoured / ignored, so the UI badges org-wide / synthetic / unavailable
     from data — the filter-shown-but-ignored state is unrepresentable. ``?signals=`` selects
-    a comma-separated subset. Scope is a *filter*, never a privilege escalation: RBAC is the
-    same ``require_bearer`` posture as the other read surfaces (no-op without a token).
+    a comma-separated subset. ``?days=`` is the window LENGTH (a number of days, or a rail
+    period key), the lower bound to ``at``'s upper one; a signal without the TIME dimension
+    has it dropped and reports it ignored. Scope is a *filter*, never a privilege
+    escalation: RBAC is the same ``require_bearer`` posture as the other read surfaces
+    (no-op without a token).
     """
-    scope = Scope.from_query({"at": at, "agent": agent, "language": language, "model": model})
+    scope = Scope.from_query(
+        {"at": at, "agent": agent, "language": language, "model": model, "days": days}
+    )
     ids = tuple(part.strip() for part in signals.split(",") if part.strip()) if signals else None
     return await compute_snapshot(scope, ids)
 
@@ -81,6 +98,7 @@ async def observability_fleet_snapshot(
     language: str | None = None,
     model: str | None = None,
     signals: str | None = None,
+    days: str | None = None,
 ) -> dict[str, object]:
     """Every fleet agent's snapshot in ONE round-trip — the per-agent fan-out, collapsed.
 
@@ -102,7 +120,15 @@ async def observability_fleet_snapshot(
     envelopes = await asyncio.gather(
         *(
             compute_snapshot(
-                Scope.from_query({"at": at, "agent": aid, "language": language, "model": model}),
+                Scope.from_query(
+                    {
+                        "at": at,
+                        "agent": aid,
+                        "language": language,
+                        "model": model,
+                        "days": days,
+                    }
+                ),
                 ids,
             )
             for aid in agent_ids
@@ -171,32 +197,37 @@ def observability_availability() -> dict[str, object]:
 
 
 @router.get("/observability/slo")
-def observability_slo(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_slo(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Quality SLO + error-budget burn-rate over the faithfulness scores.
 
     Live by default; with ``?at=`` the SLO is recomputed over the durable score
     log as of instant T (as-of-T read, ADR 0011). ``agent`` scopes the SLO to one
     agent's own scored turns (``all`` = org view); an agent with no scored turns
-    yet reads honestly empty (``n=0``).
+    yet reads honestly empty (``n=0``). ``days`` scopes it to the selected period.
     """
     faithfulness = [
         float(s["score"])  # type: ignore[arg-type]
-        for s in _scores_for(at, _agent_or_none(agent))
+        for s in _scores_for(at, _agent_or_none(agent), parse_period_days(days))
         if s.get("metric") == "faithfulness"
     ]
     return {**asdict(slo_mod.compute_slo(faithfulness)), "as_of": at, "agent": agent}
 
 
 @router.get("/observability/trend")
-def observability_trend(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_trend(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Long-horizon faithfulness trend over the score series (#150).
 
     Live by default; with ``?at=`` the trend is recomputed over the durable
     score log as of instant T (as-of-T read, ADR 0011). ``agent`` scopes the
-    trend to one agent's scored turns (``all`` = org view).
+    trend to one agent's scored turns (``all`` = org view); ``days`` scopes it to
+    the selected period.
     """
     points: list[tuple[str, float]] = []
-    for s in _scores_for(at, _agent_or_none(agent)):
+    for s in _scores_for(at, _agent_or_none(agent), parse_period_days(days)):
         if s.get("metric") != "faithfulness":
             continue
         scored_at = s.get("scored_at")
@@ -391,49 +422,68 @@ def observability_reliability(
 
 
 @router.get("/observability/conformance")
-def observability_conformance(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_conformance(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Schema/format conformance of tool-call arguments from the audit trail, live or as of T.
 
-    ``agent`` scopes to one agent's tool calls (``all`` = org view).
+    ``agent`` scopes to one agent's tool calls (``all`` = org view); ``days`` to the period.
     """
-    return asdict(conformance_mod.compute_conformance(at=at, agent_id=_agent_or_none(agent)))
+    return asdict(
+        conformance_mod.compute_conformance(
+            at=at, agent_id=_agent_or_none(agent), days=parse_period_days(days)
+        )
+    )
 
 
 @router.get("/observability/cost")
-def observability_cost(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_cost(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Token-cost distribution and token-burn anomalies over captured turns, live or as of T.
 
-    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    ``agent`` scopes to one agent's captured turns (``all`` = org view); ``days`` to the period.
     """
     turns = [
         (b.question, f"{b.question}\n{b.context}\n{b.original_answer}")
-        for b in replay_mod.recent_bundles(at, _agent_or_none(agent))
+        for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
     ]
     return asdict(cost_anomaly_mod.analyze_costs(turns))
 
 
 @router.get("/observability/routing")
-def observability_routing() -> dict[str, object]:
+def observability_routing(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Language-routing health: served vs detected language, code-switching."""
-    turns = [(b.question, b.language) for b in replay_mod.recent_bundles()]
+    turns = [
+        (b.question, b.language)
+        for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
+    ]
     return asdict(language_routing_mod.aggregate_routing(turns))
 
 
 @router.get("/observability/intent")
-def observability_intent() -> dict[str, object]:
+def observability_intent(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Business-intent mix and routing confidence over captured questions."""
-    questions = [b.question for b in replay_mod.recent_bundles()]
+    questions = [
+        b.question for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
+    ]
     return asdict(routing_intent_mod.aggregate_intents(questions))
 
 
 @router.get("/observability/anomalies")
-def observability_anomalies(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_anomalies(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Detect long/looping/repetitive sessions among captured turns, live or as of T.
 
-    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    ``agent`` scopes to one agent's captured turns (``all`` = org view); ``days`` to the period.
     """
     by_conversation: dict[str, list[str]] = {}
-    for bundle in replay_mod.recent_bundles(at, _agent_or_none(agent)):
+    for bundle in _bundles_for(at, _agent_or_none(agent), parse_period_days(days)):
         key = bundle.conversation_id or "<none>"
         by_conversation.setdefault(key, []).append(bundle.question)
     return asdict(anomalies_mod.detect_anomalies(by_conversation))
@@ -460,3 +510,31 @@ def observability_what_changed(at: str | None = None, agent: str = "all") -> dic
         curr_score=curr.original_score,
     )
     return {"available": True, **asdict(report)}
+
+
+@router.get("/observability/control-series", dependencies=[Depends(require_bearer)])
+async def observability_control_series(
+    days: str | None = None,
+    buckets: int = 8,
+    agent: str = "all",
+    at: str | None = None,
+) -> dict[str, object]:
+    """A curve for every control that can honestly have one, over the selected window.
+
+    Each bucket carries the SAME payload shape the point value is computed from, produced by
+    the SAME handler with the bucket as its scope — the front then runs its own
+    ``readControls`` over it. Nothing here derives a metric, so a curve cannot disagree with
+    the number printed under it.
+
+    ``unwindowed`` names the sources deliberately absent from every bucket and why: a
+    fixed-corpus probe re-run inside a narrower window returns the same corpus, and a
+    whole-sample statistic (a clustering, an inter-rater κ) is not smaller-but-similar when
+    you take an eighth of its input. Both would draw a flat line that reads as a stable
+    metric, which is worse than no line.
+
+    Without ``days`` the report is empty: "all history" has no width to slice, and picking one
+    from the oldest row present would make the axis depend on how long the process has run.
+    """
+    scope = Scope.from_query({"at": at, "agent": agent, "days": days})
+    report = await compute_control_series(scope, buckets)
+    return asdict(report)

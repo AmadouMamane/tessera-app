@@ -63,6 +63,10 @@ class PostgresGatingAdapter:
         if cutoff is not None:
             conditions.append("scored_at <= %s")
             params.append(cutoff)
+        since, _ = scope.window()
+        if since is not None:
+            conditions.append("scored_at >= %s")
+            params.append(since)
         if scope.agent_id is not None:
             conditions.append("agent_id = %s")
             params.append(scope.agent_id)

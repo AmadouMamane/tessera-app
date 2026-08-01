@@ -9,6 +9,8 @@ from fastapi import APIRouter, HTTPException
 
 from tessera.api.routes.observability._common import (
     _CITATION_SENTENCE,
+    _agent_or_none,
+    _bundles_for,
     _corpus_sources,
     _read_audit_entries,
 )
@@ -33,6 +35,7 @@ from tessera.observability import (
     system_profile as system_profile_mod,
 )
 from tessera.observability._asof import occurred_before
+from tessera.observability.spine.scope import parse_period_days
 
 router = APIRouter()
 
@@ -370,16 +373,26 @@ def observability_localization() -> dict[str, object]:
 
 
 @router.get("/observability/citations")
-def observability_citations() -> dict[str, object]:
+def observability_citations(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Regulatory citation validity: cited articles absent from the grounding."""
-    turns = [(b.original_answer, b.context) for b in replay_mod.recent_bundles()]
+    turns = [
+        (b.original_answer, b.context)
+        for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
+    ]
     return asdict(citation_validity_mod.aggregate_citations(turns))
 
 
 @router.get("/observability/locale-format")
-def observability_locale_format() -> dict[str, object]:
+def observability_locale_format(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Locale-formatting correctness: amounts whose style mismatches the locale."""
-    turns = [(b.original_answer, b.language) for b in replay_mod.recent_bundles()]
+    turns = [
+        (b.original_answer, b.language)
+        for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
+    ]
     return asdict(locale_format_mod.aggregate_formatting(turns))
 
 

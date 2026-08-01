@@ -56,6 +56,11 @@ async def _read_scores(scope: Scope) -> dict[str, object]:
         "scores": current_context().scores(scope),
         "as_of": scope.at,
         "agent": scope.agent_param,
+        # Echoes the window that was actually applied. The snapshot slice carries a scope
+        # report and could do without it; the standalone route has no report, so a direct
+        # caller has no other way to tell "7 days" from "everything" — and parity requires
+        # the two to say the same thing.
+        "days": scope.period_days,
     }
 
 
@@ -176,11 +181,19 @@ async def _read_what_changed(scope: Scope) -> dict[str, object]:
 
 
 async def _read_conformance(scope: Scope) -> dict[str, object]:
-    return asdict(conformance_mod.compute_conformance(at=scope.at, agent_id=scope.agent_id))
+    return asdict(
+        conformance_mod.compute_conformance(
+            at=scope.at, agent_id=scope.agent_id, days=scope.period_days
+        )
+    )
 
 
 async def _read_tool_validity(scope: Scope) -> dict[str, object]:
-    return asdict(tool_validity_mod.compute_tool_validity(at=scope.at, agent_id=scope.agent_id))
+    return asdict(
+        tool_validity_mod.compute_tool_validity(
+            at=scope.at, agent_id=scope.agent_id, days=scope.period_days
+        )
+    )
 
 
 async def _read_governance(scope: Scope) -> dict[str, object]:

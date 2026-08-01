@@ -669,6 +669,15 @@
       "turns": "{n} tours",
       "unknown": "{n} inconnus",
       "agreement": "accord {agreement}"
+    },
+    "noCurve": {
+      "fixed-corpus": "corpus fixe",
+      "fixed-corpus.why": "Sonde à corpus fixe : rejouée sur une fenêtre plus étroite, elle rend le même nombre. Une courbe plate ici décrirait une mesure unique répétée, pas une stabilité.",
+      "no-timestamp": "sur l'échantillon entier",
+      "no-timestamp.why": "Statistique calculée sur l'échantillon entier (regroupement, accord inter-juges) : un huitième de son entrée n'en est pas une version réduite, mais une autre mesure, plus bruitée.",
+      "not-measured": "non mesuré",
+      "not-measured.why": "Aucune source déclarée pour ce contrôle sur l'axe temporel.",
+      "tooShort": "pas encore d'historique"
     }
   },
   "chat": {

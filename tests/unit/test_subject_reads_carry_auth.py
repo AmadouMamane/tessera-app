@@ -366,7 +366,10 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # 132 (2026-08-01): GET /observability/erasure-reach — per-schema CARDINALITIES of
     # subject-bearing tables. It answers "how many people's data can erasure not reach", which
     # is a compliance posture; no identifier crosses the wire.
-    assert len(public) == 132
+    # 133 (2026-08-01): GET /observability/control-series — a control's curve, as buckets of
+    # the aggregate payloads already on this surface. Same handlers, narrower windows; the
+    # buckets carry counts and rates, never a turn and never a subject.
+    assert len(public) == 133
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

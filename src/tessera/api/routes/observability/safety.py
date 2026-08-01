@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException
 from tessera.api.routes.observability._common import (
     _GRANTED_TOOLS,
     _agent_or_none,
+    _bundles_for,
     _read_audit_entries,
     _scores_for,
 )
@@ -40,6 +41,7 @@ from tessera.observability.read_snapshot import (
     incidents_snapshot_key,
     read_snapshot,
 )
+from tessera.observability.spine.scope import parse_period_days
 
 router = APIRouter()
 
@@ -161,19 +163,22 @@ def observability_siem() -> dict[str, object]:
 
 
 @router.get("/observability/playbooks")
-def observability_playbooks(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_playbooks(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Incident playbooks triggered by the live (or as-of-T) signals (#115).
 
-    Bundle- and score-derived inputs honour T; the jailbreak rate is the latest
-    red-team snapshot (a periodic probe, not a per-turn event), so it stays live.
-    ``agent`` scopes the bundle/score inputs to one agent (``all`` = org view);
-    the shared red-team probe stays org.
+    Bundle- and score-derived inputs honour T and the selected period; the jailbreak
+    rate is the latest red-team snapshot (a periodic probe, not a per-turn event), so
+    it stays live. ``agent`` scopes the bundle/score inputs to one agent (``all`` = org
+    view); the shared red-team probe stays org.
     """
     ag = _agent_or_none(agent)
-    bundles = replay_mod.recent_bundles(at, ag)
+    window = parse_period_days(days)
+    bundles = _bundles_for(at, ag, window)
     faithfulness = [
         float(s["score"])  # type: ignore[arg-type]
-        for s in _scores_for(at, ag)
+        for s in _scores_for(at, ag, window)
         if s.get("metric") == "faithfulness"
     ]
     bar = 0.80
@@ -210,14 +215,16 @@ def observability_cross_tenant() -> dict[str, object]:
 
 
 @router.get("/observability/toxicity")
-def observability_toxicity(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_toxicity(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Toxicity / harmful-output rate over captured answers (#60), live or as of T.
 
-    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    ``agent`` scopes to one agent's captured turns (``all`` = org view); ``days`` to the period.
     """
     turns = [
         (b.question, b.original_answer)
-        for b in replay_mod.recent_bundles(at, _agent_or_none(agent))
+        for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
     ]
     return asdict(toxicity_mod.scan_toxicity(turns))
 
@@ -304,23 +311,31 @@ def observability_tool_loops() -> dict[str, object]:
 
 
 @router.get("/observability/tool-validity")
-def observability_tool_validity(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_tool_validity(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Validity of tool calls (allowed vs denied, argument failures), live or as of T.
 
-    ``agent`` scopes to one agent's tool calls (``all`` = org view).
+    ``agent`` scopes to one agent's tool calls (``all`` = org view); ``days`` to the period.
     """
-    return asdict(tool_validity_mod.compute_tool_validity(at=at, agent_id=_agent_or_none(agent)))
+    return asdict(
+        tool_validity_mod.compute_tool_validity(
+            at=at, agent_id=_agent_or_none(agent), days=parse_period_days(days)
+        )
+    )
 
 
 @router.get("/observability/pii-leak")
-def observability_pii_leak(at: str | None = None, agent: str = "all") -> dict[str, object]:
+def observability_pii_leak(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Output PII-leak rate: PII in answers absent from their grounding, live or as of T.
 
-    ``agent`` scopes to one agent's captured turns (``all`` = org view).
+    ``agent`` scopes to one agent's captured turns (``all`` = org view); ``days`` to the period.
     """
     turns = [
         (b.original_answer, f"{b.question}\n{b.context}")
-        for b in replay_mod.recent_bundles(at, _agent_or_none(agent))
+        for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
     ]
     return asdict(pii_leak_mod.aggregate_leaks(turns))
 

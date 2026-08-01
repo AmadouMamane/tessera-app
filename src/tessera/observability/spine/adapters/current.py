@@ -35,12 +35,21 @@ class CurrentStoresReader:
         ``agent`` + as-of-T are pushed into the store read; ``language`` / ``model`` are
         applied here (the rows carry both), so the same store read serves every language
         slice of the agent x time x language cube (ADR 0015 §Migration F).
+
+        A period forces the DURABLE log even at live. The ring buffer is bounded by a
+        *count* (200 rows), not by time, so asking it for "the last 24 hours" would return
+        whatever those 200 rows happen to span — a window in name only, and one that would
+        answer 30 days and 24 hours identically whenever traffic is thin. The lower bound
+        is then applied by ``scope.within``, the same predicate every other windowed read
+        uses.
         """
         rows = (
             persisted_scores(scope.at, scope.agent_id)
-            if scope.at
+            if scope.at or scope.period_days is not None
             else recent_scores(scope.agent_id)
         )
+        if scope.period_days is not None:
+            rows = [r for r in rows if scope.within(r.get("scored_at"))]
         if scope.language is not None:
             rows = [r for r in rows if r.get("language") == scope.language]
         if scope.model is not None:
@@ -50,6 +59,8 @@ class CurrentStoresReader:
     def bundles(self, scope: Scope) -> list[ReplayBundle]:
         """Captured turn bundles for the scope (as-of-T + agent, then language / model)."""
         rows = replay_mod.recent_bundles(scope.at, scope.agent_id)
+        if scope.period_days is not None:
+            rows = [b for b in rows if scope.within(b.captured_at)]
         if scope.language is not None:
             rows = [b for b in rows if b.language == scope.language]
         if scope.model is not None:
@@ -72,6 +83,8 @@ class CurrentStoresReader:
         from tessera.observability._asof import occurred_before
 
         rows = [r for r in _gating_archive_rows() if occurred_before(r.get("scored_at"), scope.at)]
+        if scope.period_days is not None:
+            rows = [r for r in rows if scope.within(r.get("scored_at"))]
         if scope.agent_id is not None:
             rows = [r for r in rows if r.get("agent_id") == scope.agent_id]
         if scope.language is not None:

@@ -12,6 +12,8 @@ from tessera.api.routes.observability._common import (
     _CALIBRATION_FILE,
     _CALIBRATION_JUDGE_MODEL,
     _CONSENSUS_PANEL,
+    _agent_or_none,
+    _bundles_for,
     _load_failure_items,
 )
 from tessera.observability import (
@@ -25,6 +27,7 @@ from tessera.observability import (
 from tessera.observability.eval.calibration import calibrate, gold_consensus, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.spine.adapters import read_scores
+from tessera.observability.spine.scope import parse_period_days
 
 router = APIRouter()
 
@@ -334,10 +337,12 @@ def observability_failure_predictor() -> dict[str, object]:
 
 
 @router.get("/observability/contradictions")
-async def observability_contradictions() -> dict[str, object]:
+async def observability_contradictions(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
     """Detect self-contradictions across the turns of each captured session."""
     by_conversation: dict[str, list[tuple[str, str]]] = {}
-    for bundle in replay_mod.recent_bundles():
+    for bundle in _bundles_for(at, _agent_or_none(agent), parse_period_days(days)):
         key = bundle.conversation_id or "<none>"
         by_conversation.setdefault(key, []).append((bundle.question, bundle.original_answer))
 
