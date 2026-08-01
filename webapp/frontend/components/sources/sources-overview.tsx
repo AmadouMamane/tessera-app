@@ -1186,8 +1186,8 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
             <title>{t("view.activity")}</title>
             <defs>
               <linearGradient id="sm-area" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#34d399" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+                <stop offset="0%" stopColor="var(--tessera-fg-success)" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="var(--tessera-fg-success)" stopOpacity="0" />
               </linearGradient>
             </defs>
             {/* peak + baseline reference lines */}
@@ -1201,7 +1201,12 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
             />
             <line x1="0" y1={H} x2={W} y2={H} stroke="var(--tessera-border)" />
             <path d={area} fill="url(#sm-area)" />
-            <polyline points={line} fill="none" stroke="#34d399" strokeWidth="1.5" />
+            <polyline
+              points={line}
+              fill="none"
+              stroke="var(--tessera-fg-success)"
+              strokeWidth="1.5"
+            />
           </svg>
           <div className="mt-1 flex items-center justify-between text-[0.56rem] tabular-nums text-[var(--tessera-text-muted)]">
             <span>{days.at(0)?.[0]}</span>
@@ -1970,7 +1975,7 @@ function ScoreRing({ value }: { value: string }) {
             cy="34"
             r={R}
             fill="none"
-            stroke="#34d399"
+            stroke="var(--tessera-fg-success)"
             strokeWidth="6"
             strokeLinecap="round"
             strokeDasharray={`${(filled / 100) * C} ${C}`}

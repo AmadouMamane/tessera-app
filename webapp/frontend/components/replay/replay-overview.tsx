@@ -469,7 +469,7 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
             <polyline
               points={line}
               fill="none"
-              stroke="#34d399"
+              stroke="var(--tessera-fg-success)"
               strokeWidth="2"
               vectorEffect="non-scaling-stroke"
             />

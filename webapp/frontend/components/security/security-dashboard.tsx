@@ -247,7 +247,13 @@ function Spark({ values }: { values: number[] }) {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <path d={d} fill="none" stroke="#f97316" strokeWidth="1.4" strokeLinejoin="round" />
+      <path
+        d={d}
+        fill="none"
+        stroke="var(--tessera-fg-warning)"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -415,14 +421,20 @@ function LineChart({
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <path d={path(a)} fill="none" stroke="#f97316" strokeWidth="1.6" strokeLinejoin="round" />
+        <path
+          d={path(a)}
+          fill="none"
+          stroke="var(--tessera-fg-warning)"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
         {b.length >= 2 ? (
           <path d={path(b)} fill="none" stroke="#ef4444" strokeWidth="1.4" strokeLinejoin="round" />
         ) : null}
       </svg>
       <div className="flex gap-3 text-[0.6rem] text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
-          <span className="h-1 w-3 rounded-full bg-[#f97316]" /> {aLabel}
+          <span className="h-1 w-3 rounded-full bg-[var(--tessera-fg-warning)]" /> {aLabel}
         </span>
         {b.length >= 2 ? (
           <span className="flex items-center gap-1">

@@ -389,7 +389,7 @@ function Gauge({ pct }: { pct: number }) {
           cy="14"
           r={r}
           fill="none"
-          stroke="#34d399"
+          stroke="var(--tessera-fg-success)"
           strokeWidth="3"
           strokeLinecap="round"
           strokeDasharray={c}

@@ -163,7 +163,13 @@ function Spark({ values }: { values: number[] }) {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <path d={d} fill="none" stroke="#10b981" strokeWidth="1.4" strokeLinejoin="round" />
+      <path
+        d={d}
+        fill="none"
+        stroke="var(--tessera-fg-success)"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

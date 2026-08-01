@@ -99,13 +99,13 @@ export function MetricKpi({
                 key={d}
                 d={d}
                 fill="none"
-                stroke="#10b981"
+                stroke="var(--tessera-fg-success)"
                 strokeWidth={0.8}
                 vectorEffect="non-scaling-stroke"
               />
             ))}
             {pts.map((p) => (
-              <circle key={p.i} cx={p.x} cy={p.y} r={0.9} fill="#10b981" />
+              <circle key={p.i} cx={p.x} cy={p.y} r={0.9} fill="var(--tessera-fg-success)" />
             ))}
           </svg>
         )}
@@ -193,13 +193,13 @@ export function EvolutionChart({
                     key={d}
                     d={d}
                     fill="none"
-                    stroke="#10b981"
+                    stroke="var(--tessera-fg-success)"
                     strokeWidth={0.8}
                     vectorEffect="non-scaling-stroke"
                   />
                 ))}
                 {points.map((p) => (
-                  <circle key={p.i} cx={p.x} cy={p.y} r={0.9} fill="#10b981" />
+                  <circle key={p.i} cx={p.x} cy={p.y} r={0.9} fill="var(--tessera-fg-success)" />
                 ))}
               </svg>
               {points.length === 0 ? (

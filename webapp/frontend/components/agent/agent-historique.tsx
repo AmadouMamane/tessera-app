@@ -1127,7 +1127,7 @@ function SuccessCard({ data }: { data: Data }) {
               cy="18"
               r={r}
               fill="none"
-              stroke="#34d399"
+              stroke="var(--tessera-fg-success)"
               strokeWidth="3.4"
               strokeLinecap="round"
               strokeDasharray={`${s.gauge} ${off}`}

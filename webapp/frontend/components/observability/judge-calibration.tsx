@@ -174,10 +174,22 @@ function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
           strokeDasharray="3 3"
         />
         {pts.length >= 2 ? (
-          <path d={line} fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round" />
+          <path
+            d={line}
+            fill="none"
+            stroke="var(--tessera-fg-info)"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
         ) : null}
         {pts.map((p) => (
-          <circle key={`${p.x}-${p.y}`} cx={px(p.x)} cy={py(p.y)} r="2.5" fill="#60a5fa" />
+          <circle
+            key={`${p.x}-${p.y}`}
+            cx={px(p.x)}
+            cy={py(p.y)}
+            r="2.5"
+            fill="var(--tessera-fg-info)"
+          />
         ))}
         <text
           x={W / 2}
@@ -190,7 +202,7 @@ function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
       </svg>
       <div className="flex gap-3 text-[0.55rem] text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-3 rounded-full bg-[#60a5fa]" />
+          <span className="h-1.5 w-3 rounded-full bg-[var(--tessera-fg-info)]" />
           {tq("judge.curveActual")}
         </span>
         <span className="flex items-center gap-1">
@@ -387,7 +399,13 @@ function MiniLine({ buckets, baseline }: { buckets: SeriesBucket[]; baseline?: n
           strokeDasharray="3 3"
         />
       ) : null}
-      <path d={line} fill="none" stroke="#a78bfa" strokeWidth="1.6" strokeLinejoin="round" />
+      <path
+        d={line}
+        fill="none"
+        stroke="var(--tessera-fg-accent)"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

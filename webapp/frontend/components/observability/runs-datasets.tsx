@@ -871,25 +871,25 @@ function DualLine({
         <path
           d={path(rateN)}
           fill="none"
-          stroke="#34d399"
+          stroke="var(--tessera-fg-success)"
           strokeWidth={1.5}
           strokeLinejoin="round"
         />
         <path
           d={path(costN)}
           fill="none"
-          stroke="#22d3ee"
+          stroke="var(--tessera-fg-teal)"
           strokeWidth={1.5}
           strokeLinejoin="round"
         />
       </svg>
       <div className="flex gap-2 text-[0.55rem] text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#22d3ee]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--tessera-fg-teal)]" />
           {tq("runs.charts.legendCost")}
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--tessera-fg-success)]" />
           {tq("runs.charts.legendPass")}
         </span>
       </div>

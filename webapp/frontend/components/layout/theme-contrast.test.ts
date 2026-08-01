@@ -27,12 +27,28 @@
 // frozen set: the alert ribbon's own opaque `bg-[#1f0e16]` band, and the Credit Aurore
 // navy headers. Held two-sided at its measured size, so it can only ever shrink.
 //
+// SECOND RULE, SAME DISEASE, OTHER GRAMMAR: SVG PAINT. A chart line is not a class string.
+// `stroke="#34d399"` is a presentation attribute, so the scan above — which only reads
+// inside string literals — never saw one, and reported green over 20 chart traces that were
+// unreadable under "Clair": eight emerald-400 gauge arcs and sparklines at 1.92:1, four
+// emerald-500 lines at 2.54:1, a cyan cost line at 1.81:1. They are measured here against
+// 3:1, not 4.5:1 — WCAG 2.1 SC 1.4.11 asks 3:1 of a GRAPHICAL object; 4.5:1 is what body
+// text owes. Two thresholds because there are two kinds of thing, not to be lenient.
+//
+// AND THE HOLE THIS SECOND RULE STILL HAS, sized rather than hidden (ADR 0026): a paint fed
+// by an EXPRESSION — `stroke={s.color}`, `stroke={DONUT_COLORS[i]}` — keeps its colour in a
+// JS table or in the data, where a per-attribute scan cannot follow. 48 such sites today,
+// asserted downward-only, so the unseen population cannot quietly grow while the seen one
+// reports green.
+//
 // Mutation contract (each verified red before landing):
 //   · restore `text-white` on the sidebar's super-section header  → red, named by line;
 //   · restore `text-emerald-300` on a card                        → red;
 //   · claim a translucent tint counts as a background             → red;
 //   · lower a frozen count without removing the literal           → red;
-//   · point the scan at nothing                                   → red (anti-vacuity).
+//   · point the scan at nothing                                   → red (anti-vacuity);
+//   · restore `stroke="#34d399"` on a real chart                  → red, named by line;
+//   · let the expression-fed population grow by one               → red.
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -54,6 +70,11 @@ const EXPECTED_MIN_RESOLVED = 60;
 
 /** WCAG 2.1 AA for body text. */
 const AA = 4.5;
+/** WCAG 2.1 SC 1.4.11 for non-text content — a chart line, a gauge arc, a legend swatch.
+ *  A graphical object owes 3:1, not the 4.5:1 a glyph owes. Applying 4.5 here would be a
+ *  different (stricter) rule than the standard, and applying 4.5's exemptions to a stroke
+ *  would be a weaker one; both would make the number mean something else. */
+const AA_NON_TEXT = 3;
 /** The lightest surface a cockpit foreground can land on: a card under "Clair". */
 const LIGHT_CARD = "#ffffff";
 
@@ -73,6 +94,29 @@ const FROZEN_ANCESTOR_BACKED: ReadonlyMap<string, number> = new Map([
   ["components/recouvrement/recouvrement-product-experience.tsx", 4],
   ["components/recouvrement/recouvrement-logo.tsx", 1],
 ]);
+
+/**
+ * SVG paint whose colour IS the content, not a role. A logo that changes hue is no longer
+ * the logo; an illustration of a card and a coin is not a status. Each also sits on ground
+ * painted by an ANCESTOR — a navy product header, a lilac panel — which a per-attribute
+ * scan cannot see. TWO-SIDED at its measured size, so it can only SHRINK.
+ */
+const FROZEN_DECORATIVE_PAINT: ReadonlyMap<string, number> = new Map([
+  ["components/brand/credit-aurore-logo.tsx", 3],
+  ["components/product/credit-aurore-mes-comptes-host.tsx", 8],
+  ["components/recouvrement/recouvrement-product-experience.tsx", 6],
+]);
+
+/** Anti-vacuity for the paint rule: 34 hex paint attributes survive the sweep (the frozen
+ *  decor, plus the handful that already clear 3:1). A floor just under it catches a regex
+ *  that stopped matching, which would otherwise read as "no chart is broken". */
+const EXPECTED_MIN_PAINTS = 30;
+
+/** The blind spot, sized. `stroke={s.color}` / `fill={LINE_COLORS[i]}` keep their colour in
+ *  a JS table or in the data; this witness cannot follow them there. Held downward-only:
+ *  a NEW expression-fed chart is refused, so the unseen population cannot grow while the
+ *  seen one reports green. Lowering this number is how that debt gets paid. */
+const UNSEEN_EXPRESSION_FED = 48;
 
 /** The Tailwind shades ever used as a foreground here, 100 → 600. The 400/500 band matters
  *  as much as the pale end: `emerald-400` is 1.92:1 on a white card, `amber-500` 2.15:1. */
@@ -117,6 +161,14 @@ const OPAQUE_BACKGROUND =
 
 const STRING_LITERAL = /"[^"\n]*"|`[^`]*`|'[^'\n]*'/g;
 
+/** A paint written straight onto the element. `stopColor` counts: a gradient stop under a
+ *  sparkline is the same ink as the line above it, and letting it drift leaves the area
+ *  fill emerald-400 while the line it belongs to has become emerald-700. */
+const SVG_PAINT = /\b(?:stroke|fill|stopColor)="(#[0-9a-fA-F]{3,8})"/g;
+
+/** The same three attributes fed by an expression — the population declared above. */
+const SVG_PAINT_EXPRESSION = /\b(?:stroke|fill|stopColor)=\{/g;
+
 interface Finding {
   readonly file: string;
   readonly line: number;
@@ -127,6 +179,22 @@ interface Finding {
 function srgbChannel(byte: number): number {
   const value = byte / 255;
   return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+}
+
+/** `#fff`, `#ffffff` and `#ffffff80` all name a colour; only the middle one is 7 chars.
+ *  The alpha of an 8-digit paint is dropped deliberately: over a white card, translucency
+ *  only ever WEAKENS the contrast, so judging the opaque value is the lenient reading — it
+ *  can produce a false green, never a false red. */
+function normaliseHex(raw: string): string | null {
+  const body = raw.slice(1);
+  if (body.length === 3 || body.length === 4)
+    return `#${body
+      .slice(0, 3)
+      .split("")
+      .map((c) => c + c)
+      .join("")}`;
+  if (body.length === 6 || body.length === 8) return `#${body.slice(0, 6)}`;
+  return null;
 }
 
 function relativeLuminance(hex: string): number {
@@ -178,6 +246,30 @@ function scanSource(file: string, source: string): { failing: Finding[]; resolve
   return { failing, resolved };
 }
 
+/** Split one source into the SVG paints that fail 3:1 on a white card, the resolved total,
+ *  and the count of paints this witness cannot resolve at all. */
+function scanPaint(
+  file: string,
+  source: string,
+): { failing: Finding[]; resolved: number; unseen: number } {
+  const failing: Finding[] = [];
+  let resolved = 0;
+  for (const match of source.matchAll(SVG_PAINT)) {
+    const colour = normaliseHex(match[1] ?? "");
+    if (!colour) continue;
+    resolved += 1;
+    const ratio = contrast(colour, LIGHT_CARD);
+    if (ratio >= AA_NON_TEXT) continue;
+    failing.push({
+      file,
+      line: source.slice(0, match.index ?? 0).split("\n").length,
+      utility: match[0],
+      ratio: Math.round(ratio * 100) / 100,
+    });
+  }
+  return { failing, resolved, unseen: [...source.matchAll(SVG_PAINT_EXPRESSION)].length };
+}
+
 function walkSources(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
@@ -191,20 +283,38 @@ function walkSources(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-function scanTree(): { failing: Finding[]; resolved: number; files: number } {
+interface TreeScan {
+  readonly failing: Finding[];
+  readonly resolved: number;
+  readonly files: number;
+  readonly paintFailing: Finding[];
+  readonly paintResolved: number;
+  readonly unseen: number;
+}
+
+function scanTree(): TreeScan {
   const root = process.cwd();
   const failing: Finding[] = [];
+  const paintFailing: Finding[] = [];
   let resolved = 0;
+  let paintResolved = 0;
+  let unseen = 0;
   let files = 0;
   for (const dir of SCANNED_DIRS) {
     for (const absolute of walkSources(path.join(root, dir))) {
       files += 1;
-      const found = scanSource(path.relative(root, absolute), readFileSync(absolute, "utf8"));
+      const relative = path.relative(root, absolute);
+      const source = readFileSync(absolute, "utf8");
+      const found = scanSource(relative, source);
       failing.push(...found.failing);
       resolved += found.resolved;
+      const painted = scanPaint(relative, source);
+      paintFailing.push(...painted.failing);
+      paintResolved += painted.resolved;
+      unseen += painted.unseen;
     }
   }
-  return { failing, resolved, files };
+  return { failing, resolved, files, paintFailing, paintResolved, unseen };
 }
 
 describe("every foreground literal survives the light theme", () => {
@@ -267,5 +377,77 @@ describe("every foreground literal survives the light theme", () => {
   it("has teeth: a token passes, because a token is not a literal", () => {
     const tokenised = scanSource("x.tsx", '"text-xs text-[var(--tessera-fg-success)]"');
     expect(tokenised.failing).toEqual([]);
+  });
+});
+
+describe("every SVG chart paint survives the light theme", () => {
+  const scan = scanTree();
+
+  it("sees the paint attributes at all, and actually resolves them", () => {
+    expect(scan.paintResolved).toBeGreaterThanOrEqual(EXPECTED_MIN_PAINTS);
+  });
+
+  it("leaves no sub-3:1 chart paint outside the frozen decorative set", () => {
+    const offending = scan.paintFailing.filter((f) => !FROZEN_DECORATIVE_PAINT.has(f.file));
+    expect(
+      offending.map((f) => `${f.file}:${f.line}  ${f.utility}  ${f.ratio}:1 on a white card`),
+      "a chart trace is a graphical object: use a --tessera-fg-* token so it flips with the theme",
+    ).toEqual([]);
+  });
+
+  it("holds the decorative set at its exact measured size, so it can only shrink", () => {
+    const actual: Record<string, number> = {};
+    for (const finding of scan.paintFailing) {
+      if (!FROZEN_DECORATIVE_PAINT.has(finding.file)) continue;
+      actual[finding.file] = (actual[finding.file] ?? 0) + 1;
+    }
+    expect(actual).toEqual(Object.fromEntries(FROZEN_DECORATIVE_PAINT));
+  });
+
+  // ADR 0026: a witness that cannot see must say so, and must never report "ok" over the
+  // part it cannot see. This one cannot follow `stroke={s.color}` into a JS colour table.
+  // So it counts that population instead, and refuses to let it grow.
+  it("says out loud what it cannot see, and refuses to let that grow", () => {
+    expect(
+      scan.unseen,
+      "a paint fed by an expression is invisible to this scan — tokenise it, do not add one",
+    ).toBeLessThanOrEqual(UNSEEN_EXPRESSION_FED);
+  });
+
+  it("has teeth: restoring an emerald chart stroke is rejected, named and measured", () => {
+    const arc = scanPaint("gauge.tsx", '<circle fill="none" stroke="#34d399" strokeWidth="3" />');
+    expect(arc.failing).toHaveLength(1);
+    expect(arc.failing[0]?.ratio).toBe(1.92);
+
+    const dot = scanPaint("spark.tsx", '<circle r={0.9} fill="#10b981" />');
+    expect(dot.failing.map((f) => f.ratio)).toEqual([2.54]);
+
+    const stop = scanPaint("area.tsx", '<stop offset="0%" stopColor="#34d399" />');
+    expect(stop.failing).toHaveLength(1);
+  });
+
+  it("has teeth: the threshold really is 3:1, not the 4.5:1 owed by text", () => {
+    // #8b7cf0 scores 3.37:1 — a failing GLYPH, a passing chart line. One colour, two
+    // verdicts, which is the whole reason the two rules do not share a number.
+    const line = scanPaint("x.tsx", '<path stroke="#8b7cf0" />');
+    expect(line.resolved).toBe(1);
+    expect(line.failing).toEqual([]);
+    expect(contrast("#8b7cf0", LIGHT_CARD)).toBeLessThan(AA);
+  });
+
+  it("has teeth: a token passes, a short hex is still read", () => {
+    const tokenised = scanPaint("x.tsx", '<path stroke="var(--tessera-fg-success)" />');
+    expect(tokenised.resolved).toBe(0);
+    expect(tokenised.failing).toEqual([]);
+
+    const short = scanPaint("x.tsx", '<path stroke="#fff" />');
+    expect(short.failing.map((f) => f.ratio)).toEqual([1]);
+  });
+
+  it("has teeth: an expression-fed paint is counted as unseen, not as clean", () => {
+    const expression = scanPaint("x.tsx", "<path stroke={DONUT_COLORS[i]} fill={s.color} />");
+    expect(expression.resolved).toBe(0);
+    expect(expression.failing).toEqual([]);
+    expect(expression.unseen).toBe(2);
   });
 });

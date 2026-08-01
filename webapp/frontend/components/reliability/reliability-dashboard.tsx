@@ -89,7 +89,13 @@ function Spark({ values }: { values: number[] }) {
         stroke="var(--tessera-border)"
         strokeWidth="1"
       />
-      <path d={d} fill="none" stroke="#10b981" strokeWidth="1.4" strokeLinejoin="round" />
+      <path
+        d={d}
+        fill="none"
+        stroke="var(--tessera-fg-success)"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
