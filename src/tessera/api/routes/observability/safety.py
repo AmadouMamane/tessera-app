@@ -190,8 +190,14 @@ def observability_playbooks(at: str | None = None, agent: str = "all") -> dict[s
         low_score_rate=low_rate,
         n_scores=len(faithfulness),
         jailbreak_success_rate=jailbreak_rate,
+        # Zero snapshots is not a zero attack-success rate: `snapshots[-1]` does not exist, so
+        # `jailbreak_rate` falls back to 0.0 above and would otherwise read as "no bypasses".
+        n_snapshots=len(snapshots),
         pii_leak_rate=pii.leak_rate,
         cost_anomalies=cost.n_anomalies,
+        # Both PII and cost derive from the same captured bundles. On 2026-08-01 this was ZERO
+        # (last conversation 2026-07-24, seven-day window) and the panel reported no incidents.
+        n_turns=len(bundles),
     )
     return asdict(playbooks_mod.trigger_playbooks(signals))
 
@@ -229,12 +235,13 @@ def observability_embedding_skew() -> dict[str, object]:
     else:
         query_model = settings.ollama.embedding_model
     query = EmbeddingFingerprint(model=query_model, dimension=embedding_dimension())
-    # Until the corpus records its own fingerprint at ingestion, we treat the
-    # active embedder as the corpus reference: equal by construction, so the check
-    # reports "no skew" while still surfacing the live embedding identity and
-    # flagging a future query-side profile flip.
+    # Until the corpus records its own fingerprint at ingestion, the active embedder stands in
+    # as the corpus reference — equal by CONSTRUCTION, so this comparison cannot fail and its
+    # "no skew" was never a finding. `corpus_known=False` makes the report say so: severity
+    # reads "unknown", not "none". The endpoint still surfaces the live embedding identity and
+    # would still catch a query-side profile flip once the store records its own fingerprint.
     corpus = query
-    return asdict(embedding_skew_mod.detect_skew(query, corpus))
+    return asdict(embedding_skew_mod.detect_skew(query, corpus, corpus_known=False))
 
 
 @router.get("/observability/firewall-efficacy")

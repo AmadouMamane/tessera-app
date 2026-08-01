@@ -2326,6 +2326,15 @@ export const PlaybookSchema = z.object({
 export const PlaybookReportSchema = z.object({
   n_triggered: z.number().int(),
   playbooks: z.array(PlaybookSchema),
+  /**
+   * Signal families with an EMPTY sample. They cannot trigger, and their silence is not news.
+   *
+   * `n_triggered: 0` with `n_unmeasured: 0` is a quiet fleet. `n_triggered: 0` with
+   * `n_unmeasured: 4` is a fleet nobody looked at. The digit is identical; only this tells
+   * them apart, and until 2026-08-01 the cockpit rendered both as "aucun incident".
+   */
+  unmeasured: z.array(z.string()).default([]),
+  n_unmeasured: z.number().int().default(0),
 });
 export type PlaybookReport = z.infer<typeof PlaybookReportSchema>;
 

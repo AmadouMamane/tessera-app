@@ -533,7 +533,8 @@
       "title": "Incidents à traiter (procédures)",
       "count": "{n} déclenchés",
       "clear": "Aucune procédure déclenchée — situation nominale.",
-      "viewAll": "Voir dans Incidents"
+      "viewAll": "Voir dans Incidents",
+      "unmeasured": "Aucun incident déclenché — mais {n} familles de signaux n'ont rien eu à examiner."
     },
     "rightColumn": {
       "incidents": "Incidents actifs ou récents",
@@ -3542,7 +3543,7 @@
       "noChanges": "Aucun changement récent",
       "attackLine": "Taux d'attaque",
       "incidentLine": "Incidents critiques",
-      "redteam": "Test d'intrusion continu (7 j)",
+      "redteam": "Test d'intrusion — corpus adverse figé",
       "blocked": "bloqués",
       "bypasses": "contournements",
       "blockRate": "Taux de blocage",

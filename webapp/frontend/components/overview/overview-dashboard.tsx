@@ -1505,8 +1505,23 @@ function ControlCasesSection({
         {loading ? (
           <Skeleton className="h-28 w-full sm:col-span-2" />
         ) : !playbooks || playbooks.n_triggered === 0 ? (
-          <p className="py-6 text-center text-sm text-[var(--tessera-fg-success)] sm:col-span-2">
-            {t("clear")}
+          /* "Aucun incident" over an empty window is not reassurance, it is a blind spot.
+             Only `low_score_rate` used to be gated on its sample size; the other three
+             families defaulted to zero, fired nothing, and this line went green — which is
+             exactly what the demo showed on 2026-08-01, its last conversation being 24/07
+             and the window seven days. The green is now reserved for a fleet that was
+             actually looked at. */
+          <p
+            className={cn(
+              "py-6 text-center text-sm sm:col-span-2",
+              (playbooks?.n_unmeasured ?? 0) > 0
+                ? "text-[var(--tessera-fg-warning)]"
+                : "text-[var(--tessera-fg-success)]",
+            )}
+          >
+            {(playbooks?.n_unmeasured ?? 0) > 0
+              ? t("unmeasured", { n: playbooks?.n_unmeasured ?? 0 })
+              : t("clear")}
           </p>
         ) : (
           playbooks.playbooks.map((p) => {

@@ -533,7 +533,8 @@
       "title": "Zu bearbeitende Vorfälle und Verfahren",
       "count": "{n} ausgelöst",
       "clear": "Kein Verfahren ausgelöst — nominal.",
-      "viewAll": "In Incidents öffnen"
+      "viewAll": "In Incidents öffnen",
+      "unmeasured": "Kein Vorfall ausgelöst — aber {n} Signalfamilien hatten nichts zu prüfen."
     },
     "rightColumn": {
       "incidents": "Aktive oder jüngste Vorfälle",
@@ -3542,7 +3543,7 @@
       "noChanges": "Keine aktuelle Änderung",
       "attackLine": "Angriffsrate",
       "incidentLine": "Kritische Vorfälle",
-      "redteam": "Kontinuierliches Angriffstest (7 T)",
+      "redteam": "Angriffstest — fester Angriffskorpus",
       "blocked": "geblockt",
       "bypasses": "Umgehungen",
       "blockRate": "Blockrate",

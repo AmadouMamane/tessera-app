@@ -533,7 +533,8 @@
       "title": "Incidents to handle (procedures)",
       "count": "{n} triggered",
       "clear": "No procedure triggered — normal operation.",
-      "viewAll": "Open in Incidents"
+      "viewAll": "Open in Incidents",
+      "unmeasured": "No incident fired — but {n} signal families had nothing to examine."
     },
     "rightColumn": {
       "incidents": "Active or recent incidents",
@@ -3542,7 +3543,7 @@
       "noChanges": "No recent change",
       "attackLine": "Attack rate",
       "incidentLine": "Critical incidents",
-      "redteam": "Continuous red-team (7d)",
+      "redteam": "Red-team probe — fixed adversarial corpus",
       "blocked": "blocked",
       "bypasses": "bypasses",
       "blockRate": "Block rate",

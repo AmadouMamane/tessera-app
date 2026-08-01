@@ -24,13 +24,32 @@ _SEVERITY_RANK = {"critical": 3, "high": 2, "medium": 1}
 
 @dataclass(frozen=True, slots=True)
 class PlaybookSignals:
-    """The live signal snapshot the playbooks fire on."""
+    """The live signal snapshot the playbooks fire on, and how much each one saw.
+
+    **Every rate needs its sample size, and only one had it.** `low_score_rate` was guarded by
+    `n_scores > 0`; the other three were not, so with no data at all they read 0.0, 0.0 and 0,
+    nothing fired, and the page said "0 incidents". That is not a false alarm — it is the
+    opposite, and worse: a clean bill issued over an empty window, indistinguishable on screen
+    from a genuinely quiet fleet.
+
+    The demo made it concrete. The last conversation is 2026-07-24 and the page reads a 7-day
+    window, so on 2026-08-01 every bundle-derived signal saw zero turns and the incident panel
+    reported peace. ADR 0026: a witness that cannot see reports a blind spot; it may not report
+    "ok". So each family now carries what it looked at, and the report says how many families
+    could not look.
+    """
 
     low_score_rate: float = 0.0  # share of recent turns below the faithfulness bar
     n_scores: int = 0
     jailbreak_success_rate: float = 0.0  # latest red-team attack-success rate
+    #: Red-team snapshots available. The rate is the LATEST one, so zero snapshots is not a
+    #: zero rate — it is no rate at all, and the guard below refuses to read it as safety.
+    n_snapshots: int = 0
     pii_leak_rate: float = 0.0
     cost_anomalies: int = 0
+    #: Captured turns behind `pii_leak_rate` and `cost_anomalies`. Both derive from the same
+    #: bundle set, so one count serves both.
+    n_turns: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,10 +64,19 @@ class Playbook:
 
 @dataclass(frozen=True, slots=True)
 class PlaybookReport:
-    """The incident playbooks currently triggered."""
+    """The incident playbooks currently triggered, and what could not be examined.
+
+    ``n_unmeasured`` is the load-bearing field. `n_triggered: 0` means "no incident fired";
+    combined with `n_unmeasured: 3` it means "no incident fired, and three of the four families
+    had nothing to fire on" — the same digit, opposite meanings, and the surface could not tell
+    them apart until this existed.
+    """
 
     n_triggered: int
     playbooks: list[Playbook] = field(default_factory=list)
+    #: Signal families with an empty sample. They cannot trigger, and their silence is not news.
+    unmeasured: list[str] = field(default_factory=list)
+    n_unmeasured: int = 0
 
 
 # Thresholds at which each incident fires.
@@ -66,8 +94,19 @@ def _severity(value: float, *, high: float, critical: float) -> str:
 
 
 def trigger_playbooks(signals: PlaybookSignals) -> PlaybookReport:
-    """Return the incident playbooks triggered by the current signals."""
+    """Return the incident playbooks triggered by the current signals.
+
+    Each family is gated on its own sample size. A family with no sample is reported as
+    unmeasured rather than silently contributing a zero to the "no incident" verdict.
+    """
     playbooks: list[Playbook] = []
+    unmeasured: list[str] = []
+    if signals.n_scores <= 0:
+        unmeasured.append("hallucination")
+    if signals.n_snapshots <= 0:
+        unmeasured.append("jailbreak")
+    if signals.n_turns <= 0:
+        unmeasured += ["pii_leak", "cost"]
 
     if signals.n_scores > 0 and signals.low_score_rate > _HALLUCINATION_RATE:
         playbooks.append(
@@ -84,7 +123,7 @@ def trigger_playbooks(signals: PlaybookSignals) -> PlaybookReport:
             )
         )
 
-    if signals.jailbreak_success_rate > _JAILBREAK_RATE:
+    if signals.n_snapshots > 0 and signals.jailbreak_success_rate > _JAILBREAK_RATE:
         playbooks.append(
             Playbook(
                 incident="Jailbreak / guard bypass",
@@ -99,7 +138,7 @@ def trigger_playbooks(signals: PlaybookSignals) -> PlaybookReport:
             )
         )
 
-    if signals.pii_leak_rate > _PII_RATE:
+    if signals.n_turns > 0 and signals.pii_leak_rate > _PII_RATE:
         playbooks.append(
             Playbook(
                 incident="PII leak in output",
@@ -114,7 +153,7 @@ def trigger_playbooks(signals: PlaybookSignals) -> PlaybookReport:
             )
         )
 
-    if signals.cost_anomalies > 0:
+    if signals.n_turns > 0 and signals.cost_anomalies > 0:
         playbooks.append(
             Playbook(
                 incident="Token-cost runaway",
@@ -129,4 +168,9 @@ def trigger_playbooks(signals: PlaybookSignals) -> PlaybookReport:
         )
 
     playbooks.sort(key=lambda p: _SEVERITY_RANK.get(p.severity, 0), reverse=True)
-    return PlaybookReport(n_triggered=len(playbooks), playbooks=playbooks)
+    return PlaybookReport(
+        n_triggered=len(playbooks),
+        playbooks=playbooks,
+        unmeasured=unmeasured,
+        n_unmeasured=len(unmeasured),
+    )

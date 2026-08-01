@@ -33,7 +33,17 @@ class EmbeddingFingerprint:
 
 @dataclass(frozen=True, slots=True)
 class SkewReport:
-    """Whether the query and corpus embedding spaces are compatible."""
+    """Whether the query and corpus embedding spaces are compatible.
+
+    ``corpus_known`` is what makes ``severity: "none"`` readable. The corpus does not record
+    its embedding fingerprint at ingestion yet, so the endpoint passes the ACTIVE embedder as
+    both sides — ``corpus = query``, equal by construction. A comparison of a thing with itself
+    cannot fail, so "no skew" was not a finding, it was an identity, and nothing downstream
+    could tell the two apart.
+
+    ADR 0026 again: this witness cannot see the corpus, so it may not report that the corpus is
+    fine. It reports that it could not look, and the surface can then say so.
+    """
 
     query_model: str
     query_dimension: int
@@ -42,16 +52,27 @@ class SkewReport:
     dimension_mismatch: bool  # hard skew — vectors are not comparable at all
     model_mismatch: bool  # soft skew — same width, drifted semantics
     skew: bool
-    severity: str  # "none" | "soft" | "hard"
+    severity: str  # "none" | "soft" | "hard" | "unknown"
     reason: str
+    #: False when the corpus fingerprint was substituted rather than read from the store.
+    #: A `severity: "none"` with `corpus_known: False` is a tautology, not a measurement.
+    corpus_known: bool = True
 
 
-def detect_skew(query: EmbeddingFingerprint, corpus: EmbeddingFingerprint) -> SkewReport:
+def detect_skew(
+    query: EmbeddingFingerprint,
+    corpus: EmbeddingFingerprint,
+    *,
+    corpus_known: bool = True,
+) -> SkewReport:
     """Compare the query and corpus embedding fingerprints.
 
     Args:
         query: Fingerprint of the live query-time embedder.
         corpus: Fingerprint the stored corpus was embedded with.
+        corpus_known: False when ``corpus`` was substituted (the store does not record its
+            fingerprint yet). The report then reads ``severity: "unknown"`` rather than
+            ``"none"``, because comparing the active embedder with itself proves nothing.
 
     Returns:
         A :class:`SkewReport`. A dimension mismatch is ``"hard"`` (incompatible
@@ -72,6 +93,14 @@ def detect_skew(query: EmbeddingFingerprint, corpus: EmbeddingFingerprint) -> Sk
             f"same {query.dimension}-d width but different models "
             f"({query.model} vs {corpus.model}) — semantics may have drifted"
         )
+    elif not corpus_known:
+        # The one branch that used to be a lie. With `corpus = query` the equality above is a
+        # tautology, and reporting "none" turned it into a clean bill for a store nobody read.
+        severity = "unknown"
+        reason = (
+            f"the live embedder is {query.model} {query.dimension}-d; the corpus does not "
+            "record the fingerprint it was ingested with, so no comparison was made"
+        )
     else:
         severity = "none"
         reason = f"query and corpus share the {query.model} {query.dimension}-d space"
@@ -86,4 +115,5 @@ def detect_skew(query: EmbeddingFingerprint, corpus: EmbeddingFingerprint) -> Sk
         skew=dimension_mismatch or model_mismatch,
         severity=severity,
         reason=reason,
+        corpus_known=corpus_known,
     )
