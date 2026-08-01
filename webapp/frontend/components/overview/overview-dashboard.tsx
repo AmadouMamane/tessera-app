@@ -184,6 +184,21 @@ export function OverviewDashboard({
   useEffect(() => {
     if (temporal.activeAt == null) setSecondaryAsOf(null);
   }, [temporal.activeAt]);
+  // …and the instant is adopted even if the fleet card never reports settling.
+  //
+  // The staging below hands T to the heavy fan-out only once the narrow fleet read has
+  // resolved, which keeps a SCRUB responsive. It is an optimisation, and it was load-bearing:
+  // the hand-off travelled through a child component's callback, and on a deep-linked
+  // `?lecture=asof&asof=…` that callback did not fire. The page then showed "Lecture · À un
+  // instant", moved its fleet total from 394 to 415 — and left every control reading live.
+  // Measured 2026-08-01: the SLO endpoint answers n=353 live and n=370 at T-20d, so the
+  // backend was right and the instant simply never reached the query.
+  //
+  // `temporal.asOf` is the DEBOUNCED instant, so adopting it here cannot restore the
+  // one-request-per-scrub-step behaviour the staging exists to avoid.
+  useEffect(() => {
+    if (temporal.asOf != null) setSecondaryAsOf((current) => current ?? temporal.asOf);
+  }, [temporal.asOf]);
   // The fleet total is the first, most visible proof that the cursor took effect.
   // The heavier fan-out receives the exact same T only when that narrow read has
   // settled. This is deterministic under a warm or cold backend, unlike a timer.
