@@ -142,12 +142,19 @@ def _fmt_due(item: OperatorItem) -> str:
 
 
 def _display_title(item: OperatorItem, lang: str) -> str:
-    """Human title for the queue; the raw event remains unchanged in the ledger."""
+    """Human title for the queue; the raw event remains unchanged in the ledger.
+
+    Falls back to :attr:`OperatorItem.display_title`, not to the bare `title`. One eval case
+    failing in three languages, or the same case failing under two agents, produced rows whose
+    titles were byte-identical: the queue read as one problem repeated, and the fields that
+    told the rows apart were never rendered. `display_title` appends exactly the dimension that
+    varies within a colliding group, and nothing when there is no collision.
+    """
     key = {
         "validation_requested": "validation_title",
         "action_blocked": "blocked_title",
     }.get(item.category)
-    return _t(key, lang).format(case_id=item.case_id) if key else item.title
+    return _t(key, lang).format(case_id=item.case_id) if key else item.display_title
 
 
 def _kpi(

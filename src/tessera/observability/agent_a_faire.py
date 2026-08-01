@@ -373,7 +373,14 @@ def _localized_value(
 
 
 def _display_title(item: OperatorItem, lang: str) -> str:
-    return _localized_value(_CASE_TITLE, item.case_id, lang, item.title)
+    """The localised case title, then disambiguated.
+
+    `_CASE_TITLE` is keyed by `case_id`, so one case failing in three languages resolves to
+    three IDENTICAL localised titles — a stronger collision than the raw title had, since the
+    fallback at least varied when the eval titles did. The queue then read as one problem
+    repeated three times, with the language sitting in a field nothing rendered.
+    """
+    return item.disambiguate(_localized_value(_CASE_TITLE, item.case_id, lang, item.title))
 
 
 def _display_category(item: OperatorItem, lang: str) -> str:

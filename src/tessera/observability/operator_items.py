@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
@@ -187,6 +187,46 @@ class OperatorItem:
     # (ADR 0039). ``None`` on items built outside the load path; the SLA clock
     # then falls back to ``created_at`` (the pre-0039 behaviour).
     queued_at: datetime | None = None
+    #: How many items in this queue carry the same `title` — this one included.
+    #:
+    #: One eval case failing in three languages is THREE real failures and must stay three
+    #: rows; collapsing them would hide two. What was missing is not a dedupe, it is the
+    #: distinguishing FACT: `title` is the eval case's own title, so the queue rendered the
+    #: same sentence several times and the things that told the rows apart — the language, the
+    #: agent — lived only in fields nothing displayed. An operator reading a queue of repeated
+    #: sentences cannot tell "several problems" from "one problem, several times".
+    n_variants: int = 1
+    #: Which dimensions actually differ among those siblings: ``"agent"``, ``"language"``.
+    #: Only these are appended, because appending a dimension that is CONSTANT across the
+    #: siblings adds a word and disambiguates nothing.
+    variant_dims: tuple[str, ...] = ()
+
+    def disambiguate(self, base: str) -> str:
+        """Append to ``base`` exactly what distinguishes this row from its siblings.
+
+        A unique row keeps its bare title: qualifying every line would add noise everywhere to
+        fix a collision most rows do not have. And the qualifier is the dimension that actually
+        VARIES — the same case under two agents is told apart by the agent, not by a language
+        they share.
+
+        Takes ``base`` rather than reading `self.title` because the queue pages localise the
+        title first (`agent_a_faire` looks it up per `case_id`), and a localised title collides
+        exactly as hard. Disambiguating the raw title and rendering the localised one would fix
+        the collision in the wrong string.
+        """
+        if self.n_variants <= 1 or not self.variant_dims:
+            return base
+        parts = []
+        if "agent" in self.variant_dims:
+            parts.append(self.agent_id)
+        if "language" in self.variant_dims:
+            parts.append(self.language.upper())
+        return f"{base} · {' · '.join(parts)}"
+
+    @property
+    def display_title(self) -> str:
+        """The item's own title, disambiguated."""
+        return self.disambiguate(self.title)
 
     def sla_anchor(self) -> datetime:
         """The instant the SLA clock starts: when it entered the queue (ADR 0039).
@@ -533,6 +573,42 @@ def _dedupe_items(items: list[OperatorItem]) -> list[OperatorItem]:
     return unique
 
 
+def _count_variants(items: list[OperatorItem]) -> list[OperatorItem]:
+    """Stamp each item with its sibling count and WHICH dimensions distinguish them.
+
+    Not a dedupe. `item_id` is ``<agent>.<case>.<language>``, so one case failing in three
+    languages is three genuinely distinct failures and all three belong in the queue — removing
+    two would hide two.
+
+    Grouped by TITLE rather than by case id, because the title is what the operator reads: two
+    different cases sharing a title collide on screen exactly as badly as one case under three
+    languages, and the id that tells them apart is not rendered either.
+
+    The dimensions are computed per group instead of assumed. A first version always appended
+    the language and left "Unauthorised promise of a refund · FR" twice on screen — the same
+    case under two AGENTS, told apart by a field it never mentioned.
+    """
+    from collections import defaultdict
+
+    groups: dict[str, list[OperatorItem]] = defaultdict(list)
+    for item in items:
+        groups[item.title].append(item)
+
+    dims_for: dict[str, tuple[str, ...]] = {}
+    for title, group in groups.items():
+        dims: list[str] = []
+        if len({i.agent_id for i in group}) > 1:
+            dims.append("agent")
+        if len({i.language for i in group}) > 1:
+            dims.append("language")
+        dims_for[title] = tuple(dims)
+
+    return [
+        replace(item, n_variants=len(groups[item.title]), variant_dims=dims_for[item.title])
+        for item in items
+    ]
+
+
 def load_items(agent_id: str | None = None) -> list[OperatorItem]:
     """Derive the real backlog from failed eval cases, **per-agent attributed**.
 
@@ -590,7 +666,7 @@ def _load_items_uninstrumented(agent_id: str | None = None) -> list[OperatorItem
     items.extend(
         _business_event_items(state=state, now=now, new_stamps=new_stamps, agent_id=agent_id)
     )
-    items = _dedupe_items(items)
+    items = _count_variants(_dedupe_items(items))
     # First observation is recorded once, in a single best-effort write per pass.
     _persist_first_seen(new_stamps)
     # Most urgent first: crit < high < mod < low, then oldest first.
