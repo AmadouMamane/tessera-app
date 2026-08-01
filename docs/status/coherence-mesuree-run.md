@@ -25,8 +25,14 @@
 > aucun catalogue (le conteneur n'embarque pas `webapp/`), et l'effacement RGPD laissait
 > **138 sujets** dans un schéma qu'aucun chemin de suppression n'atteint.
 >
-> **Il reste UNE action opérateur** : purger `public` —
-> `uv run python scripts/purge_orphan_schema.py --schema public --apply`. Rien n'a été supprimé.
+> **La purge est FAITE** (2026-08-01, autorisée explicitement) : `public` vidé de 1 357 mémoires,
+> 2 920 messages et 13 résumés — 138 sujets rendus au droit à l'effacement. Dump de 19 Mo /
+> 4 571 `INSERT` pris avant, dans `.agent-state/backups/`, décompte vérifié table par table.
+> `/observability/erasure-reach` répond maintenant `unreachable_subjects: 0`.
+> Rien de vivant ne lisait `public` : l'agent tourne en `tessera_local`, Cloud Run n'héberge que
+> le frontend.
+>
+> **Ce qui reste après ce chantier : `docs/status/reste-a-faire-20260801.md`** — mesuré, pas estimé.
 
 ---
 
