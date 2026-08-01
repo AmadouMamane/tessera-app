@@ -27,7 +27,11 @@ const userMenu = read("components/layout/user-menu.tsx");
 
 function accountMenuIsRailBound(menuSource: string, sidebarSource: string): boolean {
   return (
-    sidebarSource.includes("md:w-[252px]") &&
+    // The claim is "the expanded sidebar is 252px wide", not "it expands at md".
+    // The breakpoint moved md→lg on 2026-08-01 (a 252px panel on a 768px tablet
+    // was a third of the screen); pinning the prefix made this assertion fail for
+    // a change it has no opinion about.
+    /\b(?:sm|md|lg|xl|2xl):w-\[252px\]/.test(sidebarSource) &&
     menuSource.includes("w-full") &&
     menuSource.includes("w-[var(--radix-dropdown-menu-trigger-width)]") &&
     menuSource.includes('side={compact ? "bottom" : "top"}') &&

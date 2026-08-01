@@ -85,12 +85,25 @@
   --color-info-700: #2563eb;
 
   /* -- Radius -------------------------------------------------------------- */
-  --radius-xs: 0.25rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
+  /* Tightened one notch on 2026-08-01. The scale used to sit one step ABOVE
+   * Tailwind stock at every rung, which is why the cockpit read soft rather
+   * than "premium": a dense control plane whose cards are 16px-round looks
+   * like a consumer app. The reference points Amadou named — Vercel ≈ 12px
+   * cards, Linear/Stripe ≈ 8px, Cloudflare ≈ 6-8px — all sit at or below the
+   * new xl. Moving the TOKENS moves 1364 usages at once; the 76 radii that
+   * were written as arbitrary-value literals (5px, 6px, 7px, 14px…) do NOT
+   * follow a token, so they are swept onto the scale in the same change and
+   * held there by the ratchet in `radius-tokens.test.ts` — same disease, and
+   * same cure, as the colour literals of the contrast work (ADR 0026). */
+  --radius-xs: 0.1875rem; /* 3px */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-md: 0.375rem; /* 6px  — buttons, chips (×451) */
+  --radius-lg: 0.5rem; /* 8px  (×343) */
+  --radius-xl: 0.75rem; /* 12px — THE CARDS (×63) */
+  --radius-2xl: 1rem; /* 16px */
+  /* Top rung, added so the two decorative "app tile" radii on the login page
+   * (24px, 26px) have a token to land on instead of staying literals. */
+  --radius-3xl: 1.25rem; /* 20px */
 
   /* -- Shadows (banking sober, never bouncy) ------------------------------- */
   /* Default (Sombre) shadows. The "Nuit profonde" theme overrides --shadow-card /
@@ -118,6 +131,15 @@
   --tessera-muted: #071b2e;
   --tessera-border: #173249;
   --tessera-border-strong: #21425b;
+  /* THE CHROME LINE — a third border role, added 2026-08-01.
+   * `--tessera-border` draws a card's hairline; `--tessera-border-strong` an input.
+   * Neither is the right weight for the two lines that carry the SHELL: the rule
+   * under the cockpit header and the rule that divides the left panel from the
+   * content. Those are structural — they say where one region ends — and under
+   * "Clair" they were drawn at 1.23:1, which is invisible by construction rather
+   * than by accident. Giving them their own token is what lets the light theme
+   * make them 1.75× stronger without dragging every card border along with them. */
+  --tessera-chrome-line: #2a4f6c;
   /* Scrollbar thumb — a token so each theme can keep it visible against its bg. */
   --tessera-scrollbar: #21425b;
   --tessera-scrollbar-hover: #2a3d4a;
@@ -281,6 +303,7 @@
   --tessera-muted: #141b2a;
   --tessera-border: rgba(255, 255, 255, 0.07);
   --tessera-border-strong: rgba(255, 255, 255, 0.12);
+  --tessera-chrome-line: rgba(255, 255, 255, 0.16);
   --tessera-scrollbar: #232c3e;
   --tessera-scrollbar-hover: #2e3a4f;
   /* Raised surfaces (popovers/menus) lift onto their own tier; inputs take the
@@ -301,13 +324,27 @@
  * little more present (light surfaces separate by shadow, not by tone). next-themes
  * adds the .light class to <html>. */
 .light {
-  --tessera-bg: #f4f7fb;
-  --tessera-bg-soft: #eef2f7;
+  /* RE-TONED 2026-08-01, on Amadou's call. The light cockpit used to be a wash of
+   * near-whites in the wrong order: the left panel (#eef2f7) was DARKER than the
+   * content canvas (#f4f7fb), and the cards floated on a tint at a hairline of
+   * 1.23:1. Flipped to the arrangement Vercel, Linear and Stripe all use — the
+   * canvas is white, the panel carries the tint, and the card earns its edge from
+   * a border rather than from a tonal difference it no longer has.
+   *
+   * Every value here was MEASURED against the surface it actually lands on, not
+   * chosen by eye (`light-chrome-contrast.test.ts` re-measures them):
+   *   panel #f1f5f9 on the white canvas ........ 1.10:1  (a tint, read as a region)
+   *   card border #d5dee9 on white ............. 1.36:1  (Vercel's is 1.17:1)
+   *   chrome line #aab8cc on white ............. 2.01:1  (was 1.23:1 — invisible)
+   *   chrome line on the panel ................. 1.84:1 */
+  --tessera-bg: #ffffff;
+  --tessera-bg-soft: #f1f5f9;
   --tessera-surface: #ffffff;
   --tessera-surface-elevated: #e7ecf3;
   --tessera-muted: #eef2f7;
-  --tessera-border: #e3e8ef;
-  --tessera-border-strong: #cbd5e1;
+  --tessera-border: #d5dee9;
+  --tessera-border-strong: #b4c2d4;
+  --tessera-chrome-line: #aab8cc;
   --tessera-scrollbar: #cbd5e1;
   --tessera-scrollbar-hover: #aab6c6;
   --tessera-text: #0f172a;
@@ -352,6 +389,186 @@
   --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.05);
   --shadow-card-elevated: 0 4px 14px -3px rgba(15, 23, 42, 0.14), 0 2px 6px -2px
     rgba(15, 23, 42, 0.08);
+}
+
+/* THE LAUNCHER SURFACE — /login, /espaces, /select-space.
+ *
+ * These three pages used to paint themselves from `SPACE_SELECTOR_TOKENS`, a
+ * plain object of dark hex values spread into a `style={…}` attribute, plus
+ * night-blue gradients written as literals directly in their JSX. An inline
+ * style attribute is the one place a theme CLASS can never reach: <html> was
+ * correctly marked `light` and these pages went on painting #020817, so the
+ * theme control in their own header was a switch wired to nothing. Amadou
+ * reported it three times before it was believed — once per page.
+ *
+ * Same disease as the colour literals (`theme-contrast.test.ts`) and the radius
+ * literals (`radius-tokens.test.ts`): a value that names itself does not follow
+ * the system. The cure is the same — the values move into the cascade, where a
+ * class can re-tone them.
+ *
+ * NOTE, because it bit: the old object also set `--radius-lg: 24px` and
+ * `--radius-md: 16px`. Those are the names of the TAILWIND scale, so inside
+ * these three pages `rounded-lg` silently meant 24px and `rounded-md` 16px —
+ * nine corners that no change to `@theme` could ever have reached. They are not
+ * redeclared here; the nine now sit on the same scale as the rest of the app. */
+.launcher-surface {
+  --bg-app: #020817;
+  --bg-deep: #030b18;
+  --bg-radial: rgba(20, 43, 77, 0.26);
+  --bg-panel: rgba(6, 20, 38, 0.78);
+  --bg-panel-soft: rgba(10, 27, 47, 0.66);
+  --panel: rgba(6, 20, 38, 0.78);
+  --panel-soft: rgba(10, 27, 47, 0.66);
+  --border-subtle: rgba(148, 163, 184, 0.14);
+  --border-gold: rgba(214, 182, 106, 0.28);
+  --border-cyan: rgba(45, 212, 191, 0.26);
+  --border-amber: rgba(245, 158, 11, 0.28);
+  --border-rose: rgba(244, 114, 182, 0.32);
+  --text-primary: #f8fafc;
+  --text-secondary: #a6b3c8;
+  --champagne: #d6b66a;
+  --champagne-strong: #f4c76a;
+  --gold: var(--champagne);
+  --gold-strong: var(--champagne-strong);
+  --cyan: #2dd4bf;
+  --cyan-soft: #67e8f9;
+  --rose: #f472b6;
+  --rose-strong: #f9a8d4;
+  --amber: #f59e0b;
+  --amber-soft: #fbbf24;
+  --success: #22c55e;
+  --danger: #f87171;
+  --indigo: #818cf8;
+  --violet: #c084fc;
+  --shadow-gold: 0 10px 30px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-cyan: 0 10px 30px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-amber: 0 10px 30px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  /* The page backdrop, previously three literal gradients inlined in three JSX
+     files. `--launcher-backdrop-auth` is the login variant (two off-centre glows
+     instead of one overhead). */
+  --launcher-backdrop: radial-gradient(circle at 50% 12%, rgba(13, 38, 71, 0.55), transparent 46%),
+    linear-gradient(180deg, #001025 0%, #00101f 60%, #000b18 100%);
+  --launcher-backdrop-auth: radial-gradient(
+      circle at 20% 18%,
+      rgba(15, 55, 91, 0.68),
+      transparent 34%
+    ), radial-gradient(circle at 78% 60%, rgba(16, 185, 129, 0.07), transparent 28%),
+    linear-gradient(180deg, #001025 0%, #00101f 58%, #000b18 100%);
+  /* The wave band is night-blue artwork. It stays at full strength on the dark
+     themes and is softened under "Clair", where it would otherwise sit as a dark
+     slab on a pale page — the mistake the alert ribbon already made once. */
+  --launcher-waves-opacity: 1;
+  /* The plane cards and their CTA gradients. These were literals too — a card
+     that ends in rgba(2,8,23,0.94) is a night-blue card whatever the theme says. */
+  --launcher-card-bg: linear-gradient(
+    145deg,
+    var(--panel) 0%,
+    var(--panel-soft) 56%,
+    rgba(2, 8, 23, 0.94) 100%
+  );
+  --launcher-btn-gold: linear-gradient(
+    180deg,
+    rgba(214, 182, 106, 0.3),
+    rgba(88, 62, 24, 0.78) 58%,
+    rgba(42, 31, 18, 0.92)
+  );
+  --launcher-btn-cyan: linear-gradient(
+    180deg,
+    rgba(45, 212, 191, 0.22),
+    rgba(8, 86, 102, 0.7) 55%,
+    rgba(4, 39, 53, 0.92)
+  );
+  --launcher-btn-amber: linear-gradient(
+    180deg,
+    rgba(245, 158, 11, 0.24),
+    rgba(120, 72, 12, 0.72) 55%,
+    rgba(60, 38, 8, 0.92)
+  );
+  --launcher-btn-ink: #f8fafc;
+  --launcher-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 18px rgba(0, 0, 0, 0.18);
+  /* The sign-in form and the hero illustration. Found only by LOOKING at the light
+     page after the token move: the surface flipped and these did not, so the two
+     credential fields rendered as night-blue slabs carrying near-black ink — the
+     one place on the whole page where you must be able to read what you type. */
+  --launcher-field-bg: rgba(0, 16, 31, 0.7);
+  --launcher-chip-bg: rgba(0, 16, 31, 0.55);
+  --launcher-tile-mark: rgba(4, 27, 40, 0.9);
+  --launcher-tile-teal: rgba(6, 34, 57, 0.9);
+  --launcher-tile-green: rgba(6, 42, 43, 0.9);
+  --launcher-tile-violet: rgba(23, 26, 56, 0.9);
+  --launcher-tile-amber: rgba(42, 33, 19, 0.9);
+}
+
+/* The same surface under "Clair". Accents drop to the shade that reads on a pale
+ * ground — the same move, and the same 600/700 steps, the cockpit tokens make. */
+.light .launcher-surface {
+  --bg-app: #f6f8fc;
+  --bg-deep: #eef2f8;
+  --bg-radial: rgba(148, 163, 184, 0.16);
+  --bg-panel: rgba(255, 255, 255, 0.88);
+  --bg-panel-soft: rgba(248, 250, 252, 0.8);
+  --panel: rgba(255, 255, 255, 0.88);
+  --panel-soft: rgba(248, 250, 252, 0.8);
+  /* 0.30, not the 0.12 the dark value transliterates to: this is the LINE under
+     the login header and between the launcher's sections — the same structural
+     role Amadou called invisible in the cockpit. At 0.12 it measured 1.28:1;
+     at 0.30 it is 1.93:1, which lands on the cockpit's own chrome line (2.01:1). */
+  --border-subtle: rgba(15, 23, 42, 0.3);
+  --border-gold: rgba(135, 112, 68, 0.4);
+  --border-cyan: rgba(15, 118, 110, 0.34);
+  --border-amber: rgba(180, 83, 9, 0.34);
+  --border-rose: rgba(190, 24, 93, 0.34);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --champagne: #877044;
+  --champagne-strong: #6b5836;
+  --cyan: #0f766e;
+  --cyan-soft: #0e7490;
+  --rose: #be185d;
+  --rose-strong: #9d174d;
+  --amber: #b45309;
+  --amber-soft: #92400e;
+  --success: #047857;
+  --danger: #b91c1c;
+  --indigo: #4338ca;
+  --violet: #6d28d9;
+  --shadow-gold: 0 10px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-cyan: 0 10px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-amber: 0 10px 30px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --launcher-backdrop: radial-gradient(
+      circle at 50% 12%,
+      rgba(191, 214, 240, 0.55),
+      transparent 46%
+    ), linear-gradient(180deg, #f9fbfe 0%, #eff4fa 60%, #e7edf6 100%);
+  --launcher-backdrop-auth: radial-gradient(
+      circle at 20% 18%,
+      rgba(186, 211, 236, 0.62),
+      transparent 34%
+    ), radial-gradient(circle at 78% 60%, rgba(16, 185, 129, 0.1), transparent 28%),
+    linear-gradient(180deg, #f9fbfe 0%, #eff4fa 58%, #e7edf6 100%);
+  --launcher-waves-opacity: 0.32;
+  /* Cards become white panels on the pale ground; the CTAs keep their hue but
+     land on the 700 step, so their white ink still clears AA. */
+  --launcher-card-bg: linear-gradient(
+    145deg,
+    var(--panel) 0%,
+    var(--panel-soft) 56%,
+    rgba(255, 255, 255, 0.94) 100%
+  );
+  --launcher-btn-gold: linear-gradient(180deg, #9a8150 0%, #7a6440 58%, #63512f 100%);
+  --launcher-btn-cyan: linear-gradient(180deg, #0f8d82 0%, #0f766e 55%, #0d5f59 100%);
+  --launcher-btn-amber: linear-gradient(180deg, #c2670a 0%, #b45309 55%, #92400e 100%);
+  --launcher-btn-ink: #ffffff;
+  --launcher-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 18px rgba(15, 23, 42, 0.14);
+  --launcher-field-bg: #ffffff;
+  --launcher-chip-bg: rgba(255, 255, 255, 0.72);
+  /* The hero tiles keep their hue and lose their darkness — the same move the
+     accents make, so the illustration still reads as five different things. */
+  --launcher-tile-mark: #dff0ee;
+  --launcher-tile-teal: #e2edf9;
+  --launcher-tile-green: #ddf1e8;
+  --launcher-tile-violet: #e9e8f7;
+  --launcher-tile-amber: #f6efdf;
 }
 
 /* Brand lockup: a light wordmark for the dark themes, a dark wordmark for "Clair".

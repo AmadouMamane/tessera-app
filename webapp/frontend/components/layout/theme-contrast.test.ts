@@ -137,18 +137,30 @@ const UNSEEN_EXPRESSION_FED = 48;
 /** Decorative colour CONSTANTS where the colour is the content, or where the component
  *  carries its own painted ground. TWO-SIDED, so it can only shrink.
  *
- *  · `landing-launcher` declares a whole scoped design system as inline custom properties
- *    over its own `rgba(6,20,38,.78)` panel — its foregrounds were chosen against that
- *    ground and it never consumes the `--tessera-*` surface tokens;
  *  · `theme-swatch` paints the disc that REPRESENTS a theme. Making the pale-neutral swatch
- *    darker so it clears contrast would make it stop being the pale neutral theme. */
+ *    darker so it clears contrast would make it stop being the pale neutral theme.
+ *
+ *  `landing-launcher` held 14 of these until 2026-08-01 and now holds none. It was the
+ *  honest case for the exemption — a page that declared its own scoped design system as
+ *  inline custom properties over its own panel — right up until someone noticed that an
+ *  inline style attribute is precisely what a theme class cannot reach, which is why the
+ *  theme control on /login, /espaces and /select-space did nothing at all. The tokens
+ *  moved into `.launcher-surface` in the stylesheet, so they left this scan's tree.
+ *  THAT IS NOT THE SAME AS BEING SAFE: they are measured now by
+ *  `launcher-surface-contrast.test.ts`, which reads them where they live and holds both
+ *  themes. A value that merely walks out of one witness's field of view has not been
+ *  checked; it has been hidden. */
 const FROZEN_DECOR_CONSTANT: ReadonlyMap<string, number> = new Map([
-  ["components/landing/landing-launcher.tsx", 14],
   ["components/layout/theme-swatch.tsx", 1],
 ]);
 
-/** Anti-vacuity for the constant rule: 25 bare hex constants survive the sweep. */
-const EXPECTED_MIN_CONSTANTS = 20;
+/** Anti-vacuity for the constant rule. Was 20 against a population of 25; the launcher's
+ *  14 left the tree for the stylesheet on 2026-08-01, so 9 remain here and the floor
+ *  follows them down. Lowering an anti-vacuity floor is exactly how a witness goes blind,
+ *  so it is only defensible because the colours did not disappear — they are measured by
+ *  `launcher-surface-contrast.test.ts` instead, and that file is the reason this number
+ *  may move. Nothing else licenses it. */
+const EXPECTED_MIN_CONSTANTS = 8;
 
 /** The Tailwind shades ever used as a foreground here, 100 → 600. The 400/500 band matters
  *  as much as the pale end: `emerald-400` is 1.92:1 on a white card, `amber-500` 2.15:1. */

@@ -31,46 +31,7 @@ import { fetchLauncherSignal } from "@/lib/launcher-signal-client";
 import type { LauncherSignal } from "@/lib/server/launcher-signal";
 
 type Accent = "gold" | "cyan" | "amber";
-export type SpaceSelectorStyle = CSSProperties & Record<`--${string}`, string>;
-
-export const SPACE_SELECTOR_TOKENS: SpaceSelectorStyle = {
-  "--bg-app": "#020817",
-  "--bg-deep": "#030B18",
-  "--bg-radial": "rgba(20, 43, 77, 0.26)",
-  "--bg-panel": "rgba(6, 20, 38, 0.78)",
-  "--bg-panel-soft": "rgba(10, 27, 47, 0.66)",
-  "--panel": "rgba(6, 20, 38, 0.78)",
-  "--panel-soft": "rgba(10, 27, 47, 0.66)",
-  "--border-subtle": "rgba(148, 163, 184, 0.14)",
-  "--border-gold": "rgba(214, 182, 106, 0.28)",
-  "--border-cyan": "rgba(45, 212, 191, 0.26)",
-  "--border-amber": "rgba(245, 158, 11, 0.28)",
-  "--border-rose": "rgba(244, 114, 182, 0.32)",
-  "--text-primary": "#F8FAFC",
-  "--text-secondary": "#A6B3C8",
-  "--champagne": "#D6B66A",
-  "--champagne-strong": "#F4C76A",
-  "--gold": "var(--champagne)",
-  "--gold-strong": "var(--champagne-strong)",
-  "--cyan": "#2DD4BF",
-  "--cyan-soft": "#67E8F9",
-  "--rose": "#F472B6",
-  "--rose-strong": "#F9A8D4",
-  "--amber": "#F59E0B",
-  "--amber-soft": "#FBBF24",
-  "--success": "#22C55E",
-  "--danger": "#F87171",
-  "--indigo": "#818CF8",
-  "--violet": "#C084FC",
-  "--radius-lg": "24px",
-  "--radius-md": "16px",
-  "--shadow-gold": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
-  "--shadow-cyan": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
-  "--shadow-amber": "0 10px 30px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04)",
-};
-
-const CARD_BG =
-  "linear-gradient(145deg, var(--panel) 0%, var(--panel-soft) 56%, rgba(2,8,23,0.94) 100%)";
+const CARD_BG = "var(--launcher-card-bg)";
 
 // Always-visible keyboard focus ring (a bright near-white ring reads on every
 // accent over the night-blue base) — WCAG 2.4.7 on this dark launcher.
@@ -90,11 +51,10 @@ type AccentStyle = {
 const ACCENT: Record<Accent, AccentStyle> = {
   gold: {
     border: "border-[var(--border-gold)]",
-    button: "border-[var(--border-gold)] text-[var(--text-primary)]",
+    button: "border-[var(--border-gold)] text-[var(--launcher-btn-ink)]",
     buttonStyle: {
-      background:
-        "linear-gradient(180deg, rgba(214,182,106,0.30), rgba(88,62,24,0.78) 58%, rgba(42,31,18,0.92))",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+      background: "var(--launcher-btn-gold)",
+      boxShadow: "var(--launcher-btn-shadow)",
     },
     cardStyle: {
       boxShadow: "var(--shadow-gold)",
@@ -105,11 +65,10 @@ const ACCENT: Record<Accent, AccentStyle> = {
   },
   cyan: {
     border: "border-[var(--border-cyan)]",
-    button: "border-[var(--border-cyan)] text-[var(--text-primary)]",
+    button: "border-[var(--border-cyan)] text-[var(--launcher-btn-ink)]",
     buttonStyle: {
-      background:
-        "linear-gradient(180deg, rgba(45,212,191,0.22), rgba(8,86,102,0.70) 55%, rgba(4,39,53,0.92))",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+      background: "var(--launcher-btn-cyan)",
+      boxShadow: "var(--launcher-btn-shadow)",
     },
     cardStyle: {
       boxShadow: "var(--shadow-cyan)",
@@ -120,11 +79,10 @@ const ACCENT: Record<Accent, AccentStyle> = {
   },
   amber: {
     border: "border-[var(--border-amber)]",
-    button: "border-[var(--border-amber)] text-[var(--text-primary)]",
+    button: "border-[var(--border-amber)] text-[var(--launcher-btn-ink)]",
     buttonStyle: {
-      background:
-        "linear-gradient(180deg, rgba(245,158,11,0.24), rgba(120,72,12,0.72) 55%, rgba(60,38,8,0.92))",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.18)",
+      background: "var(--launcher-btn-amber)",
+      boxShadow: "var(--launcher-btn-shadow)",
     },
     cardStyle: {
       boxShadow: "var(--shadow-amber)",
@@ -158,17 +116,13 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
   const t = useTranslations("landing");
 
   return (
-    <div
-      className="relative min-h-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)]"
-      style={SPACE_SELECTOR_TOKENS}
-    >
-      {/* Flat night-blue base fills the whole viewport at any width. */}
+    <div className="launcher-surface relative min-h-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)]">
+      {/* The base fills the whole viewport at any width. Night-blue under the dark
+          themes, pale under "Clair" — the gradient is a token now, so the theme
+          class reaches it (it could not reach an inline style attribute). */}
       <div
         className="pointer-events-none absolute inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 12%, rgba(13, 38, 71, 0.55), transparent 46%), linear-gradient(180deg, #001025 0%, #00101f 60%, #000b18 100%)",
-        }}
+        style={{ background: "var(--launcher-backdrop)" }}
       />
       {/* One continuous full-width wave band, stretched horizontally but at a
           fixed height so it never grows taller as the window widens. */}
@@ -179,6 +133,7 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center bottom",
           backgroundSize: "100% 100%",
+          opacity: "var(--launcher-waves-opacity)",
           maskImage: "linear-gradient(to top, #000 60%, transparent 100%)",
           WebkitMaskImage: "linear-gradient(to top, #000 60%, transparent 100%)",
         }}
@@ -429,7 +384,7 @@ export function SignalBand({
           Desktop separators are inset gradient hairlines (fading at both ends) —
           a full-height rule cuts the band into boxes; a faded filet reads as one
           surface. Mobile keeps the plain stacked divide. */}
-      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-y-0">
+      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-y-0">
         {pillars.map((pillar, index) => (
           <Fragment key={pillar.key}>
             {index > 0 ? (
@@ -540,7 +495,7 @@ function ContainsLine({ items }: { items: { label: string; gated?: boolean }[] }
       {items.map((item) => (
         <span
           key={item.label}
-          className="inline-flex items-center gap-[6px] rounded-[8px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] px-[10px] py-[5px] text-[12px] font-medium leading-none text-[var(--text-secondary)]"
+          className="inline-flex items-center gap-[6px] rounded-lg border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--text-primary)_5%,transparent)] px-[10px] py-[5px] text-[12px] font-medium leading-none text-[var(--text-secondary)]"
         >
           {item.gated ? (
             <Lock className="h-[12px] w-[12px] shrink-0 opacity-80" aria-hidden="true" />
@@ -560,7 +515,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
   return (
     <section
       className={cn(
-        "relative flex h-full flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex h-full flex-col overflow-hidden rounded-lg border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -585,7 +540,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
         <Link
           href="/espaces"
           className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-xl border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,
             FOCUS,
           )}
@@ -606,7 +561,7 @@ function ControlPlaneCard({ t }: { t: T }) {
   return (
     <section
       className={cn(
-        "relative flex h-full flex-col overflow-hidden rounded-[var(--radius-lg)] border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex h-full flex-col overflow-hidden rounded-lg border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -639,7 +594,7 @@ function ControlPlaneCard({ t }: { t: T }) {
         <Link
           href="/surveiller/vue-ensemble"
           className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-[12px] border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-xl border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,
             FOCUS,
           )}
@@ -657,7 +612,7 @@ function ControlPlaneCard({ t }: { t: T }) {
 function CockpitVisual() {
   return (
     <div className="grid h-[144px] w-[272px] grid-cols-[140px_124px] gap-[10px]">
-      <div className="row-span-2 rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[14px]">
+      <div className="row-span-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[14px]">
         <svg aria-hidden="true" viewBox="0 0 112 76" className="h-[76px] w-[112px]">
           <path
             d="M0 62H112M0 43H112M0 24H112M13 0V76M34 0V76M55 0V76M76 0V76M97 0V76"
@@ -675,7 +630,7 @@ function CockpitVisual() {
         <div className="mt-[10px] h-[5px] w-[95px] rounded-full bg-[var(--border-subtle)]" />
         <div className="mt-[9px] h-[5px] w-[75px] rounded-full bg-[var(--border-subtle)]" />
       </div>
-      <div className="rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[12px]">
+      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[12px]">
         <div className="flex items-center gap-[13px]">
           <div className="h-[49px] w-[49px] rounded-full border-[10px] border-[var(--border-subtle)] border-l-[var(--cyan)] border-t-[var(--cyan-soft)]" />
           <div className="flex flex-col gap-[9px]">
@@ -685,7 +640,7 @@ function CockpitVisual() {
           </div>
         </div>
       </div>
-      <div className="rounded-[7px] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[12px]">
+      <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-[12px]">
         <div className="grid grid-cols-3 gap-x-[12px] gap-y-[8px]">
           {Array.from({ length: 9 }, (_, index) => (
             <span

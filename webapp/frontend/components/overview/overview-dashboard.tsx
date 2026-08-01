@@ -860,7 +860,10 @@ function KpiCard({
     <Card
       data-testid={infoKey ? `overview-kpi-${infoKey}` : undefined}
       className={cn(
-        "group relative h-full overflow-hidden rounded-lg",
+        // No radius override: a KPI tile IS a card and takes the card's corner.
+        // Overriding it to `rounded-lg` is how six tiles sat a rung tighter than
+        // the thirteen panels beside them on the same page.
+        "group relative h-full overflow-hidden",
         href && "transition-colors hover:border-blue-400/40",
       )}
     >
@@ -973,8 +976,8 @@ function CriticalControlsTable({
   const signalById = useMemo(() => new Map((signals ?? []).map((s) => [s.id, s])), [signals]);
 
   return (
-    <Card className="overflow-hidden rounded-lg">
-      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+    <Card className="overflow-hidden">
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
           <SectionInfo title={t("title")} explainKey="criticalControls" />
@@ -1194,8 +1197,8 @@ function ControlCasesTriage({
   }, [items, tab]);
 
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
           <SectionInfo title={t("title")} explainKey="cases" />
@@ -1352,8 +1355,8 @@ function GovernedActivityCard({
   const t = useTranslations("overview.governed");
   const events = feed?.events ?? [];
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
           <SectionInfo title={t("title")} explainKey="governed" />
@@ -1469,8 +1472,8 @@ function ObservabilityTracesCard({
 }) {
   const t = useTranslations("overview.traces");
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Network className="h-4 w-4 text-[var(--tessera-fg-info)]" />
           {t("title")}
@@ -1563,8 +1566,8 @@ function ControlCasesSection({
 }) {
   const t = useTranslations("overview.controlCases");
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
           <SectionInfo title={t("title")} explainKey="controlCases" />
@@ -1658,8 +1661,8 @@ function IncidentsCard({
   }
 
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-center justify-between pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("incidents")}
           <SectionInfo title={t("incidents")} explainKey="rightIncidents" />
@@ -1733,8 +1736,8 @@ function ReleaseCard({
   const blocked = gates.some((g) => g.pass === false);
 
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-start justify-between pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-start justify-between pb-2">
         <div>
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("release")}
@@ -1822,7 +1825,7 @@ function QuickActionsCard({
   }
 
   return (
-    <Card className="rounded-lg">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">{t("title")}</CardTitle>
       </CardHeader>
@@ -1879,8 +1882,8 @@ function RecentActivitiesCard({
   const t = useTranslations("overview.rightColumn");
   const rows = scores ? [...scores].reverse().slice(0, 6) : [];
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-center justify-between pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("activities")}
           <SectionInfo title={t("activities")} explainKey="rightActivities" />
@@ -1941,7 +1944,7 @@ function AnalyticsSection({
 
   return (
     <section className="grid gap-2.5 xl:grid-cols-3">
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("scores")}
@@ -1971,7 +1974,7 @@ function AnalyticsSection({
         </CardContent>
       </Card>
 
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("distribution")}
@@ -2007,7 +2010,7 @@ function AnalyticsSection({
         </CardContent>
       </Card>
 
-      <Card className="rounded-lg">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm">
             {t("impact")}
@@ -2064,8 +2067,8 @@ function GovernanceSection({
 }) {
   const t = useTranslations("overview.governance");
   return (
-    <Card className="rounded-lg">
-      <CardHeader className="flex-row items-center justify-between pb-2">
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           {t("title")}
           <SectionInfo title={t("title")} explainKey="governanceSection" />

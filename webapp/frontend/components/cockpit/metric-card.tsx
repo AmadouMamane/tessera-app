@@ -66,7 +66,7 @@ export function MetricCard({
   loading?: boolean;
 }) {
   return (
-    <section className="h-[108px] overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+    <section className="h-[108px] overflow-hidden rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <p className="flex items-center gap-1 font-medium text-[var(--tessera-text-muted)] text-xs">
         {label}
         {info}

@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { SPACE_SELECTOR_TOKENS } from "@/components/landing/landing-launcher";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import {
@@ -89,16 +88,10 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
   }));
 
   return (
-    <div
-      className="relative min-h-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)]"
-      style={SPACE_SELECTOR_TOKENS}
-    >
+    <div className="launcher-surface relative min-h-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)]">
       <div
         className="pointer-events-none absolute inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 12%, rgba(13, 38, 71, 0.55), transparent 46%), linear-gradient(180deg, #001025 0%, #00101f 60%, #000b18 100%)",
-        }}
+        style={{ background: "var(--launcher-backdrop)" }}
       />
       {/* Same continuous wave band as the launcher — visual continuity. */}
       <div
@@ -108,6 +101,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center bottom",
           backgroundSize: "100% 100%",
+          opacity: "var(--launcher-waves-opacity)",
           maskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
           WebkitMaskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
         }}

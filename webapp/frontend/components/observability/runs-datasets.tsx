@@ -311,7 +311,7 @@ export function RunsEvalTable({
   const runs = registry?.runs ?? [];
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader className="flex-row flex-wrap items-center justify-between">
         <CardTitle className="flex items-center gap-1.5 text-sm">
           {tq("runs.table.title")}
           <QInfo title={tq("runs.table.title")} k="runTable" />
@@ -560,7 +560,7 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
   const rows = report?.datasets ?? [];
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between">
+      <CardHeader className="flex-row flex-wrap items-center justify-between">
         <CardTitle className="flex items-center gap-1.5 text-sm">
           {tq("runs.qdatasets.title")}
           <QInfo title={tq("runs.qdatasets.title")} k="runDatasets" />

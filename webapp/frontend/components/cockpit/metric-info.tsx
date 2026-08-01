@@ -54,7 +54,7 @@ export function MetricInfo({ title, what, how, source, className }: MetricInfoPr
           collisionPadding={12}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            "z-50 w-72 rounded-[3px] border border-[var(--tessera-tooltip-border)] bg-[var(--tessera-tooltip-bg)] p-3 text-left shadow-[0_2px_6px_rgba(0,0,0,0.4)]",
+            "z-50 w-72 rounded-xs border border-[var(--tessera-tooltip-border)] bg-[var(--tessera-tooltip-bg)] p-3 text-left shadow-[0_2px_6px_rgba(0,0,0,0.4)]",
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           )}
         >

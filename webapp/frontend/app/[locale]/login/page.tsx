@@ -3,7 +3,6 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { TesseraLogo, TesseraMark } from "@/components/brand/tessera-logo";
-import { SPACE_SELECTOR_TOKENS } from "@/components/landing/landing-launcher";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link } from "@/i18n/navigation";
 import { demoCredentials } from "@/lib/auth/accounts";
@@ -28,24 +27,21 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
   const demoAccounts = demoCredentials();
 
   return (
-    <div
-      className="relative min-h-screen overflow-y-auto bg-[var(--bg-app)] text-[var(--text-primary)]"
-      style={SPACE_SELECTOR_TOKENS}
-    >
+    <div className="launcher-surface relative min-h-screen overflow-y-auto bg-[var(--bg-app)] text-[var(--text-primary)]">
       <div
         className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(circle at 20% 18%, rgba(15, 55, 91, 0.68), transparent 34%), radial-gradient(circle at 78% 60%, rgba(16, 185, 129, 0.07), transparent 28%), linear-gradient(180deg, #001025 0%, #00101f 58%, #000b18 100%)",
-        }}
+        style={{ background: "var(--launcher-backdrop-auth)" }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[300px] opacity-70"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[300px]"
         style={{
           backgroundImage: "url('/assets/tessera-waves-band.png')",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center bottom",
           backgroundSize: "100% 100%",
+          /* 0.7 of whatever the theme allows: full-strength artwork on the dark
+             themes, softened under "Clair". */
+          opacity: "calc(var(--launcher-waves-opacity) * 0.7)",
           maskImage: "linear-gradient(to top, #000 48%, transparent 100%)",
           WebkitMaskImage: "linear-gradient(to top, #000 48%, transparent 100%)",
         }}
@@ -96,19 +92,19 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
               <div className="absolute inset-0 opacity-[0.16] [background-image:radial-gradient(rgba(148,163,184,0.52)_0.8px,transparent_0.8px)] [background-size:18px_18px] [mask-image:radial-gradient(ellipse_at_center,#000_18%,transparent_70%)]" />
               <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 h-[198px] w-[500px] rounded-[50%] border border-cyan-300/15" />
               <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 h-[138px] w-[340px] rounded-[50%] border border-emerald-300/20" />
-              <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 grid h-[88px] w-[88px] place-items-center rounded-[26px] border border-emerald-300/30 bg-[#041b28]/90 shadow-[0_0_44px_rgba(45,212,191,0.16)]">
+              <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 grid h-[88px] w-[88px] place-items-center rounded-3xl border border-emerald-300/30 bg-[var(--launcher-tile-mark)] shadow-[0_0_44px_rgba(45,212,191,0.16)]">
                 <TesseraMark className="h-[48px] w-[48px]" />
               </div>
-              <div className="absolute top-[30px] left-[112px] grid h-11 w-11 place-items-center rounded-[14px] border border-cyan-300/25 bg-[#062239]/90 text-[var(--tessera-fg-teal)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute top-[30px] left-[112px] grid h-11 w-11 place-items-center rounded-xl border border-cyan-300/25 bg-[var(--launcher-tile-teal)] text-[var(--tessera-fg-teal)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <Fingerprint className="h-5 w-5" />
               </div>
-              <div className="absolute right-[94px] bottom-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-emerald-300/25 bg-[#062a2b]/90 text-[var(--tessera-fg-success)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute right-[94px] bottom-[36px] grid h-11 w-11 place-items-center rounded-xl border border-emerald-300/25 bg-[var(--launcher-tile-green)] text-[var(--tessera-fg-success)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <ShieldCheck className="h-5 w-5" />
               </div>
-              <div className="absolute right-[86px] top-[36px] grid h-11 w-11 place-items-center rounded-[14px] border border-violet-300/20 bg-[#171a38]/90 text-[var(--tessera-fg-accent)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute right-[86px] top-[36px] grid h-11 w-11 place-items-center rounded-xl border border-violet-300/20 bg-[var(--launcher-tile-violet)] text-[var(--tessera-fg-accent)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <LockKeyhole className="h-5 w-5" />
               </div>
-              <div className="absolute bottom-[34px] left-[96px] grid h-11 w-11 place-items-center rounded-[14px] border border-amber-200/20 bg-[#2a2113]/90 text-[var(--tessera-fg-warning)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="absolute bottom-[34px] left-[96px] grid h-11 w-11 place-items-center rounded-xl border border-amber-200/20 bg-[var(--launcher-tile-amber)] text-[var(--tessera-fg-warning)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <KeyRound className="h-5 w-5" />
               </div>
             </div>

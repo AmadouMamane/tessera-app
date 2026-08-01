@@ -116,7 +116,7 @@ function FavStar({ on, onToggle, label }: { on: boolean; onToggle: () => void; l
         }
       }}
       className={cn(
-        "grid h-[24px] w-[24px] cursor-pointer place-items-center rounded-[7px] text-[var(--text-secondary)] transition-colors hover:text-[var(--gold-strong)]",
+        "grid h-[24px] w-[24px] cursor-pointer place-items-center rounded-md text-[var(--text-secondary)] transition-colors hover:text-[var(--gold-strong)]",
         FOCUS,
       )}
     >
@@ -149,7 +149,7 @@ function SurfaceCard({
       className={cn(
         // pt clears the top-right access chip / fav star; box-shadow (not transform)
         // on hover so cards don't jitter as they pass under the cursor while scrolling.
-        "group/card relative flex min-h-[200px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-[20px] border px-[18px] pb-[22px] pt-[42px] text-center transition-[border-color,box-shadow]",
+        "group/card relative flex min-h-[200px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-2xl border px-[18px] pb-[22px] pt-[42px] text-center transition-[border-color,box-shadow]",
         a.border,
         locked ? "cursor-not-allowed opacity-55" : "hover:shadow-[0_12px_28px_rgba(0,0,0,0.34)]",
       )}
@@ -161,7 +161,7 @@ function SurfaceCard({
         <Link
           href={surface.href}
           aria-label={actionAria}
-          className={cn("absolute inset-0 rounded-[20px]", FOCUS)}
+          className={cn("absolute inset-0 rounded-2xl", FOCUS)}
         />
       )}
 
@@ -193,7 +193,7 @@ function SurfaceCard({
       <span className="pointer-events-none relative flex flex-col items-center gap-[14px]">
         <span
           className={cn(
-            "grid h-[60px] w-[60px] place-items-center rounded-[18px] border",
+            "grid h-[60px] w-[60px] place-items-center rounded-2xl border",
             a.border,
             a.icon,
           )}
@@ -246,7 +246,7 @@ function SurfaceRow({
     <div
       aria-disabled={locked || undefined}
       className={cn(
-        "group/row relative flex w-full items-center gap-[16px] rounded-[16px] border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[14px] text-left transition-[border-color]",
+        "group/row relative flex w-full items-center gap-[16px] rounded-2xl border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[14px] text-left transition-[border-color]",
         a.border,
         locked && "cursor-not-allowed opacity-55",
       )}
@@ -255,13 +255,13 @@ function SurfaceRow({
         <Link
           href={surface.href}
           aria-label={actionAria}
-          className={cn("absolute inset-0 rounded-[16px]", FOCUS)}
+          className={cn("absolute inset-0 rounded-2xl", FOCUS)}
         />
       )}
 
       <span
         className={cn(
-          "pointer-events-none grid h-[44px] w-[44px] shrink-0 place-items-center rounded-[12px] border",
+          "pointer-events-none grid h-[44px] w-[44px] shrink-0 place-items-center rounded-xl border",
           a.border,
           a.icon,
         )}
@@ -401,7 +401,7 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
 
   return (
     <div
-      className="flex w-full max-w-[1040px] flex-col gap-[18px] rounded-[24px] border border-[var(--border-subtle)] p-[22px] backdrop-blur-[3px]"
+      className="flex w-full max-w-[1040px] flex-col gap-[18px] rounded-3xl border border-[var(--border-subtle)] p-[22px] backdrop-blur-[3px]"
       style={{
         background:
           "linear-gradient(160deg, color-mix(in srgb, var(--panel) 82%, transparent), color-mix(in srgb, var(--panel-soft) 70%, transparent))",
@@ -417,12 +417,12 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("searchPlaceholder")}
             className={cn(
-              "h-[42px] w-full rounded-[12px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_55%,transparent)] pr-[14px] pl-[36px] text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)] focus:border-[color-mix(in_srgb,var(--text-primary)_30%,transparent)]",
+              "h-[42px] w-full rounded-xl border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_55%,transparent)] pr-[14px] pl-[36px] text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-secondary)] focus:border-[color-mix(in_srgb,var(--text-primary)_30%,transparent)]",
               FOCUS,
             )}
           />
         </div>
-        <div className="inline-flex rounded-[11px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_55%,transparent)] p-[3px]">
+        <div className="inline-flex rounded-xl border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_55%,transparent)] p-[3px]">
           {(["grid", "list"] as const).map((v) => (
             <button
               key={v}
@@ -431,7 +431,7 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
               aria-label={v === "grid" ? t("viewGrid") : t("viewList")}
               aria-pressed={view === v}
               className={cn(
-                "grid h-[34px] w-[34px] place-items-center rounded-[8px] transition-colors",
+                "grid h-[34px] w-[34px] place-items-center rounded-lg transition-colors",
                 FOCUS,
                 view === v
                   ? "bg-[color-mix(in_srgb,var(--text-primary)_12%,transparent)] text-[var(--text-primary)]"
@@ -477,7 +477,7 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
             value={sort}
             onChange={(e) => setSort(e.target.value as Sort)}
             className={cn(
-              "h-[34px] rounded-[10px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_55%,transparent)] px-[10px] text-[12px] text-[var(--text-primary)] outline-none",
+              "h-[34px] rounded-lg border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_55%,transparent)] px-[10px] text-[12px] text-[var(--text-primary)] outline-none",
               FOCUS,
             )}
           >
@@ -488,7 +488,7 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
       </div>
 
       {shown.length === 0 ? (
-        <p className="rounded-[16px] border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_45%,transparent)] px-[18px] py-[24px] text-center text-[13px] text-[var(--text-secondary)]">
+        <p className="rounded-2xl border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_45%,transparent)] px-[18px] py-[24px] text-center text-[13px] text-[var(--text-secondary)]">
           {t("noMatch")}
         </p>
       ) : view === "grid" ? (

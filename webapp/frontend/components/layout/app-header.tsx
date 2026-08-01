@@ -180,7 +180,7 @@ export function AppHeader({
         {/* 5.5rem = 88px, the same rule height as the launcher's `h-[88px]` row and as the
             sidebar's brand block, so the under-logo divider and the header rule are one
             continuous line. `2735f9ad` cut all three to 56px and the alignment went with them. */}
-        <div className="grid min-h-[5.5rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--tessera-border)] px-4 md:px-5">
+        <div className="grid min-h-[5.5rem] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--tessera-chrome-line)] px-4 md:px-5">
           <div className="min-w-0">{left}</div>
           <div className="flex min-w-0 items-center justify-end gap-2">
             <CockpitTools />

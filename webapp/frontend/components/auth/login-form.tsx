@@ -84,7 +84,7 @@ export function LoginForm({
             }}
             autoComplete="username"
             required
-            className="h-12 rounded-xl border-[var(--border-subtle)] bg-[#00101f]/70 pr-4 pl-11 text-[14px] text-[var(--text-primary)] shadow-inner focus-visible:ring-1 focus-visible:ring-emerald-300/55"
+            className="h-12 rounded-xl border-[var(--border-subtle)] bg-[var(--launcher-field-bg)] pr-4 pl-11 text-[14px] text-[var(--text-primary)] shadow-inner focus-visible:ring-1 focus-visible:ring-emerald-300/55"
           />
         </span>
       </label>
@@ -105,7 +105,7 @@ export function LoginForm({
             }}
             autoComplete="current-password"
             required
-            className="h-12 rounded-xl border-[var(--border-subtle)] bg-[#00101f]/70 pr-12 pl-11 text-[14px] text-[var(--text-primary)] shadow-inner focus-visible:ring-1 focus-visible:ring-emerald-300/55"
+            className="h-12 rounded-xl border-[var(--border-subtle)] bg-[var(--launcher-field-bg)] pr-12 pl-11 text-[14px] text-[var(--text-primary)] shadow-inner focus-visible:ring-1 focus-visible:ring-emerald-300/55"
           />
           <button
             type="button"

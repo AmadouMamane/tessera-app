@@ -537,7 +537,14 @@ export function RootCauseDiagnostic({
   return (
     <SubPanel title={tq("charts.diagnostic")}>
       <div className="flex flex-col gap-2 text-[0.7rem]">
-        <div className="grid grid-cols-2 gap-3">
+        <div
+          // One column on a phone, two from 640px. And `min-w-0` on the items:
+          // a grid item defaults to `min-width:auto`, so a card whose content has a
+          // wide min-content (a chart, a long unbreakable label) refuses to shrink
+          // and pushes its column past the viewport — measured at 390px, the two
+          // chart cards sat 324px wide in a 278px column and were clipped.
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 [&>*]:min-w-0"
+        >
           <section className="min-w-0">
             <h4 className="mb-1 font-semibold text-[var(--muted-foreground)]">
               {tq("charts.whatChangedTitle")}
@@ -847,7 +854,7 @@ export function FaithGroundingScatter({
         : "var(--tessera-fg-danger)";
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between gap-2">
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="flex min-w-0 items-center gap-1 text-sm">
           <span className="min-w-0 truncate">{tq("charts.faithGrounding")}</span>
           <KpiInfo title={tq("charts.faithGrounding")} k="faithGrounding" />

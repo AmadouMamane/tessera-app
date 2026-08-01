@@ -550,11 +550,11 @@ function EmptyWithSuggestions({
       {/* Icon — glow ring + mount animation */}
       <div
         className={cn(
-          "animate-in zoom-in-90 relative flex h-16 w-16 items-center justify-center rounded-[1.35rem] border border-[#D6B36A]/35 bg-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.22),0_0_0_8px_rgba(214,179,106,0.06)] duration-500",
+          "animate-in zoom-in-90 relative flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D6B36A]/35 bg-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.22),0_0_0_8px_rgba(214,179,106,0.06)] duration-500",
           iconClassName,
         )}
       >
-        <div className="absolute inset-px rounded-[1.25rem] bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_38%)]" />
+        <div className="absolute inset-px rounded-2xl bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_38%)]" />
         {icon ?? <Sparkles className="relative h-7 w-7 text-[var(--tessera-fg-warning)]" />}
       </div>
 

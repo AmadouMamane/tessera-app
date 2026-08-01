@@ -546,12 +546,15 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
             bar keeps its own full-width row below so all six tabs stay visible. A
             left-aligned coverage descriptor anchors the band so the buttons never
             float unmoored. */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="flex min-w-0 items-center gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
             <Gauge className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
             <span className="truncate">{tq("rail.signals", { n: QUALITY_SIGNALS })}</span>
           </span>
-          <div className="flex shrink-0 items-center gap-2">
+          {/* Wraps below 1024: four buttons plus the descriptor need ~840px, so on a
+              tablet or a phone this row used to run 190-454px past the card with no
+              way to scroll to it — the last two actions were simply unreachable. */}
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
               onClick={() => setTab("runs")}

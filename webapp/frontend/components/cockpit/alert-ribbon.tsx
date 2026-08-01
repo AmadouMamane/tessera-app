@@ -188,10 +188,28 @@ function GaugeRibbon({
             </Truncate>
           </div>
           {gauge ? (
-            <div className="mt-2 flex items-center gap-3">
+            /* WRAPS, AND RESERVES ITS OWN HEADROOM (fixed 2026-08-01).
+             *
+             * Two faults met here, and both were measured before being touched.
+             * (a) The track was `min-w-0 flex-1` beside a `shrink-0` caption, so
+             *     the caption won every squeeze: 344px of track at 1728, 277 at
+             *     1280, 21 at 1024, and ZERO at 768 and below. A gauge 0px wide
+             *     is not a discreet gauge, it is an absent one that still claims
+             *     to show a ratio.
+             * (b) The threshold label is positioned at `left: <threshold>%` of that
+             *     track. At 0px width, 95% of 0 is 0 — so "95,0 %" was drawn at the
+             *     track's own left edge, one line up, exactly on top of the eyebrow
+             *     "OBJECTIF DE QUALITÉ". It never escaped that line at any width; it
+             *     merely sat far enough to the RIGHT to miss the title. That is a
+             *     collision avoided by luck, not by layout.
+             *
+             * So the row now wraps, the track keeps a floor it cannot be squeezed
+             * below, and the label lives in padding reserved for it on this row
+             * instead of reaching into the row above. */
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 pt-4">
               {/* The empty track is a touch lighter than the band so the unfilled
                   extent reads — but discreet (no outline, no bright fill). */}
-              <div className="relative h-[4px] min-w-0 flex-1 overflow-visible rounded-full bg-[var(--ribbon-track)]">
+              <div className="relative h-[4px] min-w-[140px] flex-1 basis-[180px] overflow-visible rounded-full bg-[var(--ribbon-track)]">
                 <div
                   className={cn("absolute inset-y-0 left-0 rounded-full", s.gaugeFill)}
                   style={{ width: `${clampPct(gauge.value)}%` }}
@@ -201,7 +219,7 @@ function GaugeRibbon({
                     both centred on the same axis, so the number is always perfectly
                     centred on the marker regardless of glyph width. */}
                 <div
-                  className="pointer-events-none absolute -top-[26px] -bottom-1 flex -translate-x-1/2 flex-col items-center"
+                  className="pointer-events-none absolute -top-[16px] -bottom-1 flex -translate-x-1/2 flex-col items-center"
                   style={{ left: `${clampPct(gauge.threshold)}%` }}
                 >
                   {showThresholdValue ? (
@@ -213,7 +231,7 @@ function GaugeRibbon({
                 </div>
               </div>
               {gauge.caption ? (
-                <span className="shrink-0 text-[11px] tabular-nums text-[var(--tessera-text-muted)]">
+                <span className="min-w-0 text-[11px] tabular-nums text-[var(--tessera-text-muted)]">
                   {gauge.caption}
                 </span>
               ) : null}
@@ -223,8 +241,11 @@ function GaugeRibbon({
           ) : null}
         </div>
       </div>
+      {/* Wraps: the shell already wraps this whole group onto its own line at
+          narrow widths, but the two controls together need ~300px and a phone
+          leaves ~280px, so the CTA ran 18px past the band. */}
       {action || (showPulse && pulseStopLabel) ? (
-        <div className="flex shrink-0 items-center gap-2 self-center">
+        <div className="flex flex-wrap items-center gap-2 self-center">
           {/* Visible, discreet acknowledge control — clearly secondary to the CTA,
               but discoverable (a hover-only affordance was not). Silences the pulse. */}
           {showPulse && pulseStopLabel ? (

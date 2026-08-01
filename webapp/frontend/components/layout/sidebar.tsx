@@ -356,7 +356,7 @@ export function Sidebar() {
     // Reduced to an icon rail — the brand mark + nav logos stay visible (never a
     // blank gutter); the edge handle expands it back. ⌘B is the keyboard twin.
     return (
-      <aside className="group/sidebar relative flex h-full w-16 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)]">
+      <aside className="group/sidebar relative flex h-full w-16 shrink-0 flex-col border-r border-[var(--tessera-chrome-line)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)]">
         <BrandHeader collapsed />
         <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
           <ul className="flex flex-col gap-1">
@@ -376,9 +376,9 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="group/sidebar relative flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] md:w-[252px]">
+    <aside className="group/sidebar relative flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-chrome-line)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] lg:w-[252px]">
       <BrandHeader />
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:px-3">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 lg:px-3">
         <ul className="flex flex-col gap-2">
           {tree.map((node) => (
             <NavTreeNode
@@ -543,7 +543,7 @@ function NavTreeNode({
                   : "text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]",
               )}
             />
-            <span className="hidden min-w-0 flex-1 truncate md:block">{t(node.labelKey)}</span>
+            <span className="hidden min-w-0 flex-1 truncate lg:block">{t(node.labelKey)}</span>
             {node.pulse ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> : null}
             {badge ? <Badge tone={badge.tone} active={active} value={badge.count} /> : null}
           </Link>
@@ -574,7 +574,7 @@ function NavTreeNode({
     <li>
       {pinned ? (
         <div style={pad} className={headerClass}>
-          <span className="ml-1.5 hidden min-w-0 flex-1 truncate text-left md:block">
+          <span className="ml-1.5 hidden min-w-0 flex-1 truncate text-left lg:block">
             {t(node.labelKey)}
           </span>
         </div>
@@ -590,13 +590,13 @@ function NavTreeNode({
             <node.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
           )}
           <span
-            className={cn("hidden min-w-0 flex-1 truncate text-left md:block", isSuper && "ml-1.5")}
+            className={cn("hidden min-w-0 flex-1 truncate text-left lg:block", isSuper && "ml-1.5")}
           >
             {t(node.labelKey)}
           </span>
           <ChevronRight
             className={cn(
-              "hidden h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] transition-transform md:block",
+              "hidden h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] transition-transform lg:block",
               isOpen ? "rotate-90" : "",
             )}
           />
@@ -625,7 +625,7 @@ function Badge({ tone, active, value }: { tone: ChromeTone; active: boolean; val
   return (
     <span
       className={cn(
-        "hidden rounded-full px-2 py-0.5 text-[0.65rem] font-semibold md:inline-flex",
+        "hidden rounded-full px-2 py-0.5 text-[0.65rem] font-semibold lg:inline-flex",
         tone === "danger"
           ? "bg-red-500 text-white"
           : tone === "warning"
@@ -651,8 +651,8 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div
       className={cn(
-        "flex min-h-[5.5rem] items-center gap-3 border-b border-[var(--tessera-border)]",
-        collapsed ? "justify-center px-2" : "justify-center px-3 md:justify-start md:px-5",
+        "flex min-h-[5.5rem] items-center gap-3 border-b border-[var(--tessera-chrome-line)]",
+        collapsed ? "justify-center px-2" : "justify-center px-3 lg:justify-start lg:px-5",
       )}
     >
       <Link
@@ -672,7 +672,7 @@ function BrandHeader({ collapsed = false }: { collapsed?: boolean }) {
 // session control (role label + sign-out), not a static persona.
 function IdentityBlock() {
   return (
-    <div className="border-t border-[var(--tessera-border)] px-2 py-2.5 md:px-3">
+    <div className="border-t border-[var(--tessera-chrome-line)] px-2 py-2.5 lg:px-3">
       <AuthControl context="gated" />
     </div>
   );

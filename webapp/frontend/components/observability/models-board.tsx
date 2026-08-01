@@ -422,7 +422,7 @@ function CategoryHeatmap({ models }: { models: ModelStat[] }) {
                 return (
                   <td key={c} className="p-0.5">
                     <span
-                      className="flex h-4 w-7 items-center justify-center rounded-[2px] text-[0.5rem] text-black/70"
+                      className="flex h-4 w-7 items-center justify-center rounded-xs text-[0.5rem] text-black/70"
                       style={{ background: v == null ? "var(--muted)" : heatColor(v) }}
                       title={`${catLabel(c)}: ${v == null ? DASH : `${Math.round(v * 100)}%`}`}
                     >
@@ -727,7 +727,7 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
     ["best", "balanced", "economic", "avoid"].includes(v) ? tq(`models.verdict.${v}`) : v;
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between pb-1">
+      <CardHeader className="flex-row flex-wrap items-center justify-between pb-1">
         <CardTitle className="flex items-center gap-1.5 text-sm">
           {tq("models.table.title")}
           <QInfo title={tq("models.table.title")} k="modelTable" />

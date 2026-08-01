@@ -108,8 +108,7 @@ const nextItems = [
 
 const quickActions = [FileText, CalendarDays, FileText, Users, Clock3];
 
-const cardClass =
-  "rounded-[6px] border border-[#dcdee6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
+const cardClass = "rounded-md border border-[#dcdee6] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]";
 
 const defaultAssistantTab = "Préparer une relance";
 
@@ -800,9 +799,7 @@ function AssistantContextPanel({ compact = false }: { compact?: boolean }) {
   const items = compact ? copy.contextCompact : copy.context;
 
   return (
-    <section
-      className={cn("rounded-[6px] border border-[#dfe2ec] bg-white", compact ? "p-4" : "p-5")}
-    >
+    <section className={cn("rounded-md border border-[#dfe2ec] bg-white", compact ? "p-4" : "p-5")}>
       <div className="mb-3 flex items-center justify-between gap-4">
         <h3 className="!font-sans !text-[#071044] font-bold text-sm">{copy.ui.retainedContext}</h3>
         <button
@@ -818,7 +815,7 @@ function AssistantContextPanel({ compact = false }: { compact?: boolean }) {
           <div
             key={item}
             className={cn(
-              "flex items-center gap-2 rounded-[5px] bg-[#fbfbfd] px-3",
+              "flex items-center gap-2 rounded-sm bg-[#fbfbfd] px-3",
               compact ? "min-h-7 text-[0.72rem]" : "min-h-8",
             )}
           >
@@ -859,7 +856,7 @@ function AssistantThinkingIndicator({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[6px] border border-[#d8d1ff] bg-[#f5f2ff] text-[#071044] shadow-[0_10px_22px_rgba(96,72,255,0.1)]",
+        "relative overflow-hidden rounded-md border border-[#d8d1ff] bg-[#f5f2ff] text-[#071044] shadow-[0_10px_22px_rgba(96,72,255,0.1)]",
         compact ? "px-3 py-2.5" : "mb-4 px-4 py-3",
       )}
     >
@@ -910,7 +907,7 @@ function AssistantDraftPanel({
     .filter(Boolean);
 
   return (
-    <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
+    <section className="rounded-md border border-[#dfe2ec] bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="!font-sans !text-[#071044] font-bold text-sm">
           {copy.ui.customerReply}
@@ -920,7 +917,7 @@ function AssistantDraftPanel({
             </span>
           ) : null}
         </h3>
-        <div className="flex shrink-0 items-center gap-1 rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-1">
+        <div className="flex shrink-0 items-center gap-1 rounded-sm border border-[#dfe2ec] bg-[#fbfbfd] p-1">
           {(status === "loading" && content.versions.length === 0
             ? ["v1", "v2", "v3"].map((id) => ({ id, label: id.toUpperCase() }))
             : content.versions
@@ -931,7 +928,7 @@ function AssistantDraftPanel({
               disabled={status === "loading" || content.versions.length === 0}
               onClick={() => onSelectVersion(version.id)}
               className={cn(
-                "h-7 min-w-9 rounded-[4px] px-2 font-bold text-[0.68rem] transition",
+                "h-7 min-w-9 rounded-sm px-2 font-bold text-[0.68rem] transition",
                 selectedVersion?.id === version.id
                   ? "bg-[#6048ff] text-white shadow-[0_4px_10px_rgba(96,72,255,0.22)]"
                   : "text-[#071044]/70 hover:bg-white",
@@ -944,7 +941,7 @@ function AssistantDraftPanel({
       </div>
       <div
         className={cn(
-          "rounded-[5px] border border-[#dfe2ec] bg-white text-[#071044]",
+          "rounded-sm border border-[#dfe2ec] bg-white text-[#071044]",
           compact
             ? "min-h-[188px] px-3 py-3 text-xs leading-5"
             : "min-h-[132px] px-4 py-3 text-sm leading-6",
@@ -975,7 +972,7 @@ function AssistantVerificationPanel({
 }) {
   const copy = recouvrementProductCopy(useLocale() as Locale);
   return (
-    <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
+    <section className="rounded-md border border-[#dfe2ec] bg-white p-4">
       <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">{copy.ui.rules}</h3>
       <ul className="space-y-2.5 text-[#071044] text-xs">
         {status === "loading"
@@ -1016,7 +1013,7 @@ function AssistantContactRulePanel({
     isBlocked && !contactFrame.includes(copy.ui.noCall)
       ? [...contactFrame, copy.ui.noCall]
       : contactFrame;
-  const sectionClassName = "rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4";
+  const sectionClassName = "rounded-sm border border-[#dfe2ec] bg-[#fbfbfd] p-4";
   const rows = compact ? loadingRows.slice(0, 2) : loadingRows;
 
   return (
@@ -1112,7 +1109,7 @@ function AssistantFooterActions({
             type="button"
             onClick={() => onAction(action)}
             className={cn(
-              "inline-flex h-10 items-center justify-center gap-2 rounded-[5px] px-3 font-bold text-xs transition",
+              "inline-flex h-10 items-center justify-center gap-2 rounded-sm px-3 font-bold text-xs transition",
               compact ? "min-w-[132px]" : "px-4",
               primary
                 ? "bg-[linear-gradient(180deg,#e38a00,#cf7300)] text-white shadow-[0_10px_22px_rgba(217,119,0,0.22)] hover:bg-[#c96f00]"
@@ -1253,7 +1250,7 @@ function AssistantDrawer({
               aria-label={isPinned ? copy.ui.detach : copy.ui.pin}
               onClick={onTogglePinned}
               className={cn(
-                "grid place-items-center rounded-[5px] border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
+                "grid place-items-center rounded-sm border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
                 isPinned ? "h-7 w-7" : "h-8 w-8",
               )}
             >
@@ -1264,7 +1261,7 @@ function AssistantDrawer({
               aria-label={copy.ui.expand}
               onClick={onExpand}
               className={cn(
-                "grid place-items-center rounded-[5px] border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
+                "grid place-items-center rounded-sm border border-[#dfe2ec] text-[#071044] transition hover:bg-[#f7f8fb]",
                 isPinned ? "h-7 w-7" : "h-8 w-8",
               )}
             >
@@ -1275,7 +1272,7 @@ function AssistantDrawer({
               aria-label={copy.ui.close}
               onClick={onClose}
               className={cn(
-                "grid place-items-center rounded-[5px] text-[#071044] transition hover:bg-[#f7f8fb]",
+                "grid place-items-center rounded-sm text-[#071044] transition hover:bg-[#f7f8fb]",
                 isPinned ? "h-7 w-7" : "h-8 w-8",
               )}
             >
@@ -1338,7 +1335,7 @@ function AssistantDrawer({
             ) : (
               <AssistantVerificationPanel checks={checks} status={status} />
             )}
-            <section className="rounded-[6px] border border-[#dfe2ec] bg-white p-4">
+            <section className="rounded-md border border-[#dfe2ec] bg-white p-4">
               <h3 className="mb-3 !font-sans !text-[#071044] font-bold text-sm">
                 {copy.ui.suggestedActions}
               </h3>
@@ -1356,14 +1353,14 @@ function AssistantDrawer({
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <section className="grid gap-3 rounded-[6px] border border-[#dfe2ec] bg-white p-4 md:grid-cols-[minmax(0,1fr)_120px_100px_168px]">
+          <section className="grid gap-3 rounded-md border border-[#dfe2ec] bg-white p-4 md:grid-cols-[minmax(0,1fr)_120px_100px_168px]">
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#fbf0dd] font-bold text-[#d97700]">
                 MD
               </span>
               <div>
                 <p className="font-bold text-sm">M. D.</p>
-                <p className="mt-1 rounded-[5px] bg-[#ffe8e5] px-2 py-1 font-semibold text-[#f23932] text-xs">
+                <p className="mt-1 rounded-sm bg-[#ffe8e5] px-2 py-1 font-semibold text-[#f23932] text-xs">
                   {copy.ui.brokenPromise}
                 </p>
               </div>
@@ -1378,7 +1375,7 @@ function AssistantDrawer({
             </div>
             <div
               className={cn(
-                "rounded-[5px] px-3 py-2 text-xs",
+                "rounded-sm px-3 py-2 text-xs",
                 isBlockedContact ? "bg-[#fff1ef] text-[#a23b2a]" : "bg-[#e9f7e9] text-[#145b2b]",
               )}
             >
@@ -1402,7 +1399,7 @@ function AssistantDrawer({
                   type="button"
                   onClick={() => onSelectTab(tab)}
                   className={cn(
-                    "flex min-h-12 items-center justify-center gap-2 rounded-[5px] border px-3 font-bold text-xs transition",
+                    "flex min-h-12 items-center justify-center gap-2 rounded-sm border px-3 font-bold text-xs transition",
                     activeTab === tab
                       ? "border-[#b7aaff] bg-[#f4f1ff] text-[#6048ff]"
                       : "border-[#dfe2ec] bg-white text-[#071044] hover:bg-[#f7f8fb]",
@@ -1415,11 +1412,11 @@ function AssistantDrawer({
             })}
           </div>
 
-          <div className="mt-5 ml-auto max-w-[430px] rounded-[6px] bg-[#f0edff] px-5 py-4 text-[#071044] text-sm leading-6 shadow-[0_8px_18px_rgba(96,72,255,0.08)]">
+          <div className="mt-5 ml-auto max-w-[430px] rounded-md bg-[#f0edff] px-5 py-4 text-[#071044] text-sm leading-6 shadow-[0_8px_18px_rgba(96,72,255,0.08)]">
             {initialPrompt}
           </div>
 
-          <article className="mt-5 rounded-[6px] border border-[#dfe2ec] bg-white p-5 shadow-[0_12px_28px_rgba(7,16,68,0.05)]">
+          <article className="mt-5 rounded-md border border-[#dfe2ec] bg-white p-5 shadow-[0_12px_28px_rgba(7,16,68,0.05)]">
             <div className="mb-4 flex items-center gap-3 text-sm">
               <Sparkles
                 className={cn("h-5 w-5 text-[#6048ff]", status === "loading" && "animate-pulse")}
@@ -1437,12 +1434,12 @@ function AssistantDrawer({
               </button>
             </div>
             {error ? (
-              <div className="mb-4 rounded-[5px] border border-[#ffd2c9] bg-[#fff5f3] px-4 py-3 text-[#a23b2a] text-xs">
+              <div className="mb-4 rounded-sm border border-[#ffd2c9] bg-[#fff5f3] px-4 py-3 text-[#a23b2a] text-xs">
                 {error}
               </div>
             ) : null}
             {hasStructuredArtifact && content.rawResponse && status !== "loading" ? (
-              <div className="mb-4 rounded-[6px] bg-[#f0edff] px-4 py-3 text-[#071044] text-sm leading-6">
+              <div className="mb-4 rounded-md bg-[#f0edff] px-4 py-3 text-[#071044] text-sm leading-6">
                 {content.rawResponse}
               </div>
             ) : null}
@@ -1452,7 +1449,7 @@ function AssistantDrawer({
                 <AssistantContactRulePanel content={content} status={status} />
               ) : (
                 <>
-                  <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                  <section className="rounded-sm border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                     <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
                       {copy.tabs[4]}
                     </h3>
@@ -1475,7 +1472,7 @@ function AssistantDrawer({
                     />
                   ) : null}
                   {content.paymentPlan || status === "loading" ? (
-                    <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                    <section className="rounded-sm border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                       <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
                         {paymentPlanTitle}
                       </h3>
@@ -1488,7 +1485,7 @@ function AssistantDrawer({
                       )}
                     </section>
                   ) : null}
-                  <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+                  <section className="rounded-sm border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                     <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
                       {copy.ui.rules}
                     </h3>
@@ -1504,7 +1501,7 @@ function AssistantDrawer({
                   </section>
                 </>
               )}
-              <section className="rounded-[5px] border border-[#dfe2ec] bg-[#fbfbfd] p-4">
+              <section className="rounded-sm border border-[#dfe2ec] bg-[#fbfbfd] p-4">
                 <h3 className="mb-2 !font-sans !text-[#071044] font-bold text-sm">
                   {copy.ui.suggestedActions}
                 </h3>
@@ -1551,7 +1548,7 @@ function AssistantDrawer({
           <>
             <AssistantFooterActions actions={footerActions} onAction={onAction} />
             <form
-              className="mt-4 flex min-h-[56px] items-center gap-3 rounded-[5px] border border-[#b7aaff] bg-white px-4 shadow-[0_8px_18px_rgba(96,72,255,0.06)]"
+              className="mt-4 flex min-h-[56px] items-center gap-3 rounded-sm border border-[#b7aaff] bg-white px-4 shadow-[0_8px_18px_rgba(96,72,255,0.06)]"
               onSubmit={(event) => {
                 event.preventDefault();
                 onSendMessage();
@@ -1568,7 +1565,7 @@ function AssistantDrawer({
                 type="submit"
                 aria-label={copy.ui.sendQuestion}
                 disabled={status === "loading" || inputValue.trim().length === 0}
-                className="grid h-10 w-10 place-items-center rounded-[5px] bg-[#6048ff] text-white transition disabled:bg-[#c8bbff]"
+                className="grid h-10 w-10 place-items-center rounded-sm bg-[#6048ff] text-white transition disabled:bg-[#c8bbff]"
               >
                 <Send className="h-5 w-5" />
               </button>
@@ -2288,14 +2285,14 @@ export function RecouvrementProductExperience() {
                 aria-label={copy.ui.searchAria}
                 placeholder={copy.ui.searchPlaceholder}
                 readOnly
-                className="h-11 w-full cursor-default rounded-[4px] border border-[#d7d9e1] bg-white pr-4 pl-12 text-[#050816] text-sm outline-none transition placeholder:text-[#5d6275] focus:border-[#b99245] focus:ring-2 focus:ring-[#b99245]/20"
+                className="h-11 w-full cursor-default rounded-sm border border-[#d7d9e1] bg-white pr-4 pl-12 text-[#050816] text-sm outline-none transition placeholder:text-[#5d6275] focus:border-[#b99245] focus:ring-2 focus:ring-[#b99245]/20"
               />
             </label>
             <div className="flex items-center gap-4 sm:gap-6">
               <button
                 type="button"
                 aria-label={copy.ui.help}
-                className="hidden flex-col items-center gap-1 rounded-[4px] text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35 sm:flex"
+                className="hidden flex-col items-center gap-1 rounded-sm text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35 sm:flex"
               >
                 <CircleHelp className="h-[22px] w-[22px]" />
                 {copy.ui.help}
@@ -2306,7 +2303,7 @@ export function RecouvrementProductExperience() {
                   "{count}",
                   String(counters?.open ?? 0),
                 )}
-                className="relative flex flex-col items-center gap-1 rounded-[4px] text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
+                className="relative flex flex-col items-center gap-1 rounded-sm text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <Bell className="h-[22px] w-[22px]" />
                 {counters && counters.open > 0 ? (
@@ -2319,7 +2316,7 @@ export function RecouvrementProductExperience() {
               <button
                 type="button"
                 aria-label={copy.ui.accountAria}
-                className="flex items-center gap-3 rounded-[4px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
+                className="flex items-center gap-3 rounded-sm outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-[#fbf0dd] font-bold text-[#050816]">
                   JD
@@ -2347,7 +2344,7 @@ export function RecouvrementProductExperience() {
                     key={copy.nav[index]}
                     type="button"
                     className={cn(
-                      "flex min-h-[52px] items-center gap-4 rounded-[5px] px-4 text-left font-bold text-[0.92rem] transition",
+                      "flex min-h-[52px] items-center gap-4 rounded-sm px-4 text-left font-bold text-[0.92rem] transition",
                       active
                         ? "bg-[#fbf0dd] text-[#050816] shadow-[inset_3px_0_0_#b99245]"
                         : "text-[#333] hover:bg-[#f5f4f2]",
@@ -2405,7 +2402,7 @@ export function RecouvrementProductExperience() {
                     <section className="min-w-0">
                       <section className={cn(cardClass, "p-6 sm:p-8")}>
                         <div className="mb-5">
-                          <span className="inline-flex rounded-[4px] bg-[#fff3e4] px-3 py-1.5 font-bold text-[#d97700] text-xs uppercase">
+                          <span className="inline-flex rounded-sm bg-[#fff3e4] px-3 py-1.5 font-bold text-[#d97700] text-xs uppercase">
                             {copy.ui.now}
                           </span>
                         </div>
@@ -2419,7 +2416,7 @@ export function RecouvrementProductExperience() {
                                 <h2 className="!font-sans !text-[#071044] font-bold text-[1.5rem] leading-8 tracking-[0]">
                                   RC-2048
                                 </h2>
-                                <span className="shrink-0 rounded-[6px] bg-[#ffe8e5] px-2.5 py-1 font-medium text-[#f23932] text-[0.68rem]">
+                                <span className="shrink-0 rounded-md bg-[#ffe8e5] px-2.5 py-1 font-medium text-[#f23932] text-[0.68rem]">
                                   {copy.ui.brokenPromise}
                                 </span>
                               </div>
@@ -2431,7 +2428,7 @@ export function RecouvrementProductExperience() {
                                   {copy.ui.delay} {priorityCase?.days_late ?? "—"} {copy.ui.days}
                                 </span>
                               </div>
-                              <div className="mt-4 inline-flex items-center gap-3 rounded-[5px] bg-[#e9f7e9] px-4 py-2 text-[#145b2b] text-[0.86rem] leading-[1.15rem]">
+                              <div className="mt-4 inline-flex items-center gap-3 rounded-sm bg-[#e9f7e9] px-4 py-2 text-[#145b2b] text-[0.86rem] leading-[1.15rem]">
                                 <CircleCheck className="h-4 w-4 shrink-0" />
                                 <span>
                                   {copy.ui.contactWindow
@@ -2473,14 +2470,14 @@ export function RecouvrementProductExperience() {
                           <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap">
                             <button
                               type="button"
-                              className="inline-flex h-11 w-[196px] items-center justify-center gap-3 rounded-[8px] bg-[linear-gradient(180deg,#e38a00,#cf7300)] font-bold text-sm text-white shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
+                              className="inline-flex h-11 w-[196px] items-center justify-center gap-3 rounded-lg bg-[linear-gradient(180deg,#e38a00,#cf7300)] font-bold text-sm text-white shadow-[0_10px_22px_rgba(217,119,0,0.22)] transition hover:bg-[#c96f00]"
                             >
                               {copy.ui.prepareSchedule}
                               <ChevronRight className="h-5 w-5" />
                             </button>
                             <button
                               type="button"
-                              className="inline-flex h-11 w-[122px] items-center justify-center gap-3 rounded-[8px] border border-[#cfd4e3] bg-white font-semibold text-sm transition hover:bg-[#f7f8fb]"
+                              className="inline-flex h-11 w-[122px] items-center justify-center gap-3 rounded-lg border border-[#cfd4e3] bg-white font-semibold text-sm transition hover:bg-[#f7f8fb]"
                             >
                               {copy.ui.postpone}
                               <Clock3 className="h-5 w-5" />
@@ -2497,7 +2494,7 @@ export function RecouvrementProductExperience() {
                         </div>
                       </section>
 
-                      <section className="relative mt-8 rounded-[6px] border border-[#c8bbff] bg-[linear-gradient(120deg,#fbfaff,#f9f7ff)] py-6 pr-6 pl-5 shadow-[0_14px_30px_rgba(96,72,255,0.055)]">
+                      <section className="relative mt-8 rounded-md border border-[#c8bbff] bg-[linear-gradient(120deg,#fbfaff,#f9f7ff)] py-6 pr-6 pl-5 shadow-[0_14px_30px_rgba(96,72,255,0.055)]">
                         <AssistantCardBloom />
                         <div className="relative z-10 mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                           <div>
@@ -2515,7 +2512,7 @@ export function RecouvrementProductExperience() {
                           <button
                             type="button"
                             onClick={() => openAssistant()}
-                            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[7px] border border-[#9d8cff] bg-white px-4 font-bold text-[#6048ff] text-xs shadow-[0_8px_18px_rgba(96,72,255,0.12)] transition hover:bg-[#f4f1ff]"
+                            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-[#9d8cff] bg-white px-4 font-bold text-[#6048ff] text-xs shadow-[0_8px_18px_rgba(96,72,255,0.12)] transition hover:bg-[#f4f1ff]"
                           >
                             {copy.ui.openAssistant}
                             <ChevronRight className="h-4 w-4" />
@@ -2527,7 +2524,7 @@ export function RecouvrementProductExperience() {
                               key={tab}
                               type="button"
                               onClick={() => openAssistant(tab)}
-                              className="flex h-[112px] items-center gap-3 overflow-hidden rounded-[5px] border border-[#e2defd] bg-white px-3.5 py-3 text-left shadow-[0_8px_18px_rgba(96,72,255,0.035)] transition hover:border-[#b7aaff] hover:bg-[#fbfaff]"
+                              className="flex h-[112px] items-center gap-3 overflow-hidden rounded-sm border border-[#e2defd] bg-white px-3.5 py-3 text-left shadow-[0_8px_18px_rgba(96,72,255,0.035)] transition hover:border-[#b7aaff] hover:bg-[#fbfaff]"
                             >
                               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f0edff] text-[#6048ff]">
                                 <Icon className="h-5 w-5" />
@@ -2555,7 +2552,7 @@ export function RecouvrementProductExperience() {
                             <button
                               key={counterKey}
                               type="button"
-                              className="flex h-[154px] flex-col rounded-[6px] border border-[#dfe2ec] bg-white p-6 text-left shadow-[0_2px_8px_rgba(0,0,0,0.055)] transition hover:border-[#d97700]/40 hover:shadow-[0_8px_20px_rgba(7,16,68,0.07)]"
+                              className="flex h-[154px] flex-col rounded-md border border-[#dfe2ec] bg-white p-6 text-left shadow-[0_2px_8px_rgba(0,0,0,0.055)] transition hover:border-[#d97700]/40 hover:shadow-[0_8px_20px_rgba(7,16,68,0.07)]"
                             >
                               <span className="flex items-center gap-4">
                                 <span
@@ -2586,7 +2583,7 @@ export function RecouvrementProductExperience() {
                         </div>
                       </section>
 
-                      <section className="mt-10 flex min-h-[72px] flex-col items-start gap-3 rounded-[6px] border border-[#dfe2ec] bg-white px-6 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.055)] sm:flex-row sm:items-center">
+                      <section className="mt-10 flex min-h-[72px] flex-col items-start gap-3 rounded-md border border-[#dfe2ec] bg-white px-6 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.055)] sm:flex-row sm:items-center">
                         <Info className="mr-4 h-5 w-5" />
                         <span className="mr-6 font-bold">{copy.ui.todayNote}</span>
                         <span className="hidden h-8 w-px bg-[#dfe2ec] sm:block" />
@@ -2645,7 +2642,7 @@ export function RecouvrementProductExperience() {
                             RC-2048
                           </span>
                         </div>
-                        <div className="mb-6 flex items-start gap-4 rounded-[5px] bg-[#edf9df] px-5 py-5 text-[#145b2b]">
+                        <div className="mb-6 flex items-start gap-4 rounded-sm bg-[#edf9df] px-5 py-5 text-[#145b2b]">
                           <CircleCheck className="mt-0.5 h-5 w-5" />
                           <p className="font-semibold text-sm">
                             {copy.ui.contactAllowedToday}
@@ -2674,7 +2671,7 @@ export function RecouvrementProductExperience() {
                       <button
                         type="button"
                         onClick={() => openAssistant("Vérifier une règle")}
-                        className="flex w-full items-center gap-4 rounded-[6px] border border-[#f1d8ab] bg-[linear-gradient(90deg,#fff8ec,#fff2de)] p-6 text-left shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition hover:bg-[#ffefcf]"
+                        className="flex w-full items-center gap-4 rounded-md border border-[#f1d8ab] bg-[linear-gradient(90deg,#fff8ec,#fff2de)] p-6 text-left shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition hover:bg-[#ffefcf]"
                       >
                         <Sparkles className="h-7 w-7 text-[#071044]" />
                         <span>

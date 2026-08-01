@@ -8,7 +8,15 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
       ref={ref}
       data-slot="card"
       className={cn(
-        "rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--card-foreground)] shadow-[var(--shadow-card)]",
+        // `min-w-0` is load-bearing, not tidiness. A grid or flex item defaults to
+        // `min-width: auto`, which means it refuses to shrink below its content's
+        // min-content width. Measured at 390px on /surveiller/qualite-ia: the grid
+        // was correctly responsive (one column below sm) and five chart cards still
+        // rendered 324px wide inside a 278px column, clipped by an ancestor that
+        // hides its overflow — so the right-hand third of five charts was simply
+        // unreachable on a phone. A card that shrinks is better than a card you
+        // cannot scroll to.
+        "min-w-0 rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--card-foreground)] shadow-[var(--shadow-card)]",
         className,
       )}
       {...props}
