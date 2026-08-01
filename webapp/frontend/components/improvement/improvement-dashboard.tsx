@@ -29,6 +29,7 @@ import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchImprovement } from "@/lib/api/client";
 import type { Opportunity } from "@/lib/api/schemas";
+import { useWindowStore } from "@/lib/stores/window-store";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
@@ -216,9 +217,13 @@ export function ImprovementDashboard() {
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
+  // The window LENGTH, from the header's period selector. This page SHOWS that selector, so
+  // its posture must be the posture over the selected period — a control that steers nothing
+  // is worse than no control, because it is read as if it did.
+  const period = useWindowStore((st) => st.period);
   const q = useQuery({
-    queryKey: ["improvement", locale, asOf ?? null],
-    queryFn: ({ signal }) => fetchImprovement(locale, asOf, signal),
+    queryKey: ["improvement", locale, asOf ?? null, period],
+    queryFn: ({ signal }) => fetchImprovement(locale, asOf, signal, period),
     refetchInterval: historyMode ? false : POLL,
   });
   const d = q.data;

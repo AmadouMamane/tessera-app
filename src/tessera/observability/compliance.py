@@ -286,7 +286,7 @@ def _risk(status: str) -> str:
     return {"conformant": "low", "partial": "medium", "non_conformant": "high"}[status]
 
 
-def _signal_values() -> dict[str, float]:
+def _signal_values(at: str | None = None, days: float | None = None) -> dict[str, float]:
     """Read the real runtime signals, each reduced to a 0..1 'better' score.
 
     Every signal is wrapped so a single failing probe never breaks the page.
@@ -299,10 +299,10 @@ def _signal_values() -> dict[str, float]:
         except Exception as exc:  # never break the dashboard
             sys.stderr.write(f"tessera.observability.compliance: {key} failed: {exc}\n")
 
-    bundles = replay_mod.recent_bundles()
+    bundles = _windowed_bundles(at, days)
     citation_turns = [(b.original_answer, b.context) for b in bundles]
     pii_turns = [(b.original_answer, f"{b.question}\n{b.context}") for b in bundles]
-    scores = read_scores()
+    scores = read_scores(at, days=days)
 
     ai_signals = ai_act_mod.AIActSignals(
         disclosure_enabled=True,
@@ -454,14 +454,16 @@ def _legal_business_signals() -> list[BusinessLegalSignal]:
     return rows
 
 
-def compute_compliance(lang: str = "fr") -> ComplianceReport:
+def compute_compliance(
+    lang: str = "fr", at: str | None = None, days: float | None = None
+) -> ComplianceReport:
     """Assemble the compliance posture from the real runtime signals.
 
     ``lang`` (fr / de / en) localizes the framework labels, control / obligation
     names and the per-tab governance catalogues; signal values and IDs stay
     verbatim.
     """
-    values = _signal_values()
+    values = _signal_values(at, days)
     score_series, score_delta = _posture_trend()
     business_legal_signals = _legal_business_signals()
     controls: list[Control] = []
@@ -576,3 +578,18 @@ def compute_compliance(lang: str = "fr") -> ComplianceReport:
         score_delta=score_delta,
         tabs=build_tabs(lang),
     )
+
+
+def _windowed_bundles(at: str | None, days: float | None) -> list[replay_mod.ReplayBundle]:
+    """Captured turns for a scope — the durable store when a period narrows the read.
+
+    The live view is a deque bounded at 100 bundles, a bound on COUNT: filtering it by time
+    answers "whatever those hundred turns happen to span", and answers 30 days and 24 hours
+    identically the moment traffic is thin.
+    """
+    if days is None:
+        return replay_mod.recent_bundles(at)
+    from tessera.observability.spine.scope import Scope
+
+    scope = Scope(at=at, period_days=days)
+    return [b for b in replay_mod.persisted_bundles(at) if scope.within(b.captured_at)]

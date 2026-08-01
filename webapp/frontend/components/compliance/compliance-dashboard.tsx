@@ -38,6 +38,7 @@ import type {
   ComplianceObligation,
   NonConformity,
 } from "@/lib/api/schemas";
+import { useWindowStore } from "@/lib/stores/window-store";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
@@ -316,9 +317,13 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
   const { historyMode } = temporal;
   const railTimeline = useRailTimeline();
   const locale = useLocale();
+  // The window LENGTH, from the header's period selector. This page SHOWS that selector, so
+  // its posture must be the posture over the selected period — a control that steers nothing
+  // is worse than no control, because it is read as if it did.
+  const period = useWindowStore((st) => st.period);
   const q = useQuery({
-    queryKey: ["compliance", locale],
-    queryFn: ({ signal }) => fetchCompliance(locale, signal),
+    queryKey: ["compliance", locale, period],
+    queryFn: ({ signal }) => fetchCompliance(locale, signal, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });

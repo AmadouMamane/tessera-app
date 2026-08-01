@@ -41,7 +41,9 @@ router = APIRouter()
 
 
 @router.get("/observability/compliance")
-def observability_compliance(lang: str = "fr") -> dict[str, object]:
+def observability_compliance(
+    lang: str = "fr", at: str | None = None, days: str | None = None
+) -> dict[str, object]:
     """Regulatory compliance posture derived from the real runtime signals (#07).
 
     Maps the live AI-Act, conformance, citation, disclosure, PII, refusal,
@@ -51,7 +53,8 @@ def observability_compliance(lang: str = "fr") -> dict[str, object]:
     the dashboard never errors.
     """
     try:
-        return {"available": True, **asdict(compliance_mod.compute_compliance(lang))}
+        report = compliance_mod.compute_compliance(lang, at, parse_period_days(days))
+        return {"available": True, **asdict(report)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.compliance: failed: {exc}\n")
         return {"available": False}

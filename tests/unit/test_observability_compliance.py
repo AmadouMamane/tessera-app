@@ -31,7 +31,9 @@ def test_compute_compliance_is_internally_consistent(monkeypatch) -> None:
         "firewall": 0.75,  # partial
         "erasure": 0.8,  # partial
     }
-    monkeypatch.setattr(comp, "_signal_values", lambda: values)
+    # Two args now: the as-of instant and the window length. The page shows a period
+    # selector, so the posture it reports is the posture over the selected period.
+    monkeypatch.setattr(comp, "_signal_values", lambda _at=None, _days=None: values)
     report = comp.compute_compliance()
 
     # Every catalogue control whose signal is present is scored.
@@ -66,7 +68,7 @@ def test_compute_compliance_all_conformant() -> None:
     import pytest
 
     with pytest.MonkeyPatch.context() as m:
-        m.setattr(comp, "_signal_values", lambda: values)
+        m.setattr(comp, "_signal_values", lambda _at=None, _days=None: values)
         report = comp.compute_compliance()
     assert report.n_non_conformant == 0
     assert report.n_partial == 0

@@ -946,9 +946,17 @@ export async function fetchFirewallEfficacy(signal?: AbortSignal): Promise<Firew
 export async function fetchCompliance(
   lang: string,
   signal?: AbortSignal,
+  days?: string,
 ): Promise<ComplianceReport> {
-  const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
-  return request(`/observability/compliance${q}`, { signal }, ComplianceReportSchema);
+  const params = new URLSearchParams();
+  if (lang) params.set("lang", lang);
+  if (days) params.set("days", days);
+  const q = params.toString();
+  return request(
+    `/observability/compliance${q ? `?${q}` : ""}`,
+    { signal },
+    ComplianceReportSchema,
+  );
 }
 
 /** Operational reliability & cost posture derived from the real signals (#08). */
@@ -969,9 +977,11 @@ export async function fetchImprovement(
   lang: string,
   at?: string | null,
   signal?: AbortSignal,
+  days?: string,
 ): Promise<ImprovementReport> {
   const params = new URLSearchParams({ lang });
   if (at) params.set("at", at);
+  if (days) params.set("days", days);
   return request(`/observability/improvement?${params}`, { signal }, ImprovementReportSchema);
 }
 

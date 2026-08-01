@@ -33,6 +33,7 @@ from tessera.observability.read_snapshot import (
     read_snapshot,
 )
 from tessera.observability.spine.adapters import read_scores
+from tessera.observability.spine.scope import parse_period_days
 
 router = APIRouter()
 
@@ -130,7 +131,9 @@ def observability_business_runs(
 
 
 @router.get("/observability/improvement")
-def observability_improvement(lang: str = "fr", at: str | None = None) -> dict[str, object]:
+def observability_improvement(
+    lang: str = "fr", at: str | None = None, days: str | None = None
+) -> dict[str, object]:
     """Continuous-improvement posture mined from the telemetry roadmap (#09).
 
     Turns the real roadmap backlog (low-faithfulness turns, unknown intents,
@@ -140,7 +143,8 @@ def observability_improvement(lang: str = "fr", at: str | None = None) -> dict[s
     Degrades to ``available: false`` on failure.
     """
     try:
-        return {"available": True, **asdict(improvement_mod.compute_improvement(lang, at))}
+        report = improvement_mod.compute_improvement(lang, at, parse_period_days(days))
+        return {"available": True, **asdict(report)}
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.improvement: failed: {exc}\n")
         return {"available": False}

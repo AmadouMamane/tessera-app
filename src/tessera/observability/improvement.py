@@ -193,7 +193,9 @@ def _valid_at(at: str | None) -> str | None:
     return at
 
 
-def compute_improvement(lang: str = "fr", at: str | None = None) -> ImprovementReport:
+def compute_improvement(
+    lang: str = "fr", at: str | None = None, days: float | None = None
+) -> ImprovementReport:
     """Assemble the continuous-improvement posture from the real telemetry.
 
     Args:
@@ -201,10 +203,13 @@ def compute_improvement(lang: str = "fr", at: str | None = None) -> ImprovementR
         at: Optional ISO instant — scores, replay bundles and eval runs are then
             read as of T. Corpus freshness stays live (the corpus files carry no
             history); ``None`` or malformed reads live.
+        days: Optional window length. The page shows a period selector, so the
+            posture it reports must be the posture over the period selected —
+            not over all of history under a header that says otherwise.
     """
     lang = _norm_lang(lang)
     at = _valid_at(at)
-    scores = read_scores(at)
+    scores = read_scores(at, days=days)
     n_turns = 0
     n_low = 0
     languages_low: dict[str, int] = {}
