@@ -171,6 +171,24 @@ export const CONTROL_IDS: readonly ControlId[] = [
   "intent",
 ] as const;
 
+/**
+ * WHY a control has no value — four situations that were one word.
+ *
+ * "Indisponible" pooled all of these, and they demand four different actions:
+ *
+ * · `no-sample` — the reader works, the window is empty. Wait, or widen the window.
+ * · `read-failed` — the source answered "I could not measure" (`available: false`).
+ *   Investigate the source. Rendering this as `0 %` — which `?? 0` did on `securite-privacy`
+ *   — turns a failed probe into the best possible result.
+ * · `no-reader` — the catalogue declares the signal; no code reads it. Build the reader.
+ * · `planned` — declared as a design intention, never implemented. Nothing to fix today.
+ *
+ * The condition that produced the `na` always knew which one it was; the row had nowhere to
+ * put it. ADR 0026's corollary: a witness that cannot see reports a blind spot — and saying
+ * *where* the blindness is, is the whole content of that report.
+ */
+export type Unavailability = "no-sample" | "read-failed" | "no-reader" | "planned";
+
 /** One control's measurement at a point in time, or its honest absence. */
 export interface ControlReading {
   id: ControlId;
@@ -194,6 +212,8 @@ export interface ControlReading {
   calibrated: boolean;
   /** True when the signal has no sample: value is `"—"`, state is neutral. */
   noData: boolean;
+  /** Why there is no value. `null` exactly when `noData` is false. */
+  unavailable: Unavailability | null;
 }
 
 /**
@@ -239,6 +259,16 @@ interface ControlSample {
   target?: { value: number; text: string; direction: "higher" | "lower" };
   /** Severity override where the raw distance to target is not the right scale. */
   severity?: number;
+  /**
+   * Why the sample is empty, when the source can distinguish it from "nothing happened".
+   *
+   * Three sources carry an `available` flag — the judge calibration, the failure clusterer and
+   * the embedding-inversion probe — and `available: false` means the measurement did not run.
+   * That is NOT an empty window, and folding it into one is how an unrun probe came to render
+   * as `0 %` on `securite-privacy`: the most reassuring number a security control can show,
+   * from a check that never happened.
+   */
+  unavailable?: Unavailability;
 }
 
 const pct = (v: number, digits = 0): string => `${(v * 100).toFixed(digits)}%`;
@@ -560,6 +590,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
         n,
         severity: Math.min(rate * 5, 1),
         detail: { key: "count", values: { hit: String(inv.n_recoverable ?? 0), n: String(n) } },
+        unavailable: inv.available ? undefined : "read-failed",
       };
     },
   },
@@ -602,6 +633,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
         n,
         severity: Math.max(0, 0.6 - kappa),
         detail: { key: "agreement", values: { agreement: pct(a.agreement ?? 0) } },
+        unavailable: a.available ? undefined : "read-failed",
       };
     },
   },
@@ -692,6 +724,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
         text: String(c.n_failures ?? 0),
         n,
         detail: { key: "themes", values: { n: String(c.k ?? 0) } },
+        unavailable: c.available ? undefined : "read-failed",
       };
     },
   },
@@ -858,6 +891,9 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
       asOfCapable: spec.asOfCapable,
       calibrated: spec.calibrated,
       noData: true,
+      // The reader's own answer wins: only it can tell "the probe did not run" from "the
+      // window is empty". Absent that, an empty sample is an empty window.
+      unavailable: sample.unavailable ?? "no-sample",
     };
   }
 
@@ -878,6 +914,7 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
     asOfCapable: spec.asOfCapable,
     calibrated: spec.calibrated,
     noData: false,
+    unavailable: null,
   };
 }
 

@@ -110,6 +110,7 @@ import {
   fetchRuns,
   fetchSLO,
   fetchScoreSeries,
+  fetchSignalCoverage,
   fetchSignalStatusTrend,
   fetchToolValidity,
   fetchToxicity,
@@ -128,11 +129,34 @@ import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const POLL_MS = 5_000;
 
-// The Qualité IA page covers 42 of the 200-signal global catalogue (normative — see
-// docs/ui-reference/qualite-ia-ui-reference/README.md). This is a coverage framing,
-// not a live count, so it is a constant rather than a fabricated metric.
-const QUALITY_SIGNALS = 42;
-const QUALITY_CATALOGUE = 200;
+/**
+ * The signal funnel, measured. There used to be two constants here —
+ * `QUALITY_SIGNALS = 42` and `QUALITY_CATALOGUE = 200` — read from nothing, and on 2026-08-01
+ * every one of their numbers was wrong: 44 catalogue signals declare this page, the catalogue
+ * holds 202, and 19 rows actually render.
+ *
+ * The comment beside them was candid ("a coverage framing, not a live count"), which is exactly
+ * the problem: the screen said nothing of the sort, and an operator cannot read a comment.
+ *
+ * "Covers 42 of 200" was also the wrong SHAPE of claim. 124 of the 202 are `planned` — designed,
+ * never built — so a ratio against the whole catalogue measures a page against work that does
+ * not exist. What answers the operator's real question ("why only three critical signals, why
+ * twelve unavailable?") is the funnel: declared → active → on this page → wired → sampled →
+ * breaching. Each stage loses signals for a DIFFERENT reason, and only the last two are alarms.
+ */
+interface SignalFunnel {
+  /** Declared in `signal_catalog.yaml`, and how many were ever implemented. */
+  catalogue: number;
+  active: number;
+  /** Catalogue signals whose declared home is this page. */
+  declared: number;
+  /** Rows this page can actually build — a reader exists in code. */
+  wired: number;
+  /** …of which returned a sample in the window. */
+  sampled: number;
+  /** …of which breach their bar. */
+  breaching: number;
+}
 
 const TAB_DEFS = ["overview", "signals", "runs", "failed", "models", "judge"] as const;
 type TabKey = (typeof TAB_DEFS)[number];
@@ -513,6 +537,28 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
    * Reading it from the URL rather than from `selectedSignal` is what makes the link work on a
    * cold load and survive a refresh — click state does not exist yet when the page arrives.
    */
+  /**
+   * The funnel, counted from the rows this page ACTUALLY produced.
+   *
+   * The last four stages are facts about the screen, so they are counted where the screen is
+   * built — asking the backend for them would repeat the constants' mistake in a place that
+   * cannot see the screen. The first two come from the catalogue, which the backend ships.
+   */
+  const coverage = useQuery({
+    queryKey: ["signal-coverage"],
+    queryFn: ({ signal }) => fetchSignalCoverage(signal),
+    staleTime: Number.POSITIVE_INFINITY, // the catalogue is shipped with the image
+  });
+  const cat = coverage.data?.catalogue;
+  const signalFunnel: SignalFunnel = {
+    catalogue: cat?.total ?? 0,
+    active: cat?.active ?? 0,
+    declared: cat?.on_quality_page ?? 0,
+    wired: signalRows.length,
+    sampled: signalRows.filter((r) => r.status !== "na").length,
+    breaching: signalRows.filter((r) => r.status === "crit").length,
+  };
+
   const focusedSignal = readSignalFocus(searchParams);
   const focusedKey =
     signalRows.find((r) => registryIdFor(r.key) === focusedSignal)?.key ??
@@ -535,7 +581,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
       generated_at: new Date().toISOString(),
       page: "quality",
       window: tq("temporal.window"),
-      signals_covered: `${QUALITY_SIGNALS}/${QUALITY_CATALOGUE}`,
+      // The whole funnel, not a ratio: an evidence bundle that says "42/200" invites the
+      // reader to conclude the other 158 are failing, when 124 of them were never built.
+      signals: signalFunnel,
       slo: slo.data ?? null,
       refusal: refusal.data ?? null,
       conformance: conformance.data ?? null,
@@ -574,7 +622,13 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="flex min-w-0 items-center gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
             <Gauge className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
-            <span className="truncate">{tq("rail.signals", { n: QUALITY_SIGNALS })}</span>
+            <span className="truncate">
+              {tq("rail.signalsFunnel", {
+                sampled: signalFunnel.sampled,
+                wired: signalFunnel.wired,
+                declared: signalFunnel.declared,
+              })}
+            </span>
           </span>
           {/* Wraps below 1024: four buttons plus the descriptor need ~840px, so on a
               tablet or a phone this row used to run 190-454px past the card with no
@@ -731,7 +785,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               <SignalKpis
                 rows={signalRows}
                 trend={signalStatusTrend.data}
-                catalogue={QUALITY_CATALOGUE}
+                catalogue={signalFunnel.catalogue}
               />
               <SignalsTable rows={signalRows} selectedKey={focusedKey} onSelect={focusSignal} />
               <div className="grid gap-2 lg:grid-cols-3">
@@ -866,7 +920,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
         </div>
       ) : null}
 
-      <StatusBar release={releaseStatus.data} />
+      <StatusBar release={releaseStatus.data} signalsWired={signalFunnel.wired} />
     </div>
   );
 }
@@ -875,7 +929,14 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
  * of the content — not `sticky`, which left it floating mid-scroll and masking
  * the rows behind it once the page grew past one viewport. `mt-auto` keeps it at
  * the bottom when the content is short. */
-function StatusBar({ release }: { release: ReleaseStatus | undefined }) {
+function StatusBar({
+  release,
+  signalsWired,
+}: {
+  release: ReleaseStatus | undefined;
+  /** Rows this page can build — a COUNT, not the constant 42 that used to sit here. */
+  signalsWired: number;
+}) {
   const tq = useTranslations("quality");
   const dataset = release?.current ? `Llama · ${release.current.version}` : "—";
   const updated = release?.current?.date ?? "—";
@@ -885,7 +946,7 @@ function StatusBar({ release }: { release: ReleaseStatus | undefined }) {
     { icon: ShieldCheck, label: tq("statusbar.truthChain") },
     { icon: Landmark, label: tq("statusbar.truthSource") },
     { icon: CalendarClock, label: `${tq("statusbar.lastUpdate")} : ${updated}` },
-    { icon: ListChecks, label: tq("statusbar.signals", { n: QUALITY_SIGNALS }) },
+    { icon: ListChecks, label: tq("statusbar.signals", { n: signalsWired }) },
   ];
   return (
     <div className="mt-auto -mx-3 flex h-9 items-center gap-4 overflow-hidden border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)]">

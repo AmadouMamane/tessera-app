@@ -361,7 +361,9 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # breakdown makes (/observability/fleet + /observability/fleet-snapshot) returned in one
     # round-trip by the SAME handlers; both halves are already on this public surface and
     # neither carries customer subject data.
-    assert len(public) == 130
+    # 131 (2026-08-01): GET /observability/signal-coverage — a count over the catalogue file
+    # shipped inside the image. No store, no subject, no scope.
+    assert len(public) == 131
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

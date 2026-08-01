@@ -6,12 +6,11 @@
  *
  * ## Class C — the counter that counts nothing
  *
- * `observability-dashboard.tsx` renders "42 of the 200-signal catalogue" from two `const`
- * declarations. Neither is read from anything. On 2026-08-01 the page declared **44** signals,
- * the catalogue held **202**, and only **18** had a reader in code — so the header was wrong on
- * all three of its numbers, and had been for as long as it existed. The comment beside it is
- * candid ("a coverage framing, not a live count"), which is precisely the problem: the screen
- * says nothing of the sort, and an operator has no access to the comment.
+ * `observability-dashboard.tsx` headed itself "42 of the 200-signal catalogue" from two `const`
+ * declarations read from nothing. All three numbers were wrong: 44 catalogue signals declare
+ * that page, the catalogue holds 202, and 19 rows render. The comment beside them was candid
+ * ("a coverage framing, not a live count"), which is precisely the problem — the screen said
+ * nothing of the sort, and an operator has no access to a comment.
  *
  * A constant that configures the UI is fine — `PAGE_SIZE`, `MAX_PAGE_BUTTONS`, `COLS`. A
  * constant that *is a count of measured things* is a claim, and a claim must be derived. The
@@ -20,18 +19,21 @@
  *
  * ## Class D — "Indisponible" that will not say why
  *
- * `signals-table.tsx` poses the `na` status from sixteen places, for at least two genuinely
- * different reasons — the sample was empty (`n_turns === 0`), or the source could not be read
- * (`!available`) — and the row cannot tell them apart, because `SignalRow` has nowhere to put
- * the reason. The operator sees one word covering "nothing happened yet", "this signal has no
- * reader at all", "the read failed" and "planned, never implemented". Those demand four
- * different actions and get one.
+ * `signals-table.tsx` posed `na` from seventeen places for at least two genuinely different
+ * reasons — an empty sample (`n_turns === 0`) versus a source that could not be read
+ * (`!available`) — and the row could not tell them apart, because `SignalRow` had nowhere to
+ * put the reason. One word covered "nothing happened yet", "this signal has no reader at all",
+ * "the read failed" and "planned, never implemented". Four situations, four different actions,
+ * one badge.
  *
  * ADR 0026's corollary is the whole of it: a witness that cannot see reports a blind spot, it
- * does not report "ok". `na` is the cockpit reporting a blind spot without saying where.
+ * does not report "ok" — and *where* the blindness is IS the content of that report.
  *
- * Both populations are frozen at their exact measured size so they can only shrink. Lot 5 of
- * `docs/status/coherence-mesuree-run.md` takes them to zero.
+ * ## Where both stand now
+ *
+ * Class C is at zero and class D at one (the legend row, which describes no measurement). Both
+ * maps stay, because an empty ratchet is what makes the next arrival loud — and because the
+ * teeth tests, not the offender counts, are what prove these scans can still see.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -100,16 +102,16 @@ function scanCounters(file: string, source: string): Counter[] {
 }
 
 /**
- * Counters asserted rather than derived, at their exact size on 2026-08-01.
+ * Counters asserted rather than derived.
  *
- * · `observability-dashboard.tsx` holds both halves of "42 of 200", and both are wrong.
+ * **Empty, and it held both halves of "42 of 200" when this file was written.** Every one of
+ * those numbers was wrong: 44 catalogue signals declare the quality page, the catalogue holds
+ * 202, and 19 rows render. They are now a measured funnel — the catalogue counts come from
+ * `/observability/signal-coverage`, the rest from the rows the page actually produced.
  *
- * Lot 5 replaces them with counts read from the catalogue and from the reader registry, at
- * which point this map empties.
+ * It stays here, empty, so the next constant that claims to count something arrives loudly.
  */
-const FROZEN_ASSERTED_COUNTERS: ReadonlyMap<string, number> = new Map([
-  ["components/observability/observability-dashboard.tsx", 2],
-]);
+const FROZEN_ASSERTED_COUNTERS: ReadonlyMap<string, number> = new Map();
 
 /* ------------------------------------------------------------------------------------ */
 /* Class D                                                                               */
@@ -160,12 +162,15 @@ function scanUnexplainedNa(file: string, source: string): Unexplained[] {
  *
  * Wiring the table onto `lib/control-registry.ts` took it to 2: `readControl` decides
  * emptiness in ONE place (`sample.n <= 0`), so nineteen hand-written conditions became one.
- * The 2 that remain are the mapping from a registry reading to this table's vocabulary and the
- * legend row. They still cannot say WHY, because `ControlReading` has one boolean where four
- * distinguishable answers belong — Lot 5's job, and the reason this map is not yet empty.
+ * Lot 5 gave `ControlReading` an `unavailable` reason — one of `no-sample`, `read-failed`,
+ * `no-reader`, `planned` — and the row now renders which, so the count is 1.
+ *
+ * The last one is the LEGEND: a row demonstrating what the `na` badge looks like. It has no
+ * cause because it describes no measurement. Naming that honestly beats deleting the legend to
+ * reach zero, which is how a ratchet starts measuring its own convenience.
  */
 const FROZEN_UNEXPLAINED_NA: ReadonlyMap<string, number> = new Map([
-  ["components/observability/signals-table.tsx", 2],
+  ["components/observability/signals-table.tsx", 1],
 ]);
 
 /* ------------------------------------------------------------------------------------ */
@@ -216,11 +221,12 @@ function scanTree(): TreeScan {
 const scan = scanTree();
 
 describe("class C — a displayed count is derived from what it counts", () => {
-  it("sees the tree, and distinguishes claims from configuration", () => {
+  it("sees the tree, and can still recognise a counted noun", () => {
     expect(scan.files).toBeGreaterThanOrEqual(230);
-    // 15 upper-snake numeric constants stand on the tree; only 2 are claims about the system.
-    // If this floor is ever met by the *counted* set instead, the noun list has gone wrong.
-    expect(scan.allConstants).toBeGreaterThanOrEqual(12);
+    // ~13 upper-snake numeric constants stand on the tree; none is a claim any more. With the
+    // offender list at zero, THIS is what separates "nothing claims a count" from "the regex
+    // stopped matching" — plus the teeth test, which shows the scanner a fresh offender.
+    expect(scan.allConstants).toBeGreaterThanOrEqual(10);
   });
 
   it("leaves no asserted counter outside the frozen set", () => {

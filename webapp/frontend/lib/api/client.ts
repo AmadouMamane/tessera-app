@@ -274,6 +274,8 @@ import {
   SiemExportSchema,
   type SignalCatalogue,
   SignalCatalogueSchema,
+  type SignalCoverage,
+  SignalCoverageSchema,
   type SkewReport,
   SkewReportSchema,
   type SnapshotDiffReport,
@@ -1164,6 +1166,11 @@ export async function fetchSignalCatalogue(
 ): Promise<SignalCatalogue> {
   const q = lang ? `?lang=${encodeURIComponent(lang)}` : "";
   return request(`/observability/signal-catalogue${q}`, { signal }, SignalCatalogueSchema);
+}
+
+/** How many signals the catalogue declares — the first two stages of the coverage funnel. */
+export async function fetchSignalCoverage(signal?: AbortSignal): Promise<SignalCoverage> {
+  return request("/observability/signal-coverage", { signal }, SignalCoverageSchema);
 }
 
 export async function fetchPoliciesOverview(

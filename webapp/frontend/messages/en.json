@@ -2465,7 +2465,7 @@
       "truthChain": "Truth chain",
       "truthSource": "Source of truth: YAML/Git",
       "lastUpdate": "Last update",
-      "signals": "{n}/200 quality signals",
+      "signals": "{n} signals wired",
       "systemOk": "System OK"
     },
     "temporal": {
@@ -2484,7 +2484,8 @@
       "evidenceCaption": "One signed bundle for the current period.",
       "signals": "{n}/200 quality signals",
       "noFailing": "No failing category",
-      "live": "live"
+      "live": "live",
+      "signalsFunnel": "{sampled} signals measured out of {wired} wired · {declared} declared in the catalogue for this page"
     },
     "kpi": {
       "score": "Quality score",
@@ -2558,7 +2559,19 @@
       },
       "themeTitle": "Distribution by theme",
       "heatmapTitle": "Entity × severity heatmap",
-      "signalsLabel": "signals"
+      "signalsLabel": "signals",
+      "na": {
+        "no-sample": "No data",
+        "read-failed": "Probe failed",
+        "no-reader": "Not wired",
+        "planned": "Planned"
+      },
+      "why": {
+        "no-sample": "The reader works, the window is empty. Wait, or widen the period.",
+        "read-failed": "The source answered that it could not measure. Investigate the source — this is not a 0 % result.",
+        "no-reader": "The catalogue declares this signal; no code reads it. Build the reader.",
+        "planned": "Declared as a design intention, never implemented. Nothing to fix today."
+      }
     },
     "charts": {
       "evolution": "Quality score evolution (7d)",

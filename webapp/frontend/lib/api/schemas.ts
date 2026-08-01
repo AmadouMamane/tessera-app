@@ -6041,6 +6041,28 @@ export type ChromeBadgeId = string;
  * directory reads all history, every SURVEILLER domain page reads a trailing 7 days, and an
  * operator moving between them was comparing numbers that were never the same measurement.
  */
+/**
+ * How many signals the catalogue DECLARES, split by whether they were ever built.
+ *
+ * The Qualité IA header read "42 of the 200-signal catalogue" from two constants. Both were
+ * wrong, and so was the framing: 202 are declared, 78 are `active` and 124 are `planned` —
+ * designed and never implemented. A page cannot cover what does not exist, so a coverage ratio
+ * against the whole catalogue measures nothing; what the operator needs is the FUNNEL, and its
+ * first two stages are these.
+ */
+export const SignalCoverageSchema = z.object({
+  available: z.boolean(),
+  catalogue: z
+    .object({
+      total: z.number().int(),
+      active: z.number().int(),
+      planned: z.number().int(),
+      on_quality_page: z.number().int(),
+    })
+    .optional(),
+});
+export type SignalCoverage = z.infer<typeof SignalCoverageSchema>;
+
 export const FleetWindowSchema = z.object({
   period_days: z.number().int().nullable(),
   since: z.string().nullable(),

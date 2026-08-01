@@ -2465,7 +2465,7 @@
       "truthChain": "Wahrheitskette",
       "truthSource": "Wahrheitsquelle: YAML/Git",
       "lastUpdate": "Letzte Aktualisierung",
-      "signals": "{n}/200 Qualitätssignale",
+      "signals": "{n} angebundene Signale",
       "systemOk": "System OK"
     },
     "temporal": {
@@ -2484,7 +2484,8 @@
       "evidenceCaption": "Ein signiertes Paket für den aktuellen Zeitraum.",
       "signals": "{n}/200 Qualitätssignale",
       "noFailing": "Keine fehlerhafte Kategorie",
-      "live": "live"
+      "live": "live",
+      "signalsFunnel": "{sampled} gemessene Signale von {wired} angebundenen · {declared} im Katalog für diese Seite deklariert"
     },
     "kpi": {
       "score": "Qualitätsscore",
@@ -2558,7 +2559,19 @@
       },
       "themeTitle": "Verteilung nach Thema",
       "heatmapTitle": "Heatmap Entität × Schweregrad",
-      "signalsLabel": "Signale"
+      "signalsLabel": "Signale",
+      "na": {
+        "no-sample": "Keine Daten",
+        "read-failed": "Sonde fehlgeschlagen",
+        "no-reader": "Nicht angebunden",
+        "planned": "Geplant"
+      },
+      "why": {
+        "no-sample": "Der Leser funktioniert, das Zeitfenster ist leer. Warten oder den Zeitraum erweitern.",
+        "read-failed": "Die Quelle meldet, dass sie nicht messen konnte. Die Quelle prüfen — das ist kein Ergebnis von 0 %.",
+        "no-reader": "Der Katalog deklariert dieses Signal, kein Code liest es. Den Leser schreiben.",
+        "planned": "Als Entwurfsabsicht deklariert, nie implementiert. Heute nichts zu beheben."
+      }
     },
     "charts": {
       "evolution": "Entwicklung des Qualitätsscores (7 T)",

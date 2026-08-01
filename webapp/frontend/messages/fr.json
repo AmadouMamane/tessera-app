@@ -2465,7 +2465,7 @@
       "truthChain": "Chaîne de vérité",
       "truthSource": "Source de vérité : YAML/Git",
       "lastUpdate": "Dernière mise à jour",
-      "signals": "{n}/200 signaux qualité",
+      "signals": "{n} signaux branchés",
       "systemOk": "Système OK"
     },
     "temporal": {
@@ -2484,7 +2484,8 @@
       "evidenceCaption": "Un lot signé pour la période courante.",
       "signals": "{n}/200 signaux qualité",
       "noFailing": "Aucune catégorie en échec",
-      "live": "live"
+      "live": "live",
+      "signalsFunnel": "{sampled} signaux mesurés sur {wired} branchés · {declared} déclarés au catalogue pour cette page"
     },
     "kpi": {
       "score": "Score qualité",
@@ -2558,7 +2559,19 @@
       },
       "themeTitle": "Répartition par thème",
       "heatmapTitle": "Carte entité × sévérité",
-      "signalsLabel": "signaux"
+      "signalsLabel": "signaux",
+      "na": {
+        "no-sample": "Aucune donnée",
+        "read-failed": "Sonde en échec",
+        "no-reader": "Non branché",
+        "planned": "Prévu"
+      },
+      "why": {
+        "no-sample": "Le lecteur fonctionne, la fenêtre est vide. Attendre, ou élargir la période.",
+        "read-failed": "La source a répondu qu'elle n'a pas pu mesurer. Enquêter sur la source — ce n'est pas un résultat à 0 %.",
+        "no-reader": "Le catalogue déclare ce signal, aucun code ne le lit. Écrire le lecteur.",
+        "planned": "Déclaré comme intention de conception, jamais implémenté. Rien à corriger aujourd'hui."
+      }
     },
     "charts": {
       "evolution": "Évolution du score qualité (7 j)",

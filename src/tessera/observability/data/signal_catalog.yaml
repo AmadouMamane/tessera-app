@@ -1,0 +1,231 @@
+# Tessera — signal catalog (routing of the 200 observability ideas)
+# Companion to docs/observability-ideas.md (canonical IDs, do not renumber)
+# and ADR 0010. One entry per idea. This file is the single source of truth
+# for WHERE each idea lives in the restructured UI and WHAT it is.
+#
+# Vocabularies:
+#   kind:       signal | workflow | capability | practice | artifact
+#   entite:     reponse | modele | juge | retrieval | corpus | memoire | guard
+#               | outils | graphe | session | utilisateur | produit | pipeline
+#               | infra | cockpit
+#   page:       qualite | securite | conformite | fiabilite | cout | agir | metier
+#               | plateforme | produit | repo
+#               (fiabilite + cout render as one page "Fiabilité & coût";
+#                "produit" = assistant-facing surface; "repo" = portfolio/repo
+#                artifact, outside the cockpit UI)
+#   section:    etat | diagnostic | predictif | prescriptif | na
+#               (na = not a signal, no page section)
+#   cycle:      ci | online | flywheel | design
+#   engagement: slo | gate | legal | sla | none
+#   status:     active  = exists in webapp today (page A widgets, replay views,
+#                         session theater, page B evidence/exporters, infra)
+#               planned = not yet implemented
+#               Note: "58/200" counts page-A widgets only; this catalog also
+#               marks page-B and infra capabilities as active, hence ~76.
+#
+# Entity pages (fiches) are reached by drill-down only; a signal appears on
+# its `page` and on the fiche of its `entite`. Same data, two projections.
+
+signals:
+  - {id: 1, key: trace-replay, label: "Deterministic trace replay", axis: 1, kind: workflow, entite: graphe, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: active}
+  - {id: 2, key: judge-calibration, label: "LLM-judge calibration & bias", axis: 1, kind: signal, entite: juge, page: qualite, section: diagnostic, cycle: online, engagement: slo, status: active}
+  - {id: 3, key: tamper-evident-audit, label: "Tamper-evident audit + residency", axis: 1, kind: signal, entite: pipeline, page: securite, section: etat, cycle: online, engagement: legal, status: active}
+  - {id: 4, key: otel-agent-spans, label: "OTel agent spans + content events", axis: 1, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: online, engagement: none, status: active}
+  - {id: 5, key: eval-as-telemetry, label: "Eval scores as OTel telemetry", axis: 1, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: online, engagement: none, status: active}
+  - {id: 6, key: tiered-online-eval, label: "Tiered cost-aware online eval", axis: 1, kind: workflow, entite: juge, page: qualite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 7, key: per-language-drift, label: "Per-language distribution drift", axis: 1, kind: signal, entite: reponse, page: qualite, section: predictif, cycle: online, engagement: none, status: planned}
+  - {id: 8, key: context-roi-prompt-cache, label: "Context ROI + prompt-cache obs", axis: 1, kind: signal, entite: retrieval, page: cout, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 9, key: eval-gates-cd, label: "Eval gates in CD + auto-rollback", axis: 1, kind: workflow, entite: reponse, page: agir, section: prescriptif, cycle: ci, engagement: gate, status: planned}
+  - {id: 10, key: lineage-sbom, label: "Lineage / response SBOM", axis: 2, kind: signal, entite: reponse, page: fiabilite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 11, key: claim-attribution, label: "Claim-level provenance graph", axis: 2, kind: signal, entite: reponse, page: qualite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 12, key: uncertainty-logprobs, label: "Logprob/entropy uncertainty", axis: 2, kind: signal, entite: modele, page: qualite, section: predictif, cycle: online, engagement: none, status: planned}
+  - {id: 13, key: firewall-roc, label: "Firewall efficacy ROC", axis: 2, kind: signal, entite: guard, page: securite, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 14, key: e2e-trace-canaries, label: "E2E trace + multilingual canaries", axis: 2, kind: signal, entite: pipeline, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 15, key: quality-slo-error-budget, label: "Quality SLOs + error budgets", axis: 3, kind: signal, entite: reponse, page: qualite, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 16, key: shadow-traffic, label: "Shadow / mirror traffic", axis: 3, kind: workflow, entite: modele, page: agir, section: prescriptif, cycle: online, engagement: none, status: active}
+  - {id: 17, key: what-changed-rootcause, label: "Root-cause what-changed", axis: 3, kind: signal, entite: reponse, page: qualite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 18, key: self-consistency, label: "Self-consistency disagreement", axis: 4, kind: signal, entite: modele, page: qualite, section: predictif, cycle: online, engagement: none, status: active}
+  - {id: 19, key: guard-explainability, label: "Guard decision explainability", axis: 4, kind: signal, entite: guard, page: securite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 20, key: human-feedback-judge, label: "Human feedback validates judge", axis: 5, kind: signal, entite: utilisateur, page: qualite, section: diagnostic, cycle: flywheel, engagement: none, status: planned}
+  - {id: 21, key: session-goal-completion, label: "Session goal-completion eval", axis: 5, kind: signal, entite: session, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 22, key: streaming-ttft, label: "Streaming / TTFT observability", axis: 5, kind: signal, entite: modele, page: fiabilite, section: etat, cycle: online, engagement: slo, status: planned}
+  - {id: 23, key: memory-observability, label: "Memory observability (ADR 0007)", axis: 6, kind: signal, entite: memoire, page: fiabilite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 24, key: continuous-red-team, label: "Continuous red-team drift", axis: 6, kind: signal, entite: guard, page: securite, section: predictif, cycle: online, engagement: slo, status: active}
+  - {id: 25, key: carbon-green-ai, label: "Carbon / Green AI", axis: 6, kind: signal, entite: infra, page: cout, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 26, key: retrieval-ir-online, label: "Retrieval IR metrics online", axis: 7, kind: signal, entite: retrieval, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 27, key: reranker-contribution, label: "Reranker & hybrid contribution", axis: 7, kind: signal, entite: retrieval, page: qualite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 28, key: corpus-coverage-gaps, label: "Corpus coverage gaps", axis: 7, kind: signal, entite: corpus, page: qualite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 29, key: tool-arg-validation, label: "Hallucinated-tool / arg validation", axis: 8, kind: signal, entite: outils, page: fiabilite, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 30, key: multiturn-contradiction, label: "Multi-turn contradiction", axis: 8, kind: signal, entite: session, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 31, key: token-budget-per-node, label: "Token-budget per node", axis: 8, kind: signal, entite: graphe, page: cout, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 32, key: tail-based-sampling, label: "Tail-based sampling", axis: 9, kind: capability, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 33, key: cost-anomaly-security, label: "Cost anomaly as security signal", axis: 9, kind: signal, entite: infra, page: securite, section: predictif, cycle: online, engagement: none, status: active}
+  - {id: 34, key: ab-experimentation, label: "Online A/B/n experimentation", axis: 9, kind: workflow, entite: modele, page: agir, section: prescriptif, cycle: online, engagement: none, status: planned}
+  - {id: 35, key: continuous-profiling, label: "Continuous profiling (4th signal)", axis: 9, kind: signal, entite: infra, page: fiabilite, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 36, key: consent-governance-ops, label: "Consent / governance ops", axis: 10, kind: signal, entite: memoire, page: conformite, section: etat, cycle: online, engagement: legal, status: active}
+  - {id: 37, key: language-misrouting, label: "Language mis-routing detection", axis: 10, kind: signal, entite: graphe, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 38, key: output-pii-leak, label: "Output PII-leak rate", axis: 10, kind: signal, entite: reponse, page: securite, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 39, key: k-anonymity-dashboards, label: "Privacy budget / k-anonymity", axis: 10, kind: signal, entite: cockpit, page: conformite, section: etat, cycle: online, engagement: legal, status: planned}
+  - {id: 40, key: session-theater, label: "Session theater time-travel UI", axis: 11, kind: capability, entite: graphe, page: agir, section: na, cycle: online, engagement: none, status: active}
+  - {id: 41, key: golden-snapshot-ci, label: "Golden-trace snapshot diffing", axis: 11, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: ci, engagement: gate, status: active}
+  - {id: 42, key: trace-to-repro-cli, label: "Trace-to-repro CLI export", axis: 11, kind: workflow, entite: graphe, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: planned}
+  - {id: 43, key: model-load-metal-kv, label: "Model load & Metal/KV-cache", axis: 12, kind: signal, entite: infra, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 44, key: capacity-forecasting, label: "Capacity / token-demand forecast", axis: 12, kind: signal, entite: infra, page: cout, section: predictif, cycle: online, engagement: none, status: planned}
+  - {id: 45, key: multi-region-failover, label: "Multi-region failover + lag", axis: 12, kind: signal, entite: infra, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 46, key: robustness-noise, label: "Robustness under noise", axis: 13, kind: signal, entite: reponse, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 47, key: schema-conformance, label: "Schema/format conformance rate", axis: 13, kind: signal, entite: outils, page: fiabilite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 48, key: latency-attribution, label: "Latency critical-path attribution", axis: 13, kind: signal, entite: graphe, page: fiabilite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 49, key: citation-validity, label: "Regulatory citation validity", axis: 14, kind: signal, entite: reponse, page: conformite, section: etat, cycle: online, engagement: legal, status: active}
+  - {id: 50, key: corpus-freshness, label: "Corpus freshness vs live regs", axis: 14, kind: signal, entite: corpus, page: conformite, section: etat, cycle: online, engagement: legal, status: active}
+  - {id: 51, key: locale-formatting, label: "Locale-aware formatting", axis: 14, kind: signal, entite: reponse, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 52, key: poisoned-corpus-scan, label: "Poisoned-corpus / indirect injection", axis: 15, kind: signal, entite: corpus, page: securite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 53, key: semantic-cache-false-hit, label: "Semantic-cache false hits", axis: 15, kind: signal, entite: retrieval, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 54, key: eval-cost, label: "Eval-cost observability", axis: 16, kind: signal, entite: juge, page: cout, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 55, key: annotation-queue-health, label: "Annotation queue + IAA + SLA", axis: 16, kind: workflow, entite: utilisateur, page: agir, section: etat, cycle: flywheel, engagement: sla, status: planned}
+  - {id: 56, key: confidence-gated-escalation, label: "Confidence-gated escalation", axis: 16, kind: signal, entite: graphe, page: qualite, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 57, key: reasoning-roi, label: "Reasoning-quality / thinking ROI", axis: 17, kind: signal, entite: modele, page: cout, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 58, key: refusal-calibration, label: "Refusal-rate calibration", axis: 17, kind: signal, entite: modele, page: securite, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 59, key: sycophancy, label: "Sycophancy detection", axis: 17, kind: signal, entite: modele, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 60, key: toxicity-rate, label: "Toxicity / harmful-output rate", axis: 17, kind: signal, entite: reponse, page: securite, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 61, key: cross-model-consistency, label: "Cross-model consistency", axis: 18, kind: signal, entite: modele, page: qualite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 62, key: graceful-degradation, label: "Graceful-degradation obs", axis: 18, kind: signal, entite: modele, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 63, key: intent-router-obs, label: "Intent / router observability", axis: 18, kind: signal, entite: graphe, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 64, key: embedding-version-skew, label: "Embedding-version skew", axis: 18, kind: signal, entite: retrieval, page: fiabilite, section: etat, cycle: online, engagement: gate, status: active}
+  - {id: 65, key: cost-per-resolution, label: "Cost-per-resolution", axis: 19, kind: signal, entite: session, page: metier, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 66, key: funnel-per-language, label: "Conversation funnel per language", axis: 19, kind: signal, entite: session, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 67, key: time-to-first-useful, label: "Time-to-first-useful-answer", axis: 19, kind: signal, entite: session, page: qualite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 68, key: tool-downstream-health, label: "Tool downstream health + breaker", axis: 20, kind: signal, entite: outils, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 69, key: anomalous-conversations, label: "Anomalous-conversation detection", axis: 20, kind: signal, entite: session, page: securite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 70, key: cross-lingual-consistency, label: "Cross-lingual answer consistency", axis: 21, kind: signal, entite: reponse, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 71, key: readability-a11y, label: "Readability / a11y per language", axis: 21, kind: signal, entite: reponse, page: qualite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 72, key: unicode-steganography, label: "Unicode steganography detection", axis: 22, kind: signal, entite: guard, page: securite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 73, key: embedding-inversion-risk, label: "Embedding inversion privacy risk", axis: 22, kind: signal, entite: corpus, page: securite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 74, key: cross-tenant-leakage, label: "Cross-tenant leakage", axis: 22, kind: signal, entite: memoire, page: securite, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 75, key: watermark-provenance, label: "Watermark / AI provenance", axis: 22, kind: signal, entite: reponse, page: conformite, section: etat, cycle: online, engagement: legal, status: planned}
+  - {id: 76, key: ai-act-compliance, label: "EU AI Act compliance obs", axis: 23, kind: signal, entite: produit, page: conformite, section: etat, cycle: online, engagement: legal, status: active}
+  - {id: 77, key: localization-completeness, label: "Localization completeness", axis: 23, kind: signal, entite: produit, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 78, key: finetune-eval-deltas, label: "Fine-tune deltas + forgetting", axis: 24, kind: signal, entite: modele, page: qualite, section: etat, cycle: ci, engagement: gate, status: planned}
+  - {id: 79, key: judge-model-drift, label: "Judge-model drift", axis: 24, kind: signal, entite: juge, page: qualite, section: predictif, cycle: online, engagement: none, status: planned}
+  - {id: 80, key: kv-cache-finegrained, label: "KV-cache fine-grained", axis: 24, kind: signal, entite: infra, page: cout, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 81, key: ablation-observability, label: "Ablation observability", axis: 25, kind: signal, entite: reponse, page: qualite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 82, key: golden-answer-staleness, label: "Golden-answer staleness", axis: 25, kind: signal, entite: corpus, page: qualite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 83, key: sampling-bias-health, label: "Sampling-bias / stratification", axis: 25, kind: signal, entite: juge, page: qualite, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 84, key: obs-cost-itself, label: "Cost of observability itself", axis: 25, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 85, key: span-propagation-async, label: "Span propagation under async", axis: 26, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 86, key: reproducibility-hash, label: "Reproducibility / non-determinism", axis: 26, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 87, key: graph-topology-versioning, label: "Graph topology versioning", axis: 27, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: gate, status: active}
+  - {id: 88, key: tool-loop-detection, label: "Tool-call loop detection", axis: 27, kind: signal, entite: outils, page: fiabilite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 89, key: context-overflow, label: "Context truncation / overflow", axis: 27, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 90, key: midstream-guard-retraction, label: "Mid-stream guard retraction", axis: 27, kind: signal, entite: guard, page: securite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 91, key: span-cardinality, label: "Span cardinality explosion", axis: 28, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 92, key: instrumentation-coverage, label: "Instrumentation coverage", axis: 28, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: gate, status: active}
+  - {id: 93, key: clock-skew, label: "Clock skew across spans", axis: 28, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 94, key: canary-tagging, label: "Synthetic / canary tagging", axis: 28, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: online, engagement: none, status: planned}
+  - {id: 95, key: multi-judge-ensemble, label: "Multi-judge ensemble agreement", axis: 29, kind: signal, entite: juge, page: qualite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 96, key: rubric-versioning, label: "Eval-rubric versioning / drift", axis: 29, kind: signal, entite: juge, page: qualite, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 97, key: active-learning-yield, label: "Active-learning yield", axis: 29, kind: signal, entite: utilisateur, page: agir, section: etat, cycle: flywheel, engagement: none, status: planned}
+  - {id: 98, key: intent-concept-drift, label: "Concept drift in user intent", axis: 30, kind: signal, entite: utilisateur, page: qualite, section: predictif, cycle: online, engagement: none, status: planned}
+  - {id: 99, key: cross-session-journey, label: "Cross-session user journey", axis: 30, kind: signal, entite: session, page: qualite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 100, key: escalation-quality-loop, label: "Escalation-quality feedback", axis: 30, kind: signal, entite: utilisateur, page: qualite, section: diagnostic, cycle: flywheel, engagement: none, status: planned}
+  - {id: 101, key: tool-least-privilege, label: "Tool least-privilege obs", axis: 30, kind: signal, entite: outils, page: securite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 102, key: plugin-sdk, label: "Plugin SDK (ObservabilityBackend)", axis: 31, kind: capability, entite: cockpit, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 103, key: span-contract-tests, label: "Span contract tests in CI", axis: 31, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: ci, engagement: gate, status: planned}
+  - {id: 104, key: otel-genai-conformance, label: "OTel GenAI conformance suite", axis: 31, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: ci, engagement: gate, status: planned}
+  - {id: 105, key: threat-model-driven-obs, label: "Threat-model-driven signals", axis: 31, kind: practice, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 106, key: multi-cloud-portability, label: "Multi-cloud portability proof", axis: 31, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 107, key: oss-lib-extraction, label: "tessera-otel-genai OSS lib", axis: 31, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 108, key: upstream-contribution, label: "Upstream contribution (SIG)", axis: 31, kind: practice, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 109, key: sovereignty-egress-proof, label: "Sovereignty / zero-egress proof", axis: 31, kind: signal, entite: infra, page: securite, section: etat, cycle: online, engagement: legal, status: planned}
+  - {id: 110, key: tco-cost-model, label: "TCO / cost model doc", axis: 31, kind: artifact, entite: infra, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 111, key: obs-error-budget, label: "Observability error budget", axis: 31, kind: practice, entite: pipeline, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 112, key: demo-arc-script, label: "5-min scripted demo arc", axis: 31, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 113, key: theater-demo-centerpiece, label: "Session theater as demo object", axis: 31, kind: capability, entite: graphe, page: agir, section: na, cycle: online, engagement: none, status: active}
+  - {id: 114, key: written-artifact, label: "Reference written artifact", axis: 31, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 115, key: incident-playbooks, label: "AI-specific incident playbooks", axis: 32, kind: workflow, entite: cockpit, page: agir, section: prescriptif, cycle: online, engagement: none, status: active}
+  - {id: 116, key: runbook-as-code, label: "Runbook-as-code", axis: 32, kind: workflow, entite: cockpit, page: agir, section: prescriptif, cycle: ci, engagement: none, status: planned}
+  - {id: 117, key: error-budget-policy, label: "Error-budget policy + cadence", axis: 32, kind: practice, entite: cockpit, page: agir, section: prescriptif, cycle: online, engagement: none, status: planned}
+  - {id: 118, key: blameless-postmortems, label: "Postmortems with trace attached", axis: 32, kind: practice, entite: cockpit, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: planned}
+  - {id: 119, key: game-days-chaos, label: "Game days / LLM chaos", axis: 32, kind: practice, entite: cockpit, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: planned}
+  - {id: 120, key: telemetry-lakehouse, label: "Telemetry lakehouse", axis: 33, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 121, key: failure-predictor, label: "ML failure predictor on traces", axis: 33, kind: signal, entite: reponse, page: qualite, section: predictif, cycle: online, engagement: none, status: active}
+  - {id: 122, key: traces-to-sft, label: "Traces as SFT training data", axis: 33, kind: workflow, entite: reponse, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: active}
+  - {id: 123, key: failure-clustering, label: "Embedding-based failure clusters", axis: 33, kind: signal, entite: reponse, page: qualite, section: diagnostic, cycle: flywheel, engagement: none, status: active}
+  - {id: 124, key: telemetry-to-roadmap, label: "Telemetry to product roadmap", axis: 33, kind: workflow, entite: cockpit, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: active}
+  - {id: 125, key: causal-inference, label: "Causal inference on interventions", axis: 33, kind: signal, entite: reponse, page: qualite, section: diagnostic, cycle: flywheel, engagement: none, status: planned}
+  - {id: 126, key: obs-up-one-command, label: "Local obs stack, one command", axis: 34, kind: capability, entite: cockpit, page: plateforme, section: na, cycle: design, engagement: none, status: active}
+  - {id: 127, key: dev-cli, label: "Developer CLI over obs", axis: 34, kind: capability, entite: graphe, page: agir, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 128, key: pr-obs-diff, label: "PR-level obs diff", axis: 34, kind: workflow, entite: reponse, page: agir, section: prescriptif, cycle: ci, engagement: gate, status: planned}
+  - {id: 129, key: time-travel-debugging, label: "Time-travel debugging", axis: 34, kind: capability, entite: graphe, page: agir, section: na, cycle: online, engagement: none, status: planned}
+  - {id: 130, key: vcr-fixtures, label: "Record/replay VCR fixtures", axis: 34, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: ci, engagement: none, status: planned}
+  - {id: 131, key: user-confidence-indicator, label: "User-facing confidence indicator", axis: 35, kind: capability, entite: produit, page: produit, section: na, cycle: online, engagement: none, status: planned}
+  - {id: 132, key: clickable-citations, label: "Clickable verifiable citations", axis: 35, kind: capability, entite: reponse, page: produit, section: na, cycle: online, engagement: none, status: active}
+  - {id: 133, key: why-this-answer, label: "Why this answer (provenance UX)", axis: 35, kind: signal, entite: reponse, page: qualite, section: diagnostic, cycle: online, engagement: none, status: active}
+  - {id: 134, key: ai-act-disclosure-ux, label: "AI Act disclosure UX", axis: 35, kind: signal, entite: produit, page: conformite, section: etat, cycle: online, engagement: legal, status: active}
+  - {id: 135, key: user-correctable-memory, label: "User-correctable memory", axis: 35, kind: capability, entite: memoire, page: produit, section: na, cycle: online, engagement: legal, status: planned}
+  - {id: 136, key: escalation-transparency, label: "Escalation transparency", axis: 35, kind: capability, entite: session, page: produit, section: na, cycle: online, engagement: none, status: planned}
+  - {id: 137, key: customer-finops-dashboard, label: "Customer-facing FinOps", axis: 36, kind: capability, entite: cockpit, page: cout, section: na, cycle: online, engagement: none, status: planned}
+  - {id: 138, key: quality-sla-contractual, label: "Contractual quality SLA", axis: 36, kind: practice, entite: reponse, page: qualite, section: na, cycle: online, engagement: sla, status: planned}
+  - {id: 139, key: roi-view-buyer, label: "ROI view for the buyer", axis: 36, kind: signal, entite: session, page: metier, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 140, key: tiered-obs-offering, label: "Tiered obs offering via RBAC", axis: 36, kind: capability, entite: cockpit, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 141, key: carbon-report, label: "Carbon / CSRD report deliverable", axis: 36, kind: artifact, entite: infra, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 142, key: harness-as-benchmark, label: "Harness as citable benchmark", axis: 37, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 143, key: judge-study, label: "Small vs large judge study", axis: 37, kind: artifact, entite: juge, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 144, key: sovereign-eval-methodology, label: "Sovereign-eval methodology", axis: 37, kind: artifact, entite: juge, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 145, key: cross-lingual-findings, label: "Cross-lingual findings", axis: 37, kind: artifact, entite: reponse, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 146, key: negative-results, label: "Negative results published", axis: 37, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 147, key: reproducible-artifact, label: "One-command reproducible artifact", axis: 37, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 148, key: trace-schema-migration, label: "Trace schema migration / registry", axis: 38, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 149, key: obs-debt-tracking, label: "Observability-debt tracking", axis: 38, kind: signal, entite: cockpit, page: plateforme, section: etat, cycle: flywheel, engagement: none, status: planned}
+  - {id: 150, key: long-horizon-trend, label: "Long-horizon trend analysis", axis: 38, kind: signal, entite: reponse, page: qualite, section: predictif, cycle: online, engagement: none, status: active}
+  - {id: 151, key: model-migration-playbook, label: "Model-generation migration", axis: 38, kind: workflow, entite: modele, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: planned}
+  - {id: 152, key: seasonal-rebaselining, label: "Seasonal re-baselining", axis: 38, kind: signal, entite: juge, page: qualite, section: predictif, cycle: online, engagement: none, status: planned}
+  - {id: 153, key: differentiation-matrix, label: "Honest differentiation matrix", axis: 39, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 154, key: head-to-head-eval, label: "Head-to-head vs Promptfoo", axis: 39, kind: practice, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 155, key: reused-vs-invented-map, label: "Reused vs invented map", axis: 39, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 156, key: lock-in-cost, label: "Migration-cost / lock-in proof", axis: 39, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 157, key: competitive-radar, label: "Living competitive radar", axis: 39, kind: practice, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 158, key: teaching-codebase, label: "Codebase as teaching artifact", axis: 40, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 159, key: decision-why-journal, label: "Decision why journal", axis: 40, kind: practice, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 160, key: failure-museum, label: "Failure museum", axis: 40, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 161, key: trace-tutorials, label: "Interactive trace tutorials", axis: 40, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 162, key: build-your-own, label: "Build-your-own companion repo", axis: 40, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 163, key: spaced-repetition-deck, label: "Spaced-repetition insights deck", axis: 40, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 164, key: talk-workshop, label: "Talk / workshop material", axis: 40, kind: artifact, entite: cockpit, page: repo, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 165, key: meta-observability, label: "Meta-observability (obs of obs)", axis: 41, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: slo, status: active}
+  - {id: 166, key: obs-never-blocks, label: "Obs never blocks prod", axis: 41, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: gate, status: planned}
+  - {id: 167, key: backpressure-spill, label: "Backpressure & spill-to-disk", axis: 41, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 168, key: fail-closed-redaction, label: "Fail-closed redaction policy", axis: 41, kind: practice, entite: pipeline, page: plateforme, section: na, cycle: design, engagement: legal, status: active}
+  - {id: 169, key: adaptive-sampling, label: "Adaptive sampling under load", axis: 41, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: online, engagement: none, status: planned}
+  - {id: 170, key: blast-radius-isolation, label: "Blast-radius isolation", axis: 41, kind: signal, entite: pipeline, page: plateforme, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 171, key: alert-integrations, label: "Native alert integrations", axis: 42, kind: capability, entite: cockpit, page: agir, section: prescriptif, cycle: online, engagement: none, status: planned}
+  - {id: 172, key: siem-integration, label: "SIEM integration (SOC)", axis: 42, kind: signal, entite: pipeline, page: securite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 173, key: apm-bridge, label: "APM bridge (Datadog/NR)", axis: 42, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 174, key: standard-export-formats, label: "OTLP / OpenMetrics / OCSF", axis: 42, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: design, engagement: none, status: planned}
+  - {id: 175, key: auto-tickets, label: "Auto-tickets from clusters", axis: 42, kind: workflow, entite: cockpit, page: agir, section: prescriptif, cycle: online, engagement: none, status: planned}
+  - {id: 176, key: flywheel-webhooks, label: "Webhooks for the flywheel", axis: 42, kind: capability, entite: pipeline, page: agir, section: prescriptif, cycle: flywheel, engagement: none, status: planned}
+  - {id: 177, key: rbac-on-traces, label: "RBAC on traces", axis: 43, kind: capability, entite: pipeline, page: securite, section: na, cycle: online, engagement: legal, status: planned}
+  - {id: 178, key: dynamic-redaction, label: "Dynamic redaction by role", axis: 43, kind: capability, entite: pipeline, page: securite, section: na, cycle: online, engagement: legal, status: planned}
+  - {id: 179, key: trace-access-audit, label: "Trace-access audit", axis: 43, kind: signal, entite: cockpit, page: conformite, section: etat, cycle: online, engagement: legal, status: planned}
+  - {id: 180, key: gdpr-erasure-telemetry, label: "GDPR erasure across telemetry", axis: 43, kind: signal, entite: pipeline, page: conformite, section: etat, cycle: online, engagement: legal, status: active}
+  - {id: 181, key: legal-hold, label: "Legal-hold on traces", axis: 43, kind: capability, entite: pipeline, page: conformite, section: na, cycle: online, engagement: legal, status: planned}
+  - {id: 182, key: voice-audio-obs, label: "Voice / audio agent obs", axis: 44, kind: signal, entite: produit, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 183, key: subsecond-budget, label: "Sub-second budget decomposition", axis: 44, kind: signal, entite: graphe, page: fiabilite, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 184, key: stream-cancellation, label: "Stream cancellation waste", axis: 44, kind: signal, entite: session, page: cout, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 185, key: edge-store-forward, label: "Edge store-and-forward", axis: 44, kind: capability, entite: pipeline, page: plateforme, section: na, cycle: online, engagement: none, status: planned}
+  - {id: 186, key: realtime-guard-latency, label: "Real-time guardrail latency", axis: 44, kind: signal, entite: guard, page: fiabilite, section: etat, cycle: online, engagement: slo, status: planned}
+  - {id: 187, key: jitter-p99, label: "Jitter / p99.9 variance", axis: 44, kind: signal, entite: infra, page: fiabilite, section: etat, cycle: online, engagement: slo, status: planned}
+  - {id: 188, key: inter-agent-comm, label: "Inter-agent communication obs", axis: 45, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 189, key: handoff-tracing, label: "Handoff tracing", axis: 45, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 190, key: per-agent-attribution, label: "Per-agent cost/quality attribution", axis: 45, kind: signal, entite: graphe, page: metier, section: diagnostic, cycle: online, engagement: none, status: planned}
+  - {id: 191, key: deadlock-livelock, label: "Deadlock / livelock detection", axis: 45, kind: signal, entite: graphe, page: fiabilite, section: etat, cycle: online, engagement: none, status: planned}
+  - {id: 192, key: emergent-behaviour, label: "Emergent-behaviour detection", axis: 45, kind: signal, entite: graphe, page: securite, section: predictif, cycle: online, engagement: none, status: planned}
+  - {id: 193, key: responsibility-trace, label: "Responsibility / accountability trace", axis: 45, kind: signal, entite: graphe, page: conformite, section: etat, cycle: online, engagement: legal, status: planned}
+  - {id: 194, key: trace-invariants, label: "Invariants on traces", axis: 46, kind: signal, entite: graphe, page: securite, section: etat, cycle: online, engagement: gate, status: planned}
+  - {id: 195, key: temporal-logic-monitoring, label: "Temporal-logic (LTL/MTL) monitoring", axis: 46, kind: signal, entite: pipeline, page: securite, section: etat, cycle: online, engagement: gate, status: planned}
+  - {id: 196, key: provable-guard-coverage, label: "Provable guard coverage", axis: 46, kind: capability, entite: guard, page: securite, section: na, cycle: ci, engagement: gate, status: planned}
+  - {id: 197, key: property-based-testing, label: "Property-based behaviour testing", axis: 46, kind: capability, entite: graphe, page: qualite, section: na, cycle: ci, engagement: gate, status: planned}
+  - {id: 198, key: behavioural-spec, label: "Behavioural-spec conformance", axis: 46, kind: capability, entite: graphe, page: conformite, section: na, cycle: ci, engagement: gate, status: planned}
+  - {id: 199, key: differential-verification, label: "Differential safety verification", axis: 46, kind: capability, entite: modele, page: securite, section: na, cycle: ci, engagement: gate, status: planned}
+  - {id: 200, key: model-checking-graph, label: "Model checking of the agent graph", axis: 46, kind: capability, entite: graphe, page: fiabilite, section: na, cycle: ci, engagement: gate, status: planned}
+  - {id: 201, key: temporal-timeline, label: "Temporal lineage timeline (cockpit time rail)", axis: 47, kind: signal, entite: cockpit, page: plateforme, section: etat, cycle: online, engagement: none, status: active}
+  - {id: 202, key: as-of-t-read-layer, label: "As-of-T read layer (durable event stores + ?at=)", axis: 47, kind: capability, entite: cockpit, page: plateforme, section: na, cycle: online, engagement: none, status: active}

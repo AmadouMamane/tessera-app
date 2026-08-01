@@ -34,7 +34,12 @@ import type {
   ToxicityReport,
   WhatChanged,
 } from "@/lib/api/schemas";
-import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
+import {
+  type ControlId,
+  type ControlReading,
+  type Unavailability,
+  readControls,
+} from "@/lib/control-registry";
 import { registryIdFor } from "@/lib/signal-focus";
 import { capabilityFor } from "@/lib/signal-registry";
 
@@ -60,6 +65,15 @@ export interface SignalRow {
   name: string;
   category: SignalCategory;
   status: SignalStatus;
+  /**
+   * WHY the status is `na`, when it is.
+   *
+   * Sixteen hand-written conditions produced `na` for at least two genuinely different
+   * reasons — an empty window versus a probe that did not run — and the row had nowhere to
+   * say which. One word covering four situations that demand four different actions is a
+   * blind spot reported without its location.
+   */
+  unavailable?: Unavailability | null;
   score: string;
   threshold: string;
   sample: string;
@@ -239,6 +253,7 @@ function sharedRow(
     // surfaces, not a second judgement: the state itself is computed once, from the value the
     // operator sees against the bar the operator sees.
     status: reading.noData ? "na" : reading.state.key === "fail" ? "crit" : reading.state.key,
+    unavailable: reading.unavailable,
     score: reading.value,
     threshold: reading.target,
     sample: reading.detail ? td(reading.detail.key, reading.detail.values) : "—",
@@ -625,8 +640,22 @@ export function SignalsTable({
                               {r.threshold}
                             </td>
                             <td className="px-2 py-2">
-                              <Badge tone={STATUS_TONE[r.status]}>
-                                {tq(`signalsTable.status.${r.status}`)}
+                              {/* An unavailable signal says WHICH unavailability it is. The
+                                  four cases demand four different actions — wait for a sample,
+                                  investigate a failed probe, build a missing reader, or do
+                                  nothing because it was only ever planned — and the operator
+                                  had one word for all four. */}
+                              <Badge
+                                tone={STATUS_TONE[r.status]}
+                                title={
+                                  r.status === "na" && r.unavailable
+                                    ? tq(`signalsTable.why.${r.unavailable}`)
+                                    : undefined
+                                }
+                              >
+                                {r.status === "na" && r.unavailable
+                                  ? tq(`signalsTable.na.${r.unavailable}`)
+                                  : tq(`signalsTable.status.${r.status}`)}
                               </Badge>
                             </td>
                             <td className="px-2 py-2 text-[var(--muted-foreground)]">

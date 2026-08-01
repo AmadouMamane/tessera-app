@@ -27,6 +27,7 @@ from tessera.observability import (
     replay as replay_mod,
     routing_intent as routing_intent_mod,
     signal_catalogue as signal_catalogue_mod,
+    signal_coverage as signal_coverage_mod,
     slo as slo_mod,
     trends as trends_mod,
     whatchanged as whatchanged_mod,
@@ -348,6 +349,24 @@ def observability_signal_catalogue(lang: str = "fr") -> dict[str, object]:
     except Exception as exc:  # never break the dashboard
         sys.stderr.write(f"tessera.observability.signal_catalogue: failed: {exc}\n")
         return {"available": False}
+
+
+@router.get("/observability/signal-coverage")
+def observability_signal_coverage() -> dict[str, object]:
+    """How many signals the catalogue DECLARES, split by whether they were ever built.
+
+    The Qualité IA header read "42 of the 200-signal catalogue" from two constants; the real
+    numbers are 202 declared, 78 active, 124 planned. The remaining funnel stages (declared by
+    the page, wired, sampled, breaching) are facts about what the frontend rendered and are
+    counted there — asking this route to guess them would repeat the constants' mistake in a
+    place that cannot see the screen.
+
+    NOT wrapped in a ``try``. Every other route here degrades to ``available: false`` because a
+    dead panel beats a dead page; this one would degrade into "0 of 0 signals", which reads as a
+    clean, fully-covered system. A coverage number computed over a catalogue nobody could open
+    is the exact lie the constants were. Let it 500 and be noticed.
+    """
+    return signal_coverage_mod.compute_signal_coverage()
 
 
 @router.get("/observability/reliability")

@@ -142,13 +142,17 @@ def test_the_public_reads_are_untouched() -> None:
     +1 on 2026-07-31: GET /observability/fleet-batch — the two FLEET-WIDE reads a GOUVERNER
     breakdown makes (the fleet rollup + the per-agent snapshot fan-out) in one round-trip,
     by the SAME handlers; both halves are already public reads, no subject data.
+    +1 on 2026-08-01: GET /observability/signal-coverage — how many signals the catalogue
+    DECLARES, split active/planned. A count over a file shipped inside the image; it reads no
+    store, no subject, and nothing scoped. It replaced two constants that claimed "42 of 200"
+    when the real numbers were 44, 202 and 19.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 135
+    assert len(read_routes) == 136
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (
