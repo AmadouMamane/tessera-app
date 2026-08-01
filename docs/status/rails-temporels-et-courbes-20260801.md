@@ -197,3 +197,21 @@ corpus dont ce témoin ne peut pas répondre, **comptée et nommée**.
   est la vérité.
 - **`embedding_inversion`** reste une fixture ; **`redteam._SNAPSHOTS`** reste en mémoire de
   processus.
+
+---
+
+## Addendum — trois autres pages montraient le sélecteur sans le lire
+
+Trouvé en balayant les pages que le premier correctif n'avait pas touchées. Mesuré sur la pile
+vivante : `conformite`, `fiabilite-cout` et `amelioration` affichent toutes « Période », et
+aucun de leurs tableaux de bord ne lit le magasin de fenêtre.
+
+**Conformité et Amélioration sont câblées.** La posture qu'elles rapportent est celle de la
+période choisie, côté endpoint **et** côté clé de requête. Mesuré : score de conformité **89 à
+7 jours, 82 à 30 jours**.
+
+**Fiabilité & coût ne l'est PAS, délibérément.** Elle possède déjà son propre rail de période —
+**7 / 14 / 30 jours**, contre 24 h / 7 j / 30 j en entête. Deux contrôles, deux vocabulaires, sur
+une page. Décider lequel possède la fenêtre est une décision de design (le 14 jours a une raison
+d'être pour la fiabilité), pas un défaut à rustiner en silence — nommé ici pour ne pas passer
+pour un oubli.
