@@ -179,6 +179,19 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::fulllocal-tunnel": "action",
     "Makefile::fulllocal-tunnel-down": "action",
     "Makefile::fulllocal-status": "report",
+    # responsive-check (2026-08-01): 19 cockpit routes x 4 widths, asking whether any content
+    # is cut off with no way to reach it. Its exit code IS the verdict, and it can report the
+    # failure it exists to detect: `npx playwright test` is the LAST command in the recipe, so
+    # its non-zero reaches make unlaundered — nothing pipes it, nothing swallows it. The two
+    # ways it could have gone falsely green are both closed. It needs a SERVED build, so a
+    # missing server would make every page load fail into some other error; instead it probes
+    # `/fr/login` first and REFUSES with exit 2 rather than run blind — a witness that cannot
+    # look may never say "ok" (ADR 0026). And "no findings" could have meant "the query stopped
+    # matching", which is exactly how the first version of this probe certified eight widths
+    # over a visibly broken phone layout; so the spec's first test injects three known nodes
+    # (clipped / scrollable / ellipsed) and fails unless the detector separates them.
+    # Deliberately NOT in `make gate`: the gate must not depend on something being up.
+    "Makefile::responsive-check": "VERDICT",
     # deploy-diff (ADR 0048): fetches /api/version on every declared host and refuses on a SHA
     # mismatch. A thin shim over the script whose exit code IS the verdict.
     "Makefile::deploy-diff": "delegate",  # → scripts/deploy_diff.py

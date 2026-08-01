@@ -551,35 +551,37 @@ function PassRateRuns({
   if (runs.length === 0)
     return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
   return (
-    <table className="w-full text-left text-[0.65rem]">
-      <thead className="text-[0.58rem] uppercase tracking-wide text-[var(--muted-foreground)]">
-        <tr className="border-b border-[var(--border)]">
-          <th className="py-1 pr-2 font-medium">{tq("models.runs.model")}</th>
-          <th className="py-1 pr-2 text-right font-medium">{tq("models.runs.cases")}</th>
-          <th className="py-1 pr-2 text-right font-medium">{tq("models.runs.passed")}</th>
-          <th className="py-1 pr-2 text-right font-medium">{tq("models.runs.rate")}</th>
-          <th className="py-1 pr-2 font-medium">{tq("models.runs.date")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {runs.map((r) => (
-          <tr key={r.run_id} className="border-b border-[var(--border)]/50">
-            <td className="py-1 pr-2 font-medium">{shortModel(r.model)}</td>
-            <td className="py-1 pr-2 text-right tabular-nums">{r.total}</td>
-            <td className="py-1 pr-2 text-right tabular-nums">{r.passed}</td>
-            <td
-              className="py-1 pr-2 text-right font-semibold tabular-nums"
-              style={{ color: scoreBand(r.pass_rate) }}
-            >
-              {Math.round(r.pass_rate * 100)}%
-            </td>
-            <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
-              {fmtDay(r.run_at)}
-            </td>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-[0.65rem]">
+        <thead className="text-[0.58rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+          <tr className="border-b border-[var(--border)]">
+            <th className="py-1 pr-2 font-medium">{tq("models.runs.model")}</th>
+            <th className="py-1 pr-2 text-right font-medium">{tq("models.runs.cases")}</th>
+            <th className="py-1 pr-2 text-right font-medium">{tq("models.runs.passed")}</th>
+            <th className="py-1 pr-2 text-right font-medium">{tq("models.runs.rate")}</th>
+            <th className="py-1 pr-2 font-medium">{tq("models.runs.date")}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {runs.map((r) => (
+            <tr key={r.run_id} className="border-b border-[var(--border)]/50">
+              <td className="py-1 pr-2 font-medium">{shortModel(r.model)}</td>
+              <td className="py-1 pr-2 text-right tabular-nums">{r.total}</td>
+              <td className="py-1 pr-2 text-right tabular-nums">{r.passed}</td>
+              <td
+                className="py-1 pr-2 text-right font-semibold tabular-nums"
+                style={{ color: scoreBand(r.pass_rate) }}
+              >
+                {Math.round(r.pass_rate * 100)}%
+              </td>
+              <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
+                {fmtDay(r.run_at)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -744,69 +746,75 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
             {tq("models.empty")}
           </p>
         ) : (
-          <table className="w-full text-left text-[0.7rem]">
-            <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
-              <tr className="border-b border-[var(--border)]">
-                <th className="py-1.5 pr-2 font-medium">{tq("models.cols.model")}</th>
-                <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.score")}</th>
-                <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.faith")}</th>
-                <th className="py-1.5 pr-2 text-right font-medium">
-                  {tq("models.cols.grounding")}
-                </th>
-                <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.nonReg")}</th>
-                <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.hallu")}</th>
-                <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.kappa")}</th>
-                <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.cases")}</th>
-                <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.cost")}</th>
-                <th className="py-1.5 pr-2 font-medium">{tq("models.cols.evolution")}</th>
-                <th className="py-1.5 pr-2 font-medium">{tq("models.cols.verdict")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {models.map((m, i) => (
-                <tr key={m.model} className="border-b border-[var(--border)]/50">
-                  <td className="py-1.5 pr-2 font-medium text-[var(--foreground)]">
-                    <span className="flex items-center gap-1.5">
-                      {shortModel(m.model)}
-                      {i === 0 ? (
-                        <Badge tone="success" className="text-[0.5rem]">
-                          {tq("models.kpi.referentBadge")}
-                        </Badge>
-                      ) : null}
-                    </span>
-                  </td>
-                  <td className="py-1.5 pr-2 text-right font-semibold tabular-nums">
-                    <span style={{ color: scoreBand(m.pass_rate) }}>{fmtScore(m.pass_rate)}</span>
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums">
-                    {m.faithfulness != null ? m.faithfulness.toFixed(2) : DASH}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums">{pctOrDash(m.grounding)}</td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums">
-                    {pctOrDash(m.non_regression)}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums text-amber-600 dark:text-amber-400">
-                    {m.hallucination != null ? `${Math.round((1 - m.hallucination) * 100)}%` : DASH}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
-                    {DASH}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums">{m.total_cases}</td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
-                    {fmtCost(m.est_cost_eur)}
-                  </td>
-                  <td className="py-1.5 pr-2">
-                    <Spark values={m.evolution} />
-                  </td>
-                  <td className="py-1.5 pr-2">
-                    <Badge tone={VERDICT_TONE[m.verdict] ?? "neutral"} className="text-[0.6rem]">
-                      {verdictLabel(m.verdict)}
-                    </Badge>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[0.7rem]">
+              <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                <tr className="border-b border-[var(--border)]">
+                  <th className="py-1.5 pr-2 font-medium">{tq("models.cols.model")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.score")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.faith")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">
+                    {tq("models.cols.grounding")}
+                  </th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.nonReg")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.hallu")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.kappa")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.cases")}</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.cost")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("models.cols.evolution")}</th>
+                  <th className="py-1.5 pr-2 font-medium">{tq("models.cols.verdict")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {models.map((m, i) => (
+                  <tr key={m.model} className="border-b border-[var(--border)]/50">
+                    <td className="py-1.5 pr-2 font-medium text-[var(--foreground)]">
+                      <span className="flex items-center gap-1.5">
+                        {shortModel(m.model)}
+                        {i === 0 ? (
+                          <Badge tone="success" className="text-[0.5rem]">
+                            {tq("models.kpi.referentBadge")}
+                          </Badge>
+                        ) : null}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-2 text-right font-semibold tabular-nums">
+                      <span style={{ color: scoreBand(m.pass_rate) }}>{fmtScore(m.pass_rate)}</span>
+                    </td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">
+                      {m.faithfulness != null ? m.faithfulness.toFixed(2) : DASH}
+                    </td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">
+                      {pctOrDash(m.grounding)}
+                    </td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">
+                      {pctOrDash(m.non_regression)}
+                    </td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums text-amber-600 dark:text-amber-400">
+                      {m.hallucination != null
+                        ? `${Math.round((1 - m.hallucination) * 100)}%`
+                        : DASH}
+                    </td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
+                      {DASH}
+                    </td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">{m.total_cases}</td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums text-[var(--muted-foreground)]">
+                      {fmtCost(m.est_cost_eur)}
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <Spark values={m.evolution} />
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <Badge tone={VERDICT_TONE[m.verdict] ?? "neutral"} className="text-[0.6rem]">
+                        {verdictLabel(m.verdict)}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </CardContent>
     </Card>

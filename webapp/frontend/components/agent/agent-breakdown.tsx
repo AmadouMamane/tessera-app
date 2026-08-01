@@ -198,64 +198,66 @@ function MonitoringTable({
   handoffGap: number;
 }) {
   return (
-    <table className="w-full text-[0.72rem]">
-      <thead>
-        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colVolume")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
-          <th className="pb-2 font-medium">{t("colRelease")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {agents.map((a) => {
-          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
-          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-          return (
-            <tr key={a.id} className={rowClass(selected, dimmed)}>
-              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtInt(a.conversations)}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtSecs(a.latency_ms)}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                {a.handoffs_in} / {a.handoffs_out}
-              </td>
-              <td className="py-1.5">
-                <ReleaseCell agent={a} t={t} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <tfoot>
-        {/* Total org — DISTINCT entities, never the sum of the rows above. */}
-        <tr className="border-t-2 border-[#7c5cf5]/40">
-          <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
-            {t("orgTotal")}
-          </td>
-          <td
-            data-testid="fleet-org-total"
-            className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
-          >
-            {fmtInt(fleet.org?.conversations ?? 0)}
-          </td>
-          <td
-            colSpan={4}
-            className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
-          >
-            <DedupFooter
-              fleet={fleet}
-              t={t}
-              attested={attested}
-              seenShared={seenShared}
-              handoffGap={handoffGap}
-            />
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+    <div className="overflow-x-auto">
+      <table className="w-full text-[0.72rem]">
+        <thead>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colVolume")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
+            <th className="pb-2 font-medium">{t("colRelease")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {agents.map((a) => {
+            const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+            const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+            return (
+              <tr key={a.id} className={rowClass(selected, dimmed)}>
+                <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtInt(a.conversations)}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtSecs(a.latency_ms)}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  {a.handoffs_in} / {a.handoffs_out}
+                </td>
+                <td className="py-1.5">
+                  <ReleaseCell agent={a} t={t} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          {/* Total org — DISTINCT entities, never the sum of the rows above. */}
+          <tr className="border-t-2 border-[#7c5cf5]/40">
+            <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
+              {t("orgTotal")}
+            </td>
+            <td
+              data-testid="fleet-org-total"
+              className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
+            >
+              {fmtInt(fleet.org?.conversations ?? 0)}
+            </td>
+            <td
+              colSpan={4}
+              className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+            >
+              <DedupFooter
+                fleet={fleet}
+                t={t}
+                attested={attested}
+                seenShared={seenShared}
+                handoffGap={handoffGap}
+              />
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 }
 
@@ -322,108 +324,117 @@ function AlarmTable({
   const attested = fleet.handoff_conversations ?? 0;
   const seenShared = fleet.handoff_conversations_seen_shared ?? 0;
   return (
-    <table className="w-full text-[0.72rem]">
-      <thead>
-        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">
-            {t("colSignalValue", { metric: metricLabel(lens.metric, t) })}
-          </th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colSloGap")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colContribution")}</th>
-          <th className="pb-2 font-medium">{t("colRelease")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {lens.rows.map((row) => {
-          const a = byId.get(row.agentId);
-          if (!a) return null;
-          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
-          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-          return (
-            <tr key={a.id} className={rowClass(selected, dimmed)}>
-              {/* Same door as the quality lens: the alarm lens REPLACES it while a
+    <div className="overflow-x-auto">
+      <table className="w-full text-[0.72rem]">
+        <thead>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">
+              {t("colSignalValue", { metric: metricLabel(lens.metric, t) })}
+            </th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colSloGap")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colContribution")}</th>
+            <th className="pb-2 font-medium">{t("colRelease")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lens.rows.map((row) => {
+            const a = byId.get(row.agentId);
+            if (!a) return null;
+            const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+            const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+            return (
+              <tr key={a.id} className={rowClass(selected, dimmed)}>
+                {/* Same door as the quality lens: the alarm lens REPLACES it while a
                   signal burns, and the way to an agent's evaluations must not
                   disappear exactly when someone is investigating quality. */}
-              <td className="py-1.5 pr-3 font-medium">
-                <Link
-                  href={agentPath(a.id, "evaluations") as Route}
-                  title={t("openEvaluations")}
-                  className="hover:text-[var(--tessera-fg-accent)] hover:underline"
+                <td className="py-1.5 pr-3 font-medium">
+                  <Link
+                    href={agentPath(a.id, "evaluations") as Route}
+                    title={t("openEvaluations")}
+                    className="hover:text-[var(--tessera-fg-accent)] hover:underline"
+                  >
+                    {a.name}
+                  </Link>
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  {row.value === null ? (
+                    <EmptyCell reason={row.refusal} t={t} />
+                  ) : (
+                    fmtRate(row.value)
+                  )}
+                </td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    row.gapPp !== null && row.gapPp < 0 ? "text-[var(--tessera-fg-danger)]" : ""
+                  }`}
                 >
-                  {a.name}
-                </Link>
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                {row.value === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtRate(row.value)}
-              </td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row.gapPp !== null && row.gapPp < 0 ? "text-[var(--tessera-fg-danger)]" : ""
-                }`}
-              >
-                {row.gapPp === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtPp(row.gapPp)}
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                {row.nBad === null ? (
-                  <EmptyCell reason={row.refusal} t={t} />
-                ) : (
-                  `${fmtInt(row.nBad)} / ${fmtInt(row.n ?? 0)}`
-                )}
-              </td>
-              <td className="py-1.5">
-                <ReleaseCell agent={a} t={t} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <tfoot>
-        <tr className="border-t-2 border-[#7c5cf5]/40">
-          <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
-            {t("orgTotal")}
-          </td>
-          <td colSpan={2} className="py-2" />
-          <td className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]">
-            {lens.orgNBad === null || lens.orgN === null
-              ? "—"
-              : `${fmtInt(lens.orgNBad)} / ${fmtInt(lens.orgN)}`}
-          </td>
-          <td className="py-2" />
-        </tr>
-        <tr>
-          <td
-            colSpan={5}
-            className="pb-1 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
-          >
-            {/* Contribution reconciliation — the per-agent slices vs the deduplicated org
+                  {row.gapPp === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtPp(row.gapPp)}
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  {row.nBad === null ? (
+                    <EmptyCell reason={row.refusal} t={t} />
+                  ) : (
+                    `${fmtInt(row.nBad)} / ${fmtInt(row.n ?? 0)}`
+                  )}
+                </td>
+                <td className="py-1.5">
+                  <ReleaseCell agent={a} t={t} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-[#7c5cf5]/40">
+            <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
+              {t("orgTotal")}
+            </td>
+            <td colSpan={2} className="py-2" />
+            <td className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]">
+              {lens.orgNBad === null || lens.orgN === null
+                ? "—"
+                : `${fmtInt(lens.orgNBad)} / ${fmtInt(lens.orgN)}`}
+            </td>
+            <td className="py-2" />
+          </tr>
+          <tr>
+            <td
+              colSpan={5}
+              className="pb-1 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+            >
+              {/* Contribution reconciliation — the per-agent slices vs the deduplicated org
                 total. ∑ slices = org would be a coincidence, not a proof: a handed-off
                 journey touches two agents and counts once in the org. Stated, never smoothed;
                 the handoff line below (the ONE existing reconciliation) explains the gap. */}
-            {lens.sumNBad !== null && lens.orgNBad !== null ? (
-              lens.sumNBad === lens.orgNBad ? (
-                <span className="block">
-                  {t("contribReconciled", { sum: fmtInt(lens.sumNBad), org: fmtInt(lens.orgNBad) })}
-                </span>
+              {lens.sumNBad !== null && lens.orgNBad !== null ? (
+                lens.sumNBad === lens.orgNBad ? (
+                  <span className="block">
+                    {t("contribReconciled", {
+                      sum: fmtInt(lens.sumNBad),
+                      org: fmtInt(lens.orgNBad),
+                    })}
+                  </span>
+                ) : (
+                  <span className="block text-[var(--tessera-fg-warning)]/90">
+                    {t("contribGap", { sum: fmtInt(lens.sumNBad), org: fmtInt(lens.orgNBad) })}
+                  </span>
+                )
               ) : (
-                <span className="block text-[var(--tessera-fg-warning)]/90">
-                  {t("contribGap", { sum: fmtInt(lens.sumNBad), org: fmtInt(lens.orgNBad) })}
-                </span>
-              )
-            ) : (
-              <span className="block">{t("contribUnknown")}</span>
-            )}
-            <DedupFooter
-              fleet={fleet}
-              t={t}
-              attested={attested}
-              seenShared={seenShared}
-              handoffGap={attested - seenShared}
-            />
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+                <span className="block">{t("contribUnknown")}</span>
+              )}
+              <DedupFooter
+                fleet={fleet}
+                t={t}
+                attested={attested}
+                seenShared={seenShared}
+                handoffGap={attested - seenShared}
+              />
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 }
 
@@ -445,98 +456,100 @@ function QualityTable({
   const attested = fleet.handoff_conversations ?? 0;
   const seenShared = fleet.handoff_conversations_seen_shared ?? 0;
   return (
-    <table className="w-full text-[0.72rem]">
-      <thead>
-        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colFaithfulness")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colHallucination")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colRegression")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colGate")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colEvalFreshness")}</th>
-          <th className="pb-2 font-medium">{t("colRelease")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {agents.map((a) => {
-          const row = byId.get(a.id);
-          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
-          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-          const rel = a.release?.available ? a.release : null;
-          return (
-            <tr key={a.id} className={rowClass(selected, dimmed)}>
-              {/* The quality lens answers "how is THIS agent evaluated?" — the row is
+    <div className="overflow-x-auto">
+      <table className="w-full text-[0.72rem]">
+        <thead>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colFaithfulness")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colHallucination")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colRegression")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colGate")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colEvalFreshness")}</th>
+            <th className="pb-2 font-medium">{t("colRelease")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {agents.map((a) => {
+            const row = byId.get(a.id);
+            const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+            const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+            const rel = a.release?.available ? a.release : null;
+            return (
+              <tr key={a.id} className={rowClass(selected, dimmed)}>
+                {/* The quality lens answers "how is THIS agent evaluated?" — the row is
                   the door to the agent's own Évaluations page (ER-01 run rail). */}
-              <td className="py-1.5 pr-3 font-medium">
-                <Link
-                  href={agentPath(a.id, "evaluations") as Route}
-                  title={t("openEvaluations")}
-                  className="hover:text-[var(--tessera-fg-accent)] hover:underline"
+                <td className="py-1.5 pr-3 font-medium">
+                  <Link
+                    href={agentPath(a.id, "evaluations") as Route}
+                    title={t("openEvaluations")}
+                    className="hover:text-[var(--tessera-fg-accent)] hover:underline"
+                  >
+                    {a.name}
+                  </Link>
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  {row?.faithfulness == null ? (
+                    <EmptyCell reason={row?.faithfulnessRefusal ?? "absent"} t={t} />
+                  ) : (
+                    fmtRate(row.faithfulness)
+                  )}
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  {row?.hallucination == null ? (
+                    <EmptyCell reason={row?.hallucinationRefusal ?? "absent"} t={t} />
+                  ) : (
+                    fmtRate(row.hallucination)
+                  )}
+                </td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    rel && rel.blocking_t1 > 0 ? "text-[var(--tessera-fg-danger)]" : ""
+                  }`}
                 >
-                  {a.name}
-                </Link>
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                {row?.faithfulness == null ? (
-                  <EmptyCell reason={row?.faithfulnessRefusal ?? "absent"} t={t} />
-                ) : (
-                  fmtRate(row.faithfulness)
-                )}
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                {row?.hallucination == null ? (
-                  <EmptyCell reason={row?.hallucinationRefusal ?? "absent"} t={t} />
-                ) : (
-                  fmtRate(row.hallucination)
-                )}
-              </td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  rel && rel.blocking_t1 > 0 ? "text-[var(--tessera-fg-danger)]" : ""
-                }`}
-              >
-                {rel ? fmtInt(rel.blocking_t1) : "—"}
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                {rel && rel.summary_passed != null && rel.summary_total != null
-                  ? `${fmtInt(rel.summary_passed)}/${fmtInt(rel.summary_total)}`
-                  : "—"}
-              </td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
-                }`}
-                title={rel?.verdict_stale ? t("staleEval") : undefined}
-              >
-                {rel ? fmtDate(rel.run_at) : "—"}
-              </td>
-              <td className="py-1.5">
-                <ReleaseCell agent={a} t={t} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <tfoot>
-        <tr className="border-t-2 border-[#7c5cf5]/40">
-          <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
-            {t("orgTotal")}
-          </td>
-          <td
-            colSpan={6}
-            className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
-          >
-            <DedupFooter
-              fleet={fleet}
-              t={t}
-              attested={attested}
-              seenShared={seenShared}
-              handoffGap={attested - seenShared}
-            />
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+                  {rel ? fmtInt(rel.blocking_t1) : "—"}
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  {rel && rel.summary_passed != null && rel.summary_total != null
+                    ? `${fmtInt(rel.summary_passed)}/${fmtInt(rel.summary_total)}`
+                    : "—"}
+                </td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
+                  }`}
+                  title={rel?.verdict_stale ? t("staleEval") : undefined}
+                >
+                  {rel ? fmtDate(rel.run_at) : "—"}
+                </td>
+                <td className="py-1.5">
+                  <ReleaseCell agent={a} t={t} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-[#7c5cf5]/40">
+            <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">
+              {t("orgTotal")}
+            </td>
+            <td
+              colSpan={6}
+              className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+            >
+              <DedupFooter
+                fleet={fleet}
+                t={t}
+                attested={attested}
+                seenShared={seenShared}
+                handoffGap={attested - seenShared}
+              />
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   );
 }
 
@@ -619,65 +632,67 @@ function SecurityTable({
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
-    <table className="w-full text-[0.72rem]">
-      <thead>
-        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colPiiLeaks")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colToxicity")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colGuardDenied")}</th>
-          <th className="pb-2 font-medium">{t("colRelease")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {agents.map((a) => {
-          const row = byId.get(a.id);
-          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
-          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-          return (
-            <tr key={a.id} className={rowClass(selected, dimmed)}>
-              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.piiLeaks ? "text-[var(--tessera-fg-danger)]" : ""
-                }`}
-              >
-                <PairCell
-                  found={row?.piiLeaks ?? null}
-                  outOf={row?.piiN ?? null}
-                  reason={row?.piiRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.toxCount ? "text-[var(--tessera-fg-danger)]" : ""
-                }`}
-              >
-                <PairCell
-                  found={row?.toxCount ?? null}
-                  outOf={row?.toxN ?? null}
-                  reason={row?.toxRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                <PairCell
-                  found={row?.guardDenied ?? null}
-                  outOf={row?.guardTotal ?? null}
-                  reason={row?.guardRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td className="py-1.5">
-                <ReleaseCell agent={a} t={t} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <DomainFoot fleet={fleet} t={t} span={4} />
-    </table>
+    <div className="overflow-x-auto">
+      <table className="w-full text-[0.72rem]">
+        <thead>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colPiiLeaks")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colToxicity")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colGuardDenied")}</th>
+            <th className="pb-2 font-medium">{t("colRelease")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {agents.map((a) => {
+            const row = byId.get(a.id);
+            const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+            const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+            return (
+              <tr key={a.id} className={rowClass(selected, dimmed)}>
+                <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    row?.piiLeaks ? "text-[var(--tessera-fg-danger)]" : ""
+                  }`}
+                >
+                  <PairCell
+                    found={row?.piiLeaks ?? null}
+                    outOf={row?.piiN ?? null}
+                    reason={row?.piiRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    row?.toxCount ? "text-[var(--tessera-fg-danger)]" : ""
+                  }`}
+                >
+                  <PairCell
+                    found={row?.toxCount ?? null}
+                    outOf={row?.toxN ?? null}
+                    reason={row?.toxRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  <PairCell
+                    found={row?.guardDenied ?? null}
+                    outOf={row?.guardTotal ?? null}
+                    reason={row?.guardRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td className="py-1.5">
+                  <ReleaseCell agent={a} t={t} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <DomainFoot fleet={fleet} t={t} span={4} />
+      </table>
+    </div>
   );
 }
 
@@ -702,48 +717,50 @@ function ComplianceTable({
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
-    <table className="w-full text-[0.72rem]">
-      <thead>
-        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colGovernedActs")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colLedgerEntries")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-          <th className="pb-2 font-medium">{t("colRelease")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {agents.map((a) => {
-          const row = byId.get(a.id);
-          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
-          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-          return (
-            <tr key={a.id} className={rowClass(selected, dimmed)}>
-              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                <CountCell
-                  value={row?.governedActs ?? null}
-                  reason={row?.governedRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">
-                <CountCell
-                  value={row?.ledgerEntries ?? null}
-                  reason={row?.ledgerRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
-              <td className="py-1.5">
-                <ReleaseCell agent={a} t={t} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <DomainFoot fleet={fleet} t={t} span={4} />
-    </table>
+    <div className="overflow-x-auto">
+      <table className="w-full text-[0.72rem]">
+        <thead>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colGovernedActs")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colLedgerEntries")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
+            <th className="pb-2 font-medium">{t("colRelease")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {agents.map((a) => {
+            const row = byId.get(a.id);
+            const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+            const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+            return (
+              <tr key={a.id} className={rowClass(selected, dimmed)}>
+                <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  <CountCell
+                    value={row?.governedActs ?? null}
+                    reason={row?.governedRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">
+                  <CountCell
+                    value={row?.ledgerEntries ?? null}
+                    reason={row?.ledgerRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
+                <td className="py-1.5">
+                  <ReleaseCell agent={a} t={t} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <DomainFoot fleet={fleet} t={t} span={4} />
+      </table>
+    </div>
   );
 }
 
@@ -768,56 +785,58 @@ function ObservabilityTable({
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
-    <table className="w-full text-[0.72rem]">
-      <thead>
-        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colAnomalies")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colConformance")}</th>
-          <th className="pb-2 font-medium">{t("colRelease")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {agents.map((a) => {
-          const row = byId.get(a.id);
-          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
-          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-          return (
-            <tr key={a.id} className={rowClass(selected, dimmed)}>
-              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.anomalous ? "text-[var(--tessera-fg-danger)]" : ""
-                }`}
-              >
-                <PairCell
-                  found={row?.anomalous ?? null}
-                  outOf={row?.sessions ?? null}
-                  reason={row?.anomaliesRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.violations ? "text-[var(--tessera-fg-danger)]" : ""
-                }`}
-              >
-                <PairCell
-                  found={row?.violations ?? null}
-                  outOf={row?.calls ?? null}
-                  reason={row?.conformanceRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td className="py-1.5">
-                <ReleaseCell agent={a} t={t} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <DomainFoot fleet={fleet} t={t} span={3} />
-    </table>
+    <div className="overflow-x-auto">
+      <table className="w-full text-[0.72rem]">
+        <thead>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colAnomalies")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colConformance")}</th>
+            <th className="pb-2 font-medium">{t("colRelease")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {agents.map((a) => {
+            const row = byId.get(a.id);
+            const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+            const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+            return (
+              <tr key={a.id} className={rowClass(selected, dimmed)}>
+                <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    row?.anomalous ? "text-[var(--tessera-fg-danger)]" : ""
+                  }`}
+                >
+                  <PairCell
+                    found={row?.anomalous ?? null}
+                    outOf={row?.sessions ?? null}
+                    reason={row?.anomaliesRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    row?.violations ? "text-[var(--tessera-fg-danger)]" : ""
+                  }`}
+                >
+                  <PairCell
+                    found={row?.violations ?? null}
+                    outOf={row?.calls ?? null}
+                    reason={row?.conformanceRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td className="py-1.5">
+                  <ReleaseCell agent={a} t={t} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <DomainFoot fleet={fleet} t={t} span={3} />
+      </table>
+    </div>
   );
 }
 
@@ -841,59 +860,61 @@ function ReliabilityTable({
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
-    <table className="w-full text-[0.72rem]">
-      <thead>
-        <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colToolErrors")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
-          <th className="pb-2 pr-3 text-right font-medium">{t("colCostTokens")}</th>
-          <th className="pb-2 font-medium">{t("colRelease")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {agents.map((a) => {
-          const row = byId.get(a.id);
-          const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
-          const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-          return (
-            <tr key={a.id} className={rowClass(selected, dimmed)}>
-              <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-              <td
-                className={`py-1.5 pr-3 text-right tabular-nums ${
-                  row?.toolErrors ? "text-[var(--tessera-fg-danger)]" : ""
-                }`}
-              >
-                <PairCell
-                  found={row?.toolErrors ?? null}
-                  outOf={row?.toolTotal ?? null}
-                  reason={row?.toolRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td className="py-1.5 pr-3 text-right tabular-nums">{fmtSecs(a.latency_ms)}</td>
-              <td
-                className="py-1.5 pr-3 text-right tabular-nums"
-                title={
-                  row?.meanTokens != null
-                    ? t("costMeanTitle", { mean: fmtInt(Math.round(row.meanTokens)) })
-                    : undefined
-                }
-              >
-                <CountCell
-                  value={row?.totalTokens ?? null}
-                  reason={row?.costRefusal ?? null}
-                  t={t}
-                />
-              </td>
-              <td className="py-1.5">
-                <ReleaseCell agent={a} t={t} />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <DomainFoot fleet={fleet} t={t} span={4} />
-    </table>
+    <div className="overflow-x-auto">
+      <table className="w-full text-[0.72rem]">
+        <thead>
+          <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colToolErrors")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
+            <th className="pb-2 pr-3 text-right font-medium">{t("colCostTokens")}</th>
+            <th className="pb-2 font-medium">{t("colRelease")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {agents.map((a) => {
+            const row = byId.get(a.id);
+            const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
+            const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
+            return (
+              <tr key={a.id} className={rowClass(selected, dimmed)}>
+                <td className="py-1.5 pr-3 font-medium">{a.name}</td>
+                <td
+                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                    row?.toolErrors ? "text-[var(--tessera-fg-danger)]" : ""
+                  }`}
+                >
+                  <PairCell
+                    found={row?.toolErrors ?? null}
+                    outOf={row?.toolTotal ?? null}
+                    reason={row?.toolRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtSecs(a.latency_ms)}</td>
+                <td
+                  className="py-1.5 pr-3 text-right tabular-nums"
+                  title={
+                    row?.meanTokens != null
+                      ? t("costMeanTitle", { mean: fmtInt(Math.round(row.meanTokens)) })
+                      : undefined
+                  }
+                >
+                  <CountCell
+                    value={row?.totalTokens ?? null}
+                    reason={row?.costRefusal ?? null}
+                    t={t}
+                  />
+                </td>
+                <td className="py-1.5">
+                  <ReleaseCell agent={a} t={t} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <DomainFoot fleet={fleet} t={t} span={4} />
+      </table>
+    </div>
   );
 }

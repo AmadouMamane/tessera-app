@@ -103,37 +103,39 @@ function ConfusionMatrix({ tp, fp, fn, tn }: { tp: number; fp: number; fn: numbe
     </td>
   );
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="text-[0.7rem] text-[var(--muted-foreground)]">
-          <th className="px-2 py-1" />
-          <th className="px-2 py-1 font-medium" colSpan={2}>
-            {tq("judge.refHuman")}
-          </th>
-        </tr>
-        <tr className="text-[0.7rem] text-[var(--muted-foreground)]">
-          <th className="px-2 py-1" />
-          <th className="px-2 py-1 font-medium">{tq("judge.humanGood")}</th>
-          <th className="px-2 py-1 font-medium">{tq("judge.humanBad")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th className="px-2 py-1 text-left text-[0.7rem] font-medium text-[var(--muted-foreground)]">
-            {tq("judge.correct")}
-          </th>
-          {cell(tp, true)}
-          {cell(fp, false)}
-        </tr>
-        <tr>
-          <th className="px-2 py-1 text-left text-[0.7rem] font-medium text-[var(--muted-foreground)]">
-            {tq("judge.incorrect")}
-          </th>
-          {cell(fn, false)}
-          {cell(tn, true)}
-        </tr>
-      </tbody>
-    </table>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-[0.7rem] text-[var(--muted-foreground)]">
+            <th className="px-2 py-1" />
+            <th className="px-2 py-1 font-medium" colSpan={2}>
+              {tq("judge.refHuman")}
+            </th>
+          </tr>
+          <tr className="text-[0.7rem] text-[var(--muted-foreground)]">
+            <th className="px-2 py-1" />
+            <th className="px-2 py-1 font-medium">{tq("judge.humanGood")}</th>
+            <th className="px-2 py-1 font-medium">{tq("judge.humanBad")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th className="px-2 py-1 text-left text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+              {tq("judge.correct")}
+            </th>
+            {cell(tp, true)}
+            {cell(fp, false)}
+          </tr>
+          <tr>
+            <th className="px-2 py-1 text-left text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+              {tq("judge.incorrect")}
+            </th>
+            {cell(fn, false)}
+            {cell(tn, true)}
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
 

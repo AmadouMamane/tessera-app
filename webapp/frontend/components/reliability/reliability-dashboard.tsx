@@ -631,28 +631,30 @@ export function ReliabilityDashboard() {
       title={tr("panel.topServices", { n: d.services_cost?.length ?? 0 })}
       infoKey="servicesCost"
     >
-      <table className="w-full text-[0.72rem]">
-        <thead>
-          <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-            <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
-            <th className="py-1 pr-2 text-right font-medium">{tr("col.requests")}</th>
-            <th className="py-1 pr-2 text-right font-medium">{tr("col.cost")}</th>
-            <th className="py-1 text-right font-medium">{tr("col.share")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(d.services_cost ?? []).map((s) => (
-            <tr key={s.name} className="border-b border-[var(--border)]/50">
-              <td className="py-1 pr-2">{s.name}</td>
-              <td className="py-1 pr-2 text-right tabular-nums">{s.n_requests}</td>
-              <td className="py-1 pr-2 text-right tabular-nums">{eur(s.cost_eur, 4)}</td>
-              <td className="py-1 text-right tabular-nums text-[var(--muted-foreground)]">
-                {pct(s.share, 0)}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[0.72rem]">
+          <thead>
+            <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+              <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
+              <th className="py-1 pr-2 text-right font-medium">{tr("col.requests")}</th>
+              <th className="py-1 pr-2 text-right font-medium">{tr("col.cost")}</th>
+              <th className="py-1 text-right font-medium">{tr("col.share")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(d.services_cost ?? []).map((s) => (
+              <tr key={s.name} className="border-b border-[var(--border)]/50">
+                <td className="py-1 pr-2">{s.name}</td>
+                <td className="py-1 pr-2 text-right tabular-nums">{s.n_requests}</td>
+                <td className="py-1 pr-2 text-right tabular-nums">{eur(s.cost_eur, 4)}</td>
+                <td className="py-1 text-right tabular-nums text-[var(--muted-foreground)]">
+                  {pct(s.share, 0)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
   const panelIncidents = (
@@ -662,60 +664,66 @@ export function ReliabilityDashboard() {
           {tr("noIncidents")}
         </p>
       ) : (
-        <table className="w-full text-[0.7rem]">
-          <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-              <th className="py-1 pr-2 font-medium">{tr("col.date")}</th>
-              <th className="py-1 pr-2 font-medium">{tr("col.type")}</th>
-              <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
-              <th className="py-1 text-right font-medium">{tr("col.severity")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(d.incidents ?? []).map((inc, i) => (
-              <IncidentRow key={`${inc.type}-${i}`} inc={inc} />
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[0.7rem]">
+            <thead>
+              <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                <th className="py-1 pr-2 font-medium">{tr("col.date")}</th>
+                <th className="py-1 pr-2 font-medium">{tr("col.type")}</th>
+                <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
+                <th className="py-1 text-right font-medium">{tr("col.severity")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(d.incidents ?? []).map((inc, i) => (
+                <IncidentRow key={`${inc.type}-${i}`} inc={inc} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </Panel>
   );
   const panelActions = (
     <Panel title={tr("panel.actions", { n: d.actions?.length ?? 0 })} infoKey="actions">
-      <table className="w-full text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-            <th className="py-1 pr-2 font-medium">{tr("col.priority")}</th>
-            <th className="py-1 pr-2 font-medium">{tr("col.action")}</th>
-            <th className="py-1 pr-2 font-medium">{tr("col.impact")}</th>
-            <th className="py-1 text-right font-medium">{tr("col.complexity")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(d.actions ?? []).map((a) => (
-            <ActionRow key={a.priority} a={a} />
-          ))}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+              <th className="py-1 pr-2 font-medium">{tr("col.priority")}</th>
+              <th className="py-1 pr-2 font-medium">{tr("col.action")}</th>
+              <th className="py-1 pr-2 font-medium">{tr("col.impact")}</th>
+              <th className="py-1 text-right font-medium">{tr("col.complexity")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(d.actions ?? []).map((a) => (
+              <ActionRow key={a.priority} a={a} />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
   const panelServices = (
     <Panel title={tr("panel.services")} infoKey="services">
-      <table className="w-full text-[0.72rem]">
-        <thead>
-          <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-            <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
-            <th className="py-1 pr-2 text-right font-medium">{tr("col.success")}</th>
-            <th className="py-1 pr-2 text-right font-medium">{tr("col.p50")}</th>
-            <th className="py-1 text-right font-medium">{tr("col.requests")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(d.services ?? []).map((s) => (
-            <ServiceRow key={s.name} s={s} />
-          ))}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[0.72rem]">
+          <thead>
+            <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+              <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
+              <th className="py-1 pr-2 text-right font-medium">{tr("col.success")}</th>
+              <th className="py-1 pr-2 text-right font-medium">{tr("col.p50")}</th>
+              <th className="py-1 text-right font-medium">{tr("col.requests")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(d.services ?? []).map((s) => (
+              <ServiceRow key={s.name} s={s} />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
   const panelProviders = (

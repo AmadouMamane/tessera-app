@@ -567,111 +567,115 @@ export function FailedBoard({
               {tq("failed.empty")}
             </p>
           ) : (
-            <table className="w-full min-w-[940px] table-fixed text-left text-[0.7rem]">
-              <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
-                <tr className="border-b border-[var(--border)]">
-                  <th className="w-9 py-1.5 pl-4" />
-                  <th className="w-[8%] px-2 py-1.5 font-medium">{tq("failed.cols.id")}</th>
-                  <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.severity")}</th>
-                  <th className="w-[10%] px-2 py-1.5 font-medium">{tq("failed.cols.category")}</th>
-                  <th className="w-[22%] px-2 py-1.5 font-medium">{tq("failed.cols.prompt")}</th>
-                  <th className="w-[6%] px-2 py-1.5 text-right font-medium">
-                    {tq("failed.cols.score")}
-                  </th>
-                  <th className="w-[7%] px-2 py-1.5 font-medium">{tq("failed.cols.run")}</th>
-                  <th className="w-[10%] px-2 py-1.5 font-medium">{tq("failed.cols.model")}</th>
-                  <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.owner")}</th>
-                  <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.status")}</th>
-                  <th className="w-24 py-1.5 pr-4 pl-2 font-medium">
-                    <span className="sr-only">{tt("rowOpen")}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((c) => {
-                  const k = rowKey(c);
-                  const isSelected = k === selectedKey;
-                  return (
-                    <tr
-                      key={k}
-                      onClick={() => onSelect(c)}
-                      // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          onSelect(c);
-                        }
-                      }}
-                      className={`group cursor-pointer border-b border-[var(--border)]/50 outline-none transition-colors hover:bg-[var(--accent)]/40 focus-visible:bg-[var(--accent)]/40 ${
-                        isSelected ? "bg-[var(--accent)]/60" : ""
-                      }`}
-                    >
-                      <td className="py-1.5 pl-4">
-                        <input
-                          type="checkbox"
-                          checked={picked.has(k)}
-                          onChange={() => toggle(c)}
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label={c.id}
-                        />
-                      </td>
-                      <td className="px-2 py-2 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
-                        <Truncate>{c.id}</Truncate>
-                      </td>
-                      <td className="px-2 py-2">
-                        <Badge tone={SEV_TONE[c.severity] ?? "neutral"} className="text-[0.6rem]">
-                          {tq(`failed.sev.${c.severity}`)}
-                        </Badge>
-                      </td>
-                      <td className="px-2 py-2">
-                        <Truncate>{catLabel(c.category)}</Truncate>
-                      </td>
-                      <td className="px-2 py-2 text-[var(--muted-foreground)]">
-                        <Truncate>{c.prompt}</Truncate>
-                      </td>
-                      <td className="px-2 py-2 text-right tabular-nums text-[var(--muted-foreground)]">
-                        {DASH}
-                      </td>
-                      <td className="px-2 py-2 font-mono text-[0.62rem] text-[var(--muted-foreground)]">
-                        {c.catalogue_version ? `v${c.catalogue_version.split("-")[0]}` : DASH}
-                      </td>
-                      <td className="px-2 py-2">
-                        <Truncate full={c.model}>{shortModel(c.model)}</Truncate>
-                      </td>
-                      <td className="px-2 py-2 text-[var(--muted-foreground)]">
-                        <Truncate>{c.owner}</Truncate>
-                      </td>
-                      <td className="px-2 py-2">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[0.62rem] ${
-                            c.status === "new"
-                              ? "text-amber-600 dark:text-amber-400"
-                              : "text-violet-600 dark:text-violet-400"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              c.status === "new" ? "bg-amber-500" : "bg-violet-500"
-                            }`}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[940px] table-fixed text-left text-[0.7rem]">
+                <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="w-9 py-1.5 pl-4" />
+                    <th className="w-[8%] px-2 py-1.5 font-medium">{tq("failed.cols.id")}</th>
+                    <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.severity")}</th>
+                    <th className="w-[10%] px-2 py-1.5 font-medium">
+                      {tq("failed.cols.category")}
+                    </th>
+                    <th className="w-[22%] px-2 py-1.5 font-medium">{tq("failed.cols.prompt")}</th>
+                    <th className="w-[6%] px-2 py-1.5 text-right font-medium">
+                      {tq("failed.cols.score")}
+                    </th>
+                    <th className="w-[7%] px-2 py-1.5 font-medium">{tq("failed.cols.run")}</th>
+                    <th className="w-[10%] px-2 py-1.5 font-medium">{tq("failed.cols.model")}</th>
+                    <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.owner")}</th>
+                    <th className="w-[9%] px-2 py-1.5 font-medium">{tq("failed.cols.status")}</th>
+                    <th className="w-24 py-1.5 pr-4 pl-2 font-medium">
+                      <span className="sr-only">{tt("rowOpen")}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((c) => {
+                    const k = rowKey(c);
+                    const isSelected = k === selectedKey;
+                    return (
+                      <tr
+                        key={k}
+                        onClick={() => onSelect(c)}
+                        // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSelect(c);
+                          }
+                        }}
+                        className={`group cursor-pointer border-b border-[var(--border)]/50 outline-none transition-colors hover:bg-[var(--accent)]/40 focus-visible:bg-[var(--accent)]/40 ${
+                          isSelected ? "bg-[var(--accent)]/60" : ""
+                        }`}
+                      >
+                        <td className="py-1.5 pl-4">
+                          <input
+                            type="checkbox"
+                            checked={picked.has(k)}
+                            onChange={() => toggle(c)}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={c.id}
                           />
-                          {tq(`failed.status.${c.status}`)}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4 pl-2">
-                        <span className="flex items-center justify-end gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
-                          <span className="opacity-0 transition-opacity group-hover:opacity-100">
-                            {tt("rowOpen")}
+                        </td>
+                        <td className="px-2 py-2 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                          <Truncate>{c.id}</Truncate>
+                        </td>
+                        <td className="px-2 py-2">
+                          <Badge tone={SEV_TONE[c.severity] ?? "neutral"} className="text-[0.6rem]">
+                            {tq(`failed.sev.${c.severity}`)}
+                          </Badge>
+                        </td>
+                        <td className="px-2 py-2">
+                          <Truncate>{catLabel(c.category)}</Truncate>
+                        </td>
+                        <td className="px-2 py-2 text-[var(--muted-foreground)]">
+                          <Truncate>{c.prompt}</Truncate>
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums text-[var(--muted-foreground)]">
+                          {DASH}
+                        </td>
+                        <td className="px-2 py-2 font-mono text-[0.62rem] text-[var(--muted-foreground)]">
+                          {c.catalogue_version ? `v${c.catalogue_version.split("-")[0]}` : DASH}
+                        </td>
+                        <td className="px-2 py-2">
+                          <Truncate full={c.model}>{shortModel(c.model)}</Truncate>
+                        </td>
+                        <td className="px-2 py-2 text-[var(--muted-foreground)]">
+                          <Truncate>{c.owner}</Truncate>
+                        </td>
+                        <td className="px-2 py-2">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[0.62rem] ${
+                              c.status === "new"
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-violet-600 dark:text-violet-400"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                c.status === "new" ? "bg-amber-500" : "bg-violet-500"
+                              }`}
+                            />
+                            {tq(`failed.status.${c.status}`)}
                           </span>
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="py-2 pr-4 pl-2">
+                          <span className="flex items-center justify-end gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
+                            <span className="opacity-0 transition-opacity group-hover:opacity-100">
+                              {tt("rowOpen")}
+                            </span>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
         {filtered.length > PAGE_SIZE ? (

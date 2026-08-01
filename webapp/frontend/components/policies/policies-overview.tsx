@@ -390,37 +390,39 @@ function VersionHistory({ t, data, className }: { t: T; data: Data; className?: 
       info={<PolInfo k="zoneHistory" title={t("zone.history")} />}
       action={<ViewAll label={t("viewAll.history")} />}
     >
-      <table className="w-full border-collapse text-left text-[0.72rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            {cols.map((c) => (
-              <th key={c} className="whitespace-nowrap px-1.5 py-1.5 font-medium">
-                {t(`hCol.${c}`)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.version_history.map((v) => (
-            <tr
-              key={v.version}
-              className="border-b border-[var(--tessera-border)]/60 last:border-0"
-            >
-              <td className="px-1.5 py-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]">
-                {v.version}
-              </td>
-              <td className="whitespace-nowrap px-1.5 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
-                {v.datetime}
-              </td>
-              <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{v.author}</td>
-              <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{v.approver}</td>
-              <td className="px-1.5 py-1.5">
-                <Badge className={VSTATUS[v.status]}>{t(`vStatus.${v.status}`)}</Badge>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.72rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {cols.map((c) => (
+                <th key={c} className="whitespace-nowrap px-1.5 py-1.5 font-medium">
+                  {t(`hCol.${c}`)}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.version_history.map((v) => (
+              <tr
+                key={v.version}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="px-1.5 py-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]">
+                  {v.version}
+                </td>
+                <td className="whitespace-nowrap px-1.5 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
+                  {v.datetime}
+                </td>
+                <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{v.author}</td>
+                <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{v.approver}</td>
+                <td className="px-1.5 py-1.5">
+                  <Badge className={VSTATUS[v.status]}>{t(`vStatus.${v.status}`)}</Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="mt-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
         {t("version.compareLabel", { active: data.active_version, compare: data.compare_to })}
       </p>
@@ -506,37 +508,42 @@ function Impact({
       info={<PolInfo k="zoneImpact" title={t("zone.impact")} />}
     >
       {flagged ? <SyntheticNotice signalId="policy_versioning" compact /> : null}
-      <table className="w-full border-collapse text-left text-[0.68rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("impactCol.metric")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.baseline")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.candidate")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.impact")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.impact.map((r) => (
-            <tr key={r.metric} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-              <td className="px-1.5 py-1.5 text-[var(--tessera-text)]">{r.metric}</td>
-              <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text-muted)]">
-                {r.baseline}
-              </td>
-              <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text)]">
-                {r.candidate}
-              </td>
-              <td
-                className={cn(
-                  "px-1.5 py-1.5 text-right tabular-nums font-medium",
-                  TONE_TEXT[r.tone],
-                )}
-              >
-                {r.delta}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.68rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("impactCol.metric")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.baseline")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.candidate")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.impact")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.impact.map((r) => (
+              <tr
+                key={r.metric}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="px-1.5 py-1.5 text-[var(--tessera-text)]">{r.metric}</td>
+                <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                  {r.baseline}
+                </td>
+                <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text)]">
+                  {r.candidate}
+                </td>
+                <td
+                  className={cn(
+                    "px-1.5 py-1.5 text-right tabular-nums font-medium",
+                    TONE_TEXT[r.tone],
+                  )}
+                >
+                  {r.delta}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

@@ -136,9 +136,7 @@ function Panel({
         </CardTitle>
         {action}
       </CardHeader>
-      {/* `overflow-x-auto`: a mapping table with five columns is 151px wider than
-          this panel at 768px, and the card clips. Scroll beats losing columns. */}
-      <CardContent className="flex-1 overflow-x-auto">{children}</CardContent>
+      <CardContent className="flex-1">{children}</CardContent>
     </Card>
   );
 }
@@ -462,41 +460,45 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
               <Zone label={tc("sec.mapping")}>
                 <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)]">
                   <Panel title={tc("panel.mapping")} infoKey="mapping">
-                    <table className="w-full text-[0.72rem]">
-                      <thead>
-                        <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                          <th className="py-1 pr-2 font-medium">{tc("col.framework")}</th>
-                          <th className="py-1 pr-2 font-medium">{tc("col.score")}</th>
-                          <th className="py-1 font-medium">{tc("col.breakdown")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(d.frameworks ?? []).map((f) => (
-                          <FrameworkRow key={f.code} f={f} />
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[0.72rem]">
+                        <thead>
+                          <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                            <th className="py-1 pr-2 font-medium">{tc("col.framework")}</th>
+                            <th className="py-1 pr-2 font-medium">{tc("col.score")}</th>
+                            <th className="py-1 font-medium">{tc("col.breakdown")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(d.frameworks ?? []).map((f) => (
+                            <FrameworkRow key={f.code} f={f} />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </Panel>
 
                   <Panel
                     title={tc("panel.obligations", { n: d.obligations?.length ?? 0 })}
                     infoKey="obligTable"
                   >
-                    <table className="w-full text-[0.72rem]">
-                      <thead>
-                        <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                          <th className="py-1 pr-2 font-medium">{tc("col.obligation")}</th>
-                          <th className="py-1 pr-2 font-medium">{tc("col.status")}</th>
-                          <th className="py-1 pr-2 font-medium">{tc("col.due")}</th>
-                          <th className="py-1 font-medium">{tc("col.owner")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(d.obligations ?? []).slice(0, 6).map((o) => (
-                          <ObligationRow key={o.name} o={o} fwLabel={fwLabel} />
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[0.72rem]">
+                        <thead>
+                          <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                            <th className="py-1 pr-2 font-medium">{tc("col.obligation")}</th>
+                            <th className="py-1 pr-2 font-medium">{tc("col.status")}</th>
+                            <th className="py-1 pr-2 font-medium">{tc("col.due")}</th>
+                            <th className="py-1 font-medium">{tc("col.owner")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(d.obligations ?? []).slice(0, 6).map((o) => (
+                            <ObligationRow key={o.name} o={o} fwLabel={fwLabel} />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </Panel>
 
                   <Panel title={tc("panel.evidence")} infoKey="evidence">
@@ -595,32 +597,34 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                   </Panel>
 
                   <Panel title={tc("panel.incidents")} infoKey="incidents">
-                    <table className="w-full text-[0.7rem]">
-                      <thead>
-                        <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                          <th className="py-1 pr-2 font-medium">{tc("col.nc")}</th>
-                          <th className="py-1 pr-2 font-medium">{tc("col.severity")}</th>
-                          <th className="py-1 font-medium">{tc("col.status")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(d.non_conformities ?? []).slice(0, 6).map((nc) => (
-                          <tr key={nc.id} className="border-b border-[var(--border)]/50">
-                            <td className="py-1 pr-2 font-mono text-[var(--tessera-green)]">
-                              {nc.id}
-                            </td>
-                            <td className="py-1 pr-2">
-                              <Badge tone={SEV_BADGE[nc.severity] ?? "neutral"}>
-                                {tc(`sev.${nc.severity}`)}
-                              </Badge>
-                            </td>
-                            <td className="py-1 text-[var(--muted-foreground)]">
-                              {tc(`ncStatus.${nc.status}`)}
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[0.7rem]">
+                        <thead>
+                          <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                            <th className="py-1 pr-2 font-medium">{tc("col.nc")}</th>
+                            <th className="py-1 pr-2 font-medium">{tc("col.severity")}</th>
+                            <th className="py-1 font-medium">{tc("col.status")}</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {(d.non_conformities ?? []).slice(0, 6).map((nc) => (
+                            <tr key={nc.id} className="border-b border-[var(--border)]/50">
+                              <td className="py-1 pr-2 font-mono text-[var(--tessera-green)]">
+                                {nc.id}
+                              </td>
+                              <td className="py-1 pr-2">
+                                <Badge tone={SEV_BADGE[nc.severity] ?? "neutral"}>
+                                  {tc(`sev.${nc.severity}`)}
+                                </Badge>
+                              </td>
+                              <td className="py-1 text-[var(--muted-foreground)]">
+                                {tc(`ncStatus.${nc.status}`)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </Panel>
                 </div>
               </Zone>
@@ -712,48 +716,50 @@ function BusinessLegalSignalsPanel({ rows }: { rows: BusinessLegalSignal[] }) {
             {tc("businessSignals.empty")}
           </p>
         ) : (
-          <table className="w-full table-fixed text-[0.72rem]">
-            <thead>
-              <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                <th className="w-[22%] py-1 pr-2 font-medium">{tc("businessSignals.agent")}</th>
-                <th className="w-[34%] py-1 pr-2 font-medium">{tc("businessSignals.signal")}</th>
-                <th className="w-[14%] py-1 pr-2 font-medium">{tc("businessSignals.value")}</th>
-                <th className="w-[16%] py-1 pr-2 font-medium">{tc("businessSignals.status")}</th>
-                <th className="w-[14%] py-1 font-medium">{tc("businessSignals.source")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const label = tb.has(row.key) ? tb(row.key) : row.key;
-                const value =
-                  typeof row.value_pct === "number" ? `${Math.round(row.value_pct)}%` : "—";
-                return (
-                  <tr
-                    key={`${row.agent_id}.${row.key}`}
-                    className="border-b border-[var(--border)]/50"
-                  >
-                    <td className="py-1 pr-2">
-                      <Link href={row.href} className="truncate text-[var(--tessera-green)]">
-                        {row.agent_name}
-                      </Link>
-                    </td>
-                    <td className="py-1 pr-2">
-                      <Truncate full={label}>{label}</Truncate>
-                    </td>
-                    <td className="py-1 pr-2 tabular-nums">{value}</td>
-                    <td className="py-1 pr-2">
-                      <Badge tone={BUSINESS_STATUS_BADGE[row.status] ?? "neutral"}>
-                        {tc(`businessSignals.statusValue.${row.status}`)}
-                      </Badge>
-                    </td>
-                    <td className="py-1 text-[var(--muted-foreground)]">
-                      <Truncate full={row.source}>{row.source}</Truncate>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed text-[0.72rem]">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
+                  <th className="w-[22%] py-1 pr-2 font-medium">{tc("businessSignals.agent")}</th>
+                  <th className="w-[34%] py-1 pr-2 font-medium">{tc("businessSignals.signal")}</th>
+                  <th className="w-[14%] py-1 pr-2 font-medium">{tc("businessSignals.value")}</th>
+                  <th className="w-[16%] py-1 pr-2 font-medium">{tc("businessSignals.status")}</th>
+                  <th className="w-[14%] py-1 font-medium">{tc("businessSignals.source")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const label = tb.has(row.key) ? tb(row.key) : row.key;
+                  const value =
+                    typeof row.value_pct === "number" ? `${Math.round(row.value_pct)}%` : "—";
+                  return (
+                    <tr
+                      key={`${row.agent_id}.${row.key}`}
+                      className="border-b border-[var(--border)]/50"
+                    >
+                      <td className="py-1 pr-2">
+                        <Link href={row.href} className="truncate text-[var(--tessera-green)]">
+                          {row.agent_name}
+                        </Link>
+                      </td>
+                      <td className="py-1 pr-2">
+                        <Truncate full={label}>{label}</Truncate>
+                      </td>
+                      <td className="py-1 pr-2 tabular-nums">{value}</td>
+                      <td className="py-1 pr-2">
+                        <Badge tone={BUSINESS_STATUS_BADGE[row.status] ?? "neutral"}>
+                          {tc(`businessSignals.statusValue.${row.status}`)}
+                        </Badge>
+                      </td>
+                      <td className="py-1 text-[var(--muted-foreground)]">
+                        <Truncate full={row.source}>{row.source}</Truncate>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </Panel>
     </Zone>

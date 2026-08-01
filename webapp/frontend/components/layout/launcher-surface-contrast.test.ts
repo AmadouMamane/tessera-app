@@ -28,7 +28,7 @@
 //
 // Mutation contract (each verified red before landing):
 //   · re-tone `--text-secondary` light to the dark value  → red, names the pair;
-//   · drop `--border-subtle` light back to 0.12 alpha     → red at 1.28:1;
+//   · drop `--border-subtle` back to its old alpha        → red, either theme;
 //   · delete the `.light .launcher-surface` block         → red (a token is missing);
 //   · rename `.launcher-surface`                          → red (anti-vacuity).
 import { readFileSync } from "node:fs";
@@ -102,24 +102,21 @@ const AA = 4.5;
 const SEPARATOR_FLOOR = 1.8;
 
 /**
- * The dark separator, FROZEN at its measured value rather than raised.
+ * The dark separator was FROZEN at 1.19:1 for exactly one commit, and is not any more.
  *
- * Amadou's report was explicit about scope: "en fond clair". The dark launcher's
- * rule measures 1.20:1 — the same faintness the light one had — but touching it
- * would be re-toning a theme nobody complained about, on my own authority, inside
- * a change about something else. So it is recorded at what it is, one-sided: it may
- * rise, never fall. That is a debt written down, not a defect called fixed.
+ * It was frozen because Amadou's report said "en fond clair" and re-toning a theme
+ * nobody complained about, on my own authority, inside a change about something else,
+ * is not a fix — it is scope taken without asking. He then asked for the rest, so the
+ * dark rule went to 2.01:1 and both themes are now held to the SAME floor. A frozen
+ * bound that goes away because the debt was PAID is the only good ending for one.
  */
-const DARK_SEPARATOR_FROZEN = 1.19;
 
 /** The pairs a reader's eye actually forms on these three pages. `ground` names the
- *  token the foreground sits on; `min` says which of the two standards applies, and
- *  `darkMin` overrides it where the two themes are honestly held to different bars. */
+ *  token the foreground sits on; `min` says which of the two bars applies. */
 const PAIRS: ReadonlyArray<{
   fg: string;
   ground: string;
   min: number;
-  darkMin?: number;
   what: string;
 }> = [
   { fg: "--text-primary", ground: "--bg-app", min: AA, what: "headline on the page" },
@@ -134,13 +131,7 @@ const PAIRS: ReadonlyArray<{
   { fg: "--danger", ground: "--panel", min: AA, what: "danger text" },
   { fg: "--indigo", ground: "--panel", min: AA, what: "indigo accent text" },
   { fg: "--violet", ground: "--panel", min: AA, what: "violet accent text" },
-  {
-    fg: "--border-subtle",
-    ground: "--bg-app",
-    min: SEPARATOR_FLOOR,
-    darkMin: DARK_SEPARATOR_FROZEN,
-    what: "the header rule",
-  },
+  { fg: "--border-subtle", ground: "--bg-app", min: SEPARATOR_FLOOR, what: "the header rule" },
 ];
 
 /** The pale ground each theme composites a translucent token over. */
@@ -160,11 +151,10 @@ function measure(tokens: Map<string, string>, theme: "dark" | "light") {
     const bg = flatten(bgRaw, ground);
     const fg = flatten(fgRaw, bg);
     const ratio = contrast(fg, bg);
-    const floor = theme === "dark" && pair.darkMin !== undefined ? pair.darkMin : pair.min;
     measured++;
-    if (ratio < floor) {
+    if (ratio < pair.min) {
       failures.push(
-        `${theme}: ${pair.what} — ${pair.fg} (${fg}) on ${pair.ground} (${bg}) = ${ratio.toFixed(2)}:1, below ${floor}`,
+        `${theme}: ${pair.what} — ${pair.fg} (${fg}) on ${pair.ground} (${bg}) = ${ratio.toFixed(2)}:1, below ${pair.min}`,
       );
     }
   }

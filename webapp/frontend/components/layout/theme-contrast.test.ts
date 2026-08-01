@@ -592,3 +592,100 @@ describe("every colour constant survives the light theme", () => {
     expect(token.resolved).toBe(0);
   });
 });
+
+/**
+ * THE CHROME LINE, in every theme at once.
+ *
+ * `--tessera-chrome-line` is the rule under the cockpit header and the one dividing
+ * the left panel from the content. It exists because those two were drawn from the
+ * card-hairline token and measured 1.23:1 under "Clair" — invisible by construction,
+ * which is what Amadou reported on 2026-08-01.
+ *
+ * It is asserted for ALL THREE themes together, and that is the whole point rather
+ * than thoroughness for its own sake: the light value was the reported one, the dark
+ * value was fine at 2.22:1, and "Nuit profonde" turned out to be at 1.57:1 — a third
+ * theme carrying the same faint rule that nobody had reported and nobody was looking
+ * at. It was found only because all three were measured in one pass.
+ *
+ * Held at the same DESIGN floor as the launcher's separator (see
+ * `launcher-surface-contrast.test.ts` for why 3:1 is the wrong bar for a rule that
+ * separates rather than identifies).
+ *
+ * Mutation contract: drop any theme's chrome line back to its old value → red, and
+ * the failure names the theme.
+ */
+describe("the chrome line reads in every theme", () => {
+  const SEPARATOR_FLOOR = 1.8;
+  const css = readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
+
+  /** `rgba(r,g,b,a)` over an opaque ground → what the eye actually gets. */
+  const flatten = (value: string, groundHex: string): string => {
+    const rgba = /rgba?\(([^)]+)\)/.exec(value);
+    if (rgba === null) return normaliseHex(value) ?? groundHex;
+    const parts = (rgba[1] ?? "").split(",").map(Number);
+    const [r = 0, g = 0, b = 0] = parts;
+    const alpha = parts[3] ?? 1;
+    const ground = [1, 3, 5].map((i) => Number.parseInt(groundHex.slice(i, i + 2), 16));
+    return `#${[r, g, b]
+      .map((c, i) => Math.round(c * alpha + (ground[i] ?? 0) * (1 - alpha)))
+      .map((c) => c.toString(16).padStart(2, "0"))
+      .join("")}`;
+  };
+
+  const declarationsIn = (selector: string): Map<string, string> => {
+    const start = css.indexOf(`${selector} {`);
+    const out = new Map<string, string>();
+    if (start === -1) return out;
+    const body = css.slice(start, css.indexOf("\n}", start));
+    for (const m of body.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)) {
+      const [, name, value] = m;
+      if (name !== undefined && value !== undefined) out.set(name, value.trim());
+    }
+    return out;
+  };
+
+  /** Selector → the opaque page ground that theme composites onto. */
+  const THEMES: ReadonlyArray<[string, string]> = [
+    [":root", "#03101f"],
+    [".deep-night", "#0a0e16"],
+    [".light", "#ffffff"],
+  ];
+
+  it("is declared and legible in all three themes", () => {
+    const failures: string[] = [];
+    let measured = 0;
+    for (const [selector, ground] of THEMES) {
+      const tokens = declarationsIn(selector);
+      const raw = tokens.get("--tessera-chrome-line");
+      if (raw === undefined) {
+        failures.push(`${selector}: --tessera-chrome-line is not declared`);
+        continue;
+      }
+      const line = flatten(raw, ground);
+      const ratio = contrast(line, ground);
+      measured++;
+      if (ratio < SEPARATOR_FLOOR) {
+        failures.push(
+          `${selector}: chrome line ${line} on ${ground} = ${ratio.toFixed(2)}:1, below ${SEPARATOR_FLOOR}`,
+        );
+      }
+    }
+    // Anti-vacuity: three themes exist, three must have been measured.
+    expect(measured, "every theme must have been measured").toBe(THEMES.length);
+    expect(failures, failures.join("\n")).toHaveLength(0);
+  });
+
+  it("is stronger than the card hairline it was split off from", () => {
+    // If the two were equal, the split would have bought nothing — the whole point
+    // is that a structural rule may be heavier than a card's edge.
+    for (const [selector, ground] of THEMES) {
+      const tokens = declarationsIn(selector);
+      const chrome = flatten(tokens.get("--tessera-chrome-line") ?? "", ground);
+      const hairline = flatten(tokens.get("--tessera-border") ?? "", ground);
+      expect(
+        contrast(chrome, ground),
+        `${selector}: the chrome line must out-weigh --tessera-border`,
+      ).toBeGreaterThan(contrast(hairline, ground));
+    }
+  });
+});

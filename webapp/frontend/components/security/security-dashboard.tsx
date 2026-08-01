@@ -2017,29 +2017,31 @@ function SecurityRail({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <table className="w-full text-[0.7rem]">
-              <thead>
-                <tr className="text-left text-[var(--muted-foreground)]">
-                  <th className="pb-1 font-medium">{ts("rail.tool")}</th>
-                  <th className="pb-1 text-right font-medium">{ts("rail.used")}</th>
-                  <th className="pb-1 text-right font-medium">{ts("rail.risk")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(lp?.usage ?? []).slice(0, 5).map((u) => {
-                  const over = lp?.over_provisioned.includes(u.tool);
-                  return (
-                    <tr key={u.tool}>
-                      <td className="py-0.5 font-mono">{u.tool}</td>
-                      <td className="py-0.5 text-right tabular-nums">{u.used}</td>
-                      <td className={`py-0.5 text-right ${over ? WARN : GOOD}`}>
-                        {over ? ts("state.high") : ts("state.ok")}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[0.7rem]">
+                <thead>
+                  <tr className="text-left text-[var(--muted-foreground)]">
+                    <th className="pb-1 font-medium">{ts("rail.tool")}</th>
+                    <th className="pb-1 text-right font-medium">{ts("rail.used")}</th>
+                    <th className="pb-1 text-right font-medium">{ts("rail.risk")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(lp?.usage ?? []).slice(0, 5).map((u) => {
+                    const over = lp?.over_provisioned.includes(u.tool);
+                    return (
+                      <tr key={u.tool}>
+                        <td className="py-0.5 font-mono">{u.tool}</td>
+                        <td className="py-0.5 text-right tabular-nums">{u.used}</td>
+                        <td className={`py-0.5 text-right ${over ? WARN : GOOD}`}>
+                          {over ? ts("state.high") : ts("state.ok")}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 

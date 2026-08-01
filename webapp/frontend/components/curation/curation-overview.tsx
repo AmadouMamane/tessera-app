@@ -721,38 +721,43 @@ function WhyTours({ t, data, className }: { t: T; data: Data; className?: string
       action={<ViewAll label={t("viewAll.reasons")} />}
     >
       <SyntheticNotice signalId="curation" compact />
-      <table className="w-full border-collapse text-left text-[0.72rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("whyCol.reason")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("whyCol.value")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("whyCol.cost")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.why_tours.map((w) => (
-            <tr key={w.reason} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-              <td className="max-w-[180px] truncate px-1.5 py-1.5 text-[var(--tessera-text)]">
-                {w.reason}
-              </td>
-              <td className="px-1.5 py-1.5">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-[4px] overflow-hidden w-12 rounded-full bg-[var(--tessera-border)]">
-                    <div
-                      className="h-full rounded-full bg-[#2e72d2]"
-                      style={{ width: `${(w.value / maxValue) * 100}%` }}
-                    />
-                  </div>
-                  <span className="tabular-nums text-[var(--tessera-text-muted)]">{w.value}</span>
-                </div>
-              </td>
-              <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text-muted)]">
-                {w.cost}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.72rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("whyCol.reason")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("whyCol.value")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("whyCol.cost")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.why_tours.map((w) => (
+              <tr
+                key={w.reason}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="max-w-[180px] truncate px-1.5 py-1.5 text-[var(--tessera-text)]">
+                  {w.reason}
+                </td>
+                <td className="px-1.5 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-[4px] overflow-hidden w-12 rounded-full bg-[var(--tessera-border)]">
+                      <div
+                        className="h-full rounded-full bg-[#2e72d2]"
+                        style={{ width: `${(w.value / maxValue) * 100}%` }}
+                      />
+                    </div>
+                    <span className="tabular-nums text-[var(--tessera-text-muted)]">{w.value}</span>
+                  </div>
+                </td>
+                <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                  {w.cost}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -857,28 +862,30 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
       action={<ViewAll label={t("viewAll.datasets")} href="/surveiller/qualite-ia" />}
     >
       <SyntheticNotice signalId="curation" compact />
-      <table className="w-full border-collapse text-left text-[0.68rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("dsCol.dataset")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("dsCol.size")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("dsCol.updated")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.linked_datasets.map((d) => (
-            <tr key={d.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-              <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[var(--tessera-text)]">
-                {d.name}
-              </td>
-              <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
-                {d.size}
-              </td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{d.updated}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.68rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("dsCol.dataset")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("dsCol.size")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("dsCol.updated")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.linked_datasets.map((d) => (
+              <tr key={d.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
+                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[var(--tessera-text)]">
+                  {d.name}
+                </td>
+                <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
+                  {d.size}
+                </td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{d.updated}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }
@@ -965,40 +972,42 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         title={t("panel.owners")}
         info={<ExplainInfo k="panel.owners" title={t("panel.owners")} />}
       >
-        <table className="w-full border-collapse text-left text-[0.68rem]">
-          <thead>
-            <tr className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              <th className="pb-1 font-medium">{t("ownerCol.role")}</th>
-              <th className="pb-1 text-center font-medium">{t("ownerCol.required")}</th>
-              <th className="pb-1 text-center font-medium">{t("ownerCol.assigned")}</th>
-              <th className="pb-1 text-right font-medium">{t("ownerCol.status")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.owners.map((o) => (
-              <tr key={o.role}>
-                <td className="py-0.5 text-[var(--tessera-text)]">{o.role}</td>
-                <td className="py-0.5 text-center tabular-nums text-[var(--tessera-text-muted)]">
-                  {o.required}
-                </td>
-                <td className="py-0.5 text-center tabular-nums text-[var(--tessera-text-muted)]">
-                  {o.assigned}
-                </td>
-                <td className="py-0.5 text-right">
-                  <span
-                    className={
-                      o.status === "ok"
-                        ? "text-[var(--tessera-fg-success)]"
-                        : "text-[var(--tessera-fg-warning)]"
-                    }
-                  >
-                    {t(`ownerStatus.${o.status}`)}
-                  </span>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-[0.68rem]">
+            <thead>
+              <tr className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                <th className="pb-1 font-medium">{t("ownerCol.role")}</th>
+                <th className="pb-1 text-center font-medium">{t("ownerCol.required")}</th>
+                <th className="pb-1 text-center font-medium">{t("ownerCol.assigned")}</th>
+                <th className="pb-1 text-right font-medium">{t("ownerCol.status")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.owners.map((o) => (
+                <tr key={o.role}>
+                  <td className="py-0.5 text-[var(--tessera-text)]">{o.role}</td>
+                  <td className="py-0.5 text-center tabular-nums text-[var(--tessera-text-muted)]">
+                    {o.required}
+                  </td>
+                  <td className="py-0.5 text-center tabular-nums text-[var(--tessera-text-muted)]">
+                    {o.assigned}
+                  </td>
+                  <td className="py-0.5 text-right">
+                    <span
+                      className={
+                        o.status === "ok"
+                          ? "text-[var(--tessera-fg-success)]"
+                          : "text-[var(--tessera-fg-warning)]"
+                      }
+                    >
+                      {t(`ownerStatus.${o.status}`)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Panel>
 
       <Panel title={t("panel.quickActions")}>
@@ -1086,29 +1095,31 @@ function RecentActivity({
       className={className}
       action={<ViewAll label={t("viewAll.activities")} onClick={onViewAll} />}
     >
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("actCol.time")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("actCol.action")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("actCol.actor")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.recent_activity.map((a, i) => (
-            <tr
-              key={`${a.time}-${a.action}-${i}`}
-              className="border-b border-[var(--tessera-border)]/60 last:border-0"
-            >
-              <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">
-                {a.time}
-              </td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{a.action}</td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{a.actor}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("actCol.time")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("actCol.action")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("actCol.actor")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.recent_activity.map((a, i) => (
+              <tr
+                key={`${a.time}-${a.action}-${i}`}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">
+                  {a.time}
+                </td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text)]">{a.action}</td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{a.actor}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

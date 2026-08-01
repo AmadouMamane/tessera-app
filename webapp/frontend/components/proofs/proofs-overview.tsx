@@ -699,47 +699,49 @@ function Crypto({ t, data }: { t: T; data: Data }) {
 function ControlCases({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title="">
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            {(["caseId", "subject", "linked", "owner", "status"] as const).map((c) => (
-              <th key={c} className="px-1.5 py-1 font-medium">
-                {t(`ccCol.${c}`)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.control_case_proofs.map((c) => (
-            <tr
-              key={c.case_id}
-              className="border-b border-[var(--tessera-border)]/60 last:border-0"
-            >
-              <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-green)]">
-                {c.case_id}
-              </td>
-              <td className="max-w-[150px] truncate px-1.5 py-1 text-[var(--tessera-text)]">
-                {c.subject}
-              </td>
-              <td className="px-1.5 py-1 text-center tabular-nums text-[var(--tessera-text-muted)]">
-                {c.linked}
-              </td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{c.owner}</td>
-              <td className="px-1.5 py-1">
-                <span
-                  className={
-                    c.status === "ok"
-                      ? "text-[var(--tessera-fg-success)]"
-                      : "text-[var(--tessera-fg-warning)]"
-                  }
-                >
-                  {t(`ccStatus.${c.status}`)}
-                </span>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              {(["caseId", "subject", "linked", "owner", "status"] as const).map((c) => (
+                <th key={c} className="px-1.5 py-1 font-medium">
+                  {t(`ccCol.${c}`)}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.control_case_proofs.map((c) => (
+              <tr
+                key={c.case_id}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-green)]">
+                  {c.case_id}
+                </td>
+                <td className="max-w-[150px] truncate px-1.5 py-1 text-[var(--tessera-text)]">
+                  {c.subject}
+                </td>
+                <td className="px-1.5 py-1 text-center tabular-nums text-[var(--tessera-text-muted)]">
+                  {c.linked}
+                </td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{c.owner}</td>
+                <td className="px-1.5 py-1">
+                  <span
+                    className={
+                      c.status === "ok"
+                        ? "text-[var(--tessera-fg-success)]"
+                        : "text-[var(--tessera-fg-warning)]"
+                    }
+                  >
+                    {t(`ccStatus.${c.status}`)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

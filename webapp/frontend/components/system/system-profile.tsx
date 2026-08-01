@@ -425,40 +425,42 @@ function Health({ t, data, className }: { t: T; data: Data; className?: string }
 function Services({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
     <Panel title={t("zone.services")} className={className}>
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("svcCol.name")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("svcCol.status")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("svcCol.version")}</th>
-            <th className="px-1.5 py-1 text-right font-medium">{t("svcCol.instances")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.services.map((s) => (
-            <tr key={s.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.name}</td>
-              <td className="px-1.5 py-1">
-                {s.status === "ok" ? (
-                  <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-success)]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {t("status.ok")}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-warning)]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> {t("status.warn")}
-                  </span>
-                )}
-              </td>
-              <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
-                {s.version}
-              </td>
-              <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
-                {s.instances}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("svcCol.name")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("svcCol.status")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("svcCol.version")}</th>
+              <th className="px-1.5 py-1 text-right font-medium">{t("svcCol.instances")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.services.map((s) => (
+              <tr key={s.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
+                <td className="px-1.5 py-1 text-[var(--tessera-text)]">{s.name}</td>
+                <td className="px-1.5 py-1">
+                  {s.status === "ok" ? (
+                    <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-success)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {t("status.ok")}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[var(--tessera-fg-warning)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> {t("status.warn")}
+                    </span>
+                  )}
+                </td>
+                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
+                  {s.version}
+                </td>
+                <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                  {s.instances}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

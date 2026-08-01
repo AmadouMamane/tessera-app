@@ -761,6 +761,7 @@ _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 
 .PHONY: dev-up dev-down dev-status dev-preview preflight image-preflight \
         fulllocal-up fulllocal-down fulllocal-status fulllocal-tunnel fulllocal-tunnel-down \
+        responsive-check \
         deploy-diff
 
 # Start backend + frontend from THIS checkout, detached; wait for health.
@@ -892,6 +893,31 @@ fulllocal-status:
 	@echo "front : $$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-frontend 2>/dev/null || echo 'not running') · http://localhost:$${TESSERA_FRONTEND_PORT:-3090}"
 	@echo "agent : $$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-agent 2>/dev/null || echo 'not running') · workers=$$(docker exec tessera-$(or $(TESSERA_ENV),local)-agent printenv TESSERA_API__WORKERS 2>/dev/null || echo '?')"
 	@echo "tunnel: $$(docker inspect -f '{{.State.Status}}' tessera-cloudflared 2>/dev/null || echo 'not running (domain not flipped)')"
+
+# THE DESCENT — does the cockpit still work on a smaller screen?
+#
+# NOT in `make gate`, and the reason is the gate's own doctrine rather than laziness:
+# this needs a SERVED build, and a check that silently passes when nothing is
+# listening is worse than no check. So it refuses instead — a witness that cannot
+# look may never report "ok" (ADR 0026). Point it at whatever is running:
+#
+#   make responsive-check                          # the full-local front on :3090
+#   RESP_URL=http://localhost:3097 make responsive-check
+#
+# It asks ONE question over 19 cockpit routes × 4 widths (14", small laptop, tablet,
+# phone): is there content cut off with no way to reach it? And it tests its own
+# detector on every run, because "0 findings" and "the query stopped matching" are
+# otherwise the same sentence.
+responsive-check:
+	@url="$(or $(RESP_URL),http://localhost:3090)"; \
+	code=$$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$$url/fr/login" 2>/dev/null); \
+	if [ "$$code" != "200" ]; then \
+	  echo "[responsive] CANNOT LOOK — nothing serving $$url (got $$code)."; \
+	  echo "[responsive] start one first: TESSERA_AGENT_STATE=\$$PWD/.agent-state make fulllocal-up"; \
+	  exit 2; \
+	fi; \
+	echo "[responsive] looking at $$url"; \
+	cd webapp/frontend && E2E_BASE_URL="$$url" npx playwright test e2e/responsive-descent.spec.ts --reporter=line
 
 # THE FLIP — publishes the local front on your domain via the Cloudflare Tunnel. GATED:
 # run ONLY when you have validated locally, set real operator passwords, created the tunnel

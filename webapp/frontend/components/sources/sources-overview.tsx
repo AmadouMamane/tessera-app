@@ -996,49 +996,51 @@ function RetentionView({
       title={t("view.retention")}
       info={<ExplainInfo k="retention" title={t("view.retention")} />}
     >
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-2 py-1.5 font-medium">{t("col.name")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.type")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.retention")}</th>
-            <th className="px-2 py-1.5 font-medium">{t("col.classification")}</th>
-            <th className="w-6 px-2 py-1.5" aria-hidden="true" />
-          </tr>
-        </thead>
-        <tbody>
-          {data.sources.map((s) => (
-            <tr
-              key={s.id}
-              onClick={() => onSelect(s.id)}
-              onKeyDown={(e) => rowKeyActivate(e, () => onSelect(s.id))}
-              tabIndex={0}
-              // biome-ignore lint/a11y/useSemanticElements: a table row opens the detail drawer; keyboard + role provided.
-              role="button"
-              aria-label={s.name}
-              className={cn("border-b border-[var(--tessera-border)]/60", ROW_INTERACT)}
-            >
-              <td className="px-2 py-1.5 text-[var(--tessera-text)]">{s.name}</td>
-              <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                {t(`type.${s.type}`)}
-              </td>
-              <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="h-3 w-3 text-[var(--tessera-fg-info)]" /> {s.retention}
-                </span>
-              </td>
-              <td className="px-2 py-1.5">
-                <Badge className={CLASS_BADGE[s.classification]}>
-                  {t(`classification.${s.classification}`)}
-                </Badge>
-              </td>
-              <td className="px-2 py-1.5 text-right">
-                <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-2 py-1.5 font-medium">{t("col.name")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("col.type")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("col.retention")}</th>
+              <th className="px-2 py-1.5 font-medium">{t("col.classification")}</th>
+              <th className="w-6 px-2 py-1.5" aria-hidden="true" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.sources.map((s) => (
+              <tr
+                key={s.id}
+                onClick={() => onSelect(s.id)}
+                onKeyDown={(e) => rowKeyActivate(e, () => onSelect(s.id))}
+                tabIndex={0}
+                // biome-ignore lint/a11y/useSemanticElements: a table row opens the detail drawer; keyboard + role provided.
+                role="button"
+                aria-label={s.name}
+                className={cn("border-b border-[var(--tessera-border)]/60", ROW_INTERACT)}
+              >
+                <td className="px-2 py-1.5 text-[var(--tessera-text)]">{s.name}</td>
+                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                  {t(`type.${s.type}`)}
+                </td>
+                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="h-3 w-3 text-[var(--tessera-fg-info)]" /> {s.retention}
+                  </span>
+                </td>
+                <td className="px-2 py-1.5">
+                  <Badge className={CLASS_BADGE[s.classification]}>
+                    {t(`classification.${s.classification}`)}
+                  </Badge>
+                </td>
+                <td className="px-2 py-1.5 text-right">
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

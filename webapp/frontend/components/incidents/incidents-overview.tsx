@@ -812,31 +812,35 @@ function ResponseJournal({
       title={t("exec.journal")}
       action={<ViewAll label={t("exec.viewAll")} onClick={onViewAll} />}
     >
-      <table className="w-full border-collapse text-left text-[0.7rem]">
-        <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="px-1.5 py-1 font-medium">{t("journalCol.time")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("journalCol.incident")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("journalCol.action")}</th>
-            <th className="px-1.5 py-1 font-medium">{t("journalCol.actor")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.response_journal.map((r, i) => (
-            <tr
-              key={`${r.time}-${r.incident}-${i}`}
-              className="border-b border-[var(--tessera-border)]/60 last:border-0"
-            >
-              <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">
-                {r.time}
-              </td>
-              <td className="px-1.5 py-1 font-mono text-[var(--tessera-fg-info)]">{r.incident}</td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text)]">{r.action}</td>
-              <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.actor}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left text-[0.7rem]">
+          <thead>
+            <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <th className="px-1.5 py-1 font-medium">{t("journalCol.time")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("journalCol.incident")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("journalCol.action")}</th>
+              <th className="px-1.5 py-1 font-medium">{t("journalCol.actor")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.response_journal.map((r, i) => (
+              <tr
+                key={`${r.time}-${r.incident}-${i}`}
+                className="border-b border-[var(--tessera-border)]/60 last:border-0"
+              >
+                <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">
+                  {r.time}
+                </td>
+                <td className="px-1.5 py-1 font-mono text-[var(--tessera-fg-info)]">
+                  {r.incident}
+                </td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text)]">{r.action}</td>
+                <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.actor}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

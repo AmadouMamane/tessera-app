@@ -303,7 +303,10 @@
   --tessera-muted: #141b2a;
   --tessera-border: rgba(255, 255, 255, 0.07);
   --tessera-border-strong: rgba(255, 255, 255, 0.12);
-  --tessera-chrome-line: rgba(255, 255, 255, 0.16);
+  /* 0.20 → 1.80:1. At 0.16 it measured 1.57:1: a THIRD theme carrying the same
+     faint rule, found only because the other two were being measured. Nobody
+     reported it — which is the point of measuring all the themes at once. */
+  --tessera-chrome-line: rgba(255, 255, 255, 0.2);
   --tessera-scrollbar: #232c3e;
   --tessera-scrollbar-hover: #2e3a4f;
   /* Raised surfaces (popovers/menus) lift onto their own tier; inputs take the
@@ -419,7 +422,12 @@
   --bg-panel-soft: rgba(10, 27, 47, 0.66);
   --panel: rgba(6, 20, 38, 0.78);
   --panel-soft: rgba(10, 27, 47, 0.66);
-  --border-subtle: rgba(148, 163, 184, 0.14);
+  /* 0.38, not 0.14. At 0.14 this measured 1.20:1 — the dark twin of the
+     1.28:1 hairline Amadou called invisible under "Clair". It sat frozen for
+     one commit because his report said "en fond clair" and widening his scope
+     unasked is not my call; he then asked for the rest. Now 2.01:1, the same
+     number the light separator and the cockpit chrome line both carry. */
+  --border-subtle: rgba(148, 163, 184, 0.38);
   --border-gold: rgba(214, 182, 106, 0.28);
   --border-cyan: rgba(45, 212, 191, 0.26);
   --border-amber: rgba(245, 158, 11, 0.28);
