@@ -74,7 +74,7 @@ async def test_a_real_skew_is_detected(patched: Callable[[list[Any]], None]) -> 
 async def test_a_matching_corpus_is_a_finding_not_an_identity(
     patched: Callable[[list[Any]], None],
 ) -> None:
-    """"No skew" must now be a measurement — a comparison that COULD have failed."""
+    """ "No skew" must now be a measurement — a comparison that COULD have failed."""
     from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
 
     patched([(embedding_model_name(), embedding_dimension(), 4200)])
