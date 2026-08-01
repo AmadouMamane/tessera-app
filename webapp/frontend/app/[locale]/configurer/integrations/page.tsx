@@ -1,6 +1,7 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { CatalogueConsumers } from "@/components/configurer/catalogue-consumers";
 import { IntegrationsOverview } from "@/components/integrations/integrations-overview";
 import { AppShell } from "@/components/layout/app-shell";
 import { IntegrationsOverviewSchema } from "@/lib/api/schemas";
@@ -49,6 +50,10 @@ export default async function IntegrationsPage({ params }: IntegrationsPageProps
       <HydrationBoundary state={dehydrate(queryClient)}>
         <IntegrationsOverview />
       </HydrationBoundary>
+      {/* Which agents consume each shared tool, and which of them a change here would send
+          back through the gate. Written, translated, backed by a live route — and imported by
+          nothing until 2026-08-01. */}
+      <CatalogueConsumers kind="tools" />
     </AppShell>
   );
 }

@@ -2,6 +2,7 @@ import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
+import { CatalogueConsumers } from "@/components/configurer/catalogue-consumers";
 import { AppShell } from "@/components/layout/app-shell";
 import { SourcesOverview } from "@/components/sources/sources-overview";
 import { SourcesOverviewSchema } from "@/lib/api/schemas";
@@ -50,6 +51,13 @@ export default async function SourcesPage({ params }: SourcesPageProps) {
       <HydrationBoundary state={dehydrate(queryClient)}>
         <Suspense fallback={null}>
           <SourcesOverview />
+          {/* The inverse of the AGENT instance binding: which agents consume each
+            shared item, and which of them a change here would send back through the
+            gate. Written, translated (`usedBy.*`), backed by a live route — and
+            imported by nothing until 2026-08-01. This page already rendered
+            `usedBy.hint` above, so the panel was designed for it and simply never
+            mounted. */}
+          <CatalogueConsumers kind="knowledge" />
         </Suspense>
       </HydrationBoundary>
     </AppShell>
