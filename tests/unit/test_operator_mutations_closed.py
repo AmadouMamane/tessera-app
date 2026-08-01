@@ -146,13 +146,16 @@ def test_the_public_reads_are_untouched() -> None:
     DECLARES, split active/planned. A count over a file shipped inside the image; it reads no
     store, no subject, and nothing scoped. It replaced two constants that claimed "42 of 200"
     when the real numbers were 44, 202 and 19.
+    +1 on 2026-08-01: GET /observability/erasure-reach — which schemas hold subject-bearing
+    tables and which of them GDPR erasure can reach. It COUNTS; it never deletes, and the
+    counts it returns are cardinalities, never identifiers.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 136
+    assert len(read_routes) == 137
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

@@ -135,6 +135,7 @@ from tessera.api.routes.observability.fleet import (
 )
 from tessera.api.routes.observability.memory import (
     observability_erasure_coverage,
+    observability_erasure_reach,
     observability_memory,
 )
 from tessera.api.routes.observability.mutations import (

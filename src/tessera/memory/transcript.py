@@ -70,6 +70,36 @@ class ConversationSummary:
 
 
 _TABLE: Final[sql.Identifier] = sql.Identifier("conversation_messages")
+
+
+def _memory_table(table: sql.Identifier) -> sql.Composed:
+    """Schema-qualify a memory table (ADR 0014), so no statement can fall through to `public`.
+
+    The connection carries ``search_path = <schema>, public``, so a bare table name resolves to
+    this environment's table *when it exists* and to ``public`` when it does not — silently, in
+    both directions:
+
+    * a **read** that falls through returns ANOTHER environment's rows, and in the deployed
+      stack ``public`` IS production;
+    * a **delete** that falls through erases them.
+
+    One ``CREATE TABLE`` skipped in a migration is all it takes, and nothing raises.
+
+    Naming the schema also makes the converse legible, which is the finding that produced this
+    function: erasure reaches exactly this environment's rows and NO others. On 2026-08-01
+    ``public`` held 1 357 memory rows over **138 distinct subjects**, last written 2026-06-24,
+    outside every erasure path — while `DELETE /memory` returned success and the ledger recorded
+    a total erasure. :mod:`tessera.memory.erasure_reach` measures that gap;
+    ``scripts/purge_orphan_schema.py`` closes it as an operator act, because purging another
+    environment's schema from inside this one is exactly what ADR 0014 forbids.
+    """
+    from tessera.settings import get_settings
+
+    return sql.SQL("{schema}.{table}").format(
+        schema=sql.Identifier(get_settings().pg_schema), table=table
+    )
+
+
 _PERSISTED_ROLES: Final[frozenset[str]] = frozenset({"user", "assistant"})
 
 
@@ -94,20 +124,20 @@ async def ensure_transcript_schema() -> None:
             created_at      timestamptz NOT NULL DEFAULT now()
         );
         """
-    ).format(table=_TABLE, default_agent=sql.Literal(DEFAULT_AGENT_ID))
+    ).format(table=_memory_table(_TABLE), default_agent=sql.Literal(DEFAULT_AGENT_ID))
     # Per-turn agent attribution: stamp each message with the acting agent so a
     # conversation can span agents (handoff, Phase 2) and metrics partition by
     # agent. Added idempotently for tables created before the multi-agent work.
     add_agent_col = sql.SQL(
         "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS agent_id text "
         "NOT NULL DEFAULT {default_agent};"
-    ).format(table=_TABLE, default_agent=sql.Literal(DEFAULT_AGENT_ID))
+    ).format(table=_memory_table(_TABLE), default_agent=sql.Literal(DEFAULT_AGENT_ID))
     # Per-turn latency (ms), so the Synthèse latency KPI can be derived per agent
     # from real traffic instead of a shared eval run. Nullable: rows without a
     # measured latency render an honest "-".
     add_latency_col = sql.SQL(
         "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS latency_ms double precision;"
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     # Test-turn marker (ADR 0040): a turn entering on an operator TEST surface
     # (Console, COCKPIT_EMBEDDED) is still written — the transcript stays the single
     # witness of every turn — but marked so every "real traffic" read (Synthèse,
@@ -115,19 +145,19 @@ async def ensure_transcript_schema() -> None:
     # honest prior behaviour, since pre-marker rows cannot be re-distinguished.
     add_synthetic_col = sql.SQL(
         "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS synthetic boolean " "NOT NULL DEFAULT false;"
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     # The client/subject the turn served, so "Utilisateurs servis" can count
     # distinct clients per agent from real traffic. Nullable: an anonymous session
     # carries no subject, and an honest "-" is better than a fabricated one.
     add_subject_col = sql.SQL(
         "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS subject_id text;"
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     create_index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} (conversation_id, id);"
-    ).format(idx=sql.Identifier("conversation_messages_conversation"), table=_TABLE)
+    ).format(idx=sql.Identifier("conversation_messages_conversation"), table=_memory_table(_TABLE))
     create_agent_index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} (agent_id, created_at);"
-    ).format(idx=sql.Identifier("conversation_messages_agent"), table=_TABLE)
+    ).format(idx=sql.Identifier("conversation_messages_agent"), table=_memory_table(_TABLE))
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(create_table)
         await cur.execute(add_agent_col)
@@ -163,7 +193,7 @@ async def load_transcript(
             ) recent
             ORDER BY id ASC;
             """
-        ).format(table=_TABLE)
+        ).format(table=_memory_table(_TABLE))
         params: tuple[object, ...] = (conversation_id, limit)
     else:
         query = sql.SQL(
@@ -173,7 +203,7 @@ async def load_transcript(
             WHERE conversation_id = %s
             ORDER BY id ASC;
             """
-        ).format(table=_TABLE)
+        ).format(table=_memory_table(_TABLE))
         params = (conversation_id,)
 
     pool = get_pool()
@@ -232,7 +262,7 @@ async def list_conversations(
         ORDER BY last_at DESC
         LIMIT %s;
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -303,7 +333,7 @@ async def append_messages(
              name, latency_ms, synthetic)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     rows = [
         (
             conversation_id,
@@ -336,7 +366,7 @@ async def last_agent_for(conversation_id: UUID) -> str | None:
     """
     query = sql.SQL(
         "SELECT agent_id FROM {table} WHERE conversation_id = %s ORDER BY id DESC LIMIT 1;"
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -354,7 +384,7 @@ async def turn_agent_and_synthetic(turn_id: UUID) -> tuple[str, bool] | None:
     transcript has really recorded, and a vote on a test turn is itself a test.
     """
     query = sql.SQL("SELECT agent_id, synthetic FROM {table} WHERE turn_id = %s LIMIT 1;").format(
-        table=_TABLE
+        table=_memory_table(_TABLE)
     )
     pool = get_pool()
     if pool.closed:
@@ -380,7 +410,7 @@ async def count_user_turns_since(since: datetime) -> int:
     query = sql.SQL(
         "SELECT count(DISTINCT turn_id) AS turns FROM {table} "
         "WHERE role = 'user' AND created_at >= %s;"
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -392,7 +422,9 @@ async def count_user_turns_since(since: datetime) -> int:
 
 async def delete_transcript(conversation_id: UUID) -> None:
     """Delete the entire transcript for a conversation (GDPR Art. 17)."""
-    query = sql.SQL("DELETE FROM {table} WHERE conversation_id = %s;").format(table=_TABLE)
+    query = sql.SQL("DELETE FROM {table} WHERE conversation_id = %s;").format(
+        table=_memory_table(_TABLE)
+    )
     pool = get_pool()
     if pool.closed:
         await pool.open()

@@ -363,7 +363,10 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # neither carries customer subject data.
     # 131 (2026-08-01): GET /observability/signal-coverage — a count over the catalogue file
     # shipped inside the image. No store, no subject, no scope.
-    assert len(public) == 131
+    # 132 (2026-08-01): GET /observability/erasure-reach — per-schema CARDINALITIES of
+    # subject-bearing tables. It answers "how many people's data can erasure not reach", which
+    # is a compliance posture; no identifier crosses the wire.
+    assert len(public) == 132
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

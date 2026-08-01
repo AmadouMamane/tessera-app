@@ -55,6 +55,35 @@ __all__ = [
 
 _CONSENT_TABLE: Final[sql.Identifier] = sql.Identifier("memory_consent")
 
+
+def _memory_table(table: sql.Identifier) -> sql.Composed:
+    """Schema-qualify a memory table (ADR 0014), so no statement can fall through to `public`.
+
+    The connection carries ``search_path = <schema>, public``, so a bare table name resolves to
+    this environment's table *when it exists* and to ``public`` when it does not — silently, in
+    both directions:
+
+    * a **read** that falls through returns ANOTHER environment's rows, and in the deployed
+      stack ``public`` IS production;
+    * a **delete** that falls through erases them.
+
+    One ``CREATE TABLE`` skipped in a migration is all it takes, and nothing raises.
+
+    Naming the schema also makes the converse legible, which is the finding that produced this
+    function: erasure reaches exactly this environment's rows and NO others. On 2026-08-01
+    ``public`` held 1 357 memory rows over **138 distinct subjects**, last written 2026-06-24,
+    outside every erasure path — while `DELETE /memory` returned success and the ledger recorded
+    a total erasure. :mod:`tessera.memory.erasure_reach` measures that gap;
+    ``scripts/purge_orphan_schema.py`` closes it as an operator act, because purging another
+    environment's schema from inside this one is exactly what ADR 0014 forbids.
+    """
+    from tessera.settings import get_settings
+
+    return sql.SQL("{schema}.{table}").format(
+        schema=sql.Identifier(get_settings().pg_schema), table=table
+    )
+
+
 # Retention per memory kind (ADR 0007). Semantic facts about a customer outlive
 # episodic incident summaries.
 _TTL: Final[dict[str, timedelta]] = {
@@ -203,7 +232,7 @@ async def ensure_consent_schema() -> None:
             updated_at timestamptz NOT NULL DEFAULT now()
         );
         """
-    ).format(table=_CONSENT_TABLE)
+    ).format(table=_memory_table(_CONSENT_TABLE))
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(create)
         await conn.commit()
@@ -216,7 +245,7 @@ async def consent_allows(subject_id: str) -> bool:
     (conservative ``False`` by default — no retention without consent).
     """
     query = sql.SQL("SELECT granted FROM {table} WHERE subject_id = %s;").format(
-        table=_CONSENT_TABLE
+        table=_memory_table(_CONSENT_TABLE)
     )
     pool = get_pool()
     if pool.closed:
@@ -238,7 +267,7 @@ async def set_consent(subject_id: str, *, granted: bool) -> None:
         ON CONFLICT (subject_id)
         DO UPDATE SET granted = EXCLUDED.granted, updated_at = now();
         """
-    ).format(table=_CONSENT_TABLE)
+    ).format(table=_memory_table(_CONSENT_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -249,7 +278,9 @@ async def set_consent(subject_id: str, *, granted: bool) -> None:
 
 async def delete_consent(subject_id: str) -> None:
     """Delete the consent row for ``subject_id`` (part of GDPR erasure)."""
-    query = sql.SQL("DELETE FROM {table} WHERE subject_id = %s;").format(table=_CONSENT_TABLE)
+    query = sql.SQL("DELETE FROM {table} WHERE subject_id = %s;").format(
+        table=_memory_table(_CONSENT_TABLE)
+    )
     pool = get_pool()
     if pool.closed:
         await pool.open()

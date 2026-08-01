@@ -77,6 +77,36 @@ _RETENTION_ACTOR: Final = Actor.system("retention-purge")
 _BACKEND_FORGET_ACTOR: Final = Actor.system("memory-backend-forget")
 
 _TABLE: Final[sql.Identifier] = sql.Identifier("long_term_memory")
+
+
+def _memory_table(table: sql.Identifier) -> sql.Composed:
+    """Schema-qualify a memory table (ADR 0014), so no statement can fall through to `public`.
+
+    The connection carries ``search_path = <schema>, public``, so a bare table name resolves to
+    this environment's table *when it exists* and to ``public`` when it does not — silently, in
+    both directions:
+
+    * a **read** that falls through returns ANOTHER environment's rows, and in the deployed
+      stack ``public`` IS production;
+    * a **delete** that falls through erases them.
+
+    One ``CREATE TABLE`` skipped in a migration is all it takes, and nothing raises.
+
+    Naming the schema also makes the converse legible, which is the finding that produced this
+    function: erasure reaches exactly this environment's rows and NO others. On 2026-08-01
+    ``public`` held 1 357 memory rows over **138 distinct subjects**, last written 2026-06-24,
+    outside every erasure path — while `DELETE /memory` returned success and the ledger recorded
+    a total erasure. :mod:`tessera.memory.erasure_reach` measures that gap;
+    ``scripts/purge_orphan_schema.py`` closes it as an operator act, because purging another
+    environment's schema from inside this one is exactly what ADR 0014 forbids.
+    """
+    from tessera.settings import get_settings
+
+    return sql.SQL("{schema}.{table}").format(
+        schema=sql.Identifier(get_settings().pg_schema), table=table
+    )
+
+
 # Above this cosine similarity, a new candidate is treated as the same memory
 # and updated in place rather than inserted as a duplicate.
 _DEDUP_THRESHOLD: Final[float] = 0.95
@@ -107,13 +137,13 @@ async def ensure_longterm_schema() -> None:
             metadata    jsonb       NOT NULL DEFAULT '{{}}'::jsonb
         );
         """
-    ).format(table=_TABLE, dim=sql.Literal(dim))
+    ).format(table=_memory_table(_TABLE), dim=sql.Literal(dim))
     index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} USING hnsw (embedding vector_cosine_ops);"
-    ).format(idx=sql.Identifier("long_term_memory_embedding_hnsw"), table=_TABLE)
+    ).format(idx=sql.Identifier("long_term_memory_embedding_hnsw"), table=_memory_table(_TABLE))
     subject_index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} (subject_id, kind);"
-    ).format(idx=sql.Identifier("long_term_memory_subject"), table=_TABLE)
+    ).format(idx=sql.Identifier("long_term_memory_subject"), table=_memory_table(_TABLE))
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         await cur.execute(create)
@@ -161,13 +191,13 @@ async def upsert_memory(
         ORDER BY embedding <=> %s::vector
         LIMIT 1;
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     insert = sql.SQL(
         """
         INSERT INTO {table} (subject_id, kind, text, entities, embedding, importance, expires_at)
         VALUES (%s, %s, %s, %s::jsonb, %s::vector, %s, %s);
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     update = sql.SQL(
         """
         UPDATE {table}
@@ -175,7 +205,7 @@ async def upsert_memory(
             importance = %s, created_at = now(), expires_at = %s
         WHERE id = %s;
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
 
     pool = get_pool()
     if pool.closed:
@@ -238,7 +268,7 @@ async def search_memory(*, subject_id: str, query: str, top_k: int) -> list[Memo
         ORDER BY embedding <=> %s::vector
         LIMIT %s;
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -291,7 +321,7 @@ async def list_subject_memories(subject_id: str) -> list[StoredMemory]:
         WHERE subject_id = %s AND expires_at > now()
         ORDER BY created_at DESC;
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -311,7 +341,7 @@ async def list_inventory(limit: int = 200) -> list[StoredMemory]:
         ORDER BY created_at DESC
         LIMIT %s;
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -334,7 +364,7 @@ async def update_memory_text(memory_id: int, *, subject_id: str, text: str) -> b
         SET text = %s, embedding = %s::vector
         WHERE id = %s AND subject_id = %s;
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -347,7 +377,9 @@ async def update_memory_text(memory_id: int, *, subject_id: str, text: str) -> b
 
 async def delete_memory(memory_id: int, *, subject_id: str) -> bool:
     """Delete one memory of a subject; returns ``True`` when a row was removed."""
-    query = sql.SQL("DELETE FROM {table} WHERE id = %s AND subject_id = %s;").format(table=_TABLE)
+    query = sql.SQL("DELETE FROM {table} WHERE id = %s AND subject_id = %s;").format(
+        table=_memory_table(_TABLE)
+    )
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -360,7 +392,9 @@ async def delete_memory(memory_id: int, *, subject_id: str) -> bool:
 
 async def delete_subject(subject_id: str) -> int:
     """Delete every long-term memory for ``subject_id``; return the row count."""
-    query = sql.SQL("DELETE FROM {table} WHERE subject_id = %s;").format(table=_TABLE)
+    query = sql.SQL("DELETE FROM {table} WHERE subject_id = %s;").format(
+        table=_memory_table(_TABLE)
+    )
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -387,7 +421,7 @@ async def purge_expired() -> int:
     request about their own deletion. One entry per subject, with what they lost.
     """
     query = sql.SQL("DELETE FROM {table} WHERE expires_at <= now() RETURNING subject_id;").format(
-        table=_TABLE
+        table=_memory_table(_TABLE)
     )
     pool = get_pool()
     if pool.closed:

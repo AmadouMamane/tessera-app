@@ -51,6 +51,35 @@ __all__ = [
 
 _TABLE: Final[sql.Identifier] = sql.Identifier("conversation_memory")
 
+
+def _memory_table(table: sql.Identifier) -> sql.Composed:
+    """Schema-qualify a memory table (ADR 0014), so no statement can fall through to `public`.
+
+    The connection carries ``search_path = <schema>, public``, so a bare table name resolves to
+    this environment's table *when it exists* and to ``public`` when it does not — silently, in
+    both directions:
+
+    * a **read** that falls through returns ANOTHER environment's rows, and in the deployed
+      stack ``public`` IS production;
+    * a **delete** that falls through erases them.
+
+    One ``CREATE TABLE`` skipped in a migration is all it takes, and nothing raises.
+
+    Naming the schema also makes the converse legible, which is the finding that produced this
+    function: erasure reaches exactly this environment's rows and NO others. On 2026-08-01
+    ``public`` held 1 357 memory rows over **138 distinct subjects**, last written 2026-06-24,
+    outside every erasure path — while `DELETE /memory` returned success and the ledger recorded
+    a total erasure. :mod:`tessera.memory.erasure_reach` measures that gap;
+    ``scripts/purge_orphan_schema.py`` closes it as an operator act, because purging another
+    environment's schema from inside this one is exactly what ADR 0014 forbids.
+    """
+    from tessera.settings import get_settings
+
+    return sql.SQL("{schema}.{table}").format(
+        schema=sql.Identifier(get_settings().pg_schema), table=table
+    )
+
+
 _DEFAULT_SUMMARY_INSTRUCTION: Final[str] = (
     "Summarise the earlier conversation turns below concisely for context. "
     "Preserve meaning and intent. Do NOT restate amounts, IBANs, dates, ticket "
@@ -78,7 +107,7 @@ async def ensure_summary_schema() -> None:
             updated_at      timestamptz NOT NULL DEFAULT now()
         );
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(create)
         await conn.commit()
@@ -87,7 +116,7 @@ async def ensure_summary_schema() -> None:
 async def load_summary(conversation_id: UUID) -> tuple[str | None, EntityLedger]:
     """Return the persisted ``(summary, entity_ledger)`` for a conversation."""
     query = sql.SQL("SELECT summary, entities FROM {table} WHERE conversation_id = %s;").format(
-        table=_TABLE
+        table=_memory_table(_TABLE)
     )
     pool = get_pool()
     if pool.closed:
@@ -129,7 +158,7 @@ async def save_summary(conversation_id: UUID, summary: str | None, entities: Ent
                       entities = EXCLUDED.entities,
                       updated_at = now();
         """
-    ).format(table=_TABLE)
+    ).format(table=_memory_table(_TABLE))
     pool = get_pool()
     if pool.closed:
         await pool.open()
@@ -140,7 +169,9 @@ async def save_summary(conversation_id: UUID, summary: str | None, entities: Ent
 
 async def delete_summary(conversation_id: UUID) -> None:
     """Delete the summary row for a conversation (used by GDPR erasure)."""
-    query = sql.SQL("DELETE FROM {table} WHERE conversation_id = %s;").format(table=_TABLE)
+    query = sql.SQL("DELETE FROM {table} WHERE conversation_id = %s;").format(
+        table=_memory_table(_TABLE)
+    )
     pool = get_pool()
     if pool.closed:
         await pool.open()

@@ -237,6 +237,11 @@ _EXIT_WITNESSES: dict[str, str] = {
     # passes RAN, never whether they were good — the judging is check_discrimination.py's job.
     "scripts/measure_contribution_noise.py": "action",
     "scripts/ledger_backup.py": "VERDICT",  # new: it interrogates the artefact it wrote
+    # A VERDICT with three states and it needs all three: 0 = no subject data outside the
+    # active schema · 1 = there IS, and erasure cannot reach it (a compliance finding, not an
+    # error) · 2 = REFUSED, the schema named is the active one. Collapsing 1 into 0 would make
+    # "erasure is total" unfalsifiable, which is the condition it ran for months in.
+    "scripts/purge_orphan_schema.py": "VERDICT",
     # Gates the wipe on ledger_backup.py's OWN verdict, then RE-READS the row counts to prove the
     # tables are empty — never trusts psql's exit code. Refuses a non-`_local` schema (NotOk) and a
     # missing/mismatched confirmation (CannotSay), exit 2.
