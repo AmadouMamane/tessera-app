@@ -80,7 +80,14 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   cross_tenant: cap(ORG),
   erasure: cap(ORG),
   memory_inventory: cap(ORG),
-  embedding_inversion: cap(ORG),
+  // A DETERMINISTIC FIXTURE, and it was declared real here for as long as this file existed.
+  // `embedding_inversion.py` runs its assessment over `DEMO_MEMORIES` — a built-in corpus of
+  // five invented sentences — with the live embedder, "so the dashboard always shows a concrete
+  // number". The maths is real; the memories are not. `capabilities.py` said `synthetic=True`;
+  // this file said false, so `securite-privacy` rendered "Inversion embedding · Critique ·
+  // 100 %" with no notice, and fed it into the failure distribution beside real measurements.
+  // Two registries, one truth, and the one the UI reads was the wrong one.
+  embedding_inversion: cap(ORG, { synthetic: true }),
   regression_risk: cap(ORG),
   ai_act: cap(ORG),
   control_signals: cap(ORG),
@@ -138,6 +145,12 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // The firewall probe read from the attacker's side (1 − recall) — the same report, declared
   // as its own view rather than left to look like a rival number.
   injection_bypass: cap(ORG),
+  // Declared by `capabilities.py` and missing here until 2026-08-01. An absent entry is not
+  // neutral: `capabilityFor()` returns undefined, `signalSupports()` turns that into `false`,
+  // and the surface badges org-wide on no basis at all — a declaration nobody made, rendered
+  // as one that was.
+  disclosure: cap(ORG, { synthetic: true }),
+  embedding_skew: cap(ORG, { synthetic: true }),
 };
 
 /** The declared capability for `signalId`, or `undefined` if the signal is not declared. */

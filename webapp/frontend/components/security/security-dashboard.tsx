@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
@@ -774,7 +775,11 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     ];
   });
 
-  // Domain risk (real, normalised).
+  // Domain risk, normalised. NOT uniformly real: `invRate` is the embedding-inversion probe,
+  // which runs over `DEMO_MEMORIES` — a built-in corpus of five invented sentences. It reaches
+  // two of these five bars (`privacy` via the max, and `memory` outright), so the panel carries
+  // the synthetic notice rather than presenting all five as equally measured. The comment here
+  // used to read "(real, normalised)" flatly, which is how a fixture becomes a finding.
   const domainRisks = [
     { key: "promptInj", value: attackRate ?? 0 },
     { key: "privacy", value: Math.max(piiRate ?? 0, invRate ?? 0) },
@@ -783,7 +788,13 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     { key: "compliance", value: 1 - (conformance.data?.conformance_rate ?? 1) },
   ].sort((a, b) => b.value - a.value);
 
-  // Répartition des échecs (zone C donut) — real failure observations per family.
+  // Répartition des échecs (zone C donut) — failure observations per family.
+  //
+  // One of these families is NOT an observation. `inversion` counts recoverable memories from
+  // the demonstration corpus, so the donut pooled a fixture with five real counts and the
+  // header called the whole thing real. Removing the slice would be worse — the risk it
+  // demonstrates is genuine and the operator should see it — so it stays, the panel says which
+  // part is a demonstration, and the comment stops claiming what it cannot.
   const failureSlices = [
     // Failure FAMILIES — identity, not severity: every slice here is already a failure,
     // so the categorical ramp separates them and the legend says which is which.
@@ -932,6 +943,13 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       title={ts("panel.inversion")}
       info={<SecInfo k="inversion" title={ts("panel.inversion")} />}
     >
+      {/* This page carried NO synthetic notice at all, and this panel is why it needed one.
+          `embedding_inversion.py` assesses `DEMO_MEMORIES` — five invented sentences —
+          "so the dashboard always shows a concrete number". The maths is real, the memories
+          are not, and the panel read "Inversion embedding · Critique · 100 %" as if measured.
+          The notice renders from the capability registry, which said `synthetic: false` here
+          while `capabilities.py` said true; a test now refuses that disagreement. */}
+      <SyntheticNotice signalId="embedding_inversion" compact />
       {inversion.data?.available === false || inversion.isLoading ? (
         <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
           {ts("panel.computing")}
@@ -1418,6 +1436,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               title={ts("panel.failures")}
               info={<SecInfo k="failures" title={ts("panel.failures")} />}
             >
+              {/* One of the six slices (`inversion`) counts the demonstration corpus. */}
+              <SyntheticNotice signalId="embedding_inversion" compact />
               {failureSlices.length === 0 ? (
                 <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
                   {ts("panel.noFailures")}
@@ -1610,6 +1630,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.failures")}
                   info={<SecInfo k="failures" title={ts("panel.failures")} />}
                 >
+                  <SyntheticNotice signalId="embedding_inversion" compact />
                   {failureSlices.length === 0 ? (
                     <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
                       {ts("panel.noFailures")}
@@ -1728,6 +1749,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.domainRisk")}
                   info={<SecInfo k="domainRisk" title={ts("panel.domainRisk")} />}
                 >
+                  {/* `privacy` and `memory` both read the demonstration corpus. */}
+                  <SyntheticNotice signalId="embedding_inversion" compact />
                   <div className="flex flex-col gap-1.5">
                     {domainRisks.map((d) => (
                       <RiskBar key={d.key} label={ts(`domain.${d.key}`)} value={d.value} />
