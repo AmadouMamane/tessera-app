@@ -910,8 +910,8 @@ const DONUT_COLORS = [
   "var(--tessera-cat-6)",
   "var(--tessera-cat-7)",
   "var(--tessera-cat-8)",
-  "var(--tessera-text-muted)",
-  "var(--tessera-text-subtle)",
+  "var(--tessera-cat-9)",
+  "var(--tessera-cat-10)",
 ];
 
 /** Donut of category shares with a center total and a compact legend. */

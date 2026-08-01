@@ -189,11 +189,15 @@
    * donuts of failure CATEGORIES, and a green first slice reads as "the good one"
    * before the legend is consulted. Blue says "category", not "verdict".
    *
-   * EIGHT slots, and a ninth series is never a generated hue. The three ten-category
-   * donuts already fold their tail into grey; that stays, now as --tessera-text-muted
-   * / -subtle. A tenth distinguishable hue does not exist at this lightness — slate
-   * reads as grey (chroma 0.04, below the floor), every remaining chroma-bearing hue
-   * collides with one already in the ramp. Measured, not assumed. */
+   * EIGHT HUES, and a ninth series is never a generated hue. A ninth distinguishable
+   * one does not exist at this lightness — slate reads as grey (chroma 0.04, under the
+   * floor) and every remaining chroma-bearing hue collides with one already here.
+   * Measured, not assumed. So slots 9 and 10 are NEUTRALS, and are declared as such:
+   * they are the fold, separated by lightness rather than by hue, and they still clear
+   * 3:1 on both cards (6.99 / 3.77 dark, 7.58 / 4.76 light). The three ten-category
+   * donuts already ended in grey; this keeps that and makes it legible.
+   * NOT --tessera-text-subtle, which was the obvious reach and scores 2.77:1 on the
+   * dark card: a token for recessive TEXT is not a token for a filled arc. */
   --tessera-cat-1: #60a5fa; /* blue    */
   --tessera-cat-2: #f59e0b; /* amber   */
   --tessera-cat-3: #a78bfa; /* violet  */
@@ -202,6 +206,8 @@
   --tessera-cat-6: #a3e635; /* lime    */
   --tessera-cat-7: #22d3ee; /* cyan    */
   --tessera-cat-8: #f87171; /* red     */
+  --tessera-cat-9: #94a3b8; /* the fold — neutral, not a hue */
+  --tessera-cat-10: #64748b; /* the fold, one step down       */
 
   /* Tooltips / ⓘ popovers — a neutral dark-charcoal box with near-white text,
      matching the native macOS/Chrome tooltip in dark mode (the roles/access
@@ -330,6 +336,8 @@
   --tessera-cat-6: #4d7c0f; /* lime    */
   --tessera-cat-7: #0891b2; /* cyan    */
   --tessera-cat-8: #b91c1c; /* red     */
+  --tessera-cat-9: #475569; /* the fold — neutral, not a hue */
+  --tessera-cat-10: #64748b; /* the fold, one step down       */
   /* The brand green paints 26 chart traces and scores 2.20:1 on a white card. Same hue,
      the step that clears a graphical object's 3:1 with room (5.48:1). Dark keeps #00c878
      untouched — the cockpit's green is the cockpit's green. */
