@@ -34,47 +34,20 @@ interface SeverityStyle {
   dot: string;
 }
 
-const SEVERITY: Record<RibbonSeverity, SeverityStyle> = {
-  critical: {
-    band: "border border-[#e0566f]/35 bg-[#1f0e16] bg-[radial-gradient(130%_150%_at_0%_0%,rgba(224,86,111,0.22),transparent_58%)]",
-    accent: "bg-gradient-to-b from-[#ff9bb0] via-[#e0566f] to-[#e0566f]/40",
-    iconWrap: "bg-[#e0566f]/12 ring-1 ring-inset ring-[#e0566f]/30",
-    iconColor: "text-[#ff9bb0]",
-    eyebrow: "text-[#ff9bb0]/70",
-    title: "text-[#ffb3c2]",
-    gaugeFill: "bg-gradient-to-r from-[#e0566f] to-[#ff9bb0]",
-    dot: "bg-[#e0566f]",
-  },
-  warning: {
-    band: "border border-amber-400/35 bg-[#1d1606] bg-[radial-gradient(130%_150%_at_0%_0%,rgba(251,191,36,0.18),transparent_58%)]",
-    accent: "bg-gradient-to-b from-amber-300 via-amber-400 to-amber-400/40",
-    iconWrap: "bg-amber-400/12 ring-1 ring-inset ring-amber-400/30",
-    iconColor: "text-amber-300",
-    eyebrow: "text-amber-200/70",
-    title: "text-amber-100",
-    gaugeFill: "bg-gradient-to-r from-amber-400 to-amber-200",
-    dot: "bg-amber-400",
-  },
-  ok: {
-    band: "border border-[#3fb37f]/30 bg-[#0e1f17] bg-[radial-gradient(130%_150%_at_0%_0%,rgba(63,179,127,0.16),transparent_58%)]",
-    accent: "bg-gradient-to-b from-[#7fe3b3] via-[#3fb37f] to-[#3fb37f]/40",
-    iconWrap: "bg-[#3fb37f]/12 ring-1 ring-inset ring-[#3fb37f]/30",
-    iconColor: "text-[#7fe3b3]",
-    eyebrow: "text-[#7fe3b3]/70",
-    title: "text-[#a8edc9]",
-    gaugeFill: "bg-gradient-to-r from-[#3fb37f] to-[#7fe3b3]",
-    dot: "bg-[#3fb37f]",
-  },
-  info: {
-    band: "border border-sky-400/30 bg-[#0c1722] bg-[radial-gradient(130%_150%_at_0%_0%,rgba(96,194,242,0.16),transparent_58%)]",
-    accent: "bg-gradient-to-b from-sky-300 via-sky-400 to-sky-400/40",
-    iconWrap: "bg-sky-400/12 ring-1 ring-inset ring-sky-400/30",
-    iconColor: "text-sky-300",
-    eyebrow: "text-sky-200/70",
-    title: "text-sky-100",
-    gaugeFill: "bg-gradient-to-r from-sky-400 to-sky-200",
-    dot: "bg-sky-400",
-  },
+/** Every severity now paints from the SAME six variables — `.tessera-ribbon` in
+ *  globals.css sets them per `data-severity`, and swaps the whole set under "Clair".
+ *  Naming a colour here is what made this band a dark slab on a light page. */
+const RIBBON: SeverityStyle = {
+  band: "tessera-ribbon",
+  accent:
+    "bg-[linear-gradient(to_bottom,var(--ribbon-bright),var(--ribbon-base)_55%,color-mix(in_oklab,var(--ribbon-base)_40%,transparent))]",
+  iconWrap:
+    "bg-[color-mix(in_oklab,var(--ribbon-base)_12%,transparent)] ring-1 ring-inset ring-[color-mix(in_oklab,var(--ribbon-base)_30%,transparent)]",
+  iconColor: "text-[var(--ribbon-bright)]",
+  eyebrow: "text-[var(--ribbon-eyebrow)]",
+  title: "text-[var(--ribbon-title)]",
+  gaugeFill: "bg-[linear-gradient(to_right,var(--ribbon-base),var(--ribbon-bright))]",
+  dot: "bg-[var(--ribbon-base)]",
 };
 
 /** A 0..1 ratio for the gauge: the observed value and the threshold it must clear. */
@@ -140,11 +113,14 @@ function RibbonShell({
   className?: string;
   children: ReactNode;
 }) {
-  const s = SEVERITY[severity];
+  const s = RIBBON;
   return (
-    <section className={cn("relative overflow-hidden rounded-xl", s.band)}>
+    <section className={cn("relative overflow-hidden rounded-xl", s.band)} data-severity={severity}>
       <span className={cn("absolute inset-y-0 left-0 w-[3px]", s.accent)} aria-hidden />
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" aria-hidden />
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[var(--ribbon-glint)]"
+        aria-hidden
+      />
       <div className={className}>{children}</div>
     </section>
   );
@@ -167,7 +143,7 @@ function GaugeRibbon({
   pulse?: boolean;
   pulseStopLabel?: string;
 }) {
-  const s = SEVERITY[severity];
+  const s = RIBBON;
   // The pulse can be silenced (acknowledged) at runtime via a VISIBLE control (a
   // hover-only affordance was not discoverable).
   const [pulsing, setPulsing] = useState(true);
@@ -215,7 +191,7 @@ function GaugeRibbon({
             <div className="mt-2 flex items-center gap-3">
               {/* The empty track is a touch lighter than the band so the unfilled
                   extent reads — but discreet (no outline, no bright fill). */}
-              <div className="relative h-[4px] min-w-0 flex-1 overflow-visible rounded-full bg-white/[0.13]">
+              <div className="relative h-[4px] min-w-0 flex-1 overflow-visible rounded-full bg-[var(--ribbon-track)]">
                 <div
                   className={cn("absolute inset-y-0 left-0 rounded-full", s.gaugeFill)}
                   style={{ width: `${clampPct(gauge.value)}%` }}
@@ -229,11 +205,11 @@ function GaugeRibbon({
                   style={{ left: `${clampPct(gauge.threshold)}%` }}
                 >
                   {showThresholdValue ? (
-                    <span className="mb-1 whitespace-nowrap text-[9px] font-semibold leading-none tabular-nums text-[#7fe3b3]">
+                    <span className="mb-1 whitespace-nowrap text-[9px] font-semibold leading-none tabular-nums text-[var(--tessera-fg-success)]">
                       {gauge.thresholdLabel}
                     </span>
                   ) : null}
-                  <span className="w-0.5 flex-1 rounded-full bg-[#7fe3b3] shadow-[0_0_6px_rgba(127,227,179,0.7)]" />
+                  <span className="w-0.5 flex-1 rounded-full bg-[var(--tessera-fg-success)] shadow-[0_0_6px_color-mix(in_oklab,var(--tessera-fg-success)_70%,transparent)]" />
                 </div>
               </div>
               {gauge.caption ? (
@@ -256,7 +232,7 @@ function GaugeRibbon({
               type="button"
               onClick={() => setPulsing(false)}
               title={pulseStopLabel}
-              className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-[var(--tessera-text-muted)] transition-colors hover:bg-white/[0.06] hover:text-[var(--tessera-text)]"
+              className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-[var(--tessera-text-muted)] transition-colors hover:bg-[var(--ribbon-hover)] hover:text-[var(--tessera-text)]"
             >
               <BellOff className="h-3.5 w-3.5" />
               {pulseStopLabel}
@@ -271,7 +247,7 @@ function GaugeRibbon({
 
 /** Variant `slim` — one-line status line: pulse dot · statement · meta · action. */
 function SlimRibbon({ severity, title, action, meta }: BaseProps & { meta?: ReactNode }) {
-  const s = SEVERITY[severity];
+  const s = RIBBON;
   return (
     <RibbonShell severity={severity} className="flex items-center gap-3 px-4 py-2 sm:px-5">
       <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>
@@ -311,10 +287,10 @@ export function RibbonChip({
 }) {
   const toneClass =
     tone === "critical"
-      ? "border-[#e0566f]/40 bg-[#e0566f]/12 text-[#ffb3c2]"
+      ? "border-[color-mix(in_oklab,var(--ribbon-base)_40%,transparent)] bg-[color-mix(in_oklab,var(--ribbon-base)_12%,transparent)] text-[var(--ribbon-title)]"
       : tone === "warning"
-        ? "border-amber-400/40 bg-amber-400/12 text-amber-100"
-        : "border-white/10 bg-white/[0.04] text-[var(--tessera-text-muted)]";
+        ? "border-amber-400/40 bg-amber-400/12 text-[var(--ribbon-title)]"
+        : "border-[var(--ribbon-border)] bg-[var(--ribbon-track)] text-[var(--tessera-text-muted)]";
   return (
     <span
       className={cn(

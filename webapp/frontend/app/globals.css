@@ -366,6 +366,111 @@
   display: inline-block;
 }
 
+/* Alert ribbon — the page's headline verdict, theme-aware for the same reason the
+ * SR-01 strip below is: it sat as a dark slab on a light page, and under "Clair" its
+ * own foregrounds scored 2.45–2.87:1 against its own band. It was the last thing the
+ * colour sweep left alone, held frozen in the ratchet, because whether a dark block
+ * BELONGS on a light page is a design call, not a defect. That call has now been made.
+ *
+ * The component no longer names a colour. Each severity sets six variables and every
+ * element reads them, so one block holds the whole ribbon and the theme swaps it in
+ * one place. Dark keeps EXACTLY what it renders today, composited opacities included
+ * (`--ribbon-eyebrow` is the 70 % of the icon colour the class used to write), so the
+ * dark cockpit does not move. Every pair measured against the ribbon's OWN band:
+ * dark 5.1–16.1:1, light 3.1–7.3:1 — text over 4.5, the dot and border over 3. */
+/* Three surfaces the band paints on ITSELF — a white hairline, a white gauge track, a
+   white hover. Each is invisible on a pale band, which is why they are variables too:
+   on "Clair" they become ink at low alpha instead of white at low alpha. */
+.tessera-ribbon {
+  --ribbon-glint: rgba(255, 255, 255, 0.1);
+  --ribbon-track: rgba(255, 255, 255, 0.13);
+  --ribbon-hover: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--ribbon-border);
+  background: radial-gradient(130% 150% at 0% 0%, var(--ribbon-tint), transparent 58%),
+    var(--ribbon-band);
+}
+.tessera-ribbon[data-severity="critical"] {
+  --ribbon-band: #1f0e16;
+  --ribbon-tint: rgba(224, 86, 111, 0.22);
+  --ribbon-border: rgba(224, 86, 111, 0.35);
+  --ribbon-base: #e0566f;
+  --ribbon-bright: #ff9bb0;
+  --ribbon-title: #ffb3c2;
+  --ribbon-eyebrow: #bc7182;
+}
+.tessera-ribbon[data-severity="warning"] {
+  --ribbon-band: #1d1606;
+  --ribbon-tint: rgba(251, 191, 36, 0.18);
+  --ribbon-border: rgba(251, 191, 36, 0.35);
+  --ribbon-base: #fbbf24;
+  --ribbon-bright: #fcd34d;
+  --ribbon-title: #fef3c7;
+  --ribbon-eyebrow: #b99a38;
+}
+.tessera-ribbon[data-severity="ok"] {
+  --ribbon-band: #0e1f17;
+  --ribbon-tint: rgba(63, 179, 127, 0.16);
+  --ribbon-border: rgba(63, 179, 127, 0.3);
+  --ribbon-base: #3fb37f;
+  --ribbon-bright: #7fe3b3;
+  --ribbon-title: #a8edc9;
+  --ribbon-eyebrow: #5da884;
+}
+.tessera-ribbon[data-severity="info"] {
+  --ribbon-band: #0c1722;
+  --ribbon-tint: rgba(96, 194, 242, 0.16);
+  --ribbon-border: rgba(96, 194, 242, 0.3);
+  --ribbon-base: #38bdf8;
+  --ribbon-bright: #7dd3fc;
+  --ribbon-title: #e0f2fe;
+  --ribbon-eyebrow: #5b9bbb;
+}
+/* "Clair" — the same band at the pale end of its own hue, so the ribbon still reads as
+   a band and still says which severity it is, with ink dark enough to read on it. The
+   surface separates by border and lift rather than by tone, as every light card does. */
+.light .tessera-ribbon {
+  --ribbon-glint: rgba(255, 255, 255, 0.9);
+  --ribbon-track: rgba(15, 23, 42, 0.1);
+  --ribbon-hover: rgba(15, 23, 42, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+.light .tessera-ribbon[data-severity="critical"] {
+  --ribbon-band: #fff1f3;
+  --ribbon-tint: rgba(225, 29, 72, 0.1);
+  --ribbon-border: rgba(225, 29, 72, 0.38);
+  --ribbon-base: #e11d48;
+  --ribbon-bright: #be123c;
+  --ribbon-title: #9f1239;
+  --ribbon-eyebrow: #9f1239;
+}
+.light .tessera-ribbon[data-severity="warning"] {
+  --ribbon-band: #fffbeb;
+  --ribbon-tint: rgba(217, 119, 6, 0.1);
+  --ribbon-border: rgba(217, 119, 6, 0.38);
+  --ribbon-base: #d97706;
+  --ribbon-bright: #b45309;
+  --ribbon-title: #92400e;
+  --ribbon-eyebrow: #92400e;
+}
+.light .tessera-ribbon[data-severity="ok"] {
+  --ribbon-band: #ecfdf5;
+  --ribbon-tint: rgba(5, 150, 105, 0.1);
+  --ribbon-border: rgba(5, 150, 105, 0.38);
+  --ribbon-base: #059669;
+  --ribbon-bright: #047857;
+  --ribbon-title: #065f46;
+  --ribbon-eyebrow: #065f46;
+}
+.light .tessera-ribbon[data-severity="info"] {
+  --ribbon-band: #f0f9ff;
+  --ribbon-tint: rgba(2, 132, 199, 0.1);
+  --ribbon-border: rgba(2, 132, 199, 0.38);
+  --ribbon-base: #0284c7;
+  --ribbon-bright: #0369a1;
+  --ribbon-title: #075985;
+  --ribbon-eyebrow: #075985;
+}
+
 /* SR-01 control strip — the temporal instrument surface, theme-aware so it never
  * sits as a dark slab on a light page. Dark themes: a deep navy lacquered glass.
  * "Clair": a light frosted-blue glass with a soft lift. Text uses the normal theme

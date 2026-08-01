@@ -94,13 +94,17 @@ const LIGHT_CARD = "#ffffff";
  * Occurrences whose dark background comes from an ANCESTOR, which a per-literal scan
  * cannot see. TWO-SIDED — the count must match exactly — so it can only SHRINK.
  *
- * · `alert-ribbon` paints its own opaque `bg-[#1f0e16]` / `bg-[#1d1606]` / `bg-[#0e1f17]`
- *   band, dark under every theme, and its children inherit it.
  * · the Credit Aurore product/collections decor carries a navy header that is navy under
  *   every cockpit theme; it never consumed the `--tessera-*` surface tokens.
+ *
+ * `alert-ribbon` used to hold 15 of these and now holds none. It was the honest case for
+ * the exemption — a band that paints its own dark ground, whose children legitimately
+ * wear pale ink — right up until someone asked whether a dark slab belongs on a light
+ * page at all. It does not, and the answer was a design decision rather than a fix, which
+ * is exactly why it sat frozen instead of being quietly "corrected". Now the band flips
+ * with the theme and names no colour at all, so the exemption has nothing left to cover.
  */
 const FROZEN_ANCESTOR_BACKED: ReadonlyMap<string, number> = new Map([
-  ["components/cockpit/alert-ribbon.tsx", 15],
   ["components/product/chat-widget.tsx", 6],
   ["components/product/mes-comptes-host.tsx", 6],
   ["components/recouvrement/recouvrement-product-experience.tsx", 4],
