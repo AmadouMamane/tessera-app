@@ -275,12 +275,13 @@ export function OverviewDashboard({
   // property of the current policy, identical at any T — so they stay live.
   // The individual public-aggregate cards, fetched in ONE batch request (was ten fetches).
   const ovBatch = useQuery({
-    queryKey: ["ov-batch", secondaryAsOf, scope, locale],
+    queryKey: ["ov-batch", secondaryAsOf, scope, locale, period],
     queryFn: ({ signal }) =>
       fetchBatch(signal, OV_BATCH_KEYS, {
         at: secondaryAsOf ?? undefined,
         agent: scope,
         lang: locale,
+        days: period,
       }),
     refetchInterval: historyMode ? false : POLL_MS,
     placeholderData: keepPreviousData,
@@ -994,7 +995,12 @@ function CriticalControlsTable({
                   <th className="py-2 pr-4 font-medium">{t("current")}</th>
                   <th className="py-2 pr-4 font-medium">{t("target")}</th>
                   <th className="py-2 pr-4 font-medium">{t("trend")}</th>
-                  <th className="py-2 pr-4 font-medium">{t("impact")}</th>
+                  {/* The slack column. Every other column here is sized by its content; this
+                    one absorbs whatever the card has left over. It is the right one to carry it
+                    because it holds a sentence — put the slack on the short "Action" link
+                    instead and the sentence wraps to three lines while the link floats in
+                    white space, which is how the first attempt at this looked. */}
+                  <th className="w-full py-2 pr-4 font-medium">{t("impact")}</th>
                   <th className="py-2 pr-4 font-medium">{t("action")}</th>
                 </tr>
               </thead>

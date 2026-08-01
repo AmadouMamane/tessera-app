@@ -86,6 +86,7 @@ import {
   fetchCitations,
   fetchConformance,
   fetchContradictions,
+  fetchControlSeries,
   fetchCorpusFreshness,
   fetchCost,
   fetchEvalDatasets,
@@ -125,6 +126,7 @@ import type {
   WhatChanged,
 } from "@/lib/api/schemas";
 import { SIGNAL_FOCUS_PARAM, readSignalFocus, registryIdFor } from "@/lib/signal-focus";
+import { useWindowStore } from "@/lib/stores/window-store";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const POLL_MS = 5_000;
@@ -225,6 +227,10 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+  // The window LENGTH, from the same store the header's period selector writes to. It rides
+  // every windowable query below AND every one of their keys — a request that carries the
+  // period while its key does not would be served the previous period's cached answer.
+  const period = useWindowStore((st) => st.period);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -241,9 +247,19 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     router.replace(`${pathname}?${params.toString()}` as NextRoute, { scroll: false });
   }
 
+  // Every control's curve, over the same window and the same agent scope as the numbers.
+  // One request for the whole registry table; each bucket carries the payload `readControls`
+  // already knows how to read, so no control needs a bespoke trend query.
+  const controlSeries = useQuery({
+    queryKey: ["control-series", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchControlSeries(signal, { days: period, at: asOf ?? undefined, agent: scope }),
+    refetchInterval: historyMode ? false : 30_000,
+    placeholderData: keepPreviousData,
+  });
   const slo = useQuery({
-    queryKey: ["slo", asOf, scope],
-    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined, scope),
+    queryKey: ["slo", asOf, scope, period],
+    queryFn: ({ signal }) => fetchSLO(signal, asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL_MS,
   });
@@ -338,8 +354,8 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const toxicity = useQuery({
-    queryKey: ["toxicity", asOf, scope],
-    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined, scope),
+    queryKey: ["toxicity", asOf, scope, period],
+    queryFn: ({ signal }) => fetchToxicity(signal, asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -411,28 +427,28 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const tools = useQuery({
-    queryKey: ["tool-validity", asOf, scope],
-    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined, scope),
+    queryKey: ["tool-validity", asOf, scope, period],
+    queryFn: ({ signal }) => fetchToolValidity(signal, asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
 
   const routing = useQuery({
-    queryKey: ["routing"],
-    queryFn: ({ signal }) => fetchRouting(signal),
+    queryKey: ["routing", period],
+    queryFn: ({ signal }) => fetchRouting(signal, period),
     refetchInterval: 15_000,
   });
 
   const piiLeak = useQuery({
-    queryKey: ["pii-leak", asOf, scope],
-    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined, scope),
+    queryKey: ["pii-leak", asOf, scope, period],
+    queryFn: ({ signal }) => fetchPiiLeak(signal, asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
 
   const contradictions = useQuery({
-    queryKey: ["contradictions"],
-    queryFn: ({ signal }) => fetchContradictions(signal),
+    queryKey: ["contradictions", period],
+    queryFn: ({ signal }) => fetchContradictions(signal, period),
     refetchInterval: 20_000,
   });
 
@@ -444,8 +460,8 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const anomalies = useQuery({
-    queryKey: ["anomalies", asOf, scope],
-    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope),
+    queryKey: ["anomalies", asOf, scope, period],
+    queryFn: ({ signal }) => fetchAnomalies(signal, asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 20_000,
   });
@@ -457,33 +473,33 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const citations = useQuery({
-    queryKey: ["citations"],
-    queryFn: ({ signal }) => fetchCitations(signal),
+    queryKey: ["citations", period],
+    queryFn: ({ signal }) => fetchCitations(signal, period),
     refetchInterval: 15_000,
   });
 
   const localeFormat = useQuery({
-    queryKey: ["locale-format"],
-    queryFn: ({ signal }) => fetchLocaleFormat(signal),
+    queryKey: ["locale-format", period],
+    queryFn: ({ signal }) => fetchLocaleFormat(signal, period),
     refetchInterval: 15_000,
   });
 
   const conformance = useQuery({
-    queryKey: ["conformance", asOf, scope],
-    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined, scope),
+    queryKey: ["conformance", asOf, scope, period],
+    queryFn: ({ signal }) => fetchConformance(signal, asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
 
   const intent = useQuery({
-    queryKey: ["intent"],
-    queryFn: ({ signal }) => fetchIntent(signal),
+    queryKey: ["intent", period],
+    queryFn: ({ signal }) => fetchIntent(signal, period),
     refetchInterval: 15_000,
   });
 
   const cost = useQuery({
-    queryKey: ["cost", asOf, scope],
-    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined, scope),
+    queryKey: ["cost", asOf, scope, period],
+    queryFn: ({ signal }) => fetchCost(signal, asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -524,6 +540,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     // overview reads. The previous version built `` `sous ${pct(...)}` `` inline — a French
     // literal in a trilingual component, which a German operator read in French.
     tcd,
+    // …and the curve for each of them, over the window the numbers above are read under.
+    // Until 2026-08-01 this column held a direction arrow and nothing else, on all 24 rows.
+    controlSeries.data,
   );
 
   /**

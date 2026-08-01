@@ -207,7 +207,14 @@ function MonitoringTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
-            <th className="pb-2 font-medium">{t("colRelease")}</th>
+            {/* The slack column. A `w-full` table hands its leftover width to whichever
+              column the auto layout picks, and it picked the FIRST one — so the identity
+              column carried a 54 px lead while every other gutter was 12 px, and the lead
+              changed with the viewport (20 px at 1280). That is what "the widths look random"
+              looks like from the outside. Naming the column that absorbs the slack makes every
+              other column content-sized and every gutter equal; this one is the right choice
+              for it because its content is a variable-length status sentence. */}
+            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -334,7 +341,7 @@ function AlarmTable({
             </th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colSloGap")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colContribution")}</th>
-            <th className="pb-2 font-medium">{t("colRelease")}</th>
+            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -466,7 +473,7 @@ function QualityTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colRegression")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colGate")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colEvalFreshness")}</th>
-            <th className="pb-2 font-medium">{t("colRelease")}</th>
+            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -640,7 +647,7 @@ function SecurityTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colPiiLeaks")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colToxicity")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colGuardDenied")}</th>
-            <th className="pb-2 font-medium">{t("colRelease")}</th>
+            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -725,7 +732,7 @@ function ComplianceTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colGovernedActs")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLedgerEntries")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-            <th className="pb-2 font-medium">{t("colRelease")}</th>
+            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -792,7 +799,7 @@ function ObservabilityTable({
             <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colAnomalies")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colConformance")}</th>
-            <th className="pb-2 font-medium">{t("colRelease")}</th>
+            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -868,7 +875,7 @@ function ReliabilityTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colToolErrors")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colCostTokens")}</th>
-            <th className="pb-2 font-medium">{t("colRelease")}</th>
+            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>

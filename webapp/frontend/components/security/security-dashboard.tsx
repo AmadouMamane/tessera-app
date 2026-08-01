@@ -60,6 +60,7 @@ import type {
 } from "@/lib/api/schemas";
 import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
 import { panelOf, signalOf } from "@/lib/overview-snapshot";
+import { useWindowStore } from "@/lib/stores/window-store";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
@@ -563,21 +564,25 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+  // The window length, from the header's period selector. The fixed-corpus probes on this
+  // page ignore it by construction and SAY so (their capability declares no TIME dimension);
+  // the turn-derived ones — PII, toxicity, tool validity — honour it.
+  const period = useWindowStore((st) => st.period);
 
   // One batched read for the eight individual public safety signals (was eight fetches).
   const secBatch = useQuery({
-    queryKey: ["sec-batch", asOf, locale],
+    queryKey: ["sec-batch", asOf, locale, period],
     queryFn: ({ signal }) =>
-      fetchBatch(signal, SEC_BATCH_KEYS, { at: asOf ?? undefined, lang: locale }),
+      fetchBatch(signal, SEC_BATCH_KEYS, { at: asOf ?? undefined, lang: locale, days: period }),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
   const firewall = panelOf(secBatch, "firewall-efficacy", FirewallEfficacySchema);
   // One batched snapshot for the five snapshot-eligible safety signals (was five fetches).
   const secSnap = useQuery({
-    queryKey: ["sec-snapshot", asOf, scope],
+    queryKey: ["sec-snapshot", asOf, scope, period],
     queryFn: ({ signal }) =>
-      fetchOverviewSnapshot(signal, asOf ?? undefined, scope, SEC_SNAPSHOT_SIGNALS),
+      fetchOverviewSnapshot(signal, asOf ?? undefined, scope, SEC_SNAPSHOT_SIGNALS, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
@@ -826,8 +831,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               <th className="px-3 py-2 font-medium">{ts("col.state")}</th>
               <th className="px-3 py-2 font-medium">{ts("col.value")}</th>
               <th className="px-3 py-2 font-medium">{ts("col.target")}</th>
-              <th className="px-3 py-2 font-medium">{ts("col.action")}</th>
+              {/* The slack column — the one holding a sentence, not the one holding a link.
+                See the note in `overview-dashboard.tsx`. */}
+              <th className="w-full px-3 py-2 font-medium">{ts("col.action")}</th>
               <th className="px-3 py-2 font-medium">{ts("col.role")}</th>
+              {/* The slack column — see the note in `agent-breakdown.tsx`. A `w-full` table
+                gives its leftover width to whichever columns the auto layout picks, and it
+                spread it over five of the seven here: gutters of 51, 26, 37, 30, 67 px under
+                identical `px-3` padding. Naming the last column as the one that absorbs it
+                makes every other column content-sized and every gutter equal. */}
               <th className="px-3 py-2 font-medium">{ts("col.case")}</th>
             </tr>
           </thead>

@@ -6,6 +6,7 @@ import { Fragment, useMemo, useState } from "react";
 
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { QInfo } from "@/components/observability/quality-info";
+import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truncate } from "@/components/ui/truncate";
@@ -16,6 +17,7 @@ import type {
   ClusterReport,
   ConformanceReport,
   ContradictionReport,
+  ControlSeries,
   CostReport,
   FailedCasesReport,
   FirewallEfficacy,
@@ -38,6 +40,8 @@ import {
   type ControlId,
   type ControlReading,
   type Unavailability,
+  hasDrawableCurve,
+  readControlSeries,
   readControls,
 } from "@/lib/control-registry";
 import { registryIdFor } from "@/lib/signal-focus";
@@ -82,6 +86,14 @@ export interface SignalRow {
   metric: string;
   entity: SignalEntity;
   delta: number | null;
+  /**
+   * The signal's curve over the selected window: one ratio per bucket, `null` where the
+   * bucket held nothing. Produced by `readControlSeries` — the SAME `readControl` that
+   * produced `score` — so the line and the number cannot disagree.
+   */
+  curve?: (number | null)[];
+  /** Why there is no curve, when there is none. Rendered instead of an empty chart. */
+  noCurve?: string;
   action: string;
   role: "operator" | "admin";
 }
@@ -238,14 +250,52 @@ const SHARED: readonly {
   { id: "intent", key: "intent", nameKey: "intent.title", category: "sessions" },
 ];
 
+/**
+ * Which payload key a control reads — the join with the series report's `unwindowed` map.
+ *
+ * Several rows share one source (the two firewall views, the SLO and its error budget), so a
+ * reason attached to a source must reach every row derived from it.
+ */
+const SHARED_SOURCE: Partial<Record<ControlId, string>> = {
+  faithfulness: "slo",
+  errorBudget: "slo",
+  calibration: "calibration",
+  citations: "citations",
+  contradiction: "contradiction",
+  predictor: "predictor",
+  clusters: "clusters",
+  toxicity: "toxicity",
+  pii: "pii",
+  refusalOver: "refusal",
+  refusalUnder: "refusal",
+  firewall: "firewall",
+  injectionBypass: "firewall",
+  crossTenant: "crossTenant",
+  leastPrivilege: "privilege",
+  embeddingInversion: "inversion",
+  conformance: "conformance",
+  tools: "tools",
+  localeFormat: "localeFormat",
+  cost: "cost",
+  routing: "routing",
+  funnel: "funnel",
+  anomalies: "anomalies",
+  intent: "intent",
+};
+
 /** A registry reading, laid out as a row of this table. */
 function sharedRow(
   spec: (typeof SHARED)[number],
   reading: ControlReading,
   t: (key: string) => string,
   td: (key: string, values: Record<string, string>) => string,
+  series?: ControlSeries,
 ): RawRow {
+  const source = SHARED_SOURCE[spec.id];
+  const noCurve = source ? series?.unwindowed[source] : undefined;
   return {
+    curve: noCurve || !series ? undefined : readControlSeries(series.buckets, spec.id),
+    noCurve,
     key: spec.key,
     name: t(spec.nameKey),
     category: spec.category,
@@ -265,6 +315,7 @@ export function buildSignalRows(
   t: (key: string) => string,
   d: SignalData,
   td: (key: string, values: Record<string, string>) => string,
+  series?: ControlSeries,
 ): SignalRow[] {
   const rows: RawRow[] = [];
 
@@ -277,7 +328,7 @@ export function buildSignalRows(
   const pushShared = (id: ControlId) => {
     const spec = SHARED.find((s) => s.id === id);
     const reading = shared.get(id);
-    if (spec && reading) rows.push(sharedRow(spec, reading, t, td));
+    if (spec && reading) rows.push(sharedRow(spec, reading, t, td, series));
   };
 
   pushShared("faithfulness");
@@ -416,6 +467,14 @@ const COLS = 11;
 
 /** "Registre des signaux qualité" — the full registry table grouped by severity,
  * with search + entity/status filter chips (reference image 01). */
+/** A signal's status, mapped to the curve's colour — the same colour its badge carries. */
+const TREND_TONE: Record<SignalStatus, "success" | "warning" | "danger" | "neutral"> = {
+  ok: "success",
+  warn: "warning",
+  crit: "danger",
+  na: "neutral",
+};
+
 export function SignalsTable({
   rows,
   selectedKey,
@@ -426,6 +485,7 @@ export function SignalsTable({
   onSelect?: (row: SignalRow) => void;
 }) {
   const tq = useTranslations("quality");
+  const tnc = useTranslations("overview.noCurve");
   const tt = useTranslations("table");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<SignalStatus | "all">("all");
@@ -659,7 +719,25 @@ export function SignalsTable({
                               </Badge>
                             </td>
                             <td className="px-2 py-2 text-[var(--muted-foreground)]">
-                              {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
+                              {/* The curve, where one can honestly be drawn; otherwise the
+                                reason. The direction arrow stays beneath it either way — it
+                                answers a different question ("which way, over what sample")
+                                and it is the only thing this column said until 2026-08-01. */}
+                              {r.noCurve ? (
+                                <span className="text-[0.6rem]" title={tnc(`${r.noCurve}.why`)}>
+                                  {tnc(r.noCurve)}
+                                </span>
+                              ) : hasDrawableCurve(r.curve ?? []) ? (
+                                <MetricSparkline
+                                  values={r.curve ?? []}
+                                  tone={TREND_TONE[r.status]}
+                                  className="h-5"
+                                  height={20}
+                                />
+                              ) : null}
+                              <span className="block text-[0.6rem]">
+                                {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
+                              </span>
                             </td>
                             <td className="px-2 py-2 text-[var(--muted-foreground)]">
                               <span className="block truncate">

@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Flame, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
+
+import { useWindowStore } from "@/lib/stores/window-store";
 import { useSearchParams } from "next/navigation";
 
 import { AlertRibbon, type RibbonVariant } from "@/components/cockpit/alert-ribbon";
@@ -45,9 +47,15 @@ export function SignalBreachHero({
   // the per-agent KPI grid below it — unless `orgWide` pins it to the fleet SLO.
   const searchParams = useSearchParams();
   const scope = orgWide ? "all" : parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+  // …and under the same PERIOD, for exactly the same reason. The agent scope was wired here
+  // and the window was not, so on 2026-08-01 — the day the period first reached the data —
+  // this ribbon announced "Fidélité 73,1 %, 18 réponses sur 67 sous l'objectif" directly above
+  // a table reading "100 %, 1/1 conformes". Both were correct about different weeks, which is
+  // the worst way for two numbers to disagree: neither looks wrong.
+  const period = useWindowStore((s) => s.period);
   const { data } = useQuery({
-    queryKey: ["slo-hero", scope],
-    queryFn: ({ signal }) => fetchSLO(signal, undefined, scope),
+    queryKey: ["slo-hero", scope, period],
+    queryFn: ({ signal }) => fetchSLO(signal, undefined, scope, period),
     staleTime: 30_000,
   });
 

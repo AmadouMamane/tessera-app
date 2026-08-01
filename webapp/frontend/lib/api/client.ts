@@ -479,9 +479,10 @@ export async function fetchEvalScores(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<EvalScoresResponse> {
   return request(
-    withScope("/observability/scores", at, agent),
+    withScope("/observability/scores", at, agent, days),
     { signal },
     EvalScoresResponseSchema,
   );
@@ -556,8 +557,9 @@ export async function fetchSLO(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<SLOReport> {
-  return request(withScope("/observability/slo", at, agent), { signal }, SLOReportSchema);
+  return request(withScope("/observability/slo", at, agent, days), { signal }, SLOReportSchema);
 }
 
 /**
@@ -677,9 +679,10 @@ export async function fetchPlaybooks(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<PlaybookReport> {
   return request(
-    withScope("/observability/playbooks", at, agent),
+    withScope("/observability/playbooks", at, agent, days),
     { signal },
     PlaybookReportSchema,
   );
@@ -700,8 +703,9 @@ export async function fetchToxicity(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<ToxicityReport> {
-  return request(withScope("/observability/toxicity", at, agent), { signal }, ToxicityReportSchema);
+  return request(withScope("/observability/toxicity", at, agent, days), { signal }, ToxicityReportSchema);
 }
 
 /** Distil high-scoring captured turns into an SFT dataset (#122). */
@@ -787,8 +791,9 @@ export async function fetchTrend(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<TrendReport> {
-  return request(withScope("/observability/trend", at, agent), { signal }, TrendReportSchema);
+  return request(withScope("/observability/trend", at, agent, days), { signal }, TrendReportSchema);
 }
 
 /** Calendar-time score series for one metric (Vue d'ensemble chart + metric KPIs). */
@@ -1383,9 +1388,10 @@ export async function fetchConformance(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<ConformanceReport> {
   return request(
-    withScope("/observability/conformance", at, agent),
+    withScope("/observability/conformance", at, agent, days),
     { signal },
     ConformanceReportSchema,
   );
@@ -1416,17 +1422,21 @@ export async function fetchToolValidity(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<ToolValidity> {
   return request(
-    withScope("/observability/tool-validity", at, agent),
+    withScope("/observability/tool-validity", at, agent, days),
     { signal },
     ToolValiditySchema,
   );
 }
 
 /** Language-routing health: served vs detected language + code-switching. */
-export async function fetchRouting(signal?: AbortSignal): Promise<RoutingReport> {
-  return request("/observability/routing", { signal }, RoutingReportSchema);
+export async function fetchRouting(
+  signal?: AbortSignal,
+  days?: string,
+): Promise<RoutingReport> {
+  return request(withScope("/observability/routing", undefined, undefined, days), { signal }, RoutingReportSchema);
 }
 
 /** Context truncation/overflow vs the input window across captured turns (#89). */
@@ -1439,13 +1449,17 @@ export async function fetchCost(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<CostReport> {
-  return request(withScope("/observability/cost", at, agent), { signal }, CostReportSchema);
+  return request(withScope("/observability/cost", at, agent, days), { signal }, CostReportSchema);
 }
 
 /** Business-intent mix and routing confidence over captured questions (#63). */
-export async function fetchIntent(signal?: AbortSignal): Promise<IntentReport> {
-  return request("/observability/intent", { signal }, IntentReportSchema);
+export async function fetchIntent(
+  signal?: AbortSignal,
+  days?: string,
+): Promise<IntentReport> {
+  return request(withScope("/observability/intent", undefined, undefined, days), { signal }, IntentReportSchema);
 }
 
 /** Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden) (#58). */
@@ -1458,8 +1472,9 @@ export async function fetchAnomalies(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<AnomalyReport> {
-  return request(withScope("/observability/anomalies", at, agent), { signal }, AnomalyReportSchema);
+  return request(withScope("/observability/anomalies", at, agent, days), { signal }, AnomalyReportSchema);
 }
 
 /** Root-cause "what changed": lineage diff + attribution of a score delta (#17), live or as of T. */
@@ -1476,8 +1491,11 @@ export async function fetchWhatChanged(
 }
 
 /** Multi-turn self-contradictions across captured sessions (#30). */
-export async function fetchContradictions(signal?: AbortSignal): Promise<ContradictionReport> {
-  return request("/observability/contradictions", { signal }, ContradictionReportSchema);
+export async function fetchContradictions(
+  signal?: AbortSignal,
+  days?: string,
+): Promise<ContradictionReport> {
+  return request(withScope("/observability/contradictions", undefined, undefined, days), { signal }, ContradictionReportSchema);
 }
 
 /** Recorded jailbreak-drift snapshots (continuous red-team, #24). */
@@ -1491,13 +1509,19 @@ export async function runRedteam(): Promise<RedTeamResponse> {
 }
 
 /** Regulatory citation validity: cited articles absent from the grounding (#49). */
-export async function fetchCitations(signal?: AbortSignal): Promise<CitationSummary> {
-  return request("/observability/citations", { signal }, CitationSummarySchema);
+export async function fetchCitations(
+  signal?: AbortSignal,
+  days?: string,
+): Promise<CitationSummary> {
+  return request(withScope("/observability/citations", undefined, undefined, days), { signal }, CitationSummarySchema);
 }
 
 /** Locale-formatting correctness: amounts whose style mismatches the locale (#51). */
-export async function fetchLocaleFormat(signal?: AbortSignal): Promise<LocaleFormatSummary> {
-  return request("/observability/locale-format", { signal }, LocaleFormatSummarySchema);
+export async function fetchLocaleFormat(
+  signal?: AbortSignal,
+  days?: string,
+): Promise<LocaleFormatSummary> {
+  return request(withScope("/observability/locale-format", undefined, undefined, days), { signal }, LocaleFormatSummarySchema);
 }
 
 /** Output PII-leak rate: PII in answers absent from their grounding (#38), live or as of T. */
@@ -1505,8 +1529,9 @@ export async function fetchPiiLeak(
   signal?: AbortSignal,
   at?: string,
   agent?: string,
+  days?: string,
 ): Promise<PIILeakSummary> {
-  return request(withScope("/observability/pii-leak", at, agent), { signal }, PIILeakSummarySchema);
+  return request(withScope("/observability/pii-leak", at, agent, days), { signal }, PIILeakSummarySchema);
 }
 
 /** Per-language conversation funnel from scored turns (#66), live or as of T. */
