@@ -32,6 +32,7 @@ import json
 import sys
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from hashlib import blake2s
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
@@ -41,6 +42,7 @@ from tessera.observability.eval_data import CATEGORY_LABELS, load_eval_snapshot
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 __all__ = [
@@ -196,10 +198,41 @@ class OperatorItem:
     #: agent — lived only in fields nothing displayed. An operator reading a queue of repeated
     #: sentences cannot tell "several problems" from "one problem, several times".
     n_variants: int = 1
-    #: Which dimensions actually differ among those siblings: ``"agent"``, ``"language"``.
+    #: The conversation this item came from, when it has one. Business-grammar items (a
+    #: validation request, a blocked action) are per-CONVERSATION: 58 of them shared one
+    #: `case_id`, one agent, one language and one title, and differed only here. Without the
+    #: field the queue rendered fifty-eight identical sentences.
+    context_ref: str = ""
+    #: Which dimensions actually differ among those siblings: ``"agent"``, ``"language"``,
+    #: ``"context"``, ``"time"``.
     #: Only these are appended, because appending a dimension that is CONSTANT across the
     #: siblings adds a word and disambiguates nothing.
     variant_dims: tuple[str, ...] = ()
+
+    def disambiguate_with(self, dims: tuple[str, ...], base: str) -> str:
+        """Render ``base`` qualified by ``dims`` — the shape the chooser tests against.
+
+        Separate from :meth:`disambiguate` so the dimension chooser can evaluate a CANDIDATE
+        set before committing to it. Choosing dimensions and rendering them through two
+        different code paths is how a set that looks separating produces a screen that is not.
+        """
+        parts = []
+        if "agent" in dims:
+            parts.append(self.agent_id)
+        if "language" in dims:
+            parts.append(self.language.upper())
+        if "context" in dims and self.context_ref:
+            parts.append(self.context_ref[:12])
+        if "time" in dims:
+            parts.append(self.created_at.strftime("%d/%m %H:%M"))
+        if "ref" in dims:
+            # A DIGEST of the whole id, not a slice of it. `item_id[-8:]` was the first
+            # attempt and it did not separate: these ids end with the artifact key
+            # (`…RC-2048-schedule-36-months-v2`), identical across the group, and only their
+            # middle varies. An id being unique says nothing about any fixed window of it —
+            # which is the same mistake as reading a prefix, one end over.
+            parts.append(f"#{blake2s(self.item_id.encode(), digest_size=3).hexdigest()}")
+        return f"{base} · {' · '.join(parts)}" if parts else base
 
     def disambiguate(self, base: str) -> str:
         """Append to ``base`` exactly what distinguishes this row from its siblings.
@@ -216,12 +249,7 @@ class OperatorItem:
         """
         if self.n_variants <= 1 or not self.variant_dims:
             return base
-        parts = []
-        if "agent" in self.variant_dims:
-            parts.append(self.agent_id)
-        if "language" in self.variant_dims:
-            parts.append(self.language.upper())
-        return f"{base} · {' · '.join(parts)}"
+        return self.disambiguate_with(self.variant_dims, base)
 
     @property
     def display_title(self) -> str:
@@ -554,6 +582,7 @@ def _business_event_items(
                 status=st.get("status", _DEFAULT_STATUS),
                 assignee=st.get("assignee", ""),
                 source_kind="business_event",
+                context_ref=conversation_id,
                 detail_href=_business_event_href(row),
                 queued_at=_resolve_queued_at(state, item_id, now, new_stamps),
             )
@@ -573,6 +602,47 @@ def _dedupe_items(items: list[OperatorItem]) -> list[OperatorItem]:
     return unique
 
 
+def _dims_that_separate(group: list[OperatorItem]) -> tuple[str, ...]:
+    """The smallest set of dimensions that actually makes this group's titles unique.
+
+    Adds them in order of usefulness and STOPS as soon as the rendered titles are distinct —
+    then keeps going if they are not. Checking is the whole point: on the live fleet, appending
+    the conversation left "…· ckpt2-metier" twice, because the rendered form is truncated for
+    readability and two conversations shared a prefix. A dimension that is *different in the
+    data* can still be *identical on screen*, and the screen is what the operator reads.
+
+    Ends on ``ref``, a tail of `item_id`. That one is unique BY CONSTRUCTION — it is the dedupe
+    key — so the loop always terminates on a set that genuinely separates. Without a guaranteed
+    last resort the loop can exhaust its candidates and return a set that does not, with the
+    caller none the wiser: live, two validation requests landed in one conversation within one
+    minute and every earlier dimension collided.
+    """
+    if len(group) <= 1:
+        return ()
+
+    candidates: tuple[tuple[str, Callable[[OperatorItem], str]], ...] = (
+        ("agent", lambda i: i.agent_id),
+        ("language", lambda i: i.language),
+        ("context", lambda i: i.context_ref),
+        ("time", lambda i: i.created_at.isoformat()),
+        # The terminating dimension: a digest of `item_id`, the dedupe key. Unique by
+        # construction, so this candidate always separates — which is why it exists. Without a
+        # guaranteed last resort the loop can exhaust its candidates and return a set that does
+        # not separate, with the caller none the wiser. Live, two validation requests landed in
+        # one conversation within one minute and every earlier dimension collided.
+        ("ref", lambda i: i.item_id),
+    )
+    dims: list[str] = []
+    for name, key in candidates:
+        if len({key(i) for i in group}) <= 1:
+            continue  # constant here — appending it adds a word and separates nothing
+        dims.append(name)
+        rendered = {i.disambiguate_with(tuple(dims), i.title) for i in group}
+        if len(rendered) == len(group):
+            return tuple(dims)
+    return tuple(dims)
+
+
 def _count_variants(items: list[OperatorItem]) -> list[OperatorItem]:
     """Stamp each item with its sibling count and WHICH dimensions distinguish them.
 
@@ -584,9 +654,12 @@ def _count_variants(items: list[OperatorItem]) -> list[OperatorItem]:
     different cases sharing a title collide on screen exactly as badly as one case under three
     languages, and the id that tells them apart is not rendered either.
 
-    The dimensions are computed per group instead of assumed. A first version always appended
-    the language and left "Unauthorised promise of a refund · FR" twice on screen — the same
-    case under two AGENTS, told apart by a field it never mentioned.
+    The dimensions are computed per group instead of assumed, and VERIFIED rather than hoped
+    for. A first version always appended the language and left "Unauthorised promise of a
+    refund · FR" twice on screen — the same case under two AGENTS, told apart by a field it
+    never mentioned. A second computed the right dimensions and still left collisions, because
+    a chosen dimension can fail to separate in practice (a truncated conversation id whose
+    prefix two rows share). :func:`_dims_that_separate` checks the result.
     """
     from collections import defaultdict
 
@@ -596,12 +669,7 @@ def _count_variants(items: list[OperatorItem]) -> list[OperatorItem]:
 
     dims_for: dict[str, tuple[str, ...]] = {}
     for title, group in groups.items():
-        dims: list[str] = []
-        if len({i.agent_id for i in group}) > 1:
-            dims.append("agent")
-        if len({i.language for i in group}) > 1:
-            dims.append("language")
-        dims_for[title] = tuple(dims)
+        dims_for[title] = _dims_that_separate(group)
 
     return [
         replace(item, n_variants=len(groups[item.title]), variant_dims=dims_for[item.title])

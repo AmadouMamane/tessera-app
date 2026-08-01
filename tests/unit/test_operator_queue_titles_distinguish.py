@@ -86,7 +86,13 @@ def test_agent_is_appended_when_the_agent_is_what_differs() -> None:
     )
 
 
-def test_both_are_appended_when_both_differ() -> None:
+def test_only_as_many_dimensions_as_it_takes_to_separate() -> None:
+    """Two rows differing in agent AND language get the AGENT only — it already separates.
+
+    Adding every differing dimension would put two qualifiers on a line that needed one. The
+    chooser stops as soon as the rendered titles are distinct, which keeps the queue readable
+    exactly where it is already crowded.
+    """
     items = _count_variants(
         [
             _item("support-client", "c1", "fr", "A refund was promised"),
@@ -95,9 +101,39 @@ def test_both_are_appended_when_both_differ() -> None:
     )
 
     assert {i.display_title for i in items} == {
-        "A refund was promised · support-client · FR",
-        "A refund was promised · recouvrement · DE",
+        "A refund was promised · support-client",
+        "A refund was promised · recouvrement",
     }
+    assert all(i.variant_dims == ("agent",) for i in items)
+
+
+def test_it_keeps_going_when_a_dimension_does_not_actually_separate() -> None:
+    """A dimension can differ in the DATA and collide on SCREEN — the chooser must notice.
+
+    The conversation reference is truncated for readability, so two conversations sharing a
+    prefix render identically. On the live fleet that left "…· ckpt2-metier" twice after a
+    version that computed the right dimension and never checked the result.
+    """
+    a = replace(
+        _item("recouvrement", "RC-2048", "fr", "Validation requise"),
+        item_id="a",
+        context_ref="ckpt2-metier-live-aaaa",
+        created_at=datetime(2026, 7, 7, 6, 6, tzinfo=UTC),
+    )
+    b = replace(
+        _item("recouvrement", "RC-2048", "fr", "Validation requise"),
+        item_id="b",
+        context_ref="ckpt2-metier-live-bbbb",
+        created_at=datetime(2026, 7, 7, 7, 3, tzinfo=UTC),
+    )
+
+    items = _count_variants([a, b])
+
+    assert len({i.display_title for i in items}) == 2, (
+        "the two rows still read the same: the truncated conversation prefix is shared, so the "
+        "chooser had to fall through to the arrival instant"
+    )
+    assert all("time" in i.variant_dims for i in items)
 
 
 def test_grouping_is_by_title_not_by_case_id() -> None:
@@ -130,6 +166,34 @@ def test_disambiguate_applies_to_a_localised_title_too() -> None:
     assert (
         item.disambiguate("Un remboursement a été promis") == "Un remboursement a été promis · DE"
     )
+
+
+def test_it_always_terminates_on_a_set_that_separates() -> None:
+    """Two items identical in EVERY declared dimension still get distinct titles.
+
+    Same agent, language, conversation and minute — the state the live fleet reached with two
+    validation requests raised seconds apart in one conversation. The last candidate is a
+    digest of `item_id`, the dedupe key, so it separates by construction.
+
+    A tail of the id was tried first and did NOT work: these ids end with the artifact key
+    (`…RC-2048-schedule-36-months-v2`), identical across the group, and only their middle
+    varies. An id being unique says nothing about any fixed window of it.
+    """
+    when = datetime(2026, 7, 9, 23, 15, tzinfo=UTC)
+    twins = [
+        replace(
+            _item("recouvrement", "RC-2048", "fr", "Validation requise"),
+            item_id=f"recouvrement.validation.requested.conv-1.{n}.RC-2048-schedule-36-months-v2",
+            context_ref="conv-1",
+            created_at=when,
+        )
+        for n in ("aaa", "bbb")
+    ]
+
+    items = _count_variants(twins)
+
+    assert len({i.display_title for i in items}) == 2
+    assert all("ref" in i.variant_dims for i in items)
 
 
 def test_the_real_backlog_has_no_two_rows_reading_the_same() -> None:

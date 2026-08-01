@@ -154,7 +154,13 @@ def _display_title(item: OperatorItem, lang: str) -> str:
         "validation_requested": "validation_title",
         "action_blocked": "blocked_title",
     }.get(item.category)
-    return _t(key, lang).format(case_id=item.case_id) if key else item.display_title
+    # The translated branch needs disambiguating MORE than the fallback, not less: it is
+    # formatted from `case_id` alone, and on the live fleet 58 validation requests shared one
+    # `case_id` (RC-2048) with one agent, one language and one title. They differed only by
+    # conversation and instant, so this branch produced fifty-eight identical sentences — and
+    # it was the branch that skipped the disambiguation entirely.
+    base = _t(key, lang).format(case_id=item.case_id) if key else item.title
+    return item.disambiguate(base)
 
 
 def _kpi(
