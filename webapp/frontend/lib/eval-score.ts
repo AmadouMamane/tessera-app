@@ -265,6 +265,23 @@ export function parseRunAt(runAt: string | null | undefined): Date | null {
 }
 
 /**
+ * A run's DAY, for a column that has room for a date and not for an instant.
+ *
+ * The obvious spelling — `run_at.slice(0, 10)` — is what two screens did, and on the basic
+ * stamp the runner actually writes it takes ten characters off `20260801T120000Z` and renders
+ * **`20260801T1`** under a heading that says "Dernière évaluation". Measured on the built
+ * server in the per-agent breakdown; a date column showing a truncated timestamp reads as
+ * corrupted data rather than as a formatting bug, which is the expensive kind of wrong.
+ *
+ * Parsing first is what makes the ten characters safe: an unparseable stamp yields the em dash
+ * this cockpit uses for "no value", never a prefix of something the reader must decode.
+ */
+export function fmtRunDay(runAt: string | null | undefined): string {
+  const at = parseRunAt(runAt);
+  return at ? at.toISOString().slice(0, 10) : "—";
+}
+
+/**
  * CALENDAR days between a run and `now` — not 24-hour slices, and the difference is not
  * pedantic.
  *

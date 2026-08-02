@@ -16,6 +16,8 @@ import type {
 } from "@/lib/agent-lens";
 import { AGENT_SCOPE_ALL } from "@/lib/agent-scope";
 import type { Fleet } from "@/lib/api/schemas";
+import { COL_IDENTITY, COL_VERDICT, TABLE_BREAKDOWN } from "@/lib/breakdown-columns";
+import { fmtRunDay } from "@/lib/eval-score";
 
 const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 const fmtPct = (n: number) => `${n.toFixed(1).replace(".", ",")} %`;
@@ -25,7 +27,6 @@ const fmtSecs = (ms: number | null) =>
 const fmtRate = (r: number) => fmtPct(r * 100);
 /** A signed percentage-point distance ("−23,4 pt" / "+1,2 pt"). */
 const fmtPp = (pp: number) => `${pp > 0 ? "+" : ""}${pp.toFixed(1).replace(".", ",")} pt`;
-const fmtDate = (iso: string | undefined) => (iso ? iso.slice(0, 10) : "—");
 
 const RELEASE_TONE: Record<string, string> = {
   good: "text-[var(--tessera-fg-success)]",
@@ -199,22 +200,16 @@ function MonitoringTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.72rem]">
+      <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colVolume")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
-            {/* The slack column. A `w-full` table hands its leftover width to whichever
-              column the auto layout picks, and it picked the FIRST one — so the identity
-              column carried a 54 px lead while every other gutter was 12 px, and the lead
-              changed with the viewport (20 px at 1280). That is what "the widths look random"
-              looks like from the outside. Naming the column that absorbs the slack makes every
-              other column content-sized and every gutter equal; this one is the right choice
-              for it because its content is a variable-length status sentence. */}
-            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+            {/* Prose, not a number: sized by `COL_VERDICT`, which explains why. */}
+            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -332,16 +327,16 @@ function AlarmTable({
   const seenShared = fleet.handoff_conversations_seen_shared ?? 0;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.72rem]">
+      <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">
               {t("colSignalValue", { metric: metricLabel(lens.metric, t) })}
             </th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colSloGap")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colContribution")}</th>
-            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -464,16 +459,16 @@ function QualityTable({
   const seenShared = fleet.handoff_conversations_seen_shared ?? 0;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.72rem]">
+      <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colFaithfulness")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colHallucination")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colRegression")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colGate")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colEvalFreshness")}</th>
-            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -527,7 +522,7 @@ function QualityTable({
                   }`}
                   title={rel?.verdict_stale ? t("staleEval") : undefined}
                 >
-                  {rel ? fmtDate(rel.run_at) : "—"}
+                  {rel ? fmtRunDay(rel.run_at) : "—"}
                 </td>
                 <td className="py-1.5">
                   <ReleaseCell agent={a} t={t} />
@@ -640,14 +635,14 @@ function SecurityTable({
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.72rem]">
+      <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colPiiLeaks")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colToxicity")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colGuardDenied")}</th>
-            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -725,14 +720,14 @@ function ComplianceTable({
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.72rem]">
+      <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colGovernedActs")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLedgerEntries")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -793,13 +788,13 @@ function ObservabilityTable({
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.72rem]">
+      <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colAnomalies")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colConformance")}</th>
-            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -868,14 +863,14 @@ function ReliabilityTable({
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[0.72rem]">
+      <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-            <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+            <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colToolErrors")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colCostTokens")}</th>
-            <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>

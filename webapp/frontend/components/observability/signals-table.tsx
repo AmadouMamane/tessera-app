@@ -706,8 +706,17 @@ export function SignalsTable({
                                 {tq(`signalsTable.entity.${r.entity}`)}
                               </span>
                             </td>
-                            <td className="px-2 py-2 font-semibold tabular-nums">{r.score}</td>
-                            <td className="px-2 py-2 tabular-nums text-[var(--muted-foreground)]">
+                            {/* `whitespace-nowrap`, because the SIGNAL column above carries
+                                `w-full`: auto layout then squeezes every other column to its
+                                MIN-content, which for «F1 ≥ 0.90» is the width of «0.90» and
+                                breaks a four-character reading across two lines. Measured at
+                                1672 px: «489 tok», «F1 ≥ 0.90», «κ ≥ 0.60», «≤ 0.10%» and
+                                «= 100%» all wrapped in 54-59 px columns. A value and its
+                                threshold are read as one token or not at all. */}
+                            <td className="whitespace-nowrap px-2 py-2 font-semibold tabular-nums">
+                              {r.score}
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-[var(--muted-foreground)]">
                               {r.threshold}
                             </td>
                             <td className="px-2 py-2">

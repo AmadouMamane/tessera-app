@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { AGENT_SCOPE_ALL } from "@/lib/agent-scope";
 import { fetchFleet } from "@/lib/api/client";
 import type { Fleet } from "@/lib/api/schemas";
+import { COL_IDENTITY, COL_VERDICT, TABLE_BREAKDOWN } from "@/lib/breakdown-columns";
 
 const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 const fmtPct = (n: number) => `${n.toFixed(1).replace(".", ",")} %`;
@@ -130,22 +131,16 @@ export function MonitoringFleetTable({
         <h2 className="text-[0.82rem] font-semibold">{t("breakdownTitle")}</h2>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-[0.72rem]">
+        <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
           <thead>
             <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              <th className="pb-2 pr-3 font-medium">{t("colAgent")}</th>
+              <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
               <th className="pb-2 pr-3 text-right font-medium">{t("colVolume")}</th>
               <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
               <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
               <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
-              {/* The slack column. A `w-full` table hands its leftover width to whichever
-              column the auto layout picks, and it picked the FIRST one — so the identity
-              column carried a 54 px lead while every other gutter was 12 px, and the lead
-              changed with the viewport (20 px at 1280). That is what "the widths look random"
-              looks like from the outside. Naming the column that absorbs the slack makes every
-              other column content-sized and every gutter equal; this one is the right choice
-              for it because its content is a variable-length status sentence. */}
-              <th className="w-full pb-2 font-medium">{t("colRelease")}</th>
+              {/* Prose, not a number: sized by `COL_VERDICT`, which explains why. */}
+              <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
             </tr>
           </thead>
           <tbody>

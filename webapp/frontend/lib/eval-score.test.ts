@@ -11,6 +11,7 @@ import {
   caseKey,
   cellState,
   decomposeRun,
+  fmtRunDay,
   isStale,
   modelSpoke,
   parseRunAt,
@@ -269,6 +270,26 @@ describe("freshness — measured, never gated on an invented number of days", ()
     expect(parseRunAt(null)).toBeNull();
     expect(parseRunAt("not a date")).toBeNull();
     expect(ageInDays(null, new Date("2026-07-13T00:00:00Z"))).toBeNull();
+  });
+
+  /**
+   * The defect this guards is a rendering, not an arithmetic: the per-agent breakdown showed
+   * `20260801T1` under "Dernière évaluation" because a ten-character slice of the runner's
+   * BASIC stamp lands in the middle of the time. It is worth a test precisely because the
+   * broken spelling looks correct — `slice(0, 10)` is exactly right for an extended ISO date,
+   * and no report the runner writes is in extended ISO.
+   */
+  it("renders the DAY of a compact stamp, not ten characters of it", () => {
+    expect("20260801T120000Z".slice(0, 10)).toBe("20260801T1");
+    expect(fmtRunDay("20260801T120000Z")).toBe("2026-08-01");
+  });
+
+  it("still reads an extended stamp, and refuses anything it cannot parse", () => {
+    expect(fmtRunDay("2026-08-01T12:00:00Z")).toBe("2026-08-01");
+    expect(fmtRunDay("")).toBe("—");
+    expect(fmtRunDay(undefined)).toBe("—");
+    // Not "not a date"[0..10] — a prefix of an unreadable value is not a date either.
+    expect(fmtRunDay("not a date at all")).toBe("—");
   });
 
   it("counts CALENDAR days", () => {

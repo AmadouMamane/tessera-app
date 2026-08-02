@@ -45,6 +45,11 @@ async function login(page: Page): Promise<void> {
  * meaningless. Two identical consecutive reads is the cheapest honest "it has settled".
  */
 async function settle(page: Page): Promise<void> {
+  // Fonts FIRST: every assertion in this file is a text measurement, and a fallback face has
+  // different glyph widths, so a width read before the real face has loaded is a width of some
+  // other page. (Added while chasing a red on the signal registry that this did NOT explain —
+  // it is still red, on both builds, for the reason recorded at `SHORT_TEXT_CHARS`.)
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
   let previous = "";
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const current = await page.evaluate(() =>
@@ -150,6 +155,35 @@ const PAGES = [
   // than the one it names is the shape this file has already fallen into twice.
   "/fr/surveiller/qualite-ia?tab=signals",
   "/fr/surveiller/securite-privacy",
+] as const;
+
+/**
+ * Pages measured for DEAD WIDTH — the four above plus the five other lenses of the per-agent
+ * breakdown, which is the card `MAX_DEAD_SHARE` was written for.
+ *
+ * They are a separate list, and the reason is a measurement rather than a preference. Putting
+ * them through the gutter rule above turns three OTHER tables on those pages red, all three
+ * pre-existing and none of them touched by this card's fix — verified by running this file
+ * against the previous build, where they fail identically:
+ *
+ *  - `/fr/surveiller/fiabilite-cout`, «Modèle | Fournisseur | …»: gutters [38,35,8,8,8] px. A
+ *    513 px panel with ~73 px of leftover, split between its two left-aligned text columns.
+ *  - `/fr/surveiller/amelioration`, «Action | Cause probable | …»: gutters [8,68,8,37,42,49] px.
+ *  - `/fr/prouver/audit-logs`, the ten-column journal: gutters [27,24,23,24,26,28,21] px —
+ *    a 6 px spread on a table that is 98 % saturated, i.e. auto-layout noise, not a design.
+ *
+ * Naming them here with their numbers is the point: each is a sized debt someone can pick up,
+ * not a silence. What is NOT acceptable is dropping the pages so the file looks green — and
+ * what is not acceptable either is redesigning three unrelated cards in a change about one, on
+ * the evidence of this same file that a rhythm fix can put a hole somewhere else.
+ */
+const WIDE_TABLE_PAGES = [
+  ...PAGES,
+  "/fr/surveiller/conformite",
+  "/fr/surveiller/observabilite",
+  "/fr/surveiller/fiabilite-cout",
+  "/fr/surveiller/amelioration",
+  "/fr/prouver/audit-logs",
 ] as const;
 
 for (const path of PAGES) {
@@ -268,5 +302,124 @@ for (const path of PAGES) {
     }, SHORT_TEXT_CHARS);
 
     expect(wrapped, `short cells wrapped: ${wrapped.join("; ")}`).toEqual([]);
+  });
+}
+
+/**
+ * How much of its own width a table may leave unpainted.
+ *
+ * **This is the assertion this file did not have, and its absence is what shipped the defect
+ * it was written to prevent.** Every rule above measures the space BETWEEN columns, and all of
+ * them were green while the nine per-agent breakdown tables left 626 to 838 px of a 1338 px
+ * card empty. One column had taken the entire leftover, so the gutters were perfectly regular
+ * — the file asked "is the rhythm even?" and answered honestly, about a table whose columns
+ * were piled into the left third of the card. The operator's words were that they were "piled
+ * up on the left instead of spread over the card", and they were describing 60 % of it.
+ *
+ * ADR 0026's shape exactly: a witness that interrogates the neighbourhood reports on the
+ * neighbourhood. So this one asks the thing — how much of this table is nothing?
+ *
+ * Twenty-five per cent is MEASURED, not chosen. Swept over every table on thirty-one cockpit
+ * routes at 1672 px, the worst is 11 % (`/fr/configurer/parametres`, whose last column holds a
+ * short status), the breakdown tables are at 4 %, and the defect was 47-63 %. The threshold
+ * has margin on both sides: it cannot fail on a design that is merely ragged, and it cannot
+ * pass a column that has eaten the card.
+ */
+const MAX_DEAD_SHARE = 0.25;
+
+for (const path of WIDE_TABLE_PAGES) {
+  test(`${path} — no table leaves a quarter of itself empty`, async ({ page }) => {
+    await login(page);
+    await page.goto(path);
+    await page.waitForSelector("table thead tr th:nth-child(2)", { timeout: 30_000 });
+    await settle(page);
+
+    const offenders = await page.evaluate(() => {
+      const found: { head: string; width: number; dead: number }[] = [];
+      for (const table of Array.from(document.querySelectorAll("table"))) {
+        const head = table.querySelector("thead tr");
+        if (!head || head.children.length < 3) continue;
+        const box = table.getBoundingClientRect();
+        // Narrow tables sit in a column of a grid and are sized by that column, not by a
+        // card's leftover width. The complaint is about full-width cards.
+        if (box.width < 800) continue;
+
+        let ink = box.left;
+        for (const row of [head, ...Array.from(table.querySelectorAll("tbody tr"))]) {
+          // A colspan row is a sentence, not columns. A right-aligned footer that spans the
+          // table reaches the edge on its own and would report a crammed BODY as full — which
+          // is precisely how the defect looked on screen.
+          if (row.children.length !== head.children.length) continue;
+          for (const cell of Array.from(row.children)) {
+            if ((cell as HTMLTableCellElement).colSpan > 1) continue;
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            for (const rect of Array.from(range.getClientRects())) {
+              if (rect.width > 0) ink = Math.max(ink, rect.right);
+            }
+          }
+        }
+        found.push({
+          head: Array.from(head.children)
+            .map((c) => (c.textContent ?? "").trim().slice(0, 16))
+            .join(" | "),
+          width: Math.round(box.width),
+          dead: Math.round(box.right - ink),
+        });
+      }
+      return found;
+    });
+
+    expect(
+      offenders.length,
+      `no full-width table found on ${path} — the probe went blind`,
+    ).toBeGreaterThan(0);
+
+    for (const t of offenders) {
+      expect(
+        t.dead / t.width,
+        `[${t.head}] paints nothing in its last ${t.dead} px of ${t.width} — crammed left`,
+      ).toBeLessThanOrEqual(MAX_DEAD_SHARE);
+    }
+  });
+}
+
+/**
+ * The per-agent breakdown spreads its VALUE columns evenly.
+ *
+ * "Spread evenly over the whole card" is two claims, and the rule above only holds the first:
+ * a table could reach its right edge with columns of 90, 300, 90 and 600 px and still read as
+ * random. This holds the second, on the one card that renders seven different column sets from
+ * one component — so a lens added later inherits the geometry instead of re-deciding it.
+ *
+ * The first and last columns are DECLARED exceptions and named as such in
+ * `lib/breakdown-columns.ts`: the agent identity is the only left-aligned column, and the
+ * release verdict is a sentence. Everything between them holds a number and gets an equal
+ * share. Asserted at two viewports, because even at 1672 px alone is even by luck.
+ */
+for (const width of [1672, 1280]) {
+  test(`the per-agent breakdown shares one column width at ${width} px`, async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width, height: 1000 });
+    for (const path of ["/fr/surveiller/fiabilite-cout", "/fr/surveiller/amelioration"]) {
+      await page.goto(path);
+      await page.waitForSelector('table[data-breakdown="agent"]', { timeout: 30_000 });
+      await settle(page);
+      const columns = await page.evaluate(() => {
+        const table = document.querySelector('table[data-breakdown="agent"]');
+        const head = table?.querySelector("thead tr");
+        if (!head) return null;
+        return Array.from(head.children).map((c) => Math.round(c.getBoundingClientRect().width));
+      });
+      expect(columns, `no breakdown table on ${path} — the probe went blind`).not.toBeNull();
+      // Identity and verdict are the two declared exceptions; the rest hold numbers.
+      const values = (columns as number[]).slice(1, -1);
+      expect(values.length, `${path} has no value column to measure`).toBeGreaterThan(1);
+      expect(
+        Math.max(...values) - Math.min(...values),
+        `${path} at ${width} px: value columns ${JSON.stringify(values)} px — they should be ` +
+          `one width, and they are ${new Set(values).size}`,
+      ).toBeLessThanOrEqual(TOLERANCE_PX);
+    }
   });
 }

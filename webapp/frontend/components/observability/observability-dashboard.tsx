@@ -125,6 +125,7 @@ import type {
   RunSummary,
   WhatChanged,
 } from "@/lib/api/schemas";
+import { fmtRunDay } from "@/lib/eval-score";
 import { SIGNAL_FOCUS_PARAM, readSignalFocus, registryIdFor } from "@/lib/signal-focus";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
@@ -1044,7 +1045,7 @@ function RightRail({
     activity.push({
       key: "run",
       label: tq("rr.actRun", { n: latestRun.total }),
-      detail: latestRun.run_at.slice(0, 10),
+      detail: fmtRunDay(latestRun.run_at),
     });
   }
   if (current) {
