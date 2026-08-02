@@ -134,6 +134,50 @@ evidence that a rhythm fix can open a hole somewhere else.
 
 ---
 
+## 6. The second table, and which half of the mould transferred
+
+«Contrôles critiques» (Vue d'ensemble) was laid out to this playbook on 2026-08-02, and the
+useful part is what did NOT carry over. Seven columns of real content in a 1020 px card
+(814 px at 1280) means an equal share of ~99 px where «Valeur actuelle» alone inks 160 — and
+`whitespace-nowrap` then **overflows the cell** instead of wrapping. Swept on the live page,
+every `table-fixed` candidate put inks on top of each other: −29, −49, −70 px at 1672, −139 at
+1280. §4's last trap, met in the wild. **Auto layout stayed.**
+
+What transferred is the finding, not the recipe:
+
+| | before | after |
+|---|---|---|
+| ink-to-ink, 1672 px | `[17,25,16,16,16,` **`69`** `]` | `[26,25,16,16,16,30]` |
+| max/median | **4.06** | **1.20** |
+
+- **the value columns are CENTRED** — §2, unchanged, and it is what does the work;
+- **no single slack column.** `w-full` on «Impact» handed it the whole leftover, and a
+  left-aligned column's *trailing* air is the next gap: 69 px before «Action» against a 17 px
+  median. Auto layout spreads the leftover across all seven instead. Check the row height when
+  you do this: the previous comment in that file feared the sentence would wrap further, and it
+  is a reasonable fear — it just does not happen here (71 px at 1672, 97 at 1280, unchanged).
+
+So the transferable rule is: **`table-fixed` when the card has slack to distribute, auto layout
+when it does not — and centre the value columns either way.** The alignment is the mould; the
+widths are a case analysis.
+
+### Two ways the witness lied while this was being checked
+
+Both are general, and both reported a clean table over a defect.
+
+**Stillness is not arrival.** `settle()` waits for two identical consecutive header reads. This
+page holds each of its *loading* states perfectly still for seconds — rows appear as their reads
+land, then the trend column swaps a text label for a sparkline. Three different tables measured
+on one page: `[56,25,16,36,36,30]` early, `[26,25,16,36,36,30]` at 3-7 s, `[26,25,16,16,16,30]`
+once every read had answered. The spec now waits for the page's in-flight `/api/` reads to drain.
+
+**A chart is ink.** The ink walker ranged over text nodes only. A column whose body holds a
+sparkline and no text therefore measured as its *header* — 57 px centred in a 112 px box — and
+the rule reported 36 px of empty space on either side of a chart that fills the cell edge to
+edge. It stretches over `svg` boxes now.
+
+---
+
 ## 5. Where the pieces are
 
 - `webapp/frontend/lib/breakdown-columns.ts` — the three constants, each with the measurement
