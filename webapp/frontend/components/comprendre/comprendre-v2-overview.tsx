@@ -156,8 +156,21 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
     });
   }, []);
 
+  // `w-full min-w-0` on the <article> below is not cosmetic, and `min-w-0` alone was not
+  // enough — that was the first guess and it measured no change at all.
+  //
+  // The article is a flex item of the shell's COLUMN, and it carries `mx-auto`. Auto margins
+  // in the cross axis SUPPRESS `stretch`, so the item stops taking its container's width and
+  // becomes shrink-to-fit — i.e. it is sized by its own min-content, which no `min-width`
+  // can lower. At 390 px that measured 314 px inside a 278 px column, and 20 px of the page
+  // sat under `main`'s `overflow-x: hidden` with no way to reach it. A definite `w-full`
+  // restores the container as the authority; the offending floor is fixed at its source
+  // below (`lg:min-w-[16rem]`).
+  //
+  // Found by the responsive descent only after the public routes were added to its list —
+  // it had never opened this page.
   return (
-    <article className="relative isolate mx-auto max-w-[76rem] pb-14">
+    <article className="relative isolate mx-auto w-full min-w-0 max-w-[76rem] pb-14">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 -top-12 -z-10 h-[28rem] overflow-hidden"
@@ -508,7 +521,12 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
               {t("closing.body")}
             </p>
           </div>
-          <div className="flex min-w-[16rem] flex-col gap-3">
+          {/* `lg:min-w-[16rem]`, not `min-w-[16rem]`. The floor exists so the two CTAs keep a
+              readable width BESIDE the text — a two-column arrangement that only starts at
+              `lg`. Applied unconditionally it was a 256 px floor plus 56 px of padding on a
+              390 px phone, and it is what made this whole article 314 px wide inside a 278 px
+              column, with 20 px of it unreachable under `main`'s clip. */}
+          <div className="flex flex-col gap-3 lg:min-w-[16rem]">
             <Link
               href="/surveiller/vue-ensemble"
               className="inline-flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[var(--tessera-green)] px-5 py-3 text-sm font-semibold text-[#031810] hover:brightness-110"

@@ -49,8 +49,22 @@ const WIDTHS = [
   { w: 390, h: 844, name: "smartphone" },
 ] as const;
 
-/** Static cockpit routes — no `[id]` segments, so the set is stable. */
+/**
+ * Static routes — no `[id]` segments, so the set is stable.
+ *
+ * THE PUBLIC SURFACES WERE OUTSIDE THIS LIST UNTIL 2026-08-02, and that is how the descent
+ * reported 76/76 clean while `/fr/select-space` drew a 272 px decoration over its own card
+ * title at 390 px. The file's own header already admitted the shape of the hole — "it visits
+ * one locale and a FIXED PAGE LIST; a route added tomorrow is not covered until someone adds
+ * it here" — and the page a human reported as broken was one of the ones it never opened.
+ * Widening the surface of observation beats sharpening the list of suspects.
+ */
 const PAGES = [
+  // The public surfaces — the front door, the directory, the explainer, the business console.
+  "/fr/select-space",
+  "/fr/espaces",
+  "/fr/comprendre",
+  "/fr/recouvrement",
   "/fr/surveiller/vue-ensemble",
   "/fr/surveiller/qualite-ia",
   "/fr/surveiller/securite-privacy",
@@ -188,10 +202,23 @@ test.describe("the cockpit survives the descent", () => {
       await login(page);
 
       const failures: string[] = [];
+      const neverIdle: string[] = [];
       let looked = 0;
       for (const path of PAGES) {
-        await page.goto(path, { waitUntil: "networkidle", timeout: 45_000 });
-        await page.waitForTimeout(300);
+        // `networkidle` was the wait here, and on a SELF-REFRESHING page it is a wait that
+        // never ends: `/fr/surveiller/qualite-ia` repolls its SLO tile every five seconds, so
+        // there are never 500 ms of quiet and the whole run died on a 45 s timeout — the
+        // descent reporting NOTHING about nineteen pages because one of them is alive.
+        // Idle is still ATTEMPTED, because where it is reachable it is the better wait; where
+        // it is not, the page settles on a fixed delay and the fallback is COUNTED and named
+        // below. A witness that had to look at less than it promised says so (ADR 0026).
+        await page.goto(path, { waitUntil: "load", timeout: 45_000 });
+        const idle = await page
+          .waitForLoadState("networkidle", { timeout: 8_000 })
+          .then(() => true)
+          .catch(() => false);
+        if (!idle) neverIdle.push(path);
+        await page.waitForTimeout(idle ? 300 : 1_500);
         // A page that failed to render is NOT a page with no defect.
         await expect(page.locator("main")).toBeVisible();
         looked++;
@@ -202,6 +229,15 @@ test.describe("the cockpit survives the descent", () => {
 
       // Anti-vacuity: a run that visited nothing reports no defect too.
       expect(looked, "every page must have been looked at").toBe(PAGES.length);
+      if (neverIdle.length) {
+        // An annotation the line reporter does not print would make "settled on a delay" and
+        // "reached network idle" the same run to a reader — which is the failure this whole
+        // change is about.
+        // biome-ignore lint/suspicious/noConsole: the fallback must be SEEN, not recorded.
+        console.log(
+          `[descent ${vp.w}px] settled on a delay instead of network idle: ${neverIdle.join(", ")}`,
+        );
+      }
       expect(
         failures,
         `content cut off with no way to reach it:\n${failures.join("\n")}`,

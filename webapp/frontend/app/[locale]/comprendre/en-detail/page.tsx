@@ -29,7 +29,7 @@ export default async function ComprendreDetailPage({ params }: PageProps) {
 
   return (
     <ComprendreShell title={t("pageTitle")} description={t("pageLead")}>
-      <article className="mx-auto max-w-[76rem] pb-12">
+      <article className="mx-auto w-full min-w-0 max-w-[76rem] pb-12">
         <ComprendreDiagram />
 
         <div className="mt-10 divide-y divide-[var(--tessera-border)] border-[var(--tessera-border)] border-y">
