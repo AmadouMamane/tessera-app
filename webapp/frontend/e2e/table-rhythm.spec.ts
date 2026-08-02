@@ -423,3 +423,132 @@ for (const width of [1672, 1280]) {
     }
   });
 }
+
+/**
+ * The space a READER sees between two columns, and how uneven it may be.
+ *
+ * The `gutters()` rule at the top of this file measures ink to the next column's BOX. That is
+ * the trailing padding, it is 12 px everywhere by construction, and it reported a perfectly
+ * even table over the defect an operator described as *"l'espace entre Transferts et Mise en
+ * ligne est très petit tandis que l'espace entre les autres colonnes est beaucoup plus
+ * grand"*. Measured ink-to-INK on the built server, that space was **12 px against a median of
+ * 93 to 211**, on all four lenses — a ratio of 0.06 to 0.13.
+ *
+ * The cause was a mixed alignment. A right-aligned column's ink sits at the right edge of its
+ * box, so the space before the next column is that column's LEADING air; a left-aligned column
+ * has none, and where the two meet the inks touch. Both halves of the fix are visible here:
+ * the verdict column is right-aligned like its neighbours, and it gets two shares so its
+ * leading air is the same SIZE despite holding a sentence.
+ *
+ * The bar is a RATIO to the median rather than a spread in pixels, and that is deliberate.
+ * With right-aligned columns of equal width, the space before a column is `width − content`,
+ * so it varies with the content by construction — a run of gaps of 122, 166 and 119 px is the
+ * design working, not drifting. What must never happen again is one space that is a fraction
+ * of its neighbours.
+ *
+ * **0.35, and it is measured on both sides rather than chosen.** Swept over four lenses at two
+ * viewports, this layout's worst ratio is 0.48 (`fiabilite-cout` at 1672 px, gaps of 236, 201
+ * and 96) and its best is 0.92. The shipped defect ran 0.06 to 0.13. A bar of 0.35 has room
+ * under the design and well over the defect — where 0.5, the round number, would redden the
+ * suite on a card that is not broken. A threshold nobody meets is a threshold that gets
+ * lowered later, quietly, by whoever is unlucky enough to trip it.
+ */
+const MIN_GAP_RATIO = 0.35;
+
+/**
+ * The identity column is exempt, and it is exempt in the direction that costs nothing.
+ *
+ * It is the only left-aligned column, so it holds its own trailing air AND the next column's
+ * leading air: its gap is the LARGEST, never the smallest. Excluding it protects nothing —
+ * the rule is a floor — it only keeps the median honest on a four-column lens.
+ */
+for (const width of [1672, 1280]) {
+  test(`the breakdown's column spacing has no collapsed space at ${width} px`, async ({ page }) => {
+    await login(page);
+    await page.setViewportSize({ width, height: 1000 });
+    for (const path of WIDE_TABLE_PAGES) {
+      await page.goto(path);
+      await page.waitForSelector('table[data-breakdown="agent"]', { timeout: 30_000 });
+      await settle(page);
+
+      const gaps = await page.evaluate(() => {
+        /** Where a cell's ink actually starts and ends — text rects, not the padded box. */
+        const span = (cell: Element): { lo: number; hi: number } | null => {
+          let lo = Number.POSITIVE_INFINITY;
+          let hi = Number.NEGATIVE_INFINITY;
+          const walk = (node: Node): void => {
+            for (const child of Array.from(node.childNodes)) {
+              if (child.nodeType === Node.TEXT_NODE && (child.textContent ?? "").trim()) {
+                const range = document.createRange();
+                range.selectNodeContents(child);
+                for (const rect of Array.from(range.getClientRects())) {
+                  if (rect.width > 0) {
+                    lo = Math.min(lo, rect.left);
+                    hi = Math.max(hi, rect.right);
+                  }
+                }
+              } else if (child.nodeType === Node.ELEMENT_NODE) walk(child);
+            }
+          };
+          walk(cell);
+          return lo === Number.POSITIVE_INFINITY ? null : { lo, hi };
+        };
+
+        const table = document.querySelector('table[data-breakdown="agent"]');
+        const head = table?.querySelector("thead tr");
+        if (!head) return null;
+        const columns = head.children.length;
+        const rows = [head, ...Array.from(table?.querySelectorAll("tbody tr") ?? [])].filter(
+          (row) => row.children.length === columns,
+        );
+
+        // A COLUMN's ink is the union over every row: the leftmost start and the rightmost end.
+        // Taking one row would measure whichever row happened to hold the shortest value.
+        const extents: { lo: number; hi: number; label: string }[] = [];
+        for (let i = 0; i < columns; i += 1) {
+          let lo = Number.POSITIVE_INFINITY;
+          let hi = Number.NEGATIVE_INFINITY;
+          for (const row of rows) {
+            const cell = row.children[i];
+            const s = cell ? span(cell) : null;
+            if (!s) continue;
+            lo = Math.min(lo, s.lo);
+            hi = Math.max(hi, s.hi);
+          }
+          if (lo === Number.POSITIVE_INFINITY) return null;
+          const label = (head.children[i]?.textContent ?? "").trim().slice(0, 16);
+          extents.push({ lo, hi, label });
+        }
+
+        const pairs: { after: string; before: string; gap: number }[] = [];
+        for (let i = 1; i < extents.length; i += 1) {
+          const left = extents[i - 1];
+          const right = extents[i];
+          if (!left || !right) continue;
+          pairs.push({
+            after: left.label,
+            before: right.label,
+            gap: Math.round(right.lo - left.hi),
+          });
+        }
+        return pairs;
+      });
+
+      expect(gaps, `no breakdown table measured on ${path} — the probe went blind`).not.toBeNull();
+      const measured = gaps as { after: string; before: string; gap: number }[];
+      expect(measured.length, `${path}: too few columns to have a rhythm`).toBeGreaterThan(2);
+
+      // Drop the identity column's gap (the first): it is structurally the largest.
+      const rhythm = measured.slice(1);
+      const sorted = [...rhythm].sort((a, b) => a.gap - b.gap);
+      const tightest = sorted[0];
+      const middle = sorted[Math.floor(sorted.length / 2)];
+      if (!tightest || !middle) throw new Error(`${path}: no rhythm to measure`);
+      const detail = JSON.stringify(rhythm.map((g) => g.gap));
+      expect(
+        tightest.gap / middle.gap,
+        `${path} at ${width} px: only ${tightest.gap} px between «${tightest.after}» and «${tightest.before}» where the median is ${middle.gap} px — ${detail}`,
+      ).toBeGreaterThanOrEqual(MIN_GAP_RATIO);
+    }
+  });
+}

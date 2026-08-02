@@ -209,7 +209,7 @@ function MonitoringTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
             {/* Prose, not a number: sized by `COL_VERDICT`, which explains why. */}
-            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -225,7 +225,7 @@ function MonitoringTable({
                 <td className="py-1.5 pr-3 text-right tabular-nums">
                   {a.handoffs_in} / {a.handoffs_out}
                 </td>
-                <td className="py-1.5">
+                <td className="py-1.5 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -336,7 +336,7 @@ function AlarmTable({
             </th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colSloGap")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colContribution")}</th>
-            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -380,7 +380,7 @@ function AlarmTable({
                     `${fmtInt(row.nBad)} / ${fmtInt(row.n ?? 0)}`
                   )}
                 </td>
-                <td className="py-1.5">
+                <td className="py-1.5 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -468,7 +468,7 @@ function QualityTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colRegression")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colGate")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colEvalFreshness")}</th>
-            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -524,7 +524,7 @@ function QualityTable({
                 >
                   {rel ? fmtRunDay(rel.run_at) : "—"}
                 </td>
-                <td className="py-1.5">
+                <td className="py-1.5 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -642,7 +642,7 @@ function SecurityTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colPiiLeaks")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colToxicity")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colGuardDenied")}</th>
-            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -685,7 +685,7 @@ function SecurityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5">
+                <td className="py-1.5 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -727,7 +727,7 @@ function ComplianceTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colGovernedActs")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLedgerEntries")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -753,7 +753,7 @@ function ComplianceTable({
                   />
                 </td>
                 <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
-                <td className="py-1.5">
+                <td className="py-1.5 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -794,7 +794,7 @@ function ObservabilityTable({
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colAnomalies")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colConformance")}</th>
-            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -829,7 +829,7 @@ function ObservabilityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5">
+                <td className="py-1.5 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -870,7 +870,7 @@ function ReliabilityTable({
             <th className="pb-2 pr-3 text-right font-medium">{t("colToolErrors")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
             <th className="pb-2 pr-3 text-right font-medium">{t("colCostTokens")}</th>
-            <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -908,7 +908,7 @@ function ReliabilityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5">
+                <td className="py-1.5 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>

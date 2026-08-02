@@ -140,7 +140,7 @@ export function MonitoringFleetTable({
               <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
               <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
               {/* Prose, not a number: sized by `COL_VERDICT`, which explains why. */}
-              <th className={`${COL_VERDICT} pb-2 font-medium`}>{t("colRelease")}</th>
+              <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
             </tr>
           </thead>
           <tbody>
@@ -162,7 +162,7 @@ export function MonitoringFleetTable({
                   <td className="py-1.5 pr-3 text-right tabular-nums">
                     {agent.handoffs_in} / {agent.handoffs_out}
                   </td>
-                  <td className="py-1.5">
+                  <td className="py-1.5 text-right">
                     <span
                       className={
                         RELEASE_TONE[agent.release?.verdict_tone ?? "muted"] ?? RELEASE_TONE.muted
