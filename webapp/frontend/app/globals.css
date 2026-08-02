@@ -697,6 +697,14 @@
   box-shadow: var(--launcher-tile-shadow);
   transition: background 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
 }
+/* Under "Clair" the tile's hairline is NEUTRAL. The accent border is how the dark themes
+ * say which audience a surface belongs to, and on navy it reads as identity; on white the
+ * same alpha reads as a pink outline next to a teal one — two cards that look mismatched
+ * rather than two cards that are labelled. The hue stays where it is legible: the icon
+ * tile, the audience dot and the word beside it. */
+.light .launcher-tile {
+  border-color: var(--border-subtle);
+}
 .launcher-tile:hover:not([aria-disabled="true"]) {
   background: var(--launcher-tile-bg-hover);
   box-shadow: var(--launcher-tile-shadow-hover);
@@ -877,11 +885,16 @@
       rgba(7, 11, 19, 0.99) 100%
     );
 }
+/* NEUTRAL, on the same reference the rest of "Clair" already follows. This surface was
+ * the last one still carrying a hue: #eef3fb with a rgba(120,165,225) wash and a blue
+ * hairline, sitting on a page whose every other neutral is a true grey. That mismatch is
+ * exactly the complaint the light theme started from — "a cockpit whose neutrals carry a
+ * hue reads cheap next to one whose neutrals are actually neutral". The rail keeps its
+ * frosted lift; it stops being blue. Dark themes untouched (higher specificity below). */
 .light .sr01-strip {
-  border-color: rgba(120, 160, 210, 0.5);
-  background: radial-gradient(135% 90% at 50% -20%, rgba(120, 165, 225, 0.14), transparent 55%),
-    linear-gradient(180deg, #ffffff, #eef3fb 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(120, 160, 210, 0.08);
+  border-color: #d8d8d8;
+  background: linear-gradient(180deg, #ffffff, #f6f6f6 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 /* The command zone (Lecture · Période/État au · Agents · Comparer à · Replier).
