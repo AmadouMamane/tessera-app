@@ -1888,6 +1888,10 @@ export function RecouvrementProductExperience() {
           assistantState: {
             activeTask: route.targetTask,
             activeTab: activeAssistantTab,
+            // DECLARED, not guessed — and minted only by `routeRecouvrementTaskClick`, i.e.
+            // only when the operator pressed a named button. The agent honours it and never
+            // re-classifies the prompt. Free text carries none: there the classifier answers.
+            declaredIntent: route.declaredIntent,
             caseId: "RC-2048",
             currentArtifact,
             currentActionContext: options.pendingAction
@@ -1903,20 +1907,30 @@ export function RecouvrementProductExperience() {
         })
           .then((response) => {
             if (controller.signal.aborted) return;
-            const parsed = usesStructuredScheduleBackend
-              ? contentFromRecouvrementScheduleResponse(response, copy)
-              : usesStructuredDraftBackend
-                ? contentFromRecouvrementDraftResponse(response, copy)
-                : usesStructuredSummaryBackend
-                  ? contentFromCaseSummaryResponse(response)
-                  : usesStructuredPaymentOptionsBackend
-                    ? contentFromPaymentOptionsResponse(response)
-                    : contentFromRecouvrementContactResponse(response, locale);
+            // ADR 0026 — interrogate the THING. The parser follows the artifact the agent
+            // ACTUALLY returned, never the family the click hoped for. When the two
+            // disagreed (a "Résumer" click answered with a reminder draft) the drawer read
+            // a message artifact through the summary parser and rendered an empty panel:
+            // the visible half of the bug the declared intent fixes at the source.
+            const returnedFamily = artifactFamilyForArtifact(response.artifact);
+            const family = returnedFamily ?? artifactFamilyForTask(route.targetTask);
+            const parsed =
+              family === "schedule"
+                ? contentFromRecouvrementScheduleResponse(response, copy)
+                : family === "message"
+                  ? contentFromRecouvrementDraftResponse(response, copy)
+                  : family === "summary"
+                    ? contentFromCaseSummaryResponse(response)
+                    : family === "payment_options"
+                      ? contentFromPaymentOptionsResponse(response)
+                      : contentFromRecouvrementContactResponse(response, locale);
             completeAfterThinkingMinimum(() => {
               setAssistantContent(parsed);
               setSelectedVersionId(parsed.versions[0]?.id ?? "v1");
               setDrawerStateModel((current) => ({
                 ...current,
+                // Same reason: the selector highlights the family that is on screen.
+                selectedArtifactFamily: family,
                 pendingAction: null,
                 lastSuccessfulBackendIntent:
                   route.backendIntent ?? current.lastSuccessfulBackendIntent,

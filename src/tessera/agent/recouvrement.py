@@ -458,13 +458,22 @@ def _has_schedule_intent(normalized_message: str) -> bool:
 
 
 def _has_draft_intent(normalized_message: str) -> bool:
-    """Whether the current Julie turn asks for a client message or reminder draft."""
+    """Whether the current Julie turn asks for a client message or reminder draft.
+
+    A BARE VERB IS NOT AN INTENT — the object is. ``prepare`` / ``preparer`` / ``write`` /
+    ``vorbereiten`` used to sit in this list, and they carried no object: "Résume ce dossier
+    pour **préparer** l'action suivante" and "**Prépare** les options de paiement" both
+    matched, so the drawer's own Résumer button asked for a summary and was answered with a
+    reminder draft (reproduced on the deployed host, 2026-08-02). Removing them costs nothing:
+    every genuine draft request names what it drafts (relance, message client, courrier,
+    Mahnung…), and the writing verbs that ARE unambiguous (rediger/redige/schreiben) stay.
+    """
     return (
         re.search(
-            r"\b(relance|brouillon|courrier|email|mail|rediger|redige|prepare|preparer|"
+            r"\b(relance|brouillon|courrier|email|mail|rediger|redige|"
             r"message client|version courte|empathique|modifier|modifie|rends-le|rend le|"
-            r"reminder|customer message|client message|draft|write|prepare|short version|"
-            r"empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|vorbereiten|"
+            r"reminder|customer message|client message|draft|short version|"
+            r"empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|"
             r"kurze version|einfuehlsam|aendern)\b",
             normalized_message,
         )
@@ -541,6 +550,20 @@ def _active_task(state: RecouvrementWorkflowState) -> str:
     assistant_state = state.get("assistant_state") or {}
     active = assistant_state.get("activeTask")
     return str(active) if active is not None else ""
+
+
+def _declared_intent(state: RecouvrementWorkflowState) -> str | None:
+    """Return the capability the caller DECLARED for this turn, when it declared one.
+
+    ``activeTask`` says which drawer panel is open — a piece of context, and it is only
+    consulted when the text says nothing. ``declaredIntent`` is a different claim: the turn
+    was produced by pressing a named button, so the capability is stated, not inferred, and
+    a classifier has nothing to add. It is validated against the manifest vocabulary before
+    it is honoured, so an unknown string falls back to classification rather than routing
+    the graph nowhere.
+    """
+    assistant_state = state.get("assistant_state") or {}
+    return capability_for_task(assistant_state.get("declaredIntent"))
 
 
 def _current_artifact(state: RecouvrementWorkflowState) -> RecouvrementArtifact | None:
@@ -666,12 +689,18 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
     """Route the supported Recouvrement intents from the current Julie message."""
     normalized = _normalize_message(state["message"])
     active_task = _active_task(state)
+    declared_intent = _declared_intent(state)
     has_schedule_intent = _has_schedule_intent(normalized)
     has_draft_intent = _has_draft_intent(normalized)
     has_summary_intent = _has_summary_intent(normalized)
     has_payment_options_intent = _has_payment_options_intent(normalized)
     has_requested_duration = _parse_duration_months(state["message"]) is not None
-    if has_draft_intent and not has_schedule_intent and not has_payment_options_intent:
+    if declared_intent is not None:
+        # A declared capability is an ANSWER, not a hint: the caller pressed the button that
+        # names it. Classifying its prompt afterwards can only disagree with it — and did.
+        intent = declared_intent
+        confidence = 1.0
+    elif has_draft_intent and not has_schedule_intent and not has_payment_options_intent:
         intent = "draft_reminder"
         confidence = 0.93
     elif has_schedule_intent and (has_requested_duration or not has_payment_options_intent):
@@ -705,7 +734,14 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
     record_business_event(
         author=AGENT_TURN_ACTOR,
         event_name=BusinessEventName.INTENT_ROUTED,
-        payload={"intent": intent, "confidence": confidence, "active_task": active_task},
+        payload={
+            "intent": intent,
+            "confidence": confidence,
+            "active_task": active_task,
+            # The audit trail must be able to tell a CLASSIFIED intent from a DECLARED one:
+            # only one of the two can be wrong about what the operator asked for.
+            "intent_source": "declared" if declared_intent is not None else "classified",
+        },
         **_event_common(
             state,
             node_name="route_recouvrement_intent",

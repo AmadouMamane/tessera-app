@@ -625,3 +625,156 @@ describe("localized Recouvrement fallbacks", () => {
     );
   });
 });
+
+// A CLICK IS A DECLARATION, AND A DECLARATION IS NOT A GUESS.
+//
+// The drawer's five buttons name the capability they invoke, and until 2026-08-02 that name
+// was thrown away: the agent re-derived the intent by matching regexes against the button's
+// own prose, so "Résumer ce dossier" (whose prompt ends "…pour préparer l'action suivante")
+// came back as a reminder draft, and the drawer's opening turn came back as a payment
+// schedule. Reproduced on http://localhost:3097 AND on the deployed host before the fix.
+describe("declared intent", () => {
+  it("mints a declaration for every task click and for no free-text turn", () => {
+    const tasks = [
+      "summary",
+      "draft_reminder",
+      "propose_schedule",
+      "check_contact_rule",
+      "explain_payment_options",
+    ] as const;
+    for (const task of tasks) {
+      const route = routeRecouvrementTaskClick(task);
+      expect(route.declaredIntent).toBe(route.backendIntent);
+      expect(route.declaredIntent).toBeDefined();
+    }
+    // Free text concludes; it never declares — the agent's classifier stays the authority.
+    for (const message of [
+      "Résume ce dossier",
+      "Rédige une relance amiable",
+      "Propose un échéancier sur 6 mois",
+      "Peut-on appeler le client à 21h ?",
+    ]) {
+      expect(
+        routeRecouvrementDrawerMessage(message, "draft_reminder", null).declaredIntent,
+      ).toBeUndefined();
+    }
+  });
+
+  it("no longer reads a bare generic verb as a request for a draft", () => {
+    // The exact FR/EN/DE prompts behind the "Résumer" button. Each one contains only a
+    // generic verb (préparer / prepare / vorbereiten) and must not route to a draft.
+    for (const prompt of [
+      "Résume ce dossier de recouvrement pour préparer l'action suivante.",
+      "Summarise this collections case to prepare the next action.",
+      "Fassen Sie diesen Inkassovorgang zusammen, um die nächste Aktion vorzubereiten.",
+    ]) {
+      expect(routeRecouvrementDrawerMessage(prompt, "summary", null).targetTask).not.toBe(
+        "draft_reminder",
+      );
+    }
+    // And a real draft request still is one — the object, not the verb, carries the intent.
+    expect(
+      routeRecouvrementDrawerMessage("Rédige une relance amiable", "summary", null).targetTask,
+    ).toBe("draft_reminder");
+  });
+
+  it("keeps the draft vocabulary in lockstep with the agent's", () => {
+    // Two classifiers, one question. When they disagree the front parses one artifact family
+    // while the agent returns another, which is the visible half of the same bug. So the two
+    // alternations are read from the two real files and compared, not restated here.
+    const alternatives = (source: string, open: string, close: string): Set<string> => {
+      const start = source.indexOf(open);
+      const end = source.indexOf(close, start);
+      expect(start).toBeGreaterThan(-1);
+      expect(end).toBeGreaterThan(start);
+      return new Set(source.slice(start + open.length, end).split("|"));
+    };
+    const tsSource = readFileSync(
+      join(process.cwd(), "components/recouvrement/recouvrement-assistant-backend.ts"),
+      "utf8",
+    );
+    const tsBody = tsSource.slice(tsSource.indexOf("function hasDraftIntent"));
+    const tsWords = alternatives(tsBody, "/\\b(", ")\\b/");
+
+    const pySource = readFileSync(
+      join(process.cwd(), "../../src/tessera/agent/recouvrement.py"),
+      "utf8",
+    );
+    const pyStart = pySource.indexOf("def _has_draft_intent");
+    expect(pyStart).toBeGreaterThan(-1);
+    const pyBody = pySource.slice(pyStart, pySource.indexOf("def _has_summary_intent"));
+    // Concatenate the adjacent raw-string literals exactly as Python does.
+    const pyPattern = (pyBody.match(/r"((?:[^"\\]|\\.)*)"/g) ?? [])
+      .map((literal) => literal.slice(2, -1))
+      .join("");
+    const pyWords = alternatives(pyPattern, "\\b(", ")\\b");
+
+    expect([...tsWords].sort()).toEqual([...pyWords].sort());
+    // The words the bug was made of must be in neither.
+    for (const generic of ["prepare", "preparer", "write", "vorbereiten"]) {
+      expect(tsWords.has(generic)).toBe(false);
+      expect(pyWords.has(generic)).toBe(false);
+    }
+  });
+
+  it("forwards the declaration to the agent, and only that one", () => {
+    // Source witness, said out loud: the drawer component is a 2 700-line client component
+    // whose turn loop is not reachable without a full render + network double. What is
+    // pinned here is the WIRING — that the field sent is the route's declaration, never a
+    // re-derivation at the call site. The behaviour itself is pinned agent-side by
+    // tests/unit/test_recouvrement_declared_intent.py, which replays the real prompts.
+    const source = readFileSync(
+      join(process.cwd(), "components/recouvrement/recouvrement-product-experience.tsx"),
+      "utf8",
+    );
+    expect(source).toContain("declaredIntent: route.declaredIntent");
+    expect(source).not.toContain("declaredIntent: route.backendIntent");
+  });
+
+  it("parses the response by the artifact returned, not by the intent hoped for", () => {
+    const source = readFileSync(
+      join(process.cwd(), "components/recouvrement/recouvrement-product-experience.tsx"),
+      "utf8",
+    );
+    expect(source).toContain("const returnedFamily = artifactFamilyForArtifact(response.artifact)");
+    expect(source).toContain("returnedFamily ?? artifactFamilyForTask(route.targetTask)");
+  });
+});
+
+describe("editing versus creating a draft", () => {
+  const scheduleArtifact = {
+    id: "RC-2048-schedule-3-months-v2",
+    type: "schedule_proposal_v2",
+    task: "propose_schedule",
+    title: "Échéancier indicatif — 3 mois",
+    status: "draft",
+    content: { duration_months: 3 },
+  };
+
+  it("still refuses a tone-only edit when nothing editable is on screen", () => {
+    for (const message of ["rends-le plus empathique", "version courte", "modifie le message"]) {
+      expect(
+        routeRecouvrementDrawerMessage(message, "propose_schedule", scheduleArtifact),
+        message,
+      ).toMatchObject({ blockedReason: "requires_message_artifact" });
+    }
+  });
+
+  it("answers a creation that merely carries a tone", () => {
+    // "Rédige une relance empathique" is not an edit: it names what to write. It used to be
+    // refused with "commencez par un message" because the word "empathique" alone decided.
+    for (const message of [
+      "Rédige une relance empathique",
+      "Prépare un message client en version courte",
+      "Write an empathetic reminder",
+    ]) {
+      const route = routeRecouvrementDrawerMessage(message, "check_contact_rule", {
+        ...scheduleArtifact,
+        type: "contact_rule_v1",
+        task: "check_rule",
+      });
+      expect(route.blockedReason, message).toBeUndefined();
+      expect(route.targetTask, message).toBe("draft_reminder");
+    }
+  });
+});

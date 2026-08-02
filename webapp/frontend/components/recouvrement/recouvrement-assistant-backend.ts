@@ -40,6 +40,16 @@ export interface RecouvrementDrawerStateModel {
 export interface RecouvrementDrawerRoute {
   targetTask: RecouvrementDrawerTask;
   backendIntent?: RecouvrementBackendIntent;
+  /**
+   * The capability this turn DECLARES, when it declares one.
+   *
+   * `backendIntent` is what this router *concluded*; `declaredIntent` is what the operator
+   * *stated* by pressing a named button. Only the second may overrule the agent's own
+   * classifier — and it must, because a button's prose is not a request: "Résume ce dossier
+   * pour préparer l'action suivante" was classified as a reminder draft and answered with
+   * one. Free text never declares: there the agent's classifier is the answer.
+   */
+  declaredIntent?: RecouvrementBackendIntent;
   useStructuredBackend: boolean;
   useContactRuleBackend: boolean;
   blockedReason?: "requires_message_artifact";
@@ -110,16 +120,39 @@ function hasContactRuleIntent(normalized: string): boolean {
   );
 }
 
+// A BARE VERB IS NOT AN INTENT — the object is. `prepare`/`preparer`/`write`/`vorbereiten`
+// used to live here and matched "Résume ce dossier pour **préparer** l'action suivante", so
+// the drawer's own Résumer button was answered with a reminder draft. Kept in lockstep with
+// the agent's `_has_draft_intent`: the two must agree, or the front parses one artifact while
+// the agent returns another.
 function hasDraftIntent(normalized: string): boolean {
-  return /\b(relance|message client|brouillon|email|mail|courrier|rediger|redige|prepare|preparer|version courte|empathique|modifier|modifie|rends-le|rend le|reminder|customer message|client message|draft|write|prepare|short version|empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|vorbereiten|kurze version|einfuehlsam|aendern)\b/.test(
+  return /\b(relance|message client|brouillon|email|mail|courrier|rediger|redige|version courte|empathique|modifier|modifie|rends-le|rend le|reminder|customer message|client message|draft|short version|empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|kurze version|einfuehlsam|aendern)\b/.test(
     normalized,
   );
 }
 
+/** Verbs that can only act on something that already exists. */
+const DRAFT_EDIT_VERB = /\b(modifier|modifie|rends-le|rend le|edit|rewrite|aendern|umschreiben)\b/;
+/** Tone and format qualifiers. They describe an edit — or a creation. */
+const DRAFT_TONE_QUALIFIER =
+  /\b(version courte|empathique|short version|empathetic|kurze version|einfuehlsam)\b/;
+/** Words that NAME the thing to write, i.e. that make the turn a creation. */
+const DRAFT_OBJECT =
+  /\b(relance|message client|brouillon|courrier|reminder|customer message|client message|mahnung|kundennachricht|entwurf|rediger|redige|schreiben|draft)\b/;
+
+/**
+ * Whether this turn EDITS the current artifact rather than asking for a new one.
+ *
+ * The distinction matters because an edit with no editable artifact under it is refused
+ * outright ("commencez par un message"). A tone word used to be enough to trigger that, so
+ * "Rédige une relance empathique" — a plain creation with a tone — was refused instead of
+ * answered (observed on http://localhost:3097, 2026-08-02, right after a rule check). An
+ * explicit edit verb still decides on its own; a bare qualifier only counts when the turn
+ * does not already name what to write.
+ */
 function hasDraftEditIntent(normalized: string): boolean {
-  return /\b(version courte|empathique|modifier|modifie|rends-le|rend le|short version|empathetic|edit|rewrite|kurze version|einfuehlsam|aendern|umschreiben)\b/.test(
-    normalized,
-  );
+  if (DRAFT_EDIT_VERB.test(normalized)) return true;
+  return DRAFT_TONE_QUALIFIER.test(normalized) && !DRAFT_OBJECT.test(normalized);
 }
 
 function hasSummaryIntent(normalized: string): boolean {
@@ -176,6 +209,8 @@ export function routeRecouvrementTaskClick(task: RecouvrementDrawerTask): Recouv
   return {
     targetTask: task,
     backendIntent,
+    // A CLICK IS A DECLARATION. This is the only place one is minted.
+    declaredIntent: backendIntent,
     useStructuredBackend: backendIntent !== undefined,
     useContactRuleBackend: backendIntent === "check_contact_rule",
     extractedSlots: {},
