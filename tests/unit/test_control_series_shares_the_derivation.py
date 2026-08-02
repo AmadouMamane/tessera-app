@@ -19,15 +19,18 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
+from unittest import mock
 
 import pytest
 
 from tessera.api.routes import observability as obs
-from tessera.observability import replay as replay_mod
+from tessera.observability import control_series, replay as replay_mod
 from tessera.observability.control_series import (
+    _ROUND_HOURS,
     MAX_BUCKETS,
     REASON_FIXED_CORPUS,
     REASON_NO_TIMESTAMP,
+    buckets_for_window,
     compute_control_series,
 )
 from tessera.observability.eval import scores as scores_mod
@@ -237,6 +240,83 @@ async def test_the_bucket_count_is_bounded_because_each_bucket_is_a_read() -> No
     assert report.n_buckets == MAX_BUCKETS
     assert (await compute_control_series(Scope(period_days=7), n_buckets=0)).n_buckets == 1
     assert (await compute_control_series(Scope(period_days=7), n_buckets=-4)).n_buckets == 1
+
+
+@pytest.mark.parametrize(
+    ("period_days", "expected_count", "expected_width_hours"),
+    [(1, 12, 2), (7, 14, 12), (30, 30, 24)],
+)
+def test_each_cockpit_period_is_cut_into_round_clock_units(
+    period_days: int, expected_count: int, expected_width_hours: float
+) -> None:
+    """The three periods the rail offers, and the width each slice ends up being.
+
+    Pinned as values rather than derived, because they were CHOSEN by measuring the curves
+    they draw (see ``_LADDER``). A formula would be prettier and would have to disagree with
+    one of the three: the finest slicing is right at 30 j and shatters the curve into isolated
+    dots at 24 h.
+    """
+    count = buckets_for_window(period_days)
+    assert count == expected_count
+    assert period_days * 24 / count == pytest.approx(expected_width_hours)
+
+
+@pytest.mark.parametrize("period_days", [1, 7, 30, 14, 90, 0.5, 3])
+def test_no_window_is_sliced_into_a_duration_nobody_reads_an_axis_in(period_days: float) -> None:
+    """Every slice is a round clock unit, and there are between 12 and MAX_BUCKETS of them.
+
+    This is the bar the flat count of 8 failed, and failed worst exactly where it was reported:
+    7 days over 8 buckets is **21 h** a slice — not a unit anyone reads, and wide enough to
+    swallow a whole day's traffic into one point. Twelve is the floor because a curve needs
+    room for a hole and still two points on one side of it.
+    """
+    count = buckets_for_window(period_days)
+    assert 12 <= count <= MAX_BUCKETS, f"{period_days} d → {count} buckets"
+    assert period_days * 24 / count in _ROUND_HOURS
+
+
+def test_a_window_no_round_unit_divides_still_answers_within_bounds() -> None:
+    """53 days is divided evenly by no unit on the ladder, and must not raise or run away.
+
+    The round-unit promise is dropped there and nowhere else; the bound is not, because a
+    bucket is a full re-read of the stores.
+    """
+    count = buckets_for_window(53)
+    assert 1 <= count <= MAX_BUCKETS
+
+
+def test_only_the_month_overrides_the_general_rule() -> None:
+    """Two of the three measured choices are what the general rule already picks.
+
+    Worth pinning: it says the ladder is not three arbitrary numbers, and it localises the one
+    place where a measurement beat the rule — 30 j, where slicing by DAY (30 points) beat the
+    rule's 48 h (15 points) on real traffic. If a change to `_TARGET_BUCKETS` ever moved the
+    other two, this is what would say so.
+    """
+    assert {days: control_series._LADDER[days] for days in (1.0, 7.0)} == {1.0: 2.0, 7.0: 12.0}
+    without_ladder = dict(control_series._LADDER)
+    del without_ladder[1.0], without_ladder[7.0]
+    with mock.patch.object(control_series, "_LADDER", without_ladder):
+        assert buckets_for_window(1) == 12
+        assert buckets_for_window(7) == 14
+        assert buckets_for_window(30) == 30  # the surviving override
+    with mock.patch.object(control_series, "_LADDER", {}):
+        assert buckets_for_window(30) == 15  # what the rule alone would have drawn
+
+
+@pytest.mark.asyncio
+async def test_the_window_picks_the_resolution_when_the_caller_does_not() -> None:
+    """The default is derived from the window; an explicit count still wins, still clamped.
+
+    The count has to be decided in ONE place: the same control's curve is drawn on Vue
+    d'ensemble and on Qualité IA, and a resolution chosen per surface is a resolution that
+    diverges — the shape of a line is part of what it says.
+    """
+    derived = await compute_control_series(Scope(period_days=7))
+    assert derived.n_buckets == buckets_for_window(7) == 14
+    explicit = await compute_control_series(Scope(period_days=7), n_buckets=3)
+    assert explicit.n_buckets == 3
+    assert (await compute_control_series(Scope(period_days=7), n_buckets=0)).n_buckets == 1
 
 
 @pytest.mark.asyncio

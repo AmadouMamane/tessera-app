@@ -15,10 +15,14 @@
  * be the same pixel.
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
   type ControlSeriesBucket,
+  bucketWidthHours,
   hasDrawableCurve,
   readControl,
   readControlSeries,
@@ -126,5 +130,46 @@ describe("one point is not a trend", () => {
 
   it("draws once two measured buckets exist, even with a hole between them", () => {
     expect(hasDrawableCurve([0.4, null, 0.6])).toBe(true);
+  });
+});
+
+describe("how wide a slice is, read off the report and not guessed", () => {
+  const report = (since: string, until: string, n_buckets: number) => ({ since, until, n_buckets });
+
+  it("divides the report's own bounds by its own count", () => {
+    // 7 days over 14 buckets — the cockpit's default window, after the backend stopped cutting
+    // every window into a flat eight.
+    expect(bucketWidthHours(report("2026-07-26T10:00:00Z", "2026-08-02T10:00:00Z", 14))).toBe(12);
+    expect(bucketWidthHours(report("2026-08-01T10:00:00Z", "2026-08-02T10:00:00Z", 12))).toBe(2);
+    expect(bucketWidthHours(report("2026-07-03T10:00:00Z", "2026-08-02T10:00:00Z", 30))).toBe(24);
+  });
+
+  it("says nothing rather than something wrong when there is no window", () => {
+    // The count is the BACKEND's choice (`buckets_for_window`). A front that recomputed it
+    // from the period key would print a confident wrong width the day that choice changes —
+    // which is precisely the day this function starts mattering.
+    expect(bucketWidthHours(undefined)).toBeNull();
+    expect(bucketWidthHours(report("2026-08-02T10:00:00Z", "2026-08-02T10:00:00Z", 8))).toBeNull();
+    expect(
+      bucketWidthHours(report(null as unknown as string, "2026-08-02T10:00:00Z", 8)),
+    ).toBeNull();
+    expect(bucketWidthHours(report("2026-07-26T10:00:00Z", "2026-08-02T10:00:00Z", 0))).toBeNull();
+  });
+});
+
+describe("the resolution is decided once, by the window", () => {
+  it("is not pinned at either call site", () => {
+    // Vue d'ensemble and Qualité IA draw the SAME control's curve. A `buckets:` passed by one
+    // of them is not a local preference — it is that control having two shapes depending on
+    // which page you opened, which is the divergence class the registry exists to end.
+    for (const file of [
+      "components/overview/overview-dashboard.tsx",
+      "components/observability/observability-dashboard.tsx",
+    ]) {
+      const source = readFileSync(join(process.cwd(), file), "utf8");
+      const call = /fetchControlSeries\(([\s\S]{0,220}?)\)\s*,?\s*$/m.exec(source)?.[1] ?? "";
+      expect(source, file).toContain("fetchControlSeries");
+      expect(call, file).not.toContain("buckets");
+    }
   });
 });

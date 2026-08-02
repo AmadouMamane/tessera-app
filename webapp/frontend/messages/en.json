@@ -672,12 +672,17 @@
     },
     "noCurve": {
       "fixed-corpus": "fixed corpus",
-      "fixed-corpus.why": "A fixed-corpus probe: re-run over a narrower window it returns the same number. A flat line here would describe one measurement repeated, not a stable metric.",
       "no-timestamp": "whole-sample",
-      "no-timestamp.why": "Computed over the whole sample (a clustering, an inter-rater agreement): an eighth of its input is not a smaller version of it but a different, noisier measurement.",
       "not-measured": "not measured",
-      "not-measured.why": "No source is declared for this control on the time axis.",
-      "tooShort": "no history yet"
+      "sliceDays": "{n, plural, one {1 day} other {# days}}",
+      "sliceHours": "{n} h",
+      "tooShort": "no history yet",
+      "why": {
+        "fixed-corpus": "A fixed-corpus probe: re-run over a narrower window it returns the same number. A flat line here would describe one measurement repeated, not a stable metric.",
+        "no-timestamp": "Computed over the whole sample (a clustering, an inter-rater agreement): one slice of its input is not a smaller version of it but a different, noisier measurement.",
+        "not-measured": "No source is declared for this control on the time axis.",
+        "tooShort": "{n, plural, =0 {None of this window's {total} slices carries a measurement} =1 {Only one of this window's {total} slices carries a measurement} other {{n} of {total} slices carry a measurement}} — each covers {width}. Two are needed to draw a trend: a line through a single point would claim the value held for the whole window."
+      }
     }
   },
   "chat": {

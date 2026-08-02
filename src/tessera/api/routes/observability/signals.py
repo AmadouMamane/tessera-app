@@ -515,7 +515,7 @@ def observability_what_changed(at: str | None = None, agent: str = "all") -> dic
 @router.get("/observability/control-series", dependencies=[Depends(require_bearer)])
 async def observability_control_series(
     days: str | None = None,
-    buckets: int = 8,
+    buckets: int | None = None,
     agent: str = "all",
     at: str | None = None,
 ) -> dict[str, object]:
@@ -529,8 +529,14 @@ async def observability_control_series(
     ``unwindowed`` names the sources deliberately absent from every bucket and why: a
     fixed-corpus probe re-run inside a narrower window returns the same corpus, and a
     whole-sample statistic (a clustering, an inter-rater κ) is not smaller-but-similar when
-    you take an eighth of its input. Both would draw a flat line that reads as a stable
+    you take one slice of its input. Both would draw a flat line that reads as a stable
     metric, which is worse than no line.
+
+    ``buckets`` overrides the resolution; omitted, the WINDOW chooses it
+    (:func:`~tessera.observability.control_series.buckets_for_window`). It was a flat 8 until
+    2026-08-02, which meant a 7-day window was cut into slices 21 h wide — wide enough for a
+    day's traffic to fall entirely inside one, leaving a single measured point and no curve at
+    all on the cockpit's DEFAULT period.
 
     Without ``days`` the report is empty: "all history" has no width to slice, and picking one
     from the oldest row present would make the axis depend on how long the process has run.

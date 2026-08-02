@@ -1030,3 +1030,22 @@ export function readControlSeries(
 export function hasDrawableCurve(values: readonly (number | null)[]): boolean {
   return values.filter((v) => v !== null).length > 1;
 }
+
+/**
+ * How wide one bucket of a series is, in hours — the number that explains an empty cell.
+ *
+ * Read off the report's own bounds rather than the period key, because the two can disagree:
+ * the backend chooses the count from the window (`buckets_for_window`), so a front that
+ * derived the width from `days / 8` would print a confident wrong number the day that
+ * choice changes. `null` when the report has no window to slice.
+ */
+export function bucketWidthHours(series?: {
+  since: string | null;
+  until: string | null;
+  n_buckets: number;
+}): number | null {
+  if (!series || series.n_buckets <= 0 || !series.since || !series.until) return null;
+  const span = Date.parse(series.until) - Date.parse(series.since);
+  if (!Number.isFinite(span) || span <= 0) return null;
+  return span / series.n_buckets / 3_600_000;
+}

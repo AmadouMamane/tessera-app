@@ -6,7 +6,7 @@ import { Fragment, useMemo, useState } from "react";
 
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { QInfo } from "@/components/observability/quality-info";
-import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import { MetricSparkline, NoHistoryLabel } from "@/components/overview/metric-sparkline";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truncate } from "@/components/ui/truncate";
@@ -40,6 +40,7 @@ import {
   type ControlId,
   type ControlReading,
   type Unavailability,
+  bucketWidthHours,
   hasDrawableCurve,
   readControlSeries,
   readControls,
@@ -94,6 +95,8 @@ export interface SignalRow {
   curve?: (number | null)[];
   /** Why there is no curve, when there is none. Rendered instead of an empty chart. */
   noCurve?: string;
+  /** Width of one bucket, in hours — what a curve too short to draw explains on hover. */
+  bucketHours?: number | null;
   action: string;
   role: "operator" | "admin";
 }
@@ -296,6 +299,7 @@ function sharedRow(
   return {
     curve: noCurve || !series ? undefined : readControlSeries(series.buckets, spec.id),
     noCurve,
+    bucketHours: bucketWidthHours(series),
     key: spec.key,
     name: t(spec.nameKey),
     category: spec.category,
@@ -744,7 +748,7 @@ export function SignalsTable({
                                 answers a different question ("which way, over what sample")
                                 and it is the only thing this column said until 2026-08-01. */}
                               {r.noCurve ? (
-                                <span className="text-[0.6rem]" title={tnc(`${r.noCurve}.why`)}>
+                                <span className="text-[0.6rem]" title={tnc(`why.${r.noCurve}`)}>
                                   {tnc(r.noCurve)}
                                 </span>
                               ) : hasDrawableCurve(r.curve ?? []) ? (
@@ -755,7 +759,11 @@ export function SignalsTable({
                                   height={20}
                                 />
                               ) : (
-                                <span className="text-[0.6rem]">{tnc("tooShort")}</span>
+                                <NoHistoryLabel
+                                  values={r.curve ?? []}
+                                  bucketHours={r.bucketHours}
+                                  className="text-[0.6rem]"
+                                />
                               )}
                               <span className="block text-[0.6rem]">
                                 {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}

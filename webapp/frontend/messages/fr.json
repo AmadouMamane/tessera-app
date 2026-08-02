@@ -672,12 +672,17 @@
     },
     "noCurve": {
       "fixed-corpus": "corpus fixe",
-      "fixed-corpus.why": "Sonde à corpus fixe : rejouée sur une fenêtre plus étroite, elle rend le même nombre. Une courbe plate ici décrirait une mesure unique répétée, pas une stabilité.",
       "no-timestamp": "sur l'échantillon entier",
-      "no-timestamp.why": "Statistique calculée sur l'échantillon entier (regroupement, accord inter-juges) : un huitième de son entrée n'en est pas une version réduite, mais une autre mesure, plus bruitée.",
       "not-measured": "non mesuré",
-      "not-measured.why": "Aucune source déclarée pour ce contrôle sur l'axe temporel.",
-      "tooShort": "pas encore d'historique"
+      "sliceDays": "{n, plural, one {1 jour} other {# jours}}",
+      "sliceHours": "{n} h",
+      "tooShort": "pas encore d'historique",
+      "why": {
+        "fixed-corpus": "Sonde à corpus fixe : rejouée sur une fenêtre plus étroite, elle rend le même nombre. Une courbe plate ici décrirait une mesure unique répétée, pas une stabilité.",
+        "no-timestamp": "Statistique calculée sur l'échantillon entier (regroupement, accord inter-juges) : une tranche de son entrée n'en est pas une version réduite, mais une autre mesure, plus bruitée.",
+        "not-measured": "Aucune source déclarée pour ce contrôle sur l'axe temporel.",
+        "tooShort": "{n, plural, =0 {Aucune des {total} tranches de cette fenêtre ne porte de mesure} =1 {Une seule des {total} tranches de cette fenêtre porte une mesure} other {{n} tranches sur {total} portent une mesure}} — chacune couvre {width}. Il en faut deux pour tracer une évolution : une ligne tracée sur un point unique prétendrait que la valeur a tenu toute la fenêtre."
+      }
     }
   },
   "chat": {

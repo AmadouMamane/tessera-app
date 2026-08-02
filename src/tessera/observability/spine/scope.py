@@ -67,8 +67,8 @@ class Scope:
     language: str | None = None
     model: str | None = None
     environment: str | None = None
-    # Fractional on purpose. A sparkline bucket is a narrow window and nothing else — one
-    # eighth of seven days — so bucketing reuses this field instead of introducing a second
+    # Fractional on purpose. A sparkline bucket is a narrow window and nothing else — a
+    # fourteenth of seven days — so bucketing reuses this field instead of introducing a second
     # way to say "between these two instants". That matters more than it looks: the curve and
     # the number are then computed by the same code path over the same field, and a curve that
     # disagrees with the value beneath it becomes unrepresentable rather than merely unlikely.
@@ -244,7 +244,7 @@ def parse_period_days(raw: str | None) -> float | None:
     operator never picked behind numbers they are about to act on.
 
     Parsed as a FLOAT, not an int. The rail only ever sends whole days, but a sparkline
-    bucket is one eighth of the window and travels through this same parser — and ``int()``
+    bucket is a fraction of the window and travels through this same parser — and ``int()``
     on ``"0.875"`` raises, which this function turns into ``None``, which means all
     history. Every bucket of a seven-day curve would then have covered all of time and the
     line would have been flat and wrong, with nothing anywhere reporting a failure.

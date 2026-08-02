@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { cn } from "@/lib/cn";
 import type { OverviewTone } from "@/lib/overview";
 
@@ -78,6 +80,57 @@ export function MetricSparkline({
         vectorEffect="non-scaling-stroke"
       />
     </svg>
+  );
+}
+
+/**
+ * What the cell says when `hasDrawableCurve` is false — the else-branch of the sparkline.
+ *
+ * It lives beside the curve because it is the same decision seen from the other side, and it
+ * is a COMPONENT rather than a string because the honest version of "pas encore d'historique"
+ * needs the geometry: three of the four reasons a control has no curve carry a `.why` on
+ * hover, and this one — the only reason that is about the WINDOW rather than the metric — had
+ * none. At 7 days it read "no history yet" over 7 scored turns, 39 captured ones and a full
+ * probe run. There was history; it all sat inside one 21 h slice, so there was one point, and
+ * one point is not a trend.
+ *
+ * Both tables render it, which is the point: the same control's curve is drawn on Vue
+ * d'ensemble and on Qualité IA, and two sentences for one situation is how a cockpit teaches
+ * that its explanations are decorative.
+ */
+export function NoHistoryLabel({
+  values,
+  bucketHours,
+  className,
+}: {
+  /** The curve that could not be drawn — its length IS the number of slices. */
+  values: (number | null)[];
+  /** How wide one slice is, in hours. Computable exactly when `values` is non-empty. */
+  bucketHours?: number | null;
+  className?: string;
+}) {
+  const t = useTranslations("overview.noCurve");
+  const measured = values.filter((v) => v !== null).length;
+  const total = values.length;
+  const width =
+    bucketHours == null
+      ? null
+      : bucketHours >= 24
+        ? t("sliceDays", { n: Math.round(bucketHours / 24) })
+        : t("sliceHours", { n: Math.round(bucketHours) });
+
+  return (
+    <span
+      className={className}
+      // No window, no explanation: an empty `values` means the series has not arrived, and
+      // inventing "0 slices of 0 h" would be a sentence about nothing.
+      // `why.tooShort`, never `tooShort.why`: next-intl reads a dot as a namespace step, so a
+      // flat key containing one resolves to nothing and renders its own path. That is what the
+      // three sibling tooltips did — silently, on every build, since they were written.
+      title={total > 0 && width ? t("why.tooShort", { n: measured, total, width }) : undefined}
+    >
+      {t("tooShort")}
+    </span>
   );
 }
 

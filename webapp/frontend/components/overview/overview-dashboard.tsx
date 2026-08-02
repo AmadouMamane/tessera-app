@@ -28,7 +28,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 
 import { TemporalMonitoringBreakdown } from "@/components/agent/temporal-monitoring-breakdown";
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { MetricSparkline } from "@/components/overview/metric-sparkline";
+import { MetricSparkline, NoHistoryLabel } from "@/components/overview/metric-sparkline";
 import { PageEvidenceActions } from "@/components/overview/page-evidence-actions";
 import { fmtStamp, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -93,6 +93,7 @@ import { cn } from "@/lib/cn";
 import {
   type ControlId,
   type ControlReading,
+  bucketWidthHours,
   hasDrawableCurve,
   readControlSeries,
   readControls,
@@ -561,6 +562,7 @@ export function OverviewDashboard({
             historyMode={historyMode}
             provTag={provenanceTag}
             agentScoped={agentScoped}
+            bucketHours={bucketWidthHours(controlSeries.data)}
           />
           <ControlCasesTriage
             inbox={inbox.data}
@@ -946,6 +948,7 @@ function CriticalControlsTable({
   historyMode,
   provTag,
   agentScoped,
+  bucketHours,
 }: {
   controls: ControlRow[];
   /** Real catalogue-signal resolution per control id (id/name/route), or undefined. */
@@ -955,6 +958,8 @@ function CriticalControlsTable({
   provTag: TimeTagKind | null;
   /** True when a single agent is selected — org-wide rows then wear an honest badge. */
   agentScoped: boolean;
+  /** Width of one series bucket, in hours — what a row without enough history explains. */
+  bucketHours: number | null;
 }) {
   const t = useTranslations("overview.criticalControls");
   const tas = useTranslations("agentScope");
@@ -1136,7 +1141,7 @@ function CriticalControlsTable({
                         {c.noCurve ? (
                           <span
                             className="text-[0.6rem] text-[var(--muted-foreground)]"
-                            title={tnc(`${c.noCurve}.why`)}
+                            title={tnc(`why.${c.noCurve}`)}
                           >
                             {tnc(c.noCurve)}
                           </span>
@@ -1151,10 +1156,14 @@ function CriticalControlsTable({
                           // The third state, and the one that was rendering as a bare axis:
                           // the control CAN be windowed, and the window simply does not hold
                           // two measured buckets yet. An empty chart slot reads as "this metric
-                          // never moves"; saying "no history yet" is the same fact, legible.
-                          <span className="text-[0.6rem] text-[var(--muted-foreground)]">
-                            {tnc("tooShort")}
-                          </span>
+                          // never moves"; saying "no history yet" is the same fact, legible —
+                          // and on hover, WHICH window and how many of its slices carry data,
+                          // because "not yet" without a count is not falsifiable either.
+                          <NoHistoryLabel
+                            values={c.trend ?? []}
+                            bucketHours={bucketHours}
+                            className="text-[0.6rem] text-[var(--muted-foreground)]"
+                          />
                         )}
                       </td>
                       <td className="py-2 pr-4 text-[var(--muted-foreground)]">

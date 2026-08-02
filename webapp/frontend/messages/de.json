@@ -672,12 +672,17 @@
     },
     "noCurve": {
       "fixed-corpus": "fester Korpus",
-      "fixed-corpus.why": "Eine Sonde mit festem Korpus: über ein schmaleres Fenster erneut ausgeführt liefert sie dieselbe Zahl. Eine flache Linie beschriebe hier eine einzige, wiederholte Messung, keine Stabilität.",
       "no-timestamp": "über die ganze Stichprobe",
-      "no-timestamp.why": "Über die gesamte Stichprobe berechnet (Clustering, Beurteiler-Übereinstimmung): ein Achtel der Eingabe ist keine verkleinerte Fassung, sondern eine andere, verrauschtere Messung.",
       "not-measured": "nicht gemessen",
-      "not-measured.why": "Für dieses Kontrollsignal ist auf der Zeitachse keine Quelle deklariert.",
-      "tooShort": "noch kein Verlauf"
+      "sliceDays": "{n, plural, one {1 Tag} other {# Tage}}",
+      "sliceHours": "{n} Std.",
+      "tooShort": "noch kein Verlauf",
+      "why": {
+        "fixed-corpus": "Eine Sonde mit festem Korpus: über ein schmaleres Fenster erneut ausgeführt liefert sie dieselbe Zahl. Eine flache Linie beschriebe hier eine einzige, wiederholte Messung, keine Stabilität.",
+        "no-timestamp": "Über die gesamte Stichprobe berechnet (Clustering, Beurteiler-Übereinstimmung): ein Abschnitt der Eingabe ist keine verkleinerte Fassung, sondern eine andere, verrauschtere Messung.",
+        "not-measured": "Für dieses Kontrollsignal ist auf der Zeitachse keine Quelle deklariert.",
+        "tooShort": "{n, plural, =0 {Keiner der {total} Abschnitte dieses Fensters trägt eine Messung} =1 {Nur einer der {total} Abschnitte dieses Fensters trägt eine Messung} other {{n} von {total} Abschnitten tragen eine Messung}} — jeder umfasst {width}. Für einen Verlauf sind zwei nötig: eine Linie durch einen einzigen Punkt würde behaupten, der Wert habe das ganze Fenster über gehalten."
+      }
     }
   },
   "chat": {

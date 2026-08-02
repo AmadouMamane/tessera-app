@@ -13,7 +13,7 @@ reappearing on the time axis.
 So this module derives nothing. It slices the window into buckets and re-runs **the same
 handler** the point value comes from, once per bucket, with the bucket as its scope. A bucket
 is not a new concept: it is a :class:`~tessera.observability.spine.scope.Scope` whose window
-happens to be one eighth of the page's. The front then feeds each bucket's payload through
+happens to be one slice of the page's. The front then feeds each bucket's payload through
 ``readControls`` — the identical function that produced the number — and reads the ratio off
 the result. The curve cannot disagree with the value because nothing computes it separately.
 
@@ -26,13 +26,14 @@ Two honesty properties follow, and both are asserted in
 * A control whose sample carries no per-row timestamp gets **no series at all**, and says which
   of the reasons applies. A fixed-corpus probe re-run over a narrower window returns the same
   fixed corpus, so bucketing it would draw a flat line that looks like a stable metric and is
-  actually the same measurement repeated eight times.
+  actually the same measurement repeated once per slice.
 """
 
 from __future__ import annotations
 
 import asyncio
 import inspect
+import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -48,17 +49,96 @@ __all__ = [
     "SERIES_SOURCES",
     "SeriesBucket",
     "SeriesReport",
+    "buckets_for_window",
     "compute_control_series",
     "series_capability",
 ]
 
-#: Buckets a curve is drawn from. Eight is the width the sparkline already assumed (the SLO
-#: trend has used ``_MAX_BUCKETS = 8`` since it was written), kept so the one existing curve
-#: does not change shape the day every other row grows one.
+#: Buckets a curve is drawn from when the window's length says nothing — a window of "all
+#: history" has no width to slice, so this is only ever the fallback. Eight is the width the
+#: sparkline assumed for its first year (the SLO trend has used ``_MAX_BUCKETS = 8`` since it
+#: was written).
 DEFAULT_BUCKETS = 8
 #: A caller may ask for fewer or more, bounded: each bucket is a full re-read of the window's
 #: stores, so an unbounded ``?buckets=`` is an unbounded read.
 MAX_BUCKETS = 32
+
+#: Round clock units a bucket may be, in hours. A bucket of 90 h spans "three days and
+#: eighteen hours", which is not a duration anyone reads an axis in.
+_ROUND_HOURS: tuple[float, ...] = (1, 2, 3, 6, 12, 24, 48, 72, 168)
+
+#: Bucket WIDTH in hours, per cockpit period — a *chosen* resolution, swept against the live
+#: cockpit on 2026-08-02, not derived from a formula.
+#:
+#: It has to be chosen, because the right resolution depends on how the traffic is spread and
+#: no rule can know that. The sweep (three candidate widths on each of 24 h / 7 j / 30 j,
+#: counting the segments and lone dots each drew) refuted both tempting rules:
+#:
+#: ===========  =========================  =========================  ====================
+#: window       finest (1 h / 6 h / 24 h)  coarsest (3 h / 21 h / 90 h)  chosen
+#: ===========  =========================  =========================  ====================
+#: 24 h         3 points, **0 segments**   3 points, 1 segment        2 h → 3 pts, 1 seg
+#: 7 j          2 points, **0 segments**   **1 point, no curve**      12 h → 2 pts, 1 seg
+#: 30 j         8 points, 2 segments       4 points, 1 segment        24 h → 8 pts, 2 seg
+#: ===========  =========================  =========================  ====================
+#:
+#: "Finest that fits" shatters a curve into isolated dots at 24 h and 7 j — a bucket narrower
+#: than the gaps between requests puts a hole between every pair of points — and is the right
+#: answer at 30 j. So the ladder is three measurements, and says so, rather than a formula
+#: whose two ends it would have to contradict. Any other window falls back to
+#: :func:`buckets_for_window`'s general rule.
+_LADDER: dict[float, float] = {1.0: 2.0, 7.0: 12.0, 30.0: 24.0}
+
+#: What the general rule aims for on a window the ladder does not name. Fourteen sits between
+#: the three chosen counts (12 / 14 / 30) and never shatters as badly as the finest fit. It is
+#: also what makes the rule agree with the ladder at 24 h and 7 j: only 30 j is an override.
+_TARGET_BUCKETS = 14
+
+#: Float slack on "this unit divides the window". Not a tolerance anyone tunes: a window is
+#: given in days and a unit in hours, so the quotient is exact up to representation.
+_GRID_SLACK = 1e-6
+
+
+def buckets_for_window(period_days: float) -> int:
+    """How many slices a window of ``period_days`` is cut into.
+
+    A window the ladder does not name is cut on the round unit that divides it EVENLY and
+    lands closest to :data:`_TARGET_BUCKETS`. The even division is the part worth spelling
+    out: choosing a width and then rounding the count gives a real width of ``hours / count``,
+    which is a different number — 90 days aiming for weekly slices produced 13 buckets of
+    166 h, i.e. "six days, twenty-two hours", the exact species of duration this ladder
+    exists to avoid.
+
+    Args:
+        period_days: The window's length in days.
+
+    Returns:
+        A bucket count in ``[1, MAX_BUCKETS]``.
+    """
+    hours = period_days * 24
+    chosen = _LADDER.get(period_days)
+    if chosen is not None:
+        return max(1, min(MAX_BUCKETS, round(hours / chosen)))
+
+    def off_grid(unit: float) -> float:
+        """How far the window falls from a whole number of ``unit`` — ``0`` when it divides."""
+        remainder = math.fmod(hours, unit)
+        return min(remainder, unit - remainder)
+
+    even = [
+        unit
+        for unit in _ROUND_HOURS
+        if 1 <= hours / unit <= MAX_BUCKETS and off_grid(unit) < _GRID_SLACK
+    ]
+    # Ties break toward the FINER slicing: at equal distance from the target, more points say
+    # more. A window no round unit divides (53 days) keeps the nearest width and an uneven
+    # slice — an honest last resort, not a promise this function silently breaks.
+    width = (
+        min(even, key=lambda unit: (abs(hours / unit - _TARGET_BUCKETS), unit))
+        if even
+        else min(_ROUND_HOURS, key=lambda unit: abs(unit - hours / _TARGET_BUCKETS))
+    )
+    return max(1, min(MAX_BUCKETS, round(hours / width)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,13 +213,13 @@ def _sources() -> tuple[SeriesSource, ...]:
         # These three read per-turn samples too. They simply had no window to read them
         # under: their handlers took no scope at all, so "the last 30 days" and "everything"
         # were the same call. Giving them the scope the others already had is what makes a
-        # bucket of them a real measurement rather than the whole sample, drawn eight times.
+        # bucket of them a real measurement rather than the whole sample, drawn once per slice.
         SeriesSource("citations", compliance.observability_citations),
         SeriesSource("contradiction", evals.observability_contradictions),
         SeriesSource("localeFormat", compliance.observability_locale_format),
         # Fixed-corpus probes. Re-running the same adversarial corpus against the same policy
         # inside a narrower window returns the same number — a flat line that reads as "stable"
-        # while being one measurement drawn eight times. They earn a real curve only once their
+        # while being one measurement drawn once per slice. They earn a real curve only once their
         # RUNS are durably recorded with the instant each ran at, which is what
         # ``probe_history`` now does; a probe with runs inside the window is served from there.
         SeriesSource("refusal", None, REASON_FIXED_CORPUS),
@@ -190,14 +270,18 @@ def _accepted(handler: Callable[..., Any], **kwargs: object) -> dict[str, object
 
 async def compute_control_series(
     scope: Scope,
-    n_buckets: int = DEFAULT_BUCKETS,
+    n_buckets: int | None = None,
 ) -> SeriesReport:
     """Bucket ``scope``'s window and compute every bucketable source inside each.
 
     Args:
         scope: The page's active scope. Its window is what gets sliced; its agent / language /
             model facets ride along unchanged, so a curve is scoped exactly as its number is.
-        n_buckets: How many slices, clamped to ``[1, MAX_BUCKETS]``.
+        n_buckets: How many slices, clamped to ``[1, MAX_BUCKETS]``. ``None`` — the normal
+            case — lets the window choose, via :func:`buckets_for_window`. That default lives
+            here rather than in each caller because a resolution chosen per surface is a
+            resolution that diverges: the same control's curve is drawn on Vue d'ensemble and
+            on Qualité IA, and two counts would give it two shapes.
 
     Returns:
         A :class:`SeriesReport`. With no period on the scope, the report is empty and carries
@@ -217,7 +301,8 @@ async def compute_control_series(
             unwindowed=unwindowed,
         )
 
-    count = max(1, min(int(n_buckets), MAX_BUCKETS))
+    requested = buckets_for_window(scope.period_days) if n_buckets is None else int(n_buckets)
+    count = max(1, min(requested, MAX_BUCKETS))
     width_days = scope.period_days / count
     span = (until - since) / count
     bucketable = [s for s in sources if s.handler is not None]
