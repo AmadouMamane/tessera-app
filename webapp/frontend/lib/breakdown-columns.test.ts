@@ -25,16 +25,19 @@ describe("the widths are written in forms that survive the toolchain", () => {
   it.each([
     ["identity", COL_IDENTITY],
     ["verdict", COL_VERDICT],
-  ])("states the %s width as a literal arbitrary-value class", (_name, cls) => {
+  ])("states the %s width as literal arbitrary-value classes", (_name, cls) => {
     // Not a template, not a concatenation: the scanner reads source text, not values.
-    expect(cls).toMatch(/^w-\[[^${}]+\]$/);
+    // A responsive pair is still literals, so every token must look like one.
+    const tokens = cls.split(" ");
+    expect(tokens.length).toBeGreaterThan(0);
+    for (const token of tokens) expect(token).toMatch(/^(?:\w+:)?w-\[[^${}]+\]$/);
   });
 
   it("never mixes a percentage with a length in a width", () => {
-    for (const cls of [COL_IDENTITY, COL_VERDICT]) {
-      const value = /^w-\[(.+)\]$/.exec(cls)?.[1] ?? "";
+    for (const token of `${COL_IDENTITY} ${COL_VERDICT}`.split(" ")) {
+      const value = /w-\[(.+)\]$/.exec(token)?.[1] ?? "";
       const mixed = value.includes("%") && /\d(px|rem|em|ch|vw|vh)/.test(value);
-      expect(mixed, `${cls} mixes units and a table cell would ignore it`).toBe(false);
+      expect(mixed, `${token} mixes units and a table cell would ignore it`).toBe(false);
     }
   });
 
@@ -48,7 +51,8 @@ describe("the widths are written in forms that survive the toolchain", () => {
 
 describe("the two named columns leave room for the values between them", () => {
   const px = (cls: string, table: number): number => {
-    const value = /^w-\[(.+)\]$/.exec(cls)?.[1] ?? "";
+    // The widest of a responsive pair — the one that must leave room for the values.
+    const value = /w-\[([^\]]+)\]$/.exec(cls.split(" ").at(-1) ?? "")?.[1] ?? "";
     if (value.endsWith("%")) return (table * Number.parseFloat(value)) / 100;
     if (value.endsWith("rem")) return Number.parseFloat(value) * 16;
     throw new Error(`unhandled width: ${value}`);

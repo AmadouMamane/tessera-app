@@ -135,12 +135,14 @@ export function MonitoringFleetTable({
           <thead>
             <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-              <th className="pb-2 pr-3 text-right font-medium">{t("colVolume")}</th>
-              <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-              <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
-              <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
+              <th className="pb-2 text-center font-medium">{t("colVolume")}</th>
+              <th className="pb-2 text-center font-medium">{t("colEscalation")}</th>
+              <th className="pb-2 text-center font-medium">{t("colLatency")}</th>
+              <th className="pb-2 text-center font-medium">{t("colHandoffs")}</th>
               {/* Prose, not a number: sized by `COL_VERDICT`, which explains why. */}
-              <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+              <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>
+                {t("colRelease")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -150,19 +152,15 @@ export function MonitoringFleetTable({
               return (
                 <tr key={agent.id} className={rowClass(selected, dimmed)}>
                   <td className="py-1.5 pr-3 font-medium">{agent.name}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">
-                    {fmtInt(agent.conversations)}
-                  </td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">
+                  <td className="py-1.5 text-center tabular-nums">{fmtInt(agent.conversations)}</td>
+                  <td className="py-1.5 text-center tabular-nums">
                     {fmtPct(agent.escalation_rate)}
                   </td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">
-                    {fmtSecs(agent.latency_ms)}
-                  </td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums">
+                  <td className="py-1.5 text-center tabular-nums">{fmtSecs(agent.latency_ms)}</td>
+                  <td className="py-1.5 text-center tabular-nums">
                     {agent.handoffs_in} / {agent.handoffs_out}
                   </td>
-                  <td className="py-1.5 text-right">
+                  <td className="py-1.5 pr-2 text-right">
                     <span
                       className={
                         RELEASE_TONE[agent.release?.verdict_tone ?? "muted"] ?? RELEASE_TONE.muted
@@ -182,13 +180,13 @@ export function MonitoringFleetTable({
               </td>
               <td
                 data-testid="fleet-org-total"
-                className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
+                className="py-2 text-center font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
               >
                 {fmtInt(fleet.org?.conversations ?? 0)}
               </td>
               <td
                 colSpan={4}
-                className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+                className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
               >
                 <DedupFooter
                   fleet={fleet}

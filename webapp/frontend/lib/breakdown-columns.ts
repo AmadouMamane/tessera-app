@@ -34,8 +34,18 @@
 /** `table-layout: fixed` — without it the widths below are suggestions, not columns. */
 export const TABLE_BREAKDOWN = "w-full table-fixed text-[0.72rem]";
 
-/** The agent-name column: left-aligned, sized to its content rather than to a share. */
-export const COL_IDENTITY = "w-[10rem]";
+/**
+ * The agent-name column: left-aligned, and sized to its CONTENT — the widest ink it holds is
+ * «Total de la flotte» at 89 px, so 6.5 rem clears it on one line with room to spare.
+ *
+ * Responsive, and the reason is a measurement. This column is the only one that does not
+ * shrink with the card, so a width that reads well at 1672 px is 80 px of trailing air at
+ * 1280 px — and since the space a reader sees is that air PLUS the next column's, the gap
+ * after the agent name became the odd one at laptop widths (127 px against a median of 71).
+ * Two literals, one per size, rather than a percentage: a percentage small enough for 946 px
+ * leaves «Total de la flotte» to wrap, which is where this whole card started.
+ */
+export const COL_IDENTITY = "w-[6.5rem] 2xl:w-[9rem]";
 
 /**
  * The release-verdict column: a quarter of the table, aligned RIGHT like every value column.

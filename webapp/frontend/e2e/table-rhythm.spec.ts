@@ -107,6 +107,14 @@ async function measureTables(page: Page): Promise<CellBox[][]> {
       .map((table) => {
         const head = table.querySelector("thead tr");
         if (!head) return [];
+        // The per-agent breakdown is measured by the ink-to-INK rule at the bottom of this
+        // file, and this measure would say nothing true about it. A gutter here is ink to the
+        // next column's BOX — the trailing padding — which is one constant for right-aligned
+        // content and half the leftover for CENTRED content. The breakdown centres its value
+        // columns precisely so the space a reader sees is split on both sides, so this rule
+        // would report a spread that IS the design. Superseded, not dropped: what replaces it
+        // is two-sided and stricter.
+        if (table.hasAttribute("data-breakdown")) return [];
         const rows = [head, ...Array.from(table.querySelectorAll("tbody tr"))];
         return Array.from(head.children).map((headCell, column) => {
           const box = headCell.getBoundingClientRect();
@@ -440,20 +448,25 @@ for (const width of [1672, 1280]) {
  * the verdict column is right-aligned like its neighbours, and it gets two shares so its
  * leading air is the same SIZE despite holding a sentence.
  *
- * The bar is a RATIO to the median rather than a spread in pixels, and that is deliberate.
- * With right-aligned columns of equal width, the space before a column is `width − content`,
- * so it varies with the content by construction — a run of gaps of 122, 166 and 119 px is the
- * design working, not drifting. What must never happen again is one space that is a fraction
- * of its neighbours.
+ * The bars are RATIOS to the median rather than spreads in pixels, and they are measured on
+ * both sides rather than chosen. A column's leading air is `width - content`, so with columns
+ * of equal width the gaps vary with the content by construction: a run of 150, 149, 148, 146
+ * and 138 px is the design working, not drifting.
  *
- * **0.35, and it is measured on both sides rather than chosen.** Swept over four lenses at two
- * viewports, this layout's worst ratio is 0.48 (`fiabilite-cout` at 1672 px, gaps of 236, 201
- * and 96) and its best is 0.92. The shipped defect ran 0.06 to 0.13. A bar of 0.35 has room
- * under the design and well over the defect — where 0.5, the round number, would redden the
- * suite on a card that is not broken. A threshold nobody meets is a threshold that gets
- * lowered later, quietly, by whoever is unlucky enough to trip it.
+ * At a wide viewport the rule is two-sided, because BOTH failures happened here. Too small was
+ * the 12 px collision; too large was the operator's next report — *"l'espace entre Agent et
+ * Volume est visuellement plus grand"* — the identity column's fixed width leaving 80 px of
+ * trailing air on top of its neighbour's leading air. Measured at 1672 px over eight lenses,
+ * this layout runs 0.63 to 1.25 of the median; the two defects ran 0.06 and 1.93 to 2.02.
+ *
+ * At a laptop width only the floor applies, and that is a measurement, not a concession. At
+ * 946 px the columns are content-bound: «Erreurs outils (erreurs / appels)» wraps and fills
+ * its column, leaving 31 px of leading air with no width anywhere to redistribute. This layout
+ * runs 0.34 to 1.75 there, so a ceiling would assert something the page cannot hold — and a
+ * bar nobody meets is one that gets lowered later, quietly, by whoever trips it.
  */
-const MIN_GAP_RATIO = 0.35;
+const GAP_FLOOR = { wide: 0.5, laptop: 0.3 } as const;
+const GAP_CEILING = 1.6;
 
 /**
  * The identity column is exempt, and it is exempt in the direction that costs nothing.
@@ -535,20 +548,28 @@ for (const width of [1672, 1280]) {
       });
 
       expect(gaps, `no breakdown table measured on ${path} — the probe went blind`).not.toBeNull();
-      const measured = gaps as { after: string; before: string; gap: number }[];
-      expect(measured.length, `${path}: too few columns to have a rhythm`).toBeGreaterThan(2);
+      const rhythm = gaps as { after: string; before: string; gap: number }[];
+      expect(rhythm.length, `${path}: too few columns to have a rhythm`).toBeGreaterThan(2);
 
-      // Drop the identity column's gap (the first): it is structurally the largest.
-      const rhythm = measured.slice(1);
+      // Every gap, the identity column's included. An earlier version exempted it as
+      // "structurally the largest" — and it was, at 1.9x the median, which is exactly what the
+      // operator reported next. An exemption is a place a defect can live.
       const sorted = [...rhythm].sort((a, b) => a.gap - b.gap);
       const tightest = sorted[0];
+      const widest = sorted[sorted.length - 1];
       const middle = sorted[Math.floor(sorted.length / 2)];
-      if (!tightest || !middle) throw new Error(`${path}: no rhythm to measure`);
+      if (!tightest || !widest || !middle) throw new Error(`${path}: no rhythm to measure`);
       const detail = JSON.stringify(rhythm.map((g) => g.gap));
       expect(
         tightest.gap / middle.gap,
         `${path} at ${width} px: only ${tightest.gap} px between «${tightest.after}» and «${tightest.before}» where the median is ${middle.gap} px — ${detail}`,
-      ).toBeGreaterThanOrEqual(MIN_GAP_RATIO);
+      ).toBeGreaterThanOrEqual(width >= 1536 ? GAP_FLOOR.wide : GAP_FLOOR.laptop);
+      if (width >= 1536) {
+        expect(
+          widest.gap / middle.gap,
+          `${path} at ${width} px: ${widest.gap} px between «${widest.after}» and «${widest.before}» where the median is ${middle.gap} px — ${detail}`,
+        ).toBeLessThanOrEqual(GAP_CEILING);
+      }
     }
   });
 }

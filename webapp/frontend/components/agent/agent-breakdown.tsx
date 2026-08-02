@@ -204,12 +204,12 @@ function MonitoringTable({
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colVolume")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colHandoffs")}</th>
+            <th className="pb-2 text-center font-medium">{t("colVolume")}</th>
+            <th className="pb-2 text-center font-medium">{t("colEscalation")}</th>
+            <th className="pb-2 text-center font-medium">{t("colLatency")}</th>
+            <th className="pb-2 text-center font-medium">{t("colHandoffs")}</th>
             {/* Prose, not a number: sized by `COL_VERDICT`, which explains why. */}
-            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+            <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -219,13 +219,13 @@ function MonitoringTable({
             return (
               <tr key={a.id} className={rowClass(selected, dimmed)}>
                 <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtInt(a.conversations)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtSecs(a.latency_ms)}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">{fmtInt(a.conversations)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmtPct(a.escalation_rate)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmtSecs(a.latency_ms)}</td>
+                <td className="py-1.5 text-center tabular-nums">
                   {a.handoffs_in} / {a.handoffs_out}
                 </td>
-                <td className="py-1.5 text-right">
+                <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -240,13 +240,13 @@ function MonitoringTable({
             </td>
             <td
               data-testid="fleet-org-total"
-              className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
+              className="py-2 text-center font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
             >
               {fmtInt(fleet.org?.conversations ?? 0)}
             </td>
             <td
               colSpan={4}
-              className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+              className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
             >
               <DedupFooter
                 fleet={fleet}
@@ -331,12 +331,12 @@ function AlarmTable({
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">
+            <th className="pb-2 text-center font-medium">
               {t("colSignalValue", { metric: metricLabel(lens.metric, t) })}
             </th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colSloGap")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colContribution")}</th>
-            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+            <th className="pb-2 text-center font-medium">{t("colSloGap")}</th>
+            <th className="pb-2 text-center font-medium">{t("colContribution")}</th>
+            <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -359,7 +359,7 @@ function AlarmTable({
                     {a.name}
                   </Link>
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   {row.value === null ? (
                     <EmptyCell reason={row.refusal} t={t} />
                   ) : (
@@ -367,20 +367,20 @@ function AlarmTable({
                   )}
                 </td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     row.gapPp !== null && row.gapPp < 0 ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
                   {row.gapPp === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtPp(row.gapPp)}
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   {row.nBad === null ? (
                     <EmptyCell reason={row.refusal} t={t} />
                   ) : (
                     `${fmtInt(row.nBad)} / ${fmtInt(row.n ?? 0)}`
                   )}
                 </td>
-                <td className="py-1.5 text-right">
+                <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -393,7 +393,7 @@ function AlarmTable({
               {t("orgTotal")}
             </td>
             <td colSpan={2} className="py-2" />
-            <td className="py-2 pr-3 text-right font-semibold tabular-nums text-[var(--tessera-fg-accent)]">
+            <td className="py-2 text-center font-semibold tabular-nums text-[var(--tessera-fg-accent)]">
               {lens.orgNBad === null || lens.orgN === null
                 ? "—"
                 : `${fmtInt(lens.orgNBad)} / ${fmtInt(lens.orgN)}`}
@@ -403,7 +403,7 @@ function AlarmTable({
           <tr>
             <td
               colSpan={5}
-              className="pb-1 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+              className="pb-1 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
             >
               {/* Contribution reconciliation — the per-agent slices vs the deduplicated org
                 total. ∑ slices = org would be a coincidence, not a proof: a handed-off
@@ -463,12 +463,12 @@ function QualityTable({
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colFaithfulness")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colHallucination")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colRegression")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colGate")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colEvalFreshness")}</th>
-            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+            <th className="pb-2 text-center font-medium">{t("colFaithfulness")}</th>
+            <th className="pb-2 text-center font-medium">{t("colHallucination")}</th>
+            <th className="pb-2 text-center font-medium">{t("colRegression")}</th>
+            <th className="pb-2 text-center font-medium">{t("colGate")}</th>
+            <th className="pb-2 text-center font-medium">{t("colEvalFreshness")}</th>
+            <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -490,14 +490,14 @@ function QualityTable({
                     {a.name}
                   </Link>
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   {row?.faithfulness == null ? (
                     <EmptyCell reason={row?.faithfulnessRefusal ?? "absent"} t={t} />
                   ) : (
                     fmtRate(row.faithfulness)
                   )}
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   {row?.hallucination == null ? (
                     <EmptyCell reason={row?.hallucinationRefusal ?? "absent"} t={t} />
                   ) : (
@@ -505,26 +505,26 @@ function QualityTable({
                   )}
                 </td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     rel && rel.blocking_t1 > 0 ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
                   {rel ? fmtInt(rel.blocking_t1) : "—"}
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   {rel && rel.summary_passed != null && rel.summary_total != null
                     ? `${fmtInt(rel.summary_passed)}/${fmtInt(rel.summary_total)}`
                     : "—"}
                 </td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
                   }`}
                   title={rel?.verdict_stale ? t("staleEval") : undefined}
                 >
                   {rel ? fmtRunDay(rel.run_at) : "—"}
                 </td>
-                <td className="py-1.5 text-right">
+                <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -538,7 +538,7 @@ function QualityTable({
             </td>
             <td
               colSpan={6}
-              className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+              className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
             >
               <DedupFooter
                 fleet={fleet}
@@ -599,7 +599,7 @@ function DomainFoot({ fleet, t, span }: { fleet: Fleet; t: Translator; span: num
         <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">{t("orgTotal")}</td>
         <td
           colSpan={span}
-          className="py-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+          className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
         >
           <DedupFooter
             fleet={fleet}
@@ -639,10 +639,10 @@ function SecurityTable({
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colPiiLeaks")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colToxicity")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colGuardDenied")}</th>
-            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+            <th className="pb-2 text-center font-medium">{t("colPiiLeaks")}</th>
+            <th className="pb-2 text-center font-medium">{t("colToxicity")}</th>
+            <th className="pb-2 text-center font-medium">{t("colGuardDenied")}</th>
+            <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -654,7 +654,7 @@ function SecurityTable({
               <tr key={a.id} className={rowClass(selected, dimmed)}>
                 <td className="py-1.5 pr-3 font-medium">{a.name}</td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     row?.piiLeaks ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
@@ -666,7 +666,7 @@ function SecurityTable({
                   />
                 </td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     row?.toxCount ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
@@ -677,7 +677,7 @@ function SecurityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   <PairCell
                     found={row?.guardDenied ?? null}
                     outOf={row?.guardTotal ?? null}
@@ -685,7 +685,7 @@ function SecurityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 text-right">
+                <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -724,10 +724,10 @@ function ComplianceTable({
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colGovernedActs")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colLedgerEntries")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colEscalation")}</th>
-            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+            <th className="pb-2 text-center font-medium">{t("colGovernedActs")}</th>
+            <th className="pb-2 text-center font-medium">{t("colLedgerEntries")}</th>
+            <th className="pb-2 text-center font-medium">{t("colEscalation")}</th>
+            <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -738,22 +738,22 @@ function ComplianceTable({
             return (
               <tr key={a.id} className={rowClass(selected, dimmed)}>
                 <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   <CountCell
                     value={row?.governedActs ?? null}
                     reason={row?.governedRefusal ?? null}
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">
+                <td className="py-1.5 text-center tabular-nums">
                   <CountCell
                     value={row?.ledgerEntries ?? null}
                     reason={row?.ledgerRefusal ?? null}
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtPct(a.escalation_rate)}</td>
-                <td className="py-1.5 text-right">
+                <td className="py-1.5 text-center tabular-nums">{fmtPct(a.escalation_rate)}</td>
+                <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -792,9 +792,9 @@ function ObservabilityTable({
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colAnomalies")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colConformance")}</th>
-            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+            <th className="pb-2 text-center font-medium">{t("colAnomalies")}</th>
+            <th className="pb-2 text-center font-medium">{t("colConformance")}</th>
+            <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -806,7 +806,7 @@ function ObservabilityTable({
               <tr key={a.id} className={rowClass(selected, dimmed)}>
                 <td className="py-1.5 pr-3 font-medium">{a.name}</td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     row?.anomalous ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
@@ -818,7 +818,7 @@ function ObservabilityTable({
                   />
                 </td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     row?.violations ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
@@ -829,7 +829,7 @@ function ObservabilityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 text-right">
+                <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
@@ -867,10 +867,10 @@ function ReliabilityTable({
         <thead>
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colToolErrors")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colLatency")}</th>
-            <th className="pb-2 pr-3 text-right font-medium">{t("colCostTokens")}</th>
-            <th className={`${COL_VERDICT} pb-2 text-right font-medium`}>{t("colRelease")}</th>
+            <th className="pb-2 text-center font-medium">{t("colToolErrors")}</th>
+            <th className="pb-2 text-center font-medium">{t("colLatency")}</th>
+            <th className="pb-2 text-center font-medium">{t("colCostTokens")}</th>
+            <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
         <tbody>
@@ -882,7 +882,7 @@ function ReliabilityTable({
               <tr key={a.id} className={rowClass(selected, dimmed)}>
                 <td className="py-1.5 pr-3 font-medium">{a.name}</td>
                 <td
-                  className={`py-1.5 pr-3 text-right tabular-nums ${
+                  className={`py-1.5 text-center tabular-nums ${
                     row?.toolErrors ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
@@ -893,9 +893,9 @@ function ReliabilityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 pr-3 text-right tabular-nums">{fmtSecs(a.latency_ms)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmtSecs(a.latency_ms)}</td>
                 <td
-                  className="py-1.5 pr-3 text-right tabular-nums"
+                  className="py-1.5 text-center tabular-nums"
                   title={
                     row?.meanTokens != null
                       ? t("costMeanTitle", { mean: fmtInt(Math.round(row.meanTokens)) })
@@ -908,7 +908,7 @@ function ReliabilityTable({
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 text-right">
+                <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
               </tr>
