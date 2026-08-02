@@ -1007,26 +1007,51 @@ function CriticalControlsTable({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/* Named so `e2e/table-rhythm.spec.ts` can measure THIS table ink-to-ink. Without
+              the handle it fell under the file's gutter rule, which measures ink to the next
+              column's BOX — 16 px of padding everywhere, and green over a 69 px hole. */}
+            <table data-rhythm="critical-controls" className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
-                  {/* Content-fitting means NOT wrapping. Once one column absorbs the card's
-                    leftover width, every other column collapses to its narrowest legal box —
-                    and for a text column that is "wrap at every space": «Fidélité (objectif de
-                    service)» over three lines, «≤ 0.10%» over two. A minimum on the identity
-                    column and `whitespace-nowrap` on the short ones is what "fits its content"
-                    actually means here. */}
+                  {/* `docs/table-rhythm-playbook.md`, adapted — and the adaptation is measured,
+                    not a liberty taken. This table is the case §4 excludes from `table-fixed`:
+                    seven columns of real content in a 1020 px card (814 px at 1280), so an equal
+                    share is ~99 px where «Valeur actuelle» alone inks 160, and `whitespace-nowrap`
+                    then OVERFLOWS the cell rather than wrapping. Swept on the live page, every
+                    fixed-share candidate put inks on top of each other: gaps of −29, −49, −70 px
+                    at 1672 and −139 at 1280. Auto layout stays.
+
+                    What does transfer is the playbook's actual finding — the alignment, not the
+                    widths — plus its warning against a single column absorbing all the slack:
+
+                     · no slack column. `w-full` on «Impact» handed it the whole leftover, and a
+                       left-aligned column's trailing air IS the next gap: 69 px before «Action»
+                       against a 17 px median. Auto layout spreads the leftover across all seven
+                       instead, and the sentence does not wrap any further for it (row height
+                       unchanged, 71 px at 1672 and 97 at 1280 — measured, because that wrapping
+                       is exactly what the previous comment here feared).
+                     · the four value columns are CENTRED, which splits each column's air onto
+                       both sides and halves every contribution.
+
+                    Ink-to-ink at 1672: [17,25,16,16,16,69] → [26,25,16,16,16,30], max/median
+                    4.06 → 1.20, inside the playbook's 0.5–1.6 band. Below 1536 px there is no
+                    ceiling and this table is why: at 1280 the columns are content-bound and the
+                    spread is the content's, not the layout's.
+
+                    `whitespace-nowrap` on the short ones stays: it is what keeps «≤ 0.10%» off
+                    two lines. */}
                   <th className="min-w-[13rem] px-4 py-2 font-medium">{t("signal")}</th>
-                  <th className="py-2 pr-4 font-medium whitespace-nowrap">{t("state")}</th>
-                  <th className="py-2 pr-4 font-medium whitespace-nowrap">{t("current")}</th>
-                  <th className="py-2 pr-4 font-medium whitespace-nowrap">{t("target")}</th>
-                  <th className="w-28 py-2 pr-4 font-medium">{t("trend")}</th>
-                  {/* The slack column. Every other column here is sized by its content; this
-                    one absorbs whatever the card has left over. It is the right one to carry it
-                    because it holds a sentence — put the slack on the short "Action" link
-                    instead and the sentence wraps to three lines while the link floats in
-                    white space, which is how the first attempt at this looked. */}
-                  <th className="w-full py-2 pr-4 font-medium">{t("impact")}</th>
+                  <th className="py-2 pr-4 text-center font-medium whitespace-nowrap">
+                    {t("state")}
+                  </th>
+                  <th className="py-2 pr-4 text-center font-medium whitespace-nowrap">
+                    {t("current")}
+                  </th>
+                  <th className="py-2 pr-4 text-center font-medium whitespace-nowrap">
+                    {t("target")}
+                  </th>
+                  <th className="w-28 py-2 pr-4 text-center font-medium">{t("trend")}</th>
+                  <th className="py-2 pr-4 font-medium">{t("impact")}</th>
                   <th className="py-2 pr-4 font-medium">{t("action")}</th>
                 </tr>
               </thead>
@@ -1095,7 +1120,7 @@ function CriticalControlsTable({
                           </div>
                         ) : null}
                       </td>
-                      <td className="py-2 pr-4">
+                      <td className="py-2 pr-4 text-center">
                         <span
                           className={cn(
                             "inline-flex rounded-full border px-2 py-0.5 text-xs",
@@ -1111,7 +1136,7 @@ function CriticalControlsTable({
                         historically (a live current-policy probe) keeps an honest
                         tooltip instead of a second visible badge. */}
                       <td
-                        className="py-2 pr-4 whitespace-nowrap tabular-nums"
+                        className="py-2 pr-4 text-center whitespace-nowrap tabular-nums"
                         title={
                           historyMode && !c.noData && !c.asOfCapable ? tt("liveTooltip") : undefined
                         }
@@ -1128,10 +1153,10 @@ function CriticalControlsTable({
                           </div>
                         ) : null}
                       </td>
-                      <td className="py-2 pr-4 whitespace-nowrap text-[var(--muted-foreground)]">
+                      <td className="py-2 pr-4 text-center whitespace-nowrap text-[var(--muted-foreground)]">
                         {c.target}
                       </td>
-                      <td className="w-28 py-2 pr-4">
+                      <td className="w-28 py-2 pr-4 text-center">
                         {/* Permanent axis on every row → constant cell height. Three distinct
                           states, and they are three different things to tell the operator: a
                           drawable curve; a control the window CANNOT reach, which says which

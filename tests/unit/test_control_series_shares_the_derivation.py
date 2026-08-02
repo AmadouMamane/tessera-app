@@ -16,6 +16,7 @@ a flat one.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -278,6 +279,57 @@ def test_no_window_is_sliced_into_a_duration_nobody_reads_an_axis_in(period_days
     count = buckets_for_window(period_days)
     assert 12 <= count <= MAX_BUCKETS, f"{period_days} d → {count} buckets"
     assert period_days * 24 / count in _ROUND_HOURS
+
+
+@pytest.mark.asyncio
+async def test_one_hanging_source_does_not_take_the_whole_report_with_it() -> None:
+    """A source that never answers is omitted, and the other twelve keep their curves.
+
+    Found live on 2026-08-02: `/observability/control-series` stopped answering AT ALL — 60 s,
+    no response, at every bucket count including one. The culprit was `contradiction`, which
+    embeds every captured turn through the local model; `bge-m3` had been evicted from Ollama
+    and a single embed took 8.8 s. The handlers have no deadline of their own, so a cold model
+    did not slow the report down, it stopped it — and the cockpit rendered "pas encore
+    d'historique" on every row, which reads as an empty window rather than as a sleeping
+    dependency.
+
+    The bound is asserted with a source that hangs FOREVER, so the test cannot pass by being
+    fast: without a deadline it does not finish.
+    """
+    hung = asyncio.Event()  # never set — the source waits on it for as long as it is allowed
+
+    async def _never(**_: object) -> dict[str, object]:
+        await hung.wait()
+        return {}
+
+    patched = tuple(
+        control_series.SeriesSource(s.key, _never if s.key == "toxicity" else s.handler, s.reason)
+        for s in control_series._ensure_sources()
+    )
+    with (
+        mock.patch.object(control_series, "SERIES_SOURCES", patched),
+        mock.patch.object(control_series, "SOURCE_TIMEOUT_S", 0.05),
+    ):
+        report = await asyncio.wait_for(
+            compute_control_series(Scope(period_days=7), n_buckets=2), timeout=10
+        )
+
+    assert report.n_buckets == 2
+    for bucket in report.buckets:
+        assert "toxicity" not in bucket.payload, "a source that never answered was reported"
+        assert "slo" in bucket.payload, "one hanging source took a healthy one down with it"
+
+    # …and the deadline is what did it. With one long enough, the same fixture reproduces the
+    # live failure exactly: no report at all. A guard nobody has seen refuse is a guard nobody
+    # knows works.
+    with (
+        mock.patch.object(control_series, "SERIES_SOURCES", patched),
+        mock.patch.object(control_series, "SOURCE_TIMEOUT_S", 30.0),
+        pytest.raises(TimeoutError),
+    ):
+        await asyncio.wait_for(
+            compute_control_series(Scope(period_days=7), n_buckets=2), timeout=0.3
+        )
 
 
 def test_a_window_no_round_unit_divides_still_answers_within_bounds() -> None:

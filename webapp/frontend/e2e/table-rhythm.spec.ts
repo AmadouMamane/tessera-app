@@ -110,14 +110,15 @@ async function measureTables(page: Page): Promise<CellBox[][]> {
       .map((table) => {
         const head = table.querySelector("thead tr");
         if (!head) return [];
-        // The per-agent breakdown is measured by the ink-to-INK rule at the bottom of this
-        // file, and this measure would say nothing true about it. A gutter here is ink to the
-        // next column's BOX — the trailing padding — which is one constant for right-aligned
-        // content and half the leftover for CENTRED content. The breakdown centres its value
-        // columns precisely so the space a reader sees is split on both sides, so this rule
-        // would report a spread that IS the design. Superseded, not dropped: what replaces it
-        // is two-sided and stricter.
-        if (table.hasAttribute("data-breakdown")) return [];
+        // Tables measured by the ink-to-INK rule at the bottom of this file, which this
+        // measure would say nothing true about. A gutter here is ink to the next column's BOX
+        // — the trailing padding — which is one constant for right-aligned content and half
+        // the leftover for CENTRED content. Both of those tables centre their value columns
+        // precisely so the space a reader sees is split on both sides, so this rule reports a
+        // spread that IS the design. Superseded, not dropped: what replaces it is two-sided,
+        // stricter, and applied to the same tables by name — an exclusion here costs coverage
+        // only if nothing else looks, and something else does.
+        if (table.hasAttribute("data-breakdown") || table.hasAttribute("data-rhythm")) return [];
         const rows = [head, ...Array.from(table.querySelectorAll("tbody tr"))];
         return Array.from(head.children).map((headCell, column) => {
           const box = headCell.getBoundingClientRect();
@@ -478,101 +479,148 @@ const GAP_CEILING = 1.6;
  * leading air: its gap is the LARGEST, never the smallest. Excluding it protects nothing —
  * the rule is a floor — it only keeps the median honest on a four-column lens.
  */
+/**
+ * The tables this rule measures, each by a handle it carries in the DOM.
+ *
+ * «Contrôles critiques» joined on 2026-08-02, and it is NOT the breakdown's shape: seven columns
+ * of real content in a 1020 px card, auto layout, one column holding a stretching SVG. The
+ * playbook's §4 excludes that from `table-fixed` — swept on the live page, every fixed-share
+ * candidate overlapped inks (−29, −49, −70 px at 1672; −139 at 1280). What transfers is the
+ * alignment rule and the refusal of a single slack column, and the SAME bars apply: it ran
+ * 4.06 x the median before (a 69 px gap before «Action», against a 17 px median, because
+ * `w-full` handed «Impact» the whole leftover and a left-aligned column's trailing air IS the
+ * next gap) and 1.20 after.
+ */
+const RHYTHM_SUBJECTS = [
+  {
+    label: "the breakdown",
+    selector: 'table[data-breakdown="agent"]',
+    pages: WIDE_TABLE_PAGES,
+    awaits: undefined,
+  },
+  {
+    label: "«Contrôles critiques»",
+    selector: 'table[data-rhythm="critical-controls"]',
+    pages: ["/fr/surveiller/vue-ensemble"],
+    // The read whose answer this table's LAST ink depends on. `settle()` is not enough here
+    // and the failure is instructive: the trend column renders a text label until the series
+    // lands, then a sparkline that fills the cell — 57 px of ink becoming 96. The page holds
+    // the first state, perfectly still, for seconds, so "two identical consecutive reads"
+    // returns true on the LOADING layout and every number after it is that layout's. Measured:
+    // gaps [26,25,16,36,36,30] at 3 s and 7 s, [26,25,16,16,16,30] at 15 s. Stillness is not
+    // arrival; wait for the thing itself.
+    awaits: "/control-series",
+  },
+] as const;
+
 for (const width of [1672, 1280]) {
-  test(`the breakdown's column spacing has no collapsed space at ${width} px`, async ({ page }) => {
-    await login(page);
-    await page.setViewportSize({ width, height: 1000 });
-    for (const path of WIDE_TABLE_PAGES) {
-      await page.goto(path);
-      await page.waitForSelector('table[data-breakdown="agent"]', { timeout: 30_000 });
-      await settle(page);
+  for (const subject of RHYTHM_SUBJECTS) {
+    test(`${subject.label}'s column spacing has no collapsed space at ${width} px`, async ({
+      page,
+    }) => {
+      await login(page);
+      await page.setViewportSize({ width, height: 1000 });
+      for (const path of subject.pages) {
+        // Registered BEFORE the navigation: the query fires after hydration, so a wait armed
+        // afterwards would race the very response it is waiting for.
+        const arrived = subject.awaits
+          ? page.waitForResponse((r) => r.url().includes(subject.awaits), { timeout: 30_000 })
+          : null;
+        await page.goto(path);
+        await page.waitForSelector(subject.selector, { timeout: 30_000 });
+        await arrived;
+        await settle(page);
 
-      const gaps = await page.evaluate(() => {
-        /** Where a cell's ink actually starts and ends — text rects, not the padded box. */
-        const span = (cell: Element): { lo: number; hi: number } | null => {
-          let lo = Number.POSITIVE_INFINITY;
-          let hi = Number.NEGATIVE_INFINITY;
-          const walk = (node: Node): void => {
-            for (const child of Array.from(node.childNodes)) {
-              if (child.nodeType === Node.TEXT_NODE && (child.textContent ?? "").trim()) {
-                const range = document.createRange();
-                range.selectNodeContents(child);
-                for (const rect of Array.from(range.getClientRects())) {
-                  if (rect.width > 0) {
-                    lo = Math.min(lo, rect.left);
-                    hi = Math.max(hi, rect.right);
+        const gaps = await page.evaluate((selector: string) => {
+          /** Where a cell's ink actually starts and ends — text rects, not the padded box. */
+          const span = (cell: Element): { lo: number; hi: number } | null => {
+            let lo = Number.POSITIVE_INFINITY;
+            let hi = Number.NEGATIVE_INFINITY;
+            const walk = (node: Node): void => {
+              for (const child of Array.from(node.childNodes)) {
+                if (child.nodeType === Node.TEXT_NODE && (child.textContent ?? "").trim()) {
+                  const range = document.createRange();
+                  range.selectNodeContents(child);
+                  for (const rect of Array.from(range.getClientRects())) {
+                    if (rect.width > 0) {
+                      lo = Math.min(lo, rect.left);
+                      hi = Math.max(hi, rect.right);
+                    }
                   }
-                }
-              } else if (child.nodeType === Node.ELEMENT_NODE) walk(child);
-            }
+                } else if (child.nodeType === Node.ELEMENT_NODE) walk(child);
+              }
+            };
+            walk(cell);
+            return lo === Number.POSITIVE_INFINITY ? null : { lo, hi };
           };
-          walk(cell);
-          return lo === Number.POSITIVE_INFINITY ? null : { lo, hi };
-        };
 
-        const table = document.querySelector('table[data-breakdown="agent"]');
-        const head = table?.querySelector("thead tr");
-        if (!head) return null;
-        const columns = head.children.length;
-        const rows = [head, ...Array.from(table?.querySelectorAll("tbody tr") ?? [])].filter(
-          (row) => row.children.length === columns,
-        );
+          const table = document.querySelector(selector);
+          const head = table?.querySelector("thead tr");
+          if (!head) return null;
+          const columns = head.children.length;
+          const rows = [head, ...Array.from(table?.querySelectorAll("tbody tr") ?? [])].filter(
+            (row) => row.children.length === columns,
+          );
 
-        // A COLUMN's ink is the union over every row: the leftmost start and the rightmost end.
-        // Taking one row would measure whichever row happened to hold the shortest value.
-        const extents: { lo: number; hi: number; label: string }[] = [];
-        for (let i = 0; i < columns; i += 1) {
-          let lo = Number.POSITIVE_INFINITY;
-          let hi = Number.NEGATIVE_INFINITY;
-          for (const row of rows) {
-            const cell = row.children[i];
-            const s = cell ? span(cell) : null;
-            if (!s) continue;
-            lo = Math.min(lo, s.lo);
-            hi = Math.max(hi, s.hi);
+          // A COLUMN's ink is the union over every row: the leftmost start and the rightmost end.
+          // Taking one row would measure whichever row happened to hold the shortest value.
+          const extents: { lo: number; hi: number; label: string }[] = [];
+          for (let i = 0; i < columns; i += 1) {
+            let lo = Number.POSITIVE_INFINITY;
+            let hi = Number.NEGATIVE_INFINITY;
+            for (const row of rows) {
+              const cell = row.children[i];
+              const s = cell ? span(cell) : null;
+              if (!s) continue;
+              lo = Math.min(lo, s.lo);
+              hi = Math.max(hi, s.hi);
+            }
+            if (lo === Number.POSITIVE_INFINITY) return null;
+            const label = (head.children[i]?.textContent ?? "").trim().slice(0, 16);
+            extents.push({ lo, hi, label });
           }
-          if (lo === Number.POSITIVE_INFINITY) return null;
-          const label = (head.children[i]?.textContent ?? "").trim().slice(0, 16);
-          extents.push({ lo, hi, label });
-        }
 
-        const pairs: { after: string; before: string; gap: number }[] = [];
-        for (let i = 1; i < extents.length; i += 1) {
-          const left = extents[i - 1];
-          const right = extents[i];
-          if (!left || !right) continue;
-          pairs.push({
-            after: left.label,
-            before: right.label,
-            gap: Math.round(right.lo - left.hi),
-          });
-        }
-        return pairs;
-      });
+          const pairs: { after: string; before: string; gap: number }[] = [];
+          for (let i = 1; i < extents.length; i += 1) {
+            const left = extents[i - 1];
+            const right = extents[i];
+            if (!left || !right) continue;
+            pairs.push({
+              after: left.label,
+              before: right.label,
+              gap: Math.round(right.lo - left.hi),
+            });
+          }
+          return pairs;
+        }, subject.selector);
 
-      expect(gaps, `no breakdown table measured on ${path} — the probe went blind`).not.toBeNull();
-      const rhythm = gaps as { after: string; before: string; gap: number }[];
-      expect(rhythm.length, `${path}: too few columns to have a rhythm`).toBeGreaterThan(2);
-
-      // Every gap, the identity column's included. An earlier version exempted it as
-      // "structurally the largest" — and it was, at 1.9x the median, which is exactly what the
-      // operator reported next. An exemption is a place a defect can live.
-      const sorted = [...rhythm].sort((a, b) => a.gap - b.gap);
-      const tightest = sorted[0];
-      const widest = sorted[sorted.length - 1];
-      const middle = sorted[Math.floor(sorted.length / 2)];
-      if (!tightest || !widest || !middle) throw new Error(`${path}: no rhythm to measure`);
-      const detail = JSON.stringify(rhythm.map((g) => g.gap));
-      expect(
-        tightest.gap / middle.gap,
-        `${path} at ${width} px: only ${tightest.gap} px between «${tightest.after}» and «${tightest.before}» where the median is ${middle.gap} px — ${detail}`,
-      ).toBeGreaterThanOrEqual(width >= 1536 ? GAP_FLOOR.wide : GAP_FLOOR.laptop);
-      if (width >= 1536) {
         expect(
-          widest.gap / middle.gap,
-          `${path} at ${width} px: ${widest.gap} px between «${widest.after}» and «${widest.before}» where the median is ${middle.gap} px — ${detail}`,
-        ).toBeLessThanOrEqual(GAP_CEILING);
+          gaps,
+          `no ${subject.label} table measured on ${path} — the probe went blind`,
+        ).not.toBeNull();
+        const rhythm = gaps as { after: string; before: string; gap: number }[];
+        expect(rhythm.length, `${path}: too few columns to have a rhythm`).toBeGreaterThan(2);
+
+        // Every gap, the identity column's included. An earlier version exempted it as
+        // "structurally the largest" — and it was, at 1.9x the median, which is exactly what the
+        // operator reported next. An exemption is a place a defect can live.
+        const sorted = [...rhythm].sort((a, b) => a.gap - b.gap);
+        const tightest = sorted[0];
+        const widest = sorted[sorted.length - 1];
+        const middle = sorted[Math.floor(sorted.length / 2)];
+        if (!tightest || !widest || !middle) throw new Error(`${path}: no rhythm to measure`);
+        const detail = JSON.stringify(rhythm.map((g) => g.gap));
+        expect(
+          tightest.gap / middle.gap,
+          `${path} at ${width} px: only ${tightest.gap} px between «${tightest.after}» and «${tightest.before}» where the median is ${middle.gap} px — ${detail}`,
+        ).toBeGreaterThanOrEqual(width >= 1536 ? GAP_FLOOR.wide : GAP_FLOOR.laptop);
+        if (width >= 1536) {
+          expect(
+            widest.gap / middle.gap,
+            `${path} at ${width} px: ${widest.gap} px between «${widest.after}» and «${widest.before}» where the median is ${middle.gap} px — ${detail}`,
+          ).toBeLessThanOrEqual(GAP_CEILING);
+        }
       }
-    }
-  });
+    });
+  }
 }

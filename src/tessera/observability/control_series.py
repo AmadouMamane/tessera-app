@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from tessera.observability.logging import get_logger
 from tessera.observability.spine.scope import Scope
 
 if TYPE_CHECKING:
@@ -47,6 +48,7 @@ __all__ = [
     "DEFAULT_BUCKETS",
     "MAX_BUCKETS",
     "SERIES_SOURCES",
+    "SOURCE_TIMEOUT_S",
     "SeriesBucket",
     "SeriesReport",
     "buckets_for_window",
@@ -62,6 +64,25 @@ DEFAULT_BUCKETS = 8
 #: A caller may ask for fewer or more, bounded: each bucket is a full re-read of the window's
 #: stores, so an unbounded ``?buckets=`` is an unbounded read.
 MAX_BUCKETS = 32
+
+#: How long ONE source gets, per bucket.
+#:
+#: A source is computed by calling the same route handler the page calls, and those handlers
+#: have no deadline of their own. One of them — ``contradiction`` — embeds every captured turn
+#: through the local model, which answers in milliseconds warm and took **8.8 s for a single
+#: input** once the model had been evicted (measured 2026-08-02, ``bge-m3`` under Ollama). All
+#: thirteen are gathered, so a cold model does not slow this report down: it stops it. The
+#: request never resolves, and every curve on the page falls back to "no history yet" — the
+#: cockpit reporting an empty window because a model was asleep.
+#:
+#: A source that runs out of time is OMITTED, exactly like one that raises. That is not a new
+#: behaviour, it is the existing one: a missing payload is already a hole in that control's
+#: line rather than a zero, so the other twelve controls keep their curves. Fifteen seconds is
+#: ~6x the slowest FULL report measured warm (2.3 s for thirty buckets), so it cannot cut a
+#: healthy read short.
+SOURCE_TIMEOUT_S = 15.0
+
+_LOG = get_logger("tessera.observability.control_series")
 
 #: Round clock units a bucket may be, in hours. A bucket of 90 h spans "three days and
 #: eighteen hours", which is not a duration anyone reads an axis in.
@@ -336,7 +357,20 @@ async def compute_control_series(
                     agent=scope.agent_id or "all",
                     days=str(width_days),
                 )
-                return source.key, await _call(source.handler, **kwargs)
+                call = _call(source.handler, **kwargs)
+                return source.key, await asyncio.wait_for(call, SOURCE_TIMEOUT_S)
+            except TimeoutError:
+                # Omitted like a failure, but SAID: this one is a slow dependency rather than a
+                # broken one, and it is the difference between "this control has no curve" and
+                # "something upstream is asleep". Silence here is how a cold model reads as an
+                # empty window (:data:`SOURCE_TIMEOUT_S`).
+                _LOG.warning(
+                    "control_series.source_timeout",
+                    source=source.key,
+                    bucket=index,
+                    seconds=SOURCE_TIMEOUT_S,
+                )
+                return source.key, None
             except Exception:  # a source that fails is OMITTED, never zero-filled
                 return source.key, None
 
