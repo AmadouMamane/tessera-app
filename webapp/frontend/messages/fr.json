@@ -676,11 +676,13 @@
       "not-measured": "non mesuré",
       "sliceDays": "{n, plural, one {1 jour} other {# jours}}",
       "sliceHours": "{n} h",
+      "too-slow": "trop lente",
       "tooShort": "pas encore d'historique",
       "why": {
         "fixed-corpus": "Sonde à corpus fixe : rejouée sur une fenêtre plus étroite, elle rend le même nombre. Une courbe plate ici décrirait une mesure unique répétée, pas une stabilité.",
         "no-timestamp": "Statistique calculée sur l'échantillon entier (regroupement, accord inter-juges) : une tranche de son entrée n'en est pas une version réduite, mais une autre mesure, plus bruitée.",
         "not-measured": "Aucune source déclarée pour ce contrôle sur l'axe temporel.",
+        "too-slow": "La source de ce contrôle a été interrogée et n'a pas répondu dans le délai imparti — le plus souvent un modèle local évincé de la mémoire, dont le rechargement coûte plus que la lecture. Les autres contrôles gardent leur courbe ; celui-ci n'a rien à tracer pour cette fenêtre.",
         "tooShort": "{n, plural, =0 {Aucune des {total} tranches de cette fenêtre ne porte de mesure} =1 {Une seule des {total} tranches de cette fenêtre porte une mesure} other {{n} tranches sur {total} portent une mesure}} — chacune couvre {width}. Il en faut deux pour tracer une évolution : une ligne tracée sur un point unique prétendrait que la valeur a tenu toute la fenêtre."
       }
     }

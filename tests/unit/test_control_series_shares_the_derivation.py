@@ -31,6 +31,7 @@ from tessera.observability.control_series import (
     MAX_BUCKETS,
     REASON_FIXED_CORPUS,
     REASON_NO_TIMESTAMP,
+    REASON_TOO_SLOW,
     buckets_for_window,
     compute_control_series,
 )
@@ -318,6 +319,14 @@ async def test_one_hanging_source_does_not_take_the_whole_report_with_it() -> No
     for bucket in report.buckets:
         assert "toxicity" not in bucket.payload, "a source that never answered was reported"
         assert "slo" in bucket.payload, "one hanging source took a healthy one down with it"
+
+    # And the cell says WHY. Omitting it silently is how a sleeping dependency reads as an
+    # empty window — the state the live cockpit was in, with nothing on screen to distinguish
+    # "this control has no curve" from "something upstream did not answer".
+    assert report.unwindowed["toxicity"] == REASON_TOO_SLOW
+    # The three declared reasons are untouched: this one is about the RUN, they are about the
+    # metric, and collapsing them would undo the distinction they exist for.
+    assert report.unwindowed["refusal"] == REASON_FIXED_CORPUS
 
     # …and the deadline is what did it. With one long enough, the same fixture reproduces the
     # live failure exactly: no report at all. A guard nobody has seen refuse is a guard nobody

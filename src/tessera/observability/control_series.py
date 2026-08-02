@@ -47,6 +47,7 @@ if TYPE_CHECKING:
 __all__ = [
     "DEFAULT_BUCKETS",
     "MAX_BUCKETS",
+    "REASON_TOO_SLOW",
     "SERIES_SOURCES",
     "SOURCE_TIMEOUT_S",
     "SeriesBucket",
@@ -203,6 +204,11 @@ class SeriesReport:
 REASON_FIXED_CORPUS = "fixed-corpus"
 REASON_NO_TIMESTAMP = "no-timestamp"
 REASON_NOT_MEASURED = "not-measured"
+#: The fourth, and the only one that is about THIS RUN rather than about the metric: the source
+#: was asked and did not answer in time (:data:`SOURCE_TIMEOUT_S`). It says so instead of the
+#: control simply having no line, because those are different facts and only one of them is
+#: worth waking somebody for. Unlike its three siblings it is computed per request.
+REASON_TOO_SLOW = "too-slow"
 
 
 @dataclass(frozen=True, slots=True)
@@ -360,10 +366,11 @@ async def compute_control_series(
                 call = _call(source.handler, **kwargs)
                 return source.key, await asyncio.wait_for(call, SOURCE_TIMEOUT_S)
             except TimeoutError:
-                # Omitted like a failure, but SAID: this one is a slow dependency rather than a
-                # broken one, and it is the difference between "this control has no curve" and
-                # "something upstream is asleep". Silence here is how a cold model reads as an
-                # empty window (:data:`SOURCE_TIMEOUT_S`).
+                # Omitted like a failure, but SAID — twice. In the log, for whoever is on call;
+                # and in the report's `unwindowed`, so the cell carries a reason instead of an
+                # empty chart. "This control has no curve" and "something upstream is asleep"
+                # are different facts, and only one of them is worth waking somebody for.
+                timed_out.add(source.key)
                 _LOG.warning(
                     "control_series.source_timeout",
                     source=source.key,
@@ -382,14 +389,22 @@ async def compute_control_series(
             payload={key: value for key, value in settled if value is not None},
         )
 
+    #: Sources this run asked for and did not get in time. Written by `_one`, read after the
+    #: gather — a set because the same source may time out in several buckets and the operator
+    #: is owed one sentence, not one per slice.
+    timed_out: set[str] = set()
     buckets = await asyncio.gather(*(_bucket(i) for i in range(count)))
+    # A source that answered SOMEWHERE keeps its curve: the points it did return are real, and
+    # `readControlSeries` already draws the missing slice as a hole rather than a zero. Only a
+    # source that answered nowhere has nothing to show, and that is what earns the reason.
+    answered = {key for bucket in buckets for key in bucket.payload}
     return SeriesReport(
         days=scope.period_days,
         n_buckets=count,
         since=since.isoformat(),
         until=until.isoformat(),
         buckets=list(buckets),
-        unwindowed=unwindowed,
+        unwindowed=unwindowed | {key: REASON_TOO_SLOW for key in timed_out - answered},
     )
 
 

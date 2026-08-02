@@ -89,7 +89,11 @@ describe("every reason a control has no curve reaches the screen", () => {
   // rendered the literal path `overview.noCurve.fixed-corpus.why` as the tooltip. Measured on
   // the deployed build on 2026-08-02, in both tables, since the day they were written. Nothing
   // fails when a message is missing — it prints its own name, which looks like a tooltip.
-  it.each(["fixed-corpus", "no-timestamp", "not-measured"])(
+  // `too-slow` joined on 2026-08-02 and is the only one computed per REQUEST: the source was
+  // asked and did not answer inside its deadline. It reaches the screen through exactly the
+  // same `unwindowed` path as the three declared ones, which is why adding it cost two
+  // catalogue keys and no new rendering.
+  it.each(["fixed-corpus", "no-timestamp", "not-measured", "too-slow"])(
     "resolves why.%s through next-intl rather than to its own key",
     (reason) => {
       for (const locale of ["fr", "de", "en"] as const) {
