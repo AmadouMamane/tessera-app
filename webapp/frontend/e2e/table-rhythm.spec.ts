@@ -25,6 +25,9 @@ import { type Page, expect, test } from "@playwright/test";
  *
  * Run it against a BUILT server (see playwright.config.ts): `next dev` recompiles routes on
  * demand and the first paint of a page can be measured mid-layout.
+ *
+ * The layout these rules hold, and the bar behind each of them, is written up once in
+ * `docs/table-rhythm-playbook.md`.
  */
 
 test.use({ viewport: { width: 1672, height: 1000 } });

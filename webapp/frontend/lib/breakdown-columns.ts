@@ -29,6 +29,10 @@
  *
  * Held by `e2e/table-rhythm.spec.ts`, which measures the rendered geometry. A class scan
  * cannot see any of this: what reaches the screen is the resolved cascade over real content.
+ *
+ * **Laying out another wide table? Read `docs/table-rhythm-playbook.md` first.** It is this
+ * layout as a reusable contract, with the bars to check it against and the traps that cost a
+ * build each — including the two that no tool reports.
  */
 
 /** `table-layout: fixed` — without it the widths below are suggestions, not columns. */
