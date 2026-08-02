@@ -41,11 +41,55 @@ async function login(page: Page): Promise<void> {
 }
 
 /**
+ * Count the page's in-flight `/api/` reads. Attach BEFORE navigating.
+ *
+ * `settle()` below waits for stillness, and stillness is not arrival — that distinction cost
+ * this file a wrong verdict. «Contrôles critiques» renders as soon as the first read lands and
+ * then keeps changing shape as the others do: rows appear (a control with no sample is hidden
+ * at live), the trend column swaps a text label for a sparkline that fills its cell, 57 px of
+ * ink becoming 96. The page holds each of those states, perfectly still, for seconds, so "two
+ * identical consecutive reads" returns true on a LOADING layout. Measured on one page:
+ * [56,25,16,36,36,30] early, [26,25,16,36,36,30] at 3-7 s, [26,25,16,16,16,30] once every read
+ * had answered — three different tables, one of which this file would have called the design.
+ *
+ * "Every read the page issued has answered" is the honest condition, and unlike `networkidle`
+ * it survives a cockpit that polls: between polls the count really does reach zero.
+ */
+function readsInFlight(page: Page): () => number {
+  let pending = 0;
+  const isRead = (url: string): boolean => url.includes("/api/");
+  page.on("request", (r) => {
+    if (isRead(r.url())) pending += 1;
+  });
+  page.on("requestfinished", (r) => {
+    if (isRead(r.url())) pending -= 1;
+  });
+  page.on("requestfailed", (r) => {
+    if (isRead(r.url())) pending -= 1;
+  });
+  return () => pending;
+}
+
+/** Wait until nothing the page asked for is still outstanding, then until it stops moving. */
+async function quiesce(page: Page, pending: () => number): Promise<void> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    if (pending() <= 0) {
+      // One more beat: a query that resolves can immediately fire the next.
+      await page.waitForTimeout(300);
+      if (pending() <= 0) break;
+    }
+    await page.waitForTimeout(500);
+  }
+  await settle(page);
+}
+
+/**
  * Wait until the header geometry stops changing.
  *
  * A table can exist and still be resizing: data arrives, a column's longest cell grows, the
  * auto layout redistributes. Measuring in that moment produces numbers that are real and
- * meaningless. Two identical consecutive reads is the cheapest honest "it has settled".
+ * meaningless. Two identical consecutive reads is the cheapest honest "it has settled" — but
+ * only ONCE the reads have landed, which is what `quiesce()` above is for.
  */
 async function settle(page: Page): Promise<void> {
   // Fonts FIRST: every assertion in this file is a text measurement, and a fallback face has
@@ -198,7 +242,20 @@ const WIDE_TABLE_PAGES = [
   "/fr/prouver/audit-logs",
 ] as const;
 
-for (const path of PAGES) {
+/**
+ * The gutter rule's pages — `PAGES` minus the ones whose only multi-column table is measured
+ * by the stricter ink-to-INK rule at the bottom of this file.
+ *
+ * Vue d'ensemble left this list on 2026-08-02, and it left it rather than being silenced: with
+ * «Contrôles critiques» excluded from `measureTables` (a gutter to the next column's BOX says
+ * nothing true about a centred column), the page has no table for this rule to look at, and
+ * the blind-probe guard below correctly refused to pass. Dropping the ASSERTION would have
+ * been the wrong repair; the page keeps its dead-width coverage in `WIDE_TABLE_PAGES` and its
+ * spacing is now measured harder, not less.
+ */
+const GUTTER_PAGES = PAGES.filter((path) => path !== "/fr/surveiller/vue-ensemble");
+
+for (const path of GUTTER_PAGES) {
   test(`${path} — every table keeps one gutter between its columns`, async ({ page }) => {
     await login(page);
     await page.goto(path);
@@ -518,36 +575,55 @@ for (const width of [1672, 1280]) {
     test(`${subject.label}'s column spacing has no collapsed space at ${width} px`, async ({
       page,
     }) => {
+      // Waiting for every read to answer costs seconds per page, and this subject walks nine.
+      test.setTimeout(180_000);
+      const pending = readsInFlight(page);
       await login(page);
       await page.setViewportSize({ width, height: 1000 });
       for (const path of subject.pages) {
         // Registered BEFORE the navigation: the query fires after hydration, so a wait armed
-        // afterwards would race the very response it is waiting for.
+        // afterwards would race the very response it is waiting for. It is the read whose
+        // answer this table's LAST ink depends on — `quiesce` then waits for the rest.
         const arrived = subject.awaits
-          ? page.waitForResponse((r) => r.url().includes(subject.awaits), { timeout: 30_000 })
+          ? page.waitForResponse((r) => r.url().includes(subject.awaits), { timeout: 60_000 })
           : null;
         await page.goto(path);
         await page.waitForSelector(subject.selector, { timeout: 30_000 });
         await arrived;
-        await settle(page);
+        await quiesce(page, pending);
 
         const gaps = await page.evaluate((selector: string) => {
-          /** Where a cell's ink actually starts and ends — text rects, not the padded box. */
+          /**
+           * Where a cell's ink actually starts and ends — text rects, not the padded box.
+           *
+           * And DRAWN ink, not only text. Every cell of the breakdown holds text, so for a
+           * year this walked text nodes alone and was right. «Contrôles critiques» has a
+           * column whose body holds a sparkline and no text at all: measured that way, the
+           * column's ink was its HEADER, 57 px centred in a 112 px box, and the rule reported
+           * 36 px of empty space on either side of a chart that fills its cell edge to edge.
+           * The numbers were real and described a table nobody is looking at.
+           */
           const span = (cell: Element): { lo: number; hi: number } | null => {
             let lo = Number.POSITIVE_INFINITY;
             let hi = Number.NEGATIVE_INFINITY;
+            const stretch = (rect: DOMRect): void => {
+              if (rect.width <= 0) return;
+              lo = Math.min(lo, rect.left);
+              hi = Math.max(hi, rect.right);
+            };
             const walk = (node: Node): void => {
               for (const child of Array.from(node.childNodes)) {
                 if (child.nodeType === Node.TEXT_NODE && (child.textContent ?? "").trim()) {
                   const range = document.createRange();
                   range.selectNodeContents(child);
-                  for (const rect of Array.from(range.getClientRects())) {
-                    if (rect.width > 0) {
-                      lo = Math.min(lo, rect.left);
-                      hi = Math.max(hi, rect.right);
-                    }
-                  }
-                } else if (child.nodeType === Node.ELEMENT_NODE) walk(child);
+                  for (const rect of Array.from(range.getClientRects())) stretch(rect);
+                } else if (child.nodeType === Node.ELEMENT_NODE) {
+                  const element = child as Element;
+                  // A chart and an icon are ink a reader sees; they have no text to range over.
+                  if (element.tagName.toLowerCase() === "svg") {
+                    stretch(element.getBoundingClientRect());
+                  } else walk(element);
+                }
               }
             };
             walk(cell);
