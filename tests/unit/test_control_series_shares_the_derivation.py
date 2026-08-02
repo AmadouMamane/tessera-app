@@ -253,8 +253,9 @@ def test_each_cockpit_period_is_cut_into_round_clock_units(
 
     Pinned as values rather than derived, because they were CHOSEN by measuring the curves
     they draw (see ``_LADDER``). A formula would be prettier and would have to disagree with
-    one of the three: the finest slicing is right at 30 j and shatters the curve into isolated
-    dots at 24 h.
+    one of the three: the finest slicing is right at 30 j and buys nothing at 24 h and 7 j,
+    where a slice narrower than the gaps between requests puts a hole between every pair of
+    points.
     """
     count = buckets_for_window(period_days)
     assert count == expected_count
@@ -267,8 +268,12 @@ def test_no_window_is_sliced_into_a_duration_nobody_reads_an_axis_in(period_days
 
     This is the bar the flat count of 8 failed, and failed worst exactly where it was reported:
     7 days over 8 buckets is **21 h** a slice — not a unit anyone reads, and wide enough to
-    swallow a whole day's traffic into one point. Twelve is the floor because a curve needs
-    room for a hole and still two points on one side of it.
+    swallow a whole day's traffic into one point.
+
+    Twelve is the floor because that configuration was measured, not because it reads well:
+    replayed at 8 window ends over 3 controls, 8 slices of 21 h drew a 7-day curve in **0 of
+    24** cases and 14 slices of 12 h drew one in 3. A bar this file cannot show failing
+    somewhere would be decoration — this one fails on the count that shipped until today.
     """
     count = buckets_for_window(period_days)
     assert 12 <= count <= MAX_BUCKETS, f"{period_days} d → {count} buckets"

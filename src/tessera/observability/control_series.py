@@ -67,26 +67,35 @@ MAX_BUCKETS = 32
 #: eighteen hours", which is not a duration anyone reads an axis in.
 _ROUND_HOURS: tuple[float, ...] = (1, 2, 3, 6, 12, 24, 48, 72, 168)
 
-#: Bucket WIDTH in hours, per cockpit period — a *chosen* resolution, swept against the live
-#: cockpit on 2026-08-02, not derived from a formula.
+#: Bucket WIDTH in hours, per cockpit period — a *chosen* resolution, measured against the
+#: live cockpit on 2026-08-02, not derived from a formula.
 #:
 #: It has to be chosen, because the right resolution depends on how the traffic is spread and
-#: no rule can know that. The sweep (three candidate widths on each of 24 h / 7 j / 30 j,
-#: counting the segments and lone dots each drew) refuted both tempting rules:
+#: no rule can know that. It also has to be measured over MANY window ends, not one: the first
+#: sweep compared 3 h and 2 h slices at a single instant, called them equal, and an hour later
+#: they had swapped — where the bursts fall against the grid changes hourly, so one instant
+#: decides nothing. Replayed at 6-10 window ends per period, over three controls (the fraction
+#: of cases where a curve was drawable at all, and where part of it was drawn as a LINE rather
+#: than isolated dots):
 #:
-#: ===========  =========================  =========================  ====================
-#: window       finest (1 h / 6 h / 24 h)  coarsest (3 h / 21 h / 90 h)  chosen
-#: ===========  =========================  =========================  ====================
-#: 24 h         3 points, **0 segments**   3 points, 1 segment        2 h → 3 pts, 1 seg
-#: 7 j          2 points, **0 segments**   **1 point, no curve**      12 h → 2 pts, 1 seg
-#: 30 j         8 points, 2 segments       4 points, 1 segment        24 h → 8 pts, 2 seg
-#: ===========  =========================  =========================  ====================
+#: ======  ==========================  ====================  ====================  ==========
+#: window  slices                      drawable              drawn as a line       points
+#: ======  ==========================  ====================  ====================  ==========
+#: 24 h    8x3 h / **12x2 h** / 24x1 h  15 / 16 / 16 of 30    11 / 10 / 10 of 30    56/69/72
+#: 7 j     8x21 h / **14x12 h** / 28x6 h  **0** / 3 / 4 of 24   **0** / 3 / 2 of 24   6/9/11
+#: 30 j    8x90 h / 15x48 h / **30x24 h**  6 / 6 / 6 of 18     6 / 6 / 6 of 18       27/38/55
+#: ======  ==========================  ====================  ====================  ==========
 #:
-#: "Finest that fits" shatters a curve into isolated dots at 24 h and 7 j — a bucket narrower
-#: than the gaps between requests puts a hole between every pair of points — and is the right
-#: answer at 30 j. So the ladder is three measurements, and says so, rather than a formula
-#: whose two ends it would have to contradict. Any other window falls back to
-#: :func:`buckets_for_window`'s general rule.
+#: Which refutes both tempting rules. "Finest that fits" is right at 30 j and buys nothing at
+#: 24 h and 7 j, where a slice narrower than the gaps between requests puts a hole between
+#: every pair of points. And the flat eight this replaced never drew a 7-day curve AT ALL, in
+#: any of 24 replays — the reported defect, and the only row of this table that is not close.
+#: Elsewhere the choice buys resolution rather than connectivity: same lines, ~25-100 % more
+#: measured points.
+#:
+#: What none of them fixes: at 7 j only 3 cases in 24 are drawable even at 12 h. That is the
+#: traffic — two bursts six days apart — and no grid invents a measurement between them.
+#: Any other window falls back to :func:`buckets_for_window`'s general rule.
 _LADDER: dict[float, float] = {1.0: 2.0, 7.0: 12.0, 30.0: 24.0}
 
 #: What the general rule aims for on a window the ladder does not name. Fourteen sits between
