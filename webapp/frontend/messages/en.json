@@ -7672,7 +7672,17 @@
       "product": "Product",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Demonstration visit — in production, everyone enters by their identity."
+    "demoHonesty": "Demonstration visit — in production, everyone enters by their identity.",
+    "footer": {
+      "tagline": "The control plane for AI agents: supervise, secure, evaluate, prove.",
+      "navLabel": "Tessera links",
+      "links": {
+        "understand": "Understand Tessera",
+        "spaces": "Business spaces",
+        "cockpit": "Governance cockpit"
+      },
+      "note": "Demonstration — the corpus, cases and customers are synthetic; no real data appears here. Apache-2.0."
+    }
   },
   "spaces": {
     "filterFavorites": "Favorites",

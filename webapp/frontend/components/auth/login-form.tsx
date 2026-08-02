@@ -132,7 +132,10 @@ export function LoginForm({
         variant="accent"
         size="lg"
         disabled={pending}
-        className="mt-5 h-12 w-full rounded-xl border border-amber-200/40 bg-[linear-gradient(135deg,#f4c76a,#d6b66a)] text-[14px] font-semibold text-[#00101f] shadow-[0_12px_28px_rgba(214,182,106,0.16)] transition-transform hover:-translate-y-px hover:bg-[linear-gradient(135deg,#f8d17f,#dfbf70)]"
+        // Four colour literals used to live on this line, and a literal cannot follow a
+        // theme: under "Clair" the page's single most important action was a yellow slab.
+        // The look now comes from `--launcher-btn-primary*` (dark unchanged, light teal).
+        className="launcher-btn-primary mt-5 h-12 w-full rounded-lg border text-[14px] font-semibold"
       >
         <LogIn className="h-4 w-4" />
         {pending ? t("submitting") : t("submit")}

@@ -239,6 +239,13 @@
   --tessera-tooltip-fg: #ffffff;
   --tessera-tooltip-fg-muted: #dadce0;
   --tessera-tooltip-border: rgba(255, 255, 255, 0.08);
+  --tessera-orb-fill: radial-gradient(
+    circle at 35% 30%,
+    rgba(16, 185, 129, 0.2),
+    rgba(3, 19, 25, 0.96) 68%
+  );
+  --tessera-orb-border: rgba(110, 231, 183, 0.35);
+  --tessera-orb-glow: 0 0 42px rgba(0, 200, 120, 0.12);
   --tessera-green: #00c878;
   --tessera-green-soft: #003f30;
   --tessera-green-muted: #0c261f;
@@ -395,6 +402,9 @@
      the step that clears a graphical object's 3:1 with room (5.48:1). Dark keeps #00c878
      untouched — the cockpit's green is the cockpit's green. */
   --tessera-green: #00794a;
+  --tessera-orb-fill: radial-gradient(circle at 35% 30%, #ffffff, #d8f1e6 72%);
+  --tessera-orb-border: rgba(4, 120, 87, 0.28);
+  --tessera-orb-glow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 20px -8px rgba(4, 120, 87, 0.18);
   /* Light theme: the native tooltip is a light box with dark text. */
   --tessera-tooltip-bg: #f4f4f6;
   --tessera-tooltip-fg: #1f242b;
@@ -507,6 +517,53 @@
   );
   --launcher-btn-ink: #f8fafc;
   --launcher-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 18px rgba(0, 0, 0, 0.18);
+  /* THE /espaces DIRECTORY — its panel and its surface tiles. Both were literals inside
+   * `spaces-directory.tsx`: a card gradient ending in `rgba(2,8,23,0.94)` and two black
+   * shadows (`0 18px 50px rgba(0,0,0,0.36)`, `0 12px 28px rgba(0,0,0,0.34)`). On the dark
+   * themes they are correct and they are kept EXACTLY as they were; under "Clair" they
+   * painted a night-blue smear across the bottom-right of every tile and a grey halo around
+   * the panel — the "ombres dégueulasses" reported on 2026-08-02. Same disease as
+   * `--launcher-card-bg`, same cure: the value moves into the cascade so the theme reaches it. */
+  --launcher-panel-bg: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--panel) 82%, transparent),
+    color-mix(in srgb, var(--panel-soft) 70%, transparent)
+  );
+  --launcher-panel-shadow: 0 18px 50px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --launcher-tile-bg: linear-gradient(
+    160deg,
+    var(--panel) 0%,
+    var(--panel-soft) 60%,
+    rgba(2, 8, 23, 0.94) 100%
+  );
+  --launcher-tile-bg-hover: var(--launcher-tile-bg);
+  --launcher-tile-shadow: 0 0 #0000;
+  --launcher-tile-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.34);
+  /* THE SECONDARY CTA. The launcher's own comment has always said the métier card is
+   * "secondary (outline CTA)" and the code shipped a gold GRADIENT instead — which under
+   * "Clair" resolved to #9a8150 → #63512f, i.e. a muddy brown slab where the page's most
+   * visible action lives. A secondary action is a neutral surface with a hairline; that is
+   * both the documented intent here and what every reference Amadou named actually does. */
+  /* How much hue an icon tile carries. A PERCENTAGE token, because the right amount is not
+   * the same on a night-blue card and on white: 28 % of `--rose` over #ffffff is a candy
+   * pink, and on a control surface that reads as a toy. Dark keeps exactly what it had. */
+  --launcher-icon-wash: 28%;
+  --launcher-icon-wash-soft: 7%;
+  /* THE PRIMARY CTA of the sign-in form. It was a champagne gradient written as four
+   * literals inside `login-form.tsx` — #f4c76a → #d6b66a on #00101f — so "Clair" inherited
+   * a yellow slab where the page's single most important action lives. Dark keeps exactly
+   * what it renders today; only the light theme moves, onto the same teal the cockpit CTA
+   * already uses (white ink measures 5.45:1 on it). */
+  --launcher-btn-primary: linear-gradient(135deg, #f4c76a, #d6b66a);
+  --launcher-btn-primary-hover: linear-gradient(135deg, #f8d17f, #dfbf70);
+  --launcher-btn-primary-ink: #00101f;
+  --launcher-btn-primary-border: rgba(253, 230, 138, 0.4);
+  --launcher-btn-primary-shadow: 0 12px 28px rgba(214, 182, 106, 0.16);
+  --launcher-btn-secondary: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  --launcher-btn-secondary-hover: color-mix(in srgb, var(--text-primary) 14%, transparent);
+  --launcher-btn-secondary-ink: var(--text-primary);
+  --launcher-btn-secondary-border: var(--border-subtle);
+  --launcher-btn-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   /* The sign-in form and the hero illustration. Found only by LOOKING at the light
      page after the token move: the surface flipped and these did not, so the two
      credential fields rendered as night-blue slabs carrying near-black ink — the
@@ -565,10 +622,14 @@
       transparent 34%
     ), radial-gradient(circle at 78% 60%, rgba(16, 185, 129, 0.1), transparent 28%),
     linear-gradient(180deg, #fdfdfd 0%, #fafafa 58%, #f4f4f4 100%);
-  /* 0.12, down from 0.32. The band is night-blue artwork; at a third of its
-     strength it stopped being a dark slab and started being a grey haze across
-     the bottom of a neutral page — which is dirt, not brand. Kept as a whisper. */
-  --launcher-waves-opacity: 0.12;
+  /* ZERO, down from 0.12 — the whisper was still dirt. `tessera-waves-band.png` is an
+     OPAQUE RGB rectangle (1672×372, no alpha): its "background" is navy, so lowering the
+     opacity does not reveal the waves, it composites the whole navy plate onto the page.
+     At 0.12 that is a uniform ~#dedee2 slab, 300 px tall, with a gold and a cyan smudge —
+     which is exactly what "le bas de la page ne ressemble plus à rien" named on 2026-08-02.
+     A decoration that cannot be re-toned does not belong on the pale ground; the bottom of
+     the page is now carried by the launcher FOOTER, which says something true instead. */
+  --launcher-waves-opacity: 0;
   /* Cards become white panels on the pale ground; the CTAs keep their hue but
      land on the 700 step, so their white ink still clears AA. */
   --launcher-card-bg: linear-gradient(
@@ -582,6 +643,29 @@
   --launcher-btn-amber: linear-gradient(180deg, #c2670a 0%, #b45309 55%, #92400e 100%);
   --launcher-btn-ink: #ffffff;
   --launcher-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 18px rgba(15, 23, 42, 0.14);
+  /* The directory under "Clair", arranged the way dash.cloudflare.com arranges the same
+   * thing: a WHITE panel on the tinted page, and inside it tiles that take the PAGE tint
+   * back so the nesting reads without a second shadow. Structure is carried by the line and
+   * by one small elevation on hover — never by a black halo on a pale ground. */
+  --launcher-panel-bg: #ffffff;
+  --launcher-panel-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --launcher-tile-bg: #fafafa;
+  --launcher-tile-bg-hover: #ffffff;
+  --launcher-tile-shadow: 0 0 #0000;
+  --launcher-tile-shadow-hover: 0 4px 14px -3px rgba(15, 23, 42, 0.12), 0 2px 6px -2px
+    rgba(15, 23, 42, 0.07);
+  --launcher-icon-wash: 15%;
+  --launcher-icon-wash-soft: 5%;
+  --launcher-btn-primary: #0f766e;
+  --launcher-btn-primary-hover: #115e59;
+  --launcher-btn-primary-ink: #ffffff;
+  --launcher-btn-primary-border: #0d5f59;
+  --launcher-btn-primary-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --launcher-btn-secondary: #ffffff;
+  --launcher-btn-secondary-hover: #f4f4f4;
+  --launcher-btn-secondary-ink: #0f172a;
+  --launcher-btn-secondary-border: #d0d0d0;
+  --launcher-btn-secondary-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
   --launcher-field-bg: #ffffff;
   --launcher-chip-bg: rgba(255, 255, 255, 0.72);
   /* The hero tiles keep their hue and lose their darkness — the same move the
@@ -591,6 +675,58 @@
   --launcher-tile-green: #ddf1e8;
   --launcher-tile-violet: #e9e8f7;
   --launcher-tile-amber: #f6efdf;
+}
+
+/* The /comprendre hero medallion. It was a night-blue sphere written as a literal radial
+ * gradient in TSX — `rgba(3,19,25,0.96)` at 68 % — carrying `--tessera-fg-success` as its
+ * label. That token flips to #047857 under "Clair", i.e. dark green on near-black: the
+ * wordmark inside the orb measured 1.7:1 and simply could not be read. Dark keeps exactly
+ * what it renders; "Clair" gets a pale mint sphere the same ink reads on (7.9:1). */
+.tessera-orb {
+  background: var(--tessera-orb-fill);
+  border-color: var(--tessera-orb-border);
+  box-shadow: var(--tessera-orb-glow);
+}
+
+/* A tile in the /espaces directory. A CLASS, not an inline style attribute, for two reasons
+ * that both bit before: an inline `style` escapes the cascade (so no theme class can reach
+ * it), and `--launcher-tile-bg` holds a GRADIENT on the dark themes — which `bg-[var(…)]`
+ * cannot carry, since that utility writes `background-color`. One rule holds both states. */
+.launcher-tile {
+  background: var(--launcher-tile-bg);
+  box-shadow: var(--launcher-tile-shadow);
+  transition: background 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.launcher-tile:hover:not([aria-disabled="true"]) {
+  background: var(--launcher-tile-bg-hover);
+  box-shadow: var(--launcher-tile-shadow-hover);
+}
+
+/* The launcher's primary CTA. A class, because the dark value is a GRADIENT: `bg-[var(…)]`
+ * writes `background-color` and would drop it silently. */
+.launcher-btn-primary {
+  background: var(--launcher-btn-primary);
+  border-color: var(--launcher-btn-primary-border);
+  color: var(--launcher-btn-primary-ink);
+  box-shadow: var(--launcher-btn-primary-shadow);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.launcher-btn-primary:hover:not(:disabled) {
+  background: var(--launcher-btn-primary-hover);
+}
+
+/* The launcher's secondary CTA — same reason it is a class and not utilities: the dark
+ * value is a `color-mix()`, which `bg-[var(…)]` can carry but the hover pair reads better
+ * declared once, next to the tokens it consumes. */
+.launcher-btn-secondary {
+  background: var(--launcher-btn-secondary);
+  border-color: var(--launcher-btn-secondary-border);
+  color: var(--launcher-btn-secondary-ink);
+  box-shadow: var(--launcher-btn-secondary-shadow);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.launcher-btn-secondary:hover {
+  background: var(--launcher-btn-secondary-hover);
 }
 
 /* Brand lockup: a light wordmark for the dark themes, a dark wordmark for "Clair".

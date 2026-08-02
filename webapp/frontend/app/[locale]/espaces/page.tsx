@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { LauncherFooter } from "@/components/landing/launcher-footer";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import {
@@ -113,7 +114,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
             legitimately appears for a visitor (the only plan besides /produit). */}
         <AppHeader plan="business" auth="optional" brandHref="/select-space" />
 
-        <main className="flex flex-1 flex-col items-center px-6 pb-24 pt-12">
+        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-10 sm:pt-12">
           <section className="mb-10 flex w-full max-w-[1040px] flex-col items-start gap-[10px]">
             <DemoBadge />
             <h1 className="font-sans text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[var(--text-primary)]">
@@ -133,6 +134,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
             {t("accessLegend")}
           </p>
         </main>
+        <LauncherFooter width="narrow" />
       </div>
     </div>
   );

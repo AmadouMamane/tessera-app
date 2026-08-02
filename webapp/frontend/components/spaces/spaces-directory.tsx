@@ -2,6 +2,7 @@
 
 import {
   Boxes,
+  ChevronDown,
   ChevronRight,
   HandCoins,
   LayoutGrid,
@@ -52,9 +53,6 @@ type FlatSurface = SurfaceView & { audience: Audience };
 const FAV_KEY = "tessera.spaces.favorites";
 const VIEW_KEY = "tessera.spaces.view";
 
-const CARD_BG =
-  "linear-gradient(160deg, var(--panel) 0%, var(--panel-soft) 60%, rgba(2,8,23,0.94) 100%)";
-
 const ACCENT: Record<Audience, { border: string; icon: string; dot: string; iconBg: string }> = {
   external: {
     // Rose (not gold) so the customer-facing surface never reads in the warm
@@ -64,14 +62,14 @@ const ACCENT: Record<Audience, { border: string; icon: string; dot: string; icon
     icon: "text-[var(--rose-strong)]",
     dot: "var(--rose-strong)",
     iconBg:
-      "linear-gradient(150deg, color-mix(in srgb, var(--rose) 28%, transparent), color-mix(in srgb, var(--rose) 7%, transparent))",
+      "linear-gradient(150deg, color-mix(in srgb, var(--rose) var(--launcher-icon-wash), transparent), color-mix(in srgb, var(--rose) var(--launcher-icon-wash-soft), transparent))",
   },
   internal: {
     border: "border-[var(--border-cyan)]",
     icon: "text-[var(--cyan)]",
     dot: "var(--cyan)",
     iconBg:
-      "linear-gradient(150deg, color-mix(in srgb, var(--cyan) 26%, transparent), color-mix(in srgb, var(--cyan) 6%, transparent))",
+      "linear-gradient(150deg, color-mix(in srgb, var(--cyan) var(--launcher-icon-wash), transparent), color-mix(in srgb, var(--cyan) var(--launcher-icon-wash-soft), transparent))",
   },
 };
 
@@ -147,13 +145,15 @@ function SurfaceCard({
     <div
       aria-disabled={locked || undefined}
       className={cn(
-        // pt clears the top-right access chip / fav star; box-shadow (not transform)
-        // on hover so cards don't jitter as they pass under the cursor while scrolling.
-        "group/card relative flex min-h-[200px] flex-col items-center justify-center gap-[14px] overflow-hidden rounded-2xl border px-[18px] pb-[22px] pt-[42px] text-center transition-[border-color,box-shadow]",
+        // Left-aligned and substantial: the tile now carries the surface's own DESCRIPTION,
+        // which the directory already had and only showed in list mode. Two surfaces spread
+        // across four thin centred columns read as an unfinished page; two real cards read
+        // as a directory. Elevation on hover comes from a token (box-shadow, never
+        // transform, so cards don't jitter under a scrolling cursor).
+        "launcher-tile group/card relative flex min-h-[188px] flex-col gap-[12px] overflow-hidden rounded-xl border px-[16px] pt-[16px] pb-[14px]",
         a.border,
-        locked ? "cursor-not-allowed opacity-55" : "hover:shadow-[0_12px_28px_rgba(0,0,0,0.34)]",
+        locked && "cursor-not-allowed opacity-55",
       )}
-      style={{ background: CARD_BG }}
     >
       {/* Stretched action covers the whole card (no nested interactives). Inert
           when the current role can't enter — no link that would bounce away. */}
@@ -161,51 +161,38 @@ function SurfaceCard({
         <Link
           href={surface.href}
           aria-label={actionAria}
-          className={cn("absolute inset-0 rounded-2xl", FOCUS)}
+          className={cn("absolute inset-0 rounded-xl", FOCUS)}
         />
       )}
 
-      {/* Favourite star — sibling above the action, independently clickable. */}
-      <span className="absolute top-[12px] left-[12px] z-[2]">
-        <FavStar
-          on={favorite}
-          onToggle={onToggleFavorite}
-          label={t(favorite ? "unfavorite" : "favorite")}
-        />
-      </span>
-      {/* ACCESS facet (ADR 0013 amended) — gated surfaces advertise "Connexion
-          requise"; open surfaces carry no chip (the "Ouvrir" CTA below says it). */}
-      {surface.authRequired ? (
-        <span
-          className="pointer-events-none absolute top-[12px] right-[12px] z-[2] inline-flex items-center gap-[5px] rounded-full border px-[8px] py-[3px] text-[10px] font-medium"
-          style={{
-            color: "var(--amber-soft)",
-            borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
-            background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
-          }}
-        >
-          <Lock className="h-[10px] w-[10px]" aria-hidden="true" />
-          {t("authRequired")}
-        </span>
-      ) : null}
-
-      {/* Visual content — clicks pass through to the stretched action. */}
-      <span className="pointer-events-none relative flex flex-col items-center gap-[14px]">
+      <div className="pointer-events-none relative flex items-start justify-between gap-[10px]">
         <span
           className={cn(
-            "grid h-[60px] w-[60px] place-items-center rounded-2xl border",
+            "grid h-[44px] w-[44px] place-items-center rounded-xl border",
             a.border,
             a.icon,
           )}
           style={{ background: a.iconBg }}
         >
-          <Icon className="h-[28px] w-[28px]" />
+          <Icon className="h-[21px] w-[21px]" />
         </span>
-        <span className="flex flex-col items-center gap-[8px]">
-          <span className="text-[15px] font-semibold leading-none text-[var(--text-primary)]">
+        {/* Favourite star — sibling above the action, independently clickable. */}
+        <span className="pointer-events-auto z-[2]">
+          <FavStar
+            on={favorite}
+            onToggle={onToggleFavorite}
+            label={t(favorite ? "unfavorite" : "favorite")}
+          />
+        </span>
+      </div>
+
+      {/* Visual content — clicks pass through to the stretched action. */}
+      <div className="pointer-events-none relative flex flex-1 flex-col gap-[6px]">
+        <span className="flex flex-wrap items-center gap-x-[10px] gap-y-[4px]">
+          <span className="text-[15px] font-semibold leading-[1.2] text-[var(--text-primary)]">
             {surface.name}
           </span>
-          <span className="inline-flex items-center gap-[6px] text-[12px] text-[var(--text-secondary)]">
+          <span className="inline-flex items-center gap-[6px] text-[11.5px] text-[var(--text-secondary)]">
             <span
               className="h-[6px] w-[6px] rounded-full"
               style={{ background: a.dot }}
@@ -214,17 +201,41 @@ function SurfaceCard({
             {audienceLabel}
           </span>
         </span>
-      </span>
-      {locked ? (
-        <span className="pointer-events-none absolute inset-x-0 bottom-[12px] flex items-center justify-center gap-[5px] text-[11px] font-medium text-[var(--text-secondary)]">
-          <Lock className="h-[11px] w-[11px]" aria-hidden="true" />
-          {t("roleLocked")}
+        <span className="text-[12.5px] leading-[1.45] text-[var(--text-secondary)]">
+          {surface.desc}
         </span>
-      ) : (
-        <span className="pointer-events-none absolute inset-x-0 bottom-[12px] text-[11px] font-medium text-[var(--text-secondary)] transition-colors group-hover/card:text-[var(--text-primary)]">
-          {actionLabel} →
-        </span>
-      )}
+      </div>
+
+      <div className="pointer-events-none relative flex flex-wrap items-center justify-between gap-[8px]">
+        {/* ACCESS facet (ADR 0013 amended) — gated surfaces advertise "Connexion
+            requise"; open surfaces carry no chip (the "Ouvrir" CTA says it). */}
+        {surface.authRequired ? (
+          <span
+            className="inline-flex items-center gap-[5px] rounded-full border px-[8px] py-[3px] text-[10.5px] font-medium"
+            style={{
+              color: "var(--amber-soft)",
+              borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
+              background: "color-mix(in srgb, var(--amber-soft) 12%, transparent)",
+            }}
+          >
+            <Lock className="h-[10px] w-[10px]" aria-hidden="true" />
+            {t("authRequired")}
+          </span>
+        ) : (
+          <span />
+        )}
+        {locked ? (
+          <span className="inline-flex items-center gap-[5px] text-[11.5px] font-medium text-[var(--text-secondary)]">
+            <Lock className="h-[11px] w-[11px]" aria-hidden="true" />
+            {t("roleLocked")}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-[var(--text-secondary)] transition-colors group-hover/card:text-[var(--text-primary)]">
+            {actionLabel}
+            <ChevronRight className="h-[13px] w-[13px] transition-transform group-hover/card:translate-x-[2px]" />
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -246,7 +257,7 @@ function SurfaceRow({
     <div
       aria-disabled={locked || undefined}
       className={cn(
-        "group/row relative flex w-full items-center gap-[16px] rounded-2xl border bg-[color-mix(in_srgb,var(--bg-panel)_42%,transparent)] px-[18px] py-[14px] text-left transition-[border-color]",
+        "launcher-tile group/row relative flex w-full items-center gap-[16px] rounded-xl border px-[18px] py-[14px] text-left",
         a.border,
         locked && "cursor-not-allowed opacity-55",
       )}
@@ -255,7 +266,7 @@ function SurfaceRow({
         <Link
           href={surface.href}
           aria-label={actionAria}
-          className={cn("absolute inset-0 rounded-2xl", FOCUS)}
+          className={cn("absolute inset-0 rounded-xl", FOCUS)}
         />
       )}
 
@@ -401,11 +412,14 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
 
   return (
     <div
-      className="flex w-full max-w-[1040px] flex-col gap-[18px] rounded-3xl border border-[var(--border-subtle)] p-[22px] backdrop-blur-[3px]"
+      className="flex w-full max-w-[1040px] flex-col gap-[18px] rounded-2xl border border-[var(--border-subtle)] p-[22px] backdrop-blur-[3px]"
       style={{
-        background:
-          "linear-gradient(160deg, color-mix(in srgb, var(--panel) 82%, transparent), color-mix(in srgb, var(--panel-soft) 70%, transparent))",
-        boxShadow: "0 18px 50px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.04)",
+        // Both were literals, and both were black: a 50 px halo at 36 % around the panel and
+        // an inset white glint. On the night-blue themes that is depth; on a #fafafa page it
+        // is a grey bruise. Tokenised, so "Clair" gets the Cloudflare arrangement instead —
+        // a white panel separated by its LINE and a one-pixel lift.
+        background: "var(--launcher-panel-bg)",
+        boxShadow: "var(--launcher-panel-shadow)",
       }}
     >
       {/* Row 1 — search + grid/list toggle. */}
@@ -473,26 +487,39 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
         </div>
         <label className="inline-flex items-center gap-[8px] text-[11px] text-[var(--text-secondary)]">
           {t("sortLabel")}
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as Sort)}
-            className={cn(
-              "h-[34px] rounded-lg border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_55%,transparent)] px-[10px] text-[12px] text-[var(--text-primary)] outline-none",
-              FOCUS,
-            )}
-          >
-            <option value="az">{t("sortAZ")}</option>
-            <option value="za">{t("sortZA")}</option>
-          </select>
+          {/* The native chrome of a <select> is the one control on this page that ignores
+              the design system entirely — a grey OS bevel next to tokenised pills. Stripped
+              with appearance-none and given the same hairline + our own chevron. */}
+          <span className="relative inline-flex items-center">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as Sort)}
+              className={cn(
+                "h-[34px] appearance-none rounded-lg border border-[var(--border-subtle)] bg-[var(--launcher-tile-bg)] pr-[28px] pl-[10px] text-[12px] text-[var(--text-primary)] outline-none transition-colors hover:border-[color-mix(in_srgb,var(--text-primary)_28%,transparent)]",
+                FOCUS,
+              )}
+            >
+              <option value="az">{t("sortAZ")}</option>
+              <option value="za">{t("sortZA")}</option>
+            </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-[9px] h-[13px] w-[13px] text-[var(--text-secondary)]"
+              aria-hidden="true"
+            />
+          </span>
         </label>
       </div>
 
       {shown.length === 0 ? (
-        <p className="rounded-2xl border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-app)_45%,transparent)] px-[18px] py-[24px] text-center text-[13px] text-[var(--text-secondary)]">
+        <p className="launcher-tile rounded-xl border border-[var(--border-subtle)] px-[18px] py-[24px] text-center text-[13px] text-[var(--text-secondary)]">
           {t("noMatch")}
         </p>
       ) : view === "grid" ? (
-        <div className="grid grid-cols-2 gap-[16px] sm:grid-cols-3 lg:grid-cols-4">
+        // Two surfaces stretched over four narrow columns left three quarters of the panel
+        // empty and each tile too thin to say anything. Cards, not thumbnails — and TWO
+        // columns, not three: a third track would put the hole back at 1440. A future third
+        // surface wraps to a second row, which is what a directory is supposed to do.
+        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
           {shown.map((s) => (
             <SurfaceCard
               key={s.key}

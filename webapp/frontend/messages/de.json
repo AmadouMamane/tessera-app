@@ -7672,7 +7672,17 @@
       "product": "Produkt",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Demonstrationsbesuch — in Produktion betritt jeder über seine Identität."
+    "demoHonesty": "Demonstrationsbesuch — in Produktion betritt jeder über seine Identität.",
+    "footer": {
+      "tagline": "Die Kontrollebene für KI-Agenten: überwachen, sichern, bewerten, nachweisen.",
+      "navLabel": "Tessera-Links",
+      "links": {
+        "understand": "Tessera verstehen",
+        "spaces": "Fachbereiche",
+        "cockpit": "Governance-Cockpit"
+      },
+      "note": "Demonstration — Korpus, Vorgänge und Kunden sind synthetisch; es erscheinen keine echten Daten. Apache-2.0."
+    }
   },
   "spaces": {
     "filterFavorites": "Favoriten",

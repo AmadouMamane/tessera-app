@@ -7672,7 +7672,17 @@
       "product": "Produit",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Visite de démonstration — en production, chacun entre par son identité."
+    "demoHonesty": "Visite de démonstration — en production, chacun entre par son identité.",
+    "footer": {
+      "tagline": "Le plan de contrôle des agents IA : superviser, sécuriser, évaluer, prouver.",
+      "navLabel": "Liens Tessera",
+      "links": {
+        "understand": "Comprendre Tessera",
+        "spaces": "Espaces métier",
+        "cockpit": "Cockpit de gouvernance"
+      },
+      "note": "Démonstration — corpus, dossiers et clients sont synthétiques ; aucune donnée réelle n’y figure. Apache-2.0."
+    }
   },
   "spaces": {
     "filterFavorites": "Favoris",

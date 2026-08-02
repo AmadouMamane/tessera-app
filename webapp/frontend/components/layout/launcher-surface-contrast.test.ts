@@ -132,7 +132,20 @@ const PAIRS: ReadonlyArray<{
   { fg: "--indigo", ground: "--panel", min: AA, what: "indigo accent text" },
   { fg: "--violet", ground: "--panel", min: AA, what: "violet accent text" },
   { fg: "--border-subtle", ground: "--bg-app", min: SEPARATOR_FLOOR, what: "the header rule" },
+  // The /espaces tiles, added 2026-08-02 when their surface stopped being a literal.
+  // `flatten()` picks the LAST rgba() it finds in the dark gradient — which happens to be
+  // its darkest stop, i.e. the worst case a reader meets. Stated because it is luck the
+  // helper lands there, not design.
+  { fg: "--text-primary", ground: "--launcher-tile-bg", min: AA, what: "surface tile title" },
+  { fg: "--text-secondary", ground: "--launcher-tile-bg", min: AA, what: "surface tile body" },
 ];
+
+// A DECLARED BLIND SPOT (ADR 0026): `--launcher-panel-bg` is `#ffffff` under "Clair" and a
+// two-stop `color-mix()` gradient on the dark themes. `flatten()` cannot resolve a
+// color-mix, and would silently fall back to the page ground — i.e. it would measure
+// something else and report "ok". So the panel is NOT in the table above. What guards it
+// instead is that its foregrounds all sit on `--panel`, which IS measured, and that the
+// panel and `--panel` are re-toned together in the same block.
 
 /** The pale ground each theme composites a translucent token over. */
 const OPAQUE_GROUND: Record<string, string> = { dark: "#020817", light: "#fafafa" };
@@ -182,13 +195,41 @@ describe("the launcher surface survives both themes", () => {
     expect(failures, failures.join("\n")).toHaveLength(0);
   });
 
-  it("keeps the light waves softened, so the band is not a dark slab on a pale page", () => {
-    // The wave artwork is night-blue. The alert ribbon already made this mistake
-    // once (a dark band on a light cockpit) and it took a design decision, not a
-    // fix, to undo. Here the band is dimmed by token instead.
-    const opacity = Number(LIGHT.get("--launcher-waves-opacity"));
-    expect(opacity).toBeGreaterThan(0);
-    expect(opacity).toBeLessThanOrEqual(0.5);
+  it("withholds the wave band entirely under Clair, because it cannot be softened", () => {
+    // This assertion used to say "dimmed, and greater than zero" — and dimming was the
+    // wrong instrument. `tessera-waves-band.png` is 1672×372 8-bit **RGB**: no alpha. Its
+    // ground is navy, so lowering the opacity does not reveal the waves on the page, it
+    // composites the whole navy plate at that alpha. At 0.12 the result is a uniform
+    // ~#dedee2 slab 300 px tall carrying two coloured smudges — reported on 2026-08-02 as
+    // "le bas de la page ne ressemble plus à rien", which is precisely what it was.
+    //
+    // A decoration that cannot be re-toned does not belong on the pale ground at all. The
+    // bottom of those pages is carried by `LauncherFooter` now. Pinned at exactly 0 so that
+    // re-enabling it is a decision someone has to come here and make.
+    expect(Number(LIGHT.get("--launcher-waves-opacity"))).toBe(0);
     expect(Number(DARK.get("--launcher-waves-opacity"))).toBe(1);
+  });
+
+  it("keeps the /espaces tiles off black shadows under Clair", () => {
+    // The two shadows this page carried were `0 18px 50px rgba(0,0,0,0.36)` (panel) and
+    // `0 12px 28px rgba(0,0,0,0.34)` (tile hover). Both were literals in TSX, and both are
+    // depth on navy and a grey bruise on #fafafa. The rule is not "no shadow" — it is that
+    // a light surface never lifts on pure black at a third of full strength.
+    for (const token of [
+      "--launcher-panel-shadow",
+      "--launcher-tile-shadow",
+      "--launcher-tile-shadow-hover",
+    ]) {
+      const value = LIGHT.get(token);
+      expect(value, `${token} is not declared under Clair`).toBeDefined();
+      for (const [, alpha] of (value ?? "").matchAll(
+        /rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*([\d.]+)/g,
+      )) {
+        expect(
+          Number(alpha),
+          `${token} lifts on pure black at ${alpha} under Clair`,
+        ).toBeLessThanOrEqual(0.08);
+      }
+    }
   });
 });

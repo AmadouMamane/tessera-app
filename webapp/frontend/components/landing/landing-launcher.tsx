@@ -16,6 +16,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { LauncherFooter } from "@/components/landing/launcher-footer";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link } from "@/i18n/navigation";
@@ -146,7 +147,7 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
             no PRODUIT/COCKPIT toggle. The DEMO label describes the environment;
             account access remains available independently. */}
         <AppHeader plan="launcher" auth="optional" />
-        <main className="flex flex-1 flex-col items-center justify-start px-6 pt-[110px] pb-36">
+        <main className="flex flex-1 flex-col items-center justify-start px-6 pt-[56px] pb-20 sm:pt-[80px] lg:pt-[104px]">
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}
@@ -178,6 +179,7 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
               per-agent verdict + eval-gate detail lives one altitude down, on the
               Flotte (/agents) governance facet — not duplicated on the launcher. */}
         </main>
+        <LauncherFooter />
       </div>
     </div>
   );
@@ -384,13 +386,13 @@ export function SignalBand({
           Desktop separators are inset gradient hairlines (fading at both ends) —
           a full-height rule cuts the band into boxes; a faded filet reads as one
           surface. Mobile keeps the plain stacked divide. */}
-      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] sm:flex-row sm:divide-y-0">
+      <div className="flex w-full flex-col divide-y divide-[var(--border-subtle)] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[color-mix(in_srgb,var(--bg-panel)_55%,transparent)] backdrop-blur-[2px] lg:flex-row lg:divide-y-0">
         {pillars.map((pillar, index) => (
           <Fragment key={pillar.key}>
             {index > 0 ? (
               <span
                 aria-hidden="true"
-                className="my-[9px] hidden w-px shrink-0 self-stretch bg-gradient-to-b from-transparent via-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] to-transparent sm:block"
+                className="my-[9px] hidden w-px shrink-0 self-stretch bg-gradient-to-b from-transparent via-[color-mix(in_srgb,var(--text-secondary)_30%,transparent)] to-transparent lg:block"
               />
             ) : null}
             <PillarColumn
@@ -491,7 +493,7 @@ function PlaneHeader({
 // a single pill would be false. Identical chip style on both plane cards.
 function ContainsLine({ items }: { items: { label: string; gated?: boolean }[] }) {
   return (
-    <div className="mt-[18px] mb-[84px] flex flex-wrap gap-[8px] border-t border-[var(--border-subtle)] pt-[14px]">
+    <div className="mt-[18px] mb-[22px] flex flex-wrap gap-[8px] border-t border-[var(--border-subtle)] pt-[14px]">
       {items.map((item) => (
         <span
           key={item.label}
@@ -515,7 +517,7 @@ function BusinessPlaneCard({ t }: { t: T }) {
   return (
     <section
       className={cn(
-        "relative flex h-full flex-col overflow-hidden rounded-lg border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex h-full flex-col overflow-hidden rounded-xl border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
@@ -537,14 +539,16 @@ function BusinessPlaneCard({ t }: { t: T }) {
             { label: t("recouvrement.title"), gated: true },
           ]}
         />
+        {/* SECONDARY, at last. The card comment above has said "outline CTA" since ADR 0013
+            and the code shipped a gold gradient — brown under "Clair". A neutral surface
+            with a hairline is what a second action looks like, and it lets the cockpit CTA
+            beside it actually read as the primary one. */}
         <Link
           href="/espaces"
           className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-xl border text-[14px] font-semibold leading-none tracking-[0.01em]",
-            a.button,
+            "launcher-btn-secondary mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-lg border text-[14px] font-semibold leading-none tracking-[0.01em]",
             FOCUS,
           )}
-          style={a.buttonStyle}
         >
           {t("business.reveal")}
           <ArrowRight className="h-[17px] w-[17px] stroke-[1.8]" />
@@ -561,13 +565,13 @@ function ControlPlaneCard({ t }: { t: T }) {
   return (
     <section
       className={cn(
-        "relative flex h-full flex-col overflow-hidden rounded-lg border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
+        "relative flex h-full flex-col overflow-hidden rounded-xl border px-[28px] pb-[28px] pt-[28px] backdrop-blur-[2px]",
         a.border,
       )}
       style={{ ...a.cardStyle, background: CARD_BG }}
     >
       <CardGlow />
-      <div className="pointer-events-none absolute right-0 top-[20px] scale-[0.82] opacity-[0.2]">
+      <div className="pointer-events-none absolute top-[24px] right-[22px] hidden scale-[0.74] opacity-[0.18] xl:block">
         <CockpitVisual />
       </div>
       <div className="relative flex flex-1 flex-col">
@@ -594,7 +598,7 @@ function ControlPlaneCard({ t }: { t: T }) {
         <Link
           href="/surveiller/vue-ensemble"
           className={cn(
-            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-xl border text-[14px] font-semibold leading-none tracking-[0.01em]",
+            "mt-auto flex h-[46px] items-center justify-center gap-[10px] rounded-lg border text-[14px] font-semibold leading-none tracking-[0.01em]",
             a.button,
             FOCUS,
           )}

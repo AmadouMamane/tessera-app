@@ -196,7 +196,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
                 className="pointer-events-none absolute top-1/2 left-1/2 hidden h-52 w-[21rem] -translate-x-1/2 -translate-y-1/2 rotate-6 rounded-[50%] border border-cyan-300/15 sm:block"
               />
 
-              <div className="relative z-10 mx-auto mb-8 grid size-28 place-items-center rounded-full border border-emerald-300/35 bg-[radial-gradient(circle_at_35%_30%,rgba(16,185,129,0.2),rgba(3,19,25,0.96)_68%)] text-center shadow-[0_0_42px_rgba(0,200,120,0.12)] sm:absolute sm:top-1/2 sm:left-1/2 sm:mb-0 sm:-translate-x-1/2 sm:-translate-y-1/2">
+              <div className="tessera-orb relative z-10 mx-auto mb-8 grid size-28 place-items-center rounded-full border text-center sm:absolute sm:top-1/2 sm:left-1/2 sm:mb-0 sm:-translate-x-1/2 sm:-translate-y-1/2">
                 <div>
                   <Radar className="mx-auto size-5 text-[var(--tessera-fg-success)]" aria-hidden />
                   <p className="mt-2 text-xs font-semibold tracking-[0.14em] text-[var(--tessera-fg-success)] uppercase">
