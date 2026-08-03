@@ -120,6 +120,9 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/observability/catalogue_consumers.py::_passing": "VERDICT",
     "scripts/check_contribution.py::_replay_once": "VERDICT",
     "scripts/check_contribution.py::_replay": "VERDICT",
+    # `dispatch`: it PRINTS the CannotSay and tells its caller to stop. The verdict is the
+    # rendered `CannotSay` — this boolean only says whether one was emitted.
+    "scripts/check_discrimination.py::_refuse_stale_grader": "dispatch",
     # A route-existence LOOKUP inside the orphan-link probe: it answers "is this path in the
     # app tree", which selects what to report. Nothing passes or fails on it.
     "scripts/audit/scan_ui_invariants.py::known": "filter",

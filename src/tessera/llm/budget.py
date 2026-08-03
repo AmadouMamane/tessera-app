@@ -18,15 +18,31 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
+from tessera.fsutil import atomic_write_text
 from tessera.settings import get_settings
+
+_FCNTL: ModuleType | None
+try:  # POSIX only; the fall-back keeps a single-process deployment working unchanged.
+    import fcntl as _fcntl_module
+except ImportError:  # pragma: no cover - no supported deployment lacks fcntl
+    _FCNTL = None
+else:
+    _FCNTL = _fcntl_module
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from types import ModuleType
 
 __all__ = [
     "BudgetSnapshot",
@@ -34,9 +50,20 @@ __all__ = [
     "estimate_turn_cost",
     "get_budget_tracker",
     "model_is_paid",
+    "priced_models",
 ]
 
 _PARIS = ZoneInfo("Europe/Paris")
+
+_WARNED: set[str] = set()
+
+
+def _warn(message: str) -> None:
+    """Report a budget-layer degradation on stderr, once per process and cause."""
+    if message in _WARNED:
+        return
+    _WARNED.add(message)
+    sys.stderr.write(f"tessera.budget: {message}\n")
 
 
 def _today() -> str:
@@ -59,6 +86,10 @@ class BudgetSnapshot:
     day_input_tokens: int = 0
     day_output_tokens: int = 0
     day_cost_eur: Decimal = Decimal("0")
+    #: True when the persisted counters could not be read and this process restarted them at
+    #: zero. A spend breaker reading zero because it lost its file is not the same fact as a
+    #: breaker reading zero because nothing was spent, and the two must not look alike.
+    degraded: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +113,14 @@ _PRICES: dict[tuple[str, str], _Price] = {
     # On-prem inference is treated as zero marginal LLM cost — hardware
     # amortisation lives in the FinOps doc, not in per-call accounting.
     ("ollama", "llama3.3:70b"): _Price(
+        eur_per_million_input=Decimal("0"),
+        eur_per_million_output=Decimal("0"),
+    ),
+    # Declared, not merely absent. It served the whole eval catalogue and every dev turn
+    # while the table had never heard of it, and an unknown model and a free one produced
+    # the identical 0.00 € — so nothing could tell "local inference costs nothing" apart
+    # from "we forgot to write down what this costs" (audit 2026-08-03).
+    ("ollama", "llama3.2:3b"): _Price(
         eur_per_million_input=Decimal("0"),
         eur_per_million_output=Decimal("0"),
     ),
@@ -126,6 +165,19 @@ def estimate_turn_cost(*, model: str, input_tokens: int, output_tokens: int) -> 
     return "ollama", Decimal(0)
 
 
+def priced_models() -> frozenset[str]:
+    """Every model name the price table knows, whatever its price.
+
+    A model can be *servable* and absent from this set, and that combination is the blind
+    spot: :func:`estimate_turn_cost` resolves it to on-prem at zero cost, so it is free to
+    the counter and invisible to the daily ceiling — an org could burn a paid model all day
+    against a breaker that never sees a euro. Zero is the right answer for local inference and
+    the wrong one for a tariff nobody wrote down, and only the table can tell them apart.
+    Frozen by ``tests/unit/test_every_servable_model_is_priced.py``.
+    """
+    return frozenset(model for _backend, model in _PRICES)
+
+
 def model_is_paid(model: str) -> bool:
     """Whether ``model`` carries a nonzero indicative price (ADR 0034).
 
@@ -150,6 +202,7 @@ class BudgetTracker:
 
     def __init__(self, *, persist_path: Path | None = _BUDGET_FILE) -> None:
         self._lock = threading.Lock()
+        self._degraded = False
         self._input_tokens: int = 0
         self._output_tokens: int = 0
         self._cost_eur: Decimal = Decimal("0")
@@ -163,11 +216,19 @@ class BudgetTracker:
         self._load()
 
     def _load(self) -> None:
-        """Restore persisted totals from disk on startup."""
+        """Restore persisted totals from disk on startup (caller holds the file lock)."""
         if self._persist_path is None:
             return
         try:
-            data = json.loads(self._persist_path.read_text())
+            raw = self._persist_path.read_text()
+        except FileNotFoundError:
+            return  # first start — zero is the truth
+        except OSError as exc:
+            _warn(f"budget file unreadable ({exc}); this process starts its counters at zero")
+            self._degraded = True
+            return
+        try:
+            data = json.loads(raw)
             self._input_tokens = int(data.get("input_tokens", 0))
             self._output_tokens = int(data.get("output_tokens", 0))
             self._cost_eur = Decimal(str(data.get("cost_eur", "0")))
@@ -177,30 +238,34 @@ class BudgetTracker:
                 self._day_input_tokens = int(data.get("day_input_tokens", 0))
                 self._day_output_tokens = int(data.get("day_output_tokens", 0))
                 self._day_cost_eur = Decimal(str(data.get("day_cost_eur", "0")))
-        except (FileNotFoundError, KeyError, ValueError, json.JSONDecodeError):
-            pass  # first start or corrupt file — start at zero
+        except (KeyError, ValueError, json.JSONDecodeError) as exc:
+            # A cost breaker that silently resets to zero fails OPEN, which is the one
+            # direction it must never fail in. It cannot refuse every call either — that
+            # would take the agent down over a cache file — so it starts at zero and SAYS SO,
+            # and the snapshot carries `degraded` all the way to the dashboard.
+            _warn(f"budget file is not readable JSON ({exc}); counters restart at zero")
+            self._degraded = True
+
+    def _state(self) -> dict[str, object]:
+        return {
+            "input_tokens": self._input_tokens,
+            "output_tokens": self._output_tokens,
+            "cost_eur": str(self._cost_eur),
+            "day": self._day,
+            "day_input_tokens": self._day_input_tokens,
+            "day_output_tokens": self._day_output_tokens,
+            "day_cost_eur": str(self._day_cost_eur),
+        }
 
     def _persist(self) -> None:
-        """Write current totals to disk (caller holds self._lock)."""
+        """Write current totals to disk (caller holds self._lock and the file lock)."""
         if self._persist_path is None:
             return
-        try:
-            self._persist_path.parent.mkdir(parents=True, exist_ok=True)
-            self._persist_path.write_text(
-                json.dumps(
-                    {
-                        "input_tokens": self._input_tokens,
-                        "output_tokens": self._output_tokens,
-                        "cost_eur": str(self._cost_eur),
-                        "day": self._day,
-                        "day_input_tokens": self._day_input_tokens,
-                        "day_output_tokens": self._day_output_tokens,
-                        "day_cost_eur": str(self._day_cost_eur),
-                    }
-                )
-            )
-        except OSError:
-            pass  # read-only filesystem — degrade gracefully
+        # Atomic: temp file, fsync, os.replace. `write_text` truncates first, so a reader on
+        # another worker could see an empty budget — which reads as "nothing spent today" on
+        # a spend breaker. OSError is suppressed: a read-only filesystem degrades gracefully.
+        with suppress(OSError):
+            atomic_write_text(self._persist_path, json.dumps(self._state()))
 
     def _roll_day(self) -> None:
         """Start a fresh day window when the calendar day changed (lock held)."""
@@ -230,7 +295,12 @@ class BudgetTracker:
             if price is not None
             else Decimal(0)
         )
-        with self._lock:
+        with self._lock, self._file_lock():
+            # Re-read INSIDE the lock. The counters used to live only in this process's
+            # memory and `_persist` rewrote the whole file from them, so with `api.workers = N`
+            # each worker accumulated its own day total and the last writer won: the real
+            # ceiling was N times daily_eur, and ADR 0034 says "one org-wide daily breaker".
+            self._load()
             self._roll_day()
             self._input_tokens += input_tokens
             self._output_tokens += output_tokens
@@ -242,7 +312,9 @@ class BudgetTracker:
 
     def snapshot(self) -> BudgetSnapshot:
         """Return the current totals (day counters rolled to the current day)."""
-        with self._lock:
+        with self._lock, self._file_lock():
+            # A reader must see what every worker has spent, not what this one has.
+            self._load()
             self._roll_day()
             return BudgetSnapshot(
                 input_tokens=self._input_tokens,
@@ -252,7 +324,27 @@ class BudgetTracker:
                 day_input_tokens=self._day_input_tokens,
                 day_output_tokens=self._day_output_tokens,
                 day_cost_eur=self._day_cost_eur,
+                degraded=self._degraded,
             )
+
+    @contextmanager
+    def _file_lock(self) -> Iterator[None]:
+        """Hold an exclusive OS lock on the budget file for the duration of the block.
+
+        ``threading.Lock`` serialises the threads of ONE process. Since ADR 0044 the agent
+        runs N of them, each with its own tracker, and the daily ceiling is supposed to be
+        org-wide. ``flock`` is the scope that was missing.
+        """
+        if _FCNTL is None or self._persist_path is None:  # pragma: no cover - POSIX everywhere
+            yield
+            return
+        self._persist_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._persist_path.with_suffix(".lock").open("a+", encoding="utf-8") as handle:
+            _FCNTL.flock(handle.fileno(), _FCNTL.LOCK_EX)
+            try:
+                yield
+            finally:
+                _FCNTL.flock(handle.fileno(), _FCNTL.LOCK_UN)
 
     def reset(self) -> None:
         """Reset all counters; used by tests."""
