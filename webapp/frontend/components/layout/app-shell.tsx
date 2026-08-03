@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppFooter } from "./app-footer";
 import { AppHeader, type HeaderAction, type HeaderContextItem } from "./app-header";
 import { CockpitAuthGate } from "./cockpit-auth-gate";
+import { QueryHealthNotice } from "./query-health-notice";
 import { ShellChrome } from "./shell-chrome";
 import { ShellFrame } from "./shell-frame";
 import { Sidebar } from "./sidebar";
@@ -62,6 +63,7 @@ export function AppShell({
         }
         footer={<AppFooter />}
       >
+        <QueryHealthNotice />
         {children}
       </ShellFrame>
     </ShellChrome>

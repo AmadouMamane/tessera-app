@@ -32,6 +32,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreditAuroreLogo } from "@/components/brand/credit-aurore-logo";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { DemoLauncherLink } from "@/components/layout/demo-launcher-link";
 import {
   type RecouvrementDrawerStateModel,
@@ -1134,6 +1135,7 @@ function AssistantDrawer({
   messages,
   selectedVersionId,
   status,
+  synthetic,
   thinkingLabel,
   onClose,
   onExpand,
@@ -1153,6 +1155,7 @@ function AssistantDrawer({
   messages: AssistantThreadMessage[];
   selectedVersionId: string;
   status: AssistantStatus;
+  synthetic: boolean;
   thinkingLabel: string;
   onClose: () => void;
   onExpand: () => void;
@@ -1304,6 +1307,12 @@ function AssistantDrawer({
           </div>
         ) : null}
       </header>
+
+      {synthetic ? (
+        <div className="shrink-0 border-[#eceef5] border-b bg-[#fffdf7] px-6 pt-2">
+          <SyntheticNotice signalId="assistant" compact />
+        </div>
+      ) : null}
 
       {isPinned ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -1617,6 +1626,7 @@ export function RecouvrementProductExperience() {
   const [assistantContent, setAssistantContent] =
     useState<GeneratedAssistantContent>(fallbackAssistantContent);
   const [assistantStatus, setAssistantStatus] = useState<AssistantStatus>("idle");
+  const [assistantSynthetic, setAssistantSynthetic] = useState(false);
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantThread, setAssistantThread] = useState<AssistantThreadMessage[]>([]);
   const [assistantInput, setAssistantInput] = useState("");
@@ -1738,6 +1748,7 @@ export function RecouvrementProductExperience() {
 
       setAssistantInput("");
       setAssistantError(null);
+      setAssistantSynthetic(false);
       setAssistantStatus("loading");
       setAssistantThread([...priorThread, userMessage, assistantMessage]);
 
@@ -1757,6 +1768,7 @@ export function RecouvrementProductExperience() {
       };
 
       if (route.blockedReason === "requires_message_artifact") {
+        setAssistantSynthetic(true);
         const response = buildInvalidDraftEditResponse(currentArtifact, locale);
         const parsed = contentFromArtifactActionResponse(response, assistantContentRef.current);
         completeAfterThinkingMinimum(() => {
@@ -1948,6 +1960,7 @@ export function RecouvrementProductExperience() {
           .catch((err) => {
             if (controller.signal.aborted) return;
             console.warn("[recouvrement-assistant] structured backend unavailable", err);
+            setAssistantSynthetic(true);
             if (usesStructuredDraftBackend) {
               const fallbackResponse = buildDraftBackendUnavailableFallback(
                 currentArtifact,
@@ -2134,6 +2147,7 @@ export function RecouvrementProductExperience() {
         const conversationId = conversationIdRef.current ?? crypto.randomUUID();
         conversationIdRef.current = conversationId;
         setAssistantError(null);
+        setAssistantSynthetic(false);
         setAssistantStatus("loading");
 
         void sendRecouvrementAssistantAction({
@@ -2151,6 +2165,7 @@ export function RecouvrementProductExperience() {
           .catch((err) => {
             if (controller.signal.aborted) return;
             console.warn("[recouvrement-assistant] structured action backend unavailable", err);
+            setAssistantSynthetic(true);
             completeAfterThinkingMinimum(() => applyActionResponse(fallback()));
           });
       };
@@ -2313,10 +2328,11 @@ export function RecouvrementProductExperience() {
               </button>
               <button
                 type="button"
-                aria-label={copy.ui.notificationsAria.replace(
-                  "{count}",
-                  String(counters?.open ?? 0),
-                )}
+                aria-label={
+                  counters
+                    ? copy.ui.notificationsAria.replace("{count}", String(counters.open))
+                    : copy.ui.notifications
+                }
                 className="relative flex flex-col items-center gap-1 rounded-sm text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <Bell className="h-[22px] w-[22px]" />
@@ -2720,6 +2736,7 @@ export function RecouvrementProductExperience() {
           messages={assistantThread}
           selectedVersionId={selectedVersionId}
           status={assistantStatus}
+          synthetic={assistantSynthetic}
           thinkingLabel={thinkingLabel}
           onAction={handleAssistantAction}
           onClose={closeAssistant}

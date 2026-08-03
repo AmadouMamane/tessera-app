@@ -1,56 +1,38 @@
 "use client";
 
-/**
- * The route-level error boundary. There was none, anywhere under `app/`.
- *
- * Thirteen screens destructure `useQuery` without reading `isError` and render `…` while the
- * request is failing, so a backend outage arrived as a page that looked like it was still
- * loading — for as long as the operator was willing to wait. Anything that throws during
- * render had no boundary at all above it and took the whole cockpit to a blank frame.
- *
- * This says the three things a mute ellipsis never said: something failed, here is the digest
- * to correlate it with the server logs, and here is a button that retries. It deliberately
- * does NOT interpret the error — a boundary that guesses at causes invents them.
- */
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 
-import { useTranslations } from "next-intl";
+import { TesseraLogo } from "@/components/brand/tessera-logo";
+import { Button } from "@/components/ui/button";
 
-export default function LocaleError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function LocaleError({ error, reset }: { error: Error; reset: () => void }) {
   const t = useTranslations("errorBoundary");
 
   useEffect(() => {
-    // The browser console is the only place this is recoverable from once the frame is
-    // replaced; the digest is what ties it to the server-side log line.
-    console.error("[tessera] route error", error.digest ?? "(no digest)", error);
+    console.error(error);
   }, [error]);
 
   return (
-    <main className="flex min-h-[60vh] items-center justify-center px-6">
-      <div className="max-w-md text-center">
-        <p className="font-serif text-2xl font-semibold tracking-tight text-[var(--tessera-text-strong)]">
-          {t("title")}
-        </p>
-        <p className="mt-3 text-sm text-[var(--tessera-text-muted)]">{t("detail")}</p>
-        {error.digest ? (
-          <p className="mt-4 font-mono text-[0.7rem] text-[var(--tessera-text-muted)]">
-            {t("digest", { digest: error.digest })}
+    <main className="bg-canvas-glow grid min-h-dvh place-items-center bg-[var(--tessera-bg)] px-5 py-10 text-[var(--tessera-text)]">
+      <section className="w-full max-w-lg overflow-hidden rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
+        <div className="h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+        <div className="flex flex-col items-center px-7 py-8 text-center sm:px-10 sm:py-10">
+          <TesseraLogo className="mb-7 h-10" />
+          <span className="mb-4 grid h-11 w-11 place-items-center rounded-xl border border-amber-500/25 bg-amber-500/10 text-[var(--tessera-fg-warning)]">
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--tessera-text-muted)]">
+            {t("detail")}
           </p>
-        ) : null}
-        <button
-          type="button"
-          onClick={reset}
-          className="mt-6 inline-block rounded-md bg-[var(--tessera-accent)] px-4 py-2 text-sm font-medium text-[var(--tessera-accent-foreground)]"
-        >
-          {t("retry")}
-        </button>
-      </div>
+          <Button type="button" onClick={reset} className="mt-6">
+            <RefreshCw />
+            {t("retry")}
+          </Button>
+        </div>
+      </section>
     </main>
   );
 }

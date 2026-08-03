@@ -1,5 +1,3 @@
-import { cn } from "@/lib/cn";
-
 /**
  * The wave band that closes the public surfaces (`/select-space`, `/espaces`, `/login`).
  *
@@ -11,46 +9,22 @@ import { cn } from "@/lib/cn";
  * three places gets fixed in one. The variation that is deliberate is now a named
  * argument; the variation that was drift is now gone.
  *
- * WHY IT MOVED. It used to be `absolute bottom-0` against the PAGE, so when
- * `LauncherFooter` arrived on 2026-08-02 the footer landed inside it: measured on the
- * deployed build, the band spanned y 600→900 and the footer 773→900 — the whole footer,
- * every pixel of it, sitting on the artwork. On the dark themes the gold and cyan
- * strands ran straight behind "Cockpit de gouvernance", and the footer's scrim cut a
- * hard horizontal seam across the middle of the picture. That is the collision Amadou
- * reported ("le footer collisionne avec les vagues en mode bleu nuit"), and a scrim
- * treats its symptom.
- *
- * So the band is anchored to the bottom of `<main>` instead — which means it ends
- * exactly at the footer's top rule WHATEVER the footer's height, and the footer wraps
- * to two rows on a phone. The rule becomes the horizon the waves rest on: content,
- * then waves, then a line, then the foot of the page. Nothing overlaps anything.
- *
  * Its opacity is a token (`--launcher-waves-opacity`), pinned to 0 under "Clair":
  * `tessera-waves-band.png` is 8-bit RGB with no alpha, so dimming it composites the
  * whole navy plate rather than revealing the page underneath. See
  * `launcher-surface-contrast.test.ts` for that one.
  *
- * WHERE IT GOES is the one thing the caller must get right, and it is a fact about the
- * PAGE, not a taste — which is why it is `anchor` and not a z-index the caller passes:
- *
- *   · `anchor="content"` (default) — first child of a `relative` <main>, on a page that
- *     has a footer. `-z-10` puts it behind main's in-flow content while staying above
- *     the page backdrop, and `inset-x-0` resolves against main's PADDING box, so it
- *     stays full-bleed despite main's `px-6`.
- *   · `anchor="page"` — direct child of the page wrapper, on a page with NO footer
- *     (`/login`). There it is a SIBLING of the backdrop rather than a descendant of
- *     something painted above it, so `-z-10` would put it *behind* that backdrop and
- *     it would disappear. `z-0` is the same layer, ordered after it.
+ * USAGE: direct child of the page wrapper, after the backdrop and before the in-flow
+ * content. It stays at the same stacking level as the backdrop and wins by source order;
+ * the content wrapper remains above both at `z-10`.
  */
 export function LauncherWaves({
-  anchor = "content",
   /** Multiplier on the theme's own allowance — `/login` runs the artwork at 0.7 so the
    *  sign-in card stays the loudest thing on a page that has nothing else. */
   strength = 1,
   /** Where the top fade starts. Lower = the artwork reaches further up the page. */
   fadeFrom = "60%",
 }: {
-  anchor?: "content" | "page";
   strength?: number;
   fadeFrom?: string;
 }) {
@@ -58,10 +32,7 @@ export function LauncherWaves({
   return (
     <div
       aria-hidden="true"
-      className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-0 h-[300px]",
-        anchor === "content" ? "-z-10" : "z-0",
-      )}
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[300px]"
       style={{
         backgroundImage: "url('/assets/tessera-waves-band.png')",
         backgroundRepeat: "no-repeat",

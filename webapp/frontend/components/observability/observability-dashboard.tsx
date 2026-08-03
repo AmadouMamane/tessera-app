@@ -89,6 +89,7 @@ import {
   fetchControlSeries,
   fetchCorpusFreshness,
   fetchCost,
+  fetchEmbeddingSkew,
   fetchEvalDatasets,
   fetchFailedCases,
   fetchFailedRuns,
@@ -331,6 +332,15 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     refetchInterval: 60_000,
   });
 
+  // Query/corpus embedding lineage is measured from the model active at query
+  // time and the fingerprints persisted at ingestion. Keep it visible beside
+  // corpus freshness: a repaired endpoint with no screen is not observability.
+  const embeddingSkew = useQuery({
+    queryKey: ["embedding-skew"],
+    queryFn: ({ signal }) => fetchEmbeddingSkew(signal),
+    refetchInterval: 60_000,
+  });
+
   // Themed quality datasets (failure-catalogue themes × runs) — the Runs tab table.
   const evalDatasets = useQuery({
     queryKey: ["eval-datasets"],
@@ -402,8 +412,8 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
 
   // Forward-looking regression risk for the "Signaux prédictifs" column (image 00).
   const regressionRisk = useQuery({
-    queryKey: ["regression-risk", asOf],
-    queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined),
+    queryKey: ["regression-risk", asOf, period],
+    queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined, undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
@@ -827,6 +837,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 release={releaseStatus.data}
                 freshness={corpusFreshness.data}
                 datasets={evalDatasets.data}
+                skew={embeddingSkew.data}
               />
               <div className="grid gap-2 2xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)] 2xl:items-start">
                 <div className="flex flex-col gap-2">

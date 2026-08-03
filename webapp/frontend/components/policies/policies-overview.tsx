@@ -17,6 +17,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
@@ -87,11 +88,15 @@ export function PoliciesOverview() {
   const t = useTranslations("policies");
   const locale = useLocale();
   const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["policies-overview", locale],
     queryFn: ({ signal }) => fetchPoliciesOverview(locale, signal),
     staleTime: 60_000,
   });
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

@@ -43,6 +43,7 @@ import {
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
@@ -139,7 +140,7 @@ function SourcesSkeleton() {
 export function SourcesOverview() {
   const t = useTranslations("sources");
   const locale = useLocale();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["sources-overview", locale],
     queryFn: ({ signal }) => fetchSourcesOverview(locale, signal),
     staleTime: 60_000,
@@ -184,6 +185,10 @@ export function SourcesOverview() {
     if (view === "memory") return rows.filter((r) => r.infra);
     return rows;
   }, [rows, view]);
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return <SourcesSkeleton />;

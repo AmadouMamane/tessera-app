@@ -471,6 +471,23 @@ function withScope(path: string, at?: string, agent?: string, days?: string): st
 }
 
 /**
+ * Translate the cockpit window key to the integer day count expected by the
+ * score-series family of endpoints. Those FastAPI routes predate the shared
+ * `h24 | d7 | d30` convention and reject the raw key with a 422.
+ */
+export function integerWindowDays(window?: string): number | undefined {
+  if (!window) return undefined;
+  if (window === "h24") return 1;
+  const match = /^d(\d+)$/.exec(window);
+  if (match) {
+    const days = Number(match[1]);
+    return days > 0 ? days : undefined;
+  }
+  const numeric = Number(window);
+  return Number.isInteger(numeric) && numeric > 0 ? numeric : undefined;
+}
+
+/**
  * Recent online-eval scores (eval-as-telemetry; public aggregate surface).
  *
  * With `at` set, the durable score log is read as of that instant (ADR 0011).
@@ -812,7 +829,8 @@ export async function fetchScoreSeries(
   if (at) params.set("at", at);
   if (metric) params.set("metric", metric);
   if (agent && agent !== "all") params.set("agent", agent);
-  if (days) params.set("days", days);
+  const windowDays = integerWindowDays(days);
+  if (windowDays) params.set("days", String(windowDays));
   const query = params.toString();
   return request(
     `/observability/score-series${query ? `?${query}` : ""}`,
@@ -831,7 +849,8 @@ export async function fetchJudgeDrift(
   const params = new URLSearchParams();
   if (at) params.set("at", at);
   if (metric) params.set("metric", metric);
-  if (days) params.set("days", days);
+  const windowDays = integerWindowDays(days);
+  if (windowDays) params.set("days", String(windowDays));
   const query = params.toString();
   return request(
     `/observability/judge-drift${query ? `?${query}` : ""}`,
@@ -845,10 +864,13 @@ export async function fetchRegressionRisk(
   signal?: AbortSignal,
   at?: string,
   metric?: string,
+  days?: string,
 ): Promise<RegressionRisk> {
   const params = new URLSearchParams();
   if (at) params.set("at", at);
   if (metric) params.set("metric", metric);
+  const windowDays = integerWindowDays(days);
+  if (windowDays) params.set("days", String(windowDays));
   const query = params.toString();
   return request(
     `/observability/regression-risk${query ? `?${query}` : ""}`,
@@ -865,7 +887,8 @@ export async function fetchSignalStatusTrend(
 ): Promise<StatusCountsTrend> {
   const params = new URLSearchParams();
   if (at) params.set("at", at);
-  if (days) params.set("days", days);
+  const windowDays = integerWindowDays(days);
+  if (windowDays) params.set("days", String(windowDays));
   const query = params.toString();
   return request(
     `/observability/signal-status-trend${query ? `?${query}` : ""}`,

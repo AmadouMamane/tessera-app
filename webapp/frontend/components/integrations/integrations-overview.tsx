@@ -24,6 +24,7 @@ import {
 } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -57,7 +58,7 @@ export function IntegrationsOverview() {
   const t = useTranslations("integrations");
   const tt = useTranslations("table");
   const locale = useLocale();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["integrations-overview", locale],
     queryFn: ({ signal }) => fetchIntegrationsOverview(locale, signal),
     staleTime: 60_000,
@@ -96,6 +97,10 @@ export function IntegrationsOverview() {
     }
     return out;
   }, [data, search, typeFilter, sortKey, sortDir]);
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

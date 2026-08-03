@@ -21,6 +21,7 @@ import type { ReactNode } from "react";
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -67,7 +68,7 @@ export function AutomationsOverview() {
   const frozen = asof !== null;
   const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["automations-overview", locale, asof],
     queryFn: ({ signal }) => fetchAutomationsOverview(locale, asof, signal),
     staleTime: 30_000,
@@ -94,6 +95,10 @@ export function AutomationsOverview() {
       mutateAutomationApprove({ ...vars, lang: locale }),
     onSuccess: (fresh) => qc.setQueryData(["automations-overview", locale, null], fresh),
   });
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

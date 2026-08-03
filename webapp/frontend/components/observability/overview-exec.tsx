@@ -1279,7 +1279,7 @@ export function PredictiveSignals({
                     reported 100 % in production for its whole life because it could not open
                     the catalogues and divided by an empty reference; the row must not turn
                     that back into a reassuring dash. */}
-                {localization && localization.measured === false ? (
+                {localization && (!localization.available || localization.measured === false) ? (
                   <span className={`text-xs ${WARN}`}>{tq("pred.langsUnmeasured")}</span>
                 ) : langs.length === 0 ? (
                   <span className="text-xs text-[var(--muted-foreground)]">—</span>

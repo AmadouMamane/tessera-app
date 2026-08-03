@@ -333,7 +333,8 @@ function FailureDonut({
   label: string;
 }) {
   const ts = useTranslations("security");
-  const total = slices.reduce((s, x) => s + x.count, 0) || 1;
+  const measuredTotal = slices.reduce((sum, slice) => sum + slice.count, 0);
+  const denominator = measuredTotal || 1;
   const R = 39;
   const C = 2 * Math.PI * R;
   let off = 0;
@@ -350,7 +351,7 @@ function FailureDonut({
             strokeWidth="9"
           />
           {slices.map((s) => {
-            const frac = s.count / total;
+            const frac = s.count / denominator;
             const seg = { dash: frac * C, gap: C - frac * C, o: -off * C };
             off += frac;
             return (
@@ -370,7 +371,7 @@ function FailureDonut({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
           <span className="max-w-[49px] truncate text-base font-semibold leading-none tabular-nums">
-            {total}
+            {measuredTotal}
           </span>
           <span className="line-clamp-2 max-w-[49px] break-words text-center text-[0.5rem] uppercase leading-tight text-[var(--muted-foreground)]">
             {label}
@@ -385,7 +386,7 @@ function FailureDonut({
               <span className="min-w-0 truncate">{ts(`fail.${s.key}`)}</span>
             </span>
             <span className="pl-2.5 tabular-nums text-[var(--muted-foreground)]">
-              {s.count} · {Math.round((s.count / total) * 100)}%
+              {s.count} · {Math.round((s.count / denominator) * 100)}%
             </span>
           </li>
         ))}

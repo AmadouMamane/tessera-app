@@ -19,6 +19,7 @@ import { useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
@@ -79,7 +80,7 @@ export function ProofsOverview() {
   // cosmetic — scrubbing re-reads the page (registre §5).
   const asOf = temporal.asOf;
   const proofsKey = ["proofs-overview", locale, asOf ?? null] as const;
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: proofsKey,
     queryFn: ({ signal }) => fetchProofsOverview(locale, signal, asOf),
     staleTime: 30_000,
@@ -105,6 +106,10 @@ export function ProofsOverview() {
     const events = await fetchSiem();
     downloadBlob("tessera-siem-events.json", "application/json", JSON.stringify(events, null, 2));
   };
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

@@ -26,6 +26,7 @@ import { useState } from "react";
 
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -92,7 +93,7 @@ export function CurationOverview() {
   // AGIR composition (registre §6): As-of reads the folded state at T (URL-derived).
   const asof = useAsOf();
   const frozen = asof !== null;
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["curation-overview", locale, asof],
     queryFn: ({ signal }) => fetchCurationOverview(locale, asof, signal),
     staleTime: 30_000,
@@ -106,6 +107,10 @@ export function CurationOverview() {
   });
   const onDecide = (candidateId: string, decision: "promote" | "review" | "reject") =>
     decide.mutate({ candidate_id: candidateId, decision, lang: locale });
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

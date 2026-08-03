@@ -9,6 +9,7 @@ import {
   Database,
   FileDown,
   GitBranch,
+  GitCompareArrows,
   Layers,
   Workflow,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import type {
   ReleaseStatus,
   RunRegistry,
   RunSummary,
+  SkewReport,
 } from "@/lib/api/schemas";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
@@ -178,13 +180,16 @@ export function RunsKpis({
   release,
   freshness,
   datasets,
+  skew,
 }: {
   registry: RunRegistry | undefined;
   release: ReleaseStatus | undefined;
   freshness: FreshnessReport | undefined;
   datasets: QualityDatasetsReport | undefined;
+  skew: SkewReport | undefined;
 }) {
   const tq = useTranslations("quality");
+  const tes = useTranslations("observability.embeddingSkew");
   const win = windowRuns(registry);
   const nRuns = win.length;
   const cases = win.reduce((acc, r) => acc + r.total, 0);
@@ -204,9 +209,10 @@ export function RunsKpis({
     .filter((x): x is number => x != null)
     .map((x) => Math.abs(x));
   const meanDrift = drifts.length ? drifts.reduce((a, b) => a + b, 0) / drifts.length : null;
+  const skewTone = skew?.severity === "hard" ? BAD : skew?.severity === "soft" ? WARN : GOOD;
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
       <Kpi
         icon={<Activity className="h-3 w-3" />}
         label={tq("runs.kpi.runs7d")}
@@ -263,6 +269,13 @@ export function RunsKpis({
         explainKey="runDuration"
         value={fmtDuration(avgLat)}
         sub={staleN != null ? tq("runs.kpi.staleCorpora", { n: staleN }) : undefined}
+      />
+      <Kpi
+        icon={<GitCompareArrows className="h-3 w-3" />}
+        label={tes("title")}
+        value={skew ? tes(`severity.${skew.severity}`) : DASH}
+        tone={skew ? skewTone : MUTED}
+        sub={skew ? `${skew.query_model} · ${skew.query_dimension}d` : undefined}
       />
     </div>
   );

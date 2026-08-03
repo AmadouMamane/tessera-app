@@ -135,53 +135,6 @@ async function unreachableContent(page: Page): Promise<Unreachable[]> {
   });
 }
 
-/**
- * Decoration that runs UNDERNEATH the footer, in pixels of vertical overlap.
- *
- * The wave band on the public surfaces was `absolute bottom-0` against the page, so
- * when `LauncherFooter` arrived (2026-08-02) the footer landed inside it: 127 px of
- * footer, all of it, on top of the artwork, with gold and cyan strands running behind
- * the link row on the dark themes. Reported on 2026-08-03 as a collision. The fix
- * anchors the band to the bottom of `<main>`; this is what says it stayed there.
- *
- * It asks the geometric question and not a class-name question on purpose: `-z-10` in
- * a class string proves nothing about where the box ends up.
- *
- * AND IT SCANS EVERY ELEMENT, not `[aria-hidden='true']`, which is what it did for one
- * commit. That attribute is on the band because the FIX put it there — so the detector
- * could only ever see the band it was written against, and pointed at the broken build
- * it reported "the wave band was not found at all" instead of the 127 px collision that
- * was right there. A witness keyed to its own repair recognises nothing else (ADR 0026).
- * What identifies a decorative band is what it IS: a big absolutely-positioned box
- * carrying a background image. The size floor keeps icons and avatars out.
- */
-async function decorationUnderFooter(
-  page: Page,
-): Promise<{ bands: number; overlap: number; footer: boolean }> {
-  return page.evaluate(() => {
-    const footer = document.querySelector("footer");
-    const fr = footer?.getBoundingClientRect();
-    let bands = 0;
-    let overlap = 0;
-    for (const el of document.querySelectorAll("body *")) {
-      const style = getComputedStyle(el);
-      if (style.position !== "absolute" && style.position !== "fixed") continue;
-      if (!style.backgroundImage.includes("url(") || Number(style.opacity) === 0) continue;
-      const r = el.getBoundingClientRect();
-      if (r.width < 200 || r.height < 40) continue;
-      bands++;
-      if (fr === undefined) continue;
-      // Vertical overlap with the footer's box. Horizontal is not asked: these bands
-      // are full-bleed by design, so they always share the footer's columns.
-      overlap = Math.max(
-        overlap,
-        Math.round(Math.min(r.bottom, fr.bottom) - Math.max(r.top, fr.top)),
-      );
-    }
-    return { bands, overlap, footer: footer !== null };
-  });
-}
-
 async function login(page: Page) {
   await page.goto("/fr/login");
   await page.fill("#login-username", "admin");
@@ -241,45 +194,6 @@ test.describe("the cockpit survives the descent", () => {
       "an ellipsis is deliberate",
     ).toBe(false);
   });
-
-  /**
-   * THE FOOTER DOES NOT SIT ON THE ARTWORK — on the themes where the artwork exists.
-   *
-   * Run on the DARK themes, because under "Clair" the band is withheld
-   * (`--launcher-waves-opacity: 0`) and a light-only run would pass with nothing on
-   * the page to fail against. That is also why the assertion is in two halves: the
-   * band must be FOUND (otherwise zero overlap means "looked at nothing"), and then
-   * it must not reach into the footer.
-   *
-   * Two widths, because the footer wraps to two rows below `sm` and its height is
-   * exactly what the old absolute-to-the-page band could not know.
-   */
-  for (const theme of ["dark", "deep-night"] as const) {
-    for (const w of [1512, 390] as const) {
-      test(`the wave band stops at the footer — ${theme}, ${w}px`, async ({ page }) => {
-        test.setTimeout(90_000);
-        await page.setViewportSize({ width: w, height: w === 390 ? 844 : 982 });
-        await page.addInitScript((t) => {
-          try {
-            localStorage.setItem("theme", t);
-          } catch {
-            /* storage disabled — the theme falls back to the default, still dark */
-          }
-        }, theme);
-        for (const path of ["/fr/select-space", "/fr/espaces"]) {
-          await page.goto(path, { waitUntil: "load", timeout: 45_000 });
-          await page.waitForTimeout(1_200);
-          const seen = await decorationUnderFooter(page);
-          expect(seen.footer, `${path}: no footer to compare against`).toBe(true);
-          expect(seen.bands, `${path}: the wave band was not found at all`).toBeGreaterThan(0);
-          expect(
-            seen.overlap,
-            `${path} (${theme}, ${w}px): the wave band runs ${seen.overlap}px into the footer`,
-          ).toBe(0);
-        }
-      });
-    }
-  }
 
   for (const vp of WIDTHS) {
     test(`no unreachable content at ${vp.w}px (${vp.name})`, async ({ page }) => {

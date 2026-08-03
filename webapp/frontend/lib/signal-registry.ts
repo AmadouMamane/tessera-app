@@ -150,7 +150,9 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // and the surface badges org-wide on no basis at all — a declaration nobody made, rendered
   // as one that was.
   disclosure: cap(ORG, { synthetic: true }),
-  embedding_skew: cap(ORG, { synthetic: true }),
+  // The route now compares the live query embedder with fingerprints persisted
+  // at corpus ingestion; it is a real lineage measurement, not the old corpus=query alias.
+  embedding_skew: cap(ORG),
 };
 
 /** The declared capability for `signalId`, or `undefined` if the signal is not declared. */
