@@ -212,14 +212,37 @@ _EXIT_WITNESSES: dict[str, str] = {
     # plane that holds the transcripts. `obs-guard` REFUSES the boot when a credential is unset, and
     # a refusal is a verdict: exit 2, naming what is missing and the command that fixes it.
     "Makefile::obs-guard": "VERDICT",
+    # `obs-guard` asks whether a credential is SET. This asks the STORE whether it is ACCEPTED,
+    # over TCP, from the stack's own network — the only question that can tell the two apart,
+    # because the postgres image trusts its local socket and `docker exec psql` succeeds with any
+    # password. Missing it cost 818 silent Langfuse restarts over fourteen hours on 2026-08-04.
+    # Its verdict lives in the printed tag (OK / NOT OK / CANNOT SAY): make collapses every
+    # failing recipe to exit 2, so the code only separates green from not-green.
+    "Makefile::obs-verify": "VERDICT",
+    # It REWRITES a stored database password to match the environment. An act, deliberately not
+    # wired into anything — `obs-verify` names it in its refusal and never runs it, for the same
+    # reason `obs-guard` may not depend on `obs-secrets`.
+    "Makefile::obs-realign": "action",
     # It WRITES the credentials. That is an act, not a judgement — and it must never become a
     # prerequisite of the guard, or the guard would generate the very thing it demands.
     "Makefile::obs-secrets": "action",
+    # `up -d` returns when containers are CREATED, not when the stores answer. This waits, so the
+    # verify above judges a started database rather than a stopwatch. It reports nothing.
+    "Makefile::obs-wait": "action",
+    # → scripts/regrade_reports.py → eval.regrade.main
+    "Makefile::eval-regrade": "delegate",
     "Makefile::help": "report",
     # ══ scripts/ ═══════════════════════════════════════════════════════════════════════════════
     # ── witnesses that publish a Verdict, or their own unlaundered code ────────────────────────
     # Fetches /api/version on every declared host and returns 0 match / 1 divergent / 2 blind
     # (unreachable, un-stamped, or domain unset). A blind witness never says ok (ADR 0026).
+    # Re-derives a report's JUDGEMENTS from its recorded responses under today's criteria. It
+    # returns 0 when every report was re-graded and 1 when one was REFUSED — the refusal being
+    # the point: it cannot establish that no unrecorded criterion moved, so it declines rather
+    # than carrying a stale verdict forward. A case a recording cannot re-ask leaves the whole
+    # report unstamped, and the floor comparison then says CANNOT SAY rather than trusting a
+    # mixture of two rulers.
+    "scripts/regrade_reports.py": "VERDICT",
     "scripts/deploy_diff.py": "VERDICT",
     "scripts/gate_witness.py": "VERDICT",  # EXIT_VOID=3: "unusable" is not "failed"
     "scripts/worktree_owner.py": "VERDICT",  # Ok | NotOk | CannotSay

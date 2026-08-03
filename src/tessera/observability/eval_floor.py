@@ -42,12 +42,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 from eval.contribution import evaluate_contribution, restrict_baseline
-from eval.ratchet import catalogue_on_disk, load_baseline
+from eval.ratchet import catalogue_on_disk, grader_criteria_sha_for, load_baseline
 from eval.sets import load_eval_set
 from tessera.verdict import CannotSay, NoEffect, NotOk, Ok, Verdict
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from eval.contribution import ContributionVerdict
+    from eval.ratchet import Baseline
     from tessera.observability.eval_data import EvalSnapshot
 
 __all__ = [
@@ -76,6 +79,34 @@ ABSENT_NO_BASELINE = (
     "no committed null control covers this set — regenerate it (`make eval-null-write`) "
     "rather than grading against an absent floor"
 )
+
+
+def _absent_ruler_unknown(run_at: str) -> str:
+    return (
+        f"this run ({run_at or 'undated'}) does not record which grading criteria judged it, so "
+        f"it cannot be compared with a floor that does. `catalogue_version` pins WHICH cases "
+        f"exist and is blind to WHAT they assert — re-run it, or re-derive its judgements from "
+        f"its recorded responses (`make eval-regrade`), which costs no tokens"
+    )
+
+
+def _absent_floor_ruler(stamped: str, current: str) -> str:
+    return (
+        f"the null control was measured under criteria {stamped or 'it does not record'} and the "
+        f"catalogue now says {current} — the FLOOR is the stale side of this comparison, and a "
+        f"stale floor blocks a release as confidently as a bad model would. Re-measure it: "
+        f"`make eval-null-write`"
+    )
+
+
+def _absent_ruler_moved(run_ruler: str, floor_ruler: str) -> str:
+    return (
+        f"this run was judged by criteria {run_ruler} and the floor by {floor_ruler} — two "
+        f"different rulers, so 'the model breaks a run the floor passes' is not a fact about the "
+        f"model. On 2026-08-03 fifty-nine criteria changed and the floor was re-measured; the "
+        f"agents' reports were not, and this comparison reported three models as worse than no "
+        f"model at all. Re-grade the run under today's criteria (`make eval-regrade`) or re-run it"
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -348,6 +379,34 @@ class FloorGrade:
         assert_never(self.releasable)  # pragma: no cover — exhaustive; mypy proves it is
 
 
+def _rulers_disagree(
+    snap: EvalSnapshot,
+    baseline: Baseline,
+    compared_case_ids: Iterable[str],
+) -> str | None:
+    """Why this run and this floor cannot be compared — or ``None`` when they can.
+
+    **Same cases is not same ruler.** ``catalogue_version`` hashes case *ids* and is blind by
+    construction to what a case asserts, so a `pass_criteria` edit leaves it untouched. On
+    2026-08-03 fifty-nine criteria changed and the null floor was re-measured under them; the
+    agents' reports were not, and comparing the two answered "is this model worse than no model
+    at all?" with a yes for all three agents. Two of the "breaks" were correct refusals the old
+    criteria could not read.
+
+    Both sides are checked, because either can be the stale one — and a stale FLOOR blocks a
+    release exactly as confidently as a bad model would.
+    """
+    baseline_ruler = grader_criteria_sha_for(baseline.verdicts_case_ids)
+    if baseline.grader_criteria_sha != baseline_ruler:
+        return _absent_floor_ruler(baseline.grader_criteria_sha, baseline_ruler)
+    if not snap.grader_criteria_sha:
+        return _absent_ruler_unknown(snap.run_at)
+    run_ruler = grader_criteria_sha_for(compared_case_ids)
+    if snap.grader_criteria_sha != run_ruler:
+        return _absent_ruler_moved(snap.grader_criteria_sha, run_ruler)
+    return None
+
+
 def grade_against_own_floor(snap: EvalSnapshot) -> FloorGrade:
     """Grade an agent's run against the null control restricted to its own eval set.
 
@@ -365,9 +424,14 @@ def grade_against_own_floor(snap: EvalSnapshot) -> FloorGrade:
 
     try:
         eval_set = load_eval_set(snap.eval_set)
-        floor = restrict_baseline(load_baseline(NULL_BASELINE), set(eval_set.effective_case_ids))
+        baseline = load_baseline(NULL_BASELINE)
+        floor = restrict_baseline(baseline, set(eval_set.effective_case_ids))
     except (KeyError, ValueError, TypeError, OSError):
         return FloorGrade(graded=False, obstacle=ABSENT_NO_BASELINE, verdict=None)
+
+    mixed_rulers = _rulers_disagree(snap, baseline, eval_set.effective_case_ids)
+    if mixed_rulers is not None:
+        return FloorGrade(graded=False, obstacle=mixed_rulers, verdict=None)
 
     report = {
         "model": snap.model,

@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 from eval.contribution import evaluate_contribution, floor_populations, restrict_baseline
-from eval.ratchet import load_baseline
+from eval.ratchet import grader_criteria_sha_for, load_baseline
 from eval.sets import list_eval_sets, load_eval_set
 from tessera.observability.agent_evaluations import (
     _contribution_block as contribution_block,
@@ -141,7 +141,11 @@ class TestTheContributionThatReplacesIt:
         # The set's own floor names the set's own cases, so it can judge the run.
         assert set_floor.catalogue_version == report["catalogue_version"] == "28-990f1447"
         assert right.refusal is None
-        assert right.ok  # rule 1 holds on the set's own floor — the honest verdict
+        # It GRADES — which is the whole assertion. Whether that grade is a pass is a fact
+        # about the model of the day, not about the denominator, and it must not be pinned
+        # here: on 2026-08-04 the re-measured run reproduced the certified inversion on
+        # `56_policy_violation_disparage_bank|de`, and a test asserting `right.ok` would have
+        # gone red for the one reason a release gate exists to go red for.
         assert right.contribution_population == 13
 
     def test_a_modelless_run_is_not_reported_as_a_clean_contribution(self) -> None:

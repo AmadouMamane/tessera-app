@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import pytest
 
 from eval.contribution import restrict_baseline
-from eval.ratchet import load_baseline
+from eval.ratchet import grader_criteria_sha_for, load_baseline
 from eval.sets import load_eval_set
 from tessera.authz import Actor
 from tessera.observability import agent_lifecycle as lifecycle, eval_floor
@@ -120,6 +120,13 @@ def _snapshot(
         sessions=sessions,
         agent_id=eval_set,
         eval_set=eval_set,
+        # And the identity of the CRITERIA it was scored by. `catalogue_version` above says
+        # WHICH cases; this says WHAT they asserted, which the id-hash cannot see. A run that
+        # does not declare it cannot be compared with a floor that does — and on 2026-08-04
+        # that gap turned an August floor plus July judgements into "worse than no model at
+        # all" for the whole fleet. Derived from the set, so a criteria edit moves it here
+        # exactly as it moves in a real report.
+        grader_criteria_sha=grader_criteria_sha_for(load_eval_set(eval_set).effective_case_ids),
         gate_passed=gate_passed,
         gate_failed_critical=failed_critical,
     )

@@ -41,13 +41,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
 __all__ = [
     "Baseline",
     "RatchetVerdict",
     "baseline_from_report",
     "grader_criteria_sha",
+    "grader_criteria_sha_for",
     "CATALOGUE_DIR",
     "catalogue_on_disk",
     "catalogue_version",
@@ -117,15 +118,47 @@ def grader_criteria_sha(category: str, failures: Path = CATALOGUE_DIR) -> str:
     Returns:
         ``"<count>-<12 hex>"`` over the sorted ``id -> pass_criteria`` pairs of the category.
     """
+    return _criteria_sha(
+        _criteria_pairs(failures, keep=lambda case: case.get("category") == category)
+    )
+
+
+def grader_criteria_sha_for(case_ids: Iterable[str], failures: Path = CATALOGUE_DIR) -> str:
+    """The same identity, over an arbitrary set of cases rather than a whole category.
+
+    A release is graded per **eval set**, not per category, and the comparison that matters is
+    between one agent's runs and the null floor restricted to exactly those runs. Scoping the
+    identity to the ids being compared keeps a criteria edit elsewhere in the catalogue from
+    invalidating a comparison it has no bearing on — while still making an edit *inside* the set
+    the loud refusal it must be.
+
+    Args:
+        case_ids: The ids compared (order and duplicates are irrelevant). Ids absent from the
+            catalogue are ignored; the count in the returned string says how many were found.
+        failures: The catalogue directory. Defaults to the real one.
+
+    Returns:
+        ``"<count>-<12 hex>"`` over the sorted ``id -> pass_criteria`` pairs of those cases.
+    """
+    wanted = set(case_ids)
+    return _criteria_sha(_criteria_pairs(failures, keep=lambda case: str(case.get("id")) in wanted))
+
+
+def _criteria_pairs(failures: Path, *, keep: Callable[[dict[str, Any]], bool]) -> list[str]:
+    r"""``id \x1f canonical(pass_criteria)`` for every kept case. The one reader of the terminus."""
     pairs: list[str] = []
     for path in sorted(failures.glob("*.json")):
         if path.stem.startswith("_"):
             continue
         case = json.loads(path.read_text(encoding="utf-8"))
-        if case.get("category") != category:
+        if not keep(case):
             continue
         criteria = json.dumps(case.get("pass_criteria", {}), sort_keys=True, ensure_ascii=False)
         pairs.append(f"{case['id']}\x1f{criteria}")
+    return pairs
+
+
+def _criteria_sha(pairs: list[str]) -> str:
     digest = hashlib.sha256("\n".join(sorted(pairs)).encode()).hexdigest()[:12]
     return f"{len(pairs)}-{digest}"
 
@@ -211,6 +244,11 @@ class Baseline:
             baseline must be regenerated rather than silently reinterpreted.
         verdicts: ``{"<case_id>|<language>": passed}`` for every run.
         note: Free-form provenance (how it was captured).
+        grader_criteria_sha: The identity of the CRITERIA the baseline was measured under.
+            ``catalogue_version`` above cannot see a criteria edit — it hashes ids — so without
+            this a baseline re-measured under new criteria and a run graded under the old ones
+            compare as the same measurement. Empty means the baseline predates the stamp, which
+            is *unknown*, not "current".
     """
 
     kind: BaselineKind
@@ -218,6 +256,12 @@ class Baseline:
     catalogue_version: str
     verdicts: dict[str, bool]
     note: str = ""
+    grader_criteria_sha: str = ""
+
+    @property
+    def verdicts_case_ids(self) -> set[str]:
+        """The distinct case ids the verdict map covers (its keys are ``case_id|language``)."""
+        return {key.split(_KEY_SEP, 1)[0] for key in self.verdicts}
 
     @property
     def total(self) -> int:
@@ -323,6 +367,7 @@ def load_baseline(path: Path) -> Baseline:
         catalogue_version=str(payload.get("catalogue_version") or ""),
         verdicts={str(k): bool(v) for k, v in verdicts.items()},
         note=str(payload.get("note") or ""),
+        grader_criteria_sha=str(payload.get("grader_criteria_sha") or ""),
     )
 
 

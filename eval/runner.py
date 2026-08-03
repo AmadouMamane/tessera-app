@@ -14,7 +14,7 @@ import re
 import sys
 import tempfile
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final
@@ -22,7 +22,7 @@ from typing import Final
 import jsonschema
 
 from eval.gate import GateVerdict, evaluate_gate
-from eval.ratchet import catalogue_version
+from eval.ratchet import catalogue_version, grader_criteria_sha_for
 from eval.scorecard import build_scorecard
 from eval.sets import EvalSet, critical_case_ids, load_eval_set
 from tessera.agent import compile_graph
@@ -72,6 +72,14 @@ class CaseResult:
     final_response: str
     needs_escalation: bool
     invoked_tools: list[str]
+    """Every tool call ATTEMPTED — a guard *deny* appears here too, and is not an invocation."""
+    succeeded_tools: list[str] = field(default_factory=list)
+    """The calls that actually went through — what ``must_not_invoke_tools`` is really about.
+
+    Recorded separately because ``invoked_tools`` above is attempts, and until 2026-08-04 it was
+    the only tool record a report kept. Anything re-reading a report therefore had to treat a
+    blocked call as a violation, which inverts the meaning of the guard working.
+    """
     category: str = ""
     title: str = ""
     expected_behavior: str = ""
@@ -109,6 +117,21 @@ def _catalogue_version(cases: list[dict[str, object]]) -> str:
     could disagree about which catalogue they mean while both being right.
     """
     return catalogue_version(str(c["id"]) for c in cases)
+
+
+def _grader_criteria_sha(cases: list[dict[str, object]]) -> str:
+    """Identity of the CRITERIA this run was scored by — the ruler, not the case list.
+
+    ``catalogue_version`` above is a hash of case **ids**: it tracks which cases exist and is
+    blind, by construction, to what any of them asserts. Edit a ``pass_criteria`` and it does not
+    move. On 2026-08-04 that blindness had cost three agents their release: the null floor was
+    re-measured under criteria changed on 2026-08-03, the agents' reports were still judged by
+    the July ones, and the gate compared the two as if they were the same measurement and
+    concluded the models were *worse than no model at all*.
+
+    A report that says which ruler judged it lets that comparison refuse instead of conclude.
+    """
+    return grader_criteria_sha_for(str(c["id"]) for c in cases)
 
 
 #: Sentence boundaries, for locating the clause a claim was made in.
@@ -420,6 +443,7 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
         final_response=str(final_state.get("final_response", "")),
         needs_escalation=bool(final_state.get("needs_escalation", False)),
         invoked_tools=[call.tool_name for call in final_state.get("tool_calls", [])],
+        succeeded_tools=[c.tool_name for c in final_state.get("tool_calls", []) if c.succeeded],
         category=str(case.get("category", "")),
         title=str(case.get("title", "")),
         expected_behavior=str(case.get("expected_behavior", "")),
@@ -564,6 +588,7 @@ async def _run_all(args: argparse.Namespace) -> int:
         wanted = set(eval_set.effective_case_ids)
         cases = [c for c in cases if c["id"] in wanted]
     catalogue_version = _catalogue_version(cases)
+    grader_sha = _grader_criteria_sha(cases)
     if args.case:
         cases = [c for c in cases if c["id"] == args.case]
         if not cases:
@@ -635,6 +660,7 @@ async def _run_all(args: argparse.Namespace) -> int:
                 "agent_id": args.agent,
                 "eval_set": eval_set.slug if eval_set is not None else None,
                 "catalogue_version": catalogue_version,
+                "grader_criteria_sha": grader_sha,
                 # The session posture the run measured. Absent from every report before
                 # 2026-08-03, because nothing installed the guard's turn context and the
                 # posture was whatever the contextvar defaulted to. A number whose posture

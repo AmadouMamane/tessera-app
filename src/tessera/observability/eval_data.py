@@ -121,6 +121,10 @@ class EvalSnapshot:
     # Per-agent provenance (empty/None for the global catalogue snapshot).
     agent_id: str = ""
     eval_set: str = ""
+    #: Identity of the CRITERIA this run was judged by. Empty for a report written before the
+    #: runner stamped it — which is not "the current ruler", it is *unknown*, and the floor
+    #: comparison treats it as such rather than assuming the ruler never moved.
+    grader_criteria_sha: str = ""
     gate_passed: bool | None = None
     gate_failed_critical: tuple[str, ...] = ()
     # The non-critical counts: a measurement, never compared to a bar (ADR 0021 removed
@@ -375,6 +379,7 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
         sessions=sessions,
         agent_id=str(best.get("agent_id") or ""),
         eval_set=str(best.get("eval_set") or ""),
+        grader_criteria_sha=str(best.get("grader_criteria_sha") or ""),
         gate_passed=bool(gate_passed) if isinstance(gate_passed, bool) else None,
         gate_failed_critical=tuple(str(c) for c in failed_critical)
         if isinstance(failed_critical, list)
