@@ -17,6 +17,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { LauncherFooter } from "@/components/landing/launcher-footer";
+import { LauncherWaves } from "@/components/landing/launcher-waves";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link } from "@/i18n/navigation";
@@ -125,21 +126,6 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
         className="pointer-events-none absolute inset-0 z-0"
         style={{ background: "var(--launcher-backdrop)" }}
       />
-      {/* One continuous full-width wave band, stretched horizontally but at a
-          fixed height so it never grows taller as the window widens. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[300px]"
-        style={{
-          backgroundImage: "url('/assets/tessera-waves-band.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center bottom",
-          backgroundSize: "100% 100%",
-          opacity: "var(--launcher-waves-opacity)",
-          maskImage: "linear-gradient(to top, #000 60%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to top, #000 60%, transparent 100%)",
-        }}
-      />
-
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Unified header (docs/design/header-normative.md) — launcher variant:
             brand only at left, the global cluster (langue · thème · compte) at
@@ -147,7 +133,11 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
             no PRODUIT/COCKPIT toggle. The DEMO label describes the environment;
             account access remains available independently. */}
         <AppHeader plan="launcher" auth="optional" />
-        <main className="flex flex-1 flex-col items-center justify-start px-6 pt-[56px] pb-20 sm:pt-[80px] lg:pt-[104px]">
+        {/* `relative` so the wave band can anchor to the bottom of the CONTENT: it must
+            end at the footer's top rule, not run underneath the footer (see
+            LauncherWaves for the measurement that made this a bug). */}
+        <main className="relative flex flex-1 flex-col items-center justify-start px-6 pt-[56px] pb-20 sm:pt-[80px] lg:pt-[104px]">
+          <LauncherWaves />
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}

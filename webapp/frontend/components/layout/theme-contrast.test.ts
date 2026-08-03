@@ -609,13 +609,22 @@ describe("every colour constant survives the light theme", () => {
  *
  * Held at the same DESIGN floor as the launcher's separator (see
  * `launcher-surface-contrast.test.ts` for why 3:1 is the wrong bar for a rule that
- * separates rather than identifies).
+ * separates rather than identifies, AND for the full reasoning behind the value —
+ * the two floors are the same number on purpose and must move together).
  *
- * Mutation contract: drop any theme's chrome line back to its old value → red, and
- * the failure names the theme.
+ * LOWERED 1.8 → 1.4 ON 2026-08-03, in step with the other file. Short version: the
+ * 2026-08-01 report was "invisible" (they measured 1.20–1.28:1) and the correction
+ * took them to 2.01–2.22:1; the 2026-08-03 report was "trop vif […] discret
+ * premium" on the same Cloudflare reference, and the correction to THAT lands the
+ * family at 1.45–1.57:1. A floor of 1.8 would have forbidden the second correction
+ * instead of measuring it. 1.4 still refuses the state that produced the first
+ * complaint, which is the job. Move it here, dated, or not at all.
+ *
+ * Mutation contract: drop any theme's chrome line to its pre-2026-08-01 value → red,
+ * and the failure names the theme.
  */
 describe("the chrome line reads in every theme", () => {
-  const SEPARATOR_FLOOR = 1.8;
+  const SEPARATOR_FLOOR = 1.4;
   const css = readFileSync(path.join(process.cwd(), "app", "globals.css"), "utf8");
 
   /** `rgba(r,g,b,a)` over an opaque ground → what the eye actually gets. */

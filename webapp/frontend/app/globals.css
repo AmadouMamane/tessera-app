@@ -137,9 +137,26 @@
    * under the cockpit header and the rule that divides the left panel from the
    * content. Those are structural — they say where one region ends — and under
    * "Clair" they were drawn at 1.23:1, which is invisible by construction rather
-   * than by accident. Giving them their own token is what lets the light theme
-   * make them 1.75× stronger without dragging every card border along with them. */
-  --tessera-chrome-line: #2a4f6c;
+   * than by accident. Giving them their own token is what lets one theme re-weight
+   * them without dragging every card border along with it.
+   *
+   * SOFTENED 2026-08-03, and this REVERSES a decision taken two days earlier on
+   * purpose — recorded rather than quietly applied, because the earlier one was not
+   * a mistake. On 2026-08-01 Amadou reported these two rules as invisible and they
+   * went from 1.23:1 to 2.01–2.22:1. On 2026-08-03 he reported the result as "trop
+   * vif" and asked for "discret premium", naming Cloudflare as the reference. Both
+   * reports are true: 1.23 is invisible and 2.2 shouts, and the answer was never at
+   * either end. The whole family now lands in 1.45–1.57:1 — above Cloudflare's own
+   * 1.24–1.30:1 rule, which is where the first complaint came from, and well below
+   * the correction that produced the second.
+   *
+   * Two changes here, not one. The weight drops 2.22 → 1.57:1, and the CHROMA drops
+   * with it: #2a4f6c is a saturated steel blue, and on a navy shell it is the colour
+   * as much as the luminance that reads as loud. #20384a carries about a third less
+   * chroma at the same hue. Held above the card hairline (#173249, 1.45:1) by the
+   * second assertion in `theme-contrast.test.ts` — a structural rule that measured
+   * the same as a card's edge would make this token pointless. */
+  --tessera-chrome-line: #20384a;
   /* Scrollbar thumb — a token so each theme can keep it visible against its bg. */
   --tessera-scrollbar: #21425b;
   --tessera-scrollbar-hover: #2a3d4a;
@@ -310,10 +327,12 @@
   --tessera-muted: #141b2a;
   --tessera-border: rgba(255, 255, 255, 0.07);
   --tessera-border-strong: rgba(255, 255, 255, 0.12);
-  /* 0.20 → 1.80:1. At 0.16 it measured 1.57:1: a THIRD theme carrying the same
-     faint rule, found only because the other two were being measured. Nobody
-     reported it — which is the point of measuring all the themes at once. */
-  --tessera-chrome-line: rgba(255, 255, 255, 0.2);
+  /* 0.14 → 1.46:1, softened 2026-08-03 with the other two (see the :root block for
+     the full arc: invisible at 1.23, "trop vif" at 2.0+, the family now at ~1.5).
+     This theme is why all three are always re-measured together: it was the one
+     nobody reported — at 0.16/1.57:1 it was carrying the same faint rule as the
+     others and was found only because the other two were being measured. */
+  --tessera-chrome-line: rgba(255, 255, 255, 0.14);
   --tessera-scrollbar: #232c3e;
   --tessera-scrollbar-hover: #2e3a4f;
   /* Raised surfaces (popovers/menus) lift onto their own tier; inputs take the
@@ -349,17 +368,21 @@
    * #e2e2e2. Two things are borrowed, and one is deliberately not:
    *   · the NEUTRALS and their arrangement — tinted canvas, white surfaces, and
    *     structure carried by the LINE rather than by tone;
-   *   · NOT their line weight. Cloudflare's #e2e2e2 measures 1.24:1 on their own
-   *     page. That is the very faintness Amadou reported here, so the two rules
-   *     that carry the shell keep the stronger value he asked for.
+   *   · NOT their line weight, and not the correction that followed either. Their
+   *     #e2e2e2 measures 1.24:1 on their own page — the very faintness Amadou
+   *     reported here on 2026-08-01, which is why the shell's two rules went to
+   *     ~2:1 that day. On 2026-08-03 he reported THAT as "trop vif" and asked for
+   *     "discret premium" on the same Cloudflare reference. The line now sits
+   *     between the two: visibly stronger than theirs, visibly quieter than the
+   *     correction. See the :root block for the full arc.
    *
    * Measured against the surface each one lands on (`theme-contrast.test.ts` and
    * `launcher-surface-contrast.test.ts` re-measure them, they are not comments):
    *   canvas #fafafa .............................. Cloudflare's own page colour
    *   card / panel #ffffff on the canvas .......... 1.04:1 (a tone, not a border)
    *   card hairline #e0e0e0 on a card ............. 1.32:1 (Cloudflare's is 1.30:1)
-   *   chrome line #b4b4b4 on the canvas ........... 1.99:1 (theirs is 1.24:1)
-   *   chrome line on a card ....................... 2.07:1 */
+   *   chrome line #d2d2d2 on the canvas ........... 1.45:1 (theirs is 1.24:1)
+   *   chrome line on a card ....................... 1.51:1 */
   --tessera-bg: #fafafa;
   --tessera-bg-soft: #ffffff;
   --tessera-surface: #ffffff;
@@ -367,7 +390,7 @@
   --tessera-muted: #f4f4f4;
   --tessera-border: #e0e0e0;
   --tessera-border-strong: #c6c6c6;
-  --tessera-chrome-line: #b4b4b4;
+  --tessera-chrome-line: #d2d2d2;
   --tessera-scrollbar: #cdcdcd;
   --tessera-scrollbar-hover: #b0b0b0;
   --tessera-text: #0f172a;
@@ -445,12 +468,14 @@
   --bg-panel-soft: rgba(10, 27, 47, 0.66);
   --panel: rgba(6, 20, 38, 0.78);
   --panel-soft: rgba(10, 27, 47, 0.66);
-  /* 0.38, not 0.14. At 0.14 this measured 1.20:1 — the dark twin of the
-     1.28:1 hairline Amadou called invisible under "Clair". It sat frozen for
-     one commit because his report said "en fond clair" and widening his scope
-     unasked is not my call; he then asked for the rest. Now 2.01:1, the same
-     number the light separator and the cockpit chrome line both carry. */
-  --border-subtle: rgba(148, 163, 184, 0.38);
+  /* 0.25 → 1.49:1, softened 2026-08-03 in step with the cockpit chrome line and for
+     the same reported reason ("dans espaces diminuer aussi les pourtours trop vifs,
+     les rendre discret premium"). The value has now been round the loop twice: 0.14
+     measured 1.20:1 and was invisible, 0.38 measured 2.01:1 and was too loud, and
+     the two complaints together locate the answer between them rather than at
+     either end. Same band as every other separator in the app — see the
+     `--tessera-chrome-line` block in :root for the arc and the numbers. */
+  --border-subtle: rgba(148, 163, 184, 0.25);
   --border-gold: rgba(214, 182, 106, 0.28);
   --border-cyan: rgba(45, 212, 191, 0.26);
   --border-amber: rgba(245, 158, 11, 0.28);
@@ -562,7 +587,14 @@
   --launcher-btn-secondary: color-mix(in srgb, var(--text-primary) 8%, transparent);
   --launcher-btn-secondary-hover: color-mix(in srgb, var(--text-primary) 14%, transparent);
   --launcher-btn-secondary-ink: var(--text-primary);
-  --launcher-btn-secondary-border: var(--border-subtle);
+  /* PINNED, not `var(--border-subtle)`, since 2026-08-03. It aliased the separator
+     token and would have followed it down to 1.49:1 — but a button's outline and a
+     rule between two regions are different roles: the rule separates, the outline
+     is what says "this is a control you can press". WCAG SC 1.4.11 governs the
+     second and not the first. So the secondary CTA keeps the weight the separators
+     just gave up (2.01:1); "Ouvrir les espaces" is a button either side of a theme,
+     and it must not get quieter because a header rule did. */
+  --launcher-btn-secondary-border: rgba(148, 163, 184, 0.38);
   --launcher-btn-secondary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   /* The sign-in form and the hero illustration. Found only by LOOKING at the light
      page after the token move: the surface flipped and these did not, so the two
@@ -587,12 +619,14 @@
   --bg-panel-soft: #fbfbfb;
   --panel: #ffffff;
   --panel-soft: #fbfbfb;
-  /* NEUTRAL black at 0.28 → #b4b4b4 over the page, 1.99:1 — the exact weight the
-     cockpit chrome line carries. It was slate-tinted before, and the tint was the
-     whole complaint: a neutral that carries a hue reads cheap next to one that
-     does not. Cloudflare's own rule is #e2e2e2, i.e. 1.24:1; the neutrals are
-     borrowed from them, the line weight deliberately is not. */
-  --border-subtle: rgba(0, 0, 0, 0.28);
+  /* NEUTRAL black at 0.17 → ~#d4d4d4 over the page, 1.48:1 — the exact weight the
+     cockpit chrome line carries, as it has been since both were introduced. It was
+     slate-TINTED before that, and the tint was its own complaint: a neutral that
+     carries a hue reads cheap next to one that does not. Neutrality is kept; only
+     the weight moved, 0.28 → 0.17, softened 2026-08-03 with the whole family.
+     Cloudflare's own rule is #e2e2e2 (1.24:1) — the neutrals are borrowed from
+     them, the line weight sits one notch above theirs and says why in :root. */
+  --border-subtle: rgba(0, 0, 0, 0.17);
   --border-gold: rgba(135, 112, 68, 0.4);
   --border-cyan: rgba(15, 118, 110, 0.34);
   --border-amber: rgba(180, 83, 9, 0.34);

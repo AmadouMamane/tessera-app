@@ -28,7 +28,8 @@
 //
 // Mutation contract (each verified red before landing):
 //   · re-tone `--text-secondary` light to the dark value  → red, names the pair;
-//   · drop `--border-subtle` back to its old alpha        → red, either theme;
+//   · drop `--border-subtle` to the 2026-08-01 pre-fix alpha (dark .14 / light .10)
+//                                                         → red, either theme;
 //   · delete the `.light .launcher-surface` block         → red (a token is missing);
 //   · rename `.launcher-surface`                          → red (anti-vacuity).
 import { readFileSync } from "node:fs";
@@ -90,25 +91,41 @@ const AA = 4.5;
  * SC 1.4.11's 3:1 governs visual information REQUIRED TO IDENTIFY a component or
  * its state. A rule under a header identifies nothing; it separates. No reference
  * Amadou named clears 3:1 on a separator — Vercel's is about 1.17:1, Cloudflare's
- * about 1.3:1 — and the cockpit's own new chrome line, chosen the same day and on
- * purpose, is 2.01:1. The first draft of this file asserted 3:1 here anyway and
- * went red against a decision that was never wrong. A threshold nobody intends to
- * meet is not a strict witness, it is a broken one.
+ * about 1.3:1. The first draft of this file asserted 3:1 here anyway and went red
+ * against a decision that was never wrong. A threshold nobody intends to meet is
+ * not a strict witness, it is a broken one.
  *
- * So separators are held at the level the design actually decided: at least as
- * strong as the cockpit's chrome line, i.e. visibly present rather than the
- * 1.28:1 hairline that started this whole conversation.
+ * LOWERED 1.8 → 1.4 ON 2026-08-03, and the lowering is the point of this comment.
+ * A ratchet whose bound moves quietly is not a ratchet, so the reason is written
+ * here, at the constant, and not only in a commit message:
+ *
+ *   · 2026-08-01 — Amadou reports the separators as invisible. They measured
+ *     1.20–1.28:1. They go to 2.01–2.22:1, this floor is set at 1.8, and it is the
+ *     right floor FOR THAT DECISION.
+ *   · 2026-08-03 — he reports the result: "les pourtours trop vifs […] les rendre
+ *     discret premium", same Cloudflare reference as before. Both reports are true.
+ *     1.23 is invisible and 2.2 shouts; the answer was never at either end of the
+ *     range, and holding the floor at 1.8 would have made this test forbid the
+ *     correction rather than measure it.
+ *
+ * So the floor moves to 1.4 — still well above the 1.20:1 that produced the first
+ * complaint, and above Cloudflare's own 1.24–1.30:1 rule, so this file continues to
+ * refuse the state it was written to refuse. What it stops asserting is a specific
+ * weight the design has since revised. The values it now guards land at 1.45–1.57:1.
+ *
+ * If it ever needs to move again: change it HERE, with the date and the report that
+ * caused it. Never widen a pair's own `min` to dodge it.
  */
-const SEPARATOR_FLOOR = 1.8;
+const SEPARATOR_FLOOR = 1.4;
 
 /**
  * The dark separator was FROZEN at 1.19:1 for exactly one commit, and is not any more.
  *
  * It was frozen because Amadou's report said "en fond clair" and re-toning a theme
  * nobody complained about, on my own authority, inside a change about something else,
- * is not a fix — it is scope taken without asking. He then asked for the rest, so the
- * dark rule went to 2.01:1 and both themes are now held to the SAME floor. A frozen
- * bound that goes away because the debt was PAID is the only good ending for one.
+ * is not a fix — it is scope taken without asking. He then asked for the rest, so both
+ * themes have been held to the SAME floor ever since. A frozen bound that goes away
+ * because the debt was PAID is the only good ending for one.
  */
 
 /** The pairs a reader's eye actually forms on these three pages. `ground` names the
@@ -208,6 +225,18 @@ describe("the launcher surface survives both themes", () => {
     // re-enabling it is a decision someone has to come here and make.
     expect(Number(LIGHT.get("--launcher-waves-opacity"))).toBe(0);
     expect(Number(DARK.get("--launcher-waves-opacity"))).toBe(1);
+  });
+
+  it("holds the cockpit's separator floor to the same number as this one", () => {
+    // The two floors are declared in two files and the comments in both say they move
+    // together. Prose that states an invariant and does not enforce it is how they
+    // drift: on 2026-08-03 BOTH had to be lowered 1.8 → 1.4, and lowering one is a
+    // one-character way to leave the cockpit holding a bar the launcher abandoned.
+    const other = readFileSync(path.resolve(__dirname, "theme-contrast.test.ts"), "utf8");
+    const found = /const SEPARATOR_FLOOR = ([\d.]+);/.exec(other);
+    // Anti-vacuity: a renamed constant must fail LOUDLY, not match nothing and pass.
+    expect(found, "theme-contrast.test.ts no longer declares SEPARATOR_FLOOR").not.toBeNull();
+    expect(Number(found?.[1]), "the two separator floors have diverged").toBe(SEPARATOR_FLOOR);
   });
 
   it("keeps the /espaces tiles off black shadows under Clair", () => {

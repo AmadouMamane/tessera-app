@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { LauncherFooter } from "@/components/landing/launcher-footer";
+import { LauncherWaves } from "@/components/landing/launcher-waves";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import {
@@ -94,19 +95,6 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
         className="pointer-events-none absolute inset-0 z-0"
         style={{ background: "var(--launcher-backdrop)" }}
       />
-      {/* Same continuous wave band as the launcher — visual continuity. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[300px]"
-        style={{
-          backgroundImage: "url('/assets/tessera-waves-band.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center bottom",
-          backgroundSize: "100% 100%",
-          opacity: "var(--launcher-waves-opacity)",
-          maskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to top, #000 55%, transparent 100%)",
-        }}
-      />
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Unified header (docs/design/header-normative.md) — business variant:
             brand at left (links back to the launcher), the global cluster at
@@ -114,7 +102,10 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
             legitimately appears for a visitor (the only plan besides /produit). */}
         <AppHeader plan="business" auth="optional" brandHref="/select-space" />
 
-        <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-10 sm:pt-12">
+        {/* `relative` + the band as first child: same continuous wave band as the
+            launcher, and like there it ends at the footer's rule rather than under it. */}
+        <main className="relative flex flex-1 flex-col items-center px-6 pb-16 pt-10 sm:pt-12">
+          <LauncherWaves />
           <section className="mb-10 flex w-full max-w-[1040px] flex-col items-start gap-[10px]">
             <DemoBadge />
             <h1 className="font-sans text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] text-[var(--text-primary)]">

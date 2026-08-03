@@ -38,11 +38,13 @@ export function LauncherFooter({ width = "wide" }: { width?: "wide" | "narrow" }
     // other way round (cap outside, padding inside) insets the text by one gutter and the
     // page reads as two columns that nearly line up, which is worse than either.
     <footer
-      // A SCRIM, because the wave band lives at `bottom-0` and the footer now sits on top of
-      // it: on the dark themes "Cockpit de gouvernance" was landing straight on a bright
-      // cyan strand. A translucent wash of the page colour keeps the artwork visible and
-      // the words readable, in both themes, without moving either.
-      className="relative z-10 mt-auto w-full border-[var(--border-subtle)] border-t bg-[color-mix(in_srgb,var(--bg-app)_78%,transparent)] px-6 backdrop-blur-[3px]"
+      // NO SCRIM ANY MORE, and its removal is the actual fix. A wash of the page colour
+      // plus `backdrop-blur` was what stood between these words and the wave band running
+      // underneath them — it made the text readable and left the collision in place, which
+      // is why it still read as a seam cut across the artwork. The band now stops at this
+      // element's top rule (`LauncherWaves`), so there is nothing behind the footer to
+      // hide, and it sits on the page ground like every other region of the page.
+      className="relative z-10 mt-auto w-full border-[var(--border-subtle)] border-t px-6"
     >
       <div
         className={cn(
