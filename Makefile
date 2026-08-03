@@ -36,6 +36,7 @@ SHELL := /bin/bash
         eval-calibrate-weak seed generate-corpus ingest-regulations bootstrap run run-on-prem \
         precommit check ci help hooks land memory-check \
         obs-up obs-up-core obs-down obs-logs obs-guard obs-secrets dev-secrets \
+        obs-verify obs-realign obs-wait eval-regrade \
         gate gate-twice gate-checks gate-py gate-web tooling \
         claim release whoowns session landed
 
@@ -461,6 +462,25 @@ eval-contribution: install
 	@test -n "$(REPORT)" || (echo "REPORT= is required" && exit 2)
 	uv run python scripts/check_contribution.py --report $(REPORT) $(if $(MIN),--min-contribution $(MIN))
 
+# Re-derive a report's JUDGEMENTS from its recorded responses, under today's criteria.
+#
+# A report holds two different things: what the model SAID (a fact, fixed when the run ended)
+# and what that was WORTH (a judgement, made by the grader of the day). `catalogue_version`
+# pins the first and is blind to the second. On 2026-08-03 fifty-nine criteria changed and the
+# null floor was re-measured; the agents' reports were not, and the release gate — comparing an
+# August floor against July judgements — reported three models as *worse than no model at all*.
+# Two of those were refusals the old grader could not read.
+#
+# This spends NO tokens and draws NO sample: the responses are on disk. It is more reproducible
+# than a replay, which would sample a stochastic model afresh and answer a different question.
+# Cases whose criteria turn on `confidence` or `citations` — which a report does not record —
+# come back CANNOT SAY rather than quietly passing.
+#
+#   make eval-regrade                          # every latest_<agent>.json
+#   make eval-regrade REPORT=path DRY_RUN=1    # one, saying what it would change
+eval-regrade: install
+	uv run python scripts/regrade_reports.py $(if $(REPORT),--report $(REPORT)) $(if $(DRY_RUN),--dry-run)
+
 # Replay the catalogue against every local model and compare them against the null floor
 eval-sweep: install
 	uv run python scripts/run_model_sweep.py
@@ -754,11 +774,116 @@ obs-secrets:
 	  echo "  The OTLP basic-auth header is DERIVED from the key pair, so the two cannot drift."; \
 	fi
 
+# ── The credential the ENV declares, and the credential the VOLUME remembers ────────────────
+#
+# `obs-guard` asks whether a credential is SET. It cannot ask whether it is ACCEPTED — and on
+# 2026-08-04 that gap cost fourteen hours: `tessera-claude-langfuse` restarted **818 times**
+# against `P1000 Authentication failed`, and no witness in this repository said a word.
+#
+# Postgres and ClickHouse bake their password when the VOLUME IS INITIALISED and ignore the env
+# for ever after. Regenerate `.env.obs.local`, or keep a volume older than it, and the two
+# diverge in silence: every variable is set, `obs-guard` is green, and the stack cannot log in.
+#
+# The trap that hid it for a whole morning: `docker exec … psql -U langfuse` SUCCEEDS with the
+# wrong password, because the image's local socket is `trust`. So this witness interrogates THE
+# DATABASE, **over TCP, from the stack's own network, with the env credential** — the exact path
+# Langfuse takes, and the only one that can tell the two apart (ADR 0026).
+#
+# Nothing here repairs. The repair is `obs-realign`, separate and deliberate, because a witness
+# that heals its own condition reports "ok" for ever — the same reason `obs-guard` may not
+# depend on `obs-secrets`.
+#
+# Three verdicts, never two (ADR 0027): OK · NOT OK (names the divergence and the repair) ·
+# CANNOT SAY (the stack is not up, or docker is not answering — a witness that cannot see may
+# not say "ok"). They are carried by the printed TAG, not by the exit code, because **make
+# collapses every failing recipe to exit 2** whatever the recipe exits with — so `obs-verify`
+# offers exactly two codes, 0 and 2, and claiming a third here would make this comment the
+# false witness. Read the tag; the code only tells you green from not-green.
+OBS_NETWORK := tessera-claude-obs
+
+obs-verify:
+	@env_file="$(OBS_ENV_FILE)"; \
+	case "$$env_file" in /*) ;; *) env_file="./$$env_file" ;; esac; \
+	if [ -f "$$env_file" ]; then set -a; . "$$env_file"; set +a; fi; \
+	if ! docker info >/dev/null 2>&1; then \
+	  echo "[obs-verify] [CANNOT SAY] docker is not answering — no credential was tried."; \
+	  exit 2; \
+	fi; \
+	bad=""; unseen=""; \
+	if [ -n "$$(docker ps -q -f name='^tessera-claude-langfuse-db$$')" ]; then \
+	  img=$$(docker inspect tessera-claude-langfuse-db --format '{{.Config.Image}}'); \
+	  if docker run --rm --network $(OBS_NETWORK) \
+	       -e PGPASSWORD="$$TESSERA_OBS_LANGFUSE_DB_PASSWORD" "$$img" \
+	       psql -h langfuse-db -U langfuse -d langfuse -c 'select 1' >/dev/null 2>&1; then \
+	    echo "[obs-verify] [OK] postgres accepts TESSERA_OBS_LANGFUSE_DB_PASSWORD over TCP."; \
+	  else \
+	    bad="$$bad langfuse-db/TESSERA_OBS_LANGFUSE_DB_PASSWORD"; \
+	  fi; \
+	else unseen="$$unseen langfuse-db"; fi; \
+	if [ -n "$$(docker ps -q -f name='^tessera-claude-clickhouse$$')" ]; then \
+	  img=$$(docker inspect tessera-claude-clickhouse --format '{{.Config.Image}}'); \
+	  if docker run --rm --network $(OBS_NETWORK) --entrypoint clickhouse-client "$$img" \
+	       --host clickhouse --user clickhouse --password "$$TESSERA_OBS_CLICKHOUSE_PASSWORD" \
+	       --query 'SELECT 1' >/dev/null 2>&1; then \
+	    echo "[obs-verify] [OK] clickhouse accepts TESSERA_OBS_CLICKHOUSE_PASSWORD over TCP."; \
+	  else \
+	    bad="$$bad clickhouse/TESSERA_OBS_CLICKHOUSE_PASSWORD"; \
+	  fi; \
+	else unseen="$$unseen clickhouse"; fi; \
+	if [ -n "$$bad" ]; then \
+	  echo ""; \
+	  echo "[obs-verify] [NOT OK] the stack's own credential is REFUSED by the store it unlocks:"; \
+	  for b in $$bad; do echo "      $$b"; done; \
+	  echo "  The variable is set, so \`obs-guard\` is green. The VOLUME was initialised with a"; \
+	  echo "  different password, and neither store re-reads the env after that. Langfuse will"; \
+	  echo "  crash-loop on P1000 for as long as this holds, and the traces stay unreadable."; \
+	  echo "  Realign the store to the env (keeps every trace, drops no volume):"; \
+	  echo "      make obs-realign"; \
+	  exit 1; \
+	fi; \
+	if [ -n "$$unseen" ]; then \
+	  echo "[obs-verify] [CANNOT SAY] not running, so not asked:$$unseen"; \
+	  exit 2; \
+	fi
+
+# The declared repair `obs-verify` names. Deliberately NOT run by anything automatically: it
+# changes a stored credential, and a store that silently rewrites itself to match whatever the
+# caller brought is not a store you can trust. It drops no volume — the traces survive.
+obs-realign:
+	@env_file="$(OBS_ENV_FILE)"; \
+	case "$$env_file" in /*) ;; *) env_file="./$$env_file" ;; esac; \
+	if [ -f "$$env_file" ]; then set -a; . "$$env_file"; set +a; fi; \
+	[ -n "$$TESSERA_OBS_LANGFUSE_DB_PASSWORD" ] || { \
+	  echo "[obs-realign] [CANNOT SAY] no TESSERA_OBS_LANGFUSE_DB_PASSWORD — nothing to align to."; \
+	  exit 2; }; \
+	printf 'ALTER USER langfuse WITH PASSWORD :pw;\n' \
+	  | docker exec -i tessera-claude-langfuse-db psql -U langfuse -d langfuse \
+	      -v pw="'$$TESSERA_OBS_LANGFUSE_DB_PASSWORD'" \
+	  || { echo "[obs-realign] [NOT OK] postgres refused the ALTER."; exit 1; }; \
+	echo "[obs-realign] postgres role realigned. Restarting the containers that were refused:"; \
+	docker restart tessera-claude-langfuse tessera-claude-langfuse-worker >/dev/null; \
+	echo "  now run \`make obs-verify\` — this command does not grade itself."
+
 obs-up: obs-guard
 	$(OBS_COMPOSE) up -d
+	@$(MAKE) --no-print-directory obs-wait
+	@$(MAKE) --no-print-directory obs-verify
 
 obs-up-core: obs-guard
 	$(OBS_COMPOSE) up -d otel-collector phoenix prometheus grafana
+
+# `up -d` returns when the containers are CREATED, not when the stores answer. Without this the
+# verify above would read a starting database and report a divergence that is only a stopwatch.
+obs-wait:
+	@for i in $$(seq 1 60); do \
+	  ok=1; \
+	  for c in tessera-claude-langfuse-db tessera-claude-clickhouse; do \
+	    [ -n "$$(docker ps -q -f name="^$$c$$" -f health=healthy)" ] || ok=0; \
+	  done; \
+	  [ "$$ok" = 1 ] && exit 0; \
+	  sleep 2; \
+	done; \
+	echo "[obs-wait] the stores did not become healthy in 120s — verifying anyway."
 
 obs-down:
 	$(OBS_COMPOSE) down

@@ -393,3 +393,107 @@ class TestTheGuardActuallyRefuses:
             f"payloads.\n{out}"
         )
         assert "TESSERA_OBS_MINIO_PASSWORD" in out, f"it refused without naming the one gap.\n{out}"
+
+
+def _recipe(target: str) -> str:
+    """The body of a Makefile target — the lines make would actually run, nothing else."""
+    text = _MAKEFILE.read_text(encoding="utf-8")
+    match = re.search(
+        rf"^{re.escape(target)}:[^\n]*\n(?P<body>(?:\t[^\n]*\n)*)", text, re.MULTILINE
+    )
+    assert match is not None, f"`{target}` is not a target in the Makefile any more."
+    return match.group("body")
+
+
+def _commands_of(body: str) -> str:
+    """A recipe with everything it merely PRINTS removed — what it runs, not what it says.
+
+    A refusal is required to name its own repair, so the word appears in an `echo`. Only the
+    difference between naming and invoking makes the wiring assertion mean anything.
+    """
+    return "\n".join(re.sub(r"\b(echo|printf)\b.*", "", line) for line in body.splitlines())
+
+
+class TestASetCredentialIsNotAnAcceptedCredential:
+    """`obs-guard` asks whether a credential is SET. Nothing asked whether it was ACCEPTED.
+
+    On 2026-08-04 `tessera-claude-langfuse` had restarted **818 times** against
+    `P1000 Authentication failed`, for fourteen hours, while every witness in this repository was
+    green: the variable *was* set, so `obs-guard` passed. Postgres and ClickHouse bake their
+    password when the VOLUME IS INITIALISED and ignore the env for ever after, so regenerating
+    `.env.obs.local` — or keeping a volume older than it — diverges the two in silence.
+
+    The trap that hid it for a whole morning is worth its own assertion below: `docker exec …
+    psql -U langfuse` SUCCEEDS with the wrong password, because the image's local socket is
+    `trust`. A probe that takes that path certifies a credential nobody can use.
+    """
+
+    def test_the_up_target_verifies_and_not_only_guards(self) -> None:
+        body = _recipe("obs-up")
+
+        assert "obs-verify" in body, (
+            "`make obs-up` starts the stack and never asks whether the stores accept the "
+            "credentials it just handed them. That is how 818 crash-loops went unremarked for "
+            "fourteen hours. Restore the `obs-verify` step."
+        )
+
+    def test_the_probe_does_not_take_the_trust_socket(self) -> None:
+        """`docker exec … psql` authenticates over the local socket, which the postgres image
+        trusts unconditionally. A witness that asks the question that way cannot fail, and so is
+        not a witness — ADR 0026, and the exact reason this bug survived a morning of looking."""
+        body = _recipe("obs-verify")
+
+        assert "docker exec" not in body, (
+            "`obs-verify` probes with `docker exec`, i.e. over the container's LOCAL socket — "
+            "which `pg_hba.conf` sets to `trust`, so it succeeds with ANY password. It would "
+            "certify exactly the credential that crash-looped Langfuse. Probe over TCP, from "
+            "`--network`, the way Langfuse itself connects."
+        )
+        assert "--network" in body, (
+            "`obs-verify` no longer probes from the stack's own network, so it is no longer "
+            "taking the path the application takes."
+        )
+
+    def test_the_verifier_does_not_repair_what_it_checks(self) -> None:
+        """The same law that forbids `obs-guard: obs-secrets`. A check that satisfies its own
+        condition can never fail, and so has checked nothing."""
+        text = _MAKEFILE.read_text(encoding="utf-8")
+        deps = re.search(r"^obs-verify:(?P<deps>[^\n]*)$", text, re.MULTILINE)
+        assert deps is not None, "`obs-verify` is gone from the Makefile."
+
+        assert "obs-realign" not in deps.group("deps"), (
+            "`obs-verify` depends on `obs-realign`: it now REPAIRS the divergence it exists to "
+            "report, and can never be red. The repair stays a separate, deliberate command."
+        )
+        assert "ALTER USER" not in _recipe("obs-verify"), (
+            "`obs-verify` rewrites the stored password itself. A store that silently realigns to "
+            "whatever the caller brought is not a store whose credential means anything."
+        )
+
+    def test_the_refusal_names_the_repair(self) -> None:
+        """A red nobody can act on is a red people learn to ignore."""
+        body = _recipe("obs-verify")
+
+        assert "obs-realign" in body, (
+            "`obs-verify` refuses without naming `make obs-realign`, the one command that fixes "
+            "it. The operator is left with `P1000` and a guess."
+        )
+
+    def test_the_repair_is_not_wired_into_anything(self) -> None:
+        """Nothing may run `obs-realign` on its own: it mutates a stored credential.
+
+        NAMING it is required — the refusal above must say how to repair itself — so the whole
+        assertion is the difference between a recipe that PRINTS the word and one that RUNS the
+        command. Printed text is dropped before looking.
+        """
+        text = _MAKEFILE.read_text(encoding="utf-8")
+        callers = [
+            target
+            for target in re.findall(r"^([a-z][a-z0-9-]*):[^\n=]*$", text, re.MULTILINE)
+            if target != "obs-realign" and "obs-realign" in _commands_of(_recipe(target))
+        ]
+
+        assert callers == [], (
+            f"{callers} run `obs-realign` automatically. Rewriting a database password must stay "
+            f"an act somebody chose, not a side effect of starting a stack."
+        )
