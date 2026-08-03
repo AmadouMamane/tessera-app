@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
 
 __all__ = [
+    "MODEL_OVERRIDE_APPLIED",
     "SAMPLING_APPLIED",
     "ChatBackend",
     "ChatMessage",
@@ -37,6 +38,24 @@ SAMPLING_APPLIED: Final[dict[str, tuple[str, ...]]] = {
     "ollama": ("temperature", "top_p", "top_k", "frequency_penalty", "presence_penalty"),
     "vertex-ai": ("temperature", "top_p", "top_k"),
     "openai": (),
+}
+
+#: ADR 0030 — which backends honour the per-call ``model=``, keyed by ``ChatBackend.name``.
+#:
+#: The sampling knobs had a declaration a test could interrogate; the model override had
+#: none, and that is exactly where it went wrong. ``VertexAIBackend`` accepted ``model=`` and
+#: discarded it — the parameter carried a lint suppression saying it was deliberately unused,
+#: "fixed at init on the frontier path" — so a governed override was stored, validated,
+#: journalled, displayed as active, stamped on the span and threaded into the eval lineage
+#: while the base model kept serving. ADR 0030 calls that shape "cosmetic" and says the design
+#: makes it unwritable. Nothing checked, so nothing knew.
+#:
+#: All three now honour it, and ``tests/unit/test_model_override_is_effective.py`` asks each
+#: backend rather than believing this table. Audit 2026-08-03.
+MODEL_OVERRIDE_APPLIED: Final[dict[str, bool]] = {
+    "ollama": True,
+    "vertex-ai": True,
+    "openai": True,
 }
 
 

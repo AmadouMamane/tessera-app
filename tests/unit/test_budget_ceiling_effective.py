@@ -118,7 +118,15 @@ def _probe_route(
     day_cost: str,
     request_model: str | None,
 ) -> dict[str, Any]:
-    """POST /chat with a stubbed policy + tracker; return the state ainvoke saw."""
+    """POST /chat with a stubbed policy + tracker; return the state ainvoke saw.
+
+    The paid model is selected through the GOVERNED OVERRIDE rather than the body picker.
+    These tests are about the breaker, and the breaker must gate a paid model however it was
+    chosen; driving it through the picker made them depend on a path that is, correctly,
+    closed to this plane. ``POST /chat`` no longer honours a paid model outside the operator
+    console — a rule that used to live only in the frontend's BFF (audit 2026-08-03) — and a
+    TestClient carries no operator assertion, so the picker here is a customer's.
+    """
     from starlette.testclient import TestClient
 
     from tessera.api.main import build_app
@@ -127,7 +135,11 @@ def _probe_route(
     async def _policy() -> BudgetPolicy | None:
         return policy
 
+    async def _override(_agent_id: str) -> str | None:
+        return request_model
+
     monkeypatch.setattr(chat_route, "resolve_budget_policy", _policy)
+    monkeypatch.setattr(chat_route, "resolve_chat_model_override", _override)
     monkeypatch.setattr(chat_route, "get_budget_tracker", lambda: _FakeTracker(day_cost))
 
     seen: dict[str, Any] = {}
@@ -145,8 +157,6 @@ def _probe_route(
 
     monkeypatch.setattr(chat_route, "last_agent_for", _no_prior_agent)
     body: dict[str, Any] = {"message": "un tour de test"}
-    if request_model is not None:
-        body["model"] = request_model
     response = TestClient(build_app()).post("/chat", json=body)
     assert response.status_code == 200
     assert "turn.error" in response.text  # the probe raised: the graph really ran

@@ -64,7 +64,7 @@ async def test_vertex_stream_records_final_usage_once(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     backend = VertexAIBackend()
-    monkeypatch.setattr(backend, "_ensure_model", lambda: _Gemini())
+    monkeypatch.setattr(backend, "_ensure_model", lambda _model=None: _Gemini())
     budget = _BudgetSpy()
     monkeypatch.setattr("tessera.llm.frontier.get_budget_tracker", lambda: budget)
     usage: dict[str, int] = {}

@@ -884,6 +884,50 @@ def sandbox_overrides_allowed(surface: Surface, auth_state: AuthState) -> bool:
     return surface is Surface.COCKPIT_EMBEDDED and auth_state is AuthState.OPERATOR
 
 
+def _picked_model(requested: str | None, surface: Surface, auth_state: AuthState) -> str | None:
+    """Validate the per-turn model picker, server-side. Returns the model, or ``None``.
+
+    **A rule enforced only in the browser's own BFF is not enforced** — this repository's own
+    words, in ``routes/settings.py``, after exactly this class of defect (F-5). And it was
+    true again here: ``webapp/frontend/app/api/chat/route.ts`` carried the comment *"This is
+    the authoritative lock — the UI disabling the card is only a courtesy"* and refused a
+    gated model to anyone but a superadmin, while ``POST /chat`` accepted ``request.model``
+    with no check at all. The bearer the BFF attaches says the call came from our frontend,
+    never who is asking; in dev and CI there is no bearer to attach. So a direct request could
+    name a paid frontier model, and — because ADR 0030's precedence puts the picker above the
+    governed override — do it in preference to the superadmin's own stored choice. Audit
+    2026-08-03.
+
+    Two refusals, both fail-closed:
+
+    * a model outside the catalogue is dropped. Storing one is already refused at write time
+      (``allowed_chat_models``); accepting one here sent an unknown identifier to whichever
+      backend the registry resolved, which fails every turn at execution instead of once, at
+      the door.
+    * a PAID model requires the operator console — the same server-derived predicate the
+      sandbox uses, since both are privileges the body must not be able to claim. ``paid`` is
+      read from the price table, so the rule follows what actually costs money rather than a
+      second list to keep in step.
+    """
+    if not requested:
+        return None
+    from tessera.api.config_overrides import allowed_chat_models
+
+    if requested not in allowed_chat_models():
+        sys.stderr.write(
+            f"tessera.chat: ignoring model {requested!r} — not in the catalogue of servable "
+            "chat models\n"
+        )
+        return None
+    if model_is_paid(requested) and not sandbox_overrides_allowed(surface, auth_state):
+        sys.stderr.write(
+            f"tessera.chat: ignoring model {requested!r} — a paid model may only be picked "
+            "from the operator console, and this turn is not one\n"
+        )
+        return None
+    return requested
+
+
 def _turn_deadline_s() -> float:
     """Wall-clock budget for one turn's graph phase.
 
@@ -974,7 +1018,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # once per turn, after routing (the agent decides which override applies), and
     # written into the state + every attribution surface (audit context, trace
     # dimensions, eval lineage) — what serves is what is recorded.
-    effective_model = request.model or await resolve_chat_model_override(agent_id)
+    effective_model = _picked_model(request.model, surface, auth_state) or (
+        await resolve_chat_model_override(agent_id)
+    )
     # ADR 0034 — the daily budget breaker sits at the same seam and gates PAID
     # models only. When the day's recorded spend has reached the ceiling:
     # local_fallback serves the frozen base if it is zero-cost, otherwise the

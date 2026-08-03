@@ -37,11 +37,26 @@ class VertexAIBackend:
         self._project = settings.project_id
         self._max_output_tokens = settings.max_output_tokens
         self._timeout = settings.timeout_seconds
-        self._model_instance: GenerativeModel | None = None
+        self._model_instances: dict[str, GenerativeModel] = {}
 
-    def _ensure_model(self) -> GenerativeModel:
-        if self._model_instance is not None:
-            return self._model_instance
+    def _ensure_model(self, model: str | None = None) -> GenerativeModel:
+        """Return the client for ``model``, memoised BY MODEL ID.
+
+        It used to memoise a single instance built from ``settings.vertex.chat_model`` and
+        ignore the per-call ``model=`` entirely — with a ``noqa: ARG002`` saying "fixed at init
+        on the frontier path". ADR 0030 states the opposite in its own words: *"An override
+        that the runtime ignores cannot be written under this design, because the store's only
+        consumer is the serving path."* On a frontier deployment it could: a governed override
+        was stored, validated, journalled, shown as active in the catalogue, stamped on the
+        span and threaded into the eval lineage, while Vertex kept serving the base model —
+        and the cost was ESTIMATED at the requested model's price and RECORDED at the served
+        one. Two costs for one turn, and a lineage that named a model that never ran.
+        Audit 2026-08-03.
+        """
+        wanted = model or self.model
+        cached = self._model_instances.get(wanted)
+        if cached is not None:
+            return cached
         if self._project is None:
             raise RuntimeError(
                 "Vertex AI project id is not configured; set TESSERA_VERTEX__PROJECT_ID"
@@ -50,8 +65,9 @@ class VertexAIBackend:
         from vertexai.generative_models import GenerativeModel
 
         vertexai.init(project=self._project, location=self._location)
-        self._model_instance = GenerativeModel(self.model)
-        return self._model_instance
+        instance = GenerativeModel(wanted)
+        self._model_instances[wanted] = instance
+        return instance
 
     @staticmethod
     def _convert(messages: Sequence[ChatMessage]) -> list[dict[str, object]]:
@@ -73,11 +89,12 @@ class VertexAIBackend:
         frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,
-        model: str | None = None,  # noqa: ARG002  fixed at init on the frontier path
+        model: str | None = None,
         usage: dict[str, int] | None = None,
     ) -> AsyncIterator[str]:
         """Yield tokens from Vertex AI as they arrive."""
-        gemini = self._ensure_model()
+        gemini = self._ensure_model(model)
+        served_model = model or self.model
         max_tokens = max_output_tokens or self._max_output_tokens
         # `timeout_seconds` was read into self._timeout at init and then never used: the
         # deadline the settings advertised did not exist, and a frozen Vertex call held the
@@ -113,7 +130,8 @@ class VertexAIBackend:
             usage["output_tokens"] = output_tokens
         get_budget_tracker().record(
             backend=self.name,
-            model=self.model,
+            # The model that SERVED, so the bill and the lineage name the same thing.
+            model=served_model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
         )
@@ -128,10 +146,11 @@ class VertexAIBackend:
         frequency_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         presence_penalty: float | None = None,  # noqa: ARG002 — not applied (SAMPLING_APPLIED)
         max_output_tokens: int | None = None,
-        model: str | None = None,  # noqa: ARG002  fixed at init on the frontier path
+        model: str | None = None,
     ) -> ChatResponse:
         """Stream-less chat completion."""
-        gemini = self._ensure_model()
+        gemini = self._ensure_model(model)
+        served_model = model or self.model
         max_tokens = max_output_tokens or self._max_output_tokens
         async with asyncio.timeout(self._timeout):
             response = await gemini.generate_content_async(
@@ -150,13 +169,14 @@ class VertexAIBackend:
 
         get_budget_tracker().record(
             backend=self.name,
-            model=self.model,
+            # The model that SERVED, so the bill and the lineage name the same thing.
+            model=served_model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
         )
         return ChatResponse(
             content=text,
-            model=self.model,
+            model=served_model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             finish_reason=_normalise_finish_reason(finish_reason),
