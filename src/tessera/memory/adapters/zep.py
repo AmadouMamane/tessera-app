@@ -8,11 +8,15 @@ defensive across client versions.
 
 from __future__ import annotations
 
+import os
 import sys
+from dataclasses import replace
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
-from tessera.memory.adapters import MissingMemoryExtraError
+from tessera.authz import Actor
+from tessera.memory import governance
+from tessera.memory.adapters import MissingMemoryExtraError, required_env
 from tessera.memory.protocol import EntityLedger, MemoryContext, MemoryItem
 from tessera.memory.window import WindowBackend
 from tessera.settings import get_settings
@@ -22,6 +26,10 @@ if TYPE_CHECKING:
 
     from tessera.agent.state import ConversationMessage
     from tessera.memory.protocol import MemoryScope, TurnRecord
+
+#: Who screens a recalled memory, and who reads it. Both named, never defaulted (ADR 0024).
+_MEMORY_READ_ACTOR: Final = Actor.system("memory-read-screen")
+_TURN_ACTOR: Final = Actor.system("agent-turn")
 
 __all__ = ["ZepBackend"]
 
@@ -39,9 +47,18 @@ class ZepBackend(WindowBackend):
                 backend="zep", package="zep_python", extra="memory-zep"
             ) from exc
         settings = get_settings()
-        # API key/URL come from the environment in the deployed config; the
-        # client reads them itself. Kept minimal here on purpose.
-        self._client = AsyncZep(api_key="")
+        # `AsyncZep(api_key="")` is what stood here, under a comment saying the client "reads
+        # them itself". An explicit empty string does not defer to the environment — it
+        # OVERRIDES it. This backend authenticated as nobody, every call failed, and every
+        # failure was swallowed into an empty recall by the `except Exception` below.
+        api_key = required_env(
+            "ZEP_API_KEY",
+            backend="zep",
+            why="It is the credential Zep authenticates this deployment with; without it every "
+            "call fails and long-term memory silently returns nothing.",
+        )
+        base_url = os.environ.get("ZEP_API_URL", "").strip()
+        self._client = AsyncZep(api_key=api_key, **({"base_url": base_url} if base_url else {}))
         self._top_k = settings.memory.long_term_top_k
 
     async def load(
@@ -72,7 +89,10 @@ class ZepBackend(WindowBackend):
                 )
         except Exception as exc:  # recall must never break a turn
             sys.stderr.write(f"tessera.memory.zep: search failed: {exc}\n")
-        return MemoryContext(recent_verbatim=base.recent_verbatim, long_term=long_term)
+        return MemoryContext(
+            recent_verbatim=base.recent_verbatim,
+            long_term=_screened(long_term, subject_id=scope.subject_id, engine="zep"),
+        )
 
     async def record(self, *, scope: MemoryScope, turn: TurnRecord) -> None:
         """Persist the finished turn to the subject's Zep session."""
@@ -90,3 +110,30 @@ class ZepBackend(WindowBackend):
             await self._client.memory.delete(session_id=scope.subject_id)
         except Exception as exc:
             sys.stderr.write(f"tessera.memory.zep: delete failed: {exc}\n")
+
+
+def _screened(items: list[MemoryItem], *, subject_id: str, engine: str) -> list[MemoryItem]:
+    """Screen recalled memories exactly as the native backend does.
+
+    Poisoning is not a native-only risk, and an external engine is MORE exposed, not less: its
+    store is written by a component Tessera does not own.
+
+    `PersistentBackend._recall` has screened on read since ADR 0007 (anti-poisoning) and audited
+    the read since ADR 0024. These adapters did neither: text came back from a third-party store
+    and went straight into the prompt, unscreened, unmasked and unrecorded — so a memory could
+    carry an injected instruction or a residual PAN, and the audit trail said nothing had been
+    read at all.
+    """
+    kept: list[MemoryItem] = []
+    for item in items:
+        result = governance.screen_memory(item.text, actor=_MEMORY_READ_ACTOR)
+        if result.allowed:
+            kept.append(replace(item, text=result.text))
+    governance.audit_memory(
+        action="memory.read",
+        subject_id=subject_id,
+        decision="allow",
+        rationale=f"{engine}: recalled {len(kept)}/{len(items)} item(s) after screening",
+        actor=_TURN_ACTOR,
+    )
+    return kept
