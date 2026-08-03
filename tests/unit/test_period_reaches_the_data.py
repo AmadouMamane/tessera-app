@@ -251,6 +251,7 @@ def test_an_unreadable_period_is_all_history_and_never_a_guess() -> None:
     # The rail's own vocabulary is accepted directly, so a caller holding a period key does
     # not have to convert it and risk a second, divergent mapping.
     assert parse_period_days("d7") == 7
+    assert parse_period_days("d14") == 14
     assert parse_period_days("h24") == 1
 
 
