@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 from eval.contribution import evaluate_contribution, floor_populations, restrict_baseline
-from eval.ratchet import grader_criteria_sha_for, load_baseline
+from eval.ratchet import load_baseline
 from eval.sets import list_eval_sets, load_eval_set
 from tessera.observability.agent_evaluations import (
     _contribution_block as contribution_block,
