@@ -23,6 +23,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Truncate } from "@/components/ui/truncate";
@@ -297,7 +298,7 @@ function AgentConnaissancesInner() {
       </div>
 
       {detail ? (
-        <DetailDrawer
+        <KnowledgeDrawer
           key={detail.key}
           detail={detail}
           pending={mut.isPending}
@@ -862,7 +863,10 @@ function SourcesTable({
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] table-fixed border-collapse text-left">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[640px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
@@ -905,7 +909,9 @@ function SourcesTable({
                 // biome-ignore lint/a11y/useSemanticElements: a data row opens the detail drawer and stays keyboard reachable
                 role="button"
                 tabIndex={0}
+                aria-haspopup="dialog"
                 aria-label={r.name}
+                aria-pressed={r.key === selected}
                 onClick={() => r.key && onSelect(r.key)}
                 onKeyDown={(e) => {
                   if ((e.key === "Enter" || e.key === " ") && r.key) {
@@ -1175,7 +1181,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
   );
 }
 
-function DetailDrawer({
+function KnowledgeDrawer({
   detail,
   pending,
   onClose,
@@ -1188,138 +1194,47 @@ function DetailDrawer({
   onDetach: (key: string) => void;
   onToggle: (key: string, active: boolean) => void;
 }) {
-  // Anchor the overlay to the <main> content area so it spans its full height
-  // (below the header, right of the sidebar) regardless of how tall the page is.
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const r = m.getBoundingClientRect();
-      // Start below the agent tab strip so page-level navigation stays usable.
-      const tabs = document.querySelector("[data-agent-tabs]");
-      const top = tabs ? tabs.getBoundingClientRect().bottom : r.top;
-      setRect({ top, left: r.left, width: r.width, height: r.bottom - top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 p-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      title={detail.name}
+      subtitle={detail.status}
+      icon={<FileGlyph />}
+      onClose={onClose}
+      belowAgentTabs
+      width="max-w-[460px]"
     >
-      <DetailPanel
-        detail={detail}
-        pending={pending}
-        onClose={onClose}
-        onDetach={onDetach}
-        onToggle={onToggle}
-      />
-    </div>
+      <DetailPanel detail={detail} pending={pending} onDetach={onDetach} onToggle={onToggle} />
+    </DetailDrawer>
   );
 }
 
 function DetailPanel({
   detail,
   pending,
-  onClose,
   onDetach,
   onToggle,
 }: {
   detail: DetailT;
   pending: boolean;
-  onClose: () => void;
   onDetach: (key: string) => void;
   onToggle: (key: string, active: boolean) => void;
 }) {
-  const tCommon = useTranslations("common");
   const t = useTranslations("agentConnaissances");
   const [tab, setTab] = useState(detail.tabs[0] ?? "Usage");
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  useEffect(() => closeRef.current?.focus(), []);
-  // Keep Tab focus inside the drawer (the native <dialog open> is not modal).
-  const onTrapKey = (event: React.KeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-      'button, a[href], select, input, [tabindex]:not([tabindex="-1"])',
-    );
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (!first || !last) return;
-    const active = document.activeElement;
-    if (event.shiftKey && active === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
   const d = detail;
   const key = d.key;
   return (
-    <dialog
-      open
-      ref={dialogRef}
-      aria-modal="true"
-      aria-label={d.name}
-      onKeyDown={onTrapKey}
-      className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-    >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
-            <FileGlyph />
-          </span>
-          <Truncate
-            full={d.name}
-            className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
-          >
-            {d.name}
-          </Truncate>
-          <CardInfo ns="agentConnaissances" k="detail" title={d.name} />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span
-            className={cn(
-              "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
-              STATUS_TONE[d.status_tone] ?? STATUS_TONE.good,
-            )}
-          >
-            {d.status}
-          </span>
-          <button
-            type="button"
-            ref={closeRef}
-            aria-label={tCommon("close")}
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--tessera-text-muted)] outline-none hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)] focus-visible:ring-1 focus-visible:ring-[#5fd0c6]"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <div className="flex min-h-0 flex-col text-[var(--tessera-text)]">
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+            STATUS_TONE[d.status_tone] ?? STATUS_TONE.good,
+          )}
+        >
+          {d.status}
+        </span>
+        <CardInfo ns="agentConnaissances" k="detail" title={d.name} />
       </div>
 
       <nav className="flex shrink-0 items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
@@ -1493,6 +1408,6 @@ function DetailPanel({
           </Link>
         </div>
       </div>
-    </dialog>
+    </div>
   );
 }

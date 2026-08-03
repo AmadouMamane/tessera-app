@@ -24,6 +24,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
@@ -202,7 +203,7 @@ export function AgentHistorique() {
   const startIdx = (safePage - 1) * perPage;
   const pageRows = sorted.slice(startIdx, startIdx + perPage);
 
-  const selectedRow = sorted.find((r) => r.sid === selected) ?? pageRows[0] ?? allRows[0] ?? null;
+  const selectedRow = selected ? (sorted.find((r) => r.sid === selected) ?? null) : null;
 
   const resetFilters = useCallback(() => {
     setSearch("");
@@ -302,8 +303,8 @@ export function AgentHistorique() {
       ) : null}
 
       {activeIdx === 1 ? (
-        <div className="grid gap-2.5 xl:grid-cols-12">
-          <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
+        <div className="flex min-w-0 flex-col gap-2.5">
+          <div className="flex min-w-0 flex-col gap-2.5">
             <Filters
               data={data}
               search={search}
@@ -322,7 +323,7 @@ export function AgentHistorique() {
               data={data}
               rows={pageRows}
               total={total}
-              selected={selectedRow?.sid ?? null}
+              selected={selected}
               onSelect={setSelected}
               sortCol={sortCol}
               sortDir={sortDir}
@@ -342,8 +343,20 @@ export function AgentHistorique() {
               onPerPage={setPerPage}
             />
           </div>
-          <Detail data={data} row={selectedRow} className="xl:col-span-4" />
         </div>
+      ) : null}
+
+      {activeIdx === 1 && selectedRow ? (
+        <DetailDrawer
+          title={selectedRow.sid}
+          subtitle={selectedRow.category_label}
+          icon={<MessagesSquare className="h-4 w-4" />}
+          onClose={() => setSelected(null)}
+          belowAgentTabs
+          width="max-w-[460px]"
+        >
+          <Detail data={data} row={selectedRow} embedded />
+        </DetailDrawer>
       ) : null}
 
       {activeIdx === 2 ? <MessagesTab data={data} /> : null}
@@ -654,7 +667,10 @@ function SessionsTable(p: TableProps) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[840px] border-collapse text-left">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[840px] border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
@@ -693,7 +709,9 @@ function SessionsTable(p: TableProps) {
                   // biome-ignore lint/a11y/useSemanticElements: a table row is the click target here
                   role="button"
                   tabIndex={0}
+                  aria-haspopup="dialog"
                   aria-label={`Session ${r.sid}`}
+                  aria-pressed={on}
                   onClick={() => p.onSelect(r.sid)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -1240,10 +1258,12 @@ function Detail({
   data,
   row,
   className,
+  embedded = false,
 }: {
   data: Data;
   row: RowT | null;
   className?: string;
+  embedded?: boolean;
 }) {
   const agentId = useAgentId();
   const labels = data.detail_labels;
@@ -1293,24 +1313,27 @@ function Detail({
   return (
     <section
       className={cn(
-        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
+        "flex min-w-0 flex-col",
+        !embedded && "rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
         className,
       )}
     >
-      <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
-        <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {labels.eyebrow}
-        </p>
-        <div className="mt-1 flex items-center gap-2">
-          <MessagesSquare className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
-          <Truncate
-            full={row.sid}
-            className="font-mono text-[0.82rem] font-semibold text-[var(--tessera-text)]"
-          >
-            {row.sid}
-          </Truncate>
+      {!embedded ? (
+        <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
+          <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {labels.eyebrow}
+          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <MessagesSquare className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
+            <Truncate
+              full={row.sid}
+              className="font-mono text-[0.82rem] font-semibold text-[var(--tessera-text)]"
+            >
+              {row.sid}
+            </Truncate>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
         {tabs.map((tb) => {

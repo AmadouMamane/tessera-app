@@ -473,7 +473,7 @@ function withScope(path: string, at?: string, agent?: string, days?: string): st
 /**
  * Translate the cockpit window key to the integer day count expected by the
  * score-series family of endpoints. Those FastAPI routes predate the shared
- * `h24 | d7 | d30` convention and reject the raw key with a 422.
+ * `h24 | d7 | d14 | d30` convention and reject the raw key with a 422.
  */
 export function integerWindowDays(window?: string): number | undefined {
   if (!window) return undefined;

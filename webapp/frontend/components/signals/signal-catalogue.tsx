@@ -9,18 +9,11 @@ import {
   Search,
   SortAsc,
   SortDesc,
-  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -404,7 +397,10 @@ function SignalTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[940px] table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[940px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, idx) => (
@@ -654,163 +650,69 @@ function TablePagination({
 
 function SignalDrawer({ t, signal, onClose }: { t: T; signal: ScSignal; onClose: () => void }) {
   const d = signal.detail;
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const [shown, setShown] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-    return () => opener?.focus?.();
-  }, []);
-  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-    const first = f[0];
-    const last = f[f.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      const c = document.querySelector("[data-shell-content]") ?? m;
-      const cr = c.getBoundingClientRect();
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    setShown(true);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      title={translated(t, "name", d.name)}
+      subtitle={`${d.name} · ${d.id}`}
+      onClose={onClose}
+      testId="signal-detail"
+      width="max-w-[460px]"
     >
-      <dialog
-        ref={dialogRef}
-        open
-        aria-modal="true"
-        aria-label={translated(t, "name", signal.name)}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className={cn(
-          "static m-0 block h-full w-full max-w-[460px] bg-transparent p-0 transition-transform duration-200 ease-out",
-          shown ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <aside
-          data-testid="signal-detail"
-          className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <Truncate
-                as="p"
-                full={translated(t, "name", d.name)}
-                className="text-sm font-semibold text-[var(--tessera-text-strong)]"
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge className={SEV_BADGE[d.severity]}>{t(`severity.${d.severity}`)}</Badge>
+        <Badge className={STATUS_BADGE[d.status]}>{t(`status.${d.status}`)}</Badge>
+      </div>
+
+      <p className="text-xs leading-relaxed text-[var(--tessera-text)]">{d.description}</p>
+
+      <Section title={t("detail.secDefinition")}>
+        <RowList rows={d.definition} />
+      </Section>
+
+      <Section title={t("detail.secPerformance")}>
+        <RowList rows={d.performance} />
+      </Section>
+
+      {d.guard.length > 0 ? (
+        <Section title={t("detail.secGuard")}>
+          <RowList rows={d.guard} mono />
+        </Section>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Section title={t("detail.byLanguage")}>
+          <BarRow bars={d.distribution} />
+        </Section>
+        <Section title={t("detail.outcomeTitle")}>
+          <BarRow bars={d.outcome} />
+        </Section>
+      </div>
+
+      {d.tags.length > 0 ? (
+        <Section title={t("detail.secTags")}>
+          <div className="flex flex-wrap gap-1">
+            {d.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.68rem] text-[var(--tessera-text-muted)]"
               >
-                {translated(t, "name", d.name)}
-              </Truncate>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                  {d.name} · {d.id}
-                </span>
-                <Badge className={SEV_BADGE[d.severity]}>{t(`severity.${d.severity}`)}</Badge>
-                <Badge className={STATUS_BADGE[d.status]}>{t(`status.${d.status}`)}</Badge>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("detail.moreDetails")}
-              className="shrink-0 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <X className="h-4 w-4" />
-            </button>
+                {tag}
+              </span>
+            ))}
           </div>
+        </Section>
+      ) : null}
 
-          <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
-            {d.description}
-          </p>
-
-          <Section title={t("detail.secDefinition")}>
-            <RowList rows={d.definition} />
-          </Section>
-
-          <Section title={t("detail.secPerformance")}>
-            <RowList rows={d.performance} />
-          </Section>
-
-          {d.guard.length > 0 ? (
-            <Section title={t("detail.secGuard")}>
-              <RowList rows={d.guard} mono />
-            </Section>
-          ) : null}
-
-          <div className="grid grid-cols-2 gap-3">
-            <Section title={t("detail.byLanguage")}>
-              <BarRow bars={d.distribution} />
-            </Section>
-            <Section title={t("detail.outcomeTitle")}>
-              <BarRow bars={d.outcome} />
-            </Section>
-          </div>
-
-          {d.tags.length > 0 ? (
-            <Section title={t("detail.secTags")}>
-              <div className="flex flex-wrap gap-1">
-                {d.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </Section>
-          ) : null}
-
-          <Section title={t("detail.secUsage")}>
-            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-              {t("detail.loggedBy", { n: d.usage.logged_by })}
-            </p>
-            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-              {t("detail.monitors", { n: d.usage.monitors })}
-            </p>
-          </Section>
-        </aside>
-      </dialog>
-    </div>
+      <Section title={t("detail.secUsage")}>
+        <p className="text-xs text-[var(--tessera-text-muted)]">
+          {t("detail.loggedBy", { n: d.usage.logged_by })}
+        </p>
+        <p className="text-xs text-[var(--tessera-text-muted)]">
+          {t("detail.monitors", { n: d.usage.monitors })}
+        </p>
+      </Section>
+    </DetailDrawer>
   );
 }
 

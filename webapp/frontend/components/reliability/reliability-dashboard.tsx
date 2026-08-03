@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { type Period, PeriodRail } from "@/components/observability/period-rail";
@@ -28,6 +28,8 @@ import type {
   ReliabilityIncident,
   ReliabilityServiceRow,
 } from "@/lib/api/schemas";
+import { useWindowStore } from "@/lib/stores/window-store";
+import { readTemporalUrl } from "@/lib/temporal-url";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
@@ -404,10 +406,46 @@ function DayBars({
 
 const POLL = 30_000;
 
+function periodDays(key: string): number {
+  if (key === "h24") return 1;
+  const parsed = /^d(\d+)$/.exec(key);
+  return parsed ? Number(parsed[1]) : 7;
+}
+
+function periodKey(days: number): string {
+  return days === 1 ? "h24" : `d${days}`;
+}
+
+function mirrorPeriodInUrl(key: string): void {
+  const url = new URL(window.location.href);
+  if (key === "d7") url.searchParams.delete("period");
+  else url.searchParams.set("period", key);
+  if (url.toString() !== window.location.href) {
+    window.history.replaceState(window.history.state, "", url.toString());
+  }
+}
+
 export function ReliabilityDashboard() {
   const tr = useTranslations("reliability");
   const locale = useLocale();
-  const [period, setPeriod] = useState<Period>({ days: 14, anchor: null });
+  const sharedPeriod = useWindowStore((state) => state.period);
+  const setSharedPeriod = useWindowStore((state) => state.setPeriod);
+  const [anchor, setAnchor] = useState<string | null>(null);
+  const period: Period = { days: periodDays(sharedPeriod), anchor };
+  const mounted = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hydrate once from the shareable URL.
+  useEffect(() => {
+    const urlPeriod = readTemporalUrl().period;
+    if (urlPeriod) setSharedPeriod(urlPeriod);
+    else mirrorPeriodInUrl(sharedPeriod);
+  }, []);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    mirrorPeriodInUrl(sharedPeriod);
+  }, [sharedPeriod]);
   const [activeTab, setActiveTab] = useUrlBackedView(TABS, "overview");
   const q = useQuery({
     queryKey: ["reliability", period.days, period.anchor, locale],
@@ -967,7 +1005,10 @@ export function ReliabilityDashboard() {
             { value: 30, label: tr("period.d30") },
           ]}
           value={period}
-          onApply={setPeriod}
+          onApply={(next) => {
+            setAnchor(next.anchor);
+            setSharedPeriod(periodKey(next.days));
+          }}
           labels={{
             selected: tr("period.selected"),
             from: tr("period.from"),

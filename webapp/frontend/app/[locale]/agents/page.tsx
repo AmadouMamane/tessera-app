@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { FleetExplorer } from "@/components/agent/fleet-explorer";
 import { NewAgentButton } from "@/components/agent/new-agent-button";
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { redirect } from "@/i18n/navigation";
+import { Link, redirect } from "@/i18n/navigation";
 import { currentRole, hasCockpitAccess, isOperator } from "@/lib/auth/session";
 import { loadFleet } from "@/lib/server/fleet";
 
@@ -27,11 +27,33 @@ export default async function FleetPage({ params }: PageProps) {
 
   const t = await getTranslations({ locale, namespace: "fleet" });
   const data = await loadFleet(locale);
-  const agents = data?.agents ?? [];
-  const org = data?.org;
+  if (data === null) {
+    const te = await getTranslations({ locale, namespace: "queryError" });
+    return (
+      <section
+        role="alert"
+        className="grid min-h-[280px] place-items-center rounded-xl border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-5 py-10 text-center shadow-[var(--shadow-card)]"
+      >
+        <div className="max-w-md">
+          <h2 className="text-sm font-semibold text-[var(--tessera-text)]">{te("title")}</h2>
+          <p className="mt-1.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
+            {te("detail")}
+          </p>
+          <Link
+            href="/agents"
+            className="mt-5 inline-flex h-8 items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] px-3 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
+          >
+            {te("retry")}
+          </Link>
+        </div>
+      </section>
+    );
+  }
+  const agents = data.agents ?? [];
+  const org = data.org;
   // `window` is a DOM global in a browser bundle; the trailing underscore keeps this a page
   // fact rather than something that silently resolves to `globalThis.window` in a refactor.
-  const window_ = data?.window;
+  const window_ = data.window;
 
   return (
     <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">

@@ -12,18 +12,11 @@ import {
   SortAsc,
   SortDesc,
   Users,
-  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -390,7 +383,10 @@ function RoleTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[920px] table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[920px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, idx) => (
@@ -447,6 +443,7 @@ function RoleTable({
                   tabIndex={0}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                   role="button"
+                  aria-haspopup="dialog"
                   aria-label={r.name}
                   className={cn(
                     "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
@@ -779,55 +776,6 @@ function RoleDrawer({
   onTab: (tab: DetailTab) => void;
   onClose: () => void;
 }) {
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const [shown, setShown] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-    return () => opener?.focus?.();
-  }, []);
-  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-    const first = f[0];
-    const last = f[f.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      const c = document.querySelector("[data-shell-content]") ?? m;
-      const cr = c.getBoundingClientRect();
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    setShown(true);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
   const meta: [string, string][] = [
     [t("detail.scope"), role.scope],
     [t("detail.owner"), role.owner],
@@ -835,191 +783,144 @@ function RoleDrawer({
     [t("detail.environment"), role.environment],
   ];
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      title={role.name}
+      subtitle={role.id}
+      icon={<Lock className="h-4 w-4" />}
+      onClose={onClose}
+      testId="role-detail"
+      width="max-w-[440px]"
     >
-      <dialog
-        ref={dialogRef}
-        open
-        aria-modal="true"
-        aria-label={role.name}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className={cn(
-          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
-          shown ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <aside
-          data-testid="role-detail"
-          className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <Truncate
-                as="p"
-                full={role.name}
-                className="text-sm font-semibold text-[var(--tessera-text-strong)]"
-              >
-                {role.name}
-              </Truncate>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                  {role.id}
-                </span>
-                <Badge className={TYPE_BADGE[role.type]}>{t(`type.${role.type}`)}</Badge>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 text-[0.62rem]",
-                    STATUS_TEXT[role.status],
-                  )}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{" "}
-                  {t(`status.${role.status}`)}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("detail.close")}
-              className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge className={TYPE_BADGE[role.type]}>{t(`type.${role.type}`)}</Badge>
+        <span className={cn("inline-flex items-center gap-1 text-xs", STATUS_TEXT[role.status])}>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          {t(`status.${role.status}`)}
+        </span>
+      </div>
 
-          <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
-            {DETAIL_TABS.map((dt) => (
-              <button
-                key={dt}
-                type="button"
-                onClick={() => onTab(dt)}
-                className={cn(
-                  "rounded px-2 py-1 text-[0.62rem] font-medium",
-                  dt === tab
-                    ? "bg-[#0d3561] text-[#d8eaff]"
-                    : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
-                )}
-              >
-                {t(`detailTabs.${dt}`)}
-              </button>
+      <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
+        {DETAIL_TABS.map((dt) => (
+          <button
+            key={dt}
+            type="button"
+            onClick={() => onTab(dt)}
+            className={cn(
+              "rounded px-2 py-1 text-[0.62rem] font-medium",
+              dt === tab
+                ? "bg-[#0d3561] text-[#d8eaff]"
+                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
+            )}
+          >
+            {t(`detailTabs.${dt}`)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" ? (
+        <>
+          <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
+            {role.description}
+          </p>
+          <dl className="flex flex-col gap-1 text-[0.66rem]">
+            {meta.map(([k, v]) => (
+              <KV key={k} label={k} value={v} />
             ))}
+          </dl>
+          <div className="grid grid-cols-2 gap-3 border-t border-[var(--tessera-border)] pt-2">
+            <Distribution
+              title={t("detail.permDist")}
+              items={role.permission_dist}
+              labelOf={(k) => t(`perm.${k}`)}
+            />
+            <Distribution
+              title={t("detail.accessScope")}
+              items={role.access_scope}
+              labelOf={(k) => t(`resource.${k}`)}
+            />
           </div>
+        </>
+      ) : null}
 
-          {tab === "overview" ? (
-            <>
-              <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
-                {role.description}
-              </p>
-              <dl className="flex flex-col gap-1 text-[0.66rem]">
-                {meta.map(([k, v]) => (
-                  <KV key={k} label={k} value={v} />
-                ))}
-              </dl>
-              <div className="grid grid-cols-2 gap-3 border-t border-[var(--tessera-border)] pt-2">
-                <Distribution
-                  title={t("detail.permDist")}
-                  items={role.permission_dist}
-                  labelOf={(k) => t(`perm.${k}`)}
-                />
-                <Distribution
-                  title={t("detail.accessScope")}
-                  items={role.access_scope}
-                  labelOf={(k) => t(`resource.${k}`)}
-                />
-              </div>
-            </>
-          ) : null}
+      {tab === "permissions" ? (
+        <div>
+          <p className="mb-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+            {t("detail.capabilities")} ({role.caps.length})
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {role.caps.map((c) => (
+              <li
+                key={c}
+                className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text)]"
+              >
+                {t(`cap.${c}`)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
-          {tab === "permissions" ? (
-            <div>
-              <p className="mb-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-                {t("detail.capabilities")} ({role.caps.length})
-              </p>
-              <ul className="flex flex-wrap gap-1.5">
-                {role.caps.map((c) => (
-                  <li
-                    key={c}
-                    className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text)]"
+      {tab === "users" ? (
+        <div>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+              {t("detail.members")} ({role.members.length})
+            </p>
+            <Link
+              href={USERS_HREF}
+              className="text-[0.62rem] text-[var(--tessera-fg-info)] hover:text-[var(--tessera-text-strong)]"
+            >
+              {t("detail.viewAll")} →
+            </Link>
+          </div>
+          {role.members.length === 0 ? (
+            <EmptyHint>{t("empty.members")}</EmptyHint>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {role.members.map((m) => (
+                <li key={m.name} className="flex items-center gap-2 text-[0.66rem]">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-soft)] text-[0.56rem] font-semibold text-[var(--tessera-green)]">
+                    {m.name.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Truncate as="p" full={m.name} className="text-[var(--tessera-text)]">
+                      {m.name}
+                    </Truncate>
+                    <Truncate
+                      as="p"
+                      full={m.team}
+                      className="text-[0.56rem] text-[var(--tessera-text-muted)]"
+                    >
+                      {m.team}
+                    </Truncate>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0",
+                      m.status === "active"
+                        ? "text-[var(--tessera-fg-success)]"
+                        : "text-[var(--tessera-fg-warning)]",
+                    )}
                   >
-                    {t(`cap.${c}`)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+                    {t(`memberStatus.${m.status}`)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
 
-          {tab === "users" ? (
-            <div>
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <p className="text-[0.66rem] font-semibold text-[var(--tessera-text)]">
-                  {t("detail.members")} ({role.members.length})
-                </p>
-                <Link
-                  href={USERS_HREF}
-                  className="text-[0.62rem] text-[var(--tessera-fg-info)] hover:text-[var(--tessera-text-strong)]"
-                >
-                  {t("detail.viewAll")} →
-                </Link>
-              </div>
-              {role.members.length === 0 ? (
-                <EmptyHint>{t("empty.members")}</EmptyHint>
-              ) : (
-                <ul className="flex flex-col gap-1">
-                  {role.members.map((m) => (
-                    <li key={m.name} className="flex items-center gap-2 text-[0.66rem]">
-                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--tessera-green-soft)] text-[0.56rem] font-semibold text-[var(--tessera-green)]">
-                        {m.name.charAt(0).toUpperCase()}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <Truncate as="p" full={m.name} className="text-[var(--tessera-text)]">
-                          {m.name}
-                        </Truncate>
-                        <Truncate
-                          as="p"
-                          full={m.team}
-                          className="text-[0.56rem] text-[var(--tessera-text-muted)]"
-                        >
-                          {m.team}
-                        </Truncate>
-                      </div>
-                      <span
-                        className={cn(
-                          "shrink-0",
-                          m.status === "active"
-                            ? "text-[var(--tessera-fg-success)]"
-                            : "text-[var(--tessera-fg-warning)]",
-                        )}
-                      >
-                        {t(`memberStatus.${m.status}`)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : null}
+      {tab === "groups" ? <EmptyHint>{t("empty.groups")}</EmptyHint> : null}
 
-          {tab === "groups" ? <EmptyHint>{t("empty.groups")}</EmptyHint> : null}
-
-          {tab === "history" ? (
-            <dl className="flex flex-col gap-1 text-[0.66rem]">
-              <KV label={t("detail.lastModified")} value={role.modified} />
-              <KV label={t("detail.owner")} value={role.owner} />
-              <KV label={t("detail.source")} value={t("readonlyNote")} />
-            </dl>
-          ) : null}
-        </aside>
-      </dialog>
-    </div>
+      {tab === "history" ? (
+        <dl className="flex flex-col gap-1 text-[0.66rem]">
+          <KV label={t("detail.lastModified")} value={role.modified} />
+          <KV label={t("detail.owner")} value={role.owner} />
+          <KV label={t("detail.source")} value={t("readonlyNote")} />
+        </dl>
+      ) : null}
+    </DetailDrawer>
   );
 }
 

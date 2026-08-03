@@ -1,6 +1,7 @@
 "use client";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { Truncate } from "@/components/ui/truncate";
 import { fetchReplays, runReplay } from "@/lib/api/client";
 import type { ReplayBundle, ReplayResult } from "@/lib/api/schemas";
@@ -62,6 +63,12 @@ export function ReplayCassettes({ asof }: { asof: string | null }) {
   // Newest first: the API returns bundles oldest→newest.
   const bundles = [...(replays.data?.bundles ?? [])].reverse();
   const selected = selectedId ? (bundles.find((b) => b.bundle_id === selectedId) ?? null) : null;
+
+  if (replays.isError && replays.data === undefined) {
+    return (
+      <QueryErrorState compact onRetry={() => replays.refetch()} retrying={replays.isFetching} />
+    );
+  }
 
   return (
     <section className="flex min-w-0 flex-col gap-3">

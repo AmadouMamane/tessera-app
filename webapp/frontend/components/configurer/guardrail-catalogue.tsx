@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, GitBranch, ShieldCheck, Users, X } from "lucide-react";
+import { AlertTriangle, GitBranch, ShieldCheck, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
@@ -53,8 +54,6 @@ export function GuardrailCatalogue() {
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Closing must survive the rows[0] fallback below — null alone re-selects the first row.
-  const [dismissed, setDismissed] = useState(false);
 
   const rows = useMemo<Row[]>(() => {
     const all = data?.blocks ?? [];
@@ -73,7 +72,7 @@ export function GuardrailCatalogue() {
     );
   }
 
-  const selected = dismissed ? null : (rows.find((b) => b.id === selectedId) ?? rows[0] ?? null);
+  const selected = selectedId ? (rows.find((b) => b.id === selectedId) ?? null) : null;
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -99,10 +98,11 @@ export function GuardrailCatalogue() {
         </div>
       ) : null}
 
-      <div className={cn("grid gap-2.5", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
-        <div className="overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
+      <div>
+        <div className="overflow-x-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           <table
-            className="w-full border-collapse text-left text-[0.72rem]"
+            data-premium-table="true"
+            className="w-full min-w-[760px] border-collapse text-left text-xs"
             data-testid="guardrails-table"
           >
             <thead>
@@ -118,20 +118,18 @@ export function GuardrailCatalogue() {
               {rows.map((b) => (
                 <tr
                   key={b.id}
-                  onClick={() => {
-                    setDismissed(false);
-                    setSelectedId(b.id);
-                  }}
+                  onClick={() => setSelectedId(b.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      setDismissed(false);
                       setSelectedId(b.id);
                     }
                   }}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a button; keyboard + role provided.
                   role="button"
                   tabIndex={0}
+                  aria-haspopup="dialog"
                   aria-label={b.name}
+                  aria-pressed={selected?.id === b.id}
                   className={cn(
                     "cursor-pointer border-b border-[var(--tessera-border)]/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#5b8def]",
                     selected?.id === b.id
@@ -167,11 +165,8 @@ export function GuardrailCatalogue() {
             </tbody>
           </table>
         </div>
-
-        {selected ? (
-          <GuardrailDetail t={t} row={selected} onClose={() => setDismissed(true)} />
-        ) : null}
       </div>
+      {selected ? <GuardrailDetail row={selected} onClose={() => setSelectedId(null)} /> : null}
       {data.note ? (
         <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{data.note}</p>
       ) : null}
@@ -180,33 +175,22 @@ export function GuardrailCatalogue() {
 }
 
 function GuardrailDetail({
-  t,
   row,
   onClose,
 }: {
-  t: ReturnType<typeof useTranslations<"guardrailCatalogue">>;
   row: Row;
   onClose: () => void;
 }) {
   const d = row.detail;
   return (
-    <aside
-      data-testid="guardrail-detail"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
+    <DetailDrawer
+      title={d.name}
+      subtitle={row.scope}
+      icon={<ShieldCheck className="h-4 w-4" />}
+      onClose={onClose}
+      testId="guardrail-detail"
+      width="max-w-[440px]"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="truncate font-mono text-sm font-semibold text-[var(--tessera-text-strong)]">
-          {d.name}
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("close")}
-          className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
       {d.sections.map((s) => (
         <div key={s.key}>
           <p className="mb-1 text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -273,6 +257,6 @@ function GuardrailDetail({
           ) : null}
         </div>
       ) : null}
-    </aside>
+    </DetailDrawer>
   );
 }

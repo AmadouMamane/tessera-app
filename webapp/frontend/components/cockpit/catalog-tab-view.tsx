@@ -2,7 +2,9 @@
 
 import { type ReactNode, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { type PremiumColumn, PremiumDataTable } from "@/components/cockpit/premium-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truncate } from "@/components/ui/truncate";
@@ -216,56 +218,63 @@ function TablePanel({
   explain?: TabExplain | null;
   columns: TabColumn[];
   rows: TabRow[];
-  selected: string;
+  selected: string | null;
   onSelect: (id: string) => void;
 }) {
+  const premiumColumns: PremiumColumn<TabRow>[] = columns.map((column) => ({
+    key: column.key,
+    label: column.label,
+    numeric: column.align === "right",
+    sortValue: (row) => sortableCell(row.cells[column.key]),
+    render: (row) => <Cell col={column} cells={row.cells} />,
+  }));
   return (
-    <Card className="flex min-w-0 flex-col">
+    <Card className="flex min-w-0 flex-col gap-0 overflow-hidden p-0">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-1.5 text-[0.82rem] font-medium">
           {title}
           <ExplainInfo title={title} explain={explain} />
         </CardTitle>
       </CardHeader>
-      <CardContent className="min-w-0 overflow-x-auto">
-        <table className="w-full text-[0.72rem]">
-          <thead>
-            <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-              {columns.map((c) => (
-                <th
-                  key={c.key}
-                  className={`whitespace-nowrap py-1.5 pr-3 font-medium ${
-                    c.align === "right" ? "text-right" : ""
-                  }`}
-                >
-                  {c.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.id}
-                onClick={() => onSelect(r.id)}
-                className={`cursor-pointer border-b border-[var(--border)]/50 transition-colors hover:bg-[var(--tessera-muted)]/40 ${
-                  selected === r.id ? "bg-[var(--tessera-muted)]/60" : ""
-                }`}
-              >
-                {columns.map((c) => (
-                  <td
-                    key={c.key}
-                    className={`py-1.5 pr-3 align-middle ${c.align === "right" ? "text-right" : ""}`}
-                  >
-                    <Cell col={c} cells={r.cells} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </CardContent>
+      <PremiumDataTable
+        className="rounded-none border-x-0 border-b-0 shadow-none"
+        columns={premiumColumns}
+        rows={rows}
+        rowKey={(row) => row.id}
+        rowLabel={(row) => row.id}
+        emptyLabel="—"
+        selectedKey={selected}
+        onRowOpen={(row) => onSelect(row.id)}
+        minWidth={`${Math.max(680, columns.length * 128)}px`}
+      />
     </Card>
+  );
+}
+
+function sortableCell(value: unknown): string | number {
+  if (typeof value === "number" || typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return String(record.label ?? record.name ?? record.value ?? record.pct ?? "");
+  }
+  return "";
+}
+
+function RowFields({ row, columns }: { row: TabRow; columns: TabColumn[] }) {
+  return (
+    <dl className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/45 p-3 text-xs">
+      {columns.map((column) => (
+        <div
+          key={column.key}
+          className="flex items-start justify-between gap-4 border-[var(--tessera-border)]/60 border-b py-2 first:pt-0 last:border-0 last:pb-0"
+        >
+          <dt className="shrink-0 text-[var(--tessera-text-muted)]">{column.label}</dt>
+          <dd className="min-w-0 text-right text-[var(--tessera-text)]">
+            <Cell col={column} cells={row.cells} />
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -577,7 +586,8 @@ function Section({ s }: { s: TabSection }) {
  * detail panel + bottom sections). Pages pass a page-specific `footer`.
  */
 export function CatalogTabView({ tab, footer }: { tab: CatalogTab; footer?: ReactNode }) {
-  const [selected, setSelected] = useState(tab.rows[0]?.id ?? "");
+  const [selected, setSelected] = useState<string | null>(null);
+  const selectedRow = tab.rows.find((row) => row.id === selected) ?? null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -588,25 +598,32 @@ export function CatalogTabView({ tab, footer }: { tab: CatalogTab; footer?: Reac
         ))}
       </div>
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-2">
-          <TablePanel
-            title={tab.table_title}
-            explain={tab.table_explain}
-            columns={tab.columns}
-            rows={tab.rows}
-            selected={selected}
-            onSelect={setSelected}
-          />
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-            {tab.sections.map((s) => (
-              <Section key={s.title} s={s} />
-            ))}
-          </div>
+      <div className="flex min-w-0 flex-col gap-2">
+        <TablePanel
+          title={tab.table_title}
+          explain={tab.table_explain}
+          columns={tab.columns}
+          rows={tab.rows}
+          selected={selected}
+          onSelect={setSelected}
+        />
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          {tab.sections.map((s) => (
+            <Section key={s.title} s={s} />
+          ))}
         </div>
-
-        {tab.detail ? <DetailPanel detail={tab.detail} /> : null}
       </div>
+
+      {selectedRow ? (
+        <DetailDrawer
+          title={selectedRow.id}
+          subtitle={tab.table_title}
+          onClose={() => setSelected(null)}
+        >
+          <RowFields row={selectedRow} columns={tab.columns} />
+          {tab.detail ? <DetailPanel detail={tab.detail} /> : null}
+        </DetailDrawer>
+      ) : null}
 
       {footer}
     </div>

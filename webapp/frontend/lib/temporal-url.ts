@@ -11,7 +11,7 @@
  * Params carried (all optional; defaults reconstruct "live"):
  *
  * - ``lecture`` — live | asOf | history (omitted when live). The user-facing reading.
- * - ``period``  — h24 | d7 | d30 (omitted when d7). The shared window duration.
+ * - ``period``  — h24 | d7 | d14 | d30 (omitted when d7). The shared window duration.
  * - ``asof``    — instant T (ISO) when lecture=asOf.
  * - ``at``      — scrub cursor (ISO) when lecture=history (optional).
  * - ``to``      — absolute window END (ISO) to freeze a history window (optional input;

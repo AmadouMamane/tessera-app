@@ -286,6 +286,7 @@
       "now": "jetzt",
       "h24": "24 Stunden",
       "d7": "7 Tage",
+      "d14": "14 Tage",
       "d30": "30 Tage",
       "nowLive": "jetzt (live)",
       "pickDatePrompt": "Datum wählen",
@@ -9335,6 +9336,7 @@
   },
   "table": {
     "rowOpen": "Details ansehen",
+    "close": "Detailansicht schließen",
     "empty": "Keine Einträge",
     "summary": "{start} - {end} von {total}",
     "prev": "Vorherige Seite",

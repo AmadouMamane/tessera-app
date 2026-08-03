@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { ChatRoom } from "@/components/chat/chat-room";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { AppHeader } from "@/components/layout/app-header";
 import { RecouvrementLogo, RecouvrementMark } from "@/components/recouvrement/recouvrement-logo";
 import { fetchConversationMessages, fetchConversations } from "@/lib/api/client";
@@ -185,7 +186,14 @@ export function RecouvrementConsole() {
                 {t("recents")}
               </div>
               <nav className="mt-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
-                {shown.length === 0 ? (
+                {recents.isError && recents.data === undefined ? (
+                  <QueryErrorState
+                    compact
+                    onRetry={() => recents.refetch()}
+                    retrying={recents.isFetching}
+                    className="border-0 bg-transparent shadow-none"
+                  />
+                ) : shown.length === 0 ? (
                   <p className="py-1.5 pr-2 pl-3 text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
                     {q ? t("searchEmpty") : t("recentsEmpty")}
                   </p>

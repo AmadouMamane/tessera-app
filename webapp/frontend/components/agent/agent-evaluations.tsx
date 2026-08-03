@@ -26,6 +26,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import {
   TemporalRail,
   useRailTimeline,
@@ -329,7 +330,7 @@ function DimensionsTab({ data }: { data: Data }) {
   const safePage = Math.min(page, totalPages);
   const startIdx = (safePage - 1) * perPage;
   const pageRows = sorted.slice(startIdx, startIdx + perPage);
-  const selectedRow = sorted.find((r) => r.name === selected) ?? pageRows[0] ?? allRows[0] ?? null;
+  const selectedRow = selected ? (sorted.find((r) => r.name === selected) ?? null) : null;
 
   const resetFilters = useCallback(() => {
     setSearch("");
@@ -353,8 +354,8 @@ function DimensionsTab({ data }: { data: Data }) {
           )}
         </p>
       </div>
-      <div className="grid gap-2.5 xl:grid-cols-12">
-        <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
+      <div className="flex min-w-0 flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-2.5">
           <Filters
             data={data}
             search={search}
@@ -371,7 +372,7 @@ function DimensionsTab({ data }: { data: Data }) {
             data={data}
             rows={pageRows}
             total={total}
-            selected={selectedRow?.name ?? null}
+            selected={selected}
             onSelect={setSelected}
             sortCol={sortCol}
             sortDir={sortDir}
@@ -392,8 +393,19 @@ function DimensionsTab({ data }: { data: Data }) {
           />
           <JudgeMetrics data={data} />
         </div>
-        <Detail data={data} row={selectedRow} className="xl:col-span-4" />
       </div>
+      {selectedRow ? (
+        <DetailDrawer
+          title={selectedRow.name}
+          subtitle={selectedRow.type}
+          icon={<Sparkles className="h-4 w-4" />}
+          onClose={() => setSelected(null)}
+          belowAgentTabs
+          width="max-w-[460px]"
+        >
+          <Detail data={data} row={selectedRow} embedded />
+        </DetailDrawer>
+      ) : null}
     </div>
   );
 }
@@ -1579,7 +1591,10 @@ function RunsTable(p: TableProps) {
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] border-collapse text-left">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[820px] border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
@@ -1618,7 +1633,9 @@ function RunsTable(p: TableProps) {
                   // biome-ignore lint/a11y/useSemanticElements: a table row is the click target here
                   role="button"
                   tabIndex={0}
+                  aria-haspopup="dialog"
                   aria-label={`Evaluation ${r.name}`}
+                  aria-pressed={on}
                   onClick={() => p.onSelect(r.name)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -1980,10 +1997,12 @@ function Detail({
   data,
   row,
   className,
+  embedded = false,
 }: {
   data: Data;
   row: RowT | null;
   className?: string;
+  embedded?: boolean;
 }) {
   const locale = useLocale();
   const agentId = useAgentId();
@@ -2082,29 +2101,32 @@ function Detail({
   return (
     <section
       className={cn(
-        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
+        "flex min-w-0 flex-col",
+        !embedded && "rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
         className,
       )}
     >
-      <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
-        <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {labels.eyebrow}
-        </p>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <Sparkles className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
-            <Truncate
-              full={row.name}
-              className="min-w-0 text-[0.85rem] font-semibold text-[var(--tessera-text)]"
-            >
-              {row.name}
-            </Truncate>
+      {!embedded ? (
+        <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
+          <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {labels.eyebrow}
+          </p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Sparkles className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
+              <Truncate
+                full={row.name}
+                className="min-w-0 text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+              >
+                {row.name}
+              </Truncate>
+            </div>
+            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]">
+              {row.status}
+            </span>
           </div>
-          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]">
-            {row.status}
-          </span>
         </div>
-      </div>
+      ) : null}
 
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
         {tabs.map((tb) => {

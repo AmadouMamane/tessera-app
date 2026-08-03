@@ -31,8 +31,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CalendarPopover } from "@/components/cockpit/calendar-popover";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { LiveBeacon } from "@/components/cockpit/live-beacon";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
@@ -252,11 +254,12 @@ export function EtatADate() {
   const [statusF, setStatusF] = useState("all");
   const [selected, setSelected] = useState<string | null>(null);
 
-  const { data } = useQuery({
+  const etatQuery = useQuery({
     queryKey: ["etat-a-date", asOf, sources, agentScope, locale],
     queryFn: ({ signal }) => fetchEtatADate(asOf, sources, agentScope, locale, signal),
     staleTime: 30_000,
   });
+  const { data } = etatQuery;
 
   const saveSnapshot = useMutation({
     mutationFn: () => saveEtatSnapshot(asOf, sources, agentScope, locale),
@@ -304,6 +307,10 @@ export function EtatADate() {
   }, [allRows, search, typeF, statusF]);
 
   const detail = selected ? (allRows.find((r) => r.key === selected) ?? null) : null;
+
+  if (etatQuery.isError && data === undefined) {
+    return <QueryErrorState onRetry={() => etatQuery.refetch()} retrying={etatQuery.isFetching} />;
+  }
 
   return (
     <div className="relative flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
@@ -1251,7 +1258,10 @@ function SourcesTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[680px] table-fixed border-collapse text-left">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[680px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, i) => (
@@ -1300,7 +1310,9 @@ function SourcesTable({
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; it opens the detail drawer
                   role="button"
                   tabIndex={0}
+                  aria-haspopup="dialog"
                   aria-label={r.source}
+                  aria-pressed={selected === r.key}
                   onClick={() => onSelect(r.key)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -1524,31 +1536,6 @@ function Pagination({
 // ── row-click drawer (anchored to <main>, like Connaissances) ─────────────────
 
 function SourceDrawer({ t, row, onClose }: { t: T; row: Row; onClose: () => void }) {
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const r = m.getBoundingClientRect();
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.bottom - r.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const fields: [string, string][] = [
     [t("type"), row.type],
     [t("status"), row.status_label],
@@ -1559,54 +1546,34 @@ function SourceDrawer({ t, row, onClose }: { t: T; row: Row; onClose: () => void
   ];
 
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 p-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      onClose={onClose}
+      title={row.source}
+      subtitle={t("detailEyebrow")}
+      width="max-w-[440px]"
     >
-      <dialog
-        open
-        aria-modal
-        aria-label={row.source}
-        className="relative flex h-full w-full max-w-[440px] flex-col rounded-lg border border-[var(--tessera-border)] border-l bg-[var(--tessera-surface)] p-4 text-[var(--tessera-text)] shadow-2xl"
+      <span
+        className={cn(
+          "inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+          row.status === "accessible"
+            ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
+            : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+        )}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("close")}
-          className="absolute top-3 right-3 rounded-md border border-[var(--tessera-border)] p-1 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {t("detailEyebrow")}
-        </p>
-        <h3 className="mt-1 pr-8 text-[0.95rem] font-semibold">{row.source}</h3>
-        <span
-          className={cn(
-            "mt-2 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
-            row.status === "accessible"
-              ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
-              : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
-          )}
-        >
-          {row.status_label}
-        </span>
-        <dl className="mt-4 flex flex-col gap-2.5 text-[0.78rem]">
-          {fields.map(([label, value]) => (
-            <div
-              key={label}
-              className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)]/40 pb-2 last:border-0"
-            >
-              <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
-              <dd className="font-medium tabular-nums">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </dialog>
-    </div>
+        {row.status_label}
+      </span>
+      <dl className="flex flex-col gap-2.5 text-[0.78rem]">
+        {fields.map(([label, value]) => (
+          <div
+            key={label}
+            className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)]/40 pb-2 last:border-0"
+          >
+            <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
+            <dd className="font-medium tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </DetailDrawer>
   );
 }
 

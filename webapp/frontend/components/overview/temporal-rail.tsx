@@ -92,6 +92,7 @@ function fmtDay(ms: number): string {
 const PERIODS: { key: string; ms: number }[] = [
   { key: "h24", ms: 24 * 3600_000 },
   { key: "d7", ms: 7 * 24 * 3600_000 },
+  { key: "d14", ms: 14 * 24 * 3600_000 },
   { key: "d30", ms: 30 * 24 * 3600_000 },
 ];
 

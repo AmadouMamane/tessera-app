@@ -1215,3 +1215,41 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Canonical cockpit entity-table grammar (Signal Catalogue reference).
+ * The table keeps its information density, but labels remain readable and the
+ * identity column stays anchored while secondary fields scroll on small screens. */
+:is([data-premium-table="true"] table, table[data-premium-table="true"]) {
+  font-size: 0.75rem;
+}
+
+:is([data-premium-table="true"] table, table[data-premium-table="true"]) thead tr {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+}
+
+:is([data-premium-table="true"] table, table[data-premium-table="true"]) :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--tessera-surface);
+  box-shadow: 1px 0 0 var(--tessera-border);
+}
+
+:is([data-premium-table="true"] table, table[data-premium-table="true"]) thead th:first-child {
+  z-index: 2;
+}
+
+:is([data-premium-table="true"] table, table[data-premium-table="true"])
+  tbody
+  tr:is(:hover, :focus-visible)
+  > * {
+  background: var(--tessera-bg-soft);
+}
+
+:is([data-premium-table="true"] table, table[data-premium-table="true"])
+  tbody
+  tr[aria-pressed="true"]
+  > * {
+  background: var(--tessera-surface-elevated);
+}
