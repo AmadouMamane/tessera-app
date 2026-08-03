@@ -1241,11 +1241,35 @@ def emit_ledger_seal(
 
 @dataclass(frozen=True, slots=True)
 class ChainStatus:
-    """Result of verifying the audit hash chain (ADR 0010, idea #3)."""
+    """Result of verifying the audit hash chain (ADR 0010, idea #3).
+
+    ``verified`` means **no break was found** — which is also true of a chain that was never
+    written, and that is where an Ok without evidence used to come from. An absent or empty
+    journal produced ``verified=True, length=0``, and the callers that turned it into an
+    operator-facing verdict published "Chaîne d'audit intacte · 0 entrées",
+    ``chain_integrity: 1`` and a green "signature" stage — three assertions about a chain that
+    does not exist (ADR 0026: a witness that cannot see may never report "ok").
+
+    So the discriminator is explicit. Anything that shows a human a verdict asks
+    :attr:`attested`, and treats :attr:`cannot_say` as unknown rather than as either intact or
+    broken; ``verified`` stays what it always was so that "no break found" does not start
+    reading as "break found" the day a fresh install boots.
+    """
 
     verified: bool
     length: int
     broken_at: int | None  # 0-based index of the first broken entry, if any
+    present: bool = True  # False when there is no journal on disk at all
+
+    @property
+    def attested(self) -> bool:
+        """True only when a chain was actually read and every link re-derived."""
+        return self.present and self.verified and self.length > 0
+
+    @property
+    def cannot_say(self) -> bool:
+        """True when there was nothing to verify — neither intact nor broken."""
+        return not self.present or self.length == 0
 
 
 def verify_audit_chain(path: Path) -> ChainStatus:
@@ -1258,10 +1282,11 @@ def verify_audit_chain(path: Path) -> ChainStatus:
         path: The JSON-Lines audit file to verify.
 
     Returns:
-        A :class:`ChainStatus`. An empty/absent log is trivially verified.
+        A :class:`ChainStatus`. An absent log reports ``present=False``: no break was found,
+        and nothing was attested either.
     """
     if not path.exists():
-        return ChainStatus(verified=True, length=0, broken_at=None)
+        return ChainStatus(verified=True, length=0, broken_at=None, present=False)
 
     prev = _GENESIS_HASH
     index = 0

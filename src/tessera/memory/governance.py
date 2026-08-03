@@ -95,8 +95,17 @@ _TTL: Final[dict[str, timedelta]] = {
 
 # Card-number-like runs (13-19 digits, optionally space/dash grouped).
 _CARD_RE: Final = re.compile(r"\b(?:\d[ -]?){13,19}\b")
-# Full IBAN — masked to country + last 4 on storage.
-_IBAN_RE: Final = re.compile(r"\b([A-Z]{2}\d{2})(?:[ ]?[A-Z0-9]{2,4}){2,}([A-Z0-9]{4})\b")
+# Full IBAN — masked to country + last 4 on storage. Country code, check digits, then 11 to
+# 30 more alphanumerics (Norway's 15 to Malta's 34), each optionally preceded by a space so
+# the grouped form "FR76 3000 4000 0300 0012 3456 789" is one match rather than several.
+#
+# The previous pattern ended in a mandatory group of exactly four, which the grouped form
+# does not have — it ends in three. It therefore stopped short, and worse, `_CARD_RE` ran
+# FIRST and ate sixteen of the digits in the middle as a card number. An IBAN written the way
+# every French bank statement writes it came out as "FR76 [card ••••0012] 3456 789": the
+# customer's account number, unmasked at both ends, inside a string the audit trail recorded
+# as PII-screened.
+_IBAN_RE: Final = re.compile(r"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]){11,30}\b")
 
 
 def ttl_for(kind: str) -> timedelta:
@@ -150,10 +159,14 @@ def _mask_secrets(text: str) -> tuple[str, bool]:
     def _mask_iban(match: re.Match[str]) -> str:
         nonlocal masked
         masked = True
-        return f"[IBAN {match.group(1)}••••{match.group(2)}]"
+        compact = match.group(0).replace(" ", "")
+        return f"[IBAN {compact[:4]}••••{compact[-4:]}]"
 
-    out = _CARD_RE.sub(_mask_card, text)
-    out = _IBAN_RE.sub(_mask_iban, out)
+    # IBAN first. The card pattern is the greedier of the two and does not know it is
+    # standing in the middle of an account number; run it second and it only ever sees text
+    # an IBAN has already declined.
+    out = _IBAN_RE.sub(_mask_iban, text)
+    out = _CARD_RE.sub(_mask_card, out)
     return out, masked
 
 

@@ -21,12 +21,15 @@ core and a demonstration subsystem:
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from tessera.guard.decisions import load_policy
 from tessera.guard.ledger_store import read_ledger_entries, verify_active_ledger
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
 from tessera.settings import get_settings
+
+if TYPE_CHECKING:
+    from tessera.guard.audit import ChainStatus
 
 __all__ = ["compute_policies_overview"]
 
@@ -62,6 +65,11 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Audit chain broken at entry {n}",
     ),
     "chain_entries": ("{n} entrées vérifiées", "{n} Eintraege verifiziert", "{n} entries verified"),
+    "chain_absent": (
+        "Aucune chaîne d'audit à vérifier",
+        "Keine Audit-Kette zu pruefen",
+        "No audit chain to verify",
+    ),
 }
 _IMPACT_METRIC: dict[str, tuple[str, str, str]] = {
     "violations": ("Violations", "Verstoesse", "Violations"),
@@ -149,6 +157,23 @@ class _LedgerScan:
         return sum(
             tally.get(kind, 0) for rule, tally in self.per_rule.items() if rule.startswith(prefix)
         )
+
+
+def _chain_label(chain: ChainStatus, lang: str) -> str:
+    """Describe the audit chain in three states, not two.
+
+    ``attested``, not ``verified``: "no break was found" is also true of a journal that was
+    never written, and this line used to read "Chaîne d'audit intacte · 0 entrées vérifiées"
+    over an empty disk — an assertion of integrity about a chain that does not exist
+    (ADR 0026).
+    """
+    if chain.attested:
+        return f"{_t('chain_intact', lang)} · {_t('chain_entries', lang)}".format(
+            n=_fmt_int(chain.length)
+        )
+    if chain.cannot_say:
+        return _t("chain_absent", lang)
+    return _t("chain_broken", lang).format(n=chain.broken_at)
 
 
 def compute_policies_overview(lang: str = "fr") -> dict[str, object]:
@@ -407,12 +432,7 @@ def compute_policies_overview(lang: str = "fr") -> dict[str, object]:
 
     quick_links = ["audit_journal", "export_siem", "evidence_pack", "release_control"]
 
-    if chain.verified:
-        chain_label = f"{_t('chain_intact', lang)} · {_t('chain_entries', lang)}".format(
-            n=_fmt_int(chain.length)
-        )
-    else:
-        chain_label = _t("chain_broken", lang).format(n=chain.broken_at)
+    chain_label = _chain_label(chain, lang)
 
     return {
         "generated_at": now.isoformat(),

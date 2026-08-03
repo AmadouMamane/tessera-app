@@ -78,6 +78,7 @@ _TR: dict[str, tuple[str, str, str]] = {
     "l_chain": ("Chaîne d'audit", "Audit-Kette", "Audit chain"),
     "chain_ok": ("Intacte", "Intakt", "Intact"),
     "chain_broken": ("Rompue (entrée {n})", "Gebrochen (Eintrag {n})", "Broken (entry {n})"),
+    "chain_absent": ("Aucune chaîne", "Keine Kette", "No chain"),
     "ub_title": ("Utilisé par", "Verwendet von", "Used by"),
     "ub_none": ("Aucun agent", "Kein Agent", "No agent"),
     "ub_regate": ("{n} à re-valider", "{n} neu zu validieren", "{n} to re-validate"),
@@ -224,8 +225,11 @@ def _block_row(
 
 
 def _chain_label(chain: object, lang: str) -> str:
-    verified = bool(getattr(chain, "verified", True))
-    if verified:
+    # "No break found" is also true of a chain nobody ever wrote, so the absent case gets its
+    # own label rather than borrowing the intact one (ADR 0026).
+    if bool(getattr(chain, "cannot_say", False)):
+        return _t("chain_absent", lang)
+    if bool(getattr(chain, "verified", True)):
         return _t("chain_ok", lang)
     broken = getattr(chain, "broken_at", None)
     return _t("chain_broken", lang).format(n=broken if broken is not None else "?")

@@ -92,7 +92,12 @@ class InputCheckResult:
 
 @dataclass(frozen=True, slots=True)
 class GuardedResult:
-    """Outcome of a guarded tool invocation."""
+    """Outcome of a guarded tool invocation.
+
+    ``allowed`` is the verdict on **this call**, not on the policy check alone: a tool that
+    raised under ``guard.fail_closed`` is not allowed, it is contained. The distinction
+    matters because ``allowed`` is the field a caller reaches for first.
+    """
 
     allowed: bool
     result: Any
@@ -628,8 +633,13 @@ async def guarded_invoke(
             )
             _record_guard_decision(tool_name, "error")
             if settings.guard.fail_closed:
+                # CLOSED means closed. This used to return `allowed=True` alongside the
+                # error, so a caller that asked the one question the field exists to answer
+                # — "did the guard let this call stand?" — was told yes about a call that
+                # produced nothing. The workers happened to re-check `error is None`; the
+                # name promised they would not have to.
                 return GuardedResult(
-                    allowed=True,
+                    allowed=False,
                     result=None,
                     error=f"tool {tool_name!r} raised: {exc}",
                     decisions=tuple(records),

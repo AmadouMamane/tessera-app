@@ -405,15 +405,22 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
                 <span className="text-[0.9rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                   {step.count}
                 </span>
+                {/* Three states, not two. `unknown` is the backend saying there was no chain
+                    to verify: rendering that as "KO" would turn "nothing to attest" into
+                    "break detected", which is the same false claim as the "OK" it replaced,
+                    pointed the other way. */}
                 <span
                   className={cn(
                     "inline-flex items-center gap-0.5 text-[0.58rem]",
                     step.status === "ok"
                       ? "text-[var(--tessera-fg-success)]"
-                      : "text-[var(--tessera-fg-danger)]",
+                      : step.status === "unknown"
+                        ? "text-[var(--tessera-text-muted)]"
+                        : "text-[var(--tessera-fg-danger)]",
                   )}
                 >
-                  <ShieldCheck className="h-2.5 w-2.5" /> {step.status === "ok" ? "OK" : "KO"}
+                  <ShieldCheck className="h-2.5 w-2.5" />{" "}
+                  {step.status === "ok" ? "OK" : step.status === "unknown" ? "—" : "KO"}
                 </span>
               </div>
               {i < data.pipeline.length - 1 ? (

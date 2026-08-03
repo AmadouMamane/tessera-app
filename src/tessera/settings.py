@@ -20,15 +20,19 @@ triggering heavy LLM client initialisation.
 
 from __future__ import annotations
 
+import os
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import Field, HttpUrl, PostgresDsn, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from tessera.sql import safe_identifier
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 # Resolve bundled defaults relative to the installed package, not the process
 # working directory: the backend may be launched from anywhere (uvicorn, tests,
@@ -571,6 +575,53 @@ class Settings(BaseSettings):
     def hsts_enabled(self) -> bool:
         """Send HSTS only when TLS is actually terminated for this deployment."""
         return self.api.tls_terminated
+
+
+# ---------------------------------------------------------------------------
+# Unbound overrides — making `extra="ignore"` audible
+# ---------------------------------------------------------------------------
+
+
+def unbound_env_overrides(environ: Mapping[str, str] | None = None) -> tuple[str, ...]:
+    """Return ``TESSERA_<section>__<name>`` variables that bind to no settings field.
+
+    Every model here is ``extra="ignore"``, and that is deliberate rather than sloppy: the
+    nested sections are addressed with a DOUBLE underscore (``TESSERA_GUARD__AUDIT_SINK``)
+    while each sub-model also declares a single-underscore ``env_prefix``, so ``forbid`` would
+    reject the very names the deployment sets. What ``ignore`` costs is the typo:
+    ``TESSERA_GUARD__FAILCLOSED`` is accepted, dropped, and the breaker quietly keeps its
+    default while the operator believes they changed it. A setting that can be *asked for* and
+    silently not applied is the same defect as a knob that is not effective by construction
+    (ADR 0030).
+
+    Only the ``TESSERA_<section>__…`` form is inspected, because there the section name is
+    already proof of intent: the caller meant a settings field of that section. Bare
+    ``TESSERA_*`` names are left alone — many of them belong to compose, the Makefile or the
+    scripts and were never addressed to this module.
+
+    Args:
+        environ: Environment to inspect; defaults to the process environment.
+
+    Returns:
+        The offending variable names, sorted. Empty when every override binds.
+    """
+    env = os.environ if environ is None else environ
+    sections: dict[str, frozenset[str]] = {}
+    for field_name, field in Settings.model_fields.items():
+        annotation = field.annotation
+        if isinstance(annotation, type) and issubclass(annotation, BaseSettings):
+            sections[field_name.upper()] = frozenset(n.upper() for n in annotation.model_fields)
+
+    unbound: list[str] = []
+    for name in env:
+        upper = name.upper()
+        if not upper.startswith("TESSERA_") or "__" not in upper:
+            continue
+        section, _, rest = upper[len("TESSERA_") :].partition("__")
+        known = sections.get(section)
+        if known is not None and rest not in known:
+            unbound.append(name)
+    return tuple(sorted(unbound))
 
 
 # ---------------------------------------------------------------------------

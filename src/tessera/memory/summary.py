@@ -84,8 +84,22 @@ _DEFAULT_SUMMARY_INSTRUCTION: Final[str] = (
     "Summarise the earlier conversation turns below concisely for context. "
     "Preserve meaning and intent. Do NOT restate amounts, IBANs, dates, ticket "
     "numbers or regulatory citations verbatim — those are tracked separately; "
-    "refer to them generically. Answer in the conversation's language."
+    "refer to them generically. Answer in the conversation's language. "
+    "When an earlier summary is provided, fold the new turns into it and keep what it "
+    "already recorded — do not drop earlier context to make room."
 )
+
+#: Labels for the fold. The summariser sees "here is what you already knew" followed by
+#: "here is what is new", which is the only way the compaction accumulates instead of
+#: re-reading a window that keeps sliding away from the start of the conversation.
+_FOLD_PREFIX: Final[str] = "[earlier summary]"
+_TRANSCRIPT_PREFIX: Final[str] = "[new turns]"
+
+#: Characters per token, used only to convert `memory.token_budget` — declared, and shown to
+#: the operator, in tokens — into the character length this module can actually measure.
+#: Deliberately approximate; a tokenizer dependency for a truncation guard is not a trade
+#: this project makes. Four is the usual rule of thumb for European prose.
+_CHARS_PER_TOKEN: Final[int] = 4
 
 
 # ---------------------------------------------------------------------------
@@ -228,19 +242,38 @@ class SummaryBackend(WindowBackend):
         older = prior[: len(prior) - self._window]
         entities = extract_from_messages(older)
 
-        budget = get_settings().memory.token_budget
+        budget_chars = get_settings().memory.token_budget * _CHARS_PER_TOKEN
         older_text = "\n".join(f"{m.role}: {m.content}" for m in older)
-        # Bound the model input by the configured budget (cheap guard).
-        if budget and len(older_text) > budget:
-            older_text = older_text[-budget:]
+        # The budget was applied to `len()` — characters — against a value declared and
+        # published to the operator in TOKENS (`memory.token_budget`, parameters.py). At the
+        # default 2 000 the model was handed roughly a QUARTER of the configured budget.
+        # There is no tokenizer on this path and buying one for a truncation guard would be a
+        # dependency for a heuristic, so the conversion is explicit and named rather than
+        # implied by the unit's absence.
+        if budget_chars and len(older_text) > budget_chars:
+            older_text = older_text[-budget_chars:]
         # Input-leg PAN mask (pii-input-redaction, cold-path model call): the
         # entity extraction above ran on the raw text — the summariser LLM
         # only ever sees the masked form.
         older_text = mask_pan(older_text).text
-        summary = await self._summarise(older_text, scope.language)
+        # FOLD, don't restart. The previous summary used to be discarded: every turn
+        # re-summarised the raw transcript from scratch, so the moment a conversation grew
+        # past the budget the truncation above cut its OLDEST turns — and since nothing
+        # carried them forward, the earliest part of a long conversation left the agent's
+        # memory permanently while the dashboard went on reporting a summary. Feeding the
+        # prior summary back in is what makes the compaction cumulative instead of a
+        # sliding, lossy re-read.
+        previous, _ = await load_summary(scope.conversation_id)
+        summary = await self._summarise(older_text, scope.language, previous=previous)
         await save_summary(scope.conversation_id, summary, entities)
 
-    async def _summarise(self, older_text: str, language: LanguageCode) -> str:
+    async def _summarise(
+        self,
+        older_text: str,
+        language: LanguageCode,
+        *,
+        previous: str | None = None,
+    ) -> str:
         # Local imports avoid any import-time coupling with the reporter, which
         # itself imports the memory package.
         from tessera.agent.reporter import load_prompts
@@ -248,11 +281,16 @@ class SummaryBackend(WindowBackend):
 
         prompts = load_prompts(language)
         system = prompts.get("summary", _DEFAULT_SUMMARY_INSTRUCTION)
+        user = (
+            f"{_FOLD_PREFIX}\n{previous}\n\n{_TRANSCRIPT_PREFIX}\n{older_text}"
+            if previous
+            else older_text
+        )
         backend = get_summary_backend()
         response = await backend.chat(
             [
                 ChatMessage(role="system", content=system),
-                ChatMessage(role="user", content=older_text),
+                ChatMessage(role="user", content=user),
             ],
             temperature=0.1,
         )

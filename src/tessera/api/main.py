@@ -60,7 +60,7 @@ from tessera.observability.customer_feedback import ensure_customer_feedback_sch
 from tessera.observability.eval.gating_scores import ensure_eval_gating_schema
 from tessera.retrieval.citations import ensure_citation_schema
 from tessera.retrieval.store import ensure_schema, get_pool
-from tessera.settings import get_settings
+from tessera.settings import get_settings, unbound_env_overrides
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -491,6 +491,14 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     obs_logging.configure()
     traces.configure()
+    # `extra="ignore"` means a mistyped override is dropped without a word, and the operator
+    # goes on believing they changed a setting they did not (settings.unbound_env_overrides).
+    # Boot is where that can still be caught.
+    unbound = unbound_env_overrides()
+    if unbound:
+        obs_logging.get_logger("tessera.settings").warning(
+            "settings.unbound_env_overrides", names=list(unbound)
+        )
     # Leadership FIRST (ADR 0044), on a dedicated connection independent of the pool, so two
     # decisions can key off it: which worker binds the metrics port, and which worker runs the
     # singleton background loops. In the single-worker default the lone process trivially wins,

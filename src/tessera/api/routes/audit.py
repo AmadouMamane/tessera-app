@@ -714,7 +714,11 @@ def _measure(entries: list[AuditEntry], integrity: AuditIntegrity) -> dict[Audit
         "sensitive_actions": sensitive,
         "guard_refusals": refusals,
         "proof_events": signed,
-        "chain_integrity": int(integrity.verified),
+        # `and length` matters: an absent or empty journal has no break in it either, and
+        # this field used to report integrity 1 over a chain that was never written. (Not
+        # `integrity.attested` — on THIS model that name already means "an attestation entry
+        # has ratified the forks", which is a different claim entirely.)
+        "chain_integrity": int(integrity.verified and integrity.length > 0),
         "unique_actors": len(actors),
     }
 

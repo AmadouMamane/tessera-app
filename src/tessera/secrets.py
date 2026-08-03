@@ -28,6 +28,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
+import time
 from functools import lru_cache
 from typing import TYPE_CHECKING, Protocol
 
@@ -37,6 +39,26 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 __all__ = ["SecretProvider", "get_secret_provider", "resolve_secret"]
+
+#: How long a fetched secret stays cached before the backend is asked again.
+#:
+#: The caches used to be ``lru_cache`` with no expiry, so a process read each secret exactly
+#: once and kept it for its whole life. Rotation is the entire reason Vault and Secret Manager
+#: are in this file, and the readers were structurally incapable of noticing one: a rotated
+#: credential took effect on the next *restart*, which is the property those backends exist to
+#: remove. Five minutes bounds the staleness without turning every read into a network call.
+_CACHE_TTL_S: float = 300.0
+
+
+def _warn(message: str) -> None:
+    """Report a secrets-layer degradation on stderr, exactly once per process and cause."""
+    if message in _WARNED:
+        return
+    _WARNED.add(message)
+    sys.stderr.write(f"tessera.secrets: {message}\n")
+
+
+_WARNED: set[str] = set()
 
 
 class SecretProvider(Protocol):
@@ -63,18 +85,27 @@ class GcpSecretManagerProvider:
 
     def __init__(self, project_id: str) -> None:
         self._project_id = project_id
+        self._cache: dict[str, tuple[float, str | None]] = {}
 
-    @lru_cache(maxsize=64)  # noqa: B019 — provider is a process-wide singleton
     def get(self, name: str) -> str | None:
+        cached = self._cache.get(name)
+        if cached is not None and time.monotonic() - cached[0] < _CACHE_TTL_S:
+            return cached[1]
+        value = self._fetch(name)
+        self._cache[name] = (time.monotonic(), value)
+        return value
+
+    def _fetch(self, name: str) -> str | None:
         from google.cloud import secretmanager  # lazy: cloud-only dependency
 
         client = secretmanager.SecretManagerServiceClient()
         path = f"projects/{self._project_id}/secrets/{name}/versions/latest"
         try:
             response = client.access_secret_version(name=path)
-        except Exception:  # not found / no access → treat as absent
+        except Exception as exc:  # not found / no access → treat as absent
+            _warn(f"gcp secret {name!r} unreadable ({type(exc).__name__}); treated as absent")
             return None
-        return response.payload.data.decode("utf-8")
+        return str(response.payload.data.decode("utf-8"))
 
 
 class SopsSecretProvider:
@@ -86,9 +117,16 @@ class SopsSecretProvider:
 
     def __init__(self, path: str) -> None:
         self._path = path
+        self._cached: tuple[float, Mapping[str, str]] | None = None
 
-    @lru_cache(maxsize=1)  # noqa: B019 — provider is a process-wide singleton
     def _decrypted(self) -> Mapping[str, str]:
+        if self._cached is not None and time.monotonic() - self._cached[0] < _CACHE_TTL_S:
+            return self._cached[1]
+        data = self._decrypt_now()
+        self._cached = (time.monotonic(), data)
+        return data
+
+    def _decrypt_now(self) -> Mapping[str, str]:
         try:
             completed = subprocess.run(  # noqa: S603 — fixed argv, no shell, pinned binary
                 ["sops", "--decrypt", "--output-type", "json", self._path],  # noqa: S607
@@ -96,11 +134,13 @@ class SopsSecretProvider:
                 check=True,
                 text=True,
             )
-        except (OSError, subprocess.CalledProcessError):
+        except (OSError, subprocess.CalledProcessError) as exc:
+            _warn(f"sops could not decrypt {self._path!r} ({type(exc).__name__}); no secrets")
             return {}
         try:
             data = json.loads(completed.stdout)
         except json.JSONDecodeError:
+            _warn(f"sops output for {self._path!r} is not JSON; no secrets")
             return {}
         return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
 
@@ -120,9 +160,16 @@ class VaultSecretProvider:
         self._token = token
         self._mount = mount
         self._path = path
+        self._cached: tuple[float, Mapping[str, str]] | None = None
 
-    @lru_cache(maxsize=1)  # noqa: B019 — provider is a process-wide singleton
     def _data(self) -> Mapping[str, str]:
+        if self._cached is not None and time.monotonic() - self._cached[0] < _CACHE_TTL_S:
+            return self._cached[1]
+        data = self._read_now()
+        self._cached = (time.monotonic(), data)
+        return data
+
+    def _read_now(self) -> Mapping[str, str]:
         import hvac  # lazy: on-prem-premium-only dependency
 
         client = hvac.Client(url=self._url, token=self._token)
@@ -130,7 +177,8 @@ class VaultSecretProvider:
             resp = client.secrets.kv.v2.read_secret_version(
                 path=self._path, mount_point=self._mount
             )
-        except Exception:
+        except Exception as exc:
+            _warn(f"vault {self._mount}/{self._path} unreadable ({type(exc).__name__}); no secrets")
             return {}
         data = resp.get("data", {}).get("data", {})
         return {str(k): str(v) for k, v in data.items()}
@@ -143,23 +191,36 @@ class VaultSecretProvider:
 def get_secret_provider() -> SecretProvider:
     """Build the configured secret provider (process-wide singleton).
 
-    Falls back to the env provider for any misconfiguration so that a broken
-    secret backend degrades to "secret absent" rather than crashing start-up;
-    callers already handle ``None`` (a missing optional secret).
+    Falls back to the env provider for any misconfiguration so that a broken secret backend
+    degrades to "secret absent" rather than crashing start-up; callers already handle ``None``
+    (a missing optional secret).
+
+    The fall-back now says so. It used to be silent, and silence is what made it dangerous:
+    an operator who set ``provider=vault`` and mistyped ``vault_url`` got a process reading
+    secrets out of the environment — the exact posture Vault was configured to replace —
+    with nothing anywhere reporting the substitution. Degrading is a decision; degrading
+    unannounced is a different deployment than the one that was asked for.
     """
     sec = get_settings().secrets
     provider = sec.provider
-    if provider == "gcp" and sec.gcp_project_id:
-        return GcpSecretManagerProvider(sec.gcp_project_id)
-    if provider == "sops" and sec.sops_file:
-        return SopsSecretProvider(sec.sops_file)
-    if provider == "vault" and sec.vault_url and sec.vault_token is not None:
-        return VaultSecretProvider(
-            url=sec.vault_url,
-            token=sec.vault_token.get_secret_value(),
-            mount=sec.vault_mount,
-            path=sec.vault_path,
-        )
+    if provider == "gcp":
+        if sec.gcp_project_id:
+            return GcpSecretManagerProvider(sec.gcp_project_id)
+        _warn("provider 'gcp' selected without secrets.gcp_project_id — falling back to env")
+    elif provider == "sops":
+        if sec.sops_file:
+            return SopsSecretProvider(sec.sops_file)
+        _warn("provider 'sops' selected without secrets.sops_file — falling back to env")
+    elif provider == "vault":
+        if sec.vault_url and sec.vault_token is not None:
+            return VaultSecretProvider(
+                url=sec.vault_url,
+                token=sec.vault_token.get_secret_value(),
+                mount=sec.vault_mount,
+                path=sec.vault_path,
+            )
+        missing = "vault_url" if not sec.vault_url else "vault_token"
+        _warn(f"provider 'vault' selected without secrets.{missing} — falling back to env")
     return EnvSecretProvider()
 
 

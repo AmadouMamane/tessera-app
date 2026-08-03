@@ -99,6 +99,12 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # It feeds the compliance verdict rather than being one — the control's `na` status is
     # what carries the judgement, and it says its cause.
     "src/tessera/observability/compliance.py::SignalReading.measured": "data",
+    # Same shape, one layer down: "was there a chain to read at all", a property OF the
+    # status. `attested` is what a page must ask before printing an integrity claim, and
+    # `cannot_say` is the ADR 0027 third answer the boolean `verified` could not express.
+    # Neither of them decides whether anything passes.
+    "src/tessera/guard/audit.py::ChainStatus.attested": "data",
+    "src/tessera/guard/audit.py::ChainStatus.cannot_say": "data",
     # ── release & gate verdicts ───────────────────────────────────────────────────────────────
     "src/tessera/observability/eval_gate_view.py::GateCaseStatus.blocking": "VERDICT",
     "src/tessera/observability/eval_gate_view.py::GateCaseStatus.is_critical": "VERDICT",

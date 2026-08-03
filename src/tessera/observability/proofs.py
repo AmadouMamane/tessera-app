@@ -150,6 +150,16 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Beweiskette unterbrochen (Eintrag {n})",
         "Proof chain broken (entry {n})",
     ),
+    "footer_chain_unknown": (
+        "Aucune chaîne de preuve à vérifier",
+        "Keine Beweiskette zu pruefen",
+        "No proof chain to verify",
+    ),
+    "alert_chain_unknown": (
+        "Aucune chaîne d'audit à vérifier",
+        "Keine Audit-Kette zu pruefen",
+        "No audit chain to verify",
+    ),
 }
 
 
@@ -200,6 +210,43 @@ def _ledger_count_at(chain: ChainStatus, at_dt: datetime | None, asof: str | Non
     )
 
 
+def _chain_verdict(chain: ChainStatus, n_audit: int) -> tuple[bool, bool, int, str]:
+    """Return ``(clean_at_t, unknown, intact_pct, intact_label)`` for the chain at T.
+
+    Content integrity of the full chain implies every prefix is intact; a break at index b
+    leaves the b entries before it intact — so the state at T is clean whenever the break sits
+    at or after the T-prefix boundary.
+
+    Unless there was no chain to read at all. ``verified`` means "no break was found", which
+    is also true of a journal that was never written: this page used to answer "signature
+    100 % · OK" and "Chaîne de preuve intacte" over an empty disk. Nothing to attest is
+    neither intact nor broken, and the label says so rather than picking one (ADR 0026).
+    """
+    clean_at_t = chain.verified or (chain.broken_at is not None and chain.broken_at >= n_audit)
+    unknown = chain.cannot_say
+    intact_pct = (
+        100
+        if clean_at_t
+        else (round(min(chain.broken_at or 0, n_audit) / n_audit * 100) if n_audit else 0)
+    )
+    return clean_at_t, unknown, intact_pct, ("—" if unknown else f"{intact_pct}%")
+
+
+def _chain_alerts(
+    chain: ChainStatus,
+    lang: str,
+    *,
+    clean_at_t: bool,
+    unknown: bool,
+) -> list[dict[str, object]]:
+    """One alert describing the chain: unknown, intact, or broken at an index."""
+    if unknown:
+        return [{"level": "unknown", "label": _t("alert_chain_unknown", lang)}]
+    if clean_at_t:
+        return [{"level": "ok", "label": _t("alert_chain_ok", lang)}]
+    return [{"level": "bad", "label": _t("alert_chain_broken", lang).format(n=chain.broken_at)}]
+
+
 def compute_proofs_overview(lang: str = "fr", asof: str | None = None) -> dict[str, object]:
     """Return the full Proofs & exporter overview payload, live or as-of T.
 
@@ -241,17 +288,7 @@ def compute_proofs_overview(lang: str = "fr", asof: str | None = None) -> dict[s
         # Honest: the current real count, no fabricated trend line.
         return [v] * 7
 
-    # Chain verdict AT T. Content integrity of the full chain implies every prefix
-    # is intact; a break at index b leaves the b entries before it intact — so the
-    # state at T is clean whenever the break sits at/after the T-prefix boundary.
-    clean_at_t = chain.verified or (chain.broken_at is not None and chain.broken_at >= n_audit)
-    # Percentage of the T-prefix that re-derives cleanly (100% when intact; when a
-    # break is found at index b inside the prefix, the b entries before it hold).
-    intact_pct = (
-        100
-        if clean_at_t
-        else (round(min(chain.broken_at or 0, n_audit) / n_audit * 100) if n_audit else 0)
-    )
+    clean_at_t, chain_unknown, intact_pct, intact_label = _chain_verdict(chain, n_audit)
 
     kpis = [
         _kpi("artifacts", _fmt_int(total), "0", True, _flat(total)),
@@ -259,18 +296,10 @@ def compute_proofs_overview(lang: str = "fr", asof: str | None = None) -> dict[s
         _kpi("eval_scores", _fmt_int(n_scores), "0", True, _flat(n_scores)),
         _kpi("replays", _fmt_int(n_bundles), "0", True, _flat(n_bundles)),
         _kpi("reports", _fmt_int(n_reports), "0", True, _flat(n_reports)),
-        _kpi("chain", f"{intact_pct}%", "0", True, _flat(intact_pct)),
+        _kpi("chain", intact_label, "0", True, _flat(0 if chain_unknown else intact_pct)),
     ]
 
-    if clean_at_t:
-        alerts = [{"level": "ok", "label": _t("alert_chain_ok", lang)}]
-    else:
-        alerts = [
-            {
-                "level": "bad",
-                "label": _t("alert_chain_broken", lang).format(n=chain.broken_at),
-            }
-        ]
+    alerts = _chain_alerts(chain, lang, clean_at_t=clean_at_t, unknown=chain_unknown)
 
     # Real artifact families (durable stores only). manifests/snapshots have no
     # real store in this build, so they are omitted rather than fabricated.
@@ -286,17 +315,18 @@ def compute_proofs_overview(lang: str = "fr", asof: str | None = None) -> dict[s
     ]
 
     crypto = {
-        "valid_signatures": f"{intact_pct}%",
+        "valid_signatures": intact_label,
         "algorithm": "SHA-256",
         "chain_length": _fmt_int(n_audit),
         "anomalies": 0 if clean_at_t else 1,
     }
 
-    footer_chain = (
-        _t("footer_chain", lang)
-        if clean_at_t
-        else _t("footer_chain_broken", lang).format(n=chain.broken_at)
-    )
+    if chain_unknown:
+        footer_chain = _t("footer_chain_unknown", lang)
+    elif clean_at_t:
+        footer_chain = _t("footer_chain", lang)
+    else:
+        footer_chain = _t("footer_chain_broken", lang).format(n=chain.broken_at)
 
     # ── REAL evidence packs (lot 7): durable manifests, attributed + digested ─
     # As-of T only the packs frozen at/before T exist (their created_at is real).
@@ -356,8 +386,8 @@ def compute_proofs_overview(lang: str = "fr", asof: str | None = None) -> dict[s
         {"key": "collecte", "count": _fmt_int(total), "status": "ok"},
         {
             "key": "signature",
-            "count": f"{intact_pct}%",
-            "status": "ok" if chain.verified else "bad",
+            "count": intact_label,
+            "status": "unknown" if chain_unknown else ("ok" if chain.verified else "bad"),
         },
         {"key": "pack", "count": str(n_packs), "status": "ok"},
     ]

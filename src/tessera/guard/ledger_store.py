@@ -40,10 +40,12 @@ import json
 import os
 import sys
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
+from tessera.fsutil import atomic_write_text
 from tessera.guard.audit import (
     HANDOFF_TYPE,
     LEDGER_ATTESTATION_TYPE,
@@ -55,9 +57,18 @@ from tessera.guard.audit import (
 from tessera.observability.store_spans import store_read
 from tessera.sql import safe_identifier
 
+_FCNTL: ModuleType | None
+try:  # POSIX only; the fallback is documented in `_spool_file_lock`.
+    import fcntl as _fcntl_module
+except ImportError:  # pragma: no cover - no supported deployment lacks fcntl
+    _FCNTL = None
+else:
+    _FCNTL = _fcntl_module
+
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Iterator, Mapping, Sequence
     from pathlib import Path
+    from types import ModuleType
 
 __all__ = [
     "LEDGER_ATTESTATION_TYPE",
@@ -305,12 +316,42 @@ def _spool_path() -> Path:
     return get_settings().guard.audit_file.parent / "audit_spool.jsonl"
 
 
+@contextmanager
+def _spool_file_lock() -> Iterator[None]:
+    """Hold an exclusive OS lock on the spool for the duration of the block.
+
+    ``_spool_lock`` is a ``threading.Lock``: it serialises the threads of ONE process and
+    knows nothing about the others. Since ADR 0044 the agent runs N worker processes, each
+    with its own drain loop, and the dangerous sequence is not concurrent appends — those are
+    atomic ``O_APPEND`` writes — but the drain's read-then-rewrite: worker A reads the spool,
+    worker B appends, worker A rewrites from its stale snapshot, and B's entry is gone. Gone
+    from an append-only, hash-chained ledger, silently, on the path whose entire promise is
+    "zero loss".
+
+    ``flock`` is advisory and process-wide, which is exactly the scope missing here. Where it
+    is unavailable (no ``fcntl``), the block still runs: a single-process deployment loses
+    nothing, and refusing to spool would be a worse failure than the one being prevented.
+    """
+    if _FCNTL is None:  # pragma: no cover - POSIX in every supported deployment
+        yield
+        return
+    path = _spool_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = path.with_suffix(".lock")
+    with lock_path.open("a+", encoding="utf-8") as handle:
+        _FCNTL.flock(handle.fileno(), _FCNTL.LOCK_EX)
+        try:
+            yield
+        finally:
+            _FCNTL.flock(handle.fileno(), _FCNTL.LOCK_UN)
+
+
 def _spool_append(entry: Mapping[str, Any]) -> None:
     """Durably append one chained entry to the spool (append + flush + fsync)."""
     path = _spool_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(dict(entry), ensure_ascii=False)
-    with _spool_lock, path.open("a", encoding="utf-8") as fp:
+    with _spool_lock, _spool_file_lock(), path.open("a", encoding="utf-8") as fp:
         fp.write(line + "\n")
         fp.flush()
         os.fsync(fp.fileno())
@@ -388,7 +429,10 @@ def _clear_spooled(processed: set[str]) -> None:
     between the drain's read and its clear). Matches the drain's identity rule (event_id, or a
     recomputed one for a legacy entry that predates the field).
     """
-    with _spool_lock:
+    with _spool_lock, _spool_file_lock():
+        # The re-read happens INSIDE the lock, so the snapshot this rewrite is built from is
+        # the state at the moment of the rewrite — not the one the drain read some seconds
+        # ago, before another worker appended to it.
         remaining = [
             e
             for e in _read_spool_locked()
@@ -399,7 +443,11 @@ def _clear_spooled(processed: set[str]) -> None:
             if remaining
             else ""
         )
-        _spool_path().write_text(text, encoding="utf-8")
+        # Atomic: temp file, fsync, os.replace. `write_text` truncates and then writes, so a
+        # crash — or a reader on another worker — could land on an empty or half-written
+        # spool. On the store whose promise is that no entry is ever lost, the rewrite must
+        # be as durable as the append it undoes.
+        atomic_write_text(_spool_path(), text)
 
 
 def drain_spool() -> bool:
@@ -411,7 +459,7 @@ def drain_spool() -> bool:
     Postgres was unreachable (or the fork guard tripped a concurrent non-cooperating writer) —
     the entries remain spooled, order intact, and the next wake retries against the fresh head.
     """
-    with _spool_lock:
+    with _spool_lock, _spool_file_lock():
         entries = _read_spool_locked()
     if not entries:
         return True

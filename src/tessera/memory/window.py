@@ -31,19 +31,29 @@ if TYPE_CHECKING:
 __all__ = ["WindowBackend", "strip_format_directives"]
 
 
+# The unit a length directive is counted in. It used to be `\w+` — any word at all — so
+# "you must answer in 30 days as required by GDPR Art. 12" had "answer in 30 days" cut out of
+# it, and the model was handed a regulatory deadline with its deadline removed. A directive
+# is only a directive when it counts something a *reply* is measured in.
+_FORMAT_UNIT: Final[str] = (
+    r"(?:lignes?|mots?|phrases?|caractères?|points?"
+    r"|lines?|words?|sentences?|characters?|bullets?"
+    r"|Zeilen?|Wörtern?|Sätzen?|Zeichen|Stichpunkten?)"
+)
+
 # Patterns that express format/length constraints in historical user messages.
 # Stripped before injection so past one-shot instructions don't leak forward.
 _FORMAT_DIRECTIVE_RE: Final[re.Pattern[str]] = re.compile(
     r"(\s*[-,;—]?\s*)?"
     r"("
-    r"réponds?\s+en\s+\d+\s+\w+"  # FR: réponds en 2 lignes / mots
+    rf"réponds?\s+en\s+\d+\s+{_FORMAT_UNIT}"  # FR: réponds en 2 lignes / mots
     r"|réponse\s+courte"
     r"|en\s+bref"
     r"|brièvement"
-    r"|answer\s+in\s+\d+\s+\w+"  # EN: answer in 2 lines / words
+    rf"|answer\s+in\s+\d+\s+{_FORMAT_UNIT}"  # EN: answer in 2 lines / words
     r"|briefly"
     r"|short\s+answer"
-    r"|antworte\s+in\s+\d+\s+\w+"  # DE: antworte in 2 Zeilen
+    rf"|antworte\s+in\s+\d+\s+{_FORMAT_UNIT}"  # DE: antworte in 2 Zeilen
     r"|kurze\s+Antwort"
     r"|in\s+\d+\s+Zeilen?"
     r")",

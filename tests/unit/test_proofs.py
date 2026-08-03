@@ -79,7 +79,14 @@ def test_crypto_zone_reflects_the_real_audit_chain() -> None:
     assert payload["chain_verified"] == chain.verified  # type: ignore[index]
     assert crypto["algorithm"] == "SHA-256"  # type: ignore[index]  # real hash, not "Ed25519"
     assert _int(str(crypto["chain_length"])) == chain.length  # type: ignore[index]
-    if chain.verified:
+    # Three branches, because "no break was found" is also true of a chain nobody ever
+    # wrote. With two, a suite whose audit file does not exist took the `verified` one and
+    # asserted "100 % of signatures valid · 0 anomalies" over an empty disk — the test
+    # agreeing with the page about something neither of them had looked at.
+    if chain.cannot_say:
+        assert crypto["valid_signatures"] == "—"  # type: ignore[index]
+        assert _kpi(payload, "chain") == "—"
+    elif chain.verified:
         assert crypto["valid_signatures"] == "100%"  # type: ignore[index]
         assert crypto["anomalies"] == 0  # type: ignore[index]
         assert _kpi(payload, "chain") == "100%"
@@ -94,7 +101,21 @@ def test_alerts_track_the_chain_status() -> None:
 
     assert payload["alert_count"] == len(alerts)  # type: ignore[arg-type]
     assert len(alerts) == 1  # type: ignore[arg-type]
-    assert alerts[0]["level"] == ("ok" if chain.verified else "bad")  # type: ignore[index]
+    expected = "unknown" if chain.cannot_say else ("ok" if chain.verified else "bad")
+    assert alerts[0]["level"] == expected  # type: ignore[index]
+
+
+def test_an_absent_chain_is_neither_intact_nor_broken(tmp_path: Path) -> None:
+    """Pins the third answer the boolean could not express.
+
+    An absent journal reported ``verified=True, length=0``, and every page that turned that
+    into a verdict published an integrity claim about a chain that does not exist.
+    """
+    status = verify_audit_chain(tmp_path / "never-written.log")
+    assert status.present is False
+    assert status.cannot_say is True
+    assert status.attested is False
+    assert status.broken_at is None  # not broken either — that is the whole point
 
 
 def test_siem_demonstration_shape_is_present() -> None:
