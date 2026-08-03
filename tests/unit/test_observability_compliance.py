@@ -7,6 +7,16 @@ from types import SimpleNamespace
 from tessera.observability import compliance as comp
 
 
+def _readings(values: dict[str, float]) -> dict[str, comp.SignalReading]:
+    """Wrap plain scores as MEASURED readings.
+
+    A signal is now a value and the size of the sample behind it, because a rate over an empty
+    set was scoring 1.0 and reading "conformant" (audit 2026-08-03). These stubs stand for
+    probes that did observe something, so they carry a non-zero count.
+    """
+    return {key: comp.SignalReading(value=value, n=1) for key, value in values.items()}
+
+
 def test_status_thresholds() -> None:
     assert comp._status(0.95) == "conformant"
     assert comp._status(0.75) == "partial"
@@ -33,7 +43,7 @@ def test_compute_compliance_is_internally_consistent(monkeypatch) -> None:
     }
     # Two args now: the as-of instant and the window length. The page shows a period
     # selector, so the posture it reports is the posture over the selected period.
-    monkeypatch.setattr(comp, "_signal_values", lambda _at=None, _days=None: values)
+    monkeypatch.setattr(comp, "_signal_values", lambda _at=None, _days=None: _readings(values))
     report = comp.compute_compliance()
 
     # Every catalogue control whose signal is present is scored.
@@ -68,7 +78,7 @@ def test_compute_compliance_all_conformant() -> None:
     import pytest
 
     with pytest.MonkeyPatch.context() as m:
-        m.setattr(comp, "_signal_values", lambda _at=None, _days=None: values)
+        m.setattr(comp, "_signal_values", lambda _at=None, _days=None: _readings(values))
         report = comp.compute_compliance()
     assert report.n_non_conformant == 0
     assert report.n_partial == 0

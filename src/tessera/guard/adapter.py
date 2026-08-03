@@ -26,7 +26,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from tessera.agent.sdk.instrument import tool_span
 from tessera.authz import auth_satisfies
 from tessera.guard.audit import (
     GUARD_ACTOR,
@@ -578,6 +577,17 @@ async def guarded_invoke(
 
     # execute_tool span (ADR 0010, #4): carries the guard verdict so a backend
     # can show why a tool was allowed/denied without reading the audit log.
+    # Imported HERE, not at module scope, to keep `tessera.guard` importable on its own.
+    # `tessera.agent.sdk.instrument` initialises the `tessera.agent` package, whose __init__
+    # pulls the graph, whose workers import `guarded_invoke` back out of THIS module while it
+    # is still executing its import block. Reproduced in a fresh process:
+    # `python -c "import tessera.guard"` raised ImportError. It only ever worked because
+    # conftest and build_app import `tessera.agent` first — so an ops script, a batch job or a
+    # future worker that reached for the guard alone would have crashed. This file already
+    # documented the cycle and deferred `agent.state` for exactly this reason; the span import
+    # was the one left at the top. Audit 2026-08-03.
+    from tessera.agent.sdk.instrument import tool_span
+
     with tool_span(tool_name, language) as span:
         if denied:
             deny_rule = next((d.rule for d in decisions if d.kind is DecisionKind.DENY), None)

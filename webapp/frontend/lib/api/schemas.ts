@@ -1143,11 +1143,20 @@ export const ComplianceControlSchema = z.object({
   name: z.string(),
   framework: z.string(),
   signal: z.string(),
+  /** conformant | partial | non_conformant | na — `na` means it could not be MEASURED. */
   status: z.string(),
   value: z.number(),
   risk: z.string(),
   owner: z.string(),
   evidence_id: z.string(),
+  /**
+   * Why an `na` control has no value: "no-sample" (the probe ran over an empty window),
+   * "read-failed" (it raised) or "no-reader" (nothing produces this signal). Null when the
+   * control was measured. A dash on a compliance screen has to say why it is a dash.
+   */
+  unavailable: z.string().nullable().default(null),
+  /** Observations behind `value`. Zero means the number is not a measurement. */
+  n_samples: z.number().int().default(0),
 });
 export type ComplianceControl = z.infer<typeof ComplianceControlSchema>;
 

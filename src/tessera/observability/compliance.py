@@ -39,6 +39,8 @@ from tessera.observability.eval.series import compute_score_series
 from tessera.observability.spine.adapters import read_scores
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from tessera.observability.catalog_tabs import CatalogTab
 
 __all__ = [
@@ -161,6 +163,10 @@ def _control_name(cid: str, fallback: str, lang: str) -> str:
 _CONFORMANT = "conformant"
 _PARTIAL = "partial"
 _NON_CONFORMANT = "non_conformant"
+#: Not applicable — the control could not be MEASURED. Distinct from non-conformant, which is
+#: a measurement that came out bad. Before this existed a probe over an empty window scored
+#: 1.0 and read "conformant", and a probe that raised vanished from the table entirely.
+_NA = "na"
 
 _THRESHOLD_CONFORMANT = 0.9
 _THRESHOLD_PARTIAL = 0.7
@@ -189,6 +195,12 @@ class Control:
     risk: str  # low | medium | high
     owner: str
     evidence_id: str
+    #: Why this control could not be measured — ``no-sample`` (the probe ran over an empty
+    #: window), ``read-failed`` (it raised) or ``no-reader`` (nothing produces this signal).
+    #: ``None`` when the control WAS measured. A dash on a compliance screen must say why.
+    unavailable: str | None = None
+    #: How many observations stand behind ``value``. Zero means the number is not a measurement.
+    n_samples: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -283,52 +295,158 @@ def _status(value: float) -> str:
 
 
 def _risk(status: str) -> str:
-    return {"conformant": "low", "partial": "medium", "non_conformant": "high"}[status]
+    # `na` is deliberately not "low": a control nobody could measure is not a control known to
+    # be fine. Reporting an unmeasured obligation as low risk is the same lie as scoring it 1.0.
+    return {"conformant": "low", "partial": "medium", "non_conformant": "high", _NA: "unknown"}[
+        status
+    ]
 
 
-def _signal_values(at: str | None = None, days: float | None = None) -> dict[str, float]:
-    """Read the real runtime signals, each reduced to a 0..1 'better' score.
+@dataclass(frozen=True, slots=True)
+class ChainFacts:
+    """What the audit chain actually says, asked of the ledger rather than asserted."""
 
-    Every signal is wrapped so a single failing probe never breaks the page.
+    present: bool
+    verified: bool
+
+
+def _audit_chain_facts() -> ChainFacts:
+    """Ask the ledger whether it exists and whether it verifies.
+
+    The AI-Act signals used to hard-code ``audit_present=True`` and
+    ``audit_chain_verified=True``, and ``ai_act.py`` renders those into a SATISFIED Art. 12
+    obligation whose evidence line reads "tamper-evident audit chain verified". The twin route
+    ``/observability/ai-act`` did the real work all along — so one obligation had two answers,
+    and the affirming one was on the regulatory screen. A witness interrogates the thing
+    (ADR 0026). If the ledger cannot be asked, the honest answer is *not verified*, never
+    *verified*.
     """
-    values: dict[str, float] = {}
+    try:
+        from tessera.guard.ledger_store import ledger_available, verify_active_ledger_checkpointed
 
-    def safe(key: str, fn: object) -> None:
+        if not ledger_available():
+            return ChainFacts(present=False, verified=False)
+        return ChainFacts(present=True, verified=bool(verify_active_ledger_checkpointed().verified))
+    except Exception as exc:  # a chain that cannot be asked is not a verified chain
+        sys.stderr.write(f"tessera.observability.compliance: audit chain unreadable: {exc}\n")
+        return ChainFacts(present=False, verified=False)
+
+
+@dataclass(frozen=True, slots=True)
+class SignalReading:
+    """One probe's answer, WITH the size of the sample it was taken over.
+
+    Reducing a probe to a bare float destroyed the one thing a compliance reader needs: how
+    many observations stand behind the number. ``citation_validity``, ``pii_leak`` and
+    ``conformance`` all return 1.0 over an empty set, and the erasure coverage returned a
+    literal 1.0 when there were no conversations — so on any window with no traffic the
+    regulatory screen announced "Exactitude des citations 100 %", "Minimisation & non-fuite PII
+    100 %" and "Droit à l'effacement 100 %" over zero citations, zero turns and zero
+    conversations. Audit 2026-08-03.
+    """
+
+    value: float | None
+    n: int = 0
+    cause: str | None = None
+
+    @property
+    def measured(self) -> bool:
+        """True only when a value was produced over a non-empty sample."""
+        return self.value is not None and self.n > 0
+
+
+def _conformance_reading(report: conformance_mod.ConformanceReport) -> tuple[float, int]:
+    """``(rate, n)`` — a conformance rate over zero checked calls is not a rate."""
+    return report.conformance_rate, report.n_calls
+
+
+def _citation_reading(report: citation_validity_mod.CitationSummary) -> tuple[float, int]:
+    """``(rate, n)`` — 1.0 over zero citations said "every citation is valid" about none."""
+    return report.validity_rate, report.n_citations
+
+
+def _leak_reading(report: pii_leak_mod.PIILeakSummary) -> tuple[float, int]:
+    """PII is scored as the ABSENCE of leaks, over the turns actually examined."""
+    return 1.0 - report.leak_rate, report.n_turns
+
+
+def _coverage_reading(cov: erasure_mod.ErasureCoverage) -> tuple[float, int]:
+    """Erasure coverage over the conversations there were — zero of them means unknown."""
+    total = cov.n_conversations
+    return (cov.n_bundles / total if total else 0.0), total
+
+
+def _signal_values(at: str | None = None, days: float | None = None) -> dict[str, SignalReading]:
+    """Read the real runtime signals, each reduced to a 0..1 'better' score AND its sample size.
+
+    Every signal is wrapped so a single failing probe never breaks the page — but a failure is
+    now RECORDED as one. It used to be dropped from the mapping, and the catalogue loop skipped
+    any signal it could not find, so a probe that raised silently removed its control from the
+    table, from the framework roll-up and from the list of non-conformities. Since the global
+    score is the mean of the surviving controls, an unreadable calibration file made the
+    compliance score go UP.
+    """
+    values: dict[str, SignalReading] = {}
+
+    def read(key: str, fn: Callable[[], tuple[float, int]]) -> None:
+        """Run one probe under its own guard; record the value AND how big its sample was."""
         try:
-            values[key] = max(0.0, min(1.0, float(fn())))  # type: ignore[operator]
-        except Exception as exc:  # never break the dashboard
+            value, n = fn()
+        except Exception as exc:  # never break the dashboard — but never hide it either
             sys.stderr.write(f"tessera.observability.compliance: {key} failed: {exc}\n")
+            values[key] = SignalReading(value=None, n=0, cause="read-failed")
+            return
+        values[key] = (
+            SignalReading(value=max(0.0, min(1.0, float(value))), n=n)
+            if n > 0
+            else SignalReading(value=None, n=0, cause="no-sample")
+        )
 
     bundles = _windowed_bundles(at, days)
     citation_turns = [(b.original_answer, b.context) for b in bundles]
     pii_turns = [(b.original_answer, f"{b.question}\n{b.context}") for b in bundles]
     scores = read_scores(at, days=days)
 
+    # The audit-chain facts are ASKED, not asserted. `audit_present` and
+    # `audit_chain_verified` were the literals `True`, and ai_act.py turns them into a
+    # satisfied Art. 12 obligation whose evidence line reads "tamper-evident audit chain
+    # verified" — on the regulatory surface, while the twin route /observability/ai-act did
+    # the real verification. Two surfaces, one obligation, two answers, and the one that
+    # affirmed was the one a regulator reads (audit 2026-08-03, ADR 0026/0028).
+    chain = _audit_chain_facts()
     ai_signals = ai_act_mod.AIActSignals(
         disclosure_enabled=True,
         n_turns=len(bundles),
         oversight_events=0,
         escalation_available=True,
-        audit_present=True,
-        audit_chain_verified=True,
+        audit_present=chain.present,
+        audit_chain_verified=chain.verified,
         data_governance_enabled=True,
     )
     ai = ai_act_mod.assess_compliance(ai_signals)
-    safe("ai_act", lambda: ai.compliance_rate)
-    safe("disclosure", lambda: 1.0 if disclosure_mod.disclosure_status().all_covered else 0.5)
-    safe("conformance", lambda: conformance_mod.compute_conformance().conformance_rate)
-    safe(
-        "citations", lambda: citation_validity_mod.aggregate_citations(citation_turns).validity_rate
+    # Each probe is READ inside its own guard, returning ``(value, sample size)``. Computing
+    # the sizes outside `safe` would have been the obvious way to get them — and would have
+    # made one raising probe break the whole page, which is the opposite of what the wrapper
+    # is for.
+    read("ai_act", lambda: (ai.compliance_rate, len(bundles)))
+    read(
+        "disclosure",
+        lambda: (1.0 if disclosure_mod.disclosure_status().all_covered else 0.5, 1),
     )
-    safe("pii", lambda: 1.0 - pii_leak_mod.aggregate_leaks(pii_turns).leak_rate)
-    refusal = refusal_mod.compute_refusal_calibration()
-    safe("refusal", lambda: 1.0 - refusal.under_refusal_rate)
-    safe("firewall", lambda: firewall_mod.compute_efficacy().f1)
-    cov = erasure_mod.coverage(bundles, scores)
-    safe(
-        "erasure",
-        lambda: (cov.n_bundles / cov.n_conversations) if cov.n_conversations else 1.0,
+    read("conformance", lambda: _conformance_reading(conformance_mod.compute_conformance()))
+    read(
+        "citations",
+        lambda: _citation_reading(citation_validity_mod.aggregate_citations(citation_turns)),
     )
+    read("pii", lambda: _leak_reading(pii_leak_mod.aggregate_leaks(pii_turns)))
+    read(
+        "refusal",
+        lambda: (1.0 - refusal_mod.compute_refusal_calibration().under_refusal_rate, 1),
+    )
+    read("firewall", lambda: (firewall_mod.compute_efficacy().f1, 1))
+    # No conversations means the erasure footprint is UNKNOWN, not complete. The literal 1.0
+    # this used to fall back to is the plainest form of the defect.
+    read("erasure", lambda: _coverage_reading(erasure_mod.coverage(bundles, scores)))
     return values
 
 
@@ -468,9 +586,30 @@ def compute_compliance(
     business_legal_signals = _legal_business_signals()
     controls: list[Control] = []
     for cid, name, fw, signal, owner, ev in _CATALOGUE:
-        if signal not in values:
+        # A control whose signal is missing or unmeasured STAYS IN THE TABLE, as `na` with a
+        # cause. Skipping it removed the control from the roll-up, from the obligations list
+        # and from the denominator of the global score — so a probe that raised made the
+        # compliance score go up, and the frameworks reported "0 non applicable" while one of
+        # their controls had silently evaporated. Audit 2026-08-03.
+        reading = values.get(signal, SignalReading(value=None, n=0, cause="no-reader"))
+        if not reading.measured:
+            controls.append(
+                Control(
+                    id=cid,
+                    name=_control_name(cid, name, lang),
+                    framework=fw,
+                    signal=signal,
+                    status=_NA,
+                    value=0.0,
+                    risk=_risk(_NA),
+                    owner=owner,
+                    evidence_id=ev,
+                    unavailable=reading.cause or "no-sample",
+                    n_samples=reading.n,
+                )
+            )
             continue
-        v = values[signal]
+        v = reading.value or 0.0
         st = _status(v)
         controls.append(
             Control(
@@ -483,6 +622,7 @@ def compute_compliance(
                 risk=_risk(st),
                 owner=owner,
                 evidence_id=ev,
+                n_samples=reading.n,
             )
         )
 
@@ -495,7 +635,10 @@ def compute_compliance(
         n_conf = sum(1 for c in fc if c.status == _CONFORMANT)
         n_part = sum(1 for c in fc if c.status == _PARTIAL)
         n_non = sum(1 for c in fc if c.status == _NON_CONFORMANT)
-        score = sum(c.value for c in fc) / len(fc)
+        # Averaged over what was MEASURED. An `na` control contributes no score — counting it
+        # as 0.0 would invent a failure, and dropping it from the list would hide it.
+        scored = [c for c in fc if c.status != _NA]
+        score = (sum(c.value for c in scored) / len(scored)) if scored else 0.0
         frameworks.append(
             Framework(
                 code=code,
@@ -504,7 +647,7 @@ def compute_compliance(
                 n_conformant=n_conf,
                 n_partial=n_part,
                 n_non_conformant=n_non,
-                n_na=0,
+                n_na=sum(1 for c in fc if c.status == _NA),
             )
         )
 
@@ -512,7 +655,12 @@ def compute_compliance(
     n_partial = sum(1 for c in controls if c.status == _PARTIAL)
     n_non = sum(1 for c in controls if c.status == _NON_CONFORMANT)
     n_controls = len(controls)
-    global_score = round((sum(c.value for c in controls) / n_controls) * 100 if n_controls else 0)
+    scored_controls = [c for c in controls if c.status != _NA]
+    global_score = round(
+        (sum(c.value for c in scored_controls) / len(scored_controls)) * 100
+        if scored_controls
+        else 0
+    )
 
     # Obligations at risk = partial/non-conformant controls, with catalogue due-dates.
     obligations: list[Obligation] = []

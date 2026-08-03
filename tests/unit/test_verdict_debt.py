@@ -95,6 +95,10 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/observability/fleet.py::_integrity_broken": "VERDICT",
     "src/tessera/guard/ledger_store.py::LedgerShadowStatus.ok": "VERDICT",
     "src/tessera/guard/audit.py::chain_persists_for": "VERDICT",
+    # `data`: "was this reading taken over a non-empty sample", a property OF the reading.
+    # It feeds the compliance verdict rather than being one — the control's `na` status is
+    # what carries the judgement, and it says its cause.
+    "src/tessera/observability/compliance.py::SignalReading.measured": "data",
     # ── release & gate verdicts ───────────────────────────────────────────────────────────────
     "src/tessera/observability/eval_gate_view.py::GateCaseStatus.blocking": "VERDICT",
     "src/tessera/observability/eval_gate_view.py::GateCaseStatus.is_critical": "VERDICT",
