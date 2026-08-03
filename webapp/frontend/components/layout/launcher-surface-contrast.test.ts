@@ -221,8 +221,8 @@ describe("the launcher surface survives both themes", () => {
     // "le bas de la page ne ressemble plus à rien", which is precisely what it was.
     //
     // A decoration that cannot be re-toned does not belong on the pale ground at all. The
-    // bottom of those pages is carried by `LauncherFooter` now. Pinned at exactly 0 so that
-    // re-enabling it is a decision someone has to come here and make.
+    // surface closes on its own background in Clair. Pinned at exactly 0 so re-enabling it
+    // remains an explicit decision.
     expect(Number(LIGHT.get("--launcher-waves-opacity"))).toBe(0);
     expect(Number(DARK.get("--launcher-waves-opacity"))).toBe(1);
   });

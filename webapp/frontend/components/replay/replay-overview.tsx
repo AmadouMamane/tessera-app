@@ -23,6 +23,7 @@ import { useState } from "react";
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { ReplayCassettes } from "@/components/replay/replay-cassette";
@@ -91,12 +92,16 @@ export function ReplayOverview() {
   );
   // AGIR composition (registre §6): As-of reads the folded captures/diffs at T.
   const asof = useAsOf();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["replay-shadow-overview", locale, asof],
     queryFn: ({ signal }) => fetchReplayShadowOverview(locale, asof, signal),
     staleTime: 30_000,
     refetchInterval: asof ? false : 30_000,
   });
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

@@ -7672,17 +7672,7 @@
       "product": "Produkt",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Demonstrationsbesuch — in Produktion betritt jeder über seine Identität.",
-    "footer": {
-      "tagline": "Die Kontrollebene für KI-Agenten: überwachen, sichern, bewerten, nachweisen.",
-      "navLabel": "Tessera-Links",
-      "links": {
-        "understand": "Tessera verstehen",
-        "spaces": "Fachbereiche",
-        "cockpit": "Governance-Cockpit"
-      },
-      "note": "Demonstration — Korpus, Vorgänge und Kunden sind synthetisch; es erscheinen keine echten Daten. Apache-2.0."
-    }
+    "demoHonesty": "Demonstrationsbesuch — in Produktion betritt jeder über seine Identität."
   },
   "spaces": {
     "filterFavorites": "Favoriten",
@@ -10771,5 +10761,23 @@
     "pickLabel": "Früheren Stand ansehen",
     "frozenTitle": "Früherer Stand — zum Handeln zum aktuellen Stand zurückkehren",
     "pickTime": "Uhrzeit"
+  },
+  "queryHealth": {
+    "title": "Einige Daten sind nicht aktuell",
+    "detailOne": "Eine aktive Quelle antwortet nicht. Angezeigte Werte können älter sein.",
+    "detailMany": "{count} aktive Quellen antworten nicht. Angezeigte Werte können älter sein.",
+    "retry": "Erneut versuchen",
+    "retrying": "Neuer Versuch…"
+  },
+  "queryError": {
+    "title": "Daten nicht verfügbar",
+    "detail": "Die Quelle dieser Ansicht antwortet nicht. Aus diesem Fehler wird kein Null- oder Leerzustand abgeleitet.",
+    "retry": "Erneut versuchen",
+    "retrying": "Neuer Versuch…"
+  },
+  "errorBoundary": {
+    "title": "Diese Ansicht konnte nicht angezeigt werden",
+    "detail": "Der übrige Cockpit-Zustand bleibt erhalten. Laden Sie nur diese Ansicht neu, um weiterzuarbeiten.",
+    "retry": "Ansicht neu laden"
   }
 }

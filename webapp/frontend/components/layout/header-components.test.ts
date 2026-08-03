@@ -315,10 +315,12 @@ describe("H4 product-surface header contract", () => {
     expect(recouvrementProductExperience).not.toContain("dossierSearchRef");
     expect(recouvrementProductExperience).not.toContain('aria-keyshortcuts="Meta+K Control+K"');
     expect(recouvrementProductExperience).not.toContain("⌘K");
-    // Lot 9: the notification badge derives from the REAL open-case counter —
-    // the contract pins the derived value and its locale-owned template, never a hardcoded count.
+    // Lot 9: the notification badge derives from the REAL open-case counter. While the
+    // counter is unavailable, assistive text stays generic rather than inventing zero cases.
+    expect(recouvrementProductExperience).toContain("counters\n                    ?");
     expect(recouvrementProductExperience).toContain("copy.ui.notificationsAria.replace(");
-    expect(recouvrementProductExperience).toContain("String(counters?.open ?? 0)");
+    expect(recouvrementProductExperience).toContain("String(counters.open)");
+    expect(recouvrementProductExperience).not.toContain("String(counters?.open ?? 0)");
     expect(recouvrementProductExperience).toContain("min-h-[69px]");
   });
 });

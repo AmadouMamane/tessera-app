@@ -237,7 +237,9 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # synthetic, exactly like `assistant` above, so the cockpit never presents
     # a frozen number as a live measurement. See the reconciliation doc for
     # the proposed (unexecuted) route fix for each.
-    _cap("embedding_skew", frozenset(), synthetic=True),  # route aliases corpus=query
+    # The route reads corpus fingerprints persisted at ingestion and compares them with the
+    # active query embedder. It no longer aliases corpus=query, so the measurement is real.
+    _cap("embedding_skew", frozenset()),
     _cap("disclosure", frozenset(), synthetic=True),  # `enabled=True` is a route literal
     # embedding_inversion: route always calls assess_inversion_risk on hardcoded
     # DEMO_MEMORIES/DEMO_PROBES, cached once per process — never the real memory

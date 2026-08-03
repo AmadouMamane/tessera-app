@@ -16,7 +16,6 @@ import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { LauncherFooter } from "@/components/landing/launcher-footer";
 import { LauncherWaves } from "@/components/landing/launcher-waves";
 import { AppHeader } from "@/components/layout/app-header";
 import { DemoBadge } from "@/components/layout/demo-badge";
@@ -126,6 +125,8 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
         className="pointer-events-none absolute inset-0 z-0"
         style={{ background: "var(--launcher-backdrop)" }}
       />
+      {/* One continuous full-width wave band at the foot of the page. */}
+      <LauncherWaves />
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Unified header (docs/design/header-normative.md) — launcher variant:
             brand only at left, the global cluster (langue · thème · compte) at
@@ -133,11 +134,7 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
             no PRODUIT/COCKPIT toggle. The DEMO label describes the environment;
             account access remains available independently. */}
         <AppHeader plan="launcher" auth="optional" />
-        {/* `relative` so the wave band can anchor to the bottom of the CONTENT: it must
-            end at the footer's top rule, not run underneath the footer (see
-            LauncherWaves for the measurement that made this a bug). */}
         <main className="relative flex flex-1 flex-col items-center justify-start px-6 pt-[56px] pb-20 sm:pt-[80px] lg:pt-[104px]">
-          <LauncherWaves />
           <section className="flex w-full flex-col items-center text-center">
             {/* ADR 0013 — this is a labelled demo launcher, NOT the product's
                 front door. Make the "démonstration" framing explicit and visible. */}
@@ -169,7 +166,6 @@ export function LandingLauncher({ signal }: { signal: LauncherSignal | null }) {
               per-agent verdict + eval-gate detail lives one altitude down, on the
               Flotte (/agents) governance facet — not duplicated on the launcher. */}
         </main>
-        <LauncherFooter />
       </div>
     </div>
   );

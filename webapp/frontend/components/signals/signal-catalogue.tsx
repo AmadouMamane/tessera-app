@@ -22,6 +22,7 @@ import {
 } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -78,7 +79,7 @@ export function SignalCatalogue() {
   const t = useTranslations("signalCatalogue");
   const tt = useTranslations("table");
   const locale = useLocale();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["signal-catalogue", locale],
     queryFn: ({ signal }) => fetchSignalCatalogue(locale, signal),
     staleTime: 60_000,
@@ -120,6 +121,9 @@ export function SignalCatalogue() {
     });
   }, [signals, query, status, severity, category, source, sort, t]);
 
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
   if (!data) return <Skeleton />;
   if (!data.available) return <Unavailable t={t} />;
 

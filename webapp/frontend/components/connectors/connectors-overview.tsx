@@ -22,6 +22,7 @@ import {
 } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { fetchConnectors } from "@/lib/api/client";
 import type { ConnectorsOverview as Data } from "@/lib/api/schemas";
@@ -77,7 +78,7 @@ export function ConnectorsOverview() {
   const t = useTranslations("connectors");
   const tt = useTranslations("table");
   const locale = useLocale();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["connectors", locale],
     queryFn: ({ signal }) => fetchConnectors(locale, signal),
     staleTime: 60_000,
@@ -105,6 +106,9 @@ export function ConnectorsOverview() {
     return [...filtered].sort((a, b) => a[sort.key].localeCompare(b[sort.key]) * sort.dir);
   }, [connectors, query, category, status, sort]);
 
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
   if (!data) return <Loading />;
   if (!data.available) return <Unavailable text={t("unavailable")} />;
 

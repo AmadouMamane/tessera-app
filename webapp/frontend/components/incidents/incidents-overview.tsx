@@ -29,6 +29,7 @@ import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
 import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { TabStrip } from "@/components/cockpit/tab-strip";
@@ -101,7 +102,7 @@ export function IncidentsOverview() {
   // one does not act in the past.
   const asof = useAsOf();
   const frozen = asof !== null;
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["incidents-overview", locale, asof ?? null],
     queryFn: ({ signal }) => fetchIncidentsOverview(locale, asof, signal),
     staleTime: 30_000,
@@ -130,6 +131,10 @@ export function IncidentsOverview() {
       mutateIncidentPlaybook({ ...vars, lang: locale }),
     onSuccess: swap,
   });
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

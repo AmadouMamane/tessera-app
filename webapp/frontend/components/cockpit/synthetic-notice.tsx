@@ -6,11 +6,10 @@ import { isSynthetic } from "@/lib/signal-registry";
 /**
  * An honest, registry-driven banner marking a card as a deterministic fixture (ADR 0015 §E).
  *
- * The four fixture composites (incidents / curation / automations / replay_shadow) have no real
- * per-agent substrate. Rather than let them read as live data, this banner names them what they
- * are — sourced from the *same* `isSynthetic(signalId)` flag that drives the registry, so the
- * label can never drift from the declaration (project rule: never call a deterministic fixture
- * real). Renders nothing for a non-synthetic signal, so it is safe to drop into any card.
+ * Fixture composites and deterministic assistant fallbacks have no real per-agent substrate.
+ * Rather than let them read as live data, this banner names them what they are — sourced from
+ * the *same* `isSynthetic(signalId)` flag that drives the registry, so the label cannot drift
+ * from the declaration. Renders nothing for a non-synthetic signal.
  */
 export function SyntheticNotice({
   signalId,

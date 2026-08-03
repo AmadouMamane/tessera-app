@@ -7672,17 +7672,7 @@
       "product": "Product",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Demonstration visit — in production, everyone enters by their identity.",
-    "footer": {
-      "tagline": "The control plane for AI agents: supervise, secure, evaluate, prove.",
-      "navLabel": "Tessera links",
-      "links": {
-        "understand": "Understand Tessera",
-        "spaces": "Business spaces",
-        "cockpit": "Governance cockpit"
-      },
-      "note": "Demonstration — the corpus, cases and customers are synthetic; no real data appears here. Apache-2.0."
-    }
+    "demoHonesty": "Demonstration visit — in production, everyone enters by their identity."
   },
   "spaces": {
     "filterFavorites": "Favorites",
@@ -10757,5 +10747,23 @@
     "pickLabel": "Review at a chosen time",
     "frozenTitle": "Past state — return to the current state to act",
     "pickTime": "Time"
+  },
+  "queryHealth": {
+    "title": "Some data is not up to date",
+    "detailOne": "One active source is not responding. Values kept on screen may be older.",
+    "detailMany": "{count} active sources are not responding. Values kept on screen may be older.",
+    "retry": "Try again",
+    "retrying": "Retrying…"
+  },
+  "queryError": {
+    "title": "Data unavailable",
+    "detail": "The source for this view is not responding. No zero or empty state is inferred from this failure.",
+    "retry": "Try again",
+    "retrying": "Retrying…"
+  },
+  "errorBoundary": {
+    "title": "This view could not be displayed",
+    "detail": "The rest of the cockpit remains intact. Reload only this view to resume your work.",
+    "retry": "Reload view"
   }
 }

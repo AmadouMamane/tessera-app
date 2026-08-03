@@ -7672,17 +7672,7 @@
       "product": "Produit",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Visite de démonstration — en production, chacun entre par son identité.",
-    "footer": {
-      "tagline": "Le plan de contrôle des agents IA : superviser, sécuriser, évaluer, prouver.",
-      "navLabel": "Liens Tessera",
-      "links": {
-        "understand": "Comprendre Tessera",
-        "spaces": "Espaces métier",
-        "cockpit": "Cockpit de gouvernance"
-      },
-      "note": "Démonstration — corpus, dossiers et clients sont synthétiques ; aucune donnée réelle n’y figure. Apache-2.0."
-    }
+    "demoHonesty": "Visite de démonstration — en production, chacun entre par son identité."
   },
   "spaces": {
     "filterFavorites": "Favoris",
@@ -10771,5 +10761,23 @@
     "pickLabel": "Revoir à une date",
     "frozenTitle": "État à une date — revenez à l'état présent pour agir",
     "pickTime": "Heure"
+  },
+  "queryHealth": {
+    "title": "Certaines données ne sont pas à jour",
+    "detailOne": "Une source active ne répond pas. Les valeurs conservées à l’écran peuvent être antérieures.",
+    "detailMany": "{count} sources actives ne répondent pas. Les valeurs conservées à l’écran peuvent être antérieures.",
+    "retry": "Réessayer",
+    "retrying": "Nouvel essai…"
+  },
+  "queryError": {
+    "title": "Données indisponibles",
+    "detail": "La source de cette vue ne répond pas. Aucun zéro ni état vide n’est déduit de cette panne.",
+    "retry": "Réessayer",
+    "retrying": "Nouvel essai…"
+  },
+  "errorBoundary": {
+    "title": "Cette vue n’a pas pu être affichée",
+    "detail": "Le reste du cockpit reste intact. Relancez uniquement cette vue pour reprendre votre travail.",
+    "retry": "Relancer la vue"
   }
 }

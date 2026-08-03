@@ -53,7 +53,14 @@ describe("isSynthetic", () => {
   });
 
   it("is false for real signals and unknown ids", () => {
-    for (const id of ["slo", "automations", "replay_shadow", "policies", "does-not-exist"]) {
+    for (const id of [
+      "slo",
+      "automations",
+      "replay_shadow",
+      "policies",
+      "embedding_skew",
+      "does-not-exist",
+    ]) {
       expect(isSynthetic(id)).toBe(false);
     }
   });
@@ -78,6 +85,11 @@ describe("isSynthetic", () => {
   // telemetry (observability.py:1087); only `live_conversations` is real.
   it("flags the Agent Session History eval blocks", () => {
     expect(isSynthetic("agent_historique")).toBe(true);
+  });
+
+  it("flags deterministic assistant and disclosure fallbacks", () => {
+    expect(isSynthetic("assistant")).toBe(true);
+    expect(isSynthetic("disclosure")).toBe(true);
   });
 });
 

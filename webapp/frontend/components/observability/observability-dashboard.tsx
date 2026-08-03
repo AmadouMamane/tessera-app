@@ -89,6 +89,7 @@ import {
   fetchControlSeries,
   fetchCorpusFreshness,
   fetchCost,
+  fetchEmbeddingSkew,
   fetchEvalDatasets,
   fetchFailedCases,
   fetchFailedRuns,
@@ -266,15 +267,17 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const scoreSeries = useQuery({
-    queryKey: ["score-series", "faithfulness", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope),
+    queryKey: ["score-series", "faithfulness", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
 
   const groundingSeries = useQuery({
-    queryKey: ["score-series", "grounding", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope),
+    queryKey: ["score-series", "grounding", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -288,8 +291,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const hallucinationSeries = useQuery({
-    queryKey: ["score-series", "hallucination", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "hallucination", scope),
+    queryKey: ["score-series", "hallucination", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "hallucination", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -325,6 +329,15 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   const corpusFreshness = useQuery({
     queryKey: ["corpus-freshness"],
     queryFn: ({ signal }) => fetchCorpusFreshness(signal),
+    refetchInterval: 60_000,
+  });
+
+  // Query/corpus embedding lineage is measured from the model active at query
+  // time and the fingerprints persisted at ingestion. Keep it visible beside
+  // corpus freshness: a repaired endpoint with no screen is not observability.
+  const embeddingSkew = useQuery({
+    queryKey: ["embedding-skew"],
+    queryFn: ({ signal }) => fetchEmbeddingSkew(signal),
     refetchInterval: 60_000,
   });
 
@@ -383,32 +396,32 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const judgeDrift = useQuery({
-    queryKey: ["judge-drift", asOf],
-    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined),
+    queryKey: ["judge-drift", asOf, period],
+    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
 
   // Grounding-metric drift for the Comparaison des modèles "Drift & stabilité" panel.
   const groundingDrift = useQuery({
-    queryKey: ["judge-drift", "grounding", asOf],
-    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, "grounding"),
+    queryKey: ["judge-drift", "grounding", asOf, period],
+    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, "grounding", period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
 
   // Forward-looking regression risk for the "Signaux prédictifs" column (image 00).
   const regressionRisk = useQuery({
-    queryKey: ["regression-risk", asOf],
-    queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined),
+    queryKey: ["regression-risk", asOf, period],
+    queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined, undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
 
   // Per-severity-band score-count trend for the Signaux KPI tiles (image 01).
   const signalStatusTrend = useQuery({
-    queryKey: ["signal-status-trend", asOf],
-    queryFn: ({ signal }) => fetchSignalStatusTrend(signal, asOf ?? undefined),
+    queryKey: ["signal-status-trend", asOf, period],
+    queryFn: ({ signal }) => fetchSignalStatusTrend(signal, asOf ?? undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
@@ -824,6 +837,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 release={releaseStatus.data}
                 freshness={corpusFreshness.data}
                 datasets={evalDatasets.data}
+                skew={embeddingSkew.data}
               />
               <div className="grid gap-2 2xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)] 2xl:items-start">
                 <div className="flex flex-col gap-2">

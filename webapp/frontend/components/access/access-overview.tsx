@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -68,7 +69,12 @@ export function AccessOverview() {
   const t = useTranslations("roles");
   const tt = useTranslations("table");
   const locale = useLocale();
-  const { data: response } = useQuery({
+  const {
+    data: response,
+    isError,
+    isFetching,
+    refetch,
+  } = useQuery({
     queryKey: ["access-overview", locale],
     queryFn: ({ signal }) => fetchAccessOverview(locale, signal),
     staleTime: 60_000,
@@ -118,6 +124,10 @@ export function AccessOverview() {
 
   // The degraded state is a RENDER, not a crash — and it is distinct from "still loading". An
   // empty spinner would claim the page is on its way; it is not, and saying so is the point.
+  if (isError && !response) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
+
   if (unavailable) {
     return (
       <div data-testid="access-unavailable" className="flex h-full items-center justify-center p-8">

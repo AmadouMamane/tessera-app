@@ -13,6 +13,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -44,12 +45,16 @@ function KpiInfo({ k, title }: { k: string; title: string }) {
 export function SystemProfile() {
   const t = useTranslations("systemProfile");
   const locale = useLocale();
-  const { data, refetch, isFetching } = useQuery({
+  const { data, refetch, isFetching, isError } = useQuery({
     queryKey: ["system-profile", locale],
     queryFn: ({ signal }) => fetchSystemProfile(locale, signal),
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

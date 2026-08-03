@@ -33,10 +33,9 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
         className="pointer-events-none absolute inset-0"
         style={{ background: "var(--launcher-backdrop-auth)" }}
       />
-      {/* `anchor="page"`: this page has no footer, so the band belongs at the bottom of
-          the page itself — and being a sibling of the backdrop above, it cannot use the
-          negative layer the other two do. 0.7 keeps the artwork under the sign-in card. */}
-      <LauncherWaves anchor="page" strength={0.7} fadeFrom="48%" />
+      {/* The page has no footer: the wave band closes the surface itself. The 0.7
+          strength keeps the artwork quieter than the sign-in card. */}
+      <LauncherWaves strength={0.7} fadeFrom="48%" />
 
       <header className="relative z-10 flex min-h-[82px] items-center justify-between border-b border-[var(--border-subtle)] px-6 lg:px-10">
         <Link href="/select-space" className="rounded-md outline-none focus-visible:ring-2">

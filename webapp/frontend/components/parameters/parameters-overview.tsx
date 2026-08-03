@@ -19,6 +19,7 @@ import type { ReactNode } from "react";
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -90,11 +91,15 @@ export function ParametersOverview() {
   // from the ledger at T — "mes paramètres d'il y a 3 h". Key must stay accorded
   // with the SSR prefetch (`[..., null]` in live — Insight 175).
   const asOf = useAsOf();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["parameters-overview", locale, asOf ?? null],
     queryFn: ({ signal }) => fetchParametersOverview(locale, signal, asOf),
     staleTime: 60_000,
   });
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

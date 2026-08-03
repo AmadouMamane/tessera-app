@@ -28,6 +28,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 
 import { TemporalMonitoringBreakdown } from "@/components/agent/temporal-monitoring-breakdown";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline, NoHistoryLabel } from "@/components/overview/metric-sparkline";
 import { PageEvidenceActions } from "@/components/overview/page-evidence-actions";
 import { fmtStamp, useTemporalState } from "@/components/overview/temporal-rail";
@@ -1864,15 +1865,22 @@ function ReleaseCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {gates.map((g) => (
-          <div key={g.key} className="flex items-center justify-between text-xs">
-            <span>{t(`gates.${g.key}`)}</span>
-            {g.pass == null ? (
-              <Badge tone="neutral">—</Badge>
-            ) : (
-              <Badge className={toneBg[g.pass ? "success" : "danger"]}>
-                {g.pass ? "PASS" : "FAIL"}
-              </Badge>
-            )}
+          <div key={g.key} className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span>{t(`gates.${g.key}`)}</span>
+              {g.pass == null ? (
+                <Badge tone="neutral">—</Badge>
+              ) : (
+                <Badge className={toneBg[g.pass ? "success" : "danger"]}>
+                  {g.pass ? "PASS" : "FAIL"}
+                </Badge>
+              )}
+            </div>
+            {/* The disclosure leg of the AI-Act composite is still a code literal, not a
+                runtime witness. Keep that limitation attached to the compliance gate only. */}
+            {g.key === "compliance" && aiActRate != null ? (
+              <SyntheticNotice signalId="disclosure" compact />
+            ) : null}
           </div>
         ))}
       </CardContent>

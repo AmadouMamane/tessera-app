@@ -24,6 +24,7 @@ import {
 } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -90,7 +91,7 @@ export function InboxOverview() {
   const t = useTranslations("inbox");
   const locale = useLocale();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["inbox-overview", locale],
     queryFn: ({ signal }) => fetchInboxOverview(locale, signal),
     staleTime: 30_000,
@@ -140,6 +141,10 @@ export function InboxOverview() {
   }, [items, search, fPriority, fStatus, fType, fAgent]);
 
   const detail = selected ? (items.find((it) => it.id === selected) ?? null) : null;
+
+  if (isError && !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} />;
+  }
 
   if (!data) {
     return (

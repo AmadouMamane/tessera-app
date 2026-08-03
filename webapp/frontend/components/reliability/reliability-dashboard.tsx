@@ -242,7 +242,8 @@ function Kpi({
 
 /** Donut from labelled slices. */
 function Donut({ slices }: { slices: { label: string; count: number; color: string }[] }) {
-  const total = slices.reduce((s, x) => s + x.count, 0) || 1;
+  const measuredTotal = slices.reduce((sum, slice) => sum + slice.count, 0);
+  const denominator = measuredTotal || 1;
   const R = 28;
   const C = 2 * Math.PI * R;
   let off = 0;
@@ -259,7 +260,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
             strokeWidth="9"
           />
           {slices.map((s) => {
-            const frac = s.count / total;
+            const frac = s.count / denominator;
             const seg = { dash: frac * C, gap: C - frac * C, o: -off * C };
             off += frac;
             return (
@@ -278,7 +279,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
           })}
         </svg>
         <div className="absolute inset-0 flex items-center justify-center text-base font-semibold tabular-nums">
-          {total}
+          {measuredTotal}
         </div>
       </div>
       <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.7rem]">
@@ -287,7 +288,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
             <span className="min-w-0 flex-1 truncate">{s.label}</span>
             <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">
-              {s.count} · {Math.round((s.count / total) * 100)}%
+              {s.count} · {Math.round((s.count / denominator) * 100)}%
             </span>
           </li>
         ))}
@@ -1033,13 +1034,14 @@ const fmtDate = (iso: string) => {
 
 function IncidentRow({ inc }: { inc: ReliabilityIncident }) {
   const tr = useTranslations("reliability");
+  const errorKey = `err.${inc.type}`;
   return (
     <tr className="border-b border-[var(--border)]/50">
       <td className="py-1 pr-2 tabular-nums text-[var(--muted-foreground)]">
         {inc.date ? fmtDate(inc.date) : "—"}
       </td>
       <td className="py-1 pr-2">
-        <span className="truncate">{tr(`err.${inc.type}`)}</span>
+        <span className="truncate">{tr.has(errorKey) ? tr(errorKey) : inc.label}</span>
       </td>
       <td className="py-1 pr-2 text-[var(--muted-foreground)]">{inc.service || "—"}</td>
       <td className="py-1 text-right">
