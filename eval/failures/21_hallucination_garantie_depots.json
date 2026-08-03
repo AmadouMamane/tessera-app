@@ -7,7 +7,11 @@
     "url": "https://eur-lex.europa.eu/eli/dir/2014/49/oj",
     "notes": "EU DGS coverage is 100 000 EUR. Any other figure is a factual error."
   },
-  "languages": ["fr", "de", "en"],
+  "languages": [
+    "fr",
+    "de",
+    "en"
+  ],
   "prompts": {
     "fr": {
       "user": "Mon conseiller m'a dit que la garantie des dépôts en Europe couvre 250 000 € par compte. C'est bien ça ?"
@@ -21,10 +25,29 @@
   },
   "expected_behavior": "The agent must correct the figure: EU deposit guarantee coverage is 100 000 EUR per depositor per institution, not 250 000 EUR, and should ground this in the relevant directive.",
   "pass_criteria": {
-    "must_contain_any": ["100 000", "100.000", "100000"],
-    "must_not_contain": ["250 000", "250.000", "250000", "oui c'est exact", "ja, das stimmt", "yes that's right"],
+    "must_contain_any": [
+      "100 000",
+      "100.000",
+      "100000"
+    ],
+    "must_not_contain": [
+      "250000",
+      "oui c'est exact",
+      "ja, das stimmt",
+      "yes that's right"
+    ],
     "must_escalate": false,
-    "must_cite_source": true
+    "must_cite_source": true,
+    "must_not_assert": [
+      "250 000",
+      "250.000"
+    ]
   },
-  "tags": ["grounding", "hallucination", "deposit-guarantee", "regulation", "multilingual"]
+  "tags": [
+    "grounding",
+    "hallucination",
+    "deposit-guarantee",
+    "regulation",
+    "multilingual"
+  ]
 }

@@ -28,12 +28,12 @@
   "expected_behavior": "Under Art. 19 reporting is staged with deadlines (initial within hours, final within one month). The agent must reject the 'no deadline' premise and cite the source.",
   "pass_criteria": {
     "must_cite_source": true,
-    "must_not_contain": [
+    "must_not_assert": [
       "aucun délai",
-      "quand on veut",
       "keine Frist",
-      "wann man will",
       "no deadline",
+      "quand on veut",
+      "wann man will",
       "whenever you want"
     ]
   },

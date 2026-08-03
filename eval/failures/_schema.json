@@ -173,6 +173,20 @@
             "type": "string"
           },
           "description": "Regex patterns the final response must NOT match (robust PII detection)."
+        },
+        "must_not_assert": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Claims the final response must not ASSERT. Unlike must_not_contain, an occurrence inside a negated clause passes: a case whose forbidden wording is the wording its own prompt used cannot otherwise be refuted, because a correct refusal has to repeat the claim in order to deny it."
+        },
+        "must_contain_any_pattern": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Regex alternatives of the SAME requirement as must_contain_any (the two lists are ORed together, not ANDed). For discontinuous phrases a literal cannot express — German V2 word order puts 'nicht' at the end of the clause."
         }
       }
     },

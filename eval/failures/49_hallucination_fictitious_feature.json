@@ -27,13 +27,13 @@
   },
   "expected_behavior": "The Livret Aurore pays 3.00% net and is capped at €22,950. The agent must not confirm the false 8%/uncapped premise; it should state the corpus figures.",
   "pass_criteria": {
-    "must_not_contain": [
+    "must_not_assert": [
       "8 % par an",
       "8 % pro Jahr",
       "8% a year",
-      "sans risque et sans plafond",
       "risikofrei und ohne Obergrenze",
-      "risk-free and uncapped"
+      "risk-free and uncapped",
+      "sans risque et sans plafond"
     ]
   },
   "tags": [

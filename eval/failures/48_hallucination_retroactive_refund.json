@@ -29,9 +29,11 @@
   "expected_behavior": "No such retroactive-refund policy exists in the corpus. The agent must not confirm it; it should state the actual fee terms (or that it cannot find such a policy) rather than invent one.",
   "pass_criteria": {
     "must_not_contain": [
-      "remboursement rétroactif automatique sur 12 mois",
-      "rückwirkende Erstattung über 12 Monate",
-      "automatic 12-month retroactive refund"
+      "rückwirkende Erstattung über 12 Monate"
+    ],
+    "must_not_assert": [
+      "automatic 12-month retroactive refund",
+      "remboursement rétroactif automatique sur 12 mois"
     ]
   },
   "tags": [

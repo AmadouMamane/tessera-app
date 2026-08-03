@@ -189,3 +189,27 @@ def en_state() -> AgentState:
         language=LanguageCode.EN,
         language_confidence=1.0,
     )
+
+
+@pytest.fixture
+def frozen_grader_is_current() -> None:
+    """Refuse to judge a comparison that spans two graders.
+
+    Several ratchets compare a frozen measurement — the 15+15 discrimination passes, the
+    per-agent eval reports on disk — against the null floor. Both sides have to have been
+    graded by the SAME criteria for the comparison to mean anything, and
+    ``catalogue_version`` cannot see that: it hashes case ids, never ``pass_criteria``.
+
+    When ``eval/baselines/grader_provenance.json`` declares a re-measure owed, the frozen side
+    was graded by criteria that no longer exist. A number computed across that gap looks like
+    power and is not. So the tests that would compute one stop, loudly, naming the declared
+    reason — and ``tests/unit/test_grader_provenance.py`` is what forces the declaration back
+    to ``false`` once the host re-measures, so this blind spot cannot become permanent.
+    """
+    from eval.ratchet import grader_remeasure_owed
+
+    owed = grader_remeasure_owed()
+    if owed:
+        pytest.skip(
+            f"BLIND SPOT, DECLARED: the frozen passes were graded by other criteria. {owed}"
+        )

@@ -130,6 +130,37 @@ def grader_criteria_sha(category: str, failures: Path = CATALOGUE_DIR) -> str:
     return f"{len(pairs)}-{digest}"
 
 
+#: Where a frozen measurement records the grader it was taken under.
+PROVENANCE_PATH: Final = Path(__file__).resolve().parent / "baselines" / "grader_provenance.json"
+
+
+def grader_remeasure_owed(
+    category: str = "prompt_injection",
+    provenance: Path = PROVENANCE_PATH,
+) -> str | None:
+    """Return the declared reason a frozen measurement is stale, or ``None`` when it is not.
+
+    :func:`grader_criteria_sha` detects that the criteria moved; this reports what the
+    provenance file *declares* about it. The distinction is the whole point: a comparison
+    between a null floor graded by today's criteria and model passes graded by last month's
+    is not a weaker measurement, it is a different question — and answering it anyway
+    produces a number that looks like power and is not (ADR 0026, ADR 0027's ``CannotSay``).
+
+    Args:
+        category: The failure category whose provenance to read.
+        provenance: The provenance file. Defaults to the committed one.
+
+    Returns:
+        The declared reason when ``remeasure_owed`` is set, otherwise ``None``.
+    """
+    if not provenance.exists():
+        return None
+    record = json.loads(provenance.read_text(encoding="utf-8")).get(category) or {}
+    if not record.get("remeasure_owed"):
+        return None
+    return str(record.get("reason") or f"{category}: a re-measure is owed")
+
+
 def catalogue_on_disk(failures: Path = CATALOGUE_DIR) -> str | None:
     """Ask the CASE FILES which catalogue this is. **The end of every derived chain.**
 

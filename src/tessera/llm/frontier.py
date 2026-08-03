@@ -6,6 +6,7 @@ import asyncio
 from typing import TYPE_CHECKING, Literal
 
 from tessera.llm.budget import get_budget_tracker
+from tessera.llm.determinism import deterministic_sampling, effective_temperature
 from tessera.llm.router import ChatMessage, ChatResponse
 from tessera.settings import get_settings
 
@@ -206,10 +207,19 @@ def _generation_config(
 
     An unset (``None``) top-p / top-k is NOT sent — the model's own default
     serves. ``top_k`` is integer-valued for the API.
+
+    Under ``TESSERA_EVAL_DETERMINISTIC=1`` the temperature is forced to 0 and ``top_k`` to 1,
+    which is greedy decoding — the strongest reproducibility this API offers. No seed is sent:
+    the parameter is not part of the generation config this SDK builds, and sending one it
+    would reject to *look* deterministic would be worse than saying so
+    (:mod:`tessera.llm.determinism`).
     """
-    config: dict[str, float | int] = {"temperature": temperature, "max_output_tokens": max_tokens}
+    effective = effective_temperature(temperature)
+    config: dict[str, float | int] = {"temperature": effective, "max_output_tokens": max_tokens}
     if top_p is not None:
         config["top_p"] = top_p
     if top_k is not None:
         config["top_k"] = int(top_k)
+    if deterministic_sampling():
+        config["top_k"] = 1
     return config

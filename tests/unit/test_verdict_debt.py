@@ -105,6 +105,9 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # Neither of them decides whether anything passes.
     "src/tessera/guard/audit.py::ChainStatus.attested": "data",
     "src/tessera/guard/audit.py::ChainStatus.cannot_say": "data",
+    # `config`: "was this process asked to sample reproducibly". It reads one environment
+    # variable and judges nothing.
+    "src/tessera/llm/determinism.py::deterministic_sampling": "config",
     # ── release & gate verdicts ───────────────────────────────────────────────────────────────
     "src/tessera/observability/eval_gate_view.py::GateCaseStatus.blocking": "VERDICT",
     "src/tessera/observability/eval_gate_view.py::GateCaseStatus.is_critical": "VERDICT",

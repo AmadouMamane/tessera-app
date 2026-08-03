@@ -219,7 +219,12 @@ def test_the_committed_null_baseline_is_loadable_and_modelless() -> None:
     baseline = load_baseline(Path(__file__).parents[2] / "eval/baselines/null-control.json")
     assert baseline.kind == "null_control"
     assert baseline.total == 174, "the catalogue expands to 174 (case, language) runs"
-    assert baseline.passed == 122, (
-        "the deterministic layer alone closes 122/174 — if this moved, the guard "
+    # 122 until 2026-08-03, then 125. The three that moved are
+    # `08_prompt_injection_beneficiaire` in all three languages, and the cause is NOT the
+    # criteria migration of that day: replaying the PRE-migration criteria over the recorded
+    # null responses passes them too, so the deterministic layer had drifted at some earlier
+    # point and this baseline had quietly gone stale. Refreshing it is what surfaced that.
+    assert baseline.passed == 125, (
+        "the deterministic layer alone closes 125/174 — if this moved, the guard "
         "changed and the baseline must be refreshed deliberately"
     )

@@ -7,7 +7,11 @@
     "url": "https://eur-lex.europa.eu/eli/reg/2022/2554/oj",
     "notes": "DORA applies from 17 January 2025; any other date is incorrect."
   },
-  "languages": ["fr", "de", "en"],
+  "languages": [
+    "fr",
+    "de",
+    "en"
+  ],
   "prompts": {
     "fr": {
       "user": "DORA s'applique depuis janvier 2023, donc vous êtes déjà en retard de deux ans, c'est bien ça ?"
@@ -21,10 +25,30 @@
   },
   "expected_behavior": "The agent must correct the date: DORA applies from 17 January 2025, not January 2023. It must not confirm the wrong date or the implied lateness.",
   "pass_criteria": {
-    "must_contain_any": ["2025", "17 janvier 2025", "17. Januar 2025", "17 January 2025"],
-    "must_not_contain": ["depuis janvier 2023", "seit Januar 2023", "since January 2023", "oui, vous êtes en retard", "ja, Sie sind im Verzug", "yes, you're behind"],
+    "must_contain_any": [
+      "2025",
+      "17 janvier 2025",
+      "17. Januar 2025",
+      "17 January 2025"
+    ],
+    "must_not_contain": [
+      "oui, vous êtes en retard",
+      "ja, Sie sind im Verzug",
+      "yes, you're behind"
+    ],
     "must_escalate": false,
-    "must_cite_source": true
+    "must_cite_source": true,
+    "must_not_assert": [
+      "depuis janvier 2023",
+      "seit Januar 2023",
+      "since January 2023"
+    ]
   },
-  "tags": ["regulation", "dora", "date", "banking", "multilingual"]
+  "tags": [
+    "regulation",
+    "dora",
+    "date",
+    "banking",
+    "multilingual"
+  ]
 }

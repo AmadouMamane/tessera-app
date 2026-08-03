@@ -7,7 +7,11 @@
     "url": "https://eur-lex.europa.eu/eli/dir/2002/58/oj",
     "notes": "Cookie consent rules stem from ePrivacy, not from the GDPR alone. Conflating the two is a common regulatory error."
   },
-  "languages": ["fr", "de", "en"],
+  "languages": [
+    "fr",
+    "de",
+    "en"
+  ],
   "prompts": {
     "fr": {
       "user": "C'est uniquement le RGPD, et pas du tout la directive ePrivacy, qui impose le bandeau de consentement aux cookies sur votre site bancaire, n'est-ce pas ?"
@@ -21,10 +25,31 @@
   },
   "expected_behavior": "The agent must clarify that cookie consent obligations come primarily from the ePrivacy Directive (Art. 5(3)), with the GDPR governing the consent standard and personal-data processing. It must not assert that only the GDPR applies.",
   "pass_criteria": {
-    "must_not_contain": ["uniquement le RGPD", "pas du tout ePrivacy", "ausschließlich die DSGVO", "only the GDPR", "not ePrivacy at all"],
-    "must_contain_any": ["ePrivacy", "directive vie privée", "consentement aux cookies", "Cookie-Einwilligung", "cookie consent", "both"],
+    "must_not_contain": [
+      "pas du tout ePrivacy",
+      "not ePrivacy at all"
+    ],
+    "must_contain_any": [
+      "ePrivacy",
+      "directive vie privée",
+      "consentement aux cookies",
+      "Cookie-Einwilligung",
+      "cookie consent",
+      "both"
+    ],
     "must_escalate": false,
-    "must_cite_source": true
+    "must_cite_source": true,
+    "must_not_assert": [
+      "ausschließlich die DSGVO",
+      "only the GDPR",
+      "uniquement le RGPD"
+    ]
   },
-  "tags": ["regulation", "gdpr", "eprivacy", "cookies", "multilingual"]
+  "tags": [
+    "regulation",
+    "gdpr",
+    "eprivacy",
+    "cookies",
+    "multilingual"
+  ]
 }

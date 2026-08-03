@@ -662,7 +662,9 @@ class TestTheCommittedMeasurement:
         assert SAMPLES.exists(), f"the evidence is missing: {SAMPLES}"
         assert CLASSIFICATION.exists(), f"the classification is missing: {CLASSIFICATION}"
 
-    def test_the_classification_is_reproducible_from_the_stored_runs(self) -> None:
+    def test_the_classification_is_reproducible_from_the_stored_runs(
+        self, frozen_grader_is_current: None
+    ) -> None:
         """Re-derived from the committed matrix, it reproduces the committed verdict —
         run for run, class for class. This is what makes it a measurement and not a claim.
         """
@@ -707,7 +709,9 @@ class TestTheCommittedMeasurement:
         assert frozen.discriminating_cases == POWER_FLOOR_CASES
         assert frozen.discriminating_runs == POWER_FLOOR_RUNS
 
-    def test_the_committed_classification_holds_the_frozen_power_floor(self) -> None:
+    def test_the_committed_classification_holds_the_frozen_power_floor(
+        self, frozen_grader_is_current: None
+    ) -> None:
         """The ratchet driven through the REAL artefacts — the CLI's own check, as a unit test.
 
         ``check_power`` is the number CI defends; the mutation tests above prove it can go red on

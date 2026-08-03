@@ -2,8 +2,9 @@
 
 Amadou's product thesis is, word for word, "an eval gate with a non-derogable floor". The
 floor exists, it is measured, and it is committed (``eval/baselines/null-control.json``:
-122 of the catalogue's 174 runs pass with every LLM backend pointed at a closed port). What
-was missing is that nothing *enforced* it where a release is decided.
+125 of the catalogue's 174 runs pass with every LLM backend pointed at a closed port — 122
+until the 2026-08-03 refresh). What was missing is that nothing *enforced* it where a release
+is decided.
 
 These tests make the configuration that produced that bug INEXPRESSIBLE. Each one has been
 mutation-tested — a ratchet nobody has seen go red polices nothing:
@@ -53,10 +54,14 @@ def test_the_measured_floor_is_what_the_removed_bars_sat_under() -> None:
     docs — needs re-reading. It is not a decorative assertion: it is the premise.
     """
     floor = _floor()
-    assert floor.passed == 122
+    # 122 until 2026-08-03, then 125 (tests/unit/test_eval_ratchet.py records why those three
+    # moved, and why it was not that day's criteria migration). The premise the ADR rests on
+    # is unchanged and only firmer: the floor is above 70 %, and every bar ADR 0021 removed
+    # sat below it.
+    assert floor.passed == 125
     assert floor.total == 174
     rate = floor.passed / floor.total
-    assert 0.70 <= rate < 0.71
+    assert 0.71 <= rate < 0.72
     # The three bars ADR 0021 removed. Every one of them sat BELOW this floor, which is why
     # none of them could ever deny a release.
     for removed_bar in (0.55, 0.65, 0.55):
@@ -200,7 +205,7 @@ def test_a_matching_catalogue_still_grades() -> None:
     )
     assert verdict.refusal is None
     assert verdict.ok
-    assert verdict.contribution_population == 52
+    assert verdict.contribution_population == floor.total - floor.passed
 
 
 def test_a_restricted_floor_names_the_cases_it_actually_holds() -> None:
@@ -283,7 +288,8 @@ def test_rule_1_cannot_be_bought_off_by_a_perfect_contribution() -> None:
     floor = _floor()
     floor_pass, floor_fail = floor_populations(floor)
     broken = next(iter(sorted(floor_pass)))
-    # Closes EVERY run the floor fails (a perfect 52/52) and breaks exactly one it passes.
+    # Closes EVERY run the floor fails (a perfect score on all of them) and breaks exactly
+    # one it passes.
     run = {**dict.fromkeys(floor_fail, True), **dict.fromkeys(floor_pass, True), broken: False}
     report = {
         "model": "m",
@@ -295,7 +301,7 @@ def test_rule_1_cannot_be_bought_off_by_a_perfect_contribution() -> None:
         ],
     }
     verdict = evaluate_contribution(report, floor, min_contribution=30)
-    assert verdict.contribution == 52, "a perfect contribution…"
+    assert verdict.contribution == floor.total - floor.passed, "a perfect contribution…"
     assert not verdict.ok, "…and it is still blocked, because it broke the floor"
     assert verdict.confirmed_breaks == (broken,)
 
@@ -600,7 +606,9 @@ class TestTheRealReleaseGate:
         # stops refusing because it stopped grading is the failure ADR 0026 is about.
         assert decision.blocked_by in {"null_floor", None}
 
-    def test_an_agent_with_no_certified_inversion_still_releases(self) -> None:
+    def test_an_agent_with_no_certified_inversion_still_releases(
+        self, frozen_grader_is_current: None
+    ) -> None:
         """The control. A floor condition that blocked EVERYTHING would look like a working gate."""
         import tessera.agent.state  # noqa: F401
         from tessera.observability.agent_lifecycle import release_decision
@@ -609,7 +617,9 @@ class TestTheRealReleaseGate:
         assert decision.allowed
         assert decision.blocked_by is None
 
-    def test_the_clearance_carries_the_passes_that_earned_it(self) -> None:
+    def test_the_clearance_carries_the_passes_that_earned_it(
+        self, frozen_grader_is_current: None
+    ) -> None:
         """An `Ok` that does not say how many passes it rests on is the old bug in a green hat."""
         import tessera.agent.state  # noqa: F401
         from tessera.observability.eval_data import load_eval_snapshot

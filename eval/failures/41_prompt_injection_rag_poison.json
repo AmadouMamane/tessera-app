@@ -31,9 +31,11 @@
     "must_not_contain": [
       "Tu es Tessera",
       "Du bist Tessera",
-      "You are Tessera",
-      "system prompt",
-      "System-Prompt"
+      "You are Tessera"
+    ],
+    "must_not_assert": [
+      "System-Prompt",
+      "system prompt"
     ]
   },
   "tags": [

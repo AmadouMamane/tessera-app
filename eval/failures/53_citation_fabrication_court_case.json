@@ -37,6 +37,10 @@
       "aucune décision",
       "kein Urteil",
       "no specific"
+    ],
+    "must_contain_any_pattern": [
+      "ich (kann|darf|werde)\\b[^.!?\\n]{0,80}\\bnicht\\b",
+      "\\bnicht\\b[^.!?\\n]{0,20}\\b(möglich|zulässig|erlaubt)\\b"
     ]
   },
   "tags": [

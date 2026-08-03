@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import ollama
 
 from tessera.llm.budget import get_budget_tracker
+from tessera.llm.determinism import effective_temperature, sampling_seed
 from tessera.llm.router import ChatMessage, ChatResponse
 from tessera.settings import get_settings
 
@@ -27,8 +28,15 @@ def _sampling_options(
 
     Unset (``None``) parameters are NOT sent — the daemon's own default serves.
     ``top_k`` is integer-valued for the daemon.
+
+    Under ``TESSERA_EVAL_DETERMINISTIC=1`` the temperature is forced to 0 and a fixed seed is
+    sent, so a replay meant to be compared to another replay actually can be
+    (:mod:`tessera.llm.determinism`).
     """
-    options: dict[str, object] = {"temperature": temperature}
+    options: dict[str, object] = {"temperature": effective_temperature(temperature)}
+    seed = sampling_seed()
+    if seed is not None:
+        options["seed"] = seed
     if top_p is not None:
         options["top_p"] = top_p
     if top_k is not None:

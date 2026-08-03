@@ -50,7 +50,7 @@ from eval.discrimination import (
     load_samples,
     minimum_viable_samples,
 )
-from eval.ratchet import catalogue_on_disk, load_baseline
+from eval.ratchet import catalogue_on_disk, grader_remeasure_owed, load_baseline
 from tessera.verdict import CannotSay, NoEffect, NotOk, Ok, Power, Verdict, render
 
 NULL_BASELINE = Path("eval/baselines/null-control.json")
@@ -119,6 +119,22 @@ def _collect(model: str, raw: Path) -> tuple[list[dict[str, Any]], list[PassProv
     return reports, provenance
 
 
+def _refuse_stale_grader() -> bool:
+    """Print a CannotSay and return True when the frozen passes predate the current criteria.
+
+    The catalogue can hold perfectly still while the GRADER moves — ``catalogue_version``
+    hashes case ids, never ``pass_criteria``. When the provenance declares the frozen passes
+    stale, the classification would compare a null floor graded today against model passes
+    graded under criteria that no longer exist. That is not a weaker measurement; it is a
+    different question, and answering it anyway yields a number that looks like power.
+    """
+    owed = grader_remeasure_owed()
+    if not owed:
+        return False
+    sys.stdout.write(render(CannotSay(f"the grader MOVED under the frozen passes. {owed}")) + "\n")
+    return True
+
+
 def main() -> int:  # noqa: PLR0911
     """Entry point.
 
@@ -182,6 +198,9 @@ def main() -> int:  # noqa: PLR0911
             )
             + "\n"
         )
+        return 3
+
+    if not args.write and _refuse_stale_grader():
         return 3
 
     if args.write:
