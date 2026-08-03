@@ -9,9 +9,9 @@
     "regulations_dora.json",
     "regulations_gdpr.json"
   ],
-  "corpus_sha256": "4e373c75922ebeac19a23f8765f22e6b59727fbfaca8825ec944a309859eef7b",
+  "corpus_sha256": "f37aa65fa087d82a62b6e9aefd1e7afcea840b1dccc4ac020e138f7b2acdba0b",
   "dump": "pgvector-seed.sql.gz",
-  "dump_sha256": "348a9a5513d04a8ea60a9e3fd40bf05653d22cb9329f0747303c3ba2abb441af",
+  "dump_sha256": "4911a7f678cfd25e3b65ed5fa86c2d434a8b24f8cca6ee93b54ef0dfb7a72c8a",
   "embedding_dimension": 1024,
   "rows": {
     "tessera_local.documents": 241

@@ -102,12 +102,41 @@ user's language while citing the underlying text.
 
 ## Translation pipeline
 
-Product content is authored once and translated for the other locales by
-`src/tessera/corpus/translator.py`. The translator produces the DE/EN variants
-of the Crédit Aurore product docs so the three product bundles stay aligned in
-structure and coverage. Regulatory corpora are **not** machine-translated — they
-are kept in their authoritative English form and reached cross-lingually, which
-avoids introducing translation drift into legally sensitive text.
+`src/tessera/corpus/translator.py` exists to produce the DE/EN variants of the
+Crédit Aurore product docs. Regulatory corpora are **not** machine-translated —
+they are kept in their authoritative English form and reached cross-lingually,
+which avoids introducing translation drift into legally sensitive text.
+
+### The product bundles are not translations of each other
+
+This section used to say the three bundles "stay aligned in structure and
+coverage". They do not, and the correction is worth more than the claim was.
+They cover the same thirteen documents in the same order, but the **figures
+differ** — eight of the thirteen state amounts one or more of the other
+languages do not. The clearest case is the savings account: the French Livret
+Aurore states the statutory **22 950 €** ceiling of the Livret A it is modelled
+on; the German version states no ceiling.
+
+That may be entirely correct — a French *livret réglementé* and a German
+*Sparkonto* are different products under different law — but the corpus never
+said so, and until 2026-08-04 nothing could have told a deliberate product
+difference from a mistyped amount. The three bundles did not even share a key:
+each document was addressed by a localised slug (`produits/livret-aurore`,
+`produkte/sparkonto-aurore`, `products/savings-account`), so "what does the
+German version of this document say?" was not an answerable question.
+
+Two things changed, and neither of them decides the product question:
+
+* every document carries `metadata.doc_id`, a language-independent key, so the
+  three versions can be paired at all (`tessera.corpus.alignment`);
+* `tests/unit/test_corpus_facts_across_languages.py` freezes the eight
+  divergences that exist today, so a ninth cannot appear in silence. They are
+  frozen as **undeclared** — the registry shrinks as each is triaged into
+  "deliberate, and here is why" or "wrong, and here is the fix". It is not a
+  target to keep at eight.
+
+An operator reading a figure out of this corpus in one language should not
+assume the other two say the same thing.
 
 ## Corpus architecture — design decision and trade-offs
 
