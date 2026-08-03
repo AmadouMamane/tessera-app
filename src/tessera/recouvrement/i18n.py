@@ -60,6 +60,10 @@ _COPY: dict[str, tuple[str, str]] = {
         "No payment-plan approval required for this draft",
         "Keine Ratenplanfreigabe für diesen Entwurf erforderlich",
     ),
+    "Aucune validation supplémentaire n'est nécessaire pour ce contact aujourd'hui.": (
+        "No further approval is required for this contact today.",
+        "Für diesen Kontakt ist heute keine weitere Freigabe erforderlich.",
+    ),
     "Action refusée avant tout effet métier.": (
         "Action refused before any business effect.",
         "Aktion vor jeder Geschäftswirkung abgelehnt.",
@@ -96,6 +100,7 @@ _COPY: dict[str, tuple[str, str]] = {
     ),
     "Ajuster la durée": ("Adjust duration", "Laufzeit anpassen"),
     "Comparer les options": ("Compare options", "Optionen vergleichen"),
+    "Contact autorisé aujourd'hui": ("Contact allowed today", "Kontakt heute zulässig"),
     "Confirmer les moyens disponibles dans le dossier, puis préparer un échéancier indicatif si une validation est obtenue.": (
         "Confirm the methods available in the case, then prepare an indicative payment plan if approval is obtained.",
         "Die im Vorgang verfügbaren Zahlungsarten bestätigen und anschließend bei erteilter Freigabe einen unverbindlichen Ratenplan vorbereiten.",
@@ -213,6 +218,7 @@ _COPY: dict[str, tuple[str, str]] = {
     ),
     "Planifier un rappel demain": ("Schedule a call tomorrow", "Rückruf für morgen planen"),
     "Préparer le message client": ("Prepare customer message", "Kundennachricht vorbereiten"),
+    "Préparer un script d'appel": ("Prepare a call script", "Gesprächsleitfaden vorbereiten"),
     "Préparer un échéancier indicatif soumis à validation": (
         "Prepare an indicative payment plan subject to approval",
         "Unverbindlichen Ratenplan zur Freigabe vorbereiten",

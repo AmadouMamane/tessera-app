@@ -50,6 +50,7 @@ from tessera.recouvrement.message_templates import (
     render_missed_promise_clause,
     render_schedule_sentence,
 )
+from tessera.recouvrement.money import format_euro
 
 if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
@@ -291,17 +292,6 @@ class RecouvrementWorkflowState(TypedDict):
     output: NotRequired[RecouvrementOutput]
 
 
-_THOUSANDS_GROUPING_MIN = 1000.0
-
-
-def _amount_label(amount: float) -> str:
-    """Historical FR label format: ``840,00 €`` / ``1 260,50 €`` (comma decimals)."""
-    int_part, dec_part = f"{amount:.2f}".split(".")
-    if amount >= _THOUSANDS_GROUPING_MIN:
-        int_part = f"{int(int_part):,}".replace(",", " ")
-    return f"{int_part},{dec_part} €"
-
-
 def _case_for(case_id: str) -> RecouvrementCaseSnapshot:
     """Return the case snapshot from the DURABLE queue store (lot 9).
 
@@ -324,7 +314,7 @@ def _case_for(case_id: str) -> RecouvrementCaseSnapshot:
     return RecouvrementCaseSnapshot(
         case_id=str(raw.get("case_id", _RC_2048.case_id)),
         client=str(raw.get("client", "")),
-        amount_due_label=_amount_label(amount),
+        amount_due_label=format_euro(amount),
         amount_due=amount,
         days_late=int(raw.get("days_late", 0)),
         missed_promise_date=(
@@ -651,11 +641,6 @@ def _within_window(requested_time: str, case: RecouvrementCaseSnapshot) -> bool:
     return start <= requested < end
 
 
-def _format_euro(value: float) -> str:
-    """Format a deterministic euro amount with French decimal punctuation."""
-    return f"{value:.2f}".replace(".", ",") + " €"
-
-
 def _context_items(case: RecouvrementCaseSnapshot) -> list[str]:
     promise_label = case.missed_promise_label
     return [
@@ -765,7 +750,7 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
             "amount_due": case.amount_due,
             "amount_due_label": case.amount_due_label,
             "monthly_amount": monthly_amount,
-            "monthly_amount_label": _format_euro(monthly_amount),
+            "monthly_amount_label": format_euro(monthly_amount),
             "rule_impacting": True,
         }
     elif intent == "draft_reminder":
@@ -915,7 +900,7 @@ def evaluate_schedule_policy(state: RecouvrementWorkflowState) -> dict[str, obje
         if isinstance(monthly_amount_raw, int | float)
         else round(case.amount_due / requested_months, 2)
     )
-    monthly_amount_label = str(slots.get("monthly_amount_label", _format_euro(monthly_amount)))
+    monthly_amount_label = str(slots.get("monthly_amount_label", format_euro(monthly_amount)))
     decision: SchedulePolicyDecision = {
         "decision": "validation_required",
         "reason_codes": [

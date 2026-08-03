@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Final
 
 from tessera.observability.business_events import BusinessEventName
 from tessera.observability.business_scoring import BusinessScore, register_business_scorer
+from tessera.recouvrement.money import format_euro
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -82,10 +83,6 @@ def _not_applicable(metric: str, reason: str) -> BusinessScore:
 
 def _scored(metric: str, score: float, reason: str) -> BusinessScore:
     return BusinessScore(metric=metric, score=score, status="scored", reason=reason)
-
-
-def _format_euro(value: float) -> str:
-    return f"{value:.2f}".replace(".", ",") + " €"
 
 
 def _cents(value: float | int) -> int:
@@ -391,7 +388,13 @@ def _amount_consistency(rows: list[dict[str, object]]) -> BusinessScore:  # noqa
             amount_label = payload.get("amount_due_label")
             if not isinstance(amount_raw, int | float) or not isinstance(amount_label, str):
                 return _unknown("amount_consistency", "amount_payload_unusable")
-            if amount_label != _format_euro(float(amount_raw)):
+            # The label is NOT re-derived here. This comparison used to spell out its own
+            # euro format, ungrouped, against a label the agent had written grouped:
+            # identical below 1 000 €, different above it, so `amount_consistency` scored
+            # 0.0 for every case over a thousand euros — a governance KPI reporting a
+            # conflict between an amount and itself. A check that re-derives what it
+            # verifies is only ever checking its own copy.
+            if amount_label != format_euro(float(amount_raw)):
                 return _scored("amount_consistency", 0.0, "amount_label_mismatch")
         return _scored("amount_consistency", 1.0, "amount_label_matches_numeric_amount")
 

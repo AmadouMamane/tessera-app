@@ -21,7 +21,11 @@ _PROMPTS = (
     "What payment options are available?",
     "Prepare a 3 month payment plan.",
     "Write a customer reminder.",
+    # BOTH branches of the contact rule. Only the refused one used to be exercised, and the
+    # ALLOWED one leaked three French strings into English and German for as long as it had
+    # existed: a translation table is only as complete as the branches somebody walked.
     "May I call the customer at 22:00?",
+    "May I call the customer at 10:00?",
 )
 
 _FRENCH_UI_WORDS = re.compile(

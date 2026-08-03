@@ -27,7 +27,7 @@ _MIN_LOAN_AMOUNT: Final = 1000
 NODE_NAME = "simulator"
 
 _AMOUNT_RE = re.compile(
-    r"(?P<amount>[\d][\d\s.,]*)\s*(?:€|euros?|EUR)?",
+    r"(?P<amount>[\d][\d\s.,]*)\s*(?P<currency>€|euros?|EUR)?",
     re.IGNORECASE,
 )
 _DURATION_RE = re.compile(
@@ -52,23 +52,39 @@ _DRAFT_TEMPLATES: dict[LanguageCode, str] = {
 }
 
 
-def _parse_amount(text: str) -> float | None:
-    match = _AMOUNT_RE.search(text)
-    if match is None:
-        return None
-    raw = match.group("amount").replace(" ", "").replace(",", ".")
+def _to_float(raw: str) -> float | None:
+    normalised = raw.replace(" ", "").replace(",", ".")
     # If multiple dots remain (e.g. "200.000.50"), strip all but the last.
-    if raw.count(".") > 1:
-        parts = raw.split(".")
-        raw = "".join(parts[:-1]) + "." + parts[-1]
+    if normalised.count(".") > 1:
+        parts = normalised.split(".")
+        normalised = "".join(parts[:-1]) + "." + parts[-1]
     try:
-        value = float(raw)
+        return float(normalised)
     except ValueError:
         return None
-    # Amounts under 1000 are almost certainly noise (years, percentages).
-    if value < _MIN_LOAN_AMOUNT:
-        return None
-    return value
+
+
+def _parse_amount(text: str) -> float | None:
+    """Return the loan amount stated in ``text``, or ``None`` when there is none.
+
+    This used to read the FIRST number in the sentence and give up when it was too small to
+    be an amount. "un prêt sur 20 ans de 250 000 €" therefore parsed ``20``, rejected it as
+    noise and returned ``None`` — no simulation, no monthly payment and no escalation, for an
+    ordinary French sentence whose only fault was naming the duration first. Word order is not
+    evidence: every candidate is read, and one carrying an explicit currency marker wins over
+    one that does not.
+    """
+    fallback: float | None = None
+    for match in _AMOUNT_RE.finditer(text):
+        value = _to_float(match.group("amount"))
+        # Amounts under 1000 are almost certainly noise (years, percentages, months).
+        if value is None or value < _MIN_LOAN_AMOUNT:
+            continue
+        if match.group("currency"):
+            return value
+        if fallback is None:
+            fallback = value
+    return fallback
 
 
 def _parse_years(text: str) -> int | None:

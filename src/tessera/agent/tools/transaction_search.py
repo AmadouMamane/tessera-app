@@ -7,7 +7,8 @@ data-minimisation principle of GDPR Art. 5(1)(c).
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Final, Literal
 
@@ -24,6 +25,16 @@ _MAX_LOOKBACK_DAYS: Final[int] = 90
 _MAX_RESULTS: Final[int] = 50
 
 
+def _today() -> date:
+    """Return the day the demo ledger and the default window are anchored on.
+
+    Indirected on purpose: the property this module owes is "the demo set is visible
+    whatever the day it is read", and no witness can ask that of a hard-coded
+    ``date.today()``.
+    """
+    return datetime.now(UTC).date()
+
+
 class TransactionSearchRequest(BaseModel):
     """Input schema for the transaction search tool."""
 
@@ -37,7 +48,7 @@ class TransactionSearchRequest(BaseModel):
 
     @model_validator(mode="after")
     def _check_window(self) -> TransactionSearchRequest:
-        upper = self.until or date.today()
+        upper = self.until or _today()
         if upper < self.since:
             raise ValueError("until must be on or after since")
         if (upper - self.since).days > _MAX_LOOKBACK_DAYS:
@@ -73,27 +84,77 @@ class TransactionSearchResult(BaseModel):
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _DemoEntry:
+    """One demo transaction, positioned RELATIVE to the day the ledger is read."""
+
+    days_ago: int
+    at: time
+    amount: Decimal
+    direction: Literal["debit", "credit"]
+    counterparty_masked: str
+    label: str
+
+
+_FR_MONTHS: Final[tuple[str, ...]] = (
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+)
+
 # Demo dataset: a small, deterministic ledger so screenshots reproduce.
-_DEMO_LEDGER: Final[dict[str, list[Transaction]]] = {
-    "demo-customer-001": [
-        Transaction(
-            posted_at=datetime(2026, 5, 26, 11, 12, tzinfo=UTC),
+#
+# The offsets are relative, and that is the whole point. Two ABSOLUTE datetimes used to sit
+# here — 2026-05-26 and 2026-05-25 — while the only caller asks for the ninety days ending
+# today (``workers/account_lookup.py``) and this schema refuses any wider window. Fixed data
+# behind a sliding window carries an expiry date: this ledger was going to lose one of its two
+# rows on 2026-08-24 and both on 2026-08-25, after which the agent would have answered "no
+# transaction was found in the last 90 days" to every demo customer — a well-formed sentence,
+# false, with no error, no log and no probe behind it. Anchoring on the day of the query
+# removes the expiry instead of postponing it. Frozen by
+# ``tests/unit/test_demo_ledger_does_not_expire.py``.
+_DEMO_LEDGER: Final[dict[str, tuple[_DemoEntry, ...]]] = {
+    "demo-customer-001": (
+        _DemoEntry(
+            days_ago=3,
+            at=time(11, 12),
             amount=Decimal("-42.30"),
-            currency="EUR",
             direction="debit",
             counterparty_masked="MONOPRIX PARIS XX",
             label="Carte VISA XXXX 4242",
         ),
-        Transaction(
-            posted_at=datetime(2026, 5, 25, 9, 0, tzinfo=UTC),
+        _DemoEntry(
+            days_ago=4,
+            at=time(9, 0),
             amount=Decimal("1850.00"),
-            currency="EUR",
             direction="credit",
             counterparty_masked="EMPLOYEUR XXXX",
-            label="Salaire mai 2026",
+            label="Salaire {month} {year}",
         ),
-    ],
+    ),
 }
+
+
+def _materialise(entry: _DemoEntry, *, anchor: date) -> Transaction:
+    """Place one demo entry on the calendar, ``entry.days_ago`` before ``anchor``."""
+    posted_at = datetime.combine(anchor - timedelta(days=entry.days_ago), entry.at, tzinfo=UTC)
+    return Transaction(
+        posted_at=posted_at,
+        amount=entry.amount,
+        currency="EUR",
+        direction=entry.direction,
+        counterparty_masked=entry.counterparty_masked,
+        label=entry.label.format(month=_FR_MONTHS[posted_at.month - 1], year=posted_at.year),
+    )
 
 
 async def search(
@@ -112,8 +173,11 @@ async def search(
         limit=limit,
         direction=direction,
     )
-    ledger = _DEMO_LEDGER.get(request.customer_id, [])
-    upper = request.until or date.today()
+    anchor = _today()
+    ledger = [
+        _materialise(entry, anchor=anchor) for entry in _DEMO_LEDGER.get(request.customer_id, ())
+    ]
+    upper = request.until or anchor
     in_window = [
         txn
         for txn in ledger

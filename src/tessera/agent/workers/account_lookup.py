@@ -16,11 +16,12 @@ from __future__ import annotations
 import re
 import time
 from datetime import UTC, date, datetime, timedelta
-from typing import Literal
+from typing import Final, Literal
 
 from tessera.agent.state import AgentState, ToolCallRecord
 from tessera.agent.tools import account_balance, card_block, transaction_search
 from tessera.guard.adapter import guarded_invoke
+from tessera.guard.audit import confirmed_tools
 from tessera.settings import LanguageCode
 
 _THIRD_PARTY_RE = re.compile(
@@ -47,6 +48,10 @@ _THIRD_PARTY_REFUSAL: dict[LanguageCode, str] = {
 }
 
 NODE_NAME = "account_lookup"
+
+#: The window this worker asks for. Read by ``tests/unit/test_demo_ledger_does_not_expire.py``,
+#: which proves the demo ledger sits inside it on every calendar day rather than on one.
+_LOOKBACK_DAYS: Final[int] = 90
 
 _DRAFT_TEMPLATES: dict[LanguageCode, str] = {
     LanguageCode.FR: "Le solde de votre compte {iban_masked} est de {amount} {currency}.",
@@ -85,9 +90,9 @@ _CARD_BLOCKED: dict[LanguageCode, str] = {
 }
 
 _TRANSACTIONS_NONE: dict[LanguageCode, str] = {
-    LanguageCode.FR: "Aucune opération n'a été trouvée sur les 90 derniers jours.",
-    LanguageCode.DE: "In den letzten 90 Tagen wurden keine Buchungen gefunden.",
-    LanguageCode.EN: "No transactions were found in the last 90 days.",
+    LanguageCode.FR: f"Aucune opération n'a été trouvée sur les {_LOOKBACK_DAYS} derniers jours.",
+    LanguageCode.DE: f"In den letzten {_LOOKBACK_DAYS} Tagen wurden keine Buchungen gefunden.",
+    LanguageCode.EN: f"No transactions were found in the last {_LOOKBACK_DAYS} days.",
 }
 
 _TRANSACTIONS_HEADER: dict[LanguageCode, str] = {
@@ -108,19 +113,59 @@ def _card_reason(text: str) -> Literal["lost", "stolen", "fraud_suspected", "cus
     return "customer_request"
 
 
+_FOUR_DIGITS_RE = re.compile(r"(?<!\d)(\d{4})(?!\d)")
+
+#: A group of four digits introduced by a card cue is the card, whatever follows it.
+_CARD_CUE_RE = re.compile(
+    r"(?:finissant\s+par|se\s+termin\w+\s+par|terminant\s+par|carte"
+    r"|endend\s+auf|endet\s+auf|Endnummer|Karte"
+    r"|ending\s+(?:in|with)|last\s+four|card)"
+    r"\D{0,24}?(?<!\d)(\d{4})(?!\d)",
+    re.IGNORECASE,
+)
+
+#: 19xx / 20xx read as a year unless a cue says otherwise — see ``_last_four``.
+_YEAR_LIKE_RE = re.compile(r"(?:19|20)\d{2}")
+
+#: The authenticated demo customer owns one seeded card. A production connector will
+#: resolve the selected card from the authenticated account.
+_SEEDED_CARD = "4242"
+
+
 def _last_four(text: str) -> str:
-    matches = re.findall(r"(?<!\d)(\d{4})(?!\d)", text)
-    # The authenticated demo customer owns one seeded card.  A production
-    # connector will resolve the selected card from the authenticated account.
-    return matches[-1] if matches else "4242"
+    """Return the four digits identifying the card the customer is talking about.
+
+    This used to be ``matches[-1]`` — the LAST group of four in the sentence. "ma carte
+    finissant par 1234 volée le 12 juillet 2026" therefore opposed card "2026", and the
+    customer's real card stayed live. Order is not evidence: a cue is, so a cue wins, a
+    year-looking group is skipped, and only then does position decide.
+    """
+    cued = _CARD_CUE_RE.search(text)
+    if cued is not None:
+        return cued.group(1)
+    candidates: list[str] = _FOUR_DIGITS_RE.findall(text)
+    for candidate in candidates:
+        if not _YEAR_LIKE_RE.fullmatch(candidate):
+            return candidate
+    return candidates[0] if candidates else _SEEDED_CARD
 
 
 def _tool_update(call: ToolCallRecord, decisions: tuple[object, ...]) -> dict[str, object]:
     return {"tool_calls": [call], "guard_decisions": list(decisions)}
 
 
+def _confirmed_card() -> str | None:
+    """Return the card the human actually confirmed, when this turn carries a confirmation.
+
+    The confirmation token binds the card (``guard/policy.yaml``: ``confirmation_binds``), so
+    on the confirming turn the card is a fact already established server-side — not something
+    to re-read out of a sentence that no longer has to repeat the number.
+    """
+    return confirmed_tools.get().get("card_block")
+
+
 async def _block_card(state: AgentState, customer_id: str) -> dict[str, object]:
-    last_four = _last_four(state["user_input"])
+    last_four = _confirmed_card() or _last_four(state["user_input"])
     reason = _card_reason(state["user_input"])
     arguments: dict[str, object] = {
         "customer_id": customer_id,
@@ -162,7 +207,7 @@ async def _block_card(state: AgentState, customer_id: str) -> dict[str, object]:
 
 
 async def _search_transactions(state: AgentState, customer_id: str) -> dict[str, object]:
-    since = date.today() - timedelta(days=90)
+    since = date.today() - timedelta(days=_LOOKBACK_DAYS)
     arguments: dict[str, object] = {
         "customer_id": customer_id,
         "since": since.isoformat(),
