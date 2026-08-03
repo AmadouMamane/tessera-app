@@ -266,15 +266,17 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const scoreSeries = useQuery({
-    queryKey: ["score-series", "faithfulness", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope),
+    queryKey: ["score-series", "faithfulness", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
 
   const groundingSeries = useQuery({
-    queryKey: ["score-series", "grounding", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope),
+    queryKey: ["score-series", "grounding", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -288,8 +290,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const hallucinationSeries = useQuery({
-    queryKey: ["score-series", "hallucination", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "hallucination", scope),
+    queryKey: ["score-series", "hallucination", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "hallucination", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
   });
@@ -383,16 +386,16 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const judgeDrift = useQuery({
-    queryKey: ["judge-drift", asOf],
-    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined),
+    queryKey: ["judge-drift", asOf, period],
+    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
 
   // Grounding-metric drift for the Comparaison des modèles "Drift & stabilité" panel.
   const groundingDrift = useQuery({
-    queryKey: ["judge-drift", "grounding", asOf],
-    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, "grounding"),
+    queryKey: ["judge-drift", "grounding", asOf, period],
+    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, "grounding", period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });
@@ -407,8 +410,8 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
 
   // Per-severity-band score-count trend for the Signaux KPI tiles (image 01).
   const signalStatusTrend = useQuery({
-    queryKey: ["signal-status-trend", asOf],
-    queryFn: ({ signal }) => fetchSignalStatusTrend(signal, asOf ?? undefined),
+    queryKey: ["signal-status-trend", asOf, period],
+    queryFn: ({ signal }) => fetchSignalStatusTrend(signal, asOf ?? undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
   });

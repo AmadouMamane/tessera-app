@@ -614,14 +614,16 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
     : `${inventory.data?.n_expiring_soon ?? 0}`;
   const regression = panelOf(secBatch, "regression-risk", RegressionRiskSchema);
   const faith = useQuery({
-    queryKey: ["score-series", "faithfulness", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope),
+    queryKey: ["score-series", "faithfulness", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });
   const grounding = useQuery({
-    queryKey: ["score-series", "grounding", asOf, scope],
-    queryFn: ({ signal }) => fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope),
+    queryKey: ["score-series", "grounding", asOf, scope, period],
+    queryFn: ({ signal }) =>
+      fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : POLL,
   });

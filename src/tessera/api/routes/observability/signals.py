@@ -37,7 +37,7 @@ from tessera.observability.control_series import compute_control_series
 from tessera.observability.fleet import registered_agent_ids
 from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
-from tessera.observability.spine.scope import Scope, parse_period_days
+from tessera.observability.spine.scope import Scope, parse_period_days, window_days
 from tessera.observability.spine.snapshot import compute_snapshot
 
 router = APIRouter()
@@ -244,7 +244,7 @@ def observability_trend(
 def observability_score_series(
     at: str | None = None,
     metric: str = "faithfulness",
-    days: int = 7,
+    days: str | None = None,
     buckets: int = 7,
     agent: str = "all",
 ) -> dict[str, object]:
@@ -254,6 +254,12 @@ def observability_score_series(
     ending now or — with ``?at=`` — at instant T (as-of-T read, ADR 0011). Empty
     buckets carry ``mean=null`` so the chart shows a gap, never a fabricated zero.
     ``agent`` scopes the series to one agent's scored turns (``all`` = org view).
+
+    A period is spelled the same way on every other windowed endpoint of this cockpit —
+    ``d7``, ``d30``, ``h24`` — and these three spoke a private dialect of bare integers.
+    The selector therefore could not reach them: the client never built a ``days`` at all,
+    and had it tried, ``days=d30`` would have been a 422. The operator picked thirty days
+    and these read seven, silently (audit 2026-08-03).
     """
     import contextlib
     from datetime import UTC, datetime
@@ -268,7 +274,7 @@ def observability_score_series(
         read_scores(at, _agent_or_none(agent), full=True),
         metric=metric,
         end=end,
-        days=days,
+        days=window_days(days, default=7),
         n_buckets=buckets,
     )
     return {**asdict(series), "as_of": at, "agent": agent}
@@ -278,7 +284,7 @@ def observability_score_series(
 def observability_signal_status_trend(
     at: str | None = None,
     metric: str = "faithfulness",
-    days: int = 7,
+    days: str | None = None,
 ) -> dict[str, object]:
     """Per-severity-band score counts bucketed by day (Signaux KPI strip, image 01).
 
@@ -286,6 +292,12 @@ def observability_signal_status_trend(
     SLO thresholds and counts them per day, so every KPI tile gets a real
     sparkline + a real vs-previous-day delta from the durable score log. Honours
     as-of-T. Empty days are real zeros, never fabricated.
+
+    A period is spelled the same way on every other windowed endpoint of this cockpit —
+    ``d7``, ``d30``, ``h24`` — and these three spoke a private dialect of bare integers.
+    The selector therefore could not reach them: the client never built a ``days`` at all,
+    and had it tried, ``days=d30`` would have been a 422. The operator picked thirty days
+    and these read seven, silently (audit 2026-08-03).
     """
     import contextlib
     from datetime import UTC, datetime
@@ -297,7 +309,7 @@ def observability_signal_status_trend(
         with contextlib.suppress(ValueError):
             end = datetime.fromisoformat(at)
     trend = compute_status_counts_trend(
-        read_scores(at, full=True), metric=metric, end=end, days=days
+        read_scores(at, full=True), metric=metric, end=end, days=window_days(days, default=7)
     )
     return {**asdict(trend), "as_of": at}
 

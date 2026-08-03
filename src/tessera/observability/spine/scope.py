@@ -265,3 +265,29 @@ def parse_period_days(raw: str | None) -> float | None:
     except ValueError:
         return None
     return days if days > 0 else None
+
+
+def window_days(raw: str | None, *, default: int) -> int:
+    """A whole number of days for a series that buckets by day.
+
+    :func:`parse_period_days` answers in fractions and answers ``None`` for "all history",
+    because most callers bucket a window and both are meaningful there. The three
+    score-series endpoints do not: they slice a fixed number of days, so they need an
+    integer and they need a floor rather than "everything".
+
+    They used to declare ``days: int = 7`` instead, which is a private dialect — the
+    selector speaks ``d7`` / ``d30`` / ``h24``, so it could not address them at all, and
+    ``?days=d30`` would have been a 422. Converting here rather than in each route keeps the
+    vocabulary in the one module that owns it.
+
+    Args:
+        raw: The raw ``days`` query value.
+        default: What to use when the caller said nothing.
+
+    Returns:
+        At least one whole day.
+    """
+    parsed = parse_period_days(raw)
+    if parsed is None:
+        return default
+    return max(1, round(parsed))

@@ -184,6 +184,7 @@
     "loading": "Loading…",
     "empty": "No results.",
     "error": "Something went wrong.",
+    "digest": "Technical reference: {digest}",
     "retry": "Retry",
     "close": "Close",
     "details": "Details",
@@ -674,6 +675,7 @@
       "fixed-corpus": "fixed corpus",
       "no-timestamp": "whole-sample",
       "not-measured": "not measured",
+      "unscoped-handler": "handler takes no period",
       "sliceDays": "{n, plural, one {1 day} other {# days}}",
       "sliceHours": "{n} h",
       "too-slow": "too slow",
@@ -682,11 +684,10 @@
         "fixed-corpus": "A fixed-corpus probe: re-run over a narrower window it returns the same number. A flat line here would describe one measurement repeated, not a stable metric.",
         "no-timestamp": "Computed over the whole sample (a clustering, an inter-rater agreement): one slice of its input is not a smaller version of it but a different, noisier measurement.",
         "not-measured": "No source is declared for this control on the time axis.",
+        "unscoped-handler": "This control's samples are timestamped and its corpus is not fixed: what is missing is a handler that accepts a period, so \"the last 30 days\" and \"everything\" are the same call. A curve is possible here — it has simply not been written yet.",
         "too-slow": "This control's source was asked and did not answer in time — usually a local model evicted from memory, whose reload costs more than the read itself. The other controls keep their curves; this one has nothing to draw for this window.",
-        "tooShort": "{n, plural, =0 {None of this window's {total} slices carries a measurement} =1 {Only one of this window's {total} slices carries a measurement} other {{n} of {total} slices carry a measurement}} — each covers {width}. Two are needed to draw a trend: a line through a single point would claim the value held for the whole window.",
-        "unscoped-handler": "This control's samples are timestamped and its corpus is not fixed: what is missing is a handler that accepts a period, so \"the last 30 days\" and \"everything\" are the same call. A curve is possible here — it has simply not been written yet."
-      },
-      "unscoped-handler": "handler takes no period"
+        "tooShort": "{n, plural, =0 {None of this window's {total} slices carries a measurement} =1 {Only one of this window's {total} slices carries a measurement} other {{n} of {total} slices carry a measurement}} — each covers {width}. Two are needed to draw a trend: a line through a single point would claim the value held for the whole window."
+      }
     }
   },
   "chat": {
@@ -7674,17 +7675,7 @@
       "product": "Product",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Demonstration visit — in production, everyone enters by their identity.",
-    "footer": {
-      "tagline": "The control plane for AI agents: supervise, secure, evaluate, prove.",
-      "navLabel": "Tessera links",
-      "links": {
-        "understand": "Understand Tessera",
-        "spaces": "Business spaces",
-        "cockpit": "Governance cockpit"
-      },
-      "note": "Demonstration — the corpus, cases and customers are synthetic; no real data appears here. Apache-2.0."
-    }
+    "demoHonesty": "Demonstration visit — in production, everyone enters by their identity."
   },
   "spaces": {
     "filterFavorites": "Favorites",
@@ -9400,27 +9391,16 @@
     "diagram": {
       "lead": "Three spaces, distinct roles and governed exchanges",
       "caption": "The bank, its agents, the cockpit — and what flows between them.",
-      "agentFoundations": [
-        "Business context",
-        "Rules & guardrails"
-      ],
+      "agentFoundations": ["Business context", "Rules & guardrails"],
       "columns": [
         {
           "title": "Business spaces",
-          "items": [
-            "Customer site · AI assistant",
-            "Collections space · Staff"
-          ],
+          "items": ["Customer site · AI assistant", "Collections space · Staff"],
           "caption": "Business experience without exposing the machinery"
         },
         {
           "title": "AI agents",
-          "items": [
-            "Answer customers",
-            "Open an account",
-            "Manage arrears",
-            "…and other agents"
-          ]
+          "items": ["Answer customers", "Open an account", "Manage arrears", "…and other agents"]
         },
         {
           "title": "Cockpit",
@@ -9479,12 +9459,7 @@
           "label": "04 · Decision"
         }
       ],
-      "checks": [
-        "Identity and scope",
-        "Applicable rule",
-        "Permission to act",
-        "Need for a human"
-      ],
+      "checks": ["Identity and scope", "Applicable rule", "Permission to act", "Need for a human"],
       "allowed": "Allowed: the answer may be sent within the defined scope.",
       "review": "Or needs confirmation: the right person receives the case and decides.",
       "evidence": "In both cases, the decision, the rule, its version and the author are retained in a verifiable trail.",
@@ -9564,44 +9539,28 @@
           "title": "Supervise in real time.",
           "moment": "Continuously",
           "body": "Each agent continuously publishes the account of its activity: conversations, decisions, results and technical health. Tessera never searches inside an agent — the agent publishes, and the cockpit reads.",
-          "chips": [
-            "Independent of technology",
-            "Timestamped data",
-            "Transparent freshness"
-          ],
+          "chips": ["Independent of technology", "Timestamped data", "Transparent freshness"],
           "cta": "Explore the fleet and measurements"
         },
         {
           "title": "Protect every exchange.",
           "moment": "During the exchange",
           "body": "In production, every exchange passes through one online control. It can block an attack, mask sensitive data, refuse a request or ask for human intervention. Known bypasses are documented in the test harness — sixty-three public situations, including weaknesses that remain open.",
-          "chips": [
-            "Online controls",
-            "Policies applied",
-            "Systematic logging"
-          ],
+          "chips": ["Online controls", "Policies applied", "Systematic logging"],
           "cta": "See controls and blocks"
         },
         {
           "title": "Evaluate before exposure.",
           "moment": "Before exposure",
           "body": "Before being served to users, every agent must prove it is ready. It passes a set of tests and receives a release verdict. Any significant change makes its verdict due for reassessment. A model is judged on what it adds above a measured baseline without a model — a raw score is not enough.",
-          "chips": [
-            "Evaluation harness",
-            "Shared security foundation",
-            "Versioned verdict"
-          ],
+          "chips": ["Evaluation harness", "Shared security foundation", "Versioned verdict"],
           "cta": "See evaluations and verdicts"
         },
         {
           "title": "Prove at all times.",
           "moment": "After the action",
           "body": "Tessera retains a trace of what happened and what we decided. The audit ledger links each entry to the previous one: any alteration becomes detectable.",
-          "chips": [
-            "Chained log",
-            "Regular checks",
-            "Point-in-time reconstruction"
-          ],
+          "chips": ["Chained log", "Regular checks", "Point-in-time reconstruction"],
           "cta": "Open the Prove page"
         }
       ]
@@ -10791,5 +10750,23 @@
     "pickLabel": "Review at a chosen time",
     "frozenTitle": "Past state — return to the current state to act",
     "pickTime": "Time"
+  },
+  "queryHealth": {
+    "title": "Some data is not up to date",
+    "detailOne": "One active source is not responding. Values kept on screen may be older.",
+    "detailMany": "{count} active sources are not responding. Values kept on screen may be older.",
+    "retry": "Try again",
+    "retrying": "Retrying…"
+  },
+  "queryError": {
+    "title": "Data unavailable",
+    "detail": "The source for this view is not responding. No zero or empty state is inferred from this failure.",
+    "retry": "Try again",
+    "retrying": "Retrying…"
+  },
+  "errorBoundary": {
+    "title": "This view could not be displayed",
+    "detail": "The rest of the cockpit remains intact. Reload only this view to resume your work.",
+    "retry": "Reload view"
   }
 }

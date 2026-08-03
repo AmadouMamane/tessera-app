@@ -27,7 +27,7 @@ from tessera.observability import (
 from tessera.observability.eval.calibration import calibrate, gold_consensus, load_gold_set
 from tessera.observability.eval.judge import LLMJudge
 from tessera.observability.spine.adapters import read_scores
-from tessera.observability.spine.scope import parse_period_days
+from tessera.observability.spine.scope import parse_period_days, window_days
 
 router = APIRouter()
 
@@ -47,7 +47,7 @@ def observability_reproducibility() -> dict[str, object]:
 def observability_judge_drift(
     at: str | None = None,
     metric: str = "faithfulness",
-    days: int = 7,
+    days: str | None = None,
     buckets: int = 7,
 ) -> dict[str, object]:
     """Judge score-drift for ``metric`` over the window ending now or at instant T.
@@ -57,6 +57,12 @@ def observability_judge_drift(
     honours as-of-T (ADR 0011). Powers the "Drift du juge" signal on the
     Calibration juge tab. ``divergence=null``/``level="unknown"`` when there are
     too few populated buckets to judge drift, never a fabricated value.
+
+    A period is spelled the same way on every other windowed endpoint of this cockpit —
+    ``d7``, ``d30``, ``h24`` — and these three spoke a private dialect of bare integers.
+    The selector therefore could not reach them: the client never built a ``days`` at all,
+    and had it tried, ``days=d30`` would have been a 422. The operator picked thirty days
+    and these read seven, silently (audit 2026-08-03).
     """
     import contextlib
     from datetime import UTC, datetime
@@ -68,7 +74,11 @@ def observability_judge_drift(
         with contextlib.suppress(ValueError):
             end = datetime.fromisoformat(at)
     drift = compute_judge_drift(
-        read_scores(at, full=True), metric=metric, end=end, days=days, n_buckets=buckets
+        read_scores(at, full=True),
+        metric=metric,
+        end=end,
+        days=window_days(days, default=7),
+        n_buckets=buckets,
     )
     return {**asdict(drift), "as_of": at}
 

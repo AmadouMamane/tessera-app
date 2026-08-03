@@ -184,6 +184,7 @@
     "loading": "Chargement…",
     "empty": "Aucun résultat.",
     "error": "Une erreur est survenue.",
+    "digest": "Référence technique : {digest}",
     "retry": "Réessayer",
     "close": "Fermer",
     "details": "Détails",
@@ -674,6 +675,7 @@
       "fixed-corpus": "corpus fixe",
       "no-timestamp": "sur l'échantillon entier",
       "not-measured": "non mesuré",
+      "unscoped-handler": "handler sans période",
       "sliceDays": "{n, plural, one {1 jour} other {# jours}}",
       "sliceHours": "{n} h",
       "too-slow": "trop lente",
@@ -682,11 +684,10 @@
         "fixed-corpus": "Sonde à corpus fixe : rejouée sur une fenêtre plus étroite, elle rend le même nombre. Une courbe plate ici décrirait une mesure unique répétée, pas une stabilité.",
         "no-timestamp": "Statistique calculée sur l'échantillon entier (regroupement, accord inter-juges) : une tranche de son entrée n'en est pas une version réduite, mais une autre mesure, plus bruitée.",
         "not-measured": "Aucune source déclarée pour ce contrôle sur l'axe temporel.",
+        "unscoped-handler": "Les échantillons de ce contrôle sont horodatés et son corpus n'est pas figé : ce qui manque est un handler qui accepte une période, si bien que « les 30 derniers jours » et « tout » sont le même appel. Une courbe est possible ici — elle n'est pas encore écrite.",
         "too-slow": "La source de ce contrôle a été interrogée et n'a pas répondu dans le délai imparti — le plus souvent un modèle local évincé de la mémoire, dont le rechargement coûte plus que la lecture. Les autres contrôles gardent leur courbe ; celui-ci n'a rien à tracer pour cette fenêtre.",
-        "tooShort": "{n, plural, =0 {Aucune des {total} tranches de cette fenêtre ne porte de mesure} =1 {Une seule des {total} tranches de cette fenêtre porte une mesure} other {{n} tranches sur {total} portent une mesure}} — chacune couvre {width}. Il en faut deux pour tracer une évolution : une ligne tracée sur un point unique prétendrait que la valeur a tenu toute la fenêtre.",
-        "unscoped-handler": "Les échantillons de ce contrôle sont horodatés et son corpus n'est pas figé : ce qui manque est un handler qui accepte une période, si bien que « les 30 derniers jours » et « tout » sont le même appel. Une courbe est possible ici — elle n'est pas encore écrite."
-      },
-      "unscoped-handler": "handler sans période"
+        "tooShort": "{n, plural, =0 {Aucune des {total} tranches de cette fenêtre ne porte de mesure} =1 {Une seule des {total} tranches de cette fenêtre porte une mesure} other {{n} tranches sur {total} portent une mesure}} — chacune couvre {width}. Il en faut deux pour tracer une évolution : une ligne tracée sur un point unique prétendrait que la valeur a tenu toute la fenêtre."
+      }
     }
   },
   "chat": {
@@ -7674,17 +7675,7 @@
       "product": "Produit",
       "cockpit": "Cockpit"
     },
-    "demoHonesty": "Visite de démonstration — en production, chacun entre par son identité.",
-    "footer": {
-      "tagline": "Le plan de contrôle des agents IA : superviser, sécuriser, évaluer, prouver.",
-      "navLabel": "Liens Tessera",
-      "links": {
-        "understand": "Comprendre Tessera",
-        "spaces": "Espaces métier",
-        "cockpit": "Cockpit de gouvernance"
-      },
-      "note": "Démonstration — corpus, dossiers et clients sont synthétiques ; aucune donnée réelle n’y figure. Apache-2.0."
-    }
+    "demoHonesty": "Visite de démonstration — en production, chacun entre par son identité."
   },
   "spaces": {
     "filterFavorites": "Favoris",
@@ -9400,17 +9391,11 @@
     "diagram": {
       "lead": "Trois espaces, des rôles distincts et des échanges gouvernés",
       "caption": "La banque, ses agents, le cockpit — et ce qui circule entre eux.",
-      "agentFoundations": [
-        "Contexte métier",
-        "Règles & Garde-fous"
-      ],
+      "agentFoundations": ["Contexte métier", "Règles & Garde-fous"],
       "columns": [
         {
           "title": "Espaces métier",
-          "items": [
-            "Site client · Assistant IA",
-            "Espace recouvrement · Collaborateurs"
-          ],
+          "items": ["Site client · Assistant IA", "Espace recouvrement · Collaborateurs"],
           "caption": "Expérience métier sans exposition de la machinerie"
         },
         {
@@ -9575,33 +9560,21 @@
           "title": "Protéger chaque échange.",
           "moment": "Pendant l'échange",
           "body": "En production, chaque échange traverse un contrôle en ligne unique. Il peut bloquer une attaque, masquer une donnée sensible, refuser une requête ou demander une intervention humaine. Les contournements connus sont documentés dans le harnais d'épreuves — soixante-trois situations publiques, dont les faiblesses encore ouvertes.",
-          "chips": [
-            "Contrôles en ligne",
-            "Politiques appliquées",
-            "Journalisation systématique"
-          ],
+          "chips": ["Contrôles en ligne", "Politiques appliquées", "Journalisation systématique"],
           "cta": "Voir les contrôles et les blocages"
         },
         {
           "title": "Évaluer avant d'exposer.",
           "moment": "Avant l'exposition",
           "body": "Avant d'être servi aux utilisateurs, chaque agent doit prouver qu'il est prêt. Il passe un ensemble d'épreuves et reçoit un verdict de release. Toute modification significative rend son verdict à réévaluer. Un modèle y est jugé sur ce qu'il apporte au-dessus d'un plancher mesuré sans modèle — un score brut ne suffit pas.",
-          "chips": [
-            "Harnais d'évaluation",
-            "Socle de sécurité commun",
-            "Verdict versionné"
-          ],
+          "chips": ["Harnais d'évaluation", "Socle de sécurité commun", "Verdict versionné"],
           "cta": "Voir les évaluations et les verdicts"
         },
         {
           "title": "Prouver à tout instant.",
           "moment": "Après l'action",
           "body": "Tessera conserve la trace de ce qui s'est passé et de ce que nous avons décidé. Le registre d'audit relie chaque entrée à la précédente : toute altération devient détectable.",
-          "chips": [
-            "Journal chaîné",
-            "Vérifications régulières",
-            "Reconstitution à date"
-          ],
+          "chips": ["Journal chaîné", "Vérifications régulières", "Reconstitution à date"],
           "cta": "Ouvrir la page Prouver"
         }
       ]
@@ -10791,5 +10764,23 @@
     "pickLabel": "Revoir à une date",
     "frozenTitle": "État à une date — revenez à l'état présent pour agir",
     "pickTime": "Heure"
+  },
+  "queryHealth": {
+    "title": "Certaines données ne sont pas à jour",
+    "detailOne": "Une source active ne répond pas. Les valeurs conservées à l’écran peuvent être antérieures.",
+    "detailMany": "{count} sources actives ne répondent pas. Les valeurs conservées à l’écran peuvent être antérieures.",
+    "retry": "Réessayer",
+    "retrying": "Nouvel essai…"
+  },
+  "queryError": {
+    "title": "Données indisponibles",
+    "detail": "La source de cette vue ne répond pas. Aucun zéro ni état vide n’est déduit de cette panne.",
+    "retry": "Réessayer",
+    "retrying": "Nouvel essai…"
+  },
+  "errorBoundary": {
+    "title": "Cette vue n’a pas pu être affichée",
+    "detail": "Le reste du cockpit reste intact. Relancez uniquement cette vue pour reprendre votre travail.",
+    "retry": "Relancer la vue"
   }
 }

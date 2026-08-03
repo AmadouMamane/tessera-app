@@ -242,7 +242,11 @@ function Kpi({
 
 /** Donut from labelled slices. */
 function Donut({ slices }: { slices: { label: string; count: number; color: string }[] }) {
-  const total = slices.reduce((s, x) => s + x.count, 0) || 1;
+  // Two roles, two names. `|| 1` guards a division by zero; it was also the number rendered
+  // in the middle of the ring, so an empty donut displayed a confident "1" that counted
+  // nothing. A denominator is arithmetic, a total is a claim.
+  const total = slices.reduce((s, x) => s + x.count, 0);
+  const denominator = total || 1;
   const R = 28;
   const C = 2 * Math.PI * R;
   let off = 0;
@@ -259,7 +263,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
             strokeWidth="9"
           />
           {slices.map((s) => {
-            const frac = s.count / total;
+            const frac = s.count / denominator;
             const seg = { dash: frac * C, gap: C - frac * C, o: -off * C };
             off += frac;
             return (

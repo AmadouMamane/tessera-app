@@ -806,11 +806,13 @@ export async function fetchScoreSeries(
   at?: string,
   metric?: string,
   agent?: string,
+  days?: string,
 ): Promise<ScoreSeries> {
   const params = new URLSearchParams();
   if (at) params.set("at", at);
   if (metric) params.set("metric", metric);
   if (agent && agent !== "all") params.set("agent", agent);
+  if (days) params.set("days", days);
   const query = params.toString();
   return request(
     `/observability/score-series${query ? `?${query}` : ""}`,
@@ -824,10 +826,12 @@ export async function fetchJudgeDrift(
   signal?: AbortSignal,
   at?: string,
   metric?: string,
+  days?: string,
 ): Promise<JudgeDrift> {
   const params = new URLSearchParams();
   if (at) params.set("at", at);
   if (metric) params.set("metric", metric);
+  if (days) params.set("days", days);
   const query = params.toString();
   return request(
     `/observability/judge-drift${query ? `?${query}` : ""}`,
@@ -857,9 +861,11 @@ export async function fetchRegressionRisk(
 export async function fetchSignalStatusTrend(
   signal?: AbortSignal,
   at?: string,
+  days?: string,
 ): Promise<StatusCountsTrend> {
   const params = new URLSearchParams();
   if (at) params.set("at", at);
+  if (days) params.set("days", days);
   const query = params.toString();
   return request(
     `/observability/signal-status-trend${query ? `?${query}` : ""}`,
