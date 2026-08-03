@@ -33,6 +33,7 @@ from tessera.memory import governance
 from tessera.memory.entities import ledger_from_json, ledger_to_json, mask_ledger_pans
 from tessera.memory.protocol import EntityLedger, MemoryContext, MemoryItem
 from tessera.memory.summary import SummaryBackend
+from tessera.observability.logging import get_logger
 from tessera.retrieval import embeddings
 from tessera.retrieval.store import get_pool
 from tessera.settings import get_settings
@@ -107,6 +108,8 @@ def _memory_table(table: sql.Identifier) -> sql.Composed:
     )
 
 
+_LOG = get_logger("tessera.memory.persistent")
+
 # Above this cosine similarity, a new candidate is treated as the same memory
 # and updated in place rather than inserted as a duplicate.
 _DEDUP_THRESHOLD: Final[float] = 0.95
@@ -114,6 +117,39 @@ _DEDUP_THRESHOLD: Final[float] = 0.95
 _RECALL_HALF_LIFE_DAYS: Final[float] = 30.0
 # How many cosine candidates to fetch per requested item before re-ranking.
 _CANDIDATE_MULTIPLIER: Final[int] = 4
+
+#: What a row written before the embedding fingerprint existed says about itself.
+#:
+#: Not "the current model": that would be a guess dressed as a fact. Rows marked this way are
+#: still recalled — excluding them would empty a working memory on a suspicion — but they are
+#: counted by :func:`fingerprint_skew`, so the gap between "we know these match" and "we assume
+#: they do" is a number somebody can look at rather than a silence.
+_FINGERPRINT_UNKNOWN: Final[str] = "unknown"
+
+
+#: Which stored vectors the current model may be compared against.
+#:
+#: A row whose model is KNOWN and different is excluded: we positively know its vector lives in
+#: another space, and a cosine distance across two spaces is noise wearing a number. A row
+#: marked ``unknown`` is kept — it predates the stamp, and dropping it would erase a working
+#: memory on a suspicion rather than on a fact. The difference between the two is measurable
+#: (:func:`fingerprint_skew`), which is the whole point: it was previously not even nameable.
+_FINGERPRINT_FENCE: Final[sql.SQL] = sql.SQL(
+    "(embedding_model IN (%s, '" + _FINGERPRINT_UNKNOWN + "') "
+    "AND embedding_dimension IN (%s, 0))"
+)
+
+
+def _fingerprint() -> tuple[str, int]:
+    """The embedding identity a vector written now carries: ``(model, dimension)``.
+
+    A dimension change fails loudly at INSERT — ``vector(768)`` will not take 1024 floats. The
+    dangerous case is the quiet one: **two different models at the same dimension.** Their
+    vectors live in unrelated spaces, cosine distance between them is noise, and every layer
+    below is perfectly happy. Recall degrades to nonsense while the dashboard shows an unchanged
+    hit rate, because nothing anywhere recorded which model wrote which row.
+    """
+    return embeddings.embedding_model_name(), embeddings.embedding_dimension()
 
 
 async def ensure_longterm_schema() -> None:
@@ -131,13 +167,28 @@ async def ensure_longterm_schema() -> None:
             text        text        NOT NULL,
             entities    jsonb       NOT NULL DEFAULT '{{}}'::jsonb,
             embedding   vector({dim}) NOT NULL,
+            embedding_model     text NOT NULL DEFAULT '{unknown}',
+            embedding_dimension int  NOT NULL DEFAULT 0,
             importance  real        NOT NULL DEFAULT 0.5,
             created_at  timestamptz NOT NULL DEFAULT now(),
             expires_at  timestamptz NOT NULL,
             metadata    jsonb       NOT NULL DEFAULT '{{}}'::jsonb
         );
         """
-    ).format(table=_memory_table(_TABLE), dim=sql.Literal(dim))
+    ).format(
+        table=_memory_table(_TABLE),
+        dim=sql.Literal(dim),
+        unknown=sql.SQL(_FINGERPRINT_UNKNOWN),
+    )
+    # The two columns are added to a table that already exists, too: `CREATE TABLE IF NOT
+    # EXISTS` is a no-op on one, and a schema that only new installations get is not a schema.
+    migrate = sql.SQL(
+        """
+        ALTER TABLE {table} ADD COLUMN IF NOT EXISTS embedding_model text
+            NOT NULL DEFAULT '{unknown}';
+        ALTER TABLE {table} ADD COLUMN IF NOT EXISTS embedding_dimension int NOT NULL DEFAULT 0;
+        """
+    ).format(table=_memory_table(_TABLE), unknown=sql.SQL(_FINGERPRINT_UNKNOWN))
     index = sql.SQL(
         "CREATE INDEX IF NOT EXISTS {idx} ON {table} USING hnsw (embedding vector_cosine_ops);"
     ).format(idx=sql.Identifier("long_term_memory_embedding_hnsw"), table=_memory_table(_TABLE))
@@ -147,6 +198,7 @@ async def ensure_longterm_schema() -> None:
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         await cur.execute(create)
+        await cur.execute(migrate)
         await cur.execute(index)
         await cur.execute(subject_index)
         await conn.commit()
@@ -183,26 +235,33 @@ async def upsert_memory(
     entities = mask_ledger_pans(entities)
     embedding = (await embeddings.embed([text]))[0]
     expires_at = datetime.now(UTC) + governance.ttl_for(kind)
+    model, dim = _fingerprint()
+    # De-duplication compares this vector against stored ones. Comparing it against a vector
+    # some OTHER model wrote is meaningless, and a spurious 0.95 there would OVERWRITE an
+    # unrelated memory — so the dedup probe is fenced by the fingerprint as strictly as recall.
     nearest = sql.SQL(
         """
         SELECT id, 1 - (embedding <=> %s::vector) AS sim
         FROM {table}
-        WHERE subject_id = %s AND kind = %s
+        WHERE subject_id = %s AND kind = %s AND {fence}
         ORDER BY embedding <=> %s::vector
         LIMIT 1;
         """
-    ).format(table=_memory_table(_TABLE))
+    ).format(table=_memory_table(_TABLE), fence=_FINGERPRINT_FENCE)
     insert = sql.SQL(
         """
-        INSERT INTO {table} (subject_id, kind, text, entities, embedding, importance, expires_at)
-        VALUES (%s, %s, %s, %s::jsonb, %s::vector, %s, %s);
+        INSERT INTO {table}
+            (subject_id, kind, text, entities, embedding, importance, expires_at,
+             embedding_model, embedding_dimension)
+        VALUES (%s, %s, %s, %s::jsonb, %s::vector, %s, %s, %s, %s);
         """
     ).format(table=_memory_table(_TABLE))
     update = sql.SQL(
         """
         UPDATE {table}
         SET text = %s, entities = %s::jsonb, embedding = %s::vector,
-            importance = %s, created_at = now(), expires_at = %s
+            importance = %s, created_at = now(), expires_at = %s,
+            embedding_model = %s, embedding_dimension = %s
         WHERE id = %s;
         """
     ).format(table=_memory_table(_TABLE))
@@ -212,16 +271,27 @@ async def upsert_memory(
         await pool.open()
     entities_json = ledger_to_json(entities)
     async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
-        await cur.execute(nearest, (embedding, subject_id, kind, embedding))
+        await cur.execute(nearest, (embedding, subject_id, kind, model, dim, embedding))
         row = await cur.fetchone()
         if row is not None and float(row["sim"]) >= _DEDUP_THRESHOLD:
             await cur.execute(
-                update, (text, entities_json, embedding, importance, expires_at, row["id"])
+                update,
+                (text, entities_json, embedding, importance, expires_at, model, dim, row["id"]),
             )
         else:
             await cur.execute(
                 insert,
-                (subject_id, kind, text, entities_json, embedding, importance, expires_at),
+                (
+                    subject_id,
+                    kind,
+                    text,
+                    entities_json,
+                    embedding,
+                    importance,
+                    expires_at,
+                    model,
+                    dim,
+                ),
             )
         await conn.commit()
 
@@ -254,26 +324,34 @@ async def search_memory(*, subject_id: str, query: str, top_k: int) -> list[Memo
 
     Over-fetches by cosine similarity, then re-ranks the candidate pool with
     :func:`rank_memories` so recency and importance shape the final selection.
+
+    Only vectors the current embedding model can be compared against are considered
+    (:data:`_FINGERPRINT_FENCE`). Rows written by a *different* known model are in another
+    vector space entirely: ranking against them does not return worse memories, it returns
+    arbitrary ones, and every layer above would show an unchanged hit rate while doing it.
     """
     if top_k <= 0:
         return []
     query_embedding = (await embeddings.embed([query]))[0]
     candidate_pool = top_k * _CANDIDATE_MULTIPLIER
+    model, dim = _fingerprint()
     search = sql.SQL(
         """
         SELECT kind, text, entities, importance, created_at,
                1 - (embedding <=> %s::vector) AS score
         FROM {table}
-        WHERE subject_id = %s AND expires_at > now()
+        WHERE subject_id = %s AND expires_at > now() AND {fence}
         ORDER BY embedding <=> %s::vector
         LIMIT %s;
         """
-    ).format(table=_memory_table(_TABLE))
+    ).format(table=_memory_table(_TABLE), fence=_FINGERPRINT_FENCE)
     pool = get_pool()
     if pool.closed:
         await pool.open()
     async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
-        await cur.execute(search, (query_embedding, subject_id, query_embedding, candidate_pool))
+        await cur.execute(
+            search, (query_embedding, subject_id, model, dim, query_embedding, candidate_pool)
+        )
         rows = await cur.fetchall()
     candidates = [
         MemoryItem(
@@ -481,7 +559,17 @@ class PersistentBackend(SummaryBackend):
         try:
             items = await search_memory(subject_id=scope.subject_id, query=query, top_k=self._top_k)
         except Exception as exc:  # recall must never break a turn (e.g. embed offline)
+            # An empty recall and a BROKEN recall look identical from here, and they used to be
+            # reported identically: an empty list, once, to stderr. The audit trail now carries
+            # the difference, because "the subject has no memories" and "long-term memory has
+            # stopped working" are the two answers an operator most needs to tell apart.
             sys.stderr.write(f"tessera.memory.persistent: recall failed: {exc}\n")
+            _LOG.warning(
+                "long-term recall unavailable (%s: %s) — returned nothing, which is NOT "
+                "evidence that this subject has no memories",
+                type(exc).__name__,
+                exc,
+            )
             return []
         # Memory is untrusted data: screen on read too, dropping poisoned items
         # and masking residual PII (ADR 0007, anti-poisoning).
@@ -528,3 +616,75 @@ class PersistentBackend(SummaryBackend):
             actor=_BACKEND_FORGET_ACTOR,
             subject_id=scope.subject_id,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class FingerprintSkew:
+    """How much of long-term memory the current embedding model can actually read.
+
+    Before 2026-08-04 this quantity had no name and no way of being asked. A model swap — Vertex
+    at 768 dimensions, Ollama at 1024, or worse, two different models at the SAME dimension —
+    left every stored vector in a space the new one cannot reach, and the failure was invisible
+    from end to end: `_recall` swallows its exception, the dashboard reports an unchanged recall
+    rate, and the agent simply stops remembering anything while looking exactly as before.
+    """
+
+    current_model: str
+    current_dimension: int
+    comparable: int
+    """Rows written by the current model — the ones recall can genuinely rank."""
+    unstamped: int
+    """Rows written before the fingerprint existed. Recalled, but on an assumption."""
+    foreign: dict[str, int]
+    """Rows written by a different known model, per ``model@dimension``. Excluded from recall."""
+
+    @property
+    def total(self) -> int:
+        return self.comparable + self.unstamped + sum(self.foreign.values())
+
+    @property
+    def unreadable_fraction(self) -> float:
+        """Share of stored memory the current model is fenced out of (0.0 when none)."""
+        return sum(self.foreign.values()) / self.total if self.total else 0.0
+
+
+async def fingerprint_skew() -> FingerprintSkew:
+    """Count long-term memory rows by the embedding identity that wrote them.
+
+    Returns:
+        A :class:`FingerprintSkew`. A non-empty ``foreign`` means recall is silently narrower
+        than the table: those rows exist, are not expired, and can never be returned.
+    """
+    model, dim = _fingerprint()
+    query = sql.SQL(
+        """
+        SELECT embedding_model AS model, embedding_dimension AS dim, count(*) AS n
+        FROM {table}
+        WHERE expires_at > now()
+        GROUP BY embedding_model, embedding_dimension;
+        """
+    ).format(table=_memory_table(_TABLE))
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query)
+        rows = await cur.fetchall()
+
+    comparable = unstamped = 0
+    foreign: dict[str, int] = {}
+    for row in rows:
+        row_model, row_dim, n = str(row["model"]), int(row["dim"] or 0), int(row["n"])
+        if row_model == model and row_dim == dim:
+            comparable += n
+        elif row_model == _FINGERPRINT_UNKNOWN or row_dim == 0:
+            unstamped += n
+        else:
+            foreign[f"{row_model}@{row_dim}"] = foreign.get(f"{row_model}@{row_dim}", 0) + n
+    return FingerprintSkew(
+        current_model=model,
+        current_dimension=dim,
+        comparable=comparable,
+        unstamped=unstamped,
+        foreign=foreign,
+    )
