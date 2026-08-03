@@ -24,6 +24,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -134,7 +135,14 @@ class TestTwiceGreenIsAssertedNotRemembered:
     """Two green passes are a twice-green ONLY on one tree. This is the 2026-07-12 false green."""
 
     @staticmethod
-    def _record(slot: int, *, exit_code: int, tree: TreeIdentity, void: bool = False) -> None:
+    def _record(
+        slot: int,
+        *,
+        exit_code: int,
+        tree: TreeIdentity,
+        void: bool = False,
+        recorded_at: float | None = None,
+    ) -> None:
         Path(".gate").mkdir(exist_ok=True)
         Path(f".gate/pass-{slot}.json").write_text(
             json.dumps(
@@ -144,6 +152,7 @@ class TestTwiceGreenIsAssertedNotRemembered:
                     "verdict_exit_code": EXIT_VOID if void else exit_code,
                     "void": void,
                     "drift": ["BRANCH SWITCHED: a → b"] if void else [],
+                    "recorded_at": time.time() if recorded_at is None else recorded_at,
                     "tree_before": asdict(tree),
                     "tree_after": asdict(tree),
                 }
@@ -160,6 +169,44 @@ class TestTwiceGreenIsAssertedNotRemembered:
 
         assert cmd_twice() == 0
         assert "TWICE-GREEN" in capsys.readouterr().out
+
+    def test_a_leftover_slot_from_another_day_is_not_a_second_pass(
+        self, in_a_scratch_repo: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The same false green, on the time axis (audit 2026-08-03).
+
+        `make gate` alone rewrites slot 1 and `gate-twice` never clears `.gate/`. So a slot 2
+        left from a previous day, on an unchanged commit and a clean tree, matched today's
+        fingerprint EXACTLY — same worktree, branch, HEAD, digest — and `twice` reported
+        TWICE-GREEN over a single pass that ran today. Identity was checked; simultaneity
+        was not.
+        """
+        one_tree = _identity(digest="c" * 64)
+        now = time.time()
+        self._record(1, exit_code=0, tree=one_tree, recorded_at=now)
+        self._record(2, exit_code=0, tree=one_tree, recorded_at=now - 26 * 3600)
+
+        assert cmd_twice() != 0, "a slot from yesterday was accepted as today's second pass"
+        err = capsys.readouterr().err
+        assert "TWICE-GREEN REFUSED" in err
+        assert "apart" in err, "the refusal must say WHY, not merely that it refused"
+
+    def test_a_record_without_a_clock_is_refused_rather_than_trusted(
+        self, in_a_scratch_repo: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A pass predating this check cannot prove when it ran, so it cannot count.
+
+        The honest answer to "I cannot tell" is a refusal, never a pass (ADR 0026).
+        """
+        one_tree = _identity(digest="c" * 64)
+        self._record(1, exit_code=0, tree=one_tree)
+        self._record(2, exit_code=0, tree=one_tree)
+        stale = json.loads(Path(".gate/pass-2.json").read_text(encoding="utf-8"))
+        del stale["recorded_at"]
+        Path(".gate/pass-2.json").write_text(json.dumps(stale), encoding="utf-8")
+
+        assert cmd_twice() != 0
+        assert "recorded_at" in capsys.readouterr().err
 
     def test_two_green_passes_on_different_trees_are_refused(
         self, in_a_scratch_repo: Path, capsys: pytest.CaptureFixture[str]

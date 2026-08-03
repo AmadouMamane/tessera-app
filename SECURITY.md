@@ -79,4 +79,4 @@ tracked:
 - CI security gate: CodeQL, `pip-audit`, Bandit, gitleaks + detect-secrets,
   Trivy (container), a CycloneDX **SBOM**, and **cosign** keyless signing with
   SLSA provenance for the agent image.
-- A non-regression harness of 40 documented agent-failure cases gating merges.
+- A non-regression harness of 63 documented agent-failure cases gating merges.

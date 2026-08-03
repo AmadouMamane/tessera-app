@@ -27,6 +27,12 @@ import yaml
 _TARGETS_PATH = Path(__file__).resolve().parents[1] / "infra" / "deploy" / "targets.yaml"
 _PLACEHOLDER_SHAS = frozenset({"", "dev", "unknown"})
 
+#: Answers from ``/api/version`` that are a host's own ADMISSION it could not establish its
+#: build, not a build id. `unverified:<sha>` = the agent half never answered; `mixed:a/b` = the
+#: front and the agent report different commits. Comparing these as identifiers turns a blind
+#: spot into a false divergence.
+_UNVERIFIABLE_PREFIXES = ("unverified:", "mixed:")
+
 EXIT_OK = 0
 EXIT_DIVERGENT = 1
 EXIT_BLIND = 2
@@ -108,8 +114,14 @@ def _fetch_sha(host: str, timeout: float = 5.0) -> str | None:
     return sha if isinstance(sha, str) else None
 
 
-def verdict(domain: str, observations: dict[str, str | None]) -> tuple[int, str]:
-    """Pure verdict from ``label -> sha`` (``None`` = unreachable). No network — unit-testable."""
+def verdict(  # noqa: PLR0911  fail-closed: each un-comparable shape refuses with its own reason
+    domain: str, observations: dict[str, str | None]
+) -> tuple[int, str]:
+    """Pure verdict from ``label -> sha`` (``None`` = unreachable). No network — unit-testable.
+
+    Every branch that cannot establish parity refuses EXPLICITLY, with its own reason, rather
+    than falling through to a comparison it has no standing to make.
+    """
     if "CHANGE-ME" in domain:
         return EXIT_BLIND, f"domain is unset ('{domain}') — set it in targets.yaml. CannotSay."
     if len(observations) < _MIN_HOSTS_TO_COMPARE:
@@ -122,6 +134,24 @@ def verdict(domain: str, observations: dict[str, str | None]) -> tuple[int, str]
         return EXIT_BLIND, (
             f"un-stamped (sha in {sorted(_PLACEHOLDER_SHAS)}): {', '.join(placeholders)} "
             f"— parity cannot be verified. CannotSay."
+        )
+    # A HOST THAT SAYS IT COULD NOT CHECK IS A BLIND SPOT, NOT A DIVERGENCE (audit
+    # 2026-08-03). `/api/version` composes the sha over the PAIR: it answers `unverified:<sha>`
+    # when the agent half could not be reached, and `mixed:<front>/<agent>` when the two halves
+    # disagree. Neither is a build identifier, and neither was in _PLACEHOLDER_SHAS — so they
+    # were compared as ordinary strings and a host that simply could not reach its agent came
+    # back "DIVERGENCE: the hosts serve different builds", red, naming a difference that was
+    # never observed. `reste-a-faire-20260802.md` predicted this exact answer and called it
+    # the correct verdict; the code turned it into a wrong one.
+    unverifiable = sorted(
+        h for h, s in observations.items() if s is not None and s.startswith(_UNVERIFIABLE_PREFIXES)
+    )
+    if unverifiable:
+        detail = ", ".join(f"{h}={observations[h]}" for h in unverifiable)
+        return EXIT_BLIND, (
+            f"a host could not verify its own pair: {detail} — "
+            f"`unverified:` means the agent half did not answer, `mixed:` means the two halves "
+            f"disagree. Either way this is not an observed divergence between hosts. CannotSay."
         )
     shas = {s for s in observations.values() if s is not None}
     if len(shas) == 1:

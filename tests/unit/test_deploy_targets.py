@@ -73,3 +73,27 @@ def test_an_unstamped_dev_build_is_blind() -> None:
 def test_an_unset_domain_is_blind() -> None:
     obs = {"onprem": "abc123", "gcp": "abc123"}
     assert verdict("CHANGE-ME.example", obs)[0] == EXIT_BLIND
+
+
+def test_a_host_that_could_not_reach_its_agent_is_blind_not_divergent() -> None:
+    """`unverified:<sha>` is a host ADMITTING it could not check, not a build id.
+
+    `/api/version` composes the sha over the front+agent PAIR. When the agent half does not
+    answer it returns `unverified:<front-sha>` — which was compared as an ordinary string, so
+    a host whose agent was simply unreachable came back RED with "the hosts serve different
+    builds", naming a difference nobody observed. `reste-a-faire-20260802.md` predicted this
+    exact answer and called it correct; the code called it a divergence. Audit 2026-08-03.
+    """
+    obs = {"onprem": "e9f6c9fa", "gcp": "unverified:e9f6c9fa", "canonical(onprem)": "e9f6c9fa"}
+    code, message = verdict("amadoumamane.fr", obs)
+    assert code == EXIT_BLIND, "an unverifiable pair was reported as an observed divergence"
+    assert "CannotSay" in message
+    assert "DIVERGENCE" not in message
+
+
+def test_a_host_whose_two_halves_disagree_is_blind_not_divergent() -> None:
+    """`mixed:<front>/<agent>` is a divergence INSIDE one host, not between hosts."""
+    obs = {"onprem": "e9f6c9fa", "gcp": "mixed:e9f6c9fa/aa2698c3", "canonical(onprem)": "e9f6c9fa"}
+    code, message = verdict("amadoumamane.fr", obs)
+    assert code == EXIT_BLIND
+    assert "mixed:" in message

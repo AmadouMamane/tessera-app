@@ -4,7 +4,7 @@ This file is read automatically by Codex at the start of every session in this r
 
 ## Pitch
 
-Tessera is a production-grade reference implementation of a multilingual (FR / DE / EN) banking support LLM agent for the European retail market. The agent is grounded in EU regulatory corpora (DORA, CNIL, BaFin, GDPR), enforces runtime guardrails through a first-party guard at a single tool-call chokepoint, ships with a non-regression harness over forty publicly documented agent failures, and is deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.3 70B locally on Apple Silicon. The name comes from the Roman *tessera*, an identification token granting access — the semantic theme is identity and permission check at every call.
+Tessera is a production-grade reference implementation of a multilingual (FR / DE / EN) banking support LLM agent for the European retail market. The agent is grounded in EU regulatory corpora (DORA, CNIL, BaFin, GDPR), enforces runtime guardrails through a first-party guard at a single tool-call chokepoint, ships with a non-regression harness over 63 publicly documented agent failures, and is deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.3 70B locally on Apple Silicon. The name comes from the Roman *tessera*, an identification token granting access — the semantic theme is identity and permission check at every call.
 
 ## Honest positioning (non-negotiable, first page of README)
 

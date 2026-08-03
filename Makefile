@@ -23,8 +23,18 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
 
-.PHONY: install lint typecheck format test test-integration test-all \
-        coverage eval eval-demo seed ingest bootstrap run run-on-prem precommit check ci help \
+# EVERY target is phony here, and the list is enforced by a test
+# (tests/unit/test_makefile_targets_are_phony.py). A target absent from this list whose name
+# happens to match a file or directory is considered UP TO DATE by make and silently does
+# nothing. `hooks` is the one that mattered: `install` depends on it and `gate` depends on
+# `install`, so a stray `hooks/` directory would have stopped installing the trunk guard
+# without a word. `eval` was protected once, by hand, because `eval/` exists — the precaution
+# was taken and never generalised. Audit 2026-08-03.
+.PHONY: install install-all lint lint-fix typecheck format format-check test test-integration \
+        test-all coverage eval eval-demo eval-case eval-lang eval-sweep eval-noise \
+        eval-null eval-null-write eval-power eval-power-write eval-contribution \
+        eval-calibrate-weak seed generate-corpus ingest-regulations bootstrap run run-on-prem \
+        precommit check ci help hooks land memory-check \
         obs-up obs-up-core obs-down obs-logs obs-guard obs-secrets dev-secrets \
         gate gate-twice gate-checks gate-py gate-web tooling \
         claim release whoowns session landed
@@ -118,6 +128,20 @@ hooks:
 #   make land BRANCH=claude/some-branch
 land: install
 	@test -n "$(BRANCH)" || { echo "BRANCH= is required (e.g. make land BRANCH=claude/x)"; exit 2; }
+	@# THE VERDICT AND THE MUTATION MUST NAME THE SAME REF (audit 2026-08-03).
+	@# `main_guard advance` answers "may MAIN become this commit?" and prints "One trunk,
+	@# still" — then the merge below ran `--ff-only` on whatever branch this checkout
+	@# happened to be on. From `claude/foo`, `make land BRANCH=claude/bar` printed a verdict
+	@# about main and fast-forwarded foo onto bar; and since .githooks/reference-transaction
+	@# filters `refs/heads/main`, that merge was guarded by nothing at all. A witness that
+	@# judges one object while the command mutates another is ADR 0026's exact failure.
+	@cur=$$(git rev-parse --abbrev-ref HEAD); \
+	  if [ "$$cur" != "main" ]; then \
+	    echo "✗ land refuses: HEAD is '$$cur', not 'main'."; \
+	    echo "  The guard's verdict is about main; landing from another branch would move"; \
+	    echo "  '$$cur' instead, unguarded. Run it from the main checkout."; \
+	    exit 2; \
+	  fi
 	@uv run python scripts/main_guard.py installed
 	@uv run python scripts/main_guard.py advance $$(git rev-parse $(BRANCH))
 	@git merge --ff-only $(BRANCH)
@@ -535,8 +559,17 @@ seed-fixture: install
 	@TESSERA_POSTGRES__DSN=$(FIXTURE_DSN) uv run python scripts/ingest_regulations.py >/dev/null
 	@TESSERA_POSTGRES__DSN=$(FIXTURE_DSN) uv run python scripts/seed_demo.py >/dev/null
 	@mkdir -p $(dir $(FIXTURE_DUMP))
+	@# WRITE ASIDE, THEN MOVE (audit 2026-08-03). `> $(FIXTURE_DUMP)` truncates the target
+	@# BEFORE the pipeline runs, and the target is a TRACKED 1.2 MB fixture. A missing
+	@# container or an empty database therefore left a zero-byte file on disk — the notarised
+	@# empty archive this Makefile opens by warning about, and the very input `ci.yml`
+	@# describes restoring as a silent green (`gunzip | psql` applies the valid prefix).
+	@# pipefail already stops make; it cannot un-truncate the file.
 	@docker exec $(FIXTURE_PG_CONTAINER) pg_dump -U tessera -d $(FIXTURE_DB) \
-	  --no-owner --no-privileges | gzip -9 > $(FIXTURE_DUMP)
+	  --no-owner --no-privileges | gzip -9 > $(FIXTURE_DUMP).tmp
+	@test -s $(FIXTURE_DUMP).tmp || { echo "✗ dump is empty — refusing to replace the fixture"; rm -f $(FIXTURE_DUMP).tmp; exit 1; }
+	@gzip -t $(FIXTURE_DUMP).tmp || { echo "✗ dump is not a valid gzip stream — fixture untouched"; rm -f $(FIXTURE_DUMP).tmp; exit 1; }
+	@mv $(FIXTURE_DUMP).tmp $(FIXTURE_DUMP)
 	@docker exec $(FIXTURE_PG_CONTAINER) psql -U tessera -d postgres -q \
 	  -c 'DROP DATABASE IF EXISTS $(FIXTURE_DB)'
 	@uv run python scripts/seed_fixture.py
@@ -767,7 +800,20 @@ _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 # Start backend + frontend from THIS checkout, detached; wait for health.
 dev-up: dev-secrets
 	@echo "▶ dev-up from $(CURDIR) (git $$(git rev-parse --short HEAD 2>/dev/null)) — front :$(DEV_FPORT) / back :$(DEV_BPORT) / metrics :$(DEV_MPORT)"
-	@for p in $(DEV_FPORT) $(DEV_BPORT) $(DEV_MPORT); do lsof -nP -iTCP:$$p -sTCP:LISTEN >/dev/null 2>&1 && { echo "✗ port $$p in use — 'make dev-down' first (never two servers on one port)"; exit 1; }; done; true
+	@# The refusal must NAME what holds the port. It used to say "'make dev-down' first" for
+	@# any holder, including a container — and dev-down then killed Docker (see dev-down).
+	@for p in $(DEV_FPORT) $(DEV_BPORT) $(DEV_MPORT); do \
+	  pid=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null | head -1); \
+	  [ -z "$$pid" ] && continue; \
+	  comm=$$(ps -o comm= -p $$pid 2>/dev/null | sed 's|.*/||'); \
+	  if echo "$$comm" | grep -Eq '^($(_DEV_KILLABLE))$$'; then \
+	    echo "✗ port $$p held by a dev server ($$pid $$comm) — 'make dev-down' first"; \
+	  else \
+	    echo "✗ port $$p held by $$pid ($$comm), which is NOT a dev server."; \
+	    echo "  Probably the container stack; stop it with docker compose, or use dev-preview PORT=…"; \
+	  fi; \
+	  exit 1; \
+	done; true
 	@# The app-side ClickHouse READER drinks from the same canonical file as the stack it reads.
 	@# Found live (2026-07-15): the F-9 rotation secured the containers, and nobody taught the
 	@# backend the new password — its adapter fell back to the default and every ClickHouse-backed
@@ -795,12 +841,46 @@ dev-up: dev-secrets
 	@printf "  frontend :$(DEV_FPORT)/api/healthz … "; curl -sf --retry 90 --retry-connrefused --retry-delay 1 --max-time 240 http://localhost:$(DEV_FPORT)/api/healthz >/dev/null && echo ok || { echo "FAIL (see $(DEV_FRONT_LOG))"; exit 1; }
 	@$(MAKE) --no-print-directory dev-status
 
-# Stop the servers on DEV_FPORT/DEV_BPORT (by port — graceful, then hard).
+# Stop the dev servers on DEV_FPORT/DEV_BPORT/DEV_MPORT (graceful, then hard).
+#
+# IT KILLS A DEV SERVER, OR IT KILLS NOTHING (audit 2026-08-03, P0). :8099 is ALSO the host
+# port the agent CONTAINER publishes, so on a machine running the full-local stack the pid
+# holding it is `com.docker.backend`. This target therefore sent SIGTERM then SIGKILL to
+# Docker Desktop itself, taking down the agent, the frontend, Postgres, Redis, the whole
+# observability stack — and `tessera-cloudflared`, which is the public domain. It had already
+# happened once (2026-08-02) and been written down as a trap to remember. A trap you have to
+# remember is a defect you have not fixed.
+#
+# Worse, `dev-up` refuses on a busy port with the message "'make dev-down' first": the guard
+# pointed the operator straight at the destructive command.
+#
+# So the pid is interrogated before it is signalled. A port is not a licence to kill whatever
+# sits behind it — the only processes this target may end are ones it could have started.
+_DEV_KILLABLE = node|next-server|python|python3|uvicorn|uv|pnpm|npm|corepack|perl
 dev-down:
-	@for p in $(DEV_FPORT) $(DEV_BPORT); do pids=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); [ -n "$$pids" ] && { echo "  SIGTERM :$$p ($$pids)"; kill $$pids 2>/dev/null; } || echo "  :$$p free"; done; true
+	@for p in $(DEV_FPORT) $(DEV_BPORT) $(DEV_MPORT); do \
+	  pids=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); \
+	  if [ -z "$$pids" ]; then echo "  :$$p free"; continue; fi; \
+	  for pid in $$pids; do \
+	    comm=$$(ps -o comm= -p $$pid 2>/dev/null | sed 's|.*/||'); \
+	    if echo "$$comm" | grep -Eq '^($(_DEV_KILLABLE))$$'; then \
+	      echo "  SIGTERM :$$p $$pid ($$comm)"; kill $$pid 2>/dev/null || true; \
+	    else \
+	      echo "  ✗ REFUSED :$$p $$pid ($$comm) — not a dev server, dev-down leaves it alone"; \
+	      echo "    (a container publishes this port: stop it with docker compose, never here)"; \
+	    fi; \
+	  done; \
+	done; true
 	@perl -e 'select(undef,undef,undef,1.5)'
-	@for p in $(DEV_FPORT) $(DEV_BPORT); do pids=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); [ -n "$$pids" ] && { echo "  SIGKILL :$$p ($$pids)"; kill -9 $$pids 2>/dev/null; }; done; true
-	@echo "✓ dev-down: :$(DEV_FPORT) and :$(DEV_BPORT) free"
+	@for p in $(DEV_FPORT) $(DEV_BPORT) $(DEV_MPORT); do \
+	  for pid in $$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); do \
+	    comm=$$(ps -o comm= -p $$pid 2>/dev/null | sed 's|.*/||'); \
+	    if echo "$$comm" | grep -Eq '^($(_DEV_KILLABLE))$$'; then \
+	      echo "  SIGKILL :$$p $$pid ($$comm)"; kill -9 $$pid 2>/dev/null || true; \
+	    fi; \
+	  done; \
+	done; true
+	@echo "✓ dev-down: dev servers on :$(DEV_FPORT) :$(DEV_BPORT) :$(DEV_MPORT) stopped (foreign holders untouched)"
 
 # Ports, PIDs, and — the point — WHAT CODE THE PROCESS ACTUALLY LOADED, asked of the process.
 #
@@ -988,7 +1068,7 @@ help:
 	@echo "  coverage           Unit tests with HTML coverage report"
 	@echo ""
 	@echo "Eval"
-	@echo "  eval               Full 40-case regression harness"
+	@echo "  eval               Full 63-case regression harness"
 	@echo "  eval-case CASE=XX  One case by id"
 	@echo "  eval-lang LANG=fr  One language slice"
 	@echo ""

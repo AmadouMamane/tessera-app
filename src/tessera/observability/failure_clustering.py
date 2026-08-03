@@ -1,6 +1,6 @@
 """Embedding-based failure clustering (ADR 0010, idea #123).
 
-A flat list of forty-odd documented failures is hard to reason about; the
+A flat list of sixty-odd documented failures is hard to reason about; the
 question an operator actually asks is "what *kinds* of things go wrong?". This
 module answers it without hand-labelling: it embeds each failure's prompt and
 runs k-means over the vectors, so semantically similar failures fall into the

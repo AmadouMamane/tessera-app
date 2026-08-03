@@ -25,6 +25,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,11 @@ _SHORT = 12
 #: tree it describes did not exist for the whole run. Distinct from 1 (the gate genuinely
 #: failed) on purpose: conflating them would let a void run be read as an honest red.
 EXIT_VOID = 3
+
+#: How far apart two passes of one `make gate-twice` may be recorded. Generous — a full gate
+#: is minutes, and a slow machine running both passes back to back stays far inside it — but
+#: finite, so a slot left over from a previous day can never be read as today's second pass.
+_MAX_PASS_SEPARATION_S = 4 * 60 * 60
 
 
 def _git(*args: str) -> str:
@@ -191,6 +197,12 @@ def cmd_run(slot: int, command: list[str]) -> int:
             "verdict_exit_code": exit_code,
             "void": bool(drift),
             "drift": drift,
+            # WHEN this pass ran. Without it, `twice` compared two records that could be days
+            # apart and still call them one twice-green: `make gate` alone rewrites slot 1,
+            # `gate-twice` never clears .gate/, and a stale slot 2 from Monday matched
+            # Tuesday's tree exactly (same branch, same HEAD, same clean digest). Two green
+            # passes on one tree, one of which did not happen today. Audit 2026-08-03.
+            "recorded_at": time.time(),
             "tree_before": asdict(before),
             "tree_after": asdict(after),
         },
@@ -246,6 +258,24 @@ def cmd_twice() -> int:
     drift = describe_drift(before_1, before_2)
     if drift:
         problems.append("the two passes ran on DIFFERENT TREES")
+
+    # ...and on the same OCCASION. A record with no clock let a leftover slot certify a run
+    # that never happened: `make gate` alone rewrites slot 1, `gate-twice` never clears
+    # `.gate/`, so yesterday's slot 2 matched today's tree exactly and `twice` reported
+    # TWICE-GREEN over a single pass. Same shape as the drift bug, on the time axis.
+    stamps = [rec.get("recorded_at") for rec in (first, second)]
+    if any(not isinstance(s, int | float) for s in stamps):
+        problems.append(
+            "a pass carries no recorded_at — it predates this check; re-run `make gate-twice`"
+        )
+    else:
+        apart = abs(float(stamps[1]) - float(stamps[0]))  # type: ignore[arg-type]
+        if apart > _MAX_PASS_SEPARATION_S:
+            problems.append(
+                f"the two passes are {apart / 3600:.1f} h apart (max "
+                f"{_MAX_PASS_SEPARATION_S / 3600:.0f} h) — this is a stale slot, not a "
+                "twice-green; run `make gate-twice`"
+            )
 
     if not problems:
         sys.stdout.write(f"\n[TWICE-GREEN] both passes green, on ONE tree.\n  {before_1.line()}\n")
