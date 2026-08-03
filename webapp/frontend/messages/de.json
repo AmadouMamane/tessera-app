@@ -683,8 +683,10 @@
         "no-timestamp": "Über die gesamte Stichprobe berechnet (Clustering, Beurteiler-Übereinstimmung): ein Abschnitt der Eingabe ist keine verkleinerte Fassung, sondern eine andere, verrauschtere Messung.",
         "not-measured": "Für dieses Kontrollsignal ist auf der Zeitachse keine Quelle deklariert.",
         "too-slow": "Die Quelle dieses Kontrollsignals wurde abgefragt und antwortete nicht rechtzeitig — meist ein lokales Modell, das aus dem Speicher verdrängt wurde und dessen Nachladen mehr kostet als die Abfrage selbst. Die übrigen Kontrollsignale behalten ihre Kurve; dieses hat für dieses Fenster nichts zu zeichnen.",
-        "tooShort": "{n, plural, =0 {Keiner der {total} Abschnitte dieses Fensters trägt eine Messung} =1 {Nur einer der {total} Abschnitte dieses Fensters trägt eine Messung} other {{n} von {total} Abschnitten tragen eine Messung}} — jeder umfasst {width}. Für einen Verlauf sind zwei nötig: eine Linie durch einen einzigen Punkt würde behaupten, der Wert habe das ganze Fenster über gehalten."
-      }
+        "tooShort": "{n, plural, =0 {Keiner der {total} Abschnitte dieses Fensters trägt eine Messung} =1 {Nur einer der {total} Abschnitte dieses Fensters trägt eine Messung} other {{n} von {total} Abschnitten tragen eine Messung}} — jeder umfasst {width}. Für einen Verlauf sind zwei nötig: eine Linie durch einen einzigen Punkt würde behaupten, der Wert habe das ganze Fenster über gehalten.",
+        "unscoped-handler": "Die Stichproben dieses Controls sind mit Zeitstempeln versehen und sein Korpus ist nicht fest: Es fehlt ein Handler, der einen Zeitraum entgegennimmt, sodass „die letzten 30 Tage“ und „alles“ derselbe Aufruf sind. Eine Kurve ist hier möglich — sie ist nur noch nicht geschrieben."
+      },
+      "unscoped-handler": "Handler ohne Zeitraum"
     }
   },
   "chat": {
@@ -9398,11 +9400,17 @@
     "diagram": {
       "lead": "Drei Bereiche, klar getrennte Rollen und gesteuerte Interaktionen",
       "caption": "Die Bank, ihre Agenten, das Cockpit – und was zwischen ihnen zirkuliert.",
-      "agentFoundations": ["Fachlicher Kontext", "Regeln & Leitplanken"],
+      "agentFoundations": [
+        "Fachlicher Kontext",
+        "Regeln & Leitplanken"
+      ],
       "columns": [
         {
           "title": "Fachbereiche",
-          "items": ["Kundenportal · KI-Assistent", "Inkassobereich · Mitarbeitende"],
+          "items": [
+            "Kundenportal · KI-Assistent",
+            "Inkassobereich · Mitarbeitende"
+          ],
           "caption": "Fachliche Nutzung ohne Einblick in die Maschinerie"
         },
         {
@@ -9556,21 +9564,33 @@
           "title": "In Echtzeit überwachen.",
           "moment": "Kontinuierlich",
           "body": "Jeder Agent veröffentlicht kontinuierlich den Verlauf seiner Aktivität: Gespräche, Entscheidungen, Ergebnisse und technischen Zustand. Tessera durchsucht niemals das Innere eines Agenten — der Agent veröffentlicht, das Cockpit liest.",
-          "chips": ["Technologieunabhängig", "Daten mit Zeitstempel", "Transparente Aktualität"],
+          "chips": [
+            "Technologieunabhängig",
+            "Daten mit Zeitstempel",
+            "Transparente Aktualität"
+          ],
           "cta": "Flotte und Messungen erkunden"
         },
         {
           "title": "Jede Interaktion schützen.",
           "moment": "Während der Interaktion",
           "body": "Im Produktiveinsatz durchläuft jede Interaktion eine einzige Online-Kontrolle. Sie kann einen Angriff blockieren, sensible Daten maskieren, eine Anfrage ablehnen oder menschliches Eingreifen verlangen. Bekannte Umgehungen sind im Prüfharness dokumentiert — dreiundsechzig öffentliche Situationen, einschließlich noch offener Schwächen.",
-          "chips": ["Online-Kontrollen", "Angewandte Richtlinien", "Systematische Protokollierung"],
+          "chips": [
+            "Online-Kontrollen",
+            "Angewandte Richtlinien",
+            "Systematische Protokollierung"
+          ],
           "cta": "Kontrollen und Blockierungen ansehen"
         },
         {
           "title": "Vor dem Einsatz bewerten.",
           "moment": "Vor dem Einsatz",
           "body": "Bevor ein Agent Nutzern bereitgestellt wird, muss er seine Einsatzbereitschaft belegen. Er durchläuft eine Reihe von Prüfungen und erhält ein Freigabeurteil. Jede wesentliche Änderung macht sein Urteil neu bewertungsbedürftig. Ein Modell wird daran gemessen, was es gegenüber einer gemessenen Basis ohne Modell zusätzlich leistet — ein Rohwert reicht nicht.",
-          "chips": ["Bewertungsharness", "Gemeinsame Sicherheitsgrundlage", "Versioniertes Urteil"],
+          "chips": [
+            "Bewertungsharness",
+            "Gemeinsame Sicherheitsgrundlage",
+            "Versioniertes Urteil"
+          ],
           "cta": "Bewertungen und Urteile ansehen"
         },
         {

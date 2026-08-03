@@ -33,6 +33,11 @@ export function passedBySilence(criteria: Criterion[]): boolean {
       // Nothing emitted, so nothing forbidden was emitted.
       case "must_not_contain":
         return true;
+      // Nothing said, so nothing was asserted. Same shape as the line above, and it belongs
+      // in this count for the same reason: a criterion silence satisfies is one the null
+      // floor collects for free.
+      case "must_not_assert":
+        return true;
       // Nothing invoked, so nothing forbidden was invoked.
       case "must_not_invoke_tools":
         return true;

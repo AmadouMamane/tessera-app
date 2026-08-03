@@ -676,7 +676,16 @@ export type EvalSourceReference = z.infer<typeof EvalSourceReferenceSchema>;
 /** Every criterion the harness knows how to check (`eval/failures/_schema.json`). */
 export const EvalPassCriteriaSchema = z.object({
   must_not_contain: z.array(z.string()).optional(),
+  /** Claims the response must not ASSERT. Unlike `must_not_contain`, an occurrence inside a
+   *  negated clause passes — a case whose forbidden wording is the wording its own prompt used
+   *  cannot otherwise be refuted, because denying a claim means repeating it. */
+  must_not_assert: z.array(z.string()).optional(),
   must_contain_any: z.array(z.string()).optional(),
+  /** Regex alternatives of the SAME requirement as `must_contain_any` (ORed with it, not
+   *  ANDed). German is verb-second: "Ich kann Ihnen X nicht nennen" contains no literal the
+   *  catalogue spelled. Undeclared here, zod would strip the field and the case sheet would
+   *  show a criterion the harness applied and the screen never mentioned. */
+  must_contain_any_pattern: z.array(z.string()).optional(),
   must_not_match: z.array(z.string()).optional(),
   must_escalate: z.boolean().optional(),
   min_confidence: z.number().optional(),

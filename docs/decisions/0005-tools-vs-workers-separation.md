@@ -29,3 +29,47 @@ Unit tests target tools and workers separately. Tool tests exercise the action i
 Tools are reusable across worker topologies; if the orchestrator changes (LangGraph to a hypothetical successor, or a vendor-specific orchestrator on a partner deployment), tools port unchanged. Workers are testable without spinning up the real LLM. The separation makes the agent legible to a reader who has never seen Tessera before: they can read `tools/` to understand what the agent *can do*, and `workers/` to understand *how it decides what to do next*.
 
 The cost is one additional directory and one mental distinction to maintain. Pull requests that conflate the two are rejected with a pointer to this ADR. New contributors who do not yet have the distinction internalized are guided by the file layout itself — placing a function under `workers/` when it should be a tool, or vice versa, surfaces in review the moment the file path is read.
+
+## Amendment 1 (2026-08-03) — the binding was never wired
+
+The decision above stands. Its justification, in one sentence, did not.
+
+"The tool registry is assembled at agent startup and exposed to the LLM via LangGraph's
+tool-binding mechanism" describes something that has never existed in this repository. There
+is no `bind_tools`, no `tool_choice`, no `ToolNode` and no `tools=` anywhere in `src/`; the
+audit of 2026-08-03 looked for all four and found only this ADR, three docstrings and
+`CLAUDE.md` repeating the claim to one another. What the code actually does is this: a worker
+decides, in Python, that a tool is needed, builds its arguments in Python, and calls it
+through `guarded_invoke`. The model never emits a tool call and never sees a tool schema.
+
+Two honest ways out were available.
+
+**Wire the function-calling.** The five Pydantic input schemas are already stable contracts,
+`guarded_invoke` applies unchanged, and LangGraph supports it directly. It was not taken, and
+the reason is not effort: letting the model choose the tool changes what the agent *does*, so
+every number measured against the current agent — the null floor, the discrimination
+classification, the 63-case catalogue's pass rates — would describe a different system. That
+is a deliberate product change with its own evaluation campaign, not a correction.
+
+**Say what is true.** Taken. A Tessera *tool* is a **typed action target invoked by a worker**:
+a Python callable with a Pydantic-validated input schema, a frozen output type, no access to
+`AgentState`, and no knowledge of any wire format. A *worker* is a LangGraph node that decides
+which action to take and calls it.
+
+Every reason the separation was adopted survives the correction intact, because none of them
+depended on the model doing the choosing:
+
+* tools port unchanged if the orchestrator is replaced — still true, and *more* true when the
+  caller is ordinary Python;
+* workers are testable without a real LLM — still true;
+* a reader learns what the agent *can do* from `tools/` and *how it decides* from `workers/` —
+  still true;
+* the guard sits at exactly one chokepoint — still true, and it is the load-bearing one.
+
+What changes is the sentence in §Decision about tool-binding, and the "fake LLM that returns
+deterministic tool-call sequences" in §Decision's testing paragraph: worker tests drive the
+node directly, because there is no tool-call sequence to fake.
+
+If the function-calling is wired later, this amendment is the record of what it would cost:
+a fresh null floor, a fresh discrimination measurement, and a catalogue re-run — not a
+refactor.

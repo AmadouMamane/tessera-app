@@ -214,12 +214,17 @@ Tessera draws a hard line between two kinds of callable, documented in
 
 - **Workers** (`src/tessera/agent/workers/`) are LangGraph nodes. They are
   *orchestration*: the graph decides when they run, they read and write
-  `AgentState`, and the planner selects them. They are never exposed to the LLM
-  as function-call targets.
-- **Tools** (`src/tessera/agent/tools/`) are LLM-callable function-call targets
+  `AgentState`, and the planner selects them.
+- **Tools** (`src/tessera/agent/tools/`) are typed action targets
   (`account_balance`, `card_block`, `transaction_search`, `loan_simulate`,
   `ticket_escalate`). They have narrow typed signatures and side effects on
   banking systems.
+
+Neither is exposed to the model. A worker decides in Python which action to
+take, builds the arguments in Python, and calls it through the guard: there is
+no function-calling binding anywhere in `src/`, and this page said otherwise
+until 2026-08-03 (ADR 0005 §Amendment 1, which records what wiring it
+would cost).
 
 A worker may invoke a tool; a tool never invokes a worker. Keeping the two
 distinct is what lets the guard sit at exactly one boundary.

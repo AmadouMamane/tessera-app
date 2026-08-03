@@ -204,6 +204,13 @@ class SeriesReport:
 REASON_FIXED_CORPUS = "fixed-corpus"
 REASON_NO_TIMESTAMP = "no-timestamp"
 REASON_NOT_MEASURED = "not-measured"
+#: The fifth: the samples ARE timestamped and the corpus is not fixed — the handler simply
+#: takes no scope, so "the last 30 days" and "everything" are the same call. That is a
+#: signature away from a real curve, and calling it "fixed-corpus" (as `crossTenant` and
+#: `privilege` were until 2026-08-03) states a permanent property of the metric where the
+#: truth is an unfinished handler. The two read identically to an operator and mean opposite
+#: things to whoever has to fix it.
+REASON_UNSCOPED_HANDLER = "unscoped-handler"
 #: The fourth, and the only one that is about THIS RUN rather than about the metric: the source
 #: was asked and did not answer in time (:data:`SOURCE_TIMEOUT_S`). It says so instead of the
 #: control simply having no line, because those are different facts and only one of them is
@@ -255,13 +262,24 @@ def _sources() -> tuple[SeriesSource, ...]:
         SeriesSource("localeFormat", compliance.observability_locale_format),
         # Fixed-corpus probes. Re-running the same adversarial corpus against the same policy
         # inside a narrower window returns the same number — a flat line that reads as "stable"
-        # while being one measurement drawn once per slice. They earn a real curve only once their
-        # RUNS are durably recorded with the instant each ran at, which is what
-        # ``probe_history`` now does; a probe with runs inside the window is served from there.
+        # while being one measurement drawn once per slice. They earn a real curve only once
+        # their RUNS are durably recorded with the instant each ran at.
+        #
+        # That store does NOT exist. This comment used to say "which is what ``probe_history``
+        # now does", in the present tense, about a name that appears nowhere else in the
+        # repository — the comment was the only occurrence. Written down, in the present, it
+        # read as a completed piece of work; it is the piece of work that is missing.
         SeriesSource("refusal", None, REASON_FIXED_CORPUS),
         SeriesSource("firewall", None, REASON_FIXED_CORPUS),
-        SeriesSource("crossTenant", None, REASON_FIXED_CORPUS),
-        SeriesSource("privilege", None, REASON_FIXED_CORPUS),
+        # NOT fixed-corpus, whatever the label said until 2026-08-03. Both read per-turn
+        # samples, and those samples are timestamped: `detect_cross_tenant` walks turns,
+        # `analyze_privilege` walks tool calls. What they lack is a handler that takes
+        # (at, agent, days) — the same gap `citations`, `contradiction` and `localeFormat`
+        # had, and the same fix. Mislabelling them cost more than the missing curve: it filed
+        # a half-day of work as a property of the metric.
+        SeriesSource("crossTenant", None, REASON_UNSCOPED_HANDLER),
+        SeriesSource("privilege", None, REASON_UNSCOPED_HANDLER),
+        # A fixture, not a corpus — but the consequence for a curve is the same.
         SeriesSource("inversion", None, REASON_FIXED_CORPUS),
         # Whole-sample derivations: a k-means over failures, an inter-rater agreement, a
         # predictor's precision. Each needs the whole sample to mean anything, so a bucket of

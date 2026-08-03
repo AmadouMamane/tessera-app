@@ -161,3 +161,31 @@ def test_the_detector_has_teeth() -> None:
         "components/x/x-product-copy.ts", 'export const copy = { fr: { a: "Résumé" } };'
     )
     assert catalogued == []
+
+
+#: Files whose non-English literals are DATA and declare it with `@i18n-exempt <reason>`.
+#: Held by name, because an exemption is a place a defect can live and a count alone would let
+#: one file's exemption cover another's oversight.
+_EXEMPT_BY_DECLARATION: dict[str, str] = {
+    "lib/eval-criteria.ts": "the grader's negation markers, copied from eval/runner.py",
+}
+
+
+def test_every_i18n_exemption_is_declared_and_reasoned() -> None:
+    """The escape hatch is countable, named, and costs a reason."""
+    from scripts.audit.scan_i18n_mechanism import EXEMPT, FRONT, sources
+
+    declared: dict[str, str] = {}
+    for path in sources():
+        match = EXEMPT.search(path.read_text(encoding="utf-8"))
+        if match is not None:
+            declared[str(path.relative_to(FRONT))] = match.group("reason")
+
+    new = sorted(name for name in declared if name not in _EXEMPT_BY_DECLARATION)
+    assert not new, (
+        "these files exempt themselves from the i18n detector and are not in the frozen list. "
+        "An exemption is where a defect lives — add it here with what it is for, or use "
+        "next-intl:\n  " + "\n  ".join(new)
+    )
+    for reason in declared.values():
+        assert len(reason) > 20, f"an exemption's reason must say something: {reason!r}"

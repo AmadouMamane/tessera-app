@@ -41,6 +41,14 @@ LITERAL = re.compile(r"(?:`[^`\n]{4,}`|\"[^\"\n]{4,}\"|'[^'\n]{4,}')")
 #: reported. A detector with no case it must stay silent on will happily report everything.
 _PICKED_LINE = 160
 
+#: A file whose non-English literals are DATA, not rendered text, declares it — and must say
+#: why on the same line. `lib/eval-criteria.ts` is the first: it carries the grader's negation
+#: markers in three languages, copied token for token from `eval/runner.py`. They are compared
+#: against a model's answer, never shown to anybody, and translating them would break the
+#: grader. An exemption is a place a defect can live, so it costs a reason, it is counted, and
+#: `tests/unit/test_i18n_mechanism.py` holds the count.
+EXEMPT = re.compile(r"@i18n-exempt(?::)?\s+(?P<reason>\S.*\S)")
+
 
 def sources(front: Path = FRONT) -> list[Path]:
     """Every rendered `.ts`/`.tsx` under the frontend, tests and vendored trees excluded."""
@@ -64,7 +72,7 @@ def scan_text(rel: str, raw: str) -> tuple[list[dict[str, object]], int]:
     instead of on the tree — a witness that cannot be shown a defect it must catch is not a
     witness, it is a hope.
     """
-    if CATALOGUE_PATH.search(rel):
+    if CATALOGUE_PATH.search(rel) or EXEMPT.search(raw):
         return [], 0
     picks = len(PICK.findall(raw))
     # Blank out pick() calls so their arguments are not counted as hardcoded.

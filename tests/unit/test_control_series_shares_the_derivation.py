@@ -32,6 +32,7 @@ from tessera.observability.control_series import (
     REASON_FIXED_CORPUS,
     REASON_NO_TIMESTAMP,
     REASON_TOO_SLOW,
+    REASON_UNSCOPED_HANDLER,
     buckets_for_window,
     compute_control_series,
 )
@@ -202,10 +203,18 @@ async def test_a_fixed_corpus_probe_gets_no_line_and_says_which_reason() -> None
     metric while being one measurement, repeated.
     """
     report = await compute_control_series(Scope(period_days=7), n_buckets=8)
-    for key in ("refusal", "firewall", "crossTenant", "privilege", "inversion"):
+    for key in ("refusal", "firewall", "inversion"):
         assert report.unwindowed[key] == REASON_FIXED_CORPUS
         for bucket in report.buckets:
             assert key not in bucket.payload, f"{key} was bucketed despite being fixed-corpus"
+    # `crossTenant` and `privilege` carried that same label until 2026-08-03, and it was
+    # false: both read per-turn samples, and those samples are timestamped. What they lack is
+    # a handler that takes a period. Filing an unfinished handler as a property of the metric
+    # tells an operator "there will never be a curve here" about half a day of work.
+    for key in ("crossTenant", "privilege"):
+        assert report.unwindowed[key] == REASON_UNSCOPED_HANDLER
+        for bucket in report.buckets:
+            assert key not in bucket.payload, f"{key} was bucketed despite having no scope"
     for key in ("clusters", "calibration", "predictor"):
         assert report.unwindowed[key] == REASON_NO_TIMESTAMP
 

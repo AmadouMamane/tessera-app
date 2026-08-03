@@ -98,7 +98,7 @@ tessera/
 │       │   │   ├── account_lookup.py
 │       │   │   ├── simulator.py
 │       │   │   └── escalation.py
-│       │   ├── tools/                             # LLM-callable function-call targets
+│       │   ├── tools/                             # typed action targets (ADR 0005 §Amendment 1)
 │       │   │   ├── __init__.py
 │       │   │   ├── account_balance.py
 │       │   │   ├── card_block.py

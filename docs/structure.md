@@ -58,7 +58,7 @@ tessera/
 │       ├── agent/
 │       │   ├── graph.py / state.py / router.py / planner.py / reviewer.py / reporter.py
 │       │   ├── workers/                           # LangGraph nodes (orchestration)
-│       │   ├── tools/                             # LLM-callable function-call targets
+│       │   ├── tools/                             # typed action targets (ADR 0005 §Amendment 1)
 │       │   └── prompts/{fr,de,en}.yaml
 │       ├── memory/                                # agent memory (ADR 0007)
 │       ├── retrieval/                             # embeddings, store, chunking, reranking, hybrid_search
