@@ -184,7 +184,6 @@
     "loading": "Chargement…",
     "empty": "Aucun résultat.",
     "error": "Une erreur est survenue.",
-    "digest": "Référence technique : {digest}",
     "retry": "Réessayer",
     "close": "Fermer",
     "details": "Détails",

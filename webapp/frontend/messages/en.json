@@ -184,7 +184,6 @@
     "loading": "Loading…",
     "empty": "No results.",
     "error": "Something went wrong.",
-    "digest": "Technical reference: {digest}",
     "retry": "Retry",
     "close": "Close",
     "details": "Details",
