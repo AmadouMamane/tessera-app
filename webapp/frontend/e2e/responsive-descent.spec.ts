@@ -146,6 +146,14 @@ async function unreachableContent(page: Page): Promise<Unreachable[]> {
  *
  * It asks the geometric question and not a class-name question on purpose: `-z-10` in
  * a class string proves nothing about where the box ends up.
+ *
+ * AND IT SCANS EVERY ELEMENT, not `[aria-hidden='true']`, which is what it did for one
+ * commit. That attribute is on the band because the FIX put it there — so the detector
+ * could only ever see the band it was written against, and pointed at the broken build
+ * it reported "the wave band was not found at all" instead of the 127 px collision that
+ * was right there. A witness keyed to its own repair recognises nothing else (ADR 0026).
+ * What identifies a decorative band is what it IS: a big absolutely-positioned box
+ * carrying a background image. The size floor keeps icons and avatars out.
  */
 async function decorationUnderFooter(
   page: Page,
@@ -155,10 +163,10 @@ async function decorationUnderFooter(
     const fr = footer?.getBoundingClientRect();
     let bands = 0;
     let overlap = 0;
-    for (const el of document.querySelectorAll("[aria-hidden='true']")) {
+    for (const el of document.querySelectorAll("body *")) {
       const style = getComputedStyle(el);
       if (style.position !== "absolute" && style.position !== "fixed") continue;
-      if (style.backgroundImage === "none" || Number(style.opacity) === 0) continue;
+      if (!style.backgroundImage.includes("url(") || Number(style.opacity) === 0) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 200 || r.height < 40) continue;
       bands++;

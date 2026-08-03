@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { TesseraLogo, TesseraMark } from "@/components/brand/tessera-logo";
+import { LauncherWaves } from "@/components/landing/launcher-waves";
 import { DemoBadge } from "@/components/layout/demo-badge";
 import { Link } from "@/i18n/navigation";
 import { demoCredentials } from "@/lib/auth/accounts";
@@ -32,20 +33,10 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
         className="pointer-events-none absolute inset-0"
         style={{ background: "var(--launcher-backdrop-auth)" }}
       />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[300px]"
-        style={{
-          backgroundImage: "url('/assets/tessera-waves-band.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center bottom",
-          backgroundSize: "100% 100%",
-          /* 0.7 of whatever the theme allows: full-strength artwork on the dark
-             themes, softened under "Clair". */
-          opacity: "calc(var(--launcher-waves-opacity) * 0.7)",
-          maskImage: "linear-gradient(to top, #000 48%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to top, #000 48%, transparent 100%)",
-        }}
-      />
+      {/* `anchor="page"`: this page has no footer, so the band belongs at the bottom of
+          the page itself — and being a sibling of the backdrop above, it cannot use the
+          negative layer the other two do. 0.7 keeps the artwork under the sign-in card. */}
+      <LauncherWaves anchor="page" strength={0.7} fadeFrom="48%" />
 
       <header className="relative z-10 flex min-h-[82px] items-center justify-between border-b border-[var(--border-subtle)] px-6 lg:px-10">
         <Link href="/select-space" className="rounded-md outline-none focus-visible:ring-2">
