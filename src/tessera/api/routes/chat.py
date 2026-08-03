@@ -57,13 +57,10 @@ from tessera.api.session import (
 from tessera.authz import AuthState
 from tessera.guard import grounding
 from tessera.guard.audit import (
-    confirmed_tools,
-    current_auth_state,
     current_model,
-    current_tool_call_counts,
     emit_handoff,
     emit_routing,
-    guard_disabled,
+    install_turn_context,
 )
 from tessera.guard.redaction import (
     StreamingRedactor,
@@ -945,17 +942,21 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         system_prompt_override=system_prompt_override,
         guard_overrides=guard_overrides,
     )
-    # Propagate sandbox guard toggles to the guard layer for this turn only.
-    guard_disabled.set(frozenset(guard_overrides or ()))
-    # Publish the server-derived auth-state so the guard's tool allowlist gates
-    # account/PII tools on the real session (anonymous → denied, customer → ok).
-    current_auth_state.set(auth_state)
-    # A human confirmation is a fact the SERVER established, never a claim the caller made.
-    # The token was minted only when the guard refused a call and a prompt was shown; it is
-    # bound to this conversation, this tool and this card. An absent, forged, expired or
-    # foreign token simply leaves the map empty, and the guard denies exactly as before.
-    confirmed_tools.set(_verified_confirmations(request.confirmation_token, conversation_id))
-    current_tool_call_counts.set({})
+    # The guard's per-turn ambient state, installed at the ONE seam every turn path shares
+    # (tessera.guard.audit.turn_context). It publishes the server-derived auth-state so the
+    # tool allowlist gates account/PII tools on the real session, the sandbox guard toggles,
+    # a fresh call-count map, and the human confirmations — which are facts the SERVER
+    # established: the token was minted only when the guard refused a call and a prompt was
+    # shown, and is bound to this conversation, this tool and this card. An absent, forged,
+    # expired or foreign token leaves the map empty and the guard denies exactly as before.
+    #
+    # Set rather than scoped: this generator streams, so the state must outlive the body that
+    # prepares it. The contextvars are task-local, so the turn's copies die with the request.
+    install_turn_context(
+        auth_state=auth_state,
+        confirmations=_verified_confirmations(request.confirmation_token, conversation_id),
+        guard_overrides=guard_overrides or (),
+    )
     # Per-turn agent attribution: the supervisor routes this turn to an agent
     # (parcours by default; an intent can trigger a governed handoff). The chosen
     # agent handles the whole turn and is stamped on every event, metric and

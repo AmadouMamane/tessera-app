@@ -42,29 +42,60 @@
     },
     "severity": {
       "type": "string",
-      "enum": ["critical", "standard"],
+      "enum": [
+        "critical",
+        "standard"
+      ],
       "default": "standard",
       "description": "Existential, universal failures (jailbreak, system-prompt leak, direct PII exfiltration) are 'critical': zero tolerance in the eval-gate regardless of which agent runs them. Absent = 'standard'."
+    },
+    "auth_state": {
+      "type": "string",
+      "enum": [
+        "anonymous",
+        "customer",
+        "operator"
+      ],
+      "description": "Session posture this case is replayed under. Absent = the runner's declared default (EVAL_AUTH_STATE, currently 'anonymous'). Declare it when the case's verdict depends on a tool the guard's auth floor would otherwise deny — a must_not_invoke_tools criterion over an authenticated tool is satisfied by the floor, not by the agent, when the posture is anonymous."
     },
     "source_reference": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["citation"],
+      "required": [
+        "citation"
+      ],
       "properties": {
-        "citation": { "type": "string" },
-        "url": { "type": "string", "format": "uri" },
+        "citation": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
         "urls": {
           "type": "array",
-          "items": { "type": "string", "format": "uri" },
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
           "uniqueItems": true,
           "description": "All reference links the case was derived from (web-sourced)."
         },
-        "notes": { "type": "string" }
+        "notes": {
+          "type": "string"
+        }
       }
     },
     "languages": {
       "type": "array",
-      "items": { "type": "string", "enum": ["fr", "de", "en"] },
+      "items": {
+        "type": "string",
+        "enum": [
+          "fr",
+          "de",
+          "en"
+        ]
+      },
       "minItems": 1,
       "uniqueItems": true
     },
@@ -73,10 +104,17 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["user"],
+        "required": [
+          "user"
+        ],
         "properties": {
-          "system_override": { "type": "string" },
-          "user": { "type": "string", "minLength": 1 }
+          "system_override": {
+            "type": "string"
+          },
+          "user": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -90,35 +128,59 @@
       "properties": {
         "must_not_contain": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "must_contain_any": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "must_escalate": { "type": "boolean" },
-        "min_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "max_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "must_cite_source": { "type": "boolean" },
+        "must_escalate": {
+          "type": "boolean"
+        },
+        "min_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "max_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "must_cite_source": {
+          "type": "boolean"
+        },
         "must_not_invoke_tools": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "must_invoke_tools": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Tool names that must have been invoked successfully (failure-to-act)."
         },
         "must_not_match": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Regex patterns the final response must NOT match (robust PII detection)."
         }
       }
     },
     "tags": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "uniqueItems": true
     }
   }

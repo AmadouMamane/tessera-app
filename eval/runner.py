@@ -27,6 +27,8 @@ from eval.sets import EvalSet, critical_case_ids, load_eval_set
 from tessera.agent import compile_graph
 from tessera.agent.registry import get_agent
 from tessera.agent.state import new_state
+from tessera.authz import AuthState
+from tessera.guard.audit import turn_context
 from tessera.llm.budget import get_budget_tracker
 from tessera.observability.eval.report_paths import reports_write_dir
 from tessera.observability.eval_gate_view import structural_gate
@@ -36,6 +38,26 @@ FAILURES_DIR = Path(__file__).parent / "failures"
 SCHEMA_PATH = FAILURES_DIR / "_schema.json"
 # Writes go to eval/reports/<env>/ exclusively (ADR 0014, layer 3).
 REPORTS_DIR = Path(__file__).parent / "reports"
+
+#: The session posture the harness replays cases under, unless a case declares its own.
+#:
+#: ANONYMOUS is what the runner has ALWAYS measured — not by choice but by omission, because
+#: nothing installed the guard's turn context and ``current_auth_state`` defaults to it. It is
+#: kept, because the frozen baselines were captured under it and moving it here would
+#: invalidate them without saying so. It is now written down, so the next reader can see which
+#: posture produced the numbers instead of having to derive it from an absence.
+#:
+#: The consequence is worth stating plainly: under ANONYMOUS the guard denies every tool
+#: declaring ``require_auth``, so a ``must_not_invoke_tools`` criterion over those tools is
+#: satisfied by the auth floor and not by the agent's judgement. See
+#: ``tests/unit/test_eval_posture_is_declared.py``.
+EVAL_AUTH_STATE = AuthState.ANONYMOUS
+
+
+def _auth_state_for(case: dict[str, object]) -> AuthState:
+    """The posture a case is replayed under — declared, never inherited from a default."""
+    declared = case.get("auth_state")
+    return AuthState(declared) if isinstance(declared, str) else EVAL_AUTH_STATE
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,7 +260,22 @@ async def _run_case(case: dict[str, object], language: str, model: str | None = 
     graph = compile_graph()
     started = datetime.now(UTC)
     try:
-        final_state = await graph.ainvoke(initial)
+        # THE HARNESS NOW DECLARES THE POSTURE IT MEASURES (audit 2026-08-03).
+        #
+        # ``current_auth_state`` and ``current_tool_call_counts`` were installed in exactly one
+        # place, the /chat route, so this runner invoked the graph with neither: the auth floor
+        # saw the ANONYMOUS default and ``max_calls_per_turn`` was not enforced at all (the
+        # guard only counts ``if counts is not None``). Every account tool was therefore denied
+        # in every case, and the harness reported on a posture no real turn ever has.
+        #
+        # The posture is kept ANONYMOUS — that is what was measured, and the frozen baselines
+        # (null-control, discrimination) were captured under it, so changing it here would
+        # invalidate them silently. What changes is that it is now DECLARED rather than
+        # inherited from a default nobody chose, per case, and stamped into the report so a
+        # reader can see which posture produced the numbers. ``EVAL_AUTH_STATE`` is the one
+        # place to change it, deliberately, with the baselines re-measured in the same commit.
+        with turn_context(auth_state=_auth_state_for(case)):
+            final_state = await graph.ainvoke(initial)
     except Exception as exc:  # one case must never crash the whole language run
         ended = datetime.now(UTC)
         return CaseResult(
@@ -481,6 +518,11 @@ async def _run_all(args: argparse.Namespace) -> int:
                 "agent_id": args.agent,
                 "eval_set": eval_set.slug if eval_set is not None else None,
                 "catalogue_version": catalogue_version,
+                # The session posture the run measured. Absent from every report before
+                # 2026-08-03, because nothing installed the guard's turn context and the
+                # posture was whatever the contextvar defaulted to. A number whose posture
+                # is unstated cannot be compared with one taken under another.
+                "auth_state": EVAL_AUTH_STATE.value,
                 "summary": asdict(scorecard.summary),
                 "gate": gate_payload,
                 "policy_gate": policy_gate,

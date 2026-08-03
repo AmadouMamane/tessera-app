@@ -30,6 +30,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -42,7 +43,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 from tessera.authz import Actor, AuthState
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Iterator, Mapping
 
     from tessera.agent.state import GuardDecisionRecord
 
@@ -78,6 +79,8 @@ __all__ = [
     "emit_ledger_seal",
     "emit_routing",
     "guard_disabled",
+    "install_turn_context",
+    "turn_context",
     "validate_audit_chain_config",
     "verify_audit_chain",
 ]
@@ -283,6 +286,67 @@ confirmed_tools: ContextVar[Mapping[str, str | None]] = ContextVar(
 current_tool_call_counts: ContextVar[dict[str, int] | None] = ContextVar(
     "tessera_tool_call_counts", default=None
 )
+
+
+def install_turn_context(
+    *,
+    auth_state: AuthState = AuthState.ANONYMOUS,
+    confirmations: Mapping[str, str | None] | None = None,
+    guard_overrides: Iterable[str] = (),
+) -> None:
+    """Set the guard's per-turn ambient state in the CURRENT context, without unsetting it.
+
+    For the streaming route, whose generator outlives the function that prepares the turn:
+    the contextvars are task-local, so the turn's copies die with the request task. Everywhere
+    else prefer :func:`turn_context`, which scopes them. See it for why this seam exists.
+    """
+    current_auth_state.set(auth_state)
+    confirmed_tools.set(dict(confirmations or {}))
+    current_tool_call_counts.set({})
+    guard_disabled.set(frozenset(guard_overrides))
+
+
+@contextmanager
+def turn_context(
+    *,
+    auth_state: AuthState = AuthState.ANONYMOUS,
+    confirmations: Mapping[str, str | None] | None = None,
+    guard_overrides: Iterable[str] = (),
+) -> Iterator[None]:
+    """Install the guard's per-turn ambient state, and take it back down afterwards.
+
+    **A guarantee carried by ambient state reaches exactly as far as whoever sets it.**
+    ``current_auth_state`` and ``current_tool_call_counts`` were posted in exactly one place —
+    the ``/chat`` route — and the guard reads ``max_calls_per_turn`` only ``if counts is not
+    None``. So on every other path that runs the graph (the eval harness, the recouvrement
+    workflow, any programmatic invocation) the per-turn call ceiling did not exist, and the
+    auth floor saw the ``ANONYMOUS`` default. Measured: ``loan_simulate`` ran 6/6 times under
+    a limit of 5 with no context installed, and 5/6 with it.
+
+    That is an argument about the caller, not about the tool — which is what makes it a
+    defect rather than a policy. This context manager is the one seam every turn goes
+    through, so the reach of the guarantee stops being a property of who remembered to set
+    it up. Audit 2026-08-03.
+
+    Args:
+        auth_state: the SERVER-derived session posture. Never read from a request body.
+        confirmations: verified human approvals, tool → the argument value the approval was
+            bound to. Only a server-minted, server-verified token may produce one.
+        guard_overrides: sandbox categories disabled for this turn (operator surfaces only).
+    """
+    tokens = (
+        current_auth_state.set(auth_state),
+        confirmed_tools.set(dict(confirmations or {})),
+        current_tool_call_counts.set({}),
+        guard_disabled.set(frozenset(guard_overrides)),
+    )
+    try:
+        yield
+    finally:
+        current_auth_state.reset(tokens[0])
+        confirmed_tools.reset(tokens[1])
+        current_tool_call_counts.reset(tokens[2])
+        guard_disabled.reset(tokens[3])
 
 
 def _record_to_dict(record: GuardDecisionRecord) -> dict[str, Any]:

@@ -40,8 +40,9 @@ from tessera.api.security import actor_of, require_collections_operator
 from tessera.api.session import (
     SessionContext,  # noqa: TCH001  — FastAPI resolves Annotated at runtime
 )
-from tessera.authz import Surface
+from tessera.authz import AuthState, Surface
 from tessera.guard.adapter import check_user_input
+from tessera.guard.audit import turn_context
 from tessera.guard.redaction import apply_output_guard, mask_pan
 from tessera.memory.transcript import append_messages
 from tessera.settings import LanguageCode, get_settings
@@ -207,16 +208,22 @@ async def recouvrement_assistant_message(
             detail="message refused by the input guard",
         )
     started = time.perf_counter()
-    result = await run_in_threadpool(
-        run_recouvrement_graph_v1,
-        case_id=payload.case_id,
-        message=check.sanitised_text,
-        assistant_state=payload.assistant_state,
-        conversation_id=payload.conversation_id,
-        turn_id=payload.turn_id,
-        surface=payload.surface,
-        language=payload.language,
-    )
+    # The guard's per-turn state, on this plane too (audit 2026-08-03). It was installed only
+    # in /chat, so this workflow ran with no call-count map at all — meaning
+    # `max_calls_per_turn` was not enforced here, and the auth floor saw the ANONYMOUS default
+    # for a turn a verified collections operator had just authenticated. `run_in_threadpool`
+    # copies the context, so the state reaches the graph.
+    with turn_context(auth_state=AuthState.OPERATOR):
+        result = await run_in_threadpool(
+            run_recouvrement_graph_v1,
+            case_id=payload.case_id,
+            message=check.sanitised_text,
+            assistant_state=payload.assistant_state,
+            conversation_id=payload.conversation_id,
+            turn_id=payload.turn_id,
+            surface=payload.surface,
+            language=payload.language,
+        )
     latency_ms = (time.perf_counter() - started) * _MS_PER_SECOND
     guarded = _guard_visible_reply(result, language=payload.language)
     await _persist_recouvrement_turn(payload, guarded, latency_ms)
