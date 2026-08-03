@@ -513,11 +513,18 @@ class PersistentBackend(SummaryBackend):
         """Erase every trace of the subject (GDPR Art. 17), on the backend's own protocol path.
 
         Distinct from the operator's ``DELETE /memory/{id}``, which threads the *human* who
-        ordered it. Nothing in ``src/`` currently calls this — the HTTP erasure goes straight to
-        :func:`~tessera.memory.governance.erase_subject` — so the honest actor here is the
-        backend itself. If a future caller routes a human's erasure through this method, the
-        actor must be threaded from that caller's verified session, not left as this one:
-        ``system:memory-backend-forget`` appearing in the trail for an act a person ordered is
-        precisely the mis-attribution this whole lane exists to make impossible.
+        ordered it. The honest actor here is the backend itself. If a future caller routes a
+        human's erasure through this method, the actor must be threaded from that caller's
+        verified session, not left as this one: ``system:memory-backend-forget`` appearing in
+        the trail for an act a person ordered is precisely the mis-attribution this whole lane
+        exists to make impossible.
+
+        The scope's ``subject_id`` is passed explicitly. It is the key this backend WROTE
+        under, so handing it over removes any dependence on resolving it back out of a
+        transcript that a prior erasure may already have cleared.
         """
-        await governance.erase_subject(scope.conversation_id, actor=_BACKEND_FORGET_ACTOR)
+        await governance.erase_subject(
+            scope.conversation_id,
+            actor=_BACKEND_FORGET_ACTOR,
+            subject_id=scope.subject_id,
+        )

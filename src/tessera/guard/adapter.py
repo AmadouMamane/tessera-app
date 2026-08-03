@@ -106,6 +106,74 @@ class GuardedResult:
 # ---------------------------------------------------------------------------
 
 
+def _check_confirmation(policy: ToolPolicy, arguments: dict[str, object]) -> Decision | None:
+    """Refuse an irreversible act that no human approved, or approved for something else.
+
+    Two distinct refusals, because they are two distinct facts and a regulator reading the
+    ledger must be able to tell them apart: *nobody confirmed this*, and *somebody confirmed
+    a different one*.
+    """
+    if not policy.requires_confirmation:
+        return None
+    confirmed = confirmed_tools.get()
+    if policy.name not in confirmed:
+        return Decision(
+            kind=DecisionKind.DENY,
+            rule=f"tool.{policy.name}.requires_confirmation",
+            rationale=(
+                f"tool {policy.name!r} requires an explicit human confirmation "
+                "from the action-control channel"
+            ),
+        )
+    if policy.confirmation_binds is None:
+        return None
+    # An approval is for ONE act. The human was shown a specific card; blocking a different
+    # one is a decision they were never asked about.
+    approved = confirmed.get(policy.name)
+    presented = arguments.get(policy.confirmation_binds)
+    if approved is not None and presented is not None and str(presented) == approved:
+        return None
+    return Decision(
+        kind=DecisionKind.DENY,
+        rule=f"tool.{policy.name}.confirmation_binding",
+        rationale=(
+            f"the human confirmation for {policy.name!r} was bound to a different "
+            f"{policy.confirmation_binds!r} than the one presented"
+        ),
+    )
+
+
+def _check_arguments(policy: ToolPolicy, arguments: dict[str, object]) -> list[Decision]:
+    """Validate declared arguments — including the ones that are simply not there."""
+    decisions: list[Decision] = []
+    for arg_name, arg_rule in policy.arguments.items():
+        value = arguments.get(arg_name)
+        if value is None:
+            if arg_rule.required:
+                decisions.append(
+                    Decision(
+                        kind=DecisionKind.DENY,
+                        rule=f"tool.{policy.name}.argument.{arg_name}.required",
+                        rationale=(
+                            f"argument {arg_name!r} is required by policy and was absent; "
+                            "an unvalidated call is not a validated one"
+                        ),
+                    )
+                )
+            continue
+        if arg_rule.pattern is not None and not arg_rule.pattern.fullmatch(str(value)):
+            decisions.append(
+                Decision(
+                    kind=DecisionKind.DENY,
+                    rule=f"tool.{policy.name}.argument.{arg_name}",
+                    rationale=(
+                        f"argument {arg_name!r} did not match the configured validation pattern"
+                    ),
+                )
+            )
+    return decisions
+
+
 def _check_tool(
     policy: ToolPolicy,
     arguments: dict[str, object],
@@ -150,35 +218,11 @@ def _check_tool(
             )
         ]
 
-    if policy.requires_confirmation and policy.name not in confirmed_tools.get():
-        return [
-            Decision(
-                kind=DecisionKind.DENY,
-                rule=f"tool.{policy.name}.requires_confirmation",
-                rationale=(
-                    f"tool {policy.name!r} requires an explicit human confirmation "
-                    "from the action-control channel"
-                ),
-            )
-        ]
+    confirmation_denial = _check_confirmation(policy, arguments)
+    if confirmation_denial is not None:
+        return [confirmation_denial]
 
-    decisions: list[Decision] = []
-    for arg_name, arg_rule in policy.arguments.items():
-        if arg_rule.pattern is None:
-            continue
-        value = arguments.get(arg_name)
-        if value is None:
-            continue
-        if not arg_rule.pattern.fullmatch(str(value)):
-            decisions.append(
-                Decision(
-                    kind=DecisionKind.DENY,
-                    rule=f"tool.{policy.name}.argument.{arg_name}",
-                    rationale=(
-                        f"argument {arg_name!r} did not match the configured " "validation pattern"
-                    ),
-                )
-            )
+    decisions: list[Decision] = _check_arguments(policy, arguments)
 
     counts = current_tool_call_counts.get()
     if not decisions and counts is not None:

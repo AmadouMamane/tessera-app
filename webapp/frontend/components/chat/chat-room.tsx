@@ -118,6 +118,9 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
   const [pendingConfirmation, setPendingConfirmation] = useState<{
     tool: "card_block";
     card_last_four: string;
+    // The server's proof that it offered this exact action for approval. The button echoes
+    // it back; nothing the browser can invent stands in for it.
+    confirmation_token: string;
   } | null>(null);
 
   const {
@@ -127,6 +130,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
     start,
     startAssistant,
     appendToken,
+    replaceAssistantContent,
     finalizeAssistant,
     setError,
     setStreaming,
@@ -187,7 +191,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
   }, []);
 
   const sendMessage = useCallback(
-    async (text: string, confirmedTools?: Array<"card_block">) => {
+    async (text: string, confirmationToken?: string) => {
       // Snapshot history BEFORE appendUser modifies the store, and read
       // conversationId directly from the store so truncateFromMessage's
       // synchronous reset is always visible here.
@@ -254,7 +258,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
             conversation_id: currentConvId ?? undefined,
             subject_id: getSubjectId(),
             history: history.length > 0 ? history : undefined,
-            confirmed_tools: confirmedTools,
+            confirmation_token: confirmationToken,
           },
           {
             signal: controller.signal,
@@ -267,6 +271,22 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
               if (rafId === null) {
                 rafId = requestAnimationFrame(flushTokens);
               }
+            },
+            onCorrection: (correction) => {
+              // The grounding guard replaced the streamed answer. Drop what was buffered
+              // and show the vetted text right away rather than letting an unsupported
+              // claim sit on screen until the envelope lands.
+              if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+              }
+              tokenBuffer = "";
+              if (assistantId === null) assistantId = crypto.randomUUID();
+              if (!bubbleCreated) {
+                ensureAssistantBubble(assistantId);
+                bubbleCreated = true;
+              }
+              replaceAssistantContent(correction.final_response);
             },
             onEnd: (envelope) => {
               // Flush any tokens buffered in the pending frame before finalizing.
@@ -323,6 +343,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
     [
       appendUser,
       appendToken,
+      replaceAssistantContent,
       finalizeAssistant,
       locale,
       setError,
@@ -476,7 +497,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                           t("confirmCardBlockMessage", {
                             lastFour: pendingConfirmation.card_last_four,
                           }),
-                          ["card_block"],
+                          pendingConfirmation.confirmation_token,
                         )
                       }
                       className="mb-3 inline-flex items-center gap-2 rounded-lg bg-navy-900 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-navy-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500"

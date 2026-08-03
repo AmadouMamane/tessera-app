@@ -38,7 +38,7 @@ async def test_card_block_requires_then_accepts_explicit_control_confirmation() 
         assert "Confirmez explicitement" in cast("str", pending["draft_response"])
 
         current_tool_call_counts.set({})
-        confirm_token = confirmed_tools.set(frozenset({"card_block"}))
+        confirm_token = confirmed_tools.set({"card_block": "4242"})
         try:
             completed = await run(_state("Je confirme : bloquez ma carte 4242", "card_block"))
         finally:

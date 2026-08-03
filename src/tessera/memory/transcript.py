@@ -48,6 +48,7 @@ __all__ = [
     "last_agent_for",
     "list_conversations",
     "load_transcript",
+    "subject_ids_for",
     "turn_agent_and_synthetic",
 ]
 
@@ -420,8 +421,43 @@ async def count_user_turns_since(since: datetime) -> int:
     return int(row["turns"]) if row is not None else 0
 
 
-async def delete_transcript(conversation_id: UUID) -> None:
-    """Delete the entire transcript for a conversation (GDPR Art. 17)."""
+async def subject_ids_for(conversation_id: UUID) -> tuple[str, ...]:
+    """Return the subject keys a conversation's turns were written under.
+
+    **This is the transcript answering the one question erasure cannot guess.** Long-term
+    memory and consent are keyed by ``subject_id``; the turn seam writes that key from the
+    verified session (``session.subject_id``), falling back to the conversation id only when
+    there is no subject (ADR 0007, "Identity"). An erasure that assumes the fallback therefore
+    deletes nothing for every authenticated customer — while reporting success.
+
+    The transcript is the single witness of turns (ADR 0040), and it is the only table that
+    records BOTH ids on the same row, so it is the only thing that can map one to the other.
+    Read it **before** deleting it: the delete destroys the witness.
+
+    Returns the distinct non-null keys, ordered, so the result is stable to compare and to log.
+    A conversation normally yields one; it can yield more if a subject was resolved mid-thread,
+    and erasing under all of them is the only complete answer.
+    """
+    query = sql.SQL(
+        "SELECT DISTINCT subject_id FROM {table} "
+        "WHERE conversation_id = %s AND subject_id IS NOT NULL;"
+    ).format(table=_memory_table(_TABLE))
+    pool = get_pool()
+    if pool.closed:
+        await pool.open()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(query, (conversation_id,))
+        rows = await cur.fetchall()
+    return tuple(sorted(str(row["subject_id"]) for row in rows))
+
+
+async def delete_transcript(conversation_id: UUID) -> int:
+    """Delete the entire transcript for a conversation (GDPR Art. 17); return the row count.
+
+    The count is what makes the erasure provable: a deletion that touches nothing and a
+    deletion that clears twelve turns are the same 204 to the caller, and only one of them
+    is an erasure.
+    """
     query = sql.SQL("DELETE FROM {table} WHERE conversation_id = %s;").format(
         table=_memory_table(_TABLE)
     )
@@ -430,4 +466,6 @@ async def delete_transcript(conversation_id: UUID) -> None:
         await pool.open()
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(query, (conversation_id,))
+        deleted = cur.rowcount or 0
         await conn.commit()
+    return deleted

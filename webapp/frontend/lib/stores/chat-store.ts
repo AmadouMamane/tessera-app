@@ -46,6 +46,11 @@ interface ChatState {
   appendUser: (content: string) => ChatMessage;
   startAssistant: (turnId: string) => void;
   appendToken: (token: string) => void;
+  /**
+   * Replace the streaming bubble's whole content. Used when the grounding guard refuses
+   * what was streamed: the answer is not extended, it is withdrawn and replaced.
+   */
+  replaceAssistantContent: (content: string) => void;
   finalizeAssistant: (message: Omit<ChatMessage, "createdAt" | "role">) => void;
   setError: (message: string) => void;
   setStreaming: (streaming: boolean) => void;
@@ -118,6 +123,16 @@ export const useChatStore = create<ChatState>()(
           const last = messages[messages.length - 1];
           if (last?.role === "assistant") {
             messages[messages.length - 1] = { ...last, content: last.content + token };
+          }
+          return { messages };
+        }),
+
+      replaceAssistantContent: (content) =>
+        set((state) => {
+          const messages = [...state.messages];
+          const last = messages[messages.length - 1];
+          if (last?.role === "assistant") {
+            messages[messages.length - 1] = { ...last, content };
           }
           return { messages };
         }),

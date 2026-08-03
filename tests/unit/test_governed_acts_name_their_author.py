@@ -140,11 +140,17 @@ def ledger(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[dict[str, Any]]]:
     async def _none_list(*_a: object, **_k: object) -> list[object]:
         return []
 
-    # Under erase_subject — never erase_subject itself.
+    async def _no_keys(*_a: object, **_k: object) -> tuple[str, ...]:
+        return ()
+
+    # Under erase_subject — never erase_subject itself. The deletes count rows now, so the
+    # stubs must return counts: a receipt built from None would fail while summing, and the
+    # point of this test is the AUTHOR, not the arithmetic.
+    monkeypatch.setattr("tessera.memory.transcript.subject_ids_for", _no_keys)
     monkeypatch.setattr("tessera.memory.persistent.delete_subject", _one)
-    monkeypatch.setattr("tessera.memory.summary.delete_summary", _n)
-    monkeypatch.setattr("tessera.memory.transcript.delete_transcript", _n)
-    monkeypatch.setattr("tessera.memory.governance.delete_consent", _n)
+    monkeypatch.setattr("tessera.memory.summary.delete_summary", _one)
+    monkeypatch.setattr("tessera.memory.transcript.delete_transcript", _one)
+    monkeypatch.setattr("tessera.memory.governance.delete_consent", _one)
     monkeypatch.setattr("tessera.observability.erasure.purge_telemetry", lambda _s: None)
     # Under the other four routes.
     monkeypatch.setattr("tessera.memory.persistent.list_subject_memories", _none_list)

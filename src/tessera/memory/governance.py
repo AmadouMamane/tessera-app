@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from tessera.authz import Actor
 
 __all__ = [
+    "ErasureReceipt",
     "ScreenResult",
     "audit_memory",
     "consent_allows",
@@ -50,6 +51,7 @@ __all__ = [
     "purge_posture",
     "screen_memory",
     "set_consent",
+    "subject_keys_for",
     "ttl_for",
 ]
 
@@ -276,8 +278,8 @@ async def set_consent(subject_id: str, *, granted: bool) -> None:
         await conn.commit()
 
 
-async def delete_consent(subject_id: str) -> None:
-    """Delete the consent row for ``subject_id`` (part of GDPR erasure)."""
+async def delete_consent(subject_id: str) -> int:
+    """Delete the consent row for ``subject_id`` (part of GDPR erasure); return the row count."""
     query = sql.SQL("DELETE FROM {table} WHERE subject_id = %s;").format(
         table=_memory_table(_CONSENT_TABLE)
     )
@@ -286,38 +288,131 @@ async def delete_consent(subject_id: str) -> None:
         await pool.open()
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(query, (subject_id,))
+        deleted = cur.rowcount or 0
         await conn.commit()
+    return deleted
 
 
-async def erase_subject(conversation_id: UUID, *, actor: Actor) -> None:
+@dataclass(frozen=True, slots=True)
+class ErasureReceipt:
+    """What an erasure actually removed, per layer — the proof a 204 cannot carry.
+
+    A deletion that touched nothing and a deletion that cleared a person's whole record are
+    indistinguishable to an HTTP caller, and were indistinguishable in the audit trail too:
+    both sealed ``memory.forget / allow``. The counts are what let a DPO replay the claim, and
+    what let a regression be seen — an erasure silently reaching zero rows is the failure mode
+    this receipt exists to expose.
+    """
+
+    #: The subject keys the erasure ran under — resolved, never assumed.
+    subject_keys: tuple[str, ...]
+    long_term: int = 0
+    consent: int = 0
+    summary: int = 0
+    transcript: int = 0
+
+    @property
+    def total(self) -> int:
+        """Rows removed across every layer."""
+        return self.long_term + self.consent + self.summary + self.transcript
+
+    def describe(self) -> str:
+        """A one-line, stable rendering for the audit rationale."""
+        keys = ",".join(self.subject_keys) or "<none>"
+        return (
+            f"subject erasure (GDPR Art. 17): keys={keys} "
+            f"long_term={self.long_term} consent={self.consent} "
+            f"summary={self.summary} transcript={self.transcript}"
+        )
+
+
+async def subject_keys_for(conversation_id: UUID) -> tuple[str, ...]:
+    """Resolve every subject key a conversation's data could be stored under.
+
+    The conversation id itself is always included: it is the key ``scope_for`` falls back to
+    when there is no authenticated subject, so anonymous threads genuinely live under it. The
+    keys recorded on the transcript are added because an authenticated turn is written under
+    ``session.subject_id``, and *that* is the key long-term memory and consent actually use.
+
+    Erasing under the union is the only complete answer, and it is safe: a key that owns no
+    rows deletes none.
+    """
+    from tessera.memory.transcript import subject_ids_for
+
+    keys = {str(conversation_id)}
+    try:
+        keys.update(await subject_ids_for(conversation_id))
+    except Exception as exc:  # resolution must never silently NARROW the erasure
+        import sys
+
+        sys.stderr.write(
+            f"tessera.memory.governance: could not resolve subject keys for "
+            f"{conversation_id} ({exc}); erasing under the conversation id only\n"
+        )
+    return tuple(sorted(keys))
+
+
+async def erase_subject(
+    conversation_id: UUID, *, actor: Actor, subject_id: str | None = None
+) -> ErasureReceipt:
     """Erase every trace of a subject across all memory layers (GDPR Art. 17).
 
-    This is the canonical erasure used by both the persistent backend's
-    ``forget`` and the ``DELETE /memory`` endpoint, so a deletion is total
-    regardless of which backend is configured. Imports are deferred to avoid an
-    import cycle with the layers it deletes from.
+    This is the canonical erasure used by both the persistent backend's ``forget`` and the
+    ``DELETE /memory`` endpoint, so a deletion is total regardless of which backend is
+    configured. Imports are deferred to avoid an import cycle with the layers it deletes from.
+
+    **The key is resolved, not assumed, and that is the whole repair.** This function used to
+    take ``str(conversation_id)`` as the subject key. The turn seam writes long-term memory
+    under ``session.subject_id`` and only falls back to the conversation id when there is no
+    subject — so for every authenticated customer the DELETE matched zero rows, returned 204,
+    and sealed ``memory.forget / allow`` into an append-only chain over data that was still
+    there. The same class of defect as the schema-scoped one closed on 2026-08-01, moved onto
+    the identity axis. It is resolved from the transcript, which is the only table carrying
+    both ids on one row (ADR 0040) — and it is read BEFORE the transcript is deleted, because
+    the delete destroys the witness.
 
     Args:
-        conversation_id: The subject to erase.
+        conversation_id: The conversation whose subject is to be erased.
         actor: WHO ordered it. **Required, no default.** The audit event is emitted **here**,
             at the canonical erasure — the one function every path goes through — so the actor
             is *threaded in* rather than stamped by a second call at the route. One act, one
             entry: a regulator reading two entries for one deletion would have to guess which
             is authoritative, and a caller-stamped second entry could disagree with the first.
+        subject_id: A key the caller already holds (the backend protocol path has it on the
+            scope). Added to the resolved set rather than replacing it — a caller that knows
+            one key does not thereby know there are no others.
+
+    Returns:
+        An :class:`ErasureReceipt` naming the keys used and counting what each layer removed.
     """
     from tessera.memory.persistent import delete_subject
     from tessera.memory.summary import delete_summary
     from tessera.memory.transcript import delete_transcript
 
-    subject_id = str(conversation_id)
-    await delete_subject(subject_id)
-    await delete_summary(conversation_id)
-    await delete_transcript(conversation_id)
-    await delete_consent(subject_id)
+    keys = await subject_keys_for(conversation_id)
+    if subject_id and subject_id not in keys:
+        keys = tuple(sorted({*keys, subject_id}))
+
+    long_term = 0
+    consent = 0
+    for key in keys:
+        long_term += await delete_subject(key)
+        consent += await delete_consent(key)
+    summary = await delete_summary(conversation_id)
+    transcript = await delete_transcript(conversation_id)
+
+    receipt = ErasureReceipt(
+        subject_keys=keys,
+        long_term=long_term,
+        consent=consent,
+        summary=summary,
+        transcript=transcript,
+    )
     audit_memory(
         action="memory.forget",
-        subject_id=subject_id,
+        subject_id=str(conversation_id),
         decision="allow",
-        rationale="subject erasure (GDPR Art. 17)",
+        rationale=receipt.describe(),
         actor=actor,
     )
+    return receipt

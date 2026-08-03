@@ -59,6 +59,11 @@ class ArgumentRule:
     """Per-argument validation rule for a tool."""
 
     pattern: re.Pattern[str] | None = None
+    #: When true, an absent or null value is a DENY. Validation used to mean "check it IF
+    #: present": a call with the argument simply missing skipped every pattern and came back
+    #: ``allow`` with the rationale "passed all pre-flight checks" — an Ok with no evidence
+    #: (ADR 0027), on the one seam whose whole job is to have some.
+    required: bool = False
     redact_in_audit: bool = False
 
 
@@ -69,6 +74,10 @@ class ToolPolicy:
     name: str
     allow: bool = False
     requires_confirmation: bool = False
+    #: Argument name a human confirmation is BOUND to, e.g. ``card_last_four``. When set, an
+    #: approval authorises this tool *for that value only* — approving the blocking of card
+    #: 4242 is not approving the blocking of whatever card the model names next.
+    confirmation_binds: str | None = None
     require_languages: frozenset[LanguageCode] = field(default_factory=frozenset)
     # Minimum session authorization to invoke this tool (ADR 0008/0009). ``None``
     # = no auth floor (e.g. simulators, escalation). Account/PII tools declare
@@ -109,6 +118,7 @@ def _compile_arg(rule_raw: dict[str, object]) -> ArgumentRule:
     pattern = re.compile(str(pattern_raw)) if pattern_raw else None
     return ArgumentRule(
         pattern=pattern,
+        required=bool(rule_raw.get("required", False)),
         redact_in_audit=bool(rule_raw.get("redact_in_audit", False)),
     )
 
@@ -127,6 +137,9 @@ def _compile_tool(name: str, raw: dict[str, object]) -> ToolPolicy:
         name=name,
         allow=bool(raw.get("allow", False)),
         requires_confirmation=bool(raw.get("requires_confirmation", False)),
+        confirmation_binds=(
+            str(binds) if isinstance(binds := raw.get("confirmation_binds"), str) else None
+        ),
         require_languages=languages,
         require_auth=require_auth,
         max_calls_per_turn=int(raw.get("max_calls_per_turn") or 1),  # type: ignore[call-overload]

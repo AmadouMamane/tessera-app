@@ -24,8 +24,15 @@ arbitrary subject demands the second answer.
 Both are declared on their router rather than at the mount site, so a route added to this
 module cannot forget its guard (the ``mutations.py`` model, and F-1's structural lesson).
 
-The subject is still identified by its conversation id (ADR 0007, "Identity") — the caller,
-now, is identified by a signed operator assertion.
+**The subject is RESOLVED, never assumed.** These routes are addressed by conversation id, and
+every one of them used to derive the storage key as ``str(conversation_id)``. That is only the
+key when there is no authenticated subject: the turn seam writes long-term memory and consent
+under ``session.subject_id`` and falls back to the conversation id otherwise (ADR 0007,
+"Identity"). So for every authenticated customer the access request returned nothing, the
+rectification found nothing, the consent flag was written where the reflector does not read it,
+and the erasure deleted nothing while sealing a success. The key now comes from
+:func:`~tessera.memory.governance.subject_keys_for`, which asks the transcript — the only table
+carrying both ids on one row (ADR 0040).
 """
 
 from __future__ import annotations
@@ -51,6 +58,25 @@ router = APIRouter(tags=["memory"], dependencies=[Depends(require_operator)])
 #: role may read it — the auditor above all. Kept a separate router precisely so the read
 #: is not silently swept into the writers' role set, nor the writes into the readers'.
 read_router = APIRouter(tags=["memory"], dependencies=[Depends(require_subject_reader)])
+
+
+async def _subject_keys(conversation_id: uuid.UUID) -> tuple[str, ...]:
+    """Every storage key this conversation's personal data can live under.
+
+    Always includes the conversation id (the anonymous fallback) plus whatever the transcript
+    recorded. Resolution is the difference between a right that works and a 204 that lies.
+    """
+    return await governance.subject_keys_for(conversation_id)
+
+
+def _primary_subject(keys: tuple[str, ...], conversation_id: uuid.UUID) -> str:
+    """The key to *report* — a real subject when one exists, else the conversation id.
+
+    A response that echoes the conversation id for an authenticated customer tells the reader
+    the record is keyed by thread, which is exactly the belief that hid the erasure defect.
+    """
+    fallback = str(conversation_id)
+    return next((key for key in keys if key != fallback), fallback)
 
 
 class ConsentRequest(BaseModel):
@@ -121,12 +147,57 @@ async def erase_memory(
     the guard already resolved, and threaded into the canonical erasure rather than stamped by
     a second audit call here — one act, one entry. It cannot be supplied by the caller: no
     request model on this router has an actor field, and all of them are ``extra="forbid"``.
+
+    **The erasure now reaches an external engine too.** When the org runs one of the optional
+    adapters (langmem / mem0 / zep), the facts live outside Postgres, and nothing in ``src/``
+    ever called :meth:`MemoryBackend.forget` — so clearing the native tables (usually empty in
+    that configuration) returned 204 while the processor's copy survived. The protocol call is
+    made only for external backends: routing it through a first-party one would re-enter the
+    canonical erasure and write a second audit entry for a single act. A failure is recorded
+    as a refusal, never smoothed over — an erasure that could not reach a processor must read
+    as incomplete, not as done.
     """
-    await governance.erase_subject(conversation_id, actor=actor_of(session))
+    keys = await _subject_keys(conversation_id)
+    receipt = await governance.erase_subject(conversation_id, actor=actor_of(session))
+    await _forget_on_external_backend(
+        conversation_id, subject_id=_primary_subject(keys, conversation_id), session=session
+    )
     from tessera.observability.erasure import purge_telemetry
 
     purge_telemetry(str(conversation_id))
+    del receipt  # counted in the audit rationale; the HTTP contract stays 204 No Content
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+async def _forget_on_external_backend(
+    conversation_id: uuid.UUID, *, subject_id: str, session: SessionContext
+) -> None:
+    """Ask a non-first-party memory engine to forget the subject, and say so either way."""
+    from tessera.memory import _FIRST_PARTY_TIERS, get_memory_backend, scope_for
+    from tessera.settings import get_settings
+
+    configured = get_settings().memory.backend
+    if configured in _FIRST_PARTY_TIERS:
+        return
+    scope = scope_for(conversation_id, get_settings().default_language, subject_id=subject_id)
+    try:
+        await get_memory_backend().forget(scope=scope)
+    except Exception as exc:  # a processor that refused must stay VISIBLE, never smoothed
+        governance.audit_memory(
+            action="memory.forget",
+            subject_id=subject_id,
+            decision="deny",
+            rationale=f"external backend {configured!r} did not confirm erasure: {exc}",
+            actor=actor_of(session),
+        )
+        return
+    governance.audit_memory(
+        action="memory.forget",
+        subject_id=subject_id,
+        decision="allow",
+        rationale=f"external backend {configured!r} acknowledged erasure",
+        actor=actor_of(session),
+    )
 
 
 @read_router.get("/memory/{conversation_id}/items")
@@ -142,13 +213,14 @@ async def list_memory_items(
     been looking**. Reading is what the auditor role is FOR — which is exactly why the reader
     must be named, not exempted.
     """
-    subject_id = str(conversation_id)
-    stored = await persistent.list_subject_memories(subject_id)
+    keys = await _subject_keys(conversation_id)
+    subject_id = _primary_subject(keys, conversation_id)
+    stored = [item for key in keys for item in await persistent.list_subject_memories(key)]
     governance.audit_memory(
         action="memory.read",
         subject_id=subject_id,
         decision="allow",
-        rationale=f"subject access request: {len(stored)} item(s)",
+        rationale=f"subject access request: {len(stored)} item(s) over {len(keys)} key(s)",
         actor=actor_of(session),
     )
     return MemoryItemsResponse(
@@ -174,13 +246,17 @@ async def rectify_memory_item(
     session: Annotated[SessionContext, Depends(require_operator)],
 ) -> Response:
     """Rectify a stored memory's text (GDPR Art. 16). Re-screened and re-embedded."""
-    subject_id = str(conversation_id)
+    keys = await _subject_keys(conversation_id)
+    subject_id = _primary_subject(keys, conversation_id)
     screened = governance.screen_memory(payload.text, actor=actor_of(session))
     if not screened.allowed:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="rejected")
-    updated = await persistent.update_memory_text(
-        memory_id, subject_id=subject_id, text=screened.text
-    )
+    updated = False
+    for key in keys:
+        updated = await persistent.update_memory_text(memory_id, subject_id=key, text=screened.text)
+        if updated:
+            subject_id = key
+            break
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="memory not found")
     governance.audit_memory(
@@ -202,8 +278,14 @@ async def delete_memory_item(
     session: Annotated[SessionContext, Depends(require_operator)],
 ) -> Response:
     """Delete a single stored memory of a subject (GDPR Art. 17, granular)."""
-    subject_id = str(conversation_id)
-    deleted = await persistent.delete_memory(memory_id, subject_id=subject_id)
+    keys = await _subject_keys(conversation_id)
+    subject_id = _primary_subject(keys, conversation_id)
+    deleted = False
+    for key in keys:
+        deleted = await persistent.delete_memory(memory_id, subject_id=key)
+        if deleted:
+            subject_id = key
+            break
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="memory not found")
     governance.audit_memory(
@@ -229,14 +311,21 @@ async def set_memory_consent(
     changed, with no trace of who changed it or when. Revoking consent and then deleting on
     that basis, with neither step attributable, is the shape of an incident nobody can
     reconstruct afterwards.
+
+    Consent is written under **every** key this conversation resolves to, because it is the
+    lawful basis for one person's data and the reflector checks it under the key it writes
+    with. Setting it on the conversation id alone left the gate reading a row that was never
+    written — a grant that granted nothing, and a revocation that revoked nothing.
     """
-    subject_id = str(conversation_id)
-    await governance.set_consent(subject_id, granted=payload.granted)
+    keys = await _subject_keys(conversation_id)
+    subject_id = _primary_subject(keys, conversation_id)
+    for key in keys:
+        await governance.set_consent(key, granted=payload.granted)
     governance.audit_memory(
         action="memory.write",
         subject_id=subject_id,
         decision="allow",
-        rationale=f"long-term retention consent set to {payload.granted}",
+        rationale=(f"long-term retention consent set to {payload.granted} over {len(keys)} key(s)"),
         actor=actor_of(session),
     )
     return ConsentResponse(subject_id=subject_id, granted=payload.granted)

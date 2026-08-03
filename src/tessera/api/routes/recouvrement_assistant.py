@@ -42,8 +42,9 @@ from tessera.api.session import (
 )
 from tessera.authz import Surface
 from tessera.guard.adapter import check_user_input
-from tessera.guard.redaction import mask_pan
+from tessera.guard.redaction import apply_output_guard, mask_pan
 from tessera.memory.transcript import append_messages
+from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -148,6 +149,33 @@ async def _persist_recouvrement_turn(
         sys.stderr.write(f"tessera.memory.transcript: recouvrement append failed: {exc}\n")
 
 
+def _guard_visible_reply(result: Mapping[str, object], *, language: str) -> dict[str, object]:
+    """Sweep the recouvrement reply through the output guard before it leaves the server.
+
+    Audit 2026-08-03. The 2026-07-21 audit closed this plane's INPUT leg — it was then the
+    only turn path outside the chokepoint — and the output leg stayed open: ``visibleReply``
+    was returned to the operator and written to the durable transcript with no
+    :func:`apply_output_guard` anywhere, while ``mask_pan`` covered only the *user* message.
+    A plane is not guarded because one of its two legs is.
+
+    The guard is idempotent over already-clean text, so a reply built from approved
+    templates passes through untouched; what it catches is the case those templates do not
+    cover — a case field, an amount, an operator note carrying personal data into a payload
+    that is persisted and re-read.
+    """
+    reply = str(result.get("visibleReply") or "")
+    if not reply:
+        return dict(result)
+    try:
+        resolved = LanguageCode(language)
+    except ValueError:
+        resolved = get_settings().default_language
+    guarded, _record = apply_output_guard(reply, language=resolved)
+    if guarded == reply:
+        return dict(result)
+    return {**result, "visibleReply": guarded}
+
+
 @router.post("/recouvrement-assistant/message")
 @router.post("/api/recouvrement-assistant/message")
 async def recouvrement_assistant_message(
@@ -190,8 +218,9 @@ async def recouvrement_assistant_message(
         language=payload.language,
     )
     latency_ms = (time.perf_counter() - started) * _MS_PER_SECOND
-    await _persist_recouvrement_turn(payload, result, latency_ms)
-    return dict(result)
+    guarded = _guard_visible_reply(result, language=payload.language)
+    await _persist_recouvrement_turn(payload, guarded, latency_ms)
+    return dict(guarded)
 
 
 @router.post("/recouvrement-assistant/action")

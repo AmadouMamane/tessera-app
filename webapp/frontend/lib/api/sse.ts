@@ -13,6 +13,8 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { getStoredModel } from "@/lib/models";
 
 import {
+  type ChatCorrectionEvent,
+  ChatCorrectionEventSchema,
   type ChatEndEvent,
   ChatEndEventSchema,
   ChatErrorEventSchema,
@@ -36,13 +38,19 @@ export interface ChatTurnRequest {
   system_prompt_override?: string;
   /** Sandbox console: guard categories disabled for this turn (e.g. ["prompt_injection"]). */
   guard_overrides?: string[];
-  /** Human action controls confirmed outside model-generated text. */
-  confirmed_tools?: Array<"card_block">;
+  /**
+   * The server-minted token from a prior turn's `confirmation_required`, echoed back after
+   * the human clicked the control. Replaces the old `confirmed_tools` list: a confirmation
+   * the caller can simply assert is not a confirmation.
+   */
+  confirmation_token?: string;
 }
 
 export interface ChatTurnCallbacks {
   onStart?: (event: { conversation_id: string; turn_id: string; resume_token?: string }) => void;
   onToken?: (token: string) => void;
+  /** The grounding guard replaced what was streamed; render the replacement instead. */
+  onCorrection?: (event: ChatCorrectionEvent) => void;
   onEnd?: (envelope: ChatEndEvent) => void;
   onError?: (message: string) => void;
 }
@@ -66,7 +74,7 @@ export interface StreamChatOptions extends ChatTurnCallbacks {
  */
 export async function streamChat(
   payload: ChatTurnRequest,
-  { signal, surface, onStart, onToken, onEnd, onError }: StreamChatOptions = {},
+  { signal, surface, onStart, onToken, onCorrection, onEnd, onError }: StreamChatOptions = {},
 ): Promise<void> {
   const model = payload.model ?? getStoredModel();
   await fetchEventSource("/api/chat", {
@@ -104,6 +112,11 @@ export async function streamChat(
         case "turn.token": {
           const parsed = ChatTokenEventSchema.safeParse(data);
           if (parsed.success) onToken?.(parsed.data.token);
+          return;
+        }
+        case "turn.correction": {
+          const parsed = ChatCorrectionEventSchema.safeParse(data);
+          if (parsed.success) onCorrection?.(parsed.data);
           return;
         }
         case "turn.end": {

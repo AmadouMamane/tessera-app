@@ -259,11 +259,21 @@ current_auth_state: ContextVar[AuthState] = ContextVar(
     "tessera_auth_state", default=AuthState.ANONYMOUS
 )
 
-# Explicit action confirmations are a separate input channel from natural-language
-# text.  The chat UI sets this only after a human clicks the confirmation control;
-# the model cannot manufacture it in its own prompt or tool arguments.
-confirmed_tools: ContextVar[frozenset[str]] = ContextVar(
-    "tessera_confirmed_tools", default=frozenset()
+# Explicit action confirmations, mapping a confirmed tool to the argument value the
+# approval was BOUND to (``{"card_block": "4242"}``), or ``None`` when the policy binds
+# nothing.
+#
+# It used to be a bare set of tool names, filled straight from the request body. Being a
+# separate channel from natural-language text made it unforgeable by the MODEL, which is
+# what its comment claimed and all it ever proved; the CALLER could still assert it, and a
+# value the caller chooses can never carry a fact about what a human did (ADR 0024). The
+# route now fills this only from a server-minted, server-verified confirmation token.
+#
+# The bound value is what makes the approval specific. "A human approved blocking a card"
+# is not a permission to block *any* card: the guard checks that the argument about to be
+# used is the one that was shown and agreed to.
+confirmed_tools: ContextVar[Mapping[str, str | None]] = ContextVar(
+    "tessera_confirmed_tools", default={}
 )
 
 # One mutable counter map is installed at the request boundary and inherited by

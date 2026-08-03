@@ -9,20 +9,26 @@
 #   tools:
 #     <tool_name>:
 #       allow: bool                       # default: false
-#       requires_confirmation: bool       # require explicit user re-ask
+#       requires_confirmation: bool       # require explicit human confirmation
+#       confirmation_binds: <arg_name>    # the approval is valid for THAT value only
+#       require_auth: customer-auth       # minimum session authorization (ADR 0008/0009);
+#                                         # absent = no auth floor
 #       require_languages: [fr, de, en]   # restrict invocation to listed langs
 #       max_calls_per_turn: int           # default: 1
 #       arguments:                        # per-argument validation
 #         <arg_name>:
 #           pattern: regex                # value must match
+#           required: bool                # absent/null argument is a DENY (default: false)
 #           redact_in_audit: bool         # mask value in the audit trail
 #   prompt_injection:
-#     deny_patterns: [regex, ...]
 #     transform_patterns:
 #       - match: regex
 #         replacement: string
+#     # NOTE: `deny_patterns` is NOT a field here. Injection detection is sourced from the
+#     # separate `limes` package (ADR 0029) and a non-empty list makes load_policy REFUSE to
+#     # load, so that two sources of truth cannot silently coexist.
 #   pii:
-#     redact_patterns: [regex, ...]       # applied to all tool inputs/outputs
+#     redact_patterns: [regex, ...]       # applied to tool arguments in the audit copy
 #                                         # and to the final response (output guard)
 #     exfiltration_patterns:              # conjunctive: ALL must match to deny
 #       <name>: regex
@@ -49,14 +55,19 @@ tools:
   card_block:
     allow: true
     requires_confirmation: true
+    # The approval names the card it was given for. A human who agreed to block 4242 has
+    # not agreed to block whichever four digits the model produces on the next turn.
+    confirmation_binds: card_last_four
     require_auth: customer-auth
     max_calls_per_turn: 1
     arguments:
       customer_id:
         pattern: "^[a-zA-Z0-9_-]{4,64}$"
+        required: true
         redact_in_audit: true
       card_last_four:
         pattern: "^[0-9]{4}$"
+        required: true
         redact_in_audit: false
       reason:
         pattern: "^(lost|stolen|fraud_suspected|customer_request)$"

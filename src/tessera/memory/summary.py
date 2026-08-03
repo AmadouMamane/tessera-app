@@ -167,8 +167,8 @@ async def save_summary(conversation_id: UUID, summary: str | None, entities: Ent
         await conn.commit()
 
 
-async def delete_summary(conversation_id: UUID) -> None:
-    """Delete the summary row for a conversation (used by GDPR erasure)."""
+async def delete_summary(conversation_id: UUID) -> int:
+    """Delete the summary row for a conversation (used by GDPR erasure); return the row count."""
     query = sql.SQL("DELETE FROM {table} WHERE conversation_id = %s;").format(
         table=_memory_table(_TABLE)
     )
@@ -177,7 +177,9 @@ async def delete_summary(conversation_id: UUID) -> None:
         await pool.open()
     async with pool.connection() as conn, conn.cursor() as cur:
         await cur.execute(query, (conversation_id,))
+        deleted = cur.rowcount or 0
         await conn.commit()
+    return deleted
 
 
 # ---------------------------------------------------------------------------

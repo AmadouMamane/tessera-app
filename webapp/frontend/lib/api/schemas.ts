@@ -230,12 +230,27 @@ export const ChatEndEventSchema = z.object({
     .object({
       tool: z.literal("card_block"),
       card_last_four: z.string().regex(/^\d{4}$/),
+      // Signed proof the server offered THIS action for approval. Echoed back on the
+      // confirming turn; without it the guard denies, exactly as it does for a first ask.
+      confirmation_token: z.string(),
     })
     .nullable()
     .optional(),
   debug: ChatDebugSchema.optional(),
 });
 export type ChatEndEvent = z.infer<typeof ChatEndEventSchema>;
+
+/**
+ * The grounding guard replaced a streamed answer whose claims the corpus could not back.
+ * The check needs the whole answer, so on a streaming transport it can only correct after
+ * the fact — never pre-empt. What the record keeps is always the replacement.
+ */
+export const ChatCorrectionEventSchema = z.object({
+  final_response: z.string(),
+  reason: z.literal("ungrounded"),
+  unsupported: z.array(z.string()).default([]),
+});
+export type ChatCorrectionEvent = z.infer<typeof ChatCorrectionEventSchema>;
 
 export const ChatTokenEventSchema = z.object({
   token: z.string(),

@@ -258,7 +258,23 @@ class TestGuardedInvoke:
             assert called is False
             assert any(d.policy_rule.endswith("requires_confirmation") for d in denied.decisions)
 
-            confirm_token = confirmed_tools.set(frozenset({"card_block"}))
+            # A confirmation names the card it was given for. Approving 4242 does not
+            # approve 9999 — the map carries the bound value, not just the tool name.
+            wrong_card = confirmed_tools.set({"card_block": "9999"})
+            try:
+                mismatched = await guarded_invoke(
+                    tool_name="card_block",
+                    invoke=_invoke,
+                    arguments=arguments,
+                    language=LanguageCode.FR,
+                )
+            finally:
+                confirmed_tools.reset(wrong_card)
+            assert mismatched.allowed is False
+            assert called is False
+            assert any(d.policy_rule.endswith("confirmation_binding") for d in mismatched.decisions)
+
+            confirm_token = confirmed_tools.set({"card_block": "4242"})
             try:
                 allowed = await guarded_invoke(
                     tool_name="card_block",

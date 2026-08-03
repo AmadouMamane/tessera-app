@@ -125,27 +125,40 @@ class TestErasureIsTotal:
         say, the transcript behind) would have shipped green.
         """
         conversation_id = uuid4()
+        # The key an AUTHENTICATED turn is written under. It is deliberately not the
+        # conversation id: that difference is the whole defect this test now polices.
+        authenticated_subject = "demo-customer-001"
         reached: list[str] = []
+        long_term_keys: list[str] = []
+        consent_keys: list[str] = []
+
+        async def _subject_ids_for(cid: UUID) -> tuple[str, ...]:
+            assert cid == conversation_id
+            return (authenticated_subject,)
 
         async def _delete_subject(subject_id: str) -> int:
             reached.append("long_term")
-            assert subject_id == str(conversation_id)
+            long_term_keys.append(subject_id)
             return 1
 
-        async def _delete_summary(cid: UUID) -> None:
+        async def _delete_summary(cid: UUID) -> int:
             reached.append("summary")
             assert cid == conversation_id
+            return 1
 
-        async def _delete_transcript(cid: UUID) -> None:
+        async def _delete_transcript(cid: UUID) -> int:
             reached.append("transcript")
             assert cid == conversation_id
+            return 12
 
-        async def _delete_consent(subject_id: str) -> None:
+        async def _delete_consent(subject_id: str) -> int:
             reached.append("consent")
-            assert subject_id == str(conversation_id)
+            consent_keys.append(subject_id)
+            return 1
 
         audited: list[dict[str, object]] = []
 
+        monkeypatch.setattr("tessera.memory.transcript.subject_ids_for", _subject_ids_for)
         monkeypatch.setattr("tessera.memory.persistent.delete_subject", _delete_subject)
         monkeypatch.setattr("tessera.memory.summary.delete_summary", _delete_summary)
         monkeypatch.setattr("tessera.memory.transcript.delete_transcript", _delete_transcript)
@@ -153,9 +166,16 @@ class TestErasureIsTotal:
         monkeypatch.setattr(governance, "audit_memory", lambda **kw: audited.append(dict(kw)))
 
         who = Actor(principal="bob@bank.eu", role="admin")
-        await governance.erase_subject(conversation_id, actor=who)
+        receipt = await governance.erase_subject(conversation_id, actor=who)
 
-        assert sorted(reached) == ["consent", "long_term", "summary", "transcript"]
+        assert sorted(set(reached)) == ["consent", "long_term", "summary", "transcript"]
+        # THE property, and the one this test used to assert backwards: the subject-keyed
+        # layers must be cleared under the key the WRITE used. Pinning it to the conversation
+        # id made the suite certify the exact mismatch that let a DELETE report success over
+        # untouched rows.
+        assert authenticated_subject in long_term_keys, "erasure must reach the WRITE key"
+        assert authenticated_subject in consent_keys, "consent must be cleared under it too"
+        assert str(conversation_id) in long_term_keys, "the anonymous fallback stays covered"
         # The erasure is auditable — an unlogged deletion is not opposable.
         assert audited and audited[0]["action"] == "memory.forget"
         assert audited[0]["decision"] == "allow"
@@ -164,3 +184,43 @@ class TestErasureIsTotal:
         # stamped at the route, which a regulator reading two would have to arbitrate between.
         assert len(audited) == 1, "one erasure, one entry"
         assert audited[0]["actor"] == who, "the erasure must name who ordered it"
+        # A 204 cannot say whether anything was removed; the receipt can, and the trail carries
+        # it. An erasure that reaches zero rows must be readable as such.
+        assert receipt.total > 0
+        assert authenticated_subject in str(audited[0]["rationale"])
+        assert "transcript=12" in str(audited[0]["rationale"])
+
+    async def test_erasure_under_a_key_that_owns_nothing_is_visible_as_zero(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An erasure that removes nothing must SAY nothing was removed.
+
+        This is the shape the defect wore: every layer was called, every call succeeded, the
+        audit entry read ``allow``, and not one row had been touched. Counting is the only
+        thing that separates a completed erasure from a well-formed no-op.
+        """
+        conversation_id = uuid4()
+
+        async def _none(_key: str) -> int:
+            return 0
+
+        async def _none_cid(_cid: UUID) -> int:
+            return 0
+
+        async def _no_keys(_cid: UUID) -> tuple[str, ...]:
+            return ()
+
+        audited: list[dict[str, object]] = []
+        monkeypatch.setattr("tessera.memory.transcript.subject_ids_for", _no_keys)
+        monkeypatch.setattr("tessera.memory.persistent.delete_subject", _none)
+        monkeypatch.setattr("tessera.memory.summary.delete_summary", _none_cid)
+        monkeypatch.setattr("tessera.memory.transcript.delete_transcript", _none_cid)
+        monkeypatch.setattr(governance, "delete_consent", _none)
+        monkeypatch.setattr(governance, "audit_memory", lambda **kw: audited.append(dict(kw)))
+
+        receipt = await governance.erase_subject(
+            conversation_id, actor=Actor(principal="bob@bank.eu", role="admin")
+        )
+
+        assert receipt.total == 0
+        assert "long_term=0" in str(audited[0]["rationale"])

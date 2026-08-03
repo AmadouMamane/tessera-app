@@ -49,8 +49,13 @@ from tessera.api.config_overrides import (
     resolve_chat_model_override,
 )
 from tessera.api.operator import resolve_request_context
-from tessera.api.session import issue_resume_token
+from tessera.api.session import (
+    issue_confirmation_token,
+    issue_resume_token,
+    verify_confirmation_token,
+)
 from tessera.authz import AuthState
+from tessera.guard import grounding
 from tessera.guard.audit import (
     confirmed_tools,
     current_auth_state,
@@ -333,12 +338,13 @@ class ChatRequest(BaseModel):
             '["prompt_injection", "pii"]. Empty/absent = full policy applies.'
         ),
     )
-    confirmed_tools: list[Literal["card_block"]] | None = Field(
+    confirmation_token: str | None = Field(
         default=None,
-        max_length=1,
+        max_length=512,
         description=(
-            "Tools explicitly confirmed through a human UI action for this turn. "
-            "This channel is separate from model-generated text."
+            "The server-minted token returned in a prior turn's `confirmation_required`, "
+            "echoed back after the human clicked the confirmation control. Replaces the old "
+            "`confirmed_tools` list, which let any caller assert an approval nobody gave."
         ),
     )
 
@@ -350,6 +356,13 @@ class ActionConfirmationRequired(BaseModel):
 
     tool: Literal["card_block"]
     card_last_four: str = Field(pattern=r"^\d{4}$")
+    confirmation_token: str = Field(
+        description=(
+            "Signed, short-lived proof that the server offered THIS action for approval. "
+            "Echo it back on the confirming turn; it is bound to this conversation, this "
+            "tool and this card, so it cannot be replayed onto another."
+        )
+    )
 
 
 class ChatEnvelope(BaseModel):
@@ -369,7 +382,15 @@ class ChatEnvelope(BaseModel):
     debug: dict[str, object] | None = None
 
 
-def _confirmation_required(state: Mapping[str, object]) -> ActionConfirmationRequired | None:
+def _confirmation_required(
+    state: Mapping[str, object], conversation_id: uuid.UUID
+) -> ActionConfirmationRequired | None:
+    """Build the human confirmation control, carrying the server's proof it was offered.
+
+    The token is minted **here** and nowhere else: this function runs only once the guard has
+    actually refused the call with ``requires_confirmation``, so a token exists exactly when a
+    prompt is put in front of a person. Nothing a caller sends can bring one into being.
+    """
     decisions = state.get("guard_decisions")
     if not isinstance(decisions, list) or not any(
         isinstance(decision, GuardDecisionRecord)
@@ -385,8 +406,31 @@ def _confirmation_required(state: Mapping[str, object]) -> ActionConfirmationReq
             continue
         last_four = call.arguments.get("card_last_four")
         if isinstance(last_four, str) and re.fullmatch(r"\d{4}", last_four):
-            return ActionConfirmationRequired(tool="card_block", card_last_four=last_four)
+            return ActionConfirmationRequired(
+                tool="card_block",
+                card_last_four=last_four,
+                confirmation_token=issue_confirmation_token(
+                    conversation_id=str(conversation_id),
+                    tool="card_block",
+                    card_last_four=last_four,
+                ),
+            )
     return None
+
+
+def _verified_confirmations(token: str | None, conversation_id: uuid.UUID) -> dict[str, str | None]:
+    """Turn a presented token into the map of confirmations the guard may rely on.
+
+    Empty whenever the token is absent, malformed, forged, expired, or minted for another
+    conversation or tool — so the failure mode of every attack on this channel is the same
+    as sending nothing, which the guard already refuses.
+    """
+    if not token:
+        return {}
+    approved = verify_confirmation_token(
+        token, conversation_id=str(conversation_id), tool="card_block"
+    )
+    return {"card_block": approved} if approved is not None else {}
 
 
 def _fmt_ms(ms: float) -> str:
@@ -906,7 +950,11 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # Publish the server-derived auth-state so the guard's tool allowlist gates
     # account/PII tools on the real session (anonymous → denied, customer → ok).
     current_auth_state.set(auth_state)
-    confirmed_tools.set(frozenset(request.confirmed_tools or ()))
+    # A human confirmation is a fact the SERVER established, never a claim the caller made.
+    # The token was minted only when the guard refused a call and a prompt was shown; it is
+    # bound to this conversation, this tool and this card. An absent, forged, expired or
+    # foreign token simply leaves the map empty, and the guard denies exactly as before.
+    confirmed_tools.set(_verified_confirmations(request.confirmation_token, conversation_id))
     current_tool_call_counts.set({})
     # Per-turn agent attribution: the supervisor routes this turn to an agent
     # (parcours by default; an intent can trigger a governed handoff). The chosen
@@ -1102,6 +1150,7 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     # PAN on the wire. It was the last unguarded path into the safety stack.
     pii_guard_off = bool(guard_overrides and "pii" in guard_overrides)
     output_guard_record: GuardDecisionRecord | None = None
+    grounding_record: GuardDecisionRecord | None = None
     # The reporter's generation (LLM synthesis) runs here in Phase 2, outside the
     # Phase-1 node-timing context — measure it so the trace waterfall can show it.
     reporter_ms: float | None = None
@@ -1141,9 +1190,56 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
                     notice = f"\n\n{redaction_notice(resolved_language)}"
                     yield _sse("turn.token", {"token": notice})
                     final_response += notice
-            grounded = select_grounded_citations(final_response, docs)
-            if grounded:
-                turn_citations = grounded
+            # Grounding-refusal gate on the STREAMING leg (audit 2026-08-03, P0).
+            #
+            # This guard had exactly one caller — the reporter node — and `/chat` is the only
+            # chat endpoint, is SSE, and compiles the graph with
+            # `interrupt_before=[REPORTER]`. The node was therefore never executed in
+            # production and the guard never ran: an invented rate, article or figure was
+            # streamed, persisted, evaluated and scored, while the same turn on the
+            # non-streaming path would have been replaced by the vetted hedge. A guarantee
+            # that lives in a node the transport skips is not a guarantee.
+            #
+            # It cannot run token-by-token: the check is over the WHOLE answer (which
+            # specific claims does the corpus fail to back), so the honest streaming shape is
+            # to correct rather than to pre-empt. The browser may have rendered the
+            # ungrounded sentence for a moment; the record never does — `final_response`,
+            # the transcript, the eval bundle and the citations all carry the replacement.
+            grounding_check = grounding.apply_grounding_guard(
+                final_response,
+                language=resolved_language,
+                documents=docs,
+                user_input=request.message,
+                tool_grounded=any(
+                    call.succeeded
+                    for call in state.get("tool_calls", [])
+                    if isinstance(call, ToolCallRecord)
+                ),
+                policy_refusal=any(
+                    "refused" in e or "refusal" in e or "policy" in e
+                    for e in state.get("errors", [])
+                ),
+                disabled=bool(guard_overrides and "grounding" in guard_overrides),
+            )
+            if grounding_check.replaced:
+                final_response = grounding_check.text
+                if grounding_check.record is not None:
+                    grounding_record = grounding_check.record
+                # A hedged answer cites nothing: there is no source backing the claim it
+                # just refused to make.
+                turn_citations = []
+                yield _sse(
+                    "turn.correction",
+                    {
+                        "final_response": final_response,
+                        "reason": "ungrounded",
+                        "unsupported": list(grounding_check.unsupported),
+                    },
+                )
+            else:
+                grounded = select_grounded_citations(final_response, docs)
+                if grounded:
+                    turn_citations = grounded
         elif draft:
             final_response, output_guard_record = apply_output_guard(
                 reporter_module.render(state),
@@ -1169,11 +1265,23 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
             language=resolved_language,
             disabled=pii_guard_off,
         )
-    if output_guard_record is not None:
-        # Surface the redact_output decision in this turn's guard_decisions
-        # (Debug envelope + downstream persistence); the audit ledger entry was
-        # already emitted by the guard itself.
-        state["guard_decisions"] = [*state.get("guard_decisions", []), output_guard_record]
+    extra_records = [r for r in (grounding_record, output_guard_record) if r is not None]
+    if extra_records:
+        # Surface the output-leg decisions in this turn's guard_decisions (Debug envelope +
+        # downstream persistence); their audit ledger entries were already emitted by the
+        # guards themselves.
+        state["guard_decisions"] = [*state.get("guard_decisions", []), *extra_records]
+    if grounding_record is not None:
+        # An answer the guard had to replace cannot also be a confident one. These are the
+        # reporter node's own constants, so the two legs cannot drift into scoring the same
+        # turn differently depending on the transport that served it.
+        state["confidence"] = grounding.REPLACED_CONFIDENCE
+        state["grounding_score"] = grounding.REPLACED_GROUNDING
+    elif grounding.declares_unanswerable(final_response):
+        ceiling = grounding.UNANSWERABLE_CONFIDENCE_CEILING
+        if float(state.get("confidence") or 0.0) > ceiling:
+            state["confidence"] = ceiling
+            state["grounding_score"] = min(float(state.get("grounding_score") or 1.0), ceiling)
 
     duration = time.perf_counter() - started
     AGENT_TURN_DURATION.labels(agent_id=agent_id, language=resolved_language.value).observe(
@@ -1288,7 +1396,7 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
             for c in turn_citations
         ],
         finish_reason=outcome,
-        confirmation_required=_confirmation_required(state),
+        confirmation_required=_confirmation_required(state, conversation_id),
         debug=_debug_from_state(
             state=state,
             timings=node_timings,

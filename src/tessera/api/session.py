@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from starlette.responses import Response
 
 __all__ = [
+    "CONFIRMATION_TOKEN_MAX_AGE_SECONDS",
     "DEMO_CUSTOMER_ID",
     "DEMO_CUSTOMER_LABEL",
     "RESUME_TOKEN_HEADER",
@@ -48,11 +49,13 @@ __all__ = [
     "SESSION_COOKIE",
     "SessionContext",
     "clear_session_cookie",
+    "issue_confirmation_token",
     "issue_resume_token",
     "issue_session_token",
     "resolve_session",
     "set_session_cookie",
     "validate_session_signing_key",
+    "verify_confirmation_token",
     "verify_resume_token",
     "verify_session_token",
 ]
@@ -71,6 +74,17 @@ _RESUME_DOMAIN = "tessera.resume.v1"
 #: rather than grant a read forever. On expiry the widget starts a fresh conversation —
 #: exactly what it already does when the transcript comes back empty.
 RESUME_TOKEN_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
+
+#: Domain separator for the irreversible-action confirmation MAC. Third family under the
+#: same key, and the one it would be worst to confuse: a session token replayed as a
+#: confirmation would turn "this caller is logged in" into "a human approved blocking this
+#: card", which are not remotely the same statement.
+_CONFIRMATION_DOMAIN = "tessera.confirm.v1"
+
+#: How long a human has to act on a confirmation prompt. Short on purpose: the token stands
+#: for a click that is about to happen, not for a standing authorisation. Long enough to read
+#: the card's last four digits and decide; too short to be worth stockpiling.
+CONFIRMATION_TOKEN_MAX_AGE_SECONDS = 10 * 60
 
 #: Cookie name carrying the signed session token.
 SESSION_COOKIE = "tessera_session"
@@ -210,6 +224,81 @@ def _resume_mac(body: str) -> bytes:
     """MAC over the domain-separated body, so the two token families cannot cross."""
     message = f"{_RESUME_DOMAIN}.{body}".encode("ascii")
     return hmac.new(_signing_key(), message, hashlib.sha256).digest()
+
+
+def issue_confirmation_token(*, conversation_id: str, tool: str, card_last_four: str) -> str:
+    """Mint the server's statement that THIS action was offered to a human for approval.
+
+    **A confirmation the caller can assert is not a confirmation.** ``requires_confirmation``
+    in ``guard/policy.yaml`` is the last thing standing between a model's suggestion and an
+    irreversible act on a customer's card, and it was enforced by reading ``confirmed_tools``
+    straight off the request body. The guard's own docstring defended that channel as separate
+    from model-generated text — which it is, and which is beside the point: the model cannot
+    forge it, but the **caller** can, and ADR 0024 is explicit that a value the caller chooses
+    can never carry a fact about who did what. A first request could therefore block a card
+    with no prompt ever displayed, and the ledger would seal ``allowed`` under a rule whose
+    entire meaning is "a person said yes".
+
+    The token binds the three things that make the approval specific — which conversation,
+    which tool, which card — so it cannot be replayed onto a different action, a different
+    thread, or a different card. It is minted only when the guard has actually refused the
+    call and asked for confirmation, so the server issues it exactly when a prompt is shown.
+    """
+    payload = {
+        "cid": conversation_id,
+        "tool": tool,
+        "l4": card_last_four,
+        "iat": int(time.time()),
+    }
+    body = _b64e(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    return f"{body}.{_b64e(_confirmation_mac(body))}"
+
+
+def _confirmation_mac(body: str) -> bytes:
+    """MAC over the domain-separated body, so the three token families cannot cross."""
+    message = f"{_CONFIRMATION_DOMAIN}.{body}".encode("ascii")
+    return hmac.new(_signing_key(), message, hashlib.sha256).digest()
+
+
+def verify_confirmation_token(  # noqa: PLR0911  fail-closed: each invalid shape refuses explicitly
+    token: str, *, conversation_id: str, tool: str
+) -> str | None:
+    """Return the confirmed ``card_last_four``, or ``None`` if this is not a valid approval.
+
+    Fails closed on every invalid shape: malformed, forged, expired, minted for another
+    conversation, or minted for another tool. Returning the bound card digits rather than a
+    bare boolean lets the caller check that the act it is about to perform is the act that
+    was approved — a token is permission for *one* card, not for the next one the model names.
+    """
+    body, _, signature = token.partition(".")
+    if not body or not signature:
+        return None
+    try:
+        presented = _b64d(signature)
+    except ValueError:  # binascii.Error subclasses ValueError
+        return None
+    if not hmac.compare_digest(_confirmation_mac(body), presented):
+        return None
+    try:
+        payload = json.loads(_b64d(body))
+    except ValueError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    issued_at = payload.get("iat")
+    if (
+        not isinstance(issued_at, int)
+        or time.time() - issued_at > CONFIRMATION_TOKEN_MAX_AGE_SECONDS
+    ):
+        return None
+    claimed_cid = payload.get("cid")
+    claimed_tool = payload.get("tool")
+    if not isinstance(claimed_cid, str) or not hmac.compare_digest(claimed_cid, conversation_id):
+        return None
+    if not isinstance(claimed_tool, str) or not hmac.compare_digest(claimed_tool, tool):
+        return None
+    last_four = payload.get("l4")
+    return last_four if isinstance(last_four, str) else None
 
 
 def verify_resume_token(token: str, conversation_id: str) -> bool:  # noqa: PLR0911  fail-closed: each invalid shape refuses explicitly
