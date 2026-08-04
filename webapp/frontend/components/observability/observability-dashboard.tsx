@@ -273,6 +273,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
       fetchScoreSeries(signal, asOf ?? undefined, "faithfulness", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
+    enabled: tab === "overview" || tab === "signals",
   });
 
   const groundingSeries = useQuery({
@@ -281,6 +282,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
       fetchScoreSeries(signal, asOf ?? undefined, "grounding", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
+    enabled: tab === "overview",
   });
 
   const metricPairs = useQuery({
@@ -289,6 +291,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
       fetchMetricPairs(signal, "faithfulness", "grounding", asOf ?? undefined),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
+    enabled: tab === "overview",
   });
 
   const hallucinationSeries = useQuery({
@@ -297,6 +300,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
       fetchScoreSeries(signal, asOf ?? undefined, "hallucination", scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
+    enabled: tab === "overview",
   });
 
   // Documented failure catalogue is static per locale (no polling, no as-of).
@@ -304,6 +308,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["failed-cases", locale],
     queryFn: ({ signal }) => fetchFailedCases(signal, locale),
     staleTime: Number.POSITIVE_INFINITY,
+    enabled: tab === "overview" || tab === "signals",
   });
 
   // Real failed cases from the run archive (Cas échoués tab) — refresh slowly.
@@ -311,6 +316,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["failed-runs"],
     queryFn: ({ signal }) => fetchFailedRuns(signal),
     refetchInterval: 60_000,
+    enabled: tab === "failed",
   });
 
   // Eval run archive — refreshes slowly; the report files change rarely.
@@ -318,12 +324,14 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["runs"],
     queryFn: ({ signal }) => fetchRuns(signal),
     refetchInterval: 60_000,
+    enabled: tab === "overview" || tab === "runs" || tab === "models",
   });
 
   const modelComparison = useQuery({
     queryKey: ["model-comparison"],
     queryFn: ({ signal }) => fetchModelComparison(signal),
     refetchInterval: 60_000,
+    enabled: tab === "overview" || tab === "runs" || tab === "models",
   });
 
   // Real corpus inventory — feeds the KPI strip + pipeline freshness fallback.
@@ -331,6 +339,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["corpus-freshness"],
     queryFn: ({ signal }) => fetchCorpusFreshness(signal),
     refetchInterval: 60_000,
+    enabled: tab === "runs",
   });
 
   // Query/corpus embedding lineage is measured from the model active at query
@@ -340,6 +349,13 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["embedding-skew"],
     queryFn: ({ signal }) => fetchEmbeddingSkew(signal),
     refetchInterval: 60_000,
+    enabled: tab === "runs",
+    meta: {
+      health: {
+        label: tq("dataSources.embeddingCompatibility"),
+        href: "/surveiller/qualite-ia?tab=runs",
+      },
+    },
   });
 
   // Themed quality datasets (failure-catalogue themes × runs) — the Runs tab table.
@@ -347,6 +363,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["eval-datasets"],
     queryFn: ({ signal }) => fetchEvalDatasets(signal),
     refetchInterval: 60_000,
+    enabled: tab === "runs",
   });
 
   const releaseStatus = useQuery({
@@ -379,6 +396,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["localization"],
     queryFn: ({ signal }) => fetchLocalization(signal),
     staleTime: Number.POSITIVE_INFINITY,
+    enabled: tab === "overview",
   });
 
   const aiAct = useQuery({
@@ -401,6 +419,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
+    enabled: tab === "overview" || tab === "models" || tab === "judge",
   });
 
   // Grounding-metric drift for the Comparaison des modèles "Drift & stabilité" panel.
@@ -409,6 +428,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, "grounding", period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
+    enabled: tab === "models",
   });
 
   // Forward-looking regression risk for the "Signaux prédictifs" column (image 00).
@@ -417,6 +437,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryFn: ({ signal }) => fetchRegressionRisk(signal, asOf ?? undefined, undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
+    enabled: tab === "overview",
   });
 
   // Per-severity-band score-count trend for the Signaux KPI tiles (image 01).
@@ -425,6 +446,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryFn: ({ signal }) => fetchSignalStatusTrend(signal, asOf ?? undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
+    enabled: tab === "signals",
   });
 
   // Multi-judge consensus runs a panel of local judges server-side and is cached;
@@ -433,6 +455,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryKey: ["judge-consensus"],
     queryFn: ({ signal }) => fetchJudgeConsensus(signal),
     staleTime: Number.POSITIVE_INFINITY,
+    enabled: tab === "models" || tab === "judge",
   });
 
   const firewall = useQuery({
@@ -472,6 +495,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 20_000,
+    enabled: tab === "overview" || tab === "signals",
   });
 
   const anomalies = useQuery({
@@ -640,7 +664,11 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     <div className="flex flex-col gap-2.5">
       {/* Sticky chrome: tab bar + business actions on one row (image normative),
           the shared compact temporal rail (Live/Replay) below. */}
-      <div className="sticky top-0 z-30 -mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-8px_0_0_var(--tessera-bg)]">
+      {/* On phones this chrome is taller than the viewport's useful content area. Making it
+          sticky there lets it intercept taps on the first KPI row as the cards scroll behind
+          it. It becomes sticky only once the viewport has enough room to keep controls and
+          content simultaneously actionable. */}
+      <div className="-mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-8px_0_0_var(--tessera-bg)] md:sticky md:top-0 md:z-30">
         {/* The temporal rail LEADS the chrome — directly beneath the SLO alert the page
             renders above the dashboard (user feedback) — then the actions + tabs. */}
         <SignalCommandBar
@@ -840,7 +868,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 release={releaseStatus.data}
                 freshness={corpusFreshness.data}
                 datasets={evalDatasets.data}
-                skew={embeddingSkew.data}
+                skewQuery={embeddingSkew}
               />
               <div>
                 <div className="flex flex-col gap-2">

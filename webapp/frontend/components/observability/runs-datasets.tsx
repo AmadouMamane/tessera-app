@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  AlertTriangle,
   Boxes,
   ChevronRight,
   Clock,
@@ -11,14 +12,21 @@ import {
   GitBranch,
   GitCompareArrows,
   Layers,
+  LoaderCircle,
+  RefreshCw,
+  Search,
   Workflow,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { type ReactNode, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { QInfo } from "@/components/observability/quality-info";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truncate } from "@/components/ui/truncate";
+import { Link } from "@/i18n/navigation";
 import type {
   FreshnessReport,
   ModelComparison,
@@ -147,20 +155,29 @@ function Kpi({
   tone,
   sub,
   explainKey,
+  onClick,
+  actionLabel,
+  testId,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
-  value: string;
+  value: ReactNode;
   tone?: string;
-  sub?: React.ReactNode;
+  sub?: ReactNode;
   explainKey?: string;
+  onClick?: () => void;
+  actionLabel?: string;
+  testId?: string;
 }) {
-  return (
-    <Card className="flex flex-col gap-0.5 p-2">
+  const content = (
+    <>
       <div className="flex items-center gap-1 text-[0.65rem] leading-tight text-[var(--muted-foreground)]">
         <span className="opacity-70">{icon}</span>
         {label}
         {explainKey ? <QInfo title={label} k={explainKey} className="ml-auto" /> : null}
+        {onClick ? (
+          <ChevronRight className="ml-auto h-3 w-3 opacity-55" aria-hidden="true" />
+        ) : null}
       </div>
       <div
         className={`text-lg font-semibold leading-tight tabular-nums ${tone ?? "text-[var(--foreground)]"}`}
@@ -170,26 +187,280 @@ function Kpi({
       {sub ? (
         <div className="text-[0.6rem] leading-tight text-[var(--muted-foreground)]">{sub}</div>
       ) : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <Card className="overflow-hidden p-0" data-testid={testId}>
+        <button
+          type="button"
+          aria-label={actionLabel ?? label}
+          onClick={onClick}
+          className="flex h-full w-full flex-col gap-0.5 p-2 text-left outline-none transition-colors motion-reduce:transition-none hover:bg-[var(--tessera-bg)]/45 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--tessera-fg-info)]/45"
+        >
+          {content}
+        </button>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="flex flex-col gap-0.5 p-2" data-testid={testId}>
+      {content}
     </Card>
   );
 }
 
-/** Seven-tile headline strip of the Runs & datasets tab (reference image 02). */
+export interface EmbeddingSkewQueryState {
+  data: SkewReport | undefined;
+  error: Error | null;
+  isError: boolean;
+  isFetching: boolean;
+  isLoading: boolean;
+  isStale: boolean;
+  dataUpdatedAt: number;
+  refetch: () => Promise<unknown>;
+}
+
+export type EmbeddingSkewTone = "good" | "warning" | "danger" | "muted";
+
+/** Unknown evidence is a warning, never the green used by a measured match. */
+export function embeddingSkewTone(
+  report: SkewReport | undefined,
+  isError = false,
+): EmbeddingSkewTone {
+  if (isError && !report) return "danger";
+  if (!report || report.corpus_rows === 0) return "muted";
+  if (report.severity === "hard") return "danger";
+  if (report.severity === "soft" || report.severity === "unknown") return "warning";
+  return "good";
+}
+
+const SKEW_TONE_CLASS: Record<EmbeddingSkewTone, string> = {
+  good: GOOD,
+  warning: WARN,
+  danger: BAD,
+  muted: MUTED,
+};
+
+function knownEmbeddingRows(report: SkewReport): number {
+  return Math.max(0, report.corpus_rows - report.unfingerprinted_rows);
+}
+
+function EmbeddingSkewDrawer({
+  query,
+  onClose,
+}: {
+  query: EmbeddingSkewQueryState;
+  onClose: () => void;
+}) {
+  const t = useTranslations("observability.embeddingSkew");
+  const locale = useLocale();
+  const report = query.data;
+  const tone = embeddingSkewTone(report, query.isError);
+  const known = report ? knownEmbeddingRows(report) : 0;
+  const hasMeasuredSpace = (report?.spaces.length ?? 0) > 0;
+  const coverage = report && report.corpus_rows > 0 ? known / report.corpus_rows : 0;
+  const updated = query.dataUpdatedAt
+    ? new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
+        query.dataUpdatedAt,
+      )
+    : null;
+
+  return (
+    <DetailDrawer
+      title={t("title")}
+      subtitle={report ? t(`severity.${report.severity}`) : t("unavailable")}
+      icon={<GitCompareArrows className="h-4 w-4" />}
+      onClose={onClose}
+      testId="embedding-skew-detail"
+      width="max-w-[500px]"
+    >
+      {query.isLoading ? (
+        <div aria-label={t("loading")} className="space-y-3">
+          <div className="h-20 animate-pulse rounded-lg bg-[var(--tessera-bg)] motion-reduce:animate-none" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-24 animate-pulse rounded-lg bg-[var(--tessera-bg)] motion-reduce:animate-none" />
+            <div className="h-24 animate-pulse rounded-lg bg-[var(--tessera-bg)] motion-reduce:animate-none" />
+          </div>
+        </div>
+      ) : null}
+
+      {query.isError && !report ? (
+        <div className="rounded-lg border border-red-500/25 bg-red-500/[0.07] p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--tessera-fg-danger)]" />
+            <div>
+              <p className="text-sm font-semibold">{t("unavailable")}</p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
+                {t("unavailableDetail")}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {query.isError && report ? (
+        <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.07] p-3 text-xs text-[var(--tessera-text-muted)]">
+          {t("refreshFailed", { time: updated ?? "—" })}
+        </div>
+      ) : null}
+
+      {report ? (
+        <>
+          <div
+            className={`rounded-lg border p-3 ${
+              tone === "danger"
+                ? "border-red-500/25 bg-red-500/[0.07]"
+                : tone === "warning"
+                  ? "border-amber-500/25 bg-amber-500/[0.07]"
+                  : "border-[var(--tessera-border)] bg-[var(--tessera-bg)]/45"
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className={SKEW_TONE_CLASS[tone]}>
+                {report.corpus_rows === 0 ? t("empty") : t(`severity.${report.severity}`)}
+              </Badge>
+              {query.isFetching ? (
+                <span className="inline-flex items-center gap-1 text-[0.65rem] text-[var(--tessera-text-muted)]">
+                  <LoaderCircle className="h-3 w-3 animate-spin motion-reduce:animate-none" />
+                  {t("refreshing")}
+                </span>
+              ) : null}
+              {query.isStale && !query.isFetching ? (
+                <span className="text-[0.65rem] text-[var(--tessera-fg-warning)]">
+                  {t("stale")}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
+              {t(`impact.${report.corpus_rows === 0 ? "empty" : report.severity}`)}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-3">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {t("query")}
+              </p>
+              <p className="mt-1 text-sm font-semibold">{report.query_model}</p>
+              <p className="text-xs text-[var(--tessera-text-muted)]">
+                {t("dimensions", { count: report.query_dimension })}
+              </p>
+            </div>
+            <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-3">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {t("corpus")}
+              </p>
+              <p className="mt-1 text-sm font-semibold">
+                {hasMeasuredSpace ? report.corpus_model : t("fingerprintMissing")}
+              </p>
+              <p className="text-xs text-[var(--tessera-text-muted)]">
+                {hasMeasuredSpace
+                  ? report.corpus_known
+                    ? t("dimensions", { count: report.corpus_dimension })
+                    : t("partialFingerprint", {
+                        dimensions: report.corpus_dimension,
+                        known,
+                        total: report.corpus_rows,
+                      })
+                  : t("notMeasured")}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-3">
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <span className="font-semibold">{t("coverageTitle")}</span>
+              <span className="tabular-nums text-[var(--tessera-text-muted)]">
+                {t("coverage", { known, total: report.corpus_rows })}
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--tessera-border)]/55">
+              <div
+                className={`h-full rounded-full ${
+                  coverage === 1
+                    ? "bg-[var(--tessera-fg-success)]"
+                    : "bg-[var(--tessera-fg-warning)]"
+                }`}
+                style={{ width: `${Math.round(coverage * 100)}%` }}
+              />
+            </div>
+            {report.spaces.length > 0 ? (
+              <div className="mt-3 space-y-1 border-t border-[var(--tessera-border)] pt-2">
+                <p className="text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                  {t("spaces")}
+                </p>
+                {report.spaces.map((space) => (
+                  <div
+                    key={`${space.model}-${space.dimension}`}
+                    className="flex items-center justify-between gap-3 text-xs"
+                  >
+                    <span>{`${space.model} · ${space.dimension}d`}</span>
+                    <span className="tabular-nums text-[var(--tessera-text-muted)]">
+                      {t("spaceRows", { count: space.rows })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-3">
+            <p className="text-xs font-semibold">{t("remediationTitle")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
+              {t(`remediation.${report.corpus_rows === 0 ? "empty" : report.severity}`)}
+            </p>
+          </div>
+        </>
+      ) : null}
+
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-3">
+        <span className="text-[0.65rem] text-[var(--tessera-text-muted)]">
+          {updated ? t("lastUpdated", { time: updated }) : t("neverUpdated")}
+        </span>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/configurer/sources-memoire?view=indexation">
+              <Search className="h-3.5 w-3.5" />
+              {t("inspectCorpus")}
+            </Link>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            <RefreshCw
+              className={query.isFetching ? "animate-spin motion-reduce:animate-none" : undefined}
+            />
+            {query.isFetching ? t("refreshing") : t("retry")}
+          </Button>
+        </div>
+      </div>
+    </DetailDrawer>
+  );
+}
+
+/** Eight-tile headline strip of the Runs & datasets tab (reference image 02). */
 export function RunsKpis({
   registry,
   release,
   freshness,
   datasets,
-  skew,
+  skewQuery,
 }: {
   registry: RunRegistry | undefined;
   release: ReleaseStatus | undefined;
   freshness: FreshnessReport | undefined;
   datasets: QualityDatasetsReport | undefined;
-  skew: SkewReport | undefined;
+  skewQuery: EmbeddingSkewQueryState;
 }) {
   const tq = useTranslations("quality");
   const tes = useTranslations("observability.embeddingSkew");
+  const [skewOpen, setSkewOpen] = useState(false);
   const win = windowRuns(registry);
   const nRuns = win.length;
   const cases = win.reduce((acc, r) => acc + r.total, 0);
@@ -209,7 +480,27 @@ export function RunsKpis({
     .filter((x): x is number => x != null)
     .map((x) => Math.abs(x));
   const meanDrift = drifts.length ? drifts.reduce((a, b) => a + b, 0) / drifts.length : null;
-  const skewTone = skew?.severity === "hard" ? BAD : skew?.severity === "soft" ? WARN : GOOD;
+  const skew = skewQuery.data;
+  const skewTone = embeddingSkewTone(skew, skewQuery.isError);
+  const skewValue = skewQuery.isLoading ? (
+    <span
+      aria-label={tes("loading")}
+      className="inline-block h-5 w-24 animate-pulse rounded bg-[var(--tessera-border)]/65 motion-reduce:animate-none"
+    />
+  ) : skewQuery.isError && !skew ? (
+    tes("unavailable")
+  ) : skew?.corpus_rows === 0 ? (
+    tes("empty")
+  ) : skew ? (
+    tes(`severity.${skew.severity}`)
+  ) : (
+    DASH
+  );
+  const skewSub = skew
+    ? tes("coverage", { known: knownEmbeddingRows(skew), total: skew.corpus_rows })
+    : skewQuery.isError
+      ? tes("retryHint")
+      : undefined;
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
@@ -273,10 +564,16 @@ export function RunsKpis({
       <Kpi
         icon={<GitCompareArrows className="h-3 w-3" />}
         label={tes("title")}
-        value={skew ? tes(`severity.${skew.severity}`) : DASH}
-        tone={skew ? skewTone : MUTED}
-        sub={skew ? `${skew.query_model} · ${skew.query_dimension}d` : undefined}
+        value={skewValue}
+        tone={SKEW_TONE_CLASS[skewTone]}
+        sub={skewSub}
+        onClick={() => setSkewOpen(true)}
+        actionLabel={tes("openDetails")}
+        testId="embedding-skew-kpi"
       />
+      {skewOpen ? (
+        <EmbeddingSkewDrawer query={skewQuery} onClose={() => setSkewOpen(false)} />
+      ) : null}
     </div>
   );
 }

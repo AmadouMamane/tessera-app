@@ -89,6 +89,23 @@ Rapport détaillé : [`audit-360-2026-07-21.md`](./audit-360-2026-07-21.md).
 
 ## Log (newest first)
 
+- 2026-08-04 — **Qualité IA : compatibilité des embeddings rendue honnête et opérable**
+  (branche `codex/embedding-lineage-premium`). La source du bandeau générique a été nommée :
+  le corpus comptait 241 chunks dont 241 sans empreinte de modèle, donc l’API répondait
+  correctement `severity: unknown` mais le contrat frontend rejetait cet état et le classait
+  à tort comme panne de données. Le contrat est désormais fermé de bout en bout (`unknown`
+  explicite, couverture et preuves), la tuile Qualité IA distingue chargement / synchronisé /
+  incompatibilité / inconnu / indisponible, et son drawer canonique expose les modèles, les
+  dimensions, la couverture et la remédiation. Les requêtes sont suspendues hors onglet actif ;
+  le bandeau global nomme uniquement les sources réellement en échec avec dernière valeur valide
+  et relance. Le drawer est plein écran sur mobile et le rail temporel ne masque plus les actions.
+  Une réparation contrôlée complète la tranche : plan sec lié au contenu par SHA-256, confirmation
+  exacte lignes+digest, embeddings calculés avant transaction, verrou transactionnel, réconciliation
+  texte/clé et écriture atomique uniquement des lignes encore sans empreinte. Double gate vert sur
+  l’arbre de la tranche : Ruff/format/mypy/TypeScript/Biome sans erreur, frontend 724 réussis
+  (14 ignorés), Python 3 071 réussis (4 ignorés, 59 exclus), couverture 83,8 %. Landing, rebuild
+  local-public et application du plan de réparation restent les actions opérateur suivantes.
+
 - 2026-07-15 — **The page-nature model of the WHOLE site, frozen** (branch
   `claude/contextualisation-pages`, 5 commits `43c66d3e`→docs). The `is_org_wide` doctrine
   applied to PAGES: 27 zone pages classified `org-wide | lens:<domaine> | redirect` in

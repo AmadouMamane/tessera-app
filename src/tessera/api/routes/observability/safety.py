@@ -14,6 +14,7 @@ from tessera.api.routes.observability._common import (
     _read_audit_entries,
     _scores_for,
 )
+from tessera.api.routes.observability.schemas_safety import EmbeddingSkewPayload
 from tessera.observability import (
     cost_anomaly as cost_anomaly_mod,
     cross_tenant as cross_tenant_mod,
@@ -229,7 +230,7 @@ def observability_toxicity(
     return asdict(toxicity_mod.scan_toxicity(turns))
 
 
-@router.get("/observability/embedding-skew")
+@router.get("/observability/embedding-skew", response_model=EmbeddingSkewPayload)
 async def observability_embedding_skew() -> dict[str, object]:
     """Embedding-version skew between the query-time and corpus embedders (#64).
 
@@ -276,12 +277,21 @@ async def observability_embedding_skew() -> dict[str, object]:
             "spaces": [],
         }
 
-    # The LARGEST recorded space is the corpus reference — a partial re-ingestion under a new
-    # model leaves two spaces, and the majority one is what queries mostly land against. Every
-    # space travels in `spaces` so a split corpus is visible rather than averaged away.
-    model, dimension, _ = known[0]
-    corpus = EmbeddingFingerprint(model=str(model), dimension=int(dimension))
-    report = asdict(embedding_skew_mod.detect_skew(query, corpus, corpus_known=True))
+    # Compare EVERY recorded space. Using only the majority could return ``none`` while a
+    # minority of rows lives in an incompatible space — precisely the silent retrieval fault
+    # this probe exists to expose. Hard beats soft, which beats incomplete evidence, which
+    # beats a fully measured match.
+    coverage_complete = unfingerprinted == 0
+    reports = [
+        embedding_skew_mod.detect_skew(
+            query,
+            EmbeddingFingerprint(model=str(model), dimension=int(dimension)),
+            corpus_known=coverage_complete,
+        )
+        for model, dimension, _ in known
+    ]
+    severity_rank = {"none": 0, "unknown": 1, "soft": 2, "hard": 3}
+    report = asdict(max(reports, key=lambda item: severity_rank[item.severity]))
     return {
         **report,
         "corpus_rows": sum(n for _, _, n in groups),

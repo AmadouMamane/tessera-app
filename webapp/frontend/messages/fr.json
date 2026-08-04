@@ -1420,14 +1420,51 @@
       "bytesPerTurn": "Télémétrie / tour"
     },
     "embeddingSkew": {
-      "title": "Skew de version d'embedding",
+      "title": "Compatibilité des embeddings",
       "status": "État",
       "query": "Embedder requête",
       "corpus": "Embedder corpus",
+      "loading": "Chargement de la compatibilité",
+      "unavailable": "Indisponible",
+      "unavailableDetail": "La vérification n’a pas pu être actualisée. Aucune conclusion ne peut être tirée sur la compatibilité du corpus.",
+      "empty": "Corpus vide",
+      "openDetails": "Ouvrir le détail de compatibilité des embeddings",
+      "dimensions": "{count} dimensions",
+      "fingerprintMissing": "Empreinte non enregistrée",
+      "partialFingerprint": "{dimensions} dimensions · {known}/{total} segments traçables",
+      "notMeasured": "Comparaison non effectuée",
+      "coverageTitle": "Couverture de la preuve",
+      "coverage": "{known} / {total} segments traçables",
+      "spaces": "Espaces observés",
+      "spaceRows": "{count} segments",
+      "refreshing": "Actualisation…",
+      "stale": "Mesure à actualiser",
+      "refreshFailed": "L’actualisation a échoué ; la dernière mesure valide de {time} reste affichée.",
+      "retry": "Actualiser",
+      "retryHint": "Ouvrir pour réessayer",
+      "lastUpdated": "Dernière mesure valide à {time}",
+      "neverUpdated": "Aucune mesure valide reçue",
+      "inspectCorpus": "Voir l’indexation",
+      "remediationTitle": "Remédiation recommandée",
       "severity": {
         "none": "Synchronisé",
         "soft": "Skew léger",
-        "hard": "Skew dur"
+        "hard": "Incompatible",
+        "unknown": "Non vérifiable"
+      },
+      "impact": {
+        "none": "Le modèle actif et tous les espaces d’embedding du corpus ont été comparés et sont compatibles.",
+        "soft": "Les dimensions sont compatibles, mais les modèles diffèrent : les voisinages sémantiques peuvent dériver.",
+        "hard": "Les dimensions diffèrent : les vecteurs ne sont pas comparables de manière fiable.",
+        "unknown": "Aucune incompatibilité n’est démontrée, mais l’empreinte d’ingestion manque : la compatibilité ne peut pas être prouvée.",
+        "empty": "Aucun segment indexé n’est disponible pour effectuer la comparaison."
+      },
+      "remediation": {
+        "none": "Aucune action corrective. Continuer à enregistrer l’empreinte à chaque ingestion.",
+        "soft": "Réindexer le corpus avec le modèle actif dans un espace temporaire, vérifier les résultats puis basculer.",
+        "hard": "Bloquer toute bascule silencieuse et reconstruire l’index avec le modèle actif avant validation.",
+        "unknown": "Ré-encoder les segments non traçables avec le modèle actif ; ne jamais compléter leur empreinte par supposition.",
+        "empty": "Ingérer le corpus avec un modèle et une dimension enregistrés dès l’écriture."
       }
     },
     "freshness": {
@@ -1901,6 +1938,9 @@
     }
   },
   "quality": {
+    "dataSources": {
+      "embeddingCompatibility": "Compatibilité des embeddings"
+    },
     "title": "Qualité IA",
     "subtitle": "Suivez la qualité des réponses, les écarts à l'objectif et les évaluations avant mise en ligne.",
     "sections": {
@@ -10767,9 +10807,19 @@
     "pickTime": "Heure"
   },
   "queryHealth": {
-    "title": "Certaines données ne sont pas à jour",
-    "detailOne": "Une source active ne répond pas. Les valeurs conservées à l’écran peuvent être antérieures.",
-    "detailMany": "{count} sources actives ne répondent pas. Les valeurs conservées à l’écran peuvent être antérieures.",
+    "titleOne": "Une source nécessite votre attention",
+    "titleMany": "{count} sources nécessitent votre attention",
+    "sourceFallback": "Source « {source} »",
+    "lastSuccess": "dernière réussite à {time}",
+    "noSuccess": "aucune donnée valide reçue",
+    "more": "Et {count} autre(s) source(s).",
+    "kind": {
+      "contract": "Réponse incompatible avec le contrat attendu",
+      "access": "Accès à la source refusé",
+      "service": "Le service a retourné une erreur",
+      "network": "Source momentanément inaccessible",
+      "response": "Réponse de la source refusée"
+    },
     "retry": "Réessayer",
     "retrying": "Nouvel essai…"
   },

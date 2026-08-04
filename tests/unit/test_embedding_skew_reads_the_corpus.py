@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from tessera.api.routes.observability import safety
+from tessera.api.routes.observability.schemas_safety import EmbeddingSkewPayload
 from tessera.observability.embedding_skew import EmbeddingFingerprint, detect_skew
 
 if TYPE_CHECKING:
@@ -107,14 +108,29 @@ async def test_rows_ingested_before_the_columns_existed_are_named_not_assumed(
 
 
 @pytest.mark.asyncio
+async def test_unknown_is_a_first_class_wire_verdict(
+    patched: Callable[[list[Any]], None],
+) -> None:
+    """The honest blind spot must survive FastAPI response validation unchanged."""
+    patched([(None, None, 241)])
+
+    payload = EmbeddingSkewPayload.model_validate(await safety.observability_embedding_skew())
+
+    assert payload.severity == "unknown"
+    assert payload.corpus_known is False
+    assert payload.corpus_rows == 241
+    assert payload.unfingerprinted_rows == 241
+
+
+@pytest.mark.asyncio
 async def test_a_split_corpus_is_visible_rather_than_averaged(
     patched: Callable[[list[Any]], None],
 ) -> None:
     """A partial re-ingestion leaves TWO spaces, and hiding one is how the skew hides.
 
-    The majority space is the comparison reference — it is what most queries land against —
-    but the minority space travels in `spaces` so an operator can see that half the corpus was
-    never re-embedded.
+    The majority space may match the query, but a minority space can still poison retrieval.
+    The verdict therefore follows the worst observed space and keeps the incomplete coverage
+    explicit instead of averaging either problem away.
     """
     patched(
         [
@@ -125,12 +141,32 @@ async def test_a_split_corpus_is_visible_rather_than_averaged(
     )
     report = await safety.observability_embedding_skew()
 
-    assert report["corpus_model"] == "bge-m3"
+    assert report["corpus_model"] == "text-multilingual-embedding-002"
+    assert report["corpus_known"] is False
+    assert report["severity"] == "hard"
     assert report["corpus_rows"] == 4000
     assert report["unfingerprinted_rows"] == 100
     spaces = report["spaces"]
     assert isinstance(spaces, list)
     assert len(spaces) == 2, "the second embedding space vanished from the report"
+
+
+@pytest.mark.asyncio
+async def test_partial_matching_fingerprint_is_unknown_not_green(
+    patched: Callable[[list[Any]], None],
+) -> None:
+    """A measured matching subset cannot clear the rows the witness still cannot see."""
+    from tessera.retrieval.embeddings import embedding_dimension, embedding_model_name
+
+    patched([(embedding_model_name(), embedding_dimension(), 240), (None, None, 1)])
+
+    report = await safety.observability_embedding_skew()
+
+    assert report["skew"] is False
+    assert report["corpus_known"] is False
+    assert report["severity"] == "unknown"
+    assert report["corpus_rows"] == 241
+    assert report["unfingerprinted_rows"] == 1
 
 
 @pytest.mark.asyncio

@@ -2073,17 +2073,52 @@ export const ObsCostReportSchema = z.object({
 });
 export type ObsCostReport = z.infer<typeof ObsCostReportSchema>;
 
-export const SkewReportSchema = z.object({
-  query_model: z.string(),
-  query_dimension: z.number().int(),
-  corpus_model: z.string(),
-  corpus_dimension: z.number().int(),
-  dimension_mismatch: z.boolean(),
-  model_mismatch: z.boolean(),
-  skew: z.boolean(),
-  severity: z.enum(["none", "soft", "hard"]),
-  reason: z.string(),
-});
+export const SkewReportSchema = z
+  .object({
+    query_model: z.string(),
+    query_dimension: z.number().int().positive(),
+    corpus_model: z.string(),
+    corpus_dimension: z.number().int().positive(),
+    dimension_mismatch: z.boolean(),
+    model_mismatch: z.boolean(),
+    skew: z.boolean(),
+    severity: z.enum(["none", "soft", "hard", "unknown"]),
+    reason: z.string(),
+    corpus_known: z.boolean(),
+    corpus_rows: z.number().int().nonnegative(),
+    unfingerprinted_rows: z.number().int().nonnegative(),
+    spaces: z.array(
+      z.object({
+        model: z.string(),
+        dimension: z.number().int().positive(),
+        rows: z.number().int().positive(),
+      }),
+    ),
+  })
+  .superRefine((report, context) => {
+    const measuredRows = report.spaces.reduce((total, space) => total + space.rows, 0);
+    if (measuredRows + report.unfingerprinted_rows !== report.corpus_rows) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "embedding evidence does not cover corpus rows exactly",
+        path: ["corpus_rows"],
+      });
+    }
+    if (report.corpus_known && report.unfingerprinted_rows !== 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "known corpus cannot contain unfingerprinted rows",
+        path: ["corpus_known"],
+      });
+    }
+    if (report.severity === "none" && !report.corpus_known) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "incomplete evidence cannot receive a clean verdict",
+        path: ["severity"],
+      });
+    }
+  });
 export type SkewReport = z.infer<typeof SkewReportSchema>;
 
 export const RegulationFreshnessSchema = z.object({

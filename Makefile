@@ -33,7 +33,8 @@ SHELL := /bin/bash
 .PHONY: install install-all lint lint-fix typecheck format format-check test test-integration \
         test-all coverage eval eval-demo eval-case eval-lang eval-sweep eval-noise \
         eval-null eval-null-write eval-power eval-power-write eval-contribution \
-        eval-calibrate-weak seed generate-corpus ingest-regulations bootstrap run run-on-prem \
+        eval-calibrate-weak seed generate-corpus ingest-regulations reindex-embeddings \
+        bootstrap run run-on-prem \
         precommit check ci help hooks land memory-check \
         obs-up obs-up-core obs-down obs-logs obs-guard obs-secrets dev-secrets \
         obs-verify obs-realign obs-wait eval-regrade \
@@ -552,6 +553,12 @@ ingest-regulations: install
 # Ingest Crédit Aurore product corpus into pgvector
 seed: install
 	uv run python scripts/seed_demo.py
+
+# Repair legacy vectors whose ingestion did not record model/dimension provenance.
+# Dry-run by default; pass ARGS="--apply --expect-rows N --expect-plan-digest SHA" only after
+# reviewing the exact plan printed by a preceding dry run.
+reindex-embeddings: install
+	uv run python scripts/reindex_embeddings.py $(ARGS)
 
 # ── e2e seed fixture ────────────────────────────────────────────────────────
 # Rebuild `fixtures/e2e/pgvector-seed.sql.gz` — the corpus CI restores instead of
@@ -1201,6 +1208,7 @@ help:
 	@echo "  generate-corpus    Re-generate product JSON pages"
 	@echo "  ingest-regulations Ingest EU regulatory corpus into pgvector"
 	@echo "  seed               Ingest product corpus into pgvector"
+	@echo "  reindex-embeddings Dry-run/repair legacy embedding provenance (ARGS=...)"
 	@echo "  bootstrap          Boot Postgres + ingest all corpora"
 	@echo ""
 	@echo "Run"

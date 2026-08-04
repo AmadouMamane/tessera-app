@@ -307,6 +307,26 @@ the local / on-prem logical dump.
 2. Verify the chunk count after ingest — **expected ~238 chunks**. A materially
    different count signals a partial or duplicated ingest.
 
+### Embedding compatibility is not verifiable
+
+When `/observability/embedding-skew` reports `severity=unknown`, do not fill the missing model
+and dimension columns by assumption: the old vector must be replaced by one the active embedder
+actually produced.
+
+1. Inspect the exact live target without a model call or database write:
+   `make reindex-embeddings`. Record the printed `rows`, `digest`, `model` and `dimension`.
+2. Apply only that reviewed plan:
+   `make reindex-embeddings ARGS="--apply --expect-rows <rows> --expect-plan-digest <digest>"`.
+   A count, content, model or dimension change refuses the operation.
+3. The tool computes every vector before opening the write transaction, stages the replacements
+   in a temporary pgvector table, reconciles keys and exact stored texts, then updates all rows
+   atomically. Readers keep the previous committed index until that commit.
+4. Verify `/observability/embedding-skew`: `corpus_known=true`,
+   `unfingerprinted_rows=0`, and `severity=none` for a corpus rebuilt with the active model.
+
+The repair does not re-chunk or replace source content; it re-embeds the exact text already in
+the index. Any content refresh remains the ordinary ingestion workflow above.
+
 ## Rollback
 
 Shift traffic back to the last known-good revision:

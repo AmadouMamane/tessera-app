@@ -164,6 +164,7 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::seed-fixture": "action",
     "Makefile::generate-corpus": "action",
     "Makefile::ingest-regulations": "action",
+    "Makefile::reindex-embeddings": "delegate",  # → scripts/reindex_embeddings.py
     "Makefile::run": "action",
     "Makefile::run-on-prem": "action",
     "Makefile::dev-up": "action",
@@ -314,6 +315,10 @@ _EXIT_WITNESSES: dict[str, str] = {
     "scripts/generate_traffic.py": "action",
     "scripts/generate_zod.py": "action",
     "scripts/ingest_regulations.py": "action",
+    # Dry-run reports the exact target; --apply replaces its vectors atomically. Exit 2 refuses
+    # an obsolete/unreadable plan and exit 3 reports a failed repair. Those codes describe the
+    # controlled action, not whether the repository passes a quality judgement.
+    "scripts/reindex_embeddings.py": "action",
     "scripts/ingest_transcript_traffic.py": "action",
     "scripts/seed_agents.py": "action",
     "scripts/seed_demo.py": "action",

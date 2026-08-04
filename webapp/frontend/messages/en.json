@@ -1420,14 +1420,51 @@
       "bytesPerTurn": "Telemetry / turn"
     },
     "embeddingSkew": {
-      "title": "Embedding-version skew",
+      "title": "Embedding compatibility",
       "status": "Status",
       "query": "Query embedder",
       "corpus": "Corpus embedder",
+      "loading": "Loading embedding compatibility",
+      "unavailable": "Unavailable",
+      "unavailableDetail": "The check could not be refreshed. No conclusion can be drawn about corpus compatibility.",
+      "empty": "Empty corpus",
+      "openDetails": "Open embedding compatibility details",
+      "dimensions": "{count} dimensions",
+      "fingerprintMissing": "Fingerprint not recorded",
+      "partialFingerprint": "{dimensions} dimensions · {known}/{total} traceable segments",
+      "notMeasured": "Comparison not performed",
+      "coverageTitle": "Evidence coverage",
+      "coverage": "{known} / {total} traceable segments",
+      "spaces": "Observed spaces",
+      "spaceRows": "{count} segments",
+      "refreshing": "Refreshing…",
+      "stale": "Measurement needs refreshing",
+      "refreshFailed": "Refresh failed; the last valid measurement from {time} remains displayed.",
+      "retry": "Refresh",
+      "retryHint": "Open to retry",
+      "lastUpdated": "Last valid measurement at {time}",
+      "neverUpdated": "No valid measurement received",
+      "inspectCorpus": "View indexing",
+      "remediationTitle": "Recommended remediation",
       "severity": {
         "none": "In sync",
         "soft": "Soft skew",
-        "hard": "Hard skew"
+        "hard": "Incompatible",
+        "unknown": "Not verifiable"
+      },
+      "impact": {
+        "none": "The active model and every corpus embedding space were compared and are compatible.",
+        "soft": "Dimensions are compatible, but the models differ: semantic neighbourhoods may drift.",
+        "hard": "Dimensions differ: the vectors cannot be compared reliably.",
+        "unknown": "No incompatibility is proven, but the ingestion fingerprint is missing, so compatibility cannot be demonstrated.",
+        "empty": "No indexed segment is available for comparison."
+      },
+      "remediation": {
+        "none": "No corrective action. Keep recording the fingerprint on every ingestion.",
+        "soft": "Reindex the corpus with the active model in a temporary space, validate the result, then switch over.",
+        "hard": "Prevent any silent switch and rebuild the index with the active model before validation.",
+        "unknown": "Re-encode untraceable segments with the active model; never fill their fingerprint by assumption.",
+        "empty": "Ingest the corpus with the model and dimension recorded at write time."
       }
     },
     "freshness": {
@@ -1901,6 +1938,9 @@
     }
   },
   "quality": {
+    "dataSources": {
+      "embeddingCompatibility": "Embedding compatibility"
+    },
     "title": "AI Quality",
     "subtitle": "Track response quality, gaps to target, and evaluations before launch.",
     "sections": {
@@ -10753,9 +10793,19 @@
     "pickTime": "Time"
   },
   "queryHealth": {
-    "title": "Some data is not up to date",
-    "detailOne": "One active source is not responding. Values kept on screen may be older.",
-    "detailMany": "{count} active sources are not responding. Values kept on screen may be older.",
+    "titleOne": "One source needs your attention",
+    "titleMany": "{count} sources need your attention",
+    "sourceFallback": "Source “{source}”",
+    "lastSuccess": "last succeeded at {time}",
+    "noSuccess": "no valid data received",
+    "more": "And {count} more source(s).",
+    "kind": {
+      "contract": "Response does not match the expected contract",
+      "access": "Access to the source was denied",
+      "service": "The service returned an error",
+      "network": "Source is temporarily unreachable",
+      "response": "The source response was rejected"
+    },
     "retry": "Try again",
     "retrying": "Retrying…"
   },

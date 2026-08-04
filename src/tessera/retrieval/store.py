@@ -32,11 +32,16 @@ if TYPE_CHECKING:
 
 __all__ = [
     "DocumentRecord",
+    "ReembeddedChunk",
+    "UnfingerprintedChunk",
     "VectorHit",
+    "corpus_fingerprints",
     "ensure_schema",
     "get_pool",
     "insert_documents",
     "knn_search",
+    "load_unfingerprinted_chunks",
+    "replace_unfingerprinted_embeddings",
 ]
 
 
@@ -63,6 +68,27 @@ class VectorHit:
     text: str
     score: float
     metadata: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class UnfingerprintedChunk:
+    """One stored chunk whose original embedding space was not recorded."""
+
+    corpus: str
+    source: str
+    chunk_id: str
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ReembeddedChunk:
+    """Replacement vector for one exact, still-unfingerprinted stored chunk."""
+
+    corpus: str
+    source: str
+    chunk_id: str
+    text: str
+    embedding: list[float]
 
 
 _pool: AsyncConnectionPool | None = None
@@ -291,3 +317,172 @@ async def corpus_fingerprints() -> list[tuple[str | None, int | None, int]]:
         )
         rows = await cur.fetchall()
     return [(r[0], r[1], int(r[2])) for r in rows]
+
+
+async def load_unfingerprinted_chunks() -> list[UnfingerprintedChunk]:
+    """Read the exact stored texts whose embedding provenance is incomplete.
+
+    The repair re-embeds these texts as stored; it does not re-chunk source files or assume
+    which model created the legacy vector. That keeps content and identity stable while the
+    missing evidence is rebuilt.
+    """
+    table = safe_identifier(get_settings().postgres.vector_table)
+    async with _connection() as conn, conn.cursor() as cur:
+        await cur.execute(
+            f"""
+            SELECT corpus, source, chunk_id, text
+              FROM {table}
+             WHERE embedding_model IS NULL OR embedding_dimension IS NULL
+             ORDER BY corpus, source, chunk_id;
+            """  # noqa: S608 — fixed, validated identifier; no caller string reaches the SQL
+        )
+        rows = await cur.fetchall()
+    return [
+        UnfingerprintedChunk(
+            corpus=str(row[0]),
+            source=str(row[1]),
+            chunk_id=str(row[2]),
+            text=str(row[3]),
+        )
+        for row in rows
+    ]
+
+
+_EMBEDDING_REPAIR_LOCK = 0x7E55E2A0454D  # "TESSERA EM", serialises repair transactions
+
+
+async def replace_unfingerprinted_embeddings(
+    repairs: Sequence[ReembeddedChunk],
+    *,
+    model: str,
+    dimension: int,
+) -> int:
+    """Atomically replace every legacy vector after staging and exact-text reconciliation.
+
+    Retrieval keeps reading the old committed vectors while embeddings are computed. This
+    function then stages all replacements in a temporary table and updates the live rows in
+    one transaction. It refuses partial coverage, content drift, duplicate keys and dimension
+    mismatches; no fingerprint is ever backfilled without a freshly produced vector.
+
+    Args:
+        repairs: Fresh vectors for the complete current set of unfingerprinted chunks.
+        model: Active model that produced every replacement vector.
+        dimension: Expected width of every replacement vector.
+
+    Returns:
+        Number of rows atomically replaced.
+
+    Raises:
+        ValueError: The replacement set is internally inconsistent.
+        RuntimeError: The live target changed or cannot be reconciled exactly.
+    """
+    if not model.strip():
+        msg = "embedding repair model must be non-empty"
+        raise ValueError(msg)
+    if dimension < 1:
+        msg = "embedding repair dimension must be positive"
+        raise ValueError(msg)
+    keys = [(row.corpus, row.source, row.chunk_id) for row in repairs]
+    if len(keys) != len(set(keys)):
+        msg = "embedding repair contains duplicate chunk keys"
+        raise ValueError(msg)
+    if any(len(row.embedding) != dimension for row in repairs):
+        msg = f"embedding repair contains a vector outside the declared {dimension}-d space"
+        raise ValueError(msg)
+
+    table = safe_identifier(get_settings().postgres.vector_table)
+    async with _connection() as conn, conn.cursor() as cur:
+        try:
+            await cur.execute("SELECT pg_advisory_xact_lock(%s)", (_EMBEDDING_REPAIR_LOCK,))
+            await cur.execute(
+                f"""
+                SELECT count(*)::int
+                  FROM {table}
+                 WHERE embedding_model IS NULL OR embedding_dimension IS NULL;
+                """  # noqa: S608 — fixed, validated identifier
+            )
+            count_row = await cur.fetchone()
+            current = int(count_row[0]) if count_row is not None else 0
+            if current != len(repairs):
+                msg = (
+                    "embedding repair target changed after planning: "
+                    f"planned {len(repairs)}, found {current}"
+                )
+                raise RuntimeError(msg)
+
+            await cur.execute(
+                f"""
+                CREATE TEMP TABLE tessera_embedding_repair_stage (
+                    corpus               text NOT NULL,
+                    source               text NOT NULL,
+                    chunk_id             text NOT NULL,
+                    original_text        text NOT NULL,
+                    embedding            vector({dimension}) NOT NULL,
+                    embedding_model      text NOT NULL,
+                    embedding_dimension  integer NOT NULL,
+                    PRIMARY KEY (corpus, source, chunk_id)
+                ) ON COMMIT DROP;
+                """
+            )
+            await cur.executemany(
+                """
+                INSERT INTO tessera_embedding_repair_stage
+                    (corpus, source, chunk_id, original_text, embedding,
+                     embedding_model, embedding_dimension)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                """,
+                [
+                    (
+                        row.corpus,
+                        row.source,
+                        row.chunk_id,
+                        row.text,
+                        row.embedding,
+                        model,
+                        dimension,
+                    )
+                    for row in repairs
+                ],
+            )
+            await cur.execute(
+                f"""
+                SELECT count(*)::int
+                  FROM {table} AS target
+                  JOIN tessera_embedding_repair_stage AS stage
+                    USING (corpus, source, chunk_id)
+                 WHERE target.text = stage.original_text
+                   AND (target.embedding_model IS NULL OR target.embedding_dimension IS NULL);
+                """  # noqa: S608 — fixed, validated identifier
+            )
+            matched_row = await cur.fetchone()
+            matched = int(matched_row[0]) if matched_row is not None else 0
+            if matched != len(repairs):
+                msg = (
+                    "embedding repair staging did not reconcile with the live texts: "
+                    f"planned {len(repairs)}, matched {matched}"
+                )
+                raise RuntimeError(msg)
+
+            await cur.execute(
+                f"""
+                UPDATE {table} AS target
+                   SET embedding = stage.embedding,
+                       embedding_model = stage.embedding_model,
+                       embedding_dimension = stage.embedding_dimension
+                  FROM tessera_embedding_repair_stage AS stage
+                 WHERE target.corpus = stage.corpus
+                   AND target.source = stage.source
+                   AND target.chunk_id = stage.chunk_id
+                   AND target.text = stage.original_text
+                   AND (target.embedding_model IS NULL OR target.embedding_dimension IS NULL);
+                """  # noqa: S608 — fixed, validated identifier
+            )
+            updated = cur.rowcount or 0
+            if updated != len(repairs):
+                msg = f"embedding repair updated {updated} rows; expected {len(repairs)}"
+                raise RuntimeError(msg)
+            await conn.commit()
+            return updated
+        except Exception:
+            await conn.rollback()
+            raise

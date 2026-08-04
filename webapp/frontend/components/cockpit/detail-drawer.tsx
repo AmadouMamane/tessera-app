@@ -49,6 +49,14 @@ export function DetailDrawer({
 
   useEffect(() => {
     const measure = () => {
+      // A content-anchored drawer is premium on a wide cockpit: the navigation remains
+      // legible while the inspected entity stays contextualised. On a phone that same
+      // anchor leaves barely two thirds of the viewport for the panel, so the canonical
+      // drawer becomes a true full-screen modal instead.
+      if (window.innerWidth < 640) {
+        setRect(undefined);
+        return;
+      }
       const main = document.querySelector("main");
       if (!main) return;
       const mainRect = main.getBoundingClientRect();

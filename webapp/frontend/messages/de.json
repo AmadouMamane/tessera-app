@@ -1420,14 +1420,51 @@
       "bytesPerTurn": "Telemetrie / Turn"
     },
     "embeddingSkew": {
-      "title": "Embedding-Versions-Skew",
+      "title": "Embedding-Kompatibilität",
       "status": "Status",
       "query": "Query-Embedder",
       "corpus": "Korpus-Embedder",
+      "loading": "Embedding-Kompatibilität wird geladen",
+      "unavailable": "Nicht verfügbar",
+      "unavailableDetail": "Die Prüfung konnte nicht aktualisiert werden. Zur Kompatibilität des Korpus ist keine Aussage möglich.",
+      "empty": "Leerer Korpus",
+      "openDetails": "Details zur Embedding-Kompatibilität öffnen",
+      "dimensions": "{count} Dimensionen",
+      "fingerprintMissing": "Fingerabdruck nicht erfasst",
+      "partialFingerprint": "{dimensions} Dimensionen · {known}/{total} Segmente nachvollziehbar",
+      "notMeasured": "Vergleich nicht durchgeführt",
+      "coverageTitle": "Nachweisabdeckung",
+      "coverage": "{known} / {total} Segmente nachvollziehbar",
+      "spaces": "Beobachtete Räume",
+      "spaceRows": "{count} Segmente",
+      "refreshing": "Wird aktualisiert…",
+      "stale": "Messung muss aktualisiert werden",
+      "refreshFailed": "Die Aktualisierung ist fehlgeschlagen; die letzte gültige Messung von {time} bleibt sichtbar.",
+      "retry": "Aktualisieren",
+      "retryHint": "Zum Wiederholen öffnen",
+      "lastUpdated": "Letzte gültige Messung um {time}",
+      "neverUpdated": "Keine gültige Messung empfangen",
+      "inspectCorpus": "Indexierung ansehen",
+      "remediationTitle": "Empfohlene Behebung",
       "severity": {
         "none": "Synchron",
         "soft": "Leichter Skew",
-        "hard": "Harter Skew"
+        "hard": "Inkompatibel",
+        "unknown": "Nicht verifizierbar"
+      },
+      "impact": {
+        "none": "Das aktive Modell und alle Embedding-Räume des Korpus wurden verglichen und sind kompatibel.",
+        "soft": "Die Dimensionen sind kompatibel, aber die Modelle unterscheiden sich; semantische Nachbarschaften können abweichen.",
+        "hard": "Die Dimensionen unterscheiden sich; die Vektoren sind nicht zuverlässig vergleichbar.",
+        "unknown": "Keine Inkompatibilität ist belegt, aber der Ingestions-Fingerabdruck fehlt; die Kompatibilität ist nicht nachweisbar.",
+        "empty": "Für den Vergleich ist kein indexiertes Segment verfügbar."
+      },
+      "remediation": {
+        "none": "Keine Korrektur nötig. Den Fingerabdruck bei jeder Ingestion weiter erfassen.",
+        "soft": "Den Korpus mit dem aktiven Modell in einem temporären Raum neu indexieren, prüfen und anschließend umschalten.",
+        "hard": "Jede stille Umschaltung verhindern und den Index vor der Freigabe mit dem aktiven Modell neu aufbauen.",
+        "unknown": "Nicht nachvollziehbare Segmente mit dem aktiven Modell neu kodieren; ihren Fingerabdruck niemals durch Annahme ergänzen.",
+        "empty": "Den Korpus ingestieren und Modell sowie Dimension beim Schreiben erfassen."
       }
     },
     "freshness": {
@@ -1901,6 +1938,9 @@
     }
   },
   "quality": {
+    "dataSources": {
+      "embeddingCompatibility": "Embedding-Kompatibilität"
+    },
     "title": "KI-Qualität",
     "subtitle": "Verfolgen Sie Antwortqualität, Abweichungen vom Ziel und Prüfungen vor der Freigabe.",
     "sections": {
@@ -10767,9 +10807,19 @@
     "pickTime": "Uhrzeit"
   },
   "queryHealth": {
-    "title": "Einige Daten sind nicht aktuell",
-    "detailOne": "Eine aktive Quelle antwortet nicht. Angezeigte Werte können älter sein.",
-    "detailMany": "{count} aktive Quellen antworten nicht. Angezeigte Werte können älter sein.",
+    "titleOne": "Eine Quelle benötigt Ihre Aufmerksamkeit",
+    "titleMany": "{count} Quellen benötigen Ihre Aufmerksamkeit",
+    "sourceFallback": "Quelle „{source}“",
+    "lastSuccess": "letzter Erfolg um {time}",
+    "noSuccess": "keine gültigen Daten empfangen",
+    "more": "Und {count} weitere Quelle(n).",
+    "kind": {
+      "contract": "Antwort entspricht nicht dem erwarteten Vertrag",
+      "access": "Zugriff auf die Quelle wurde verweigert",
+      "service": "Der Dienst hat einen Fehler zurückgegeben",
+      "network": "Quelle ist vorübergehend nicht erreichbar",
+      "response": "Die Antwort der Quelle wurde abgelehnt"
+    },
     "retry": "Erneut versuchen",
     "retrying": "Neuer Versuch…"
   },
