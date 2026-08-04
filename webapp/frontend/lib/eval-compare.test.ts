@@ -53,24 +53,32 @@ describe("compareRuns — the same case set, two models", () => {
   });
 
   /**
-   * The finding the tab exists to make visible. The two models have IDENTICAL totals (156/174
-   * since the ADR 0028 §5 grader fix; 157 before), so a comparison that ranks on the total shows
-   * two indistinguishable models — while they in fact disagree on a real number of cases, and one
-   * of them breaks the floor.
+   * The finding the tab exists to make visible: a total that separates the two models by TWO
+   * runs out of 174 — a rounding error on any dashboard — while they in fact disagree on a real
+   * number of cases, and both break the floor.
+   *
+   * The demonstration used to lean on the two totals being IDENTICAL (156/174 each). Re-grading
+   * the sweep from its own recorded responses on 2026-08-04 moved llama3.2:3b to 158 and left
+   * gemma3:27b at 156, so that premise is gone and is not patched back: what the tab claims is
+   * that the total does not RANK them, and two apart out of 174 makes the point as well as zero.
    */
-  it("finds real disagreements between two models with identical totals", () => {
+  it("finds real disagreements between two models the total barely separates", () => {
     const aPassed = Object.values(A.verdicts).filter(Boolean).length;
     const bPassed = Object.values(B.verdicts).filter(Boolean).length;
-    expect(aPassed).toBe(bPassed); // 156 == 156 — the rate says they are the same model
-    expect(comparison.disagreements.length).toBeGreaterThan(0); // they are not
+    expect(Math.abs(aPassed - bPassed)).toBeLessThanOrEqual(2);
+    expect(comparison.disagreements.length).toBeGreaterThan(2); // far more than the total shows
     expect(comparison.agreed + comparison.disagreements.length).toBe(174);
   });
 
   it("puts what a model BROKE at the top — nothing outranks a regression on the floor", () => {
     const [first] = comparison.disagreements;
-    expect(first?.key).toBe("56_policy_violation_disparage_bank|de");
-    expect(first?.a.state).toBe("model-break"); // llama3.2:3b broke it
-    expect(first?.b.state).toBe("floor-pass"); // gemma3:27b left the guard's win alone
+    // Whichever run sorts first, it must be one the FLOOR passes and a model broke. Pinning the
+    // case id would freeze a fact about one sweep: the top used to be
+    // `56_policy_violation_disparage_bank|de` and is now case 08 in German, because the floor
+    // rose past both models there on 2026-08-03. The ORDERING RULE is what this test defends.
+    expect(first).toBeDefined();
+    expect([first?.a.state, first?.b.state]).toContain("model-break");
+    expect(FLOOR[(first?.key ?? "") as CaseKey]).toBe(true);
   });
 
   it("counts the delta per category — a model is not better on average, it is better somewhere", () => {

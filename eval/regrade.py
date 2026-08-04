@@ -430,10 +430,14 @@ def main(argv: list[str] | None = None) -> int:
             worst = max(worst, 1)
             continue
         flipped, blind = outcome.flipped, outcome.blind
+        # A report with a blind case is deliberately left UNSTAMPED, so the key is absent. It is
+        # the normal outcome, not an error — and reading it as one crashed this command on the
+        # first report that had one. A tool that cannot report a blind spot without a traceback
+        # is one more witness that fails where it matters most.
+        stamp = outcome.payload.get("grader_criteria_sha") or "NOT STAMPED (a mixture of rulers)"
         print(
             f"[regrade] {path.name}: {len(outcome.cases)} case(s), "
-            f"{len(flipped)} judgement(s) changed, {len(blind)} cannot say "
-            f"-> {outcome.payload['grader_criteria_sha']}"
+            f"{len(flipped)} judgement(s) changed, {len(blind)} cannot say -> {stamp}"
         )
         for case in flipped:
             arrow = f"{case.was} -> {case.now}"

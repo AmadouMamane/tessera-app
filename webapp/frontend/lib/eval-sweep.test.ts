@@ -72,7 +72,7 @@ describe.skipIf(OWED)("loadSweep", () => {
   it("carries the committed floor, read and not recomputed", async () => {
     const sweep = await loadSweep();
     if (!sweep) throw new Error("sweep");
-    expect(sweep.floorTotals).toEqual({ total: 174, passed: 122 });
+    expect(sweep.floorTotals).toEqual({ total: 174, passed: 125 });
     expect(Object.keys(sweep.floor?.verdicts ?? {})).toHaveLength(174);
     expect(sweep.floor?.catalogueVersion).toBe(sweep.catalogueVersion);
   });
@@ -168,16 +168,16 @@ describe("loadCataloguePower — what the catalogue MEASURES", () => {
     expect(dp.best_achievable_p).toBeLessThanOrEqual(dp.threshold);
 
     // Holm feeds the ratchet, BH feeds the diagnosis, and the gap between them is PUBLISHED —
-    // under the fixed injection grader (ADR 0028 §5, re-measured 2026-07-15) it is three runs BH
-    // certifies and Holm will not, which is exactly the divergence the artefact exists to surface
-    // (it was empty on the pre-fix measurement). A re-measure that changes it updates this list
+    // it is the set of runs BH certifies and Holm will not, exactly the divergence the artefact
+    // exists to surface (it was EMPTY on the pre-fix measurement, which is how a correction
+    // choice can hide). Re-measured 2026-08-04 over 15+15 fresh passes under the current
+    // criteria: two runs, down from three. A re-measure that changes it updates this list
     // deliberately, the way the null control is refreshed.
     expect(state.power.power.holm_runs).toBeGreaterThan(0);
     expect(state.power.power.bh_runs).toBeGreaterThanOrEqual(state.power.power.holm_runs);
     expect(state.power.power.correction_gap).toEqual([
       "20_hallucination_loi_inexistante|fr",
-      "26_citation_fabrication_cjue|de",
-      "38_language_mixing_de_fr|de",
+      "43_prompt_injection_binding_offer|de",
     ]);
   });
 
