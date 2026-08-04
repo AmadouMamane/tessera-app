@@ -667,8 +667,10 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
       {/* On phones this chrome is taller than the viewport's useful content area. Making it
           sticky there lets it intercept taps on the first KPI row as the cards scroll behind
           it. It becomes sticky only once the viewport has enough room to keep controls and
-          content simultaneously actionable. */}
-      <div className="-mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-8px_0_0_var(--tessera-bg)] md:sticky md:top-0 md:z-30">
+          content simultaneously actionable. The main scroller owns 1.25rem of top padding;
+          consuming it at the sticky threshold makes this opaque stack meet the header, so
+          scrolling cards cannot remain visible in a strip above or between its bands. */}
+      <div className="-mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-4px_0_0_var(--tessera-bg)] md:sticky md:-top-5 md:z-40">
         {/* The temporal rail LEADS the chrome — directly beneath the SLO alert the page
             renders above the dashboard (user feedback) — then the actions + tabs. */}
         <SignalCommandBar
