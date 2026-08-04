@@ -499,6 +499,25 @@ def _with_run_twins(requested: list[Path], reports_dir: Path) -> list[Path]:
     return chosen + extras
 
 
+def _requested(report: Path | None, reports_dir: Path, *, whole_dir: bool) -> list[Path]:
+    """The reports the caller asked for: one, a whole directory, or the agents' pointers."""
+    if report is not None:
+        return [report]
+    if not whole_dir:
+        return sorted(reports_dir.glob("latest_*.json"))
+    # A directory of runs also holds aggregates (`noise_<model>.json`) carrying no `results` at
+    # all. They are not reports whose precondition failed — they are not reports. Skipped by
+    # name and reason, out loud, never silently.
+    out: list[Path] = []
+    for path in sorted(reports_dir.glob("*.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict) and isinstance(payload.get("results"), list):
+            out.append(path)
+        else:
+            print(f"[regrade] skipped {path.name}: it holds no `results` — not a run report")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     """Re-grade one report in place, or every agent report under the reports directory.
 
@@ -513,12 +532,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--report", type=Path, help="One report to re-grade. Default: all agents'.")
     parser.add_argument(
+        "--dir",
+        type=Path,
+        help=(
+            "Re-grade every report in this directory instead of the agents' pointers. Used for "
+            "the frozen discrimination passes in .eval-noise/, whose verdicts are the evidence "
+            "the release gate classifies: a matrix derived from recordings graded by a ruler "
+            "that has since moved certifies nothing."
+        ),
+    )
+    parser.add_argument(
         "--dry-run", action="store_true", help="Say what would change; write nothing."
     )
     args = parser.parse_args(argv)
 
-    reports_dir = reports_write_dir()
-    requested = [args.report] if args.report else sorted(reports_dir.glob("latest_*.json"))
+    reports_dir = args.dir or reports_write_dir()
+    requested = _requested(args.report, reports_dir, whole_dir=args.dir is not None)
     targets = _with_run_twins(requested, reports_dir)
     if not targets:
         sys.stderr.write("no report to re-grade\n")

@@ -37,7 +37,7 @@ SHELL := /bin/bash
         bootstrap run run-on-prem \
         precommit check ci help hooks land memory-check \
         obs-up obs-up-core obs-down obs-logs obs-guard obs-secrets dev-secrets \
-        obs-verify obs-realign obs-wait eval-regrade \
+        obs-verify obs-realign obs-wait eval-regrade eval-regrade-noise \
         gate gate-twice gate-checks gate-py gate-web tooling \
         claim release whoowns session landed
 
@@ -481,6 +481,18 @@ eval-contribution: install
 #   make eval-regrade REPORT=path DRY_RUN=1    # one, saying what it would change
 eval-regrade: install
 	uv run python scripts/regrade_reports.py $(if $(REPORT),--report $(REPORT)) $(if $(DRY_RUN),--dry-run)
+
+# Re-grade the FROZEN discrimination passes in .eval-noise/ — the recordings the release gate's
+# power measurement is derived from. They are gitignored scratch, but they are evidence: the
+# committed matrix carries their verdicts verbatim. On 2026-08-04 a re-measure re-graded 13 of
+# the 30 and left 17 under the previous rule, and the mixture certified the models and blocked
+# two agents with no file able to say so. `make eval-power-write` now REFUSES a mixture, so this
+# is the step that precedes it. Zero tokens: the responses are already on disk.
+#
+#   make eval-regrade-noise            # all thirty passes
+#   make eval-regrade-noise DRY_RUN=1  # say what would change; write nothing
+eval-regrade-noise: install
+	uv run python scripts/regrade_reports.py --dir .eval-noise $(if $(DRY_RUN),--dry-run)
 
 # Replay the catalogue against every local model and compare them against the null floor
 eval-sweep: install

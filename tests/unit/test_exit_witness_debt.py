@@ -232,6 +232,10 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::obs-wait": "action",
     # → scripts/regrade_reports.py → eval.regrade.main
     "Makefile::eval-regrade": "delegate",
+    # The same script over `.eval-noise/` — the frozen discrimination passes. Same delegation,
+    # same exit code: 1 when a report's precondition could not be established, which is a refusal
+    # about re-deriving a judgement, never a verdict about a model.
+    "Makefile::eval-regrade-noise": "delegate",
     "Makefile::help": "report",
     # ══ scripts/ ═══════════════════════════════════════════════════════════════════════════════
     # ── witnesses that publish a Verdict, or their own unlaundered code ────────────────────────

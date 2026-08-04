@@ -1105,6 +1105,8 @@ def dump_samples(
     weak_prov: Sequence[PassProvenance],
     *,
     note: str = "",
+    grader_criteria_sha: str = "",
+    carried_verdicts: Sequence[str] = (),
 ) -> str:
     """Serialise the evidence: the key list once, then one bitstring per pass.
 
@@ -1120,6 +1122,12 @@ def dump_samples(
         strong_prov: Provenance of each of the reference model's passes.
         weak_prov: Provenance of each of the weak model's passes.
         note: A sentence for the human reading the artefact.
+        grader_criteria_sha: The ruler these verdicts were produced under. Empty means the
+            measurement predates the stamp and the key is omitted rather than written blank.
+        carried_verdicts: Runs whose verdict could NOT be re-derived — they turn on a criterion
+            no recording holds (confidence, citations) — and whose original judgement was
+            carried unchanged. Named in the artefact so the blind spot travels with the
+            measurement instead of being absorbed into it (ADR 0026).
 
     Returns:
         The serialised evidence.
@@ -1139,15 +1147,44 @@ def dump_samples(
             for p in records
         ]
 
-    payload = {
+    payload: dict[str, Any] = {
         "kind": "discrimination_samples",
         "catalogue_version": strong.catalogue_versions[0] if strong.catalogue_versions else "",
-        "note": note,
-        "keys": list(keys),
-        "strong": {"model": strong.model, "passes": _prov(strong_prov), "matrix": _bits(strong)},
-        "weak": {"model": weak.model, "passes": _prov(weak_prov), "matrix": _bits(weak)},
     }
+    # The ruler that produced this matrix. `catalogue_version` hashes case IDS and is blind to
+    # what they assert (ADR 0028 §5); the null floor this matrix is compared against has carried
+    # its `grader_criteria_sha` since 2026-08-04 and this artefact did not. So the comparison
+    # could be — and was — a floor graded by today's rule against a matrix graded by an earlier
+    # one, with nothing in either file able to say so. Omitted rather than written empty: a
+    # matrix measured before the stamp existed genuinely does not know its ruler, and "" would
+    # claim to know that the answer is "none".
+    if grader_criteria_sha:
+        payload["grader_criteria_sha"] = grader_criteria_sha
+    if carried_verdicts:
+        payload["carried_verdicts"] = list(carried_verdicts)
+    payload["note"] = note
+    payload["keys"] = list(keys)
+    payload["strong"] = {
+        "model": strong.model,
+        "passes": _prov(strong_prov),
+        "matrix": _bits(strong),
+    }
+    payload["weak"] = {"model": weak.model, "passes": _prov(weak_prov), "matrix": _bits(weak)}
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+
+
+def samples_grader_sha(path: Path) -> str | None:
+    """The ruler a committed samples artefact declares, or ``None`` when it declares none.
+
+    Read separately from :func:`load_samples` so adding the stamp did not change that
+    function's signature, and so a caller can ask the artefact *about its own provenance*
+    without loading a 174-column matrix to do it.
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return None
+    sha = payload.get("grader_criteria_sha")
+    return sha if isinstance(sha, str) and sha else None
 
 
 def load_samples(path: Path) -> tuple[list[str], Sample, Sample]:
