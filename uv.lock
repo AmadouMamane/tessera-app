@@ -1791,8 +1791,8 @@ wheels = [
 
 [[package]]
 name = "limes"
-version = "0.1.0"
-source = { git = "https://github.com/AmadouMamane/Limes.git?rev=86bf21dd38eef1cb683a0a124102b6df08381ec7#86bf21dd38eef1cb683a0a124102b6df08381ec7" }
+version = "0.6.0"
+source = { git = "https://github.com/AmadouMamane/Limes.git?rev=b6c368c67a9901c136c6d3fe2be41230556e5202#b6c368c67a9901c136c6d3fe2be41230556e5202" }
 dependencies = [
     { name = "pyyaml" },
 ]
@@ -3985,7 +3985,7 @@ requires-dist = [
     { name = "langchain-google-vertexai", specifier = ">=2.0.10,<5" },
     { name = "langgraph", specifier = ">=1.0.10,<2" },
     { name = "langmem", marker = "extra == 'memory-langmem'", specifier = ">=0.0.10,<0.1" },
-    { name = "limes", git = "https://github.com/AmadouMamane/Limes.git?rev=86bf21dd38eef1cb683a0a124102b6df08381ec7" },
+    { name = "limes", git = "https://github.com/AmadouMamane/Limes.git?rev=b6c368c67a9901c136c6d3fe2be41230556e5202" },
     { name = "limits", specifier = ">=3.13,<5" },
     { name = "mem0ai", marker = "extra == 'memory-mem0'", specifier = ">=0.1.0,<0.2" },
     { name = "ollama", specifier = ">=0.4.1,<0.5" },

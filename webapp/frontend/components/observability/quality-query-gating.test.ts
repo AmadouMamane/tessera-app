@@ -31,7 +31,13 @@ describe("quality tab query gating", () => {
 
 describe("quality mobile chrome", () => {
   it("keeps the tall control rail non-sticky on phones", () => {
-    expect(source).toContain("md:sticky md:top-0 md:z-30");
+    expect(source).toContain("md:sticky md:-top-5 md:z-40");
     expect(source).not.toContain('className="sticky top-0 z-30');
+  });
+
+  it("masks scrolling content up to the shell header once pinned", () => {
+    expect(source).toContain("bg-[var(--tessera-bg)]");
+    expect(source).toContain("shadow-[0_-4px_0_0_var(--tessera-bg)]");
+    expect(source).not.toContain("md:sticky md:top-0");
   });
 });
