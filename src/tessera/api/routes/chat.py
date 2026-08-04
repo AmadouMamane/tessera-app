@@ -62,8 +62,10 @@ from tessera.guard.audit import (
     emit_routing,
     install_turn_context,
 )
+from tessera.guard.decisions import DecisionKind
 from tessera.guard.redaction import (
     StreamingRedactor,
+    apply_egress_guard,
     apply_output_guard,
     contains_pii,
     emit_output_redaction,
@@ -1198,9 +1200,13 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     pii_guard_off = bool(guard_overrides and "pii" in guard_overrides)
     output_guard_record: GuardDecisionRecord | None = None
     grounding_record: GuardDecisionRecord | None = None
+    egress_guard_record: GuardDecisionRecord | None = None
     # The reporter's generation (LLM synthesis) runs here in Phase 2, outside the
     # Phase-1 node-timing context — measure it so the trace waterfall can show it.
     reporter_ms: float | None = None
+    # The RAW answer of whichever branch runs — captured before the regex output
+    # guard, so the secret-egress check (ADR 0049) sees a credential's shape intact.
+    raw_answer = ""
     if NodeName.REPORTER.value in (snapshot.next or ()):
         reporter_perf_start = time.perf_counter()
         docs = state.get("retrieved_documents", [])
@@ -1216,6 +1222,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
                 emitted = token if redactor is None else redactor.feed(token)
                 if emitted:
                     yield _sse("turn.token", {"token": emitted})
+            # The RAW synthesis, before the regex masking above: what secret-egress
+            # must inspect (the regex could mangle a credential's shape).
+            raw_answer = "".join(tokens)
             # Cite the chunks that actually ground the answer's claims (across
             # every worker), falling back to the worker-selected citations when
             # attribution finds nothing so a turn never loses its sources.
@@ -1288,8 +1297,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
                 if grounded:
                     turn_citations = grounded
         elif draft:
+            raw_answer = reporter_module.render(state)
             final_response, output_guard_record = apply_output_guard(
-                reporter_module.render(state),
+                raw_answer,
                 language=resolved_language,
                 user_input=request.message,
                 disabled=pii_guard_off,
@@ -1297,8 +1307,9 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
         else:
             from tessera.agent.reporter import _FALLBACK_RESPONSES
 
+            raw_answer = _FALLBACK_RESPONSES[resolved_language]
             final_response, output_guard_record = apply_output_guard(
-                _FALLBACK_RESPONSES[resolved_language],
+                raw_answer,
                 language=resolved_language,
                 user_input=request.message,
                 disabled=pii_guard_off,
@@ -1307,21 +1318,45 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     else:
         # Escalation / short-circuit texts are vetted, but the guard still
         # sweeps them so no path can return unmasked PII.
+        raw_answer = str(state.get("final_response", ""))
         final_response, output_guard_record = apply_output_guard(
-            str(state.get("final_response", "")),
+            raw_answer,
             language=resolved_language,
             disabled=pii_guard_off,
         )
-    extra_records = [r for r in (grounding_record, output_guard_record) if r is not None]
+    # Outbound secret block (ADR 0049) — limes secrets-egress over the RAW answer of
+    # whichever branch ran (before the regex guard could mangle a credential's shape).
+    # Like the grounding gate it can only correct a token stream after the fact: on the
+    # synthesis branch the browser may have shown a prefix, but the record, the turn.end
+    # envelope and the transcript all carry the withheld text. A withheld answer cites
+    # nothing. PII stays with the first-party guard above.
+    egress_text, egress_guard_record = apply_egress_guard(
+        raw_answer,
+        language=resolved_language,
+        disabled=pii_guard_off,
+    )
+    egress_blocked = (
+        egress_guard_record is not None and egress_guard_record.decision == DecisionKind.DENY.value
+    )
+    if egress_blocked:
+        final_response = egress_text
+        turn_citations = []
+        yield _sse(
+            "turn.correction",
+            {"final_response": final_response, "reason": "egress", "unsupported": []},
+        )
+    extra_records = [
+        r for r in (grounding_record, output_guard_record, egress_guard_record) if r is not None
+    ]
     if extra_records:
         # Surface the output-leg decisions in this turn's guard_decisions (Debug envelope +
         # downstream persistence); their audit ledger entries were already emitted by the
         # guards themselves.
         state["guard_decisions"] = [*state.get("guard_decisions", []), *extra_records]
-    if grounding_record is not None:
-        # An answer the guard had to replace cannot also be a confident one. These are the
-        # reporter node's own constants, so the two legs cannot drift into scoring the same
-        # turn differently depending on the transport that served it.
+    if grounding_record is not None or egress_blocked:
+        # An answer the guard had to replace or withhold cannot also be a confident one. These
+        # are the reporter node's own constants, so the two legs cannot drift into scoring the
+        # same turn differently depending on the transport that served it.
         state["confidence"] = grounding.REPLACED_CONFIDENCE
         state["grounding_score"] = grounding.REPLACED_GROUNDING
     elif grounding.declares_unanswerable(final_response):

@@ -21,7 +21,8 @@ import yaml
 
 from tessera.agent.state import AgentState, Citation, ConversationMessage
 from tessera.guard import grounding
-from tessera.guard.redaction import apply_output_guard, mask_pan
+from tessera.guard.decisions import DecisionKind
+from tessera.guard.redaction import apply_egress_guard, apply_output_guard, mask_pan
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.memory import memory_backend_for_state, scope_for
 from tessera.settings import LanguageCode
@@ -404,13 +405,26 @@ async def run(state: AgentState) -> dict[str, object]:
         )
         raw_final = grounding_check.text
 
-    final, guard_record = apply_output_guard(
+    # Outbound secret block (ADR 0049): limes secrets-egress on the RAW answer,
+    # BEFORE the regex guard — whose broad IBAN shape can graze a substring inside a
+    # credential and mangle it, blinding the secret rule. A block withholds the whole
+    # answer; PII stays with the first-party guard below.
+    egress_text, egress_record = apply_egress_guard(
         raw_final,
         language=language,
-        user_input=str(state.get("user_input", "")),
         disabled="pii" in overrides,
     )
-    replaced = grounding_check is not None and grounding_check.replaced
+    egress_blocked = egress_record is not None and egress_record.decision == DecisionKind.DENY.value
+    if egress_blocked:
+        final, guard_record = egress_text, None
+    else:
+        final, guard_record = apply_output_guard(
+            raw_final,
+            language=language,
+            user_input=str(state.get("user_input", "")),
+            disabled="pii" in overrides,
+        )
+    replaced = (grounding_check is not None and grounding_check.replaced) or egress_blocked
     if docs and not replaced:
         # Footer appended after the guard: citation sources carry no PII by
         # construction, and the masking notice must read as part of the answer,
@@ -438,7 +452,11 @@ async def run(state: AgentState) -> dict[str, object]:
             update["grounding_score"] = min(float(state.get("grounding_score") or 1.0), ceiling)
     records = [
         record
-        for record in ((grounding_check.record if grounding_check else None), guard_record)
+        for record in (
+            (grounding_check.record if grounding_check else None),
+            guard_record,
+            egress_record,
+        )
         if record is not None
     ]
     if records:

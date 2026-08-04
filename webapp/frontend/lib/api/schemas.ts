@@ -241,13 +241,16 @@ export const ChatEndEventSchema = z.object({
 export type ChatEndEvent = z.infer<typeof ChatEndEventSchema>;
 
 /**
- * The grounding guard replaced a streamed answer whose claims the corpus could not back.
- * The check needs the whole answer, so on a streaming transport it can only correct after
- * the fact — never pre-empt. What the record keeps is always the replacement.
+ * A guard replaced a streamed answer after the fact. Two reasons, both post-hoc because the
+ * check needs the whole answer, so on a streaming transport it can only correct — never
+ * pre-empt: `ungrounded` (the grounding guard, claims the corpus could not back) and `egress`
+ * (the outbound egress guard, ADR 0049 — limes masked PII the regex leg missed, or withheld an
+ * answer carrying a secret). What the record keeps is always the replacement; `unsupported` is
+ * populated only for `ungrounded`.
  */
 export const ChatCorrectionEventSchema = z.object({
   final_response: z.string(),
-  reason: z.literal("ungrounded"),
+  reason: z.enum(["ungrounded", "egress"]),
   unsupported: z.array(z.string()).default([]),
 });
 export type ChatCorrectionEvent = z.infer<typeof ChatCorrectionEventSchema>;

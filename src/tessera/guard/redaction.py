@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
 from tessera.guard.audit import GUARD_ACTOR, emit_audit, guard_disabled
@@ -48,8 +49,10 @@ if TYPE_CHECKING:
 __all__ = [
     "RedactedText",
     "StreamingRedactor",
+    "apply_egress_guard",
     "apply_output_guard",
     "contains_pii",
+    "egress_withheld_notice",
     "emit_output_redaction",
     "mask_pan",
     "redact_text",
@@ -346,6 +349,111 @@ def apply_output_guard(
     if (redacted.changed or input_pii) and notice not in out:
         out = f"{out.rstrip()}\n\n{notice}"
     return out, record
+
+
+# ---------------------------------------------------------------------------
+# Outbound egress guard — limes pii-egress (redact) + secrets-egress (block)
+# ---------------------------------------------------------------------------
+
+# Shown in place of an answer the egress guard withheld (a credential, or a value
+# the mask could not conceal). Like _NOTICE it lives in code, not the prompt YAML:
+# a safety string must hold with the guard alone, independent of any bundle.
+_WITHHELD: Final[dict[LanguageCode, str]] = {
+    LanguageCode.FR: (
+        "Par mesure de sécurité, je ne peux pas afficher cette réponse : elle "
+        "contenait une donnée sensible (identifiant ou secret). Je transmets votre "
+        "demande à un conseiller."
+    ),
+    LanguageCode.DE: (
+        "Aus Sicherheitsgründen kann ich diese Antwort nicht anzeigen: Sie enthielt "
+        "vertrauliche Daten (Zugangsdaten oder ein Geheimnis). Ich leite Ihre Anfrage "
+        "an einen Berater weiter."
+    ),
+    LanguageCode.EN: (
+        "For security, I can't show this response: it contained sensitive data (a "
+        "credential or secret). I'm forwarding your request to a human advisor."
+    ),
+}
+
+
+def egress_withheld_notice(language: LanguageCode) -> str:
+    """The localized message shown when the egress guard withheld the answer."""
+    return _WITHHELD[language]
+
+
+def _record_egress_metric(decision: str) -> None:
+    """Count one egress guard decision on ``final_response``, partitioned by agent."""
+    from tessera.agent.identity import resolve_agent_id
+
+    GUARD_DECISIONS_TOTAL.labels(
+        target="final_response",
+        decision=decision,
+        agent_id=resolve_agent_id() or "none",
+    ).inc()
+
+
+def apply_egress_guard(
+    text: str,
+    *,
+    language: LanguageCode,
+    actor: str | None = None,
+    observed_at: str | None = None,
+    disabled: bool = False,
+) -> tuple[str, GuardDecisionRecord | None]:
+    """Withhold a final response that carries a secret (ADR 0049).
+
+    Run on the RAW answer, **before** :func:`apply_output_guard`: the regex guard's
+    broad IBAN shape can graze a substring inside a credential and mangle it, after
+    which the secret rule no longer matches. Detection is delegated to limes'
+    ``secrets-egress`` (:mod:`tessera.guard.limes_egress_backend`), the single
+    source of truth (ADR 0029). PII stays with the first-party guard — this leg
+    adds only the outbound secret block Tessera never had.
+
+    A **block** — a secret fired, or the detector could not look (``CannotSay``,
+    fail-closed) — replaces ``text`` with the localized withheld message and records
+    a ``DENY`` decision. A clean forward returns ``text`` unchanged and ``None``:
+    there is no redact leg, a credential is withheld whole, never masked-around.
+
+    Args:
+        text: The RAW candidate final response (before the regex output guard).
+        language: Response language; selects the withheld wording.
+        actor: The session's asserted identity, recorded into limes' context.
+        observed_at: ISO-8601 timestamp; defaults to now (limes never reads the
+            clock, so the caller supplies it and a decision re-derives on replay).
+        disabled: The sandbox ``pii`` guard override for this turn; skips the pass,
+            as :func:`apply_output_guard` does.
+
+    Returns:
+        ``(safe_text, decision)`` — ``decision`` is ``None`` when nothing fired.
+    """
+    from tessera.agent.state import GuardDecisionRecord
+    from tessera.guard.limes_egress_backend import check_egress
+
+    if disabled or "pii" in guard_disabled.get():
+        return text, None
+    outcome = check_egress(
+        text,
+        observed_at=observed_at or datetime.now(UTC).isoformat(),
+        actor=actor,
+    )
+    if not outcome.blocked:
+        return text, None
+    record = GuardDecisionRecord(
+        target="final_response",
+        decision=DecisionKind.DENY.value,
+        policy_rule=outcome.rule,
+        rationale=outcome.rationale,
+    )
+    emit_audit(
+        target="final_response",
+        arguments={"final_response": "[withheld — egress blocked by limes]"},
+        decisions=[record],
+        sink=get_settings().guard.audit_sink,
+        actor=GUARD_ACTOR,
+        outcome="denied",
+    )
+    _record_egress_metric("denied")
+    return egress_withheld_notice(language), record
 
 
 # ---------------------------------------------------------------------------
