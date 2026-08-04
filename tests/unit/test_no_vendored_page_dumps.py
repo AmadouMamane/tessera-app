@@ -90,9 +90,9 @@ class TestNoForeignPageDump:
             for path in _tracked_paths()
             if path.parts[:1] == ("docs",) and path.suffix in _FORBIDDEN_DOC_SUFFIXES
         )
-        assert not compiled, (
-            f"docs/ ships compiled or source assets, which belong in the app: {compiled}"
-        )
+        assert (
+            not compiled
+        ), f"docs/ ships compiled or source assets, which belong in the app: {compiled}"
 
     def test_no_editor_or_os_droppings_are_tracked(self) -> None:
         droppings = sorted(str(path) for path in _tracked_paths() if path.name in _FORBIDDEN_NAMES)
