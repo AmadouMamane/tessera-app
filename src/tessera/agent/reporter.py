@@ -22,7 +22,12 @@ import yaml
 from tessera.agent.state import AgentState, Citation, ConversationMessage
 from tessera.guard import grounding
 from tessera.guard.decisions import DecisionKind
-from tessera.guard.redaction import apply_egress_guard, apply_output_guard, mask_pan
+from tessera.guard.redaction import (
+    apply_egress_guard,
+    apply_output_guard,
+    apply_pii_egress_recall,
+    mask_pan,
+)
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.memory import memory_backend_for_state, scope_for
 from tessera.settings import LanguageCode
@@ -416,7 +421,7 @@ async def run(state: AgentState) -> dict[str, object]:
     )
     egress_blocked = egress_record is not None and egress_record.decision == DecisionKind.DENY.value
     if egress_blocked:
-        final, guard_record = egress_text, None
+        final, guard_record, recall_record = egress_text, None, None
     else:
         final, guard_record = apply_output_guard(
             raw_final,
@@ -424,7 +429,18 @@ async def run(state: AgentState) -> dict[str, object]:
             user_input=str(state.get("user_input", "")),
             disabled="pii" in overrides,
         )
-    replaced = (grounding_check is not None and grounding_check.replaced) or egress_blocked
+        # pii-egress recall (ADR 0049 §Amendment 1): mask PII the regex missed, on the
+        # already-masked answer. A redact masks more (the answer stands); a blind
+        # detector fails closed and withholds.
+        final, recall_record = apply_pii_egress_recall(
+            final, language=language, disabled="pii" in overrides
+        )
+    recall_blocked = recall_record is not None and recall_record.decision == DecisionKind.DENY.value
+    replaced = (
+        (grounding_check is not None and grounding_check.replaced)
+        or egress_blocked
+        or recall_blocked
+    )
     if docs and not replaced:
         # Footer appended after the guard: citation sources carry no PII by
         # construction, and the masking notice must read as part of the answer,
@@ -456,6 +472,7 @@ async def run(state: AgentState) -> dict[str, object]:
             (grounding_check.record if grounding_check else None),
             guard_record,
             egress_record,
+            recall_record,
         )
         if record is not None
     ]

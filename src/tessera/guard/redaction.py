@@ -51,6 +51,7 @@ __all__ = [
     "StreamingRedactor",
     "apply_egress_guard",
     "apply_output_guard",
+    "apply_pii_egress_recall",
     "contains_pii",
     "egress_withheld_notice",
     "emit_output_redaction",
@@ -447,6 +448,98 @@ def apply_egress_guard(
     emit_audit(
         target="final_response",
         arguments={"final_response": "[withheld — egress blocked by limes]"},
+        decisions=[record],
+        sink=get_settings().guard.audit_sink,
+        actor=GUARD_ACTOR,
+        outcome="denied",
+    )
+    _record_egress_metric("denied")
+    return egress_withheld_notice(language), record
+
+
+def apply_pii_egress_recall(
+    text: str,
+    *,
+    language: LanguageCode,
+    actor: str | None = None,
+    observed_at: str | None = None,
+    disabled: bool = False,
+) -> tuple[str, GuardDecisionRecord | None]:
+    """Mask PII the regex output guard missed (ADR 0049 §Amendment 1).
+
+    Run *after* :func:`apply_output_guard`, on the already-masked answer: a second,
+    checksum-gated pass (limes ``pii-egress``) that catches a datum the first-party
+    regex left behind — a Corsica NIR (its ``2A``/``2B`` letters break the regex's
+    digit-only shapes), a PAN or IBAN whose grouping the regex pattern does not match.
+    It masks the leftover to ``[REDACTED:pii]``; it never re-fires on the regex's own
+    masks (``XXXX XXXX XXXX 6467`` and friends carry too little to match), so the PCI
+    last-four display and the harness cases (02/45) are untouched. Detection is limes'
+    (ADR 0029); this leg only composes it with the decision/audit machinery.
+
+    Three outcomes:
+
+    * leftover PII found → the answer is returned **further masked**, with a
+      ``TRANSFORM`` record (the answer stands; masking is not a refusal);
+    * nothing found → ``text`` unchanged, no record;
+    * the detector could not look (``CannotSay`` — content over limes' 200k budget,
+      or non-UTF-8) → **fail-closed**: the answer is withheld, with a ``DENY`` record.
+      The regex guard already masked what it could see; the recall refuses to vouch
+      for a tail it did not read.
+
+    Args:
+        text: The answer *after* the first-party regex guard.
+        language: Response language; selects the withheld wording (block only).
+        actor: The session's asserted identity, recorded into limes' context.
+        observed_at: ISO-8601 timestamp; defaults to now (limes never reads the
+            clock, so the caller supplies it and a decision re-derives on replay).
+        disabled: The sandbox ``pii`` guard override for this turn; skips the pass,
+            as :func:`apply_output_guard` does.
+
+    Returns:
+        ``(safe_text, decision)`` — ``decision`` is ``None`` when nothing was masked.
+    """
+    from tessera.agent.state import GuardDecisionRecord
+    from tessera.guard.limes_egress_backend import check_pii_egress
+
+    if disabled or "pii" in guard_disabled.get():
+        return text, None
+    outcome = check_pii_egress(
+        text,
+        observed_at=observed_at or datetime.now(UTC).isoformat(),
+        actor=actor,
+    )
+    if outcome.action == "forward":
+        return text, None
+    if outcome.action == "redact":
+        record = GuardDecisionRecord(
+            target="final_response",
+            decision=DecisionKind.TRANSFORM.value,
+            policy_rule=outcome.rule,
+            rationale=outcome.rationale,
+            redactions=outcome.redactions,
+        )
+        emit_audit(
+            target="final_response",
+            arguments={"redactions": ", ".join(outcome.redactions)},
+            decisions=[record],
+            sink=get_settings().guard.audit_sink,
+            actor=GUARD_ACTOR,
+            outcome="allowed",
+        )
+        _record_egress_metric("transformed")
+        # A REDACT egress always carries its masked content; fall back to text only
+        # to satisfy the type-checker (content is None on BLOCK, handled below).
+        return outcome.content or text, record
+    # block (fail-closed): the recall detector was blind — withhold the answer.
+    record = GuardDecisionRecord(
+        target="final_response",
+        decision=DecisionKind.DENY.value,
+        policy_rule=outcome.rule,
+        rationale=outcome.rationale,
+    )
+    emit_audit(
+        target="final_response",
+        arguments={"final_response": "[withheld — pii-egress recall blind, fail-closed]"},
         decisions=[record],
         sink=get_settings().guard.audit_sink,
         actor=GUARD_ACTOR,
