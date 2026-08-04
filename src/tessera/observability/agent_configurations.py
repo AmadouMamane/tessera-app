@@ -969,18 +969,20 @@ def _retrieval_block(
         },
         "note": _loc(
             lang,
-            "Nombre de documents remis à la synthèse par recherche, et reranking RRF "
-            "(fusion lexicale + vectorielle, actif par défaut — vérité historique). "
+            "Nombre de documents remis à la synthèse par recherche, et fusion RRF "
+            "(actif par défaut — vérité historique). Désactivé, la recherche n'est "
+            "que vectorielle : aucune requête lexicale n'est émise (ADR 0050). "
             "Non défini = défaut historique par recherche. Résolu à chaque tour au "
             "même seam que le modèle — ADR 0035.",
             "Anzahl der pro Suche an die Synthese uebergebenen Dokumente und "
-            "RRF-Reranking (lexikalische + vektorielle Fusion, standardmaessig aktiv "
-            "- historische Wahrheit). Nicht gesetzt = historischer Standard je Suche. "
+            "RRF-Fusion (standardmaessig aktiv - historische Wahrheit). Deaktiviert "
+            "ist die Suche rein vektoriell: es wird keine lexikalische Abfrage "
+            "gestellt (ADR 0050). Nicht gesetzt = historischer Standard je Suche. "
             "Pro Turn am selben Seam aufgeloest - ADR 0035.",
-            "Documents handed to synthesis per lookup, and RRF reranking (lexical + "
-            "vector fusion, on by default - the historical truth). Unset = the "
-            "historical per-lookup default. Resolved every turn at the same seam - "
-            "ADR 0035.",
+            "Documents handed to synthesis per lookup, and RRF fusion (on by default "
+            "- the historical truth). Turned off, the search is dense-only: no "
+            "lexical query is issued at all (ADR 0050). Unset = the historical "
+            "per-lookup default. Resolved every turn at the same seam - ADR 0035.",
         ),
     }
 

@@ -307,6 +307,12 @@ _EXIT_WITNESSES: dict[str, str] = {
     "scripts/config_inventory.py": "action",
     "scripts/consolidate_memory.py": "action",
     "scripts/probe_retrieval.py": "report",
+    # Measures hybrid retrieval recall three ways and prints the numbers (ADR 0050). It reports;
+    # it never decides. There is deliberately no threshold to exit non-zero on: a recall figure
+    # is compared against the previous configuration by a reader, not against a constant this
+    # script would carry — and a constant here would be the "frozen number nobody re-measured"
+    # shape the eval floor already had to be rescued from.
+    "scripts/probe_hybrid_recall.py": "report",
     "scripts/reseal_audit_chain.py": "action",
     "scripts/calibrate_pan_mask.py": "action",
     "scripts/capture-ribbon.cjs": "action",

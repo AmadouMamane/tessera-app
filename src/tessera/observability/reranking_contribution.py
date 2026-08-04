@@ -12,8 +12,17 @@ question and its chunks with the same embedder, and scoring the same lexical
 overlap the reranker uses — then reports the **reranker lift** (chunks the fusion
 pulled into the top-k that pure vector search would have dropped) and the
 **lexical-vs-vector share** of the fused top results. It reuses
-:func:`tessera.retrieval.reranking.lexical_score` and the same RRF constant, so
-the analysis matches production fusion exactly.
+:func:`tessera.retrieval.reranking.lexical_score` and the same RRF constant.
+
+**What it can and cannot see, since ADR 0050.** It analyses a *captured* chunk
+set, so it measures how the two signals shaped an **ordering** — and that part
+still mirrors production's arithmetic. It cannot measure what the lexical arm
+**recovered**, because a recovered chunk is by definition one the dense arm did
+not return, and therefore one that is not in the captured set. It also scores
+the Python token-overlap approximation, where production's sparse arm is now
+PostgreSQL's ``ts_rank_cd`` over a GIN index. So: a real reading of the fused
+ordering, not a reading of hybrid recall. `scripts/probe_hybrid_recall.py`
+measures the latter.
 """
 
 from __future__ import annotations
@@ -30,7 +39,8 @@ if TYPE_CHECKING:
 
 __all__ = ["RerankContribution", "measure_contribution"]
 
-# Must match retrieval/reranking._RRF_K so the analysis mirrors production fusion.
+# Must match retrieval/reranking._RRF_K so the ordering analysis mirrors production's fusion
+# arithmetic (see the module docstring for what that mirror does and does not cover).
 _RRF_K = 60
 
 

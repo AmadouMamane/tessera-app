@@ -85,13 +85,20 @@ _TR: dict[str, tuple[str, str, str]] = {
         "Embeddings from Ollama (local path) or Vertex AI (frontier path), aligned "
         "with the active LLM.",
     ),
+    # Said "BM25 + vectoriel" until 2026-08-04, when there was no lexical index at all and
+    # the only sparse signal reordered the vector candidates in Python (ADR 0050). It now
+    # names the two indexes that exist, and calls the lexical rank what it is: PostgreSQL
+    # full-text with ts_rank_cd, which is not BM25.
     "d_pg": (
-        "Magasin de récupération hybride (BM25 + vectoriel) sur PostgreSQL avec "
-        "l'extension pgvector. Cloud SQL en déploiement cloud.",
-        "Hybrider Retrieval-Speicher (BM25 + vektoriell) auf PostgreSQL mit der "
-        "pgvector-Erweiterung. Cloud SQL im Cloud-Deployment.",
-        "Hybrid retrieval store (BM25 + vector) on PostgreSQL with the pgvector "
-        "extension. Cloud SQL in the cloud deployment.",
+        "Magasin de récupération hybride sur PostgreSQL : index vectoriel HNSW "
+        "(pgvector) et index lexical GIN (recherche plein texte, une configuration "
+        "par langue), fusionnés par RRF. Cloud SQL en déploiement cloud.",
+        "Hybrider Retrieval-Speicher auf PostgreSQL: HNSW-Vektorindex (pgvector) und "
+        "lexikalischer GIN-Index (Volltextsuche, eine Konfiguration je Sprache), per "
+        "RRF fusioniert. Cloud SQL im Cloud-Deployment.",
+        "Hybrid retrieval store on PostgreSQL: HNSW vector index (pgvector) and "
+        "lexical GIN index (full-text search, one configuration per language), fused "
+        "with RRF. Cloud SQL in the cloud deployment.",
     ),
     "d_fw": (
         "Garde-fou d'exécution interne (première partie), point de passage "

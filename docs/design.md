@@ -140,8 +140,9 @@ Retrieval is PostgreSQL with the `pgvector` extension. The store
 (`src/tessera/retrieval/store.py`) owns one process-wide async connection pool
 and creates its schema idempotently in `ensure_schema()`: a `documents` table
 keyed by `(corpus, source, chunk_id)`, with a `vector(dim)` embedding column,
-an HNSW index using `vector_cosine_ops`, and a secondary `(corpus, language)`
-index.
+an HNSW index using `vector_cosine_ops`, a secondary `(corpus, language)`
+index, and — since ADR 0050 — a generated `text_search tsvector` column with a
+GIN index, analysed per language (`fr → french`, `de → german`, `en → english`).
 
 ### Hybrid search
 
@@ -149,17 +150,29 @@ The public entry point is `search()` in
 `src/tessera/retrieval/hybrid_search.py`. The pipeline is:
 
 1. Embed the query with the active embedding backend.
-2. Run an HNSW kNN query against pgvector via `store.knn_search`,
-   over-fetching by a factor of `_VECTOR_OVERFETCH` (3) so the reranker has
-   enough candidates to meaningfully reorder.
-3. Rerank candidates with RRF (reciprocal-rank fusion) in
-   `src/tessera/retrieval/reranking.py`, blending the vector ranking with a
-   lexical (BM25-style) signal.
+2. Run, **concurrently**, two independent retrievals over-fetched by a factor of
+   `_VECTOR_OVERFETCH` (3):
+   - `store.knn_search` — HNSW kNN against pgvector (dense);
+   - `store.lexical_search` — a disjunction of the query's terms against the
+     generated `tsvector` column's GIN index, one text-search configuration per
+     language (sparse).
+3. Fuse the two candidate lists with RRF (reciprocal-rank fusion) in
+   `reranking.fuse`. A document contributes `1/(k+rank)` for each list that
+   returned it and nothing for a list that did not, so a chunk the dense arm
+   never returned can still reach the answer.
 4. Materialise `RetrievedDocument` records carrying the fused score for the
    agent state.
 
-Empty queries short-circuit to an empty list; empty kNN results short-circuit
-before reranking.
+Empty queries short-circuit to an empty list. An empty kNN result no longer
+short-circuits: the lexical arm may still have found something, which was the
+whole point of ADR 0050. `rerank=False` (ADR 0035) skips step 2's lexical arm
+and step 3 entirely, serving the raw vector order.
+
+Until 2026-08-04 there was no lexical index: step 2 ran one query and step 3
+reordered its output with a Python token-overlap score, so retrieval recall was
+whatever the dense arm returned. See
+[ADR 0050](decisions/0050-hybrid-search-retrieves-twice.md) for the measurement
+and `scripts/probe_hybrid_recall.py` to reproduce it.
 
 ### Cross-lingual regulation search
 

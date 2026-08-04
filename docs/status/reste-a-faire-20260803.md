@@ -284,15 +284,64 @@ quatorze heures. Réparer, donc, plutôt que tuer.
 
 ---
 
-## 7. Retrieval / mémoire — trois quarts soldés le 2026-08-04
-
-**Reste, et c'est une migration :**
-
-- **`hybrid_search` n'est pas hybride** : aucun index lexical (`tsvector`/BM25 : zéro
-  occurrence dans `src/`). Le signal lexical **réordonne** les candidats vectoriels ; un
-  document que le kNN ne remonte pas est irrécupérable. Seul point de §7 non traité.
+## 7. Retrieval / mémoire — **soldé le 2026-08-04**
 
 **Soldé :**
+
+- ✅ **`hybrid_search` est hybride** (ADR 0050). Il ne l'était pas : **zéro** `tsvector` /
+  `to_tsquery` / index GIN dans `src/`, un seul récupérateur, et un score de chevauchement de
+  tokens en Python appliqué **après** — donc capable de réordonner, jamais de récupérer. Un
+  document que le kNN ne remontait pas était **irrécupérable**. Désormais : colonne `tsvector`
+  **générée** + index **GIN** (une configuration de recherche **par langue**), une requête
+  lexicale **sœur** de la requête vectorielle exécutée **en parallèle**, et une fusion RRF sur
+  **deux listes indépendantes** — un document ne contribue que pour les listes qui l'ont rendu,
+  aucun rang inventé. `rerank=False` (ADR 0035) n'émet plus **aucune** requête lexicale ; un
+  magasin sans index se **dégrade bruyamment** au lieu de redevenir dense en silence.
+
+  ⚠️ **Le piège de la tranche, et il a failli passer.** La première implémentation utilisait
+  `websearch_to_tsquery`, qui joint les termes par **ET** : une question entière exige qu'un
+  seul chunk contienne *tous* ses mots. Ma sonde a alors rapporté « 0 document rendu par le
+  seul bras lexical » sur les 174 prompts du catalogue — ce qui se lit comme *« le bras
+  lexical ne change rien sur le langage naturel »* et signifiait *« le bras lexical n'a jamais
+  tiré »*. Attrapé en ajoutant le **compteur d'anti-vacuité** (`searches_with_a_lexical_match`,
+  `lexical_candidates_seen`) : **0 sur 348**. Corrigé en disjonction. ADR 0026 encore : un zéro
+  qui ne distingue pas « rien » de « pas regardé » n'est pas une mesure.
+
+  **Mesuré** (`scripts/probe_hybrid_recall.py`, corpus vivant, k=4, sur-échantillonnage ×3) :
+
+  | connu-item (212 requêtes) | rappel@4 |
+  |---|---|
+  | vectoriel seul | 58,0 % |
+  | ancien (kNN ×3 → réordonnancement Python) | 69,3 % |
+  | hybride | **99,1 %** |
+
+  dont **34** chunks rendus par le **seul** bras lexical — absents même du sur-échantillonnage
+  dense, donc hors d'atteinte de l'ancienne implémentation. Langage naturel (348 recherches) :
+  le bras matche **333** fois, **181** documents rendus par lui seul, 62,9 % du top-4 ancien
+  survit — et le **coût**, dit sans détour : le cosinus moyen du top-1 descend de **0,5399 à
+  0,5207**. Le bras connu-item est *favorable au lexical par construction* ; son chiffre est
+  une borne haute, pas un gain typique.
+
+  ⚠️ **Deuxième piège, attrapé par mes propres témoins d'intégration** (deux rouges, deux vrais
+  défauts) : (a) j'avais écrit que `german` **décompose** *Immobilienkredite* — Postgres a
+  répondu que `english` matche aussi, parce que les deux ne font qu'ôter un `e` final : c'est un
+  stemmer snowball, **pas** un décomposeur, et affirmer le contraire aurait revendiqué une
+  capacité que ce schéma n'a pas ; (b) découper la requête sur `\w+` seul demandait
+  `'aur' | '2024' | '118'`, ce qui matche aussi **`AUR-2024-999`** — une *autre* référence de
+  contrat rendue comme si c'était celle demandée. Les traits d'union sont donc conservés dans
+  les termes, `to_tsquery` construit alors la phrase `'aur' <-> '-2024' <-> '-118'`, et la
+  référence voisine ne matche plus. Un numéro de référence est exactement la classe de jetons
+  pour laquelle ce bras existe.
+
+  🔻 **Dette déclarée, pas soldée : les rapports d'éval sur disque ont été produits par
+  l'ancien récupérateur.** `catalogue_version` ne peut pas le voir — il hache des identifiants
+  de cas, pas le code qui y répond, exactement comme il ne voyait pas un changement de grader
+  (ADR 0028 §5). La récupération a changé, donc le contexte de l'agent a changé, donc les
+  verdicts enregistrés décrivent du code qui n'existe plus. Ils ne sont pas faux pour autant ;
+  ils ne sont simplement plus une preuve sur l'agent d'aujourd'hui. Fermeture = une re-mesure.
+- ✅ **Le cockpit ne ment plus sur le magasin.** `connectors.py` annonçait « BM25 + vectoriel »
+  dans les trois langues alors qu'aucun index lexical n'existait ; il nomme maintenant les deux
+  index qui existent, et appelle le rang lexical par son nom (`ts_rank_cd`, qui n'est pas BM25).
 
 - ✅ **Empreinte d'embedding.** `long_term_memory` porte `(embedding_model,
   embedding_dimension)` sur chaque ligne, et **toute** comparaison est clôturée dessus —
