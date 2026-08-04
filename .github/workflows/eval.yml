@@ -63,9 +63,9 @@ jobs:
     name: Deterministic control (no model, no services)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: "3.12"
@@ -90,7 +90,7 @@ jobs:
 
       - name: Upload the control report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-null-control-${{ github.run_id }}
           path: .eval-control/null-control.json
@@ -105,9 +105,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.model != ''
     runs-on: ${{ inputs.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: "3.12"
@@ -164,7 +164,7 @@ jobs:
 
       - name: Upload scorecard
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eval-scorecard-${{ github.run_id }}
           path: |
