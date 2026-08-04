@@ -233,9 +233,7 @@ def load_runs(directory: Path | None = None) -> RunRegistry:
         if _grading_rank(run) > _grading_rank(current):
             kept[key] = run
 
-    runs = [
-        replace(run, superseded_copies=folded.get(key, 0)) for key, run in kept.items()
-    ]
+    runs = [replace(run, superseded_copies=folded.get(key, 0)) for key, run in kept.items()]
     runs.sort(key=lambda r: (r.run_at, r.run_id), reverse=True)
     models = sorted({r.model for r in runs})
     languages = sorted({r.language for r in runs if r.language})

@@ -24,6 +24,7 @@ export function PeriodRail({
   value,
   onApply,
   labels,
+  window,
 }: {
   title: string;
   items: PeriodItem[];
@@ -31,6 +32,17 @@ export function PeriodRail({
   value: Period;
   onApply: (p: Period) => void;
   labels: { selected: string; from: string; apply: string; noData: string };
+  /**
+   * The window the data was actually computed over, as the server states it. Supply it
+   * whenever the payload carries its own bounds.
+   *
+   * Without it the rail reconstructs "from" by walking `days - 1` items back through the
+   * timeline — which silently assumes one item per day. It held while every window was
+   * daily; a 24 h window is 24 hourly items, so `days - 1` landed on index 0 and the rail
+   * announced `X → X`, a window of zero length, for a window that was real. A control may
+   * state the window it was handed; it may not re-derive one.
+   */
+  window?: { from: string; to: string };
 }) {
   const [days, setDays] = useState(value.days);
   const [anchor, setAnchor] = useState<string | null>(value.anchor);
@@ -41,9 +53,14 @@ export function PeriodRail({
   }, [value.days, value.anchor]);
 
   const selected = anchor ?? items[0]?.stamp ?? null;
-  const newest = items[0]?.label ?? "—";
-  const startIdx = Math.min(items.length - 1, Math.max(0, days - 1));
-  const startLabel = items.length ? (items[startIdx]?.label ?? items.at(-1)?.label ?? "—") : "—";
+  const derivedIdx = Math.min(items.length - 1, Math.max(0, days - 1));
+  const newest = window?.to ?? items[0]?.label ?? "—";
+  const startLabel =
+    window?.from ?? (items.length ? (items[derivedIdx]?.label ?? items.at(-1)?.label ?? "—") : "—");
+  // A length the caller does not offer cannot be *shown* as chosen: a native <select> whose
+  // value matches no <option> silently displays the first one, so the control would claim a
+  // window the page is not using. Say the truth instead of picking a neighbour.
+  const knownPreset = presets.some((p) => p.value === days);
 
   return (
     <aside className="flex min-w-0 flex-col gap-2">
@@ -62,6 +79,7 @@ export function PeriodRail({
                 onChange={(e) => setDays(Number(e.target.value))}
                 className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 text-[0.72rem]"
               >
+                {knownPreset ? null : <option value={days}>{`${days} j`}</option>}
                 {presets.map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}

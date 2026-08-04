@@ -124,7 +124,7 @@ def test_daily_holds_snapshot_availability(monkeypatch) -> None:
 
     now = datetime.now(UTC)
     rows = [{"scored_at": now.isoformat(), "metric": "faithfulness", "score": 0.2}]
-    daily = rel._daily(
+    daily = rel._series(
         rows, cost_per_request=0.01, availability=0.997, error_rate=0.003, end=now, days=30
     )
     assert len(daily) == 30

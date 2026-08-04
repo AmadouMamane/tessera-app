@@ -22,6 +22,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Final
 
 from tessera.observability import (
     cost_anomaly as cost_anomaly_mod,
@@ -151,15 +152,22 @@ class Incident:
 
 @dataclass(frozen=True, slots=True)
 class DayPoint:
-    """One calendar day of operational posture, from the durable score log.
+    """One bucket of operational posture, from the durable score log.
 
-    ``volume`` and ``quality`` are measured (scored-turn count and mean score that
-    day); ``error_rate`` is the share of that day's turns scoring below the crit
-    threshold, ``availability`` its complement; ``cost_eur`` is the day's volume at
-    the current per-request cost (a transparent estimate, like the latency figure).
+    ``volume`` and ``quality`` are measured (scored-turn count and mean score in the
+    bucket); ``error_rate`` is the share of turns scoring below the crit threshold,
+    ``availability`` its complement; ``cost_eur`` is the bucket's volume at the
+    current per-request cost (a transparent estimate, like the latency figure).
+
+    A bucket is a **day** on a multi-day window and an **hour** on a 24 h one — see
+    :func:`_series`. ``bucket_start`` is the instant that opens it and is the only
+    unambiguous identity a bucket has: ``date`` cannot distinguish 24 hourly buckets
+    of the same day, and it is kept because it is still the right label for a daily
+    window.
     """
 
-    date: str  # YYYY-MM-DD
+    date: str  # YYYY-MM-DD — the calendar day the bucket falls in
+    bucket_start: str  # ISO-8601 instant opening the bucket
     volume: int
     quality: float | None
     availability: float
@@ -220,6 +228,17 @@ class ReliabilityReport:
     quality_series: list[float] = field(default_factory=list)
     quality_delta: float | None = None
     daily: list[DayPoint] = field(default_factory=list)
+    #: Grain the series above is bucketed at — ``"hour"`` on a 24 h window, ``"day"``
+    #: beyond it — and that bucket's width in seconds. Published rather than inferred
+    #: client-side, because the number of points alone cannot tell 24 hours from 24 days.
+    resolution: str = "day"
+    bucket_seconds: int = 86_400
+    #: The window actually measured, as instants. The period rail used to re-derive its
+    #: "from" by counting series items backwards, which collapsed to a zero-length window
+    #: the moment the window held fewer items than it assumed. A control states the window
+    #: it was given; it does not reconstruct it.
+    window_start: str = ""
+    window_end: str = ""
     services_cost: list[ServiceCostRow] = field(default_factory=list)
     actions: list[ActionRow] = field(default_factory=list)
     # Period-over-period deltas for the KPI tiles, vs the immediately preceding
@@ -262,7 +281,28 @@ def _in_window(ts: object, start: datetime, end: datetime) -> bool:
     return t is not None and start <= t <= end
 
 
-def _daily(
+#: Buckets a 24 h window is cut into. One point is not a series: a window this short
+#: has to be read at sub-daily resolution or it cannot be read at all.
+_HOURS_IN_DAY: Final = 24
+
+#: Longest window still served hourly. Above it the day is the honest grain — 30 days
+#: of hourly buckets is 720 points on a 20-pixel-high bar chart.
+_HOURLY_MAX_DAYS: Final = 1
+
+
+def resolution_for(days: int) -> tuple[str, int]:
+    """The bucket grain a window of ``days`` is read at: ``(name, seconds)``.
+
+    The page offers 24 h, 7 d, 14 d and 30 d. Cutting all four into *calendar days*
+    made the first one a single bar — a "window" with nothing to compare inside it —
+    so the grain follows the window instead of the window being clamped to the grain.
+    """
+    if days <= _HOURLY_MAX_DAYS:
+        return "hour", 3600
+    return "day", 86_400
+
+
+def _series(
     rows: list[dict[str, object]],
     *,
     cost_per_request: float,
@@ -271,17 +311,31 @@ def _daily(
     end: datetime,
     days: int,
 ) -> list[DayPoint]:
-    """One :class:`DayPoint` per calendar day over the window ending at ``end``.
+    """One :class:`DayPoint` per bucket over the window ending at ``end``.
 
-    Volume, quality and the derived cost are *measured* per day from the durable
+    Volume, quality and the derived cost are *measured* per bucket from the durable
     score log. Availability and error rate are the **current** tool-validity rates
-    held across the window: Tessera does not record a per-day uptime breakdown, so
+    held across the window: Tessera does not record a per-bucket uptime breakdown, so
     rather than reinterpret answer-quality as availability (which would contradict
-    the availability KPI), each day carries the present rate — flat, honest and
+    the availability KPI), each bucket carries the present rate — flat, honest and
     consistent with the headline tile.
+
+    Daily buckets keep their original alignment (a bucket is a calendar day, labelled
+    by the day it *closes*), so no multi-day window's numbers move. Hourly buckets are
+    aligned on the window's own end, not on the wall clock, so the last bucket always
+    ends exactly at ``end`` — a 24 h window read at T must contain T.
     """
-    start = end - timedelta(days=days)
-    by_day: dict[str, list[float]] = {}
+    _, step_seconds = resolution_for(days)
+    step = timedelta(seconds=step_seconds)
+    hourly = step_seconds < 86_400  # noqa: PLR2004 — seconds in a day, spelled out above
+    n_buckets = _HOURS_IN_DAY if hourly else days
+    start = end - step * n_buckets
+
+    def _bucket_end(index: int) -> datetime:
+        """Instant closing bucket ``index`` — its label for the daily alignment."""
+        return start + step * (index + 1)
+
+    by_bucket: dict[str, list[float]] = {}
     for r in rows:
         if r.get("metric") != _TREND_METRICS[0]:  # one row per turn
             continue
@@ -293,17 +347,26 @@ def _daily(
         except (KeyError, TypeError, ValueError):
             # best-effort: skip a score row that won't coerce to float — non-gating (0015)
             continue
-        by_day.setdefault(ts.date().isoformat(), []).append(score)
+        if hourly:
+            # Which of the N slots since `start` this turn fell in — floor division, so a
+            # turn is counted once and only in the slot that contains it.
+            index = min(n_buckets - 1, int((ts - start) / step))
+            key = _bucket_end(index).isoformat()
+        else:
+            key = ts.date().isoformat()
+        by_bucket.setdefault(key, []).append(score)
 
     out: list[DayPoint] = []
-    for i in range(days):
-        day = (start + timedelta(days=i + 1)).date().isoformat()
-        scores = by_day.get(day, [])
+    for i in range(n_buckets):
+        closes = _bucket_end(i)
+        key = closes.isoformat() if hourly else closes.date().isoformat()
+        scores = by_bucket.get(key, [])
         vol = len(scores)
         quality = sum(scores) / vol if vol else None
         out.append(
             DayPoint(
-                date=day,
+                date=closes.date().isoformat(),
+                bucket_start=(closes - step).isoformat(),
                 volume=vol,
                 quality=quality,
                 availability=round(availability, 4),
@@ -723,7 +786,7 @@ def compute_reliability(
     volume_series, volume_delta, quality_series, quality_delta = _trends(
         scores_asof, end=end, days=days
     )
-    daily = _daily(
+    daily = _series(
         scores_asof,
         cost_per_request=cost_per_request,
         availability=availability,
@@ -731,6 +794,7 @@ def compute_reliability(
         end=end,
         days=days,
     )
+    resolution, bucket_seconds = resolution_for(days)
     services_cost = _services_cost(funnel, cost_per_request=cost_per_request)
     actions = _actions(models, funnel, cost, tool, lang)
 
@@ -763,6 +827,10 @@ def compute_reliability(
         quality_series=quality_series,
         quality_delta=quality_delta,
         daily=daily,
+        resolution=resolution,
+        bucket_seconds=bucket_seconds,
+        window_start=(end - timedelta(seconds=bucket_seconds * len(daily))).isoformat(),
+        window_end=end.isoformat(),
         services_cost=services_cost,
         actions=actions,
         availability_delta=_abs_delta(availability, prev.availability),

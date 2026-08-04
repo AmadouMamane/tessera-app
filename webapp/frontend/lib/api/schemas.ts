@@ -1047,6 +1047,9 @@ export const ReliabilityIncidentSchema = z.object({
 });
 export const ReliabilityDayPointSchema = z.object({
   date: z.string(),
+  // The instant opening the bucket — the only unambiguous identity a bucket has once a
+  // window can be read hourly: 24 hourly buckets of one day all share the same `date`.
+  bucket_start: z.string(),
   volume: z.number().int(),
   quality: z.number().nullable(),
   availability: z.number(),
@@ -1093,6 +1096,13 @@ export const ReliabilityReportSchema = z.object({
   quality_series: z.array(z.number()).optional(),
   quality_delta: z.number().nullable().optional(),
   daily: z.array(ReliabilityDayPointSchema).optional(),
+  // Grain of `daily`, and the window it actually covers. Published rather than inferred:
+  // the number of points alone cannot tell 24 hours from 24 days, and a control that
+  // re-derives its own window from the item count collapses when the count surprises it.
+  resolution: z.enum(["hour", "day"]).optional(),
+  bucket_seconds: z.number().int().optional(),
+  window_start: z.string().optional(),
+  window_end: z.string().optional(),
   services_cost: z.array(ReliabilityServiceCostRowSchema).optional(),
   actions: z.array(ReliabilityActionRowSchema).optional(),
   availability_delta: z.number().nullable().optional(),

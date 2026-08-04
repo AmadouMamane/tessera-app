@@ -518,9 +518,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     reports_dir = reports_write_dir()
-    requested = (
-        [args.report] if args.report else sorted(reports_dir.glob("latest_*.json"))
-    )
+    requested = [args.report] if args.report else sorted(reports_dir.glob("latest_*.json"))
     targets = _with_run_twins(requested, reports_dir)
     if not targets:
         sys.stderr.write("no report to re-grade\n")

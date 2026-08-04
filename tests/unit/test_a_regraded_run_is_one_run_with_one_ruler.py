@@ -99,9 +99,9 @@ def test_a_reports_summary_agrees_with_its_own_verdicts(name: str) -> None:
     rows = payload["results"]
     summary = payload["summary"]
     actual = sum(1 for r in rows if r.get("passed"))
-    assert summary["passed"] == actual, (
-        f"{name}: summary says {summary['passed']} passed, its own results say {actual}"
-    )
+    assert (
+        summary["passed"] == actual
+    ), f"{name}: summary says {summary['passed']} passed, its own results say {actual}"
     assert summary["total"] == len(rows)
     assert summary["failed"] == len(rows) - actual
 

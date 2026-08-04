@@ -471,6 +471,9 @@ export function ReliabilityDashboard() {
     color: ERR_COLOR[s.label] ?? "var(--tessera-text-muted)",
   }));
   const budgetUsed = d.budget_monthly_eur ? (d.budget_spent_eur ?? 0) / d.budget_monthly_eur : 0;
+  // The grain the server actually bucketed at. Read from the payload, never guessed from the
+  // point count: 24 points is 24 hours on an h24 window and 24 days on a d24 one.
+  const resolution = d.resolution ?? "day";
   const daily = d.daily ?? [];
   const availLine = daily.map((p) => p.availability);
   const errLine = daily.map((p) => p.error_rate);
@@ -995,15 +998,27 @@ export function ReliabilityDashboard() {
 
         <PeriodRail
           title={tr("period.title")}
+          // Keyed on the bucket's opening INSTANT, not its calendar date: on a 24 h window
+          // the 24 buckets all fall on one or two dates, so `date` would collapse them into
+          // duplicate rows sharing a React key — and the anchor sent back would name a day
+          // when the window is an hour.
           items={(d.daily ?? [])
-            .filter((p) => p.date)
-            .map((p) => ({ stamp: p.date, label: fmtDate(p.date) }))
+            .filter((p) => p.bucket_start)
+            .map((p) => ({
+              stamp: p.bucket_start,
+              label: bucketLabel(p.bucket_start, resolution),
+            }))
             .reverse()}
           presets={[
+            { value: 1, label: tr("period.h24") },
             { value: 7, label: tr("period.d7") },
             { value: 14, label: tr("period.d14") },
             { value: 30, label: tr("period.d30") },
           ]}
+          window={{
+            from: windowBoundLabel(d.window_start, resolution),
+            to: windowBoundLabel(d.window_end, resolution),
+          }}
           value={period}
           onApply={(next) => {
             setAnchor(next.anchor);
@@ -1072,6 +1087,25 @@ const fmtDate = (iso: string) => {
   const parts = iso.split("-");
   return parts.length === 3 ? `${parts[2]}/${parts[1]}` : iso;
 };
+
+/**
+ * Label one bucket of the series. A daily bucket is a date; an hourly one has to carry its
+ * hour, or 24 buckets of the same day render as 24 identical rows in the rail.
+ */
+export function bucketLabel(iso: string, resolution: "hour" | "day"): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return iso;
+  const d = new Date(t);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return resolution === "hour"
+    ? `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)} ${p(d.getUTCHours())}:00`
+    : `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}`;
+}
+
+/** The window bound as the server states it — date for a day grain, date + hour below it. */
+export function windowBoundLabel(iso: string | undefined, resolution: "hour" | "day"): string {
+  return iso ? bucketLabel(iso, resolution) : "—";
+}
 
 function IncidentRow({ inc }: { inc: ReliabilityIncident }) {
   const tr = useTranslations("reliability");
