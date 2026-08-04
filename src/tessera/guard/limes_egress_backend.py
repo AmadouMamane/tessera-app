@@ -41,6 +41,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Final
 
 from limes.detectors.pii_egress import PiiEgressDetector
 from limes.detectors.secrets_egress import SecretsEgressDetector
@@ -53,9 +54,16 @@ __all__ = [
     "PiiEgressOutcome",
     "check_egress",
     "check_pii_egress",
+    "contains_secret",
     "egress_witness",
     "pii_egress_witness",
 ]
+
+#: Fail-closed secret disposition, shared by every secrets-egress guard here.
+_SECRET_EGRESS_POLICY: Final = EgressPolicy(
+    default=OnEgressFinding.BLOCK,
+    by_kind={"secret": OnEgressFinding.BLOCK},
+)
 
 
 # ---------------------------------------------------------------------------
@@ -82,23 +90,22 @@ class EgressOutcome:
 
 
 @lru_cache(maxsize=1)
+def _secret_detector() -> SecretsEgressDetector:
+    """The process-wide secrets-egress detector (its policy is loaded once)."""
+    return SecretsEgressDetector()
+
+
+@lru_cache(maxsize=1)
 def _policy_hash() -> str:
     """SHA-256 of the packaged limes egress policy the secret detector runs under."""
-    return SecretsEgressDetector().policy_hash
+    return _secret_detector().policy_hash
 
 
 @lru_cache(maxsize=1)
 def _guard() -> Guard:
     """Return the process-wide limes secret-egress guard (detector + block once)."""
-    secrets = SecretsEgressDetector()
-    return Guard(
-        [secrets],
-        policy_hash=secrets.policy_hash,
-        egress=EgressPolicy(
-            default=OnEgressFinding.BLOCK,
-            by_kind={"secret": OnEgressFinding.BLOCK},
-        ),
-    )
+    det = _secret_detector()
+    return Guard([det], policy_hash=det.policy_hash, egress=_SECRET_EGRESS_POLICY)
 
 
 def egress_witness() -> tuple[str, str]:
@@ -106,8 +113,38 @@ def egress_witness() -> tuple[str, str]:
 
     Proves that limes — not a fallback — produced an egress decision.
     """
-    secrets = SecretsEgressDetector()
-    return secrets.id, secrets.version
+    det = _secret_detector()
+    return det.id, det.version
+
+
+def contains_secret(text: str, *, observed_at: str, actor: str | None = None) -> bool:
+    """True when limes' secrets-egress finds a credential in ``text`` (detection only).
+
+    The lightweight check :class:`~tessera.guard.redaction.StreamingRedactor` runs
+    before emitting a segment, so a secret is caught token-by-token and its characters
+    never reach the wire (ADR 0049 §Amendment 1, the SSE pre-emption). It uses a
+    **fresh ledger per call**: the streaming leg is not the leg of record — the post-hoc
+    :func:`check_egress` is — so a per-token check must not append to a shared chain.
+
+    Only a genuine secret ``Deny`` returns ``True``; a ``CannotSay`` does not. A single
+    streamed segment is tiny (never over limes' budget), so the blind spot the
+    fail-closed disposition guards against can only be raised meaningfully by the
+    whole-answer post-hoc check, not by freezing the stream on a fragment.
+
+    Args:
+        text: The candidate segment about to be emitted.
+        observed_at: ISO-8601 timestamp, recorded into limes' evidence.
+        actor: The session's asserted identity (``None`` when anonymous).
+
+    Returns:
+        ``True`` when a credential is present; the caller withholds the segment.
+    """
+    from limes.record import Ledger
+
+    det = _secret_detector()
+    guard = Guard([det], policy_hash=det.policy_hash, ledger=Ledger(), egress=_SECRET_EGRESS_POLICY)
+    egress = guard.check_egress(text, actor=actor, observed_at=observed_at)
+    return egress.action is Action.BLOCK and not isinstance(egress.verdict, CannotSay)
 
 
 def _outcome(egress: Egress, policy_hash: str) -> EgressOutcome:

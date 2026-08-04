@@ -122,3 +122,29 @@ Seam: `apply_pii_egress_recall`, run after `apply_output_guard` at both transpor
 synthesis branch a redact is a post-hoc `turn.correction` (reason `egress` — the
 frontend schema already documents this reason as "limes masked PII the regex leg
 missed"). A mutation ratchet unplugs limes and watches the missed NIR stay clear.
+
+### SSE secret pre-emption — a credential's characters never stream
+
+The original residual (§Consequences): on the streaming synthesis branch the secret
+block is post-hoc, so a credential's prefix could flash on screen for a frame before the
+correction. `StreamingRedactor` now closes it for **single-token** secrets:
+
+- a long credential-shaped tail is held **in full**, past the PII hold window
+  (`_CRED_TAIL`), so a secret still being typed never streams its prefix;
+- before every emit (and at flush) the unemitted region is checked by limes'
+  `secrets-egress` — a **detection-only** call with a fresh ledger, since the streaming
+  leg is not the leg of record — and on a hit the redactor **freezes**: it emits nothing
+  more and flags `secret_detected`. A secret is withheld whole, so there is nothing to
+  emit; the existing post-hoc `apply_egress_guard` on the full answer then replaces the
+  turn. The browser has seen only the benign text before the credential.
+
+The check runs on the whole unemitted region, not the about-to-emit segment, so a
+credential is caught the instant it completes — before `_TAIL_HOLD` could cut it at an
+internal digit boundary and stream the prefix (the exact bug the first cut of this change
+hit and a test now pins). No `chat.py` change was needed: the redactor simply stops
+leaking, and the post-hoc block it already had turns the freeze into a proper withhold.
+
+Residual, now narrower and still declared: a **multi-line** secret (PEM armour, which
+contains spaces, so it is not a single token) is not pre-empted token-by-token — only the
+post-hoc guard catches it. A mutation ratchet unplugs the streaming check and watches the
+credential's prefix stream to prove the freeze is limes', not the PII masker's IBAN graze.

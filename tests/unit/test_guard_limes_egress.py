@@ -44,6 +44,7 @@ from tessera.guard.limes_egress_backend import (
     pii_egress_witness,
 )
 from tessera.guard.redaction import (
+    StreamingRedactor,
     apply_egress_guard,
     apply_output_guard,
     apply_pii_egress_recall,
@@ -252,3 +253,58 @@ class TestPiiRecallReporterIntegration:
         final = str(update["final_response"])
         assert _CORSICA_NIR not in final
         assert "[REDACTED:pii]" in final
+
+
+class TestStreamingSecretPreemption:
+    """ADR 0049 §Amendment 1 — a secret never streams a character; the redactor freezes.
+
+    The SSE synthesis branch streams token-by-token, so the post-hoc secret block can
+    only correct after the fact — a credential's prefix could flash on screen. The
+    StreamingRedactor closes that residual: it holds a forming credential off the wire
+    and freezes the instant limes confirms one, so not one of its characters is emitted.
+    """
+
+    @staticmethod
+    def _stream(text: str, *, chunk: int) -> tuple[str, StreamingRedactor]:
+        r = StreamingRedactor()
+        parts = [r.feed(text[i : i + chunk]) for i in range(0, len(text), chunk)]
+        parts.append(r.flush())
+        return "".join(parts), r
+
+    def test_a_secret_never_reaches_the_wire(self) -> None:
+        # Across chunk boundaries (1 char, a few, a word): not the whole secret, and not
+        # even a 16-char prefix, may appear in the emitted stream.
+        for chunk in (1, 3, 8):
+            emitted, r = self._stream(f"The deploy key is {_SECRET} now.", chunk=chunk)
+            assert _SECRET not in emitted, f"chunk={chunk}: full secret streamed"
+            assert _SECRET[:16] not in emitted, f"chunk={chunk}: a 16-char prefix streamed"
+            assert r.secret_detected, f"chunk={chunk}: the redactor did not freeze"
+
+    def test_a_secret_at_the_very_end_is_caught_at_flush(self) -> None:
+        emitted, r = self._stream(f"Your key: {_SECRET}", chunk=5)
+        assert _SECRET not in emitted and r.secret_detected
+
+    def test_pii_still_masks_and_does_not_falsely_freeze(self) -> None:
+        emitted, r = self._stream(f"Card {_TEST_PAN} charged.", chunk=2)
+        assert _TEST_PAN not in emitted and "XXXX" in emitted
+        assert not r.secret_detected
+
+    def test_a_benign_long_token_streams_unchanged(self) -> None:
+        text = "See https://example.com/a/very/long/opaque/path/abcdefghijklmnop here."
+        emitted, r = self._stream(text, chunk=4)
+        assert emitted == text and not r.secret_detected
+
+    def test_the_mutation_that_proves_the_freeze_depends_on_limes(self, monkeypatch) -> None:
+        # Unplug the streaming secret check → the credential's prefix streams in the clear
+        # (the PII masker only grazes its IBAN-shaped tail). Proves the freeze is limes',
+        # not a coincidence of the first-party masker.
+        monkeypatch.setattr(
+            "tessera.guard.limes_egress_backend.contains_secret",
+            lambda *_a, **_k: False,
+        )
+        emitted, r = self._stream(f"key {_SECRET} end", chunk=1)
+        assert _SECRET[:8] in emitted, (
+            "MUTATION: with the streaming check unplugged the secret's prefix must stream — "
+            "if it does not, the freeze does not depend on limes"
+        )
+        assert not r.secret_detected
