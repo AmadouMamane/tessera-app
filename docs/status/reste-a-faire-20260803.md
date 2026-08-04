@@ -266,17 +266,71 @@ Le plafond est un seul compteur, atomique, honnête sur sa dégradation. Et il e
 
 ---
 
-## 6. Observabilité — ce qui reste
+## 6. Observabilité — **soldé le 2026-08-04**
 
-- Le **magasin de sondes durable** n'existe pas. `refusal` et `firewall` (corpus fixe) en
-  dépendent réellement ; `crossTenant` et `privilege` ne demandent **qu'une signature de
-  handler** `(at, agent, days)` — leur étiquette est corrigée, le handler reste à écrire.
-- `redteam._SNAPSHOTS` est une liste en mémoire de processus : perdue au redémarrage **et**
-  invisible entre workers. Le GET n'a aucun consommateur.
-- `fetchEmbeddingSkew` n'est appelé nulle part : la réparation du 2026-08-01 n'est visible sur
-  aucun écran, et la capability déclare toujours `synthetic=True` à tort.
-- `/observability/localization` est réparé **côté backend seulement** : le composant teste
-  `measured`, jamais `available`, et rend `—`.
+- ✅ **Le magasin de sondes durable existe.** `tessera.observability.probe_store` est ce que le
+  commentaire de `control_series` décrivait **au présent** sous le nom `probe_history` — un nom
+  dont ce commentaire était la seule occurrence du dépôt. Écrit, plus décrit.
+
+  La raison `fixed-corpus` était juste sur le **handler** et fausse sur la **métrique** :
+  rejouer le même corpus adverse dans une fenêtre plus étroite rend le même nombre, mais ce que
+  ces sondes mesurent — la **politique** — bouge. Ce qui manquait n'était donc pas une
+  dérivation, c'était le **relevé daté de chaque réponse distincte**. La courbe est une fonction
+  en escalier dont chaque marche est une mesure réelle, et un seau antérieur au premier passage
+  enregistré ne reçoit **rien** — jamais un zéro : sur un taux de refus, un zéro et un trou ont
+  la même couleur et disent le contraire.
+
+  ⚠️ **Dédoublonné par contenu, et c'est la moitié du travail.** Les deux handlers mémoïsent sur
+  l'empreinte de politique : une ligne par lecture aurait rempli un journal borné de
+  rafraîchissements de page et fait tracer une courbe à partir de 400 lignes qui sont **une**
+  mesure — précisément le défaut que `fixed-corpus` empêchait, réintroduit par ce qui devait le
+  corriger. Une réponse identique **prolonge** son passage ; une réponse différente en ouvre un
+  nouveau, et cette frontière est la marche. Les témoins épinglent les **deux** sens : un
+  identique ne doit PAS créer, un différent DOIT.
+- ✅ **`crossTenant` et `privilege` ont leur signature `(at, agent, days)`.** Ils n'étaient ni à
+  corpus fixe ni sans horodatage — seulement sans portée. Le **nombre de la carte suit la même
+  fenêtre que sa courbe** (clé de lot portée), sans quoi la carte aurait imprimé « tout
+  l'historique » sous une ligne « ces 7 jours ».
+  ⚠️ Le chemin fenêtré de `least-privilege` reste en Python **même sur Postgres** : la version
+  SQL évidente caste `payload->>'occurred_at'` dans le prédicat, donc **un** horodatage malformé
+  fait échouer **toute** la requête là où `Scope.within` échoue *ouvert* sur cette seule ligne.
+  Deux réponses différentes à une date pourrie = une route et sa courbe qui divergent.
+- ✅ **`redteam` survit au redémarrage et entre workers.** C'était un `deque(maxlen=50)` en
+  mémoire de processus, ce qui contredisait deux fois la prémisse écrite du module (« des
+  passages répétés forment une série de dérive ») : perdue au redémarrage, et **différente par
+  worker** — l'historique affiché dépendait de qui répondait. Journalisé, mais **sans**
+  dédoublonnage : « on l'a relancé et trois passent encore » n'est pas « on n'a pas regardé
+  depuis mardi ».
+  ✅ **Le GET a enfin un consommateur** : le panneau red-team affichait en fait les chiffres du
+  **pare-feu**. Il montre désormais la dernière campagne (taux, date) — et **« jamais
+  exécutée »** quand il n'y en a pas, parce qu'un « 0 % de réussite d'attaque » serait la façon
+  la plus rassurante possible d'annoncer que la garde n'a jamais été attaquée.
+  ⚠️ Le composant `Sparkline` **n'a pas** été monté : « livré NON branché » est une instruction
+  permanente de l'architecte, pas un oubli.
+
+**Deux points de cette liste étaient périmés — vérifiés, pas crus :**
+
+- `fetchEmbeddingSkew` **est** appelé (`observability-dashboard.tsx:350`, rendu ligne 873) et la
+  capability déclare `_cap("embedding_skew", frozenset())`, donc `provenance=LIVE`, donc
+  `synthetic=False` (`spine/capabilities.py:81` dérive le drapeau de la provenance). Le vitest
+  `signal-registry.test.ts:113` l'affirme déjà.
+- `/observability/localization` **est** lu correctement : `overview-exec.tsx:1282` teste
+  `!localization.available || localization.measured === false`, et c'est l'unique consommateur.
+
+  ⚠️ **Mais son témoin, lui, était creux** et a été refait. Il faisait `readFileSync` du
+  composant pour vérifier que la **source contenait la chaîne** `"!localization.available || …"`.
+  ADR 0026 mot pour mot : il interrogeait le voisinage, pas la chose. Il serait passé au rouge
+  sur un simple renommage, et au **vert** sur cette même garde placée dans une branche que React
+  n'atteint jamais. Remplacé par un test de **rendu** avec ses deux contrôles : catalogue
+  illisible → l'écran le nomme ; rapport réellement mesuré → il trace les écarts (sans quoi un
+  composant qui afficherait *toujours* « illisible » passerait les deux premiers).
+
+⚠️ **Et un troisième témoin réparé, attrapé par la suite complète.** `test_obs_batch_parity`
+indexait les routes **par chemin seul**. `/observability/redteam` enregistre un GET (lire les
+instantanés) **et** un POST (lancer une campagne) : le dict gardait celui que FastAPI
+enregistrait en dernier et comparait le handler de lecture du lot à une **mutation**. Vrai tant
+qu'aucune clé de lot ne nommait un chemin à deux verbes ; la première qui l'a fait a transformé
+l'assertion en pile ou face sur l'ordre d'enregistrement. Indexé par (chemin, méthode).
 
 **Soldé le 2026-08-04 — le crash-loop Langfuse, et le trou de garde qui le rendait muet.**
 `tessera-claude-langfuse` avait redémarré **818 fois en quatorze heures** sur

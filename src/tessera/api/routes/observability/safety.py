@@ -28,6 +28,7 @@ from tessera.observability import (
     pii_leak as pii_leak_mod,
     playbooks as playbooks_mod,
     policies as policies_mod,
+    probe_store as probe_store_mod,
     redteam as redteam_mod,
     refusal as refusal_mod,
     replay as replay_mod,
@@ -129,12 +130,47 @@ async def observability_embedding_inversion() -> dict[str, object]:
 
 
 @router.get("/observability/least-privilege")
-def observability_least_privilege() -> dict[str, object]:
-    """Tool least-privilege: granted vs actually-used tools from the audit (#101)."""
+def observability_least_privilege(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
+    """Tool least-privilege: granted vs actually-used tools from the audit (#101).
+
+    ``days`` scopes to a period, which is what gives this control a curve: which grants were
+    exercised *this week* is a different — and more actionable — fact than which were ever
+    exercised. It was labelled ``fixed-corpus`` until 2026-08-03 and never was one; audit
+    entries carry ``occurred_at``.
+
+    A period takes the Python path even on Postgres. The ``GROUP BY`` fast path below counts
+    the whole trail, and the obvious windowed version of it —
+    ``(payload->>'occurred_at')::timestamptz >= %s`` — casts a free-text JSON field inside the
+    predicate: one malformed stamp anywhere in the chain fails the **whole** query, where
+    :meth:`Scope.within` deliberately fails *open* on exactly that row. Different answers to a
+    bad timestamp is how a route and its own curve come to disagree, so the windowed read uses
+    the one that is already the file-mode behaviour. It reads from the incrementally-cached
+    whole-ledger payloads, not a fresh scan.
+    """
     # Exclude non-tool audit targets: the input guard ("user_input") and the
     # memory governance actions are audited too but are not tool invocations.
     non_tools = {"user_input"}
     from tessera.guard.ledger_store import audit_target_call_counts, ledger_source
+    from tessera.observability.spine.scope import Scope
+
+    window = parse_period_days(days)
+    if window is not None:
+        scope = Scope(at=at, agent_id=_agent_or_none(agent), period_days=window)
+        windowed: dict[str, int] = {}
+        for entry in _read_audit_entries():
+            target = entry.get("target")
+            if not (
+                isinstance(target, str)
+                and target not in non_tools
+                and not target.startswith("memory.")
+            ):
+                continue
+            if not scope.within(entry.get("occurred_at")):
+                continue
+            windowed[target] = windowed.get(target, 0) + 1
+        return asdict(least_privilege_mod.analyze_privilege(_GRANTED_TOOLS, windowed))
 
     if ledger_source() == "postgres":
         # The DB counts per target (a handful of rows) instead of materialising 64 k payloads to
@@ -209,9 +245,22 @@ def observability_playbooks(
 
 
 @router.get("/observability/cross-tenant")
-def observability_cross_tenant() -> dict[str, object]:
-    """Cross-tenant leakage: foreign subject ids in a turn's context (#74)."""
-    turns = [(b.conversation_id or "", b.context) for b in replay_mod.recent_bundles()]
+def observability_cross_tenant(
+    at: str | None = None, agent: str = "all", days: str | None = None
+) -> dict[str, object]:
+    """Cross-tenant leakage: foreign subject ids in a turn's context (#74), live or as of T.
+
+    ``agent`` scopes to one agent's captured turns (``all`` = org view); ``days`` to the period.
+
+    This control was labelled ``fixed-corpus`` on the time axis until 2026-08-03 and it never
+    was one: it walks captured turns, and those turns carry ``captured_at``. What it lacked was
+    this signature. Taking the scope the other bundle-readers already take is the whole of what
+    turns it from a number into a curve.
+    """
+    turns = [
+        (b.conversation_id or "", b.context)
+        for b in _bundles_for(at, _agent_or_none(agent), parse_period_days(days))
+    ]
     return asdict(cross_tenant_mod.detect_cross_tenant(turns))
 
 
@@ -307,10 +356,20 @@ def observability_firewall_efficacy() -> dict[str, object]:
     The report is a deterministic fixed-corpus probe; the ``observed_at`` stamp is
     the live recompute time (ADR 0029) — the measurement is dated by *when it was
     read*, not by a wall clock baked into the reproducible measurement content.
+
+    The measurement is also journalled (:mod:`tessera.observability.probe_store`), which is
+    what gives this control a curve: the corpus never moves, but the policy does, and a dated
+    record of each distinct answer is a real time series where re-running the handler over a
+    narrower window would only be the same number drawn once per slice.
     """
     from datetime import UTC, datetime
 
-    return {**asdict(firewall_mod.compute_efficacy()), "observed_at": datetime.now(UTC).isoformat()}
+    report = {
+        **asdict(firewall_mod.compute_efficacy()),
+        "observed_at": datetime.now(UTC).isoformat(),
+    }
+    probe_store_mod.record_probe_run("firewall", report)
+    return report
 
 
 @router.get("/observability/redteam")
@@ -321,8 +380,14 @@ def observability_redteam() -> dict[str, object]:
 
 @router.get("/observability/refusal")
 def observability_refusal() -> dict[str, object]:
-    """Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden)."""
-    return asdict(refusal_mod.compute_refusal_calibration())
+    """Refusal-rate calibration: over-refusal (legit) vs under-refusal (forbidden).
+
+    Journalled like the firewall probe, and for the same reason: the corpus is fixed, the
+    policy is not, so the history of *distinct answers* is the only honest curve available.
+    """
+    report = asdict(refusal_mod.compute_refusal_calibration())
+    probe_store_mod.record_probe_run("refusal", report)
+    return report
 
 
 @router.get("/observability/guard-retraction")

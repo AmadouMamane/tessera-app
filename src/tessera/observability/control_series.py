@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from tessera.observability import probe_store
 from tessera.observability.logging import get_logger
 from tessera.observability.spine.scope import Scope
 
@@ -47,6 +48,7 @@ if TYPE_CHECKING:
 __all__ = [
     "DEFAULT_BUCKETS",
     "MAX_BUCKETS",
+    "REASON_NO_RUNS_RECORDED",
     "REASON_TOO_SLOW",
     "SERIES_SOURCES",
     "SOURCE_TIMEOUT_S",
@@ -216,6 +218,12 @@ REASON_UNSCOPED_HANDLER = "unscoped-handler"
 #: control simply having no line, because those are different facts and only one of them is
 #: worth waking somebody for. Unlike its three siblings it is computed per request.
 REASON_TOO_SLOW = "too-slow"
+#: The sixth, also per-request: this is a journalled probe, the journal exists, and it holds no
+#: run at or before any bucket of THIS window. Distinct from ``fixed-corpus`` in the way that
+#: matters to whoever reads it — that one says "a curve here would be a lie", this one says
+#: "the curve is real and starts once the probe has run". Filling the gap costs one page load,
+#: not a design decision.
+REASON_NO_RUNS_RECORDED = "no-runs-recorded"
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,6 +234,12 @@ class SeriesSource:
     handler: Callable[..., Any] | None
     #: ``None`` when the source IS bucketable; otherwise the reason it is not.
     reason: str | None = None
+    #: Set when the bucket's value is READ FROM THE PROBE JOURNAL rather than computed by
+    #: re-running a handler. A fixed-corpus probe re-run over a narrower window returns the
+    #: same number, so its curve cannot come from its handler — it comes from the dated record
+    #: of each distinct answer (:mod:`tessera.observability.probe_store`). The value is the
+    #: probe's name in that journal.
+    probe: str | None = None
 
 
 def series_capability(key: str) -> str | None:
@@ -260,25 +274,28 @@ def _sources() -> tuple[SeriesSource, ...]:
         SeriesSource("citations", compliance.observability_citations),
         SeriesSource("contradiction", evals.observability_contradictions),
         SeriesSource("localeFormat", compliance.observability_locale_format),
-        # Fixed-corpus probes. Re-running the same adversarial corpus against the same policy
-        # inside a narrower window returns the same number — a flat line that reads as "stable"
-        # while being one measurement drawn once per slice. They earn a real curve only once
-        # their RUNS are durably recorded with the instant each ran at.
+        # Fixed-corpus probes, read from the JOURNAL rather than re-run per bucket. Re-running
+        # the same adversarial corpus against the same policy inside a narrower window returns
+        # the same number — a flat line that reads as "stable" while being one measurement
+        # drawn once per slice. So the curve is not derived from the handler at all: it is the
+        # dated record of each distinct answer the probe has given, and it steps when the
+        # POLICY moves, which is the thing an operator actually wants to see on this axis.
         #
-        # That store does NOT exist. This comment used to say "which is what ``probe_history``
-        # now does", in the present tense, about a name that appears nowhere else in the
-        # repository — the comment was the only occurrence. Written down, in the present, it
-        # read as a completed piece of work; it is the piece of work that is missing.
-        SeriesSource("refusal", None, REASON_FIXED_CORPUS),
-        SeriesSource("firewall", None, REASON_FIXED_CORPUS),
-        # NOT fixed-corpus, whatever the label said until 2026-08-03. Both read per-turn
-        # samples, and those samples are timestamped: `detect_cross_tenant` walks turns,
-        # `analyze_privilege` walks tool calls. What they lack is a handler that takes
-        # (at, agent, days) — the same gap `citations`, `contradiction` and `localeFormat`
-        # had, and the same fix. Mislabelling them cost more than the missing curve: it filed
-        # a half-day of work as a property of the metric.
-        SeriesSource("crossTenant", None, REASON_UNSCOPED_HANDLER),
-        SeriesSource("privilege", None, REASON_UNSCOPED_HANDLER),
+        # The comment here used to say "which is what ``probe_history`` now does", in the
+        # present tense, about a name that appeared nowhere else in the repository — the
+        # comment was its only occurrence. Written down, in the present, it read as completed
+        # work; it was the work that was missing. It is now
+        # :mod:`tessera.observability.probe_store`, and the two route handlers record into it.
+        SeriesSource("refusal", None, probe="refusal"),
+        SeriesSource("firewall", None, probe="firewall"),
+        # NOT fixed-corpus, whatever the label said until 2026-08-03, and no longer unscoped
+        # either. Both read per-turn samples, and those samples are timestamped:
+        # `detect_cross_tenant` walks turns, `analyze_privilege` walks tool calls. What they
+        # lacked was a handler taking (at, agent, days) — the same gap `citations`,
+        # `contradiction` and `localeFormat` had, and the same fix. Mislabelling them cost more
+        # than the missing curve: it filed a half-day of work as a property of the metric.
+        SeriesSource("crossTenant", safety.observability_cross_tenant),
+        SeriesSource("privilege", safety.observability_least_privilege),
         # A fixture, not a corpus — but the consequence for a curve is the same.
         SeriesSource("inversion", None, REASON_FIXED_CORPUS),
         # Whole-sample derivations: a k-means over failures, an inter-rater agreement, a
@@ -360,6 +377,11 @@ async def compute_control_series(
     width_days = scope.period_days / count
     span = (until - since) / count
     bucketable = [s for s in sources if s.handler is not None]
+    journalled = [s for s in sources if s.probe is not None]
+    # Read ONCE for the whole window, not once per bucket: thirty slices of a journalled probe
+    # are thirty lookups into the same file, and re-reading it per slice would also let the
+    # curve be drawn from two different versions of the history if a run landed mid-request.
+    recorded = probe_store.load_probe_runs() if journalled else []
 
     async def _bucket(index: int) -> SeriesBucket:
         bucket_end = since + span * (index + 1)
@@ -400,11 +422,23 @@ async def compute_control_series(
                 return source.key, None
 
         settled = await asyncio.gather(*(_one(s) for s in bucketable))
+        # The journalled probes: what this probe measured AT the bucket's right edge. A bucket
+        # older than the first recorded run gets nothing at all — the probe was not run then,
+        # and on a refusal rate an absent point and a zero render the same colour and mean
+        # opposite things.
+        from_journal = [
+            (source.key, run.payload)
+            for source in journalled
+            if (run := probe_store.probe_run_at(str(source.probe), bucket_end, runs=recorded))
+        ]
         return SeriesBucket(
             index=index,
             since=(since + span * index).isoformat(),
             until=bucket_end.isoformat(),
-            payload={key: value for key, value in settled if value is not None},
+            payload={
+                **{key: value for key, value in settled if value is not None},
+                **dict(from_journal),
+            },
         )
 
     #: Sources this run asked for and did not get in time. Written by `_one`, read after the
@@ -416,13 +450,20 @@ async def compute_control_series(
     # `readControlSeries` already draws the missing slice as a hole rather than a zero. Only a
     # source that answered nowhere has nothing to show, and that is what earns the reason.
     answered = {key for bucket in buckets for key in bucket.payload}
+    # A journalled probe with nothing to show has a REASON rather than an empty chart, and a
+    # reason that says the gap is fillable — "run the probe once" — instead of `fixed-corpus`,
+    # which said the curve itself was impossible. Computed per request, like `too-slow`,
+    # because it is a fact about the store's contents and not about the metric.
+    no_runs = {s.key for s in journalled if s.key not in answered}
     return SeriesReport(
         days=scope.period_days,
         n_buckets=count,
         since=since.isoformat(),
         until=until.isoformat(),
         buckets=list(buckets),
-        unwindowed=unwindowed | {key: REASON_TOO_SLOW for key in timed_out - answered},
+        unwindowed=unwindowed
+        | {key: REASON_TOO_SLOW for key in timed_out - answered}
+        | {key: REASON_NO_RUNS_RECORDED for key in no_runs},
     )
 
 

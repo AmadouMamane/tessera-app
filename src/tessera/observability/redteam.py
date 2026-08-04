@@ -10,13 +10,25 @@ attack family) or a falling one (a policy tightening) both show up immediately.
 The guard is regex-only here, so each run is fast and deterministic. The honest
 takeaway the demo makes: a static pattern guard *will* leave residual success,
 which is exactly why continuous red-teaming and the downstream judge matter.
+
+**The drift series is durable** (2026-08-04). It was a ``deque(maxlen=50)`` in process memory,
+which broke the module's own premise twice over: "repeated runs form a drift series" was true
+only until the container restarted, and under more than one worker each process kept a
+*different* series — so which history the operator saw depended on which worker answered. A
+snapshot is a dated measurement of the deployed policy; losing it on a restart is losing the
+only evidence that the policy used to behave differently. It is now appended to the same
+durable journal the fixed-corpus probes write to
+(:mod:`tessera.observability.probe_store`).
+
+Unlike ``refusal`` and ``firewall``, red-team snapshots are **not** deduplicated by content:
+each run is an explicit act somebody triggered, and "we ran it again and it still bypasses
+three" is a different fact from "we have not looked since Tuesday".
 """
 
 from __future__ import annotations
 
 import json
-from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,6 +36,7 @@ from typing import TYPE_CHECKING
 from tessera.guard.adapter import check_user_input
 from tessera.guard.audit import GUARD_ACTOR
 from tessera.guard.decisions import load_policy
+from tessera.observability import probe_store
 from tessera.observability.firewall_efficacy import load_injection_prompts
 
 if TYPE_CHECKING:
@@ -37,7 +50,11 @@ __all__ = ["RedTeamSnapshot", "load_adversarial_corpus", "recent_snapshots", "ru
 _REPO = Path(__file__).resolve().parents[3]
 _ADVERSARIAL_PATH = _REPO / "eval" / "calibration" / "adversarial_inputs.json"
 
-_SNAPSHOTS: deque[RedTeamSnapshot] = deque(maxlen=50)
+#: The probe's key in the durable journal.
+_PROBE = "redteam"
+#: How many snapshots the drift series shows. The journal itself is bounded separately; this
+#: is what a reader gets back, unchanged from the ``deque(maxlen=50)`` this replaced.
+_HISTORY = 50
 _SAMPLE_LIMIT = 3
 
 
@@ -90,10 +107,30 @@ def run_redteam(
         attack_success_rate=(len(bypassed) / n_attacks if n_attacks else 0.0),
         bypassed_samples=[text[:120] for text in bypassed[:_SAMPLE_LIMIT]],
     )
-    _SNAPSHOTS.append(snapshot)
+    probe_store.append_probe_run(_PROBE, asdict(snapshot))
     return snapshot
 
 
 def recent_snapshots() -> list[RedTeamSnapshot]:
-    """Return the recorded red-team snapshots (newest last)."""
-    return list(_SNAPSHOTS)
+    """Return the recorded red-team snapshots (newest last), from the durable journal.
+
+    A malformed journal row is skipped rather than raising: this feeds a drift chart and a
+    playbook input, and one bad row must not remove the rest of the history from view.
+    """
+    snapshots: list[RedTeamSnapshot] = []
+    for run in probe_store.probe_runs(_PROBE):
+        payload = run.payload
+        try:
+            snapshots.append(
+                RedTeamSnapshot(
+                    ran_at=str(payload["ran_at"]),
+                    n_attacks=int(payload["n_attacks"]),
+                    n_blocked=int(payload["n_blocked"]),
+                    n_bypassed=int(payload["n_bypassed"]),
+                    attack_success_rate=float(payload["attack_success_rate"]),
+                    bypassed_samples=[str(s) for s in payload.get("bypassed_samples") or []],
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return snapshots[-_HISTORY:]

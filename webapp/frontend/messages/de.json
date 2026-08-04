@@ -676,6 +676,7 @@
       "no-timestamp": "über die ganze Stichprobe",
       "not-measured": "nicht gemessen",
       "unscoped-handler": "Handler ohne Zeitraum",
+      "no-runs-recorded": "kein Durchlauf aufgezeichnet",
       "sliceDays": "{n, plural, one {1 Tag} other {# Tage}}",
       "sliceHours": "{n} Std.",
       "too-slow": "zu langsam",
@@ -685,6 +686,7 @@
         "no-timestamp": "Über die gesamte Stichprobe berechnet (Clustering, Beurteiler-Übereinstimmung): ein Abschnitt der Eingabe ist keine verkleinerte Fassung, sondern eine andere, verrauschtere Messung.",
         "not-measured": "Für dieses Kontrollsignal ist auf der Zeitachse keine Quelle deklariert.",
         "unscoped-handler": "Die Stichproben dieses Controls sind mit Zeitstempeln versehen und sein Korpus ist nicht fest: Es fehlt ein Handler, der einen Zeitraum entgegennimmt, sodass „die letzten 30 Tage“ und „alles“ derselbe Aufruf sind. Eine Kurve ist hier möglich — sie ist nur noch nicht geschrieben.",
+        "no-runs-recorded": "Sonde mit festem Korpus, aber protokolliert: Ihre Kurve wird nicht je Abschnitt neu ausgeführt, sondern ist die datierte Aufzeichnung jeder unterschiedlichen Antwort, die sie gegeben hat — sie ändert sich, wenn sich die Richtlinie ändert, nicht der Korpus. Für dieses Fenster enthält das Protokoll keinen Durchlauf. Ein Seitenaufruf genügt, um einen zu schreiben.",
         "too-slow": "Die Quelle dieses Kontrollsignals wurde abgefragt und antwortete nicht rechtzeitig — meist ein lokales Modell, das aus dem Speicher verdrängt wurde und dessen Nachladen mehr kostet als die Abfrage selbst. Die übrigen Kontrollsignale behalten ihre Kurve; dieses hat für dieses Fenster nichts zu zeichnen.",
         "tooShort": "{n, plural, =0 {Keiner der {total} Abschnitte dieses Fensters trägt eine Messung} =1 {Nur einer der {total} Abschnitte dieses Fensters trägt eine Messung} other {{n} von {total} Abschnitten tragen eine Messung}} — jeder umfasst {width}. Für einen Verlauf sind zwei nötig: eine Linie durch einen einzigen Punkt würde behaupten, der Wert habe das ganze Fenster über gehalten."
       }
@@ -3606,7 +3608,9 @@
       "blocked": "geblockt",
       "bypasses": "Umgehungen",
       "blockRate": "Blockrate",
-      "uniqueBypasses": "Eindeutige Umgehungen"
+      "uniqueBypasses": "Eindeutige Umgehungen",
+      "redteamLastRun": "Letzte Kampagne",
+      "redteamNeverRun": "nie ausgeführt"
     },
     "overProvisioned": "Über-privilegiert",
     "act": {

@@ -73,9 +73,23 @@ class _BatchScope:
 _BATCH_KEYS: dict[str, tuple[Any, Callable[[_BatchScope], dict[str, Any]]]] = {
     # Sécurité — no-arg public reads
     "firewall-efficacy": (safety.observability_firewall_efficacy, lambda _s: {}),
-    "least-privilege": (safety.observability_least_privilege, lambda _s: {}),
     "refusal": (safety.observability_refusal, lambda _s: {}),
-    "cross-tenant": (safety.observability_cross_tenant, lambda _s: {}),
+    # The recorded jailbreak-drift snapshots. Org-wide and unscoped by nature: a red-team
+    # campaign is run against the deployed policy, not against one agent's week.
+    "redteam": (safety.observability_redteam, lambda _s: {}),
+    # These two used to sit above with the no-arg probes, because their handlers took no scope.
+    # They do now, and passing it is not optional: their CURVES are computed per bucket, so a
+    # card left reading all-history would print one window's number under another window's
+    # line. The two ways to keep them agreeing are to scope both or neither, and neither means
+    # deleting a curve that the samples support.
+    "least-privilege": (
+        safety.observability_least_privilege,
+        lambda s: {"at": s.at, "agent": s.agent, "days": s.days},
+    ),
+    "cross-tenant": (
+        safety.observability_cross_tenant,
+        lambda s: {"at": s.at, "agent": s.agent, "days": s.days},
+    ),
     "embedding-inversion": (safety.observability_embedding_inversion, lambda _s: {}),
     "erasure-coverage": (memory.observability_erasure_coverage, lambda _s: {}),
     "regression-risk": (evals.observability_regression_risk, lambda s: {"at": s.at}),

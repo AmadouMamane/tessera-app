@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { Route } from "next";
-import { useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -46,6 +46,7 @@ import {
   InversionReportSchema,
   PIILeakSummarySchema,
   PrivilegeReportSchema,
+  RedTeamResponseSchema,
   RefusalReportSchema,
   RegressionRiskSchema,
   ToxicityReportSchema,
@@ -530,6 +531,7 @@ const SEC_BATCH_KEYS = [
   "firewall-efficacy",
   "least-privilege",
   "refusal",
+  "redteam",
   "cross-tenant",
   "embedding-inversion",
   "erasure-coverage",
@@ -557,6 +559,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   // two surfaces read — the counts used to be pasted in as `(3/25)` beside every value.
   const tcd = useTranslations("overview.controlDetail");
   const locale = useLocale();
+  const formatter = useFormatter();
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
@@ -567,7 +570,9 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
   // The window length, from the header's period selector. The fixed-corpus probes on this
   // page ignore it by construction and SAY so (their capability declares no TIME dimension);
-  // the turn-derived ones — PII, toxicity, tool validity — honour it.
+  // the turn-derived ones — PII, toxicity, tool validity, and since 2026-08-04 cross-tenant
+  // and least-privilege — honour it. Those last two were in the first group by accident of
+  // their handlers taking no scope, never because their samples lacked timestamps.
   const period = useWindowStore((st) => st.period);
 
   // One batched read for the eight individual public safety signals (was eight fetches).
@@ -594,6 +599,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const whatChanged = signalOf(secSnap, "what_changed", WhatChangedSchema);
   const lp = panelOf(secBatch, "least-privilege", PrivilegeReportSchema);
   const refusal = panelOf(secBatch, "refusal", RefusalReportSchema);
+  // Newest last, as the endpoint documents. `undefined` when the campaign has never run —
+  // which the panel must render as "never run", not as a reassuring 0 % success rate.
+  const redteamHistory = panelOf(secBatch, "redteam", RedTeamResponseSchema);
+  const lastRedteam = redteamHistory.data?.snapshots.at(-1);
   const crossTenant = panelOf(secBatch, "cross-tenant", CrossTenantReportSchema);
   const inversion = panelOf(secBatch, "embedding-inversion", InversionReportSchema);
   const erasure = panelOf(secBatch, "erasure-coverage", ErasureCoverageSchema);
@@ -932,6 +941,22 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
         </div>
         <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
         <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
+        {/* The recorded campaign history. The numbers above are the FIXED-CORPUS efficacy
+            probe, recomputed on every read; these are the runs somebody actually triggered.
+            Until 2026-08-04 the endpoint that serves them had no consumer at all and the
+            snapshots lived in one worker's memory, so "repeated runs form a drift series" —
+            the module's own premise — was true of nothing anyone could see. A campaign that
+            has never run must SAY so: a 0 % success rate here would be the most reassuring
+            possible way to report that the guard was never attacked. */}
+        {lastRedteam ? (
+          <KV
+            label={ts("panel.redteamLastRun")}
+            value={`${pct(lastRedteam.attack_success_rate)} · ${formatter.dateTime(new Date(lastRedteam.ran_at), { dateStyle: "short", timeStyle: "short" })}`}
+            tone={lastRedteam.n_bypassed > 0 ? WARN : GOOD}
+          />
+        ) : (
+          <KV label={ts("panel.redteamLastRun")} value={ts("panel.redteamNeverRun")} tone={MUTED} />
+        )}
       </div>
     </Panel>
   );

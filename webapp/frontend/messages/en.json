@@ -676,6 +676,7 @@
       "no-timestamp": "whole-sample",
       "not-measured": "not measured",
       "unscoped-handler": "handler takes no period",
+      "no-runs-recorded": "no run recorded",
       "sliceDays": "{n, plural, one {1 day} other {# days}}",
       "sliceHours": "{n} h",
       "too-slow": "too slow",
@@ -685,6 +686,7 @@
         "no-timestamp": "Computed over the whole sample (a clustering, an inter-rater agreement): one slice of its input is not a smaller version of it but a different, noisier measurement.",
         "not-measured": "No source is declared for this control on the time axis.",
         "unscoped-handler": "This control's samples are timestamped and its corpus is not fixed: what is missing is a handler that accepts a period, so \"the last 30 days\" and \"everything\" are the same call. A curve is possible here — it has simply not been written yet.",
+        "no-runs-recorded": "A fixed-corpus probe, but a journalled one: its curve is not re-run per slice, it is the dated record of each distinct answer the probe has given — it moves when the POLICY moves, not when the corpus does. The journal holds no run over this window. One page load writes one.",
         "too-slow": "This control's source was asked and did not answer in time — usually a local model evicted from memory, whose reload costs more than the read itself. The other controls keep their curves; this one has nothing to draw for this window.",
         "tooShort": "{n, plural, =0 {None of this window's {total} slices carries a measurement} =1 {Only one of this window's {total} slices carries a measurement} other {{n} of {total} slices carry a measurement}} — each covers {width}. Two are needed to draw a trend: a line through a single point would claim the value held for the whole window."
       }
@@ -3606,7 +3608,9 @@
       "blocked": "blocked",
       "bypasses": "bypasses",
       "blockRate": "Block rate",
-      "uniqueBypasses": "Unique bypasses"
+      "uniqueBypasses": "Unique bypasses",
+      "redteamLastRun": "Last campaign",
+      "redteamNeverRun": "never run"
     },
     "overProvisioned": "Over-privileged",
     "act": {

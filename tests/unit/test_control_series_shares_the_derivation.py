@@ -17,6 +17,7 @@ a flat one.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -30,9 +31,9 @@ from tessera.observability.control_series import (
     _ROUND_HOURS,
     MAX_BUCKETS,
     REASON_FIXED_CORPUS,
+    REASON_NO_RUNS_RECORDED,
     REASON_NO_TIMESTAMP,
     REASON_TOO_SLOW,
-    REASON_UNSCOPED_HANDLER,
     buckets_for_window,
     compute_control_series,
 )
@@ -203,18 +204,26 @@ async def test_a_fixed_corpus_probe_gets_no_line_and_says_which_reason() -> None
     metric while being one measurement, repeated.
     """
     report = await compute_control_series(Scope(period_days=7), n_buckets=8)
-    for key in ("refusal", "firewall", "inversion"):
-        assert report.unwindowed[key] == REASON_FIXED_CORPUS
+    # `inversion` is the remaining one: a fixture, re-derived identically inside any window.
+    assert report.unwindowed["inversion"] == REASON_FIXED_CORPUS
+    for bucket in report.buckets:
+        assert "inversion" not in bucket.payload, "inversion was bucketed despite being fixed"
+    # `refusal` and `firewall` carried that label until 2026-08-04. Their corpus IS fixed, so
+    # re-running the handler per slice would still be one measurement drawn eight times — but
+    # the policy they measure is not fixed, and a dated record of each distinct answer is a
+    # real curve. With an empty journal (this test writes none) they must say THAT, not
+    # "fixed-corpus": the first says a page load fills the gap, the second said no curve was
+    # ever possible here.
+    for key in ("refusal", "firewall"):
+        assert report.unwindowed[key] == REASON_NO_RUNS_RECORDED
         for bucket in report.buckets:
-            assert key not in bucket.payload, f"{key} was bucketed despite being fixed-corpus"
+            assert key not in bucket.payload, f"{key} was bucketed from an empty journal"
     # `crossTenant` and `privilege` carried that same label until 2026-08-03, and it was
-    # false: both read per-turn samples, and those samples are timestamped. What they lack is
-    # a handler that takes a period. Filing an unfinished handler as a property of the metric
-    # tells an operator "there will never be a curve here" about half a day of work.
+    # false: both read per-turn samples, and those samples are timestamped. What they lacked
+    # was a handler taking a period, written on 2026-08-04 — so they are now bucketed like any
+    # other turn-derived control, and must NOT appear among the excuses.
     for key in ("crossTenant", "privilege"):
-        assert report.unwindowed[key] == REASON_UNSCOPED_HANDLER
-        for bucket in report.buckets:
-            assert key not in bucket.payload, f"{key} was bucketed despite having no scope"
+        assert key not in report.unwindowed, f"{key} still excuses itself after gaining a scope"
     for key in ("clusters", "calibration", "predictor"):
         assert report.unwindowed[key] == REASON_NO_TIMESTAMP
 
@@ -240,8 +249,12 @@ async def test_all_history_yields_no_buckets_rather_than_an_invented_axis() -> N
     assert report.n_buckets == 0
     assert report.days is None
     # The refusals still travel: the UI must be able to say WHY a control has no curve even
-    # when nothing has a curve.
-    assert report.unwindowed["refusal"] == REASON_FIXED_CORPUS
+    # when nothing has a curve. `inversion` is the one that carries a reason about the METRIC;
+    # the journalled probes carry one about this RUN, so with no window to run over they are
+    # silent here exactly like `slo` and every other bucketable source.
+    assert report.unwindowed["inversion"] == REASON_FIXED_CORPUS
+    assert "refusal" not in report.unwindowed
+    assert "slo" not in report.unwindowed
 
 
 @pytest.mark.asyncio
@@ -312,8 +325,11 @@ async def test_one_hanging_source_does_not_take_the_whole_report_with_it() -> No
         await hung.wait()
         return {}
 
+    # `replace`, not a positional rebuild: the latter listed three of the four fields, so the
+    # day a fourth was added (`probe`) every patched source silently lost it and this fixture
+    # would have tested a shape the production one does not have.
     patched = tuple(
-        control_series.SeriesSource(s.key, _never if s.key == "toxicity" else s.handler, s.reason)
+        dataclasses.replace(s, handler=_never) if s.key == "toxicity" else s
         for s in control_series._ensure_sources()
     )
     with (
@@ -333,9 +349,9 @@ async def test_one_hanging_source_does_not_take_the_whole_report_with_it() -> No
     # empty window — the state the live cockpit was in, with nothing on screen to distinguish
     # "this control has no curve" from "something upstream did not answer".
     assert report.unwindowed["toxicity"] == REASON_TOO_SLOW
-    # The three declared reasons are untouched: this one is about the RUN, they are about the
+    # The declared reasons are untouched: this one is about the RUN, they are about the
     # metric, and collapsing them would undo the distinction they exist for.
-    assert report.unwindowed["refusal"] == REASON_FIXED_CORPUS
+    assert report.unwindowed["inversion"] == REASON_FIXED_CORPUS
 
     # …and the deadline is what did it. With one long enough, the same fixture reproduces the
     # live failure exactly: no report at all. A guard nobody has seen refuse is a guard nobody

@@ -705,14 +705,32 @@ export async function fetchPlaybooks(
   );
 }
 
-/** Tool least-privilege: granted vs actually-used tools from the audit (#101). */
-export async function fetchLeastPrivilege(signal?: AbortSignal): Promise<PrivilegeReport> {
-  return request("/observability/least-privilege", { signal }, PrivilegeReportSchema);
+/** Tool least-privilege: granted vs actually-used tools from the audit (#101), live or as of T. */
+export async function fetchLeastPrivilege(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+  days?: string,
+): Promise<PrivilegeReport> {
+  return request(
+    withScope("/observability/least-privilege", at, agent, days),
+    { signal },
+    PrivilegeReportSchema,
+  );
 }
 
-/** Cross-tenant leakage: foreign subject ids in a turn's context (#74). */
-export async function fetchCrossTenant(signal?: AbortSignal): Promise<CrossTenantReport> {
-  return request("/observability/cross-tenant", { signal }, CrossTenantReportSchema);
+/** Cross-tenant leakage: foreign subject ids in a turn's context (#74), live or as of T. */
+export async function fetchCrossTenant(
+  signal?: AbortSignal,
+  at?: string,
+  agent?: string,
+  days?: string,
+): Promise<CrossTenantReport> {
+  return request(
+    withScope("/observability/cross-tenant", at, agent, days),
+    { signal },
+    CrossTenantReportSchema,
+  );
 }
 
 /** Toxicity / harmful-output rate over captured answers (#60), live or as of T. */

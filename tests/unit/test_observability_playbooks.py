@@ -90,9 +90,11 @@ def test_a_measured_and_healthy_fleet_reports_nothing_unmeasured() -> None:
 def test_a_jailbreak_rate_with_no_snapshot_behind_it_does_not_fire() -> None:
     """`snapshots[-1]` on an empty list falls back to 0.0 upstream — a rate that never was.
 
-    `redteam._SNAPSHOTS` is a process-local list, so a restart empties it. The route then reads
-    `jailbreak_rate = 0.0` and, before this gate, that zero was indistinguishable from a measured
-    zero: "no bypasses" from a probe that had not run since boot.
+    The red-team history was a process-local deque until 2026-08-04, so a restart emptied it.
+    It is durable now — but a fresh deployment still starts with nothing, and so does any
+    environment where the campaign has never been triggered. The route then reads
+    `jailbreak_rate = 0.0` and, before this gate, that zero was indistinguishable from a
+    measured zero: "no bypasses" from a probe that had not run.
     """
     assert trigger_playbooks(PlaybookSignals(jailbreak_success_rate=0.9)).n_triggered == 0
     fired = trigger_playbooks(PlaybookSignals(jailbreak_success_rate=0.9, n_snapshots=1))

@@ -676,6 +676,7 @@
       "no-timestamp": "sur l'échantillon entier",
       "not-measured": "non mesuré",
       "unscoped-handler": "handler sans période",
+      "no-runs-recorded": "aucun passage enregistré",
       "sliceDays": "{n, plural, one {1 jour} other {# jours}}",
       "sliceHours": "{n} h",
       "too-slow": "trop lente",
@@ -685,6 +686,7 @@
         "no-timestamp": "Statistique calculée sur l'échantillon entier (regroupement, accord inter-juges) : une tranche de son entrée n'en est pas une version réduite, mais une autre mesure, plus bruitée.",
         "not-measured": "Aucune source déclarée pour ce contrôle sur l'axe temporel.",
         "unscoped-handler": "Les échantillons de ce contrôle sont horodatés et son corpus n'est pas figé : ce qui manque est un handler qui accepte une période, si bien que « les 30 derniers jours » et « tout » sont le même appel. Une courbe est possible ici — elle n'est pas encore écrite.",
+        "no-runs-recorded": "Sonde à corpus fixe, mais journalisée : sa courbe n'est pas rejouée par tranche, elle est le relevé daté de chaque réponse distincte qu'elle a donnée — elle change quand la politique change, pas quand le corpus bouge. Le journal ne contient aucun passage sur cette fenêtre. Une lecture de la page suffit à en écrire un.",
         "too-slow": "La source de ce contrôle a été interrogée et n'a pas répondu dans le délai imparti — le plus souvent un modèle local évincé de la mémoire, dont le rechargement coûte plus que la lecture. Les autres contrôles gardent leur courbe ; celui-ci n'a rien à tracer pour cette fenêtre.",
         "tooShort": "{n, plural, =0 {Aucune des {total} tranches de cette fenêtre ne porte de mesure} =1 {Une seule des {total} tranches de cette fenêtre porte une mesure} other {{n} tranches sur {total} portent une mesure}} — chacune couvre {width}. Il en faut deux pour tracer une évolution : une ligne tracée sur un point unique prétendrait que la valeur a tenu toute la fenêtre."
       }
@@ -3606,7 +3608,9 @@
       "blocked": "bloqués",
       "bypasses": "contournements",
       "blockRate": "Taux de blocage",
-      "uniqueBypasses": "Contournements uniques"
+      "uniqueBypasses": "Contournements uniques",
+      "redteamLastRun": "Dernière campagne",
+      "redteamNeverRun": "jamais exécutée"
     },
     "overProvisioned": "Sur-privilégié",
     "act": {

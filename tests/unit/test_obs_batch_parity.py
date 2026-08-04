@@ -64,10 +64,22 @@ def no_external(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 def test_batch_dispatches_to_each_routes_own_handler(app: FastAPI) -> None:
-    # The strong, deterministic guarantee: same handler object as the standalone route registers.
-    endpoints = {getattr(r, "path", None): getattr(r, "endpoint", None) for r in app.routes}
+    """The strong, deterministic guarantee: the SAME handler object the standalone route uses.
+
+    Indexed by (path, method), not by path alone. A path is not a unique key here —
+    ``/observability/redteam`` registers a GET that reads the recorded snapshots and a POST
+    that runs a fresh campaign — so a path-keyed dict kept whichever route FastAPI registered
+    last and compared the batch's read handler against a mutation. It happened to hold while
+    no batch key named a path with two verbs; the first one that did turned this assertion
+    into a coin flip on registration order. The batch only ever dispatches reads.
+    """
+    endpoints = {
+        (getattr(r, "path", None), method): getattr(r, "endpoint", None)
+        for r in app.routes
+        for method in getattr(r, "methods", None) or ()
+    }
     for key, (handler, _kwargs) in _BATCH_KEYS.items():
-        assert endpoints.get(f"/observability/{key}") is handler, key
+        assert endpoints.get((f"/observability/{key}", "GET")) is handler, key
 
 
 @pytest.mark.usefixtures("no_external")
