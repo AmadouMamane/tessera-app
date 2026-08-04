@@ -11,6 +11,7 @@ import asyncio
 from typing import Literal
 
 from tessera.llm import ChatMessage, get_chat_backend
+from tessera.llm.ceiling import resolve_spend_model
 
 __all__ = ["translate_page"]
 
@@ -40,7 +41,14 @@ async def translate_page(
     text: str,
     target: Literal["fr", "de", "en"],
 ) -> str:
-    """Translate ``text`` into ``target`` via the active chat backend."""
+    """Translate ``text`` into ``target`` via the active chat backend.
+
+    Raises:
+        DailyCeilingReachedError: The org's daily ceiling is reached (ADR 0034). Raised rather
+            than returning the source text: a corpus page that silently stayed in its original
+            language would be a translation failure that looks like a translation.
+    """
+    model = await resolve_spend_model(caller="corpus.translator")
     backend = get_chat_backend()
     response = await backend.chat(
         [
@@ -48,6 +56,7 @@ async def translate_page(
             ChatMessage(role="user", content=text),
         ],
         temperature=0.1,
+        model=model,
     )
     return response.content.strip()
 

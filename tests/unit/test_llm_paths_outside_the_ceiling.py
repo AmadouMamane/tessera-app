@@ -1,17 +1,22 @@
-"""ADR 0034's daily ceiling is enforced at one seam, and nine paths do not pass through it.
+"""ADR 0034's daily ceiling is asked by every path that spends. The debt is zero.
 
-``POST /chat`` resolves the budget policy and refuses (or degrades to a local model) when the
-day's spend has reached the ceiling. Every one of those turns is counted. So is every turn of
-the nine modules below — they call the same backends and increment the same meter — but none
-of them ever *asks*: the summariser, the reflector, the judge, the corpus translator and the
-five observability probes will happily keep spending after the breaker has tripped.
+``POST /chat`` has always resolved the budget policy and refused (or degraded) once the day's
+spend reached the ceiling. Until 2026-08-04 nothing else did: the summariser, the reflector,
+the judge, the corpus translator and five observability probes called the same backends and
+incremented the same meter without ever asking. The ceiling bounded the user-facing turn and
+nothing else — backwards, since the probes replay whole catalogues.
 
-The gap is not "the ceiling does not work". It is "the ceiling covers the user-facing turn
-and nothing else", and the difference matters most exactly when it is expensive: the probes
-replay whole catalogues.
+Ten modules were frozen here as owed. Nine are now routed through
+:func:`tessera.llm.ceiling.resolve_spend_model`. The tenth was never a debt:
+``observability/agent_configurations.py`` obtains a backend to read its *name* and the
+sampling it declares, and never calls it. It is exempt by name and with its reason, the way
+``agent/reporter.py`` is — never by a pattern, because a rule broad enough to excuse a
+descriptive read would excuse a spending one with it.
 
-This is a debt, held at its measured size so it can only shrink. Closing an entry means
-routing that module through the policy — not deleting it from the list.
+**This file must not become vacuous now that the list is empty.** A ratchet whose freeze is
+empty and whose detector has quietly stopped seeing looks exactly like a debt that was paid.
+So the detector is asked to prove it can still see, twice: that it finds LLM call sites at all,
+and that it would flag a module that spends without asking (ADR 0026).
 """
 
 from __future__ import annotations
@@ -29,37 +34,29 @@ _SRC = Path(__file__).resolve().parents[2] / "src" / "tessera"
 _LLM_ENTRY_POINTS = frozenset({"get_chat_backend", "get_summary_backend", "backend_for_model"})
 
 #: Names that mean "this module consults the daily ceiling before spending".
-_CEILING_NAMES = frozenset({"resolve_budget_policy", "BudgetPolicy"})
-
-#: Runs INSIDE a turn the route has already gated. The reporter is a graph node: by the time
-#: it speaks, `POST /chat` has resolved the policy and either refused the turn or chosen a
-#: model it can afford. Exempted by name and with its reason, never by a pattern — a rule
-#: broad enough to excuse the reporter would excuse the nine below with it.
-_GATED_BY_THEIR_CALLER: frozenset[str] = frozenset({"agent/reporter.py"})
-
-#: Measured 2026-08-03. Downward only. Each entry is a module that spends on an LLM without
-#: ever reading the ceiling that is supposed to bound the org's day. Ten, not the nine the
-#: audit listed: `agent_configurations.py` reaches a model the same way and had not been
-#: counted.
-_FROZEN_UNGATED: frozenset[str] = frozenset(
-    {
-        "corpus/translator.py",
-        "memory/reflector.py",
-        "memory/summary.py",
-        "observability/ablation.py",
-        "observability/agent_configurations.py",
-        "observability/consistency.py",
-        "observability/crosslingual.py",
-        "observability/eval/judge.py",
-        "observability/replay.py",
-        "observability/robustness.py",
-    }
+_CEILING_NAMES = frozenset(
+    {"resolve_budget_policy", "BudgetPolicy", "resolve_spend_model", "DailyCeilingReachedError"}
 )
 
+#: Exempt by name, each with its reason. Two kinds, and the distinction is the point:
+#:
+#: * ``agent/reporter.py`` — SPENDS, but inside a turn ``POST /chat`` has already gated: by the
+#:   time it speaks, the route has resolved the policy and either refused the turn or chosen a
+#:   model it can afford.
+#: * ``observability/agent_configurations.py`` — does NOT spend. It obtains a backend to read
+#:   ``backend.name`` and ``SAMPLING_APPLIED``, and never calls ``chat``. Gating it would refuse
+#:   to *describe* the configuration once the budget was spent.
+_EXEMPT: frozenset[str] = frozenset({"agent/reporter.py", "observability/agent_configurations.py"})
 
-def _names_used(path: Path) -> set[str]:
-    """Every identifier the module mentions, imported or called."""
-    tree = ast.parse(path.read_text(encoding="utf-8"))
+#: Was ten on 2026-08-03. Downward only, and now empty: every module that spends asks first.
+#: An entry may only leave this set by being routed through the ceiling — never by being
+#: deleted from the list, and never by widening :data:`_EXEMPT`.
+_FROZEN_UNGATED: frozenset[str] = frozenset()
+
+
+def _names_used(source: str) -> set[str]:
+    """Every identifier the source mentions, imported or called."""
+    tree = ast.parse(source)
     used: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Name):
@@ -71,42 +68,80 @@ def _names_used(path: Path) -> set[str]:
     return used
 
 
+def _is_ungated(source: str) -> bool:
+    used = _names_used(source)
+    return bool(used & _LLM_ENTRY_POINTS) and not (used & _CEILING_NAMES)
+
+
+def _modules_reaching_an_llm() -> set[str]:
+    """Every module outside the seam that names an LLM entry point, gated or not."""
+    found: set[str] = set()
+    for path in sorted(_SRC.rglob("*.py")):
+        relative = path.relative_to(_SRC).as_posix()
+        if relative.startswith(("api/", "llm/")):
+            continue  # the seam itself and the route that enforces it
+        if _names_used(path.read_text(encoding="utf-8")) & _LLM_ENTRY_POINTS:
+            found.add(relative)
+    return found
+
+
 def _ungated_modules() -> set[str]:
     ungated: set[str] = set()
     for path in sorted(_SRC.rglob("*.py")):
         relative = path.relative_to(_SRC).as_posix()
-        if relative.startswith(("api/", "llm/")) or relative in _GATED_BY_THEIR_CALLER:
-            continue  # the seam itself, the route that enforces it, and what runs inside it
-        used = _names_used(path)
-        if used & _LLM_ENTRY_POINTS and not (used & _CEILING_NAMES):
+        if relative.startswith(("api/", "llm/")) or relative in _EXEMPT:
+            continue
+        if _is_ungated(path.read_text(encoding="utf-8")):
             ungated.add(relative)
     return ungated
 
 
-def test_the_detector_finds_something() -> None:
-    """A ratchet whose probe returns nothing polices nothing (ADR 0026)."""
-    assert _ungated_modules(), (
-        "no module was found reaching an LLM outside api/ and llm/ — either the debt is "
-        "genuinely closed (delete this file and the freeze below) or the detector stopped "
-        "seeing, which is the failure this repository keeps paying for"
+class TestTheDetectorCanStillSee:
+    """With an empty freeze, these are the only things standing between green and vacuous."""
+
+    def test_it_finds_the_modules_that_reach_a_model(self) -> None:
+        found = _modules_reaching_an_llm()
+        assert len(found) >= 9, (
+            "the detector found almost no module reaching an LLM outside api/ and llm/ — "
+            f"either the code moved or the probe stopped seeing. Found: {sorted(found)}"
+        )
+
+    def test_it_would_flag_a_module_that_spends_without_asking(self) -> None:
+        """The positive control: a synthetic ungated module must be caught."""
+        assert _is_ungated(
+            "from tessera.llm.router import backend_for_model\nbackend_for_model('x')"
+        )
+
+    def test_it_does_not_flag_a_module_that_asks(self) -> None:
+        """The negative control: without it, a detector that flags everything would pass above."""
+        assert not _is_ungated(
+            "from tessera.llm.ceiling import resolve_spend_model\n"
+            "from tessera.llm.router import backend_for_model\n"
+            "backend_for_model('x')"
+        )
+
+
+def test_no_llm_path_escapes_the_ceiling() -> None:
+    ungated = sorted(_ungated_modules() - _FROZEN_UNGATED)
+    assert not ungated, (
+        "these modules spend on an LLM without consulting the daily ceiling:\n  "
+        + "\n  ".join(ungated)
+        + "\nRoute them through `tessera.llm.ceiling.resolve_spend_model` rather than adding "
+        "them to the freeze — the freeze is empty and may only stay so."
     )
 
 
-def test_no_new_llm_path_escapes_the_ceiling() -> None:
-    ungated = _ungated_modules()
-    new = sorted(ungated - _FROZEN_UNGATED)
-    assert not new, (
-        "these modules spend on an LLM without consulting the daily ceiling, and they are "
-        "not in the frozen debt:\n  " + "\n  ".join(new) + "\nRoute them through "
-        "`resolve_budget_policy` (see `POST /chat`) rather than adding them here."
+def test_the_frozen_debt_stays_empty() -> None:
+    """It reached zero on 2026-08-04. Growing it back is a decision, not a merge."""
+    assert not _FROZEN_UNGATED, (
+        "the frozen debt is no longer empty. An ungated LLM path was accepted rather than "
+        f"routed: {sorted(_FROZEN_UNGATED)}"
     )
 
 
-def test_the_frozen_debt_does_not_name_a_module_that_is_already_gated() -> None:
-    """The list may only shrink, and a stale entry would let a real regression hide behind it."""
-    ungated = _ungated_modules()
-    stale = sorted(_FROZEN_UNGATED - ungated)
-    assert not stale, (
-        "these are frozen as ungated but no longer are — remove them from _FROZEN_UNGATED so "
-        "the count keeps meaning something:\n  " + "\n  ".join(stale)
-    )
+def test_the_exemptions_stay_two_and_keep_their_reasons() -> None:
+    """An exemption is a place where a defect is allowed to live. These two are not defects —
+    but a third arriving unexamined would be, so it has to be a deliberate edit here."""
+    assert {"agent/reporter.py", "observability/agent_configurations.py"} == _EXEMPT
+    for relative in _EXEMPT:
+        assert (_SRC / relative).is_file(), f"{relative} is exempt and no longer exists"

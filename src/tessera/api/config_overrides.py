@@ -213,6 +213,20 @@ def _validated_value(key: str, value: str) -> str:
     return value
 
 
+def _forget_cached_ceiling() -> None:
+    """Drop the ceiling cache after any override write (ADR 0034).
+
+    Placed in the STORE, not in the two route handlers: a third writer added later would
+    otherwise leave an operator's new ceiling unenforced for a TTL without anyone noticing.
+    Invalidating on a model-knob write too is deliberate — one wasted read within 30 s is
+    cheaper than a rule about which keys matter, which is the kind of rule that goes stale.
+    Imported lazily: :mod:`tessera.llm.ceiling` reads this module back.
+    """
+    from tessera.llm.ceiling import invalidate_policy_cache
+
+    invalidate_policy_cache()
+
+
 async def set_override(key: str, value: str, *, author: str, reason: str) -> Override:
     """Validate against the closed registry and upsert one override, attributed.
 
@@ -257,6 +271,7 @@ async def set_override(key: str, value: str, *, author: str, reason: str) -> Ove
         await conn.commit()
     if row is None:  # pragma: no cover — RETURNING on an upsert always yields
         raise KnobError(f"override {key!r} was not stored")
+    _forget_cached_ceiling()
     return _row_to_override(row)
 
 
@@ -278,6 +293,7 @@ async def delete_override(key: str) -> None:
         await conn.commit()
     if not deleted:
         raise OverrideNotStoredError(key)
+    _forget_cached_ceiling()
 
 
 def _precedence_keys(agent_id: str | None) -> list[str]:

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
+from tessera.llm.ceiling import resolve_spend_model
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.observability.eval.judge import FAITHFULNESS, LLMJudge
 
@@ -94,6 +95,7 @@ async def measure_robustness(
     judge: Judge | None = None,
 ) -> RobustnessReport:
     """Answer the clean question and each perturbed variant, and score stability."""
+    model = await resolve_spend_model(caller="observability.robustness", model=model)
     generator = backend or backend_for_model(model)
     active_judge: Judge = judge or LLMJudge()
 

@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
+from tessera.llm.ceiling import resolve_spend_model
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.observability.eval.judge import FAITHFULNESS, LLMJudge
 
@@ -398,6 +399,7 @@ async def replay(
         A :class:`ReplayResult` with the candidate answer, its faithfulness
         score, the delta versus the original, and textual similarity.
     """
+    model = await resolve_spend_model(caller="observability.replay", model=model)
     generator = backend or backend_for_model(model)
     messages = [
         ChatMessage(role="system", content=_ANSWER_SYSTEM),

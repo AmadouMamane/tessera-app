@@ -46,9 +46,25 @@ _DEFAULT_EXTRACT_INSTRUCTION: Final[str] = (
 
 
 async def _extract_facts(turn: TurnRecord) -> list[str]:
-    """Ask the cheap model for durable customer facts; return a clean list."""
+    """Ask the cheap model for durable customer facts; return a clean list.
+
+    Returns ``[]`` when the org's daily ceiling is reached (ADR 0034) — this runs on the cold
+    path *after* a turn has been answered, so refusing here must never break that turn. It says
+    so on stderr rather than returning a quiet empty list: "no facts in this exchange" and "we
+    were not allowed to look" are different answers, and this repository has already paid for
+    a memory path where they were the same one.
+    """
+    import sys
+
     from tessera.agent.reporter import load_prompts
+    from tessera.llm.ceiling import DailyCeilingReachedError, resolve_spend_model
     from tessera.llm.router import ChatMessage, get_summary_backend
+
+    try:
+        model = await resolve_spend_model(caller="memory.reflector")
+    except DailyCeilingReachedError as exc:
+        sys.stderr.write(f"tessera.memory.reflector: no facts extracted this turn — {exc}\n")
+        return []
 
     prompts = load_prompts(turn.language)
     instruction = prompts.get("memory_extract", _DEFAULT_EXTRACT_INSTRUCTION)
@@ -62,6 +78,7 @@ async def _extract_facts(turn: TurnRecord) -> list[str]:
             ChatMessage(role="user", content=exchange),
         ],
         temperature=0.0,
+        model=model,
     )
     facts: list[str] = []
     for raw in response.content.splitlines():

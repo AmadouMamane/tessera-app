@@ -229,7 +229,15 @@ async def test_rerank_off_skips_overfetch_and_serves_vector_order(
 
 
 async def test_rerank_on_overfetches_for_the_reranker(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Both arms over-fetch by the same factor — and BOTH are stubbed here.
+
+    Stubbing only ``knn_search`` left the lexical arm reaching the real pool: the test passed
+    because a Postgres happened to be up on the developer's machine, and went red the moment
+    another test in the same process closed the pool. A unit test that quietly needs a database
+    is not a unit test; it is an integration test that has not said so.
+    """
     requested: dict[str, Any] = {}
+    lexical_requested: dict[str, Any] = {}
 
     async def _embed(_texts: list[str]) -> list[list[float]]:
         return [[0.0]]
@@ -238,14 +246,20 @@ async def test_rerank_on_overfetches_for_the_reranker(monkeypatch: pytest.Monkey
         requested.update(kwargs)
         return [_hit("a", 0.9)]
 
+    async def _lexical(**kwargs: Any) -> list[Any]:
+        lexical_requested.update(kwargs)
+        return []
+
     async def _record(_categories: list[str]) -> None:
         return None
 
     monkeypatch.setattr(hybrid_search.embeddings, "embed", _embed)
     monkeypatch.setattr(hybrid_search.store, "knn_search", _knn)
+    monkeypatch.setattr(hybrid_search.store, "lexical_search", _lexical)
     monkeypatch.setattr(hybrid_search.citations, "record_retrieval_query", _record)
 
     await hybrid_search.search(
         query="taux livret", language=LanguageCode.FR, corpus="credit_aurore", top_k=2
     )
     assert requested["top_k"] == 6  # 2 x _VECTOR_OVERFETCH — the historical truth
+    assert lexical_requested["top_k"] == 6  # the lexical arm over-fetches identically

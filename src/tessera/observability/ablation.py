@@ -23,6 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from tessera.llm.ceiling import resolve_spend_model
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.observability.eval.judge import FAITHFULNESS, LLMJudge
 
@@ -89,6 +90,10 @@ async def measure_ablation(
         An :class:`AblationReport` with each layer's worth relative to baseline.
     """
     chunks = [c for c in context.split("\n\n") if c.strip()]
+    # ADR 0034 — this probe re-answers a turn twice per layer, so it is one of the expensive
+    # paths the ceiling exists for. Raises when the day is spent; never returns an empty
+    # report, which would be indistinguishable from "no layer helped".
+    model = await resolve_spend_model(caller="observability.ablation", model=model)
     generator = backend or backend_for_model(model)
     active_judge: Judge = judge or LLMJudge()
 

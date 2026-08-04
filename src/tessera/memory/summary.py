@@ -22,6 +22,7 @@ from psycopg import sql
 from psycopg.rows import dict_row
 
 from tessera.guard.redaction import mask_pan
+from tessera.llm.ceiling import DailyCeilingReachedError
 from tessera.memory.entities import (
     extract_from_messages,
     ledger_from_json,
@@ -264,7 +265,14 @@ class SummaryBackend(WindowBackend):
         # prior summary back in is what makes the compaction cumulative instead of a
         # sliding, lossy re-read.
         previous, _ = await load_summary(scope.conversation_id)
-        summary = await self._summarise(older_text, scope.language, previous=previous)
+        try:
+            summary = await self._summarise(older_text, scope.language, previous=previous)
+        except DailyCeilingReachedError as exc:
+            # ADR 0034. Keep the PREVIOUS fold and write nothing: saving an empty summary here
+            # would discard everything older than the window — a ceiling would then delete
+            # memory rather than decline to extend it. The turn itself is already answered.
+            sys.stderr.write(f"tessera.memory.summary: fold skipped, prior summary kept — {exc}\n")
+            return
         await save_summary(scope.conversation_id, summary, entities)
 
     async def _summarise(
@@ -277,8 +285,10 @@ class SummaryBackend(WindowBackend):
         # Local imports avoid any import-time coupling with the reporter, which
         # itself imports the memory package.
         from tessera.agent.reporter import load_prompts
+        from tessera.llm.ceiling import resolve_spend_model
         from tessera.llm.router import ChatMessage, get_summary_backend
 
+        model = await resolve_spend_model(caller="memory.summary")
         prompts = load_prompts(language)
         system = prompts.get("summary", _DEFAULT_SUMMARY_INSTRUCTION)
         user = (
@@ -293,5 +303,6 @@ class SummaryBackend(WindowBackend):
                 ChatMessage(role="user", content=user),
             ],
             temperature=0.1,
+            model=model,
         )
         return response.content.strip()

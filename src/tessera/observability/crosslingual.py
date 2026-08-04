@@ -14,6 +14,7 @@ import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from tessera.llm.ceiling import resolve_spend_model
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.retrieval.embeddings import embed
 
@@ -71,6 +72,7 @@ async def measure_crosslingual(
     Returns:
         A :class:`CrossLingualReport`.
     """
+    model = await resolve_spend_model(caller="observability.crosslingual", model=model)
     generator = backend or backend_for_model(model)
     embed_fn = embedder or embed
 

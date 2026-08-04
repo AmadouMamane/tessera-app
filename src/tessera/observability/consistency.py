@@ -13,6 +13,7 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from tessera.llm.ceiling import resolve_spend_model
 from tessera.llm.router import ChatMessage, backend_for_model
 from tessera.retrieval.embeddings import embed
 
@@ -70,6 +71,7 @@ async def measure_consistency(
     Returns:
         A :class:`ConsistencyReport`.
     """
+    model = await resolve_spend_model(caller="observability.consistency", model=model)
     generator = backend or backend_for_model(model)
     messages = [
         ChatMessage(role="system", content=_SAMPLE_SYSTEM),

@@ -1104,6 +1104,10 @@ async def _serving_effectiveness(agent_slug: str) -> tuple[str, str, tuple[str, 
     from tessera.llm.router import SAMPLING_APPLIED, backend_for_model
 
     model, provenance = await resolve_chat_model_with_provenance(agent_slug)
+    # This obtains a backend to READ it — its name and the sampling it declares — and never
+    # calls it. No token is ever spent here, which is why this module is exempt from ADR 0034's
+    # ceiling rather than routed through it: gating a read would refuse to *describe* the
+    # configuration once the day's budget was spent, which is the opposite of useful.
     backend = backend_for_model(model if provenance != "base" else None)
     return model, backend.name, SAMPLING_APPLIED.get(backend.name, ()), provenance
 

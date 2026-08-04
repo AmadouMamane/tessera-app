@@ -214,19 +214,40 @@ baseline** : commit séparé qui re-mesure le plancher.
 
 ---
 
-## 4. Budget — ce qui reste après le compteur partagé
+## 4. Budget — **soldé le 2026-08-04**, la dette gelée est à zéro
 
-Le plafond est désormais un seul compteur, atomique, honnête sur sa dégradation. Ce qui reste :
+Le plafond est un seul compteur, atomique, honnête sur sa dégradation. Et il est désormais
+**interrogé par tout ce qui dépense**, pas seulement par le tour utilisateur.
 
-- **Dix modules dépensent sans jamais interroger le plafond** — `corpus/translator`,
-  `memory/reflector`, `memory/summary`, `observability/{ablation,agent_configurations,
-  consistency,crosslingual,replay,robustness}`, `observability/eval/judge`. Gelés dans
-  `tests/unit/test_llm_paths_outside_the_ceiling.py`, **downward only**. Le détecteur en a
-  trouvé **dix** là où l'audit en comptait neuf : les cinq sondes passent par
-  `backend_for_model`, qu'une sonde ne connaissant que les deux fabriques ne voyait pas.
-- Les brancher demande une politique **mise en cache** (aujourd'hui `resolve_budget_policy`
-  est `async` et frappe Postgres), donc un TTL et un pont sync/async. C'est le travail, et il
-  n'est pas fait.
+- ✅ **Les dix modules sont traités.** Neuf passent par
+  `tessera.llm.ceiling.resolve_spend_model` — `corpus/translator`, `memory/reflector`,
+  `memory/summary`, `observability/{ablation,consistency,crosslingual,replay,robustness}`,
+  `observability/eval/judge`. Le gel de
+  `tests/unit/test_llm_paths_outside_the_ceiling.py` est **vide**.
+- ⚠️ **Le dixième n'était pas une dette : c'était un faux positif du détecteur.**
+  `observability/agent_configurations` obtient un backend pour **lire son nom** et les
+  paramètres d'échantillonnage qu'il déclare — il n'appelle jamais `chat`, il ne dépense
+  jamais un jeton. Le détecteur compte « mentionne une fabrique de backend », pas « dépense ».
+  Exempté **par son nom et sa raison**, comme `agent/reporter.py` — jamais par un motif, car
+  une règle assez large pour excuser une lecture descriptive excuserait une dépense avec elle.
+- **Le pont sync/async annoncé n'était pas nécessaire**, et c'est une leçon sur la façon dont
+  la dette avait été relevée : neuf des dix sites *obtiennent* leur backend dans une fonction
+  `async`. Seul `eval/judge` l'obtient dans un `__init__` synchrone — mais il ne **dépense**
+  que dans `score()`, qui est `async`. La question à poser était « où l'argent sort-il ? »,
+  pas « où le backend est-il fabriqué ? ».
+- **Ce qui est mis en cache, et ce qui ne l'est surtout pas.** La politique (une lecture
+  Postgres) est mise en cache 30 s, et invalidée par **le magasin** à chaque écriture
+  d'override — pas par les deux handlers de route, car un troisième écrivain ajouté plus tard
+  laisserait le nouveau plafond inappliqué sans que personne le voie. **La dépense n'est
+  jamais mise en cache** : elle est relue à chaque appel. Mettre en cache le franchissement
+  laisserait une sonde continuer à dépenser pendant tout un TTL après le déclenchement.
+- **Un refus se lit comme un refus.** Un gestionnaire d'exception unique rend **402** avec le
+  plafond, la dépense du jour et **qui** a été refusé. Six sondes rendant six formes de
+  « rapport vide » est exactement ainsi qu'un refus finit par ressembler à une mesure
+  (ADR 0026). Les deux chemins de **mémoire** font l'inverse, et c'est délibéré : ils tournent
+  **après** que le tour a été répondu, donc ils dégradent en le disant sur stderr — et le
+  résumé **conserve le pli précédent** plutôt que d'en écrire un vide, sans quoi un plafond
+  **supprimerait** de la mémoire au lieu de refuser de l'étendre.
 
 ---
 

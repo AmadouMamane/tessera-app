@@ -14,6 +14,7 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Protocol
 
+from tessera.llm.ceiling import resolve_spend_model
 from tessera.llm.router import ChatMessage, get_summary_backend
 from tessera.settings import get_settings
 
@@ -131,7 +132,14 @@ class LLMJudge:
         self._model = model or get_settings().observability.judge_model
 
     async def score(self, *, metric: str, question: str, answer: str, context: str) -> JudgeVerdict:
-        """Score ``answer`` for ``metric`` given ``question`` and ``context``."""
+        """Score ``answer`` for ``metric`` given ``question`` and ``context``.
+
+        Raises:
+            DailyCeilingReachedError: The org's daily ceiling is reached (ADR 0034). The judge
+                is called once per metric per probe run, so it is where a catalogue replay
+                spends most of its money — and a fabricated score would be worse than none.
+        """
+        model = await resolve_spend_model(caller="observability.eval.judge", model=self._model)
         rubric = rubric_for(metric)
         messages = [
             ChatMessage(role="system", content=rubric + _FORMAT_INSTRUCTION),
@@ -140,7 +148,7 @@ class LLMJudge:
                 content=f"CONTEXT:\n{context}\n\nQUESTION:\n{question}\n\nANSWER:\n{answer}",
             ),
         ]
-        response = await self._backend.chat(messages, temperature=0.0, model=self._model)
+        response = await self._backend.chat(messages, temperature=0.0, model=model)
         data = _extract_json(response.content)
         return JudgeVerdict(
             metric=metric,

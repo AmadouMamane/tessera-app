@@ -86,3 +86,52 @@ Two gaps:
   seam, the router, the tracker and the validators.
 - The `knob_keys()` frozen-registry test grows the two budget keys — the
   registry stays closed, just larger.
+
+---
+
+## Amendment 1 (2026-08-04) — the ceiling is asked by everything that spends, not only by `/chat`
+
+**What was true until this date.** `POST /chat` resolved the policy and refused or degraded.
+Nothing else did. Ten modules were frozen in `tests/unit/test_llm_paths_outside_the_ceiling.py`
+as spending without ever asking — the summariser, the reflector, the corpus translator, the
+judge and five observability probes. The breaker therefore bounded the *user-facing* turn and
+nothing else, which is backwards: a probe replays a whole catalogue, and the user asks one
+question.
+
+**Nine were wired; the tenth was never a debt.** `observability/agent_configurations.py`
+obtains a backend to read `backend.name` and the sampling it declares, and never calls it. The
+detector counts *"names an LLM factory"*, not *"spends"*. It is now exempt by name and with
+its reason, alongside `agent/reporter.py` — never by a pattern, because a rule broad enough to
+excuse a descriptive read would excuse a spending one with it.
+
+**The sync/async bridge the debt predicted was not needed**, and why is worth recording: nine
+of the ten *obtain* their backend inside an `async` function. Only `eval/judge` obtains it in a
+sync `__init__` — but it only *spends* in `score()`, which is `async`. The question to ask of a
+spending path is where the money leaves, not where the client is built.
+
+### The rule lives in one place
+
+`tessera.llm.ceiling.resolve_spend_model(caller=…, model=…)` applies **the same** rule the
+chat route applies, deliberately, so "over the ceiling" cannot come to mean two things. It
+returns the model to actually use, or raises `DailyCeilingReachedError`. It fails open in the
+same two ways: no stored ceiling (or an unreadable store) means no ceiling, and an unpriced
+model is never gated.
+
+**What is cached and what is not.** The policy is a Postgres read, cached for 30 s and
+invalidated by the **override store** on every write — placed there rather than in the two
+route handlers, because a third writer added later would otherwise leave an operator's new
+ceiling unenforced for a TTL with nobody noticing. **The spend is never cached**: caching the
+crossing would let a probe keep spending for a whole TTL after the breaker tripped.
+
+### A refusal must read as a refusal
+
+One exception handler answers **402 Payment Required** with the ceiling, the day's spend and
+the `caller` that was refused. Not 503 — nothing is unavailable. Not 429 — nothing is
+rate-limited. And above all not 200 with an empty report: six probes returning six shapes of
+"no results" is precisely how a refusal comes to look like a measurement (ADR 0026).
+
+**The two memory paths do the opposite, on purpose.** They run *after* the turn has been
+answered, so raising there would turn a budget cap into an outage. They degrade and say so on
+stderr — and `memory/summary` keeps the **previous** fold rather than saving an empty one:
+writing an empty summary would discard everything older than the window, so a ceiling would
+*delete* memory instead of declining to extend it.

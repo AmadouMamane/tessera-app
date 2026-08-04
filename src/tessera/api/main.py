@@ -19,8 +19,9 @@ import os
 from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, Any, Final
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from tessera import __version__
@@ -51,6 +52,7 @@ from tessera.api.session import validate_session_signing_key
 from tessera.api.settings_store import ensure_settings_schema
 from tessera.guard.audit import validate_audit_chain_config
 from tessera.guard.seal import validate_exposed_seal_config
+from tessera.llm.ceiling import DailyCeilingReachedError
 from tessera.memory.governance import ensure_consent_schema
 from tessera.memory.persistent import ensure_longterm_schema
 from tessera.memory.summary import ensure_summary_schema
@@ -563,6 +565,28 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await pool.close()
 
 
+async def _daily_ceiling_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Turn ADR 0034's refusal into an answer the operator can act on.
+
+    ``402 Payment Required`` — the only status that says what happened. Not 503 (nothing is
+    unavailable), not 429 (nothing is rate-limited), and above all not 200 with an empty
+    report: a probe that returns zeros when it was refused is indistinguishable from a probe
+    that ran and found zeros.
+    """
+    ceiling = exc if isinstance(exc, DailyCeilingReachedError) else None
+    return JSONResponse(
+        status_code=402,
+        content={
+            "error": "daily_ceiling_reached",
+            "detail": str(exc),
+            "caller": ceiling.caller if ceiling else None,
+            "model": ceiling.model if ceiling else None,
+            "ceiling_eur": str(ceiling.ceiling_eur) if ceiling else None,
+            "day_spend_eur": str(ceiling.day_spend_eur) if ceiling else None,
+        },
+    )
+
+
 def build_app() -> FastAPI:
     """Construct the FastAPI application."""
     settings = get_settings()
@@ -612,6 +636,13 @@ def build_app() -> FastAPI:
             allow_headers=["authorization", "content-type", "x-request-id"],
             allow_credentials=False,
         )
+
+    # ADR 0034 — one refusal for every path that asked the ceiling and was told no. Registered
+    # once here rather than caught in each probe route: six probes returning six shapes of
+    # "empty report" is how a refusal comes to look like a measurement (ADR 0026). 402 Payment
+    # Required is the one status that says what actually happened; the body names the ceiling,
+    # the day's spend and WHO was refused, so the operator can act without reading a log.
+    app.add_exception_handler(DailyCeilingReachedError, _daily_ceiling_handler)
 
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware)
