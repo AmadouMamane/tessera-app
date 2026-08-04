@@ -256,7 +256,8 @@ def observability_score_series(
     ``agent`` scopes the series to one agent's scored turns (``all`` = org view).
 
     A period is spelled the same way on every other windowed endpoint of this cockpit —
-    ``d7``, ``d30``, ``h24`` — and these three spoke a private dialect of bare integers.
+    ``h24``, ``d7``, ``d14``, ``d30`` — and these endpoints spoke a private dialect of
+    bare integers.
     The selector therefore could not reach them: the client never built a ``days`` at all,
     and had it tried, ``days=d30`` would have been a 422. The operator picked thirty days
     and these read seven, silently (audit 2026-08-03).
@@ -294,7 +295,8 @@ def observability_signal_status_trend(
     as-of-T. Empty days are real zeros, never fabricated.
 
     A period is spelled the same way on every other windowed endpoint of this cockpit —
-    ``d7``, ``d30``, ``h24`` — and these three spoke a private dialect of bare integers.
+    ``h24``, ``d7``, ``d14``, ``d30`` — and these endpoints spoke a private dialect of
+    bare integers.
     The selector therefore could not reach them: the client never built a ``days`` at all,
     and had it tried, ``days=d30`` would have been a 422. The operator picked thirty days
     and these read seven, silently (audit 2026-08-03).

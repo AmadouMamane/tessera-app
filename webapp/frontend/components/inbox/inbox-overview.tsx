@@ -9,20 +9,13 @@ import {
   Layers,
   RefreshCcw,
   Search,
-  X,
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -470,7 +463,10 @@ function TaskTable({
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[760px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, i) => (
@@ -510,6 +506,7 @@ function TaskTable({
                   key={it.id}
                   // biome-ignore lint/a11y/useSemanticElements: a data row opens the detail drawer; keyboard + role provided.
                   role="button"
+                  aria-haspopup="dialog"
                   tabIndex={0}
                   aria-label={it.title}
                   aria-pressed={active}
@@ -699,56 +696,6 @@ function InboxDrawer({
   onClose: () => void;
   onCycle: () => void;
 }) {
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const [shown, setShown] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-    return () => opener?.focus?.();
-  }, []);
-  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-    const first = f[0];
-    const last = f[f.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      const c = document.querySelector("[data-shell-content]") ?? m;
-      const cr = c.getBoundingClientRect();
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    setShown(true);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const fields: [string, ReactNode][] = [
     [t("col.type"), t(`type.${item.type}`)],
     ...(item.agent ? ([[t("filters.agent"), item.agent]] as [string, ReactNode][]) : []),
@@ -764,118 +711,77 @@ function InboxDrawer({
   ];
 
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <dialog
-        ref={dialogRef}
-        open
-        aria-modal="true"
-        aria-label={item.title}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className={cn(
-          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
-          shown ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <aside className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Badge className={PRIORITY[item.priority]}>{t(`priority.${item.priority}`)}</Badge>
-                <span className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
-                  {item.id}
-                </span>
-              </div>
-              <p className="mt-1.5 pr-6 text-[0.92rem] font-semibold leading-tight">{item.title}</p>
+    <DetailDrawer onClose={onClose} title={item.title} subtitle={item.id} width="max-w-[440px]">
+      <Badge className={PRIORITY[item.priority]}>{t(`priority.${item.priority}`)}</Badge>
+      <div className="flex min-w-0 flex-col gap-3 text-[var(--tessera-text)]">
+        <dl className="flex flex-col gap-2.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.74rem]">
+          {fields.map(([label, value]) => (
+            <div
+              key={label}
+              className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)]/40 pb-2 last:border-0 last:pb-0"
+            >
+              <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
+              <dd className="min-w-0 truncate text-right font-medium">{value}</dd>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("close")}
-              className="shrink-0 rounded-md border border-[var(--tessera-border)] p-1 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+          ))}
+        </dl>
 
-          <dl className="flex flex-col gap-2.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.74rem]">
-            {fields.map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)]/40 pb-2 last:border-0 last:pb-0"
-              >
-                <dt className="text-[var(--tessera-text-muted)]">{label}</dt>
-                <dd className="min-w-0 truncate text-right font-medium">{value}</dd>
-              </div>
-            ))}
-          </dl>
-
-          {/* WF-01 — the journaled transitions of this case, each naming its
+        {/* WF-01 — the journaled transitions of this case, each naming its
               verified author (ADR 0024). Honest empty when it never moved. */}
-          <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-            <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {t("drawer.transitions")}
+        <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+          <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {t("drawer.transitions")}
+          </p>
+          {item.transitions.length > 0 ? (
+            <ol className="mt-1.5 flex flex-col gap-1.5 text-[0.68rem]">
+              {item.transitions.map((r, i) => (
+                <li
+                  key={`${r.at}-${r.label}-${i}`}
+                  className="flex items-baseline justify-between gap-2"
+                >
+                  <span className="min-w-0">
+                    <span className="text-[var(--tessera-text)]">{r.label}</span>{" "}
+                    <span className="text-[var(--tessera-text-muted)]">· {r.by}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+                    {r.at}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="mt-1.5 text-[0.62rem] leading-snug text-[var(--tessera-text-muted)]">
+              {t("drawer.transitionsEmpty")}
             </p>
-            {item.transitions.length > 0 ? (
-              <ol className="mt-1.5 flex flex-col gap-1.5 text-[0.68rem]">
-                {item.transitions.map((r, i) => (
-                  <li
-                    key={`${r.at}-${r.label}-${i}`}
-                    className="flex items-baseline justify-between gap-2"
-                  >
-                    <span className="min-w-0">
-                      <span className="text-[var(--tessera-text)]">{r.label}</span>{" "}
-                      <span className="text-[var(--tessera-text-muted)]">· {r.by}</span>
-                    </span>
-                    <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
-                      {r.at}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-1.5 text-[0.62rem] leading-snug text-[var(--tessera-text-muted)]">
-                {t("drawer.transitionsEmpty")}
-              </p>
-            )}
-          </div>
+          )}
+        </div>
 
-          <div className="mt-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-            <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-              {t("col.status")}
-            </p>
-            <span className="mt-1 inline-flex">
-              <Badge className={STATUS[item.status]}>{t(`status.${item.status}`)}</Badge>
-            </span>
-            <button
-              type="button"
-              onClick={onCycle}
-              disabled={busy}
-              className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5] disabled:opacity-50"
+        <div className="mt-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+          <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {t("col.status")}
+          </p>
+          <span className="mt-1 inline-flex">
+            <Badge className={STATUS[item.status]}>{t(`status.${item.status}`)}</Badge>
+          </span>
+          <button
+            type="button"
+            onClick={onCycle}
+            disabled={busy}
+            className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5] disabled:opacity-50"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" /> {t("cycleStatus")}
+          </button>
+          {item.href ? (
+            <Link
+              href={item.href}
+              className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-text-strong)]"
             >
-              <RefreshCcw className="h-3.5 w-3.5" /> {t("cycleStatus")}
-            </button>
-            {item.href ? (
-              <Link
-                href={item.href}
-                className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-text-strong)]"
-              >
-                {t("openBusinessRun")} <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            ) : null}
-          </div>
-        </aside>
-      </dialog>
-    </div>
+              {t("openBusinessRun")} <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </DetailDrawer>
   );
 }
 

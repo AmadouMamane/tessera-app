@@ -8,7 +8,7 @@ became a key is invisible to it:
 * **307 bare French literals** rendered straight into the DOM. A German operator reads them in
   French. `/observability/localization` reports 100 % complete while they are on screen —
   ADR 0026's failure exactly: it interrogates the catalogues, not the page.
-* **342 `pick(locale, fr, de, en)` calls** — a SECOND, inline mechanism. It works, and it is
+* **341 `pick(locale, fr, de, en)` calls** — a SECOND, inline mechanism. It works, and it is
   not a defect in itself; it is a second place to look, and a second place to forget.
 
 This ratchet holds both populations at their exact measured size on 2026-08-01 so they can
@@ -77,7 +77,7 @@ _FROZEN_BARE_FRENCH: dict[str, int] = {
 
 #: The second mechanism, held at its size. It may shrink (calls migrating to the catalogues);
 #: it may not grow, because a third place to look is not a thing this codebase needs.
-_FROZEN_PICK_CALLS = 342
+_FROZEN_PICK_CALLS = 341
 
 #: Anti-vacuity. The scan must actually see a tree: ~300 sources, 2 in-TS catalogues. A floor
 #: under each is what separates "nothing is wrong" from "the walk found no files" — the

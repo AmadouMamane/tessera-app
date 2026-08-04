@@ -26,6 +26,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import {
   TemporalRail,
   useRailTimeline,
@@ -127,7 +128,7 @@ export function AgentPrompts() {
   }, [rows, search, cat, vars]);
 
   const details = data?.details ?? [];
-  const detail = details.find((d) => d.key === selected) ?? details[0] ?? null;
+  const detail = selected ? (details.find((d) => d.key === selected) ?? null) : null;
 
   if (!data?.available) {
     return (
@@ -201,8 +202,8 @@ export function AgentPrompts() {
             ))}
           </div>
 
-          <div className="grid gap-2.5 xl:grid-cols-12">
-            <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
+          <div className="flex min-w-0 flex-col gap-2.5">
+            <div className="flex min-w-0 flex-col gap-2.5">
               <Filters
                 data={data}
                 search={search}
@@ -248,7 +249,7 @@ export function AgentPrompts() {
                 data={data}
                 rows={filtered}
                 total={rows.length}
-                selected={detail?.key ?? null}
+                selected={selected}
                 onSelect={setSelected}
               />
               <div className="grid gap-2.5 md:grid-cols-3">
@@ -257,8 +258,20 @@ export function AgentPrompts() {
                 <ByType data={data} />
               </div>
             </div>
-            <Detail detail={detail} className="xl:col-span-4" />
           </div>
+
+          {detail ? (
+            <DetailDrawer
+              title={detail.name}
+              subtitle={detail.id}
+              icon={<FileCode2 className="h-4 w-4" />}
+              onClose={() => setSelected(null)}
+              belowAgentTabs
+              width="max-w-[460px]"
+            >
+              <Detail detail={detail} embedded />
+            </DetailDrawer>
+          ) : null}
 
           <Footer data={data} />
         </>
@@ -566,7 +579,10 @@ function PromptsTable({
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[760px] border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
@@ -598,6 +614,7 @@ function PromptsTable({
                     // biome-ignore lint/a11y/useSemanticElements: a data row selects the prompt and stays keyboard reachable
                     role="button"
                     tabIndex={0}
+                    aria-haspopup="dialog"
                     aria-label={r.name}
                     aria-pressed={on}
                     onClick={() => onSelect(r.key)}
@@ -792,7 +809,15 @@ function ByType({ data }: { data: Data }) {
   );
 }
 
-function Detail({ detail, className }: { detail: DetailT | null; className?: string }) {
+function Detail({
+  detail,
+  className,
+  embedded = false,
+}: {
+  detail: DetailT | null;
+  className?: string;
+  embedded?: boolean;
+}) {
   const t = useTranslations("agentPrompts");
   const [tab, setTab] = useState(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset tab on prompt change
@@ -802,37 +827,40 @@ function Detail({ detail, className }: { detail: DetailT | null; className?: str
   return (
     <section
       className={cn(
-        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
+        "flex min-w-0 flex-col",
+        !embedded && "rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
         className,
       )}
     >
-      <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
-        <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {t("detailEyebrow")}
-        </p>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <FileCode2 className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
-            <span className="min-w-0">
-              <Truncate
-                full={d.name}
-                className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
-              >
-                {d.name}
-              </Truncate>
-              <Truncate
-                full={d.id}
-                className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
-              >
-                {d.id}
-              </Truncate>
+      {!embedded ? (
+        <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
+          <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {t("detailEyebrow")}
+          </p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <FileCode2 className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
+              <span className="min-w-0">
+                <Truncate
+                  full={d.name}
+                  className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+                >
+                  {d.name}
+                </Truncate>
+                <Truncate
+                  full={d.id}
+                  className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
+                >
+                  {d.id}
+                </Truncate>
+              </span>
+            </div>
+            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]">
+              {d.status}
             </span>
           </div>
-          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]">
-            {d.status}
-          </span>
         </div>
-      </div>
+      ) : null}
 
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
         {d.tabs.map((tb, i) => {

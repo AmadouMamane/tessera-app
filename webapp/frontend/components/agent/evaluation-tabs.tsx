@@ -902,7 +902,10 @@ export function ComparaisonsTab({ data }: { data: Data }) {
         </p>
       ) : null}
       <section className="overflow-x-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-        <table className="w-full min-w-[560px] border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[560px] border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-3 py-2 font-medium">

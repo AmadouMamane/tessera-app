@@ -9,18 +9,11 @@ import {
   Search,
   SortAsc,
   SortDesc,
-  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -288,7 +281,10 @@ function ConnectorsTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[820px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, idx) => (
@@ -341,6 +337,7 @@ function ConnectorsTable({
                   tabIndex={0}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                   role="button"
+                  aria-haspopup="dialog"
                   aria-label={c.name}
                   className={cn(
                     "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
@@ -539,56 +536,6 @@ function Distribution({ t, data }: { t: T; data: Data }) {
 // ── drawer ───────────────────────────────────────────────────────────────────
 
 function CxDrawer({ t, cx, onClose }: { t: T; cx: Cx; onClose: () => void }) {
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const [shown, setShown] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-    return () => opener?.focus?.();
-  }, []);
-  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-    const first = f[0];
-    const last = f[f.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      const c = document.querySelector("[data-shell-content]") ?? m;
-      const cr = c.getBoundingClientRect();
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    setShown(true);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const meta: [string, string][] = [
     [t("drawer.role"), cx.role],
     [t("drawer.endpoint"), cx.endpoint],
@@ -599,78 +546,36 @@ function CxDrawer({ t, cx, onClose }: { t: T; cx: Cx; onClose: () => void }) {
     [t("drawer.lastCheck"), cx.last_check],
   ];
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      onClose={onClose}
+      title={cx.name}
+      subtitle={cx.id}
+      icon={<Plug className="h-4 w-4" />}
+      width="max-w-[460px]"
     >
-      <dialog
-        ref={dialogRef}
-        open
-        aria-modal="true"
-        aria-label={cx.name}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className={cn(
-          "static m-0 block h-full w-full max-w-[460px] bg-transparent p-0 transition-transform duration-200 ease-out",
-          shown ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <aside
-          data-testid="connector-detail"
-          className="flex h-full w-full min-w-0 flex-col gap-4 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-5 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge className={CAT_BADGE[cx.category]}>{t(`category.${cx.category}`)}</Badge>
+        <span
+          className={cn("inline-flex items-center gap-1.5 text-[0.66rem]", STATUS[cx.status]?.text)}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge className={CAT_BADGE[cx.category]}>{t(`category.${cx.category}`)}</Badge>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 text-[0.66rem]",
-                    STATUS[cx.status]?.text,
-                  )}
-                >
-                  <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[cx.status]?.dot)} />
-                  {t(`status.${cx.status}`)}
-                </span>
-              </div>
-              <h2 className="mt-2 truncate text-lg font-semibold text-[var(--tessera-text-strong)]">
-                {cx.name}
-              </h2>
-              <p className="mt-1 truncate font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
-                {cx.id}
-              </p>
+          <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[cx.status]?.dot)} />
+          {t(`status.${cx.status}`)}
+        </span>
+      </div>
+      <div data-testid="connector-detail" className="flex flex-col gap-4">
+        <p className="text-[0.8rem] leading-relaxed text-[var(--tessera-text)]">{cx.description}</p>
+        <dl className="flex flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.72rem]">
+          {meta.map(([k, v]) => (
+            <div key={k} className="flex items-center justify-between gap-3">
+              <dt className="shrink-0 text-[var(--tessera-text-muted)]">{k}</dt>
+              <dd className="min-w-0 truncate text-right font-mono text-[0.68rem] text-[var(--tessera-text)]">
+                {v}
+              </dd>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("drawer.close")}
-              className="shrink-0 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <p className="text-[0.8rem] leading-relaxed text-[var(--tessera-text)]">
-            {cx.description}
-          </p>
-          <dl className="flex flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.72rem]">
-            {meta.map(([k, v]) => (
-              <div key={k} className="flex items-center justify-between gap-3">
-                <dt className="shrink-0 text-[var(--tessera-text-muted)]">{k}</dt>
-                <dd className="min-w-0 truncate text-right font-mono text-[0.68rem] text-[var(--tessera-text)]">
-                  {v}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </aside>
-      </dialog>
-    </div>
+          ))}
+        </dl>
+      </div>
+    </DetailDrawer>
   );
 }
 

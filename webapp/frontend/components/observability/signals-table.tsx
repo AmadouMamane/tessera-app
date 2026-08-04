@@ -596,7 +596,7 @@ export function SignalsTable({
               Content sizes the columns now; the SIGNAL column absorbs the leftover because it
               holds the name and its catalogue id; `min-w` keeps the horizontal scroll on a
               narrow viewport rather than crushing everything. */}
-            <table className="w-full min-w-[960px] text-xs">
+            <table data-premium-table="true" className="w-full min-w-[960px] text-xs">
               <thead>
                 <tr className="border-[var(--border)] border-b text-left text-[0.66rem] uppercase tracking-wide text-[var(--muted-foreground)]">
                   <th className="py-1.5 pr-2 pl-5 font-medium whitespace-nowrap">
@@ -671,6 +671,8 @@ export function SignalsTable({
                             // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                             role="button"
                             tabIndex={0}
+                            aria-haspopup="dialog"
+                            aria-pressed={selectedKey === r.key}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
@@ -1254,7 +1256,7 @@ export function SignalsRail({
   const fiche = sig;
   return (
     <aside className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-col gap-2 xl:sticky xl:top-28">
+      <div className="flex flex-col gap-2">
         {/* Fiche signal */}
         <Card>
           <CardHeader>

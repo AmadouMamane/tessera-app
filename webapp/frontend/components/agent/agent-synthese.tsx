@@ -144,7 +144,7 @@ export function AgentSynthese() {
 // rail wears the shared SR-01 chip grammar (rail-chip + AsOfPickerChip): no
 // status colours for a reading, no OS-drawn datetime panel on the strip.
 
-const PERIODS = ["h24", "d7", "d30"] as const;
+const PERIODS = ["h24", "d7", "d14", "d30"] as const;
 
 function AgentRail({
   temporal,

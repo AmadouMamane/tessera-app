@@ -22,6 +22,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import {
   TemporalRail,
   useRailTimeline,
@@ -145,7 +146,7 @@ export function AgentGardeFous() {
   }, [rows, search, cat, status, sev, mode]);
 
   const details = data?.details ?? [];
-  const detail = details.find((d) => d.key === selected) ?? details[0] ?? null;
+  const detail = selected ? (details.find((d) => d.key === selected) ?? null) : null;
 
   if (!data?.available) {
     return (
@@ -211,8 +212,8 @@ export function AgentGardeFous() {
         ))}
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-12">
-        <div className="flex min-w-0 flex-col gap-2.5 xl:col-span-8">
+      <div className="flex min-w-0 flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-2.5">
           <Filters
             data={data}
             search={search}
@@ -271,7 +272,7 @@ export function AgentGardeFous() {
             data={data}
             rows={filtered}
             total={rows.length}
-            selected={detail?.key ?? null}
+            selected={selected}
             onSelect={setSelected}
           />
           <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
@@ -285,13 +286,24 @@ export function AgentGardeFous() {
             <Overrides data={data} />
           </div>
         </div>
-        <Detail
-          detail={detail}
-          className="xl:col-span-4"
-          busy={mutate.isPending}
-          onToggle={(key, enabled) => mutate.mutate({ key, enabled, lang: locale })}
-        />
       </div>
+      {detail ? (
+        <DetailDrawer
+          title={detail.name}
+          subtitle={detail.id}
+          icon={<ShieldCheck className="h-4 w-4" />}
+          onClose={() => setSelected(null)}
+          belowAgentTabs
+          width="max-w-[460px]"
+        >
+          <Detail
+            detail={detail}
+            embedded
+            busy={mutate.isPending}
+            onToggle={(key, enabled) => mutate.mutate({ key, enabled, lang: locale })}
+          />
+        </DetailDrawer>
+      ) : null}
     </div>
   );
 }
@@ -664,7 +676,10 @@ function RulesTable({
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[760px] border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
@@ -696,6 +711,7 @@ function RulesTable({
                     // biome-ignore lint/a11y/useSemanticElements: a data row selects the rule and stays keyboard reachable
                     role="button"
                     tabIndex={0}
+                    aria-haspopup="dialog"
                     aria-label={r.name}
                     aria-pressed={on}
                     onClick={() => onSelect(r.key)}
@@ -1029,11 +1045,13 @@ function Overrides({ data }: { data: Data }) {
 function Detail({
   detail,
   className,
+  embedded = false,
   busy,
   onToggle,
 }: {
   detail: DetailT | null;
   className?: string;
+  embedded?: boolean;
   busy: boolean;
   onToggle: (key: string, enabled: boolean) => void;
 }) {
@@ -1047,44 +1065,47 @@ function Detail({
   return (
     <section
       className={cn(
-        "flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
+        "flex min-w-0 flex-col",
+        !embedded && "rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]",
         className,
       )}
     >
-      <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
-        <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-          {t("detailEyebrow")}
-        </p>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
-            <span className="min-w-0">
-              <Truncate
-                full={d.name}
-                className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
-              >
-                {d.name}
-              </Truncate>
-              <Truncate
-                full={d.id}
-                className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
-              >
-                {d.id}
-              </Truncate>
+      {!embedded ? (
+        <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
+          <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {t("detailEyebrow")}
+          </p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
+              <span className="min-w-0">
+                <Truncate
+                  full={d.name}
+                  className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
+                >
+                  {d.name}
+                </Truncate>
+                <Truncate
+                  full={d.id}
+                  className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
+                >
+                  {d.id}
+                </Truncate>
+              </span>
+            </div>
+            <span
+              className={cn(
+                "shrink-0 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+                d.status_tone === "good"
+                  ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
+                  : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
+              )}
+            >
+              {d.status}
             </span>
           </div>
-          <span
-            className={cn(
-              "shrink-0 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
-              d.status_tone === "good"
-                ? "border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]"
-                : "border-red-500/30 bg-red-500/15 text-[var(--tessera-fg-danger)]",
-            )}
-          >
-            {d.status}
-          </span>
         </div>
-      </div>
+      ) : null}
 
       <nav className="flex items-center gap-4 border-b border-[var(--tessera-border)] px-3.5">
         {d.tabs.map((tb, i) => {

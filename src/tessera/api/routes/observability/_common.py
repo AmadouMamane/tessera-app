@@ -40,7 +40,7 @@ _GRAMMAR_EVENT_ORDER = {
     "action.blocked": 75,
     "message.generated": 80,
 }
-_SYNTHESE_PERIODS: dict[str, int | None] = {"h24": 1, "d7": 7, "d30": 30}
+_SYNTHESE_PERIODS: dict[str, int | None] = {"h24": 1, "d7": 7, "d14": 14, "d30": 30}
 _GRANTED_TOOLS = frozenset(
     {"account_balance", "card_block", "transaction_search", "loan_simulate", "ticket_escalate"}
 )

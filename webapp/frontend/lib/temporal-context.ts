@@ -12,7 +12,7 @@
 export interface TemporalContext {
   /** ISO instant T being viewed, or null when live (now). */
   asOf: string | null;
-  /** Active window key: "h24" | "d7" | "d30". */
+  /** Active window key: "h24" | "d7" | "d14" | "d30". */
   period: string;
 }
 

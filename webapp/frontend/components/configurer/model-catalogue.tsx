@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Cpu, GitBranch, Users, X } from "lucide-react";
+import { AlertTriangle, Cpu, GitBranch, Users } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -63,8 +64,6 @@ export function ModelCatalogue() {
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Closing must survive the rows[0] fallback below — null alone re-selects the first row.
-  const [dismissed, setDismissed] = useState(false);
 
   const rows = useMemo<Row[]>(() => {
     const all = data?.models ?? [];
@@ -83,7 +82,7 @@ export function ModelCatalogue() {
     );
   }
 
-  const selected = dismissed ? null : (rows.find((m) => m.id === selectedId) ?? rows[0] ?? null);
+  const selected = selectedId ? (rows.find((m) => m.id === selectedId) ?? null) : null;
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -111,10 +110,11 @@ export function ModelCatalogue() {
 
       <ServingModels />
 
-      <div className={cn("grid gap-2.5", selected && "xl:grid-cols-[minmax(0,1fr)_360px]")}>
+      <div>
         <div className="overflow-x-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
           <table
-            className="w-full border-collapse text-left text-[0.72rem]"
+            data-premium-table="true"
+            className="w-full min-w-[760px] border-collapse text-left text-xs"
             data-testid="models-table"
           >
             <thead>
@@ -130,20 +130,18 @@ export function ModelCatalogue() {
               {rows.map((m) => (
                 <tr
                   key={m.id}
-                  onClick={() => {
-                    setDismissed(false);
-                    setSelectedId(m.id);
-                  }}
+                  onClick={() => setSelectedId(m.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
-                      setDismissed(false);
                       setSelectedId(m.id);
                     }
                   }}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a button; keyboard + role provided.
                   role="button"
                   tabIndex={0}
+                  aria-haspopup="dialog"
                   aria-label={m.name}
+                  aria-pressed={selected?.id === m.id}
                   className={cn(
                     "cursor-pointer border-b border-[var(--tessera-border)]/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#5b8def]",
                     selected?.id === m.id
@@ -177,9 +175,8 @@ export function ModelCatalogue() {
             </tbody>
           </table>
         </div>
-
-        {selected ? <ModelDetail t={t} row={selected} onClose={() => setDismissed(true)} /> : null}
       </div>
+      {selected ? <ModelDetail row={selected} onClose={() => setSelectedId(null)} /> : null}
       {data.note ? (
         <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{data.note}</p>
       ) : null}
@@ -442,37 +439,22 @@ function ServingModels() {
 }
 
 function ModelDetail({
-  t,
   row,
   onClose,
 }: {
-  t: ReturnType<typeof useTranslations<"models">>;
   row: Row;
   onClose: () => void;
 }) {
   const d = row.detail;
   return (
-    <aside
-      data-testid="model-detail"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 xl:sticky xl:top-0 xl:h-fit"
+    <DetailDrawer
+      title={d.name}
+      subtitle={row.provider_label}
+      icon={<Cpu className="h-4 w-4" />}
+      onClose={onClose}
+      testId="model-detail"
+      width="max-w-[440px]"
     >
-      <div className="flex items-start justify-between gap-2">
-        <Truncate
-          as="p"
-          full={d.name}
-          className="font-mono text-sm font-semibold text-[var(--tessera-text-strong)]"
-        >
-          {d.name}
-        </Truncate>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("close")}
-          className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
       {d.sections.map((s) => (
         <div key={s.key}>
           <p className="mb-1 text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
@@ -539,6 +521,6 @@ function ModelDetail({
           </Link>
         ) : null}
       </div>
-    </aside>
+    </DetailDrawer>
   );
 }

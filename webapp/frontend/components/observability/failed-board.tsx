@@ -568,7 +568,10 @@ export function FailedBoard({
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[940px] table-fixed text-left text-[0.7rem]">
+              <table
+                data-premium-table="true"
+                className="w-full min-w-[940px] table-fixed text-left text-xs"
+              >
                 <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
                   <tr className="border-b border-[var(--border)]">
                     <th className="w-9 py-1.5 pl-4" />
@@ -601,6 +604,8 @@ export function FailedBoard({
                         // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                         role="button"
                         tabIndex={0}
+                        aria-haspopup="dialog"
+                        aria-pressed={isSelected}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
@@ -831,7 +836,7 @@ export function FailedRail({
   };
 
   return (
-    <aside className="flex w-full flex-col gap-2 2xl:w-80">
+    <aside className="flex w-full flex-col gap-2">
       <Card>
         <CardHeader className="pb-1">
           <CardTitle className="flex items-center justify-between gap-2 text-[0.8rem]">

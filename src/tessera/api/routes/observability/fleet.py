@@ -123,7 +123,7 @@ async def _compute_fleet(
     """Compute the fleet rollup with no caching (the cold path of the memo).
 
     ``lang`` localizes the per-agent release verdict label. ``period`` scopes the
-    operational conversation figures to ``h24``/``d7``/``d30``; omitted keeps the
+    operational conversation figures to ``h24``/``d7``/``d14``/``d30``; omitted keeps the
     all-history fleet directory contract. ``at`` moves the end of that window to
     an ISO instant.
 
@@ -427,7 +427,7 @@ async def observability_agent_synthese(
     quick access. Sourced end to end from the transcript + S1 journal + registry +
     pgvector; degrades to ``available: false``.
 
-    The ``period`` query param (``h24``/``d7``/``d30``) restricts the
+    The ``period`` query param (``h24``/``d7``/``d14``/``d30``) restricts the
     transcript-derived figures to that trailing window; unknown values mean the
     whole history. The ``agent_id`` query param scopes the slice to one agent
     (per-turn attribution); it defaults to the single agent. ``at`` (ISO instant)

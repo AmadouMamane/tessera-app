@@ -38,7 +38,7 @@ _ALL_AGENTS = "all"  # the deduplicated org view (mirrors ``lib/agent-scope`` on
 #: vocabulary (``lib/stores/window-store.ts``) and a number of days on the wire.
 #: ``tests/unit/test_period_reaches_the_data.py`` pins it against the front's own list, so a
 #: period added to the selector cannot quietly mean nothing to the backend.
-PERIOD_DAYS: dict[str, int] = {"h24": 1, "d7": 7, "d30": 30}
+PERIOD_DAYS: dict[str, int] = {"h24": 1, "d7": 7, "d14": 14, "d30": 30}
 
 
 class Dimension(str, Enum):
@@ -81,7 +81,7 @@ class Scope:
         ``agent`` of ``"all"`` / empty maps to the org view (``agent_id=None``); any
         other value is a concrete agent id. ``at`` is the as-of-T instant. ``days`` is
         the window length — accepted either as a number or as one of the rail's period
-        keys (``h24`` / ``d7`` / ``d30``), so a caller may send whichever vocabulary it
+        keys (``h24`` / ``d7`` / ``d14`` / ``d30``), so a caller may send whichever vocabulary it
         already holds. Blank values are dropped so a filter is never silently the empty
         string, and an UNPARSEABLE window is dropped to ``None`` (all history) rather
         than guessed at: a period nobody can read must not silently become a default one
@@ -276,7 +276,7 @@ def window_days(raw: str | None, *, default: int) -> int:
     integer and they need a floor rather than "everything".
 
     They used to declare ``days: int = 7`` instead, which is a private dialect — the
-    selector speaks ``d7`` / ``d30`` / ``h24``, so it could not address them at all, and
+    selector speaks ``h24`` / ``d7`` / ``d14`` / ``d30``, so it could not address them at all, and
     ``?days=d30`` would have been a 422. Converting here rather than in each route keeps the
     vocabulary in the one module that owns it.
 

@@ -21,6 +21,13 @@ const overviewScreens = [
   "components/users/users-overview.tsx",
 ] as const;
 
+const embeddedQueryScreens = [
+  "components/observability/session-theater.tsx",
+  "components/proofs/etat-a-date.tsx",
+  "components/recouvrement/recouvrement-console.tsx",
+  "components/replay/replay-cassette.tsx",
+] as const;
+
 describe("overview query errors", () => {
   it.each(overviewScreens)("renders a recoverable unavailable state in %s", (file) => {
     const source = readFileSync(join(root, file), "utf8");
@@ -28,5 +35,20 @@ describe("overview query errors", () => {
     expect(source).toContain("isError");
     expect(source).toContain("<QueryErrorState");
     expect(source).toContain("refetch()");
+  });
+
+  it.each(embeddedQueryScreens)("keeps embedded query failures distinct in %s", (file) => {
+    const source = readFileSync(join(root, file), "utf8");
+    expect(source).toContain('from "@/components/cockpit/query-error-state"');
+    expect(source).toContain("isError");
+    expect(source).toContain("<QueryErrorState");
+    expect(source).toContain("refetch()");
+  });
+
+  it("keeps the server-rendered fleet failure distinct from an empty fleet", () => {
+    const source = readFileSync(join(root, "app/[locale]/agents/page.tsx"), "utf8");
+    expect(source).toContain("if (data === null)");
+    expect(source).toContain('namespace: "queryError"');
+    expect(source).toContain('role="alert"');
   });
 });

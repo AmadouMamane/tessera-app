@@ -30,6 +30,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { type ReactNode, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
@@ -722,7 +723,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
         />
       ) : null}
 
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div
+        className={`grid gap-2 ${tab === "signals" || tab === "failed" ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}
+      >
         <div className="flex min-w-0 flex-col gap-2">
           {tab === "overview" && (
             <>
@@ -839,20 +842,15 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 datasets={evalDatasets.data}
                 skew={embeddingSkew.data}
               />
-              <div className="grid gap-2 2xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)] 2xl:items-start">
+              <div>
                 <div className="flex flex-col gap-2">
                   <RunsEvalTable
                     registry={runs.data}
-                    selectedId={(selectedRun ?? runs.data?.runs[0])?.run_id ?? null}
+                    selectedId={selectedRun?.run_id ?? null}
                     onSelect={setSelectedRun}
                   />
                   <DatasetsTable report={evalDatasets.data} />
                 </div>
-                <RunContextPanel
-                  run={selectedRun ?? runs.data?.runs[0]}
-                  release={releaseStatus.data}
-                  onEvidence={downloadQualityEvidence}
-                />
               </div>
               <RunsCharts
                 registry={runs.data}
@@ -865,7 +863,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           {tab === "failed" && (
             <FailedBoard
               report={failedRuns.data}
-              selected={selectedFailed ?? failedRuns.data?.cases[0] ?? null}
+              selected={selectedFailed}
               onSelect={setSelectedFailed}
             />
           )}
@@ -893,29 +891,13 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           )}
         </div>
 
-        {tab === "signals" ? (
-          <SignalsRail
-            selected={selectedSignal}
-            rows={signalRows}
-            failed={failedCases.data}
-            release={releaseStatus.data}
-            whatChanged={whatChanged.data}
-            onOpen={setTab}
-            onEvidence={downloadQualityEvidence}
-          />
-        ) : tab === "runs" ? (
+        {tab === "signals" ? null : tab === "runs" ? (
           <RunsRail
             registry={runs.data}
             datasets={evalDatasets.data}
             release={releaseStatus.data}
           />
-        ) : tab === "failed" ? (
-          <FailedRail
-            failedCase={selectedFailed ?? failedRuns.data?.cases[0]}
-            release={releaseStatus.data}
-            onEvidence={downloadQualityEvidence}
-          />
-        ) : tab === "models" ? (
+        ) : tab === "failed" ? null : tab === "models" ? (
           <ModelsPeriodRail registry={runs.data} period={modelsPeriod} onApply={setModelsPeriod} />
         ) : tab === "judge" ? (
           <JudgeRail
@@ -935,6 +917,58 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           />
         )}
       </div>
+
+      {tab === "signals" && selectedSignal ? (
+        <DetailDrawer
+          title={selectedSignal.name}
+          subtitle={`${selectedSignal.metric} · ${selectedSignal.entity}`}
+          icon={<Radio className="h-4 w-4" />}
+          onClose={() => setSelectedSignal(null)}
+          width="max-w-[500px]"
+        >
+          <SignalsRail
+            selected={selectedSignal}
+            rows={signalRows}
+            failed={failedCases.data}
+            release={releaseStatus.data}
+            whatChanged={whatChanged.data}
+            onOpen={setTab}
+            onEvidence={downloadQualityEvidence}
+          />
+        </DetailDrawer>
+      ) : null}
+
+      {tab === "runs" && selectedRun ? (
+        <DetailDrawer
+          title={selectedRun.run_id}
+          subtitle={`${selectedRun.model} · ${selectedRun.language}`}
+          icon={<Boxes className="h-4 w-4" />}
+          onClose={() => setSelectedRun(null)}
+          width="max-w-[480px]"
+        >
+          <RunContextPanel
+            run={selectedRun}
+            release={releaseStatus.data}
+            onEvidence={downloadQualityEvidence}
+          />
+        </DetailDrawer>
+      ) : null}
+
+      {tab === "failed" && selectedFailed ? (
+        <DetailDrawer
+          title={selectedFailed.id}
+          subtitle={`${selectedFailed.category} · ${selectedFailed.severity}`}
+          icon={<Siren className="h-4 w-4" />}
+          onClose={() => setSelectedFailed(null)}
+          width="max-w-[500px]"
+        >
+          <FailedRail
+            failedCase={selectedFailed}
+            release={releaseStatus.data}
+            onEvidence={downloadQualityEvidence}
+          />
+        </DetailDrawer>
+      ) : null}
 
       {/* Full-width analytics row below the [main · rail] grid (image normative):
           Pass-rate des runs | Évolution | Répartition | Faith×Grounding | Régressions
@@ -1081,7 +1115,7 @@ function RightRail({
 
   return (
     <aside className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-col gap-2 xl:sticky xl:top-28">
+      <div className="flex flex-col gap-2">
         {/* Derniers problèmes */}
         <Card>
           <CardHeader>

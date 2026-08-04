@@ -722,7 +722,7 @@ function BusinessLegalSignalsPanel({ rows }: { rows: BusinessLegalSignal[] }) {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-[0.72rem]">
+            <table data-premium-table="true" className="w-full table-fixed text-xs">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
                   <th className="w-[22%] py-1 pr-2 font-medium">{tc("businessSignals.agent")}</th>

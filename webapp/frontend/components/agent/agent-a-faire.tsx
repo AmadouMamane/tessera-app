@@ -16,19 +16,11 @@ import {
   Search,
   StickyNote,
   UserPlus,
-  X,
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import {
   FilterDropdown,
@@ -36,6 +28,7 @@ import {
   downloadBlob,
   toCsv,
 } from "@/components/agent/agent-subtab-shared";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { fetchAgentAFaire, mutateAFaireItem } from "@/lib/api/client";
@@ -554,7 +547,10 @@ function TaskTable({
         <ExplainInfo k="table" title={tbl.count} />
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[760px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => {
@@ -601,6 +597,7 @@ function TaskTable({
                   key={it.key ?? `${it.title}-${it.ref}`}
                   // biome-ignore lint/a11y/useSemanticElements: a data row selects the item and stays keyboard reachable
                   role="button"
+                  aria-haspopup="dialog"
                   tabIndex={0}
                   aria-label={it.title}
                   aria-pressed={active}
@@ -798,331 +795,240 @@ function TaskDrawer({
   onResolve: () => void;
   onAssign: () => void;
 }) {
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const [shown, setShown] = useState(false);
   const [tab, setTab] = useState(0);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-    return () => opener?.focus?.();
-  }, []);
-  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-    const first = f[0];
-    const last = f[f.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      const c = document.querySelector("[data-shell-content]") ?? m;
-      const cr = c.getBoundingClientRect();
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    setShown(true);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const d = detail;
   const s = data.status;
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      onClose={onClose}
+      title={d.selected.title}
+      subtitle={`${d.selected.id} · ${d.selected.subtitle}`}
+      width="max-w-[440px]"
     >
-      <dialog
-        ref={dialogRef}
-        open
-        aria-modal="true"
-        aria-label={d.title}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className={cn(
-          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
-          shown ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <aside className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
-          {/* header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Badge className={PRIO_TONE[d.selected.prio_tone] ?? PRIO_TONE.crit}>
-                  {d.selected.priority}
-                </Badge>
-                <span className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
-                  {d.selected.id}
-                </span>
-              </div>
-              <p className="mt-1.5 pr-6 text-[0.92rem] font-semibold leading-tight">
-                {d.selected.title}
+      <Badge className={PRIO_TONE[d.selected.prio_tone] ?? PRIO_TONE.crit}>
+        {d.selected.priority}
+      </Badge>
+      <div className="flex min-w-0 flex-col gap-3 text-[var(--tessera-text)]">
+        {/* contexte */}
+        <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+          <nav className="mb-2 flex items-center gap-4 border-b border-[var(--tessera-border)]">
+            {d.tabs.map((tb, i) => (
+              <button
+                key={tb}
+                type="button"
+                aria-pressed={i === tab}
+                onClick={() => setTab(i)}
+                className={cn(
+                  "-mb-px border-b-2 py-1.5 text-[0.66rem] transition-colors",
+                  i === tab
+                    ? "border-emerald-400 font-medium text-[var(--tessera-text)]"
+                    : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
+                )}
+              >
+                {tb}
+              </button>
+            ))}
+          </nav>
+          {tab === 0 ? (
+            <>
+              <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+                {d.context.map((c) => (
+                  <div key={c.label} className="flex items-center justify-between gap-2">
+                    <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
+                    <Truncate
+                      as="dd"
+                      full={c.value}
+                      className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
+                    >
+                      {c.value}
+                    </Truncate>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2 text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                {d.summary_label}
               </p>
-              <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-                {d.selected.subtitle}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("close")}
-              className="shrink-0 rounded-md border border-[var(--tessera-border)] p-1 text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* contexte */}
-          <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-            <nav className="mb-2 flex items-center gap-4 border-b border-[var(--tessera-border)]">
-              {d.tabs.map((tb, i) => (
-                <button
-                  key={tb}
-                  type="button"
-                  aria-pressed={i === tab}
-                  onClick={() => setTab(i)}
-                  className={cn(
-                    "-mb-px border-b-2 py-1.5 text-[0.66rem] transition-colors",
-                    i === tab
-                      ? "border-emerald-400 font-medium text-[var(--tessera-text)]"
-                      : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
-                  )}
-                >
-                  {tb}
-                </button>
-              ))}
-            </nav>
-            {tab === 0 ? (
-              <>
-                <dl className="flex flex-col gap-1.5 text-[0.7rem]">
-                  {d.context.map((c) => (
-                    <div key={c.label} className="flex items-center justify-between gap-2">
-                      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
-                      <Truncate
-                        as="dd"
-                        full={c.value}
-                        className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
-                      >
-                        {c.value}
-                      </Truncate>
-                    </div>
-                  ))}
-                </dl>
-                <p className="mt-2 text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                  {d.summary_label}
-                </p>
-                <p className="text-[0.7rem] leading-snug text-[var(--tessera-text)]">{d.summary}</p>
-              </>
-            ) : null}
-            {tab === 1 ? (
-              <>
-                <dl className="flex flex-col gap-1.5 text-[0.7rem]">
-                  {d.sla_rows.map((r) => (
-                    <div key={r.label} className="flex items-center justify-between gap-2">
-                      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{r.label}</dt>
-                      <Truncate
-                        as="dd"
-                        full={r.value}
-                        className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
-                      >
-                        {r.value}
-                      </Truncate>
-                    </div>
-                  ))}
-                </dl>
-                {/* WF-01 — the journaled transitions, each naming its verified
+              <p className="text-[0.7rem] leading-snug text-[var(--tessera-text)]">{d.summary}</p>
+            </>
+          ) : null}
+          {tab === 1 ? (
+            <>
+              <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+                {d.sla_rows.map((r) => (
+                  <div key={r.label} className="flex items-center justify-between gap-2">
+                    <dt className="shrink-0 text-[var(--tessera-text-muted)]">{r.label}</dt>
+                    <Truncate
+                      as="dd"
+                      full={r.value}
+                      className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
+                    >
+                      {r.value}
+                    </Truncate>
+                  </div>
+                ))}
+              </dl>
+              {/* WF-01 — the journaled transitions, each naming its verified
                     author (ADR 0024). Honest empty when the case never moved
                     since the journal opened. */}
-                {d.transitions_title ? (
-                  <p className="mt-2 text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
-                    {d.transitions_title}
-                  </p>
-                ) : null}
-                {d.transition_rows && d.transition_rows.length > 0 ? (
-                  <ol className="mt-1 flex flex-col gap-1.5 text-[0.68rem]">
-                    {d.transition_rows.map((r, i) => (
-                      <li
-                        key={`${r.at}-${r.label}-${i}`}
-                        className="flex items-baseline justify-between gap-2"
-                      >
-                        <span className="min-w-0">
-                          <span className="text-[var(--tessera-text)]">{r.label}</span>{" "}
-                          <span className="text-[var(--tessera-text-muted)]">· {r.by}</span>
-                        </span>
-                        <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
-                          {r.at}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                ) : d.transitions_empty ? (
-                  <p className="mt-1 text-[0.62rem] leading-snug text-[var(--tessera-text-muted)]">
-                    {d.transitions_empty}
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-            {tab === 2 ? (
-              <>
-                <dl className="flex flex-col gap-1.5 text-[0.7rem]">
-                  {d.context.slice(0, 1).map((c) => (
-                    <div key={c.label} className="flex items-center justify-between gap-2">
-                      <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
-                      <Truncate
-                        as="dd"
-                        full={c.value}
-                        className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
-                      >
-                        {c.value}
-                      </Truncate>
-                    </div>
+              {d.transitions_title ? (
+                <p className="mt-2 text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                  {d.transitions_title}
+                </p>
+              ) : null}
+              {d.transition_rows && d.transition_rows.length > 0 ? (
+                <ol className="mt-1 flex flex-col gap-1.5 text-[0.68rem]">
+                  {d.transition_rows.map((r, i) => (
+                    <li
+                      key={`${r.at}-${r.label}-${i}`}
+                      className="flex items-baseline justify-between gap-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="text-[var(--tessera-text)]">{r.label}</span>{" "}
+                        <span className="text-[var(--tessera-text-muted)]">· {r.by}</span>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
+                        {r.at}
+                      </span>
+                    </li>
                   ))}
-                </dl>
-                <Link
-                  href="/surveiller/qualite-ia"
-                  className="mt-2 inline-flex items-center gap-1 text-[0.68rem] text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
-                >
-                  {d.selected.cta} <ArrowUpRight className="h-3 w-3" />
-                </Link>
-              </>
-            ) : null}
-            {tab === 3 ? (
-              <p className="py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
-                {t("noRelations")}
-              </p>
-            ) : null}
-          </div>
-
-          {/* echeance & sla */}
-          <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-            <h4 className="mb-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-              {d.sla_title}
-            </h4>
-            <p
-              className={cn(
-                "text-[1.1rem] font-semibold tabular-nums",
-                SLA_TONE[d.sla_tone] ?? "text-[var(--tessera-text)]",
-              )}
-            >
-              {d.sla_value}
-            </p>
-            <p
-              className={cn(
-                "mb-2 text-[0.58rem]",
-                SLA_TONE[d.sla_tone] ?? "text-[var(--tessera-text-muted)]",
-              )}
-            >
-              {d.sla_note}
-            </p>
-            <dl className="flex flex-col gap-1.5 text-[0.7rem]">
-              {d.sla_rows.map((r) => (
-                <div key={r.label} className="flex items-center justify-between gap-2">
-                  <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
-                  <dd className="tabular-nums text-[var(--tessera-text)]">{r.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-
-          {/* assignation */}
-          <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-            <h4 className="mb-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-              {d.assign_title}
-            </h4>
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{d.assign_label}</p>
-                <span className="mt-0.5 inline-flex items-center gap-1.5 text-[0.72rem] text-[var(--tessera-text)]">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6d4aed]/20 text-[0.5rem] font-medium text-[var(--tessera-fg-accent)]">
-                    {d.assignee
-                      .split(" ")
-                      .map((p) => p[0] ?? "")
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </span>
-                  {d.assignee}
-                </span>
-              </div>
-              <div className="text-right">
-                <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{d.team_label}</p>
-                <p className="text-[0.7rem] text-[var(--tessera-text)]">{d.team}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onAssign}
-              disabled={busy}
-              className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-accent)] hover:bg-[#4c3fb0]/60 disabled:opacity-50"
-            >
-              <UserPlus className="h-3.5 w-3.5" /> {d.reassign}
-            </button>
-          </div>
-
-          {/* statut & actions */}
-          {s ? (
-            <div className="mt-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-              <h4 className="mb-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
-                {s.title}
-              </h4>
-              <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.label}</p>
-              <span className="mt-0.5 flex h-8 w-full items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2.5 text-[0.68rem] text-[var(--tessera-text)]">
-                {d.current_status ?? s.value}
-              </span>
-              <div className="mt-2 flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={onTake}
-                  disabled={busy}
-                  className="flex h-9 items-center justify-center rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5] disabled:opacity-50"
-                >
-                  {s.primary}
-                </button>
-                <button
-                  type="button"
-                  onClick={onResolve}
-                  disabled={busy}
-                  className="flex h-8 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
-                >
-                  {s.secondary}
-                </button>
-              </div>
-            </div>
+                </ol>
+              ) : d.transitions_empty ? (
+                <p className="mt-1 text-[0.62rem] leading-snug text-[var(--tessera-text-muted)]">
+                  {d.transitions_empty}
+                </p>
+              ) : null}
+            </>
           ) : null}
-        </aside>
-      </dialog>
-    </div>
+          {tab === 2 ? (
+            <>
+              <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+                {d.context.slice(0, 1).map((c) => (
+                  <div key={c.label} className="flex items-center justify-between gap-2">
+                    <dt className="shrink-0 text-[var(--tessera-text-muted)]">{c.label}</dt>
+                    <Truncate
+                      as="dd"
+                      full={c.value}
+                      className="min-w-0 text-right font-medium text-[var(--tessera-text)]"
+                    >
+                      {c.value}
+                    </Truncate>
+                  </div>
+                ))}
+              </dl>
+              <Link
+                href="/surveiller/qualite-ia"
+                className="mt-2 inline-flex items-center gap-1 text-[0.68rem] text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
+              >
+                {d.selected.cta} <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </>
+          ) : null}
+          {tab === 3 ? (
+            <p className="py-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+              {t("noRelations")}
+            </p>
+          ) : null}
+        </div>
+
+        {/* echeance & sla */}
+        <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+          <h4 className="mb-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+            {d.sla_title}
+          </h4>
+          <p
+            className={cn(
+              "text-[1.1rem] font-semibold tabular-nums",
+              SLA_TONE[d.sla_tone] ?? "text-[var(--tessera-text)]",
+            )}
+          >
+            {d.sla_value}
+          </p>
+          <p
+            className={cn(
+              "mb-2 text-[0.58rem]",
+              SLA_TONE[d.sla_tone] ?? "text-[var(--tessera-text-muted)]",
+            )}
+          >
+            {d.sla_note}
+          </p>
+          <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+            {d.sla_rows.map((r) => (
+              <div key={r.label} className="flex items-center justify-between gap-2">
+                <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
+                <dd className="tabular-nums text-[var(--tessera-text)]">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* assignation */}
+        <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+          <h4 className="mb-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+            {d.assign_title}
+          </h4>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{d.assign_label}</p>
+              <span className="mt-0.5 inline-flex items-center gap-1.5 text-[0.72rem] text-[var(--tessera-text)]">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6d4aed]/20 text-[0.5rem] font-medium text-[var(--tessera-fg-accent)]">
+                  {d.assignee
+                    .split(" ")
+                    .map((p) => p[0] ?? "")
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </span>
+                {d.assignee}
+              </span>
+            </div>
+            <div className="text-right">
+              <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{d.team_label}</p>
+              <p className="text-[0.7rem] text-[var(--tessera-text)]">{d.team}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onAssign}
+            disabled={busy}
+            className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-[#5b4bbd] bg-[#4c3fb0]/40 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-accent)] hover:bg-[#4c3fb0]/60 disabled:opacity-50"
+          >
+            <UserPlus className="h-3.5 w-3.5" /> {d.reassign}
+          </button>
+        </div>
+
+        {/* statut & actions */}
+        {s ? (
+          <div className="mt-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
+            <h4 className="mb-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+              {s.title}
+            </h4>
+            <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">{s.label}</p>
+            <span className="mt-0.5 flex h-8 w-full items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2.5 text-[0.68rem] text-[var(--tessera-text)]">
+              {d.current_status ?? s.value}
+            </span>
+            <div className="mt-2 flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={onTake}
+                disabled={busy}
+                className="flex h-9 items-center justify-center rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5] disabled:opacity-50"
+              >
+                {s.primary}
+              </button>
+              <button
+                type="button"
+                onClick={onResolve}
+                disabled={busy}
+                className="flex h-8 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)] disabled:opacity-50"
+              >
+                {s.secondary}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </DetailDrawer>
   );
 }
 

@@ -1,5 +1,5 @@
 /**
- * Single owner of the cockpit's temporal WINDOW (the period: h24 / d7 / d30).
+ * Single owner of the cockpit's temporal WINDOW (the period: h24 / d7 / d14 / d30).
  *
  * The window is SHARED STATE, not a property of any rail (ADR 0011). It is set in
  * ONE place — the page's top toolbar control — and READ by everything that needs
@@ -12,7 +12,7 @@
 import { create } from "zustand";
 
 interface WindowState {
-  /** Active window key: "h24" | "d7" | "d30". */
+  /** Active window key: "h24" | "d7" | "d14" | "d30". */
   period: string;
   setPeriod: (period: string) => void;
   /**

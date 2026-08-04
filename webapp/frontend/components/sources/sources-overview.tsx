@@ -28,7 +28,6 @@ import {
   Sparkles,
   Tag,
   Users,
-  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -37,11 +36,11 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
 import { AgentScopeFilter } from "@/components/agent/agent-scope-filter";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { TabStrip } from "@/components/cockpit/tab-strip";
@@ -302,13 +301,7 @@ export function SourcesOverview() {
 
       {selected ? (
         <SourcesDrawer ariaLabel={selected.name} onClose={() => setSelectedId(null)}>
-          <DetailPanel
-            t={t}
-            row={selected}
-            tab={tab}
-            onTab={setTab}
-            onClose={() => setSelectedId(null)}
-          />
+          <DetailPanel t={t} row={selected} tab={tab} onTab={setTab} />
         </SourcesDrawer>
       ) : null}
     </div>
@@ -555,88 +548,10 @@ function SourcesDrawer({
   onClose: () => void;
   children: ReactNode;
 }) {
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const [shown, setShown] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
-  // Focus into the drawer on open and return focus to the opener (the row) on close.
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-    return () => opener?.focus?.();
-  }, []);
-  // Trap Tab inside the drawer (a non-modal <dialog open> isn't modal natively).
-  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-    const first = f[0];
-    const last = f[f.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      // Vertical extent = the visible scroll viewport (main); horizontal extent =
-      // the centred content column, so the panel sits over the table, not at the
-      // far screen edge on wide viewports.
-      const c = document.querySelector("[data-shell-content]") ?? m;
-      const cr = c.getBoundingClientRect();
-      // Span the content column so the panel's right edge lines up with the main
-      // table's right border (not the screen edge); no right padding keeps it flush.
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    setShown(true);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <dialog
-        ref={dialogRef}
-        open
-        aria-modal="true"
-        aria-label={ariaLabel}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className={cn(
-          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
-          shown ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        {children}
-      </dialog>
-    </div>
+    <DetailDrawer onClose={onClose} title={ariaLabel} width="max-w-[440px]">
+      {children}
+    </DetailDrawer>
   );
 }
 
@@ -699,7 +614,10 @@ function SourceTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[940px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c) => (
@@ -760,7 +678,9 @@ function SourceTable({
                   tabIndex={0}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                   role="button"
+                  aria-haspopup="dialog"
                   aria-label={s.name}
+                  aria-pressed={active}
                   className={cn(
                     "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
@@ -1530,7 +1450,10 @@ function QualityTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[820px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="w-[26%] truncate py-1.5 pl-5 pr-2 font-medium">
@@ -1565,7 +1488,9 @@ function QualityTable({
                   tabIndex={0}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                   role="button"
+                  aria-haspopup="dialog"
                   aria-label={s.name}
+                  aria-pressed={active}
                   className={cn(
                     "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
@@ -1663,13 +1588,11 @@ function DetailPanel({
   row,
   tab,
   onTab,
-  onClose,
 }: {
   t: T;
   row: Row | null;
   tab: string;
   onTab: (tab: string) => void;
-  onClose: () => void;
 }) {
   if (!row) {
     return (
@@ -1691,52 +1614,30 @@ function DetailPanel({
     t(`classification.${row.classification}`),
   ];
   return (
-    <aside
-      data-testid="source-detail"
-      className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <Truncate
-            as="p"
-            full={detail.name}
-            className="text-sm font-semibold text-[var(--tessera-text-strong)]"
+    <aside data-testid="source-detail" className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge className={CLASS_BADGE[detail.classification]}>
+            {t(`classification.${detail.classification}`)}
+          </Badge>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-[0.62rem]",
+              STATUS[detail.status].text,
+            )}
           >
-            {detail.name}
-          </Truncate>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge className={CLASS_BADGE[detail.classification]}>
-              {t(`classification.${detail.classification}`)}
-            </Badge>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 text-[0.62rem]",
-                STATUS[detail.status].text,
-              )}
-            >
-              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />{" "}
-              {t(`status.${detail.status}`)}
-            </span>
-          </div>
+            <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />{" "}
+            {t(`status.${detail.status}`)}
+          </span>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {row.infra ? null : (
-            <Link
-              href={{ pathname: "/prouver/etat-a-date", query: { sources: row.id } }}
-              className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)] hover:border-[#2e72d2] hover:text-[var(--tessera-text)]"
-            >
-              <CalendarClock className="h-3.5 w-3.5" /> {t("detail.asof")}
-            </Link>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("detail.close")}
-            className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+        {row.infra ? null : (
+          <Link
+            href={{ pathname: "/prouver/etat-a-date", query: { sources: row.id } }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)] hover:border-[#2e72d2] hover:text-[var(--tessera-text)]"
           >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+            <CalendarClock className="h-3.5 w-3.5" /> {t("detail.asof")}
+          </Link>
+        )}
       </div>
 
       {/* Ring kept tight on the left; the divider sits midway between the ring and

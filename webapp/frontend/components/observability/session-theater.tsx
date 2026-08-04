@@ -15,6 +15,7 @@ import {
 import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useState } from "react";
 
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,7 +100,19 @@ export function SessionTheater() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {bundles.length === 0 ? (
+        {replays.isError && replays.data === undefined ? (
+          <QueryErrorState
+            compact
+            onRetry={() => replays.refetch()}
+            retrying={replays.isFetching}
+          />
+        ) : trajectory.isError && trajectory.data === undefined ? (
+          <QueryErrorState
+            compact
+            onRetry={() => trajectory.refetch()}
+            retrying={trajectory.isFetching}
+          />
+        ) : bundles.length === 0 ? (
           <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
             {t("theater.empty")}
           </p>

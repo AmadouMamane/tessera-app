@@ -49,10 +49,11 @@ const READING_ICON: Record<Reading, ComponentType<{ className?: string }>> = {
   asof: Crosshair,
   historique: History,
 };
-const PERIODS = ["h24", "d7", "d30"] as const;
+const PERIODS = ["h24", "d7", "d14", "d30"] as const;
 const PERIOD_MS: Record<string, number> = {
   h24: 24 * 3600_000,
   d7: 7 * 24 * 3600_000,
+  d14: 14 * 24 * 3600_000,
   d30: 30 * 24 * 3600_000,
 };
 

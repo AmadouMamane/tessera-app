@@ -1,4 +1,3 @@
-import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 /**
  * Locale-aware layout — owns the <html lang>, loads the message catalogue
@@ -10,6 +9,7 @@ import type { ReactNode } from "react";
 
 import { auth } from "@/auth";
 import { Providers } from "@/components/providers";
+import { IntlProvider } from "@/components/providers/intl-provider";
 import { type Locale, routing } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
 
@@ -61,9 +61,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       className={cn(inter.variable, serif.variable, mono.variable)}
     >
       <body className="h-screen overflow-hidden font-sans antialiased">
-        <NextIntlClientProvider locale={locale as Locale} messages={messages}>
+        <IntlProvider locale={locale as Locale} messages={messages}>
           <Providers session={session}>{children}</Providers>
-        </NextIntlClientProvider>
+        </IntlProvider>
       </body>
     </html>
   );

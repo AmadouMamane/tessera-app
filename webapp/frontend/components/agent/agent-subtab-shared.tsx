@@ -13,10 +13,10 @@
  */
 
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Search, X } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Truncate } from "@/components/ui/truncate";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { cn } from "@/lib/cn";
 
 export function pick(locale: string, fr: string, de: string, en: string): string {
@@ -249,6 +249,7 @@ export function DataTable<T>({
   defaultPerPage?: number;
 }) {
   const locale = useLocale();
+  const tableT = useTranslations("table");
   const [sortCol, setSortCol] = useState<number | null>(initialSortCol);
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialSortDir);
   const [page, setPage] = useState(1);
@@ -294,11 +295,14 @@ export function DataTable<T>({
   };
 
   return (
-    <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-      <div className="overflow-x-auto">
+    <section
+      data-premium-table="true"
+      className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]"
+    >
+      <div className="overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable]">
         <table className="w-full table-fixed border-collapse text-left" style={{ minWidth }}>
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-[0.65rem] uppercase tracking-[0.06em] text-[var(--tessera-text-muted)]">
               {columns.map((c, i) => {
                 const sortable = c.sortable !== false && Boolean(c.sortValue);
                 return (
@@ -310,6 +314,8 @@ export function DataTable<T>({
                     style={c.width ? { width: c.width } : undefined}
                     className={cn(
                       "px-3 py-2 font-medium",
+                      i === 0 &&
+                        "sticky left-0 z-[2] bg-[var(--tessera-surface)] shadow-[1px_0_0_var(--tessera-border)]",
                       c.numeric ? "text-right" : "text-left",
                       i === 0 ? "" : "whitespace-nowrap",
                     )}
@@ -339,6 +345,7 @@ export function DataTable<T>({
                   </th>
                 );
               })}
+              {onRowClick ? <th className="w-28 px-3 py-2" aria-hidden="true" /> : null}
             </tr>
           </thead>
           <tbody>
@@ -350,6 +357,7 @@ export function DataTable<T>({
                 <tr
                   key={k}
                   role={clickable ? "button" : undefined}
+                  aria-haspopup={clickable ? "dialog" : undefined}
                   tabIndex={clickable ? 0 : undefined}
                   onClick={clickable ? () => onRowClick?.(r) : undefined}
                   onKeyDown={
@@ -363,31 +371,47 @@ export function DataTable<T>({
                       : undefined
                   }
                   className={cn(
-                    "border-b border-[var(--tessera-border)]/60 last:border-0",
+                    "group border-b border-[var(--tessera-border)]/60 last:border-0 transition-colors motion-reduce:transition-none",
                     clickable
-                      ? "cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#8b7cf0]"
+                      ? "cursor-pointer focus:outline-none focus-visible:bg-[color-mix(in_oklch,var(--tessera-fg-info)_9%,transparent)]"
                       : "",
-                    on ? "bg-[#6d4aed]/10" : clickable ? "hover:bg-[var(--tessera-bg)]/40" : "",
+                    on
+                      ? "bg-[color-mix(in_oklch,var(--tessera-fg-info)_11%,transparent)] shadow-[inset_3px_0_0_var(--tessera-fg-info)]"
+                      : clickable
+                        ? "hover:bg-[color-mix(in_oklch,var(--tessera-fg-info)_7%,transparent)]"
+                        : "",
                   )}
                 >
-                  {columns.map((c) => (
+                  {columns.map((c, index) => (
                     <td
                       key={c.key}
                       className={cn(
-                        "px-3 py-2.5 text-[0.7rem]",
+                        "px-3 py-2.5 text-xs leading-5",
+                        index === 0 &&
+                          "sticky left-0 z-[1] bg-[var(--tessera-surface)] shadow-[1px_0_0_var(--tessera-border)] group-hover:bg-[color-mix(in_oklch,var(--tessera-fg-info)_7%,var(--tessera-surface))] group-focus-visible:bg-[color-mix(in_oklch,var(--tessera-fg-info)_9%,var(--tessera-surface))]",
                         c.numeric ? "whitespace-nowrap text-right tabular-nums" : "",
                       )}
                     >
                       {c.render(r)}
                     </td>
                   ))}
+                  {clickable ? (
+                    <td className="px-3 py-2.5">
+                      <span className="flex items-center justify-end gap-1 whitespace-nowrap text-[0.7rem] text-[var(--tessera-fg-info)]">
+                        <span className="opacity-0 transition-opacity motion-reduce:transition-none group-hover:opacity-100 group-focus-visible:opacity-100">
+                          {tableT("rowOpen")}
+                        </span>
+                        <ChevronRight className="h-3.5 w-3.5 opacity-55" />
+                      </span>
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}
             {pageRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={columns.length + (onRowClick ? 1 : 0)}
                   className="px-3 py-8 text-center text-[0.72rem] text-[var(--tessera-text-muted)]"
                 >
                   {emptyLabel}
@@ -537,113 +561,17 @@ export function EvalDrawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const locale = useLocale();
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const r = m.getBoundingClientRect();
-      const tabs = document.querySelector("[data-agent-tabs]");
-      const top = tabs ? tabs.getBoundingClientRect().bottom : r.top;
-      setRect({ top, left: r.left, width: r.width, height: r.bottom - top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  useEffect(() => closeRef.current?.focus(), []);
-
-  const onTrapKey = (event: React.KeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-      'button, a[href], select, input, [tabindex]:not([tabindex="-1"])',
-    );
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (!first || !last) return;
-    const active = document.activeElement;
-    if (event.shiftKey && active === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 p-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      title={title}
+      subtitle={subtitle}
+      icon={icon}
+      onClose={onClose}
+      belowAgentTabs
+      width="max-w-[460px]"
     >
-      <dialog
-        open
-        ref={dialogRef}
-        aria-modal="true"
-        aria-label={title}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className="static m-0 flex h-full w-full max-w-[460px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-0 text-[var(--tessera-text)] shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
-      >
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-3">
-          <div className="flex min-w-0 items-center gap-2">
-            {icon ? (
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
-                {icon}
-              </span>
-            ) : null}
-            <div className="min-w-0">
-              <Truncate
-                full={title}
-                className="text-[0.85rem] font-semibold text-[var(--tessera-text)]"
-              >
-                {title}
-              </Truncate>
-              {subtitle ? (
-                <Truncate
-                  full={subtitle}
-                  className="text-[0.62rem] text-[var(--tessera-text-muted)]"
-                >
-                  {subtitle}
-                </Truncate>
-              ) : null}
-            </div>
-          </div>
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label={pick(locale, "Fermer", "Schliessen", "Close")}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3.5">{children}</div>
-      </dialog>
-    </div>
+      <div className="flex flex-col gap-2.5">{children}</div>
+    </DetailDrawer>
   );
 }
 

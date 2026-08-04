@@ -11,18 +11,11 @@ import {
   ShieldCheck,
   SortAsc,
   SortDesc,
-  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
@@ -365,7 +358,10 @@ function IntegrationTable({
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] table-fixed border-collapse text-left text-[0.72rem]">
+        <table
+          data-premium-table="true"
+          className="w-full min-w-[900px] table-fixed border-collapse text-left text-xs"
+        >
           <thead>
             <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, idx) => (
@@ -422,6 +418,7 @@ function IntegrationTable({
                   tabIndex={0}
                   // biome-ignore lint/a11y/useSemanticElements: a table row cannot be a <button>; keyboard + role provided.
                   role="button"
+                  aria-haspopup="dialog"
                   aria-label={i.name}
                   className={cn(
                     "group cursor-pointer border-b border-[var(--tessera-border)]/60 outline-none transition-colors last:border-0 hover:bg-[#0b2b49] focus-visible:bg-[#0b2b49]",
@@ -666,213 +663,119 @@ function IntegrationsDrawer({
   onTab: (tab: DetailTab) => void;
   onClose: () => void;
 }) {
-  const [rect, setRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const [shown, setShown] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const FOCUSABLE = 'button, a[href], select, input, [tabindex]:not([tabindex="-1"])';
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-    return () => opener?.focus?.();
-  }, []);
-  const onTrapKey = (event: ReactKeyboardEvent<HTMLDialogElement>) => {
-    if (event.key !== "Tab" || !dialogRef.current) return;
-    const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-    const first = f[0];
-    const last = f[f.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-  useEffect(() => {
-    const measure = () => {
-      const m = document.querySelector("main");
-      if (!m) return;
-      const mr = m.getBoundingClientRect();
-      const c = document.querySelector("[data-shell-content]") ?? m;
-      const cr = c.getBoundingClientRect();
-      setRect({ top: mr.top, left: cr.left, width: cr.width, height: mr.bottom - mr.top });
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  useEffect(() => {
-    setShown(true);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
   return (
-    <div
-      className="fixed z-50 flex justify-end overflow-hidden bg-[#020817]/70 py-2.5 pl-2.5 backdrop-blur-[2px]"
-      style={rect ?? { inset: 0 }}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <DetailDrawer
+      title={detail.name}
+      subtitle={detail.id}
+      icon={<Plug className="h-4 w-4" />}
+      onClose={onClose}
+      testId="integration-detail"
+      width="max-w-[440px]"
     >
-      <dialog
-        ref={dialogRef}
-        open
-        aria-modal="true"
-        aria-label={detail.name}
-        onKeyDown={onTrapKey}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-        className={cn(
-          "static m-0 block h-full w-full max-w-[440px] bg-transparent p-0 transition-transform duration-200 ease-out",
-          shown ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        <aside
-          data-testid="integration-detail"
-          className="flex h-full w-full min-w-0 flex-col gap-3 overflow-y-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 shadow-[0_12px_48px_rgba(0,0,0,0.5)]"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <Truncate as="p" className="text-sm font-semibold text-[var(--tessera-text-strong)]">
-                {detail.name}
-              </Truncate>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-                  {detail.id}
-                </span>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 text-[0.62rem]",
-                    STATUS[detail.status].text,
-                  )}
-                >
-                  <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />{" "}
-                  {t(`status.${detail.status}`)}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("detail.close")}
-              className="text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+      <span className={cn("inline-flex items-center gap-1 text-xs", STATUS[detail.status].text)}>
+        <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />
+        {t(`status.${detail.status}`)}
+      </span>
 
-          <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
-            {DETAIL_TABS.map((dt) => (
-              <button
-                key={dt}
-                type="button"
-                onClick={() => onTab(dt)}
-                className={cn(
-                  "rounded px-2 py-1 text-[0.62rem] font-medium",
-                  dt === tab
-                    ? "bg-[#0d3561] text-[#d8eaff]"
-                    : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
-                )}
+      <div className="flex flex-wrap gap-1 border-b border-[var(--tessera-border)] pb-2">
+        {DETAIL_TABS.map((dt) => (
+          <button
+            key={dt}
+            type="button"
+            onClick={() => onTab(dt)}
+            className={cn(
+              "rounded px-2 py-1 text-[0.62rem] font-medium",
+              dt === tab
+                ? "bg-[#0d3561] text-[#d8eaff]"
+                : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
+            )}
+          >
+            {t(`detailTabs.${dt}`)}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" ? (
+        <>
+          <Section title={t("detail.connectivity")}>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <Stat label={t("detail.responseTime")} value={detail.response_time} />
+              <Stat
+                label={t("detail.successRate")}
+                value={detail.success_rate}
+                tone="text-[var(--tessera-fg-success)]"
+              />
+              <Stat label={t("detail.lastSync")} value={detail.last_sync} small />
+            </div>
+          </Section>
+          <Section title={t("detail.general")}>
+            <p className="mb-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text)]">
+              {detail.description}
+            </p>
+            <dl className="flex flex-col gap-1 text-[0.66rem]">
+              <KV label={t("detail.owner")} value={detail.owner} />
+              <KV label={t("detail.environment")} value={detail.environment} />
+              <KV label={t("detail.region")} value={detail.region} />
+              <div className="flex items-center justify-between gap-2">
+                <dt className="text-[var(--tessera-text-muted)]">{t("detail.criticality")}</dt>
+                <dd>
+                  <Badge className={CRIT_BADGE[detail.criticality]}>
+                    {t(`criticality.${detail.criticality}`)}
+                  </Badge>
+                </dd>
+              </div>
+            </dl>
+          </Section>
+        </>
+      ) : null}
+
+      {tab === "policy" ? (
+        <Section title={t("detail.config")}>
+          <dl className="flex flex-col gap-1 text-[0.64rem]">
+            {detail.config_rows.map((r) => (
+              <KV key={r.label} label={r.label} value={r.value} mono />
+            ))}
+          </dl>
+        </Section>
+      ) : null}
+
+      {tab === "security" ? (
+        <Section title={t("detail.security")}>
+          <dl className="flex flex-col gap-1 text-[0.64rem]">
+            {detail.security_rows.map((r) => (
+              <KV key={r.label} label={r.label} value={r.value} mono />
+            ))}
+          </dl>
+        </Section>
+      ) : null}
+
+      {tab === "usage" ? (
+        <Section title={t("detail.usage")}>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                ["read", detail.usage.read],
+                ["write", detail.usage.write],
+                ["cost", detail.usage.cost],
+              ] as const
+            ).map(([k, m]) => (
+              <div
+                key={k}
+                className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
               >
-                {t(`detailTabs.${dt}`)}
-              </button>
+                <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
+                  {t(`detail.${k}`)}
+                </p>
+                <p className="text-[0.82rem] font-semibold text-[var(--tessera-text-strong)]">
+                  {m.value}
+                </p>
+                <p className="text-[0.56rem] text-[var(--tessera-text-muted)]">{m.delta}</p>
+              </div>
             ))}
           </div>
-
-          {tab === "overview" ? (
-            <>
-              <Section title={t("detail.connectivity")}>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <Stat label={t("detail.responseTime")} value={detail.response_time} />
-                  <Stat
-                    label={t("detail.successRate")}
-                    value={detail.success_rate}
-                    tone="text-[var(--tessera-fg-success)]"
-                  />
-                  <Stat label={t("detail.lastSync")} value={detail.last_sync} small />
-                </div>
-              </Section>
-              <Section title={t("detail.general")}>
-                <p className="mb-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text)]">
-                  {detail.description}
-                </p>
-                <dl className="flex flex-col gap-1 text-[0.66rem]">
-                  <KV label={t("detail.owner")} value={detail.owner} />
-                  <KV label={t("detail.environment")} value={detail.environment} />
-                  <KV label={t("detail.region")} value={detail.region} />
-                  <div className="flex items-center justify-between gap-2">
-                    <dt className="text-[var(--tessera-text-muted)]">{t("detail.criticality")}</dt>
-                    <dd>
-                      <Badge className={CRIT_BADGE[detail.criticality]}>
-                        {t(`criticality.${detail.criticality}`)}
-                      </Badge>
-                    </dd>
-                  </div>
-                </dl>
-              </Section>
-            </>
-          ) : null}
-
-          {tab === "policy" ? (
-            <Section title={t("detail.config")}>
-              <dl className="flex flex-col gap-1 text-[0.64rem]">
-                {detail.config_rows.map((r) => (
-                  <KV key={r.label} label={r.label} value={r.value} mono />
-                ))}
-              </dl>
-            </Section>
-          ) : null}
-
-          {tab === "security" ? (
-            <Section title={t("detail.security")}>
-              <dl className="flex flex-col gap-1 text-[0.64rem]">
-                {detail.security_rows.map((r) => (
-                  <KV key={r.label} label={r.label} value={r.value} mono />
-                ))}
-              </dl>
-            </Section>
-          ) : null}
-
-          {tab === "usage" ? (
-            <Section title={t("detail.usage")}>
-              <div className="grid grid-cols-3 gap-2">
-                {(
-                  [
-                    ["read", detail.usage.read],
-                    ["write", detail.usage.write],
-                    ["cost", detail.usage.cost],
-                  ] as const
-                ).map(([k, m]) => (
-                  <div
-                    key={k}
-                    className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
-                  >
-                    <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
-                      {t(`detail.${k}`)}
-                    </p>
-                    <p className="text-[0.82rem] font-semibold text-[var(--tessera-text-strong)]">
-                      {m.value}
-                    </p>
-                    <p className="text-[0.56rem] text-[var(--tessera-text-muted)]">{m.delta}</p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          ) : null}
-        </aside>
-      </dialog>
-    </div>
+        </Section>
+      ) : null}
+    </DetailDrawer>
   );
 }
 
