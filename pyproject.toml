@@ -91,7 +91,7 @@ dependencies = [
     # closed, so limes absent means every turn is refused (ADR 0029). Pinned
     # to a commit of the published repo so the lock resolves identically from
     # any checkout depth and any machine; bump the sha deliberately.
-    "limes @ git+https://github.com/AmadouMamane/Limes.git@86bf21dd38eef1cb683a0a124102b6df08381ec7",
+    "limes @ git+https://github.com/AmadouMamane/Limes.git@b6c368c67a9901c136c6d3fe2be41230556e5202",
 ]
 
 [project.optional-dependencies]
