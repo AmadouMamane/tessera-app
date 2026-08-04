@@ -211,8 +211,15 @@ class ReliabilityReport:
     n_requests: int
     total_tokens: int
     cache_overhead_pct: float
+    #: Whether the **cost** budget holds: the month-end projection is at or under the monthly
+    #: target. It used to carry ``obs_cost.measure_overhead().within_budget`` — a verdict about
+    #: instrumentation overhead against a *millisecond* budget — while sitting under three
+    #: euro figures and rendering as "Dans le budget". A green badge answering a different
+    #: question than the numbers it labels is the failure ADR 0026 is about.
     within_budget: bool
     budget_monthly_eur: float
+    #: Spend since the 1st of the anchor's month, and the linear projection to month end —
+    #: both about the MONTH, whatever window the period rail holds. See :func:`_month_to_date`.
     budget_spent_eur: float
     budget_projected_eur: float
     error_breakdown: list[ErrorSlice] = field(default_factory=list)
@@ -375,6 +382,46 @@ def _series(
             )
         )
     return out
+
+
+def _month_bounds(end: datetime) -> tuple[datetime, datetime]:
+    """``(first instant of end's month, first instant of the next)`` — both UTC."""
+    month_start = end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month = (
+        month_start.replace(year=month_start.year + 1, month=1)
+        if month_start.month == 12  # noqa: PLR2004 — December, spelled out
+        else month_start.replace(month=month_start.month + 1)
+    )
+    return month_start, next_month
+
+
+def _month_to_date(bundles: list[replay_mod.ReplayBundle], end: datetime) -> tuple[float, float]:
+    """Spend since the 1st of ``end``'s month, and the linear projection to month end.
+
+    The tile reads "Dépensé (ce mois)" and "Prévision fin de mois", so both must be about
+    the **month** — not about whichever analysis window the period rail happens to hold.
+    Two things were wrong at once:
+
+    * the "monthly" spend was the *window's* spend, so switching from 7 to 30 days changed
+      how much the month had cost;
+    * the projection was ``spent * (30 / max(1, n_requests)) * n_requests`` — an expression
+      in which ``n_requests`` cancels exactly, leaving ``spent * 30`` whatever the window.
+      On a 30-day window that projected thirty months of spend, and nothing in the formula
+      referred to the month it claimed to forecast.
+
+    The projection is now what the label says: month-to-date scaled by the fraction of the
+    month elapsed. Before any time has elapsed there is nothing to extrapolate from, and the
+    projection is the spend itself rather than a division by zero dressed as a forecast.
+    """
+    month_start, next_month = _month_bounds(end)
+    in_month = [b for b in bundles if _in_window(b.captured_at, month_start, end)]
+    spent = cost_anomaly_mod.analyze_costs(
+        [(b.question, f"{b.question}\n{b.context}\n{b.original_answer}") for b in in_month]
+    ).estimated_cost_eur
+    elapsed = (end - month_start).total_seconds()
+    whole = (next_month - month_start).total_seconds()
+    projected = spent * (whole / elapsed) if elapsed > 0 else spent
+    return round(spent, 4), round(projected, 2)
 
 
 def _services_cost(
@@ -689,7 +736,8 @@ def compute_reliability(
     """
     start, end = _window_bounds(days, anchor)
     anchor_iso = end.isoformat()
-    bundles = [b for b in replay_mod.persisted_bundles() if _in_window(b.captured_at, start, end)]
+    persisted = replay_mod.persisted_bundles()
+    bundles = [b for b in persisted if _in_window(b.captured_at, start, end)]
     cost = cost_anomaly_mod.analyze_costs(
         [(b.question, f"{b.question}\n{b.context}\n{b.original_answer}") for b in bundles]
     )
@@ -779,9 +827,7 @@ def compute_reliability(
 
     incidents = _incidents(cost, tool, end.date().isoformat(), lang)
 
-    # Budget projection: linear from spend so far over the window.
-    spent = total_cost_eur
-    projected = round(spent * (30.0 / max(1, n_requests)) * n_requests, 2) if n_requests else spent
+    spent, projected = _month_to_date(persisted, end)
 
     volume_series, volume_delta, quality_series, quality_delta = _trends(
         scores_asof, end=end, days=days
@@ -813,7 +859,7 @@ def compute_reliability(
         n_requests=n_requests,
         total_tokens=total_tokens,
         cache_overhead_pct=obs.overhead_pct_of_budget,
-        within_budget=obs.within_budget,
+        within_budget=projected <= _MONTHLY_BUDGET_EUR,
         budget_monthly_eur=_MONTHLY_BUDGET_EUR,
         budget_spent_eur=round(spent, 2),
         budget_projected_eur=round(projected, 2),
