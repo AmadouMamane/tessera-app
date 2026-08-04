@@ -40,10 +40,11 @@ import argparse
 import re
 import sys
 import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
+
+from tessera.urlfetch import UnsupportedSchemeError, urlopen_http
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -139,7 +140,12 @@ def _check_eval_package() -> Check:
         import importlib
 
         try:
-            importlib.import_module("eval")
+            # B307 fires here on a name, not on a call: our first-party package is literally
+            # named `eval`, and bandit resolves the imported module's name against its
+            # blacklist. There is no builtin eval() on this line — the marker below records a
+            # false positive caused by the package name, and carries no prose after it,
+            # because bandit reads everything following its marker as test ids.
+            importlib.import_module("eval")  # nosec B307
             importlib.import_module("eval.runner")
         except ModuleNotFoundError as exc:
             return Check(
@@ -287,8 +293,10 @@ def _check_prometheus() -> Check:
         base = PrometheusAdapter().base_url
         url = base.rstrip("/") + "/-/healthy"
         try:
-            with urllib.request.urlopen(url, timeout=2) as response:  # noqa: S310 — self-hosted
+            with urlopen_http(url, timeout=2) as response:
                 code = response.status
+        except UnsupportedSchemeError as exc:
+            return Check("prometheus", Verdict.FAIL, str(exc))
         except urllib.error.HTTPError as exc:
             return Check("prometheus", Verdict.FAIL, f"{url} -> HTTP {exc.code}")
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
@@ -327,14 +335,23 @@ def _check_ollama() -> Check:
 
 
 def _check_http(base: str, path: str) -> Check:
-    """A running server answers 200 at ``path`` (``/readyz`` 503 surfaces as FAIL)."""
+    """A running server answers 200 at ``path`` (``/readyz`` 503 surfaces as FAIL).
+
+    ``base`` is an operator flag, which is a reason to trust the *intent* and never a reason to
+    skip checking the *value*: ``--base file:///etc/passwd`` would otherwise have preflight read
+    a local file and report it as a healthy server. :func:`tessera.urlfetch.urlopen_http` is the
+    gate; the ``UnsupportedSchemeError`` it raises surfaces as an ordinary FAIL, like any other
+    unreachable target, because that is what it is.
+    """
     name = f"http {path}"
 
     def probe() -> Check:
         url = base.rstrip("/") + path
         try:
-            with urllib.request.urlopen(url, timeout=4) as response:  # noqa: S310 — operator URL
+            with urlopen_http(url, timeout=4) as response:
                 code = response.status
+        except UnsupportedSchemeError as exc:
+            return Check(name, Verdict.FAIL, str(exc))
         except urllib.error.HTTPError as exc:
             return Check(name, Verdict.FAIL, f"{url} -> HTTP {exc.code}")
         except (urllib.error.URLError, TimeoutError, OSError) as exc:

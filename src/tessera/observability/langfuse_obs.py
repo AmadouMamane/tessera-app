@@ -28,6 +28,8 @@ import urllib.request
 from collections import Counter
 from dataclasses import asdict, dataclass
 
+from tessera.urlfetch import urlopen_http
+
 __all__ = ["TracesObservability", "compute_traces_observability"]
 
 _HOST = os.environ.get("LANGFUSE_HOST", "http://localhost:3900")
@@ -76,7 +78,7 @@ def _empty(at: str | None) -> TracesObservability:
 def _get_json(url: str, timeout: float) -> dict[str, object]:
     token = base64.b64encode(f"{_PUBLIC}:{_SECRET}".encode()).decode()
     request = urllib.request.Request(url, headers={"Authorization": f"Basic {token}"})  # noqa: S310
-    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+    with urlopen_http(request, timeout=timeout) as response:
         payload = json.load(response)
     return payload if isinstance(payload, dict) else {}
 

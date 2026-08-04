@@ -14,9 +14,11 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 /**
- * v2 product preview #2 — faithful reproduction of the "Mes comptes" retail
- * bank portal (`docs/ui-reference/produit/espace_client.png`) as a decor host,
- * with the *same* floating `ChatWidget` (reusing `<ChatRoom>`) on top.
+ * v2 product preview #2 — a generic retail-bank "Mes comptes" portal as a
+ * decor host, with the *same* floating `ChatWidget` (reusing `<ChatRoom>`) on
+ * top. The shape is the industry's common one; it reproduces no particular
+ * bank's page (the screenshot it once cited was a real institution's live
+ * portal and was removed from the repository).
  *
  * Like `/produit/apercu`, this is a separate route: the legacy `/produit`
  * stays intact. Rendered outside `ProductShell`, still behind the product

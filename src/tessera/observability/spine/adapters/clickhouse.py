@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Final
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
 from tessera.sql import safe_identifier, safe_qualified_identifier
+from tessera.urlfetch import urlopen_http
 
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
@@ -254,7 +255,7 @@ class ClickHouseAdapter:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=self._timeout_s) as response:  # noqa: S310
+            with urlopen_http(request, timeout=self._timeout_s) as response:
                 payload: bytes = response.read()
                 return payload.decode("utf-8")
         except urllib.error.HTTPError as exc:

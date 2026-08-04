@@ -25,7 +25,7 @@ which target is canonical = repoint the `tessera` CNAME **and** set `primary:` t
 ## 0. The single image (prevents divergence at the source)
 
 Both fronts must run the **same** image. CI (`deploy.yml`) builds and pushes
-`…/tessera-frontend:<sha>` with the commit SHA **baked in** (`ARG TESSERA_BUILD_SHA`). 
+`…/tessera-frontend:<sha>` with the commit SHA **baked in** (`ARG TESSERA_BUILD_SHA`).
 
 - **Cloud Run** already deploys that tag.
 - **Full-local** must *pull* it instead of building locally:

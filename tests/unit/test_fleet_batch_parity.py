@@ -10,7 +10,10 @@ Three tests pin that, and one pins a deliberate NON-forward:
   ``/observability/fleet-snapshot`` register — so each half is that route's payload by
   construction, no divergence possible;
 * value (at the wire): each half of the combined body equals the standalone route's JSON body —
-  the serialization path too, not just the handler return, since the frontend consumes the wire;
+  the serialization path too, not just the handler return, since the frontend consumes the wire.
+  The SNAPSHOT half is checked here, because it is registry-driven and therefore populated
+  anywhere. The FLEET half needs a database to have a populated arm at all, so its value parity
+  lives in ``tests/integration/test_fleet_batch_parity_populated.py`` (2026-08-04);
 * independence: the two halves are passed through untouched, so each still degrades on its own
   terms (an unavailable fleet does not empty the snapshot);
 * ``?at=`` scopes the FLEET half only. The breakdown's snapshot fan-out has never carried an
@@ -68,8 +71,17 @@ def app() -> FastAPI:
 
 @pytest.fixture
 def no_external(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Refuse outbound sockets so handlers that dial an external stack take their documented
-    degrade path deterministically (as in CI) rather than hanging or leaking sockets."""
+    """Refuse plain outbound sockets, so a handler that dials an external stack degrades here
+    rather than hanging or leaking a socket.
+
+    It does **not** cut the database. Measured 2026-08-04: psycopg's pool does not dial through
+    ``socket.socket.connect``, so on a developer's machine — where ``tessera_test`` is up — the
+    fleet rollup silently ran its real Postgres aggregate while this docstring claimed the
+    offline path was forced. That is why the value-parity of the fleet half moved to
+    ``tests/integration/``: what a fixture *claims* to isolate and what it isolates were two
+    different things, and the difference was invisible until a runner without a database
+    disagreed with the local gate (ADR 0026).
+    """
 
     def _refused(*_: Any, **__: Any) -> Any:
         raise ConnectionRefusedError("no external stack in a unit sweep")
@@ -88,27 +100,31 @@ def test_fleet_batch_calls_each_routes_own_handler(app: FastAPI) -> None:
 
 
 @pytest.mark.usefixtures("no_external")
-def test_both_halves_equal_their_standalone_route(app: FastAPI) -> None:
-    """Each half of the combined body is the standalone route's body, byte for byte."""
+def test_the_snapshot_half_equals_its_standalone_route(app: FastAPI) -> None:
+    """The registry-driven half is compared at the wire, on any machine, with real content.
+
+    The FLEET half's value parity is deliberately NOT asserted here. Its populated arm is a
+    Postgres aggregate over ``conversation_messages``; with no database the route honestly
+    degrades to ``FleetUnavailable``, whose entire body is ``{"available": false}`` — and
+    comparing that to itself is exactly the vacuous pass this file exists to refuse. It is
+    asserted where the data lives: ``tests/integration/test_fleet_batch_parity_populated.py``.
+
+    Nothing is lost in the meantime, because the STRONG guarantee needs no data at all:
+    ``test_fleet_batch_calls_each_routes_own_handler`` pins that both routes are the same
+    handler object, so a divergence is not merely absent but impossible to construct.
+    """
     client = TestClient(app, raise_server_exceptions=False)
 
     combined = client.get(f"/observability/fleet-batch?lang=fr&period=d7&signals={_SIGNALS}")
     assert combined.status_code == 200
     body = combined.json()
 
-    fleet = client.get("/observability/fleet?lang=fr&period=d7")
-    assert fleet.status_code == 200
-    assert body["fleet"] == fleet.json()
-
     snapshot = client.get(f"/observability/fleet-snapshot?signals={_SIGNALS}")
     assert snapshot.status_code == 200
     assert _without_call_meta(body["fleet_snapshot"]) == _without_call_meta(snapshot.json())
 
-    # Anti-vacuity: both halves are registry-driven and non-empty even with no live stack, so an
-    # all-empty pass cannot be mistaken for parity — and the fleet half, being a response_model
-    # union, is compared on its POPULATED arm, which is the serialization that could have drifted.
-    assert body["fleet"]["available"] is True, "the fleet half degraded — vacuous parity"
-    assert body["fleet"]["agents"], "the fleet half came back with no agent — vacuous parity"
+    # Anti-vacuity, and it bites here: the snapshot half is registry-driven, so it is populated
+    # with or without a live stack. An all-empty pass can never be mistaken for parity.
     assert body["fleet_snapshot"]["agents"], "the snapshot half came back empty — vacuous parity"
 
 

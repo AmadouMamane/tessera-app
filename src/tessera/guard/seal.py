@@ -41,6 +41,7 @@ from tessera.guard.ledger_store import (
     read_ledger_entries,
     verify_ledger_tree,
 )
+from tessera.urlfetch import urlopen_http
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -242,13 +243,13 @@ class Rfc3161Provider:
         return proc.stdout
 
     def _post(self, query: bytes) -> bytes:
-        req = urllib.request.Request(  # noqa: S310  fixed https TSA endpoint from config
+        req = urllib.request.Request(  # noqa: S310  scheme gated by `urlopen_http` below
             self._url or "",
             data=query,
             headers={"Content-Type": "application/timestamp-query"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
+        with urlopen_http(req, timeout=15) as resp:
             return bytes(resp.read())
 
     def _token_time(self, token: bytes) -> str:

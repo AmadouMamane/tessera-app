@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
+from tessera.urlfetch import urlopen_http
 
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
@@ -140,7 +141,7 @@ class LangfuseAdapter:
             url, headers={"Authorization": f"Basic {token}"}
         )
         try:
-            with urllib.request.urlopen(request, timeout=self._timeout_s) as response:  # noqa: S310
+            with urlopen_http(request, timeout=self._timeout_s) as response:
                 payload = json.load(response)
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
             msg = f"langfuse unreachable at {self._config.host}: {exc}"
@@ -159,7 +160,7 @@ class LangfuseAdapter:
             headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=self._timeout_s):  # noqa: S310
+            with urlopen_http(request, timeout=self._timeout_s):
                 return
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
             msg = f"langfuse delete failed at {self._config.host}: {exc}"

@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
 from tessera.observability.store_spans import store_read
+from tessera.urlfetch import urlopen_http
 
 if TYPE_CHECKING:
     from tessera.observability.spine.scope import Scope
@@ -80,7 +81,7 @@ class PrometheusAdapter:
         url = f"{self._base_url}{path}?{urllib.parse.urlencode(params)}"
         request = urllib.request.Request(url)  # noqa: S310 — self-hosted localhost scrape target
         try:
-            with urllib.request.urlopen(request, timeout=self._timeout_s) as response:  # noqa: S310
+            with urlopen_http(request, timeout=self._timeout_s) as response:
                 payload = json.load(response)
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
             msg = f"prometheus unreachable at {self._base_url}: {exc}"

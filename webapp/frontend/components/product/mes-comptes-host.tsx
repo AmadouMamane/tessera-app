@@ -28,10 +28,10 @@ import type { LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 /**
- * Decor host #2 for the v2 product preview (`/produit/apercu2`). A faithful
- * reproduction of a retail-bank "Mes comptes" customer portal
- * (`docs/ui-reference/produit/espace_client.png`), re-themed in Tessera's
- * navy/gold palette (follows the active light/dark theme via CSS tokens):
+ * Decor host #2 for the v2 product preview (`/produit/apercu2`). A generic
+ * retail-bank "Mes comptes" customer portal — the industry's common shape, not
+ * any particular institution's page — in Tessera's navy/gold palette (follows
+ * the active light/dark theme via CSS tokens):
  * top bar, secondary tabs, a two-column accounts layout (current / savings /
  * cashback + a credit promo) and a "useful links" right rail, over a dark
  * footer.
