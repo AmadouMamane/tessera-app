@@ -67,6 +67,7 @@ from tessera.guard.redaction import (
     StreamingRedactor,
     apply_egress_guard,
     apply_output_guard,
+    apply_pii_egress_recall,
     contains_pii,
     emit_output_redaction,
     mask_pan,
@@ -1345,18 +1346,45 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
             "turn.correction",
             {"final_response": final_response, "reason": "egress", "unsupported": []},
         )
+    # pii-egress recall (ADR 0049 §Amendment 1) — a second, checksum-gated pass over the
+    # already-masked final_response, catching PII the regex leg missed (a Corsica NIR, a
+    # PAN/IBAN whose grouping the regex pattern does not match) and masking it to
+    # [REDACTED:pii]. A redact corrects the streamed bubble (reason `egress`, as the
+    # frontend schema documents); a blind detector fails closed and withholds. Skipped
+    # when the secret block already withheld the whole answer — nothing left to recall.
+    recall_guard_record: GuardDecisionRecord | None = None
+    if not egress_blocked:
+        recall_text, recall_guard_record = apply_pii_egress_recall(
+            final_response, language=resolved_language, disabled=pii_guard_off
+        )
+        if recall_guard_record is not None and recall_text != final_response:
+            final_response = recall_text
+            if recall_guard_record.decision == DecisionKind.DENY.value:
+                # A withheld answer (recall detector blind, fail-closed) cites nothing.
+                turn_citations = []
+            yield _sse(
+                "turn.correction",
+                {"final_response": final_response, "reason": "egress", "unsupported": []},
+            )
+    recall_blocked = (
+        recall_guard_record is not None and recall_guard_record.decision == DecisionKind.DENY.value
+    )
     extra_records = [
-        r for r in (grounding_record, output_guard_record, egress_guard_record) if r is not None
+        r
+        for r in (grounding_record, output_guard_record, egress_guard_record, recall_guard_record)
+        if r is not None
     ]
     if extra_records:
         # Surface the output-leg decisions in this turn's guard_decisions (Debug envelope +
         # downstream persistence); their audit ledger entries were already emitted by the
         # guards themselves.
         state["guard_decisions"] = [*state.get("guard_decisions", []), *extra_records]
-    if grounding_record is not None or egress_blocked:
+    if grounding_record is not None or egress_blocked or recall_blocked:
         # An answer the guard had to replace or withhold cannot also be a confident one. These
         # are the reporter node's own constants, so the two legs cannot drift into scoring the
-        # same turn differently depending on the transport that served it.
+        # same turn differently depending on the transport that served it. (A recall *redact*
+        # only masks a region — the answer stands — so it does not downgrade; only a recall
+        # withhold, the blind fail-closed case, does.)
         state["confidence"] = grounding.REPLACED_CONFIDENCE
         state["grounding_score"] = grounding.REPLACED_GROUNDING
     elif grounding.declares_unanswerable(final_response):

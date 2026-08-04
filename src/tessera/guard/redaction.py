@@ -51,6 +51,7 @@ __all__ = [
     "StreamingRedactor",
     "apply_egress_guard",
     "apply_output_guard",
+    "apply_pii_egress_recall",
     "contains_pii",
     "egress_withheld_notice",
     "emit_output_redaction",
@@ -456,6 +457,98 @@ def apply_egress_guard(
     return egress_withheld_notice(language), record
 
 
+def apply_pii_egress_recall(
+    text: str,
+    *,
+    language: LanguageCode,
+    actor: str | None = None,
+    observed_at: str | None = None,
+    disabled: bool = False,
+) -> tuple[str, GuardDecisionRecord | None]:
+    """Mask PII the regex output guard missed (ADR 0049 §Amendment 1).
+
+    Run *after* :func:`apply_output_guard`, on the already-masked answer: a second,
+    checksum-gated pass (limes ``pii-egress``) that catches a datum the first-party
+    regex left behind — a Corsica NIR (its ``2A``/``2B`` letters break the regex's
+    digit-only shapes), a PAN or IBAN whose grouping the regex pattern does not match.
+    It masks the leftover to ``[REDACTED:pii]``; it never re-fires on the regex's own
+    masks (``XXXX XXXX XXXX 6467`` and friends carry too little to match), so the PCI
+    last-four display and the harness cases (02/45) are untouched. Detection is limes'
+    (ADR 0029); this leg only composes it with the decision/audit machinery.
+
+    Three outcomes:
+
+    * leftover PII found → the answer is returned **further masked**, with a
+      ``TRANSFORM`` record (the answer stands; masking is not a refusal);
+    * nothing found → ``text`` unchanged, no record;
+    * the detector could not look (``CannotSay`` — content over limes' 200k budget,
+      or non-UTF-8) → **fail-closed**: the answer is withheld, with a ``DENY`` record.
+      The regex guard already masked what it could see; the recall refuses to vouch
+      for a tail it did not read.
+
+    Args:
+        text: The answer *after* the first-party regex guard.
+        language: Response language; selects the withheld wording (block only).
+        actor: The session's asserted identity, recorded into limes' context.
+        observed_at: ISO-8601 timestamp; defaults to now (limes never reads the
+            clock, so the caller supplies it and a decision re-derives on replay).
+        disabled: The sandbox ``pii`` guard override for this turn; skips the pass,
+            as :func:`apply_output_guard` does.
+
+    Returns:
+        ``(safe_text, decision)`` — ``decision`` is ``None`` when nothing was masked.
+    """
+    from tessera.agent.state import GuardDecisionRecord
+    from tessera.guard.limes_egress_backend import check_pii_egress
+
+    if disabled or "pii" in guard_disabled.get():
+        return text, None
+    outcome = check_pii_egress(
+        text,
+        observed_at=observed_at or datetime.now(UTC).isoformat(),
+        actor=actor,
+    )
+    if outcome.action == "forward":
+        return text, None
+    if outcome.action == "redact":
+        record = GuardDecisionRecord(
+            target="final_response",
+            decision=DecisionKind.TRANSFORM.value,
+            policy_rule=outcome.rule,
+            rationale=outcome.rationale,
+            redactions=outcome.redactions,
+        )
+        emit_audit(
+            target="final_response",
+            arguments={"redactions": ", ".join(outcome.redactions)},
+            decisions=[record],
+            sink=get_settings().guard.audit_sink,
+            actor=GUARD_ACTOR,
+            outcome="allowed",
+        )
+        _record_egress_metric("transformed")
+        # A REDACT egress always carries its masked content; fall back to text only
+        # to satisfy the type-checker (content is None on BLOCK, handled below).
+        return outcome.content or text, record
+    # block (fail-closed): the recall detector was blind — withhold the answer.
+    record = GuardDecisionRecord(
+        target="final_response",
+        decision=DecisionKind.DENY.value,
+        policy_rule=outcome.rule,
+        rationale=outcome.rationale,
+    )
+    emit_audit(
+        target="final_response",
+        arguments={"final_response": "[withheld — pii-egress recall blind, fail-closed]"},
+        decisions=[record],
+        sink=get_settings().guard.audit_sink,
+        actor=GUARD_ACTOR,
+        outcome="denied",
+    )
+    _record_egress_metric("denied")
+    return egress_withheld_notice(language), record
+
+
 # ---------------------------------------------------------------------------
 # Streaming
 # ---------------------------------------------------------------------------
@@ -474,29 +567,53 @@ _TAIL_HOLD: Final = re.compile(
     r"|(?:\+?[0-9][ ./-]?){1,40}"  # digit-group run (PAN / phone / IBAN tail)
     r")$"
 )
+# A trailing run of credential-alphabet characters, held in FULL past the PII window
+# (``_TAIL_HOLD`` only reaches back ``_TAIL_WINDOW``). A single-token secret — a vendor
+# key, a JWT — must land whole before any of it streams, so ``secrets-egress`` sees the
+# complete credential and the redactor can freeze rather than half-emit it. The alphabet
+# is every character the shipped secret rules use (alnum and ``._/+=~-``); a run this long
+# in prose is a URL or a hash, briefly held then released once the secret check clears it.
+# Multi-token secrets (PEM armour contains spaces) are NOT covered — that residual is the
+# one ADR 0049 §Amendment 1 keeps declared.
+_CRED_TAIL: Final = re.compile(r"[A-Za-z0-9._/+=~-]{16,}$")
 
 
 class StreamingRedactor:
-    """Incremental :func:`redact_text` over an SSE token stream.
+    """Incremental :func:`redact_text` over an SSE token stream, secret-aware.
 
-    Text is emitted only once its tail can no longer be the prefix of an
-    unfinished PII match (``_TAIL_HOLD``), so a card number can never leak in
-    an early chunk and be "fixed" after the fact. Every emitted segment goes
-    through :func:`redact_text`; :meth:`flush` drains the remainder at stream
-    end.
+    Two guarantees over the token stream, so nothing sensitive leaks in an early chunk
+    to be "fixed" after the fact:
 
-    Known limit: an unbroken token run longer than ``_TAIL_WINDOW`` (no
-    realistic PII is) may be cut mid-run, and a *lowercase* IBAN can mask
-    partially. The batch guard on the persisted text applies the same policy
-    either way.
+    * **PII is masked in place.** Text is emitted only once its tail can no longer be the
+      prefix of an unfinished PII match (``_TAIL_HOLD``); every emitted segment goes
+      through :func:`redact_text`.
+    * **A secret pre-empts the stream (ADR 0049 §Amendment 1).** A single-token credential
+      is held in full (``_CRED_TAIL``) until it terminates, then limes' ``secrets-egress``
+      checks the segment *before* it is emitted. On a hit the redactor **freezes** — it
+      emits nothing further and flags the detection — because a secret is withheld whole,
+      never masked-around. The post-hoc egress guard on the persisted answer then replaces
+      the whole turn; the browser never saw the credential's characters.
+
+    :meth:`flush` drains the remainder at stream end (also secret-checked).
+
+    Known limits: an unbroken token run longer than ``_TAIL_WINDOW`` that is *not*
+    credential-shaped may still be cut mid-run (no realistic PII is), a *lowercase* IBAN
+    can mask partially, and a **multi-line** secret (PEM armour, which contains spaces) is
+    not pre-empted token-by-token — only the post-hoc guard catches it. The batch guard on
+    the persisted text applies the same policy either way.
     """
 
-    def __init__(self, *, policy: Policy | None = None) -> None:
+    def __init__(self, *, policy: Policy | None = None, observed_at: str | None = None) -> None:
         self._policy = policy
+        # limes never reads the clock; the redactor supplies one for its throwaway
+        # detection checks (the leg of record is the post-hoc guard, not this one).
+        self._observed_at = observed_at or datetime.now(UTC).isoformat()
         self._raw = ""
         self._start = 0
         self._parts: list[str] = []
         self._redactions: list[str] = []
+        self._frozen = False
+        self._secret_detected = False
 
     @property
     def text(self) -> str:
@@ -508,22 +625,43 @@ class StreamingRedactor:
         """Labels of every mask applied so far (masked forms only)."""
         return tuple(self._redactions)
 
+    @property
+    def secret_detected(self) -> bool:
+        """Whether a secret froze the stream (its characters were never emitted)."""
+        return self._secret_detected
+
     def feed(self, chunk: str) -> str:
         """Absorb ``chunk``; return whatever became safe to emit (maybe '')."""
+        if self._frozen:
+            return ""
         self._raw += chunk
+        # Secret pre-emption (ADR 0049 §Amendment 1): the moment the unemitted region
+        # carries a complete credential, freeze — a secret is withheld whole, so nothing
+        # more streams and the post-hoc egress guard replaces the turn. ``_CRED_TAIL`` has
+        # kept the still-forming credential off the wire until this point, so freezing here
+        # means not one of its characters was emitted.
+        if self._freeze_if_secret():
+            return ""
         limit = len(self._raw) - _MIN_HOLD
         if limit <= self._start:
             return ""
         search_from = max(self._start, len(self._raw) - _TAIL_WINDOW)
         tail = _TAIL_HOLD.search(self._raw, search_from)
         cut = min(limit, tail.start()) if tail else limit
+        # Hold a long credential-shaped tail in FULL (past the PII window), so a secret
+        # still being typed cannot stream its prefix before it completes and is caught.
+        cred = _CRED_TAIL.search(self._raw, self._start)
+        if cred is not None:
+            cut = min(cut, cred.start())
         if cut <= self._start:
             return ""
         return self._emit(cut)
 
     def flush(self) -> str:
-        """Drain and redact everything still held back."""
-        if self._start >= len(self._raw):
+        """Drain and redact everything still held back (unless a secret froze it)."""
+        if self._frozen or self._start >= len(self._raw):
+            return ""
+        if self._freeze_if_secret():
             return ""
         return self._emit(len(self._raw))
 
@@ -533,3 +671,29 @@ class StreamingRedactor:
         self._parts.append(segment.text)
         self._redactions.extend(segment.redactions)
         return segment.text
+
+    def _freeze_if_secret(self) -> bool:
+        """Freeze the stream when the unemitted region carries a complete credential.
+
+        Checked on the whole unemitted region ``_raw[_start:]`` (not the about-to-emit
+        segment), so a credential is caught the instant it completes — before ``_TAIL_HOLD``
+        could cut it at an internal digit boundary and stream the prefix. Detection is limes'
+        ``secrets-egress``; the recorded verdict is the post-hoc guard's, never this pre-check.
+        Only reached when not already frozen (the callers guard on ``_frozen``), so the return
+        says whether this call froze — the callers stop emitting on ``True``.
+        """
+        segment = self._raw[self._start :]
+        if not segment.strip():
+            return False
+        from tessera.guard.limes_egress_backend import contains_secret
+
+        try:
+            found = contains_secret(segment, observed_at=self._observed_at)
+        except UnicodeEncodeError:
+            # limes' unpaired-surrogate debt raises rather than verdicts; the post-hoc
+            # egress guard on the whole answer is the backstop, so never crash the stream.
+            found = False
+        if found:
+            self._frozen = True
+            self._secret_detected = True
+        return found

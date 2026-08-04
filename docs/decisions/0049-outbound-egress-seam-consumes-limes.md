@@ -90,3 +90,61 @@ A withheld answer carries no citations and no confident score, on both legs.
   own answer, measured the same way as every guard (limes' in-package secrets
   matrix plus the Tessera guard suite, with a mutation ratchet that unplugs limes
   and watches the secret leave).
+
+## Amendment 1 (2026-08-04) — the two deferred follow-ups land
+
+The original cut named two follow-ups and half-built neither. Both now land.
+
+### `pii-egress` recall — a second pass over the already-masked answer
+
+The concern that deferred it (§Decision 1) was that `pii-egress` here would either
+replace the PCI last-four display with a full `[REDACTED]` or double-guard with the
+regex. The ordering dissolves both: the recall runs **after** the regex guard, on the
+text it already masked. So the regex keeps ownership of the display and the harness
+cases (02/45) — masked *before* recall sees them — and recall never re-fires on them:
+`XXXX XXXX XXXX 6467` carries four digits (no PAN), `FRXX XXXX 0123` has no `dd` head,
+`XXXX@XXXX` no TLD, `XXXX 78` two digits. Recall only ever masks what the regex *left
+behind*, to a shape-free `[REDACTED:pii]`.
+
+What it catches is real, not marginal: the regex baseline located 21/32 of limes'
+PII corpus, `pii-egress` 32/32. The clean witness is a **Corsica NIR** (`… 2A …`) —
+its department-code letters break the regex's digit-only shapes and it has no NIR rule
+at all, so the regex leaves it clear; the recall masks it. (A grouped all-digit NIR is
+already caught by the regex's broad PAN shape, so it is not the gap.)
+
+Disposition: a PII `Deny` **redacts** (a `TRANSFORM` record; the answer stands, it is
+not a refusal). `CannotSay` — reachable only over limes' 200 000-character budget or
+non-UTF-8, neither of which a real answer hits — **fails closed** to a withhold, as the
+secret leg does: a second witness that could not look may not report the tail clean.
+
+Seam: `apply_pii_egress_recall`, run after `apply_output_guard` at both transports
+(`reporter.run` batch; `chat.py` on the already-masked `final_response`). On the SSE
+synthesis branch a redact is a post-hoc `turn.correction` (reason `egress` — the
+frontend schema already documents this reason as "limes masked PII the regex leg
+missed"). A mutation ratchet unplugs limes and watches the missed NIR stay clear.
+
+### SSE secret pre-emption — a credential's characters never stream
+
+The original residual (§Consequences): on the streaming synthesis branch the secret
+block is post-hoc, so a credential's prefix could flash on screen for a frame before the
+correction. `StreamingRedactor` now closes it for **single-token** secrets:
+
+- a long credential-shaped tail is held **in full**, past the PII hold window
+  (`_CRED_TAIL`), so a secret still being typed never streams its prefix;
+- before every emit (and at flush) the unemitted region is checked by limes'
+  `secrets-egress` — a **detection-only** call with a fresh ledger, since the streaming
+  leg is not the leg of record — and on a hit the redactor **freezes**: it emits nothing
+  more and flags `secret_detected`. A secret is withheld whole, so there is nothing to
+  emit; the existing post-hoc `apply_egress_guard` on the full answer then replaces the
+  turn. The browser has seen only the benign text before the credential.
+
+The check runs on the whole unemitted region, not the about-to-emit segment, so a
+credential is caught the instant it completes — before `_TAIL_HOLD` could cut it at an
+internal digit boundary and stream the prefix (the exact bug the first cut of this change
+hit and a test now pins). No `chat.py` change was needed: the redactor simply stops
+leaking, and the post-hoc block it already had turns the freeze into a proper withhold.
+
+Residual, now narrower and still declared: a **multi-line** secret (PEM armour, which
+contains spaces, so it is not a single token) is not pre-empted token-by-token — only the
+post-hoc guard catches it. A mutation ratchet unplugs the streaming check and watches the
+credential's prefix stream to prove the freeze is limes', not the PII masker's IBAN graze.

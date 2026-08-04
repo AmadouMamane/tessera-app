@@ -1,19 +1,30 @@
-"""ADR 0049 ratchet — a secret never leaves in the agent's answer.
+"""ADR 0049 ratchet — a secret never leaves, and PII the regex missed is recalled.
 
-The seam is :func:`tessera.guard.redaction.apply_egress_guard`, run on the RAW
-answer (before the regex output guard) at both transports (reporter node + the SSE
-route). It adds the one outbound capability Tessera lacked: a secret **block**. PII
-stays with the first-party regex guard. These tests pin the thesis:
+Two seams in :mod:`tessera.guard.redaction`, run at both transports (reporter node +
+the SSE route):
+
+* :func:`apply_egress_guard`, on the RAW answer (before the regex output guard) — the
+  one outbound capability Tessera lacked: a secret **block**;
+* :func:`apply_pii_egress_recall`, on the already-masked answer (after the regex
+  guard, ADR 0049 §Amendment 1) — a second, checksum-gated pass that **masks PII the
+  regex left behind** (a Corsica NIR, a PAN/IBAN grouping the regex pattern misses)
+  without re-firing on the regex's own masks.
+
+These tests pin the thesis for both:
 
 1. a credential (assembled at runtime — never a literal, ADR 0009) **blocks** the
-   whole answer, which is replaced by the localized withheld message;
-2. ordinary content, and even PII, **forwards** — this leg does not touch PII;
-3. the MUTATION that proves the ratchet bites: unplug limes (its backend always
-   forwards) and the same secret **leaves in the clear** — so test 1 genuinely
-   depends on limes, not on any refusal being present.
+   whole answer, which is replaced by the localized withheld message; a NIR the regex
+   missed is **redacted** to ``[REDACTED:pii]``, the answer standing;
+2. ordinary content forwards; the secret leg does not touch PII, and the recall leg
+   does not re-fire on an already-masked PAN/IBAN/e-mail/phone;
+3. the MUTATION that proves each ratchet bites: unplug limes (its backend always
+   forwards) and the secret **leaves in the clear** / the NIR **stays unmasked** — so
+   the seams genuinely depend on limes, not on any refusal being present.
 
-Secrets are assembled from fragments so no credential-shaped literal is committed
-to this repository either (the reason limes' own corpus is assembled, ADR 0010).
+Secrets are assembled from fragments so no credential-shaped literal is committed to
+this repository either (the reason limes' own corpus is assembled, ADR 0010). The NIR
+is a synthetic vector (recomputed control key, fictional identity — limes corpus
+``nir_04_corsica``); PII vectors, like the test PAN, are literals here.
 """
 
 from __future__ import annotations
@@ -24,8 +35,21 @@ from typing import cast
 from tessera.agent import reporter
 from tessera.agent.state import AgentState, new_state
 from tessera.guard.decisions import DecisionKind
-from tessera.guard.limes_egress_backend import EgressOutcome, check_egress, egress_witness
-from tessera.guard.redaction import apply_egress_guard, egress_withheld_notice
+from tessera.guard.limes_egress_backend import (
+    EgressOutcome,
+    PiiEgressOutcome,
+    check_egress,
+    check_pii_egress,
+    egress_witness,
+    pii_egress_witness,
+)
+from tessera.guard.redaction import (
+    StreamingRedactor,
+    apply_egress_guard,
+    apply_output_guard,
+    apply_pii_egress_recall,
+    egress_withheld_notice,
+)
 from tessera.settings import LanguageCode
 
 _TS = "2026-08-04T00:00:00Z"
@@ -34,6 +58,11 @@ _TS = "2026-08-04T00:00:00Z"
 # real datum; the secret is spliced so no `sk_live_…` literal exists in the file.
 _TEST_PAN = "4242 4242 4242 4242"
 _SECRET = "sk_" + "live_" + "EXAMPLEONLY0000000000000"
+# A synthetic Corsica NIR (control key recomputed valid, identity fictional). Its
+# `2A` department code breaks the regex guard's digit-only shapes, so the regex leaves
+# it clear and the recall pass is what catches it. Its 15 digits fail Luhn, so it can
+# never read as a card number and muddy the assertion.
+_CORSICA_NIR = "1 75 12 2A 123 456 53"
 
 
 class TestBackend:
@@ -119,3 +148,163 @@ class TestReporterIntegration:
         final = str(update["final_response"])
         assert _SECRET not in final
         assert final == egress_withheld_notice(LanguageCode.EN)
+
+
+class TestPiiRecallBackend:
+    """check_pii_egress maps limes' pii-egress recall disposition."""
+
+    def test_clean_text_forwards(self) -> None:
+        out = check_pii_egress("Your balance is fine.", observed_at=_TS)
+        assert out.action == "forward"
+        assert out.content == "Your balance is fine."
+
+    def test_a_nir_the_regex_misses_is_redacted(self) -> None:
+        out = check_pii_egress(f"Assuré {_CORSICA_NIR} au dossier.", observed_at=_TS)
+        assert out.action == "redact"
+        assert out.content is not None and _CORSICA_NIR not in out.content
+        assert "[REDACTED:pii]" in out.content
+        assert out.redactions == ("pii=[REDACTED:pii]",)
+
+    def test_it_does_not_refire_on_the_regex_own_masks(self) -> None:
+        # The recall runs on text the regex already masked; those forms must forward,
+        # or the PCI last-four display and the harness cases (02/45) would be lost.
+        for masked in (
+            "Your card XXXX XXXX XXXX 6467 was charged.",
+            "Account FRXX XXXX 0123 is active.",
+            "Reach me at XXXX@XXXX please.",
+            "Call XXXX 78 tomorrow.",
+        ):
+            out = check_pii_egress(masked, observed_at=_TS)
+            assert out.action == "forward", f"recall re-fired on the regex mask {masked!r}"
+
+    def test_witness_names_the_detector(self) -> None:
+        assert pii_egress_witness() == ("pii-egress", "0.1.0")
+
+
+class TestPiiRecallSeam:
+    """apply_pii_egress_recall composes the backend with the decision/audit machinery."""
+
+    def test_it_masks_a_nir_the_regex_missed_end_to_end(self) -> None:
+        # Precondition: the first-party regex leaves the Corsica NIR clear (2A breaks
+        # its digit-only shapes). The recall, run on that output, is what masks it.
+        raw = f"Assuré {_CORSICA_NIR} (Corse-du-Sud)."
+        regex_masked, _ = apply_output_guard(raw, language=LanguageCode.FR)
+        assert _CORSICA_NIR in regex_masked, "precondition: the regex must miss this NIR"
+        text, record = apply_pii_egress_recall(regex_masked, language=LanguageCode.FR)
+        assert _CORSICA_NIR not in text and "[REDACTED:pii]" in text
+        assert record is not None and record.decision == DecisionKind.TRANSFORM.value
+
+    def test_clean_text_passes_through_with_no_decision(self) -> None:
+        text, record = apply_pii_egress_recall("Your balance is fine.", language=LanguageCode.EN)
+        assert text == "Your balance is fine." and record is None
+
+    def test_an_already_masked_pan_is_untouched(self) -> None:
+        masked = "Your card XXXX XXXX XXXX 6467 was charged."
+        text, record = apply_pii_egress_recall(masked, language=LanguageCode.EN)
+        assert text == masked and record is None
+
+    def test_the_sandbox_pii_override_skips_the_whole_pass(self) -> None:
+        raw = f"Assuré {_CORSICA_NIR} au dossier."
+        text, record = apply_pii_egress_recall(raw, language=LanguageCode.FR, disabled=True)
+        assert text == raw and record is None
+
+
+class TestPiiRecallMutationRatchetBites:
+    """Unplug limes → the NIR the regex missed stays clear. A ratchet never seen red is none."""
+
+    def test_unplugging_limes_lets_the_missed_nir_leave(self, monkeypatch) -> None:
+        def _always_forward(text: str, **_: object) -> PiiEgressOutcome:
+            return PiiEgressOutcome(
+                action="forward",
+                content=text,
+                redactions=(),
+                rule="egress.limes.pii.allow",
+                rationale="MUTATION: limes unplugged",
+                policy_hash="mutation",
+            )
+
+        monkeypatch.setattr("tessera.guard.limes_egress_backend.check_pii_egress", _always_forward)
+        raw = f"Assuré {_CORSICA_NIR} (Corse-du-Sud)."
+        regex_masked, _ = apply_output_guard(raw, language=LanguageCode.FR)
+        text, record = apply_pii_egress_recall(regex_masked, language=LanguageCode.FR)
+        assert _CORSICA_NIR in text, (
+            "MUTATION: with limes unplugged the NIR the regex missed must stay clear — "
+            "if it is still masked, the seam does not depend on limes"
+        )
+        assert record is None
+
+
+class TestPiiRecallReporterIntegration:
+    """The recall runs end-to-end in the reporter node (the non-SSE / eval transport)."""
+
+    async def test_run_masks_a_nir_the_regex_missed_in_the_draft(self) -> None:
+        # The draft path (no retrieval docs) renders the draft verbatim, so a NIR a
+        # tool result carried into it reaches the output guard, survives the regex
+        # (2A), and must be masked by the recall — end to end, through the real node.
+        state = new_state(
+            conversation_id=uuid.uuid4(),
+            turn_id=uuid.uuid4(),
+            user_input="rappelle mon numéro de sécurité sociale",
+            language=LanguageCode.FR,
+            language_confidence=1.0,
+        )
+        state["draft_response"] = f"Votre NIR est {_CORSICA_NIR} (Corse-du-Sud)."
+        update = await reporter.run(cast(AgentState, state))
+        final = str(update["final_response"])
+        assert _CORSICA_NIR not in final
+        assert "[REDACTED:pii]" in final
+
+
+class TestStreamingSecretPreemption:
+    """ADR 0049 §Amendment 1 — a secret never streams a character; the redactor freezes.
+
+    The SSE synthesis branch streams token-by-token, so the post-hoc secret block can
+    only correct after the fact — a credential's prefix could flash on screen. The
+    StreamingRedactor closes that residual: it holds a forming credential off the wire
+    and freezes the instant limes confirms one, so not one of its characters is emitted.
+    """
+
+    @staticmethod
+    def _stream(text: str, *, chunk: int) -> tuple[str, StreamingRedactor]:
+        r = StreamingRedactor()
+        parts = [r.feed(text[i : i + chunk]) for i in range(0, len(text), chunk)]
+        parts.append(r.flush())
+        return "".join(parts), r
+
+    def test_a_secret_never_reaches_the_wire(self) -> None:
+        # Across chunk boundaries (1 char, a few, a word): not the whole secret, and not
+        # even a 16-char prefix, may appear in the emitted stream.
+        for chunk in (1, 3, 8):
+            emitted, r = self._stream(f"The deploy key is {_SECRET} now.", chunk=chunk)
+            assert _SECRET not in emitted, f"chunk={chunk}: full secret streamed"
+            assert _SECRET[:16] not in emitted, f"chunk={chunk}: a 16-char prefix streamed"
+            assert r.secret_detected, f"chunk={chunk}: the redactor did not freeze"
+
+    def test_a_secret_at_the_very_end_is_caught_at_flush(self) -> None:
+        emitted, r = self._stream(f"Your key: {_SECRET}", chunk=5)
+        assert _SECRET not in emitted and r.secret_detected
+
+    def test_pii_still_masks_and_does_not_falsely_freeze(self) -> None:
+        emitted, r = self._stream(f"Card {_TEST_PAN} charged.", chunk=2)
+        assert _TEST_PAN not in emitted and "XXXX" in emitted
+        assert not r.secret_detected
+
+    def test_a_benign_long_token_streams_unchanged(self) -> None:
+        text = "See https://example.com/a/very/long/opaque/path/abcdefghijklmnop here."
+        emitted, r = self._stream(text, chunk=4)
+        assert emitted == text and not r.secret_detected
+
+    def test_the_mutation_that_proves_the_freeze_depends_on_limes(self, monkeypatch) -> None:
+        # Unplug the streaming secret check → the credential's prefix streams in the clear
+        # (the PII masker only grazes its IBAN-shaped tail). Proves the freeze is limes',
+        # not a coincidence of the first-party masker.
+        monkeypatch.setattr(
+            "tessera.guard.limes_egress_backend.contains_secret",
+            lambda *_a, **_k: False,
+        )
+        emitted, r = self._stream(f"key {_SECRET} end", chunk=1)
+        assert _SECRET[:8] in emitted, (
+            "MUTATION: with the streaming check unplugged the secret's prefix must stream — "
+            "if it does not, the freeze does not depend on limes"
+        )
+        assert not r.secret_detected
