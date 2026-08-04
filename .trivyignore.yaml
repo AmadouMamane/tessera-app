@@ -1,0 +1,33 @@
+# One ignored finding, and it is not a dismissal.
+#
+# Trivy's SECRET scanner reports an `AsymmetricPrivateKey` inside the runtime
+# image, at:
+#
+#   /opt/venv/lib/python3.12/site-packages/limes/corpus/egress/secrets_positive.json
+#
+# That file is limes' own eval corpus — the POSITIVE test vectors for its egress
+# secret detector. The flagged value is PEM armour whose body base64-decodes to
+# "EXAMPLE ONLY - not a key", which the corpus itself states in its `why` field.
+# So there is no key here. But the finding is still TRUE about something real: a
+# dependency's test fixtures are shipped into a production image, and no amount of
+# ignoring changes that.
+#
+# The durable fix is upstream, in the limes package: a wheel that does not ship its
+# corpus (or ships it only under a test extra). It is not done here for one reason
+# worth recording — deleting the corpus from the image was implemented on
+# 2026-08-04 and REVERTED the same hour: another session was wiring limes'
+# detectors, pii-egress among them, the guard fails closed, and a build-time check
+# of the injection path would not have covered what they were adding. Removing a
+# dependency's data during a concurrent rewrite of that dependency is how an image
+# comes to refuse every turn.
+#
+# Scope discipline: this ignores ONE rule at ONE path. It does not disable the
+# secret scanner, which earned its keep by finding this on the first run it ever
+# had. If this path stops existing, delete the entry rather than widening it.
+#
+# Reviewed 2026-08-04. Revisit when limes' packaging changes.
+
+secrets:
+  - id: private-key
+    paths:
+      - "/opt/venv/lib/python*/site-packages/limes/corpus/**"

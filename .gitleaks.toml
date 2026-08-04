@@ -1,0 +1,26 @@
+# gitleaks configuration — one allowlist, and it is not a convenience.
+#
+# `.secrets.baseline` is detect-secrets' record of what has already been looked at.
+# Every entry stores a `hashed_secret`: a SHA-1 of the matched string, and nothing
+# else. gitleaks' `generic-api-key` rule reads those 40-character hex digests as
+# high-entropy strings and reported 46 of them — so committing the baseline, which
+# is exactly what makes the detect-secrets job able to gate at all, turned the
+# gitleaks job red. Two secret scanners, each fed by the other's bookkeeping.
+#
+# Excluding this ONE file loses nothing, and the reason is structural rather than
+# a judgement call: a baseline entry is a hash of a string that lives somewhere
+# else in the tree, where gitleaks scans it on its own terms. If a real secret were
+# ever committed, gitleaks would catch it AT THE SOURCE; the hash in the baseline
+# is derived evidence, and irreversible besides.
+#
+# Nothing else is allowlisted, deliberately. An allowlist is a place where a defect
+# can live, so this file should stay one entry long.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+[rules.allowlist]
+description = "detect-secrets' baseline stores SHA-1 hashes, not secrets; the underlying strings are scanned at their own paths."
+paths = ['''^\.secrets\.baseline$''']

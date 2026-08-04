@@ -128,6 +128,11 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: "1"
           ignore-unfixed: true
+          # ONE ignored finding, justified at length in the file itself: limes'
+          # own eval corpus, shipped in the wheel, whose PEM body decodes to
+          # "EXAMPLE ONLY - not a key". The secret scanner stays ON — it found
+          # that on the very first run it was ever given.
+          trivyignores: .trivyignore.yaml
 
   guard-policy-lint:
     name: guard policy lint
