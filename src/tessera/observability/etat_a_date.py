@@ -1059,7 +1059,7 @@ def _banner(lang: str, agent: str | None) -> str:
         )
     return head + _loc(
         lang,
-        "La configuration affichée par défaut est celle de l'agent Support client ;",
+        "La configuration affichée par défaut est celle de l'agent Support client",
         "Standardmäßig wird die Konfiguration des Kundenservice-Agenten angezeigt;",
         "By default, the displayed configuration belongs to the Customer support agent;",
     )
