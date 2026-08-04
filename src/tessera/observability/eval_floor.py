@@ -142,6 +142,16 @@ class CertifiedInversions:
     catalogue_version: str
     passes: int
     runs: tuple[str, ...]
+    #: The model's measured pass rate on each entry of ``runs``, in the same order ("9/15").
+    #: Empty for a measurement taken before the rates were carried; the refusal degrades to its
+    #: previous wording rather than inventing a number.
+    rates: tuple[str, ...] = ()
+
+    def described_runs(self) -> str:
+        """``run (9/15)`` for each inversion, or just the run when no rate was recorded."""
+        if len(self.rates) != len(self.runs):
+            return ", ".join(self.runs)
+        return ", ".join(f"{run} ({rate})" for run, rate in zip(self.runs, self.rates, strict=True))
 
 
 def certified_inversions(  # noqa: PLR0911
@@ -231,8 +241,21 @@ def certified_inversions(  # noqa: PLR0911
             if isinstance(run, dict) and run.get("class") == "inverted" and key in agent_runs
         )
     )
+    # The measured pass rate of each inverted run, as the classifier recorded it ("13/15").
+    # Carried so the refusal can STATE it instead of asserting "reproducibly breaks them" over
+    # every inversion alike: on 2026-08-04 one agent was refused on a run the model breaks 6
+    # times in 15 and another on a run it breaks 2 times in 15, and both were reported in the
+    # same words. Both refusals are correct — ADR 0021 Rule 1 counts runs, not p-values — but an
+    # operator deciding what to fix first cannot read that sentence and learn which is which.
+    rates = tuple(
+        str(runs[key].get("strong") or "?") for key in inverted if isinstance(runs.get(key), dict)
+    )
     return CertifiedInversions(
-        model=model, catalogue_version=measured_on, passes=passes, runs=inverted
+        model=model,
+        catalogue_version=measured_on,
+        passes=passes,
+        runs=inverted,
+        rates=rates,
     )
 
 
@@ -324,8 +347,8 @@ class FloorGrade:
             return NotOk(
                 f"the model is CERTIFIED worse than silence on "
                 f"{len(self.certified.runs)} run(s) this agent executes "
-                f"({', '.join(self.certified.runs)}) — the null control passes them with ZERO "
-                f"tokens and the model reproducibly breaks them, measured over "
+                f"({self.certified.described_runs()}) — the null control passes them with ZERO "
+                f"tokens and the model does not, measured over "
                 f"{self.certified.passes} full passes. ADR 0021 Rule 1 is non-derogable: one is "
                 f"enough. This is a fact about the model, not about the report on disk — a single "
                 f"clean run does not clear it, it just got lucky."

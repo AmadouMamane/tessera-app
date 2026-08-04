@@ -5,7 +5,7 @@
   "agent_id": "onboarding",
   "eval_set": "onboarding",
   "catalogue_version": "25-92b10927",
-  "grader_criteria_sha": "25-302801510b1d",
+  "grader_criteria_sha": "25-41e7ebe9614a",
   "auth_state": "anonymous",
   "summary": {
     "total": 69,
@@ -1333,5 +1333,7 @@
     "input_tokens": 73000,
     "output_tokens": 5343,
     "estimated_cost_eur": 0.0
-  }
+  },
+  "regraded_at": "20260804T181632Z",
+  "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded."
 }

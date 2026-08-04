@@ -35,6 +35,7 @@ polices nothing).
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -158,8 +159,59 @@ def _criteria_pairs(failures: Path, *, keep: Callable[[dict[str, Any]], bool]) -
     return pairs
 
 
+#: Names in :mod:`eval.runner` that DECIDE whether a criterion is met. Their source is folded
+#: into the criteria identity below.
+_GRADER_DECIDERS: Final[tuple[str, ...]] = (
+    "_claim_is_asserted",
+    "_is_refused_restatement",
+    "_check_substrings",
+    "_check_required_alternatives",
+    "_NEGATION_MARKERS",
+    "_ATTRIBUTION_FRAMES",
+    "_REFUSAL_MARKERS",
+    "_TRAILING_NEGATION_WINDOW",
+    "_SENTENCE_BREAKS",
+)
+
+
+def _grader_code_sha() -> str:
+    """Identity of the CODE that applies the criteria, not of the criteria text.
+
+    ``catalogue_version`` hashes case **ids** and is blind to what any case asserts; that
+    blindness cost three agents their release on 2026-08-04, and the fix was to hash the
+    ``pass_criteria`` too. This is the SAME blindness one level deeper, and it bit on
+    2026-08-04 as well: ``must_not_assert``'s meaning lives in ``_claim_is_asserted``, so
+    widening what counts as a denial changes every verdict that criterion ever produced — and
+    moved neither hash. A frozen null floor and a fresh agent report could then be graded by
+    two different rulers wearing the same number, which is exactly the comparison ADR 0028 §5
+    says must refuse rather than conclude.
+
+    Only the DECIDING names are hashed, not the whole module: a docstring fix or a new report
+    field must not invalidate every recorded measurement, or the refusal becomes noise and the
+    next person learns to re-stamp past it.
+
+    A name that disappears is recorded as ``<gone>`` rather than skipped — deleting a decider
+    is a grader change too, and a silent skip would hide the largest one there is.
+    """
+    from eval import runner
+
+    parts: list[str] = []
+    for name in _GRADER_DECIDERS:
+        obj = getattr(runner, name, None)
+        if obj is None:
+            parts.append(f"{name}\x1f<gone>")
+            continue
+        try:
+            parts.append(f"{name}\x1f{inspect.getsource(obj)}")
+        except (OSError, TypeError):
+            # A constant, not a function: its VALUE is the rule.
+            parts.append(f"{name}\x1f{obj!r}")
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:12]
+
+
 def _criteria_sha(pairs: list[str]) -> str:
-    digest = hashlib.sha256("\n".join(sorted(pairs)).encode()).hexdigest()[:12]
+    material = "\n".join(sorted(pairs)) + "\n\x1e" + _grader_code_sha()
+    digest = hashlib.sha256(material.encode()).hexdigest()[:12]
     return f"{len(pairs)}-{digest}"
 
 
@@ -333,13 +385,21 @@ def model_spoke(report: dict[str, Any]) -> bool:
 
 
 def baseline_from_report(report: dict[str, Any], *, kind: BaselineKind, note: str = "") -> Baseline:
-    """Capture a report as a baseline (used by ``--write`` to refresh a reference)."""
+    """Capture a report as a baseline (used by ``--write`` to refresh a reference).
+
+    ``grader_criteria_sha`` travels. It did not until 2026-08-04, and the loss was silent and
+    exactly backwards: ``load_baseline`` READ the field, so a baseline refreshed by ``--write``
+    came back with an empty ruler — a floor that cannot name the criteria that judged it, which
+    is the unfalsifiable state the stamp was introduced to end. Refreshing the reference is the
+    one moment the ruler is certainly known, and it was the one moment it was dropped.
+    """
     return Baseline(
         kind=kind,
         model=str(report.get("model") or ""),
         catalogue_version=str(report.get("catalogue_version") or ""),
         verdicts=report_verdicts(report),
         note=note,
+        grader_criteria_sha=str(report.get("grader_criteria_sha") or ""),
     )
 
 
@@ -372,11 +432,23 @@ def load_baseline(path: Path) -> Baseline:
 
 
 def dump_baseline(baseline: Baseline) -> str:
-    """Serialise a baseline to the on-disk JSON form (stable key order)."""
-    payload = {
+    """Serialise a baseline to the on-disk JSON form (stable key order).
+
+    ``grader_criteria_sha`` is written whenever it is known. Its absence here was the second
+    half of the same silent loss described in :func:`baseline_from_report`: even once the
+    Baseline object carried the ruler, the serialiser did not emit it, so a ``--write`` still
+    produced a floor that could not say what judged it. Omitted when empty rather than written
+    as ``""`` — a baseline predating the stamp genuinely does not know its ruler, and an empty
+    string is a claim to know it is nothing.
+    """
+    payload: dict[str, Any] = {
         "kind": baseline.kind,
         "model": baseline.model,
         "catalogue_version": baseline.catalogue_version,
+    }
+    if baseline.grader_criteria_sha:
+        payload["grader_criteria_sha"] = baseline.grader_criteria_sha
+    payload |= {
         "note": baseline.note,
         "totals": {"total": baseline.total, "passed": baseline.passed},
         "verdicts": dict(sorted(baseline.verdicts.items())),
