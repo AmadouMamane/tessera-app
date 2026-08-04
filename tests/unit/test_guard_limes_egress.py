@@ -155,12 +155,12 @@ class TestPiiRecallBackend:
 
     def test_clean_text_forwards(self) -> None:
         out = check_pii_egress("Your balance is fine.", observed_at=_TS)
-        assert out.action == "forward" and not out.redacted
+        assert out.action == "forward"
         assert out.content == "Your balance is fine."
 
     def test_a_nir_the_regex_misses_is_redacted(self) -> None:
         out = check_pii_egress(f"Assuré {_CORSICA_NIR} au dossier.", observed_at=_TS)
-        assert out.redacted and out.action == "redact"
+        assert out.action == "redact"
         assert out.content is not None and _CORSICA_NIR not in out.content
         assert "[REDACTED:pii]" in out.content
         assert out.redactions == ("pii=[REDACTED:pii]",)

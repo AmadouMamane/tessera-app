@@ -665,20 +665,6 @@ class StreamingRedactor:
             return ""
         return self._emit(len(self._raw))
 
-    def _freeze_if_secret(self) -> bool:
-        """Freeze the stream when the unemitted region carries a complete credential.
-
-        Checked on the whole unemitted region ``_raw[_start:]`` (not the about-to-emit
-        segment), so a credential is caught the instant it completes — before ``_TAIL_HOLD``
-        could cut it at an internal digit boundary and stream the prefix. Idempotent once
-        set; a frozen redactor emits nothing more.
-        """
-        if self._contains_secret(self._raw[self._start :]):
-            self._frozen = True
-            self._secret_detected = True
-            return True
-        return False
-
     def _emit(self, cut: int) -> str:
         segment = redact_text(self._raw[self._start : cut], policy=self._policy)
         self._start = cut
@@ -686,15 +672,28 @@ class StreamingRedactor:
         self._redactions.extend(segment.redactions)
         return segment.text
 
-    def _contains_secret(self, segment: str) -> bool:
-        """Whether ``segment`` carries a credential (limes secrets-egress, detection only)."""
+    def _freeze_if_secret(self) -> bool:
+        """Freeze the stream when the unemitted region carries a complete credential.
+
+        Checked on the whole unemitted region ``_raw[_start:]`` (not the about-to-emit
+        segment), so a credential is caught the instant it completes — before ``_TAIL_HOLD``
+        could cut it at an internal digit boundary and stream the prefix. Detection is limes'
+        ``secrets-egress``; the recorded verdict is the post-hoc guard's, never this pre-check.
+        Only reached when not already frozen (the callers guard on ``_frozen``), so the return
+        says whether this call froze — the callers stop emitting on ``True``.
+        """
+        segment = self._raw[self._start :]
         if not segment.strip():
             return False
         from tessera.guard.limes_egress_backend import contains_secret
 
         try:
-            return contains_secret(segment, observed_at=self._observed_at)
+            found = contains_secret(segment, observed_at=self._observed_at)
         except UnicodeEncodeError:
             # limes' unpaired-surrogate debt raises rather than verdicts; the post-hoc
             # egress guard on the whole answer is the backstop, so never crash the stream.
-            return False
+            found = False
+        if found:
+            self._frozen = True
+            self._secret_detected = True
+        return found

@@ -229,16 +229,6 @@ class PiiEgressOutcome:
     rationale: str
     policy_hash: str
 
-    @property
-    def redacted(self) -> bool:
-        """Whether leftover PII was masked."""
-        return self.action == "redact"
-
-    @property
-    def blocked(self) -> bool:
-        """Whether the recall detector could not look (fail-closed)."""
-        return self.action == "block"
-
 
 @lru_cache(maxsize=1)
 def _pii_policy_hash() -> str:

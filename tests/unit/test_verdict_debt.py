@@ -141,6 +141,12 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # ── content & grounding verdicts ──────────────────────────────────────────────────────────
     "src/tessera/guard/redaction.py::contains_pii": "VERDICT",
     "src/tessera/guard/redaction.py::_luhn_valid": "VERDICT",
+    # `text`, not a verdict — and the distinction from `contains_pii` above is load-bearing.
+    # `contains_pii`'s bit is TERMINAL: it directly gates the masking notice, and nothing else
+    # records that decision. `contains_secret` only feeds the streaming pre-emption (ADR 0049
+    # §Amendment 1); the RECORDED verdict is limes' `check_egress` block on the whole answer,
+    # via `apply_egress_guard`'s DENY. This is a regex classification feeding a verdict upstream.
+    "src/tessera/guard/limes_egress_backend.py::contains_secret": "text",
     "src/tessera/guard/grounding.py::_quant_supported": "VERDICT",
     "src/tessera/guard/grounding.py::declares_unanswerable": "VERDICT",
     # ── evidence & capability verdicts ────────────────────────────────────────────────────────
@@ -209,6 +215,13 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # own decision is recorded on the span, never reduced to this bit.
     "src/tessera/llm/budget.py::model_is_paid": "data",
     "src/tessera/guard/redaction.py::RedactedText.changed": "data",
+    # `data`: a property OF the redactor's state — was a secret found and the stream frozen.
+    # It decides nothing that passes; the withhold is the post-hoc egress guard's DENY.
+    "src/tessera/guard/redaction.py::StreamingRedactor.secret_detected": "data",
+    # `text`: the streaming twin of `contains_secret` above — the same regex classification,
+    # enacted (it freezes the stream) and reporting whether it fired. The recorded verdict is
+    # still the post-hoc egress guard's block, not this pre-emption bit.
+    "src/tessera/guard/redaction.py::StreamingRedactor._freeze_if_secret": "text",
     "src/tessera/guard/redaction.py::_iban_context": "text",
     "src/tessera/memory/persistent.py::delete_memory": "write",
     "src/tessera/memory/persistent.py::update_memory_text": "write",
