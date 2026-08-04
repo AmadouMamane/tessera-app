@@ -820,8 +820,19 @@ export function RunContextPanel({
             {run.regraded_at ? (
               <CtxRow k={tq("runs.ctx.regraded")}>{fmtDate(run.regraded_at)}</CtxRow>
             ) : null}
+            {/*
+              A re-grade cannot re-ask a criterion the recording does not hold (max_confidence,
+              must_cite_source): it keeps the original verdict at those runs. The ruler was still
+              applied everywhere else, so showing the sha alone would claim more coverage than was
+              measured — the count of carried runs is what makes the difference visible.
+            */}
             <CtxRow k={tq("runs.ctx.ruler")}>
               <span className="font-mono text-[0.68rem]">{run.grader_criteria_sha ?? DASH}</span>
+              {run.grader_blind_runs.length > 0 ? (
+                <span className="ml-1.5 text-[0.68rem] text-amber-600 dark:text-amber-400">
+                  {tq("runs.ctx.carried", { n: run.grader_blind_runs.length })}
+                </span>
+              ) : null}
             </CtxRow>
             <CtxRow k={tq("runs.ctx.cases")}>
               <span className="tabular-nums">

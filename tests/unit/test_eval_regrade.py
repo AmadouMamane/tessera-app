@@ -325,25 +325,40 @@ class TestTheRegradedReportsOnDiskAreCurrent:
 
     @pytest.mark.parametrize("agent", ["onboarding", "recouvrement", "support-client"])
     def test_each_agent_report_declares_a_ruler(self, agent: str) -> None:
+        """Every report says which criteria judged it — in one of the two honest forms.
+
+        This used to *skip* when a report had a blind run, on the grounds that the floor said
+        CANNOT SAY anyway. It no longer does, for two reasons. The floor now compares a partly
+        carried run (a carried verdict is the failing one, so it can only add a break, never
+        remove one). And a skip is the wrong shape here: it stops looking at exactly the reports
+        most likely to be unplaceable, and would sail past one that names nothing at all.
+        """
         path = _ROOT / "eval" / "reports" / "local" / f"latest_{agent}.json"
         if not path.exists():
             pytest.skip(f"no committed report for {agent}")
         payload = json.loads(path.read_text(encoding="utf-8"))
 
-        unstampable = payload.get("grader_criteria_unstampable")
-        if unstampable:
-            pytest.skip(
-                f"BLIND SPOT, DECLARED: {len(unstampable)} case(s) of {agent} cannot be re-graded "
-                f"from their recording ({', '.join(map(str, unstampable[:3]))}). The report is "
-                f"deliberately unstamped, so the floor comparison says CANNOT SAY rather than "
-                f"trusting a mixture. Clear it by re-running: "
-                f"`uv run python scripts/run_eval.py --agent {agent}`."
-            )
-        assert payload.get("grader_criteria_sha"), (
+        blind = payload.get("grader_criteria_unstampable") or ()
+        named = payload.get("grader_criteria_sha") or (
+            payload.get("grader_criteria_sha_partial") if blind else ""
+        )
+        assert named, (
             f"{path.name} does not say which criteria judged it, so the release gate cannot "
             f"compare it with the floor and blocks the agent with a CANNOT SAY. Repair without "
             f"spending a token: `make eval-regrade`."
         )
+        current = grader_criteria_sha_for(
+            {str(r.get("case_id")) for r in payload.get("results") or ()}
+        )
+        assert named == current, (
+            f"{path.name} was judged under {named!r} and the catalogue on disk grades {current!r}. "
+            f"Re-grade it: `make eval-regrade` (no tokens)."
+        )
+        if blind:
+            assert not payload.get("grader_criteria_sha"), (
+                f"{path.name} claims full coverage while naming {len(blind)} run(s) it could not "
+                f"re-ask. Those two statements cannot both be true."
+            )
 
 
 def test_git_is_the_witness_and_is_reachable() -> None:

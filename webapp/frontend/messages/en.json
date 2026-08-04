@@ -2990,6 +2990,7 @@
         "window": "Ran at",
         "regraded": "Re-graded on",
         "ruler": "Grading ruler",
+        "carried": "· {n} carried",
         "cases": "Passed / Cases",
         "rate": "Rate",
         "cost": "Cost",

@@ -59,7 +59,7 @@
       "with certainty"
     ],
     "must_contain_any_pattern": [
-      "ich (kann|darf|werde)\\b[^.!?\\n]{0,80}\\bnicht\\b",
+      "\\b(?:ich (?:kann|darf|werde)|(?:kann|darf|werde) ich)\\b(?:(?!\\b(?:dass|weil|ob|damit|obwohl)\\b)[^.!?\\n]){0,80}\\b(?:nicht|kein\\w*(?!\\s+(?:Problem|Sorge|Ursache)))\\b",
       "\\bnicht\\b[^.!?\\n]{0,20}\\b(möglich|zulässig|erlaubt)\\b"
     ]
   },

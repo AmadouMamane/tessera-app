@@ -407,18 +407,27 @@ def regrade_report(payload: Mapping[str, object], *, check_precondition: bool = 
     fresh["results"] = fresh_results
     _rederive_totals(fresh, fresh_results)
     blind = [c for c in cases if c.now is None]
+    ruler = grader_criteria_sha_for(str(r.get("case_id")) for r in fresh_results)
     if blind:
         # A report is stamped with a ruler only when EVERY case in it was judged by that ruler.
         # One case nobody could re-ask makes the whole report a mixture, and a mixture that
-        # claims to be current is exactly the fossil this module exists to end. Left unstamped,
-        # the floor comparison says CANNOT SAY — which blocks, loudly, with a reason.
+        # claims to be current is exactly the fossil this module exists to end.
+        #
+        # But going *silent* is the other failure. On 2026-08-05 a criteria correction made four
+        # more cases re-gradable and, in doing so, made every one of the thirty frozen passes
+        # carry a blind run — so no pass named a ruler at all, and the classifier refused the
+        # whole matrix for want of one. A witness that cannot see everything says what it saw
+        # and where it is blind (ADR 0026); it does not answer "nothing". So the applied ruler
+        # is recorded under a name that cannot be mistaken for full coverage, and the blind runs
+        # are named beside it. `grader_criteria_sha` stays absent: this report does not claim
+        # every case was judged by that rule, and nothing may read it as if it did.
         fresh.pop("grader_criteria_sha", None)
+        fresh["grader_criteria_sha_partial"] = ruler
         fresh["grader_criteria_unstampable"] = [f"{c.case_id}|{c.language}" for c in blind]
     else:
         fresh.pop("grader_criteria_unstampable", None)
-        fresh["grader_criteria_sha"] = grader_criteria_sha_for(
-            str(r.get("case_id")) for r in fresh_results
-        )
+        fresh.pop("grader_criteria_sha_partial", None)
+        fresh["grader_criteria_sha"] = ruler
     fresh["regraded_at"] = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     fresh["regrade_note"] = (
         "Judgements re-derived from the recorded responses under the criteria in "

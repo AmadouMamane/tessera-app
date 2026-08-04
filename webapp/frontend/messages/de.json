@@ -2990,6 +2990,7 @@
         "window": "Ausgeführt am",
         "regraded": "Neu bewertet am",
         "ruler": "Bewertungsregel",
+        "carried": "· {n} übernommen",
         "cases": "Bestanden / Fälle",
         "rate": "Quote",
         "cost": "Kosten",

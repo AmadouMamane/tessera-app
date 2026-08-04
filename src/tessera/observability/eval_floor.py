@@ -418,15 +418,28 @@ def _rulers_disagree(
 
     Both sides are checked, because either can be the stale one — and a stale FLOOR blocks a
     release exactly as confidently as a bad model would.
+
+    **A partly-carried run is compared, and here is why that is not a loophole.** A re-grade
+    cannot re-ask a criterion no recording holds (``max_confidence``, ``must_cite_source``), so it
+    keeps the original judgement at those runs and declines to stamp the report. On 2026-08-05 a
+    criteria correction made four more cases re-gradable, every agent report acquired a carried
+    run, and this reader — which asks for a stamp — refused all three agents on runs that had just
+    been graded. The rule applied is now published as ``grader_criteria_sha_partial`` beside the
+    runs it did not cover, and that is accepted, because a carried verdict is the FAILING one:
+    it was recorded as a break and it stays a break. Carrying can add a break to this comparison,
+    never remove one, so accepting it can only ever block a release — never clear it.
     """
     baseline_ruler = grader_criteria_sha_for(baseline.verdicts_case_ids)
     if baseline.grader_criteria_sha != baseline_ruler:
         return _absent_floor_ruler(baseline.grader_criteria_sha, baseline_ruler)
-    if not snap.grader_criteria_sha:
+    named = snap.grader_criteria_sha or (
+        snap.grader_criteria_sha_partial if snap.grader_blind_runs else ""
+    )
+    if not named:
         return _absent_ruler_unknown(snap.run_at)
     run_ruler = grader_criteria_sha_for(compared_case_ids)
-    if snap.grader_criteria_sha != run_ruler:
-        return _absent_ruler_moved(snap.grader_criteria_sha, run_ruler)
+    if named != run_ruler:
+        return _absent_ruler_moved(named, run_ruler)
     return None
 
 

@@ -42,6 +42,14 @@ class RunSummary:
     every verdict without spending a token. ``regraded_at`` and
     ``grader_criteria_sha`` name that second act, so a displayed pass rate can say
     **when it was judged and by which ruler** — not only when it was sampled.
+
+    A re-grade cannot re-ask a criterion the recording does not hold
+    (``max_confidence``, ``must_cite_source``), so it keeps the original verdict at
+    those runs and declines to claim full coverage. It publishes the rule it did
+    apply anyway, and :attr:`grader_blind_runs` is what makes the difference
+    visible: a ruler with carried exceptions is not the same statement as a ruler
+    that judged everything, and a screen that showed only the first would be
+    reporting more coverage than was measured.
     """
 
     run_id: str
@@ -58,6 +66,9 @@ class RunSummary:
     eval_set: str | None = None
     regraded_at: str | None = None
     grader_criteria_sha: str | None = None
+    #: The ``case|language`` runs whose verdict was carried, not re-derived. Non-empty means
+    #: ``grader_criteria_sha`` is the rule that was APPLIED, not a claim of full coverage.
+    grader_blind_runs: tuple[str, ...] = ()
     #: Older gradings of this same run that this row supersedes (0 in the normal case).
     superseded_copies: int = 0
 
@@ -160,8 +171,17 @@ def _summary_run(path: Path, obj: dict[str, object]) -> RunSummary | None:
         catalogue_version=_optional_str(obj.get("catalogue_version")),
         eval_set=_optional_str(obj.get("eval_set")) or _optional_str(obj.get("agent_id")),
         regraded_at=_optional_str(obj.get("regraded_at")),
-        grader_criteria_sha=_optional_str(obj.get("grader_criteria_sha")),
+        grader_criteria_sha=_optional_str(obj.get("grader_criteria_sha"))
+        or _optional_str(obj.get("grader_criteria_sha_partial")),
+        grader_blind_runs=_str_tuple(obj.get("grader_criteria_unstampable")),
     )
+
+
+def _str_tuple(value: object) -> tuple[str, ...]:
+    """The strings in a list, from an untrusted payload — never the text of a non-list."""
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, str))
 
 
 def _optional_str(value: object) -> str | None:

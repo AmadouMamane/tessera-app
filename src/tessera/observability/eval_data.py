@@ -125,6 +125,14 @@ class EvalSnapshot:
     #: runner stamped it — which is not "the current ruler", it is *unknown*, and the floor
     #: comparison treats it as such rather than assuming the ruler never moved.
     grader_criteria_sha: str = ""
+    #: The ruler a re-grade APPLIED when it could not claim to have applied it everywhere. Some
+    #: cases turn on a signal no recording holds (``max_confidence``, ``must_cite_source``), so
+    #: their original judgement is carried rather than re-derived; the report may then not stamp
+    #: :attr:`grader_criteria_sha`, and going silent would leave the floor unable to compare a run
+    #: that had in fact just been graded. It names the rule here and the exceptions below.
+    grader_criteria_sha_partial: str = ""
+    #: The ``case|language`` runs whose verdict was carried, not re-derived.
+    grader_blind_runs: tuple[str, ...] = ()
     gate_passed: bool | None = None
     gate_failed_critical: tuple[str, ...] = ()
     # The non-critical counts: a measurement, never compared to a bar (ADR 0021 removed
@@ -268,6 +276,13 @@ def load_agent_or_global_snapshot(agent_id: str | None) -> EvalSnapshot:
     return load_eval_snapshot(None)
 
 
+def _blind_runs(value: object) -> tuple[str, ...]:
+    """The ``case|language`` runs a re-grade could not re-ask, from an untrusted payload."""
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, str))
+
+
 def _score_report(payload: dict[str, object]) -> tuple[int, str]:
     """Rank a report: more results wins, then most recent run_at."""
     results = payload.get("results")
@@ -380,6 +395,8 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
         agent_id=str(best.get("agent_id") or ""),
         eval_set=str(best.get("eval_set") or ""),
         grader_criteria_sha=str(best.get("grader_criteria_sha") or ""),
+        grader_criteria_sha_partial=str(best.get("grader_criteria_sha_partial") or ""),
+        grader_blind_runs=_blind_runs(best.get("grader_criteria_unstampable")),
         gate_passed=bool(gate_passed) if isinstance(gate_passed, bool) else None,
         gate_failed_critical=tuple(str(c) for c in failed_critical)
         if isinstance(failed_critical, list)

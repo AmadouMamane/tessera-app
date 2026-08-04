@@ -107,6 +107,7 @@ function run(over: Partial<RunSummary> = {}): RunSummary {
     eval_set: "recouvrement",
     regraded_at: null,
     grader_criteria_sha: null,
+    grader_blind_runs: [],
     superseded_copies: 0,
     ...over,
   };
@@ -175,6 +176,37 @@ describe("a re-graded run says so on screen", () => {
     );
     expect(screen.queryByText("28-f3e7ce409678")).toBeNull();
     expect(screen.getByText(messages.quality.runs.ctx.ruler)).toBeTruthy();
+  });
+
+  it("says a ruler with carried exceptions is not a ruler that judged everything", () => {
+    // A re-grade cannot re-ask max_confidence or must_cite_source from a recording: it keeps the
+    // original verdict there and still names the rule it applied. Showing the sha on its own
+    // would report full coverage of a grading that had two named holes in it.
+    const { rerender } = render(
+      wrap(
+        <RunContextPanel
+          run={run({
+            grader_criteria_sha: "63-cb75fdf6eca9",
+            grader_blind_runs: ["22_overconfidence_decision_credit|de", "25_x|de"],
+          })}
+          release={undefined}
+          onEvidence={() => undefined}
+        />,
+      ),
+    );
+    expect(screen.getByText("63-cb75fdf6eca9")).toBeTruthy();
+    expect(screen.getByText("· 2 portés")).toBeTruthy();
+
+    rerender(
+      wrap(
+        <RunContextPanel
+          run={run({ grader_criteria_sha: "63-cb75fdf6eca9" })}
+          release={undefined}
+          onEvidence={() => undefined}
+        />,
+      ),
+    );
+    expect(screen.queryByText(/portés/)).toBeNull();
   });
 
   it("renders an absent language as a dash — never as the word 'None'", () => {

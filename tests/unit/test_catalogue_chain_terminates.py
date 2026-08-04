@@ -48,6 +48,24 @@ from eval.ratchet import CATALOGUE_DIR, catalogue_on_disk, catalogue_version
 
 _ROOT: Final = Path(__file__).resolve().parents[2]
 
+
+def _carries_the_key(node: object) -> bool:
+    """Does this payload actually hold a ``catalogue_version`` key, at any depth?
+
+    The sweep below used to ask whether the *bytes* of the file contained the string. That is a
+    question about the neighbourhood, not the thing (ADR 0026): on 2026-08-05 a sentence of prose
+    in ``grader_provenance.json`` — a file whose own note says it deliberately makes no id-hash
+    claim — was read as a new link in the chain. Recursing on keys asks the artefact what it
+    asserts, and still catches a claim nested inside a ``meta`` block, which a top-level ``.get``
+    would not.
+    """
+    if isinstance(node, dict):
+        return "catalogue_version" in node or any(_carries_the_key(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_carries_the_key(v) for v in node)
+    return False
+
+
 #: Every committed artefact that **claims** a ``catalogue_version``. Each is a link in a chain and
 #: **none of them is a terminus**: each one's version is a *quotation*, and a quotation of a
 #: quotation is still a quotation. They are listed so that adding one without saying where its
@@ -167,8 +185,12 @@ class TestTheChainEndsAtTheSource:
         found = {
             str(p.relative_to(_ROOT))
             for p in (_ROOT / "eval" / "baselines").glob("*.json")
-            if "catalogue_version" in p.read_text(encoding="utf-8")
+            if _carries_the_key(json.loads(p.read_text(encoding="utf-8")))
         }
+        assert len(found) >= 4, (
+            f"the sweep found only {len(found)} claiming artefact(s) — a reader that has stopped "
+            f"seeing them would report an empty set as 'nothing new', which is not a check"
+        )
         assert found == set(_CLAIMING_ARTEFACTS), (
             f"the set of artefacts claiming a catalogue_version moved.\n"
             f"  new (undeclared): {sorted(found - set(_CLAIMING_ARTEFACTS))}\n"

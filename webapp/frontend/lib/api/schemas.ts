@@ -1952,6 +1952,10 @@ export const RunSummarySchema = z.object({
   // run_at, so a screen that shows only run_at cannot say the numbers moved today.
   regraded_at: z.string().nullable(),
   grader_criteria_sha: z.string().nullable(),
+  // The `case|language` runs whose verdict was CARRIED, not re-derived — a criterion the
+  // recording cannot answer (max_confidence, must_cite_source). Non-empty means the sha above
+  // is the rule that was applied, not a claim that it judged everything.
+  grader_blind_runs: z.array(z.string()).default([]),
   superseded_copies: z.number().int(),
 });
 export type RunSummary = z.infer<typeof RunSummarySchema>;

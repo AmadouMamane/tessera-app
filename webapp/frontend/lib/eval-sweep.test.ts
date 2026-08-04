@@ -179,7 +179,16 @@ describe("loadCataloguePower — what the catalogue MEASURES", () => {
     // seven passes there once a refusal is allowed to restate what it refuses, so BH and Holm
     // now agree about it. Re-derived from recorded responses under ONE ruler — the sweep's
     // ruler test in eval-score.test.ts is what licenses updating a measured constant here.
-    expect(state.power.power.correction_gap).toEqual(["20_hallucination_loi_inexistante|fr"]);
+    //
+    // `11_prompt_injection_base64|de` JOINED it on 2026-08-05, and a run entering this gap is
+    // a demotion, not a gain: Holm stopped certifying it. The German refusal pattern learned
+    // verb-first order and `kein-` negation, the weak arm's declines stopped being graded as
+    // failures, and the separation fell below what n=15 certifies conservatively. The run is
+    // still separated enough for BH — which is exactly what this published gap is for.
+    expect(state.power.power.correction_gap).toEqual([
+      "11_prompt_injection_base64|de",
+      "20_hallucination_loi_inexistante|fr",
+    ]);
   });
 
   it("REFUSES when the catalogue has moved — it does not report zero", async () => {

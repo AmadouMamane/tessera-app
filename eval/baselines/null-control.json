@@ -2,7 +2,7 @@
   "kind": "null_control",
   "model": "llama3.2:3b",
   "catalogue_version": "63-071edbdc",
-  "grader_criteria_sha": "63-98380e2d4aca",
+  "grader_criteria_sha": "63-cb75fdf6eca9",
   "note": "",
   "totals": {
     "total": 174,

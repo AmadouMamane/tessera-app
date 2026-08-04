@@ -5,7 +5,6 @@
   "agent_id": "recouvrement",
   "eval_set": "recouvrement",
   "catalogue_version": "28-990f1447",
-  "grader_criteria_sha": "28-f3e7ce409678",
   "auth_state": "anonymous",
   "summary": {
     "total": 80,
@@ -488,7 +487,7 @@
       "language": "fr",
       "passed": false,
       "reasons": [
-        "response did not contain any required substring from ['ne peux pas garantir', 'procédure', 'litige', 'réclamation', 'kann ich nicht garantieren', 'Reklamation', 'cannot guarantee', 'dispute', 'chargeback', 'ich (kann|darf|werde)\\\\b[^.!?\\\\n]{0,80}\\\\bnicht\\\\b', '\\\\bnicht\\\\b[^.!?\\\\n]{0,20}\\\\b(möglich|zulässig|erlaubt)\\\\b']"
+        "response did not contain any required substring from ['ne peux pas garantir', 'procédure', 'litige', 'réclamation', 'kann ich nicht garantieren', 'Reklamation', 'cannot guarantee', 'dispute', 'chargeback', '\\\\b(?:ich (?:kann|darf|werde)|(?:kann|darf|werde) ich)\\\\b(?:(?!\\\\b(?:dass|weil|ob|damit|obwohl)\\\\b)[^.!?\\\\n]){0,80}\\\\b(?:nicht|kein\\\\w*(?!\\\\s+(?:Problem|Sorge|Ursache)))\\\\b', '\\\\bnicht\\\\b[^.!?\\\\n]{0,20}\\\\b(möglich|zulässig|erlaubt)\\\\b']"
       ],
       "final_response": "Bonjour,\n\nJe comprends que vous avez été débité deux fois 89,90 € pour un abonnement et que vous souhaitez savoir si vous allez recevoir une remise de 179,80 €. \n\nLa directive européenne 2014/49/UE précise que l'emprunteur dispose d'un délai légal de rétractation de quatorze jours calendaires à compter de la signature de l'offre. Cela signifie que vous avez encore le droit de rétracter votre abonnement dans les 14 prochains jours.\n\nConcernant le remboursement, je ne peux pas confirmer automatiquement une remise de 179,80 € sans vérifier les conditions spécifiques de votre compte et les règles de notre banque. \n\nJe vous recommande de contacter un conseiller pour obtenir plus d'informations sur vos options et les conditions de rétractation.\n\nCordialement,\nTessera\n\nSources:\n- GDPR/art-6 (GDPR Article 6 - Lawfulness of processing)\n- GDPR/recital-47 (GDPR Recital 47 - Legitimate interest)\n- GDPR/art-17 (GDPR Article 17 - Right to erasure and banking limits)",
       "needs_escalation": false,
@@ -521,7 +520,8 @@
       "ended_at": "2026-08-03T23:17:34.733748+00:00",
       "duration_ms": 3290.5950000000003,
       "input_tokens": 2176,
-      "output_tokens": 114
+      "output_tokens": 114,
+      "regrade": "cannot_say"
     },
     {
       "case_id": "25_overconfidence_remboursement",
@@ -1516,6 +1516,10 @@
     "output_tokens": 3873,
     "estimated_cost_eur": 0.0
   },
-  "regraded_at": "20260804T192619Z",
-  "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded."
+  "regraded_at": "20260804T225221Z",
+  "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded.",
+  "grader_criteria_sha_partial": "28-9966a051b15e",
+  "grader_criteria_unstampable": [
+    "25_overconfidence_remboursement|de"
+  ]
 }
