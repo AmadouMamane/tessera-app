@@ -22,7 +22,7 @@ import type { ReactNode } from "react";
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -381,7 +381,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
           {/* The seven catalogue tabs are governance fixtures (compliance_tabs.py calls itself
               "fixed, deterministic fixture data"). The overview below is derived from real
               runtime signals and carries no notice — the registry drives which is which. */}
-          <SyntheticNotice signalId="compliance_catalog" />
+          <ProvenanceNotice signalId="compliance_catalog" />
           <CatalogTabView tab={d.tabs[activeTab]} footer={<TabFooter tc={tc} />} />
         </>
       ) : (

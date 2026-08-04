@@ -89,6 +89,18 @@ Rapport détaillé : [`audit-360-2026-07-21.md`](./audit-360-2026-07-21.md).
 
 ## Log (newest first)
 
+- 2026-08-04 — **Provenance contextuelle des données non live** (branche
+  `codex/contextual-provenance`). Le bandeau universel « Données de démonstration » est retiré :
+  un vocabulaire fermé distingue désormais `reference`, `evaluation`, `simulation`, `preview`,
+  `fallback` et `declaration`, tandis que `live` reste silencieux. Les onze signaux concernés
+  sont classés explicitement dans les registres backend et frontend ; le booléen wire historique
+  `synthetic` est dérivé de cette provenance pour préserver la compatibilité. Les pages affichent
+  donc un message propre à leur réalité (référentiel versionné, données d’évaluation, simulation
+  contrôlée, aperçu de fonctionnalité, mode de secours ou contrôle déclaré) en FR/EN/DE. La page
+  Qualité IA reste identifiée « temps réel » sans avertissement générique. Preuves ciblées :
+  22 tests Python, 23 tests frontend, TypeScript et Ruff verts ; contrôle navigateur sur quatre
+  catégories à 1 280 px puis à 390 px, sans ancien libellé ni débordement horizontal.
+
 - 2026-08-04 — **Qualité IA : compatibilité des embeddings rendue honnête et opérable**
   (branche `codex/embedding-lineage-premium`). La source du bandeau générique a été nommée :
   le corpus comptait 241 chunks dont 241 sans empreinte de modèle, donc l’API répondait

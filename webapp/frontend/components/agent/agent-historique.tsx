@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { agentPath } from "@/lib/agent-context";
@@ -273,7 +273,7 @@ export function AgentHistorique() {
       <LiveConversations data={data} locale={locale} />
 
       <AgentSubtabs tabs={subtabs} active={active} onSelect={setSubtab} />
-      <SyntheticNotice signalId="agent_historique" compact />
+      <ProvenanceNotice signalId="agent_historique" compact />
 
       {activeIdx === 0 ? (
         <>

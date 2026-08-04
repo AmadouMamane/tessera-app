@@ -20,7 +20,7 @@ import type { ReactNode } from "react";
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
 import { Badge } from "@/components/ui/badge";
@@ -967,7 +967,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           are not, and the panel read "Inversion embedding · Critique · 100 %" as if measured.
           The notice renders from the capability registry, which said `synthetic: false` here
           while `capabilities.py` said true; a test now refuses that disagreement. */}
-      <SyntheticNotice signalId="embedding_inversion" compact />
+      <ProvenanceNotice signalId="embedding_inversion" compact />
       {inversion.data?.available === false || inversion.isLoading ? (
         <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
           {ts("panel.computing")}
@@ -1455,7 +1455,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               info={<SecInfo k="failures" title={ts("panel.failures")} />}
             >
               {/* One of the six slices (`inversion`) counts the demonstration corpus. */}
-              <SyntheticNotice signalId="embedding_inversion" compact />
+              <ProvenanceNotice signalId="embedding_inversion" compact />
               {failureSlices.length === 0 ? (
                 <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
                   {ts("panel.noFailures")}
@@ -1648,7 +1648,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.failures")}
                   info={<SecInfo k="failures" title={ts("panel.failures")} />}
                 >
-                  <SyntheticNotice signalId="embedding_inversion" compact />
+                  <ProvenanceNotice signalId="embedding_inversion" compact />
                   {failureSlices.length === 0 ? (
                     <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
                       {ts("panel.noFailures")}
@@ -1768,7 +1768,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   info={<SecInfo k="domainRisk" title={ts("panel.domainRisk")} />}
                 >
                   {/* `privacy` and `memory` both read the demonstration corpus. */}
-                  <SyntheticNotice signalId="embedding_inversion" compact />
+                  <ProvenanceNotice signalId="embedding_inversion" compact />
                   <div className="flex flex-col gap-1.5">
                     {domainRisks.map((d) => (
                       <RiskBar key={d.key} label={ts(`domain.${d.key}`)} value={d.value} />

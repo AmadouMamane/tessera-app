@@ -26,9 +26,9 @@ import { useState } from "react";
 
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -231,7 +231,7 @@ export function CurationOverview() {
             label={t("zone.governance")}
             info={<ExplainInfo k="zone.governance" title={t("zone.governance")} />}
           >
-            <SyntheticNotice signalId="curation" compact />
+            <ProvenanceNotice signalId="curation" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:col-span-8 2xl:grid-cols-5">
                 {data.actions.map((a) => (
@@ -252,7 +252,7 @@ export function CurationOverview() {
             label={t("zone.trends")}
             info={<ExplainInfo k="zone.trends" title={t("zone.trends")} />}
           >
-            <SyntheticNotice signalId="curation" compact />
+            <ProvenanceNotice signalId="curation" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <BacklogTrend t={t} data={data} className="xl:col-span-4" />
               <BalanceChart t={t} data={data} className="xl:col-span-4" />
@@ -725,7 +725,7 @@ function WhyTours({ t, data, className }: { t: T; data: Data; className?: string
       className={className}
       action={<ViewAll label={t("viewAll.reasons")} />}
     >
-      <SyntheticNotice signalId="curation" compact />
+      <ProvenanceNotice signalId="curation" compact />
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.72rem]">
           <thead>
@@ -777,7 +777,7 @@ function CoverageHeatmap({ t, data, className }: { t: T; data: Data; className?:
       info={<ExplainInfo k="panel.coverage" title={t("panel.coverage")} />}
       className={className}
     >
-      <SyntheticNotice signalId="curation" compact />
+      <ProvenanceNotice signalId="curation" compact />
       <div className="overflow-x-auto">
         <table className="w-full border-separate border-spacing-1 text-[0.6rem]">
           <thead>
@@ -823,7 +823,7 @@ function QualitySignals({ t, data, className }: { t: T; data: Data; className?: 
       className={className}
       action={<ViewAll label={t("viewAll.signals")} href="/surveiller/qualite-ia" />}
     >
-      <SyntheticNotice signalId="curation" compact />
+      <ProvenanceNotice signalId="curation" compact />
       <ul className="flex flex-col gap-2">
         {data.quality_signals.map((s) => (
           <li key={s.key} className="flex flex-col gap-1 text-[0.66rem]">
@@ -866,7 +866,7 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
       className={className}
       action={<ViewAll label={t("viewAll.datasets")} href="/surveiller/qualite-ia" />}
     >
-      <SyntheticNotice signalId="curation" compact />
+      <ProvenanceNotice signalId="curation" compact />
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.68rem]">
           <thead>
@@ -901,7 +901,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
   const tc = useTranslations("common");
   return (
     <aside className="flex min-w-0 flex-col gap-3">
-      <SyntheticNotice signalId="curation" compact />
+      <ProvenanceNotice signalId="curation" compact />
       <Panel
         title={t("panel.workflow")}
         info={<ExplainInfo k="panel.workflow" title={t("panel.workflow")} />}

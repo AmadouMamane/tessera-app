@@ -13,6 +13,7 @@ import pytest
 from tessera.observability.spine.adapters import SpineUnavailableError
 from tessera.observability.spine.capabilities import (
     CAPABILITIES,
+    SignalProvenance,
     capability_for,
     snapshot_signal_ids,
 )
@@ -21,6 +22,17 @@ from tessera.observability.spine.scope import Dimension, Scope
 
 
 class TestCapabilities:
+    def test_non_live_sources_have_precise_provenance(self) -> None:
+        expected = {
+            "compliance_catalog": SignalProvenance.REFERENCE,
+            "agent_historique": SignalProvenance.EVALUATION,
+            "embedding_inversion": SignalProvenance.SIMULATION,
+            "policy_versioning": SignalProvenance.PREVIEW,
+            "assistant": SignalProvenance.FALLBACK,
+            "disclosure": SignalProvenance.DECLARATION,
+        }
+        assert {signal: capability_for(signal).provenance for signal in expected} == expected
+
     def test_fixtures_are_flagged_synthetic(self) -> None:
         # policies / replay_shadow / automations graduated to real cores; their
         # absent subsystems keep dedicated synthetic flags.
@@ -30,6 +42,10 @@ class TestCapabilities:
             assert capability_for(signal_id).synthetic is False
         for signal_id in ("policy_versioning", "shadow_traffic", "automation_workflow"):
             assert capability_for(signal_id).synthetic is True
+
+    def test_synthetic_is_derived_from_provenance(self) -> None:
+        for capability in CAPABILITIES.values():
+            assert capability.synthetic is (capability.provenance is not SignalProvenance.LIVE)
 
     def test_fixed_corpus_probes_are_org_wide(self) -> None:
         # A fixed-corpus probe of the shared policy declares no AGENT dimension → org-wide.

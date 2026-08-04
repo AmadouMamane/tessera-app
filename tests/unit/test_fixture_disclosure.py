@@ -4,7 +4,7 @@ Audit 2026-07-10, P0 ``fixture-as-real``:
 
 - ``compliance_tabs.py`` declares itself "fixed, deterministic fixture data" for seven
   governance catalogues, but ``signal-registry.ts`` never registered ``compliance`` and
-  the dashboard never imported ``SyntheticNotice`` — while ``incidents-overview.tsx``
+  the dashboard never rendered a provenance notice — while ``incidents-overview.tsx``
   renders it five times. The right pattern existed; it was not applied to the most
   regulatorily sensitive surface in the product.
 - ``observability.py:1087`` serves "Historique de session agent" — a KPI strip, a trend
@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tessera.observability.spine.capabilities import capability_for
+from tessera.observability.spine.capabilities import SignalProvenance, capability_for
 
 if TYPE_CHECKING:
     import pytest
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 def test_compliance_catalogue_tabs_are_declared_synthetic() -> None:
     """The seven governance catalogues are fixtures and must be declared as such."""
     assert capability_for("compliance_catalog").synthetic is True
+    assert capability_for("compliance_catalog").provenance is SignalProvenance.REFERENCE
 
 
 def test_derived_compliance_posture_is_not_flagged_as_a_fixture() -> None:
@@ -48,6 +49,7 @@ def test_derived_compliance_posture_is_not_flagged_as_a_fixture() -> None:
 def test_agent_session_history_is_declared_synthetic() -> None:
     """The eval-session half of the history page is a fixture shaped like telemetry."""
     assert capability_for("agent_historique").synthetic is True
+    assert capability_for("agent_historique").provenance is SignalProvenance.EVALUATION
 
 
 async def test_the_history_route_stamps_its_fixture_half(monkeypatch: pytest.MonkeyPatch) -> None:

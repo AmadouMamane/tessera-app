@@ -8,7 +8,7 @@ ledger) behind an adapter seam; later phases swap the adapter to the live spine
 
 The point of the package is honesty made structural: a signal *declares* the dimensions
 it supports (:mod:`capabilities`), the read layer *reports* what it honoured vs ignored,
-and the UI badges org-wide / synthetic from that report — so the illegal state
+and the UI derives org-wide / provenance disclosures from that contract — so the illegal state
 "a filter is shown but silently ignored" is unrepresentable.
 """
 
@@ -17,6 +17,7 @@ from __future__ import annotations
 from tessera.observability.spine.capabilities import (
     CAPABILITIES,
     SignalCapability,
+    SignalProvenance,
     capability_for,
     snapshot_signal_ids,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "Scope",
     "ScopeReport",
     "SignalCapability",
+    "SignalProvenance",
     "SignalRegistry",
     "SignalResult",
     "SignalSpec",

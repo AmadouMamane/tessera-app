@@ -9383,9 +9383,31 @@
     "next": "Page suivante",
     "perPage": "Lignes par page"
   },
-  "synthetic": {
-    "title": "Données de démonstration",
-    "detail": "jeu de référence déterministe, non issu du trafic réel"
+  "dataProvenance": {
+    "reference": {
+      "title": "Référentiel versionné",
+      "detail": "catalogue déterministe, non calculé à partir du trafic"
+    },
+    "evaluation": {
+      "title": "Données d’évaluation",
+      "detail": "résultats issus d’un jeu de test contrôlé"
+    },
+    "simulation": {
+      "title": "Simulation contrôlée",
+      "detail": "scénario déterministe, distinct de l’activité réelle"
+    },
+    "preview": {
+      "title": "Aperçu de fonctionnalité",
+      "detail": "parcours illustratif, aucune opération réelle exécutée"
+    },
+    "fallback": {
+      "title": "Mode de secours",
+      "detail": "proposition locale, non générée par le service IA en direct"
+    },
+    "declaration": {
+      "title": "Contrôle déclaré",
+      "detail": "configuration statique, non mesurée dans le trafic"
+    }
   },
   "capability": {
     "summarize_case": "Résumé du dossier",

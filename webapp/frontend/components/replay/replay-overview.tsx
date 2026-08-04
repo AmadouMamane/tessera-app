@@ -23,8 +23,8 @@ import { useState } from "react";
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { ReplayCassettes } from "@/components/replay/replay-cassette";
 import { Button } from "@/components/ui/button";
@@ -131,7 +131,7 @@ export function ReplayOverview() {
         ) : null}
         {activeTab === "shadow" ? (
           <div className="flex min-w-0 flex-col gap-2">
-            <SyntheticNotice signalId="shadow_traffic" compact />
+            <ProvenanceNotice signalId="shadow_traffic" compact />
             <Panel title={t("tabs.shadow")}>
               <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">
                 {t("tabx.shadowExplain")}
@@ -183,7 +183,7 @@ export function ReplayOverview() {
         ) : null}
         {activeTab === "exports" ? (
           <div className="flex min-w-0 flex-col gap-2">
-            <SyntheticNotice signalId="shadow_traffic" compact />
+            <ProvenanceNotice signalId="shadow_traffic" compact />
             <ProofsExports t={t} data={data} />
           </div>
         ) : null}
@@ -747,7 +747,7 @@ function ProofsExports({
       className={className}
       action={<ViewAll label={t("exportBtn.all")} onClick={onViewAll} />}
     >
-      <SyntheticNotice signalId="shadow_traffic" compact />
+      <ProvenanceNotice signalId="shadow_traffic" compact />
       <dl className="flex flex-col gap-1.5 text-[0.7rem]">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-center justify-between gap-2">

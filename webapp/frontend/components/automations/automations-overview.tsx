@@ -21,9 +21,9 @@ import type { ReactNode } from "react";
 import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -858,7 +858,7 @@ function Savings({ t, data, className }: { t: T; data: Data; className?: string 
       className={className}
       info={<KpiInfo k="zone.savings" title={t("zone.savings").replace(/^K · /, "")} />}
     >
-      <SyntheticNotice signalId="automation_workflow" compact />
+      <ProvenanceNotice signalId="automation_workflow" compact />
       <dl className="flex flex-col gap-2">
         {data.savings.map((s) => (
           <div key={s.key} className="flex items-center justify-between gap-2">

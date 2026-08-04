@@ -19,8 +19,8 @@ import { useState } from "react";
 
 import { downloadBlob } from "@/components/agent/agent-subtab-shared";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
@@ -181,7 +181,7 @@ export function ProofsOverview() {
         </Link>
       }
     >
-      <SyntheticNotice signalId="evidence_export" compact />
+      <ProvenanceNotice signalId="evidence_export" compact />
       <Exporters t={t} data={data} />
     </Zone>
   );
@@ -207,7 +207,7 @@ export function ProofsOverview() {
       label={t("zone.controlCases")}
       info={<ExplainInfo k="zone.controlCases" title={t("zone.controlCases")} />}
     >
-      <SyntheticNotice signalId="evidence_export" compact />
+      <ProvenanceNotice signalId="evidence_export" compact />
       <ControlCases t={t} data={data} />
     </Zone>
   );
@@ -216,7 +216,7 @@ export function ProofsOverview() {
       label={t("zone.retention")}
       info={<ExplainInfo k="zone.retention" title={t("zone.retention")} />}
     >
-      <SyntheticNotice signalId="evidence_export" compact />
+      <ProvenanceNotice signalId="evidence_export" compact />
       <Retention t={t} data={data} />
     </Zone>
   );
@@ -929,7 +929,7 @@ function ProofsRail({
       </Panel>
 
       {/* The journal / queue below stay demonstration (no external export). */}
-      <SyntheticNotice signalId="evidence_export" compact />
+      <ProvenanceNotice signalId="evidence_export" compact />
 
       <Panel
         title={t("zone.journal")}

@@ -1,10 +1,10 @@
 """Per-signal capability declarations — the single source of honesty truth (ADR 0015).
 
 Each signal declares which :class:`~tessera.observability.spine.scope.Dimension` s it can
-be sliced by, whether it is a deterministic fixture (``synthetic``), and its migration
-``source`` (``local`` / ``spine`` / ``shadow``). The read layer intersects the request
-``Scope`` with these dimensions and *reports* what it honoured, so the UI badges
-"org-wide" / "synthetic" from data — never a hand-placed note.
+be sliced by, the provenance of any non-live material, and its migration ``source``
+(``local`` / ``spine`` / ``shadow``). The legacy ``synthetic`` verdict is derived from
+provenance, so a reference catalogue, a simulation and a fallback can no longer collapse
+into one operator-facing sentence while the read layer keeps its binary compatibility flag.
 
 A signal that **omits** ``AGENT`` is org-wide *by construction*: a fixed-corpus probe of
 the shared policy (``refusal``, ``firewall``) has no per-agent substrate to slice, and a
@@ -15,7 +15,8 @@ the UI then shows "org-wide" automatically and truthfully.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import StrEnum
 
 from tessera.observability.spine.scope import Dimension
 
@@ -26,6 +27,7 @@ __all__ = [
     "SOURCE_SHADOW",
     "SOURCE_SPINE",
     "SignalCapability",
+    "SignalProvenance",
     "capability_for",
     "snapshot_signal_ids",
 ]
@@ -43,13 +45,26 @@ SOURCE_SPINE = "spine"
 SOURCE_SHADOW = "shadow"
 
 
+class SignalProvenance(StrEnum):
+    """Closed provenance vocabulary for material that is not live telemetry."""
+
+    LIVE = "live"
+    REFERENCE = "reference"
+    EVALUATION = "evaluation"
+    SIMULATION = "simulation"
+    PREVIEW = "preview"
+    FALLBACK = "fallback"
+    DECLARATION = "declaration"
+
+
 @dataclass(frozen=True, slots=True)
 class SignalCapability:
     """What a signal can be sliced by, and how honestly to present it."""
 
     id: str
     dimensions: frozenset[Dimension]
-    synthetic: bool = False
+    provenance: SignalProvenance = SignalProvenance.LIVE
+    synthetic: bool = field(init=False)
     source: str = SOURCE_JSONL
     # Whether the batched snapshot hot path computes this signal (store-derived,
     # scope-varying). Org-wide fixed-corpus probes are declared here for their badges
@@ -61,6 +76,10 @@ class SignalCapability:
     # flipped, never a stale hardcoded local alias. Fact-less signals keep the static field.
     fact: str | None = None
 
+    def __post_init__(self) -> None:
+        """Materialise the legacy wire flag from the richer provenance contract."""
+        object.__setattr__(self, "synthetic", self.provenance is not SignalProvenance.LIVE)
+
     @property
     def org_wide(self) -> bool:
         """True when the signal cannot be sliced by agent (org-wide by construction)."""
@@ -71,7 +90,7 @@ def _cap(
     signal_id: str,
     dims: set[Dimension] | frozenset[Dimension] = frozenset(),
     *,
-    synthetic: bool = False,
+    provenance: SignalProvenance = SignalProvenance.LIVE,
     source: str = SOURCE_JSONL,
     in_snapshot: bool = False,
     fact: str | None = None,
@@ -79,7 +98,7 @@ def _cap(
     return SignalCapability(
         id=signal_id,
         dimensions=frozenset(dims),
-        synthetic=synthetic,
+        provenance=provenance,
         source=source,
         in_snapshot=in_snapshot,
         fact=fact,
@@ -177,22 +196,22 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # substrate would be one more thing for the two registries to disagree about.
     # Deterministic fixtures — no real per-agent substrate. Flagged synthetic so they can
     # never be silently ventilated (project rule: never call a deterministic fixture real).
-    _cap("incidents", frozenset(), synthetic=True),
-    _cap("curation", frozenset(), synthetic=True),
+    _cap("incidents", frozenset(), provenance=SignalProvenance.SIMULATION),
+    _cap("curation", frozenset(), provenance=SignalProvenance.SIMULATION),
     # Automations: the rule/execution core is REAL (code-defined rules evaluated
     # against the owned stores; durable enabled flags; a journal of evaluations
     # actually executed via POST /observability/automations/evaluate)…
     _cap("automations", frozenset()),
     # …while the approval queue + savings/ROI tallies are a ticketing subsystem
     # this build does not implement — those zones stay flagged.
-    _cap("automation_workflow", frozenset(), synthetic=True),
+    _cap("automation_workflow", frozenset(), provenance=SignalProvenance.PREVIEW),
     # Replay & shadow: the replay core is REAL (captured bundles, the durable
     # replay_runs journal written by POST /observability/replay, and run-N vs
     # run-N-1 eval comparisons with exact newly-failing cases)…
     _cap("replay_shadow", frozenset()),
     # …while fleet-wide shadow-traffic mirroring + evidence-export tallies are a
     # subsystem this build does not implement — those zones stay flagged.
-    _cap("shadow_traffic", frozenset(), synthetic=True),
+    _cap("shadow_traffic", frozenset(), provenance=SignalProvenance.PREVIEW),
     # Policies & guardrails: the governance core is REAL (active policies = the compiled
     # guard/policy.yaml keyed by the emitted policy_rule ids; posture KPIs + runtime gauges
     # = ledger decisions; version rail = the real policy version + mtime; chain = live).
@@ -200,12 +219,12 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # …but the impact simulator and the multi-actor approval workflow describe a
     # policy-versioning subsystem this build does not implement (policy.yaml is a single
     # Git-managed file). Those zones stay a flagged demonstration fixture.
-    _cap("policy_versioning", frozenset(), synthetic=True),
+    _cap("policy_versioning", frozenset(), provenance=SignalProvenance.PREVIEW),
     # The Proofs page's export half — evidence-pack assembly/signing/export, exporters &
     # destinations, control-case linkage, retention obligations, export journal — is a SIEM
     # subsystem this build does not implement. Flagged synthetic so those zones carry the
     # demonstration notice; the page's artifact counts and audit-chain integrity are REAL.
-    _cap("evidence_export", frozenset(), synthetic=True),
+    _cap("evidence_export", frozenset(), provenance=SignalProvenance.PREVIEW),
     # Conformité, split in two exactly like policies / policy_versioning above.
     # `compliance.py` derives the overview posture from REAL runtime signals (AI-Act
     # obligations, schema conformance, citation validity, PII screening, refusal calibration,
@@ -217,17 +236,17 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # incidents & exceptions, purge & retention, evidence & attestations) which the module
     # itself calls "fixed, deterministic fixture data". Flagged so the most regulatorily
     # sensitive surface in the product cannot read as measured fact.
-    _cap("compliance_catalog", frozenset(), synthetic=True),
+    _cap("compliance_catalog", frozenset(), provenance=SignalProvenance.REFERENCE),
     # Agent Session History: the eval-session blocks (KPI strip, trend, sessions-by-agent,
     # score distribution, success gauge, watchlist) are a deterministic fixture shaped like
     # telemetry. Only `live_conversations` — the operator's real transcript turns — is live,
     # and it carries its own honest block. Flagged so the fixture half cannot read as live.
-    _cap("agent_historique", frozenset(), synthetic=True),
+    _cap("agent_historique", frozenset(), provenance=SignalProvenance.EVALUATION),
     # The Assistant page renders a canned, localized *sample* conversation (grounded Q&A with
     # sources/guardrails/quality) — a legitimate UX illustration, but not real traffic. This
     # build ships without a per-conversation grounded-session store, so it is flagged synthetic
     # and the page carries the demonstration notice rather than reading as a live exchange.
-    _cap("assistant", frozenset(), synthetic=True),
+    _cap("assistant", frozenset(), provenance=SignalProvenance.FALLBACK),
     # Metamorphic wiring proof (Phase 2, docs/design/signal-wiring-map.md +
     # signal-wiring-reconciliation.md) found these three routes feed their
     # aggregator a frozen or hardcoded value — never a runtime source — so no
@@ -240,13 +259,15 @@ _DECLARATIONS: tuple[SignalCapability, ...] = (
     # The route reads corpus fingerprints persisted at ingestion and compares them with the
     # active query embedder. It no longer aliases corpus=query, so the measurement is real.
     _cap("embedding_skew", frozenset()),
-    _cap("disclosure", frozenset(), synthetic=True),  # `enabled=True` is a route literal
+    _cap(
+        "disclosure", frozenset(), provenance=SignalProvenance.DECLARATION
+    ),  # `enabled=True` is a route literal
     # embedding_inversion: route always calls assess_inversion_risk on hardcoded
     # DEMO_MEMORIES/DEMO_PROBES, cached once per process — never the real memory
     # store. Was previously declared non-synthetic below the org-wide fixed-corpus
     # probes; moved and flipped here after Phase 2 proved it dead against a real
     # memory-store perturbation.
-    _cap("embedding_inversion", frozenset(), synthetic=True),
+    _cap("embedding_inversion", frozenset(), provenance=SignalProvenance.SIMULATION),
 )
 
 CAPABILITIES: dict[str, SignalCapability] = {c.id: c for c in _DECLARATIONS}

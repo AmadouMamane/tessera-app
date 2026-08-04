@@ -29,9 +29,9 @@ import { AgirRail, useAsOf } from "@/components/agir/agir-rail";
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { CatalogTabView } from "@/components/cockpit/catalog-tab-view";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { StretchChart } from "@/components/cockpit/stretch-chart";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
@@ -183,7 +183,7 @@ export function IncidentsOverview() {
 
       {activeTab !== "overview" && data.tabs?.[activeTab] ? (
         <div className="flex min-w-0 flex-col gap-2">
-          <SyntheticNotice signalId="incidents" compact />
+          <ProvenanceNotice signalId="incidents" compact />
           <CatalogTabView tab={data.tabs[activeTab]} footer={<Footer t={t} data={data} />} />
         </div>
       ) : (
@@ -221,7 +221,7 @@ export function IncidentsOverview() {
 
           {/* C · Exécution & automation */}
           <Zone label={t("zone.execution")}>
-            <SyntheticNotice signalId="incidents" compact />
+            <ProvenanceNotice signalId="incidents" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <RunningPlaybook t={t} data={data} className="xl:col-span-4" />
               <ResponseJournal
@@ -237,7 +237,7 @@ export function IncidentsOverview() {
 
           {/* D · Impact & performance */}
           <Zone label={t("zone.impact")}>
-            <SyntheticNotice signalId="incidents" compact />
+            <ProvenanceNotice signalId="incidents" compact />
             <div className="grid gap-3 xl:grid-cols-12">
               <MttrChart
                 t={t}
@@ -633,7 +633,7 @@ function Catalog({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: () => v
       title={t("triage.catalog")}
       action={<ViewAll label={t("triage.viewCatalog")} onClick={onViewAll} />}
     >
-      <SyntheticNotice signalId="incidents" compact />
+      <ProvenanceNotice signalId="incidents" compact />
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
         {data.playbook_catalog.map((pb) => (
           <div

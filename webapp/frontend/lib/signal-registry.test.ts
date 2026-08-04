@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { capabilityFor, isOrgWide, isSynthetic, signalSupports } from "./signal-registry";
+import {
+  capabilityFor,
+  isOrgWide,
+  isSynthetic,
+  provenanceFor,
+  signalSupports,
+} from "./signal-registry";
 
 describe("isOrgWide", () => {
   it("is true for fixed-corpus probes and the crypto invariant", () => {
@@ -67,7 +73,7 @@ describe("isSynthetic", () => {
 
   // Audit 2026-07-10, P0 `fixture-as-real`: compliance_tabs.py calls itself "fixed,
   // deterministic fixture data" for seven governance catalogues, but `compliance` was not
-  // declared here at all and compliance-dashboard.tsx never imported SyntheticNotice —
+  // declared here at all and compliance-dashboard.tsx never rendered a provenance notice —
   // on the most regulatorily sensitive surface in the product.
   it("flags the Conformité governance catalogues", () => {
     expect(isSynthetic("compliance_catalog")).toBe(true);
@@ -90,6 +96,22 @@ describe("isSynthetic", () => {
   it("flags deterministic assistant and disclosure fallbacks", () => {
     expect(isSynthetic("assistant")).toBe(true);
     expect(isSynthetic("disclosure")).toBe(true);
+  });
+});
+
+describe("provenanceFor", () => {
+  it("distinguishes every non-live source instead of flattening them into demo data", () => {
+    expect(provenanceFor("compliance_catalog")).toBe("reference");
+    expect(provenanceFor("agent_historique")).toBe("evaluation");
+    expect(provenanceFor("embedding_inversion")).toBe("simulation");
+    expect(provenanceFor("policy_versioning")).toBe("preview");
+    expect(provenanceFor("assistant")).toBe("fallback");
+    expect(provenanceFor("disclosure")).toBe("declaration");
+  });
+
+  it("returns live for measured signals and undefined for unknown ids", () => {
+    expect(provenanceFor("embedding_skew")).toBe("live");
+    expect(provenanceFor("does-not-exist")).toBeUndefined();
   });
 });
 

@@ -28,7 +28,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 
 import { TemporalMonitoringBreakdown } from "@/components/agent/temporal-monitoring-breakdown";
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { MetricSparkline, NoHistoryLabel } from "@/components/overview/metric-sparkline";
 import { PageEvidenceActions } from "@/components/overview/page-evidence-actions";
 import { fmtStamp, useTemporalState } from "@/components/overview/temporal-rail";
@@ -1879,7 +1879,7 @@ function ReleaseCard({
             {/* The disclosure leg of the AI-Act composite is still a code literal, not a
                 runtime witness. Keep that limitation attached to the compliance gate only. */}
             {g.key === "compliance" && aiActRate != null ? (
-              <SyntheticNotice signalId="disclosure" compact />
+              <ProvenanceNotice signalId="disclosure" compact />
             ) : null}
           </div>
         ))}

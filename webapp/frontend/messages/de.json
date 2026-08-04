@@ -9383,9 +9383,31 @@
     "next": "Nächste Seite",
     "perPage": "Zeilen pro Seite"
   },
-  "synthetic": {
-    "title": "Demonstrationsdaten",
-    "detail": "deterministischer Referenzdatensatz, nicht aus echtem Verkehr"
+  "dataProvenance": {
+    "reference": {
+      "title": "Versionierte Referenz",
+      "detail": "deterministischer Katalog, nicht aus Verkehrsdaten berechnet"
+    },
+    "evaluation": {
+      "title": "Evaluationsdaten",
+      "detail": "Ergebnisse aus einem kontrollierten Testdatensatz"
+    },
+    "simulation": {
+      "title": "Kontrollierte Simulation",
+      "detail": "deterministisches Szenario, getrennt von realer Aktivität"
+    },
+    "preview": {
+      "title": "Funktionsvorschau",
+      "detail": "illustrativer Ablauf, keine reale Aktion ausgeführt"
+    },
+    "fallback": {
+      "title": "Fallback-Modus",
+      "detail": "lokaler Vorschlag, nicht vom Live-KI-Dienst erzeugt"
+    },
+    "declaration": {
+      "title": "Deklarierte Kontrolle",
+      "detail": "statische Konfiguration, nicht im Verkehr gemessen"
+    }
   },
   "capability": {
     "summarize_case": "Fallzusammenfassung",

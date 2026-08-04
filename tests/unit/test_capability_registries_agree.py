@@ -1,15 +1,16 @@
 """CLASS E — the two capability registries are one declaration, asserted.
 
 `spine/capabilities.py` and `webapp/frontend/lib/signal-registry.ts` describe the same thing:
-which dimensions a signal can be sliced by, and whether it is a deterministic fixture. Both
+which dimensions a signal can be sliced by, and the provenance of non-live material. Both
 files say, in their own docstring, that they mirror the other. **Neither checked.**
 
 They had drifted three ways by 2026-08-01, and one of the three was not cosmetic:
 
-* `embedding_inversion` — backend `synthetic=True`, frontend `synthetic: false`. The probe runs
+* `embedding_inversion` — backend fixture, frontend live. The probe runs
   over `DEMO_MEMORIES`, five invented sentences in `embedding_inversion.py`, "so the dashboard
-  always shows a concrete number". The maths is real; the memories are not. `<SyntheticNotice>`
-  renders from the FRONTEND flag, so `securite-privacy` showed "Inversion embedding · Critique ·
+  always shows a concrete number". The maths is real; the memories are not. The provenance
+  notice renders from the FRONTEND declaration, so `securite-privacy` showed
+  "Inversion embedding · Critique ·
   100 %" with no notice at all, and fed it into the failure distribution beside real
   measurements. Two registries, one truth, and the UI read the wrong one.
 * `disclosure`, `embedding_skew` — declared by the backend, absent from the frontend. An absent
@@ -37,8 +38,9 @@ _REGISTRY_TS = (
     Path(__file__).resolve().parents[2] / "webapp" / "frontend" / "lib" / "signal-registry.ts"
 )
 
-#: `  signal_id: cap(DIMS, { synthetic: true }),` — the whole declaration on one line.
+#: `  signal_id: cap(DIMS, { provenance: "simulation" }),` — one declaration per line.
 _ENTRY = re.compile(r"^ {2}([a-z_][a-z0-9_]*):\s*cap\(([^)]*)\)", re.M)
+_PROVENANCE = re.compile(r'provenance:\s*"([a-z]+)"')
 
 #: Anti-vacuity: the parse must find a registry, not an empty match set. ~50 entries stand
 #: today; a floor well under it catches a regex that stopped matching without going red every
@@ -46,8 +48,8 @@ _ENTRY = re.compile(r"^ {2}([a-z_][a-z0-9_]*):\s*cap\(([^)]*)\)", re.M)
 _MIN_PARSED = 40
 
 
-def _frontend_registry() -> dict[str, bool]:
-    """Signal id → `synthetic`, parsed from the TypeScript source.
+def _frontend_registry() -> dict[str, str]:
+    """Signal id → provenance, parsed from the TypeScript source.
 
     Parsed rather than executed. A Node round-trip would be a second toolchain in a Python
     test, and the declaration is a flat object literal — the one shape where a regex is honest.
@@ -55,7 +57,14 @@ def _frontend_registry() -> dict[str, bool]:
     """
     source = _REGISTRY_TS.read_text(encoding="utf-8")
     body = source.split("export const SIGNAL_REGISTRY", 1)[1].split("\n};", 1)[0]
-    return {m.group(1): "synthetic: true" in m.group(2) for m in _ENTRY.finditer(body)}
+    return {
+        match.group(1): (
+            provenance.group(1)
+            if (provenance := _PROVENANCE.search(match.group(2))) is not None
+            else "live"
+        )
+        for match in _ENTRY.finditer(body)
+    }
 
 
 def test_the_parse_sees_a_registry() -> None:
@@ -93,26 +102,24 @@ def test_both_registries_declare_the_same_signals() -> None:
     )
 
 
-def test_both_registries_agree_on_which_signals_are_fixtures() -> None:
-    """The flag the OPERATOR sees must equal the flag the backend declares.
+def test_both_registries_agree_on_provenance() -> None:
+    """The explanation the operator sees must equal the backend provenance.
 
-    `<SyntheticNotice>` renders from the frontend flag alone. A disagreement here is not an
-    inconsistency between two files — it is a fixture presented as a measurement.
+    `<ProvenanceNotice>` renders from the frontend category alone. A disagreement here is not
+    an inconsistency between two files — it is a source presented as something it is not.
     """
     front = _frontend_registry()
     disagree = {
-        signal: (cap.synthetic, front[signal])
+        signal: (cap.provenance.value, front[signal])
         for signal, cap in CAPABILITIES.items()
-        if signal in front and cap.synthetic != front[signal]
+        if signal in front and cap.provenance.value != front[signal]
     }
 
     assert disagree == {}, (
-        "these signals disagree on `synthetic` (backend, frontend):\n  "
+        "these signals disagree on provenance (backend, frontend):\n  "
         + "\n  ".join(f"{s}: back={b}, front={f}" for s, (b, f) in sorted(disagree.items()))
-        + "\n\nThe UI renders its notice from the FRONTEND flag. Where the backend says fixture "
-        "and\nthe frontend says real, a deterministic demo is on screen labelled as a "
-        "measurement —\nwhich is exactly what `embedding_inversion` did, at 100 % Critique, "
-        "inside the\nfailure distribution."
+        + "\n\nThe UI renders its notice from the FRONTEND provenance. A mismatch can call a "
+        "fallback a simulation, a reference live telemetry, or hide the notice entirely."
     )
 
 
@@ -122,13 +129,16 @@ def test_the_witness_has_teeth() -> None:
     The parse is a regex over TypeScript, so it can go subtly wrong in exactly the way a
     silent mirror does. These assertions are the control.
     """
+    source = "  real_one: cap(ORG),\n" '  fallback_one: cap(ORG, { provenance: "fallback" }),\n'
     parsed = {
-        m.group(1): "synthetic: true" in m.group(2)
-        for m in _ENTRY.finditer(
-            "  real_one: cap(ORG),\n  fixture_one: cap(ORG, { synthetic: true }),\n"
+        match.group(1): (
+            provenance.group(1)
+            if (provenance := _PROVENANCE.search(match.group(2))) is not None
+            else "live"
         )
+        for match in _ENTRY.finditer(source)
     }
-    assert parsed == {"real_one": False, "fixture_one": True}
+    assert parsed == {"real_one": "live", "fallback_one": "fallback"}
 
     # …and a nested/indented line is NOT an entry: only two-space keys at the object's top
     # level declare a signal, so a comment or a nested literal cannot invent one.

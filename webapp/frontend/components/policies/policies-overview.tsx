@@ -17,8 +17,8 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ProvenanceNotice } from "@/components/cockpit/provenance-notice";
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
-import { SyntheticNotice } from "@/components/cockpit/synthetic-notice";
 import { MetricSparkline } from "@/components/overview/metric-sparkline";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
@@ -134,13 +134,13 @@ export function PoliciesOverview() {
         ) : null}
         {activeTab === "impactSimulator" ? (
           <div className="flex min-w-0 flex-col gap-2">
-            <SyntheticNotice signalId="policy_versioning" compact />
+            <ProvenanceNotice signalId="policy_versioning" compact />
             <Impact t={t} data={data} />
           </div>
         ) : null}
         {activeTab === "approvals" ? (
           <div className="flex min-w-0 flex-col gap-2">
-            <SyntheticNotice signalId="policy_versioning" compact />
+            <ProvenanceNotice signalId="policy_versioning" compact />
             <PoliciesRail t={t} data={data} full />
           </div>
         ) : null}
@@ -512,7 +512,7 @@ function Impact({
       className={className}
       info={<PolInfo k="zoneImpact" title={t("zone.impact")} />}
     >
-      {flagged ? <SyntheticNotice signalId="policy_versioning" compact /> : null}
+      {flagged ? <ProvenanceNotice signalId="policy_versioning" compact /> : null}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[0.68rem]">
           <thead>
@@ -582,7 +582,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
         title={t("zone.sensitive")}
         info={<PolInfo k="zoneSensitive" title={t("zone.sensitive")} />}
       >
-        <SyntheticNotice signalId="policy_versioning" compact />
+        <ProvenanceNotice signalId="policy_versioning" compact />
         <ul className="flex flex-col gap-1">
           {data.sensitive_actions.map((a) => (
             <li key={a.key}>

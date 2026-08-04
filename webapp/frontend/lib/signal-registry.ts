@@ -2,10 +2,10 @@
  * The signal capability registry (ADR 0015) — the front's mirror of the backend
  * `tessera.observability.spine.capabilities`.
  *
- * Each signal declares the dimensions it can be sliced by, whether it is a deterministic
- * fixture (`synthetic`), and its migration `source`. The UI renders the "org-wide" /
- * "synthetic" badges and the filter affordance **from these declarations** — not from
- * hand-placed notes. A signal that omits `"agent"` is org-wide *by construction* (a
+ * Each signal declares the dimensions it can be sliced by, the provenance of non-live
+ * material, and its migration `source`. The UI renders the "org-wide" badge, contextual
+ * provenance notice and filter affordance **from these declarations** — not from hand-placed
+ * notes. A signal that omits `"agent"` is org-wide *by construction* (a
  * fixed-corpus probe of the shared policy, or a crypto invariant like audit-chain
  * integrity), so it badges org-wide automatically and truthfully.
  *
@@ -18,11 +18,20 @@
 
 import type { Dimension } from "./scope";
 
+export type SignalProvenance =
+  | "live"
+  | "reference"
+  | "evaluation"
+  | "simulation"
+  | "preview"
+  | "fallback"
+  | "declaration";
+
 export interface SignalCapability {
   /** Dimensions this signal can be sliced by. Empty ⇒ org-wide by construction. */
   dimensions: Dimension[];
-  /** A deterministic fixture, not real data — the UI labels it honestly. */
-  synthetic: boolean;
+  /** What produced this material; `live` is the only real-traffic posture. */
+  provenance: SignalProvenance;
   /** Migration source: `local` (degraded current stores) | `spine` | `shadow`. */
   source: "local" | "spine" | "shadow";
 }
@@ -35,11 +44,11 @@ const ORG: Dimension[] = [];
 
 function cap(
   dimensions: Dimension[],
-  opts: { synthetic?: boolean; source?: SignalCapability["source"] } = {},
+  opts: { provenance?: SignalProvenance; source?: SignalCapability["source"] } = {},
 ): SignalCapability {
   return {
     dimensions,
-    synthetic: opts.synthetic ?? false,
+    provenance: opts.provenance ?? "live",
     source: opts.source ?? "local",
   };
 }
@@ -87,33 +96,33 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // this file said false, so `securite-privacy` rendered "Inversion embedding · Critique ·
   // 100 %" with no notice, and fed it into the failure distribution beside real measurements.
   // Two registries, one truth, and the one the UI reads was the wrong one.
-  embedding_inversion: cap(ORG, { synthetic: true }),
+  embedding_inversion: cap(ORG, { provenance: "simulation" }),
   regression_risk: cap(ORG),
   ai_act: cap(ORG),
   control_signals: cap(ORG),
   audit_integrity: cap(ORG),
   // Deterministic fixtures — no real per-agent substrate (flagged so they can never be
   // silently ventilated).
-  incidents: cap(ORG, { synthetic: true }),
-  curation: cap(ORG, { synthetic: true }),
+  incidents: cap(ORG, { provenance: "simulation" }),
+  curation: cap(ORG, { provenance: "simulation" }),
   // Automations: real rule/execution core (code-defined rules over owned stores,
   // durable toggles, journalled evaluations); approvals/savings stay flagged.
   automations: cap(ORG),
-  automation_workflow: cap(ORG, { synthetic: true }),
+  automation_workflow: cap(ORG, { provenance: "preview" }),
   // Replay & shadow: real core (bundles + durable replay journal + run-to-run
   // eval comparisons); the shadow-fleet/export zones stay flagged below.
   replay_shadow: cap(ORG),
-  shadow_traffic: cap(ORG, { synthetic: true }),
+  shadow_traffic: cap(ORG, { provenance: "preview" }),
   // Policies & guardrails: the governance core is REAL (compiled guard/policy.yaml rows
   // keyed by emitted policy_rule ids + ledger-derived KPIs/gauges + live chain status)…
   policies: cap(ORG),
   // …while the impact simulator + approval workflow describe a policy-versioning
   // subsystem this build does not implement — those zones stay flagged.
-  policy_versioning: cap(ORG, { synthetic: true }),
+  policy_versioning: cap(ORG, { provenance: "preview" }),
   // Proofs page — the export half (pack assembly/signing/export, exporters, destinations,
   // retention, journal) is a SIEM subsystem this build does not implement; its artifact
   // counts and audit-chain integrity are real. The export zones carry the demo notice.
-  evidence_export: cap(ORG, { synthetic: true }),
+  evidence_export: cap(ORG, { provenance: "preview" }),
   // Conformité — the overview posture is REAL: compliance.py derives every control status from
   // runtime signals (AI-Act obligations, conformance, citation validity, PII screening, refusal
   // calibration, GDPR erasure, firewall efficacy) against thresholds…
@@ -122,14 +131,14 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // register, DORA/CNIL/BaFin mapping, obligations, evaluations, incidents, purge & retention,
   // evidence & attestations) that compliance_tabs.py itself calls "fixed, deterministic fixture
   // data". Those tabs carry the notice; the derived posture must not be smeared as fake.
-  compliance_catalog: cap(ORG, { synthetic: true }),
+  compliance_catalog: cap(ORG, { provenance: "reference" }),
   // Agent Session History — the eval-session blocks (KPI strip, trend, score distribution,
   // success gauge, watchlist) are a deterministic fixture shaped like telemetry. Only
   // `live_conversations` is real, and it carries its own block.
-  agent_historique: cap(ORG, { synthetic: true }),
+  agent_historique: cap(ORG, { provenance: "evaluation" }),
   // Assistant page renders a canned, localized sample conversation (no per-conversation
   // grounded-session store in this build); flagged so it reads as a demonstration, not live.
-  assistant: cap(ORG, { synthetic: true }),
+  assistant: cap(ORG, { provenance: "fallback" }),
   // UI control-row aliases (the overview "critical controls" table uses these ids).
   faithfulness: cap(AGENT_TIME),
   pii: cap(AGENT_TIME),
@@ -149,7 +158,7 @@ export const SIGNAL_REGISTRY: Record<string, SignalCapability> = {
   // neutral: `capabilityFor()` returns undefined, `signalSupports()` turns that into `false`,
   // and the surface badges org-wide on no basis at all — a declaration nobody made, rendered
   // as one that was.
-  disclosure: cap(ORG, { synthetic: true }),
+  disclosure: cap(ORG, { provenance: "declaration" }),
   // The route now compares the live query embedder with fingerprints persisted
   // at corpus ingestion; it is a real lineage measurement, not the old corpus=query alias.
   embedding_skew: cap(ORG),
@@ -175,7 +184,13 @@ export function isOrgWide(signalId: string): boolean {
   return capability !== undefined && !capability.dimensions.includes("agent");
 }
 
-/** Whether the signal is a deterministic fixture (drives the "synthétique" badge). */
+/** The declared provenance, or `undefined` when the signal itself is undeclared. */
+export function provenanceFor(signalId: string): SignalProvenance | undefined {
+  return capabilityFor(signalId)?.provenance;
+}
+
+/** Legacy binary posture, derived from provenance for wire/backward compatibility. */
 export function isSynthetic(signalId: string): boolean {
-  return capabilityFor(signalId)?.synthetic ?? false;
+  const provenance = provenanceFor(signalId);
+  return provenance !== undefined && provenance !== "live";
 }
