@@ -162,6 +162,14 @@ def test_normalize_scope_keeps_only_valid_categories() -> None:
     assert ead._normalize_scope("bogus,nope") is None
 
 
+def test_default_scope_banner_names_only_the_default_agent_configuration() -> None:
+    assert ead._banner("fr", None) == (
+        "Cette vue retrouve les sources, les règles et la configuration disponibles à la date "
+        "choisie. Elle ne relance pas le modèle et ne recrée donc pas sa réponse exacte. "
+        "La configuration affichée par défaut est celle de l'agent Support client ;"
+    )
+
+
 def test_scope_restricts_knowledge_dimension_and_sets_meta() -> None:
     payload = ead._assemble(
         _rows(),

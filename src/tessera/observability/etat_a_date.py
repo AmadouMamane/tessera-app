@@ -1059,12 +1059,9 @@ def _banner(lang: str, agent: str | None) -> str:
         )
     return head + _loc(
         lang,
-        "La configuration affichée est celle de l'agent Support client ; les décisions de "
-        "contrôle et les transferts couvrent toute la flotte.",
-        "Angezeigt wird die Konfiguration des Kundenservice-Agenten; Kontrollentscheidungen "
-        "und Übergaben umfassen die gesamte Flotte.",
-        "The displayed configuration belongs to the Customer support agent; control decisions "
-        "and transfers cover the whole fleet.",
+        "La configuration affichée par défaut est celle de l'agent Support client ;",
+        "Standardmäßig wird die Konfiguration des Kundenservice-Agenten angezeigt;",
+        "By default, the displayed configuration belongs to the Customer support agent;",
     )
 
 
