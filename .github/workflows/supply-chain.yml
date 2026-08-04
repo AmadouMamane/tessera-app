@@ -1,8 +1,10 @@
 name: Supply chain
 
-# SBOM, image signing (cosign keyless) and SLSA provenance for the agent image
+# SBOM, secret scanning and image signing (cosign keyless) for the agent image
 # (ADR 0020). These run only in GitHub Actions and cannot be validated on a dev
-# laptop — they are reviewed, then exercised here.
+# laptop — they are reviewed, then exercised here. SLSA provenance USED to live
+# here and was removed on 2026-08-04; the reason, and how to restore it, is at
+# the bottom of this file.
 
 on:
   push:
@@ -68,24 +70,49 @@ jobs:
       # `scan --baseline` REWRITES the baseline in place and exits 0, so it could not gate
       # either. And a missing baseline is now a BLIND SPOT, said out loud and exiting non-zero:
       # a witness that cannot see may never report "ok" (ADR 0026).
+      # SYMLINKS ARE EXCLUDED, and the exclusion is checked rather than trusted.
+      # `detect-secrets scan` refuses to follow a symlink even when handed one
+      # explicitly, so a symlink can never appear in the baseline — while the hook,
+      # given the same path, follows it happily. The result was a job that could not
+      # be made green by any honest baseline: three symlinked message catalogues
+      # under src/tessera/observability/data/messages/ were reported for ever.
+      # Skipping them loses nothing ONLY IF each one's target is itself tracked and
+      # therefore scanned on its own path, so that is asserted below, per link. A
+      # symlink pointing outside the tracked set is a real gap and fails the job.
       - name: Scan against baseline
         run: |
           set -o pipefail
           if [ ! -f .secrets.baseline ]; then
-            echo "::error title=detect-secrets has no baseline::.secrets.baseline is not committed, so this job cannot tell a new secret from a known one. That is a BLIND SPOT, and a blind spot is not a pass. Create it once and commit it:  detect-secrets scan > .secrets.baseline"
+            echo "::error title=detect-secrets has no baseline::.secrets.baseline is not committed, so this job cannot tell a new secret from a known one. That is a BLIND SPOT, and a blind spot is not a pass. Create it once and commit it:  git ls-files -z | xargs -0 detect-secrets scan --baseline .secrets.baseline"
             exit 1
           fi
-          git ls-files -z | xargs -0 detect-secrets-hook --baseline .secrets.baseline
+
+          : > /tmp/ds-files
+          missing=0
+          while IFS= read -r f; do
+            if [ -L "$f" ]; then
+              target=$(cd "$(dirname "$f")" && python3 -c "import os,sys;print(os.path.relpath(os.path.realpath(os.readlink(sys.argv[1])), sys.argv[2]))" "$(basename "$f")" "$(git rev-parse --show-toplevel)" 2>/dev/null || true)
+              if [ -z "$target" ] || ! git ls-files --error-unmatch "$target" >/dev/null 2>&1; then
+                echo "::error title=symlink outside the scanned set::$f -> ${target:-<unresolvable>} is not tracked, so skipping the link would skip its content entirely."
+                missing=1
+              fi
+            else
+              printf '%s\n' "$f" >> /tmp/ds-files
+            fi
+          done < <(git ls-files)
+          [ "$missing" -eq 0 ] || exit 1
+
+          tr '\n' '\0' < /tmp/ds-files | xargs -0 detect-secrets-hook --baseline .secrets.baseline
 
   sign-and-provenance:
-    name: cosign sign + SLSA provenance
+    name: cosign sign + SBOM attestation
     # Image signing needs to push to GHCR and use OIDC — skip on fork PRs.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-      id-token: write  # OIDC for cosign keyless + SLSA
+      id-token: write  # OIDC for cosign keyless signing
     outputs:
       image: ${{ steps.img.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
@@ -134,18 +161,31 @@ jobs:
           cosign attest --yes --predicate image.sbom.cyclonedx.json \
             --type cyclonedx "${{ steps.img.outputs.image }}@${{ steps.build.outputs.digest }}"
 
-  # SLSA build provenance for the pushed image digest.
-  provenance:
-    needs: sign-and-provenance
-    if: github.event_name != 'pull_request'
-    permissions:
-      actions: read
-      id-token: write
-      packages: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.0.0
-    with:
-      image: ${{ needs.sign-and-provenance.outputs.image }}
-      digest: ${{ needs.sign-and-provenance.outputs.digest }}
-    secrets:
-      registry-username: ${{ github.actor }}
-      registry-password: ${{ secrets.GITHUB_TOKEN }}
+  # ── SLSA build provenance: removed 2026-08-04, and the reason is a DECISION ───
+  #
+  # `slsa-framework/slsa-github-generator` refused to run, on purpose:
+  #
+  #   "Repository is private. The workflow has halted in order to keep the
+  #    repository name from being exposed in the public transparency log.
+  #    Set 'private-repository' to override."
+  #
+  # SLSA provenance is recorded in Sigstore's PUBLIC, append-only Rekor log. The
+  # override is one boolean, and it publishes this repository's name — the failing
+  # run's own log had already printed every commit message it was attesting. That
+  # is an outward-facing disclosure about a private repository, so it is the
+  # operator's call, not a workflow tidy-up. The job ran on every push and could
+  # never succeed; a permanently red workflow stops being read, so it is gone
+  # rather than pinned red or, worse, silenced with continue-on-error.
+  #
+  # What REMAINS on every image, and it is not nothing: `cosign sign` (keyless,
+  # OIDC) and a CycloneDX SBOM attached with `cosign attest`, both above, both
+  # green. What is LOST is the SLSA level-3 build provenance — the non-forgeable
+  # statement about WHICH workflow, at which commit, produced this digest. The
+  # signature says the image came from this repository's OIDC identity; it does
+  # not say what built it.
+  #
+  # To restore it, one line — `with: private-repository: true` — and the
+  # understanding that the repository name goes public. Worth knowing before
+  # deciding: cosign's keyless signing above ALREADY writes this repository's
+  # workflow identity to the same public Rekor log, so the override changes the
+  # amount published, not the fact of it.

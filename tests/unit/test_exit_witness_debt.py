@@ -364,7 +364,6 @@ _EXIT_WITNESSES: dict[str, str] = {
     # header declares them non-gating, and a declared non-gate is still a green tick in the UI.
     ".github/workflows/deps.yml::python": "OWED",
     ".github/workflows/deps.yml::frontend": "OWED",
-    ".github/workflows/security.yml::codeql": "VERDICT",
     ".github/workflows/security.yml::dependency-audit": "VERDICT",
     ".github/workflows/security.yml::bandit": "VERDICT",
     ".github/workflows/security.yml::gitleaks": "VERDICT",
@@ -373,7 +372,6 @@ _EXIT_WITNESSES: dict[str, str] = {
     ".github/workflows/supply-chain.yml::detect-secrets": "VERDICT",  # fixed: no baseline ⇒ red
     ".github/workflows/supply-chain.yml::sbom": "action",
     ".github/workflows/supply-chain.yml::sign-and-provenance": "action",
-    ".github/workflows/supply-chain.yml::provenance": "action",
     ".github/workflows/deploy.yml::build-and-deploy": "action",
 }
 

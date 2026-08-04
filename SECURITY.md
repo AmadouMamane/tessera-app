@@ -76,7 +76,13 @@ tracked:
 - Rate limiting and a request-size ceiling on the API (ADR 0020).
 - Deployment-aware secret resolution: GCP Secret Manager (cloud), SOPS+age
   (on-prem standard), or Vault/OpenBao (on-prem premium) — never secrets in git.
-- CI security gate: CodeQL, `pip-audit`, Bandit, gitleaks + detect-secrets,
-  Trivy (container), a CycloneDX **SBOM**, and **cosign** keyless signing with
-  SLSA provenance for the agent image.
+- CI security gate: `pip-audit` (with no ignored advisories), Bandit, gitleaks
+  + detect-secrets, Trivy (container), a CycloneDX **SBOM**, and **cosign**
+  keyless signing of the agent image.
+- Two things this gate does NOT do, stated rather than implied: there is no
+  **CodeQL** run (code scanning is billed on a private repository, so every
+  run ended on "Code scanning is not enabled"), and no **SLSA provenance**
+  (the generator refuses on a private repo, to keep the repository name out of
+  the public transparency log). The first leaves a real gap — no interprocedural
+  taint analysis; the syntactic checks above do not replace it.
 - A non-regression harness of 63 documented agent-failure cases gating merges.

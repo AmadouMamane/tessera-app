@@ -142,7 +142,7 @@ make gate      # run it twice; a check that passes once and fails once is a red 
 
 - **Python — 2,517 tests pass** (`pytest -m "not integration"`, 83.3% coverage). Agent graph, router/policy deterministic short-circuits (including the policy/scope refusal guard, the third-party-PII guard, the auth redirect and the DORA corrections with their false-positive contracts), retrieval, guard, corpus generation, the LLM router, the memory tiers (window / summary / persistent / entity ledger / governance), and reasoning-trace stripping. Plus `ruff check`, `ruff format --check`, `mypy --strict`.
 - **Frontend — 425 tests pass** (`vitest run`), plus `tsc --noEmit` and `biome check`, with `pnpm` pinned by `packageManager` (9.15.0).
-- **Security workflow.** `bandit`, `pip-audit`, Trivy. The supply-chain workflow builds, signs (cosign), and attaches SLSA provenance + an SBOM to the agent image.
+- **Security workflow.** `bandit`, `pip-audit`, Trivy, `gitleaks` + `detect-secrets`, and a guard-policy lint. The supply-chain workflow builds, signs (cosign, keyless) and attaches a CycloneDX SBOM to the agent image. **No CodeQL and no SLSA provenance**, and neither is an oversight: code scanning is a billed GitHub Advanced Security feature on a private repository, and the SLSA generator refuses to run on one because it would publish the repository name to a public transparency log. Both are declared blind spots — the taint analysis has no free substitute (`.github/workflows/security.yml` says so at the top).
 
 Until 2026-07-10 this section claimed the frontend `biome` and `tsc` ran in CI. They did not — no workflow invoked `pnpm`, `biome`, `tsc`, `vitest` or Playwright, so the entire frontend could rot without a witness. The `gate` job is what makes the claim true.
 
@@ -397,7 +397,7 @@ Vulnerability disclosure policy and threat model:
 - [`SECURITY.md`](./SECURITY.md) — disclosure and contact.
 - [`docs/threat-model.md`](./docs/threat-model.md) — assets, adversaries, mitigations.
 
-On every push, `security.yml` runs CodeQL, `pip-audit`, `bandit`, `gitleaks`, a Trivy image scan, and a guard-policy lint; `supply-chain.yml` produces an SBOM and signs the image (cosign + SLSA provenance).
+On every push, `security.yml` runs `pip-audit`, `bandit`, `gitleaks`, a Trivy image scan and a guard-policy lint; `supply-chain.yml` produces an SBOM, runs `detect-secrets` and signs the image (cosign, keyless). CodeQL and SLSA provenance are deliberately absent — see the security workflow bullet above.
 
 ### What the authorization model does and does not promise
 

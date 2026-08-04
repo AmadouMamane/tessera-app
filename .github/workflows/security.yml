@@ -10,9 +10,10 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
+# No `security-events: write`: nothing here uploads SARIF any more. See the note
+# on the removed CodeQL job below — least privilege follows the capability.
 permissions:
   contents: read
-  security-events: write
   actions: read
 
 concurrency:
@@ -22,22 +23,27 @@ concurrency:
 env:
   UV_VERSION: "0.5.4"
 
+# ── A removed job, and the hole it leaves, stated ──────────────────────────────
+#
+# `codeql` ran here until 2026-08-04 and could never have passed: GitHub code
+# scanning is an Advanced Security feature, billed on a private repository, and
+# it is not enabled for this one. Every run ended on
+#   "Code scanning is not enabled for this repository"
+# — and so did the SARIF upload that `trivy` used to attempt. A job that cannot
+# succeed is worse than an absent one: it makes the workflow permanently red, and
+# a permanently red workflow stops being read.
+#
+# What is LOST, said plainly rather than papered over: CodeQL's interprocedural
+# taint analysis. Nothing free replaces it. What still covers part of the ground:
+#   - ruff's `S` family (flake8-bandit) on every file, in the gate, blocking;
+#   - `bandit` below, on src/, medium severity and above;
+#   - `gitleaks` and `detect-secrets` for credential material;
+#   - `trivy` below, for the image's OS and library packages.
+# All syntactic. None of them follows a value from an HTTP parameter to a sink,
+# which is precisely what CodeQL was here for. That is a DECLARED blind spot, and
+# re-enabling it is an operator decision with a price attached (ADR 0026).
+
 jobs:
-  codeql:
-    name: CodeQL (python)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: github/codeql-action/init@v3
-        with:
-          languages: python
-          queries: security-extended,security-and-quality
-
-      - uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:python"
-
   dependency-audit:
     name: pip-audit
     runs-on: ubuntu-latest
@@ -109,21 +115,19 @@ jobs:
       - name: Build agent image
         run: docker build -f infra/docker/Dockerfile.agent -t tessera-agent:scan .
 
+      # `table`, not `sarif`. The SARIF went to code scanning, which is not enabled
+      # here, so the upload failed and the findings were readable NOWHERE: the job
+      # exited 1 with a log that named a count and not one package. A finding you
+      # cannot read is not a finding. The table prints into the log, where the
+      # person the red is for will actually see it.
       - name: Run Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: tessera-agent:scan
-          format: sarif
-          output: trivy-results.sarif
+          format: table
           severity: CRITICAL,HIGH
           exit-code: "1"
           ignore-unfixed: true
-
-      - name: Upload Trivy SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-results.sarif
 
   guard-policy-lint:
     name: guard policy lint
