@@ -9,6 +9,7 @@ import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 
+from tessera.api.request_path import routed_path
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -65,7 +66,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         """Enforce bearer-token authentication, exempting health and metrics paths."""
-        if self._expected is None or request.url.path in self._EXEMPT_PATHS:
+        if self._expected is None or routed_path(request) in self._EXEMPT_PATHS:
             return await call_next(request)
 
         header = request.headers.get("authorization", "")

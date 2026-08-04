@@ -48,11 +48,29 @@ dependencies = [
     "langchain-core>=0.3.20,<2",
     "langchain-google-vertexai>=2.0.10,<5",
     # HTTP layer
-    "fastapi>=0.115.0,<1",
-    # Pin starlette <1.0: 1.x moves its TestClient to an unvetted `httpx2`
-    # dependency. 0.49.1+ still fixes CVE-2025-54121 and CVE-2025-62727; the
-    # 1.x-only PYSEC-2026-161 is tracked as an ignored advisory (security.yml).
-    "starlette>=0.49.1,<1.0",
+    # Capped BELOW 0.137 on purpose (2026-08-04), and the reason is measured, not
+    # stylistic: from 0.137.2 `include_router` stops flattening into `app.routes`
+    # and keeps a nested `_IncludedRouter`. Five test files walk `app.routes`, and
+    # three of them are security ratchets — subject-read auth, mutation-route auth,
+    # and ADR 0024's "every governed act names its author". Under the new shape
+    # their loops would iterate over nothing and stay GREEN, which is the exact
+    # failure this repository exists to refuse. Lifting the cap is real work (adapt
+    # the walks, then prove they still SEE routes), not a version bump.
+    # It costs nothing in security: fastapi has required only `starlette>=0.46.0`,
+    # with no upper bound, since well before 0.136 — the old `starlette<1.0` cap
+    # was ours alone.
+    "fastapi>=0.115.0,<0.137",
+    # starlette >=1.3.1 (2026-08-04). The former `<1.0` cap was there because 1.x
+    # moves its TestClient onto `httpx2`, then an unknown quantity. It is not one:
+    # same author as httpx (Tom Christie), published under the Pydantic org, and it
+    # is a TEST-only need, so it lives in the dev group and `--no-dev` keeps it out
+    # of the image. Staying below 1.0 cost five advisories, two of which were live
+    # here — the Host-header path reconstruction (PYSEC-2026-161 / -248) let
+    # `Host: example.com/healthz#` make `request.url.path` read `/healthz` while the
+    # router dispatched `/chat`, which is an auth bypass against
+    # `AuthMiddleware._EXEMPT_PATHS`. Fixed on both sides: the version, and
+    # `tessera.api.request_path.routed_path`, which reads what the router reads.
+    "starlette>=1.3.1,<2",
     "uvicorn[standard]>=0.32.0,<0.33",
     "httpx>=0.28.1,<1",
     "python-multipart>=0.0.12,<0.1",
@@ -135,6 +153,9 @@ dev = [
     "pytest-mock>=3.14.0,<4",
     "pytest-xdist>=3.6.1,<4",
     "hypothesis>=6.119.0,<7",
+    # starlette 1.x's TestClient transport. Test-only on purpose: `uv sync --no-dev`
+    # in Dockerfile.agent means it is never in the runtime image.
+    "httpx2>=2.9.1,<3",
 
     # Type stubs
     "types-pyyaml>=6.0.12,<7",

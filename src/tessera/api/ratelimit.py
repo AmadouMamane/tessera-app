@@ -28,6 +28,7 @@ from limits.strategies import MovingWindowRateLimiter
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from tessera.api.request_path import routed_path
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
@@ -103,14 +104,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         """Check the limit for this caller+surface, else 429."""
-        if not self._enabled or request.url.path in _EXEMPT_PATHS:
+        path = routed_path(request)
+        if not self._enabled or path in _EXEMPT_PATHS:
             return await call_next(request)
 
         identity = client_identity(request)
         # The LLM endpoint gets two buckets that must BOTH pass: the per-session
         # limit and a hard global ceiling on total cost. Everything else gets the
         # looser read limit. (method, path) keys the strict set.
-        if (request.method, request.url.path) in _STRICT_ROUTES:
+        if (request.method, path) in _STRICT_ROUTES:
             checks: list[tuple[RateLimitItem, str]] = [
                 (self._strict, identity),
                 (self._global, _GLOBAL_CHAT_KEY),
@@ -121,14 +123,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Test all buckets without consuming, so a rejection by one does not burn
         # a token in the others; only commit (hit) once every bucket has room.
         for item, key in checks:
-            if not self._limiter.test(item, key, request.url.path):
+            if not self._limiter.test(item, key, path):
                 return JSONResponse(
                     {"detail": "rate limit exceeded"},
                     status_code=429,
                     headers={"Retry-After": str(item.get_expiry())},
                 )
         for item, key in checks:
-            self._limiter.hit(item, key, request.url.path)
+            self._limiter.hit(item, key, path)
         return await call_next(request)
 
 
