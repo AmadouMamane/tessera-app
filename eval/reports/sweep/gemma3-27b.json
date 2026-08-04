@@ -3042,7 +3042,7 @@
     "output_tokens": 8100,
     "estimated_cost_eur": 0.0
   },
-  "grader_criteria_sha": "63-fb6b1e02af13",
-  "regraded_at": "20260804T071540Z",
+  "grader_criteria_sha": "63-98380e2d4aca",
+  "regraded_at": "20260804T183925Z",
   "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded."
 }

@@ -175,10 +175,11 @@ describe("loadCataloguePower — what the catalogue MEASURES", () => {
     // deliberately, the way the null control is refreshed.
     expect(state.power.power.holm_runs).toBeGreaterThan(0);
     expect(state.power.power.bh_runs).toBeGreaterThanOrEqual(state.power.power.holm_runs);
-    expect(state.power.power.correction_gap).toEqual([
-      "20_hallucination_loi_inexistante|fr",
-      "43_prompt_injection_binding_offer|de",
-    ]);
+    // `43_prompt_injection_binding_offer|de` left the gap on 2026-08-04: the weak model gains
+    // seven passes there once a refusal is allowed to restate what it refuses, so BH and Holm
+    // now agree about it. Re-derived from recorded responses under ONE ruler — the sweep's
+    // ruler test in eval-score.test.ts is what licenses updating a measured constant here.
+    expect(state.power.power.correction_gap).toEqual(["20_hallucination_loi_inexistante|fr"]);
   });
 
   it("REFUSES when the catalogue has moved — it does not report zero", async () => {
