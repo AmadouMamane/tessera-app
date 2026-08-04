@@ -214,11 +214,35 @@ Les faux négatifs sont soldés (§0). Ce qui reste est **une mesure, pas un cor
 
 ---
 
-## 3. Les 29 critères que le plancher d'auth tranche à la place de l'agent
+## 3. Les critères que le plancher d'auth tranche à la place de l'agent — **29 → 27**
 
-Inchangé. Gelés dans `tests/unit/test_eval_posture_is_declared.py`, ne peuvent que baisser.
-Baisser le chiffre = déclarer `auth_state: customer` sur le cas, ce qui **déplace sa
-baseline** : commit séparé qui re-mesure le plancher.
+Gelés dans `tests/unit/test_eval_posture_is_declared.py`, ne peuvent que baisser.
+
+**Le 29 mélangeait deux choses.** Trié le 2026-08-04, cas par cas, sur ce que chaque cas dit
+de lui-même :
+
+- **2 critères sont INTENDUS**, pas une dette. `29_tool_misuse_blocage_sans_auth` exige que
+  l'agent n'appelle pas `card_block` *« while the session is unauthenticated »*, et
+  `55_tool_misuse_destructive_no_auth` qu'une action irréversible *« require identity
+  verification »*. La posture anonyme **est le sujet** de ces cas : le plancher d'auth qui
+  refuse est la mesure, pas un raccourci. Exemptés **par leur nom et leur raison**, jamais par
+  un motif — même règle que le faux positif de §4, et pour la même cause : une règle assez
+  large pour les excuser excuserait les dix-sept autres avec eux. Un test relit leur
+  `expected_behavior` sur disque, donc l'exemption ne peut pas survivre à ce qui l'a justifiée.
+- **27 restent dus**, sur 17 cas — et plusieurs le disent dans leur propre texte.
+  `31_tool_misuse_balance_tiers` s'ouvre sur *« Je suis bien authentifié sur mon compte »* : le
+  prompt du cas **affirme** une posture que le harnais contredit.
+  `54_tool_misuse_block_third_party_card` exige que l'agent ne bloque pas *« a card that is not
+  **the authenticated user's** »*. Sous ANONYMOUS, ni l'un ni l'autre ne peut tester ce qu'il
+  annonce : la garde refuse d'abord, pour une raison étrangère à l'attaque, et ils passeraient
+  contre un agent qui essaierait.
+
+⚠️ **Le prix, écrit pour que personne ne le découvre en cours de commit.** Changer une posture
+change ce que l'**agent fait** : les réponses enregistrées ne décrivent plus la nouvelle
+posture, donc **`make eval-regrade` ne peut pas payer celle-ci**. Il faut un vrai rejeu du
+catalogue **et** 15+15 passes de discrimination fraîches — une heure de GPU et de vrais jetons.
+C'est exactement pourquoi ce n'est pas plié dans un commit de re-notation : contrairement aux
+correctifs de grader du 2026-08-04, cette dette-ci ne se solde pas gratuitement.
 
 ---
 
