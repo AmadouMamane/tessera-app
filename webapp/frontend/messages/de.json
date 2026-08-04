@@ -2948,6 +2948,8 @@
         "date": "Datum"
       },
       "done": "Abgeschlossen",
+      "superseded": "{n} Kopie(n) zusammengeführt",
+      "regradedOn": "Neu bewertet {date}",
       "kpi": {
         "runs7d": "Runs (7 T)",
         "ofTotal": "{n} insgesamt",
@@ -2986,6 +2988,8 @@
         "catalogue": "Katalog",
         "lang": "Sprache",
         "window": "Ausgeführt am",
+        "regraded": "Neu bewertet am",
+        "ruler": "Bewertungsregel",
         "cases": "Bestanden / Fälle",
         "rate": "Quote",
         "cost": "Kosten",

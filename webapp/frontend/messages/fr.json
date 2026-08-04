@@ -2948,6 +2948,8 @@
         "date": "Date"
       },
       "done": "Terminé",
+      "superseded": "{n} copie(s) repliée(s)",
+      "regradedOn": "Re-noté le {date}",
       "kpi": {
         "runs7d": "Runs (7 j)",
         "ofTotal": "{n} au total",
@@ -2986,6 +2988,8 @@
         "catalogue": "Catalogue",
         "lang": "Langue",
         "window": "Exécuté le",
+        "regraded": "Re-noté le",
+        "ruler": "Règle de notation",
         "cases": "Réussis / Cas",
         "rate": "Taux",
         "cost": "Coût",

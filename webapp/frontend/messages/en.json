@@ -2948,6 +2948,8 @@
         "date": "Date"
       },
       "done": "Completed",
+      "superseded": "{n} copy(ies) folded",
+      "regradedOn": "Re-graded {date}",
       "kpi": {
         "runs7d": "Runs (7d)",
         "ofTotal": "{n} total",
@@ -2986,6 +2988,8 @@
         "catalogue": "Catalogue",
         "lang": "Language",
         "window": "Ran at",
+        "regraded": "Re-graded on",
+        "ruler": "Grading ruler",
         "cases": "Passed / Cases",
         "rate": "Rate",
         "cost": "Cost",

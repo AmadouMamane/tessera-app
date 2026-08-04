@@ -628,6 +628,15 @@ export function RunsEvalTable({
         </CardTitle>
         <Badge tone="neutral" className="text-[0.65rem]">
           {tq("runs.count", { n: registry?.n ?? 0 })}
+          {/*
+            A run re-graded after the fact exists on disk twice — the latest_<agent> pointer
+            and its timestamped archive. The registry folds them into one row; saying how many
+            it folded keeps the count reconcilable with the file listing instead of leaving a
+            silent gap between "69 runs" and "75 files".
+          */}
+          {registry && registry.superseded > 0
+            ? ` · ${tq("runs.superseded", { n: registry.superseded })}`
+            : null}
         </Badge>
       </CardHeader>
       <CardContent className="max-h-[268px] overflow-auto">
@@ -700,7 +709,7 @@ export function RunsEvalTable({
                         {r.catalogue_version ? `v${r.catalogue_version.split("-")[0]}` : DASH}
                       </td>
                       <td className="px-2 py-1.5 uppercase text-[var(--muted-foreground)]">
-                        {r.language && r.language !== "None" ? r.language : DASH}
+                        {r.language ?? DASH}
                       </td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{r.total}</td>
                       <td className="px-2 py-1.5 text-right tabular-nums">{r.passed}</td>
@@ -720,9 +729,15 @@ export function RunsEvalTable({
                       </td>
                       <td className="px-2 py-1.5">
                         <span className="inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              r.regraded_at ? "bg-sky-500" : "bg-emerald-500"
+                            }`}
+                          />
                           <span className="text-[0.65rem] text-[var(--muted-foreground)]">
-                            {tq("runs.done")}
+                            {r.regraded_at
+                              ? tq("runs.regradedOn", { date: fmtDate(r.regraded_at) })
+                              : tq("runs.done")}
                           </span>
                         </span>
                       </td>
@@ -793,11 +808,21 @@ export function RunContextPanel({
             <CtxRow k={tq("runs.ctx.model")}>{run.model}</CtxRow>
             <CtxRow k={tq("runs.ctx.catalogue")}>{run.catalogue_version ?? DASH}</CtxRow>
             <CtxRow k={tq("runs.ctx.lang")}>
-              <span className="uppercase">
-                {run.language && run.language !== "None" ? run.language : DASH}
-              </span>
+              <span className="uppercase">{run.language ?? DASH}</span>
             </CtxRow>
             <CtxRow k={tq("runs.ctx.window")}>{fmtDate(run.run_at)}</CtxRow>
+            {/*
+              Sampling and judging are two acts. A re-grade re-judges the recorded responses
+              under moved criteria — no token, no new sample — so it moves the pass rate above
+              WITHOUT moving run_at. Shown only when it happened; a run judged once has nothing
+              extra to say, and an empty row would imply the question was asked and unanswered.
+            */}
+            {run.regraded_at ? (
+              <CtxRow k={tq("runs.ctx.regraded")}>{fmtDate(run.regraded_at)}</CtxRow>
+            ) : null}
+            <CtxRow k={tq("runs.ctx.ruler")}>
+              <span className="font-mono text-[0.68rem]">{run.grader_criteria_sha ?? DASH}</span>
+            </CtxRow>
             <CtxRow k={tq("runs.ctx.cases")}>
               <span className="tabular-nums">
                 {run.passed}/{run.total}

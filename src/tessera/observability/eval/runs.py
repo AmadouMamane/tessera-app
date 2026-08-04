@@ -16,7 +16,7 @@ stays ``None`` rather than becoming a zero.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 
@@ -34,12 +34,20 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class RunSummary:
-    """One eval run over the failure catalogue."""
+    """One eval run over the failure catalogue, and the ruler that judged it.
+
+    A *run* is a sampling event — ``run_at``, a model, an eval set, the responses
+    it recorded. The *grading* is a separate act: the same recorded responses can
+    be re-judged later under moved criteria (``make eval-regrade``), which changes
+    every verdict without spending a token. ``regraded_at`` and
+    ``grader_criteria_sha`` name that second act, so a displayed pass rate can say
+    **when it was judged and by which ruler** — not only when it was sampled.
+    """
 
     run_id: str
     run_at: str
     model: str
-    language: str
+    language: str | None
     total: int
     passed: int
     failed: int
@@ -47,6 +55,16 @@ class RunSummary:
     est_cost_eur: float | None
     mean_latency_ms: float | None
     catalogue_version: str | None
+    eval_set: str | None = None
+    regraded_at: str | None = None
+    grader_criteria_sha: str | None = None
+    #: Older gradings of this same run that this row supersedes (0 in the normal case).
+    superseded_copies: int = 0
+
+    @property
+    def graded_at(self) -> str:
+        """When the verdicts in this row were decided — the re-grade, else the run."""
+        return self.regraded_at or self.run_at
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +83,14 @@ class ModelStat:
 
 @dataclass(frozen=True, slots=True)
 class RunRegistry:
-    """The run archive plus the catalogue it was run against."""
+    """The run archive plus the catalogue it was run against.
+
+    ``n`` counts **runs**, not files: a run re-graded after the fact exists on disk
+    twice (the ``latest_<agent>.json`` pointer and its timestamped archive), and
+    counting files published one run as two — with two different rulers and, when
+    a judgement had moved, two different pass rates. ``superseded`` says out loud
+    how many older gradings were folded away, so the fold is never silent.
+    """
 
     n: int
     runs: list[RunSummary]
@@ -73,6 +98,7 @@ class RunRegistry:
     catalogue_version: str | None
     models: list[str] = field(default_factory=list)
     languages: list[str] = field(default_factory=list)
+    superseded: int = 0
 
 
 def default_reports_dir() -> Path:
@@ -116,20 +142,54 @@ def _summary_run(path: Path, obj: dict[str, object]) -> RunSummary | None:
     failed = int(summary.get("failed", max(0, total - passed)) or 0)
     rate = summary.get("pass_rate")
     pass_rate = float(rate) if isinstance(rate, int | float) else (passed / total if total else 0.0)
-    version = obj.get("catalogue_version")
     return RunSummary(
         run_id=path.stem,
         run_at=str(obj.get("run_at", path.stem)),
         model=model,
-        language=str(obj.get("lang", "")),
+        # A multilingual agent run carries `lang: null`. `str(None)` turned that absence into
+        # the four-character *value* "None", which then travelled into the registry's language
+        # list and offered the operator a language filter for a language that does not exist.
+        # An absent language is None, and the screen renders "—" from it.
+        language=_optional_str(obj.get("lang")),
         total=total,
         passed=passed,
         failed=failed,
         pass_rate=pass_rate,
         est_cost_eur=est_cost,
         mean_latency_ms=_mean_latency_ms(obj.get("results")),
-        catalogue_version=str(version) if isinstance(version, str) else None,
+        catalogue_version=_optional_str(obj.get("catalogue_version")),
+        eval_set=_optional_str(obj.get("eval_set")) or _optional_str(obj.get("agent_id")),
+        regraded_at=_optional_str(obj.get("regraded_at")),
+        grader_criteria_sha=_optional_str(obj.get("grader_criteria_sha")),
     )
+
+
+def _optional_str(value: object) -> str | None:
+    """A non-empty string, or ``None`` — never the *text* of a missing value."""
+    return value if isinstance(value, str) and value else None
+
+
+def _run_identity(run: RunSummary) -> tuple[str, str, str, str]:
+    """What makes two report files the SAME run rather than two runs.
+
+    The sampling event: when it ran, which model answered, which set it ran over,
+    in which language. Two files agreeing on all four hold one run's responses —
+    typically the ``latest_<agent>.json`` pointer and its timestamped archive.
+    """
+    return (run.run_at, run.model, run.eval_set or "", run.language or "")
+
+
+def _grading_rank(run: RunSummary) -> tuple[str, int, str]:
+    """Order two gradings of one run, newest grading first once reversed.
+
+    Deterministic and stated, because the alternative is not: folding on first-seen
+    would let the *filesystem enumeration order* decide which verdicts an operator
+    reads, and the two copies genuinely disagreed (one judgement on ``recouvrement``)
+    after the 2026-08-04 re-grade wrote only the pointer. A run whose ruler is named
+    outranks one whose ruler is not; ``run_id`` breaks a remaining tie so the answer
+    never depends on the disk.
+    """
+    return (run.graded_at, 1 if run.grader_criteria_sha else 0, run.run_id)
 
 
 def load_runs(directory: Path | None = None) -> RunRegistry:
@@ -138,11 +198,15 @@ def load_runs(directory: Path | None = None) -> RunRegistry:
     Args:
         directory: Report directory; defaults to ``eval/reports``.
 
+    One row per *run*, not per file: a re-graded run exists twice on disk and its
+    two copies can carry different verdicts, so the newest **grading** of each run
+    wins and the count of folded copies is reported rather than swallowed.
+
     Returns:
         A :class:`RunRegistry`. An absent or unreadable directory yields an empty
         registry rather than raising.
     """
-    runs: list[RunSummary] = []
+    parsed: list[RunSummary] = []
     files = report_files_for(directory)
     if files:
         for path in files:
@@ -155,8 +219,24 @@ def load_runs(directory: Path | None = None) -> RunRegistry:
                 continue
             run = _summary_run(path, obj)
             if run is not None:
-                runs.append(run)
-    runs.sort(key=lambda r: r.run_at, reverse=True)
+                parsed.append(run)
+
+    kept: dict[tuple[str, str, str, str], RunSummary] = {}
+    folded: dict[tuple[str, str, str, str], int] = {}
+    for run in parsed:
+        key = _run_identity(run)
+        current = kept.get(key)
+        if current is None:
+            kept[key] = run
+            continue
+        folded[key] = folded.get(key, 0) + 1
+        if _grading_rank(run) > _grading_rank(current):
+            kept[key] = run
+
+    runs = [
+        replace(run, superseded_copies=folded.get(key, 0)) for key, run in kept.items()
+    ]
+    runs.sort(key=lambda r: (r.run_at, r.run_id), reverse=True)
     models = sorted({r.model for r in runs})
     languages = sorted({r.language for r in runs if r.language})
     version = runs[0].catalogue_version if runs else None
@@ -168,6 +248,7 @@ def load_runs(directory: Path | None = None) -> RunRegistry:
         catalogue_version=version,
         models=models,
         languages=languages,
+        superseded=sum(folded.values()),
     )
 
 

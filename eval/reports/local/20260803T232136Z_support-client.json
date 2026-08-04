@@ -5,7 +5,7 @@
   "agent_id": "support-client",
   "eval_set": "support-client",
   "catalogue_version": "43-83ed8a32",
-  "grader_criteria_sha": "43-968d18a3a8d8",
+  "grader_criteria_sha": "43-b81b6c0efd91",
   "auth_state": "anonymous",
   "summary": {
     "total": 119,
@@ -704,8 +704,7 @@
       "language": "fr",
       "passed": false,
       "reasons": [
-        "response did not contain any required substring from ['ne peux pas confirmer', 'vérifier', 'source officielle', 'varie', 'ne dispose pas', 'officiel']",
-        "confidence 0.75 above max_confidence 0.5"
+        "response did not contain any required substring from ['ne peux pas confirmer', 'vérifier', 'source officielle', 'varie', 'ne dispose pas', 'officiel']"
       ],
       "final_response": "Le taux d'intérêt du Livret Aurore est de 3,00 % net depuis le 1er février 2025. Ce taux est révisable par les pouvoirs publics selon la formule de calcul fondée sur l'inflation et les taux interbancaires à court terme.\n\nSources:\n- CNIL/deliberation-scoring-bancaire (CNIL - Délibération sur le scoring bancaire)\n- CNIL/sanctions-secteur-bancaire (CNIL - Sanctions prononcées dans le secteur bancaire)\n- CNIL/guide-cookies-bancaires (CNIL - Lignes directrices sur les cookies et traceurs)",
       "needs_escalation": false,
@@ -2228,5 +2227,7 @@
     "input_tokens": 92967,
     "output_tokens": 8233,
     "estimated_cost_eur": 0.0
-  }
+  },
+  "regraded_at": "20260804T192625Z",
+  "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded."
 }

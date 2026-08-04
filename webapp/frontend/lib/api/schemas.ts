@@ -1926,7 +1926,9 @@ export const RunSummarySchema = z.object({
   run_id: z.string(),
   run_at: z.string(),
   model: z.string(),
-  language: z.string(),
+  // A multilingual agent run has no single language. It used to arrive as the STRING "None"
+  // (Python `str(None)`), which the table then had to special-case; it is now null.
+  language: z.string().nullable(),
   total: z.number().int(),
   passed: z.number().int(),
   failed: z.number().int(),
@@ -1934,6 +1936,13 @@ export const RunSummarySchema = z.object({
   est_cost_eur: z.number().nullable(),
   mean_latency_ms: z.number().nullable(),
   catalogue_version: z.string().nullable(),
+  eval_set: z.string().nullable(),
+  // When the verdicts in this row were decided, and by which ruler. A re-grade re-judges
+  // recorded responses under moved criteria: it changes the pass rate without changing
+  // run_at, so a screen that shows only run_at cannot say the numbers moved today.
+  regraded_at: z.string().nullable(),
+  grader_criteria_sha: z.string().nullable(),
+  superseded_copies: z.number().int(),
 });
 export type RunSummary = z.infer<typeof RunSummarySchema>;
 
@@ -1944,6 +1953,7 @@ export const RunRegistrySchema = z.object({
   catalogue_version: z.string().nullable(),
   models: z.array(z.string()),
   languages: z.array(z.string()),
+  superseded: z.number().int(),
 });
 export type RunRegistry = z.infer<typeof RunRegistrySchema>;
 

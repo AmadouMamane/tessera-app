@@ -275,6 +275,58 @@ def regrade_case(
     )
 
 
+def _rederive_totals(fresh: dict[str, object], rows: list[dict[str, object]]) -> None:
+    """Recompute, in place, every number this report derives from its verdicts.
+
+    A re-grade rewrites ``results``. Until 2026-08-04 it rewrote nothing else, so a report
+    whose judgement moved kept its **old** ``summary`` — and ``summary`` is what the run
+    registry, the cockpit KPIs and the agent pages read. ``latest_recouvrement.json`` shipped
+    that day with ``summary.passed = 76`` over 77 passing rows: the flip existed in the file
+    and reached no screen. A derived number that does not follow its own source is worse than
+    a missing one, because it looks answered.
+
+    ``gate`` and ``policy_gate`` are pure functions of the verdicts plus the catalogue's
+    criticality, so they are re-derived the same way — and only when the report already
+    carried them (a non-agent catalogue run has none, and inventing one would be a
+    fabricated governance verdict).
+    """
+    total = len(rows)
+    passed = sum(1 for r in rows if r.get("passed"))
+    fresh["summary"] = {
+        "total": total,
+        "passed": passed,
+        "failed": total - passed,
+        "pass_rate": passed / total if total else 0.0,
+    }
+
+    if isinstance(fresh.get("gate"), dict):
+        from eval.gate import evaluate_gate
+        from eval.sets import critical_case_ids
+
+        verdict = evaluate_gate(
+            [(str(r.get("case_id")), bool(r.get("passed"))) for r in rows],
+            critical_ids=critical_case_ids(),
+        )
+        fresh["gate"] = {
+            "passed": verdict.passed,
+            "critical_ok": verdict.critical_ok,
+            "failed_critical": list(verdict.failed_critical),
+            "standard_total": verdict.standard_total,
+            "standard_passed": verdict.standard_passed,
+            "standard_pass_rate": round(verdict.standard_pass_rate, 4),
+        }
+
+    if isinstance(fresh.get("policy_gate"), dict):
+        from tessera.observability.eval_gate_view import structural_gate
+
+        fresh["policy_gate"] = structural_gate(
+            [
+                (str(r.get("case_id")), str(r.get("language") or ""), bool(r.get("passed")))
+                for r in rows
+            ]
+        )
+
+
 def regrade_report(payload: Mapping[str, object], *, check_precondition: bool = True) -> Regrade:
     """Re-read a whole report under today's criteria.
 
@@ -353,6 +405,7 @@ def regrade_report(payload: Mapping[str, object], *, check_precondition: bool = 
 
     fresh = dict(payload)
     fresh["results"] = fresh_results
+    _rederive_totals(fresh, fresh_results)
     blind = [c for c in cases if c.now is None]
     if blind:
         # A report is stamped with a ruler only when EVERY case in it was judged by that ruler.
@@ -394,6 +447,58 @@ def _normalise_run_at(run_at: str) -> str | None:
     return f"{date}T{clock}Z"
 
 
+def _run_identity_of(payload: Mapping[str, object]) -> tuple[str, str, str] | None:
+    """``(run_at, model, eval_set)`` — what makes two files the same sampling event."""
+    run_at, model = payload.get("run_at"), payload.get("model")
+    if not isinstance(run_at, str) or not run_at or not isinstance(model, str):
+        return None
+    eval_set = payload.get("eval_set") or payload.get("agent_id")
+    return (run_at, model, eval_set if isinstance(eval_set, str) else "")
+
+
+def _with_run_twins(requested: list[Path], reports_dir: Path) -> list[Path]:
+    """The requested reports, then every other file holding the SAME run.
+
+    ``latest_<agent>.json`` is a *pointer* to a run whose timestamped archive sits beside it.
+    Re-grading only the pointer left the archive asserting the previous ruler's verdicts about
+    the very same responses, and the run registry published both — so which judgement an
+    operator read came down to directory enumeration order. One run, one grading: whatever the
+    caller names, its twins move with it.
+
+    Requested paths come first so a caller can tell what it asked for from what followed.
+    """
+    known: dict[tuple[str, str, str], list[Path]] = {}
+    for path in sorted(reports_dir.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            # best-effort: an unreadable neighbour is not this command's business (0015)
+            continue
+        if not isinstance(payload, dict):
+            continue
+        identity = _run_identity_of(payload)
+        if identity is not None:
+            known.setdefault(identity, []).append(path)
+
+    chosen = [p.resolve() for p in requested]
+    seen = set(chosen)
+    extras: list[Path] = []
+    for path in chosen:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        identity = _run_identity_of(payload) if isinstance(payload, dict) else None
+        if identity is None:
+            continue
+        for twin in known.get(identity, []):
+            resolved = twin.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                extras.append(resolved)
+    return chosen + extras
+
+
 def main(argv: list[str] | None = None) -> int:
     """Re-grade one report in place, or every agent report under the reports directory.
 
@@ -412,14 +517,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    targets = (
-        [args.report]
-        if args.report
-        else sorted(p for p in reports_write_dir().glob("latest_*.json"))
+    reports_dir = reports_write_dir()
+    requested = (
+        [args.report] if args.report else sorted(reports_dir.glob("latest_*.json"))
     )
+    targets = _with_run_twins(requested, reports_dir)
     if not targets:
         sys.stderr.write("no report to re-grade\n")
         return 2
+    for extra in targets[len(requested) :]:
+        print(f"[regrade] also: {extra.name} — same run as a requested report")
 
     worst = 0
     for path in targets:
