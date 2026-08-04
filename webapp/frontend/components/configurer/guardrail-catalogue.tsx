@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchGuardrailCatalogue } from "@/lib/api/client";
@@ -47,7 +48,7 @@ export function GuardrailCatalogue() {
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["guardrail-catalogue", locale, scope],
     queryFn: ({ signal }) => fetchGuardrailCatalogue(locale, scope, signal),
     staleTime: 60_000,
@@ -64,7 +65,22 @@ export function GuardrailCatalogue() {
   if (isLoading) {
     return <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("loading")}</p>;
   }
-  if (!data?.available || rows.length === 0) {
+  // Three states, not one. `!data?.available || rows.length === 0` collapsed "the request
+  // failed", "the backend says it cannot serve this" and "there are genuinely no guardrails"
+  // into a single sentence — and the third is the reassuring one. A platform that reports "no
+  // guardrails configured" because its catalogue endpoint is down is telling the operator the
+  // opposite of what happened.
+  if (isError || !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} compact />;
+  }
+  if (!data.available) {
+    return (
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+        {t("unavailable")}
+      </p>
+    );
+  }
+  if (rows.length === 0) {
     return (
       <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
         {t("empty")}

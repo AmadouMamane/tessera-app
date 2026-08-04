@@ -276,6 +276,7 @@
       "asofAt": "Zustand am:",
       "asofBanner": "Sie sehen den Zustand am {time}. Aktionen wirken weiterhin auf die Gegenwart.",
       "openInProofs": "In NACHWEISEN öffnen · Zustand zum Datum",
+      "agentsUnknown": "beobachtete Agenten: —",
       "agentsObserved": "{n, plural, =0 {Kein Agent beobachtet} one {# Agent beobachtet} other {# Agenten beobachtet}}",
       "lastUpdate": "Letzte Aktualisierung",
       "viewingAt": "Ansicht:",
@@ -331,6 +332,7 @@
       "eventNext": "Nächstes Ereignis",
       "eventsBrowse": "Ereignisse",
       "noEventsInWindow": "Kein Ereignis in diesem Fenster",
+      "eventsUnavailable": "Zeitachse nicht lesbar — die Achse ist leer, weil die Abfrage fehlschlug, nicht weil nichts geschehen ist.",
       "observationWindow": "Beobachtungsfenster",
       "goToInstant": "Zu einem Zeitpunkt springen",
       "periodState": "Im Zeitraum",
@@ -2508,6 +2510,7 @@
       "activity": "Letzte Aktivitäten",
       "seeActivity": "Alle Aktivitäten ansehen",
       "noActivity": "Keine aktuelle Aktivität",
+      "problemsUnavailable": "Liste der fehlgeschlagenen Fälle nicht gelesen — das heißt nicht „keine Probleme“.",
       "noProblems": "Kein offenes Problem",
       "actions": "Schnellaktionen",
       "linkRuns": "Alle Bewertungen ansehen",
@@ -8729,6 +8732,8 @@
   "agentScope": {
     "label": "Agenten:",
     "all": "Alle Agenten",
+    "fleetUnavailable": "Flotte nicht lesbar — die Liste ist leer, weil die Abfrage fehlschlug.",
+    "allAgentsLink": "Alle Agenten →",
     "hint": "Dieser Filter gilt für alle Governance-Ansichten; er ändert nicht den Agenten, dessen Seite geöffnet ist.",
     "breakdownTitle": "Ansicht pro Agent",
     "openEvaluations": "Evaluierungen des Agenten ansehen",
@@ -9322,6 +9327,7 @@
     },
     "loading": "Modellkatalog wird geladen...",
     "empty": "Keine Modelle im Katalog.",
+    "unavailable": "Modellkatalog nicht verfügbar — der Dienst konnte nicht antworten. Das heißt nicht „keine Modelle“.",
     "close": "Schließen",
     "serving": {
       "title": "Bedientes Modell — Organisation und pro Agent",
@@ -9376,6 +9382,7 @@
     },
     "loading": "Guardrail-Katalog wird geladen...",
     "empty": "Keine Guardrail-Profile.",
+    "unavailable": "Guardrail-Katalog nicht verfügbar — der Dienst konnte nicht antworten. Das heißt nicht „keine Guardrails“.",
     "close": "Schließen"
   },
   "table": {

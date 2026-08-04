@@ -257,7 +257,11 @@ export function SignalCommandBar({
     // Only fetched for the scoped-agents count; a scope-less page never reads it.
     enabled: scopeFilter && knownFleetCount == null,
   });
-  const fleetCount = knownFleetCount ?? fleet.data?.agents?.length ?? 0;
+  // `?? 0` printed "0 agents observés" whenever the fleet read failed — a statement about the
+  // ORGANISATION derived from a fact about the REQUEST, and the most reassuring possible way
+  // to report that nothing is being watched. `null` means "not known", which the label renders
+  // as an em dash rather than a number.
+  const fleetCount = knownFleetCount ?? fleet.data?.agents?.length ?? null;
   const dataRange = useDataRange();
   const minPickDate = dataRange.data?.start ? new Date(dataRange.data.start) : undefined;
 
@@ -330,7 +334,9 @@ export function SignalCommandBar({
             <Suspense
               key="agents"
               fallback={
-                <span className="tabular-nums">{t("agentsObserved", { n: fleetCount })}</span>
+                <span className="tabular-nums">
+                  {fleetCount == null ? t("agentsUnknown") : t("agentsObserved", { n: fleetCount })}
+                </span>
               }
             >
               <ObservedAgentsLabel fleetCount={fleetCount} />
@@ -684,10 +690,17 @@ function DisabledChip({
  * Suspense boundary because it reads the URL via useSearchParams (build-safe, the
  * same pattern as AgentScopeFilter), so the bar never triggers a CSR bailout.
  */
-function ObservedAgentsLabel({ fleetCount }: { fleetCount: number }) {
+function ObservedAgentsLabel({ fleetCount }: { fleetCount: number | null }) {
   const t = useTranslations("overview.time");
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
+  // Scoped to one agent, the count is 1 by construction and no read is needed. Otherwise it
+  // is the fleet size — or unknown, which is a third state and not the number zero.
   const n = isScopedToAgent(scope) ? 1 : fleetCount;
+  if (n == null) {
+    return (
+      <span className="tabular-nums text-[var(--tessera-text-muted)]">{t("agentsUnknown")}</span>
+    );
+  }
   return <span className="tabular-nums">{t("agentsObserved", { n })}</span>;
 }

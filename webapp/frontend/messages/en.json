@@ -276,6 +276,7 @@
       "asofAt": "State at:",
       "asofBanner": "You are viewing the state at {time}. Actions still apply to the present.",
       "openInProofs": "Open in PROVE · State at date",
+      "agentsUnknown": "agents observed: —",
       "agentsObserved": "{n, plural, =0 {No agent observed} one {# agent observed} other {# agents observed}}",
       "lastUpdate": "Last update",
       "viewingAt": "Viewing:",
@@ -331,6 +332,7 @@
       "eventNext": "Next event",
       "eventsBrowse": "Events",
       "noEventsInWindow": "No event in this window",
+      "eventsUnavailable": "Timeline unreadable \u2014 the axis is empty because the read failed, not because nothing happened.",
       "observationWindow": "Observation window",
       "goToInstant": "Go to a point in time",
       "periodState": "Over the period",
@@ -2508,6 +2510,7 @@
       "activity": "Recent activity",
       "seeActivity": "See all activity",
       "noActivity": "No recent activity",
+      "problemsUnavailable": "Failed-case list unread — that is not the same as “no problems”.",
       "noProblems": "No open problem",
       "actions": "Quick actions",
       "linkRuns": "View all evaluations",
@@ -8729,6 +8732,8 @@
   "agentScope": {
     "label": "Agents:",
     "all": "All agents",
+    "fleetUnavailable": "Fleet unreadable — the list is empty because the read failed.",
+    "allAgentsLink": "All agents →",
     "hint": "This filter applies to every governance view; it does not change the agent opened in its own page.",
     "breakdownTitle": "Per-agent view",
     "openEvaluations": "View the agent's evaluations",
@@ -9322,6 +9327,7 @@
     },
     "loading": "Loading model catalogue...",
     "empty": "No models in the catalogue.",
+    "unavailable": "Model catalogue unavailable — the service could not answer. That is not the same as \u201cno models\u201d.",
     "close": "Close",
     "serving": {
       "title": "Serving model — org and per agent",
@@ -9376,6 +9382,7 @@
     },
     "loading": "Loading guardrail catalogue...",
     "empty": "No guardrail profiles.",
+    "unavailable": "Guardrail catalogue unavailable — the service could not answer. That is not the same as \u201cno guardrails\u201d.",
     "close": "Close"
   },
   "table": {

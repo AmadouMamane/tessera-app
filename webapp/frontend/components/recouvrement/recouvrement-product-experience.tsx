@@ -2329,7 +2329,12 @@ export function RecouvrementProductExperience() {
               <button
                 type="button"
                 aria-label={
-                  counters
+                  // `counters ? …` announced "0 notifications" while the badge eight lines
+                  // below — correctly guarded on `open > 0` — showed nothing at all. Two
+                  // renderings of one state, and the screen-reader one was the odd sentence:
+                  // a sighted user sees no badge, so the accessible name must not count. The
+                  // condition is now the badge's own, so the two cannot drift again.
+                  counters && counters.open > 0
                     ? copy.ui.notificationsAria.replace("{count}", String(counters.open))
                     : copy.ui.notifications
                 }

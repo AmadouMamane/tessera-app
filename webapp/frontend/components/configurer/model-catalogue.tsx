@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { Button } from "@/components/ui/button";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
@@ -57,7 +58,7 @@ export function ModelCatalogue() {
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: ["model-catalogue", locale, scope],
     queryFn: ({ signal }) => fetchModelCatalogue(locale, scope, signal),
     staleTime: 60_000,
@@ -74,7 +75,20 @@ export function ModelCatalogue() {
   if (isLoading) {
     return <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("loading")}</p>;
   }
-  if (!data?.available || rows.length === 0) {
+  // Three states, not one — see the identical note in `guardrail-catalogue`. "No models are
+  // served" is a very different sentence from "we could not ask", and only one of them should
+  // survive a broken catalogue endpoint.
+  if (isError || !data) {
+    return <QueryErrorState onRetry={() => void refetch()} retrying={isFetching} compact />;
+  }
+  if (!data.available) {
+    return (
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+        {t("unavailable")}
+      </p>
+    );
+  }
+  if (rows.length === 0) {
     return (
       <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
         {t("empty")}

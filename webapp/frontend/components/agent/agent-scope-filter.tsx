@@ -44,7 +44,7 @@ function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string
   const searchParams = useSearchParams();
   const scope = parseAgentScope(searchParams.get(AGENT_SCOPE_PARAM));
 
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["fleet-scope-filter"],
     queryFn: ({ signal }) => fetchFleet(signal),
     staleTime: 60_000,
@@ -89,6 +89,13 @@ function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string
           ) : null}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        {/* "All" always works; the per-agent choices vanish silently when the fleet read
+            fails, which reads as an org with exactly one scope. Say which it is. */}
+        {isError && agents.length === 0 ? (
+          <DropdownMenuItem disabled className="text-[var(--tessera-text-muted)]">
+            {t("fleetUnavailable")}
+          </DropdownMenuItem>
+        ) : null}
         {agents.map((a) => (
           <DropdownMenuItem
             key={a.id}

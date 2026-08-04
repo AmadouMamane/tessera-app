@@ -239,6 +239,9 @@ export function TemporalRail({
     : selectedAt != null
       ? t("modeHistory")
       : t("modeLive");
+  // Same query key as every caller's `useRailTimeline()`, so this is a cache read, not a
+  // second request. It exists only so the rail can tell an empty window from an unread one.
+  const railTimeline = useRailTimeline();
   const periodMs = PERIODS.find((p) => p.key === periodKey)?.ms ?? 7 * 24 * 3600_000;
   const rawStart = timeline ? new Date(timeline.window_start).getTime() : end - periodMs;
   const viewStart = end - periodMs;
@@ -444,6 +447,11 @@ export function TemporalRail({
       prevDisabled={prevEventT == null}
       nextDisabled={nextEventT == null}
       noEvents={events.length === 0}
+      // "No event in this window" and "we could not read the timeline" both produce zero
+      // markers on the axis, and the first is the calm one. The rail subscribes to the SAME
+      // query key its ten callers use, so react-query serves it from the same cache entry —
+      // no extra request, and no `timelineFailed` prop to thread through ten call sites.
+      unavailable={railTimeline.isError && !timeline}
       onPrev={() => seekToEvent(prevEventT)}
       onNext={() => seekToEvent(nextEventT)}
     />
@@ -983,6 +991,7 @@ function SignalEventNavigation({
   prevDisabled,
   nextDisabled,
   noEvents,
+  unavailable = false,
   onPrev,
   onNext,
 }: {
@@ -991,15 +1000,19 @@ function SignalEventNavigation({
   nextDisabled: boolean;
   /** No navigable event in the window → a disabled, labelled capsule + reason. */
   noEvents: boolean;
+  /** The timeline could not be READ. Same empty axis, opposite meaning. */
+  unavailable?: boolean;
   onPrev: () => void;
   onNext: () => void;
 }) {
   // Empty window: an honest disabled capsule with the reason in a tooltip — never a
-  // dead pair of arrows that could read as a broken player.
+  // dead pair of arrows that could read as a broken player. And when the timeline could not
+  // be read at all, the reason must say so: "no event in this window" is a statement about
+  // the WINDOW, and asserting it from a failed request is asserting calm from silence.
   if (noEvents) {
     return (
       <span
-        title={t("noEventsInWindow")}
+        title={unavailable ? t("eventsUnavailable") : t("noEventsInWindow")}
         className="ml-auto flex h-8 shrink-0 cursor-not-allowed items-center gap-2 whitespace-nowrap rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/40 px-3 text-[0.7rem] font-medium text-[var(--tessera-text-muted)] opacity-60"
       >
         <Milestone className="h-3.5 w-3.5" />

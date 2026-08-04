@@ -939,6 +939,10 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
         ) : (
           <RightRail
             failed={failedCases.data}
+            // "Aucun problème" is the most reassuring sentence on this page, and an unread
+            // list produces it exactly as a clean run does. The rail must be able to tell
+            // them apart; only the query knows which happened.
+            failedUnavailable={failedCases.isError && !failedCases.data}
             release={releaseStatus.data}
             whatChanged={whatChanged.data}
             runs={runs.data}
@@ -1091,6 +1095,7 @@ function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) 
  * rapides · Activités récentes — all fed by live data, links into the tabs. */
 function RightRail({
   failed,
+  failedUnavailable = false,
   release,
   whatChanged,
   runs,
@@ -1098,6 +1103,8 @@ function RightRail({
   onEvidence,
 }: {
   failed: FailedCasesReport | undefined;
+  /** The failed-cases read did not answer — distinct from "it answered, and there are none". */
+  failedUnavailable?: boolean;
   release: ReleaseStatus | undefined;
   whatChanged: WhatChanged | undefined;
   runs: RunRegistry | undefined;
@@ -1153,7 +1160,9 @@ function RightRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
             {problems.length === 0 ? (
-              <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noProblems")}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {failedUnavailable ? tq("rr.problemsUnavailable") : tq("rr.noProblems")}
+              </p>
             ) : (
               problems.map((p) => (
                 <div

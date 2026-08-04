@@ -2,13 +2,26 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { missingMessageFallback } from "@/i18n/fallback";
+
 const root = process.cwd();
 
 describe("premium cockpit contracts", () => {
   it("never renders a raw next-intl key when a dynamic catalogue entry is absent", () => {
-    const source = readFileSync(join(root, "components/providers/intl-provider.tsx"), "utf8");
-    expect(source).toContain("getMessageFallback");
-    expect(source).toContain('=> "—"');
+    // Asked of the FUNCTION, and of both renderers that use it. This assertion used to grep
+    // `intl-provider.tsx` for the literal `=> "—"`, so it went red the day the fallback was
+    // extracted to `i18n/fallback.ts` and shared with the SERVER renderer — a refactor that
+    // fixed a real hole (the server had no fallback at all and printed the dotted key path).
+    // A witness that fails on the fix it was asking for is asking the wrong question.
+    const fallback = missingMessageFallback();
+    expect(fallback).not.toContain(".");
+    expect(fallback.length).toBeLessThan(4);
+
+    for (const file of ["components/providers/intl-provider.tsx", "i18n/request.ts"]) {
+      const source = readFileSync(join(root, file), "utf8");
+      expect(source, `${file} sets no message fallback`).toContain("getMessageFallback");
+      expect(source, `${file} swallows the miss`).toContain("onError");
+    }
   });
 
   it("offers the shared 14-day window everywhere that owns a period control", () => {

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown, Network } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { agentIcon } from "@/components/agent/agent-icon";
 import {
@@ -27,7 +28,8 @@ export function AgentSwitcher() {
   const agentId = useAgentId();
   const pathname = usePathname();
   const router = useRouter();
-  const { data } = useQuery({
+  const t = useTranslations("agentScope");
+  const { data, isError } = useQuery({
     queryKey: ["fleet-switcher"],
     queryFn: ({ signal }) => fetchFleet(signal),
     staleTime: 60_000,
@@ -56,6 +58,13 @@ export function AgentSwitcher() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[15rem]">
+        {/* An empty menu is what a failed fleet read looked like: the operator opens the
+            switcher, sees nothing, and concludes there are no other agents. Say which it is. */}
+        {isError && agents.length === 0 ? (
+          <DropdownMenuItem disabled className="text-[var(--tessera-text-muted)]">
+            {t("fleetUnavailable")}
+          </DropdownMenuItem>
+        ) : null}
         {agents.map((a) => {
           const Icon = agentIcon(a.id);
           return (
@@ -77,7 +86,7 @@ export function AgentSwitcher() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/agents" className="flex items-center gap-2">
-            <Network className="h-3.5 w-3.5" /> Tous les agents →
+            <Network className="h-3.5 w-3.5" /> {t("allAgentsLink")}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

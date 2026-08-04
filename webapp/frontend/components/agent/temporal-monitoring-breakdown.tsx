@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { AGENT_SCOPE_ALL } from "@/lib/agent-scope";
 import { fetchFleet } from "@/lib/api/client";
 import type { Fleet } from "@/lib/api/schemas";
@@ -87,6 +88,13 @@ export function TemporalMonitoringBreakdown({
       fleet={fleetQuery.data ?? initialFleet}
       scope={scope}
       busy={fleetQuery.isPlaceholderData}
+      // Without this the table cannot tell a refused or broken read from a real answer of
+      // zero, and it renders "no agents" — a statement about the ORGANISATION derived from a
+      // fact about the REQUEST. The SSR caller has no query and passes nothing, so it keeps
+      // the honest-empty branch it already had.
+      failed={fleetQuery.isError && !fleetQuery.data && !initialFleet}
+      onRetry={() => void fleetQuery.refetch()}
+      retrying={fleetQuery.isFetching}
     />
   );
 }
@@ -96,13 +104,24 @@ export function MonitoringFleetTable({
   fleet,
   scope,
   busy = false,
+  failed = false,
+  onRetry,
+  retrying = false,
 }: {
   fleet: Fleet | null;
   scope: string;
   busy?: boolean;
+  /** The read failed — distinct from "the read succeeded and there is nothing". */
+  failed?: boolean;
+  onRetry?: () => void;
+  retrying?: boolean;
 }) {
   const t = useTranslations("agentScope");
   const agents = fleet?.agents ?? [];
+
+  if (failed && onRetry) {
+    return <QueryErrorState onRetry={onRetry} retrying={retrying} compact />;
+  }
 
   if (!fleet || agents.length === 0) {
     return (

@@ -317,10 +317,22 @@ describe("H4 product-surface header contract", () => {
     expect(recouvrementProductExperience).not.toContain("⌘K");
     // Lot 9: the notification badge derives from the REAL open-case counter. While the
     // counter is unavailable, assistive text stays generic rather than inventing zero cases.
-    expect(recouvrementProductExperience).toContain("counters\n                    ?");
+    //
+    // The condition used to be pinned as the literal `"counters\n                    ?"` —
+    // an indentation, asserted as a contract. It broke on the 2026-08-04 fix that made the
+    // accessible name use the BADGE's own condition (`counters.open > 0`) instead of merely
+    // `counters`: with a real counter reading zero, the badge showed nothing while the
+    // aria-label announced "0 notification". Pin the two conditions being IDENTICAL, which is
+    // the actual contract, and let the formatter own the whitespace.
     expect(recouvrementProductExperience).toContain("copy.ui.notificationsAria.replace(");
     expect(recouvrementProductExperience).toContain("String(counters.open)");
     expect(recouvrementProductExperience).not.toContain("String(counters?.open ?? 0)");
+    const ariaGuards = recouvrementProductExperience.match(/counters && counters\.open > 0/g) ?? [];
+    expect(
+      ariaGuards.length,
+      "the aria-label and the visual badge must share one condition, so a zero count cannot be " +
+        "announced to a screen reader while nothing is drawn for everyone else",
+    ).toBeGreaterThanOrEqual(2);
     expect(recouvrementProductExperience).toContain("min-h-[69px]");
   });
 });

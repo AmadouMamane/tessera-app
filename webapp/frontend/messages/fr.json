@@ -276,6 +276,7 @@
       "asofAt": "État au :",
       "asofBanner": "Vous consultez l'état au {time}. Les actions restent appliquées au présent.",
       "openInProofs": "Ouvrir dans PROUVER · État à date",
+      "agentsUnknown": "agents observés : —",
       "agentsObserved": "{n, plural, =0 {Aucun agent observé} one {# agent observé} other {# agents observés}}",
       "lastUpdate": "Dernière mise à jour",
       "viewingAt": "Vue :",
@@ -331,6 +332,7 @@
       "eventNext": "Événement suivant",
       "eventsBrowse": "Événements",
       "noEventsInWindow": "Aucun événement dans la fenêtre",
+      "eventsUnavailable": "Chronologie illisible — l'axe est vide parce que la lecture a échoué, pas parce que rien ne s'est produit.",
       "observationWindow": "Fenêtre d’observation",
       "goToInstant": "Aller à un instant",
       "periodState": "Sur la période",
@@ -2508,6 +2510,7 @@
       "activity": "Activités récentes",
       "seeActivity": "Voir toutes les activités",
       "noActivity": "Aucune activité récente",
+      "problemsUnavailable": "Liste des cas en échec non lue — ce n'est pas « aucun problème ».",
       "noProblems": "Aucun problème ouvert",
       "actions": "Actions rapides",
       "linkRuns": "Voir toutes les évaluations",
@@ -8729,6 +8732,8 @@
   "agentScope": {
     "label": "Agents :",
     "all": "Tous les agents",
+    "fleetUnavailable": "Flotte illisible — la liste est vide parce que la lecture a échoué.",
+    "allAgentsLink": "Tous les agents →",
     "hint": "Ce filtre agit sur toutes les vues de gouvernance ; il ne change pas l'agent ouvert dans sa fiche.",
     "breakdownTitle": "Vue par agent",
     "openEvaluations": "Voir les évaluations de l'agent",
@@ -9322,6 +9327,7 @@
     },
     "loading": "Chargement du catalogue de modèles...",
     "empty": "Aucun modèle au catalogue.",
+    "unavailable": "Catalogue de modèles indisponible — le service n'a pas pu répondre. Ce n'est pas « aucun modèle ».",
     "close": "Fermer",
     "serving": {
       "title": "Modèle servi — organisation et par agent",
@@ -9376,6 +9382,7 @@
     },
     "loading": "Chargement du catalogue de garde-fous...",
     "empty": "Aucun profil de garde-fous.",
+    "unavailable": "Catalogue de garde-fous indisponible — le service n'a pas pu répondre. Ce n'est pas « aucun garde-fou ».",
     "close": "Fermer"
   },
   "table": {

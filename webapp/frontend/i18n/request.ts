@@ -6,6 +6,7 @@
  */
 import { getRequestConfig } from "next-intl/server";
 
+import { missingMessageFallback, reportMissingMessage } from "./fallback";
 import { type Locale, routing } from "./routing";
 
 export default getRequestConfig(async ({ requestLocale }) => {
@@ -22,5 +23,10 @@ export default getRequestConfig(async ({ requestLocale }) => {
     messages,
     timeZone: "Europe/Paris",
     now: new Date(),
+    // The client provider has had these since it was written; the SERVER renderer had neither,
+    // so a dynamic key that missed printed its own dotted path into a server-rendered page.
+    // Same two functions on both sides — see `i18n/fallback.ts`.
+    onError: reportMissingMessage,
+    getMessageFallback: missingMessageFallback,
   };
 });

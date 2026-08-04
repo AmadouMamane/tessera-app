@@ -251,18 +251,111 @@ Le plafond est un seul compteur, atomique, honnête sur sa dégradation. Et il e
 
 ---
 
-## 5. Front — ce qui reste
+## 5. Front — **soldé le 2026-08-04**
 
-- **30 écrans** font `data?.x ?? []` : `/admin/utilisateurs` affiche « 0/0 utilisateurs » sur
-  panne RBAC, indistinguable de « ce tenant n'a aucun opérateur ». Le `error.tsx` de route
-  couvre l'exception, **pas** la requête qui échoue sans lever.
-- **~210 `t()` dynamiques** non gardés par `t.has()` peuvent afficher le chemin de la clé.
-- Un `aria-label` annonce « 0 notification » quand le badge visuel, correctement gardé huit
-  lignes plus bas, n'affiche rien (`recouvrement-product-experience.tsx:2316`).
-- **3 signaux `synthetic: true` sans bandeau** : `assistant`, `disclosure`, `embedding_skew`.
-- `fiabilite-cout` a **trois** fenêtres indépendantes. Arbitrage proposé (non fait) : le
-  `PeriodRail` devient l'unique propriétaire — il écrit `?period=` **et** le store.
-  ⚠️ Le 14 jours a une raison d'être ; ce n'est pas une rustine à appliquer sans décision.
+Les cinq points ont été **mesurés avant d'être traités**, et trois des cinq chiffres du ticket
+étaient faux. Chaque nombre ci-dessous est reproductible.
+
+### Une lecture qui ÉCHOUE ne doit pas se rendre comme un résultat VIDE
+
+Le ticket disait « 30 écrans ». Il comptait les **occurrences** de `?? []`, pas les gardes.
+Compté sur l'arbre : **246** `.tsx`, dont **56** portent une lecture faillible ; **37** ont un
+repli *et* une reconnaissance d'erreur ; **8** avaient un repli **nu**. Ce sont ces huit qui
+étaient le défaut, et ils sont traités :
+
+- les deux catalogues (`model-catalogue`, `guardrail-catalogue`) fondaient **trois** états en
+  une phrase — `!data?.available || rows.length === 0` — et la troisième est la rassurante.
+  Une plateforme qui annonce « aucun garde-fou configuré » parce que son endpoint est tombé dit
+  à l'opérateur l'**inverse** de ce qui s'est passé ;
+- `temporal-monitoring-breakdown` rendait « aucun agent » sur lecture refusée ;
+- le rail temporel affichait « aucun événement dans la fenêtre » sur une chronologie illisible —
+  la même absence de marqueurs, le sens opposé. Il s'abonne à la **même `queryKey`** que ses dix
+  appelants, donc la vérité lui parvient sans requête supplémentaire ni prop à faire traverser
+  dix fichiers ;
+- `signal-command-bar` imprimait « 0 agents observés », qui est la façon la plus rassurante
+  d'annoncer que **rien n'est surveillé** ;
+- le sélecteur d'agents et le filtre de portée rendaient un menu **vide** (et le premier portait
+  une chaîne française codée en dur, dans un produit trilingue) ;
+- `observability-dashboard` affichait « aucun problème » sur une liste de cas en échec non lue.
+
+⚠️ **Le cliquet a attrapé deux choses que ma sonde jetable manquait.** (a) Il a signalé le
+**commentaire** qui explique le retrait d'un `?? 0`, parce qu'il cite `?? 0` : un détecteur qui
+ne distingue pas le code de la prose *sur* le code désigne la documentation comme le défaut — et
+le chemin le plus court vers le vert aurait été d'effacer l'explication. (b) Une fois les
+commentaires retirés, il a trouvé un écran de plus (`observability-dashboard`, ~1100 lignes) dont
+l'unique mot « unavailable » était… dans un commentaire.
+
+🔻 **Ce que ce cliquet ne voit pas, écrit parce qu'un témoin aveugle doit le dire.** Sa
+granularité est le **fichier** : une garde n'importe où blanchit tous les replis du fichier.
+À lire comme une borne sur la **croissance** de la classe, pas comme un certificat par écran ;
+par écran, le témoin est un test de **rendu**. Un seul écran reste gelé — la palette de
+commandes, avec sa raison : un raccourci absent n'affirme rien sur le nombre d'agents.
+
+### Les `t()` dynamiques
+
+**490** appels dynamiques sur **65** fichiers (pas ~210). Les envelopper un à un de `t.has()`
+aurait raté le 491ᵉ. Deux coutures à la place :
+
+- ⚠️ **le fournisseur CLIENT était gardé depuis toujours ; le rendu SERVEUR ne l'était pas.**
+  C'est la moitié qui rate le plus rarement et le plus mal : toute page sous `app/[locale]/` qui
+  lit par `getTranslations` rend côté serveur, et une clé manquante y imprimait le **chemin
+  pointé**. Les deux rendus d'une même application n'étaient pas d'accord sur ce à quoi
+  ressemble une clé absente. `i18n/fallback.ts` est désormais la source unique des deux ;
+- **la parité des catalogues est gelée** : 7292 clés feuilles dans chacun des trois, union 7292,
+  **zéro** manquante. C'est ce qui garde vide l'ensemble sur lequel le repli peut tirer — le vrai
+  défaut de cette classe n'est pas le plantage, c'est un opérateur allemand voyant un tiret
+  cadratin là où le français voit un libellé, parce que la clé n'a été ajoutée qu'à `fr.json`.
+  ⚠️ Le repli reste `—`, et c'est un **compromis assumé**, argumenté dans le fichier : un tiret
+  est exactement ce que rend une valeur légitimement absente. Il est gardé parce que l'ensemble
+  est vide aujourd'hui et qu'un marqueur criard remplirait le cockpit de jetons de débogage à la
+  première valeur d'énumération non mappée. Le cliquet de parité maintient l'ensemble vide ;
+  `reportMissingMessage` rend le manque audible.
+
+### L'`aria-label` des notifications
+
+Réel et corrigé : à `open === 0`, le badge visuel n'affichait rien et le lecteur d'écran
+entendait « 0 notification ». La condition de l'`aria-label` est désormais **celle du badge**,
+donc les deux ne peuvent plus diverger.
+
+### Les signaux `synthetic` — le chiffre du ticket était faux dans les deux sens
+
+Non pas 3 mais **11** capabilities non-LIVE, et `embedding_skew` n'en fait pas partie (il est
+`LIVE` depuis la réparation du 2026-08-01). Croisement par machine des 11 déclarations Python
+avec les `<ProvenanceNotice signalId="…">` montés dans le front : **les onze portent un
+bandeau, et aucun signal LIVE n'en porte**. Le point était donc périmé — mais **rien**
+n'entretenait cette correspondance : basculer une provenance en `SIMULATION` faisait réclamer à
+une page une mesure vivante qu'elle ne prend plus, sans un seul rouge.
+`test_synthetic_signals_carry_a_banner.py` lie maintenant les deux, **dans les deux sens** — un
+vrai nombre portant un avertissement est un vrai nombre que personne n'écoute.
+
+### `fiabilite-cout` — l'arbitrage proposé était DÉJÀ en place
+
+Mesuré, pas supposé : le `PeriodRail` écrit **déjà** `?period=` (via `mirrorPeriodInUrl`) **et**
+le store partagé, et la page ne contient qu'**un seul** `useQuery`, clé sur `period.days` +
+`period.anchor`. Les « trois fenêtres » étaient le store, le miroir d'URL et l'état interne du
+rail — et ce dernier est un miroir **contrôlé**, resynchronisé par `useEffect` depuis sa prop.
+
+⚠️ **Et l'ancre locale est correcte, elle ne doit pas être unifiée.** `PeriodRail` le dit
+lui-même : *« Distinct from TemporalRail, which time-travels to an instant »*. Son ancre borne un
+**jour** d'une série quotidienne ; `windowStore.anchorEnd` est l'**instant** de fin du cockpit,
+posé par le scrubber. Les confondre fusionnerait deux concepts aux espaces de valeurs différents.
+
+🔻 **Le résidu réel, nouvellement mesuré, et il demande une décision produit — pas une
+rustine.** Le store partagé peut valoir `h24` (posé par la barre de commande d'une autre page
+SURVEILLER), alors que les préréglages de ce rail sont 7/14/30. En arrivant sur la page avec la
+fenêtre partagée à 24 h, `periodDays("h24")` vaut 1, **aucun préréglage n'est sélectionné**, et
+`startIdx = 0` fait coïncider « du » et « au ». La question à trancher est produit :
+**une page dont la série est quotidienne offre-t-elle une fenêtre de 24 h ?** Si oui il faut un
+préréglage ; si non il faut le dire, pas réécrire silencieusement le choix de l'opérateur.
+Le 14 jours, lui, est intact : offert par le rail **et** par `PERIODS` de la barre de commande.
+
+⚠️ **Deux témoins par grep de source réparés au passage**, tous deux devenus rouges sur un
+refactor qui **corrigeait** ce qu'ils demandaient : l'un épinglait `'counters\n{20 espaces}?'`
+— une **indentation**, affirmée comme un contrat ; l'autre cherchait le littéral `=> "—"` dans
+le fournisseur client, et a viré au rouge le jour où ce repli a été extrait pour être partagé
+avec le rendu serveur qui n'en avait aucun. Un témoin qui échoue sur le correctif qu'il réclame
+pose la mauvaise question (ADR 0026). Reformulés sur le contrat réel : *les deux conditions sont
+identiques*, et *les deux rendus posent un repli et un rapport d'erreur*.
 
 ---
 
