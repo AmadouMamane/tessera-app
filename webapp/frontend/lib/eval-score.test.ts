@@ -122,8 +122,10 @@ describe.skipIf(OWED)("the committed floor", () => {
   });
 
   it("declares the criteria it was measured under — an id-hash cannot see a ruler change", () => {
-    expect(baselineDoc.grader_criteria_sha, "the floor no longer says which ruler judged it")
-      .toBeTruthy();
+    expect(
+      baselineDoc.grader_criteria_sha,
+      "the floor no longer says which ruler judged it",
+    ).toBeTruthy();
   });
 });
 
