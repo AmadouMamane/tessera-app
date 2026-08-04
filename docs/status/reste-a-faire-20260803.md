@@ -102,6 +102,51 @@ d'outillage, et « 40 » → **63 dérivé** par un test.
 
 ---
 
+## 0 ter. La CI n'est plus bloquée, et le premier runner en 158 commits a trouvé du vrai
+
+**Le push a eu lieu le 2026-08-04** (§1.2 est donc soldé) et la facturation ne bloque plus : huit
+workflows tournent réellement sur chaque `main`. La phrase du `CLAUDE.md` — *« CI is
+billing-blocked, so the local gate is this project's ONLY witness »* — est **périmée**. Le gate
+local reste nécessaire ; il n'est plus le seul témoin, et il ne suffisait pas.
+
+Ce que le premier runner a vu et qu'aucun témoin local ne voyait :
+
+| trouvaille | ce qui a été fait |
+|---|---|
+| **Contournement d'authentification VIVANT** — `Host: example.com/healthz#` faisait lire `/healthz` à `request.url.path`, donc exempté du contrôle bearer, pendant que le routeur dispatchait `/chat`. Le jeton bearer **est** posé sur l'agent déployé. | réparé des deux côtés : `starlette>=1.3.1` **et** `tessera.api.request_path.routed_path`, qui lit `scope["path"]` — ce que le routeur lit |
+| **17 avis** dans 7 paquets | **zéro**, et **plus aucun `--ignore-vuln`** : les deux exemptions sont tombées par les faits |
+| `fastapi` 0.137+ vide `app.routes`, que **trois cliquets de sécurité** itèrent | plafonné `<0.137` + `test_route_walks_still_see_routes.py` |
+| **36 Mo de code tiers** dans `docs/`, une **capture d'un vrai portail bancaire avec des soldes réels**, son clone HTML | supprimés ; `test_no_vendored_page_dumps.py` |
+| 7 `urlopen` sans garde de schéma | une seule porte : `tessera.urlfetch` |
+| un test unitaire exigeait Postgres et refusait une parité creuse | rehébergé dans `tests/integration/` — il avait raison |
+| `detect-secrets` ne pouvait être vert par **aucune** baseline honnête (il ignore les liens, le hook les suit) ; `gitleaks` lisait les empreintes de cette baseline comme des secrets | deux exemptions d'**une entrée chacune**, gelées par `test_scanner_exemptions_stay_narrow.py` |
+
+**Deux jobs retirés — décisions, pas correctifs, et ils laissent des trous :**
+
+- **CodeQL.** Le code scanning est **facturé** (GitHub Advanced Security) sur un dépôt privé. Trou
+  déclaré, sans substitut gratuit : **aucune analyse de teinte interprocédurale**. ruff `S`,
+  bandit, gitleaks, detect-secrets et Trivy sont tous syntaxiques.
+- **Provenance SLSA.** Le générateur refuse volontairement sur un dépôt privé, pour ne pas publier
+  son nom dans le journal de transparence **public**. L'override est un booléen et il publie :
+  c'est une **divulgation**, pas un rangement d'outillage. `cosign` + SBOM restent verts ; ce qui
+  est perdu est la provenance de build niveau 3. La ligne qui restaure est écrite là où le job
+  vivait, avec le fait utile : cosign écrit **déjà** l'identité du dépôt dans ce même journal.
+
+⚠️ **Piège à retenir.** Ma sonde locale posait une question plus **étroite** que le témoin —
+`trivy --scanners vuln` là où la CI lance `vuln,secret`, et `gitleaks:latest` (8.30.1, qui ne
+signale plus les empreintes SHA-1) là où l'action épingle **8.24.3**. Deux « 0 » lus comme des
+accords. Reproduire **avec la version et les options du témoin**, et exiger un compte non nul de
+ce qui a été examiné.
+
+⚠️ **Et une décision annulée, volontairement.** Retirer `limes/corpus` de l'image (vraie
+correction du dernier signalement Trivy) était implémenté et prouvé sur l'image construite ;
+annulé sur signalement qu'une autre session câblait `pii-egress`. La garde échoue **fermée** :
+supprimer les données d'une dépendance pendant qu'on la réécrit est le chemin le plus court vers
+une image qui refuse tous les tours. Le vrai correctif appartient au paquet `limes` (une wheel qui
+n'embarque pas son corpus) et il est nommé dans `.trivyignore.yaml`.
+
+---
+
 ## 1. Deux actes opératoires — décision, pas correctif
 
 ### 1.1 `admin` / `tessera-admin` — exclu sur consigne, toujours ouvert
@@ -111,11 +156,15 @@ mot de passe est **déclaré**, jamais qu'il **diffère du défaut publié** —
 documentée déclare précisément ce défaut. Aggravant, mesuré : agent et front publient sur
 **`0.0.0.0`** alors que Postgres et Redis sont sur `127.0.0.1`.
 
-### 1.2 `main` local est très en avance sur `origin/main`
+### 1.2 `main` local est très en avance sur `origin/main` — ✅ SOLDÉ le 2026-08-04
 
-Aucun de ces commits n'a vu un runner ; `eval.yml` et `integration.yml` jugent `origin/main`,
+~~Aucun de ces commits n'a vu un runner ; `eval.yml` et `integration.yml` jugent `origin/main`,
 donc un arbre périmé. Pousser est **sortant** et consomme la facturation CI : décision
-opérateur.
+opérateur.~~
+
+L'opérateur a tranché : poussé. 158 commits, fast-forward. Le `Eval` planifié de ce matin était
+**rouge** — sur l'arbre périmé — et il est vert dès le premier push. Voir §0 ter pour ce que les
+autres workflows ont trouvé.
 
 ---
 
