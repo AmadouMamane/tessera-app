@@ -166,7 +166,7 @@ def test_default_scope_banner_names_only_the_default_agent_configuration() -> No
     assert ead._banner("fr", None) == (
         "Cette vue retrouve les sources, les règles et la configuration disponibles à la date "
         "choisie. Elle ne relance pas le modèle et ne recrée donc pas sa réponse exacte. "
-        "La configuration affichée par défaut est celle de l'agent Support client ;"
+        "La configuration affichée par défaut est celle de l'agent Support client"
     )
 
 
