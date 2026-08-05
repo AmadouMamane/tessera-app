@@ -1248,9 +1248,9 @@
       "empty": "No traces captured yet — the replay buffer is empty."
     },
     "components": {
-      "title": "Technical stack components",
+      "title": "Stack components",
       "what": "Every component Tessera depends on, and what the probe actually got back from it.",
-      "how": "tessera.preflight interrogates each dependency THROUGH ITS OWN adapter (Postgres through the ledger's connection, ClickHouse and Prometheus through theirs), never a neighbour.",
+      "how": "Each component is interrogated BY THE PROTOCOL IT SPEAKS at its declared address — never by asking Docker \"what containers exist?\", a neighbouring question: a container can be Up and refuse every connection.",
       "source": "GET /observability/components — src/tessera/preflight.py",
       "checked": "checked {when}",
       "unreadable": "Unreadable — the components' state could not be obtained",
@@ -1271,6 +1271,10 @@
         "verdict": "Verdict",
         "interrogates": "What is interrogated",
         "detail": "What it answered"
+      },
+      "group": {
+        "stack": "The stack — {n} components",
+        "precondition": "Process preconditions — {n}"
       }
     }
   },

@@ -41,7 +41,8 @@ from typing import Final
 from fastapi import APIRouter, Depends
 
 from tessera.api.security import require_bearer
-from tessera.preflight import PreflightReport, Verdict, run_preflight
+from tessera.observability.stack_components import STACK_COMPONENTS, probe_stack
+from tessera.preflight import Check, PreflightReport, Verdict, run_preflight
 
 router = APIRouter()
 
@@ -54,6 +55,13 @@ _TTL_S: Final = 15.0
 #: time, so it has to mean something outside this process.
 _cache: tuple[float, PreflightReport] | None = None
 _cache_lock = Lock()
+
+_stack_cache: tuple[float, tuple[Check, ...]] | None = None
+_stack_cache_lock = Lock()
+
+#: What each stack component is, in the operator's words — read from the declaration so the
+#: page and the registry cannot drift into two answers.
+_STACK_ROLES: Final[dict[str, str]] = {c.key: c.role for c in STACK_COMPONENTS}
 
 #: What each check actually interrogates — the evidence, so a reader can tell a dependency
 #: being down from a probe that never ran. Keyed by ``Check.name``; an unknown name degrades to
@@ -73,7 +81,7 @@ _HEADLINE: Final[dict[int, str]] = {0: "clear", 1: "fail", 2: "blind"}
 
 
 def _probe() -> tuple[float, PreflightReport]:
-    """Run the preflight, off the event loop, at most once per TTL."""
+    """Run both witnesses, off the event loop, at most once per TTL."""
     global _cache
     with _cache_lock:
         cached = _cache
@@ -89,6 +97,20 @@ def _probe() -> tuple[float, PreflightReport]:
     return _cache
 
 
+def _stack() -> tuple[float, tuple[Check, ...]]:
+    """The twelve declared stack components, cached on the same TTL as the preconditions."""
+    global _stack_cache
+    with _stack_cache_lock:
+        cached = _stack_cache
+        if cached is not None and (time.time() - cached[0]) < _TTL_S:
+            return cached
+    observed_at = time.time()
+    checks = probe_stack()
+    with _stack_cache_lock:
+        _stack_cache = (observed_at, checks)
+    return _stack_cache
+
+
 @router.get("/observability/components", dependencies=[Depends(require_bearer)])
 async def observability_components() -> dict[str, object]:
     """Every declared component, what was interrogated, and what it answered.
@@ -101,22 +123,37 @@ async def observability_components() -> dict[str, object]:
         instant the probe actually ran, which is NOT the instant of this request.
     """
     observed_at, report = await asyncio.to_thread(_probe)
+    _, stack = await asyncio.to_thread(_stack)
+
+    def entry(check: Check, group: str, subtitle: str) -> dict[str, object]:
+        return {
+            "name": check.name,
+            "group": group,
+            "verdict": check.verdict.value,
+            "detail": check.detail,
+            "interrogates": subtitle,
+        }
+
+    components = [entry(check, "stack", _STACK_ROLES.get(check.name, "")) for check in stack] + [
+        entry(check, "precondition", _INTERROGATES.get(check.name, "")) for check in report.checks
+    ]
+    every = (*stack, *report.checks)
+    fail = sum(1 for c in every if c.verdict is Verdict.FAIL)
+    blind = sum(1 for c in every if c.verdict is Verdict.BLIND)
     return {
         "observed_at": observed_at,
-        "verdict": _HEADLINE[report.exit_code],
+        # A FAIL anywhere outranks a blind spot: "something is down" is the actionable one.
+        # Blind never yields "clear" — the reason this surface has three states.
+        "verdict": "fail" if fail else ("blind" if blind else "clear"),
         "counts": {
-            "total": len(report.checks),
-            "ok": sum(1 for c in report.checks if c.verdict is Verdict.OK),
-            "fail": len(report.failures),
-            "blind": len(report.blind),
+            "total": len(every),
+            "ok": sum(1 for c in every if c.verdict is Verdict.OK),
+            "fail": fail,
+            "blind": blind,
+            # The operator's twelve, counted on its own: the preconditions are a different
+            # question and folding them together would hide which half moved.
+            "stack_total": len(stack),
+            "stack_ok": sum(1 for c in stack if c.verdict is Verdict.OK),
         },
-        "components": [
-            {
-                "name": check.name,
-                "verdict": check.verdict.value,
-                "detail": check.detail,
-                "interrogates": _INTERROGATES.get(check.name, ""),
-            }
-            for check in report.checks
-        ],
+        "components": components,
     }

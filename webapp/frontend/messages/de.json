@@ -1248,9 +1248,9 @@
       "empty": "Noch keine Traces erfasst — der Replay-Puffer ist leer."
     },
     "components": {
-      "title": "Komponenten der technischen Kette",
+      "title": "Komponenten des Stacks",
       "what": "Jede Komponente, von der Tessera abhängt, und was die Sonde tatsächlich von ihr erhalten hat.",
-      "how": "tessera.preflight befragt jede Abhängigkeit ÜBER IHREN EIGENEN Adapter (Postgres über die Verbindung des Ledgers, ClickHouse und Prometheus über ihre eigene), niemals einen Nachbarn.",
+      "how": "Jede Komponente wird ÜBER IHR EIGENES PROTOKOLL an der deklarierten Adresse befragt — niemals über Docker (»welche Container existieren?«), eine Nachbarfrage: ein Container kann Up sein und jede Verbindung ablehnen.",
       "source": "GET /observability/components — src/tessera/preflight.py",
       "checked": "geprüft {when}",
       "unreadable": "Nicht lesbar — der Zustand der Komponenten konnte nicht ermittelt werden",
@@ -1271,6 +1271,10 @@
         "verdict": "Urteil",
         "interrogates": "Was befragt wird",
         "detail": "Was sie geantwortet hat"
+      },
+      "group": {
+        "stack": "Der Stack — {n} Komponenten",
+        "precondition": "Prozess-Voraussetzungen — {n}"
       }
     }
   },

@@ -470,6 +470,13 @@ export type HealthResponse = z.infer<typeof HealthResponseSchema>;
  */
 export const ComponentCheckSchema = z.object({
   name: z.string(),
+  /**
+   * `stack` — one of the twelve components the deployment runs (Redis, ClickHouse, Postgres,
+   * MinIO, …). `precondition` — what the agent process itself needs to serve a turn. Two
+   * different questions: Grafana being down is not the agent being broken, and a surface that
+   * merges them tells the operator to look in the wrong place.
+   */
+  group: z.enum(["stack", "precondition"]),
   verdict: z.enum(["ok", "fail", "blind", "skip"]),
   detail: z.string(),
   interrogates: z.string(),
@@ -482,6 +489,8 @@ export const ComponentsResponseSchema = z.object({
     ok: z.number().int().nonnegative(),
     fail: z.number().int().nonnegative(),
     blind: z.number().int().nonnegative(),
+    stack_total: z.number().int().nonnegative(),
+    stack_ok: z.number().int().nonnegative(),
   }),
   components: z.array(ComponentCheckSchema),
 });

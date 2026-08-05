@@ -55,8 +55,8 @@ export function ComponentsPanel() {
             </span>
             <Badge tone={tone(query.data.verdict === "clear" ? "ok" : query.data.verdict)}>
               {t(`verdict.${query.data.verdict}`, {
-                ok: query.data.counts.ok,
-                total: query.data.counts.total,
+                ok: query.data.counts.stack_ok,
+                total: query.data.counts.stack_total,
               })}
             </Badge>
           </div>
@@ -80,27 +80,41 @@ export function ComponentsPanel() {
                 </tr>
               </thead>
               <tbody>
-                {query.data.components.map((component) => (
-                  <tr
-                    key={component.name}
-                    className="border-b border-[var(--tessera-border)]/60 last:border-0"
-                  >
-                    <td className="whitespace-nowrap px-1.5 py-1 font-medium text-[var(--foreground)]">
-                      {component.name}
-                    </td>
-                    <td className="px-1.5 py-1">
-                      <Badge tone={tone(component.verdict)}>
-                        {t(`state.${component.verdict}`)}
-                      </Badge>
-                    </td>
-                    <td className="px-1.5 py-1 text-[var(--muted-foreground)]">
-                      {component.interrogates || "—"}
-                    </td>
-                    <td className="px-1.5 py-1 font-mono text-[0.66rem] text-[var(--muted-foreground)]">
-                      {component.detail}
-                    </td>
-                  </tr>
-                ))}
+                {(["stack", "precondition"] as const).flatMap((group) => {
+                  const rows = query.data.components.filter((c) => c.group === group);
+                  if (rows.length === 0) return [];
+                  return [
+                    <tr key={`h-${group}`}>
+                      <th
+                        colSpan={4}
+                        className="px-1.5 pb-1 pt-3 text-left text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]"
+                      >
+                        {t(`group.${group}`, { n: rows.length })}
+                      </th>
+                    </tr>,
+                    ...rows.map((component) => (
+                      <tr
+                        key={component.name}
+                        className="border-b border-[var(--tessera-border)]/60 last:border-0"
+                      >
+                        <td className="whitespace-nowrap px-1.5 py-1 font-medium text-[var(--foreground)]">
+                          {component.name}
+                        </td>
+                        <td className="px-1.5 py-1">
+                          <Badge tone={tone(component.verdict)}>
+                            {t(`state.${component.verdict}`)}
+                          </Badge>
+                        </td>
+                        <td className="px-1.5 py-1 text-[var(--muted-foreground)]">
+                          {component.interrogates || "—"}
+                        </td>
+                        <td className="px-1.5 py-1 font-mono text-[0.66rem] text-[var(--muted-foreground)]">
+                          {component.detail}
+                        </td>
+                      </tr>
+                    )),
+                  ];
+                })}
               </tbody>
             </table>
           </div>

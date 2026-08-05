@@ -1248,9 +1248,9 @@
       "empty": "Aucune trace capturée pour l'instant — le tampon replay est vide."
     },
     "components": {
-      "title": "Composants de la chaîne technique",
+      "title": "Composants de la pile",
       "what": "Chaque composant dont dépend Tessera, et ce que la sonde a réellement obtenu de lui.",
-      "how": "tessera.preflight interroge chaque dépendance PAR SON PROPRE adaptateur (Postgres par la connexion du registre, ClickHouse et Prometheus par la leur), jamais un voisin.",
+      "how": "Chaque composant est interrogé PAR LE PROTOCOLE QU'IL PARLE, à l'adresse déclarée — jamais en demandant à Docker « quels conteneurs existent ? », qui est une question voisine : un conteneur peut être Up et refuser toute connexion.",
       "source": "GET /observability/components — src/tessera/preflight.py",
       "checked": "vérifié {when}",
       "unreadable": "Lecture impossible — l'état des composants n'a pas pu être obtenu",
@@ -1271,6 +1271,10 @@
         "verdict": "Verdict",
         "interrogates": "Ce qui est interrogé",
         "detail": "Ce qu'il a répondu"
+      },
+      "group": {
+        "stack": "La pile — {n} composants",
+        "precondition": "Préconditions du processus — {n}"
       }
     }
   },
