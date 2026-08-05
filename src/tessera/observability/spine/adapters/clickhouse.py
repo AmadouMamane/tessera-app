@@ -15,10 +15,16 @@ only the sampled monitoring firehose. Langfuse/Phoenix keep the *trace* for dril
 
 Dimension columns are plain ``String``s: an unattributed dimension is stored as ``""`` and
 mapped back to ``None`` at read, mirroring the jsonl rows' ``null`` — never a fabricated
-value. Credentials default to the self-hosted stack (``docker-compose.obs.claude.yml``) and
-resolve from Secret Manager in the deployed profile. An unreachable ClickHouse raises
-:class:`SpineUnavailableError` → honest-empty reads / best-effort-skipped writes, never a
-fabricated zero.
+value. Credentials resolve from the process environment (Secret Manager in the deployed
+profile), then from the project's dotenv files, then from the self-hosted stack's defaults
+(``docker-compose.obs.claude.yml``).
+
+An unreachable ClickHouse raises :class:`SpineUnavailableError`; writes are skipped
+best-effort. Reads **propagate** it rather than flattening to an empty list: ``[]`` asserts
+that nothing was ever emitted, which is the one thing a store that could not be read is
+unable to say. Callers that merely display rows flatten it back to ``[]``; callers that
+INTERPRET emptiness — a level, a score, a verdict — must ask whether the read succeeded at
+all (commit ``e7184679``).
 """
 
 from __future__ import annotations
@@ -70,6 +76,11 @@ def _dotenv_files() -> tuple[str, ...]:
     return tuple(str(item) for item in declared)
 
 
+# A quoted dotenv value is at least the pair of quotes itself; a lone `"` is a one-character
+# value, not an empty quoted one, and stripping it would invent a credential nobody wrote.
+_QUOTED_MIN_LEN: Final = 2
+
+
 def _dotenv_values() -> dict[str, str]:
     """`KEY=value` pairs from the project's dotenv files, best effort.
 
@@ -98,7 +109,7 @@ def _dotenv_values() -> dict[str, str]:
             if not key:
                 continue
             value = value.strip()
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            if len(value) >= _QUOTED_MIN_LEN and value[0] == value[-1] and value[0] in {'"', "'"}:
                 value = value[1:-1]
             values[key] = value
     return values

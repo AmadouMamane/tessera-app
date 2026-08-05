@@ -72,7 +72,7 @@ def test_a_value_in_dotenv_reaches_the_config(
         encoding="utf-8",
     )
     config = ClickHouseConfig.from_env()
-    assert config.password == "from-dotenv"
+    assert config.password == "from-dotenv"  # noqa: S105 — a literal written by this test
     assert config.url == "http://host:18123"
 
 
@@ -90,7 +90,7 @@ def test_the_process_environment_still_wins(
         "TESSERA_CLICKHOUSE_PASSWORD=from-dotenv\n", encoding="utf-8"
     )
     monkeypatch.setenv("TESSERA_CLICKHOUSE_PASSWORD", "from-environment")
-    assert ClickHouseConfig.from_env().password == "from-environment"
+    assert ClickHouseConfig.from_env().password == "from-environment"  # noqa: S105 — a literal
 
 
 def test_no_dotenv_at_all_keeps_the_documented_defaults(
@@ -124,7 +124,7 @@ def test_the_parser_survives_the_shapes_a_dotenv_file_really_has(
         encoding="utf-8",
     )
     values = _dotenv_values()
-    assert values["TESSERA_CLICKHOUSE_PASSWORD"] == "quoted=with=equals"
+    assert values["TESSERA_CLICKHOUSE_PASSWORD"] == "quoted=with=equals"  # noqa: S105 — a literal
     assert values["TESSERA_CLICKHOUSE_USER"] == "exported"
     assert "" not in values, "a line with no name on the left is not a setting of the empty name"
 
@@ -136,4 +136,4 @@ def test_env_local_outranks_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     monkeypatch.delenv("TESSERA_CLICKHOUSE_PASSWORD", raising=False)
     (tmp_path / ".env").write_text("TESSERA_CLICKHOUSE_PASSWORD=base\n", encoding="utf-8")
     (tmp_path / ".env.local").write_text("TESSERA_CLICKHOUSE_PASSWORD=overlay\n", encoding="utf-8")
-    assert ClickHouseConfig.from_env().password == "overlay"
+    assert ClickHouseConfig.from_env().password == "overlay"  # noqa: S105 — a literal
