@@ -81,6 +81,8 @@ import {
   ClusterReportSchema,
   type ComplianceReport,
   ComplianceReportSchema,
+  type ComponentsResponse,
+  ComponentsResponseSchema,
   type ConformanceReport,
   ConformanceReportSchema,
   type ConnectorsOverview,
@@ -441,6 +443,11 @@ export async function fetchHealth(signal?: AbortSignal): Promise<HealthResponse>
 
 export async function fetchReadiness(signal?: AbortSignal): Promise<HealthResponse> {
   return request("/readyz", { signal }, HealthResponseSchema);
+}
+
+/** Every declared component, what was interrogated, and what it answered. */
+export async function fetchComponents(signal?: AbortSignal): Promise<ComponentsResponse> {
+  return request("/observability/components", { signal }, ComponentsResponseSchema);
 }
 
 /** Append an optional `?at=<ISO>` as-of-T instant to an observability path (ADR 0011). */

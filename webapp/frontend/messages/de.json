@@ -1246,6 +1246,32 @@
       "lowScore": "Niedriger Score (< {s})",
       "baseRate": "Basisrate (Head)",
       "empty": "Noch keine Traces erfasst — der Replay-Puffer ist leer."
+    },
+    "components": {
+      "title": "Komponenten der technischen Kette",
+      "what": "Jede Komponente, von der Tessera abhängt, und was die Sonde tatsächlich von ihr erhalten hat.",
+      "how": "tessera.preflight befragt jede Abhängigkeit ÜBER IHREN EIGENEN Adapter (Postgres über die Verbindung des Ledgers, ClickHouse und Prometheus über ihre eigene), niemals einen Nachbarn.",
+      "source": "GET /observability/components — src/tessera/preflight.py",
+      "checked": "geprüft {when}",
+      "unreadable": "Nicht lesbar — der Zustand der Komponenten konnte nicht ermittelt werden",
+      "empty": "Keine Komponente deklariert",
+      "verdict": {
+        "clear": "{ok}/{total} betriebsbereit",
+        "fail": "{ok}/{total} — eine Abhängigkeit ist ausgefallen",
+        "blind": "{ok}/{total} — eine Sonde konnte nicht hinsehen"
+      },
+      "state": {
+        "ok": "OK",
+        "fail": "Ausgefallen",
+        "blind": "Blinder Fleck",
+        "skip": "Nicht zutreffend"
+      },
+      "col": {
+        "name": "Komponente",
+        "verdict": "Urteil",
+        "interrogates": "Was befragt wird",
+        "detail": "Was sie geantwortet hat"
+      }
     }
   },
   "settings": {

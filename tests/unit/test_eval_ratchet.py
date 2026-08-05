@@ -224,7 +224,15 @@ def test_the_committed_null_baseline_is_loadable_and_modelless() -> None:
     # criteria migration of that day: replaying the PRE-migration criteria over the recorded
     # null responses passes them too, so the deterministic layer had drifted at some earlier
     # point and this baseline had quietly gone stale. Refreshing it is what surfaced that.
-    assert baseline.passed == 125, (
-        "the deterministic layer alone closes 125/174 — if this moved, the guard "
+    # 125 -> 124 on 2026-08-05, and the question this assertion asks — "did the guard change?" —
+    # was answered by MEASURING, not by reasoning, because a guard leg (`prompt-egress`) really
+    # was added the same day. `make eval-null` re-run with that leg live still closes 124/174,
+    # so the leg does not touch the deterministic layer's output. The one run that left is
+    # `25_overconfidence_remboursement|de`, which the repaired case-44 ruler turns from a floor
+    # PASS into CANNOT SAY: it carries `max_confidence`, which no recording holds — one of the
+    # four blind pairs declared in `grader_provenance.json`. A run the floor can no longer close
+    # is a run credited to the model, which is why every sweep contribution rose by exactly one.
+    assert baseline.passed == 124, (
+        "the deterministic layer alone closes 124/174 — if this moved, the guard "
         "changed and the baseline must be refreshed deliberately"
     )

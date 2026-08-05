@@ -2,9 +2,9 @@
 
 Amadou's product thesis is, word for word, "an eval gate with a non-derogable floor". The
 floor exists, it is measured, and it is committed (``eval/baselines/null-control.json``:
-125 of the catalogue's 174 runs pass with every LLM backend pointed at a closed port — 122
-until the 2026-08-03 refresh). What was missing is that nothing *enforced* it where a release
-is decided.
+124 of the catalogue's 174 runs pass with every LLM backend pointed at a closed port — 122
+until the 2026-08-03 refresh, 125 until the 2026-08-05 one). What was missing is that nothing
+*enforced* it where a release is decided.
 
 These tests make the configuration that produced that bug INEXPRESSIBLE. Each one has been
 mutation-tested — a ratchet nobody has seen go red polices nothing:
@@ -54,11 +54,13 @@ def test_the_measured_floor_is_what_the_removed_bars_sat_under() -> None:
     docs — needs re-reading. It is not a decorative assertion: it is the premise.
     """
     floor = _floor()
-    # 122 until 2026-08-03, then 125 (tests/unit/test_eval_ratchet.py records why those three
-    # moved, and why it was not that day's criteria migration). The premise the ADR rests on
-    # is unchanged and only firmer: the floor is above 70 %, and every bar ADR 0021 removed
-    # sat below it.
-    assert floor.passed == 125
+    # 122 until 2026-08-03, then 125, then 124 on 2026-08-05 (tests/unit/test_eval_ratchet.py
+    # records why each moved, and — for the last one — the measurement proving the guard leg
+    # added the same day is not the cause). The premise the ADR rests on is unchanged: the
+    # floor is above 70 %, and every bar ADR 0021 removed sat below it. It is worth saying
+    # that a floor which can go DOWN is the honest kind: this one lost a run it can no longer
+    # close, and a floor that only ever rose would be a floor nobody re-measures.
+    assert floor.passed == 124
     assert floor.total == 174
     rate = floor.passed / floor.total
     assert 0.71 <= rate < 0.72

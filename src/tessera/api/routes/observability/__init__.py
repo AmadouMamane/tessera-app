@@ -27,6 +27,7 @@ from tessera.api.routes.observability import (
     business,
     client,
     compliance,
+    components,
     comprendre,
     console,
     evals,
@@ -233,6 +234,7 @@ router.include_router(batch.router)
 router.include_router(business.router)
 router.include_router(client.router)
 router.include_router(compliance.router)
+router.include_router(components.router)
 router.include_router(comprendre.router)
 router.include_router(console.router)
 router.include_router(evals.router)

@@ -1246,6 +1246,32 @@
       "lowScore": "Bas score (< {s})",
       "baseRate": "Taux de base (tête)",
       "empty": "Aucune trace capturée pour l'instant — le tampon replay est vide."
+    },
+    "components": {
+      "title": "Composants de la chaîne technique",
+      "what": "Chaque composant dont dépend Tessera, et ce que la sonde a réellement obtenu de lui.",
+      "how": "tessera.preflight interroge chaque dépendance PAR SON PROPRE adaptateur (Postgres par la connexion du registre, ClickHouse et Prometheus par la leur), jamais un voisin.",
+      "source": "GET /observability/components — src/tessera/preflight.py",
+      "checked": "vérifié {when}",
+      "unreadable": "Lecture impossible — l'état des composants n'a pas pu être obtenu",
+      "empty": "Aucun composant déclaré",
+      "verdict": {
+        "clear": "{ok}/{total} opérationnels",
+        "fail": "{ok}/{total} — une dépendance est tombée",
+        "blind": "{ok}/{total} — une sonde n'a pas pu regarder"
+      },
+      "state": {
+        "ok": "OK",
+        "fail": "En panne",
+        "blind": "Angle mort",
+        "skip": "Non applicable"
+      },
+      "col": {
+        "name": "Composant",
+        "verdict": "Verdict",
+        "interrogates": "Ce qui est interrogé",
+        "detail": "Ce qu'il a répondu"
+      }
     }
   },
   "settings": {

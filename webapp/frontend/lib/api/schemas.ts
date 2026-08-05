@@ -460,6 +460,33 @@ export const HealthResponseSchema = z.object({
 });
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
+/**
+ * The stack's components as `tessera.preflight` sees them.
+ *
+ * `verdict` has THREE states on purpose. `blind` — the probe could not look at all — is
+ * neither `ok` nor `fail`, and collapsing it into either is the failure ADR 0026 is about.
+ * `observed_at` is the instant the probe ran, not the instant of the request: the backend
+ * caches it, and a component list that cannot say when it last looked invites "now".
+ */
+export const ComponentCheckSchema = z.object({
+  name: z.string(),
+  verdict: z.enum(["ok", "fail", "blind", "skip"]),
+  detail: z.string(),
+  interrogates: z.string(),
+});
+export const ComponentsResponseSchema = z.object({
+  observed_at: z.number(),
+  verdict: z.enum(["clear", "fail", "blind"]),
+  counts: z.object({
+    total: z.number().int().nonnegative(),
+    ok: z.number().int().nonnegative(),
+    fail: z.number().int().nonnegative(),
+    blind: z.number().int().nonnegative(),
+  }),
+  components: z.array(ComponentCheckSchema),
+});
+export type ComponentsResponse = z.infer<typeof ComponentsResponseSchema>;
+
 export const BudgetSnapshotSchema = z.object({
   input_tokens: z.number().int().nonnegative(),
   output_tokens: z.number().int().nonnegative(),

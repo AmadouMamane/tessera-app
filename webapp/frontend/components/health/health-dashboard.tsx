@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ComponentsPanel } from "@/components/health/components-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -122,6 +123,11 @@ export function HealthDashboard() {
       {/* Tail-based sampling — REAL: analyze_sampling over the captured replay
         bundles (slow / low-faithfulness turns are always kept; a deterministic
         base-rate sample of the head is kept for baseline visibility). */}
+      {/* The components come BEFORE the tail-sampling card: they are what this page is
+          for, and until 2026-08-05 they were simply absent — four KPI cards over /healthz and
+          /readyz, none of which could go red for a dependency. */}
+      <ComponentsPanel />
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">

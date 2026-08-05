@@ -332,7 +332,7 @@
       "eventNext": "Next event",
       "eventsBrowse": "Events",
       "noEventsInWindow": "No event in this window",
-      "eventsUnavailable": "Timeline unreadable \u2014 the axis is empty because the read failed, not because nothing happened.",
+      "eventsUnavailable": "Timeline unreadable — the axis is empty because the read failed, not because nothing happened.",
       "observationWindow": "Observation window",
       "goToInstant": "Go to a point in time",
       "periodState": "Over the period",
@@ -1246,6 +1246,32 @@
       "lowScore": "Low score (< {s})",
       "baseRate": "Base rate (head)",
       "empty": "No traces captured yet — the replay buffer is empty."
+    },
+    "components": {
+      "title": "Technical stack components",
+      "what": "Every component Tessera depends on, and what the probe actually got back from it.",
+      "how": "tessera.preflight interrogates each dependency THROUGH ITS OWN adapter (Postgres through the ledger's connection, ClickHouse and Prometheus through theirs), never a neighbour.",
+      "source": "GET /observability/components — src/tessera/preflight.py",
+      "checked": "checked {when}",
+      "unreadable": "Unreadable — the components' state could not be obtained",
+      "empty": "No component declared",
+      "verdict": {
+        "clear": "{ok}/{total} operational",
+        "fail": "{ok}/{total} — a dependency is down",
+        "blind": "{ok}/{total} — a probe could not look"
+      },
+      "state": {
+        "ok": "OK",
+        "fail": "Down",
+        "blind": "Blind spot",
+        "skip": "Not applicable"
+      },
+      "col": {
+        "name": "Component",
+        "verdict": "Verdict",
+        "interrogates": "What is interrogated",
+        "detail": "What it answered"
+      }
     }
   },
   "settings": {
@@ -9337,7 +9363,7 @@
     },
     "loading": "Loading model catalogue...",
     "empty": "No models in the catalogue.",
-    "unavailable": "Model catalogue unavailable — the service could not answer. That is not the same as \u201cno models\u201d.",
+    "unavailable": "Model catalogue unavailable — the service could not answer. That is not the same as “no models”.",
     "close": "Close",
     "serving": {
       "title": "Serving model — org and per agent",
@@ -9392,7 +9418,7 @@
     },
     "loading": "Loading guardrail catalogue...",
     "empty": "No guardrail profiles.",
-    "unavailable": "Guardrail catalogue unavailable — the service could not answer. That is not the same as \u201cno guardrails\u201d.",
+    "unavailable": "Guardrail catalogue unavailable — the service could not answer. That is not the same as “no guardrails”.",
     "close": "Close"
   },
   "table": {
