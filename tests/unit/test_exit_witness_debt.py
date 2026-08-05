@@ -201,6 +201,13 @@ _EXIT_WITNESSES: dict[str, str] = {
     # deploy-diff (ADR 0048): fetches /api/version on every declared host and refuses on a SHA
     # mismatch. A thin shim over the script whose exit code IS the verdict.
     "Makefile::deploy-diff": "delegate",  # → scripts/deploy_diff.py
+    # served-check (ADR 0051): asks the RUNNING stack which commit it serves and refuses when a
+    # surface it serves has moved since. The question deploy-diff cannot ask — deploy-diff
+    # compares the two hosts to EACH OTHER, and two equally stale hosts agree perfectly.
+    # Deliberately NOT in `make gate`: the gate judges a checkout, not a deployment, and a
+    # permanently-blind check inside a gate teaches people to ignore exit codes. The manifest's
+    # own test IS in the gate; this asks the stack where a stack exists.
+    "Makefile::served-check": "delegate",  # → scripts/served_check.py
     # ── preflight: assert every declared container input, or refuse (ADR 0043) ─────────────────
     # Its exit code IS the verdict (0 clear / 1 FAIL / 2 BLIND), passed through unlaundered:
     # `docker exec … tessera-preflight` returns the command's OWN code, and a missing container
@@ -254,6 +261,13 @@ _EXIT_WITNESSES: dict[str, str] = {
     # mixture of two rulers.
     "scripts/regrade_reports.py": "VERDICT",
     "scripts/deploy_diff.py": "VERDICT",
+    # 0 = the stack serves this commit (or only unserved paths moved) · 1 = REFUSED, a served
+    # surface has moved (STALE / DRIFTED / CHIMERA) · 2 = blind (nothing serving, the stack
+    # cannot name its commit, or it was built from a dirty tree and holds a working tree rather
+    # than a commit). It CAN report the failure it exists to detect: the pure `verdict()` is
+    # driven through every branch in tests/unit/test_served_surfaces_manifest.py without a
+    # network or a git repo, so the refusals are proven to be reachable and not merely written.
+    "scripts/served_check.py": "VERDICT",
     "scripts/gate_witness.py": "VERDICT",  # EXIT_VOID=3: "unusable" is not "failed"
     "scripts/worktree_owner.py": "VERDICT",  # Ok | NotOk | CannotSay
     # It asks the REMOTE (`git ls-remote`), never `refs/remotes/origin/main` — which is a

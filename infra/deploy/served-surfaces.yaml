@@ -1,0 +1,194 @@
+# Served surfaces — for each part of the repo, HOW it reaches the running stack (ADR 0051).
+#
+# The problem this closes, stated plainly: a commit landing on `main` does NOT change what the
+# stack serves, and it does not fail to change it *uniformly* either. Some paths are baked into
+# an image and stay frozen at the commit that built it; others are bind-mounted from the working
+# tree and move the instant the file changes on disk. Land a change touching both and the served
+# stack becomes a CHIMERA — old code reading new data — with nothing on any surface saying so.
+#
+# That is not hypothetical. `eval/reports` is mounted while `eval/baselines` and the grader are
+# baked, so a re-grade landed without a rebuild put the deployed cockpit into `CannotSay`:
+# fresh reports, stale ruler, no error anywhere. The stack was wrong in a way that looked like
+# an honest refusal.
+#
+# `make served-check` reads this file, asks the running stack which commit it serves
+# (`/api/version`), and classifies every file that changed since — so "do I need to rebuild?"
+# is a machine verdict instead of a memory. `tests/unit/test_served_surfaces_manifest.py`
+# checks THIS FILE against the Dockerfiles and compose files, because a manifest nobody
+# verifies is a declaration, and this project does not take declarations for facts (ADR 0026).
+#
+# medium:
+#   baked    — copied into an image. Frozen at build time; a change here is invisible until
+#              the image is rebuilt AND the container recreated.
+#   mounted  — bind-mounted from the working tree. A change is live immediately (or at the
+#              next container restart for config read once at boot). No rebuild needed —
+#              and no rebuild POSSIBLE: rebuilding does not change what is served here.
+#   absent   — not in any served image or mount. Changing it cannot affect the running stack.
+#
+# The default for an unlisted path is `baked`, deliberately: the safe answer to "I do not know
+# what this file is" is "assume the stack must be rebuilt", never "assume it does not matter".
+
+version: 1
+
+surfaces:
+  # ── baked into the agent image (infra/docker/Dockerfile.agent) ─────────────────────────────
+  - path: src/
+    medium: baked
+    images: [agent]
+    why: >-
+      The whole Python application. `COPY src ./src` in the builder stage, carried into the
+      runtime stage. Every route, the guard, the observability projection and the level
+      resolver live here — the stack runs the copy taken at build time and nothing else.
+
+  - path: eval/
+    medium: baked
+    images: [agent]
+    except: [eval/reports/]
+    why: >-
+      `COPY eval ./eval` bakes the failure catalogue, the eval sets, the baselines and the
+      grader. The baselines and the grader criteria are the RULER a report is scored by, so
+      landing a re-grade without rebuilding leaves new reports being read by an old ruler.
+
+  - path: pyproject.toml
+    medium: baked
+    images: [agent]
+    why: Dependency set and tool config; `COPY pyproject.toml uv.lock* ./` into the builder.
+
+  - path: uv.lock
+    medium: baked
+    images: [agent]
+    why: The resolved dependency graph the image installs. A change here changes the venv.
+
+  - path: webapp/frontend/messages/
+    medium: baked
+    images: [agent, frontend]
+    why: >-
+      Baked TWICE and that is the point: the frontend renders them, and the agent copies them
+      to `src/tessera/observability/data/messages` so server-side surfaces can read the same
+      catalogue. Rebuilding one half leaves the pair disagreeing about a label.
+
+  # ── baked into the frontend image (infra/docker/Dockerfile.frontend) ───────────────────────
+  - path: webapp/frontend/
+    medium: baked
+    images: [frontend]
+    why: >-
+      The whole Next.js app, compiled to a standalone build at image build time. Nothing under
+      it is read from disk at runtime — a page edit is invisible until the image is rebuilt.
+
+  # ── mounted from the working tree ──────────────────────────────────────────────────────────
+  - path: eval/reports/
+    medium: mounted
+    mounts: ["./eval/reports:/app/eval/reports:ro"]
+    why: >-
+      Per-environment eval reports are host state, generated per run, so the cutover overlay
+      mounts them read-only OVER the copy the image baked. This is the dangerous half of the
+      chimera: reports move without a rebuild while the grader that scores them does not.
+
+  - path: infra/observability/prometheus/
+    medium: mounted
+    mounts:
+      - "./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+      - "./infra/observability/prometheus/rules:/etc/prometheus/rules:ro"
+    why: >-
+      Scrape config and alert rules, mounted into the Prometheus container. Live at the next
+      container restart, never at a rebuild — the agent image does not contain them.
+
+  - path: infra/observability/grafana/
+    medium: mounted
+    mounts:
+      - "./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro"
+    why: Dashboards and datasource provisioning, mounted into the Grafana container.
+
+  - path: infra/observability/otel-collector/
+    medium: mounted
+    mounts:
+      - "./infra/observability/otel-collector/collector.onprem.yaml:/etc/otelcol-contrib/collector.onprem.yaml:ro"
+    why: >-
+      The collector pipeline config. It decides which metrics reach Prometheus at all, so a
+      change here can move the turn-evidence read (ADR 0017 §4 Am. 3) with no rebuild.
+
+  # ── not served ─────────────────────────────────────────────────────────────────────────────
+  - path: docs/
+    medium: absent
+    why: Documentation and ADRs. Read by people and by CI, never by the running stack.
+
+  - path: tests/
+    medium: absent
+    why: >-
+      Not copied by either Dockerfile. The gate reads them from the working tree; the served
+      containers never see them.
+
+  - path: scripts/
+    medium: absent
+    why: >-
+      Operator tooling run from the checkout (`uv run python scripts/...`), not from inside a
+      container. `served_check.py` itself lives here.
+
+  - path: infra/terraform/
+    medium: absent
+    why: Infrastructure description applied by Terraform, not code any container loads.
+
+  - path: .github/
+    medium: absent
+    why: CI workflow definitions, executed by GitHub Actions.
+
+  - path: Makefile
+    medium: absent
+    why: >-
+      Operator entry points. It BUILDS the images and so decides what gets baked, but it is
+      never itself served — changing a target changes the next build, not the running one.
+
+  # Root tooling. Listed one by one rather than swept up by a wildcard, because `absent` is the
+  # claim "changing this cannot affect what runs" and a wrong one silences the check. The safe
+  # default (`baked`) already covers anything not named here; these are named only because the
+  # noise of a false refusal teaches an operator to ignore a real one.
+  - path: .pre-commit-config.yaml
+    medium: absent
+    why: Commit-time hook definitions, run from the checkout. No container reads them.
+
+  - path: .secrets.baseline
+    medium: absent
+    why: The detect-secrets allowlist, read by the pre-commit hook only.
+
+  - path: .python-version
+    medium: absent
+    why: >-
+      Local interpreter pin for `uv`. The agent image pins its own base image, so this file
+      cannot change what the container runs.
+
+  - path: .gitignore
+    medium: absent
+    why: Git plumbing.
+
+  - path: docker-compose
+    medium: absent
+    why: >-
+      The compose files decide which paths are mounted, so they SHAPE the served stack — but
+      they are never inside it. A change here takes effect at the next `up` (which recreates the
+      containers), not at a rebuild, which is why it is not a rebuild signal. Note this entry is
+      a prefix: it covers docker-compose.yml and every overlay.
+
+  - path: CLAUDE.md
+    medium: absent
+    why: Agent-facing repository context, read at session start. Not served.
+
+  - path: AGENTS.md
+    medium: absent
+    why: Agent-facing repository context. Not served.
+
+  - path: CHANGELOG.md
+    medium: absent
+    why: Release notes. Not copied by either Dockerfile (unlike README.md and LICENSE, which are).
+
+  - path: CONTRIBUTING.md
+    medium: absent
+    why: Contributor guide. Not copied by either Dockerfile.
+
+  - path: SECURITY.md
+    medium: absent
+    why: Vulnerability disclosure policy. Not copied by either Dockerfile.
+
+  - path: CODE_OF_CONDUCT.md
+    medium: absent
+    why: Community policy. Not copied by either Dockerfile.

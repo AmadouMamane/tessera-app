@@ -948,7 +948,7 @@ _SETSID = perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec: $$!"'
 .PHONY: dev-up dev-down dev-status dev-preview preflight image-preflight \
         fulllocal-up fulllocal-down fulllocal-status fulllocal-tunnel fulllocal-tunnel-down \
         responsive-check \
-        deploy-diff
+        deploy-diff served-check
 
 # Start backend + frontend from THIS checkout, detached; wait for health.
 dev-up: dev-secrets
@@ -1136,6 +1136,11 @@ fulllocal-status:
 	@echo "front : $$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-frontend 2>/dev/null || echo 'not running') · http://localhost:$${TESSERA_FRONTEND_PORT:-3090}"
 	@echo "agent : $$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-agent 2>/dev/null || echo 'not running') · workers=$$(docker exec tessera-$(or $(TESSERA_ENV),local)-agent printenv TESSERA_API__WORKERS 2>/dev/null || echo '?')"
 	@echo "tunnel: $$(docker inspect -f '{{.State.Status}}' tessera-cloudflared 2>/dev/null || echo 'not running (domain not flipped)')"
+	@# "healthy" answers whether the container is UP, never whether it runs THIS commit — and a
+	@# status that says healthy over a stack three commits stale is how landing without rebuilding
+	@# stays invisible (ADR 0051). Non-gating here: the verdict is printed, the exit code belongs
+	@# to `make served-check`.
+	@uv run python scripts/served_check.py --url http://localhost:$${TESSERA_FRONTEND_PORT:-3090} || true
 
 # THE DESCENT — does the cockpit still work on a smaller screen?
 #
@@ -1190,6 +1195,19 @@ fulllocal-tunnel-down:
 # unset). Its exit code is its own verdict — pass-through, unlaundered.
 deploy-diff:
 	@uv run python scripts/deploy_diff.py
+
+# Staleness witness (ADR 0051): does the RUNNING stack serve what this checkout has landed?
+#
+# `deploy-diff` asks whether the two targets agree with EACH OTHER — and two hosts three commits
+# stale agree perfectly. This asks the stack about the thing instead of about its neighbour:
+# `/api/version` names the served commit, `infra/deploy/served-surfaces.yaml` says which paths
+# are baked into the image and which are bind-mounted live, and every file changed since is
+# classified. Exit 0 = the stack serves this commit (or only unserved paths moved) · 1 = REFUSED,
+# baked code is stale and/or mounted data has already moved under it (the chimera that put the
+# cockpit into `CannotSay`: fresh reports, frozen grader) · 2 = blind (nothing serving, or the
+# stack cannot name its commit). Point it anywhere: SERVED_URL=https://tessera.<domain> make served-check
+served-check:
+	@uv run python scripts/served_check.py $(if $(SERVED_URL),--url $(SERVED_URL),)
 
 # ── CI simulation ───────────────────────────────────────────────────────────
 
