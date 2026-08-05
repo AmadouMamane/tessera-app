@@ -79,9 +79,11 @@ __all__ = [
     "has_turn_evidence",
     "ledger_turn_evidence",
     "recent_turn_evidence",
+    "rows_by_agent",
     "turn_evidence_enabled",
     "turn_evidence_sources",
     "turn_evidence_state",
+    "turns_by_agent",
     "turns_in_window",
 ]
 
@@ -316,36 +318,56 @@ def ledger_turn_evidence(agent_id: str, *, now: datetime | None = None) -> TurnE
     return "observed" if window.turns else "dormant"
 
 
+def rows_by_agent(rows: Iterable[Mapping[str, object]]) -> dict[str, list[Mapping[str, object]]]:
+    """Group ledger rows by ``agent_id``, dropping rows that name no agent (pure)."""
+    grouped: dict[str, list[Mapping[str, object]]] = {}
+    for row in rows:
+        agent_id = row.get("agent_id")
+        if isinstance(agent_id, str) and agent_id:
+            grouped.setdefault(agent_id, []).append(row)
+    return grouped
+
+
 def agents_with_ledger_turns(*, now: datetime | None = None) -> set[str] | None:
     """The ``agent_id`` s the ledger proves served a turn inside the window — one whole-fleet read.
 
-    The grouped sibling of :func:`ledger_turn_evidence`, for the fleet loop: one read for every
-    card instead of one per card. ``None`` when the store did not answer, or when it answered
-    with rows that carry no usable instant.
+    The grouped sibling of :func:`ledger_turn_evidence`. ``None`` when the store did not answer,
+    or when it answered with rows that carry no usable instant.
+
+    The fleet does NOT call this: it needs the capability-stamp fact from the same rows, and two
+    whole-ledger reads that could disagree with each other is the shape this codebase keeps
+    paying for. It calls ``business_capabilities.fleet_ledger_facts`` instead, which derives both
+    facts from one read using this module's pure helpers.
     """
     from tessera.observability import business_events
 
-    end = now or datetime.now(UTC)
     read = business_events.business_event_read()
     if read.blind:
         return None
+    return turns_by_agent(read.rows, now=now)
+
+
+def turns_by_agent(
+    rows: Iterable[Mapping[str, object]], *, now: datetime | None = None
+) -> set[str] | None:
+    """Which agents these ledger rows prove served a turn inside the window (pure).
+
+    ``None`` when rows existed and not one of them could be dated: the store answered, but not
+    with facts this read understands, and publishing an empty set would report that as
+    fleet-wide dormancy.
+    """
+    end = now or datetime.now(UTC)
     since = end - RECENCY_WINDOW
-    by_agent: dict[str, list[Mapping[str, object]]] = {}
-    for row in read.rows:
-        agent_id = row.get("agent_id")
-        if isinstance(agent_id, str) and agent_id:
-            by_agent.setdefault(agent_id, []).append(row)
-    if not by_agent:
+    grouped = rows_by_agent(rows)
+    if not grouped:
         return set()
     emitting: set[str] = set()
     legible_anywhere = False
-    for agent_id, rows in by_agent.items():
-        window = turns_in_window(rows, since=since, until=end)
+    for agent_id, agent_rows in grouped.items():
+        window = turns_in_window(agent_rows, since=since, until=end)
         legible_anywhere = legible_anywhere or window.legible
         if window.turns:
             emitting.add(agent_id)
-    # Rows existed and not one of them could be dated: the store answered, but not with facts
-    # this read understands. Reporting an empty set would publish that as fleet-wide dormancy.
     return emitting if legible_anywhere else None
 
 

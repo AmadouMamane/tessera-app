@@ -237,3 +237,48 @@ def test_a_canary_turn_cannot_manufacture_the_evidence(monkeypatch: pytest.Monke
 
     bc.resolve_level_state(_AGENT)
     assert seen.get("include_synthetic") in (None, False)
+
+
+# ── the fleet's grouped read must answer what the per-agent read answers ─────────────────────
+
+
+def test_the_grouped_fleet_read_agrees_with_the_per_agent_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two surfaces asking one question must not get two answers.
+
+    Found on the live stack on 2026-08-06 and not by a test: `resolve_level_state` said
+    `recouvrement` was L3 while the fleet card said L2, because `fleet.py` never passed
+    `business_events=` and so could not express L3 at all. That cap was unfalsifiable while
+    every agent short-circuited to L0 for want of turn evidence — freeing one agent revealed it.
+    """
+    rows = [_row(turn_id="t-1"), _row(turn_id="t-2", agent_id="other-agent")]
+    _ledger(monkeypatch, rows)
+
+    facts = bc.fleet_ledger_facts()
+    assert facts.readable is True
+    assert facts.turns == {_AGENT, "other-agent"}
+    assert facts.stamped == {_AGENT, "other-agent"}
+    # The per-agent path, on the same rows, must reach the same verdict for the same agent.
+    assert turn_evidence.ledger_turn_evidence(_AGENT) == "observed"
+
+
+def test_the_grouped_read_stays_blind_rather_than_reporting_an_empty_fleet(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A whole-fleet `None`, never a whole-fleet "nobody emitted"."""
+    _blind_ledger(monkeypatch)
+    facts = bc.fleet_ledger_facts()
+    assert facts.readable is False
+    assert facts.turns is None
+    assert facts.stamped is None
+
+
+def test_an_unstamped_emitter_reaches_the_turn_fact_but_not_the_capability_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The two facts are independent: serving turns is not the same as stamping capabilities."""
+    _ledger(monkeypatch, [_row(capability_id="")])
+    facts = bc.fleet_ledger_facts()
+    assert facts.turns == {_AGENT}
+    assert facts.stamped == set()

@@ -18,7 +18,7 @@ from tessera.observability.spine.adapters import fact_source
 from tessera.settings import get_settings
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
     from tessera.agent.registry import Agent
     from tessera.observability.turn_evidence import TurnEvidence
@@ -26,9 +26,11 @@ if TYPE_CHECKING:
 __all__ = [
     "UNKNOWN_CAPABILITY_ID",
     "UNKNOWN_CAPABILITY_LABEL",
+    "FleetLedgerFacts",
     "LevelResolution",
     "business_capability_aggregate",
     "declares_external_effects",
+    "fleet_ledger_facts",
     "resolve_level_state",
     "resolve_observability_level",
 ]
@@ -365,9 +367,45 @@ def _governed(agent_id: str | None) -> bool:
     return release.available and release.socle_total > 0
 
 
-def _has_capability_stamped_events(rows: list[dict[str, object]]) -> bool:
+def _has_capability_stamped_events(rows: Iterable[Mapping[str, object]]) -> bool:
     """≥1 business event stamped with a real ``capability_id`` — the L3 evidence."""
     return any(_capability(row) != UNKNOWN_CAPABILITY_ID for row in rows)
+
+
+@dataclass(frozen=True, slots=True)
+class FleetLedgerFacts:
+    """Both ledger-derived level facts for the whole fleet, from **one** read.
+
+    ``turns`` feeds the L0→L1 decision (§4 Amendment 3), ``stamped`` the L2→L3 one. They come
+    from a single read on purpose: two whole-ledger reads can disagree with each other, and a
+    fleet card whose two rungs were computed from different snapshots is the class of defect
+    this module keeps closing. ``None`` on either means the store could not answer that
+    question — never that the answer is "none".
+    """
+
+    turns: set[str] | None
+    stamped: set[str] | None
+    readable: bool
+
+
+def fleet_ledger_facts() -> FleetLedgerFacts:
+    """Read the ledger once and derive every per-agent fact a fleet card's level needs.
+
+    The fleet computes levels inside its card loop, so a per-agent read would be one ClickHouse
+    round-trip per card. Both facts are derived here with the pure helpers that the single-agent
+    path uses, so grouped and per-agent reads cannot drift apart in meaning.
+    """
+    read = business_events.business_event_read()
+    if read.blind:
+        return FleetLedgerFacts(turns=None, stamped=None, readable=False)
+    stamped = {
+        agent_id
+        for agent_id, rows in turn_evidence.rows_by_agent(read.rows).items()
+        if _has_capability_stamped_events(rows)
+    }
+    return FleetLedgerFacts(
+        turns=turn_evidence.turns_by_agent(read.rows), stamped=stamped, readable=True
+    )
 
 
 @dataclass(frozen=True, slots=True)

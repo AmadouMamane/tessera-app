@@ -38,7 +38,10 @@ from tessera.observability.agentspec_projection import (
     is_invocable,
     observability_level,
 )
-from tessera.observability.business_capabilities import business_capability_aggregate
+from tessera.observability.business_capabilities import (
+    business_capability_aggregate,
+    fleet_ledger_facts,
+)
 from tessera.observability.operator_items import NATURE_A_TRAITER, load_items_for
 from tessera.observability.store_spans import store_read
 from tessera.retrieval.store import _connection
@@ -669,17 +672,18 @@ async def compute_fleet(
         releases,
         records,
         observed_turns,
-        ledger_turns,
+        ledger,
         integrity_broken,
         canary_verdicts,
     ) = await asyncio.gather(
         asyncio.to_thread(fleet_release_states, lang),
         asyncio.to_thread(_agent_records),
         asyncio.to_thread(turn_evidence.agents_with_turn_evidence),
-        # The second turn-evidence source (§4 Amendment 3), read ONCE for the whole fleet like
-        # its Prometheus sibling. Per-card it would be one ClickHouse round-trip per agent, and
-        # the level is computed inside the card loop.
-        asyncio.to_thread(turn_evidence.agents_with_ledger_turns),
+        # Both ledger-derived level facts, read ONCE for the whole fleet like their Prometheus
+        # sibling: the turn evidence for L0→L1 (§4 Amendment 3) and the capability stamps for
+        # L2→L3. Per-card each would be a ClickHouse round-trip, and the level is computed
+        # inside the card loop.
+        asyncio.to_thread(fleet_ledger_facts),
         asyncio.to_thread(_integrity_broken),
         asyncio.to_thread(_canary_verdicts),
     )
@@ -725,14 +729,28 @@ async def compute_fleet(
         # Two rungs, never one: `level` rests on observed turns alone, `level_declared` on the
         # manifest. When they differ the badge says so — a declared rung must never be dressed
         # up as a computed one (the over-claim `turn-agent` made visible).
-        evidence = turn_evidence.turn_evidence_state(aid, observed_turns, emitting=ledger_turns)
+        #
+        # `business_events` was NOT passed here until 2026-08-06, so this card's computed level
+        # was capped at L2 by construction — it could not express L3 whatever the agent emitted.
+        # Invisible while every agent short-circuited to L0 for want of turn evidence; the moment
+        # Amendment 3 gave `recouvrement` its turns, the fleet said L2 and `resolve_level_state`
+        # said L3. Two surfaces, one question, two answers. Both rungs now read the same facts.
+        evidence = turn_evidence.turn_evidence_state(aid, observed_turns, emitting=ledger.turns)
+        stamped = ledger.stamped is not None and aid in ledger.stamped
         level = (
-            observability_level(record, governed=governed, has_turn_evidence=evidence == "observed")
+            observability_level(
+                record,
+                governed=governed,
+                has_turn_evidence=evidence == "observed",
+                business_events=stamped,
+            )
             if record is not None
             else None
         )
         level_declared = (
-            declared_observability_level(record, governed=governed) if record is not None else None
+            declared_observability_level(record, governed=governed, business_events=stamped)
+            if record is not None
+            else None
         )
         business_facts = business_by_agent[aid]
         agents.append(

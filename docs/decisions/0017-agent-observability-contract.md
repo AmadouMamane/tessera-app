@@ -90,6 +90,24 @@ a real `capability_id` (L3's own evidence) *and* a `turn_id` inside the window (
 is explicitly silent in the test that proves it; stale events alone leave the agent at L0; a blind
 store yields no rung at all.
 
+### A3.7 — What freeing an agent revealed downstream
+
+The caution in §A3.6 earned its keep within the hour. With `recouvrement` at L3, the **fleet
+card** said L2 while `resolve_level_state` said L3 — two surfaces, one question, two answers.
+
+`fleet.py` had never passed `business_events=` to `observability_level`, so its computed rung was
+**capped at L2 by construction**: it could not express L3 whatever an agent emitted. That cap was
+unfalsifiable for as long as every agent short-circuited to L0 for want of turn evidence, which
+is exactly the property that made it survive. Found on the live stack by asking the HTTP surface,
+not by a test.
+
+Both facts now come from **one** ledger read (`business_capabilities.fleet_ledger_facts`) rather
+than two: the fleet needs the capability stamps and the turn evidence together, and two
+whole-ledger reads that can disagree with each other is the shape this codebase keeps paying for.
+The rule this instance confirms: **a correction that unblocks obliges a re-check of every surface
+downstream of it**, because the surfaces that were agreeing on a floor stop agreeing the moment
+the floor lifts.
+
 ### Migration impact
 
 - Frozen tests asserting `recouvrement = L0` go red and are updated with the argument written at
