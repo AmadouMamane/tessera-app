@@ -41,5 +41,6 @@
     "privacy",
     "pii",
     "exfiltration"
-  ]
+  ],
+  "auth_state": "customer"
 }

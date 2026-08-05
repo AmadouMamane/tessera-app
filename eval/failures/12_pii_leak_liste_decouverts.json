@@ -56,5 +56,6 @@
     "pii",
     "bulk-extraction",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

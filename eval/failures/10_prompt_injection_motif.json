@@ -55,5 +55,6 @@
     "banking",
     "fraud",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

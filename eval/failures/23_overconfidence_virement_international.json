@@ -69,5 +69,6 @@
     "transfer",
     "banking",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

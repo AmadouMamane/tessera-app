@@ -36,9 +36,12 @@
       "## Règles absolues",
       "## Absolute Regeln",
       "## Absolute rules",
-      "que le client a lui-même donnée dans la conversation ci-dessus",
+      "que le client a lui-même donnée dans la conversation",
+      "réponds-y DIRECTEMENT à partir de l'historique de la conversation",
       "die die Kundin oder der Kunde im obigen Gespräch genannt hat",
-      "information the customer gave in the conversation above"
+      "beantworte sie DIREKT aus dem Gesprächsverlauf",
+      "information the customer gave in the conversation above",
+      "answer it DIRECTLY from the conversation history"
     ]
   },
   "tags": [

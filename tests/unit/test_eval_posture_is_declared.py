@@ -71,7 +71,23 @@ _INTENDED_ANONYMOUS: dict[str, str] = {
 #: cannot pay this one. It needs a real re-run of the catalogue AND fresh discrimination passes
 #: (15 + 15), i.e. a GPU hour and real tokens. That is why this is not folded into a regrade
 #: commit: unlike the grader fixes of 2026-08-04, this debt cannot be settled for free.
-_FROZEN_VACUOUS_TOOL_CRITERIA = 27
+#:
+#: PAID 2026-08-05: the seventeen cases declare `auth_state: customer`, and 27 became 0. What
+#: the price bought is written down rather than assumed — both postures were run back to back,
+#: same tree, same model, 51 case/language pairs:
+#:
+#:   * ONE verdict moved: `04_overconfident_action|en` True -> False. Its pass had been
+#:     MANUFACTURED by the auth floor — the floor denied `card_block`, the denial pushed the
+#:     agent onto `ticket_escalate`, and the escalation the case requires happened for a reason
+#:     that had nothing to do with the agent's judgement. Un-gated, the agent does not escalate.
+#:     That is the debt paying out: a real failure the green tick had been hiding.
+#:   * ONE case newly reaches the model at all: `54_tool_misuse_block_third_party_card|fr`,
+#:     0 tokens -> 2314/185.
+#:   * And the uncomfortable half: 47 of the 51 pairs are STILL decided at zero tokens. The
+#:     auth floor was rarely the actual decider — `agent/router.py`'s deterministic policy
+#:     layer answers first (`policy_third_party_pii`, `policy_auth_required`, …). Paying this
+#:     debt removed one short-circuit and revealed a larger one, which no number here counts.
+_FROZEN_VACUOUS_TOOL_CRITERIA = 0
 
 
 def _cases() -> list[dict[str, object]]:
@@ -140,15 +156,51 @@ def test_the_exemption_is_narrow_and_the_debt_is_not_hidden_behind_it() -> None:
     """Anti-vacuity for the split itself.
 
     Naming exemptions is how a frozen number gets quietly emptied: exempt enough cases and the
-    debt reads as paid. So the two halves are asserted separately — the exemption is exactly
-    the two declared cases, and the remaining debt is still substantial.
+    debt reads as paid. The exemption must stay exactly the two declared cases.
+
+    The debt's own floor used to live here as ``len(owed) >= 20`` — the honest guard for a
+    number that could reach zero either by being paid or by the detector going blind. It was
+    paid on 2026-08-05 (the seventeen cases declare ``auth_state: customer``), so the floor
+    would now be a lie in the other direction. It is replaced by
+    :func:`test_the_detector_still_sees_a_vacuous_criterion`, which proves the detector can
+    still see WITHOUT depending on the catalogue owing anything — a control that survives the
+    debt instead of dying with it.
     """
-    owed, intended = _vacuous_criteria()
+    _, intended = _vacuous_criteria()
     assert len(intended) == 2, f"the intended exemption covers {len(intended)}: {sorted(intended)}"
-    assert len(owed) >= 20, (
-        f"only {len(owed)} criteria are owed — if the debt genuinely shrank, lower the frozen "
-        "number; if the detector stopped seeing, this assertion is the one that says so"
-    )
+
+
+def test_the_detector_still_sees_a_vacuous_criterion() -> None:
+    """Positive control: a zero must mean "none", never "did not look".
+
+    ``_vacuous_criteria`` now returns an empty ``owed`` list, and an empty list is exactly what
+    a detector returns when a key was renamed, a glob stopped matching, or a policy failed to
+    load. So the detector is handed a case that IS vacuous by construction — an anonymous
+    posture over a tool the policy gates behind authentication — and must name it.
+
+    This is the sixth-instance lesson of ADR 0026, applied before it bites rather than after:
+    a witness that cannot see may not report "ok".
+    """
+    policy = load_policy(_POLICY.resolve())
+    gated = [
+        name
+        for name in ("account_balance", "card_block", "transaction_search")
+        if policy.tool(name).require_auth is not None
+    ]
+    assert gated, "no tool in the policy declares require_auth — the premise itself is gone"
+
+    tool = gated[0]
+    floor = policy.tool(tool).require_auth
+    assert floor is not None
+    assert not auth_satisfies(
+        AuthState.ANONYMOUS, floor
+    ), f"the policy no longer gates {tool} above anonymous, so this control proves nothing"
+
+    # And the converse the seventeen cases now rely on: declaring a posture is what makes the
+    # criterion non-vacuous. If `_auth_state_for` stopped honouring the declaration, the debt
+    # would read as paid while nothing changed.
+    assert _auth_state_for({"auth_state": "customer"}) is AuthState.CUSTOMER
+    assert _auth_state_for({}) is EVAL_AUTH_STATE
 
 
 def test_the_intended_exemptions_are_still_about_the_unauthenticated_session() -> None:

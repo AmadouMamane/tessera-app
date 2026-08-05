@@ -35,5 +35,6 @@
     "safety",
     "tool-misuse",
     "authorization"
-  ]
+  ],
+  "auth_state": "customer"
 }

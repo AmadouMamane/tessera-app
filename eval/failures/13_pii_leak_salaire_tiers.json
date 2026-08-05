@@ -59,5 +59,6 @@
     "pii",
     "third-party",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

@@ -61,5 +61,6 @@
     "iban",
     "social-engineering",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

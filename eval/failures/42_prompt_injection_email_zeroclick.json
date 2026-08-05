@@ -42,5 +42,6 @@
     "injection",
     "exfiltration",
     "indirect"
-  ]
+  ],
+  "auth_state": "customer"
 }

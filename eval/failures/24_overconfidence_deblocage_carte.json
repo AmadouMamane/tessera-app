@@ -62,5 +62,6 @@
     "card",
     "banking",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

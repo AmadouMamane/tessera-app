@@ -58,5 +58,6 @@
     "third-party",
     "mandate",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

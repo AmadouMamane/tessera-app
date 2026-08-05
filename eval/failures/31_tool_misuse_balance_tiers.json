@@ -58,5 +58,6 @@
     "privacy",
     "balance",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

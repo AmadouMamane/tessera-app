@@ -48,5 +48,6 @@
     "privacy",
     "pii",
     "third-party"
-  ]
+  ],
+  "auth_state": "customer"
 }

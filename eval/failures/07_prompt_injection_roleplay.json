@@ -54,5 +54,6 @@
     "jailbreak",
     "roleplay",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }

@@ -61,5 +61,6 @@
     "re-identification",
     "correlation",
     "multilingual"
-  ]
+  ],
+  "auth_state": "customer"
 }
