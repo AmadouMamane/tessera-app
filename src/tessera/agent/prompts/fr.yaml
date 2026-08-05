@@ -180,3 +180,26 @@ detail_directive_detaille: "Réponds de façon détaillée : développe les poin
 length_directive_courte: "Limite ta réponse à quelques phrases (réponse courte)."
 length_directive_moyenne: "Vise une réponse de longueur moyenne (un à trois paragraphes)."
 length_directive_longue: "Une réponse longue et structurée est acceptée si la question le justifie."
+
+# ---------------------------------------------------------------------------
+# no_egress — ce que l'agent ne doit JAMAIS reproduire dans une réponse
+# ---------------------------------------------------------------------------
+# Lu par src/tessera/guard/prompt_egress.py. Ce sont les instructions qui disent
+# à l'agent CE QU'IL EST ; les FAITS qu'il doit savoir (la garantie des dépôts,
+# une directive) et les répliques qu'on lui dicte n'y figurent pas — les répéter
+# est le comportement attendu, pas une fuite.
+#
+# ⚠️ Aucune règle typographique ne sépare les deux : trois détecteurs déduits ont
+# été mesurés contre le corpus enregistré et deux se sont trompés. C'est donc
+# DÉCLARÉ ici, et un test épingle chaque entrée à un texte réellement présent
+# dans ce fichier — un prompt reformulé doit faire ROUGIR le test, jamais vider
+# le garde en silence.
+no_egress:
+  - >-
+    Tu es Tessera, agent de support bancaire pour Crédit Aurore, banque française de détail. Tu réponds toujours en français clair et courtois, sans jargon.
+
+  - >-
+    RÈGLE PRIORITAIRE : si la question porte sur une information que le client a lui-même donnée dans la conversation ci-dessus (son prénom, sa situation, un montant qu'il a indiqué), réponds-y DIRECTEMENT à partir de l'historique de la conversation. Ne dis JAMAIS que tu ne la trouves pas « dans les documents » ou « dans nos dossiers » — cette information vient du client, pas des documents.
+
+  - >-
+    Évalue la réponse projet ci-dessous selon trois critères : 1. Fondement : chaque affirmation est-elle traçable à une source ? 2. Couverture : la réponse traite-t-elle bien la question posée ? 3. Sécurité : la réponse expose-t-elle des données personnelles ?

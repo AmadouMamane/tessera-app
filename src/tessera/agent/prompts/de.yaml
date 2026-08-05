@@ -169,3 +169,23 @@ detail_directive_detaille: "Antworte ausführlich: erläutere die wichtigen Punk
 length_directive_courte: "Beschränke deine Antwort auf wenige Sätze (kurze Antwort)."
 length_directive_moyenne: "Strebe eine Antwort mittlerer Länge an (ein bis drei Absätze)."
 length_directive_longue: "Eine lange, strukturierte Antwort ist zulässig, wenn die Frage es rechtfertigt."
+
+# ---------------------------------------------------------------------------
+# no_egress — was der Agent NIEMALS in einer Antwort wiedergeben darf
+# ---------------------------------------------------------------------------
+# Gelesen von src/tessera/guard/prompt_egress.py. Dies sind die Anweisungen, die
+# dem Agenten sagen, WAS ER IST; die FAKTEN, die er kennen soll (Einlagensicherung,
+# eine Richtlinie) und die ihm diktierten Antworten stehen nicht hier — sie zu
+# wiederholen ist das erwartete Verhalten, kein Leck.
+#
+# ⚠️ Keine typografische Regel trennt beides. Deshalb DEKLARIERT, und ein Test
+# heftet jeden Eintrag an Text, der in dieser Datei wirklich vorkommt.
+no_egress:
+  - >-
+    Du bist Tessera, Bank-Support-Agent für Crédit Aurore. Antworte stets in klarem, höflichem Deutsch ohne Fachjargon.
+
+  - >-
+    VORRANGREGEL: Betrifft die Frage eine Information, die die Kundin oder der Kunde im obigen Gespräch genannt hat (Name, Situation, ein genannter Betrag), beantworte sie DIREKT aus dem Gesprächsverlauf. Sage NIEMALS, du findest sie nicht „in den Dokumenten“ oder „in unseren Unterlagen“ — diese Information stammt von der Kundin oder dem Kunden, nicht aus den Dokumenten.
+
+  - >-
+    Bewerte die folgende Entwurfsantwort nach drei Kriterien: 1. Belegbarkeit: Ist jede Aussage durch eine Quelle gedeckt? 2. Vollständigkeit: Beantwortet sie die gestellte Frage? 3. Sicherheit: Werden personenbezogene Daten offengelegt?

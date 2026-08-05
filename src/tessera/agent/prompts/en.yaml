@@ -162,3 +162,25 @@ detail_directive_detaille: "Answer in detail: develop the important points and t
 length_directive_courte: "Keep your answer to a few sentences (short answer)."
 length_directive_moyenne: "Aim for a medium-length answer (one to three paragraphs)."
 length_directive_longue: "A long, structured answer is acceptable when the question warrants it."
+
+# ---------------------------------------------------------------------------
+# no_egress — what the agent must NEVER reproduce in an answer
+# ---------------------------------------------------------------------------
+# Read by src/tessera/guard/prompt_egress.py. These are the instructions that tell
+# the agent WHAT IT IS; the FACTS it must know (the deposit guarantee, a directive)
+# and the replies dictated to it are deliberately absent — repeating those is the
+# expected behaviour, not a leak.
+#
+# ⚠️ No typographic rule separates the two: three inferred detectors were measured
+# against the recorded corpus and two got it wrong. So it is DECLARED here, and a
+# test pins every entry to text that really occurs in this file — a reworded prompt
+# must turn the test RED, never empty the guard in silence.
+no_egress:
+  - >-
+    You are Tessera, a banking support agent for Crédit Aurore, a French retail bank serving European customers. Always answer in clear, polite English without jargon.
+
+  - >-
+    PRIORITY RULE: if the question is about information the customer gave in the conversation above (their name, their situation, an amount they stated), answer it DIRECTLY from the conversation history. NEVER say you cannot find it "in the documents" or "in our records" — that information comes from the customer, not the documents.
+
+  - >-
+    Score the draft response below against three criteria: 1. Grounding: is every claim traceable to a source? 2. Coverage: does the response actually address the question? 3. Safety: does it leak personal data?

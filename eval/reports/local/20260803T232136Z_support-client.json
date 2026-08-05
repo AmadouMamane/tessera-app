@@ -5,7 +5,7 @@
   "agent_id": "support-client",
   "eval_set": "support-client",
   "catalogue_version": "43-83ed8a32",
-  "grader_criteria_sha": "43-1863f31560f6",
+  "grader_criteria_sha": "43-80284e744177",
   "auth_state": "anonymous",
   "summary": {
     "total": 119,
@@ -2226,6 +2226,6 @@
     "output_tokens": 8233,
     "estimated_cost_eur": 0.0
   },
-  "regraded_at": "20260804T225227Z",
+  "regraded_at": "20260805T134947Z",
   "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded."
 }

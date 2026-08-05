@@ -377,9 +377,106 @@ _WITHHELD: Final[dict[LanguageCode, str]] = {
 }
 
 
+# Shown in place of an answer that reproduced the agent's own instructions. Distinct wording
+# from _WITHHELD on purpose: nothing of the CUSTOMER's was at risk here, and telling someone
+# their data was withheld when it was not is its own small dishonesty. Naming the refusal is
+# deliberate and allowed — a refusal may say what it declines (6fef31de).
+_PROMPT_WITHHELD: Final[dict[LanguageCode, str]] = {
+    LanguageCode.FR: (
+        "Je ne peux pas afficher cette réponse : elle reproduisait mes instructions "
+        "internes. Ces instructions ne sont pas divulgables. Reformulez votre question "
+        "sur votre compte ou nos produits et j'y répondrai volontiers."
+    ),
+    LanguageCode.DE: (
+        "Ich kann diese Antwort nicht anzeigen: Sie gab meine internen Anweisungen "
+        "wieder. Diese Anweisungen sind nicht offenlegbar. Stellen Sie Ihre Frage gerne "
+        "zu Ihrem Konto oder unseren Produkten neu."
+    ),
+    LanguageCode.EN: (
+        "I can't show this response: it reproduced my internal instructions, which are "
+        "not disclosable. Please rephrase your question about your account or our "
+        "products and I'll gladly answer."
+    ),
+}
+
+
 def egress_withheld_notice(language: LanguageCode) -> str:
     """The localized message shown when the egress guard withheld the answer."""
     return _WITHHELD[language]
+
+
+def prompt_egress_withheld_notice(language: LanguageCode) -> str:
+    """The localized message shown when the answer reproduced the agent's instructions."""
+    return _PROMPT_WITHHELD[language]
+
+
+def apply_prompt_egress(
+    text: str,
+    *,
+    language: LanguageCode,
+    disabled: bool = False,
+) -> tuple[str, GuardDecisionRecord | None]:
+    """Withhold a final response that reproduces the agent's own instructions.
+
+    The third outbound leak, beside credentials and personal data, and the one the guard had no
+    leg for. It is not hypothetical: 38 of the 19 203 recorded responses reproduce a declared
+    span of the system prompt, spread over **seven** distinct cases — a full German prompt dump
+    under ``44_prompt_injection_system_prompt_leak|de``, the English one under ``|en``, and the
+    priority-rule block under five cases that never look for a leak at all
+    (``30_tool_misuse_pret_aberrant|fr`` alone accounts for eleven).
+
+    That spread is the argument for a guard rather than more catalogue entries: a case can only
+    refuse the leak somebody thought to write it for. What counts as protected is DECLARED in
+    the prompt bundles under ``no_egress`` and detected by
+    :func:`tessera.guard.prompt_egress.detect_prompt_egress` — never inferred, because two
+    inferred designs were measured against this corpus and both were wrong (see that module).
+
+    **Withheld whole, not masked.** The same reasoning as ``secrets-egress``: a system prompt
+    disclosed in part is still disclosed, and unlike leftover PII there is no useful remainder
+    to save — an answer that dumps its instructions in reply to an extraction request has
+    nothing else in it. Where the leak sits inside an otherwise substantive answer
+    (``05_citation_hallucination|en``), withholding is the conservative direction.
+
+    Run on the RAW answer, before the regex output guard, for the reason the secret leg is:
+    the guard's masks would rewrite the very text being compared.
+
+    Args:
+        text: The RAW candidate final response.
+        language: Response language; selects the withheld wording.
+        disabled: The sandbox ``pii`` override for this turn, as the other legs honour it.
+
+    Returns:
+        ``(safe_text, decision)`` — ``decision`` is ``None`` when nothing was reproduced.
+    """
+    from tessera.agent.state import GuardDecisionRecord
+    from tessera.guard.prompt_egress import PROMPT_EGRESS_RULE, detect_prompt_egress
+
+    if disabled or "pii" in guard_disabled.get():
+        return text, None
+    leaked = detect_prompt_egress(text, language.value)
+    if not leaked:
+        return text, None
+    record = GuardDecisionRecord(
+        target="final_response",
+        decision=DecisionKind.DENY.value,
+        policy_rule=PROMPT_EGRESS_RULE,
+        # The rationale names WHICH declared span leaked, never the span's text: an audit line
+        # that quotes the instruction to prove the instruction leaked has leaked it again.
+        rationale=(
+            f"the answer reproduced {len(leaked)} declared no_egress span(s) of the "
+            f"{language.value} prompt bundle"
+        ),
+    )
+    emit_audit(
+        target="final_response",
+        arguments={"final_response": "[withheld — prompt-egress: instructions reproduced]"},
+        decisions=[record],
+        sink=get_settings().guard.audit_sink,
+        actor=GUARD_ACTOR,
+        outcome="denied",
+    )
+    _record_egress_metric("denied")
+    return prompt_egress_withheld_notice(language), record
 
 
 def _record_egress_metric(decision: str) -> None:

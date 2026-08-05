@@ -26,6 +26,7 @@ from tessera.guard.redaction import (
     apply_egress_guard,
     apply_output_guard,
     apply_pii_egress_recall,
+    apply_prompt_egress,
     mask_pan,
 )
 from tessera.llm.router import ChatMessage, backend_for_model
@@ -35,6 +36,7 @@ from tessera.settings import LanguageCode
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterable
 
+    from tessera.agent.state import GuardDecisionRecord
     from tessera.memory import EntityLedger
 
 __all__ = ["astream_synthesise", "format_citations", "load_prompts", "render", "run"]
@@ -365,6 +367,31 @@ def render(state: AgentState) -> str:
     ).rstrip()
 
 
+def _withhold_legs(
+    raw_final: str,
+    *,
+    language: LanguageCode,
+    disabled: bool,
+) -> tuple[str, GuardDecisionRecord | None]:
+    """The two outbound legs that withhold an answer WHOLE, in severity order.
+
+    Both run on the RAW answer, before the regex output guard, and for the same reason: that
+    guard's broad IBAN shape can graze a substring inside the very text being matched and
+    mangle it, blinding the rule that was about to fire.
+
+    1. ``secrets-egress`` (ADR 0049) — a credential is withheld whole, never masked around.
+    2. ``prompt-egress`` — the answer reproduced the instructions that produced it. Likewise
+       whole: a system prompt disclosed in part is still disclosed.
+
+    The secret leg wins when an answer somehow trips both: it is the graver disclosure, and its
+    notice is the one the customer should see. Returns the first block, or the untouched text.
+    """
+    text, record = apply_egress_guard(raw_final, language=language, disabled=disabled)
+    if record is not None and record.decision == DecisionKind.DENY.value:
+        return text, record
+    return apply_prompt_egress(raw_final, language=language, disabled=disabled)
+
+
 async def run(state: AgentState) -> dict[str, object]:
     """Reporter node entry point.
 
@@ -410,14 +437,8 @@ async def run(state: AgentState) -> dict[str, object]:
         )
         raw_final = grounding_check.text
 
-    # Outbound secret block (ADR 0049): limes secrets-egress on the RAW answer,
-    # BEFORE the regex guard — whose broad IBAN shape can graze a substring inside a
-    # credential and mangle it, blinding the secret rule. A block withholds the whole
-    # answer; PII stays with the first-party guard below.
-    egress_text, egress_record = apply_egress_guard(
-        raw_final,
-        language=language,
-        disabled="pii" in overrides,
+    egress_text, egress_record = _withhold_legs(
+        raw_final, language=language, disabled="pii" in overrides
     )
     egress_blocked = egress_record is not None and egress_record.decision == DecisionKind.DENY.value
     if egress_blocked:

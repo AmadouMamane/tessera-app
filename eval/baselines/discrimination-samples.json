@@ -1,7 +1,7 @@
 {
   "kind": "discrimination_samples",
   "catalogue_version": "63-071edbdc",
-  "grader_criteria_sha": "63-cb75fdf6eca9",
+  "grader_criteria_sha": "63-8cc69e503f1c",
   "carried_verdicts": [
     "22_overconfidence_decision_credit|de",
     "25_overconfidence_remboursement|de",
@@ -191,91 +191,91 @@
     "passes": [
       {
         "source": "llama3.2-3b_pass1.json",
-        "sha256": "1b5553655c0e19e38f93e6304cce65e244870b9124ea38ee3e306991c4c4650d",
+        "sha256": "45be4f89fd749eed43f72a73f44e030a6f2c687a6e101b78161cabe0925589aa",
         "output_tokens": 12278,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass2.json",
-        "sha256": "1929c959a87ddc42fef13a3d97c8a114ac960c1a6b6d0b110da1d73dacd2c961",
+        "sha256": "b404f4dddffb3530fae44bc37314f3b7f8f64a94003d92a872a2e35c4a71ced9",
         "output_tokens": 11974,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass3.json",
-        "sha256": "ab04a136b5a4f7abc4b86e1f2e6185cbd2415aa796c3f1dddc1e669a9903f5e5",
+        "sha256": "559a97042f7acaa1b7cbe8a2689f5e6c1920e88869d0ff17fa3f92f253ab2843",
         "output_tokens": 11976,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass4.json",
-        "sha256": "51c4435f4b39b605e2d6231ad053965c3bcbb9cb4df73176f0c9454304e0c034",
+        "sha256": "4275723dc33b8757e4892e669c1962d66108f5db9585c1bb7fd1dbe13b26f7ed",
         "output_tokens": 12281,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass5.json",
-        "sha256": "aa95487d9958d588f3da93639edcd6b445d80fde1e080ebd6206ebefa8bea7e8",
+        "sha256": "58879cbaf9817ab70cc350e83be1960342edbb6e97ee37f77ad669fe0ab094c5",
         "output_tokens": 11852,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass6.json",
-        "sha256": "42a659e356905b7f8aa4740d867c892467c3cdc189e9c9387acd78e80fe8b178",
+        "sha256": "842bf7c3de5c5db8603278e26ef0662dad97f2b3a97f93b8601f22713325aa6e",
         "output_tokens": 11954,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass7.json",
-        "sha256": "5d6d8a143123b69b39e331147dd1b5fcbc0461fc049ef13a77db9a7df4e10b5a",
+        "sha256": "7ccf5cad9eb5118a0201a4d0b69ac0be4fcda6a23130ce143fd05b00d00383b9",
         "output_tokens": 11313,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass8.json",
-        "sha256": "de3444e64c035202d7d24cd2a66f0e3d32c8b1815a36bdb344b2ca6157728ddc",
+        "sha256": "b64dd6ceabb270c9163a78122ba0632e0357ff53c7e192b8e80cfc01a8124b31",
         "output_tokens": 13301,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass9.json",
-        "sha256": "d8965164d0d185ac814e210bee1a41951be33faf61cbe05b63479a726bfff8c4",
+        "sha256": "183751a1764424a9f902afacb58e826d2f4f6481aaff6f0972eac58238bf5c1f",
         "output_tokens": 12141,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass10.json",
-        "sha256": "e8c18a1a03f8073ea550138adf9d5ee4fb780b062c5b3e1f1c6946cb3376ed38",
+        "sha256": "91cf694b63e925c951776b5d5d9cfc9c2c83b0fb3dcac8df898d69464ad20daa",
         "output_tokens": 11997,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass11.json",
-        "sha256": "f46edfb15c20601246ff469c1d359d4d3a2d7cf59edd84552fe2e247d73b78f6",
+        "sha256": "1d4de7ef89f60841b9729a1091f2fc67ab0e8fee7c6398b869545b4bb2bd6d81",
         "output_tokens": 12699,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass12.json",
-        "sha256": "56fd927e85e95aedb50d495d18e559d0a7cf1e53f28316ddadacece4d2d268b0",
+        "sha256": "1110ae3f8a4b31b54e8bfaad8239f2118a9a138c7ff2980011d6185877933bfa",
         "output_tokens": 11985,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass13.json",
-        "sha256": "4a75ef82dd92d5ece669acff18d4a1439028e3821109ce73607cbfe3e826fda6",
+        "sha256": "f406c76467fccdf90497c20b5734c8065a7bc727e3a8bd985935d5cee48a3826",
         "output_tokens": 11966,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass14.json",
-        "sha256": "bf05e830598ad39b17bb578b7a05d63657013ed1c38d8e284529f34412be9183",
+        "sha256": "e06625e4a5b2a7c9850ae0b9d9b25a11e76cc790a69f40166682393eadf64934",
         "output_tokens": 11893,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-3b_pass15.json",
-        "sha256": "0216a9b1b66772ccf4a0d60fca33ce22710e26a5dfe7781ced7a558b0c87d22f",
+        "sha256": "bf229c184fbea448410764b5f5bc554963264424f6abbb53c1b3d7d8e6b32382",
         "output_tokens": 12151,
         "catalogue_version": "63-071edbdc"
       }
@@ -303,91 +303,91 @@
     "passes": [
       {
         "source": "llama3.2-1b_pass1.json",
-        "sha256": "e6977c5e24ce81e37cdeaf8315c7b0f9fc806b86e767f1e95f49d89f59ca056f",
+        "sha256": "36cf40c4203c03d1668d07d310e8ef583cf690ba9e1773f21c84c2061a0993b9",
         "output_tokens": 13054,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass2.json",
-        "sha256": "0a4154a1aa380c634589ddf6b8125a7e6eb558e9079e6521d0b655e9a3b228dc",
+        "sha256": "cd4780333b529fdeed6548da2094ab96d7266784917d3fbb24e032414b0c2288",
         "output_tokens": 13447,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass3.json",
-        "sha256": "ebe60d90e043f9564e797e6a2f172e6c2c4c30ea6183bf9ff9d72b4ee9298e30",
+        "sha256": "03edc31f46832d64bbd39c2932d245d210f766612b2e6e74d68a237041a04510",
         "output_tokens": 14366,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass4.json",
-        "sha256": "45902adda558bb44669d684348dd7119ab8e6ba2755b42e41c55c63f43e63e07",
+        "sha256": "a0e743f3d0e2bb8ec86e470952c5947e897b19e81c34c3791958ea7d20b9db48",
         "output_tokens": 13687,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass5.json",
-        "sha256": "b29ea2e8e225134b8928783973b0ca773693f7148a4766886a1743de16132938",
+        "sha256": "24b987faa8d1d7e499fc963f60f28c32e360cadfd7fc45baddaa77e55b4118bd",
         "output_tokens": 13093,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass6.json",
-        "sha256": "e2b9e7093af430a9517e6217dfa0dec2cb63af38f5c5415d644f767a2603449d",
+        "sha256": "78214adf6ef1597756863dad39dcb1368c9b6aaf08756e7e40492aa40e6d1015",
         "output_tokens": 15044,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass7.json",
-        "sha256": "03b6cb36874da1c307f03fe95e9a0cd638752e8000247862ecbfbcef00ec06f4",
+        "sha256": "51a7bcb62a53eed4a10dce332eaa591ebeb6aca990bee4ce5c31a5ea2574c670",
         "output_tokens": 14770,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass8.json",
-        "sha256": "8b827aea49c6aaca5c0e4a8a6a3821954d06bae0cd813ca510e4704f97ddcc38",
+        "sha256": "dac90f361b5adcb620033e735652ef1eff1e014630c63a4a3264a072d3b0853b",
         "output_tokens": 14483,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass9.json",
-        "sha256": "16ad8e528c894c59381e797b5b0e6a283624a3b59b2431d9ed71f6fc2dc3cdc2",
+        "sha256": "1964c11884da0fd94d623102fd564c451b3e346b30b8193b404b4b0bc4e648ef",
         "output_tokens": 14036,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass10.json",
-        "sha256": "249219fb0bea5e3ad69af99230d110db0668a2c8930bf4933bbd7ea09df4bffd",
+        "sha256": "a4c39ff139652990b0d94312375093861a6b799cdf1a2ba01eb126e3f797f10c",
         "output_tokens": 14501,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass11.json",
-        "sha256": "b874b4beb8de549f0b1e6b77e4ce6cc42ef2aae2497ee7cd42dfed2925e8869c",
+        "sha256": "06e40f068c9a7a4b0e3129e05b7e54cb8c06f59d105288f1cf7e5222e1a34c56",
         "output_tokens": 14484,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass12.json",
-        "sha256": "aca6e975e7aa769ff11133dad420683a63d8db5747c991b2e2cef1d22a2d4da5",
+        "sha256": "adf2a0fdf67369974c868db8584e6dc5461a1f6979d99da57ca9276b7c48800f",
         "output_tokens": 13452,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass13.json",
-        "sha256": "6d6ebe20343676610ea2b4802d811efcecc9977f139d3847c637780667029bca",
+        "sha256": "bc9457c501febddadd6ba1c43c800327d95ca3884e0781903a27009235ea76b4",
         "output_tokens": 15975,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass14.json",
-        "sha256": "899bd090feaf24a4d3c808e0b18c69615751ff76c7e8c04df7ed1601d5759ca4",
+        "sha256": "44af55d227325ac4a907a178122369b1884b014eb12f2534f4a471b45a4b36a2",
         "output_tokens": 14834,
         "catalogue_version": "63-071edbdc"
       },
       {
         "source": "llama3.2-1b_pass15.json",
-        "sha256": "737f5ad08cc57a7dc370f2e2baf4b2c3048796dfff34a7727020a181ea1dff6b",
+        "sha256": "6ac936b91556e9c8464cb46ceb73ea75a7328a7fa58c91dcbeff92c43652a867",
         "output_tokens": 15191,
         "catalogue_version": "63-071edbdc"
       }
