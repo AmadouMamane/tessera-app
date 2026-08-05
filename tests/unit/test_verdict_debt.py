@@ -228,7 +228,7 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/memory/protocol.py::EntityLedger.is_empty": "data",
     "src/tessera/observability/_asof.py::occurred_before": "data",
     "src/tessera/observability/agent_garde_fous.py::_enabled": "config",
-    "src/tessera/observability/agent_lifecycle.py::_level_at_least": "data",
+    "src/tessera/observability/business_capabilities.py::level_at_least": "data",
     "src/tessera/observability/business_capabilities.py::_governed": "filter",
     "src/tessera/observability/business_capabilities.py::_has_capability_stamped_events": "data",
     "src/tessera/observability/business_events.py::_matches_scope": "filter",

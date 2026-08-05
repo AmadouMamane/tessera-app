@@ -4,17 +4,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from tessera.agent.registry import get_agent
 from tessera.observability import business_events, business_scoring, turn_evidence
-from tessera.observability.agent_release import agent_release_state
+from tessera.observability.agent_release import eval_release_state
 from tessera.observability.agentspec_projection import (
     business_signal_descriptors,
     declared_observability_level,
     observability_level,
 )
 from tessera.observability.spine.adapters import fact_source
+from tessera.settings import get_settings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -355,7 +356,10 @@ def _governed(agent_id: str | None) -> bool:
     if not agent_id:
         return False
     try:
-        release = agent_release_state(agent_id)
+        # The EVAL half, deliberately. `agent_release_state` now applies the level condition,
+        # and the level is computed from this very predicate — asking the governed question here
+        # would close the loop `resolve_level_state -> _governed -> agent_release_state`.
+        release = eval_release_state(agent_id)
     except (OSError, ValueError):
         return False
     return release.available and release.socle_total > 0
@@ -405,6 +409,30 @@ def resolve_level_state(agent_id: str | None) -> LevelResolution:
         declared=declared_observability_level(agent, governed=governed, business_events=stamped),
         evidence=evidence,
     )
+
+
+#: ADR 0017 §4 ladder order, for the §A2.4 "at least L2 / L3" release conditions.
+_LEVEL_ORDER: Final[dict[str | None, int]] = {None: -1, "L0": 0, "L1": 1, "L2": 2, "L3": 3}
+
+
+def level_at_least(level: str | None, required: str | None) -> bool:
+    """Whether ``level`` meets a required minimum on the L0-L3 ladder (no requirement = always)."""
+    if required is None:
+        return True
+    return _LEVEL_ORDER.get(level, -1) >= _LEVEL_ORDER.get(required, 99)
+
+
+def required_level_for(agent_id: str | None) -> str | None:
+    """The rung an agent must reach before it may ship — ADR 0017 §A2.4 rules 3 and 4.
+
+    ONE definition, because two surfaces asking "may this ship?" and disagreeing is the failure
+    this function exists to end. The release gate applied these rules; the fleet's "Prêt à être
+    mis en ligne" column did not, and on 2026-08-05 it rendered PRÊT for an agent the gate
+    refuses — visible only once a stricter condition stopped masking it.
+    """
+    if declares_external_effects(agent_id):
+        return "L3"
+    return "L2" if get_settings().is_production() else None
 
 
 def resolve_observability_level(agent_id: str | None) -> str | None:

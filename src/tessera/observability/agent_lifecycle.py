@@ -21,13 +21,13 @@ from tessera.authz import Actor  # noqa: TCH001  — a runtime annotation on a p
 from tessera.guard.audit import emit_agent_lifecycle
 from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.business_capabilities import (
-    declares_external_effects,
+    level_at_least,
+    required_level_for,
     resolve_observability_level,
 )
 from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.eval_floor import grade_against_own_floor
 from tessera.observability.knowledge import _LANG_IDX, _norm_lang
-from tessera.settings import get_settings
 from tessera.verdict import Ok
 
 __all__ = [
@@ -145,17 +145,6 @@ def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
 
 
-# ADR 0017 §4 ladder order, for the §A2.4 "at least L2 / L3" release conditions.
-_LEVEL_ORDER: dict[str | None, int] = {None: -1, "L0": 0, "L1": 1, "L2": 2, "L3": 3}
-
-
-def _level_at_least(level: str | None, required: str | None) -> bool:
-    """Whether ``level`` meets a required minimum on the L0-L3 ladder (None required = always)."""
-    if required is None:
-        return True
-    return _LEVEL_ORDER.get(level, -1) >= _LEVEL_ORDER.get(required, 99)
-
-
 def _blocked_by(*, eval_passed: bool, floor_ok: bool, level_ok: bool) -> str | None:
     """Which condition blocks the release (``None`` when nothing does).
 
@@ -249,13 +238,11 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
     """
     lang = _norm_lang(lang)
     level = resolve_observability_level(agent_id)
-    if declares_external_effects(agent_id):
-        required_level: str | None = "L3"
-    elif get_settings().is_production():
-        required_level = "L2"
-    else:
-        required_level = None
-    level_ok = _level_at_least(level, required_level)
+    # ONE definition of rules 3 and 4, shared with the fleet's release column. It used to live
+    # here alone, so that column simply did not have them: on 2026-08-05 it rendered PRÊT for an
+    # agent this function refuses, invisible until a stricter condition stopped masking it.
+    required_level = required_level_for(agent_id)
+    level_ok = level_at_least(level, required_level)
 
     try:
         snap = load_eval_snapshot(agent_id)

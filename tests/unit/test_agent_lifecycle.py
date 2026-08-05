@@ -20,7 +20,11 @@ from eval.contribution import restrict_baseline
 from eval.ratchet import grader_criteria_sha_for, load_baseline
 from eval.sets import load_eval_set
 from tessera.authz import Actor
-from tessera.observability import agent_lifecycle as lifecycle, eval_floor
+from tessera.observability import (
+    agent_lifecycle as lifecycle,
+    business_capabilities as capabilities,
+    eval_floor,
+)
 from tessera.observability.eval_data import EvalSnapshot, SessionRow
 
 #: A real, named promoter — a promotion signed "admin" names an authority, not a person.
@@ -206,9 +210,13 @@ def _wire(
         lifecycle, "load_eval_snapshot", lambda _aid: _snapshot(gate_passed=gate_passed)
     )
     monkeypatch.setattr(lifecycle, "resolve_observability_level", lambda _aid: level)
-    monkeypatch.setattr(lifecycle, "declares_external_effects", lambda _aid: external)
+    # Rules 3 and 4 now live in ONE place, `business_capabilities.required_level_for`, shared
+    # with the fleet's release column — which did not have them and rendered PRÊT for an agent
+    # this gate refuses. `required_level_for` resolves these two names out of its OWN module
+    # globals at call time, so the seam is there and not on the copies this module imported.
+    monkeypatch.setattr(capabilities, "declares_external_effects", lambda _aid: external)
     monkeypatch.setattr(
-        lifecycle, "get_settings", lambda: SimpleNamespace(is_production=lambda: prod)
+        capabilities, "get_settings", lambda: SimpleNamespace(is_production=lambda: prod)
     )
 
 

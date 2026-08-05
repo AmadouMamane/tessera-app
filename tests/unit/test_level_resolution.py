@@ -117,10 +117,11 @@ def test_an_unproven_level_never_satisfies_the_release_gate(
             model=model, catalogue_version="held-neutral-for-this-test", passes=15, runs=()
         ),
     )
-    monkeypatch.setattr(lifecycle, "declares_external_effects", lambda _aid: False)
-    monkeypatch.setattr(
-        lifecycle, "get_settings", lambda: SimpleNamespace(is_production=lambda: True)
-    )
+    # Rules 3 and 4 have ONE definition now (`bc.required_level_for`), shared with the fleet's
+    # release column — which lacked them entirely. The seam is in that module, not on the copies
+    # `agent_lifecycle` imported.
+    monkeypatch.setattr(bc, "declares_external_effects", lambda _aid: False)
+    monkeypatch.setattr(bc, "get_settings", lambda: SimpleNamespace(is_production=lambda: True))
 
     # The manifest DOES declare L2 — what follows is about proof, not declaration.
     assert bc.resolve_level_state(_AGENT).declared == "L2"

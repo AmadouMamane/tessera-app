@@ -15,7 +15,7 @@ state — never a fabricated verdict.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, TypedDict
 
 from tessera.observability.eval_data import load_eval_snapshot
@@ -31,6 +31,7 @@ __all__ = [
     "ReleaseBuckets",
     "ReleaseFacts",
     "agent_release_state",
+    "eval_release_state",
     "fleet_release_buckets",
     "fleet_release_states",
 ]
@@ -113,6 +114,10 @@ _VERDICT_TR: dict[str, tuple[str, str]] = {
         "BLOCKED: LESS RELIABLE THAN NO MODEL",
     ),
     "ÉVALUATION INSUFFISANTE": ("BEWERTUNG NICHT AUSREICHEND", "EVALUATION NOT SUFFICIENT"),
+    "BLOQUÉ : PREUVES DE FONCTIONNEMENT INSUFFISANTES": (
+        "BLOCKIERT: UNZUREICHENDE FUNKTIONSNACHWEISE",
+        "BLOCKED: INSUFFICIENT EVIDENCE OF OPERATION",
+    ),
     "PASSE": ("BEREIT", "READY"),
     "Éval non exécutée": ("Bewertung nicht ausgeführt", "Evaluation not run"),
 }
@@ -229,8 +234,18 @@ class AgentRelease:
         }
 
 
-def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
-    """Return the eval-gate release verdict for one agent, or an honest empty state.
+def eval_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
+    """The EVAL half of the release verdict: the gate plus ADR 0021's measured floor.
+
+    A narrower question than :func:`agent_release_state`, and it exists for one reason: the
+    computed L-level reads *this* — an agent counts as ``governed`` when an eval with a socle has
+    run — so the level condition cannot be applied here without
+    ``resolve_level_state -> _governed -> agent_release_state`` closing on itself. The two
+    questions are separated so the recursion is impossible by construction rather than avoided by
+    care.
+
+    Nothing operator-facing should render this on its own: it answers "did the evaluation clear",
+    not "may this ship".
 
     ``lang`` localizes the human-facing ``verdict_label`` (fr / de / en); all
     other fields are language-independent numbers, ids and tone keys.
@@ -285,6 +300,48 @@ def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
         socle_total=gate.socle_total,
         floor_ok=floor_ok,
         floor_block=floor.block_reason(),
+    )
+
+
+def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
+    """Return the GOVERNED release verdict for one agent — the question the column asks.
+
+    The fleet's column is headed *"Prêt à être mis en ligne"* and its note says *"dernier
+    contrôle avant mise en ligne"*. That is the whole release decision, so this must apply every
+    condition :func:`tessera.observability.agent_lifecycle.release_decision` applies, not the two
+    it happened to know about.
+
+    **It knew about two.** On 2026-07-14 this surface rendered PASSE for agents certified worse
+    than silence, and learned to read the measured floor. It never learned rules 3 and 4 — no
+    production below L2, and **L3 when the agent declares external effects**. That stayed
+    invisible for as long as a stricter condition happened to fail first: `recouvrement` was
+    blocked by the floor, so nobody could see the column ignoring its level. On 2026-08-05 the
+    floor stopped blocking it and the column said **PRÊT** for an agent the release gate refuses.
+    A screen that reports more than was measured is the defect this repository treats as
+    non-negotiable, and one condition masking another is exactly how it survives.
+
+    The level is asked of :mod:`tessera.observability.business_capabilities` lazily: that module
+    imports this one, and the import is a cycle at module load. The recursion the *call* would
+    otherwise close is broken at :func:`eval_release_state`, which is what ``_governed`` reads.
+    """
+    facts = eval_release_state(agent_id, lang)
+    if not facts.available:
+        return facts
+
+    from tessera.observability.business_capabilities import (
+        level_at_least,
+        required_level_for,
+        resolve_observability_level,
+    )
+
+    required = required_level_for(agent_id)
+    if level_at_least(resolve_observability_level(agent_id), required):
+        return facts
+    return replace(
+        facts,
+        passed=False,
+        verdict_label=_verdict_label("BLOQUÉ : PREUVES DE FONCTIONNEMENT INSUFFISANTES", lang),
+        verdict_tone="bad",
     )
 
 
