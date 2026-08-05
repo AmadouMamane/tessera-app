@@ -169,7 +169,11 @@ export function AgentMetier() {
 
   if (aggregate.isLoading && !data) return <MetierSkeleton />;
 
-  if (!data || aggregate.isError) {
+  // `level_readable === false` means the business-event store did not answer. It arrives with a
+  // null level, so without this branch it would fall through to `empty` below and tell the
+  // operator the agent "has not yet reached the required level" — a measurement nobody took.
+  // An unanswered store is unavailability, and says so (ADR 0026).
+  if (!data || aggregate.isError || !data.level_readable) {
     return (
       <HonestEmpty
         title={t("unavailable.title")}
@@ -287,6 +291,35 @@ function TemporalModeBadge({ asOf }: { asOf: string | null }) {
   );
 }
 
+/**
+ * The L-level badge — which rung, said out loud.
+ *
+ * Two rungs exist and both are legitimate. The DECLARED one is what this page's manifest
+ * reaches; the PROVEN one is what observed facts support, and it is the only one the release
+ * gate reads. On 2026-08-05 an operator read "Niveau L3" here and was told elsewhere the same
+ * agent sits at L0. Neither number was wrong; the badge simply did not say which question it
+ * was answering. So: one badge when they agree, and when they do not, both — the gap is the
+ * information, and hiding it is what let a declaration read as a measurement.
+ */
+export function LevelBadge({
+  declared,
+  computed,
+  t,
+}: {
+  declared: string | null;
+  computed: string | null;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  if (computed === null || computed === declared) {
+    return <Badge tone="info">{t("level", { level: declared ?? "—" })}</Badge>;
+  }
+  return (
+    <Badge tone="warning" title={t("levelGap.hint")}>
+      {t("levelGap.label", { declared: declared ?? "—", proven: computed })}
+    </Badge>
+  );
+}
+
 function SignalKpiStrip({
   data,
   signals,
@@ -312,7 +345,11 @@ function SignalKpiStrip({
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <TemporalModeBadge asOf={asOf} />
-          <Badge tone="info">{t("level", { level: data.observability_level ?? "—" })}</Badge>
+          <LevelBadge
+            declared={data.observability_level ?? null}
+            computed={data.computed_level ?? null}
+            t={t}
+          />
           <Badge tone="neutral">{t("events", { count: data.event_count })}</Badge>
         </div>
       </div>

@@ -1566,3 +1566,54 @@ async def test_observability_business_runs_groups_turns_artifacts_actions_and_sc
     assert summary["artifact"]["type"] == "case_summary_v1"
     assert payment["artifact"]["type"] == "payment_options_v1"
     assert contact["artifact"]["content"]["decision"] == "blocked"
+
+
+async def test_observability_business_runs_limit_bounds_the_whole_response(
+    observed_recouvrement_stores: Path,
+) -> None:
+    """`limit` bounds the response, not one field of it.
+
+    It used to slice ``runs`` and hand back every raw event, plus a ``scores`` block aggregated
+    over all of them — three fields describing three different populations under one ``limit``.
+    Measured on the serving stack on 2026-08-05: ``limit=30`` answered 30 runs and **500**
+    events, 67 turns' worth, so two thirds of the payload described turns the caller was never
+    given. (On the wire it is ~5 KB either way — this is a coherence fix, not a speed one, and
+    saying otherwise would be selling it as more than it is.)
+    """
+    conversation = "conv-rc-bounded"
+    for index in range(3):
+        run_recouvrement_graph_v1(
+            case_id="RC-2048",
+            message="Résumer ce dossier",
+            conversation_id=conversation,
+            turn_id=f"turn-bounded-{index}",
+            assistant_state={"activeTask": "summary"},
+        )
+
+    whole = await call_route(
+        obs.observability_business_runs,
+        agent="recouvrement",
+        conversation_id=conversation,
+        limit=100,
+    )
+    # Positive control first: without it, every assertion below would also hold on a response
+    # that had simply lost its rows.
+    assert len(whole["runs"]) == whole["runs_total"] == 3
+    assert len(whole["events"]) == whole["events_total"] > 3
+
+    bounded = await call_route(
+        obs.observability_business_runs,
+        agent="recouvrement",
+        conversation_id=conversation,
+        limit=1,
+    )
+    assert len(bounded["runs"]) == 1
+    kept = {run["turn_id"] for run in bounded["runs"]}
+    assert {
+        event["turn_id"] for event in bounded["events"]
+    } == kept, "events must describe the runs that were returned, not the ones that were not"
+    # ... and the caller is told what the bound removed, rather than left to read a truncated
+    # answer as the whole of it.
+    assert bounded["runs_total"] == 3
+    assert bounded["events_total"] == whole["events_total"]
+    assert len(bounded["events"]) < bounded["events_total"]

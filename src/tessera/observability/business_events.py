@@ -51,8 +51,10 @@ __all__ = [
     "BusinessEvent",
     "BusinessEventClassification",
     "BusinessEventName",
+    "BusinessEventRead",
     "BusinessEventSink",
     "BusinessEventStore",
+    "BusinessEventsUnavailableError",
     "BusinessPayloadValidationError",
     "ClickHouseBusinessEventStore",
     "CockpitSignalSink",
@@ -61,6 +63,7 @@ __all__ = [
     "InMemoryBusinessEventStore",
     "MetricsSink",
     "ReplaySink",
+    "business_event_read",
     "business_event_rows",
     "classify_event",
     "emit_business_event",
@@ -203,6 +206,18 @@ UNATTRIBUTED_ROLE: Final = "unattributed"
 
 class BusinessPayloadValidationError(ValueError):
     """A critical business event did not satisfy its strict payload contract."""
+
+
+class BusinessEventsUnavailableError(RuntimeError):
+    """The active business-event store could not be read at all.
+
+    The distinction this type exists to keep: *the store was read and holds nothing about this
+    agent* is a fact, and *the store did not answer* is a blind spot. They arrive as the same
+    empty list unless something refuses to flatten them, and downstream that difference decides
+    a level and therefore a release verdict — one says "this agent has not proven L3", the
+    other says "I cannot tell". ADR 0026: a witness that cannot see may not report "ok", and it
+    may not report a shortfall either.
+    """
 
 
 class BusinessEventSink(Protocol):
@@ -613,7 +628,15 @@ class ClickHouseBusinessEventStore:
         artifact_type: str | None = None,
         decision: str | None = None,
     ) -> list[BusinessEvent]:
-        """Read + rebuild business events from the owned table (honest-empty if unreachable)."""
+        """Read + rebuild business events from the owned table.
+
+        Raises :class:`BusinessEventsUnavailableError` when the table cannot be read. It used
+        to return ``[]`` and call that "honest-empty", which is the one thing it is not: an
+        empty list is the assertion *this agent emitted nothing*, and an unreachable store
+        cannot make it. Callers that only display rows still get an empty list — they catch it
+        in :func:`business_event_rows` — but a caller deriving a **level** or a **verdict** now
+        gets to tell "no events" from "no answer" (ADR 0026).
+        """
         from tessera.observability.spine.adapters.base import SpineUnavailableError
         from tessera.observability.spine.adapters.clickhouse import ClickHouseAdapter
 
@@ -632,7 +655,7 @@ class ClickHouseBusinessEventStore:
             )
         except SpineUnavailableError as exc:
             _LOG.warning("owned business-event read unavailable: %s", exc)
-            return []
+            raise BusinessEventsUnavailableError(str(exc)) from exc
         return [event for event in (_row_to_event(row) for row in rows) if event is not None]
 
     def clear(self) -> None:
@@ -683,7 +706,14 @@ class _ShadowBusinessEventStore:
             "decision": decision,
         }
         primary = self._primary.list(**filters)
-        owned = self._owned.list(**filters)
+        try:
+            owned = self._owned.list(**filters)
+        except BusinessEventsUnavailableError as exc:
+            # Shadow mode serves the PRIMARY result; an unreadable owned store is a gap in the
+            # comparison, not in the answer. It is logged as what it is and never counted as a
+            # divergence of zero rows, which would read as "the owned table agrees it is empty".
+            _LOG.warning("business-event shadow comparison blind: owned unreadable (%s)", exc)
+            return primary
         if len(primary) != len(owned):
             _LOG.warning(
                 "business-event shadow divergence: primary=%d owned=%d filters=%s",
@@ -1131,13 +1161,71 @@ def business_event_rows(
 
     Synthetic (canary) events are excluded by default (ADR 0019 §4) — see
     :func:`persisted_business_events`.
+
+    An unreadable store yields ``[]`` here, which is right for the surfaces that only *display*
+    rows: a table renders empty and the page stays up. It is wrong for anything that derives a
+    level, a score or a verdict from the absence — those must call :func:`business_event_read`
+    and refuse to conclude.
+    """
+    return business_event_read(
+        at=at,
+        agent_id=agent_id,
+        workflow_id=workflow_id,
+        conversation_id=conversation_id,
+        turn_id=turn_id,
+        case_id=case_id,
+        capability_id=capability_id,
+        event_name=event_name,
+        artifact_type=artifact_type,
+        decision=decision,
+        include_synthetic=include_synthetic,
+    ).rows
+
+
+@dataclass(frozen=True, slots=True)
+class BusinessEventRead:
+    """Rows, plus whether the store actually answered.
+
+    ``readable is False`` always comes with ``rows == []``, and the two must not be confused:
+    the empty list is then the *absence of an answer*, not the answer "none". Anything deriving
+    a claim from emptiness reads ``readable`` first.
+    """
+
+    rows: list[dict[str, object]]
+    readable: bool
+
+    @property
+    def blind(self) -> bool:
+        """True when the store did not answer — the caller may assert nothing about emptiness."""
+        return not self.readable
+
+
+def business_event_read(
+    *,
+    at: str | None = None,
+    agent_id: str | None = None,
+    workflow_id: str | None = None,
+    conversation_id: str | None = None,
+    turn_id: str | None = None,
+    case_id: str | None = None,
+    capability_id: str | None = None,
+    event_name: str | None = None,
+    artifact_type: str | None = None,
+    decision: str | None = None,
+    include_synthetic: bool = False,
+) -> BusinessEventRead:
+    """Read business-event rows and say whether the store answered.
+
+    The same read as :func:`business_event_rows`, minus the flattening. Use it wherever an
+    empty result would otherwise be *interpreted* — a computed observability level, a release
+    condition, a coverage claim — so a store that is down degrades the claim to "cannot say"
+    instead of manufacturing a measured shortfall.
     """
     from tessera.observability.store_spans import store_read
 
     with store_read("business_events", "business_events.rows", target="business_events") as read:
-        rows = [
-            event.to_row()
-            for event in recent_business_events(
+        try:
+            events = recent_business_events(
                 at=at,
                 agent_id=agent_id,
                 workflow_id=workflow_id,
@@ -1150,9 +1238,12 @@ def business_event_rows(
                 decision=decision,
                 include_synthetic=include_synthetic,
             )
-        ]
+        except BusinessEventsUnavailableError:
+            read.rows_read(0)
+            return BusinessEventRead(rows=[], readable=False)
+        rows = [event.to_row() for event in events]
         read.rows_read(len(rows))
-    return rows
+    return BusinessEventRead(rows=rows, readable=True)
 
 
 def _label(value: str | None) -> str:

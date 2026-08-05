@@ -378,11 +378,17 @@ class LevelResolution:
     declarations would reach if the turn evidence existed. They are equal exactly when the
     evidence is ``observed``; otherwise ``declared`` is the ambition and ``computed`` the
     truth, and the badge must render the gap rather than hide it.
+
+    ``facts_readable`` is the third state neither rung can express. Both are derived from the
+    business-event store, and that store can fail to answer; when it does, ``None`` here means
+    *I could not tell*, never *this agent reached nothing*. A caller turning a rung into a
+    verdict must branch on it — see :func:`level_at_least`'s callers.
     """
 
     computed: str | None
     declared: str | None
     evidence: TurnEvidence
+    facts_readable: bool = True
 
     @property
     def proven(self) -> bool:
@@ -391,14 +397,28 @@ class LevelResolution:
 
 
 def resolve_level_state(agent_id: str | None) -> LevelResolution:
-    """Resolve both rungs and the reason the evidence is (or is not) there."""
+    """Resolve both rungs and the reason the evidence is (or is not) there.
+
+    An unreadable business-event store yields **no rung at all** rather than the rung the agent
+    would have if it had emitted nothing. That distinction is the whole point: on 2026-08-05
+    the release column learned to block an agent below its required level, and a ClickHouse
+    outage would have made it print that measured-sounding refusal over a blind spot.
+    """
     agent = _agent(agent_id)
     evidence = turn_evidence.turn_evidence_state(agent_id)
     if agent is None:
         return LevelResolution(computed=None, declared=None, evidence=evidence)
-    rows = business_events.business_event_rows(agent_id=agent_id) if agent_id else []
+    read = (
+        business_events.business_event_read(agent_id=agent_id)
+        if agent_id
+        else business_events.BusinessEventRead(rows=[], readable=True)
+    )
+    if read.blind:
+        return LevelResolution(
+            computed=None, declared=None, evidence=evidence, facts_readable=False
+        )
     governed = _governed(agent_id)
-    stamped = _has_capability_stamped_events(rows)
+    stamped = _has_capability_stamped_events(read.rows)
     return LevelResolution(
         computed=observability_level(
             agent,
@@ -456,15 +476,46 @@ def declares_external_effects(agent_id: str | None) -> bool:
     )
 
 
-def _level_payload(agent_id: str | None, rows: list[dict[str, object]]) -> dict[str, object]:
+def _level_payload(
+    agent_id: str | None, read: business_events.BusinessEventRead
+) -> dict[str, object]:
+    """The Métier page's level block — **both** rungs, named.
+
+    This payload answers "what do this agent's DECLARATIONS still lack to reach L3?" — a
+    contract question, not an emission one — so ``observability_level`` is the DECLARED rung
+    and always was. The release gate answers a different question and reads the COMPUTED rung,
+    and on 2026-08-05 an operator found the two on screen at once: the Métier page said L3, the
+    gate said L0, both correct, nothing on either surface saying which was which. The fix is a
+    legend, never making the gate read a declaration: ``computed_level`` now travels beside the
+    declared one so the page can render the gap instead of picking a side.
+    """
     agent = _agent(agent_id)
+    if read.blind:
+        # The store did not answer, so neither rung exists. Publishing L0 here would invent a
+        # measured floor out of an outage — the page must say it cannot see (ADR 0026).
+        return {
+            "observability_level": None,
+            "computed_level": None,
+            "level_readable": False,
+            "required_level": "L3",
+            "missing_requirements": ["business_events_unreadable"],
+        }
+
     governed = _governed(agent_id)
-    has_business_events = _has_capability_stamped_events(rows)
-    # The Métier readiness payload answers "what do this agent's DECLARATIONS still lack to
-    # reach L3?" — a contract question, not an emission one. It asks for the declared rung
-    # explicitly rather than inheriting it from a defaulted flag.
+    has_business_events = _has_capability_stamped_events(read.rows)
+    evidence = turn_evidence.turn_evidence_state(agent_id)
     level = (
         declared_observability_level(agent, governed=governed, business_events=has_business_events)
+        if agent is not None
+        else None
+    )
+    computed = (
+        observability_level(
+            agent,
+            governed=governed,
+            business_events=has_business_events,
+            has_turn_evidence=evidence == "observed",
+        )
         if agent is not None
         else None
     )
@@ -476,13 +527,15 @@ def _level_payload(agent_id: str | None, rows: list[dict[str, object]]) -> dict[
         missing.append("observable_contract")
     if not governed:
         missing.append("governance")
-    if not rows:
+    if not read.rows:
         missing.append("business_events")
     elif not has_business_events:
         missing.append("capability_stamps")
 
     return {
         "observability_level": level,
+        "computed_level": computed,
+        "level_readable": True,
         "required_level": "L3",
         "missing_requirements": missing if level != "L3" else [],
     }
@@ -503,7 +556,7 @@ def business_capability_aggregate(
     ``business_events`` fact source (jsonl/spine/shadow) inside the existing spine seam.
     Events without a stamp stay grouped under ``—`` / ``non attribué`` and are never reassigned.
     """
-    rows = business_events.business_event_rows(
+    read = business_events.business_event_read(
         at=at,
         agent_id=agent_id,
         workflow_id=workflow_id,
@@ -511,7 +564,8 @@ def business_capability_aggregate(
         turn_id=turn_id,
         case_id=case_id,
     )
-    level_payload = _level_payload(agent_id, rows)
+    rows = read.rows
+    level_payload = _level_payload(agent_id, read)
     by_capability: dict[str, list[dict[str, object]]] = {}
     for row in rows:
         by_capability.setdefault(_capability(row), []).append(row)

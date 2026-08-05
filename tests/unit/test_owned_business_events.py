@@ -1,13 +1,17 @@
 """ADR 0017 §5 / Phase D — the owned ClickHouse business-event store (offline).
 
 Locks the Phase-D mechanism without a live ClickHouse: the JSONEachRow line + dedup key are
-pure; the read store rebuilds ``BusinessEvent`` s and is honest-empty when unreachable; the
+pure; the read store rebuilds ``BusinessEvent`` s and **refuses** when unreachable rather than
+answering the empty list (which would assert the agent emitted nothing — see
+``test_an_unreachable_store_refuses_rather_than_reporting_empty``); the
 per-fact flip routes reads (owned default → local override → shadow); GDPR erasure reaches the owned
 business-event table (count-then-delete, bound params, deferred-never-faked); the dual-write
 is best-effort and gated; the backfill inserts exactly the difference.
 """
 
 from __future__ import annotations
+
+import pytest
 
 from tessera.authz import Actor
 from tessera.observability import business_events as be, erasure
@@ -131,9 +135,53 @@ def test_read_store_rebuilds_events(monkeypatch) -> None:  # type: ignore[no-unt
     assert stub.calls[0]["agent_id"] == "recouvrement"  # filter pushed through
 
 
-def test_read_store_is_honest_empty_when_unreachable(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_an_unreachable_store_refuses_rather_than_reporting_empty(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """ "Honest-empty when unreachable" was the one thing an empty list cannot be.
+
+    This assertion used to read ``list(...) == []`` under the name *honest empty*, and the name
+    was the bug: ``[]`` is the claim *this agent emitted nothing*, and a store that did not
+    answer is not entitled to make it. Downstream it became a computed L0, and on 2026-08-05
+    the fleet's release column had just learned to block an agent below its required rung — so
+    an outage would have printed a measured-sounding refusal over a blind spot (ADR 0026).
+    """
     monkeypatch.setattr(ch_mod, "ClickHouseAdapter", lambda *_a, **_k: _StubAdapter(down=True))
-    assert ClickHouseBusinessEventStore().list(agent_id="recouvrement") == []  # never fabricated
+    with pytest.raises(be.BusinessEventsUnavailableError):
+        ClickHouseBusinessEventStore().list(agent_id="recouvrement")
+
+
+def test_the_display_read_still_degrades_to_empty(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Positive control on the other half: pages that only SHOW rows must keep rendering.
+
+    The distinction is for callers who *interpret* emptiness. A table does not, so it keeps the
+    old shape — this is why the refusal above did not have to be paid for at every call site.
+    """
+    monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", "spine")
+    monkeypatch.setattr(ch_mod, "ClickHouseAdapter", lambda *_a, **_k: _StubAdapter(down=True))
+    assert be.business_event_rows(agent_id="recouvrement") == []
+
+
+def test_the_interpreting_read_says_it_could_not_see(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """And the two are told apart by the same call, not by a second guess at the store."""
+    monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", "spine")
+    monkeypatch.setattr(ch_mod, "ClickHouseAdapter", lambda *_a, **_k: _StubAdapter(down=True))
+    blind = be.business_event_read(agent_id="recouvrement")
+    assert blind.rows == []
+    assert blind.readable is False
+    assert blind.blind is True
+
+
+def test_a_readable_store_that_holds_nothing_is_not_blind(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Negative control — without it, ``readable`` could be a field that is always False.
+
+    An empty answer and no answer are the two states this whole change exists to separate, so
+    the test suite has to exhibit both, and from the same seam.
+    """
+    monkeypatch.setenv("TESSERA_SPINE_SOURCE_BUSINESS_EVENTS", "spine")
+    monkeypatch.setattr(ch_mod, "ClickHouseAdapter", lambda *_a, **_k: _StubAdapter(rows=[]))
+    read = be.business_event_read(agent_id="recouvrement")
+    assert read.rows == []
+    assert read.readable is True
+    assert read.blind is False
 
 
 # --- per-fact flip routing -------------------------------------------------------

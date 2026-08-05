@@ -231,6 +231,7 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/observability/business_capabilities.py::level_at_least": "data",
     "src/tessera/observability/business_capabilities.py::_governed": "filter",
     "src/tessera/observability/business_capabilities.py::_has_capability_stamped_events": "data",
+    "src/tessera/observability/business_events.py::BusinessEventRead.blind": "data",
     "src/tessera/observability/business_events.py::_matches_scope": "filter",
     "src/tessera/observability/business_events.py::is_synthetic_turn": "data",
     "src/tessera/observability/business_scoring.py::BusinessScorer.supports": "dispatch",

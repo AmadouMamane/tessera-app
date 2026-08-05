@@ -328,7 +328,18 @@ def _business_runs_response(
     capability_id: str | None,
     limit: int,
 ) -> dict[str, object]:
-    """Shared implementation for the generic and per-agent business-runs reads."""
+    """Shared implementation for the generic and per-agent business-runs reads.
+
+    ``limit`` bounds the runs AND everything the response says about them. It used not to:
+    ``runs`` was sliced and ``events`` carried the whole unsliced read, so ``limit=30`` answered
+    30 runs and 500 raw events — 69 % of the payload describing turns the caller was never
+    handed, and a ``scores`` block aggregated over a different population than the runs beside
+    it. A bound that binds one field of a response and not the rest is not a bound; it is two
+    answers to two questions, shipped as one.
+
+    (Measured, so it is not sold as more than it is: on the wire this is ~5 KB either way —
+    the payload compresses. The fix is coherence, not speed.)
+    """
     rows = business_events_mod.business_event_rows(
         at=at,
         agent_id=agent_id,
@@ -340,10 +351,16 @@ def _business_runs_response(
     )
     runs = _workflow_runs_from_rows(rows)
     bounded_limit = max(1, min(limit, 100))
+    bounded_runs = runs[:bounded_limit]
+    kept_turns = {run.get("turn_id") for run in bounded_runs}
+    bounded_rows = [row for row in rows if row.get("turn_id") in kept_turns]
     return {
-        "runs": runs[:bounded_limit],
-        "events": rows,
-        "scores": business_scoring_mod.score_rows(rows),
+        "runs": bounded_runs,
+        "events": bounded_rows,
+        "scores": business_scoring_mod.score_rows(bounded_rows),
+        # What the bound dropped, said out loud: a truncation nobody can see reads as coverage.
+        "events_total": len(rows),
+        "runs_total": len(runs),
         "as_of": at,
         "agent": agent_id or "all",
         "workflow_id": workflow_id,

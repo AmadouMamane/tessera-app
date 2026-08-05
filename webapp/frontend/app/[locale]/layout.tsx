@@ -53,6 +53,13 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   // reads the request cookie, so this segment renders per-request (dynamic) — correct for a gated,
   // per-user cockpit; anonymous requests get `null` and the public pages render as before.
   const session = await auth();
+  // `i18n/request.ts` gives the SERVER renderer a time zone and a `now`; the client provider was
+  // given neither, so every client component calling `format.relativeTime` / `format.dateTime`
+  // fell back to the browser's own clock and zone — and next-intl reported that fallback through
+  // `onError` on every render (visible in the console on the Métier page, 2026-08-05). Passing
+  // them makes the two renderers agree on the instant they are formatting relative to, which is
+  // also what keeps SSR and hydration from disagreeing about "il y a 1 heure".
+  const now = new Date();
 
   return (
     <html
@@ -61,7 +68,12 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       className={cn(inter.variable, serif.variable, mono.variable)}
     >
       <body className="h-screen overflow-hidden font-sans antialiased">
-        <IntlProvider locale={locale as Locale} messages={messages}>
+        <IntlProvider
+          locale={locale as Locale}
+          messages={messages}
+          timeZone="Europe/Paris"
+          now={now}
+        >
           <Providers session={session}>{children}</Providers>
         </IntlProvider>
       </body>

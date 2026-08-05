@@ -205,11 +205,20 @@ def _wire(
     prod: bool,
     external: bool,
     gate_passed: bool | None = True,
+    readable: bool = True,
 ) -> None:
     monkeypatch.setattr(
         lifecycle, "load_eval_snapshot", lambda _aid: _snapshot(gate_passed=gate_passed)
     )
-    monkeypatch.setattr(lifecycle, "resolve_observability_level", lambda _aid: level)
+    # The gate reads the whole resolution, not the rung alone: an unreadable business-event
+    # store yields NO rung, and that must never be spoken of as a rung measured short.
+    monkeypatch.setattr(
+        lifecycle,
+        "resolve_level_state",
+        lambda _aid: capabilities.LevelResolution(
+            computed=level, declared=level, evidence="observed", facts_readable=readable
+        ),
+    )
     # Rules 3 and 4 now live in ONE place, `business_capabilities.required_level_for`, shared
     # with the fleet's release column — which did not have them and rendered PRÊT for an agent
     # this gate refuses. `required_level_for` resolves these two names out of its OWN module
@@ -229,6 +238,49 @@ def test_prod_blocks_below_l2(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "L2" in decision.reason
     # The gate PASSED — the block is the level, not the eval-gate (§A2.4 honesty).
     assert decision.blocked_by == lifecycle.BLOCKED_BY_OBSERVABILITY_LEVEL
+
+
+def test_an_unreadable_level_refuses_under_its_own_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A store that did not answer is a blind spot, never a measured shortfall (ADR 0026).
+
+    The level is derived from the business-event store, and that store can be down — it was,
+    in a worktree, on the very day the release column learned to apply the level condition. The
+    refusal is correct; calling it "level below L3" would not be, because no such measurement
+    exists. The two must be distinguishable by the operator who has to decide whether to emit
+    business events or to repair a database.
+    """
+    _wire(monkeypatch, level=None, prod=False, external=True, readable=False)
+    decision = lifecycle.release_decision("recouvrement")
+    assert not decision.allowed
+    assert decision.blocked_by == lifecycle.BLOCKED_BY_LEVEL_UNREADABLE
+    assert decision.blocked_by != lifecycle.BLOCKED_BY_OBSERVABILITY_LEVEL
+    # ... and the sentence says so, rather than naming a rung nobody measured.
+    assert "L3" not in decision.reason
+
+
+def test_an_unreadable_level_cannot_release_either(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The other direction, which is the one that would actually be dangerous.
+
+    A blind read must not be treated as "nothing objected". Both halves matter: the previous
+    test proves it does not fabricate a block, this one proves it does not fabricate a pass.
+    """
+    _wire(monkeypatch, level=None, prod=False, external=True, readable=False)
+    assert not lifecycle.release_decision("recouvrement").allowed
+
+
+def test_an_unreadable_level_is_ignored_where_no_level_is_required(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Negative control: the blind branch must not become a fourth condition for everyone.
+
+    Outside production, with no external effects, §A2.4 requires no rung at all — so whether
+    the store answered is not a question this decision asks. An outage that degraded agents the
+    rule never governed would be the same over-claim wearing the opposite sign.
+    """
+    _wire(monkeypatch, level=None, prod=False, external=False, readable=False)
+    decision = lifecycle.release_decision("recouvrement")
+    assert decision.allowed
+    assert decision.blocked_by is None
 
 
 def test_prod_allows_at_l2(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -433,6 +485,7 @@ def test_every_block_reason_has_its_own_label() -> None:
         lifecycle.BLOCKED_BY_EVAL_GATE,
         lifecycle.BLOCKED_BY_FLOOR,
         lifecycle.BLOCKED_BY_OBSERVABILITY_LEVEL,
+        lifecycle.BLOCKED_BY_LEVEL_UNREADABLE,
     }
     assert reasons == set(lifecycle._BLOCK_LABEL), "every block reason needs its own label"
     assert len({lifecycle._BLOCK_LABEL[r] for r in reasons}) == len(reasons), "labels must differ"

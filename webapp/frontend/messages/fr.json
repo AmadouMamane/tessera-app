@@ -8241,6 +8241,10 @@
     "title": "Métier",
     "subtitle": "Capacités, signaux et exécutions métier réels de cet agent.",
     "level": "Niveau {level}",
+    "levelGap": {
+      "label": "{declared} déclaré · {proven} prouvé",
+      "hint": "Le niveau déclaré est celui que le contrat de l'agent atteint. Le niveau prouvé est celui que les faits observés soutiennent — c'est le seul que la porte de mise en ligne lit."
+    },
     "events": "{count} événements",
     "empty": {
       "title": "Données métier indisponibles",

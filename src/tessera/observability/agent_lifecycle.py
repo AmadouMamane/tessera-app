@@ -23,7 +23,7 @@ from tessera.guard.ledger_store import read_ledger_entries
 from tessera.observability.business_capabilities import (
     level_at_least,
     required_level_for,
-    resolve_observability_level,
+    resolve_level_state,
 )
 from tessera.observability.eval_data import load_eval_snapshot
 from tessera.observability.eval_floor import grade_against_own_floor
@@ -91,6 +91,21 @@ _TR: dict[str, tuple[str, str, str]] = {
         "L3 required: the agent declares external effects but its level is {lvl} "
         "(its business events must be verifiable).",
     ),
+    "r_level_unreadable": (
+        "niveau d'observabilité indéterminable : le magasin d'événements métier n'a pas "
+        "répondu. Ce n'est pas un manquement mesuré, c'est un angle mort — réparez la "
+        "lecture, puis redemandez.",
+        "Observability-Stufe nicht bestimmbar: Der Geschaeftsereignis-Speicher hat nicht "
+        "geantwortet. Das ist kein gemessener Mangel, sondern ein blinder Fleck — Lesezugriff "
+        "reparieren und erneut fragen.",
+        "observability level undeterminable: the business-event store did not answer. This is "
+        "not a measured shortfall, it is a blind spot — repair the read, then ask again.",
+    ),
+    "s_level_unreadable": (
+        "Niveau non lisible",
+        "Stufe nicht lesbar",
+        "Level not readable",
+    ),
     "lvl_none": ("aucun", "keiner", "none"),
     "s_live": ("En service", "Im Einsatz", "In service"),
     "s_ready": ("Prêt à être mis en ligne", "Bereit zur Freigabe", "Ready to launch"),
@@ -129,6 +144,11 @@ BLOCKED_BY_OBSERVABILITY_LEVEL = "observability_level"
 #: fixed by different work, and a label that conflates them sends the operator to the wrong
 #: place.
 BLOCKED_BY_FLOOR = "null_floor"
+#: Not a fourth condition — the *absence of an answer* about the third. The L-level is derived
+#: from the business-event store, and that store can be down; reporting "level below L3" then
+#: would state a measurement nobody took. Distinct from ``BLOCKED_BY_OBSERVABILITY_LEVEL``
+#: because the fixes differ: one is emit business events, the other is repair the store.
+BLOCKED_BY_LEVEL_UNREADABLE = "observability_level_unreadable"
 
 #: Block reason → state label. Exhaustive by construction: a `blocked_by` with no entry here
 #: would read as the critical eval-gate, which is exactly the misattribution `blocked_by`
@@ -138,6 +158,7 @@ _BLOCK_LABEL: dict[str | None, str] = {
     BLOCKED_BY_EVAL_GATE: "s_blocked",
     BLOCKED_BY_FLOOR: "s_blocked_floor",
     BLOCKED_BY_OBSERVABILITY_LEVEL: "s_blocked_level",
+    BLOCKED_BY_LEVEL_UNREADABLE: "s_level_unreadable",
 }
 
 
@@ -145,7 +166,9 @@ def _t(key: str, lang: str) -> str:
     return _TR[key][_LANG_IDX.get(lang, 0)]
 
 
-def _blocked_by(*, eval_passed: bool, floor_ok: bool, level_ok: bool) -> str | None:
+def _blocked_by(
+    *, eval_passed: bool, floor_ok: bool, level_ok: bool, level_blind: bool = False
+) -> str | None:
     """Which condition blocks the release (``None`` when nothing does).
 
     Reported in the order an operator must fix them: a failed critical case first, then a
@@ -153,11 +176,17 @@ def _blocked_by(*, eval_passed: bool, floor_ok: bool, level_ok: bool) -> str | N
     its own cause — the state label never attributes a floor break or a level shortfall to
     the critical eval-gate, because they are three different problems with three different
     fixes (ADR 0017 §A2.4 honesty, extended to ADR 0021's Rule 1).
+
+    ``level_blind`` is the fourth outcome and the one that is not a condition at all: the
+    level could not be read. It still refuses the release — an unproven level ships nothing —
+    but it is reported as the blind spot it is rather than as a level that was measured short.
     """
     if not eval_passed:
         return BLOCKED_BY_EVAL_GATE
     if not floor_ok:
         return BLOCKED_BY_FLOOR
+    if level_blind:
+        return BLOCKED_BY_LEVEL_UNREADABLE
     if not level_ok:
         return BLOCKED_BY_OBSERVABILITY_LEVEL
     return None
@@ -237,12 +266,17 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
        business events. The L-level is a *condition*, not a parallel lifecycle.
     """
     lang = _norm_lang(lang)
-    level = resolve_observability_level(agent_id)
+    level_state = resolve_level_state(agent_id)
+    level = level_state.computed
     # ONE definition of rules 3 and 4, shared with the fleet's release column. It used to live
     # here alone, so that column simply did not have them: on 2026-08-05 it rendered PRÊT for an
     # agent this function refuses, invisible until a stricter condition stopped masking it.
     required_level = required_level_for(agent_id)
-    level_ok = level_at_least(level, required_level)
+    # The level is derived from a store that can be down. Where no level is required, that
+    # cannot matter; where one is, an unreadable store must not be spoken of as a measured
+    # shortfall (ADR 0026) — it still refuses, under its own name.
+    level_blind = required_level is not None and not level_state.facts_readable
+    level_ok = not level_blind and level_at_least(level, required_level)
 
     try:
         snap = load_eval_snapshot(agent_id)
@@ -287,6 +321,8 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
         # Not translated through _t(): the reason names case ids and the command that
         # settles them, and a paraphrase of those would be less useful in every language.
         reason = floor.block_reason() or ""
+    elif level_blind:
+        reason = _t("r_level_unreadable", lang)
     elif not level_ok:
         lvl = level or _t("lvl_none", lang)
         key = "r_below_l3_external" if required_level == "L3" else "r_below_l2_prod"
@@ -307,7 +343,12 @@ def release_decision(agent_id: str, lang: str = "fr") -> ReleaseDecision:
         floor_graded=floor.graded,
         floor_regressions=floor.regression_candidates,
         # Attribute the block to its real cause so the UI label never lies (§A2.4).
-        blocked_by=_blocked_by(eval_passed=eval_passed, floor_ok=floor_ok, level_ok=level_ok),
+        blocked_by=_blocked_by(
+            eval_passed=eval_passed,
+            floor_ok=floor_ok,
+            level_ok=level_ok,
+            level_blind=level_blind,
+        ),
     )
 
 

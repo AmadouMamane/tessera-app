@@ -118,6 +118,10 @@ _VERDICT_TR: dict[str, tuple[str, str]] = {
         "BLOCKIERT: UNZUREICHENDE FUNKTIONSNACHWEISE",
         "BLOCKED: INSUFFICIENT EVIDENCE OF OPERATION",
     ),
+    "NE PEUT PAS DIRE : NIVEAU NON LISIBLE": (
+        "KANN NICHTS SAGEN: STUFE NICHT LESBAR",
+        "CANNOT SAY: LEVEL NOT READABLE",
+    ),
     "PASSE": ("BEREIT", "READY"),
     "Éval non exécutée": ("Bewertung nicht ausgeführt", "Evaluation not run"),
 }
@@ -331,11 +335,28 @@ def agent_release_state(agent_id: str, lang: str = "fr") -> AgentRelease:
     from tessera.observability.business_capabilities import (
         level_at_least,
         required_level_for,
-        resolve_observability_level,
+        resolve_level_state,
     )
 
     required = required_level_for(agent_id)
-    if level_at_least(resolve_observability_level(agent_id), required):
+    if required is None:
+        # No level condition applies, so nothing about the level — including our ability to read
+        # it — can change this verdict. Asked in the other order, an unreadable store would have
+        # degraded agents the rule never governed.
+        return facts
+
+    level = resolve_level_state(agent_id)
+    if not level.facts_readable:
+        # The store that proves the level did not answer. Refusing to ship is right; calling it
+        # "insufficient evidence of operation" would not be — that sentence claims a measurement
+        # nobody took. Same discipline as the null floor's CannotSay: two refusals, kept apart.
+        return replace(
+            facts,
+            passed=False,
+            verdict_label=_verdict_label("NE PEUT PAS DIRE : NIVEAU NON LISIBLE", lang),
+            verdict_tone="muted",
+        )
+    if level_at_least(level.computed, required):
         return facts
     return replace(
         facts,

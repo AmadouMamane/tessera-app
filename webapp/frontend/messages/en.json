@@ -8241,6 +8241,10 @@
     "title": "Business",
     "subtitle": "Real business capabilities, signals and executions for this agent.",
     "level": "Level {level}",
+    "levelGap": {
+      "label": "{declared} declared · {proven} proven",
+      "hint": "The declared level is what the agent's contract reaches. The proven level is what observed facts support — it is the only one the release gate reads."
+    },
     "events": "{count} events",
     "empty": {
       "title": "Business data unavailable",

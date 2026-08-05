@@ -8241,6 +8241,10 @@
     "title": "Fachlichkeit",
     "subtitle": "Reale fachliche Fähigkeiten, Signale und Ausführungen dieses Agenten.",
     "level": "Niveau {level}",
+    "levelGap": {
+      "label": "{declared} deklariert · {proven} nachgewiesen",
+      "hint": "Die deklarierte Stufe ist das, was der Vertrag des Agenten erreicht. Die nachgewiesene Stufe ist das, was beobachtete Fakten stützen — nur diese liest das Freigabe-Tor."
+    },
     "events": "{count} Ereignisse",
     "empty": {
       "title": "Fachdaten nicht verfügbar",

@@ -105,9 +105,20 @@ class TestTheColumnAppliesIt:
     """Driven, so the block is proved rather than observed on today's data."""
 
     def _column(
-        self, monkeypatch: pytest.MonkeyPatch, *, level: str | None, required: str | None
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        level: str | None,
+        required: str | None,
+        readable: bool = True,
     ) -> agent_release.AgentRelease:
-        monkeypatch.setattr(capabilities, "resolve_observability_level", lambda _aid: level)
+        monkeypatch.setattr(
+            capabilities,
+            "resolve_level_state",
+            lambda _aid: capabilities.LevelResolution(
+                computed=level, declared=level, evidence="observed", facts_readable=readable
+            ),
+        )
         monkeypatch.setattr(capabilities, "required_level_for", lambda _aid: required)
         return agent_release.agent_release_state("support-client", "fr")
 
@@ -137,6 +148,34 @@ class TestTheColumnAppliesIt:
         state = self._column(monkeypatch, level="L3", required=None)
         assert state.available is False
         assert state.passed is False
+
+    def test_an_unreadable_level_is_neither_ready_nor_blocked(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The column has a third thing to say, and it must say it.
+
+        The business-event store the level rests on can be down. Printing "PRÊT" would ship an
+        agent nobody vouched for; printing "BLOQUÉ : PREUVES DE FONCTIONNEMENT INSUFFISANTES"
+        would state a measurement nobody took and send the operator to instrument an agent when
+        the fix is a database. This is the same shape as the null floor's CannotSay, which this
+        very module already keeps distinct from its NotOk.
+        """
+        blind = self._column(monkeypatch, level=None, required="L3", readable=False)
+        assert blind.passed is False
+        assert blind.verdict_label == "NE PEUT PAS DIRE : NIVEAU NON LISIBLE"
+        assert blind.verdict_tone == "muted", "a blind spot must not be painted as a failure"
+
+    def test_an_unreadable_level_where_none_is_required_changes_nothing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Negative control: the blind branch is reached only when a level is actually required.
+
+        Without this, "cannot say" would quietly become a fourth condition applying to every
+        agent, and an outage would degrade the whole fleet — the same over-claim, opposite sign.
+        """
+        unaffected = self._column(monkeypatch, level=None, required=None, readable=False)
+        assert unaffected.passed is True
+        assert unaffected.verdict_label == "PRÊT"
 
 
 def test_the_narrow_question_is_what_governed_reads() -> None:

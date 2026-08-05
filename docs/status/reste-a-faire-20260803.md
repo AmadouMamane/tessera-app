@@ -898,3 +898,117 @@ marqueur de refus absent de la liste, toutes dans `30_tool_misuse_pret_aberrant`
 demande de **reconnaître** un montant aberrant et pas de refuser. **Aucune asymétrie anglaise à
 corriger** — un résultat nul, écrit parce qu'il aurait été plus confortable de ne pas l'avoir
 cherché.
+
+---
+
+## 11. Ce que l'opérateur a vu que mes tests ne voyaient pas
+
+*(2026-08-05, matin. Trois observations de l'opérateur sur `tessera.` et `gcp.`, à la suite de
+§10 : `recouvrement` affiché **L3** sur sa page métier alors que la porte le tient à **L0** ;
+un clic sur un run « qui met un temps fou ou ne s'affiche même pas ». Trois constats, dont un
+défaut dans la tranche `02803663` que je venais de livrer.)*
+
+### 11.1 ⚠️ Une lecture en échec pouvait BLOQUER un agent — défaut de ma propre tranche
+
+`§5` a établi la règle côté écrans : *une lecture qui échoue ne se rend pas comme un résultat
+vide*. Elle n'avait pas été appliquée à la **lecture elle-même**.
+
+`ClickHouseBusinessEventStore.list` attrapait `SpineUnavailableError` et retournait `[]`, sous
+un docstring qui appelait ça *« honest-empty if unreachable »*. C'est la seule chose qu'une
+liste vide ne peut pas être : `[]` **affirme** que l'agent n'a rien émis. En aval,
+`_has_capability_stamped_events` en dérivait `False`, le niveau **calculé** dégradait — et la
+veille, `02803663` venait d'apprendre à la colonne de flotte à **bloquer** un agent sous son
+échelon requis. Une panne de base aurait donc imprimé *« BLOQUÉ : PREUVES DE FONCTIONNEMENT
+INSUFFISANTES »* au-dessus d'un **angle mort**. ADR 0026, dans ma propre tranche, à un jour
+d'intervalle.
+
+Ce n'était pas théorique : le worktree lit ClickHouse avec de mauvais identifiants
+(`403 AUTHENTICATION_FAILED`), donc le défaut était **actif** à l'endroit même où je mesurais.
+
+Corrigé en séparant les deux questions au lieu d'assouplir la garde :
+
+- le magasin **lève** `BusinessEventsUnavailableError` au lieu de rendre `[]` ;
+- `business_event_rows` l'attrape et rend `[]` — les 12 appelants qui ne font qu'**afficher**
+  des lignes gardent exactement leur contrat, et une page ne tombe pas parce qu'une base est
+  down ;
+- `business_event_read` rend `(rows, readable)` — pour les appelants qui **interprètent** le
+  vide : un niveau, un score, un verdict ;
+- `LevelResolution` porte `facts_readable` ; aveugle, il ne rend **aucun** échelon, pas L0 ;
+- la colonne et la porte disent alors **`NE PEUT PAS DIRE : NIVEAU NON LISIBLE`** /
+  `blocked_by="observability_level_unreadable"` — distinct de
+  `"observability_level"`, parce que les réparations diffèrent : émettre des événements métier,
+  ou réparer une base.
+
+**Les deux sens sont testés, et le troisième aussi.** Une lecture aveugle ne bloque pas
+(`test_an_unreadable_level_refuses_under_its_own_name`), ne **libère** pas
+(`..._cannot_release_either`), et **n'affecte pas** les agents qu'aucune règle de niveau ne
+gouverne (`..._is_ignored_where_no_level_is_required`) — sans ce dernier contrôle, « ne peut
+pas dire » serait devenue une quatrième condition pour toute la flotte, le même excès de
+prétention avec le signe opposé. Mesuré ici, magasin aveugle : `onboarding` et `support-client`
+**PRÊT** (aucun niveau requis), `recouvrement` **NE PEUT PAS DIRE**.
+
+### 11.2 Le L3 de l'opérateur et mon L0 étaient tous les deux justes — il manquait la légende
+
+`_level_payload` appelle `declared_observability_level` ; la porte lit `.computed`. Les deux
+commentaires l'assument, chacun de son côté : *« a contract question, not an emission one »* et
+*« must see the computed rung and nothing else, so that an unproven level can never satisfy a
+gate »*. **Rien à l'écran ne disait laquelle des deux questions le badge répondait.**
+
+La charge porte désormais `computed_level` **à côté** de `observability_level`, et le badge
+rend `L3 déclaré · L0 prouvé` quand ils divergent, un seul échelon quand ils s'accordent. Cinq
+tests de rendu, dont deux contrôles négatifs : pas de légende quand il n'y a pas d'écart, et
+pas d'écart **fabriqué** quand l'échelon prouvé est inconnu.
+
+⚠️ **Ce qu'il ne fallait pas faire :** régler ça en faisant lire le déclaré à la porte. Ce
+serait laisser une **déclaration** satisfaire un gate — exactement ce que le commentaire de
+`resolve_observability_level` interdit.
+
+### 11.3 La lenteur au clic : **non reproductible** sur le code courant
+
+Mesuré avant d'attribuer, et le résultat est un **résultat nul** qu'il faut écrire.
+
+| mesure | localhost:3090 | via le tunnel `tessera.` |
+|---|---|---|
+| aller-retour RSC d'un clic (serveur) | med **194 ms**, p95 223 ms, n=20 | — |
+| clic réel, navigateur, jusqu'à l'URL + réseau calme | **269 ms** | **279 ms** |
+| clics 2 à 6, à la suite | **17-58 ms** | idem |
+| page ouverte 30 s sans rien toucher | 15 requêtes, **40 Ko** | idem |
+
+Le détail d'un run est **déjà en mémoire** (`runs.find(...)`) : le clic ne charge rien, il
+déclenche un `router.replace` et donc un aller-retour RSC — 270 ms, une fois, puis le cache du
+routeur répond. **Je ne reproduis pas « un temps fou ».**
+
+⚠️ **Deux hypothèses que mes propres sondes ont tuées**, écrites parce qu'elles étaient
+plausibles et fausses :
+
+1. « 940 Ko toutes les 5 s » — vrai **décompressé**, faux **sur le fil** : mesuré au protocole
+   (CDP `encodedDataLength`), 6 requêtes de runs = **29 Ko** au total. Mon premier compteur
+   lisait `content-length`, absent sur les réponses compressées, et rapportait donc **0 Ko** :
+   un compteur qui ne voit rien ne dit pas « rien ».
+2. « le parsing zod fige le fil principal » — mesuré avec le **vrai** schéma sur la **vraie**
+   charge : `JSON.parse` **2,0 ms**, `zod.parse` **8,0 ms**. Deux ordres de grandeur en dessous
+   de ce qu'il faudrait pour qu'un clic paraisse bloqué.
+
+**Hypothèse restante, non vérifiée :** l'image full-local a été reconstruite **deux fois** le
+2026-08-05 (`8f6016f8` puis `02803663`). Un onglet resté ouvert à travers un rebuild garde des
+références de chunks Next qui n'existent plus ; la navigation part alors en 404 puis en
+rechargement complet — ce qui produit exactement « un temps fou, ou rien ». Un rechargement dur
+(⇧⌘R) le tranche en une seconde. **À confirmer par l'opérateur** : c'est le seul point de cette
+tranche que je ne peux pas mesurer moi-même.
+
+### 11.4 Deux défauts trouvés en mesurant, corrigés
+
+- **`limit` ne bornait que `runs`.** `/observability/business/runs?limit=30` rendait 30 runs
+  **et les 500 événements bruts**, plus un bloc `scores` agrégé sur cette population-là : trois
+  champs décrivant trois populations sous une seule borne. `events` et `scores` sont désormais
+  restreints aux runs rendus, et `events_total` / `runs_total` **disent ce que la borne a
+  retiré** — une troncature invisible se lit comme une couverture. (Ce n'est **pas** un gain de
+  performance : ~5 Ko sur le fil avant comme après. C'est une correction de cohérence, et la
+  vendre autrement serait la vendre pour plus qu'elle n'est.)
+- **Une erreur i18n à chaque rendu.** `i18n/request.ts` donne `timeZone` et `now` au rendu
+  **serveur** ; le fournisseur **client** n'avait ni l'un ni l'autre, donc tout composant client
+  appelant `format.relativeTime` retombait sur l'horloge du navigateur et next-intl le signalait
+  via `onError` à chaque rendu. Les deux valeurs sont passées au fournisseur. Et le rapporteur
+  imprimait `[i18n] missing message` pour **toutes** les erreurs, y compris cet
+  `ENVIRONMENT_FALLBACK` qui n'est pas un message manquant — il nomme le code maintenant. Les
+  trois catalogues étant à parité parfaite, l'étiquette envoyait chercher au mauvais endroit.

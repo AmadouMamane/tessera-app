@@ -845,8 +845,13 @@ export type RecouvrementRun = z.infer<typeof RecouvrementRunSchema>;
 
 export const RecouvrementRunsResponseSchema = z.object({
   runs: z.array(RecouvrementRunSchema),
+  // `events` and `scores` describe the SAME runs as `runs` — they used not to, carrying the
+  // whole unsliced read while `runs` honoured `limit`. `*_total` says what the bound dropped,
+  // because a truncation nobody can see reads as coverage.
   events: z.array(BusinessEventSchema),
   scores: z.array(BusinessScoreSchema),
+  events_total: z.number().int().optional(),
+  runs_total: z.number().int().optional(),
   as_of: z.string().nullable().optional(),
   agent: z.string(),
   workflow_id: z.string().nullable().optional(),
@@ -932,7 +937,15 @@ export const BusinessCapabilitiesResponseSchema = z.object({
   case_id: z.string().nullable().optional(),
   source: z.string(),
   fact: z.string(),
+  // The DECLARED rung — what the manifest reaches. Kept under its historical name because
+  // this page's question is a contract one; `computed_level` is the PROVEN rung the release
+  // gate reads. They differ routinely, and a screen that shows one without naming it lets an
+  // operator read a declaration as a measurement (found on the Métier page, 2026-08-05).
   observability_level: z.string().nullable().optional(),
+  computed_level: z.string().nullable().optional(),
+  // False when the business-event store did not answer: neither rung exists, and the page
+  // must say it cannot see rather than render "level not yet reached".
+  level_readable: z.boolean().default(true),
   required_level: z.string(),
   missing_requirements: z.array(z.string()).default([]),
   unknown_capability_id: z.string().optional(),

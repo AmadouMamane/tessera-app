@@ -21,12 +21,20 @@
  * set empty; this is the seat belt, and `reportMissingMessage` is what makes it audible.
  */
 
-/** Reported on every miss, on both renderers. Never swallowed. */
+/** Reported on every i18n error, on both renderers. Never swallowed — and named correctly. */
 export function reportMissingMessage(error: unknown): void {
   // `console.error` on the server reaches container logs; in the browser it reaches the console
-  // and any error reporter attached to it. Either way the miss leaves a trace, which the em
+  // and any error reporter attached to it. Either way the problem leaves a trace, which the em
   // dash below deliberately does not.
-  console.error("[i18n] missing message", error);
+  //
+  // next-intl routes EVERY error through this one hook, not only missing keys: a
+  // MISSING_MESSAGE, an ENVIRONMENT_FALLBACK (a formatter with no `now`/`timeZone` guessing
+  // from the local environment) and a FORMATTING_ERROR all arrive here. Labelling all of them
+  // "missing message" is how an ENVIRONMENT_FALLBACK sat in the console for weeks looking like
+  // a catalogue gap — and the catalogues are at perfect parity, so the label was actively
+  // misleading about where to look. The code says which it is.
+  const code = (error as { code?: string } | null)?.code;
+  console.error(`[i18n] ${code ?? "error"}`, error);
 }
 
 /** What renders in place of the missing string. See the note above before changing it. */
