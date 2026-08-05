@@ -1012,3 +1012,56 @@ tranche que je ne peux pas mesurer moi-même.
   imprimait `[i18n] missing message` pour **toutes** les erreurs, y compris cet
   `ENVIRONMENT_FALLBACK` qui n'est pas un message manquant — il nomme le code maintenant. Les
   trois catalogues étant à parité parfaite, l'étiquette envoyait chercher au mauvais endroit.
+
+---
+
+## 12. Les deux copies de §10.6 — l'instantané embarqué devient DÉRIVÉ
+
+*(2026-08-05, suite. §10.6 notait « les rapports de sweep existent en deux copies trackées déjà
+divergentes » et renvoyait à « un chantier à part ». Mesuré : ce n'était pas seulement le sweep,
+et la copie **servie en production** était la mauvaise.)*
+
+### 12.1 Ce que le conteneur sert vraiment
+
+`webapp/frontend/lib/eval-sweep.ts::sources` résout **deux** sources : le dépôt vivant si un
+`pyproject.toml` se trouve au-dessus du répertoire courant, sinon `data/eval/`. Vérifié **dans le
+conteneur** plutôt que supposé : `pwd` = `/app`, **aucun** `pyproject.toml` au-dessus, et
+`eval/reports` **n'y est pas monté**. Donc la seule source de l'image autonome est le bundle — et
+il était maintenu **à la main**, comme un second original.
+
+Quatre dérives simultanées, toutes mesurées :
+
+| artefact | état embarqué | conséquence |
+|---|---|---|
+| `catalogue.json` | **36 cas sur 63** avec des `pass_criteria` périmés (dont tous ceux corrigés en §10) | l'écran affichait des critères que le grader n'applique plus |
+| `discrimination.json` | **absent** | la surface répondait `not-measured` alors que la mesure existe |
+| `null-control.json` | copie du **13 juillet** : 3 verdicts d'écart, **pas de `grader_criteria_sha`** | rien en aval ne pouvait dire quelle règle l'avait notée |
+| `sweep/*.json` | les 7 diffèrent ; **5 sur 7** nomment MOINS de runs aveugles | ⚠️ sens de l'**excès de prétention** : plus de couverture annoncée que mesurée |
+
+⚠️ **Aucun verdict ne diffère** — c'est la seule raison pour laquelle c'était une dérive et pas
+un incident. Et `case-schema.json` divergeait aussi.
+
+**Le code n'était pas malhonnête ; le bundle l'était.** La branche `not-measured` de
+`eval-sweep.ts` dit exactement ce qu'elle veut dire — *personne n'a lancé la mesure*. Elle était
+juste au-dessus d'un fichier qu'on avait oublié d'embarquer. **Un lecteur honnête au-dessus d'un
+instantané menteur informe mal quand même.**
+
+### 12.2 Le correctif : cesser d'avoir deux originaux
+
+- `scripts/build_eval_bundle.py` **dérive** le bundle du dépôt (catalogue, schéma, les deux
+  bases de référence, tous les rapports de sweep), et **supprime** ce que le dépôt n'a plus — un
+  run gardé côté bundle est un run que la porte n'a jamais vu.
+- `make eval-bundle` l'exécute.
+- `tests/unit/test_eval_bundle_is_derived.py` devient **rouge** dès que le committé cesse d'être
+  ce que le script écrirait. ⚠️ Avec son **contrôle positif** : un plan vide ferait passer les
+  deux assertions sur un bundle vide — c'est exactement ainsi que cette classe de garde vire au
+  vert au-dessus d'un trou (répertoire déplacé, glob renommé). Et une assertion **dédiée** aux
+  `pass_criteria`, parce qu'une comparaison d'octets ne dit que « quelque chose diffère ».
+
+⚠️ **Le cliquet a d'abord été lancé contre l'arbre dérivé, et il a échoué** — 36 cas nommés, les
+7 rapports, le catalogue, le schéma, la base nulle. Un cliquet écrit **après** le correctif se
+calibre **sur** lui ; celui-ci a prouvé qu'il voyait avant qu'on le rende vert.
+
+**Leçon, la même que les deux `.eval-noise/` de §9 et que les deux registres mémoire :** *un
+répertoire n'a pas d'identité — il faut interroger chaque copie.* Ici on a supprimé la question
+en supprimant la seconde origine.

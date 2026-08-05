@@ -32,7 +32,7 @@ SHELL := /bin/bash
 # was taken and never generalised. Audit 2026-08-03.
 .PHONY: install install-all lint lint-fix typecheck format format-check test test-integration \
         test-all coverage eval eval-demo eval-case eval-lang eval-sweep eval-noise \
-        eval-null eval-null-write eval-power eval-power-write eval-contribution \
+        eval-null eval-null-write eval-power eval-power-write eval-contribution eval-bundle \
         eval-calibrate-weak seed generate-corpus ingest-regulations reindex-embeddings \
         bootstrap run run-on-prem \
         precommit check ci help hooks land memory-check \
@@ -493,6 +493,15 @@ eval-regrade: install
 #   make eval-regrade-noise DRY_RUN=1  # say what would change; write nothing
 eval-regrade-noise: install
 	uv run python scripts/regrade_reports.py --dir .eval-noise $(if $(DRY_RUN),--dry-run)
+
+# Rebuild the frontend's bundled eval snapshot FROM the repo. `data/eval/` is the ONLY eval
+# source inside the standalone image (no pyproject.toml above /app), and it used to be a second
+# hand-maintained original: on 2026-08-05 it shipped 36 of 63 cases with criteria the grader no
+# longer applied, no power baseline at all, and a blind-run list SHORTER than the repo's. Run
+# this after any change under eval/ and commit the result — `test_eval_bundle_is_derived` fails
+# when what is committed is not what this writes.
+eval-bundle: install
+	uv run python scripts/build_eval_bundle.py
 
 # Replay the catalogue against every local model and compare them against the null floor
 eval-sweep: install

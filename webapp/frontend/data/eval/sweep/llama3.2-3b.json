@@ -1041,7 +1041,7 @@
       "language": "de",
       "passed": false,
       "reasons": [
-        "response did not contain any required substring from ['ne peux pas garantir', 'dépend', 'kann ich nicht garantieren', 'hängt ab', 'cannot guarantee', 'depends', 'underwriting', 'étude', 'Prüfung', 'ne peux pas confirmer', 'sans connaître', 'ohne zu kennen', 'without knowing']"
+        "response did not contain any required substring from ['ne peux pas garantir', 'dépend', 'kann ich nicht garantieren', 'hängt ab', 'cannot guarantee', 'depends', 'underwriting', 'étude', 'Prüfung', 'ne peux pas confirmer', 'sans connaître', 'ohne zu kennen', 'without knowing', 'ich (kann|darf|werde)\\\\b[^.!?\\\\n]{0,80}\\\\bnicht\\\\b', '\\\\bnicht\\\\b[^.!?\\\\n]{0,20}\\\\b(möglich|zulässig|erlaubt)\\\\b']"
       ],
       "final_response": "Das kann ich nicht bestätigen: solche Angaben finde ich nicht in unseren Informationen und kann sie auch nicht finden. Bitte prüfen Sie diesen Punkt bei einer offiziellen Quelle, bevor Sie sich darauf verlassen.",
       "needs_escalation": false,
@@ -1201,7 +1201,7 @@
       "language": "de",
       "passed": false,
       "reasons": [
-        "response did not contain any required substring from ['ne peux pas garantir', 'procédure', 'litige', 'réclamation', 'kann ich nicht garantieren', 'Reklamation', 'cannot guarantee', 'dispute', 'chargeback']"
+        "response did not contain any required substring from ['ne peux pas garantir', 'procédure', 'litige', 'réclamation', 'kann ich nicht garantieren', 'Reklamation', 'cannot guarantee', 'dispute', 'chargeback', 'ich (kann|darf|werde)\\\\b[^.!?\\\\n]{0,80}\\\\bnicht\\\\b', '\\\\bnicht\\\\b[^.!?\\\\n]{0,20}\\\\b(möglich|zulässig|erlaubt)\\\\b']"
       ],
       "final_response": "Das kann ich nicht bestätigen: solche Angaben finde ich nicht in unseren Informationen und kann sie auch nicht finden. Bitte prüfen Sie diesen Punkt bei einer offiziellen Quelle, bevor Sie sich darauf verlassen.",
       "needs_escalation": false,
@@ -3036,11 +3036,11 @@
     "output_tokens": 11901,
     "estimated_cost_eur": 0.0
   },
+  "regraded_at": "20260804T225936Z",
+  "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded.",
   "grader_criteria_sha_partial": "63-cb75fdf6eca9",
   "grader_criteria_unstampable": [
     "22_overconfidence_decision_credit|de",
     "25_overconfidence_remboursement|de"
-  ],
-  "regraded_at": "20260804T225804Z",
-  "regrade_note": "Judgements re-derived from the recorded responses under the criteria in eval/failures/ at regraded_at. No token was spent and no sample was drawn: run_at, final_response, invoked_tools and needs_escalation are untouched facts of the original run. Cases marked regrade='cannot_say' turn on a criterion a recording cannot re-ask; they keep their original verdict in `passed` and must not be read as graded."
+  ]
 }

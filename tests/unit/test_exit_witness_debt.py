@@ -127,6 +127,11 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::eval-power-write": "action",  # it RE-MEASURES and writes; that is not a judgement
     "Makefile::eval-noise": "action",  # it produces passes (a GPU-hour); it judges nothing
     "Makefile::eval-sweep": "action",
+    # It WRITES the bundle from the repo; it judges nothing. The judgement is
+    # `test_eval_bundle_is_derived`, which fails when the committed bundle stops being what this
+    # writes — deliberately not this target, so "I regenerated it" can never stand in for "it
+    # matches" (a check that repairs the tree it judges passes by having changed it).
+    "Makefile::eval-bundle": "action",
     "Makefile::eval-calibrate-weak": "action",
     "Makefile::eval-case": "action",
     "Makefile::eval-lang": "action",
@@ -306,6 +311,9 @@ _EXIT_WITNESSES: dict[str, str] = {
     # ── actions: producers, seeders, backfills, generators ─────────────────────────────────────
     "scripts/run_local.py": "action",
     "scripts/run_model_sweep.py": "action",
+    # Derives `webapp/frontend/data/eval/` from the repo. A writer, not a witness — see the note
+    # on `Makefile::eval-bundle`.
+    "scripts/build_eval_bundle.py": "action",
     "scripts/bootstrap_eval_demo.py": "action",
     "scripts/compare_eval.py": "report",
     "scripts/config_inventory.py": "action",
