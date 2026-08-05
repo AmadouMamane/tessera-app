@@ -369,7 +369,7 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # 133 (2026-08-01): GET /observability/control-series — a control's curve, as buckets of
     # the aggregate payloads already on this surface. Same handlers, narrower windows; the
     # buckets carry counts and rates, never a turn and never a subject.
-    assert len(public) == 133
+    assert len(public) == 134
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

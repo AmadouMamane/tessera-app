@@ -152,13 +152,20 @@ def test_the_public_reads_are_untouched() -> None:
     +1 on 2026-08-01: GET /observability/control-series — each control's curve as buckets of
     the SAME payload its point value is computed from. It calls the same read handlers this
     surface already exposes, once per bucket; it adds no source and no mutation.
+    +1 on 2026-08-05: GET /observability/components — the stack's components as
+    `tessera.preflight` sees them: name, verdict (ok/fail/blind), and the probe's own evidence.
+    It reads no store row, carries no subject and no scope; its content is connection health
+    (a masked DSN, a URL, an HTTP status). It is on this surface rather than behind an operator
+    guard for the same reason /healthz is: an operator diagnosing an outage must be able to see
+    WHICH dependency is down, and the page that promised exactly that had been rendering four
+    process-level cards over it.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 138
+    assert len(read_routes) == 139
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (
