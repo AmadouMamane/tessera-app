@@ -109,6 +109,24 @@ surfaces:
       change here can move the turn-evidence read (ADR 0017 §4 Am. 3) with no rebuild.
 
   # ── not served ─────────────────────────────────────────────────────────────────────────────
+  - path: infra/deploy/
+    medium: absent
+    why: >-
+      Non-secret deployment wiring read from the CHECKOUT by operator tooling — `targets.yaml`
+      by `deploy-diff`, this file by `served-check`. Neither Dockerfile copies it and no compose
+      mounts it, so editing it can never change what a container runs. Declared explicitly
+      rather than left to the safe `baked` default: without this entry every edit to THIS FILE
+      made served-check demand a rebuild, and a check that cries wolf about its own manifest
+      teaches an operator to ignore it — which is the failure this whole ADR is about.
+
+  - path: infra/docker/
+    medium: absent
+    why: >-
+      The Dockerfiles themselves. They DECIDE what gets baked, so a change here changes the next
+      image — but they are never inside one. Like the Makefile: a build input, not a served
+      surface. (A change here does mean the next `fulllocal-up` produces a different image; it
+      does not mean the running one is stale in a way this check can see.)
+
   - path: docs/
     medium: absent
     why: Documentation and ADRs. Read by people and by CI, never by the running stack.
