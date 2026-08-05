@@ -30,6 +30,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
@@ -47,6 +48,61 @@ __all__ = [
     "business_events_ddl",
     "online_scores_ddl",
 ]
+
+
+def _dotenv_files() -> tuple[str, ...]:
+    """The dotenv files ``Settings`` is CURRENTLY configured to read, in its precedence order.
+
+    Asked of `Settings` rather than restated, for two reasons. One is the lesson of the release
+    column: two places answering the same question diverge, and sharing the definition is the
+    only fix that holds. The other is subtler and would have been a real regression — the test
+    suite's `conftest` sets ``env_file`` to ``None`` on purpose, so a run never picks up a
+    developer's `.env.local`. A private copy of the path list would have quietly re-opened that
+    hole; deferring to the live config means this resolver inherits the guard for free.
+    """
+    from tessera.settings import Settings
+
+    declared = Settings.model_config.get("env_file")
+    if declared is None:
+        return ()
+    if isinstance(declared, str | Path):
+        return (str(declared),)
+    return tuple(str(item) for item in declared)
+
+
+def _dotenv_values() -> dict[str, str]:
+    """`KEY=value` pairs from the project's dotenv files, best effort.
+
+    Deliberately NOT cached: the cost is two small file reads on a path that already performs an
+    HTTP round-trip, and a cache here would both leak state between tests and go stale the moment
+    an operator edits the file they were told to edit.
+
+    Parsing is intentionally minimal — `KEY=value`, `#` comments, optional surrounding quotes.
+    A value this cannot parse is skipped rather than guessed: a credential read wrong produces a
+    403 that looks exactly like a missing store, and that confusion is what this whole seam is
+    here to end.
+    """
+    values: dict[str, str] = {}
+    for name in _dotenv_files():
+        path = Path(name)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for raw in text.splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.removeprefix("export ").strip()
+            if not key:
+                continue
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+                value = value[1:-1]
+            values[key] = value
+    return values
+
 
 # Mirrors the live ring buffer's bound (``eval.scores._RECENT`` maxlen) so the live read
 # has the same semantics as the jsonl reader it must hold parity with.
@@ -110,16 +166,36 @@ class ClickHouseConfig:
 
     @classmethod
     def from_env(cls) -> ClickHouseConfig:
-        """Resolve from the environment, defaulting to the local obs stack's HTTP port.
+        """Resolve from the environment, then from the project's declared dotenv files.
 
-        In the deployed profile (ADR 0014) the same names resolve from Secret Manager,
-        never the repo — the backend reads them from the environment either way.
+        In the deployed profile (ADR 0014) these names resolve from Secret Manager, never the
+        repo, and the process environment is the only source that matters — which is why it
+        keeps priority here and why the container's behaviour is unchanged.
+
+        The dotenv fallback exists because this resolver used to read ``os.environ`` **alone**,
+        while every other setting in the project goes through ``tessera.settings.Settings``, whose
+        ``env_file=(".env", ".env.local")`` is what CLAUDE.md documents as the local-development
+        seam. So the file an operator is told to configure had no effect on this one component:
+        a host-side read fell back to the literal default ``clickhouse`` and got a 403. That is
+        the exact failure that made a whole day of measurement blind on 2026-08-05 — and a store
+        that cannot be read is not the same as a store that is empty (commit `e7184679`).
+
+        Precedence is process environment first, then `.env.local`, then `.env`, then the
+        defaults — the same order ``Settings`` applies, so the two cannot disagree.
         """
+        files = _dotenv_values()
+
+        def resolve(name: str, fallback: str) -> str:
+            value = os.environ.get(name)
+            if value is None:
+                value = files.get(name)
+            return value if value is not None else fallback
+
         return cls(
-            url=os.environ.get("TESSERA_CLICKHOUSE_URL", "http://localhost:18123").rstrip("/"),
-            user=os.environ.get("TESSERA_CLICKHOUSE_USER", "clickhouse"),
-            password=os.environ.get("TESSERA_CLICKHOUSE_PASSWORD", "clickhouse"),
-            database=os.environ.get("TESSERA_CLICKHOUSE_DATABASE", "tessera"),
+            url=resolve("TESSERA_CLICKHOUSE_URL", "http://localhost:18123").rstrip("/"),
+            user=resolve("TESSERA_CLICKHOUSE_USER", "clickhouse"),
+            password=resolve("TESSERA_CLICKHOUSE_PASSWORD", "clickhouse"),
+            database=resolve("TESSERA_CLICKHOUSE_DATABASE", "tessera"),
         )
 
 
