@@ -72,7 +72,7 @@ describe.skipIf(OWED)("loadSweep", () => {
   it("carries the committed floor, read and not recomputed", async () => {
     const sweep = await loadSweep();
     if (!sweep) throw new Error("sweep");
-    expect(sweep.floorTotals).toEqual({ total: 174, passed: 125 });
+    expect(sweep.floorTotals).toEqual({ total: 174, passed: 124 });
     expect(Object.keys(sweep.floor?.verdicts ?? {})).toHaveLength(174);
     expect(sweep.floor?.catalogueVersion).toBe(sweep.catalogueVersion);
   });
