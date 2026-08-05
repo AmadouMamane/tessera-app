@@ -8,6 +8,12 @@ trusted as observed. These tests pin the repair:
   the manifest would reach), plus why the evidence is missing;
 - the §A2.4 release gate reads the computed rung and nothing else — an unproven level gates
   nothing, whatever the manifest promises.
+
+These stub ``turn_evidence_state`` whole, which since §4 Amendment 3 means they deliberately
+bypass the two-source merge: what they assert is what the RESOLVER does with a given evidence
+verdict, not how that verdict is reached. The merge itself — and the ledger source the amendment
+added — is pinned in ``test_turn_evidence_asks_the_agent_not_one_route.py``. The stubs take
+``**_k`` so that adding a third source cannot silently turn them into a different test.
 """
 
 from __future__ import annotations
@@ -34,7 +40,7 @@ def _governed(monkeypatch: pytest.MonkeyPatch, *, value: bool) -> None:
 def test_proven_agent_computes_and_declares_the_same_rung(monkeypatch: pytest.MonkeyPatch) -> None:
     _no_business_events(monkeypatch)
     _governed(monkeypatch, value=False)
-    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None: "observed")
+    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None, **_k: "observed")
 
     state = bc.resolve_level_state(_AGENT)
     assert state.evidence == "observed"
@@ -49,7 +55,9 @@ def test_absent_store_falls_back_honestly_and_keeps_the_declared_rung(
     """The over-claim, killed: no store ⇒ no proof ⇒ the computed rung drops to L0."""
     _no_business_events(monkeypatch)
     _governed(monkeypatch, value=False)
-    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None: "unverifiable")
+    monkeypatch.setattr(
+        turn_evidence, "turn_evidence_state", lambda _a, _o=None, **_k: "unverifiable"
+    )
 
     state = bc.resolve_level_state(_AGENT)
     assert state.computed == "L0"  # never fabricated from an assumption
@@ -62,7 +70,7 @@ def test_dormant_agent_falls_back_too_and_is_distinguishable(
 ) -> None:
     _no_business_events(monkeypatch)
     _governed(monkeypatch, value=True)
-    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None: "dormant")
+    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None, **_k: "dormant")
 
     state = bc.resolve_level_state(_AGENT)
     assert state.computed == "L0"
@@ -71,7 +79,9 @@ def test_dormant_agent_falls_back_too_and_is_distinguishable(
 
 
 def test_unmanifested_agent_has_neither_rung(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None: "unverifiable")
+    monkeypatch.setattr(
+        turn_evidence, "turn_evidence_state", lambda _a, _o=None, **_k: "unverifiable"
+    )
     state = bc.resolve_level_state("does-not-exist")
     assert state.computed is None
     assert state.declared is None  # honest-empty badge, never "L0"
@@ -83,7 +93,9 @@ def test_resolve_observability_level_exposes_only_the_computed_rung(
     """The release gate's only entry point. It must never see the declared rung."""
     _no_business_events(monkeypatch)
     _governed(monkeypatch, value=True)
-    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None: "unverifiable")
+    monkeypatch.setattr(
+        turn_evidence, "turn_evidence_state", lambda _a, _o=None, **_k: "unverifiable"
+    )
 
     assert bc.resolve_observability_level(_AGENT) == "L0"
     assert bc.resolve_level_state(_AGENT).declared == "L2"
@@ -103,7 +115,7 @@ def test_an_unproven_level_never_satisfies_the_release_gate(
 
     _no_business_events(monkeypatch)
     _governed(monkeypatch, value=True)
-    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None: "dormant")
+    monkeypatch.setattr(turn_evidence, "turn_evidence_state", lambda _a, _o=None, **_k: "dormant")
     monkeypatch.setattr(lifecycle, "load_eval_snapshot", lambda _aid: _passing_snapshot())
     # Hold the CERTIFIED-INVERSION axis neutral: this test is about the observability LEVEL, and
     # `recouvrement` runs `56_policy_violation_disparage_bank|de`, on which the real llama3.2:3b is

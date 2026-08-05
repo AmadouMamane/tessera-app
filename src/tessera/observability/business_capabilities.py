@@ -396,6 +396,27 @@ class LevelResolution:
         return self.evidence == "observed"
 
 
+def _ledger_emitters(
+    read: business_events.BusinessEventRead, agent_id: str | None
+) -> set[str] | None:
+    """The turn-evidence half of an ALREADY-PERFORMED, agent-filtered ledger read.
+
+    The rows this resolver reads for L3 are the same rows that prove a turn, so the second fact
+    comes out of the first read rather than paying for another one. ``None`` is *the ledger could
+    not answer* — unreachable, or rows that carry no usable instant — never *nothing emitted*.
+    """
+    if read.blind:
+        return None
+    if not agent_id:
+        return set()
+    window = turn_evidence.turns_in_window(
+        read.rows, since=datetime.now(UTC) - turn_evidence.RECENCY_WINDOW
+    )
+    if not window.legible:
+        return None
+    return {agent_id} if window.turns else set()
+
+
 def resolve_level_state(agent_id: str | None) -> LevelResolution:
     """Resolve both rungs and the reason the evidence is (or is not) there.
 
@@ -403,16 +424,26 @@ def resolve_level_state(agent_id: str | None) -> LevelResolution:
     would have if it had emitted nothing. That distinction is the whole point: on 2026-08-05
     the release column learned to block an agent below its required level, and a ClickHouse
     outage would have made it print that measured-sounding refusal over a blind spot.
+
+    Since §4 Amendment 3 the same store also carries **turn** evidence, so its silence now
+    reaches the L0→L1 decision too, not only L2→L3 — which is why the read happens before the
+    evidence is resolved and why ``facts_readable`` gates both. A store that cannot answer must
+    say so at every rung it feeds; a blind spot that demotes only some decisions is the same
+    over-claim wearing a smaller hat.
     """
-    agent = _agent(agent_id)
-    evidence = turn_evidence.turn_evidence_state(agent_id)
-    if agent is None:
-        return LevelResolution(computed=None, declared=None, evidence=evidence)
     read = (
         business_events.business_event_read(agent_id=agent_id)
         if agent_id
         else business_events.BusinessEventRead(rows=[], readable=True)
     )
+    evidence = turn_evidence.turn_evidence_state(
+        agent_id, emitting=_ledger_emitters(read, agent_id)
+    )
+    agent = _agent(agent_id)
+    if agent is None:
+        return LevelResolution(
+            computed=None, declared=None, evidence=evidence, facts_readable=not read.blind
+        )
     if read.blind:
         return LevelResolution(
             computed=None, declared=None, evidence=evidence, facts_readable=False
@@ -503,7 +534,11 @@ def _level_payload(
 
     governed = _governed(agent_id)
     has_business_events = _has_capability_stamped_events(read.rows)
-    evidence = turn_evidence.turn_evidence_state(agent_id)
+    # Same read, both facts (§4 Amendment 3) — and the same read the caller already paid for,
+    # so the turn evidence here can never disagree with the rung computed from these rows.
+    evidence = turn_evidence.turn_evidence_state(
+        agent_id, emitting=_ledger_emitters(read, agent_id)
+    )
     level = (
         declared_observability_level(agent, governed=governed, business_events=has_business_events)
         if agent is not None

@@ -669,12 +669,17 @@ async def compute_fleet(
         releases,
         records,
         observed_turns,
+        ledger_turns,
         integrity_broken,
         canary_verdicts,
     ) = await asyncio.gather(
         asyncio.to_thread(fleet_release_states, lang),
         asyncio.to_thread(_agent_records),
         asyncio.to_thread(turn_evidence.agents_with_turn_evidence),
+        # The second turn-evidence source (§4 Amendment 3), read ONCE for the whole fleet like
+        # its Prometheus sibling. Per-card it would be one ClickHouse round-trip per agent, and
+        # the level is computed inside the card loop.
+        asyncio.to_thread(turn_evidence.agents_with_ledger_turns),
         asyncio.to_thread(_integrity_broken),
         asyncio.to_thread(_canary_verdicts),
     )
@@ -720,7 +725,7 @@ async def compute_fleet(
         # Two rungs, never one: `level` rests on observed turns alone, `level_declared` on the
         # manifest. When they differ the badge says so — a declared rung must never be dressed
         # up as a computed one (the over-claim `turn-agent` made visible).
-        evidence = turn_evidence.turn_evidence_state(aid, observed_turns)
+        evidence = turn_evidence.turn_evidence_state(aid, observed_turns, emitting=ledger_turns)
         level = (
             observability_level(record, governed=governed, has_turn_evidence=evidence == "observed")
             if record is not None

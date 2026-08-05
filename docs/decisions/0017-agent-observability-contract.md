@@ -4,7 +4,9 @@
   **Amended 2026-07-06 (§Amendment 1: business capability model, per-capability Métier view,
   external-effect invariant, `product_surface` non-exposure rule). Amended 2026-07-06
   (§Amendment 2: typed envelope actor, the 3-level business-metric ladder, declared policy
-  metadata, observability level gates release).**
+  metadata, observability level gates release). Amended 2026-08-06 (§Amendment 3: L1 evidence
+  is any recorded emission — the business-event ledger joins the Prometheus counter — bounded
+  by a 30-day recency window; a store's blindness now reaches the L0→L1 decision).**
 - Date: 2026-07-06
 - Deciders: Tessera maintainers
 - Related: 0008 (agent audience and surface), 0010 (Recouvrement internal operator agent),
@@ -15,6 +17,90 @@
   `src/tessera/recouvrement/scoring.py`, `src/tessera/agent/agents.yaml`,
   the "ADR-001" vision draft (2026-07-06, chat-authored, outside the numbered corpus —
   harvested by §Amendment 1).
+
+## Amendment 3 (2026-08-06) — L1 evidence is *any* recorded emission, bounded by a recency window; the store's blindness reaches L0→L1 too
+
+**§4 defines L1 as "the cockpit observes the agent emitting turns". It never defined what
+looking means, and the implementation answered with one route's counter.**
+
+### A3.1 — The defect, measured
+
+`tessera_agent_turns_total` is incremented in `src/tessera/api/routes/chat.py` and nowhere else.
+`recouvrement` serves its turns over `/recouvrement-assistant/message`, so the counter never
+named it. `observability_level()` returns `L0` *before* it reads business events, so its **1281
+timestamped business events** — the only real business evidence in the system, spanning
+2026-07-06 to 2026-08-05, capability-stamped, all under `recouvrement_collections_v1` — were
+never consulted. The agent required L3, declared L3, computed L0, and was blocked.
+
+**The one agent in the fleet producing evidence was the one the door refused for want of
+evidence.** This is ADR 0026's shape precisely: the witness interrogated the *neighbourhood*
+(`/chat`, the neighbour of the route actually serving the turn) rather than the thing (the agent).
+
+### A3.2 — Decision: two sources, one meaning
+
+A turn is proven by **either** the Prometheus turn counter **or** a distinct `turn_id` carrying a
+timestamped event in the business-event ledger.
+
+The §4 rule *"computed from passing gates, never asserted"* is untouched, and the argument must
+be stated because widening evidence is exactly where over-claim enters: **both are emissions the
+agent makes and a store records.** Neither is a declaration. What widens is what counts as
+looking, not what counts as proof. The ledger read inherits the ADR 0019 §4 synthetic exclusion
+from the read seam, so a canary turn can never manufacture the evidence that unlocks a rung.
+
+### A3.3 — The window is not optional
+
+Business events live six months. Read unbounded, the ledger would answer *"has this agent ever
+emitted?"* and an agent dead since July would read as observed until January — trading a false
+negative for a false positive. The ledger read is therefore bounded by a **30-day recency
+window** (`turn_evidence.RECENCY_WINDOW`), chosen against its neighbour rather than picked: it is
+the usual Prometheus retention, so the two sources answer over comparable horizons.
+
+Consequence, stated rather than discovered: **an agent that stops emitting falls back to L0 once
+the window passes it.** Evidence expires. Surfaces must word this as *observed recently*.
+
+### A3.4 — One source's silence no longer proves absence
+
+Before this amendment the counter's silence *was* the answer. With a second source able to
+contradict it, an agent is `dormant` only when **both** stores answered and neither holds a turn;
+if either is blind the verdict is `unverifiable`. Otherwise a ClickHouse outage would quietly
+demote an agent that is emitting fine.
+
+This extends `facts_readable` from the L2→L3 decision to **L0→L1**: the business-event store now
+carries turn evidence, so its outage must reach every rung it feeds. A blind spot that demotes
+only some decisions is the same over-claim wearing a smaller hat.
+
+### A3.5 — The route counts its own turn, and a ratchet keeps it that way
+
+`/recouvrement-assistant/message` now increments the counter (successes *and* failures, as
+`/chat` does). Deriving evidence from the ledger fixes this case; it does not close the class —
+the next agent served outside `/chat` and emitting no business events would hit the same wall in
+silence. `tests/unit/test_a_route_that_serves_a_turn_counts_it.py` refuses any route module that
+invokes an agent turn without reaching the counter, with a frozen exemption set for routes whose
+turns are counted elsewhere (`/agents/{id}/invoke`, which drives a real HTTP turn to the agent's
+own route). `recouvrement_assistant.py` has now been found outside a `/chat` seam three times —
+input guard (2026-07-21), durable transcript (ADR 0040), this counter — and three instances of
+one class is not three bugs.
+
+### A3.6 — This amendment FREES an agent
+
+`recouvrement` moves L0 → L3 and satisfies its required L3. **A change that unblocks must be read
+harder than one that blocks**, because nothing downstream complains when it is wrong — the same
+caution owed to the two grader widenings of 2026-08-04/05. What was verified: the rows must carry
+a real `capability_id` (L3's own evidence) *and* a `turn_id` inside the window (L1's); the counter
+is explicitly silent in the test that proves it; stale events alone leave the agent at L0; a blind
+store yields no rung at all.
+
+### Migration impact
+
+- Frozen tests asserting `recouvrement = L0` go red and are updated with the argument written at
+  the place of the number. `tests/unit/test_level_resolution.py` stubs the evidence verdict whole
+  and so is unaffected in meaning; its stubs now take `**_k` so a future source cannot silently
+  turn them into a different test.
+- The `L3 déclaré · L0 prouvé` legend stops diverging **for `recouvrement`**. It keeps its
+  examples — `onboarding` and `support-client` remain L2 declared / L0 computed — so the legend is
+  not broken, only less populated.
+- **Nothing is visible without a rebuild** (ADR 0051): the level is computed inside the agent
+  image.
 
 ## Amendment 1 (2026-07-06) — Capability becomes a first-class contract object; the per-capability Métier view; the external-effect invariant; the `product_surface` non-exposure rule
 

@@ -129,6 +129,12 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # Whether any catalogue was read at all. A DATA question about a load result, not a
     # verdict about the localization measurement — the route turns it into `available`.
     "src/tessera/observability/message_catalogues.py::CatalogueLoad.found": "data",
+    # Whether the ledger rows examined carried a usable instant — the same shape as
+    # `CatalogueLoad.found` above: a question about the READ, not about the agent. It decides
+    # nothing on its own; `ledger_turn_evidence` turns it into `unverifiable`, and that IS the
+    # three-valued verdict, carrying its own reason. Its whole job is to stop an unparsable
+    # timestamp format from emptying the window and reading as dormancy.
+    "src/tessera/observability/turn_evidence.py::TurnWindow.legible": "data",
     # ── authz & guard verdicts ────────────────────────────────────────────────────────────────
     "src/tessera/authz.py::auth_satisfies": "VERDICT",
     "src/tessera/agent/registry.py::can_handoff": "VERDICT",
