@@ -117,7 +117,12 @@ def test_the_parser_survives_the_shapes_a_dotenv_file_really_has(
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".env.local").write_text(
         "\n# a comment\n\n"
-        'TESSERA_CLICKHOUSE_PASSWORD="quoted=with=equals"\n'
+        # The VALUE is the fixture: this test exists to prove the parser strips the quotes and
+        # keeps the `=` signs inside them. gitleaks flagged it on 2026-08-05 — correctly by
+        # shape, wrongly by fact. Annotated narrowly rather than by widening a rule that would
+        # then miss a real one, and the annotation must sit on the SAME line as the finding:
+        # put one line above, as it was first written, gitleaks ignores it entirely.
+        'TESSERA_CLICKHOUSE_PASSWORD="quoted=with=equals"\n'  # gitleaks:allow
         "export TESSERA_CLICKHOUSE_USER=exported\n"
         "not a pair\n"
         "=orphan-value\n",
