@@ -164,3 +164,51 @@ def test_a_healthy_stack_serves_every_capability() -> None:
     """The negative control: the rules above must not be red on a system that is fine."""
     assert set(consequence_states(_ALL_OK).values()) == {"served"}
     assert set(reachable_signals(_ALL_OK).values()) == {"served"}
+
+
+def test_a_components_own_read_can_only_degrade_its_capabilities() -> None:
+    """ADR 0052 §Amendment 1.3 — the socket is the neighbourhood, the read is the thing.
+
+    Three directions, one rule (`_worst` over both witnesses):
+
+    * socket OK + read FAIL ⇒ lost — the 2026-08-06 Langfuse case, where a 200 on `/health`
+      dressed an unreadable store as « assurée »;
+    * socket OK + read BLIND ⇒ cannot_say — an unreachable read is a blind spot, not a pass;
+    * socket FAIL + read OK ⇒ still lost — a stale green read must never resurrect a dead
+      component, because the merge would otherwise be a way to launder a failure.
+    """
+    states = consequence_states(_ALL_OK, {"langfuse-web": Verdict.FAIL})
+    assert states["llm-observability"] == "lost"
+
+    states = consequence_states(_ALL_OK, {"clickhouse": Verdict.BLIND})
+    assert states["business-events"] == "cannot_say"
+    assert states["turn-evidence"] == "cannot_say", "both of its sources must be readable"
+
+    states = consequence_states(_with(postgres=Verdict.FAIL), {"postgres": Verdict.OK})
+    assert states["ledger"] == "lost"
+
+
+def test_because_and_state_come_from_the_same_merge() -> None:
+    """Two derivations of one verdict is how a column and a gate once came to disagree."""
+    from tessera.observability.stack_topology import consequence_because
+
+    reads = {"langfuse-web": Verdict.FAIL}
+    states = consequence_states(_ALL_OK, reads)
+    because = consequence_because(_ALL_OK, reads)
+    for key, state in states.items():
+        if state == "served":
+            assert because[key] == [], f"{key} is served yet blames {because[key]}"
+        else:
+            assert because[key], f"{key} is {state} and names nobody to fix"
+
+
+def test_a_read_witness_for_an_unprobed_component_is_still_not_a_pass() -> None:
+    """A component the socket probe never saw stays cannot_say even with a green read.
+
+    `_worst(cannot_say, served)` is `cannot_say`: half a witness is not a witness. The socket
+    leg missing means the probe registry and the read map disagree about what exists, and the
+    honest answer to a disagreement is that nothing may be claimed.
+    """
+    verdicts = {key: verdict for key, verdict in _ALL_OK.items() if key != "postgres"}
+    states = consequence_states(verdicts, {"postgres": Verdict.OK})
+    assert states["ledger"] == "cannot_say"

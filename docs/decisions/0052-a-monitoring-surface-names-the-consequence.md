@@ -110,7 +110,8 @@ worse than one that offers none.
   cockpit asks. That is a real limitation, and it is published on every row rather than hidden —
   but a deployment wanting real availability numbers must poll the endpoint on a timer. Adding
   that scheduler is deliberately out of scope here: a number nobody can explain the coverage of is
-  the thing this ADR refuses.
+  the thing this ADR refuses. *(Superseded by Amendment 1: the scheduler exists, and the coverage
+  it produces is explained by the same `observed_ratio` machinery.)*
 - `coverage_descriptor` now reads `business_event_read` instead of `business_event_rows`. The
   latter says in its own docstring that it is "wrong for anything that derives a coverage claim
   from the absence", and the coverage claim was calling it: a ClickHouse outage rendered as an
@@ -127,3 +128,60 @@ worse than one that offers none.
   declaration, so it can go stale — `tests/unit/test_observability_chain.py` pins that every
   declared dependency is a component something actually probes, which catches a renamed or
   removed component but not a capability that quietly acquired a new store.
+
+## Amendment 1 (2026-08-07) — the probe is scheduled, the phases are published, and a capability's witness is its own read
+
+Three additions, each closing a hole the original decision named and left open. Every payload
+change is by addition; the five endpoints keep their existing fields and meanings.
+
+### 1. The leader watches (`probe_interval_s`, default 60 s)
+
+The original consequences section said it plainly: nothing scheduled the probe, so the history
+covered whatever a cockpit happened to watch — **1.3 % of the day, the day the page shipped**.
+`observed_ratio` published the sliver honestly, and an operator cannot act on "99 % of 18
+minutes".
+
+The ADR 0044 **leader** now probes on a cadence (`TESSERA_OBS_PROBE_INTERVAL_S`, seconds, `0`
+disables). The loop lives with its siblings in `api/main.py`, probes first and sleeps after,
+and goes through the same 15 s cache as the page's reads, so a beat landing beside a page poll
+reuses the observation instead of opening twelve more sockets. The original refusal — "a number
+nobody can explain the coverage of" — is not reintroduced: coverage is still explained by
+`observed_ratio`, which now approaches 1 because somebody is actually looking.
+
+Two consequences of the original design soften but do not disappear:
+
+- **The journal keeps several writers.** Workers still record on a request-path cache miss; the
+  leader is merely the steady one. The loss direction is unchanged (a clobbered write can only
+  under-claim coverage, never over-claim uptime).
+- **A dead leader must not read as a running scheduler.** The loop stamps every beat to
+  `probe_scheduler.json` (interval, instant, pid), and `/observability/component-history`
+  reports the scheduler **from that stamp, never from configuration**: `never` (no beat has
+  landed), `active` (last beat within two intervals plus slack), `stale` (the beats stopped —
+  a dead leader loop, which is a different repair from "not configured"). Interrogate the
+  thing, not its declaration (0026).
+
+### 2. The phases travel to the screen
+
+`component-history` served totals (`seconds_by_verdict`) and transitions; the phases themselves
+stayed in the journal. A total cannot say *when* the fail was, and "when" is the question an
+operator opens a history window with. The endpoint now also returns the phases clipped to the
+window — `clipped_phases()` — so the page can draw a timeline in which a hole in the record is
+visibly a hole, which was always this ADR's point rendered as ink.
+
+### 3. A capability's state merges its component's OWN READ (the socket is the neighbourhood)
+
+On 2026-08-06 this page said `langfuse-web OK` — its health endpoint answered 200 — and
+`llm-observability · assurée`, while the overview's traces panel said *"Stack d'observabilité
+injoignable"*: the module the consequence row itself cites (`langfuse_obs.py`) could not
+complete one authenticated read. Two surfaces contradicted each other about one system because
+this one's witness interrogated the neighbourhood (the socket) instead of the thing (the read).
+
+`consequence_states()` therefore now accepts a second map — component → the verdict of its own
+**adapter-level read** — merged with `_worst`, so a read can only degrade a state, never
+improve it. Four reads exist today and cost nothing new: preflight already *is* the adapter
+read for postgres, clickhouse and prometheus; Langfuse gains `langfuse_read_health()`, one
+authenticated `limit=1` query through the same URL, credentials and parser the real numbers
+use, cached on the probe's TTL. Each consequence row names which of its dependencies carried a
+read this cycle (`checked_by_read`), so "assurée" over a socket-only check can never be
+mistaken for the stronger claim — and `because` is computed from the same merge as the state,
+so the two cannot disagree.

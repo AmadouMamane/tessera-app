@@ -272,12 +272,26 @@ class ObservabilitySettings(BaseSettings):
     # The scheduler is always WIRED (it idles under this flag), so flipping it is go-and-observe,
     # never a latent provisioned-but-silent trap (the Hica-seal off-chrono lesson).
     canary_scheduler_enabled: bool = False
+    # ADR 0052 §Amendment 1 — the stack-probe cadence, in seconds; 0 disables. ON by default,
+    # unlike the canary: probing twelve local sockets is passive observation with no LLM cost
+    # and no synthetic traffic, and without it the component history only covers the minutes a
+    # cockpit happened to be open (1.3 % of the day it shipped). Runs on the ADR 0044 leader
+    # only, so N workers never multiply it — and unit tests, which have no Postgres to elect a
+    # leader with, never start it at all.
+    probe_interval_s: int = 60
 
     @field_validator("online_eval_sample_rate")
     @classmethod
     def _sample_rate_is_a_fraction(cls, value: float) -> float:
         if not 0.0 <= value <= 1.0:
             raise ValueError(f"online_eval_sample_rate must be in [0.0, 1.0]; got {value!r}")
+        return value
+
+    @field_validator("probe_interval_s")
+    @classmethod
+    def _probe_interval_is_not_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError(f"probe_interval_s must be >= 0 (0 disables); got {value!r}")
         return value
 
 

@@ -15,10 +15,13 @@ differ, and ADR 0026's rule is that a witness which cannot see may not report "o
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from tessera.api.routes.observability import components as components_route
+from tessera.observability import component_history, probe_scheduler
+from tessera.observability.langfuse_obs import LangfuseReadHealth
 from tessera.observability.stack_components import StackObservation
 from tessera.preflight import Check, PreflightReport, Verdict
 
@@ -48,26 +51,39 @@ def _clear_cache() -> None:
     components_route._stack_cache = None
 
 
-def _serve(report: PreflightReport, stack: tuple[Check, ...] = ()) -> dict[str, object]:
-    """Serve the route with BOTH witnesses stubbed.
+def _serve(
+    report: PreflightReport,
+    stack: tuple[Check, ...] = (),
+    langfuse_read: LangfuseReadHealth | None = None,
+) -> dict[str, object]:
+    """Serve the route with ALL THREE witnesses stubbed.
 
-    The stack probe opens twelve real sockets. Left live, these tests would depend on the
-    machine's network and on a compose project being up — a unit test that is red on a laptop
-    and green in CI teaches nobody anything.
+    The stack probe opens twelve real sockets and the Langfuse read is an authenticated HTTP
+    round-trip. Left live, these tests would depend on the machine's network and on a compose
+    project being up — a unit test that is red on a laptop and green in CI teaches nobody
+    anything. The Langfuse leg defaults to OK so the pre-Amendment-1 tests keep asserting what
+    they always asserted.
     """
     components_route._cache = None
     components_route._stack_cache = None
     original_preflight = components_route.run_preflight
     original_stack = components_route.probe_stack_observations
+    original_langfuse = components_route.langfuse_read_health
     components_route.run_preflight = lambda **_: report  # type: ignore[assignment]
     components_route.probe_stack_observations = lambda *_, **__: tuple(  # type: ignore[assignment]
         _observed(check) for check in stack
+    )
+    components_route.langfuse_read_health = lambda: (  # type: ignore[assignment]
+        langfuse_read
+        if langfuse_read is not None
+        else LangfuseReadHealth(Verdict.OK, "stubbed read")
     )
     try:
         return asyncio.run(components_route.observability_components())
     finally:
         components_route.run_preflight = original_preflight  # type: ignore[assignment]
         components_route.probe_stack_observations = original_stack  # type: ignore[assignment]
+        components_route.langfuse_read_health = original_langfuse  # type: ignore[assignment]
 
 
 def _by_name(payload: dict[str, object], group: str) -> dict[str, dict[str, object]]:
@@ -285,3 +301,120 @@ def test_one_component_can_carry_two_answers_without_them_being_confused() -> No
     assert payload["counts"]["stack_ok"] == 1, (  # type: ignore[index]
         "the stack's own count must not be dragged down by a precondition failure"
     )
+
+
+def _consequence(payload: dict[str, object], key: str) -> dict[str, object]:
+    rows = {str(row["key"]): row for row in payload["consequences"]}  # type: ignore[index, union-attr]
+    return rows[key]  # type: ignore[return-value]
+
+
+def test_a_green_socket_cannot_carry_a_capability_whose_own_read_fails() -> None:
+    """2026-08-06, as a payload: langfuse-web answered 200 while the authenticated read failed.
+
+    The overview said « Stack d'observabilité injoignable » and this page said « assurée » —
+    two surfaces contradicting each other about one system, because this one's witness was the
+    socket (the neighbourhood) and not the read (the thing, ADR 0026). The capability must now
+    follow the READ down, while the component row honestly stays green: the container is up,
+    and the agent still cannot read it.
+    """
+    payload = _serve(
+        PreflightReport(()),
+        stack=(
+            Check("langfuse-web", Verdict.OK, "3000/api/public/health -> HTTP 200"),
+            Check("clickhouse", Verdict.OK, "clickhouse:8123/ping -> HTTP 200"),
+        ),
+        langfuse_read=LangfuseReadHealth(Verdict.FAIL, "HTTP 401 on /api/public/traces"),
+    )
+    row = _consequence(payload, "llm-observability")
+    assert row["state"] == "lost", "the read is the capability; the socket is scenery"
+    assert "langfuse-web" in row["because"], "the row must still name the component to fix"  # type: ignore[operator]
+    assert (
+        _by_name(payload, "stack")["langfuse-web"]["verdict"] == "ok"
+    ), "the component row keeps its own truth: the container IS up"
+
+
+def test_a_read_can_degrade_a_capability_but_never_improve_one() -> None:
+    """A dead socket with a (stale-cached) green read stays lost — `_worst` is one-way."""
+    payload = _serve(
+        PreflightReport(()),
+        stack=(
+            Check("langfuse-web", Verdict.FAIL, "connection refused"),
+            Check("clickhouse", Verdict.OK, "clickhouse:8123/ping -> HTTP 200"),
+        ),
+        langfuse_read=LangfuseReadHealth(Verdict.OK, "answered before the container died"),
+    )
+    assert _consequence(payload, "llm-observability")["state"] == "lost"
+
+
+def test_each_consequence_names_which_dependencies_carried_a_real_read() -> None:
+    """`checked_by_read` is the difference between « assurée » and « le port répond »."""
+    payload = _serve(
+        PreflightReport(
+            (
+                Check("postgres", Verdict.OK, "connect ok"),
+                Check("clickhouse", Verdict.OK, "read ok"),
+                Check("prometheus", Verdict.OK, "query ok"),
+            )
+        ),
+        stack=(
+            Check("postgres", Verdict.OK, "up"),
+            Check("clickhouse", Verdict.OK, "up"),
+            Check("prometheus", Verdict.OK, "up"),
+            Check("langfuse-web", Verdict.OK, "up"),
+        ),
+    )
+    assert _consequence(payload, "turn-evidence")["checked_by_read"] == [
+        "prometheus",
+        "clickhouse",
+    ], "both of turn-evidence's dependencies have adapter-level witnesses"
+    assert _consequence(payload, "ledger")["checked_by_read"] == ["postgres"]
+    assert _consequence(payload, "llm-observability")["checked_by_read"] == [
+        "langfuse-web",
+        "clickhouse",
+    ], "langfuse via its own probe, clickhouse via preflight — both are named"
+
+
+def test_a_failed_adapter_read_reaches_the_capability_through_preflight() -> None:
+    """The 2026-08-05 morning, end to end: port open, credentials refused, capability lost."""
+    payload = _serve(
+        PreflightReport((Check("clickhouse", Verdict.FAIL, "403 AUTHENTICATION_FAILED"),)),
+        stack=(
+            Check("clickhouse", Verdict.OK, "port answers"),
+            Check("prometheus", Verdict.OK, "port answers"),
+        ),
+    )
+    row = _consequence(payload, "business-events")
+    assert row["state"] == "lost"
+    assert row["because"] == ["clickhouse"]
+
+
+# ---------------------------------------------------------------------------------------------
+# /observability/component-history — phases + the scheduler's own heartbeat
+
+
+def test_history_serves_the_phases_a_timeline_draws_and_the_probe_heartbeat() -> None:
+    """The endpoint publishes WHAT happened WHEN, and whether anybody is steadily looking."""
+    now = datetime.now(UTC)
+    component_history.record_observation({"clickhouse": "fail"}, at=now - timedelta(minutes=30))
+    component_history.record_observation({"clickhouse": "ok"}, at=now - timedelta(minutes=10))
+    probe_scheduler.write_stamp(at=now - timedelta(seconds=30))
+
+    payload = asyncio.run(components_route.observability_component_history(days=1))
+
+    drawn = [
+        (str(p["component"]), str(p["verdict"]))  # type: ignore[index]
+        for p in payload["phases"]  # type: ignore[union-attr]
+    ]
+    assert ("clickhouse", "fail") in drawn
+    assert ("clickhouse", "ok") in drawn
+    probe = payload["probe"]
+    assert probe["state"] == "active"  # type: ignore[index]
+    assert probe["interval_s"] == 60.0  # type: ignore[index]
+    assert probe["last_run_at"] is not None  # type: ignore[index]
+
+
+def test_history_reports_a_scheduler_that_never_beat_as_never() -> None:
+    """No stamp ⇒ `never` — the page may announce the intent, not a heartbeat."""
+    payload = asyncio.run(components_route.observability_component_history(days=1))
+    assert payload["probe"]["state"] == "never"  # type: ignore[index]
+    assert payload["probe"]["last_run_at"] is None  # type: ignore[index]

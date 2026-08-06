@@ -375,6 +375,42 @@ async def _start_read_cache_warmer() -> asyncio.Task[None] | None:
     return asyncio.create_task(_warm())
 
 
+async def _start_stack_probe_scheduler() -> asyncio.Task[None] | None:
+    """LEADER-only loop: probe the twelve stack components on a cadence (ADR 0052 §Amendment 1).
+
+    Without it the component journal only knows the minutes a cockpit happened to be open, and
+    every availability figure is a true statement about a sliver — 1.3 % of the day, the day the
+    history shipped. The loop probes FIRST and sleeps after (a fresh leader records immediately),
+    goes through the same 15 s cache as the page's own reads (a beat landing just after a page
+    poll reuses its observation), and stamps its liveness to a file each beat so the endpoint —
+    served by ANY worker — can report `active`/`stale` from something the loop actually wrote
+    rather than from configuration. Best-effort: a cycle failure warns and the loop survives.
+    """
+    from tessera.api.routes.observability.components import probe_for_scheduler
+    from tessera.observability.probe_scheduler import probe_posture
+
+    log = obs_logging.get_logger("tessera.stackprobe")
+    posture = probe_posture()
+    log.info("stack_probe.posture", **posture)
+    if not posture["scheduling"]:
+        return None
+    cadence = posture["interval_s"]
+    interval = cadence if isinstance(cadence, int) else 60
+
+    async def _loop() -> None:
+        while True:
+            try:
+                observed_at = await asyncio.to_thread(probe_for_scheduler)
+                log.debug("stack_probe.cycle", observed_at=observed_at)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # a cycle failure must never kill the loop
+                log.warning("stack_probe.cycle_failed", error=str(exc))
+            await asyncio.sleep(interval)
+
+    return asyncio.create_task(_loop())
+
+
 async def _start_read_snapshot_writer() -> asyncio.Task[None] | None:
     """LEADER-only loop: compute the hottest cockpit reads once and publish a shared snapshot.
 
@@ -448,6 +484,7 @@ async def _start_singleton_work() -> list[asyncio.Task[None]]:
         await _start_memory_purge_scheduler(),  # ADR 0007 §Retention — off-chrono
         await _start_ledger_verification_scheduler(),  # off-chrono chain walk
         await _start_read_snapshot_writer(),  # ADR 0046 — shared hot-read cache
+        await _start_stack_probe_scheduler(),  # ADR 0052 §Am.1 — the watched history
     ]
     return [task for task in started if task is not None]
 

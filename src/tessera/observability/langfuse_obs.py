@@ -22,15 +22,24 @@ from __future__ import annotations
 import base64
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter
 from dataclasses import asdict, dataclass
+from threading import Lock
+from typing import Final
 
+from tessera.preflight import Verdict
 from tessera.urlfetch import urlopen_http
 
-__all__ = ["TracesObservability", "compute_traces_observability"]
+__all__ = [
+    "LangfuseReadHealth",
+    "TracesObservability",
+    "compute_traces_observability",
+    "langfuse_read_health",
+]
 
 _HOST = os.environ.get("LANGFUSE_HOST", "http://localhost:3900")
 _PUBLIC = os.environ.get("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public")
@@ -81,6 +90,60 @@ def _get_json(url: str, timeout: float) -> dict[str, object]:
     with urlopen_http(request, timeout=timeout) as response:
         payload = json.load(response)
     return payload if isinstance(payload, dict) else {}
+
+
+@dataclass(frozen=True)
+class LangfuseReadHealth:
+    """Whether this module's own authenticated read path works, spoken as a probe verdict."""
+
+    verdict: Verdict
+    detail: str
+
+
+#: Same TTL as the stack probe, for the same reason: the dashboard polls, and one authenticated
+#: round-trip per 15 s answers it as well as one per request.
+_READ_TTL_S: Final = 15.0
+_read_cache: tuple[float, LangfuseReadHealth] | None = None
+_read_cache_lock = Lock()
+
+
+def _read_health_uncached() -> LangfuseReadHealth:
+    """One authenticated read against the same API this module's numbers come from."""
+    url = f"{_HOST}/api/public/traces?limit=1"
+    try:
+        _get_json(url, timeout=3.0)
+    except urllib.error.HTTPError as exc:
+        # The service answered and refused (401/403) or failed (5xx): the read path is BROKEN,
+        # which is a different repair from a dead container — fix keys, not restarts.
+        return LangfuseReadHealth(Verdict.FAIL, f"HTTP {exc.code} on {url}")
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return LangfuseReadHealth(Verdict.BLIND, str(exc))
+    except (json.JSONDecodeError, ValueError) as exc:
+        return LangfuseReadHealth(Verdict.FAIL, f"unparseable answer: {exc}")
+    return LangfuseReadHealth(Verdict.OK, "authenticated read answered")
+
+
+def langfuse_read_health() -> LangfuseReadHealth:
+    """Can *this module* actually read Langfuse — not "is the port open".
+
+    On 2026-08-06 the observability page said ``langfuse-web OK`` (its health endpoint answered
+    200) and the overview said *"Stack d'observabilite injoignable"* — because THIS module's
+    authenticated read was failing while the socket was fine. Two surfaces contradicted each
+    other about one system; the witness was interrogating the neighbourhood (ADR 0026). This
+    probe asks the thing itself: one ``limit=1`` read through the same URL, credentials and
+    parser the real numbers use.
+    """
+    global _read_cache
+    with _read_cache_lock:
+        cached = _read_cache
+        if cached is not None and (time.time() - cached[0]) < _READ_TTL_S:
+            return cached[1]
+    # Outside the lock — the probe can take its full 3 s timeout, and a queue of dashboard
+    # readers serialised behind one round-trip is the failure the cache exists to prevent.
+    health = _read_health_uncached()
+    with _read_cache_lock:
+        _read_cache = (time.time(), health)
+    return health
 
 
 def _percentile(values: list[float], q: float) -> float | None:

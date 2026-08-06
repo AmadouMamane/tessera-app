@@ -56,6 +56,7 @@ __all__ = [
     "ComponentPhase",
     "Transition",
     "availability",
+    "clipped_phases",
     "load_phases",
     "record_observation",
     "transitions",
@@ -380,6 +381,49 @@ def availability(
         )
         for component, by_verdict in spans.items()
     }
+
+
+def clipped_phases(
+    *,
+    since: datetime,
+    until: datetime | None = None,
+    phases: Iterable[ComponentPhase] | None = None,
+) -> list[ComponentPhase]:
+    """The phases a window can SHOW — each clipped to the window, unparseable ones dropped.
+
+    This is what a timeline renders: :func:`availability` collapses the same spans into totals,
+    and a total cannot say *when* the fail was. Clipping happens here rather than in the UI so
+    the payload is bounded by the window and the two surfaces cannot disagree about what
+    overlaps it. A point phase (``since == until``) survives clipping — one observation is a
+    real look, and dropping it would render "never observed" over "observed once".
+
+    Ordered by component, then by start, so a renderer can draw rows without re-sorting.
+    """
+    end = until or datetime.now(UTC)
+    known = list(phases) if phases is not None else load_phases()
+    kept: list[tuple[str, datetime, ComponentPhase]] = []
+    for phase in known:
+        start, stop = phase.start(), phase.end()
+        if start is None or stop is None:
+            continue
+        left, right = max(start, since), min(stop, end)
+        if right < left:
+            continue
+        kept.append(
+            (
+                phase.component,
+                left,
+                ComponentPhase(
+                    component=phase.component,
+                    verdict=phase.verdict,
+                    since=left.isoformat(),
+                    until=right.isoformat(),
+                    n_observations=phase.n_observations,
+                ),
+            )
+        )
+    kept.sort(key=lambda item: (item[0], item[1]))
+    return [phase for _, _, phase in kept]
 
 
 def _write(phases: Sequence[ComponentPhase]) -> None:

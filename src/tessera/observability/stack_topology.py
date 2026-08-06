@@ -279,23 +279,67 @@ def _worst(states: Iterable[ConsequenceState]) -> ConsequenceState:
     return "cannot_say" if "cannot_say" in ranked else "served"
 
 
-def consequence_states(verdicts: Mapping[str, Verdict]) -> dict[str, ConsequenceState]:
+def _need_state(
+    need: str,
+    verdicts: Mapping[str, Verdict],
+    read_verdicts: Mapping[str, Verdict],
+) -> ConsequenceState:
+    """One dependency's contribution: its socket verdict, worsened by its own READ when one ran.
+
+    The second map is the 2026-08-06 lesson: ``langfuse-web`` answered its health endpoint with
+    200 while the module this capability cites could not complete one authenticated read — the
+    socket is the *neighbourhood*, the read is the *thing* (ADR 0026). Where an adapter-level
+    read exists (the preflight witnesses for postgres / clickhouse / prometheus, the Langfuse
+    read probe), it joins the socket with :func:`_worst`; where none exists, the socket stands
+    alone, which is stated to the reader via ``checked_by_read`` rather than implied.
+    """
+    socket = _FROM_VERDICT.get(verdicts[need], "cannot_say") if need in verdicts else "cannot_say"
+    if need in read_verdicts:
+        return _worst((socket, _FROM_VERDICT.get(read_verdicts[need], "cannot_say")))
+    return socket
+
+
+def consequence_states(
+    verdicts: Mapping[str, Verdict],
+    read_verdicts: Mapping[str, Verdict] | None = None,
+) -> dict[str, ConsequenceState]:
     """Resolve every declared consequence against what the probe actually observed.
 
     Args:
         verdicts: Component key → the verdict its own probe returned, as
             :func:`tessera.observability.stack_components.probe_stack` produced it.
+        read_verdicts: Component key → the verdict of that component's **own read path**
+            (an adapter-level query, not a socket), where one was performed. Optional so the
+            declared-only callers keep their meaning; when present it can only degrade a
+            state, never improve it.
 
     Returns:
         Consequence key → its state. A dependency the probe never reported on yields
         ``cannot_say`` for the whole capability rather than being skipped: a missing witness is
         a blind spot, never a pass (ADR 0026).
     """
+    reads = read_verdicts or {}
     return {
-        consequence.key: _worst(
-            _FROM_VERDICT.get(verdicts[need], "cannot_say") if need in verdicts else "cannot_say"
-            for need in consequence.needs
-        )
+        consequence.key: _worst(_need_state(need, verdicts, reads) for need in consequence.needs)
+        for consequence in CONSEQUENCES
+    }
+
+
+def consequence_because(
+    verdicts: Mapping[str, Verdict],
+    read_verdicts: Mapping[str, Verdict] | None = None,
+) -> dict[str, list[str]]:
+    """Per consequence, the dependencies whose merged contribution is not ``served``.
+
+    The same merge as :func:`consequence_states`, exposed separately so the surface can name
+    the component to restart without re-deriving the rule — two derivations of one verdict is
+    how the fleet column and the release gate once came to disagree.
+    """
+    reads = read_verdicts or {}
+    return {
+        consequence.key: [
+            need for need in consequence.needs if _need_state(need, verdicts, reads) != "served"
+        ]
         for consequence in CONSEQUENCES
     }
 

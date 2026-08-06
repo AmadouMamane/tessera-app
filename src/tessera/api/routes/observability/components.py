@@ -42,7 +42,8 @@ from typing import Final
 from fastapi import APIRouter, Depends, Query
 
 from tessera.api.security import require_bearer
-from tessera.observability import component_history, quality_nets
+from tessera.observability import component_history, probe_scheduler, quality_nets
+from tessera.observability.langfuse_obs import langfuse_read_health
 from tessera.observability.stack_components import (
     STACK_COMPONENTS,
     StackObservation,
@@ -55,6 +56,7 @@ from tessera.observability.stack_topology import (
     CHAIN_EDGES,
     CHAIN_NODES,
     CONSEQUENCES,
+    consequence_because,
     consequence_states,
     reachable_signals,
 )
@@ -103,6 +105,40 @@ _INTERROGATES: Final[dict[str, str]] = {
 }
 
 _HEADLINE: Final[dict[int, str]] = {0: "clear", 1: "fail", 2: "blind"}
+
+#: Stack components whose preflight twin performs an ADAPTER-LEVEL read (the ledger's own
+#: ``connect``, the ClickHouse adapter's HTTP read, the Prometheus adapter's query). For these,
+#: a capability's state merges the socket verdict with the read verdict — the port being open is
+#: the neighbourhood, the read is the thing (ADR 0026). The morning of 2026-08-05 is the proof:
+#: ClickHouse accepted connections while refusing its credentials.
+_READ_WITNESSES: Final = frozenset({"postgres", "clickhouse", "prometheus"})
+
+
+def _read_verdicts(report: PreflightReport) -> dict[str, Verdict]:
+    """Component key → the verdict of its own READ path, where one actually ran.
+
+    Preflight supplies three (postgres / clickhouse / prometheus — each check IS the adapter's
+    read); Langfuse gets its own, because its socket said OK on 2026-08-06 while this process
+    could not complete one authenticated read and the overview page said so — two cockpit
+    surfaces contradicting each other about one system.
+    """
+    reads = {check.name: check.verdict for check in report.checks if check.name in _READ_WITNESSES}
+    reads["langfuse-web"] = langfuse_read_health().verdict
+    return reads
+
+
+def probe_for_scheduler() -> float:
+    """One scheduler beat: ensure a fresh stack observation exists, then stamp liveness.
+
+    Runs through the same cache as the page's own reads, so a beat landing just after a page
+    poll reuses its observation instead of opening twelve more sockets — and the journal write
+    stays where it belongs, on the actual probe. The stamp is written on every beat regardless:
+    it vouches for the LOOP being alive, which is a different fact from an observation having
+    happened, and the history endpoint reports it as such.
+    """
+    observed_at, _ = _stack()
+    probe_scheduler.write_stamp()
+    return observed_at
 
 
 def _probe() -> tuple[float, PreflightReport]:
@@ -212,7 +248,12 @@ async def observability_components() -> dict[str, object]:
     fail = sum(1 for c in every if c.verdict is Verdict.FAIL)
     blind = sum(1 for c in every if c.verdict is Verdict.BLIND)
     verdicts = {check.name: check.verdict for check in stack}
-    states = consequence_states(verdicts)
+    # Adapter-level reads join the socket verdicts (they can only degrade, never improve): the
+    # Langfuse leg is a live authenticated round-trip, so it runs off the event loop with the
+    # other probes rather than blocking it for its 3 s timeout.
+    read_checks = await asyncio.to_thread(_read_verdicts, report)
+    states = consequence_states(verdicts, read_checks)
+    because = consequence_because(verdicts, read_checks)
     return {
         "observed_at": observed_at,
         # A FAIL anywhere outranks a blind spot: "something is down" is the actionable one.
@@ -281,12 +322,13 @@ async def observability_components() -> dict[str, object]:
                 "gates_agents": consequence.gates_agents,
                 "state": states[consequence.key],
                 # Which dependency is responsible — so the row names a component to restart
-                # instead of leaving the operator to intersect two lists by eye.
-                "because": [
-                    need
-                    for need in consequence.needs
-                    if verdicts.get(need, Verdict.BLIND) is not Verdict.OK
-                ],
+                # instead of leaving the operator to intersect two lists by eye. Same merge as
+                # the state (socket ⊕ its own read), so the two can never disagree.
+                "because": because[consequence.key],
+                # The dependencies whose verdict includes an adapter-level READ this cycle —
+                # named, so "assurée" over a socket-only check cannot be mistaken for the
+                # stronger claim.
+                "checked_by_read": [need for need in consequence.needs if need in read_checks],
             }
             for consequence in CONSEQUENCES
         ],
@@ -330,8 +372,26 @@ async def observability_component_history(
     phases = await asyncio.to_thread(component_history.load_phases)
     stats = component_history.availability(since=start, until=end, phases=phases)
     changes = component_history.transitions(since=start, until=end, phases=phases)
+    visible = component_history.clipped_phases(since=start, until=end, phases=phases)
     return {
         "window": {"since": start.isoformat(), "until": end.isoformat(), "days": days},
+        # The phases themselves, clipped to the window — what a timeline draws. The totals
+        # above cannot say WHEN the fail was, and "when" is the question an operator opens
+        # this window with.
+        "phases": [
+            {
+                "component": phase.component,
+                "verdict": phase.verdict,
+                "since": phase.since,
+                "until": phase.until,
+                "n_observations": phase.n_observations,
+            }
+            for phase in visible
+        ],
+        # The scheduler's own heartbeat (ADR 0052 §Amendment 1) — derived from the stamp the
+        # loop writes, never from configuration, so a dead leader reads as `stale` and not as
+        # "scheduled". `never` + a configured interval means the first beat has not landed.
+        "probe": probe_scheduler.scheduler_report(),
         "availability": [
             {
                 "component": stat.component,
