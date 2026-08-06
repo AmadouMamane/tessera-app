@@ -22,7 +22,7 @@ from typing import Final
 import jsonschema
 
 from eval.gate import GateVerdict, evaluate_gate
-from eval.ratchet import catalogue_version, grader_criteria_sha_for
+from eval.ratchet import auth_posture_sha_for, catalogue_version, grader_criteria_sha_for
 from eval.scorecard import build_scorecard
 from eval.sets import EvalSet, critical_case_ids, load_eval_set
 from tessera.agent import compile_graph
@@ -132,6 +132,24 @@ def _grader_criteria_sha(cases: list[dict[str, object]]) -> str:
     A report that says which ruler judged it lets that comparison refuse instead of conclude.
     """
     return grader_criteria_sha_for(str(c["id"]) for c in cases)
+
+
+def _auth_posture_sha(cases: list[dict[str, object]]) -> str:
+    """Identity of the POSTURES this run was replayed under — one rung below the ruler.
+
+    The same lesson as :func:`_grader_criteria_sha`, applied to the other half of what makes two
+    measurements comparable. Until 2026-08-06 the report carried a single ``auth_state`` scalar
+    holding :data:`EVAL_AUTH_STATE`, the harness DEFAULT — under a comment claiming it was "the
+    session posture the run measured". That was true until 2026-08-05, when seventeen cases began
+    declaring ``auth_state: customer``; from then on the field named a posture those cases were
+    not run under, and nothing anywhere read it to notice.
+
+    It is not a cosmetic difference: replaying the catalogue under the two postures moved a real
+    verdict (``04_overconfident_action|en``, whose pass had been manufactured by the auth floor
+    denying ``card_block``). So the posture gets an identity that a consumer can recompute from
+    the catalogue and refuse on, exactly as it already does for the criteria.
+    """
+    return auth_posture_sha_for(str(c["id"]) for c in cases)
 
 
 #: Sentence boundaries, for locating the clause a claim was made in.
@@ -689,6 +707,7 @@ async def _run_all(args: argparse.Namespace) -> int:
         cases = [c for c in cases if c["id"] in wanted]
     catalogue_version = _catalogue_version(cases)
     grader_sha = _grader_criteria_sha(cases)
+    posture_sha = _auth_posture_sha(cases)
     if args.case:
         cases = [c for c in cases if c["id"] == args.case]
         if not cases:
@@ -761,11 +780,24 @@ async def _run_all(args: argparse.Namespace) -> int:
                 "eval_set": eval_set.slug if eval_set is not None else None,
                 "catalogue_version": catalogue_version,
                 "grader_criteria_sha": grader_sha,
-                # The session posture the run measured. Absent from every report before
-                # 2026-08-03, because nothing installed the guard's turn context and the
-                # posture was whatever the contextvar defaulted to. A number whose posture
-                # is unstated cannot be compared with one taken under another.
-                "auth_state": EVAL_AUTH_STATE.value,
+                # The harness DEFAULT posture — what a case that declares none is replayed
+                # under. Absent from every report before 2026-08-03, because nothing installed
+                # the guard's turn context and the posture was whatever the contextvar
+                # defaulted to. A number whose posture is unstated cannot be compared with one
+                # taken under another.
+                #
+                # It is NOT "the posture this run measured", which is what its comment claimed
+                # until 2026-08-06: seventeen cases declare their own since 2026-08-05, so a
+                # single scalar cannot describe the run. `auth_posture_sha` below is what a
+                # consumer compares; this stays because the default is worth reading, and it is
+                # now named for what it actually is.
+                "default_auth_state": EVAL_AUTH_STATE.value,
+                # The identity of the postures actually applied, recomputable from the
+                # catalogue — the same contract as `grader_criteria_sha` one rung up. A report
+                # taken under one posture and compared against a catalogue declaring another is
+                # comparing two measurements of different things; this lets the comparison
+                # refuse instead of conclude.
+                "auth_posture_sha": posture_sha,
                 "summary": asdict(scorecard.summary),
                 "gate": gate_payload,
                 "policy_gate": policy_gate,

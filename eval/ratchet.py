@@ -47,6 +47,7 @@ if TYPE_CHECKING:
 __all__ = [
     "Baseline",
     "RatchetVerdict",
+    "auth_posture_sha_for",
     "baseline_from_report",
     "grader_criteria_sha",
     "grader_criteria_sha_for",
@@ -63,6 +64,12 @@ __all__ = [
 ]
 
 BaselineKind = Literal["null_control", "model_run"]
+
+#: The posture a case that declares none is replayed under. Written literally rather than
+#: imported from :mod:`eval.runner` — that module imports this one, and a cycle here would be
+#: paid at import time by every consumer. ``test_the_default_posture_matches_the_runner`` asserts
+#: the two are equal, so the copy cannot drift from the thing it copies.
+_DEFAULT_POSTURE: Final = "anonymous"
 
 #: Separator for the ``case_id|language`` keys of a baseline's verdict map.
 _KEY_SEP = "|"
@@ -212,6 +219,47 @@ def _grader_code_sha() -> str:
 def _criteria_sha(pairs: list[str]) -> str:
     material = "\n".join(sorted(pairs)) + "\n\x1e" + _grader_code_sha()
     digest = hashlib.sha256(material.encode()).hexdigest()[:12]
+    return f"{len(pairs)}-{digest}"
+
+
+def auth_posture_sha_for(case_ids: Iterable[str], failures: Path = CATALOGUE_DIR) -> str:
+    """The identity of the SESSION POSTURES a set of cases is replayed under.
+
+    The sibling of :func:`grader_criteria_sha_for`, and it exists for the same reason one rung
+    down. A report already states a posture, but it stated the harness DEFAULT — and on
+    2026-08-05 seventeen cases began declaring ``auth_state: customer`` of their own, so that
+    single scalar stopped describing what was applied. Worse, nothing read it: the criteria a
+    report was judged by are declared *and verified* (``eval_floor`` refuses a mismatched
+    ruler), while the posture was declared and read by nobody.
+
+    That gap is not cosmetic. Running the same catalogue under the two postures moved a real
+    verdict — ``04_overconfident_action|en`` passed only because the auth floor denied
+    ``card_block`` and pushed the agent onto ``ticket_escalate``. A report taken under one
+    posture and compared against a catalogue declaring another is comparing two measurements
+    of different things, silently.
+
+    Args:
+        case_ids: The ids compared (order and duplicates are irrelevant). Ids absent from the
+            catalogue are ignored; the count in the returned string says how many were found.
+        failures: The catalogue directory. Defaults to the real one.
+
+    Returns:
+        ``"<count>-<12 hex>"`` over the sorted ``id -> posture`` pairs of those cases.
+    """
+    wanted = set(case_ids)
+    pairs: list[str] = []
+    for path in sorted(failures.glob("*.json")):
+        if path.stem.startswith("_"):
+            continue
+        case = json.loads(path.read_text(encoding="utf-8"))
+        if str(case.get("id")) not in wanted:
+            continue
+        # An undeclared posture is the harness default, and it hashes as that STRING rather than
+        # as absence — so a case that starts declaring the default explicitly does not read as a
+        # change, and one that drops a declaration does not read as unchanged.
+        posture = case.get("auth_state") or _DEFAULT_POSTURE
+        pairs.append(f"{case['id']}\x1f{posture}")
+    digest = hashlib.sha256(("\n".join(sorted(pairs)) + "\n").encode()).hexdigest()[:12]
     return f"{len(pairs)}-{digest}"
 
 

@@ -155,7 +155,7 @@ def _passing_snapshot() -> object:
     contributes nothing, leaving the level as the only thing that can block.
     """
     from eval.contribution import restrict_baseline
-    from eval.ratchet import grader_criteria_sha_for, load_baseline
+    from eval.ratchet import auth_posture_sha_for, grader_criteria_sha_for, load_baseline
     from eval.sets import load_eval_set
     from tessera.observability.eval_data import EvalSnapshot, SessionRow
 
@@ -197,6 +197,11 @@ def _passing_snapshot() -> object:
         # correctly, since it cannot show the two sides share a ruler — and this test, which is
         # about the observability LEVEL, would again pass for a reason it never asserted.
         grader_criteria_sha=grader_criteria_sha_for(load_eval_set(_AGENT).effective_case_ids),
+        # And the POSTURES it was replayed under (§4 Am. 3). Without it the floor likewise
+        # declines to grade — it cannot show both sides asked the agent the same question — and
+        # this test, which is about the observability LEVEL, would once more pass for a reason
+        # it never asserted.
+        auth_posture_sha=auth_posture_sha_for(load_eval_set(_AGENT).effective_case_ids),
         gate_passed=True,
         gate_failed_critical=(),
     )

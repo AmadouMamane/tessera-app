@@ -42,7 +42,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, assert_never
 
 from eval.contribution import evaluate_contribution, restrict_baseline
-from eval.ratchet import catalogue_on_disk, grader_criteria_sha_for, load_baseline
+from eval.ratchet import (
+    auth_posture_sha_for,
+    catalogue_on_disk,
+    grader_criteria_sha_for,
+    load_baseline,
+)
 from eval.sets import load_eval_set
 from tessera.verdict import CannotSay, NoEffect, NotOk, Ok, Verdict
 
@@ -107,6 +112,47 @@ def _absent_ruler_moved(run_ruler: str, floor_ruler: str) -> str:
         f"agents' reports were not, and this comparison reported three models as worse than no "
         f"model at all. Re-grade the run under today's criteria (`make eval-regrade`) or re-run it"
     )
+
+
+def _absent_posture_unknown(run_at: str) -> str:
+    return (
+        f"the run of {run_at or 'unknown date'} does not say which SESSION POSTURES it was "
+        f"replayed under, so it cannot be compared with a catalogue that declares them. Every "
+        f"report written before 2026-08-06 is in this state, and it is not a formality: on "
+        f"2026-08-05 seventeen cases began declaring `auth_state: customer`, and replaying them "
+        f"un-gated moved a real verdict — `04_overconfident_action|en` had been passing only "
+        f"because the auth floor denied `card_block`. Re-run it: `make eval AGENT=<id>`"
+    )
+
+
+def _absent_posture_moved(run_posture: str, catalogue_posture: str) -> str:
+    return (
+        f"this run was replayed under postures {run_posture} and the catalogue now declares "
+        f"{catalogue_posture} — the agent was asked a different question, so its verdicts are "
+        f"not comparable with today's. A posture decides whether the guard's auth floor answers "
+        f"before the agent does, which is the difference between measuring the agent and "
+        f"measuring the guard. Re-run it: `make eval AGENT=<id>`"
+    )
+
+
+def _postures_disagree(snap: EvalSnapshot, compared_case_ids: Iterable[str]) -> str | None:
+    """Whether this run's session postures still match what the catalogue declares.
+
+    The sibling of :func:`_rulers_disagree`, one rung down, and it exists because the criteria
+    got this treatment on 2026-08-04 while the posture — declared in the report since 2026-08-03
+    — was read by **nobody**. A field that is written and never read is not a control; it is a
+    comment that happens to be machine-readable.
+
+    ``None`` means comparable. A string is the obstacle, and it BLOCKS rather than concludes:
+    an unstated posture is unknown, never "the current one".
+    """
+    named = snap.auth_posture_sha
+    if not named:
+        return _absent_posture_unknown(snap.run_at)
+    current = auth_posture_sha_for(compared_case_ids)
+    if named != current:
+        return _absent_posture_moved(named, current)
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -465,9 +511,16 @@ def grade_against_own_floor(snap: EvalSnapshot) -> FloorGrade:
     except (KeyError, ValueError, TypeError, OSError):
         return FloorGrade(graded=False, obstacle=ABSENT_NO_BASELINE, verdict=None)
 
-    mixed_rulers = _rulers_disagree(snap, baseline, eval_set.effective_case_ids)
-    if mixed_rulers is not None:
-        return FloorGrade(graded=False, obstacle=mixed_rulers, verdict=None)
+    # Two ways the two sides can fail to be comparable, asked in order. The ruler first because
+    # it is the familiar one and should be named first when both apply; the posture second, and
+    # asked AT ALL for the first time — it was stamped on reports since 2026-08-03 and read by
+    # nothing until 2026-08-06. A shared ruler is not enough if the agent was asked a different
+    # question.
+    incomparable = _rulers_disagree(snap, baseline, eval_set.effective_case_ids) or (
+        _postures_disagree(snap, eval_set.effective_case_ids)
+    )
+    if incomparable is not None:
+        return FloorGrade(graded=False, obstacle=incomparable, verdict=None)
 
     report = {
         "model": snap.model,

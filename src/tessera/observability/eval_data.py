@@ -133,6 +133,13 @@ class EvalSnapshot:
     grader_criteria_sha_partial: str = ""
     #: The ``case|language`` runs whose verdict was carried, not re-derived.
     grader_blind_runs: tuple[str, ...] = ()
+    #: Identity of the SESSION POSTURES this run was replayed under — the criteria's sibling one
+    #: rung down. Empty for a report written before 2026-08-06, which is *unknown* rather than
+    #: "the current posture": on 2026-08-05 seventeen cases began declaring
+    #: ``auth_state: customer``, and every report on disk predates that. Assuming they match
+    #: would compare a run taken under the auth floor's denial with a catalogue that no longer
+    #: asks for it — a difference measured to move a real verdict, not a theoretical one.
+    auth_posture_sha: str = ""
     gate_passed: bool | None = None
     gate_failed_critical: tuple[str, ...] = ()
     # The non-critical counts: a measurement, never compared to a bar (ADR 0021 removed
@@ -396,6 +403,7 @@ def load_eval_snapshot(agent_id: str | None = None) -> EvalSnapshot:
         eval_set=str(best.get("eval_set") or ""),
         grader_criteria_sha=str(best.get("grader_criteria_sha") or ""),
         grader_criteria_sha_partial=str(best.get("grader_criteria_sha_partial") or ""),
+        auth_posture_sha=str(best.get("auth_posture_sha") or ""),
         grader_blind_runs=_blind_runs(best.get("grader_criteria_unstampable")),
         gate_passed=bool(gate_passed) if isinstance(gate_passed, bool) else None,
         gate_failed_critical=tuple(str(c) for c in failed_critical)
