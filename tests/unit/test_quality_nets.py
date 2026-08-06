@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
-from tessera.observability import quality_nets
+from tessera.observability import business_events, quality_nets
 from tessera.observability.semconv import DEPLOYMENT_ENVIRONMENT
 
 if TYPE_CHECKING:
@@ -22,8 +22,20 @@ _FULL_ROW = {
 }
 
 
-def _rows(monkeypatch: pytest.MonkeyPatch, rows: list[dict[str, object]]) -> None:
-    monkeypatch.setattr(quality_nets.business_events, "business_event_rows", lambda **_kw: rows)
+def _rows(
+    monkeypatch: pytest.MonkeyPatch, rows: list[dict[str, object]], *, readable: bool = True
+) -> None:
+    """Stub the read seam that says WHETHER THE STORE ANSWERED, not the flattening one.
+
+    The descriptor used to call ``business_event_rows``, whose own docstring forbids exactly
+    that — *"wrong for anything that derives a coverage claim from the absence"*. Stubbing the
+    same seam the code reads is what makes ``readable=False`` testable at all.
+    """
+    monkeypatch.setattr(
+        quality_nets.business_events,
+        "business_event_read",
+        lambda **_kw: business_events.BusinessEventRead(rows=rows, readable=readable),
+    )
 
 
 def _bundles(monkeypatch: pytest.MonkeyPatch, captured: list[str]) -> None:
@@ -93,6 +105,73 @@ def test_coverage_measures_the_latest_event(monkeypatch: pytest.MonkeyPatch) -> 
     desc = quality_nets.coverage_descriptor("recouvrement")
     assert desc is not None
     assert desc["covered_pct"] == 100.0
+
+
+def test_a_store_that_did_not_answer_is_not_an_agent_that_emits_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The class this repo keeps re-finding: a blind read published as a measured shortfall.
+
+    Both branches produce zero rows. Reading the flattened seam made them the same answer —
+    ``no_evidence``, with every required attribute listed as missing, which renders as an agent
+    that instruments nothing. One of those two is a claim about the agent and the other is a
+    claim about the reader's own eyes, and only one of them is warranted.
+    """
+    _rows(monkeypatch, [], readable=False)
+    blind = quality_nets.coverage_descriptor("recouvrement")
+    _rows(monkeypatch, [])
+    empty = quality_nets.coverage_descriptor("recouvrement")
+
+    assert blind is not None and empty is not None
+    assert blind["status"] == "unverifiable"
+    assert empty["status"] == "no_evidence", "a store that answered 'none' still says none"
+    assert blind["covered_pct"] is None and empty["covered_pct"] is None
+    assert blind["missing_attributes"] == [], (
+        "nothing is KNOWN to be missing when nobody could look — listing the whole contract "
+        "renders as a total instrumentation failure the read cannot support"
+    )
+    assert empty["missing_attributes"] == empty["required_attributes"]
+
+
+def test_fleet_coverage_reads_the_ledger_once_and_serves_every_agent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Signal 92 for the fleet, from ONE read — the shape fleet_ledger_facts established."""
+    reads: list[dict[str, object]] = []
+
+    def _one_read(**kwargs: object) -> business_events.BusinessEventRead:
+        reads.append(kwargs)
+        return business_events.BusinessEventRead(rows=[dict(_FULL_ROW)], readable=True)
+
+    monkeypatch.setattr(quality_nets.business_events, "business_event_read", _one_read)
+    payload = quality_nets.fleet_coverage()
+
+    assert len(reads) == 1, "one whole-ledger read, not one per agent"
+    assert reads[0].get("agent_id") is None, "the fleet read must not filter to one agent"
+    agents = payload["agents"]
+    assert isinstance(agents, list) and agents, "the manifested fleet must produce rows"
+    covered = {str(a["agent_id"]): a["covered_pct"] for a in agents}
+    assert covered["recouvrement"] == 100.0, "the agent with rows is measured"
+    others = [pct for agent_id, pct in covered.items() if agent_id != "recouvrement"]
+    assert all(pct is None for pct in others), "an agent with no rows carries no percentage"
+
+
+def test_fleet_coverage_that_could_not_read_says_so_on_every_row(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ClickHouse outage must not render as a fleet that instruments nothing."""
+    monkeypatch.setattr(
+        quality_nets.business_events,
+        "business_event_read",
+        lambda **_kw: business_events.BusinessEventRead(rows=[], readable=False),
+    )
+    payload = quality_nets.fleet_coverage()
+    agents = payload["agents"]
+    assert payload["blind"] is True
+    assert isinstance(agents, list)
+    assert agents, "the fleet is still listed — the reader is told it cannot be judged"
+    assert all(a["status"] == "unverifiable" for a in agents)
+    assert all(a["covered_pct"] is None for a in agents)
 
 
 # --------------------------------------------------------------------------- #

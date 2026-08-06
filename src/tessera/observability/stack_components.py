@@ -30,9 +30,11 @@ not "down".
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import socket
 import urllib.error
+import urllib.parse
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Literal
 
@@ -42,7 +44,7 @@ from tessera.urlfetch import UnsupportedSchemeError, urlopen_http
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__all__ = ["STACK_COMPONENTS", "StackComponent", "probe_stack"]
+__all__ = ["STACK_COMPONENTS", "StackComponent", "is_loopback", "probe_stack", "ui_url"]
 
 _TIMEOUT_S: Final = 3.0
 
@@ -62,6 +64,13 @@ class StackComponent:
     #: For ``http``: the path whose answer means "alive". Chosen per component, because
     #: ``/`` on Grafana is a 302 to a login page and proves only that a web server exists.
     path: str = ""
+    #: Where an operator's BROWSER opens this component, when it has a UI worth opening.
+    #: Deliberately not derived from ``default_address``: that address is resolved inside the
+    #: compose network (``grafana:3000``) and means nothing to a browser, while the published
+    #: port (``127.0.0.1:13000``) means nothing inside the network. Two vantage points, two
+    #: addresses; conflating them is how a dashboard grows links to closed doors.
+    #: ``TESSERA_STACK_UI_<KEY>`` overrides it; empty ⇒ this component has no UI and no link.
+    default_ui: str = ""
 
 
 #: The twelve. Ordered as an operator reads a stack: what the agent stores in, what it measures
@@ -78,19 +87,50 @@ STACK_COMPONENTS: Final[tuple[StackComponent, ...]] = (
         "prometheus:9090",
         "http",
         "/-/healthy",
+        # /targets, not /: the question an operator opens Prometheus with from this page is
+        # "is it still scraping the agent?", and that page answers it in one screen.
+        default_ui="http://127.0.0.1:19090/targets",
     ),
-    StackComponent("grafana", "metrics dashboards", "grafana:3000", "http", "/api/health"),
+    StackComponent(
+        "grafana",
+        "metrics dashboards",
+        "grafana:3000",
+        "http",
+        "/api/health",
+        default_ui="http://127.0.0.1:13000",
+    ),
     StackComponent(
         "otel-collector", "trace intake (OTLP)", "otel-collector:8888", "http", "/metrics"
     ),
-    StackComponent("phoenix", "trace viewer", "phoenix:6006", "http", "/healthz"),
     StackComponent(
-        "langfuse-web", "LLM observability UI", "langfuse-web:3000", "http", "/api/public/health"
+        "phoenix",
+        "trace viewer",
+        "phoenix:6006",
+        "http",
+        "/healthz",
+        default_ui="http://127.0.0.1:16006",
+    ),
+    StackComponent(
+        "langfuse-web",
+        "LLM observability UI",
+        "langfuse-web:3000",
+        "http",
+        "/api/public/health",
+        default_ui="http://127.0.0.1:3900",
     ),
     StackComponent("langfuse-worker", "LLM observability ingestion", "langfuse-worker:3030", "tcp"),
     StackComponent("langfuse-db", "Langfuse's own Postgres", "langfuse-db:5432", "tcp"),
     StackComponent("langfuse-redis", "Langfuse's own queue", "redis:6379", "tcp"),
-    StackComponent("minio", "trace blob storage (S3)", "minio:9000", "http", "/minio/health/live"),
+    StackComponent(
+        "minio",
+        "trace blob storage (S3)",
+        "minio:9000",
+        "http",
+        "/minio/health/live",
+        # The CONSOLE (:9001 → 19101), not the S3 API (:9000 → 19100). Opening the API port in
+        # a browser yields an XML error, which is a link that works and helps nobody.
+        default_ui="http://127.0.0.1:19101",
+    ),
 )
 
 
@@ -103,6 +143,36 @@ def _address(component: StackComponent) -> str:
     """
     key = f"TESSERA_STACK_{component.key.upper().replace('-', '_')}"
     return os.environ.get(key) or component.default_address
+
+
+def ui_url(component: StackComponent) -> str:
+    """Where a browser opens this component, or ``""`` when it has no UI.
+
+    ``TESSERA_STACK_UI_<KEY>`` overrides the declared default, and setting it to an empty value
+    removes the link — a deployment that publishes no ports should promise no doors.
+    """
+    key = f"TESSERA_STACK_UI_{component.key.upper().replace('-', '_')}"
+    override = os.environ.get(key)
+    return (override if override is not None else component.default_ui).strip()
+
+
+def is_loopback(url: str) -> bool:
+    """Whether ``url`` names the loopback interface — i.e. is only true *on the deployment host*.
+
+    This is a fact about the URL, resolved here and **carried** to the browser rather than
+    guessed there: the front cannot know that ``127.0.0.1:13000`` is Grafana-on-the-host and not
+    Grafana-on-the-reader's-laptop, and a reader on ``tessera.example.com`` clicking a loopback
+    link reaches whatever happens to run on *their* port 13000 — nothing, usually, and something
+    else entirely at worst. The caller pairs it with its own vantage point before rendering a
+    live link.
+    """
+    host = urllib.parse.urlsplit(url).hostname
+    if not host:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host == "localhost" or host.endswith(".localhost")
 
 
 def _probe_tcp(component: StackComponent, address: str) -> Check:

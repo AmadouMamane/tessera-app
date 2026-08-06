@@ -35,13 +35,28 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import UTC, datetime, timedelta
 from threading import Lock
 from typing import Final
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from tessera.api.security import require_bearer
-from tessera.observability.stack_components import STACK_COMPONENTS, probe_stack
+from tessera.observability import component_history, quality_nets
+from tessera.observability.stack_components import (
+    STACK_COMPONENTS,
+    is_loopback,
+    probe_stack,
+    ui_url,
+)
+from tessera.observability.stack_topology import (
+    AGENT_NODE,
+    CHAIN_EDGES,
+    CHAIN_NODES,
+    CONSEQUENCES,
+    consequence_states,
+    reachable_signals,
+)
 from tessera.preflight import Check, PreflightReport, Verdict, run_preflight
 
 router = APIRouter()
@@ -108,6 +123,13 @@ def _stack() -> tuple[float, tuple[Check, ...]]:
     checks = probe_stack()
     with _stack_cache_lock:
         _stack_cache = (observed_at, checks)
+    # Journalled HERE, on the cache MISS, because this is where an observation actually
+    # happened. Recording on every request would count cache hits as looks, and the history's
+    # whole value is that it distinguishes "watched and steady" from "nobody was looking".
+    component_history.record_observation(
+        {check.name: check.verdict.value for check in checks},
+        at=datetime.fromtimestamp(observed_at, tz=UTC),
+    )
     return _stack_cache
 
 
@@ -140,6 +162,8 @@ async def observability_components() -> dict[str, object]:
     every = (*stack, *report.checks)
     fail = sum(1 for c in every if c.verdict is Verdict.FAIL)
     blind = sum(1 for c in every if c.verdict is Verdict.BLIND)
+    verdicts = {check.name: check.verdict for check in stack}
+    states = consequence_states(verdicts)
     return {
         "observed_at": observed_at,
         # A FAIL anywhere outranks a blind spot: "something is down" is the actionable one.
@@ -156,4 +180,133 @@ async def observability_components() -> dict[str, object]:
             "stack_ok": sum(1 for c in stack if c.verdict is Verdict.OK),
         },
         "components": components,
+        # The chain, so the page can show that one dead node explains three red rows. Nodes and
+        # edges are declared (stack_topology); the verdicts joined onto them are the live probe's.
+        "chain": {
+            "nodes": [
+                {
+                    "key": node.key,
+                    "stage": node.stage,
+                    "carries": list(node.carries),
+                    # The emitter is not probed from outside: this very response is its proof.
+                    # Stated, not inferred, so a reader knows why one node cannot go red here.
+                    "verdict": "ok"
+                    if node.key == AGENT_NODE
+                    else verdicts[node.key].value
+                    if node.key in verdicts
+                    else "blind",
+                    "self_evident": node.key == AGENT_NODE,
+                }
+                for node in CHAIN_NODES
+            ],
+            "edges": [
+                {
+                    "source": edge.source,
+                    "target": edge.target,
+                    "signal": edge.signal,
+                    "declared_in": edge.declared_in,
+                    "profile": edge.profile,
+                }
+                for edge in CHAIN_EDGES
+            ],
+            "signals": reachable_signals(verdicts),
+        },
+        # What each store underwrites, and whether it still does. The capability is declared
+        # (it is a fact about this codebase, and `reads` cites the module); the STATE is
+        # computed from the probe above and never asserted.
+        "consequences": [
+            {
+                "key": consequence.key,
+                "needs": list(consequence.needs),
+                "reads": consequence.reads,
+                "gates_agents": consequence.gates_agents,
+                "state": states[consequence.key],
+                # Which dependency is responsible — so the row names a component to restart
+                # instead of leaving the operator to intersect two lists by eye.
+                "because": [
+                    need
+                    for need in consequence.needs
+                    if verdicts.get(need, Verdict.BLIND) is not Verdict.OK
+                ],
+            }
+            for consequence in CONSEQUENCES
+        ],
+        # Where a browser opens each tool. `loopback` is a fact about the URL, not a
+        # recommendation: the caller compares it with its own vantage point before offering a
+        # live link, because a loopback address is only true on the deployment host.
+        "links": [
+            {"key": component.key, "url": url, "loopback": is_loopback(url)}
+            for component in STACK_COMPONENTS
+            if (url := ui_url(component))
+        ],
     }
+
+
+#: Windows the history card offers. Bounded to a declared set rather than accepting any integer:
+#: an unbounded window over a file-backed journal is a way to ask one reader to parse everything.
+_HISTORY_DAYS: Final = (1, 7, 30)
+
+
+@router.get("/observability/component-history", dependencies=[Depends(require_bearer)])
+async def observability_component_history(
+    days: int = Query(1, ge=1, le=max(_HISTORY_DAYS)),
+) -> dict[str, object]:
+    """Availability and verdict CHANGES per component over the last ``days``.
+
+    The dimension the live probe cannot have. Read the numbers with ``observed_ratio``: the probe
+    runs when the cockpit asks, so a window is watched in patches, and every percentage below is
+    a share of **observed** time, not of wall-clock time. ``observed_ratio`` is how much of the
+    window was watched at all; where it is low, the availability figure is a true statement about
+    a small sample and says nothing about the rest — which is why both travel together and the UI
+    may not render one without the other.
+
+    Returns:
+        ``availability`` — per component, seconds in each verdict plus the observed share;
+        ``transitions`` — every verdict change inside the window, newest first, each flagged
+        ``after_gap`` when it was *discovered* after a hole rather than witnessed;
+        ``window`` — the bounds actually used.
+    """
+    end = datetime.now(UTC)
+    start = end - timedelta(days=days)
+    phases = await asyncio.to_thread(component_history.load_phases)
+    stats = component_history.availability(since=start, until=end, phases=phases)
+    changes = component_history.transitions(since=start, until=end, phases=phases)
+    return {
+        "window": {"since": start.isoformat(), "until": end.isoformat(), "days": days},
+        "availability": [
+            {
+                "component": stat.component,
+                "seconds_by_verdict": stat.seconds_by_verdict,
+                "observed_seconds": round(stat.observed_seconds, 1),
+                "window_seconds": round(stat.window_seconds, 1),
+                "observed_ratio": round(stat.observed_ratio, 4),
+                # None when nothing was observed — never 0 or 1, both of which are claims the
+                # record cannot support.
+                "ok_ratio": None if stat.ok_ratio is None else round(stat.ok_ratio, 4),
+            }
+            for stat in sorted(stats.values(), key=lambda s: s.component)
+        ],
+        "transitions": [
+            {
+                "component": change.component,
+                "from": change.from_verdict,
+                "to": change.to_verdict,
+                "at": change.at,
+                "after_gap": change.after_gap,
+            }
+            for change in changes
+        ],
+        "continuity_window_s": component_history.CONTINUITY_WINDOW.total_seconds(),
+    }
+
+
+@router.get("/observability/instrumentation-coverage", dependencies=[Depends(require_bearer)])
+async def observability_instrumentation_coverage() -> dict[str, object]:
+    """Signal 92 for the whole fleet — how much of the L1 span contract each agent stamps.
+
+    Existed per agent since step 6b (``/observability/quality-nets?agent=…``) and was therefore
+    unaskable by any surface that shows a fleet. ``blind`` true means the store did not answer:
+    every agent then reads ``unverifiable`` and no percentage may be rendered, because a store
+    that is down produces exactly the same empty rows as an agent that emits nothing.
+    """
+    return await asyncio.to_thread(quality_nets.fleet_coverage)

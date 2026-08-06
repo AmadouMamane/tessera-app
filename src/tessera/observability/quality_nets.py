@@ -32,7 +32,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from tessera.agent.registry import get_agent
+from tessera.agent.registry import get_agent, list_agents
 from tessera.observability import business_events, replay
 from tessera.observability.semconv import (
     DEPLOYMENT_ENVIRONMENT,
@@ -51,6 +51,7 @@ if TYPE_CHECKING:
 __all__ = [
     "canary_descriptor",
     "coverage_descriptor",
+    "fleet_coverage",
     "latest_canary_verdict",
     "latest_canary_verdicts",
 ]
@@ -202,24 +203,63 @@ def _synthetic_run_facet(agent_id: str, *, reference: datetime) -> dict[str, obj
 def coverage_descriptor(agent_id: str | None) -> dict[str, object] | None:
     """Instrumentation-coverage (signal 92) for one agent, measured from live telemetry.
 
-    ``None`` for an un-manifested agent (no L1 obligation). For a manifested agent with no
-    telemetry yet, coverage is ``None`` with ``status="no_evidence"`` — honest-empty, never
-    a fabricated percentage.
+    ``None`` for an un-manifested agent (no L1 obligation). For a manifested agent whose store
+    answered with nothing, coverage is ``None`` with ``status="no_evidence"``; when the store
+    did not answer at all, ``status="unverifiable"`` — honest-empty in both cases, never a
+    fabricated percentage, and never the two collapsed into one word.
     """
     agent = _agent(agent_id)
     if agent is None or agent.observability is None:
         return None
+    read = business_events.business_event_read(agent_id=agent_id) if agent_id else None
+    return _coverage_from_rows(
+        agent.id,
+        rows=read.rows if read is not None else [],
+        # No agent id to read for is not a store outage — it is a caller that asked nothing,
+        # and the honest answer there is the same as an empty answer.
+        blind=read.blind if read is not None else False,
+    )
+
+
+def _coverage_from_rows(
+    agent_id: str, *, rows: list[dict[str, object]], blind: bool
+) -> dict[str, object]:
+    """Build one agent's coverage descriptor from rows already read (pure).
+
+    Split out so the fleet read can serve every agent from ONE whole-ledger read instead of one
+    read per agent — the shape ``business_capabilities.fleet_ledger_facts`` established, and for
+    the same reason: two whole-ledger reads that can disagree with each other is a bug this
+    codebase keeps paying for.
+
+    ``blind`` is carried in rather than inferred from ``rows`` being empty. That inference is
+    precisely what :func:`business_events.business_event_rows` warns against in its own
+    docstring — *"wrong for anything that derives a coverage claim from the absence"* — and this
+    function is that coverage claim. A store that is down must degrade the claim to *cannot say*,
+    never to a measured shortfall.
+    """
     required = list(REQUIRED_TURN_SPAN_ATTRIBUTES)
-    rows = business_events.business_event_rows(agent_id=agent_id) if agent_id else []
+    base: dict[str, object] = {
+        "agent_id": agent_id,
+        "signal": "instrumentation-coverage",
+        # The source of the measurement, named so no label may imply span coverage:
+        # it is the Scope dims carried on business events (a proxy), not a span store.
+        "evidence_source": "business_events",
+        "measures": "scope_dimensions",
+        "required_attributes": required,
+    }
+    if blind:
+        return {
+            **base,
+            "covered_pct": None,
+            # NOT the required list: naming every attribute as "missing" when nobody could look
+            # renders as a total instrumentation failure. Nothing is known to be missing.
+            "missing_attributes": [],
+            "evidence_at": None,
+            "status": "unverifiable",
+        }
     if not rows:
         return {
-            "agent_id": agent.id,
-            "signal": "instrumentation-coverage",
-            # The source of the measurement, named so no label may imply span coverage:
-            # it is the Scope dims carried on business events (a proxy), not a span store.
-            "evidence_source": "business_events",
-            "measures": "scope_dimensions",
-            "required_attributes": required,
+            **base,
             "covered_pct": None,
             "missing_attributes": required,
             "evidence_at": None,
@@ -233,15 +273,55 @@ def coverage_descriptor(agent_id: str | None) -> dict[str, object] | None:
     ]
     covered = len(required) - len(missing)
     return {
-        "agent_id": agent.id,
-        "signal": "instrumentation-coverage",
-        "evidence_source": "business_events",
-        "measures": "scope_dimensions",
-        "required_attributes": required,
+        **base,
         "covered_pct": round(100.0 * covered / len(required), 1),
         "missing_attributes": missing,
         "evidence_at": str(latest.get("timestamp", "")),
         "status": "measured",
+    }
+
+
+def fleet_coverage() -> dict[str, object]:
+    """Instrumentation coverage for every manifested agent, from ONE read of the ledger.
+
+    Signal 92 has existed since step 6b and was reachable only as
+    ``/observability/quality-nets?agent=<id>`` — one agent at a time, on a page that never
+    called it. A fleet has no per-agent page to ask from, so the number that answers *"is the
+    fleet instrumented?"* was computable and never computed.
+
+    Returns:
+        ``agents`` — one descriptor per manifested agent, worst coverage first so the row that
+        needs work leads; ``blind`` — the store did not answer, in which case every descriptor
+        reads ``unverifiable`` and the caller must render *cannot say*, never 0 %; and
+        ``observed_at``, the instant of the read.
+    """
+    read = business_events.business_event_read()
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for row in read.rows:
+        row_agent = row.get("agent_id")
+        if isinstance(row_agent, str) and row_agent:
+            grouped.setdefault(row_agent, []).append(row)
+
+    descriptors = [
+        _coverage_from_rows(agent.id, rows=grouped.get(agent.id, []), blind=read.blind)
+        for agent in list_agents()
+        if agent.observability is not None
+    ]
+    # Worst first: unverifiable and no-evidence sort ahead of every measured percentage, because
+    # "I cannot tell you" is the row an operator must act on before any 96 %.
+    descriptors.sort(
+        key=lambda d: (
+            d["covered_pct"] if isinstance(d["covered_pct"], int | float) else -1.0,
+            str(d["agent_id"]),
+        )
+    )
+    return {
+        "observed_at": datetime.now(UTC).isoformat(),
+        "blind": read.blind,
+        "required_attributes": list(REQUIRED_TURN_SPAN_ATTRIBUTES),
+        "evidence_source": "business_events",
+        "measures": "scope_dimensions",
+        "agents": descriptors,
     }
 
 
