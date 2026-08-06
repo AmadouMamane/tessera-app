@@ -40,6 +40,9 @@ export function InstrumentationCoverage() {
 
   const agents = query.data?.agents ?? [];
   const measured = agents.filter((agent) => agent.covered_pct !== null);
+  // Agents this evidence cannot speak about at all. Counted apart from the fleet figure and
+  // named on the card, so "100 % sur 1 agent mesuré" cannot be read as "1 of 6 is instrumented".
+  const inapplicable = agents.filter((agent) => agent.status === "not_applicable").length;
   const fleetPct =
     measured.length > 0
       ? measured.reduce((total, agent) => total + (agent.covered_pct ?? 0), 0) / measured.length
@@ -84,7 +87,12 @@ export function InstrumentationCoverage() {
                     {agent.agent_id}
                   </span>
                   {agent.covered_pct === null ? (
-                    <Badge tone="warning">{t(`status.${agent.status}`)}</Badge>
+                    // `not_applicable` is neutral, never amber: an agent with no business
+                    // grammar is behaving correctly, and an amber chip beside "aucune
+                    // télémétrie" told five healthy agents' operators they were broken.
+                    <Badge tone={agent.status === "not_applicable" ? "neutral" : "warning"}>
+                      {t(`status.${agent.status}`)}
+                    </Badge>
                   ) : (
                     <>
                       {/* The bar is the measurement, so it only exists where there IS one. An
@@ -119,6 +127,7 @@ export function InstrumentationCoverage() {
                 source reads as a claim about spans, and this measures event fields. */}
             <p className="mt-1.5 text-[0.62rem] text-[var(--muted-foreground)]">
               {t("proxy", { n: query.data.required_attributes.length })}
+              {inapplicable > 0 ? ` ${t("inapplicable", { n: inapplicable })}` : ""}
             </p>
           </>
         )}

@@ -44,26 +44,31 @@ export function useServedFromLoopback(): boolean {
 }
 
 /**
- * The link for one component, and whether it may be offered as a live one.
+ * The link for one component, and whether its address is only true on the deployment host.
  *
- * A loopback URL is only true on the deployment host. Offering it to a reader on another host
- * sends them to whatever runs on *their* port 13000 — nothing, usually, and something else
- * entirely at worst. So the URL is still shown (it is useful: an operator who can reach the host
- * wants to know the port) but it stops being clickable, under a caption that says why.
+ * This started stricter — a loopback link was rendered as inert text unless the page was itself
+ * served over loopback — and that was wrong in the case that actually matters. The operator
+ * reading `https://tessera.<domain>` is very often sitting **at** the deployment host, where
+ * `127.0.0.1:13000` opens Grafana perfectly; refusing to link it hands them five chips that do
+ * nothing, which is the complaint that produced this note. A page cannot detect that vantage
+ * point either: probing the address is blocked, and the page's own origin only tells you how the
+ * reader reached *this* app, not where they are.
+ *
+ * So the link is always a link, and what is *known* is said instead of guessed: `hostLocal` marks
+ * an address that resolves only on the deployment host, and the UI labels it — visibly, not in a
+ * tooltip. That is the honest trade. A reader elsewhere is told before they click; a reader on
+ * the host gets the door. Withholding a working door is its own kind of dishonesty.
  */
 export interface ResolvedLink {
   url: string;
-  clickable: boolean;
+  /** True when the address names loopback — meaningful only from the deployment host. */
+  hostLocal: boolean;
 }
 
-export function resolveLink(
-  links: ComponentLink[] | undefined,
-  key: string,
-  servedFromLoopback: boolean,
-): ResolvedLink | null {
+export function resolveLink(links: ComponentLink[] | undefined, key: string): ResolvedLink | null {
   const link = links?.find((candidate) => candidate.key === key);
   if (!link) return null;
-  return { url: link.url, clickable: !link.loopback || servedFromLoopback };
+  return { url: link.url, hostLocal: link.loopback };
 }
 
 /**

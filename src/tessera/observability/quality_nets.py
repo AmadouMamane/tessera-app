@@ -218,11 +218,23 @@ def coverage_descriptor(agent_id: str | None) -> dict[str, object] | None:
         # No agent id to read for is not a store outage — it is a caller that asked nothing,
         # and the honest answer there is the same as an empty answer.
         blind=read.blind if read is not None else False,
+        declares_events=_declares_business_signals(agent),
     )
 
 
+def _declares_business_signals(agent: Agent) -> bool:
+    """Whether this agent's manifest says it emits business events at all (ADR 0017 §4 L3).
+
+    The whole coverage measurement is taken on business-event fields. For an agent that declares
+    no business signals, that evidence does not exist and never will — which is a fact about the
+    manifest, not about the agent's instrumentation.
+    """
+    observability = agent.observability
+    return bool(observability is not None and getattr(observability, "business_signals", None))
+
+
 def _coverage_from_rows(
-    agent_id: str, *, rows: list[dict[str, object]], blind: bool
+    agent_id: str, *, rows: list[dict[str, object]], blind: bool, declares_events: bool = True
 ) -> dict[str, object]:
     """Build one agent's coverage descriptor from rows already read (pure).
 
@@ -258,12 +270,19 @@ def _coverage_from_rows(
             "status": "unverifiable",
         }
     if not rows:
+        # Zero rows has TWO causes and they are opposite findings. An agent whose manifest
+        # declares no business signals is not *failing* to emit them — it has no business
+        # grammar, so this evidence does not exist for it and never will. Reporting that as
+        # "no telemetry" reads as an instrumentation failure and is how five correctly-behaving
+        # agents came to be listed as emitting nothing, next to the whole contract marked
+        # missing, while Prometheus showed them serving turns. Measuring the neighbourhood and
+        # publishing it as a fact about the thing (ADR 0026), one layer up.
         return {
             **base,
             "covered_pct": None,
-            "missing_attributes": required,
+            "missing_attributes": [] if not declares_events else required,
             "evidence_at": None,
-            "status": "no_evidence",
+            "status": "no_evidence" if declares_events else "not_applicable",
         }
     latest = max(rows, key=lambda row: str(row.get("timestamp", "")))
     missing = [
@@ -303,7 +322,12 @@ def fleet_coverage() -> dict[str, object]:
             grouped.setdefault(row_agent, []).append(row)
 
     descriptors = [
-        _coverage_from_rows(agent.id, rows=grouped.get(agent.id, []), blind=read.blind)
+        _coverage_from_rows(
+            agent.id,
+            rows=grouped.get(agent.id, []),
+            blind=read.blind,
+            declares_events=_declares_business_signals(agent),
+        )
         for agent in list_agents()
         if agent.observability is not None
     ]

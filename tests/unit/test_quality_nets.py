@@ -133,6 +133,58 @@ def test_a_store_that_did_not_answer_is_not_an_agent_that_emits_nothing(
     assert empty["missing_attributes"] == empty["required_attributes"]
 
 
+def test_an_agent_with_no_business_grammar_is_not_an_agent_with_no_telemetry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Zero rows has two causes, and the page published the wrong one for five of six agents.
+
+    The measurement is taken on business-event fields. Five of the fleet's six agents declare
+    **no business signals at all** — they have no business grammar, so this evidence does not
+    exist for them and never will. The card rendered that as "aucune télémétrie" with the whole
+    contract listed as missing, while Prometheus showed those same agents serving turns.
+
+    That is ADR 0026 one layer up: the neighbourhood (business events) measured, and the result
+    published as a fact about the thing (instrumentation).
+    """
+    _rows(monkeypatch, [])
+    without = quality_nets._coverage_from_rows(
+        "support-client", rows=[], blind=False, declares_events=False
+    )
+    owed = quality_nets._coverage_from_rows(
+        "recouvrement", rows=[], blind=False, declares_events=True
+    )
+
+    assert without["status"] == "not_applicable"
+    assert without["missing_attributes"] == [], (
+        "an agent that never had to emit these is not missing them — listing the whole contract "
+        "reads as a total instrumentation failure"
+    )
+    assert owed["status"] == "no_evidence", "one that SHOULD emit and has not still says so"
+    assert owed["missing_attributes"] == owed["required_attributes"]
+    assert without["covered_pct"] is None and owed["covered_pct"] is None
+
+
+def test_the_fleet_read_asks_the_manifest_which_agents_owe_business_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The distinction has to survive the fleet path, which is the only one a page calls."""
+    monkeypatch.setattr(
+        quality_nets.business_events,
+        "business_event_read",
+        lambda **_kw: business_events.BusinessEventRead(rows=[], readable=True),
+    )
+    by_agent = {str(a["agent_id"]): a for a in quality_nets.fleet_coverage()["agents"]}
+
+    assert (
+        by_agent["recouvrement"]["status"] == "no_evidence"
+    ), "recouvrement declares business signals, so silence from it IS a finding"
+    others = [d for agent_id, d in by_agent.items() if agent_id != "recouvrement"]
+    assert others, "the fleet must carry more than one manifested agent"
+    assert all(
+        d["status"] == "not_applicable" for d in others
+    ), "agents declaring no business signals must not be reported as emitting no telemetry"
+
+
 def test_fleet_coverage_reads_the_ledger_once_and_serves_every_agent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

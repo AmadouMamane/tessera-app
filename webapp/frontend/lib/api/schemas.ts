@@ -634,7 +634,14 @@ export const AgentCoverageSchema = z.object({
   missing_attributes: z.array(z.string()),
   required_attributes: z.array(z.string()),
   evidence_at: z.string().nullable(),
-  status: z.enum(["measured", "no_evidence", "unverifiable"]),
+  /**
+   * Four states, because absence has four causes and they are not the same finding.
+   * `not_applicable` — this agent's manifest declares no business signals, so the evidence this
+   * measurement is taken on does not exist for it and never will. Rendering that as
+   * `no_evidence` reads as an instrumentation failure, which is how five correctly-behaving
+   * agents came to be listed as emitting nothing while Prometheus showed them serving turns.
+   */
+  status: z.enum(["measured", "no_evidence", "not_applicable", "unverifiable"]),
   evidence_source: z.string(),
   measures: z.string(),
 });

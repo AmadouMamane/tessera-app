@@ -1332,7 +1332,7 @@
       },
       "edgeDeclared": "{source} → ici ({signal}) — déclaré dans {where}",
       "openTool": "Ouvrir {url}",
-      "onHostOnly": "{url} — joignable depuis l'hôte de déploiement uniquement"
+      "onHostOnly": "{url} — adresse de l'hôte de déploiement (s'ouvre depuis cette machine)"
     },
     "consequences": {
       "title": "Ce que chaque magasin porte",
@@ -1410,8 +1410,10 @@
       "status": {
         "measured": "mesuré",
         "no_evidence": "aucune télémétrie",
-        "unverifiable": "ne peut pas dire"
-      }
+        "unverifiable": "ne peut pas dire",
+        "not_applicable": "pas de grammaire métier"
+      },
+      "inapplicable": "{n} agent(s) n'émettent pas d'événements métier : cette preuve n'existe pas pour eux — ils peuvent servir des tours sans être mesurables ici."
     },
     "tools": {
       "title": "Ouvrir les outils",
@@ -1420,8 +1422,8 @@
       "source": "GET /observability/components — docker-compose.obs.claude.yml",
       "unreadable": "Lecture impossible",
       "none": "Aucune adresse navigateur configurée pour ce déploiement.",
-      "hostOnly": "Joignables depuis l'hôte",
-      "hostOnlyTitle": "{url} — joignable depuis l'hôte de déploiement uniquement, pas depuis ce navigateur"
+      "hostOnly": "Adresses de l'hôte",
+      "hostOnlyTitle": "{url} — adresse de l'hôte de déploiement. Elle s'ouvre si votre navigateur tourne sur cette machine ; depuis ailleurs elle pointe sur VOTRE machine."
     }
   },
   "settings": {

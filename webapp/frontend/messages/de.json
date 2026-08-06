@@ -1332,7 +1332,7 @@
       },
       "edgeDeclared": "{source} → hier ({signal}) — deklariert in {where}",
       "openTool": "{url} öffnen",
-      "onHostOnly": "{url} — nur vom Deployment-Host aus erreichbar"
+      "onHostOnly": "{url} — Adresse des Deployment-Hosts (öffnet von dieser Maschine)"
     },
     "consequences": {
       "title": "Was jeder Speicher trägt",
@@ -1410,8 +1410,10 @@
       "status": {
         "measured": "gemessen",
         "no_evidence": "keine Telemetrie",
-        "unverifiable": "kann nichts sagen"
-      }
+        "unverifiable": "kann nichts sagen",
+        "not_applicable": "keine Geschäftsgrammatik"
+      },
+      "inapplicable": "{n} Agent(en) senden keine Geschäftsereignisse: dieser Nachweis existiert für sie nicht — sie können Turns bedienen und hier trotzdem nicht messbar sein."
     },
     "tools": {
       "title": "Werkzeuge öffnen",
@@ -1420,8 +1422,8 @@
       "source": "GET /observability/components — docker-compose.obs.claude.yml",
       "unreadable": "Nicht lesbar",
       "none": "Für dieses Deployment ist keine Browser-Adresse konfiguriert.",
-      "hostOnly": "Nur vom Host erreichbar",
-      "hostOnlyTitle": "{url} — nur vom Deployment-Host aus erreichbar, nicht aus diesem Browser"
+      "hostOnly": "Host-Adressen",
+      "hostOnlyTitle": "{url} — Adresse des Deployment-Hosts. Sie öffnet sich, wenn Ihr Browser auf dieser Maschine läuft; von anderswo zeigt sie auf IHRE Maschine."
     }
   },
   "settings": {

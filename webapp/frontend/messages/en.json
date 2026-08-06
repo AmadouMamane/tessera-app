@@ -1332,7 +1332,7 @@
       },
       "edgeDeclared": "{source} → here ({signal}) — declared in {where}",
       "openTool": "Open {url}",
-      "onHostOnly": "{url} — reachable from the deployment host only"
+      "onHostOnly": "{url} — the deployment host's address (opens from that machine)"
     },
     "consequences": {
       "title": "What each store carries",
@@ -1410,8 +1410,10 @@
       "status": {
         "measured": "measured",
         "no_evidence": "no telemetry",
-        "unverifiable": "cannot say"
-      }
+        "unverifiable": "cannot say",
+        "not_applicable": "no business grammar"
+      },
+      "inapplicable": "{n} agent(s) emit no business events: this evidence does not exist for them — they may serve turns and still not be measurable here."
     },
     "tools": {
       "title": "Open the tools",
@@ -1420,8 +1422,8 @@
       "source": "GET /observability/components — docker-compose.obs.claude.yml",
       "unreadable": "Unreadable",
       "none": "No browser address configured for this deployment.",
-      "hostOnly": "Reachable from the host",
-      "hostOnlyTitle": "{url} — reachable from the deployment host only, not from this browser"
+      "hostOnly": "Host addresses",
+      "hostOnlyTitle": "{url} — the deployment host's address. It opens if your browser runs on that machine; from elsewhere it points at YOUR machine."
     }
   },
   "settings": {

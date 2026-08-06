@@ -5,7 +5,7 @@ import { ArrowUpRight, ExternalLink, Home } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { useServedFromLoopback, verdictTone } from "@/components/health/observability-shared";
+import { verdictTone } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,20 +19,24 @@ const POLL_MS = 15_000;
  * Grafana, Prometheus, Langfuse, Phoenix and MinIO all run beside this page, and the page linked
  * nowhere. An operator diagnosing a red component had to remember five port numbers.
  *
- * A link is only offered when it can actually be opened FROM HERE. The published addresses are
- * loopback (`127.0.0.1:13000` is Grafana on the deployment host), which is true for a reader
- * sitting on that host and false for everyone else: on `tessera.example.com` the same link
- * reaches whatever happens to run on the reader's own port 13000. So the URL is always shown —
- * an operator who can reach the host wants the port — and it becomes clickable only when this
- * page is itself being served from loopback. A dashboard that promises closed doors is worse
- * than one that promises nothing.
+ * The published addresses are loopback: `127.0.0.1:13000` is Grafana **on the deployment host**,
+ * and means something else entirely from another machine. The first version therefore rendered
+ * them inert unless the page was itself served over loopback — and that was wrong in exactly the
+ * case that matters. An operator reading `https://tessera.<domain>` is very often sitting AT the
+ * host, where those doors open perfectly; they got five chips that did nothing, with the reason
+ * hidden in a `title=`.
+ *
+ * The page cannot know where the reader is: probing the address is blocked, and its own origin
+ * only says how they reached THIS app. So it stops guessing and says what it knows. Every door is
+ * a real link; a host-local address carries a ⌂ **on the chip** and names itself in the tooltip.
+ * A reader elsewhere is told before they click; a reader on the host gets in. Promising a closed
+ * door is dishonest — and so is withholding one that would have opened.
  *
  * Each door also carries the component's live verdict, because the second-most useless link on a
  * monitoring page is one into a tool that is down.
  */
 export function ToolLinks() {
   const t = useTranslations("health.tools");
-  const servedFromLoopback = useServedFromLoopback();
 
   const query = useQuery({
     queryKey: ["components"],
@@ -55,7 +59,7 @@ export function ToolLinks() {
           <span className="min-w-0 truncate">{t("title")}</span>
           <MetricInfo title={t("title")} what={t("what")} how={t("how")} source={t("source")} />
         </CardTitle>
-        {query.data && links.length > 0 && !servedFromLoopback ? (
+        {query.data && links.some((link) => link.loopback) ? (
           <Badge tone="neutral">
             <Home className="h-3 w-3" />
             {t("hostOnly")}
@@ -79,7 +83,7 @@ export function ToolLinks() {
                 name={link.key}
                 url={link.url}
                 verdict={verdicts.get(link.key) ?? "blind"}
-                clickable={!link.loopback || servedFromLoopback}
+                hostLocal={link.loopback}
               />
             ))}
           </div>
@@ -96,12 +100,13 @@ function ToolDoor({
   name,
   url,
   verdict,
-  clickable,
+  hostLocal,
 }: {
   name: string;
   url: string;
   verdict: string;
-  clickable: boolean;
+  /** The address resolves only on the deployment host — labelled, never used to withhold. */
+  hostLocal: boolean;
 }) {
   const t = useTranslations("health.tools");
   const tone = verdictTone(verdict);
@@ -127,26 +132,22 @@ function ToolDoor({
       <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
         {port}
       </span>
-      {clickable ? <ArrowUpRight className="h-3 w-3 shrink-0" /> : null}
+      {hostLocal ? (
+        // Visible, not a tooltip. The previous version put this in `title=` and rendered the
+        // chip inert; an operator sitting AT the host saw five buttons that did nothing and no
+        // reason on screen.
+        <Home className="h-2.5 w-2.5 shrink-0 text-[var(--muted-foreground)]" />
+      ) : null}
+      <ArrowUpRight className="h-3 w-3 shrink-0" />
     </>
   );
 
-  if (!clickable) {
-    return (
-      <span
-        title={t("hostOnlyTitle", { url })}
-        className={`${DOOR} border-[var(--tessera-border)] text-[var(--muted-foreground)]`}
-      >
-        {body}
-      </span>
-    );
-  }
   return (
     <a
       href={url}
       target="_blank"
       rel="noreferrer"
-      title={url}
+      title={hostLocal ? t("hostOnlyTitle", { url }) : url}
       className={`${DOOR} border-[var(--tessera-border)] text-[var(--foreground)] transition-colors hover:border-[var(--tessera-green)]/50 hover:text-[var(--tessera-green)]`}
     >
       {body}

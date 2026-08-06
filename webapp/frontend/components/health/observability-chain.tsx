@@ -18,11 +18,7 @@ import {
 import { useTranslations } from "next-intl";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import {
-  resolveLink,
-  useServedFromLoopback,
-  verdictTone,
-} from "@/components/health/observability-shared";
+import { resolveLink, verdictTone } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,7 +41,6 @@ const POLL_MS = 15_000;
  */
 export function ObservabilityChain() {
   const t = useTranslations("health.chain");
-  const servedFromLoopback = useServedFromLoopback();
 
   const query = useQuery({
     queryKey: ["components"],
@@ -71,7 +66,6 @@ export function ObservabilityChain() {
         ) : (
           <ChainGraph
             data={query.data}
-            servedFromLoopback={servedFromLoopback}
             t={t as (key: string, values?: Record<string, string | number>) => string}
           />
         )}
@@ -134,11 +128,9 @@ const SIGNAL_LINE: Record<ChainSignal, string> = {
  */
 function ChainGraph({
   data,
-  servedFromLoopback,
   t,
 }: {
   data: ComponentsResponse;
-  servedFromLoopback: boolean;
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
   const byStage = STAGE_ORDER.map((stage) => ({
@@ -160,7 +152,7 @@ function ChainGraph({
                   key={node.key}
                   node={node}
                   edges={data.chain.edges.filter((edge) => edge.target === node.key)}
-                  link={resolveLink(data.links, node.key, servedFromLoopback)}
+                  link={resolveLink(data.links, node.key)}
                   t={t}
                 />
               ))}
@@ -186,7 +178,7 @@ function ChainNodeCard({
 }: {
   node: ChainNode;
   edges: ChainEdge[];
-  link: { url: string; clickable: boolean } | null;
+  link: { url: string; hostLocal: boolean } | null;
   t: (key: string, values?: Record<string, string | number>) => string;
 }) {
   const Icon = NODE_ICON[node.key] ?? Server;
@@ -218,26 +210,20 @@ function ChainNodeCard({
           title={node.self_evident ? t("selfEvident") : t(`verdictTitle.${node.verdict}`, { n: 0 })}
         />
         {link ? (
-          link.clickable ? (
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noreferrer"
-              title={t("openTool", { url: link.url })}
-              className="shrink-0 text-[var(--muted-foreground)] transition-colors hover:text-[var(--tessera-green)]"
-            >
-              <ArrowUpRight className="h-3 w-3" />
-            </a>
-          ) : (
-            // Shown, not offered. An operator who CAN reach the host still wants the port; a
-            // reader who cannot must not be handed a door onto their own loopback.
-            <span
-              className="shrink-0 text-[0.55rem] text-[var(--muted-foreground)]"
-              title={t("onHostOnly", { url: link.url })}
-            >
-              ⌂
-            </span>
-          )
+          // Always a link. Whether the reader is at the deployment host is not knowable from
+          // here, and withholding a door that would have opened is its own dishonesty; what IS
+          // known — that the address is host-local — is said in the tooltip and on the card.
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noreferrer"
+            title={
+              link.hostLocal ? t("onHostOnly", { url: link.url }) : t("openTool", { url: link.url })
+            }
+            className="shrink-0 text-[var(--muted-foreground)] transition-colors hover:text-[var(--tessera-green)]"
+          >
+            <ArrowUpRight className="h-3 w-3" />
+          </a>
         ) : null}
       </div>
       {edges.length > 0 ? (
