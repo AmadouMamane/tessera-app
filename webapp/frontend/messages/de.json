@@ -1439,7 +1439,7 @@
       "how": "Vorhandensein der Scope-Dimensionen im jüngsten Geschäftsereignis des Agenten. Ein bewusst benannter PROXY für Span-Attribute: beide tragen konstruktionsbedingt dieselben Dimensionen. Ein Speicher ohne Antwort ergibt „kann nichts sagen“, nie 0 %.",
       "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
       "unreadable": "Nicht lesbar",
-      "blind": "Speicher stumm — kann nichts sagen",
+      "blind": "Quelle stumm — kann nichts sagen",
       "noneMeasured": "Keine Messung",
       "noAgents": "Kein Agent deklariert",
       "fleet": "{pct} % über {n, plural, one {# gemessenen Agenten} other {# gemessene Agenten}}",

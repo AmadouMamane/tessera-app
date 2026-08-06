@@ -1439,7 +1439,7 @@
       "how": "Presence of the Scope dimensions on the agent's most recent business event. A deliberately named PROXY for span attributes: both carry the same dimensions by construction. A store that did not answer yields 'cannot say', never 0 %.",
       "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
       "unreadable": "Unreadable",
-      "blind": "Store silent — cannot say",
+      "blind": "Source silent — cannot say",
       "noneMeasured": "Nothing measured",
       "noAgents": "No agent declared",
       "fleet": "{pct} % across {n, plural, one {# measured agent} other {# measured agents}}",

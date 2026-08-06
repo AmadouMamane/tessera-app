@@ -1344,7 +1344,7 @@
       "stage": {
         "emitter": "Émetteur",
         "pipeline": "Transport",
-        "store": "Magasins",
+        "store": "Conservation",
         "viewer": "Consultation"
       },
       "signal": {
@@ -1439,7 +1439,7 @@
       "how": "Présence, sur le dernier événement métier de l'agent, des repères que chaque événement doit porter. C'est un PROXY assumé de ce que portent les traces : les deux portent les mêmes repères par construction. Une source qui n'a pas répondu donne « ne peut pas dire », jamais 0 %.",
       "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
       "unreadable": "Lecture impossible",
-      "blind": "Magasin muet — ne peut pas dire",
+      "blind": "Source muette — ne peut pas dire",
       "noneMeasured": "Aucune mesure",
       "noAgents": "Aucun agent déclaré",
       "fleet": "{pct} % sur {n, plural, one {# agent mesuré} other {# agents mesurés}}",
