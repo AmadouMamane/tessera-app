@@ -250,6 +250,13 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # A cache-freshness control decision, not a verdict: it selects whether the leader recomputes
     # the snapshot or only re-stamps it (ADR 0046 amendment). Nothing PASSES — a wrong answer costs
     # only a slightly stale card or a wasted recompute, never a governance or safety outcome.
+    # A fact about the MANIFEST — "does this agent declare business signals?" — with one right
+    # answer that a reader can check by opening the manifest. Nothing PASSES on it: it selects
+    # which of two honest absences the coverage descriptor reports (`no_evidence`, the agent
+    # should emit and has not, versus `not_applicable`, this evidence does not exist for it),
+    # and BOTH yield a null percentage. It decides what the operator is told, never whether an
+    # agent is judged fit.
+    "src/tessera/observability/quality_nets.py::_declares_business_signals": "data",
     "src/tessera/observability/read_snapshot.py::snapshot_needs_recompute": "data",
     "src/tessera/observability/reliability.py::_in_window": "data",
     "src/tessera/observability/spine/adapters/__init__.py::_has_fact_overrides": "config",
