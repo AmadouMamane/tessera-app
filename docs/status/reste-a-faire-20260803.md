@@ -1,5 +1,26 @@
 # Ce qui reste, au 2026-08-03 (révisé le soir, puis le 2026-08-04)
 
+> ## ⚠️ PÉRIMÉ SUR AU MOINS DEUX SECTIONS — constaté le 2026-08-06
+>
+> **Ne pas l'utiliser comme reste-à-faire sans vérifier chaque item contre le code.** Le
+> 2026-08-06, deux de ses sections annonçaient un travail déjà fait, et les croire a coûté deux
+> détours — dont un détecteur de garde écrit en double puis supprimé :
+>
+> - **§3 (les 27 critères dus)** — **SOLDÉ le 2026-08-05.** Les dix-sept cas déclarent
+>   `auth_state: customer` et `_FROZEN_VACUOUS_TOOL_CRITERIA` vaut **0**. La section décrit
+>   encore le prix d'une dette qui ne court plus. Ce qui restait était ailleurs : rien ne
+>   **vérifiait** qu'un rapport avait été pris sous la posture déclarée (corrigé le 2026-08-06,
+>   `auth_posture_sha`).
+> - **§10.6, fuite de prompt** — **SOLDÉ le 2026-08-05** par `1bed71f1 feat(guard):
+>   prompt-egress`. Ce qui restait n'était pas le détecteur mais son **second transport** : il
+>   ne tournait que dans REPORTER, jamais en production (corrigé le 2026-08-06).
+> - **§10.6, sweeps en deux copies** — soldé par §12 : le bundle est **dérivé**, et
+>   `test_eval_bundle_is_derived.py` le tient.
+>
+> La leçon vaut plus que la correction : **un document de statut n'est pas la chose.** Il décrit
+> un instant ; le code décrit le présent. Ce qui reste vraiment se lit dans les cliquets gelés
+> (`_FROZEN_*`, `OWED_*`) et dans les tests, qui bougent avec l'arbre (ADR 0026).
+
 Successeur de `reste-a-faire-20260802.md`. Écrit après la première tranche de remédiation de
 l'audit 360° (`audit-360-20260803.md`, `main = e0816bc4`), **puis révisé après la seconde**,
 qui a traité §2, §4, §5, §7, §9 et §10 de la version du matin.
