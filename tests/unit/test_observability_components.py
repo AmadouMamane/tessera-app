@@ -175,7 +175,7 @@ def test_the_published_instant_is_when_the_probe_ran_not_when_it_was_asked() -> 
     ), "the second read was served from cache, so it must publish the FIRST probe's instant"
 
 
-def test_what_a_thing_IS_and_what_it_was_ASKED_are_two_different_fields() -> None:
+def test_what_a_thing_is_and_what_it_was_asked_are_two_different_fields() -> None:
     """One column carried two meanings, and the operator called the result charabia.
 
     ``interrogates`` held the component's ROLE on a stack row ("ledger + retrieval store") and
