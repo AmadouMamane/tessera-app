@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { observedAt } from "@/components/health/observability-shared";
+import { observedAt, relativeNow } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +62,7 @@ export function ComponentsPanel() {
                 invites the reader to assume "now". */}
             <span className="text-[0.66rem] text-[var(--muted-foreground)]">
               {t("checked", {
-                when: format.relativeTime(observedAt(query.data.observed_at)),
+                when: format.relativeTime(observedAt(query.data.observed_at), relativeNow()),
               })}
             </span>
             <Badge tone={tone(query.data.verdict === "clear" ? "ok" : query.data.verdict)}>
@@ -150,9 +150,17 @@ function ComponentRow({ component }: { component: ComponentCheck }) {
   // to the technical string — which is at least true — never to a blank cell or to next-intl's
   // rendering of the key path.
   const role = t.has(`role.${component.name}`) ? t(`role.${component.name}`) : component.role;
-  const asked = t.has(`asks.${component.name}`)
-    ? t(`asks.${component.name}`)
-    : askedLabel(component.asked, t);
+
+  // Looked up per GROUP, never by name alone. `postgres`, `clickhouse` and `prometheus` appear
+  // in BOTH halves — the port and the adapter are two different questions with two different
+  // answers, which is the whole reason the table has two groups. A name-only lookup gave the
+  // stack rows the PRECONDITION's sentence: "postgres · la connexion propre au registre" next to
+  // an answer about a DNS name not resolving. The stack's question is derived from the probe
+  // and needs no map at all; only the preconditions carry declared prose.
+  const asked =
+    component.group === "precondition" && t.has(`asks.${component.name}`)
+      ? t(`asks.${component.name}`)
+      : askedLabel(component.asked, t);
 
   // `eval-package` answers `import eval, import eval.runner` — its own question, restated. The
   // badge already carries the outcome, so an echoing cell adds nothing and costs the reader a

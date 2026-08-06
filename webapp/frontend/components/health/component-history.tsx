@@ -6,7 +6,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
-import { humanSeconds, verdictTone } from "@/components/health/observability-shared";
+import { humanSeconds, relativeNow, verdictTone } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -105,7 +105,7 @@ export function ComponentHistoryPanel() {
                       <ArrowRight className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
                       <Badge tone={verdictTone(change.to)}>{t(`state.${change.to}`)}</Badge>
                       <span className="text-[0.66rem] text-[var(--muted-foreground)]">
-                        {format.relativeTime(new Date(change.at))}
+                        {format.relativeTime(new Date(change.at), relativeNow())}
                       </span>
                       {/* Witnessed or merely found? The instant means different things, and a
                           reader acting on a timestamp deserves to know which one it is. */}

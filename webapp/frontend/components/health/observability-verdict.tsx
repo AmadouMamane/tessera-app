@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Eye, EyeOff, XCircle } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
-import { observedAt } from "@/components/health/observability-shared";
+import { observedAt, relativeNow } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -131,7 +131,7 @@ export function ObservabilityVerdict() {
               that cannot say when it last looked invites the reader to assume "now". */}
           <span className="flex items-center gap-1 text-[0.66rem] text-[var(--muted-foreground)]">
             <Eye className="h-3 w-3" />
-            {t("checked", { when: format.relativeTime(observedAt(observed_at)) })}
+            {t("checked", { when: format.relativeTime(observedAt(observed_at), relativeNow()) })}
           </span>
         </div>
       </CardContent>

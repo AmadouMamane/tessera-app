@@ -58,9 +58,28 @@ export function resolveLink(links: ComponentLink[] | undefined, key: string): Re
  * bug in the page, and worse, it undermines the one thing this stamp is here to establish: that
  * the reader is being told when the probe actually looked. Clamping keeps a skewed clock from
  * turning an honest disclosure into an obvious falsehood.
+ *
+ * Clamping alone did NOT fix it, which is why {@link relativeNow} exists beside it: next-intl
+ * compares against the `now` its provider captured at SERVER RENDER, so a probe that ran after
+ * the page was rendered is in that comparison's future however carefully this value is bounded.
+ * The page kept saying "vérifié dans 2 secondes" with the clamp already in place — a fix that
+ * addressed a real cause, and not the one on screen.
  */
 export function observedAt(epochSeconds: number): Date {
   return new Date(Math.min(epochSeconds * 1000, Date.now()));
+}
+
+/**
+ * The instant to compare a freshness stamp against — the BROWSER's now, passed explicitly.
+ *
+ * `useFormatter().relativeTime(date)` defaults to the `now` held by `NextIntlClientProvider`,
+ * which is fixed at server render and does not advance. Every stamp on this page is read after
+ * that instant, so the default reference makes recent events read as future ones. Only call it
+ * where the data has already arrived (i.e. not during the first server pass), which is the case
+ * for every caller here: the branches that render a stamp all sit behind a resolved query.
+ */
+export function relativeNow(): Date {
+  return new Date();
 }
 
 /** Seconds → a compact duration an operator reads at a glance ("3 h 12", "4 min"). */
