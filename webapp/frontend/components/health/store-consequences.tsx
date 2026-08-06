@@ -22,6 +22,12 @@ const POLL_MS = 15_000;
  * refused at the release gate. The store and the blocked agent lived on two screens with no
  * sentence between them.
  *
+ * The module that reads each store is EVIDENCE — it makes the declared capability checkable —
+ * but it is a pointer into the codebase, so it lives in the row's tooltip rather than on the
+ * card. The line: an address, an HTTP status or an errno is a fact about the RUNNING SYSTEM and
+ * stays visible, because it is what somebody diagnosing an outage reads next; a source path is a
+ * fact about the repository, and an operator cannot act on it.
+ *
  * Two things are kept visibly apart, because they are not the same kind of claim:
  *
  * * the capability is **declared** — which module reads which store is a fact about this
@@ -72,6 +78,14 @@ export function StoreConsequences() {
               return (
                 <li
                   key={row.key}
+                  // The module that performs the read is EVIDENCE — it is what makes the declared
+                  // capability checkable — but it is a pointer into the codebase, and a source
+                  // path is not something an operator can act on. It moves here, one hover away,
+                  // and off the face of the card. The line this draws: an ADDRESS, an HTTP status
+                  // or an errno is a fact about the RUNNING SYSTEM and stays visible, because it
+                  // is what somebody diagnosing an outage reads next; a file path is a fact about
+                  // the repository and belongs where a developer looks for it.
+                  title={`${t(`capability.${row.key}`)} — ${t("readsTitle", { module: row.reads })}`}
                   className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[var(--tessera-border)]/50 py-1 last:border-0"
                 >
                   <span className="flex items-center gap-1 text-[0.72rem] font-medium text-[var(--foreground)]">
@@ -96,16 +110,10 @@ export function StoreConsequences() {
                     </span>
                   ) : null}
                   {row.gates_agents && row.state !== "served" ? (
-                    <span className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+                    <span className="ml-auto text-[0.66rem] text-[var(--tessera-fg-warning)]">
                       {t("mayBlockAgents")}
                     </span>
                   ) : null}
-                  <span
-                    className="ml-auto truncate font-mono text-[0.6rem] text-[var(--muted-foreground)]"
-                    title={t("readsTitle", { module: row.reads })}
-                  >
-                    {row.reads}
-                  </span>
                 </li>
               );
             })}
