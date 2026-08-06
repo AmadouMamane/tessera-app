@@ -32,6 +32,19 @@ A judgement (recorded per entry, never hidden in a heuristic):
     ``delegate``  — a thin shim over a registered script or target. It launders nothing and judges
                     nothing of its own; *the witness is the thing it calls*, and that thing is
                     registered separately. Counting both would inflate the debt with shims.
+
+                    ⚠ ``delegate`` does **not** mean the script's exit code reaches the caller.
+                    Make exits **2 on any failed recipe** — measured, on the installed make, in
+                    ``tests/unit/test_make_flattens_exit_codes.py``: a recipe exiting 1, 2 or 4
+                    all leave make at 2. So every tri-state witness reached through a target
+                    (``served-check``, ``preflight``, ``deploy-diff``, ``landed``) loses the
+                    distinction between *refused* and *blind* at the shell, and the verdict
+                    survives only in the printed line. That word was read the other way — CLAUDE.md
+                    went on to attribute "0 ok · 1 refused · 2 blind" to ``make served-check``
+                    itself, and the ``preflight`` recipe said its code was "passed through
+                    unlaundered". Both were false, and both are corrected. The debt is unchanged:
+                    the witness is still the script, and the script is still right. What was wrong
+                    was the belief about the wrapper.
     ``action``    — it changes the world (install, seed, run, deploy). Its exit code reports the
                     action, not a judgement about the code.
     ``report``    — it prints. It judges nothing and claims nothing.
@@ -207,11 +220,16 @@ _EXIT_WITNESSES: dict[str, str] = {
     # Deliberately NOT in `make gate`: the gate judges a checkout, not a deployment, and a
     # permanently-blind check inside a gate teaches people to ignore exit codes. The manifest's
     # own test IS in the gate; this asks the stack where a stack exists.
+    # NB the tri-state reaches a READER, not a caller: through make it is 0-or-2 (see `delegate`).
     "Makefile::served-check": "delegate",  # → scripts/served_check.py
     # ── preflight: assert every declared container input, or refuse (ADR 0043) ─────────────────
-    # Its exit code IS the verdict (0 clear / 1 FAIL / 2 BLIND), passed through unlaundered:
-    # `docker exec … tessera-preflight` returns the command's OWN code, and a missing container
-    # (nothing to exec) is a non-zero docker error, never a false 0.
+    # The WITNESS's code is the verdict (0 clear / 1 FAIL / 2 BLIND) and nothing launders it inside
+    # the recipe: `docker exec … tessera-preflight` returns the command's OWN code, and a missing
+    # container (nothing to exec) is a non-zero docker error, never a false 0. It is still a
+    # VERDICT — a blind spot cannot read as 0, which is the property this classification is about.
+    # What it is NOT is a tri-state at the shell: this comment used to say "passed through
+    # unlaundered", and make exits 2 on any failed recipe, so a FAIL and a BLIND spot arrive as
+    # the same number. Read the printed verdict (see `delegate` above).
     "Makefile::preflight": "VERDICT",
     # `docker build …` then `docker run … tessera-preflight --image-only`: a build regression OR a
     # failed image-only check aborts the target non-zero. Closes the gate's image blind spot.

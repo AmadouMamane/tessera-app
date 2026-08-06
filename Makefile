@@ -1079,6 +1079,10 @@ dev-preview:
 # `preflight` runs the FULL witness inside the running cutover container, so it sees the
 # container's real DSN, joined networks, mounts and env — the check to run after `up`
 # and before trusting a smoke-test. `HTTP=<base>` also probes a server's health routes.
+#
+# ⚠ The 0/1/2 above is the WITNESS's; `make preflight` answers 0 or 2, because make exits 2 on
+# any failed recipe. A FAIL and a BLIND spot arrive here as the same number. Read the printed
+# verdict, or `docker exec … tessera-preflight` directly when the code is what you need.
 preflight:
 	@docker exec tessera-$(or $(TESSERA_ENV),local)-agent tessera-preflight $(if $(HTTP),--http $(HTTP),)
 
@@ -1197,8 +1201,9 @@ fulllocal-tunnel-down:
 
 # Anti-divergence witness (ADR 0048): fetch /api/version on every host declared in
 # infra/deploy/targets.yaml (the two targets + the canonical) and REFUSE if the served build
-# SHAs differ. Exit 0 = match · 1 = divergent · 2 = blind (unreachable / un-stamped / domain
-# unset). Its exit code is its own verdict — pass-through, unlaundered.
+# SHAs differ. The SCRIPT exits 0 = match · 1 = divergent · 2 = blind (unreachable / un-stamped /
+# domain unset). Through make, 1 and 2 both surface as 2 — see the note on `served-check` below;
+# read the printed line, or call `scripts/deploy_diff.py` when the number is what you need.
 deploy-diff:
 	@uv run python scripts/deploy_diff.py
 
@@ -1208,10 +1213,20 @@ deploy-diff:
 # stale agree perfectly. This asks the stack about the thing instead of about its neighbour:
 # `/api/version` names the served commit, `infra/deploy/served-surfaces.yaml` says which paths
 # are baked into the image and which are bind-mounted live, and every file changed since is
-# classified. Exit 0 = the stack serves this commit (or only unserved paths moved) · 1 = REFUSED,
-# baked code is stale and/or mounted data has already moved under it (the chimera that put the
-# cockpit into `CannotSay`: fresh reports, frozen grader) · 2 = blind (nothing serving, or the
-# stack cannot name its commit). Point it anywhere: SERVED_URL=https://tessera.<domain> make served-check
+# classified. The SCRIPT exits 0 = the stack serves this commit (or only unserved paths moved) ·
+# 1 = REFUSED, baked code is stale and/or mounted data has already moved under it (the chimera
+# that put the cockpit into `CannotSay`: fresh reports, frozen grader) · 2 = blind (nothing
+# serving, or the stack cannot name its commit).
+#
+# ⚠ THROUGH MAKE, THAT TRI-STATE IS GONE. Measured, not assumed (GNU Make 3.81, and it is in the
+# manual): make exits **2 on any failed recipe** — a recipe exiting 1, 2 or 4 all leave make at 2.
+# So `make served-check` answers 0 or 2, and "REFUSED" and "blind" are the same code. They are
+# opposite instructions — rebuild the image, versus go find out why nothing answered — and only
+# the printed line tells them apart. A caller that wants the verdict as a NUMBER must run the
+# script: `uv run python scripts/served_check.py [--url …]`. See
+# `tests/unit/test_make_flattens_exit_codes.py`, which measures it rather than trusting this note.
+#
+# Point it anywhere: SERVED_URL=https://tessera.<domain> make served-check
 served-check:
 	@uv run python scripts/served_check.py $(if $(SERVED_URL),--url $(SERVED_URL),)
 
