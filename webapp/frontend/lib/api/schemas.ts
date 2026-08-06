@@ -561,6 +561,15 @@ export const ComponentsResponseSchema = z.object({
     blind: z.number().int().nonnegative(),
     stack_total: z.number().int().nonnegative(),
     stack_ok: z.number().int().nonnegative(),
+    /**
+     * Counted per half, not just `ok`. A sentence that opens with the STACK ratio and then
+     * continues with the whole-of-twenty `fail`/`blind` tally is two scopes in one claim — and
+     * it reads correctly only while every precondition happens to be green.
+     */
+    stack_fail: z.number().int().nonnegative(),
+    stack_blind: z.number().int().nonnegative(),
+    precondition_total: z.number().int().nonnegative(),
+    precondition_ok: z.number().int().nonnegative(),
   }),
   components: z.array(ComponentCheckSchema),
   chain: z.object({

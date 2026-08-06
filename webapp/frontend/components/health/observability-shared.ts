@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import type { ComponentLink, ConsequenceState } from "@/lib/api/schemas";
 
 /**
@@ -21,26 +19,6 @@ export function verdictTone(verdict: string): "success" | "danger" | "warning" |
 export function stateTone(state: ConsequenceState): "success" | "danger" | "warning" {
   if (state === "served") return "success";
   return state === "lost" ? "danger" : "warning";
-}
-
-/**
- * Whether THIS page is being served from the loopback interface.
- *
- * The one fact that decides whether a `127.0.0.1` tool link is a door or a lie. Read in an
- * effect rather than during render: the server has no `window`, and reading it during render
- * would make the first client paint disagree with the server's HTML.
- *
- * Starts `false` — so before the effect runs, a loopback link renders as "on the deployment
- * host" rather than as a live link. Erring towards the honest caption costs a reader one frame;
- * erring the other way offers a door that is not there.
- */
-export function useServedFromLoopback(): boolean {
-  const [loopback, setLoopback] = useState(false);
-  useEffect(() => {
-    const host = window.location.hostname;
-    setLoopback(host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1");
-  }, []);
-  return loopback;
 }
 
 /**

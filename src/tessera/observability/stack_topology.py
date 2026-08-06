@@ -72,13 +72,26 @@ AGENT_NODE: Final = "agent"
 
 @dataclass(frozen=True, slots=True)
 class ChainNode:
-    """One node of the observability chain, and where it sits."""
+    """One node of the observability chain, where it sits, and whether it KEEPS what it gets."""
 
     key: str
     stage: Stage
     #: The signals this node handles at all — used to grey a node out for a signal it never
     #: carries, rather than drawing it as a healthy participant in a pipeline it is not in.
     carries: tuple[Signal, ...]
+    #: Whether this node RETAINS the signal, i.e. whether arriving here counts as delivery.
+    #:
+    #: Deliberately its own field rather than ``stage == "store"``. The two answer different
+    #: questions — ``stage`` is the reading order a picture needs, ``keeps`` is the semantics a
+    #: verdict needs — and Phoenix is exactly where they part: it is where an operator *reads*
+    #: traces (so it belongs in the viewer column) and it is also a store that keeps them.
+    #:
+    #: Getting this from the graph instead cost a wrong verdict. :func:`reachable_signals` used
+    #: to treat "a node with no outgoing edge" as delivery, which is a fact about the drawing,
+    #: not about the system: the only metrics leaf is **Grafana**, so a dead dashboard reported
+    #: *metrics no longer arrive* while Prometheus was storing them perfectly. That is the
+    #: neighbourhood answering for the thing (ADR 0026), inside the module written to prevent it.
+    keeps: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,16 +113,22 @@ class ChainEdge:
 CHAIN_NODES: Final[tuple[ChainNode, ...]] = (
     ChainNode(AGENT_NODE, "emitter", ("traces", "metrics", "events", "state")),
     ChainNode("otel-collector", "pipeline", ("traces", "metrics")),
-    ChainNode("prometheus", "store", ("metrics",)),
-    ChainNode("clickhouse", "store", ("events", "traces")),
-    ChainNode("postgres", "store", ("state",)),
-    ChainNode("redis", "store", ("state",)),
-    ChainNode("minio", "store", ("traces",)),
-    ChainNode("langfuse-db", "store", ("state",)),
-    ChainNode("langfuse-redis", "store", ("state",)),
-    ChainNode("phoenix", "viewer", ("traces",)),
+    ChainNode("prometheus", "store", ("metrics",), keeps=True),
+    ChainNode("clickhouse", "store", ("events", "traces"), keeps=True),
+    ChainNode("postgres", "store", ("state",), keeps=True),
+    ChainNode("redis", "store", ("state",), keeps=True),
+    ChainNode("minio", "store", ("traces",), keeps=True),
+    ChainNode("langfuse-db", "store", ("state",), keeps=True),
+    ChainNode("langfuse-redis", "store", ("state",), keeps=True),
+    # A viewer in the layout AND a store in fact: Phoenix keeps the traces it shows. This is the
+    # pair that makes `keeps` a separate field instead of a synonym for `stage == "store"`.
+    ChainNode("phoenix", "viewer", ("traces",), keeps=True),
+    # Langfuse's UI and worker keep nothing themselves — the traces they handle land in
+    # ClickHouse and MinIO, which are the nodes that count as delivery.
     ChainNode("langfuse-web", "viewer", ("traces",)),
     ChainNode("langfuse-worker", "pipeline", ("traces",)),
+    # Grafana READS Prometheus. It stores no metric, so its death costs a dashboard, never a
+    # signal — the verdict this whole field exists to get right.
     ChainNode("grafana", "viewer", ("metrics",)),
 )
 
@@ -310,10 +329,10 @@ def reachable_signals(verdicts: Mapping[str, Verdict]) -> dict[Signal, Consequen
     ``state`` is excluded — a component's private storage is not a signal travelling the
     observability chain, and folding it in would answer a different question.
     """
+    keepers = {node.key for node in CHAIN_NODES if node.keeps}
     signals: dict[Signal, ConsequenceState] = {}
     for signal in {edge.signal for edge in CHAIN_EDGES} - {"state"}:
         edges = [edge for edge in CHAIN_EDGES if edge.signal == signal]
-        sources = {edge.source for edge in edges}
         # Best state achievable on a path from the emitter to each node, relaxed until stable.
         # The chain is a handful of nodes deep; a fixed point costs nothing and needs no
         # assumption that the declaration happens to be topologically ordered.
@@ -330,10 +349,13 @@ def reachable_signals(verdicts: Mapping[str, Verdict]) -> dict[Signal, Consequen
                     changed = True
             if not changed:
                 break
-        # Only where the signal comes to REST: a healthy hop halfway down a severed chain is
-        # not delivery, and counting it as one is the edge-by-edge error above.
-        sinks = [node for node in best if node != AGENT_NODE and node not in sources]
-        signals[signal] = _best(best[node] for node in sinks) if sinks else "cannot_say"
+        # Only where the signal is KEPT. This used to read "a node with no outgoing edge", which
+        # is a property of the drawing: metrics' only leaf is Grafana, so a dead dashboard
+        # reported that metrics no longer arrive while Prometheus was storing them. A healthy hop
+        # halfway down a severed chain is not delivery either — that is why the walk above starts
+        # at the emitter rather than tallying edges.
+        arrivals = [node for node in best if node != AGENT_NODE and node in keepers]
+        signals[signal] = _best(best[node] for node in arrivals) if arrivals else "cannot_say"
     return signals
 
 

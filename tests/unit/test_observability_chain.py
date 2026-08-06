@@ -115,6 +115,51 @@ def test_a_component_missing_from_the_probe_is_a_blind_spot_not_a_pass() -> None
     assert set(states.values()) == {"cannot_say"}
 
 
+def test_a_dead_dashboard_does_not_mean_the_metrics_stopped_arriving() -> None:
+    """Shipped wrong, found by re-auditing rather than by a report. Grafana is a VIEWER.
+
+    ``reachable_signals`` treated "a node with no outgoing edge" as delivery — a fact about the
+    drawing, not about the system. The only metrics leaf is Grafana, so a dead dashboard put
+    *metrics no longer arrive* in the page's headline while Prometheus was storing them
+    perfectly. Delivery is arrival at a node that KEEPS the signal, which is why `keeps` is a
+    declared field and not `stage == "store"`.
+    """
+    assert reachable_signals(_with(grafana=Verdict.FAIL)) == {
+        "traces": "served",
+        "metrics": "served",
+        "events": "served",
+    }, "losing a dashboard costs a dashboard"
+    assert (
+        reachable_signals(_with(prometheus=Verdict.FAIL))["metrics"] == "lost"
+    ), "…while losing the store that keeps them really does lose them"
+
+
+def test_one_surviving_trace_store_is_enough() -> None:
+    """Phoenix and Langfuse's ClickHouse both keep traces; either alone is still delivery."""
+    assert reachable_signals(_with(phoenix=Verdict.FAIL))["traces"] == "served"
+    assert (
+        reachable_signals(_with(phoenix=Verdict.FAIL, clickhouse=Verdict.FAIL, minio=Verdict.FAIL))[
+            "traces"
+        ]
+        == "lost"
+    ), "only when every keeper is gone are the traces actually lost"
+
+
+def test_every_signal_has_somewhere_to_be_kept() -> None:
+    """A signal whose declaration names no keeper could only ever answer 'cannot say'.
+
+    The negative control for the field above: adding a signal and forgetting to mark a keeper
+    would make it permanently unreadable, which reads as a broken stack forever.
+    """
+    keepers = {node.key for node in CHAIN_NODES if node.keeps}
+    carried = {edge.signal for edge in CHAIN_EDGES} - {"state"}
+    for signal in carried:
+        reachable = {
+            node.key for node in CHAIN_NODES if signal in node.carries and node.key in keepers
+        }
+        assert reachable, f"{signal} travels the chain and no node declares that it keeps it"
+
+
 def test_a_healthy_stack_serves_every_capability() -> None:
     """The negative control: the rules above must not be red on a system that is fine."""
     assert set(consequence_states(_ALL_OK).values()) == {"served"}

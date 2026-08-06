@@ -1295,7 +1295,8 @@
         "metrics": "metrics",
         "events": "business events",
         "state": "state"
-      }
+      },
+      "preconditions": "{bad}/{total} process preconditions impaired"
     },
     "chain": {
       "title": "The observability chain",

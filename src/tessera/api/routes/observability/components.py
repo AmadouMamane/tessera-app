@@ -176,8 +176,18 @@ async def observability_components() -> dict[str, object]:
             "blind": blind,
             # The operator's twelve, counted on its own: the preconditions are a different
             # question and folding them together would hide which half moved.
+            #
+            # Every one of these is published per half, not just `ok`, because a headline that
+            # opens "I observe {stack_ok}/{stack_total} STACK components" and then continues
+            # "· {blind} unreadable" from the whole-of-twenty tally is two scopes in one
+            # sentence. It read correctly only while every precondition was green — the
+            # infalsifiable shape: wrong, and unable to show it until something else moved.
             "stack_total": len(stack),
             "stack_ok": sum(1 for c in stack if c.verdict is Verdict.OK),
+            "stack_fail": sum(1 for c in stack if c.verdict is Verdict.FAIL),
+            "stack_blind": sum(1 for c in stack if c.verdict is Verdict.BLIND),
+            "precondition_total": len(report.checks),
+            "precondition_ok": sum(1 for c in report.checks if c.verdict is Verdict.OK),
         },
         "components": components,
         # The chain, so the page can show that one dead node explains three red rows. Nodes and

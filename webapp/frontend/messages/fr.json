@@ -1295,7 +1295,8 @@
         "metrics": "métriques",
         "events": "événements métier",
         "state": "état"
-      }
+      },
+      "preconditions": "{bad}/{total} préconditions du processus en défaut"
     },
     "chain": {
       "title": "La chaîne d'observabilité",

@@ -81,6 +81,10 @@ def test_a_clear_stack_says_clear_and_counts_itself() -> None:
         "blind": 0,
         "stack_total": 0,
         "stack_ok": 0,
+        "stack_fail": 0,
+        "stack_blind": 0,
+        "precondition_total": 2,
+        "precondition_ok": 2,
     }
 
 
@@ -136,6 +140,10 @@ def test_a_failure_outranks_a_blind_spot_in_the_headline() -> None:
         "blind": 1,
         "stack_total": 0,
         "stack_ok": 0,
+        "stack_fail": 0,
+        "stack_blind": 0,
+        "precondition_total": 2,
+        "precondition_ok": 0,
     }
 
 
@@ -165,6 +173,38 @@ def test_the_published_instant_is_when_the_probe_ran_not_when_it_was_asked() -> 
     assert (
         second["observed_at"] == first["observed_at"]
     ), "the second read was served from cache, so it must publish the FIRST probe's instant"
+
+
+def test_the_two_halves_are_counted_separately_so_a_sentence_cannot_mix_them() -> None:
+    """The headline opens with the STACK ratio; every clause after it must share that scope.
+
+    It did not. "I observe {stack_ok}/{stack_total} stack components" was followed by
+    "· {blind} unreadable" taken from the whole-of-twenty tally, so a blind PRECONDITION would
+    have been reported as an unreadable stack component. It read correctly only for as long as
+    every precondition happened to be green — wrong, and structurally unable to show it.
+    """
+    payload = _serve(
+        PreflightReport(
+            (
+                Check("postgres", Verdict.OK, "ok"),
+                Check("clickhouse", Verdict.BLIND, "could not look"),
+            )
+        ),
+        stack=(
+            Check("redis", Verdict.OK, "up"),
+            Check("grafana", Verdict.FAIL, "down"),
+        ),
+    )
+    counts = payload["counts"]
+    assert counts["stack_total"] == 2  # type: ignore[index]
+    assert counts["stack_ok"] == 1  # type: ignore[index]
+    assert counts["stack_fail"] == 1  # type: ignore[index]
+    assert counts["stack_blind"] == 0, (  # type: ignore[index]
+        "the blind check is a PRECONDITION; counting it here would attribute it to the stack"
+    )
+    assert counts["precondition_total"] == 2  # type: ignore[index]
+    assert counts["precondition_ok"] == 1  # type: ignore[index]
+    assert counts["blind"] == 1, "the whole-of-twenty tally still sees it"  # type: ignore[index]
 
 
 def test_one_component_can_carry_two_answers_without_them_being_confused() -> None:

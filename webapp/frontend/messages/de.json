@@ -1295,7 +1295,8 @@
         "metrics": "Metriken",
         "events": "Geschäftsereignisse",
         "state": "Zustand"
-      }
+      },
+      "preconditions": "{bad}/{total} Prozess-Vorbedingungen beeinträchtigt"
     },
     "chain": {
       "title": "Die Observability-Kette",

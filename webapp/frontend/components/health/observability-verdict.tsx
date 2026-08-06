@@ -83,22 +83,34 @@ export function ObservabilityVerdict() {
           <span className="font-medium">
             {t("observing", { ok: counts.stack_ok, total: counts.stack_total })}
           </span>
-          {counts.fail > 0 ? (
+          {/* Every clause below is scoped to THE STACK, like the one it follows. The
+              preconditions are a different question — "can this process serve a turn?" — and
+              they get their own clause rather than being folded into these counts. */}
+          {counts.stack_fail > 0 ? (
             <span className="text-[var(--tessera-fg-danger)]">
               {" · "}
-              {t("down", { n: counts.fail })}
+              {t("down", { n: counts.stack_fail })}
             </span>
           ) : null}
-          {counts.blind > 0 ? (
+          {counts.stack_blind > 0 ? (
             <span className="text-[var(--tessera-fg-warning)]">
               {" · "}
-              {t("blind", { n: counts.blind })}
+              {t("blind", { n: counts.stack_blind })}
             </span>
           ) : null}
-          {counts.fail === 0 && counts.blind === 0 ? (
+          {counts.stack_fail === 0 && counts.stack_blind === 0 ? (
             <span className="text-[var(--muted-foreground)]">
               {" · "}
               {t("allClear")}
+            </span>
+          ) : null}
+          {counts.precondition_ok < counts.precondition_total ? (
+            <span className="text-[var(--tessera-fg-danger)]">
+              {" · "}
+              {t("preconditions", {
+                bad: counts.precondition_total - counts.precondition_ok,
+                total: counts.precondition_total,
+              })}
             </span>
           ) : null}
         </p>
