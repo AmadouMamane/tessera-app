@@ -116,6 +116,13 @@ worse than one that offers none.
   from the absence", and the coverage claim was calling it: a ClickHouse outage rendered as an
   agent instrumenting nothing, with every required attribute listed as missing. Blind now yields
   `unverifiable` with **nothing** named as missing, because nothing is known to be.
+- **The journal has several writers.** Under 0044 the agent is N uvicorn processes, each probing
+  and each folding its observations into one file with a read-modify-write; no cross-process lock
+  exists, so an interleave can lose a phase. This is acceptable only because of the *direction* of
+  the loss: a lost phase removes observed time, so it can only lower `observed_ratio` and widen a
+  hole. It under-claims coverage; it cannot over-claim uptime. A deployment needing a complete
+  journal rather than an honest one wants a single writer (the 0046 leader) — a change to who
+  probes, not to what is recorded.
 - The consequence map is a second place that must move when a store's readers change. It is a
   declaration, so it can go stale — `tests/unit/test_observability_chain.py` pins that every
   declared dependency is a component something actually probes, which catches a renamed or

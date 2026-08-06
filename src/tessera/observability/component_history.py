@@ -21,6 +21,19 @@ reported as ``unobserved`` and never as ``ok``.
 That is why :func:`availability` publishes ``observed_ratio`` beside every percentage. "99.9 %
 available" over a window that was watched for four of its twenty-four hours is a true sentence
 about four hours and a false one about the day; the reader gets both numbers or neither.
+
+**Several workers write this journal, and the race is survivable in one direction only.** Under
+ADR 0044 the agent runs as N uvicorn processes, each with its own probe cache, each folding its
+observations into this one file with a read-modify-write. Two workers interleaving can lose a
+phase — there is no cross-process lock, and :func:`tessera.fsutil.atomic_write_text` prevents a
+corrupt file, not a clobbered one.
+
+Stated rather than discovered, because the direction of the loss is what makes it acceptable: a
+lost phase removes observed time and can only make ``observed_ratio`` *lower* and a hole *wider*.
+The failure is conservative — it under-claims coverage, never over-claims uptime — so the one
+property this module exists to guarantee survives it. A deployment that needs the journal to be
+complete rather than merely honest wants a single writer (the ADR 0046 leader), which is a change
+to who probes, not to what is recorded here.
 """
 
 from __future__ import annotations
