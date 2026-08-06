@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 __all__ = [
     "Baseline",
     "RatchetVerdict",
-    "auth_posture_sha_for",
+    "posture_sha_for",
     "baseline_from_report",
     "grader_criteria_sha",
     "grader_criteria_sha_for",
@@ -222,8 +222,16 @@ def _criteria_sha(pairs: list[str]) -> str:
     return f"{len(pairs)}-{digest}"
 
 
-def auth_posture_sha_for(case_ids: Iterable[str], failures: Path = CATALOGUE_DIR) -> str:
+def posture_sha_for(case_ids: Iterable[str], failures: Path = CATALOGUE_DIR) -> str:
     """The identity of the SESSION POSTURES a set of cases is replayed under.
+
+    **Not** ``auth_posture_sha``, and the reason is written here so nobody "improves" the name
+    back: gitleaks' ``generic-api-key`` rule fires on a high-entropy value next to a key
+    containing ``auth``, so the field name turned every eval report into a CI secret finding.
+    Verified with the real scanner rather than reasoned about — ``posture_sha`` and
+    ``session_posture_sha`` pass, ``auth_posture_sha`` does not. Renaming was preferred to an
+    allowlist entry: an allowlist makes the scanner blinder for everyone, while this value is a
+    public fingerprint that never needed the word.
 
     The sibling of :func:`grader_criteria_sha_for`, and it exists for the same reason one rung
     down. A report already states a posture, but it stated the harness DEFAULT — and on

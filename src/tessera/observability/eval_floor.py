@@ -43,10 +43,10 @@ from typing import TYPE_CHECKING, assert_never
 
 from eval.contribution import evaluate_contribution, restrict_baseline
 from eval.ratchet import (
-    auth_posture_sha_for,
     catalogue_on_disk,
     grader_criteria_sha_for,
     load_baseline,
+    posture_sha_for,
 )
 from eval.sets import load_eval_set
 from tessera.verdict import CannotSay, NoEffect, NotOk, Ok, Verdict
@@ -146,10 +146,10 @@ def _postures_disagree(snap: EvalSnapshot, compared_case_ids: Iterable[str]) -> 
     ``None`` means comparable. A string is the obstacle, and it BLOCKS rather than concludes:
     an unstated posture is unknown, never "the current one".
     """
-    named = snap.auth_posture_sha
+    named = snap.posture_sha
     if not named:
         return _absent_posture_unknown(snap.run_at)
-    current = auth_posture_sha_for(compared_case_ids)
+    current = posture_sha_for(compared_case_ids)
     if named != current:
         return _absent_posture_moved(named, current)
     return None

@@ -7,7 +7,7 @@
   "catalogue_version": "43-83ed8a32",
   "grader_criteria_sha": "43-80284e744177",
   "default_auth_state": "anonymous",
-  "auth_posture_sha": "43-22ea28f9460f",
+  "posture_sha": "43-22ea28f9460f",
   "summary": {
     "total": 119,
     "passed": 116,

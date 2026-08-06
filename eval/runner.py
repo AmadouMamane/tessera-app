@@ -22,7 +22,7 @@ from typing import Final
 import jsonschema
 
 from eval.gate import GateVerdict, evaluate_gate
-from eval.ratchet import auth_posture_sha_for, catalogue_version, grader_criteria_sha_for
+from eval.ratchet import catalogue_version, grader_criteria_sha_for, posture_sha_for
 from eval.scorecard import build_scorecard
 from eval.sets import EvalSet, critical_case_ids, load_eval_set
 from tessera.agent import compile_graph
@@ -134,7 +134,7 @@ def _grader_criteria_sha(cases: list[dict[str, object]]) -> str:
     return grader_criteria_sha_for(str(c["id"]) for c in cases)
 
 
-def _auth_posture_sha(cases: list[dict[str, object]]) -> str:
+def _posture_sha(cases: list[dict[str, object]]) -> str:
     """Identity of the POSTURES this run was replayed under — one rung below the ruler.
 
     The same lesson as :func:`_grader_criteria_sha`, applied to the other half of what makes two
@@ -149,7 +149,7 @@ def _auth_posture_sha(cases: list[dict[str, object]]) -> str:
     denying ``card_block``). So the posture gets an identity that a consumer can recompute from
     the catalogue and refuse on, exactly as it already does for the criteria.
     """
-    return auth_posture_sha_for(str(c["id"]) for c in cases)
+    return posture_sha_for(str(c["id"]) for c in cases)
 
 
 #: Sentence boundaries, for locating the clause a claim was made in.
@@ -707,7 +707,7 @@ async def _run_all(args: argparse.Namespace) -> int:
         cases = [c for c in cases if c["id"] in wanted]
     catalogue_version = _catalogue_version(cases)
     grader_sha = _grader_criteria_sha(cases)
-    posture_sha = _auth_posture_sha(cases)
+    posture_sha = _posture_sha(cases)
     if args.case:
         cases = [c for c in cases if c["id"] == args.case]
         if not cases:
@@ -788,7 +788,7 @@ async def _run_all(args: argparse.Namespace) -> int:
                 #
                 # It is NOT "the posture this run measured", which is what its comment claimed
                 # until 2026-08-06: seventeen cases declare their own since 2026-08-05, so a
-                # single scalar cannot describe the run. `auth_posture_sha` below is what a
+                # single scalar cannot describe the run. `posture_sha` below is what a
                 # consumer compares; this stays because the default is worth reading, and it is
                 # now named for what it actually is.
                 "default_auth_state": EVAL_AUTH_STATE.value,
@@ -797,7 +797,7 @@ async def _run_all(args: argparse.Namespace) -> int:
                 # taken under one posture and compared against a catalogue declaring another is
                 # comparing two measurements of different things; this lets the comparison
                 # refuse instead of conclude.
-                "auth_posture_sha": posture_sha,
+                "posture_sha": posture_sha,
                 "summary": asdict(scorecard.summary),
                 "gate": gate_payload,
                 "policy_gate": policy_gate,

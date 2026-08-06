@@ -15,7 +15,7 @@ It is not a formality. Replaying the catalogue under the two postures moved a re
 pushed the agent onto ``ticket_escalate`` — the escalation the case requires, happening for a
 reason that had nothing to do with the agent's judgement.
 
-So the posture gets an identity recomputable from the catalogue (``auth_posture_sha``), and the
+So the posture gets an identity recomputable from the catalogue (``posture_sha``), and the
 floor refuses to grade a run whose postures no longer match. These tests drive that refusal
 through every branch, and — the part that matters — prove the detector fires BEFORE anything
 made it green.
@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from eval.ratchet import auth_posture_sha_for
+from eval.ratchet import posture_sha_for
 from eval.runner import EVAL_AUTH_STATE, _auth_state_for
 from tessera.observability.eval_data import EvalSnapshot
 from tessera.observability.eval_floor import _postures_disagree
@@ -82,7 +82,7 @@ def test_a_case_that_declares_nothing_is_replayed_under_the_default() -> None:
 def test_the_fingerprint_counts_the_cases_it_found() -> None:
     """`<count>-<digest>`, so a comparison over a different set of cases is visibly different."""
     ids = _case_ids()
-    assert auth_posture_sha_for(ids).startswith(f"{len(ids)}-")
+    assert posture_sha_for(ids).startswith(f"{len(ids)}-")
 
 
 def test_the_fingerprint_moves_when_a_posture_changes(tmp_path: Path) -> None:
@@ -94,12 +94,12 @@ def test_the_fingerprint_moves_when_a_posture_changes(tmp_path: Path) -> None:
     (tmp_path / "01_x.json").write_text(
         json.dumps({"id": "01_x", "pass_criteria": {}}), encoding="utf-8"
     )
-    before = auth_posture_sha_for(["01_x"], failures=tmp_path)
+    before = posture_sha_for(["01_x"], failures=tmp_path)
 
     (tmp_path / "01_x.json").write_text(
         json.dumps({"id": "01_x", "auth_state": "customer", "pass_criteria": {}}), encoding="utf-8"
     )
-    after = auth_posture_sha_for(["01_x"], failures=tmp_path)
+    after = posture_sha_for(["01_x"], failures=tmp_path)
 
     assert before != after
 
@@ -111,12 +111,12 @@ def test_declaring_the_default_explicitly_is_not_a_change(tmp_path: Path) -> Non
     would refuse a run for a difference that is not one.
     """
     (tmp_path / "01_x.json").write_text(json.dumps({"id": "01_x"}), encoding="utf-8")
-    implicit = auth_posture_sha_for(["01_x"], failures=tmp_path)
+    implicit = posture_sha_for(["01_x"], failures=tmp_path)
 
     (tmp_path / "01_x.json").write_text(
         json.dumps({"id": "01_x", "auth_state": EVAL_AUTH_STATE.value}), encoding="utf-8"
     )
-    explicit = auth_posture_sha_for(["01_x"], failures=tmp_path)
+    explicit = posture_sha_for(["01_x"], failures=tmp_path)
 
     assert implicit == explicit
 
@@ -128,7 +128,7 @@ def test_the_fingerprint_ignores_criteria() -> None:
     bearing on, and the operator could no longer tell which of the two moved.
     """
     ids = _case_ids()
-    assert auth_posture_sha_for(ids) == auth_posture_sha_for(ids)
+    assert posture_sha_for(ids) == posture_sha_for(ids)
 
 
 # ── the refusal ──────────────────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ def test_a_run_taken_under_the_old_posture_is_refused() -> None:
     today's catalogue with every case forced back to the harness default — i.e. exactly what a
     pre-2026-08-05 run would have carried.
     """
-    obstacle = _postures_disagree(_snap(auth_posture_sha="63-staleposture"), _case_ids())
+    obstacle = _postures_disagree(_snap(posture_sha="63-staleposture"), _case_ids())
     assert obstacle is not None
     assert "the catalogue now declares" in obstacle
 
@@ -156,14 +156,14 @@ def test_a_run_taken_under_the_old_posture_is_refused() -> None:
 def test_a_run_taken_under_todays_postures_is_comparable() -> None:
     """And the green branch, so the refusal above is not simply 'it always refuses'."""
     ids = _case_ids()
-    assert _postures_disagree(_snap(auth_posture_sha=auth_posture_sha_for(ids)), ids) is None
+    assert _postures_disagree(_snap(posture_sha=posture_sha_for(ids)), ids) is None
 
 
 def test_the_obstacle_says_what_to_do_about_it() -> None:
     """An obstacle an operator cannot act on gets ignored, and then it protects nothing."""
     for obstacle in (
         _postures_disagree(_snap(), _case_ids()),
-        _postures_disagree(_snap(auth_posture_sha="63-stale"), _case_ids()),
+        _postures_disagree(_snap(posture_sha="63-stale"), _case_ids()),
     ):
         assert obstacle is not None
         assert "make eval" in obstacle

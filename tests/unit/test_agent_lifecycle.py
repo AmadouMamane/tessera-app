@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import pytest
 
 from eval.contribution import restrict_baseline
-from eval.ratchet import auth_posture_sha_for, grader_criteria_sha_for, load_baseline
+from eval.ratchet import grader_criteria_sha_for, load_baseline, posture_sha_for
 from eval.sets import load_eval_set
 from tessera.authz import Actor
 from tessera.observability import (
@@ -137,7 +137,7 @@ def _snapshot(
         # difference between measuring the agent and measuring the guard. Derived from the set,
         # like the ruler above, so a posture edit moves it here as it moves in a real report —
         # a hard-coded value would let this fixture claim comparability it does not have.
-        auth_posture_sha=auth_posture_sha_for(load_eval_set(eval_set).effective_case_ids),
+        posture_sha=posture_sha_for(load_eval_set(eval_set).effective_case_ids),
         gate_passed=gate_passed,
         gate_failed_critical=failed_critical,
     )
