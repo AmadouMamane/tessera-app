@@ -1,9 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Search } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
+import { ComponentDrawer } from "@/components/health/component-drawer";
 import { observedAt, relativeNow } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +16,13 @@ import { fetchComponents } from "@/lib/api/client";
 import type { ComponentCheck } from "@/lib/api/schemas";
 
 const POLL_MS = 15_000;
+
+type VerdictFilter = "all" | "ok" | "fail" | "blind";
+type SortColumn = "name" | "verdict";
+type Sort = { column: SortColumn; direction: 1 | -1 } | null;
+
+/** How a verdict ranks when the column is sorted: the actionable ones first. */
+const VERDICT_RANK: Record<string, number> = { fail: 0, blind: 1, skip: 2, ok: 3 };
 
 /**
  * The stack's components, as the preflight witness sees them.
@@ -25,19 +36,20 @@ const POLL_MS = 15_000;
  * state and never as "ok": a witness that cannot see may not report ok (ADR 0026). A reader who
  * cannot tell "the database is down" from "nobody asked the database" has no information.
  *
- * Four facts per row, and they used to be three columns carrying two meanings. One heading —
- * *"ce qui est interrogé"* — held the component's ROLE on a stack row and the QUESTION on a
- * precondition row; beside it *"ce qu'il a répondu"* showed the probe's detail, which for
- * `eval-package` is the question again, word for word, in both cells. The operator's verdict on
- * that was "c'est un peu du charabia", and it was.
- *
- * So: WHAT IT IS sits under the name, WHAT WAS ASKED is its own column and is translated, and
- * WHAT CAME BACK is the probe's own words in monospace — dropped when it merely echoes the
- * question, because a cell that repeats its neighbour is noise wearing the costume of evidence.
+ * Since the mould pass this is a full table of the playbook's kind: filterable (by verdict and
+ * by text), sortable within each half, and every row opens the component's drawer — the raw
+ * answer, the capabilities that depend on it, its edges in the chain with their citations, and
+ * its own slice of the history. No pagination, deliberately: the table is bounded at twenty by
+ * construction (the registry is declared), and splitting the two halves across pages would
+ * hide exactly the half-to-half comparison the group headers exist for.
  */
 export function ComponentsPanel() {
   const t = useTranslations("health.components");
   const format = useFormatter();
+  const [filter, setFilter] = useState<VerdictFilter>("all");
+  const [needle, setNeedle] = useState("");
+  const [sort, setSort] = useState<Sort>(null);
+  const [selected, setSelected] = useState<ComponentCheck | null>(null);
 
   const query = useQuery({
     queryKey: ["components"],
@@ -48,10 +60,52 @@ export function ComponentsPanel() {
   const tone = (verdict: string) =>
     verdict === "ok" ? "success" : verdict === "fail" ? "danger" : "warning";
 
+  const rows = query.data?.components ?? [];
+  const counts = useMemo(
+    () => ({
+      all: rows.length,
+      ok: rows.filter((c) => c.verdict === "ok").length,
+      fail: rows.filter((c) => c.verdict === "fail").length,
+      blind: rows.filter((c) => c.verdict === "blind").length,
+    }),
+    [rows],
+  );
+
+  const visible = useMemo(() => {
+    const lowered = needle.trim().toLowerCase();
+    const matches = (component: ComponentCheck) => {
+      if (filter !== "all" && component.verdict !== filter) return false;
+      if (!lowered) return true;
+      return [component.name, component.role, component.asked, component.detail].some((field) =>
+        field.toLowerCase().includes(lowered),
+      );
+    };
+    const filtered = rows.filter(matches);
+    if (sort === null) return filtered;
+    const compare = (a: ComponentCheck, b: ComponentCheck) => {
+      const delta =
+        sort.column === "name"
+          ? a.name.localeCompare(b.name)
+          : (VERDICT_RANK[a.verdict] ?? 9) - (VERDICT_RANK[b.verdict] ?? 9);
+      return delta * sort.direction;
+    };
+    return [...filtered].sort(compare);
+  }, [rows, filter, needle, sort]);
+
+  function toggleSort(column: SortColumn) {
+    setSort((current) => {
+      if (current === null || current.column !== column) return { column, direction: 1 };
+      if (current.direction === 1) return { column, direction: -1 };
+      return null;
+    });
+  }
+
+  const filters: VerdictFilter[] = ["all", "ok", "fail", "blind"];
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+        <CardTitle className="flex min-w-0 items-center gap-1.5 text-sm">
           <span className="min-w-0 truncate">{t("title")}</span>
           <MetricInfo title={t("title")} what={t("what")} how={t("how")} source={t("source")} />
         </CardTitle>
@@ -77,71 +131,170 @@ export function ComponentsPanel() {
       <CardContent className="pt-1">
         {query.isPending ? (
           <Skeleton className="h-24 w-full" />
-        ) : query.error ? (
+        ) : query.error || !query.data ? (
           // A failed READ is not an empty result: say the read failed, never "0 components".
-          <Badge tone="danger">{t("unreadable")}</Badge>
-        ) : query.data && query.data.components.length > 0 ? (
-          // `table-fixed`, per docs/table-rhythm-playbook.md: auto layout hands its leftover
-          // width to a column of its own choosing and the choice changes with the viewport,
-          // which is what "the columns look random" is. The identity column is sized to its
-          // content and left-aligned; the evidence column takes a flat share, right-aligned, so
-          // its leading air matches its neighbours' instead of being whatever is left.
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
-              <thead>
-                <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
-                  <th className="w-[11rem] px-1.5 py-1 font-medium 2xl:w-[14rem]">
-                    {t("col.name")}
-                  </th>
-                  <th className="w-[6.5rem] px-1.5 py-1 font-medium">{t("col.verdict")}</th>
-                  <th className="px-1.5 py-1 font-medium">{t("col.asked")}</th>
-                  <th className="w-[36%] px-1.5 py-1 pr-2 text-right font-medium">
-                    {t("col.answered")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(["stack", "precondition"] as const).flatMap((group) => {
-                  const rows = query.data.components.filter((c) => c.group === group);
-                  if (rows.length === 0) return [];
-                  return [
-                    <tr key={`h-${group}`}>
-                      <th
-                        colSpan={4}
-                        className="px-1.5 pb-1 pt-3 text-left text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]"
-                      >
-                        <span className="flex items-baseline gap-2">
-                          {t(`group.${group}`, { n: rows.length })}
-                          {/* The two halves answer DIFFERENT questions and were rendered
-                              identically: Grafana being down is not the agent being broken.
-                              A reader who cannot tell the groups apart looks in the wrong
-                              place, which is the failure this whole page is about. */}
-                          <span className="font-normal normal-case tracking-normal text-[var(--muted-foreground)]/70">
-                            {t(`groupAsks.${group}`)}
-                          </span>
-                        </span>
+          <QueryErrorState
+            compact
+            onRetry={() => void query.refetch()}
+            retrying={query.isRefetching}
+          />
+        ) : rows.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-0.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-muted)]/30 p-0.5">
+                {filters.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setFilter(option)}
+                    className={`rounded-md px-2 py-0.5 text-[0.66rem] transition-colors ${
+                      option === filter
+                        ? "bg-[var(--tessera-surface)] font-medium text-[var(--foreground)] shadow-sm"
+                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {t(`filter.${option}`)}
+                    <span className="ml-1 tabular-nums text-[var(--muted-foreground)]">
+                      {counts[option]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <label className="relative ml-auto flex items-center">
+                <Search className="pointer-events-none absolute left-2 h-3 w-3 text-[var(--muted-foreground)]" />
+                <input
+                  type="search"
+                  value={needle}
+                  onChange={(event) => setNeedle(event.target.value)}
+                  placeholder={t("searchPlaceholder")}
+                  className="h-6.5 w-44 rounded-md border border-[var(--tessera-border)] bg-transparent pl-6.5 pr-2 text-[0.7rem] text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                />
+              </label>
+            </div>
+            {visible.length === 0 ? (
+              <p className="py-2 text-xs text-[var(--muted-foreground)]">{t("noMatch")}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
+                  <thead>
+                    <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                      <SortableHeader
+                        className="w-[11rem] 2xl:w-[14rem]"
+                        label={t("col.name")}
+                        column="name"
+                        sort={sort}
+                        onToggle={toggleSort}
+                      />
+                      <SortableHeader
+                        className="w-[6.5rem]"
+                        label={t("col.verdict")}
+                        column="verdict"
+                        sort={sort}
+                        onToggle={toggleSort}
+                      />
+                      <th className="px-1.5 py-1 font-medium">{t("col.asked")}</th>
+                      <th className="w-[36%] px-1.5 py-1 pr-2 text-right font-medium">
+                        {t("col.answered")}
                       </th>
-                    </tr>,
-                    ...rows.map((component) => (
-                      <ComponentRow key={`${group}-${component.name}`} component={component} />
-                    )),
-                  ];
-                })}
-              </tbody>
-            </table>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(["stack", "precondition"] as const).flatMap((group) => {
+                      const groupRows = visible.filter((c) => c.group === group);
+                      if (groupRows.length === 0) return [];
+                      return [
+                        <tr key={`h-${group}`}>
+                          <th
+                            colSpan={4}
+                            className="px-1.5 pb-1 pt-3 text-left text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]"
+                          >
+                            <span className="flex items-baseline gap-2">
+                              {t(`group.${group}`, { n: groupRows.length })}
+                              {/* The two halves answer DIFFERENT questions and were rendered
+                                  identically: Grafana being down is not the agent being broken.
+                                  A reader who cannot tell the groups apart looks in the wrong
+                                  place, which is the failure this whole page is about. */}
+                              <span className="font-normal normal-case tracking-normal text-[var(--muted-foreground)]/70">
+                                {t(`groupAsks.${group}`)}
+                              </span>
+                            </span>
+                          </th>
+                        </tr>,
+                        ...groupRows.map((component) => (
+                          <ComponentRow
+                            key={`${group}-${component.name}`}
+                            component={component}
+                            onOpen={() => setSelected(component)}
+                          />
+                        )),
+                      ];
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-xs text-[var(--muted-foreground)]">{t("empty")}</p>
         )}
       </CardContent>
+      {selected && query.data ? (
+        <ComponentDrawer component={selected} data={query.data} onClose={() => setSelected(null)} />
+      ) : null}
     </Card>
+  );
+}
+
+function SortableHeader({
+  label,
+  column,
+  sort,
+  onToggle,
+  className = "",
+}: {
+  label: string;
+  column: SortColumn;
+  sort: Sort;
+  onToggle: (column: SortColumn) => void;
+  className?: string;
+}) {
+  const active = sort?.column === column;
+  const direction = active ? sort.direction : undefined;
+  return (
+    <th
+      className={`px-1.5 py-1 font-medium ${className}`}
+      aria-sort={active ? (direction === 1 ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onToggle(column)}
+        className="flex items-center gap-0.5 uppercase tracking-wide transition-colors hover:text-[var(--foreground)]"
+      >
+        {label}
+        {active ? (
+          direction === 1 ? (
+            <ArrowUp className="h-2.5 w-2.5" />
+          ) : (
+            <ArrowDown className="h-2.5 w-2.5" />
+          )
+        ) : (
+          <ChevronsUpDown className="h-2.5 w-2.5 opacity-50" />
+        )}
+      </button>
+    </th>
   );
 }
 
 /** Normalise for the echo test: whitespace and case must not make two identical cells differ. */
 const flatten = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
 
-function ComponentRow({ component }: { component: ComponentCheck }) {
+function ComponentRow({
+  component,
+  onOpen,
+}: {
+  component: ComponentCheck;
+  onOpen: () => void;
+}) {
   const t = useTranslations("health.components");
   const tone =
     component.verdict === "ok" ? "success" : component.verdict === "fail" ? "danger" : "warning";
@@ -185,10 +338,24 @@ function ComponentRow({ component }: { component: ComponentCheck }) {
       : component.detail;
 
   return (
-    <tr className="border-b border-[var(--tessera-border)]/60 last:border-0 align-top">
+    <tr
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      tabIndex={0}
+      aria-label={t("openRow", { name: component.name })}
+      className="group cursor-pointer border-b border-[var(--tessera-border)]/60 align-top outline-none transition-colors last:border-0 hover:bg-[var(--tessera-muted)]/30 focus-visible:bg-[var(--tessera-muted)]/30"
+    >
       <td className="px-1.5 py-1">
-        <span className="block truncate font-medium text-[var(--foreground)]">
-          {component.name}
+        <span className="flex items-center gap-1">
+          <span className="block min-w-0 truncate font-medium text-[var(--foreground)]">
+            {component.name}
+          </span>
+          <ChevronRight className="h-3 w-3 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover:opacity-70 group-focus-visible:opacity-70" />
         </span>
         {role ? (
           <span className="block truncate text-[0.62rem] text-[var(--muted-foreground)]">

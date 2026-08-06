@@ -1221,6 +1221,26 @@
         "what": "La politique de conservation des traces : les échanges lents ou peu fiables sont TOUJOURS gardés ; un échantillon régulier du reste est gardé pour garder une vue de référence.",
         "how": "analyze_sampling(recent_bundles()) — tail = latence ≥ seuil OU score < seuil ; tête conservée par hachage déterministe du bundle_id au taux de base.",
         "source": "Échanges réels capturés, src/tessera/observability/tail_sampling.py"
+      },
+      "kpiComponents": {
+        "what": "Les composants de la pile d'observabilité que la sonde voit, à l'instant de la dernière vérification.",
+        "how": "ok / total sur les composants déclarés de la pile ; une panne et un angle mort sont comptés à part — un aveugle n'est jamais vert.",
+        "source": "Sondes TCP/HTTP de la pile (les mêmes données que le tableau Composants)."
+      },
+      "kpiSignals": {
+        "what": "Pour chaque signal (traces, métriques, événements) : circule-t-il encore de l'agent jusqu'à un magasin qui le conserve ?",
+        "how": "Lecture de la chaîne déclarée comme un chemin depuis l'émetteur ; une seule route vivante suffit à servir un signal.",
+        "source": "Chaîne déclarée (stack_topology) résolue par la sonde en direct."
+      },
+      "kpiCapabilities": {
+        "what": "Les réponses que le cockpit sait encore donner : preuve de tour, événements métier, registre des actes, traces…",
+        "how": "Chaque capacité nomme les composants dont elle dépend ; son état fusionne la sonde socket et, quand elle existe, la lecture réelle de l'adaptateur.",
+        "source": "Conséquences déclarées, états calculés depuis la sonde."
+      },
+      "kpiCoverage": {
+        "what": "Signal 92 — la part du contrat de span L1 que chaque agent estampille réellement.",
+        "how": "Moyenne sur les seuls agents mesurés ; un magasin muet rend « ne peut pas dire », jamais 0 %.",
+        "source": "Dimensions portées par les événements métier (ClickHouse)."
       }
     },
     "title": "Observabilité",
@@ -1316,7 +1336,16 @@
         "unreachable": "injoignable",
         "uninterrogable": "impossible à interroger",
         "probe_failed": "la sonde elle-même a échoué"
-      }
+      },
+      "filter": {
+        "all": "Tous",
+        "ok": "OK",
+        "fail": "Pannes",
+        "blind": "Angles morts"
+      },
+      "searchPlaceholder": "Rechercher un composant…",
+      "noMatch": "Aucun composant ne correspond au filtre.",
+      "openRow": "Ouvrir le détail de {name}"
     },
     "verdict": {
       "observing": "J'observe {ok}/{total} composants de la pile",
@@ -1333,7 +1362,8 @@
         "events": "événements métier",
         "state": "état"
       },
-      "preconditions": "{bad}/{total} de ce dont le processus a besoin est en défaut"
+      "preconditions": "{bad}/{total} de ce dont le processus a besoin est en défaut",
+      "eyebrow": "Verdict d'observabilité"
     },
     "chain": {
       "title": "La chaîne d'observabilité",
@@ -1370,7 +1400,18 @@
       },
       "edgeDeclared": "{source} → ici ({signal}) — déclaré dans {where}",
       "openTool": "Ouvrir {url}",
-      "onHostOnly": "{url} — adresse de l'hôte de déploiement (s'ouvre depuis cette machine)"
+      "onHostOnly": "{url} — adresse de l'hôte de déploiement (s'ouvre depuis cette machine)",
+      "signalPath": "Trajet du signal {signal}",
+      "openNode": "Ouvrir les arêtes de {node}",
+      "declaredEdges": "Arêtes déclarées",
+      "verdictLine": "État",
+      "nodeState": {
+        "ok": "opérationnel",
+        "fail": "en panne",
+        "blind": "illisible (la sonde n'a pas pu regarder)",
+        "skip": "non applicable"
+      },
+      "carries": "porte : {list}"
     },
     "consequences": {
       "title": "Ce qu'on ne peut plus savoir",
@@ -1397,7 +1438,9 @@
         "traces": "Traces des échanges",
         "llm-observability": "Suivi des appels au modèle",
         "dashboards": "Tableaux de bord"
-      }
+      },
+      "readBacked": "lecture vérifiée ({n})",
+      "readBackedTitle": "État adossé à une lecture réelle de l'adaptateur pour : {list}. Le port qui répond est le voisinage ; la lecture est la chose (ADR 0026)."
     },
     "history": {
       "title": "Historique",
@@ -1421,7 +1464,8 @@
         "component": "Composant",
         "ok": "Disponible",
         "observed": "Part observée",
-        "detail": "Détail"
+        "detail": "Détail",
+        "timeline": "Frise"
       },
       "state": {
         "ok": "OK",
@@ -1431,7 +1475,17 @@
       },
       "cannotSay": "ne peut pas dire",
       "blindThroughout": "Observé, mais en angle mort tout du long : la sonde a regardé sans rien pouvoir conclure sur le composant. Une disponibilité de 0 % dirait « il est tombé », ce qui n'est pas ce qui a été constaté.",
-      "neverObservedTitle": "Jamais observé sur cette fenêtre — aucune disponibilité ne peut en être tirée."
+      "neverObservedTitle": "Jamais observé sur cette fenêtre — aucune disponibilité ne peut en être tirée.",
+      "probeActive": "Sonde planifiée : toutes les {every} · dernier passage {last}",
+      "probeStale": "Sonde planifiée À L'ARRÊT — dernier battement {last}",
+      "probeNever": "Sonde planifiée ({every}) : aucun battement encore enregistré ici",
+      "probeOnDemand": "Sonde à la demande uniquement — elle ne tourne que quand le cockpit regarde",
+      "holesFootnote": "Fenêtre du {from} au {to}. Un blanc dans une frise est un trou du relevé, jamais du temps de bon fonctionnement : une phase n'absorbe une observation qu'à {continuity} d'écart au plus.",
+      "showAll": "Voir les {n} changements plus anciens",
+      "showLess": "Réduire",
+      "segmentTitle": "{verdict} de {from} à {to} ({duration}, {n} observations)",
+      "timelineEmpty": "{component} : rien d'observé sur cette fenêtre",
+      "timelineSummary": "{component} : {parts}"
     },
     "coverage": {
       "title": "Ce que chaque agent estampille",
@@ -1462,6 +1516,65 @@
       "none": "Aucune adresse navigateur configurée pour ce déploiement.",
       "hostOnly": "Adresses de l'hôte",
       "hostOnlyTitle": "{url} — adresse de l'hôte de déploiement. Elle s'ouvre si votre navigateur tourne sur cette machine ; depuis ailleurs elle pointe sur VOTRE machine."
+    },
+    "kpi": {
+      "components": {
+        "title": "Composants observés",
+        "allClear": "aucune panne, aucun angle mort",
+        "degraded": "{fail} en panne · {blind} illisible(s)"
+      },
+      "signals": {
+        "title": "Signaux acheminés",
+        "allServed": "traces · métriques · événements"
+      },
+      "capabilities": {
+        "title": "Capacités assurées",
+        "allServed": "toutes assurées",
+        "gatesAtRisk": "{n} pouvant bloquer des agents",
+        "atRisk": "{n} dégradée(s)"
+      },
+      "coverage": {
+        "title": "Couverture d'instrumentation",
+        "blind": "magasin illisible — ne peut pas dire",
+        "noneMeasured": "aucun agent mesuré",
+        "measured": "sur {n} agent(s) mesuré(s)"
+      }
+    },
+    "zones": {
+      "chain": "La chaîne et ce qu'elle porte",
+      "time": "Dans le temps",
+      "detail": "Le détail"
+    },
+    "service": {
+      "title": "Service Tessera",
+      "reliability": "Fiabilité & coût"
+    },
+    "drawer": {
+      "asked": "Ce qu'on lui a demandé",
+      "answered": "Ce qu'il a répondu (mot pour mot)",
+      "dependents": "Capacités qui en dépendent",
+      "edges": "Dans la chaîne",
+      "lastDay": "Dernières 24 h",
+      "door": "Porte d'accès",
+      "group": {
+        "stack": "Composant de la pile",
+        "precondition": "Précondition du processus"
+      },
+      "signal": {
+        "traces": "traces",
+        "metrics": "métriques",
+        "events": "événements métier",
+        "state": "état propre"
+      },
+      "remoteProfile": "profil remote uniquement",
+      "readBacked": "vérifié par lecture",
+      "readBackedTitle": "La sonde a exécuté la lecture de l'adaptateur, pas seulement ouvert le port.",
+      "historyLoading": "Historique en cours de lecture…",
+      "historyUnreadable": "Historique illisible — rien ne peut être affirmé.",
+      "availabilityLine": "Disponible {ok} · observé {observed} sur la fenêtre",
+      "cannotSay": "ne peut pas dire",
+      "neverObserved": "Jamais observé sur cette fenêtre.",
+      "hostLocalNote": "Adresse de l'hôte de déploiement — elle n'ouvre que depuis cette machine."
     }
   },
   "settings": {

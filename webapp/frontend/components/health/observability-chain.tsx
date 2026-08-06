@@ -1,5 +1,6 @@
 "use client";
 
+import * as Popover from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -16,8 +17,10 @@ import {
   Share2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { resolveLink, verdictTone } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,8 +39,10 @@ const POLL_MS = 15_000;
  * wrong — metrics reach Prometheus by two routes, so a dead collector does not blind them;
  * business events never touch the collector at all.
  *
- * Every edge carries the file that declares it, shown on hover. The drawing is a claim about
- * the system, and a claim whose evidence a reader cannot reach is decoration (ADR 0026).
+ * Every edge carries the file that declares it. It used to live in a hover `title` — the one
+ * affordance a touch screen does not have and a reader never finds — so the citations now open
+ * on CLICK: every node and every signal badge is a popover naming its edges and the file that
+ * wires each one (ADR 0026: a claim whose evidence a reader cannot reach is decoration).
  */
 export function ObservabilityChain() {
   const t = useTranslations("health.chain");
@@ -51,7 +56,7 @@ export function ObservabilityChain() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+        <CardTitle className="flex min-w-0 items-center gap-1.5 text-sm">
           <span className="min-w-0 truncate">{t("title")}</span>
           <MetricInfo title={t("title")} what={t("what")} how={t("how")} source={t("source")} />
         </CardTitle>
@@ -62,31 +67,90 @@ export function ObservabilityChain() {
           <Skeleton className="h-40 w-full" />
         ) : query.error || !query.data ? (
           // A failed read is not an empty chain: say the read failed, never draw a healthy one.
-          <Badge tone="danger">{t("unreadable")}</Badge>
-        ) : (
-          <ChainGraph
-            data={query.data}
-            t={t as (key: string, values?: Record<string, string | number>) => string}
+          <QueryErrorState
+            compact
+            onRetry={() => void query.refetch()}
+            retrying={query.isRefetching}
           />
+        ) : (
+          <ChainGraph data={query.data} />
         )}
       </CardContent>
     </Card>
   );
 }
 
-/** Per signal, whether it still gets from the agent to somewhere it is kept. */
+/** Shared popover chrome, on the tooltip surface the ⓘ uses — one look for "evidence opens". */
+function ChainPopover({ trigger, children }: { trigger: ReactNode; children: ReactNode }) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          sideOffset={6}
+          collisionPadding={12}
+          className="z-50 w-80 rounded-xs border border-[var(--tessera-tooltip-border)] bg-[var(--tessera-tooltip-bg)] p-3 text-left shadow-[0_2px_6px_rgba(0,0,0,0.4)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        >
+          {children}
+          <Popover.Arrow className="fill-[var(--tessera-tooltip-border)]" />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/** One edge, with its citation in the open — the line the whole drawing rests on. */
+function EdgeLine({ edge }: { edge: ChainEdge }) {
+  const t = useTranslations("health.chain");
+  return (
+    <li className="text-[0.7rem] leading-snug text-[var(--tessera-tooltip-fg-muted)]">
+      <span className="text-[var(--tessera-tooltip-fg)]">
+        {edge.source} → {edge.target}
+      </span>
+      {" · "}
+      {t(`signal.${edge.signal}`)}
+      {edge.profile ? ` (${t(`profile.${edge.profile}`)})` : ""}
+      <span className="block truncate font-mono text-[0.62rem]" title={edge.declared_in}>
+        {edge.declared_in}
+      </span>
+    </li>
+  );
+}
+
+/** Per signal, whether it still gets from the agent to somewhere it is kept — click for the path. */
 function SignalLegend({ data }: { data: ComponentsResponse }) {
   const t = useTranslations("health.chain");
   const entries = Object.entries(data.chain.signals) as [ChainSignal, string][];
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {entries.map(([signal, state]) => (
-        <Badge
+        <ChainPopover
           key={signal}
-          tone={state === "served" ? "success" : state === "lost" ? "danger" : "warning"}
+          trigger={
+            <button
+              type="button"
+              aria-label={t("signalPath", { signal: t(`signal.${signal}`) })}
+              className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+            >
+              <Badge
+                tone={state === "served" ? "success" : state === "lost" ? "danger" : "warning"}
+              >
+                {t(`signal.${signal}`)} · {t(`state.${state}`)}
+              </Badge>
+            </button>
+          }
         >
-          {t(`signal.${signal}`)} · {t(`state.${state}`)}
-        </Badge>
+          <p className="font-semibold text-[var(--tessera-tooltip-fg)] text-xs">
+            {t("signalPath", { signal: t(`signal.${signal}`) })}
+          </p>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {data.chain.edges
+              .filter((edge) => edge.signal === signal)
+              .map((edge) => (
+                <EdgeLine key={`${edge.source}-${edge.target}`} edge={edge} />
+              ))}
+          </ul>
+        </ChainPopover>
       ))}
     </div>
   );
@@ -125,14 +189,11 @@ const SIGNAL_LINE: Record<ChainSignal, string> = {
  * edge changed — a picture that rearranges itself between two polls is unreadable. The cost is
  * that an edge is drawn as an incoming-signal chip on its target rather than as a curve; on a
  * chain this shallow that reads better and survives a phone viewport, which a curve does not.
+ * The emitter column centres its lone node so the drawing reads as a fan-out from it rather
+ * than as a stray card over a void.
  */
-function ChainGraph({
-  data,
-  t,
-}: {
-  data: ComponentsResponse;
-  t: (key: string, values?: Record<string, string | number>) => string;
-}) {
+function ChainGraph({ data }: { data: ComponentsResponse }) {
+  const t = useTranslations("health.chain");
   const byStage = STAGE_ORDER.map((stage) => ({
     stage,
     nodes: data.chain.nodes.filter((node) => node.stage === stage),
@@ -147,15 +208,20 @@ function ChainGraph({
               <p className="text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                 {t(`stage.${column.stage}`)}
               </p>
-              {column.nodes.map((node) => (
-                <ChainNodeCard
-                  key={node.key}
-                  node={node}
-                  edges={data.chain.edges.filter((edge) => edge.target === node.key)}
-                  link={resolveLink(data.links, node.key)}
-                  t={t}
-                />
-              ))}
+              <div
+                className={`flex min-w-0 flex-1 flex-col gap-1.5 ${
+                  column.stage === "emitter" ? "justify-center pb-4" : ""
+                }`}
+              >
+                {column.nodes.map((node) => (
+                  <ChainNodeCard
+                    key={node.key}
+                    node={node}
+                    edges={data.chain.edges}
+                    link={resolveLink(data.links, node.key)}
+                  />
+                ))}
+              </div>
             </div>
             {index < byStage.length - 1 ? (
               <div
@@ -174,15 +240,16 @@ function ChainNodeCard({
   node,
   edges,
   link,
-  t,
 }: {
   node: ChainNode;
   edges: ChainEdge[];
   link: { url: string; hostLocal: boolean } | null;
-  t: (key: string, values?: Record<string, string | number>) => string;
 }) {
+  const t = useTranslations("health.chain");
   const Icon = NODE_ICON[node.key] ?? Server;
   const tone = verdictTone(node.verdict);
+  const incoming = edges.filter((edge) => edge.target === node.key);
+  const outgoing = edges.filter((edge) => edge.source === node.key);
   const ring =
     tone === "success"
       ? "border-[var(--tessera-border)]"
@@ -199,16 +266,57 @@ function ChainNodeCard({
   return (
     <div className={`min-w-0 rounded-lg border px-2 py-1.5 ${ring}`}>
       <div className="flex min-w-0 items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
-        <span className="min-w-0 flex-1 truncate text-[0.72rem] font-medium text-[var(--foreground)]">
-          {node.key}
-        </span>
-        {/* The emitter cannot go red here and the reader is told why, rather than left to
-            wonder why one node is permanently green. */}
-        <span
-          className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
-          title={node.self_evident ? t("selfEvident") : t(`verdictTitle.${node.verdict}`, { n: 0 })}
-        />
+        <ChainPopover
+          trigger={
+            <button
+              type="button"
+              aria-label={t("openNode", { node: node.key })}
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
+              <span className="min-w-0 flex-1 truncate text-[0.72rem] font-medium text-[var(--foreground)]">
+                {node.key}
+              </span>
+              {/* The emitter cannot go red here and the reader is told why, rather than left
+                  to wonder why one node is permanently green. */}
+              <span
+                className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
+                title={
+                  node.self_evident ? t("selfEvident") : t(`verdictTitle.${node.verdict}`, { n: 0 })
+                }
+              />
+            </button>
+          }
+        >
+          <p className="flex items-center justify-between gap-2 font-semibold text-[var(--tessera-tooltip-fg)] text-xs">
+            {node.key}
+            <span className="font-normal text-[0.62rem] uppercase tracking-wide text-[var(--tessera-tooltip-fg-muted)]">
+              {t(`stage.${node.stage}`)}
+            </span>
+          </p>
+          <p className="mt-0.5 text-[0.7rem] text-[var(--tessera-tooltip-fg-muted)]">
+            {node.self_evident
+              ? t("selfEvident")
+              : `${t("verdictLine")} : ${t(`nodeState.${node.verdict}`)}`}
+            {node.carries.length > 0
+              ? ` · ${t("carries", {
+                  list: node.carries.map((signal) => t(`signal.${signal}`)).join(", "),
+                })}`
+              : ""}
+          </p>
+          {incoming.length + outgoing.length > 0 ? (
+            <>
+              <p className="mt-2 border-t border-[var(--tessera-tooltip-border)] pt-2 font-medium text-[0.58rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
+                {t("declaredEdges")}
+              </p>
+              <ul className="mt-1 flex max-h-48 flex-col gap-1 overflow-y-auto">
+                {[...incoming, ...outgoing].map((edge) => (
+                  <EdgeLine key={`${edge.source}-${edge.target}-${edge.signal}`} edge={edge} />
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </ChainPopover>
         {link ? (
           // Always a link. Whether the reader is at the deployment host is not knowable from
           // here, and withholding a door that would have opened is its own dishonesty; what IS
@@ -226,12 +334,13 @@ function ChainNodeCard({
           </a>
         ) : null}
       </div>
-      {edges.length > 0 ? (
+      {incoming.length > 0 ? (
         <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
-          {edges.map((edge) => (
+          {incoming.map((edge) => (
             <span
               key={`${edge.source}-${edge.signal}`}
-              // The declaration travels to the reader: this is where the drawing is checkable.
+              // The declaration also travels on hover for mouse readers; the popover above is
+              // where it is reachable for everyone else.
               title={t("edgeDeclared", {
                 source: edge.source,
                 signal: t(`signal.${edge.signal}`),

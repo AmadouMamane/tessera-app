@@ -5,6 +5,7 @@ import { Gauge } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,8 +52,8 @@ export function InstrumentationCoverage() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-          <Gauge className="h-3.5 w-3.5 shrink-0" />
+        <CardTitle className="flex min-w-0 items-center gap-1.5 text-sm">
+          <Gauge className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
           <span className="min-w-0 truncate">{t("title")}</span>
           <MetricInfo title={t("title")} what={t("what")} how={t("how")} source={t("source")} />
         </CardTitle>
@@ -72,7 +73,11 @@ export function InstrumentationCoverage() {
         {query.isPending ? (
           <Skeleton className="h-20 w-full" />
         ) : query.error || !query.data ? (
-          <Badge tone="danger">{t("unreadable")}</Badge>
+          <QueryErrorState
+            compact
+            onRetry={() => void query.refetch()}
+            retrying={query.isRefetching}
+          />
         ) : agents.length === 0 ? (
           <p className="text-xs text-[var(--muted-foreground)]">{t("noAgents")}</p>
         ) : (

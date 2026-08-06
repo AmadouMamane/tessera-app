@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Ban, CircleSlash, ShieldAlert } from "lucide-react";
+import { Ban, CircleSlash, SearchCheck, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { stateTone } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +54,7 @@ export function StoreConsequences() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+        <CardTitle className="flex min-w-0 items-center gap-1.5 text-sm">
           <span className="min-w-0 truncate">{t("title")}</span>
           <MetricInfo title={t("title")} what={t("what")} how={t("how")} source={t("source")} />
         </CardTitle>
@@ -69,7 +70,11 @@ export function StoreConsequences() {
         {query.isPending ? (
           <Skeleton className="h-24 w-full" />
         ) : query.error || !query.data ? (
-          <Badge tone="danger">{t("unreadable")}</Badge>
+          <QueryErrorState
+            compact
+            onRetry={() => void query.refetch()}
+            retrying={query.isRefetching}
+          />
         ) : (
           <ul className="flex flex-col gap-1">
             {rows.map((row) => {
@@ -107,6 +112,18 @@ export function StoreConsequences() {
                   {row.because.length > 0 ? (
                     <span className="text-[0.66rem] text-[var(--muted-foreground)]">
                       {t("because", { list: row.because.join(", ") })}
+                    </span>
+                  ) : null}
+                  {/* Which dependencies carried an ADAPTER-LEVEL read this cycle (ADR 0052
+                      Am.1.3): « assurée » over a socket-only check must not be mistaken for
+                      the stronger claim, so the stronger claim is marked and named. */}
+                  {row.checked_by_read.length > 0 ? (
+                    <span
+                      className="flex items-center gap-0.5 text-[0.62rem] text-[var(--muted-foreground)]"
+                      title={t("readBackedTitle", { list: row.checked_by_read.join(", ") })}
+                    >
+                      <SearchCheck className="h-3 w-3" />
+                      {t("readBacked", { n: row.checked_by_read.length })}
                     </span>
                   ) : null}
                   {row.gates_agents && row.state !== "served" ? (

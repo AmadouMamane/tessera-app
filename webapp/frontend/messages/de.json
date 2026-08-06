@@ -1221,6 +1221,26 @@
         "what": "Die Trace-Retention-Politik: langsame oder wenig treue Turns werden IMMER behalten; eine deterministische Stichprobe des Heads bleibt fuer die Basissicht.",
         "how": "analyze_sampling(recent_bundles()) — Tail = Latenz ≥ Schwelle ODER Score < Schwelle; Head per deterministischem Hash der bundle_id zur Basisrate.",
         "source": "Erfasste Replay-Bundles (echte Turns), src/tessera/observability/tail_sampling.py"
+      },
+      "kpiComponents": {
+        "what": "Die Komponenten des Beobachtbarkeits-Stacks, wie die Sonde sie zum Zeitpunkt der letzten Prüfung sieht.",
+        "how": "ok / gesamt über die deklarierten Stack-Komponenten; Ausfall und blinder Fleck werden getrennt gezählt — blind ist nie grün.",
+        "source": "TCP/HTTP-Sonden des Stacks (dieselben Daten wie die Komponententabelle)."
+      },
+      "kpiSignals": {
+        "what": "Für jedes Signal (Traces, Metriken, Ereignisse): fließt es noch vom Agenten bis zu einem Speicher, der es aufbewahrt?",
+        "how": "Die deklarierte Kette wird als Pfad vom Emitter gelesen; eine einzige lebende Route genügt.",
+        "source": "Deklarierte Kette (stack_topology), aufgelöst durch die Live-Sonde."
+      },
+      "kpiCapabilities": {
+        "what": "Die Antworten, die das Cockpit noch geben kann: Turn-Nachweis, Geschäftsereignisse, Register, Traces …",
+        "how": "Jede Fähigkeit benennt ihre Komponenten; ihr Zustand verschmilzt Socket-Sonde und, wo vorhanden, die echte Adapter-Lesung.",
+        "source": "Deklarierte Konsequenzen, Zustände aus der Sonde berechnet."
+      },
+      "kpiCoverage": {
+        "what": "Signal 92 — der Anteil des L1-Span-Vertrags, den jeder Agent tatsächlich stempelt.",
+        "how": "Mittel über die gemessenen Agenten; ein stummer Speicher ergibt « keine Aussage », nie 0 %.",
+        "source": "Dimensionen der Geschäftsereignisse (ClickHouse)."
       }
     },
     "title": "Observability",
@@ -1316,7 +1336,16 @@
         "unreachable": "nicht erreichbar",
         "uninterrogable": "nicht befragbar",
         "probe_failed": "die Sonde selbst ist gescheitert"
-      }
+      },
+      "filter": {
+        "all": "Alle",
+        "ok": "OK",
+        "fail": "Ausfälle",
+        "blind": "Blinde Flecken"
+      },
+      "searchPlaceholder": "Komponente suchen…",
+      "noMatch": "Keine Komponente entspricht dem Filter.",
+      "openRow": "Details zu {name} öffnen"
     },
     "verdict": {
       "observing": "Ich beobachte {ok}/{total} Stack-Komponenten",
@@ -1333,7 +1362,8 @@
         "events": "Geschäftsereignisse",
         "state": "Zustand"
       },
-      "preconditions": "{bad}/{total} von dem, was der Prozess braucht, ist beeinträchtigt"
+      "preconditions": "{bad}/{total} von dem, was der Prozess braucht, ist beeinträchtigt",
+      "eyebrow": "Urteil zur Beobachtbarkeit"
     },
     "chain": {
       "title": "Die Observability-Kette",
@@ -1370,7 +1400,18 @@
       },
       "edgeDeclared": "{source} → hier ({signal}) — deklariert in {where}",
       "openTool": "{url} öffnen",
-      "onHostOnly": "{url} — Adresse des Deployment-Hosts (öffnet von dieser Maschine)"
+      "onHostOnly": "{url} — Adresse des Deployment-Hosts (öffnet von dieser Maschine)",
+      "signalPath": "Weg des Signals {signal}",
+      "openNode": "Kanten von {node} öffnen",
+      "declaredEdges": "Deklarierte Kanten",
+      "verdictLine": "Zustand",
+      "nodeState": {
+        "ok": "betriebsbereit",
+        "fail": "ausgefallen",
+        "blind": "nicht einsehbar (die Sonde konnte nicht schauen)",
+        "skip": "nicht anwendbar"
+      },
+      "carries": "trägt: {list}"
     },
     "consequences": {
       "title": "Was nicht mehr gewusst werden kann",
@@ -1397,7 +1438,9 @@
         "traces": "Traces der Dialoge",
         "llm-observability": "Beobachtung der Modellaufrufe",
         "dashboards": "Dashboards"
-      }
+      },
+      "readBacked": "Lesung geprüft ({n})",
+      "readBackedTitle": "Zustand gestützt auf eine echte Adapter-Lesung für: {list}. Ein offener Port ist die Nachbarschaft; die Lesung ist die Sache (ADR 0026)."
     },
     "history": {
       "title": "Verlauf",
@@ -1421,7 +1464,8 @@
         "component": "Komponente",
         "ok": "Verfügbar",
         "observed": "Beobachteter Anteil",
-        "detail": "Detail"
+        "detail": "Detail",
+        "timeline": "Zeitleiste"
       },
       "state": {
         "ok": "OK",
@@ -1431,7 +1475,17 @@
       },
       "cannotSay": "kann nichts sagen",
       "blindThroughout": "Beobachtet, aber durchgehend im blinden Fleck: die Sonde hat hingesehen und konnte nichts über die Komponente schließen. 0 % Verfügbarkeit hieße „sie ist ausgefallen“ — das wurde nicht festgestellt.",
-      "neverObservedTitle": "In diesem Fenster nie beobachtet — daraus lässt sich keine Verfügbarkeit ableiten."
+      "neverObservedTitle": "In diesem Fenster nie beobachtet — daraus lässt sich keine Verfügbarkeit ableiten.",
+      "probeActive": "Geplante Sonde: alle {every} · letzter Durchlauf {last}",
+      "probeStale": "Geplante Sonde GESTOPPT — letzter Herzschlag {last}",
+      "probeNever": "Geplante Sonde ({every}): noch kein Herzschlag aufgezeichnet",
+      "probeOnDemand": "Sonde nur auf Anfrage — sie läuft nur, wenn das Cockpit hinschaut",
+      "holesFootnote": "Fenster vom {from} bis {to}. Eine Lücke in der Zeitleiste ist ein Loch in der Aufzeichnung, nie Betriebszeit: eine Phase nimmt eine Beobachtung nur bis {continuity} Abstand auf.",
+      "showAll": "Die {n} älteren Änderungen zeigen",
+      "showLess": "Einklappen",
+      "segmentTitle": "{verdict} von {from} bis {to} ({duration}, {n} Beobachtungen)",
+      "timelineEmpty": "{component}: nichts beobachtet in diesem Fenster",
+      "timelineSummary": "{component}: {parts}"
     },
     "coverage": {
       "title": "Was jeder Agent stempelt",
@@ -1462,6 +1516,65 @@
       "none": "Für dieses Deployment ist keine Browser-Adresse konfiguriert.",
       "hostOnly": "Host-Adressen",
       "hostOnlyTitle": "{url} — Adresse des Deployment-Hosts. Sie öffnet sich, wenn Ihr Browser auf dieser Maschine läuft; von anderswo zeigt sie auf IHRE Maschine."
+    },
+    "kpi": {
+      "components": {
+        "title": "Beobachtete Komponenten",
+        "allClear": "kein Ausfall, kein blinder Fleck",
+        "degraded": "{fail} ausgefallen · {blind} nicht einsehbar"
+      },
+      "signals": {
+        "title": "Zugestellte Signale",
+        "allServed": "Traces · Metriken · Ereignisse"
+      },
+      "capabilities": {
+        "title": "Gesicherte Fähigkeiten",
+        "allServed": "alle gesichert",
+        "gatesAtRisk": "{n} können Agenten blockieren",
+        "atRisk": "{n} beeinträchtigt"
+      },
+      "coverage": {
+        "title": "Instrumentierungsabdeckung",
+        "blind": "Speicher nicht lesbar — keine Aussage",
+        "noneMeasured": "kein Agent gemessen",
+        "measured": "über {n} gemessene Agenten"
+      }
+    },
+    "zones": {
+      "chain": "Die Kette und was sie trägt",
+      "time": "Im Zeitverlauf",
+      "detail": "Das Detail"
+    },
+    "service": {
+      "title": "Tessera-Dienst",
+      "reliability": "Zuverlässigkeit & Kosten"
+    },
+    "drawer": {
+      "asked": "Was gefragt wurde",
+      "answered": "Was es geantwortet hat (wortwörtlich)",
+      "dependents": "Davon abhängige Fähigkeiten",
+      "edges": "In der Kette",
+      "lastDay": "Letzte 24 h",
+      "door": "Zugangstür",
+      "group": {
+        "stack": "Komponente des Stacks",
+        "precondition": "Voraussetzung des Prozesses"
+      },
+      "signal": {
+        "traces": "Traces",
+        "metrics": "Metriken",
+        "events": "Geschäftsereignisse",
+        "state": "eigener Zustand"
+      },
+      "remoteProfile": "nur Remote-Profil",
+      "readBacked": "durch Lesung geprüft",
+      "readBackedTitle": "Die Sonde hat die Adapter-Lesung ausgeführt, nicht nur den Port geöffnet.",
+      "historyLoading": "Verlauf wird gelesen…",
+      "historyUnreadable": "Verlauf nicht lesbar — nichts kann behauptet werden.",
+      "availabilityLine": "Verfügbar {ok} · beobachtet {observed} im Fenster",
+      "cannotSay": "keine Aussage",
+      "neverObserved": "In diesem Fenster nie beobachtet.",
+      "hostLocalNote": "Adresse des Deployment-Hosts — sie öffnet nur von dieser Maschine aus."
     }
   },
   "settings": {

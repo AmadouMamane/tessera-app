@@ -1221,6 +1221,26 @@
         "what": "The trace-retention policy: slow or low-faithfulness turns are ALWAYS kept; a deterministic sample of the head is kept for baseline visibility.",
         "how": "analyze_sampling(recent_bundles()) — tail = latency ≥ threshold OR score < threshold; head kept by deterministic bundle_id hash at the base rate.",
         "source": "Captured replay bundles (real turns), src/tessera/observability/tail_sampling.py"
+      },
+      "kpiComponents": {
+        "what": "The observability-stack components as the probe sees them, at the instant of the last check.",
+        "how": "ok / total across the declared stack components; a failure and a blind spot are counted apart — blind is never green.",
+        "source": "The stack's TCP/HTTP probes (the same data as the Components table)."
+      },
+      "kpiSignals": {
+        "what": "For each signal (traces, metrics, events): does it still flow from the agent to a store that keeps it?",
+        "how": "The declared chain is read as a path from the emitter; a single live route is enough to serve a signal.",
+        "source": "Declared chain (stack_topology) resolved by the live probe."
+      },
+      "kpiCapabilities": {
+        "what": "The answers the cockpit can still give: turn evidence, business events, the ledger, traces…",
+        "how": "Each capability names the components it needs; its state merges the socket probe and, where one exists, the adapter's own read.",
+        "source": "Declared consequences, states computed from the probe."
+      },
+      "kpiCoverage": {
+        "what": "Signal 92 — the share of the L1 span contract each agent actually stamps.",
+        "how": "Mean over the measured agents only; a mute store yields “cannot say”, never 0 %.",
+        "source": "Dimensions carried on business events (ClickHouse)."
       }
     },
     "title": "Observability",
@@ -1316,7 +1336,16 @@
         "unreachable": "unreachable",
         "uninterrogable": "cannot be interrogated",
         "probe_failed": "the probe itself failed"
-      }
+      },
+      "filter": {
+        "all": "All",
+        "ok": "OK",
+        "fail": "Failures",
+        "blind": "Blind spots"
+      },
+      "searchPlaceholder": "Search a component…",
+      "noMatch": "No component matches the filter.",
+      "openRow": "Open details for {name}"
     },
     "verdict": {
       "observing": "I observe {ok}/{total} stack components",
@@ -1333,7 +1362,8 @@
         "events": "business events",
         "state": "state"
       },
-      "preconditions": "{bad}/{total} of what the process needs is impaired"
+      "preconditions": "{bad}/{total} of what the process needs is impaired",
+      "eyebrow": "Observability verdict"
     },
     "chain": {
       "title": "The observability chain",
@@ -1370,7 +1400,18 @@
       },
       "edgeDeclared": "{source} → here ({signal}) — declared in {where}",
       "openTool": "Open {url}",
-      "onHostOnly": "{url} — the deployment host's address (opens from that machine)"
+      "onHostOnly": "{url} — the deployment host's address (opens from that machine)",
+      "signalPath": "Path of the {signal} signal",
+      "openNode": "Open the edges of {node}",
+      "declaredEdges": "Declared edges",
+      "verdictLine": "State",
+      "nodeState": {
+        "ok": "operational",
+        "fail": "down",
+        "blind": "unreadable (the probe could not look)",
+        "skip": "not applicable"
+      },
+      "carries": "carries: {list}"
     },
     "consequences": {
       "title": "What can no longer be known",
@@ -1397,7 +1438,9 @@
         "traces": "Traces of the exchanges",
         "llm-observability": "Watching the model calls",
         "dashboards": "Dashboards"
-      }
+      },
+      "readBacked": "read-verified ({n})",
+      "readBackedTitle": "State backed by a real adapter-level read for: {list}. An open port is the neighbourhood; the read is the thing (ADR 0026)."
     },
     "history": {
       "title": "History",
@@ -1421,7 +1464,8 @@
         "component": "Component",
         "ok": "Available",
         "observed": "Share observed",
-        "detail": "Detail"
+        "detail": "Detail",
+        "timeline": "Timeline"
       },
       "state": {
         "ok": "OK",
@@ -1431,7 +1475,17 @@
       },
       "cannotSay": "cannot say",
       "blindThroughout": "Observed, but blind throughout: the probe looked and could conclude nothing about the component. 0 % available would say 'it went down', which is not what was found.",
-      "neverObservedTitle": "Never observed over this window — no availability can be drawn from it."
+      "neverObservedTitle": "Never observed over this window — no availability can be drawn from it.",
+      "probeActive": "Scheduled probe: every {every} · last run {last}",
+      "probeStale": "Scheduled probe STOPPED — last beat {last}",
+      "probeNever": "Scheduled probe ({every}): no beat recorded here yet",
+      "probeOnDemand": "On-demand probe only — it runs only when the cockpit is looking",
+      "holesFootnote": "Window from {from} to {to}. A blank in a timeline is a hole in the record, never uptime: a phase only absorbs an observation up to {continuity} apart.",
+      "showAll": "Show the {n} older changes",
+      "showLess": "Collapse",
+      "segmentTitle": "{verdict} from {from} to {to} ({duration}, {n} observations)",
+      "timelineEmpty": "{component}: nothing observed in this window",
+      "timelineSummary": "{component}: {parts}"
     },
     "coverage": {
       "title": "What each agent stamps",
@@ -1462,6 +1516,65 @@
       "none": "No browser address configured for this deployment.",
       "hostOnly": "Host addresses",
       "hostOnlyTitle": "{url} — the deployment host's address. It opens if your browser runs on that machine; from elsewhere it points at YOUR machine."
+    },
+    "kpi": {
+      "components": {
+        "title": "Components observed",
+        "allClear": "no failure, no blind spot",
+        "degraded": "{fail} down · {blind} unreadable"
+      },
+      "signals": {
+        "title": "Signals delivered",
+        "allServed": "traces · metrics · events"
+      },
+      "capabilities": {
+        "title": "Capabilities underwritten",
+        "allServed": "all underwritten",
+        "gatesAtRisk": "{n} can block agents",
+        "atRisk": "{n} degraded"
+      },
+      "coverage": {
+        "title": "Instrumentation coverage",
+        "blind": "store unreadable — cannot say",
+        "noneMeasured": "no agent measured",
+        "measured": "across {n} measured agent(s)"
+      }
+    },
+    "zones": {
+      "chain": "The chain and what it carries",
+      "time": "Over time",
+      "detail": "The detail"
+    },
+    "service": {
+      "title": "Tessera service",
+      "reliability": "Reliability & cost"
+    },
+    "drawer": {
+      "asked": "What was asked",
+      "answered": "What it answered (verbatim)",
+      "dependents": "Capabilities that depend on it",
+      "edges": "In the chain",
+      "lastDay": "Last 24 h",
+      "door": "Door",
+      "group": {
+        "stack": "Stack component",
+        "precondition": "Process precondition"
+      },
+      "signal": {
+        "traces": "traces",
+        "metrics": "metrics",
+        "events": "business events",
+        "state": "own state"
+      },
+      "remoteProfile": "remote profile only",
+      "readBacked": "read-verified",
+      "readBackedTitle": "The probe executed the adapter's read, not just opened the port.",
+      "historyLoading": "Reading the history…",
+      "historyUnreadable": "History unreadable — nothing can be claimed.",
+      "availabilityLine": "Available {ok} · observed {observed} in the window",
+      "cannotSay": "cannot say",
+      "neverObserved": "Never observed in this window.",
+      "hostLocalNote": "Deployment-host address — it only opens from that machine."
     }
   },
   "settings": {

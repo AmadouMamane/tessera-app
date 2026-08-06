@@ -5,6 +5,7 @@ import { ArrowUpRight, ExternalLink, Home } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { QueryErrorState } from "@/components/cockpit/query-error-state";
 import { verdictTone } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,8 +55,8 @@ export function ToolLinks() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex min-w-0 items-center gap-1 font-sans text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+        <CardTitle className="flex min-w-0 items-center gap-1.5 text-sm">
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
           <span className="min-w-0 truncate">{t("title")}</span>
           <MetricInfo title={t("title")} what={t("what")} how={t("how")} source={t("source")} />
         </CardTitle>
@@ -70,7 +71,11 @@ export function ToolLinks() {
         {query.isPending ? (
           <Skeleton className="h-12 w-full" />
         ) : query.error || !query.data ? (
-          <Badge tone="danger">{t("unreadable")}</Badge>
+          <QueryErrorState
+            compact
+            onRetry={() => void query.refetch()}
+            retrying={query.isRefetching}
+          />
         ) : links.length === 0 ? (
           // Configured to publish nothing is a legitimate deployment, and it must read as that
           // rather than as a broken card.

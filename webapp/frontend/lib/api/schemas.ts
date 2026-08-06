@@ -559,6 +559,12 @@ export const ConsequenceSchema = z.object({
   state: ConsequenceStateSchema,
   /** Which dependency is responsible — so the row names a component instead of a puzzle. */
   because: z.array(z.string()),
+  /**
+   * The dependencies whose verdict included an ADAPTER-LEVEL read this cycle (ADR 0052 Am.1.3)
+   * — the socket is the neighbourhood, the read is the thing. Named so « assurée » over a
+   * socket-only check cannot be mistaken for the stronger claim.
+   */
+  checked_by_read: z.array(z.string()),
 });
 export type Consequence = z.infer<typeof ConsequenceSchema>;
 
@@ -649,9 +655,35 @@ export const ComponentTransitionSchema = z.object({
 });
 export type ComponentTransition = z.infer<typeof ComponentTransitionSchema>;
 
+/** One uninterrupted stretch of one verdict, clipped to the requested window — what a timeline draws. */
+export const ComponentPhaseSchema = z.object({
+  component: z.string(),
+  verdict: z.string(),
+  since: z.string(),
+  until: z.string(),
+  n_observations: z.number().int().nonnegative(),
+});
+export type ComponentPhase = z.infer<typeof ComponentPhaseSchema>;
+
+/**
+ * The probe scheduler's heartbeat (ADR 0052 Am.1.1) — derived from the stamp the leader loop
+ * actually writes, never from configuration. `never` = no beat has landed (the interval, when
+ * present, is the announced intent); `stale` = the beats stopped, which is a dead leader loop
+ * and a different repair from "not configured".
+ */
+export const ProbeSchedulerReportSchema = z.object({
+  state: z.enum(["never", "active", "stale"]),
+  interval_s: z.number().nullable(),
+  last_run_at: z.string().nullable(),
+});
+export type ProbeSchedulerReport = z.infer<typeof ProbeSchedulerReportSchema>;
+
 export const ComponentHistorySchema = z.object({
   window: z.object({ since: z.string(), until: z.string(), days: z.number() }),
   availability: z.array(ComponentAvailabilitySchema),
+  /** The phases themselves — the totals above cannot say WHEN the fail was. */
+  phases: z.array(ComponentPhaseSchema),
+  probe: ProbeSchedulerReportSchema,
   transitions: z.array(ComponentTransitionSchema),
   continuity_window_s: z.number(),
 });
