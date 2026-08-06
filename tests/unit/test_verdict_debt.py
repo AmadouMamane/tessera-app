@@ -256,6 +256,11 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     "src/tessera/observability/spine/adapters/langfuse.py::_matches_agent": "filter",
     "src/tessera/observability/spine/capabilities.py::SignalCapability.org_wide": "data",
     "src/tessera/observability/spine/registry.py::SignalSpec.synthetic": "data",
+    # A property of a URL string — "does this name the loopback interface?" — with a single right
+    # answer a reader can check by looking at the URL. Nothing PASSES on it: the caller pairs it
+    # with its own vantage point to decide whether to offer a live link, and the worst a wrong
+    # answer costs is a door shown as host-only when it need not have been.
+    "src/tessera/observability/stack_components.py::is_loopback": "data",
     "src/tessera/observability/tail_sampling.py::_keep_head": "data",
     "src/tessera/observability/turn_evidence.py::turn_evidence_enabled": "config",
     "src/tessera/recouvrement/scoring.py::RecouvrementBusinessScorer.supports": "dispatch",

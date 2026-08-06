@@ -159,13 +159,20 @@ def test_the_public_reads_are_untouched() -> None:
     guard for the same reason /healthz is: an operator diagnosing an outage must be able to see
     WHICH dependency is down, and the page that promised exactly that had been rendering four
     process-level cards over it.
+    +2 on 2026-08-06: GET /observability/component-history and
+    GET /observability/instrumentation-coverage. The first publishes the SAME component verdicts
+    the read above already carries, over time instead of at one instant — durations and verdict
+    changes, no store row and no subject. The second is signal 92 for the fleet: a percentage
+    against a declared attribute contract per agent, computed from whether Scope dimensions are
+    PRESENT on business events. It reports that a field was stamped, never the field's value, so
+    no business-event content crosses it.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 139
+    assert len(read_routes) == 141
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

@@ -1223,8 +1223,8 @@
         "source": "Erfasste Replay-Bundles (echte Turns), src/tessera/observability/tail_sampling.py"
       }
     },
-    "title": "Servicestatus",
-    "description": "Verfolgen Sie die Verfügbarkeit von Tessera, der Datenbank und der Modelle.",
+    "title": "Observability",
+    "description": "Was der Stack wissen lässt: die Signalkette, das Urteil, das jeder Speicher trägt, und was sich im Zeitverlauf geändert hat.",
     "cards": {
       "backend": "Tessera-Dienst",
       "readiness": "Verfügbarkeit",
@@ -1275,7 +1275,153 @@
       "group": {
         "stack": "Der Stack — {n} Komponenten",
         "precondition": "Prozess-Voraussetzungen — {n}"
+      },
+      "groupAsks": {
+        "stack": "was der Betreiber betreibt",
+        "precondition": "was der Prozess braucht, um einen Turn zu bedienen"
       }
+    },
+    "verdict": {
+      "observing": "Ich beobachte {ok}/{total} Stack-Komponenten",
+      "down": "{n} ausgefallen",
+      "blind": "{n} nicht lesbar",
+      "allClear": "kein Ausfall, kein blinder Fleck",
+      "unreadable": "Urteil nicht lesbar — der Komponentenstatus konnte nicht ermittelt werden",
+      "checked": "gesehen {when}",
+      "signalsLost": "Kommt nicht mehr an: {list}",
+      "signalsUnknown": "Kann nichts sagen: {list}",
+      "signal": {
+        "traces": "Traces",
+        "metrics": "Metriken",
+        "events": "Geschäftsereignisse",
+        "state": "Zustand"
+      }
+    },
+    "chain": {
+      "title": "Die Observability-Kette",
+      "what": "Der tatsächliche Weg jedes Signals vom Agenten bis zum Speicher, der es aufbewahrt — samt Zustand jeder Station.",
+      "how": "Knoten und Kanten sind DEKLARIERT, aus den Dateien, die sie verdrahten (Kante überfahren: sie nennt ihre eigene); die Urteile stammen aus der Sonde. Ein Signal gilt als angekommen, sobald ein ganzer Pfad grün ist: Metriken erreichen Prometheus über ZWEI Wege, ein toter Collector macht sie also nicht blind.",
+      "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
+      "unreadable": "Nicht lesbar — die Kette konnte nicht ermittelt werden",
+      "stage": {
+        "emitter": "Sender",
+        "pipeline": "Transport",
+        "store": "Speicher",
+        "viewer": "Ansicht"
+      },
+      "signal": {
+        "traces": "Traces",
+        "metrics": "Metriken",
+        "events": "Ereignisse",
+        "state": "Zustand"
+      },
+      "state": {
+        "served": "kommt an",
+        "lost": "kommt nicht an",
+        "cannot_say": "kann nichts sagen"
+      },
+      "profile": {
+        "remote": "Remote-Profil"
+      },
+      "selfEvident": "Der Agent wird nicht von außen sondiert: diese Antwort ist sein Beweis.",
+      "verdictTitle": {
+        "ok": "Befragt, Antwort gut",
+        "fail": "Befragt, Antwort schlecht",
+        "blind": "Konnte nicht befragt werden — weder „ok“ noch „ausgefallen“",
+        "skip": "Hier nicht anwendbar"
+      },
+      "edgeDeclared": "{source} → hier ({signal}) — deklariert in {where}",
+      "openTool": "{url} öffnen",
+      "onHostOnly": "{url} — nur vom Deployment-Host aus erreichbar"
+    },
+    "consequences": {
+      "title": "Was jeder Speicher trägt",
+      "what": "Was das Cockpit nicht mehr beantworten kann, wenn ein Speicher schweigt — das fehlende Glied zwischen roter Komponente und Folge.",
+      "how": "Die Fähigkeit ist DEKLARIERT (die rechte Spalte nennt das lesende Modul); der Zustand wird aus der Sonde BERECHNET. Eine Komponente, die nicht befragt werden konnte, ergibt „kann nichts sagen“ — nie „verloren“, nie „bedient“.",
+      "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
+      "unreadable": "Nicht lesbar",
+      "allServed": "{n}/{n} bedient",
+      "atRisk": "{n} von {total} beeinträchtigt",
+      "gatesAgents": "Kann einen Agenten blockieren",
+      "mayBlockAgents": "kann einen Agenten am Freigabe-Tor blockieren",
+      "because": "wegen {list}",
+      "readsTitle": "Gelesen von {module}",
+      "state": {
+        "served": "bedient",
+        "lost": "verloren",
+        "cannot_say": "kann nichts sagen"
+      },
+      "capability": {
+        "turn-evidence": "Turn-Nachweis (Stufe L1)",
+        "business-events": "Geschäftsereignisse",
+        "aggregates": "Aggregate und SLO",
+        "ledger": "Beweiskräftiges Ledger",
+        "traces": "Turn-Traces",
+        "llm-observability": "LLM-Observability",
+        "dashboards": "Dashboards"
+      }
+    },
+    "history": {
+      "title": "Im Zeitverlauf",
+      "what": "Verfügbarkeit je Komponente und vor allem jeder WECHSEL des Urteils — eine Komponente, die zwischen zwei Abfragen ausfällt und zurückkommt, war bisher unsichtbar.",
+      "how": "Die Sonde läuft, wenn das Cockpit fragt: das Fenster wird also stückweise beobachtet. Jeder Prozentsatz ist ein Anteil der BEOBACHTETEN Zeit, und der beobachtete Anteil steht daneben. Schweigen zählt nie als „ok“.",
+      "source": "GET /observability/component-history — src/tessera/observability/component_history.py",
+      "unreadable": "Nicht lesbar",
+      "nothingRecorded": "Nichts aufgezeichnet in diesem Fenster — das Journal entsteht, wenn die Sonde läuft. Das heißt „niemand hat hingesehen“, nicht „alles war in Ordnung“.",
+      "window": {
+        "1": "24 Std.",
+        "7": "7 T.",
+        "30": "30 T."
+      },
+      "transitions": "Wechsel ({n})",
+      "noTransitions": "Kein Urteilswechsel im beobachteten Teil.",
+      "discovered": "nach einer Lücke entdeckt",
+      "discoveredTitle": "Der Wechsel geschah während eines Schweigens: dieser Zeitpunkt ist der der ENTDECKUNG, nicht der des Ausfalls.",
+      "unobserved": "keine beobachtete Dauer",
+      "observedTitle": "{observed} beobachtet von {window} — davon {decidable} mit einem Befund",
+      "col": {
+        "component": "Komponente",
+        "ok": "Verfügbar",
+        "observed": "Beobachtet",
+        "detail": "Detail"
+      },
+      "state": {
+        "ok": "OK",
+        "fail": "ausgefallen",
+        "blind": "blinder Fleck",
+        "skip": "nicht anwendbar"
+      },
+      "cannotSay": "kann nichts sagen",
+      "blindThroughout": "Beobachtet, aber durchgehend im blinden Fleck: die Sonde hat hingesehen und konnte nichts über die Komponente schließen. 0 % Verfügbarkeit hieße „sie ist ausgefallen“ — das wurde nicht festgestellt.",
+      "neverObservedTitle": "In diesem Fenster nie beobachtet — daraus lässt sich keine Verfügbarkeit ableiten."
+    },
+    "coverage": {
+      "title": "Instrumentierungsabdeckung",
+      "what": "Der Anteil des L1-Dimensionsvertrags, den jeder Agent tatsächlich stempelt (Signal 92).",
+      "how": "Vorhandensein der Scope-Dimensionen im jüngsten Geschäftsereignis des Agenten. Ein bewusst benannter PROXY für Span-Attribute: beide tragen konstruktionsbedingt dieselben Dimensionen. Ein Speicher ohne Antwort ergibt „kann nichts sagen“, nie 0 %.",
+      "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
+      "unreadable": "Nicht lesbar",
+      "blind": "Speicher stumm — kann nichts sagen",
+      "noneMeasured": "Keine Messung",
+      "noAgents": "Kein manifestierter Agent",
+      "fleet": "{pct} % über {n, plural, one {# gemessenen Agenten} other {# gemessene Agenten}}",
+      "missing": "fehlt: {list}",
+      "proxy": "Gemessen an den {n} geforderten Scope-Dimensionen auf Geschäftsereignissen — kein Span-Speicher.",
+      "status": {
+        "measured": "gemessen",
+        "no_evidence": "keine Telemetrie",
+        "unverifiable": "kann nichts sagen"
+      }
+    },
+    "tools": {
+      "title": "Werkzeuge öffnen",
+      "what": "Die Observability-Werkzeuge, die neben dieser Seite laufen, mit ihrem aktuellen Urteil.",
+      "how": "Die veröffentlichten Adressen sind Loopback: wahr vom Deployment-Host aus, falsch anderswo. Der Link ist deshalb nur klickbar, wenn DIESE Seite selbst über Loopback ausgeliefert wird; sonst wird die Adresse gezeigt, aber nicht versprochen.",
+      "source": "GET /observability/components — docker-compose.obs.claude.yml",
+      "unreadable": "Nicht lesbar",
+      "none": "Für dieses Deployment ist keine Browser-Adresse konfiguriert.",
+      "hostOnly": "Nur vom Host erreichbar",
+      "hostOnlyTitle": "{url} — nur vom Deployment-Host aus erreichbar, nicht aus diesem Browser"
     }
   },
   "settings": {

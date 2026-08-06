@@ -1223,8 +1223,8 @@
         "source": "Captured replay bundles (real turns), src/tessera/observability/tail_sampling.py"
       }
     },
-    "title": "Service health",
-    "description": "Track the availability of Tessera, its database, and its models.",
+    "title": "Observability",
+    "description": "What the stack lets you know: the chain of signals, the verdict each store carries, and what changed over time.",
     "cards": {
       "backend": "Tessera service",
       "readiness": "Readiness",
@@ -1275,7 +1275,153 @@
       "group": {
         "stack": "The stack — {n} components",
         "precondition": "Process preconditions — {n}"
+      },
+      "groupAsks": {
+        "stack": "what the operator runs",
+        "precondition": "what the process needs to serve a turn"
       }
+    },
+    "verdict": {
+      "observing": "I observe {ok}/{total} stack components",
+      "down": "{n} down",
+      "blind": "{n} unreadable",
+      "allClear": "nothing down, no blind spot",
+      "unreadable": "Verdict unreadable — the component status could not be obtained",
+      "checked": "seen {when}",
+      "signalsLost": "No longer arriving: {list}",
+      "signalsUnknown": "Cannot say: {list}",
+      "signal": {
+        "traces": "traces",
+        "metrics": "metrics",
+        "events": "business events",
+        "state": "state"
+      }
+    },
+    "chain": {
+      "title": "The observability chain",
+      "what": "The route each signal actually takes, from the agent to the store that keeps it — and the state of every stage.",
+      "how": "Nodes and edges are DECLARED from the files that wire them (hover an edge: it cites its own), with verdicts joined from the probe. A signal arrives as soon as one whole path is green: metrics reach Prometheus by TWO routes, so a dead collector does not blind them.",
+      "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
+      "unreadable": "Unreadable — the chain could not be obtained",
+      "stage": {
+        "emitter": "Emitter",
+        "pipeline": "Transport",
+        "store": "Stores",
+        "viewer": "Viewers"
+      },
+      "signal": {
+        "traces": "traces",
+        "metrics": "metrics",
+        "events": "events",
+        "state": "state"
+      },
+      "state": {
+        "served": "arrives",
+        "lost": "does not arrive",
+        "cannot_say": "cannot say"
+      },
+      "profile": {
+        "remote": "remote profile"
+      },
+      "selfEvident": "The agent is not probed from outside: this very response is its proof.",
+      "verdictTitle": {
+        "ok": "Interrogated, answer good",
+        "fail": "Interrogated, answer bad",
+        "blind": "Could not be interrogated — neither 'ok' nor 'down'",
+        "skip": "Not applicable here"
+      },
+      "edgeDeclared": "{source} → here ({signal}) — declared in {where}",
+      "openTool": "Open {url}",
+      "onHostOnly": "{url} — reachable from the deployment host only"
+    },
+    "consequences": {
+      "title": "What each store carries",
+      "what": "What the cockpit stops being able to answer when a store goes quiet — the missing link between a red component and its consequence.",
+      "how": "The capability is DECLARED (the right-hand column cites the module that reads the store); the state is COMPUTED from the probe. A component that could not be interrogated yields 'cannot say' — never 'lost', never 'served'.",
+      "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
+      "unreadable": "Unreadable",
+      "allServed": "{n}/{n} served",
+      "atRisk": "{n} of {total} impaired",
+      "gatesAgents": "Can block an agent",
+      "mayBlockAgents": "can block an agent at the release gate",
+      "because": "because of {list}",
+      "readsTitle": "Read by {module}",
+      "state": {
+        "served": "served",
+        "lost": "lost",
+        "cannot_say": "cannot say"
+      },
+      "capability": {
+        "turn-evidence": "Turn evidence (level L1)",
+        "business-events": "Business events",
+        "aggregates": "Aggregates and SLO",
+        "ledger": "Opposable ledger",
+        "traces": "Turn traces",
+        "llm-observability": "LLM observability",
+        "dashboards": "Dashboards"
+      }
+    },
+    "history": {
+      "title": "Over time",
+      "what": "Availability per component and, above all, every CHANGE of verdict — a component that falls and comes back between two polls was invisible until now.",
+      "how": "The probe runs when the cockpit asks, so the window is watched in patches. Every percentage is a share of OBSERVED time, and the observed share sits beside it. Silence is never counted as 'ok'.",
+      "source": "GET /observability/component-history — src/tessera/observability/component_history.py",
+      "unreadable": "Unreadable",
+      "nothingRecorded": "Nothing recorded over this window — the journal is written when the probe runs, so this means 'nobody looked', not 'everything was fine'.",
+      "window": {
+        "1": "24 h",
+        "7": "7 d",
+        "30": "30 d"
+      },
+      "transitions": "Changes ({n})",
+      "noTransitions": "No verdict change in what was observed.",
+      "discovered": "discovered after a gap",
+      "discoveredTitle": "The change happened during a silence: this instant is the DISCOVERY, not the failure.",
+      "unobserved": "no observed duration",
+      "observedTitle": "{observed} observed out of {window} — of which {decidable} yielded a verdict",
+      "col": {
+        "component": "Component",
+        "ok": "Available",
+        "observed": "Observed",
+        "detail": "Detail"
+      },
+      "state": {
+        "ok": "OK",
+        "fail": "down",
+        "blind": "blind spot",
+        "skip": "n/a"
+      },
+      "cannotSay": "cannot say",
+      "blindThroughout": "Observed, but blind throughout: the probe looked and could conclude nothing about the component. 0 % available would say 'it went down', which is not what was found.",
+      "neverObservedTitle": "Never observed over this window — no availability can be drawn from it."
+    },
+    "coverage": {
+      "title": "Instrumentation coverage",
+      "what": "The share of the L1 dimension contract each agent actually stamps (signal 92).",
+      "how": "Presence of the Scope dimensions on the agent's most recent business event. A deliberately named PROXY for span attributes: both carry the same dimensions by construction. A store that did not answer yields 'cannot say', never 0 %.",
+      "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
+      "unreadable": "Unreadable",
+      "blind": "Store silent — cannot say",
+      "noneMeasured": "Nothing measured",
+      "noAgents": "No manifested agent",
+      "fleet": "{pct} % across {n, plural, one {# measured agent} other {# measured agents}}",
+      "missing": "missing: {list}",
+      "proxy": "Measured over the {n} required Scope dimensions carried on business events — not a span store.",
+      "status": {
+        "measured": "measured",
+        "no_evidence": "no telemetry",
+        "unverifiable": "cannot say"
+      }
+    },
+    "tools": {
+      "title": "Open the tools",
+      "what": "The observability tools running beside this page, each with its current verdict.",
+      "how": "The published addresses are loopback: true from the deployment host, false anywhere else. A link is therefore clickable only when THIS page is itself served over loopback; otherwise the address is shown without being promised.",
+      "source": "GET /observability/components — docker-compose.obs.claude.yml",
+      "unreadable": "Unreadable",
+      "none": "No browser address configured for this deployment.",
+      "hostOnly": "Reachable from the host",
+      "hostOnlyTitle": "{url} — reachable from the deployment host only, not from this browser"
     }
   },
   "settings": {

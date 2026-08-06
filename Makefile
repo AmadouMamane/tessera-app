@@ -1009,7 +1009,12 @@ dev-up: dev-secrets
 #
 # So the pid is interrogated before it is signalled. A port is not a licence to kill whatever
 # sits behind it — the only processes this target may end are ones it could have started.
-_DEV_KILLABLE = node|next-server|python|python3|uvicorn|uv|pnpm|npm|corepack|perl
+# `next-server` renames its own process, and `ps -o comm=` reports the renamed title:
+# `next-server (v15.0.4)`, with a space and a version. Anchored with `$$`, the entry
+# `next-server` matched none of it, so `dev-up` started a frontend `dev-down` could not stop —
+# twice in one session, each time leaving the port held and the next `dev-preview` refused.
+# `[ (]*` absorbs the suffix without loosening the anchor into a prefix match.
+_DEV_KILLABLE = node|next-server[ (].*|next-server|python|python3|uvicorn|uv|pnpm|npm|corepack|perl
 dev-down:
 	@for p in $(DEV_FPORT) $(DEV_BPORT) $(DEV_MPORT); do \
 	  pids=$$(lsof -nP -tiTCP:$$p -sTCP:LISTEN 2>/dev/null); \
@@ -1020,7 +1025,8 @@ dev-down:
 	      echo "  SIGTERM :$$p $$pid ($$comm)"; kill $$pid 2>/dev/null || true; \
 	    else \
 	      echo "  ✗ REFUSED :$$p $$pid ($$comm) — not a dev server, dev-down leaves it alone"; \
-	      echo "    (a container publishes this port: stop it with docker compose, never here)"; \
+	      echo "    (if a container publishes this port, stop it with docker compose, never here)"; \
+	      echo "    NOTE: this names a POSSIBILITY, not a finding — nothing here asked Docker."; \
 	    fi; \
 	  done; \
 	done; true

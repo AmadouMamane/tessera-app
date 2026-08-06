@@ -369,7 +369,17 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # 133 (2026-08-01): GET /observability/control-series — a control's curve, as buckets of
     # the aggregate payloads already on this surface. Same handlers, narrower windows; the
     # buckets carry counts and rates, never a turn and never a subject.
-    assert len(public) == 134
+    # 134 (2026-08-05): GET /observability/components — connection health per declared
+    # component (a masked DSN, a URL, an HTTP status). No store row, no subject, no scope.
+    # 135 (2026-08-06): GET /observability/component-history — the same component verdicts as
+    # 134, over time: durations per verdict and the instants they changed. Still no store row
+    # and no subject; what it adds is a clock, not a source.
+    # 136 (2026-08-06): GET /observability/instrumentation-coverage — signal 92 for the fleet.
+    # Per agent, the share of a DECLARED attribute contract stamped on its latest business
+    # event. It reports that a field was present, never the field's value, so no business-event
+    # content crosses it; the only identifier it names is the agent id, which every other read
+    # on this surface already carries.
+    assert len(public) == 136
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

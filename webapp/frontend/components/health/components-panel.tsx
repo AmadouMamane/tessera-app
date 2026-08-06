@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { observedAt } from "@/components/health/observability-shared";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,7 +51,7 @@ export function ComponentsPanel() {
                 invites the reader to assume "now". */}
             <span className="text-[0.66rem] text-[var(--muted-foreground)]">
               {t("checked", {
-                when: format.relativeTime(new Date(query.data.observed_at * 1000)),
+                when: format.relativeTime(observedAt(query.data.observed_at)),
               })}
             </span>
             <Badge tone={tone(query.data.verdict === "clear" ? "ok" : query.data.verdict)}>
@@ -69,14 +70,23 @@ export function ComponentsPanel() {
           // A failed READ is not an empty result: say the read failed, never "0 components".
           <Badge tone="danger">{t("unreadable")}</Badge>
         ) : query.data && query.data.components.length > 0 ? (
+          // `table-fixed`, per docs/table-rhythm-playbook.md: auto layout hands its leftover
+          // width to a column of its own choosing and the choice changes with the viewport,
+          // which is what "the columns look random" is. The identity column is sized to its
+          // content and left-aligned; the prose column takes a flat share, right-aligned, so
+          // its leading air matches its neighbours' instead of being whatever is left.
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[0.72rem]">
+            <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
               <thead>
                 <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
-                  <th className="px-1.5 py-1 font-medium">{t("col.name")}</th>
-                  <th className="px-1.5 py-1 font-medium">{t("col.verdict")}</th>
+                  <th className="w-[8.5rem] px-1.5 py-1 font-medium 2xl:w-[10rem]">
+                    {t("col.name")}
+                  </th>
+                  <th className="w-[6rem] px-1.5 py-1 font-medium">{t("col.verdict")}</th>
                   <th className="px-1.5 py-1 font-medium">{t("col.interrogates")}</th>
-                  <th className="px-1.5 py-1 font-medium">{t("col.detail")}</th>
+                  <th className="w-[38%] px-1.5 py-1 pr-2 text-right font-medium">
+                    {t("col.detail")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -89,15 +99,24 @@ export function ComponentsPanel() {
                         colSpan={4}
                         className="px-1.5 pb-1 pt-3 text-left text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]"
                       >
-                        {t(`group.${group}`, { n: rows.length })}
+                        <span className="flex items-baseline gap-2">
+                          {t(`group.${group}`, { n: rows.length })}
+                          {/* The two halves answer DIFFERENT questions and were rendered
+                              identically: Grafana being down is not the agent being broken.
+                              A reader who cannot tell the groups apart looks in the wrong
+                              place, which is the failure this whole page is about. */}
+                          <span className="font-normal normal-case tracking-normal text-[var(--muted-foreground)]/70">
+                            {t(`groupAsks.${group}`)}
+                          </span>
+                        </span>
                       </th>
                     </tr>,
                     ...rows.map((component) => (
                       <tr
-                        key={component.name}
+                        key={`${group}-${component.name}`}
                         className="border-b border-[var(--tessera-border)]/60 last:border-0"
                       >
-                        <td className="whitespace-nowrap px-1.5 py-1 font-medium text-[var(--foreground)]">
+                        <td className="truncate px-1.5 py-1 font-medium text-[var(--foreground)]">
                           {component.name}
                         </td>
                         <td className="px-1.5 py-1">
@@ -105,10 +124,13 @@ export function ComponentsPanel() {
                             {t(`state.${component.verdict}`)}
                           </Badge>
                         </td>
-                        <td className="px-1.5 py-1 text-[var(--muted-foreground)]">
+                        <td className="truncate px-1.5 py-1 text-[var(--muted-foreground)]">
                           {component.interrogates || "—"}
                         </td>
-                        <td className="px-1.5 py-1 font-mono text-[0.66rem] text-[var(--muted-foreground)]">
+                        <td
+                          className="truncate px-1.5 py-1 pr-2 text-right font-mono text-[0.66rem] text-[var(--muted-foreground)]"
+                          title={component.detail}
+                        >
                           {component.detail}
                         </td>
                       </tr>

@@ -54,6 +54,11 @@ __all__ = [
 #: closed cockpit becomes a hole within two minutes instead of an assumption.
 CONTINUITY_WINDOW: Final = timedelta(seconds=120)
 
+#: Verdicts that decide something ABOUT THE COMPONENT. ``blind`` and ``skip`` are facts about the
+#: probe, not about the thing (ADR 0026), and they are the reason ``ok_ratio`` has its own
+#: denominator instead of reusing the observed total.
+_DECIDED: Final = frozenset({"ok", "fail"})
+
 #: Phases kept, oldest rolling off. Twenty components, a handful of real transitions a day:
 #: leaves months of history; a flapping component costs its own share and no one else's,
 #: because the cap is applied per component rather than to the file.
@@ -119,15 +124,33 @@ class Availability:
         return self.observed_seconds / self.window_seconds if self.window_seconds > 0 else 0.0
 
     @property
-    def ok_ratio(self) -> float | None:
-        """Share of the **observed** time the component was ``ok`` — ``None`` when unobserved.
+    def decidable_seconds(self) -> float:
+        """Observed time in which the probe reached a verdict about the thing — ``ok`` or ``fail``.
 
-        ``None`` rather than ``0.0`` or ``1.0``: a window nobody watched has no availability,
-        and both numeric answers are assertions the record cannot support.
+        Deliberately NOT ``observed_seconds``. Looking and failing to see is still looking, so
+        blind time is observed; but it says nothing about whether the component was up, and it
+        must not sit in the denominator of a number called *availability*.
         """
-        if self.observed_seconds <= 0:
+        return sum(
+            seconds for verdict, seconds in self.seconds_by_verdict.items() if verdict in _DECIDED
+        )
+
+    @property
+    def ok_ratio(self) -> float | None:
+        """Share of the **decidable** time the component was ``ok``, or ``None``.
+
+        ``None`` rather than ``0.0`` or ``1.0``, in the two cases where a number would be a lie:
+        a window nobody watched, and — the one that shipped and had to be caught on the screen —
+        a window watched entirely through a blind spot. Dividing by *observed* time made three
+        minutes of "could not resolve the address" render as **0.0 % available**, in the same
+        column and the same ink as a real outage. That is "the database is down" printed over
+        "nobody could ask the database", which is the single confusion this whole surface was
+        built to prevent, reintroduced in an arithmetic denominator.
+        """
+        decidable = self.decidable_seconds
+        if decidable <= 0:
             return None
-        return self.seconds_by_verdict.get("ok", 0.0) / self.observed_seconds
+        return self.seconds_by_verdict.get("ok", 0.0) / decidable
 
 
 def _state_path() -> Path:

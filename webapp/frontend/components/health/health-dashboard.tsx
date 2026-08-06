@@ -7,7 +7,13 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
+import { ComponentHistoryPanel } from "@/components/health/component-history";
 import { ComponentsPanel } from "@/components/health/components-panel";
+import { InstrumentationCoverage } from "@/components/health/instrumentation-coverage";
+import { ObservabilityChain } from "@/components/health/observability-chain";
+import { ObservabilityVerdict } from "@/components/health/observability-verdict";
+import { StoreConsequences } from "@/components/health/store-consequences";
+import { ToolLinks } from "@/components/health/tool-links";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,6 +70,10 @@ export function HealthDashboard() {
 
   return (
     <div className="flex flex-col gap-2.5">
+      {/* The page's answer, first. Everything below is the evidence for it — and a reader who
+          only reads one line must get the one that would change what they do next. */}
+      <ObservabilityVerdict />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatusCard
           title={t("cards.backend")}
@@ -120,13 +130,31 @@ export function HealthDashboard() {
         />
       </div>
 
-      {/* Tail-based sampling — REAL: analyze_sampling over the captured replay
-        bundles (slow / low-faithfulness turns are always kept; a deterministic
-        base-rate sample of the head is kept for baseline visibility). */}
+      {/* The chain, then what its silence costs, then the detail. The order is the reading
+          order of the question this page is now answering — *can I know what happened?* — and
+          it puts the two blocks that need no scrolling first. The components table becomes the
+          detail UNDER the chain rather than the page's substance: it is the raw material for a
+          verdict, and the verdict now sits above it. */}
+      <ObservabilityChain />
+
+      <div className="grid gap-2.5 xl:grid-cols-2">
+        <StoreConsequences />
+        <ComponentHistoryPanel />
+      </div>
+
+      <div className="grid gap-2.5 xl:grid-cols-2">
+        <InstrumentationCoverage />
+        <ToolLinks />
+      </div>
+
       {/* The components come BEFORE the tail-sampling card: they are what this page is
           for, and until 2026-08-05 they were simply absent — four KPI cards over /healthz and
           /readyz, none of which could go red for a dependency. */}
       <ComponentsPanel />
+
+      {/* Tail-based sampling — REAL: analyze_sampling over the captured replay
+        bundles (slow / low-faithfulness turns are always kept; a deterministic
+        base-rate sample of the head is kept for baseline visibility). */}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

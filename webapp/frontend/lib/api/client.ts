@@ -81,6 +81,8 @@ import {
   ClusterReportSchema,
   type ComplianceReport,
   ComplianceReportSchema,
+  type ComponentHistory,
+  ComponentHistorySchema,
   type ComponentsResponse,
   ComponentsResponseSchema,
   type ConformanceReport,
@@ -161,6 +163,8 @@ import {
   InboxOverviewSchema,
   type IncidentsOverview,
   IncidentsOverviewSchema,
+  type InstrumentationCoverage,
+  InstrumentationCoverageSchema,
   type IntegrationsOverview,
   IntegrationsOverviewSchema,
   type IntentReport,
@@ -448,6 +452,29 @@ export async function fetchReadiness(signal?: AbortSignal): Promise<HealthRespon
 /** Every declared component, what was interrogated, and what it answered. */
 export async function fetchComponents(signal?: AbortSignal): Promise<ComponentsResponse> {
   return request("/observability/components", { signal }, ComponentsResponseSchema);
+}
+
+/** Availability and verdict CHANGES per component — the dimension a live probe cannot have. */
+export async function fetchComponentHistory(
+  days: number,
+  signal?: AbortSignal,
+): Promise<ComponentHistory> {
+  return request(
+    `/observability/component-history?days=${encodeURIComponent(days)}`,
+    { signal },
+    ComponentHistorySchema,
+  );
+}
+
+/** Signal 92 for the whole fleet — how much of the L1 span contract each agent stamps. */
+export async function fetchInstrumentationCoverage(
+  signal?: AbortSignal,
+): Promise<InstrumentationCoverage> {
+  return request(
+    "/observability/instrumentation-coverage",
+    { signal },
+    InstrumentationCoverageSchema,
+  );
 }
 
 /** Append an optional `?at=<ISO>` as-of-T instant to an observability path (ADR 0011). */

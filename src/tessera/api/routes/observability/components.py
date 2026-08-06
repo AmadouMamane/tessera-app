@@ -278,10 +278,15 @@ async def observability_component_history(
                 "component": stat.component,
                 "seconds_by_verdict": stat.seconds_by_verdict,
                 "observed_seconds": round(stat.observed_seconds, 1),
+                # Observed time in which the probe reached a verdict about the component. The
+                # denominator of `ok_ratio`, published so a reader can see what the percentage
+                # is a percentage OF — blind minutes are observed and are not decidable.
+                "decidable_seconds": round(stat.decidable_seconds, 1),
                 "window_seconds": round(stat.window_seconds, 1),
                 "observed_ratio": round(stat.observed_ratio, 4),
-                # None when nothing was observed — never 0 or 1, both of which are claims the
-                # record cannot support.
+                # None when nothing was DECIDABLE — never 0 or 1, both of which are claims the
+                # record cannot support. A window watched entirely through a blind spot yields
+                # None, not 0 %.
                 "ok_ratio": None if stat.ok_ratio is None else round(stat.ok_ratio, 4),
             }
             for stat in sorted(stats.values(), key=lambda s: s.component)

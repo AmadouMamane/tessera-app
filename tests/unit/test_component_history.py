@@ -52,6 +52,36 @@ def test_time_nobody_watched_stays_out_of_the_numerator_and_the_denominator() ->
     assert stat.ok_ratio == 1.0, "of what was observed, all of it was ok — and that is all"
 
 
+def test_a_window_watched_entirely_through_a_blind_spot_has_no_availability() -> None:
+    """Caught on the screen, not in a test: three blind minutes rendered as **0.0 % available**.
+
+    Blind time IS observed — looking and failing to see is still looking — but it decides nothing
+    about the component, so it may not sit in the denominator of a number called availability.
+    Dividing by observed time printed "the database is down" over "nobody could ask the database",
+    in the same column and the same ink as a real outage.
+    """
+    unseeable = _phases(("clickhouse", "blind", _T0, _T0 + timedelta(minutes=3)))
+    stat = availability(since=_T0, until=_T0 + timedelta(hours=24), phases=unseeable)["clickhouse"]
+
+    assert stat.observed_seconds == 180.0, "the probe did look — that is not in question"
+    assert stat.decidable_seconds == 0.0, "…and it decided nothing about the component"
+    assert stat.ok_ratio is None, "so there is no availability to state, not even 0 %"
+
+
+def test_availability_is_a_share_of_decidable_time_not_of_watched_time() -> None:
+    """Half up, then down, then a blind stretch that must dilute neither."""
+    mixed = _phases(
+        ("prometheus", "ok", _T0, _T0 + timedelta(minutes=6)),
+        ("prometheus", "fail", _T0 + timedelta(minutes=6), _T0 + timedelta(minutes=8)),
+        ("prometheus", "blind", _T0 + timedelta(minutes=8), _T0 + timedelta(minutes=28)),
+    )
+    stat = availability(since=_T0, until=_T0 + timedelta(hours=1), phases=mixed)["prometheus"]
+
+    assert stat.observed_seconds == 1680.0
+    assert stat.decidable_seconds == 480.0
+    assert stat.ok_ratio == 0.75, "6 of the 8 minutes anybody could judge"
+
+
 def test_a_phase_does_not_run_on_to_the_edge_of_the_window() -> None:
     """The one-line bug this module is shaped against: clipping to `until`, not to now."""
     stale = _phases(("prometheus", "ok", _T0, _T0 + timedelta(minutes=1)))

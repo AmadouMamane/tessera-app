@@ -481,6 +481,76 @@ export const ComponentCheckSchema = z.object({
   detail: z.string(),
   interrogates: z.string(),
 });
+/**
+ * A capability's standing — the same three-valued alphabet the probe speaks, deliberately.
+ * `cannot_say` is not `lost`: an operator restarts a component for one and questions their own
+ * vantage point for the other.
+ */
+export const ConsequenceStateSchema = z.enum(["served", "lost", "cannot_say"]);
+export type ConsequenceState = z.infer<typeof ConsequenceStateSchema>;
+
+/** What travels an edge of the chain. Four kinds, because they fail independently. */
+export const ChainSignalSchema = z.enum(["traces", "metrics", "events", "state"]);
+export type ChainSignal = z.infer<typeof ChainSignalSchema>;
+
+export const ChainNodeSchema = z.object({
+  key: z.string(),
+  stage: z.enum(["emitter", "pipeline", "store", "viewer"]),
+  carries: z.array(ChainSignalSchema),
+  verdict: z.enum(["ok", "fail", "blind", "skip"]),
+  /**
+   * True for the emitter alone: nothing probes it from outside, because this very response is
+   * its proof. Carried rather than inferred so the UI can say why one node cannot go red.
+   */
+  self_evident: z.boolean(),
+});
+export type ChainNode = z.infer<typeof ChainNodeSchema>;
+
+export const ChainEdgeSchema = z.object({
+  source: z.string(),
+  target: z.string(),
+  signal: ChainSignalSchema,
+  /** The config file that wires this edge — the drawing's evidence, reachable by the reader. */
+  declared_in: z.string(),
+  /** Non-null when the edge exists only in one deployment profile (`remote`). */
+  profile: z.string().nullable(),
+});
+export type ChainEdge = z.infer<typeof ChainEdgeSchema>;
+
+/**
+ * What the cockpit stops being able to answer when a store goes quiet.
+ *
+ * The capability is declared (`reads` cites the module that queries the store); `state` is
+ * computed from the live probe. Keeping the two apart is the point: a page that states a
+ * consequence it did not measure is exactly the over-claim this project forbids.
+ */
+export const ConsequenceSchema = z.object({
+  key: z.string(),
+  needs: z.array(z.string()),
+  reads: z.string(),
+  /** True when losing it can BLOCK an agent rather than merely blank a chart. */
+  gates_agents: z.boolean(),
+  state: ConsequenceStateSchema,
+  /** Which dependency is responsible — so the row names a component instead of a puzzle. */
+  because: z.array(z.string()),
+});
+export type Consequence = z.infer<typeof ConsequenceSchema>;
+
+/**
+ * Where a browser opens a tool.
+ *
+ * `loopback` is a FACT about the URL, not a recommendation: `127.0.0.1:13000` is Grafana on the
+ * deployment host, and a reader on `tessera.example.com` clicking it reaches whatever happens to
+ * run on their own port 13000. The caller pairs it with its own vantage point before offering a
+ * live link — otherwise the page promises closed doors.
+ */
+export const ComponentLinkSchema = z.object({
+  key: z.string(),
+  url: z.string(),
+  loopback: z.boolean(),
+});
+export type ComponentLink = z.infer<typeof ComponentLinkSchema>;
+
 export const ComponentsResponseSchema = z.object({
   observed_at: z.number(),
   verdict: z.enum(["clear", "fail", "blind"]),
@@ -493,8 +563,92 @@ export const ComponentsResponseSchema = z.object({
     stack_ok: z.number().int().nonnegative(),
   }),
   components: z.array(ComponentCheckSchema),
+  chain: z.object({
+    nodes: z.array(ChainNodeSchema),
+    edges: z.array(ChainEdgeSchema),
+    /** Per signal, whether it still gets from the agent to somewhere it is kept. */
+    signals: z.record(ChainSignalSchema, ConsequenceStateSchema),
+  }),
+  consequences: z.array(ConsequenceSchema),
+  links: z.array(ComponentLinkSchema),
 });
 export type ComponentsResponse = z.infer<typeof ComponentsResponseSchema>;
+
+/**
+ * Component verdicts over time — availability and, above all, CHANGES.
+ *
+ * Read `ok_ratio` only beside `observed_ratio`. The probe runs when the cockpit asks, so a
+ * window is watched in patches: "99.9 % available" over a window watched for four of its
+ * twenty-four hours is a true statement about four hours and a false one about the day. Both
+ * numbers travel together, and the UI may not render one without the other.
+ */
+export const ComponentAvailabilitySchema = z.object({
+  component: z.string(),
+  seconds_by_verdict: z.record(z.string(), z.number()),
+  observed_seconds: z.number(),
+  /**
+   * Observed time in which the probe reached a verdict about the component — `ok` or `fail`.
+   * The denominator of `ok_ratio`: blind minutes are observed and decide nothing, so they are
+   * excluded, and a window watched entirely through a blind spot has no availability at all.
+   */
+  decidable_seconds: z.number(),
+  window_seconds: z.number(),
+  observed_ratio: z.number(),
+  /** Null when nothing was DECIDABLE — never 0 or 1, both of which are unsupported claims. */
+  ok_ratio: z.number().nullable(),
+});
+export type ComponentAvailability = z.infer<typeof ComponentAvailabilitySchema>;
+
+export const ComponentTransitionSchema = z.object({
+  component: z.string(),
+  from: z.string(),
+  to: z.string(),
+  at: z.string(),
+  /**
+   * True when the change was found after a hole in the record: `at` is then a DISCOVERY time,
+   * not an occurrence time, and the wording has to say so.
+   */
+  after_gap: z.boolean(),
+});
+export type ComponentTransition = z.infer<typeof ComponentTransitionSchema>;
+
+export const ComponentHistorySchema = z.object({
+  window: z.object({ since: z.string(), until: z.string(), days: z.number() }),
+  availability: z.array(ComponentAvailabilitySchema),
+  transitions: z.array(ComponentTransitionSchema),
+  continuity_window_s: z.number(),
+});
+export type ComponentHistory = z.infer<typeof ComponentHistorySchema>;
+
+/**
+ * Signal 92 — how much of the L1 span contract each agent actually stamps.
+ *
+ * `status` distinguishes the two ways a percentage can be absent, and they are not the same
+ * fact: `no_evidence` is a store that answered "none", `unverifiable` is a store that did not
+ * answer. Rendering the second as 0 % turns a ClickHouse outage into a fleet that instruments
+ * nothing.
+ */
+export const AgentCoverageSchema = z.object({
+  agent_id: z.string(),
+  covered_pct: z.number().nullable(),
+  missing_attributes: z.array(z.string()),
+  required_attributes: z.array(z.string()),
+  evidence_at: z.string().nullable(),
+  status: z.enum(["measured", "no_evidence", "unverifiable"]),
+  evidence_source: z.string(),
+  measures: z.string(),
+});
+export type AgentCoverage = z.infer<typeof AgentCoverageSchema>;
+
+export const InstrumentationCoverageSchema = z.object({
+  observed_at: z.string(),
+  blind: z.boolean(),
+  required_attributes: z.array(z.string()),
+  evidence_source: z.string(),
+  measures: z.string(),
+  agents: z.array(AgentCoverageSchema),
+});
+export type InstrumentationCoverage = z.infer<typeof InstrumentationCoverageSchema>;
 
 export const BudgetSnapshotSchema = z.object({
   input_tokens: z.number().int().nonnegative(),
