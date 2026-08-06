@@ -1224,7 +1224,7 @@
       }
     },
     "title": "Observability",
-    "description": "What the stack lets you know: the chain of signals, the verdict each store carries, and what changed over time.",
+    "description": "What the stack lets you know: where each signal goes, what can no longer be known if a component falls, and what changed over time.",
     "cards": {
       "backend": "Tessera service",
       "readiness": "Readiness",
@@ -1337,7 +1337,7 @@
     },
     "chain": {
       "title": "The observability chain",
-      "what": "The route each signal actually takes, from the agent to the store that keeps it — and the state of every stage.",
+      "what": "The route each signal actually takes, from the agent to wherever it is kept — and the state of every stage.",
       "how": "Nodes and edges are DECLARED from the files that wire them (hover an edge: it cites its own), with verdicts joined from the probe. A signal arrives as soon as one whole path is green: metrics reach Prometheus by TWO routes, so a dead collector does not blind them.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Unreadable — the chain could not be obtained",
@@ -1451,7 +1451,7 @@
         "unverifiable": "cannot say",
         "not_applicable": "emits no business events"
       },
-      "inapplicable": "{n} agent(s) are out of this measurement's reach, and that is not a shortcoming: they can serve turns without emitting business events."
+      "inapplicable": "{n} agent(s) are out of this measurement's reach, and that is not a shortcoming: they can handle requests without emitting business events."
     },
     "tools": {
       "title": "Open the tools",

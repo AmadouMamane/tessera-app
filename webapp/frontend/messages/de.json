@@ -1224,7 +1224,7 @@
       }
     },
     "title": "Observability",
-    "description": "Was der Stack wissen lässt: die Signalkette, das Urteil, das jeder Speicher trägt, und was sich im Zeitverlauf geändert hat.",
+    "description": "Was der Stack wissen lässt: der Weg der Signale, was nicht mehr gewusst werden kann, wenn eine Komponente ausfällt, und was sich im Zeitverlauf geändert hat.",
     "cards": {
       "backend": "Tessera-Dienst",
       "readiness": "Verfügbarkeit",
@@ -1337,7 +1337,7 @@
     },
     "chain": {
       "title": "Die Observability-Kette",
-      "what": "Der tatsächliche Weg jedes Signals vom Agenten bis zum Speicher, der es aufbewahrt — samt Zustand jeder Station.",
+      "what": "Der tatsächliche Weg jedes Signals, vom Agenten bis dorthin, wo es aufbewahrt wird — samt Zustand jeder Station.",
       "how": "Knoten und Kanten sind DEKLARIERT, aus den Dateien, die sie verdrahten (Kante überfahren: sie nennt ihre eigene); die Urteile stammen aus der Sonde. Ein Signal gilt als angekommen, sobald ein ganzer Pfad grün ist: Metriken erreichen Prometheus über ZWEI Wege, ein toter Collector macht sie also nicht blind.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Nicht lesbar — die Kette konnte nicht ermittelt werden",
@@ -1451,7 +1451,7 @@
         "unverifiable": "kann nichts sagen",
         "not_applicable": "sendet keine Geschäftsereignisse"
       },
-      "inapplicable": "{n} Agent(en) liegen außerhalb dieser Messung, und das ist kein Mangel: sie können Turns bedienen, ohne Geschäftsereignisse zu senden."
+      "inapplicable": "{n} Agent(en) liegen außerhalb dieser Messung, und das ist kein Mangel: sie können Anfragen bearbeiten, ohne Geschäftsereignisse zu senden."
     },
     "tools": {
       "title": "Werkzeuge öffnen",
