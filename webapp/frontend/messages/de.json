@@ -1269,8 +1269,8 @@
       "col": {
         "name": "Komponente",
         "verdict": "Urteil",
-        "interrogates": "Was befragt wird",
-        "detail": "Was sie geantwortet hat"
+        "asked": "Was gefragt wurde",
+        "answered": "Was es antwortete"
       },
       "group": {
         "stack": "Der Stack — {n} Komponenten",
@@ -1279,7 +1279,34 @@
       "groupAsks": {
         "stack": "was der Betreiber betreibt",
         "precondition": "was der Prozess braucht, um einen Turn zu bedienen"
-      }
+      },
+      "role": {
+        "postgres": "beweiskräftiges Ledger + Retrieval-Speicher",
+        "redis": "Agent-Cache · Ratenbegrenzung",
+        "clickhouse": "Geschäftsereignisse + Online-Scores",
+        "prometheus": "die Metriken, aus denen die L-Stufen berechnet werden",
+        "grafana": "Metrik-Dashboards",
+        "otel-collector": "Trace-Annahme (OTLP)",
+        "phoenix": "Trace-Ansicht",
+        "langfuse-web": "LLM-Observability-Oberfläche",
+        "langfuse-worker": "Langfuse-Ingestion",
+        "langfuse-db": "Langfuses eigenes Postgres",
+        "langfuse-redis": "Langfuses eigene Queue",
+        "minio": "Ablage großer Trace-Daten (S3)"
+      },
+      "asks": {
+        "tcp": "nimmt der Port eine Verbindung an",
+        "http": "HTTP-GET-Anfrage {path}",
+        "eval-package": "lässt sich das eval-Paket importieren",
+        "eval-reports": "der Report-Loader, den die Dashboards aufrufen",
+        "app-factory": "lässt sich die Anwendung bauen",
+        "operator-key": "ist der Signierschlüssel für Betreiber-Assertions vorhanden",
+        "postgres": "die eigene Verbindung des Ledgers",
+        "clickhouse": "der eigene HTTP-Read des ClickHouse-Adapters",
+        "prometheus": "die eigene Abfrage des Prometheus-Adapters",
+        "ollama": "die Modell-Liste des Chat-Backends"
+      },
+      "answeredByVerdict": "die Frage war die Antwort — siehe Urteil"
     },
     "verdict": {
       "observing": "Ich beobachte {ok}/{total} Stack-Komponenten",

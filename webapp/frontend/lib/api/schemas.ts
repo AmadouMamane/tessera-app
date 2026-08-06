@@ -478,7 +478,19 @@ export const ComponentCheckSchema = z.object({
    */
   group: z.enum(["stack", "precondition"]),
   verdict: z.enum(["ok", "fail", "blind", "skip"]),
+  /** What came BACK, in the probe's own words. The evidence — never rewritten. */
   detail: z.string(),
+  /**
+   * What the thing IS (stack rows only; a precondition is not a thing).
+   *
+   * Its own field because it used to share one with the question below, under a single heading:
+   * a stack row showed its role there and a precondition row showed what was asked. Two
+   * meanings, one column.
+   */
+  role: z.string().default(""),
+  /** What was PUT TO it — derived for a stack component, declared for a precondition. */
+  asked: z.string().default(""),
+  /** Legacy alias of `asked`, kept so an older client renders something rather than nothing. */
   interrogates: z.string(),
 });
 /**
@@ -550,6 +562,8 @@ export const ComponentLinkSchema = z.object({
   loopback: z.boolean(),
 });
 export type ComponentLink = z.infer<typeof ComponentLinkSchema>;
+
+export type ComponentCheck = z.infer<typeof ComponentCheckSchema>;
 
 export const ComponentsResponseSchema = z.object({
   observed_at: z.number(),

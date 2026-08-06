@@ -78,6 +78,15 @@ _stack_cache_lock = Lock()
 #: page and the registry cannot drift into two answers.
 _STACK_ROLES: Final[dict[str, str]] = {c.key: c.role for c in STACK_COMPONENTS}
 
+#: What was PUT TO each stack component, DERIVED from how it is probed rather than written out.
+#: A second hand-maintained sentence per component is a second thing to get wrong, and this one
+#: has exactly one right answer already sitting in the declaration: the protocol, and the path
+#: for HTTP. The surface translates it; this is the fallback and the machine-readable form.
+_STACK_QUESTIONS: Final[dict[str, str]] = {
+    c.key: (f"HTTP GET {c.path or '/'}" if c.kind == "http" else "TCP connect")
+    for c in STACK_COMPONENTS
+}
+
 #: What each check actually interrogates — the evidence, so a reader can tell a dependency
 #: being down from a probe that never ran. Keyed by ``Check.name``; an unknown name degrades to
 #: no subtitle rather than to a guess.
@@ -147,17 +156,43 @@ async def observability_components() -> dict[str, object]:
     observed_at, report = await asyncio.to_thread(_probe)
     _, stack = await asyncio.to_thread(_stack)
 
-    def entry(check: Check, group: str, subtitle: str) -> dict[str, object]:
+    def entry(check: Check, group: str, *, role: str, asked: str) -> dict[str, object]:
+        """One row, with the three facts kept apart instead of two of them sharing a cell.
+
+        They were not distinct before, and the table said so: one column headed *"ce qui est
+        interrogé"* held the component's ROLE for a stack row and the QUESTION for a
+        precondition row — two different meanings under one heading. Beside it, *"ce qu'il a
+        répondu"* showed ``detail``, which for ``eval-package`` is literally the question again:
+        ``import eval, import eval.runner`` in both cells.
+
+        * ``role``  — what the thing IS. Empty for a precondition: a precondition is not a thing.
+        * ``asked`` — what was PUT TO IT. Derived for a stack component (it is a property of the
+          probe, not prose to maintain), declared for a precondition.
+        * ``detail`` — what came BACK, in the probe's own words. Left verbatim, because it is the
+          evidence; the surface hides it when it merely echoes the question.
+        """
         return {
             "name": check.name,
             "group": group,
             "verdict": check.verdict.value,
             "detail": check.detail,
-            "interrogates": subtitle,
+            "role": role,
+            "asked": asked,
+            # Kept so an older client keeps rendering something rather than an empty column.
+            "interrogates": asked,
         }
 
-    components = [entry(check, "stack", _STACK_ROLES.get(check.name, "")) for check in stack] + [
-        entry(check, "precondition", _INTERROGATES.get(check.name, "")) for check in report.checks
+    components = [
+        entry(
+            check,
+            "stack",
+            role=_STACK_ROLES.get(check.name, ""),
+            asked=_STACK_QUESTIONS.get(check.name, ""),
+        )
+        for check in stack
+    ] + [
+        entry(check, "precondition", role="", asked=_INTERROGATES.get(check.name, ""))
+        for check in report.checks
     ]
     every = (*stack, *report.checks)
     fail = sum(1 for c in every if c.verdict is Verdict.FAIL)

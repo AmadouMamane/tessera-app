@@ -175,6 +175,43 @@ def test_the_published_instant_is_when_the_probe_ran_not_when_it_was_asked() -> 
     ), "the second read was served from cache, so it must publish the FIRST probe's instant"
 
 
+def test_what_a_thing_IS_and_what_it_was_ASKED_are_two_different_fields() -> None:
+    """One column carried two meanings, and the operator called the result charabia.
+
+    ``interrogates`` held the component's ROLE on a stack row ("ledger + retrieval store") and
+    the QUESTION on a precondition row ("import eval, import eval.runner"), under one heading.
+    Beside it, the answer column showed ``detail`` — which for ``eval-package`` is that same
+    question, word for word. Two cells, one string, no information.
+    """
+    payload = _serve(
+        PreflightReport((Check("eval-package", Verdict.OK, "import eval, import eval.runner"),)),
+        stack=(Check("postgres", Verdict.OK, "postgres:5432 accepts connections"),),
+    )
+    component = _by_name(payload, "stack")["postgres"]
+    precondition = _by_name(payload, "precondition")["eval-package"]
+
+    assert component["role"], "a stack component says what it IS"
+    assert component["asked"] == "TCP connect", "…and, separately, what was PUT to it"
+    assert component["role"] != component["asked"], "the two facts may not collapse into one"
+
+    assert precondition["role"] == "", "a precondition is not a thing; it has no role"
+    assert precondition["asked"], "it does have a question"
+    # The echo itself: pinned so the surface can detect and suppress it rather than print it
+    # twice. If a future probe stops restating its question, this is where that is noticed.
+    assert (
+        precondition["detail"] == precondition["asked"]
+    ), "eval-package answers with its own question — the case the surface must not render twice"
+
+
+def test_a_stack_question_is_derived_from_the_probe_not_written_out() -> None:
+    """A second hand-maintained sentence per component is a second thing to get wrong.
+
+    The protocol and path already live in the declaration, and they are the whole question.
+    """
+    payload = _serve(PreflightReport(()), stack=(Check("clickhouse", Verdict.OK, "HTTP 200"),))
+    assert _by_name(payload, "stack")["clickhouse"]["asked"] == "HTTP GET /ping"
+
+
 def test_the_two_halves_are_counted_separately_so_a_sentence_cannot_mix_them() -> None:
     """The headline opens with the STACK ratio; every clause after it must share that scope.
 

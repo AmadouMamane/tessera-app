@@ -1269,8 +1269,8 @@
       "col": {
         "name": "Component",
         "verdict": "Verdict",
-        "interrogates": "What is interrogated",
-        "detail": "What it answered"
+        "asked": "What it was asked",
+        "answered": "What it answered"
       },
       "group": {
         "stack": "The stack — {n} components",
@@ -1279,7 +1279,34 @@
       "groupAsks": {
         "stack": "what the operator runs",
         "precondition": "what the process needs to serve a turn"
-      }
+      },
+      "role": {
+        "postgres": "opposable ledger + retrieval store",
+        "redis": "agent cache · rate limiting",
+        "clickhouse": "business events + online scores",
+        "prometheus": "the metrics the L-levels are computed from",
+        "grafana": "metrics dashboards",
+        "otel-collector": "trace intake (OTLP)",
+        "phoenix": "trace viewer",
+        "langfuse-web": "LLM observability UI",
+        "langfuse-worker": "Langfuse ingestion",
+        "langfuse-db": "Langfuse's own Postgres",
+        "langfuse-redis": "Langfuse's own queue",
+        "minio": "trace blob storage (S3)"
+      },
+      "asks": {
+        "tcp": "does the port accept a connection",
+        "http": "HTTP GET {path}",
+        "eval-package": "does the eval package import",
+        "eval-reports": "the report loader the dashboards call",
+        "app-factory": "does the application build",
+        "operator-key": "is the operator assertion signing key present",
+        "postgres": "the ledger store's own connection",
+        "clickhouse": "the ClickHouse adapter's own HTTP read",
+        "prometheus": "the Prometheus adapter's own query",
+        "ollama": "the chat backend's model list"
+      },
+      "answeredByVerdict": "the question was the answer — see the verdict"
     },
     "verdict": {
       "observing": "I observe {ok}/{total} stack components",

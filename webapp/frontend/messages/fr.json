@@ -1269,8 +1269,8 @@
       "col": {
         "name": "Composant",
         "verdict": "Verdict",
-        "interrogates": "Ce qui est interrogé",
-        "detail": "Ce qu'il a répondu"
+        "asked": "Ce qui lui a été demandé",
+        "answered": "Ce qu'il a répondu"
       },
       "group": {
         "stack": "La pile — {n} composants",
@@ -1279,7 +1279,34 @@
       "groupAsks": {
         "stack": "ce que l'opérateur fait tourner",
         "precondition": "ce dont le processus a besoin pour servir un tour"
-      }
+      },
+      "role": {
+        "postgres": "registre opposable + magasin de recherche",
+        "redis": "cache de l'agent · limitation de débit",
+        "clickhouse": "événements métier + scores en ligne",
+        "prometheus": "les métriques dont les niveaux L sont calculés",
+        "grafana": "tableaux de bord des métriques",
+        "otel-collector": "réception des traces (OTLP)",
+        "phoenix": "lecture des traces",
+        "langfuse-web": "interface d'observabilité LLM",
+        "langfuse-worker": "ingestion Langfuse",
+        "langfuse-db": "le Postgres propre à Langfuse",
+        "langfuse-redis": "la file propre à Langfuse",
+        "minio": "stockage des traces volumineuses (S3)"
+      },
+      "asks": {
+        "tcp": "le port accepte-t-il une connexion",
+        "http": "requête HTTP GET {path}",
+        "eval-package": "le paquet eval s'importe-t-il",
+        "eval-reports": "le chargeur de rapports que lisent les tableaux de bord",
+        "app-factory": "l'application se construit-elle",
+        "operator-key": "la clé de signature des assertions opérateur est-elle présente",
+        "postgres": "la connexion propre au registre",
+        "clickhouse": "la lecture HTTP propre à l'adaptateur ClickHouse",
+        "prometheus": "la requête propre à l'adaptateur Prometheus",
+        "ollama": "la liste de modèles du moteur de chat"
+      },
+      "answeredByVerdict": "la question était la réponse — voir le verdict"
     },
     "verdict": {
       "observing": "J'observe {ok}/{total} composants de la pile",

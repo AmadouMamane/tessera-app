@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchComponents } from "@/lib/api/client";
+import type { ComponentCheck } from "@/lib/api/schemas";
 
 const POLL_MS = 15_000;
 
@@ -23,6 +24,16 @@ const POLL_MS = 15_000;
  * Three verdicts, not two. `blind` — the probe could not look at all — is rendered as its own
  * state and never as "ok": a witness that cannot see may not report ok (ADR 0026). A reader who
  * cannot tell "the database is down" from "nobody asked the database" has no information.
+ *
+ * Four facts per row, and they used to be three columns carrying two meanings. One heading —
+ * *"ce qui est interrogé"* — held the component's ROLE on a stack row and the QUESTION on a
+ * precondition row; beside it *"ce qu'il a répondu"* showed the probe's detail, which for
+ * `eval-package` is the question again, word for word, in both cells. The operator's verdict on
+ * that was "c'est un peu du charabia", and it was.
+ *
+ * So: WHAT IT IS sits under the name, WHAT WAS ASKED is its own column and is translated, and
+ * WHAT CAME BACK is the probe's own words in monospace — dropped when it merely echoes the
+ * question, because a cell that repeats its neighbour is noise wearing the costume of evidence.
  */
 export function ComponentsPanel() {
   const t = useTranslations("health.components");
@@ -73,19 +84,19 @@ export function ComponentsPanel() {
           // `table-fixed`, per docs/table-rhythm-playbook.md: auto layout hands its leftover
           // width to a column of its own choosing and the choice changes with the viewport,
           // which is what "the columns look random" is. The identity column is sized to its
-          // content and left-aligned; the prose column takes a flat share, right-aligned, so
+          // content and left-aligned; the evidence column takes a flat share, right-aligned, so
           // its leading air matches its neighbours' instead of being whatever is left.
           <div className="overflow-x-auto">
             <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
               <thead>
                 <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
-                  <th className="w-[8.5rem] px-1.5 py-1 font-medium 2xl:w-[10rem]">
+                  <th className="w-[11rem] px-1.5 py-1 font-medium 2xl:w-[14rem]">
                     {t("col.name")}
                   </th>
-                  <th className="w-[6rem] px-1.5 py-1 font-medium">{t("col.verdict")}</th>
-                  <th className="px-1.5 py-1 font-medium">{t("col.interrogates")}</th>
-                  <th className="w-[38%] px-1.5 py-1 pr-2 text-right font-medium">
-                    {t("col.detail")}
+                  <th className="w-[6.5rem] px-1.5 py-1 font-medium">{t("col.verdict")}</th>
+                  <th className="px-1.5 py-1 font-medium">{t("col.asked")}</th>
+                  <th className="w-[36%] px-1.5 py-1 pr-2 text-right font-medium">
+                    {t("col.answered")}
                   </th>
                 </tr>
               </thead>
@@ -112,28 +123,7 @@ export function ComponentsPanel() {
                       </th>
                     </tr>,
                     ...rows.map((component) => (
-                      <tr
-                        key={`${group}-${component.name}`}
-                        className="border-b border-[var(--tessera-border)]/60 last:border-0"
-                      >
-                        <td className="truncate px-1.5 py-1 font-medium text-[var(--foreground)]">
-                          {component.name}
-                        </td>
-                        <td className="px-1.5 py-1">
-                          <Badge tone={tone(component.verdict)}>
-                            {t(`state.${component.verdict}`)}
-                          </Badge>
-                        </td>
-                        <td className="truncate px-1.5 py-1 text-[var(--muted-foreground)]">
-                          {component.interrogates || "—"}
-                        </td>
-                        <td
-                          className="truncate px-1.5 py-1 pr-2 text-right font-mono text-[0.66rem] text-[var(--muted-foreground)]"
-                          title={component.detail}
-                        >
-                          {component.detail}
-                        </td>
-                      </tr>
+                      <ComponentRow key={`${group}-${component.name}`} component={component} />
                     )),
                   ];
                 })}
@@ -146,4 +136,70 @@ export function ComponentsPanel() {
       </CardContent>
     </Card>
   );
+}
+
+/** Normalise for the echo test: whitespace and case must not make two identical cells differ. */
+const flatten = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+
+function ComponentRow({ component }: { component: ComponentCheck }) {
+  const t = useTranslations("health.components");
+  const tone =
+    component.verdict === "ok" ? "success" : component.verdict === "fail" ? "danger" : "warning";
+
+  // Translated where a translation exists, served English otherwise. A missing key must degrade
+  // to the technical string — which is at least true — never to a blank cell or to next-intl's
+  // rendering of the key path.
+  const role = t.has(`role.${component.name}`) ? t(`role.${component.name}`) : component.role;
+  const asked = t.has(`asks.${component.name}`)
+    ? t(`asks.${component.name}`)
+    : askedLabel(component.asked, t);
+
+  // `eval-package` answers `import eval, import eval.runner` — its own question, restated. The
+  // badge already carries the outcome, so an echoing cell adds nothing and costs the reader a
+  // double-take.
+  const echoes = flatten(component.detail) === flatten(component.asked);
+
+  return (
+    <tr className="border-b border-[var(--tessera-border)]/60 last:border-0 align-top">
+      <td className="px-1.5 py-1">
+        <span className="block truncate font-medium text-[var(--foreground)]">
+          {component.name}
+        </span>
+        {role ? (
+          <span className="block truncate text-[0.62rem] text-[var(--muted-foreground)]">
+            {role}
+          </span>
+        ) : null}
+      </td>
+      <td className="px-1.5 py-1">
+        <Badge tone={tone}>{t(`state.${component.verdict}`)}</Badge>
+      </td>
+      <td className="truncate px-1.5 py-1 text-[var(--muted-foreground)]" title={component.asked}>
+        {asked || "—"}
+      </td>
+      <td
+        className="truncate px-1.5 py-1 pr-2 text-right font-mono text-[0.66rem] text-[var(--muted-foreground)]"
+        title={component.detail}
+      >
+        {echoes ? (
+          <span className="font-sans italic">{t("answeredByVerdict")}</span>
+        ) : (
+          component.detail
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * The derived stack question, rendered in the reader's language.
+ *
+ * The backend sends `TCP connect` / `HTTP GET /ping` — derived from the probe rather than
+ * written out per component, so there is no second list to keep in step. Only the shape needs
+ * translating, and the path stays verbatim because it is an address, not prose.
+ */
+function askedLabel(asked: string, t: (key: string, values?: Record<string, string>) => string) {
+  if (asked === "TCP connect") return t("asks.tcp");
+  const path = asked.match(/^HTTP GET (.+)$/)?.[1];
+  return path ? t("asks.http", { path }) : asked;
 }
