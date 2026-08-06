@@ -68,6 +68,7 @@ from tessera.guard.redaction import (
     apply_egress_guard,
     apply_output_guard,
     apply_pii_egress_recall,
+    apply_prompt_egress,
     contains_pii,
     emit_output_redaction,
     mask_pan,
@@ -1339,6 +1340,29 @@ async def _stream_turn(  # noqa: PLR0915, PLR0912  SSE turn handler is inherentl
     egress_blocked = (
         egress_guard_record is not None and egress_guard_record.decision == DecisionKind.DENY.value
     )
+    # Instruction leak (prompt-egress), on THIS transport too. The guard leg landed with a single
+    # call site — `reporter.run` — and ADR 0049 already established, for the secret leg, that the
+    # REPORTER node never runs in production: `/chat` interrupts before it. So the third outbound
+    # leak was guarded on the canary/eval path and open on the customer path, which is the
+    # grounding P0 repeating itself a third time (grounding, secrets-egress, this). Measured on
+    # the corpus: 38 of 19 203 responses reproduce a declared `no_egress` span across seven cases.
+    #
+    # Runs on the RAW answer for the same reason the secret leg does, and only when the secret
+    # leg did not already withhold — a credential is the graver disclosure and its notice is the
+    # one the customer should see.
+    if not egress_blocked:
+        prompt_text, prompt_guard_record = apply_prompt_egress(
+            raw_answer, language=resolved_language, disabled=pii_guard_off
+        )
+        if (
+            prompt_guard_record is not None
+            and prompt_guard_record.decision == DecisionKind.DENY.value
+        ):
+            egress_text, egress_guard_record, egress_blocked = (
+                prompt_text,
+                prompt_guard_record,
+                True,
+            )
     if egress_blocked:
         final_response = egress_text
         turn_citations = []
