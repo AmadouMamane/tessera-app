@@ -1264,7 +1264,7 @@
         "ok": "OK",
         "fail": "Down",
         "blind": "Blind spot",
-        "skip": "Not applicable"
+        "skip": "not applicable"
       },
       "col": {
         "name": "Component",
@@ -1274,39 +1274,49 @@
       },
       "group": {
         "stack": "The stack — {n} components",
-        "precondition": "Process preconditions — {n}"
+        "precondition": "What the process needs — {n}"
       },
       "groupAsks": {
         "stack": "what the operator runs",
-        "precondition": "what the process needs to serve a turn"
+        "precondition": "without which the agent cannot answer"
       },
       "role": {
-        "postgres": "opposable ledger + retrieval store",
+        "postgres": "act ledger + document retrieval",
         "redis": "agent cache · rate limiting",
         "clickhouse": "business events + online scores",
-        "prometheus": "the metrics the L-levels are computed from",
+        "prometheus": "the metrics the cockpit's figures come from",
         "grafana": "metrics dashboards",
-        "otel-collector": "trace intake (OTLP)",
+        "otel-collector": "trace intake",
         "phoenix": "trace viewer",
         "langfuse-web": "LLM observability UI",
         "langfuse-worker": "Langfuse ingestion",
         "langfuse-db": "Langfuse's own Postgres",
         "langfuse-redis": "Langfuse's own queue",
-        "minio": "trace blob storage (S3)"
+        "minio": "large trace storage"
       },
       "asks": {
-        "tcp": "does the port accept a connection",
-        "http": "HTTP GET {path}",
-        "eval-package": "does the eval package import",
-        "eval-reports": "the report loader the dashboards call",
-        "app-factory": "does the application build",
-        "operator-key": "is the operator assertion signing key present",
-        "postgres": "the ledger store's own connection",
-        "clickhouse": "the ClickHouse adapter's own HTTP read",
-        "prometheus": "the Prometheus adapter's own query",
-        "ollama": "the chat backend's model list"
+        "tcp": "open a TCP connection",
+        "http": "call GET {path}",
+        "eval-package": "import the eval package",
+        "eval-reports": "load the evaluation reports",
+        "app-factory": "build the application",
+        "operator-key": "read the key that signs operator acts",
+        "postgres": "open the ledger's connection",
+        "clickhouse": "read through the ClickHouse adapter",
+        "prometheus": "query through the Prometheus adapter",
+        "ollama": "list the chat backend's models"
       },
-      "answeredByVerdict": "the question was the answer — see the verdict"
+      "answeredByVerdict": "nothing beyond the verdict",
+      "outcome": {
+        "accepted": "connection accepted",
+        "refused": "connection refused",
+        "unresolved": "address not findable from here",
+        "http_ok": "answered",
+        "http_error": "answered with an error",
+        "unreachable": "unreachable",
+        "uninterrogable": "cannot be interrogated",
+        "probe_failed": "the probe itself failed"
+      }
     },
     "verdict": {
       "observing": "I observe {ok}/{total} stack components",
@@ -1323,7 +1333,7 @@
         "events": "business events",
         "state": "state"
       },
-      "preconditions": "{bad}/{total} process preconditions impaired"
+      "preconditions": "{bad}/{total} of what the process needs is impaired"
     },
     "chain": {
       "title": "The observability chain",
@@ -1349,48 +1359,48 @@
         "cannot_say": "cannot say"
       },
       "profile": {
-        "remote": "remote profile"
+        "remote": "agents outside the process"
       },
       "selfEvident": "The agent is not probed from outside: this very response is its proof.",
       "verdictTitle": {
-        "ok": "Interrogated, answer good",
-        "fail": "Interrogated, answer bad",
-        "blind": "Could not be interrogated — neither 'ok' nor 'down'",
-        "skip": "Not applicable here"
+        "ok": "interrogated — good answer",
+        "fail": "interrogated — bad answer",
+        "blind": "could not be interrogated: neither running nor down",
+        "skip": "not applicable here"
       },
       "edgeDeclared": "{source} → here ({signal}) — declared in {where}",
       "openTool": "Open {url}",
       "onHostOnly": "{url} — the deployment host's address (opens from that machine)"
     },
     "consequences": {
-      "title": "What each store carries",
+      "title": "What can no longer be known",
       "what": "What the cockpit stops being able to answer when a store goes quiet — the missing link between a red component and its consequence.",
       "how": "The capability is DECLARED (the right-hand column cites the module that reads the store); the state is COMPUTED from the probe. A component that could not be interrogated yields 'cannot say' — never 'lost', never 'served'.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Unreadable",
-      "allServed": "{n}/{n} served",
-      "atRisk": "{n} of {total} impaired",
+      "allServed": "{n} of {n} capabilities held",
+      "atRisk": "{n} of {total} capabilities affected",
       "gatesAgents": "Can block an agent",
-      "mayBlockAgents": "can block an agent at the release gate",
+      "mayBlockAgents": "can stop an agent going live",
       "because": "because of {list}",
       "readsTitle": "Read by {module}",
       "state": {
-        "served": "served",
+        "served": "held",
         "lost": "lost",
         "cannot_say": "cannot say"
       },
       "capability": {
-        "turn-evidence": "Turn evidence (level L1)",
+        "turn-evidence": "Proof that an agent is handling requests",
         "business-events": "Business events",
-        "aggregates": "Aggregates and SLO",
-        "ledger": "Opposable ledger",
-        "traces": "Turn traces",
-        "llm-observability": "LLM observability",
+        "aggregates": "Aggregate figures and service objectives",
+        "ledger": "Act ledger",
+        "traces": "Traces of the exchanges",
+        "llm-observability": "Watching the model calls",
         "dashboards": "Dashboards"
       }
     },
     "history": {
-      "title": "Over time",
+      "title": "History",
       "what": "Availability per component and, above all, every CHANGE of verdict — a component that falls and comes back between two polls was invisible until now.",
       "how": "The probe runs when the cockpit asks, so the window is watched in patches. Every percentage is a share of OBSERVED time, and the observed share sits beside it. Silence is never counted as 'ok'.",
       "source": "GET /observability/component-history — src/tessera/observability/component_history.py",
@@ -1410,38 +1420,38 @@
       "col": {
         "component": "Component",
         "ok": "Available",
-        "observed": "Observed",
+        "observed": "Share observed",
         "detail": "Detail"
       },
       "state": {
         "ok": "OK",
         "fail": "down",
         "blind": "blind spot",
-        "skip": "n/a"
+        "skip": "not applicable"
       },
       "cannotSay": "cannot say",
       "blindThroughout": "Observed, but blind throughout: the probe looked and could conclude nothing about the component. 0 % available would say 'it went down', which is not what was found.",
       "neverObservedTitle": "Never observed over this window — no availability can be drawn from it."
     },
     "coverage": {
-      "title": "Instrumentation coverage",
+      "title": "What each agent stamps",
       "what": "The share of the L1 dimension contract each agent actually stamps (signal 92).",
       "how": "Presence of the Scope dimensions on the agent's most recent business event. A deliberately named PROXY for span attributes: both carry the same dimensions by construction. A store that did not answer yields 'cannot say', never 0 %.",
       "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
       "unreadable": "Unreadable",
       "blind": "Store silent — cannot say",
       "noneMeasured": "Nothing measured",
-      "noAgents": "No manifested agent",
+      "noAgents": "No agent declared",
       "fleet": "{pct} % across {n, plural, one {# measured agent} other {# measured agents}}",
       "missing": "missing: {list}",
-      "proxy": "Measured over the {n} required Scope dimensions carried on business events — not a span store.",
+      "proxy": "Measured over the {n} markers every business event must carry — not over the traces.",
       "status": {
         "measured": "measured",
-        "no_evidence": "no telemetry",
+        "no_evidence": "should emit, nothing received",
         "unverifiable": "cannot say",
-        "not_applicable": "no business grammar"
+        "not_applicable": "emits no business events"
       },
-      "inapplicable": "{n} agent(s) emit no business events: this evidence does not exist for them — they may serve turns and still not be measurable here."
+      "inapplicable": "{n} agent(s) are out of this measurement's reach, and that is not a shortcoming: they can serve turns without emitting business events."
     },
     "tools": {
       "title": "Open the tools",

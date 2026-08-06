@@ -44,9 +44,66 @@ from tessera.urlfetch import UnsupportedSchemeError, urlopen_http
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__all__ = ["STACK_COMPONENTS", "StackComponent", "is_loopback", "probe_stack", "ui_url"]
+__all__ = [
+    "STACK_COMPONENTS",
+    "StackComponent",
+    "StackObservation",
+    "is_loopback",
+    "probe_stack",
+    "probe_stack_observations",
+    "ui_url",
+]
+
+#: What a probe found, as a code rather than as a sentence.
+#:
+#: The sentence still exists — ``Check.detail`` carries it, and the preflight CLI prints it in a
+#: terminal where English is the right answer. What did not exist was a machine-readable form,
+#: so a French cockpit rendered *"postgres:5432 accepts connections"* verbatim under a French
+#: heading. That string is not the machine talking; it is OUR prose, written here, and prose we
+#: wrote can be translated. What the machine said — an errno, an HTTP status — is carried
+#: separately in ``StackObservation.raw`` and is never rewritten.
+StackOutcome = Literal[
+    "accepted",  # tcp: the port took the connection
+    "refused",  # tcp: the port answered, and said no
+    "unresolved",  # the address does not resolve FROM HERE — a fact about the vantage point
+    "http_ok",  # http: a response, with its status
+    "http_error",  # http: a response, with a bad status
+    "unreachable",  # http: no response at all
+    "uninterrogable",  # the address cannot be probed by this prober (scheme, shape)
+    "probe_failed",  # the probe itself broke — a blind spot, never a verdict about the thing
+]
 
 _TIMEOUT_S: Final = 3.0
+
+
+@dataclass(frozen=True, slots=True)
+class StackObservation:
+    """What one probe saw: the verdict, the outcome as a CODE, and the machine's own words."""
+
+    check: Check
+    outcome: StackOutcome
+    #: What was actually contacted — a host:port or a URL. An address, so never translated.
+    address: str
+    #: The machine's own text: an errno, an HTTP status, a scheme complaint. Empty when the
+    #: probe simply succeeded and there was nothing for the machine to say. **Never rewritten**
+    #: — the moment a surface paraphrases an errno it is reporting its own reading of the
+    #: evidence as the evidence.
+    raw: str
+
+
+def _seen(
+    component: StackComponent,
+    verdict: Verdict,
+    outcome: StackOutcome,
+    address: str,
+    sentence: str,
+    *,
+    raw: str = "",
+) -> StackObservation:
+    """One observation, carrying both the English sentence and its machine-readable form."""
+    return StackObservation(
+        check=Check(component.key, verdict, sentence), outcome=outcome, address=address, raw=raw
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -175,62 +232,128 @@ def is_loopback(url: str) -> bool:
         return host == "localhost" or host.endswith(".localhost")
 
 
-def _probe_tcp(component: StackComponent, address: str) -> Check:
+def _probe_tcp(component: StackComponent, address: str) -> StackObservation:
     host, _, port = address.rpartition(":")
     if not host or not port.isdigit():
-        return Check(
-            component.key,
+        return _seen(
+            component,
             Verdict.BLIND,
+            "uninterrogable",
+            address,
             f"no host:port to interrogate — address is {address!r}",
+            raw="",
         )
     try:
         with socket.create_connection((host, int(port)), timeout=_TIMEOUT_S):
-            return Check(component.key, Verdict.OK, f"{address} accepts connections")
+            return _seen(
+                component, Verdict.OK, "accepted", address, f"{address} accepts connections"
+            )
     except socket.gaierror as exc:
         # Unresolvable is BLIND, not FAIL: from outside the compose network this name means
         # nothing, and "the probe cannot reach it from here" is not "the component is down".
-        return Check(component.key, Verdict.BLIND, f"{address} does not resolve from here: {exc}")
+        return _seen(
+            component,
+            Verdict.BLIND,
+            "unresolved",
+            address,
+            f"{address} does not resolve from here: {exc}",
+            raw=str(exc),
+        )
     except OSError as exc:
-        return Check(component.key, Verdict.FAIL, f"{address} refused the connection: {exc}")
+        return _seen(
+            component,
+            Verdict.FAIL,
+            "refused",
+            address,
+            f"{address} refused the connection: {exc}",
+            raw=str(exc),
+        )
 
 
-def _probe_http(component: StackComponent, address: str) -> Check:
+def _probe_http(component: StackComponent, address: str) -> StackObservation:
     url = f"http://{address}{component.path}"
     try:
         with urlopen_http(url, timeout=_TIMEOUT_S) as response:
-            return Check(component.key, Verdict.OK, f"{url} -> HTTP {response.status}")
+            return _seen(
+                component,
+                Verdict.OK,
+                "http_ok",
+                url,
+                f"{url} -> HTTP {response.status}",
+                raw=f"HTTP {response.status}",
+            )
     except urllib.error.HTTPError as exc:
-        return Check(component.key, Verdict.FAIL, f"{url} -> HTTP {exc.code}")
+        return _seen(
+            component,
+            Verdict.FAIL,
+            "http_error",
+            url,
+            f"{url} -> HTTP {exc.code}",
+            raw=f"HTTP {exc.code}",
+        )
     except UnsupportedSchemeError as exc:
-        return Check(component.key, Verdict.BLIND, f"cannot interrogate {url}: {exc}")
+        return _seen(
+            component,
+            Verdict.BLIND,
+            "uninterrogable",
+            url,
+            f"cannot interrogate {url}: {exc}",
+            raw=str(exc),
+        )
     except urllib.error.URLError as exc:
         reason = exc.reason
         if isinstance(reason, socket.gaierror):
-            return Check(component.key, Verdict.BLIND, f"{url} does not resolve from here")
-        return Check(component.key, Verdict.FAIL, f"{url} unreachable: {reason}")
+            return _seen(
+                component,
+                Verdict.BLIND,
+                "unresolved",
+                url,
+                f"{url} does not resolve from here",
+                raw=str(reason),
+            )
+        return _seen(
+            component,
+            Verdict.FAIL,
+            "unreachable",
+            url,
+            f"{url} unreachable: {reason}",
+            raw=str(reason),
+        )
     except OSError as exc:
-        return Check(component.key, Verdict.FAIL, f"{url} unreachable: {exc}")
+        return _seen(
+            component, Verdict.FAIL, "unreachable", url, f"{url} unreachable: {exc}", raw=str(exc)
+        )
 
 
 def probe_stack(components: Sequence[StackComponent] | None = None) -> tuple[Check, ...]:
+    """The checks alone — what the preflight CLI prints, unchanged."""
+    return tuple(o.check for o in probe_stack_observations(components))
+
+
+def probe_stack_observations(
+    components: Sequence[StackComponent] | None = None,
+) -> tuple[StackObservation, ...]:
     """Interrogate every declared component and report what each answered.
 
     An unexpected error inside a probe becomes BLIND rather than a verdict about the component,
     the same rule ``preflight._guard`` applies: a hole in the witness must never be reported as
     a fact about the thing.
     """
-    checks: list[Check] = []
+    seen: list[StackObservation] = []
     for component in components if components is not None else STACK_COMPONENTS:
         address = _address(component)
         try:
             probe = _probe_http if component.kind == "http" else _probe_tcp
-            checks.append(probe(component, address))
+            seen.append(probe(component, address))
         except Exception as exc:  # a broken probe is a blind spot, never a verdict about the thing
-            checks.append(
-                Check(
-                    component.key,
+            seen.append(
+                _seen(
+                    component,
                     Verdict.BLIND,
+                    "probe_failed",
+                    address,
                     f"probe could not run: {type(exc).__name__}: {exc}",
+                    raw=f"{type(exc).__name__}: {exc}",
                 )
             )
-    return tuple(checks)
+    return tuple(seen)

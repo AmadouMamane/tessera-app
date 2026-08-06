@@ -1264,49 +1264,59 @@
         "ok": "OK",
         "fail": "En panne",
         "blind": "Angle mort",
-        "skip": "Non applicable"
+        "skip": "sans objet"
       },
       "col": {
         "name": "Composant",
         "verdict": "Verdict",
-        "asked": "Ce qui lui a été demandé",
+        "asked": "Ce qu'on lui a demandé",
         "answered": "Ce qu'il a répondu"
       },
       "group": {
         "stack": "La pile — {n} composants",
-        "precondition": "Préconditions du processus — {n}"
+        "precondition": "Ce dont le processus a besoin — {n}"
       },
       "groupAsks": {
         "stack": "ce que l'opérateur fait tourner",
-        "precondition": "ce dont le processus a besoin pour servir un tour"
+        "precondition": "sans quoi l'agent ne peut pas répondre"
       },
       "role": {
-        "postgres": "registre opposable + magasin de recherche",
+        "postgres": "registre des actes + recherche documentaire",
         "redis": "cache de l'agent · limitation de débit",
         "clickhouse": "événements métier + scores en ligne",
-        "prometheus": "les métriques dont les niveaux L sont calculés",
+        "prometheus": "les métriques d'où sortent les chiffres du cockpit",
         "grafana": "tableaux de bord des métriques",
-        "otel-collector": "réception des traces (OTLP)",
+        "otel-collector": "réception des traces",
         "phoenix": "lecture des traces",
         "langfuse-web": "interface d'observabilité LLM",
         "langfuse-worker": "ingestion Langfuse",
         "langfuse-db": "le Postgres propre à Langfuse",
         "langfuse-redis": "la file propre à Langfuse",
-        "minio": "stockage des traces volumineuses (S3)"
+        "minio": "stockage des traces volumineuses"
       },
       "asks": {
-        "tcp": "le port accepte-t-il une connexion",
-        "http": "requête HTTP GET {path}",
-        "eval-package": "le paquet eval s'importe-t-il",
-        "eval-reports": "le chargeur de rapports que lisent les tableaux de bord",
-        "app-factory": "l'application se construit-elle",
-        "operator-key": "la clé de signature des assertions opérateur est-elle présente",
-        "postgres": "la connexion propre au registre",
-        "clickhouse": "la lecture HTTP propre à l'adaptateur ClickHouse",
-        "prometheus": "la requête propre à l'adaptateur Prometheus",
-        "ollama": "la liste de modèles du moteur de chat"
+        "tcp": "ouvrir une connexion TCP",
+        "http": "appeler GET {path}",
+        "eval-package": "importer le paquet eval",
+        "eval-reports": "charger les rapports d'évaluation",
+        "app-factory": "construire l'application",
+        "operator-key": "lire la clé qui signe les actes d'opérateur",
+        "postgres": "ouvrir la connexion du registre",
+        "clickhouse": "lire via l'adaptateur ClickHouse",
+        "prometheus": "interroger via l'adaptateur Prometheus",
+        "ollama": "lister les modèles du moteur de chat"
       },
-      "answeredByVerdict": "la question était la réponse — voir le verdict"
+      "answeredByVerdict": "rien de plus que le verdict",
+      "outcome": {
+        "accepted": "connexion acceptée",
+        "refused": "connexion refusée",
+        "unresolved": "adresse introuvable depuis ici",
+        "http_ok": "a répondu",
+        "http_error": "a répondu en erreur",
+        "unreachable": "injoignable",
+        "uninterrogable": "impossible à interroger",
+        "probe_failed": "la sonde elle-même a échoué"
+      }
     },
     "verdict": {
       "observing": "J'observe {ok}/{total} composants de la pile",
@@ -1323,7 +1333,7 @@
         "events": "événements métier",
         "state": "état"
       },
-      "preconditions": "{bad}/{total} préconditions du processus en défaut"
+      "preconditions": "{bad}/{total} de ce dont le processus a besoin est en défaut"
     },
     "chain": {
       "title": "La chaîne d'observabilité",
@@ -1333,7 +1343,7 @@
       "unreadable": "Lecture impossible — la chaîne n'a pas pu être obtenue",
       "stage": {
         "emitter": "Émetteur",
-        "pipeline": "Acheminement",
+        "pipeline": "Transport",
         "store": "Magasins",
         "viewer": "Consultation"
       },
@@ -1349,48 +1359,48 @@
         "cannot_say": "ne peut pas dire"
       },
       "profile": {
-        "remote": "profil distant"
+        "remote": "agents hors du processus"
       },
       "selfEvident": "L'agent n'est pas sondé de l'extérieur : cette réponse est sa preuve.",
       "verdictTitle": {
-        "ok": "Interrogé, réponse bonne",
-        "fail": "Interrogé, réponse mauvaise",
-        "blind": "N'a pas pu être interrogé — ce n'est ni « ok » ni « en panne »",
-        "skip": "Sans objet ici"
+        "ok": "interrogé — bonne réponse",
+        "fail": "interrogé — mauvaise réponse",
+        "blind": "n'a pas pu être interrogé : ni « en marche » ni « en panne »",
+        "skip": "sans objet ici"
       },
       "edgeDeclared": "{source} → ici ({signal}) — déclaré dans {where}",
       "openTool": "Ouvrir {url}",
       "onHostOnly": "{url} — adresse de l'hôte de déploiement (s'ouvre depuis cette machine)"
     },
     "consequences": {
-      "title": "Ce que chaque magasin porte",
+      "title": "Ce qu'on ne peut plus savoir",
       "what": "Ce que le cockpit cesse de pouvoir répondre quand un magasin se tait — le chaînon entre un composant rouge et sa conséquence.",
       "how": "La capacité est DÉCLARÉE (la colonne de droite cite le module qui lit le magasin) ; l'état est CALCULÉ depuis la sonde. Un composant qui n'a pas pu être interrogé donne « ne peut pas dire », jamais « perdu » et jamais « servi ».",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Lecture impossible",
-      "allServed": "{n}/{n} servies",
-      "atRisk": "{n} sur {total} en défaut",
+      "allServed": "{n} capacités sur {n} assurées",
+      "atRisk": "{n} capacités sur {total} touchées",
       "gatesAgents": "Peut bloquer un agent",
-      "mayBlockAgents": "peut bloquer un agent au portail de mise en ligne",
+      "mayBlockAgents": "peut empêcher la mise en ligne d'un agent",
       "because": "à cause de {list}",
       "readsTitle": "Lu par {module}",
       "state": {
-        "served": "servie",
+        "served": "assurée",
         "lost": "perdue",
         "cannot_say": "ne peut pas dire"
       },
       "capability": {
-        "turn-evidence": "Preuve de tour (niveau L1)",
+        "turn-evidence": "Preuve qu'un agent traite des demandes",
         "business-events": "Événements métier",
-        "aggregates": "Agrégats et SLO",
-        "ledger": "Registre opposable",
-        "traces": "Traces de tour",
-        "llm-observability": "Observabilité LLM",
+        "aggregates": "Chiffres agrégés et objectifs de service",
+        "ledger": "Registre des actes",
+        "traces": "Traces des échanges",
+        "llm-observability": "Suivi des appels au modèle",
         "dashboards": "Tableaux de bord"
       }
     },
     "history": {
-      "title": "Dans le temps",
+      "title": "Historique",
       "what": "La disponibilité par composant et, surtout, chaque CHANGEMENT de verdict — un composant qui tombe et remonte entre deux sondages était jusqu'ici invisible.",
       "how": "La sonde tourne quand le cockpit demande : la fenêtre est donc observée par morceaux. Chaque pourcentage est une part du temps OBSERVÉ, et la part observée est affichée à côté. Un silence n'est jamais compté comme « ok ».",
       "source": "GET /observability/component-history — src/tessera/observability/component_history.py",
@@ -1410,7 +1420,7 @@
       "col": {
         "component": "Composant",
         "ok": "Disponible",
-        "observed": "Observé",
+        "observed": "Part observée",
         "detail": "Détail"
       },
       "state": {
@@ -1424,24 +1434,24 @@
       "neverObservedTitle": "Jamais observé sur cette fenêtre — aucune disponibilité ne peut en être tirée."
     },
     "coverage": {
-      "title": "Couverture d'instrumentation",
+      "title": "Ce que chaque agent estampille",
       "what": "La part du contrat de dimensions L1 que chaque agent estampille réellement (signal 92).",
       "how": "Présence des dimensions Scope sur le dernier événement métier de l'agent. C'est un PROXY assumé des attributs de span : les deux portent les mêmes dimensions par construction. Un magasin qui n'a pas répondu donne « ne peut pas dire », jamais 0 %.",
       "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
       "unreadable": "Lecture impossible",
       "blind": "Magasin muet — ne peut pas dire",
       "noneMeasured": "Aucune mesure",
-      "noAgents": "Aucun agent manifesté",
+      "noAgents": "Aucun agent déclaré",
       "fleet": "{pct} % sur {n, plural, one {# agent mesuré} other {# agents mesurés}}",
       "missing": "manque : {list}",
-      "proxy": "Mesuré sur les {n} dimensions Scope requises, portées par les événements métier — pas un magasin de spans.",
+      "proxy": "Mesuré sur les {n} repères que chaque événement métier doit porter — pas sur les traces.",
       "status": {
         "measured": "mesuré",
-        "no_evidence": "aucune télémétrie",
+        "no_evidence": "devrait émettre, rien reçu",
         "unverifiable": "ne peut pas dire",
-        "not_applicable": "pas de grammaire métier"
+        "not_applicable": "n'émet pas d'événements métier"
       },
-      "inapplicable": "{n} agent(s) n'émettent pas d'événements métier : cette preuve n'existe pas pour eux — ils peuvent servir des tours sans être mesurables ici."
+      "inapplicable": "{n} agent(s) sont hors de portée de cette mesure, et ce n'est pas un défaut : ils peuvent servir des tours sans émettre d'événements métier."
     },
     "tools": {
       "title": "Ouvrir les outils",

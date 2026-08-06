@@ -1264,7 +1264,7 @@
         "ok": "OK",
         "fail": "Ausgefallen",
         "blind": "Blinder Fleck",
-        "skip": "Nicht zutreffend"
+        "skip": "nicht zutreffend"
       },
       "col": {
         "name": "Komponente",
@@ -1274,39 +1274,49 @@
       },
       "group": {
         "stack": "Der Stack — {n} Komponenten",
-        "precondition": "Prozess-Voraussetzungen — {n}"
+        "precondition": "Was der Prozess braucht — {n}"
       },
       "groupAsks": {
         "stack": "was der Betreiber betreibt",
-        "precondition": "was der Prozess braucht, um einen Turn zu bedienen"
+        "precondition": "ohne das kann der Agent nicht antworten"
       },
       "role": {
-        "postgres": "beweiskräftiges Ledger + Retrieval-Speicher",
+        "postgres": "Aktenregister + Dokumentensuche",
         "redis": "Agent-Cache · Ratenbegrenzung",
         "clickhouse": "Geschäftsereignisse + Online-Scores",
-        "prometheus": "die Metriken, aus denen die L-Stufen berechnet werden",
+        "prometheus": "die Metriken, aus denen die Zahlen des Cockpits stammen",
         "grafana": "Metrik-Dashboards",
-        "otel-collector": "Trace-Annahme (OTLP)",
+        "otel-collector": "Trace-Annahme",
         "phoenix": "Trace-Ansicht",
         "langfuse-web": "LLM-Observability-Oberfläche",
         "langfuse-worker": "Langfuse-Ingestion",
         "langfuse-db": "Langfuses eigenes Postgres",
         "langfuse-redis": "Langfuses eigene Queue",
-        "minio": "Ablage großer Trace-Daten (S3)"
+        "minio": "Ablage großer Trace-Daten"
       },
       "asks": {
-        "tcp": "nimmt der Port eine Verbindung an",
-        "http": "HTTP-GET-Anfrage {path}",
-        "eval-package": "lässt sich das eval-Paket importieren",
-        "eval-reports": "der Report-Loader, den die Dashboards aufrufen",
-        "app-factory": "lässt sich die Anwendung bauen",
-        "operator-key": "ist der Signierschlüssel für Betreiber-Assertions vorhanden",
-        "postgres": "die eigene Verbindung des Ledgers",
-        "clickhouse": "der eigene HTTP-Read des ClickHouse-Adapters",
-        "prometheus": "die eigene Abfrage des Prometheus-Adapters",
-        "ollama": "die Modell-Liste des Chat-Backends"
+        "tcp": "eine TCP-Verbindung öffnen",
+        "http": "GET {path} aufrufen",
+        "eval-package": "das eval-Paket importieren",
+        "eval-reports": "die Evaluationsberichte laden",
+        "app-factory": "die Anwendung bauen",
+        "operator-key": "den Signierschlüssel für Betreiberakte lesen",
+        "postgres": "die Verbindung des Ledgers öffnen",
+        "clickhouse": "über den ClickHouse-Adapter lesen",
+        "prometheus": "über den Prometheus-Adapter abfragen",
+        "ollama": "die Modelle des Chat-Backends auflisten"
       },
-      "answeredByVerdict": "die Frage war die Antwort — siehe Urteil"
+      "answeredByVerdict": "nichts über das Urteil hinaus",
+      "outcome": {
+        "accepted": "Verbindung angenommen",
+        "refused": "Verbindung abgelehnt",
+        "unresolved": "Adresse von hier aus nicht auffindbar",
+        "http_ok": "hat geantwortet",
+        "http_error": "hat mit Fehler geantwortet",
+        "unreachable": "nicht erreichbar",
+        "uninterrogable": "nicht befragbar",
+        "probe_failed": "die Sonde selbst ist gescheitert"
+      }
     },
     "verdict": {
       "observing": "Ich beobachte {ok}/{total} Stack-Komponenten",
@@ -1323,7 +1333,7 @@
         "events": "Geschäftsereignisse",
         "state": "Zustand"
       },
-      "preconditions": "{bad}/{total} Prozess-Vorbedingungen beeinträchtigt"
+      "preconditions": "{bad}/{total} von dem, was der Prozess braucht, ist beeinträchtigt"
     },
     "chain": {
       "title": "Die Observability-Kette",
@@ -1349,48 +1359,48 @@
         "cannot_say": "kann nichts sagen"
       },
       "profile": {
-        "remote": "Remote-Profil"
+        "remote": "Agenten außerhalb des Prozesses"
       },
       "selfEvident": "Der Agent wird nicht von außen sondiert: diese Antwort ist sein Beweis.",
       "verdictTitle": {
-        "ok": "Befragt, Antwort gut",
-        "fail": "Befragt, Antwort schlecht",
-        "blind": "Konnte nicht befragt werden — weder „ok“ noch „ausgefallen“",
-        "skip": "Hier nicht anwendbar"
+        "ok": "befragt — gute Antwort",
+        "fail": "befragt — schlechte Antwort",
+        "blind": "konnte nicht befragt werden: weder „läuft“ noch „ausgefallen“",
+        "skip": "hier nicht zutreffend"
       },
       "edgeDeclared": "{source} → hier ({signal}) — deklariert in {where}",
       "openTool": "{url} öffnen",
       "onHostOnly": "{url} — Adresse des Deployment-Hosts (öffnet von dieser Maschine)"
     },
     "consequences": {
-      "title": "Was jeder Speicher trägt",
+      "title": "Was nicht mehr gewusst werden kann",
       "what": "Was das Cockpit nicht mehr beantworten kann, wenn ein Speicher schweigt — das fehlende Glied zwischen roter Komponente und Folge.",
       "how": "Die Fähigkeit ist DEKLARIERT (die rechte Spalte nennt das lesende Modul); der Zustand wird aus der Sonde BERECHNET. Eine Komponente, die nicht befragt werden konnte, ergibt „kann nichts sagen“ — nie „verloren“, nie „bedient“.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Nicht lesbar",
-      "allServed": "{n}/{n} bedient",
-      "atRisk": "{n} von {total} beeinträchtigt",
+      "allServed": "{n} von {n} Fähigkeiten gesichert",
+      "atRisk": "{n} von {total} Fähigkeiten betroffen",
       "gatesAgents": "Kann einen Agenten blockieren",
-      "mayBlockAgents": "kann einen Agenten am Freigabe-Tor blockieren",
+      "mayBlockAgents": "kann die Freigabe eines Agenten verhindern",
       "because": "wegen {list}",
       "readsTitle": "Gelesen von {module}",
       "state": {
-        "served": "bedient",
+        "served": "gesichert",
         "lost": "verloren",
         "cannot_say": "kann nichts sagen"
       },
       "capability": {
-        "turn-evidence": "Turn-Nachweis (Stufe L1)",
+        "turn-evidence": "Nachweis, dass ein Agent Anfragen bearbeitet",
         "business-events": "Geschäftsereignisse",
-        "aggregates": "Aggregate und SLO",
-        "ledger": "Beweiskräftiges Ledger",
-        "traces": "Turn-Traces",
-        "llm-observability": "LLM-Observability",
+        "aggregates": "Aggregierte Zahlen und Service-Ziele",
+        "ledger": "Aktenregister",
+        "traces": "Traces der Dialoge",
+        "llm-observability": "Beobachtung der Modellaufrufe",
         "dashboards": "Dashboards"
       }
     },
     "history": {
-      "title": "Im Zeitverlauf",
+      "title": "Verlauf",
       "what": "Verfügbarkeit je Komponente und vor allem jeder WECHSEL des Urteils — eine Komponente, die zwischen zwei Abfragen ausfällt und zurückkommt, war bisher unsichtbar.",
       "how": "Die Sonde läuft, wenn das Cockpit fragt: das Fenster wird also stückweise beobachtet. Jeder Prozentsatz ist ein Anteil der BEOBACHTETEN Zeit, und der beobachtete Anteil steht daneben. Schweigen zählt nie als „ok“.",
       "source": "GET /observability/component-history — src/tessera/observability/component_history.py",
@@ -1410,38 +1420,38 @@
       "col": {
         "component": "Komponente",
         "ok": "Verfügbar",
-        "observed": "Beobachtet",
+        "observed": "Beobachteter Anteil",
         "detail": "Detail"
       },
       "state": {
         "ok": "OK",
         "fail": "ausgefallen",
         "blind": "blinder Fleck",
-        "skip": "nicht anwendbar"
+        "skip": "nicht zutreffend"
       },
       "cannotSay": "kann nichts sagen",
       "blindThroughout": "Beobachtet, aber durchgehend im blinden Fleck: die Sonde hat hingesehen und konnte nichts über die Komponente schließen. 0 % Verfügbarkeit hieße „sie ist ausgefallen“ — das wurde nicht festgestellt.",
       "neverObservedTitle": "In diesem Fenster nie beobachtet — daraus lässt sich keine Verfügbarkeit ableiten."
     },
     "coverage": {
-      "title": "Instrumentierungsabdeckung",
+      "title": "Was jeder Agent stempelt",
       "what": "Der Anteil des L1-Dimensionsvertrags, den jeder Agent tatsächlich stempelt (Signal 92).",
       "how": "Vorhandensein der Scope-Dimensionen im jüngsten Geschäftsereignis des Agenten. Ein bewusst benannter PROXY für Span-Attribute: beide tragen konstruktionsbedingt dieselben Dimensionen. Ein Speicher ohne Antwort ergibt „kann nichts sagen“, nie 0 %.",
       "source": "GET /observability/instrumentation-coverage — src/tessera/observability/quality_nets.py",
       "unreadable": "Nicht lesbar",
       "blind": "Speicher stumm — kann nichts sagen",
       "noneMeasured": "Keine Messung",
-      "noAgents": "Kein manifestierter Agent",
+      "noAgents": "Kein Agent deklariert",
       "fleet": "{pct} % über {n, plural, one {# gemessenen Agenten} other {# gemessene Agenten}}",
       "missing": "fehlt: {list}",
-      "proxy": "Gemessen an den {n} geforderten Scope-Dimensionen auf Geschäftsereignissen — kein Span-Speicher.",
+      "proxy": "Gemessen an den {n} Merkmalen, die jedes Geschäftsereignis tragen muss — nicht an den Traces.",
       "status": {
         "measured": "gemessen",
-        "no_evidence": "keine Telemetrie",
+        "no_evidence": "sollte senden, nichts empfangen",
         "unverifiable": "kann nichts sagen",
-        "not_applicable": "keine Geschäftsgrammatik"
+        "not_applicable": "sendet keine Geschäftsereignisse"
       },
-      "inapplicable": "{n} Agent(en) senden keine Geschäftsereignisse: dieser Nachweis existiert für sie nicht — sie können Turns bedienen und hier trotzdem nicht messbar sein."
+      "inapplicable": "{n} Agent(en) liegen außerhalb dieser Messung, und das ist kein Mangel: sie können Turns bedienen, ohne Geschäftsereignisse zu senden."
     },
     "tools": {
       "title": "Werkzeuge öffnen",

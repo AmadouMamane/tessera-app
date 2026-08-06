@@ -490,6 +490,20 @@ export const ComponentCheckSchema = z.object({
   role: z.string().default(""),
   /** What was PUT TO it — derived for a stack component, declared for a precondition. */
   asked: z.string().default(""),
+  /**
+   * What the probe FOUND, as a code — so the answer can be said in the reader's language.
+   *
+   * `postgres:5432 accepts connections` is not the machine talking; it is our own sentence,
+   * written in `stack_components.py`, and it was rendered verbatim under a French heading.
+   * Prose we wrote can be translated. What the machine said travels in `raw` and never is.
+   * Empty for a precondition: preflight is a CLI witness whose line is read in a terminal, and
+   * paraphrasing it here would make the page and the terminal disagree about one check.
+   */
+  outcome: z.string().default(""),
+  /** What was contacted — a host:port or a URL. An address, so never translated. */
+  address: z.string().default(""),
+  /** The machine's own words: an errno, an HTTP status. Never rewritten. */
+  raw: z.string().default(""),
   /** Legacy alias of `asked`, kept so an older client renders something rather than nothing. */
   interrogates: z.string(),
 });

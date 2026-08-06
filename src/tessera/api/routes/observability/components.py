@@ -45,8 +45,9 @@ from tessera.api.security import require_bearer
 from tessera.observability import component_history, quality_nets
 from tessera.observability.stack_components import (
     STACK_COMPONENTS,
+    StackObservation,
     is_loopback,
-    probe_stack,
+    probe_stack_observations,
     ui_url,
 )
 from tessera.observability.stack_topology import (
@@ -71,7 +72,7 @@ _TTL_S: Final = 15.0
 _cache: tuple[float, PreflightReport] | None = None
 _cache_lock = Lock()
 
-_stack_cache: tuple[float, tuple[Check, ...]] | None = None
+_stack_cache: tuple[float, tuple[StackObservation, ...]] | None = None
 _stack_cache_lock = Lock()
 
 #: What each stack component is, in the operator's words — read from the declaration so the
@@ -121,7 +122,7 @@ def _probe() -> tuple[float, PreflightReport]:
     return _cache
 
 
-def _stack() -> tuple[float, tuple[Check, ...]]:
+def _stack() -> tuple[float, tuple[StackObservation, ...]]:
     """The twelve declared stack components, cached on the same TTL as the preconditions."""
     global _stack_cache
     with _stack_cache_lock:
@@ -129,14 +130,14 @@ def _stack() -> tuple[float, tuple[Check, ...]]:
         if cached is not None and (time.time() - cached[0]) < _TTL_S:
             return cached
     observed_at = time.time()
-    checks = probe_stack()
+    checks = probe_stack_observations()
     with _stack_cache_lock:
         _stack_cache = (observed_at, checks)
     # Journalled HERE, on the cache MISS, because this is where an observation actually
     # happened. Recording on every request would count cache hits as looks, and the history's
     # whole value is that it distinguishes "watched and steady" from "nobody was looking".
     component_history.record_observation(
-        {check.name: check.verdict.value for check in checks},
+        {o.check.name: o.check.verdict.value for o in checks},
         at=datetime.fromtimestamp(observed_at, tz=UTC),
     )
     return _stack_cache
@@ -154,7 +155,12 @@ async def observability_components() -> dict[str, object]:
         instant the probe actually ran, which is NOT the instant of this request.
     """
     observed_at, report = await asyncio.to_thread(_probe)
-    _, stack = await asyncio.to_thread(_stack)
+    _, observations = await asyncio.to_thread(_stack)
+    stack = tuple(o.check for o in observations)
+    #: Outcome code + the machine's own words, per component. The English sentence in
+    #: ``Check.detail`` stays too (the CLI prints it); the surface prefers these, because a
+    #: French page rendering "postgres:5432 accepts connections" is showing OUR prose untranslated.
+    outcomes = {o.check.name: o for o in observations}
 
     def entry(check: Check, group: str, *, role: str, asked: str) -> dict[str, object]:
         """One row, with the three facts kept apart instead of two of them sharing a cell.
@@ -171,6 +177,7 @@ async def observability_components() -> dict[str, object]:
         * ``detail`` — what came BACK, in the probe's own words. Left verbatim, because it is the
           evidence; the surface hides it when it merely echoes the question.
         """
+        seen = outcomes.get(check.name) if group == "stack" else None
         return {
             "name": check.name,
             "group": group,
@@ -178,6 +185,13 @@ async def observability_components() -> dict[str, object]:
             "detail": check.detail,
             "role": role,
             "asked": asked,
+            # What the probe found, as a CODE the surface can say in the reader's language, and
+            # the machine's own words kept apart from it. Absent for a precondition: preflight
+            # is a CLI witness whose line is read in a terminal, and paraphrasing it here would
+            # make the page and the terminal disagree about the same check.
+            "outcome": seen.outcome if seen else "",
+            "address": seen.address if seen else "",
+            "raw": seen.raw if seen else "",
             # Kept so an older client keeps rendering something rather than an empty column.
             "interrogates": asked,
         }

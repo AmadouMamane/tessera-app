@@ -167,6 +167,23 @@ function ComponentRow({ component }: { component: ComponentCheck }) {
   // double-take.
   const echoes = flatten(component.detail) === flatten(component.asked);
 
+  // What the probe found, said in the reader's language, with the MACHINE's own words appended
+  // and untouched. A stack probe carries an outcome code for exactly this; a precondition does
+  // not, and falls back to preflight's own line — which is read identically in a terminal, and
+  // which this page has no business paraphrasing.
+  const found =
+    component.outcome && t.has(`outcome.${component.outcome}`)
+      ? [
+          `${component.address} — ${t(`outcome.${component.outcome}`)}`,
+          component.raw && !component.raw.startsWith("HTTP") ? component.raw : "",
+          component.outcome === "http_ok" || component.outcome === "http_error"
+            ? component.raw
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : component.detail;
+
   return (
     <tr className="border-b border-[var(--tessera-border)]/60 last:border-0 align-top">
       <td className="px-1.5 py-1">
@@ -189,11 +206,7 @@ function ComponentRow({ component }: { component: ComponentCheck }) {
         className="truncate px-1.5 py-1 pr-2 text-right font-mono text-[0.66rem] text-[var(--muted-foreground)]"
         title={component.detail}
       >
-        {echoes ? (
-          <span className="font-sans italic">{t("answeredByVerdict")}</span>
-        ) : (
-          component.detail
-        )}
+        {echoes ? <span className="font-sans italic">{t("answeredByVerdict")}</span> : found}
       </td>
     </tr>
   );

@@ -19,7 +19,26 @@ import asyncio
 import pytest
 
 from tessera.api.routes.observability import components as components_route
+from tessera.observability.stack_components import StackObservation
 from tessera.preflight import Check, PreflightReport, Verdict
+
+
+def _observed(check: Check) -> StackObservation:
+    """Wrap a stubbed Check the way a real probe would return it.
+
+    The probes carry a machine-readable OUTCOME beside the English sentence, so a French page can
+    say "accepte les connexions" without paraphrasing an errno. These stubs supply a plausible
+    one rather than a blank: a test that always sends an empty outcome cannot notice the surface
+    reading it.
+    """
+    outcome = (
+        "accepted"
+        if check.verdict is Verdict.OK
+        else "refused"
+        if check.verdict is Verdict.FAIL
+        else "unresolved"
+    )
+    return StackObservation(check=check, outcome=outcome, address="host:1234", raw=check.detail)
 
 
 @pytest.fixture(autouse=True)
@@ -39,14 +58,16 @@ def _serve(report: PreflightReport, stack: tuple[Check, ...] = ()) -> dict[str, 
     components_route._cache = None
     components_route._stack_cache = None
     original_preflight = components_route.run_preflight
-    original_stack = components_route.probe_stack
+    original_stack = components_route.probe_stack_observations
     components_route.run_preflight = lambda **_: report  # type: ignore[assignment]
-    components_route.probe_stack = lambda *_, **__: stack  # type: ignore[assignment]
+    components_route.probe_stack_observations = lambda *_, **__: tuple(  # type: ignore[assignment]
+        _observed(check) for check in stack
+    )
     try:
         return asyncio.run(components_route.observability_components())
     finally:
         components_route.run_preflight = original_preflight  # type: ignore[assignment]
-        components_route.probe_stack = original_stack  # type: ignore[assignment]
+        components_route.probe_stack_observations = original_stack  # type: ignore[assignment]
 
 
 def _by_name(payload: dict[str, object], group: str) -> dict[str, dict[str, object]]:
