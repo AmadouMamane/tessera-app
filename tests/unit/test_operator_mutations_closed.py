@@ -166,13 +166,24 @@ def test_the_public_reads_are_untouched() -> None:
     against a declared attribute contract per agent, computed from whether Scope dimensions are
     PRESENT on business events. It reports that a field was stamped, never the field's value, so
     no business-event content crosses it.
+    +3 on 2026-08-07: GET /observability/eval-sweep, GET /eval/sweep-run and
+    GET /eval/sweep-case-result. The catalogue sweep, which the evaluations screen used to read
+    off the FILESYSTEM while every sibling block of the same page read this API. The first is
+    public like the rest of this surface (committed artefacts: runs, the null floor, the
+    discrimination measurement, the case catalogue, and the provenance of the grading). The
+    other two carry the model's real responses and therefore take `require_bearer` — which is
+    NOT `require_operator`, so the loop below still holds: the operator gate stays in the RSC,
+    which checks the role and calls them server-to-server. Their paths sit outside the
+    `/observability/` prefix because the front's /api proxy allowlists that prefix as public and
+    attaches the service bearer for anonymous callers (F-4); the freeze counts them because it
+    spans every GET on this ROUTER, not every GET under that prefix.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 141
+    assert len(read_routes) == 144
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

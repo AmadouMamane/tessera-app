@@ -379,7 +379,24 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # event. It reports that a field was present, never the field's value, so no business-event
     # content crosses it; the only identifier it names is the agent id, which every other read
     # on this surface already carries.
-    assert len(public) == 136
+    # 137 (2026-08-07): GET /observability/eval-sweep — the catalogue sweep's aggregates, which
+    # the evaluations screen used to read off the FILESYSTEM (the repo in dev, a bundle baked
+    # into the image in prod) while every sibling block of the same page read this API. Runs,
+    # the committed null floor, the discrimination measurement and the case catalogue — all
+    # artefacts already committed in the open repository — plus the provenance of the grading
+    # (when it was re-judged, under which criteria sha). No store row, no subject.
+    # 138-139 (2026-08-07): GET /eval/sweep-run and GET /eval/sweep-case-result. These carry the
+    # MODEL's real responses to the catalogue cases, so unlike the read above they take
+    # `require_bearer` (the same posture as /observability/business/*). They are counted here
+    # and NOT in SUBJECT_SCOPED_READS deliberately: a catalogue case is a synthetic documented
+    # failure with fabricated identifiers, so no customer subject data crosses them — what they
+    # carry is a weakness map of the deployment, which ADR 0009 makes operator material rather
+    # than GDPR material. The operator gate stays where it already is: the RSC checks the role
+    # and calls these server-to-server. They live OUTSIDE the /observability/ prefix on purpose
+    # — the front's /api proxy allowlists that prefix as public and attaches the service bearer
+    # on an anonymous caller's behalf (the F-4 lesson), so a bearer under it would have guarded
+    # nothing at all.
+    assert len(public) == 139
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:
