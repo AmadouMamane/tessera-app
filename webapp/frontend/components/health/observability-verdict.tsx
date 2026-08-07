@@ -44,15 +44,7 @@ export function ObservabilityVerdict() {
   // A failed READ of the verdict is not a clear verdict. It is the one state this ribbon must
   // never render as reassurance, and the reason it gets its own branch rather than an `?? 0`.
   if (query.error || !query.data) {
-    return (
-      <AlertRibbon
-        variant="slim"
-        severity="warning"
-        icon={EyeOff}
-        eyebrow={t("eyebrow")}
-        title={t("unreadable")}
-      />
-    );
+    return <AlertRibbon variant="slim" severity="warning" icon={EyeOff} title={t("unreadable")} />;
   }
 
   const { counts, verdict, observed_at, chain } = query.data;
@@ -110,7 +102,6 @@ export function ObservabilityVerdict() {
       variant="slim"
       severity={severity}
       icon={icon}
-      eyebrow={t("eyebrow")}
       title={title}
       meta={
         <span className="flex flex-wrap items-center gap-1.5">

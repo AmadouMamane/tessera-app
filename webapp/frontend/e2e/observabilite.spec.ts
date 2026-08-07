@@ -38,8 +38,9 @@ test("the verdict leads the page as a ribbon instead of twenty rows to scan", as
   const observing = page.getByText(/\d+\/\d+ composants de la pile observés/);
   const unreadable = page.getByText(/Verdict illisible/);
   await expect(observing.or(unreadable).first()).toBeVisible();
-  // The ribbon carries the page's own eyebrow — two verdicts, one visual language.
-  await expect(page.getByText("Verdict d'observabilité", { exact: true })).toBeVisible();
+  // No eyebrow assertion: `slim` is one line by design and never drew one. The prop was
+  // accepted and DISCARDED, so this asserted text that could not exist — and said nothing,
+  // because an e2e spec nobody runs against a served build polices nothing.
 });
 
 test("the KPI row answers this page's question, not the process's", async ({ page }) => {
@@ -50,7 +51,9 @@ test("the KPI row answers this page's question, not the process's", async ({ pag
   await expect(page.getByText("Capacités assurées", { exact: true })).toBeVisible();
   await expect(page.getByText("Couverture d'instrumentation", { exact: true })).toBeVisible();
   // The process facts still exist — as one compact card in the detail zone, not as the lead.
-  await expect(page.getByText("Service Tessera", { exact: true })).toBeVisible();
+  // `.first()`: the card's title also appears in its own MetricInfo tooltip, so a strict
+  // locator resolves to two nodes and fails on a page where the text is plainly there.
+  await expect(page.getByText("Service Tessera", { exact: true }).first()).toBeVisible();
 });
 
 test("the page is sectioned into the three zones of its question", async ({ page }) => {

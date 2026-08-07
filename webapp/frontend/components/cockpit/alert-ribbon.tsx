@@ -65,8 +65,6 @@ export interface RibbonGauge {
 interface BaseProps {
   severity: RibbonSeverity;
   icon: ComponentType<{ className?: string }>;
-  /** Small category label above the statement (e.g. "Signal franchi (SLO)"). */
-  eyebrow: string;
   /** The statement itself (e.g. "Fidélité — 45,5 % < seuil 80,0 %"). */
   title: ReactNode;
   /** Optional trailing action (a remediation link/button). */
@@ -91,13 +89,26 @@ export function AlertRibbon(
   props:
     | (BaseProps & {
         variant?: "gauge";
+        /** Small category label above the statement (e.g. "Signal franchi (SLO)"). */
+        eyebrow: string;
         gauge?: RibbonGauge;
         meta?: ReactNode;
         pulse?: boolean;
         /** Tooltip/aria for the "stop pulsing" control (rendered when `pulse`). */
         pulseStopLabel?: string;
       })
-    | (BaseProps & { variant: "slim"; meta?: ReactNode }),
+    | (BaseProps & {
+        variant: "slim";
+        meta?: ReactNode;
+        /**
+         * `slim` is one line by design and has never drawn an eyebrow — the prop used to be
+         * accepted here and silently DISCARDED. Four call sites passed one, an e2e assertion
+         * was written against text that never rendered, and nothing said a word. A knob that
+         * can be asked for and quietly not applied is the same defect as a knob that does not
+         * work (ADR 0030); `never` turns it into a compile error.
+         */
+        eyebrow?: never;
+      }),
 ) {
   if (props.variant === "slim") return <SlimRibbon {...props} />;
   return <GaugeRibbon {...props} />;
@@ -138,6 +149,7 @@ function GaugeRibbon({
   pulse,
   pulseStopLabel,
 }: BaseProps & {
+  eyebrow: string;
   gauge?: RibbonGauge;
   meta?: ReactNode;
   pulse?: boolean;

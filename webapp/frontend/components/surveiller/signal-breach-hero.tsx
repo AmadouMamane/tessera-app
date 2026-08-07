@@ -74,15 +74,7 @@ export function SignalBreachHero({
       threshold: pct(data.target),
     });
     if (variant === "slim") {
-      return (
-        <AlertRibbon
-          variant="slim"
-          severity="ok"
-          icon={ShieldCheck}
-          eyebrow={t("title")}
-          title={okTitle}
-        />
-      );
+      return <AlertRibbon variant="slim" severity="ok" icon={ShieldCheck} title={okTitle} />;
     }
     return (
       <AlertRibbon
@@ -125,7 +117,6 @@ export function SignalBreachHero({
         variant="slim"
         severity="critical"
         icon={TriangleAlert}
-        eyebrow={t("title")}
         title={title}
         meta={
           <span className="inline-flex items-center gap-1.5 tabular-nums">
