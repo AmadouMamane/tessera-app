@@ -1354,7 +1354,7 @@
       }
     },
     "verdict": {
-      "observing": "Ich beobachte {ok}/{total} Stack-Komponenten",
+      "observing": "{ok}/{total} Stack-Komponenten beobachtet",
       "down": "{n} ausgefallen",
       "blind": "{n} nicht lesbar",
       "allClear": "kein Ausfall, kein blinder Fleck",
@@ -1420,7 +1420,7 @@
       "carries": "trägt: {list}"
     },
     "consequences": {
-      "title": "Was das Cockpit noch wissen kann",
+      "title": "Was das Cockpit beantworten kann",
       "what": "Die Fragen, die das Cockpit beantworten kann — und welche ihm eine stumme Komponente nimmt. Das Bindeglied zwischen einer roten Leuchte und ihrer Folge.",
       "how": "Die Fähigkeit ist DEKLARIERT (der Tooltip der Zeile nennt das lesende Modul); der Zustand wird aus der Sonde BERECHNET. Eine Komponente, die nicht befragt werden konnte, ergibt „unentscheidbar“ — nie „verloren“ und nie „gesichert“.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",

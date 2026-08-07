@@ -1354,7 +1354,7 @@
       }
     },
     "verdict": {
-      "observing": "I observe {ok}/{total} stack components",
+      "observing": "{ok}/{total} stack components observed",
       "down": "{n} down",
       "blind": "{n} unreadable",
       "allClear": "nothing down, no blind spot",
@@ -1420,7 +1420,7 @@
       "carries": "carries: {list}"
     },
     "consequences": {
-      "title": "What the cockpit can still know",
+      "title": "What the cockpit can answer",
       "what": "The questions the cockpit can answer, and which of them a silent component takes away — the link between a red light and its consequence.",
       "how": "The capability is DECLARED (the row's tooltip cites the module that reads the store); the state is COMPUTED from the probe. A component that could not be interrogated yields 'undecidable' — never 'lost', never 'held'.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",

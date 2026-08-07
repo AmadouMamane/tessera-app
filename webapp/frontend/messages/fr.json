@@ -1354,7 +1354,7 @@
       }
     },
     "verdict": {
-      "observing": "J'observe {ok}/{total} composants de la pile",
+      "observing": "{ok}/{total} composants de la pile observés",
       "down": "{n} en panne",
       "blind": "{n} illisibles",
       "allClear": "aucune panne, aucun angle mort",
@@ -1420,7 +1420,7 @@
       "carries": "porte : {list}"
     },
     "consequences": {
-      "title": "Ce que le cockpit peut encore savoir",
+      "title": "Ce que le cockpit sait répondre",
       "what": "Les questions auxquelles le cockpit sait répondre, et lesquelles un composant muet lui retire — le chaînon entre un voyant rouge et sa conséquence.",
       "how": "La capacité est DÉCLARÉE (l'infobulle de la ligne cite le module qui la lit) ; l'état est CALCULÉ depuis la sonde. Un composant qui n'a pas pu être interrogé donne « indécidable », jamais « perdue » et jamais « assurée ».",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",

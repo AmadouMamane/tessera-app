@@ -760,7 +760,11 @@ describe("cockpit surfaces keep one ten-pixel rhythm", () => {
   ] as const;
 
   it("sets the shell and every sibling Card collection to ten pixels", () => {
-    expect(shellFrame).toContain("mx-auto flex h-full w-full flex-col gap-2.5");
+    // `min-h-full`, not `h-full`: this assertion is about the ten-pixel RHYTHM, and it was
+    // pinning the height keyword alongside it. A fixed 100% height made the content box exactly
+    // the viewport and let its children overflow it, so the scroll container's padding-bottom
+    // never reached the end of a long page (the last card sat on the footer, 2026-08-07).
+    expect(shellFrame).toContain("mx-auto flex min-h-full w-full flex-col gap-2.5");
     expect(card).toContain('data-slot="card"');
     expect(globals).toContain(
       ':where(.flex, .grid):has(> [data-slot="card"] ~ [data-slot="card"])',

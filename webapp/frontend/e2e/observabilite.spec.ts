@@ -33,7 +33,9 @@ async function login(page: Page) {
 test("the verdict leads the page as a ribbon instead of twenty rows to scan", async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
-  const observing = page.getByText(/J'observe \d+\/\d+ composants/);
+  // Not « J'observe … » — the cockpit was speaking in the first person in exactly one string
+  // out of the whole catalogue, and nowhere else does it say "I".
+  const observing = page.getByText(/\d+\/\d+ composants de la pile observés/);
   const unreadable = page.getByText(/Verdict illisible/);
   await expect(observing.or(unreadable).first()).toBeVisible();
   // The ribbon carries the page's own eyebrow — two verdicts, one visual language.
@@ -86,9 +88,7 @@ test("an edge citation is reachable by CLICK, not only by hover", async ({ page 
 test("each store says what its silence costs", async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
-  await expect(
-    page.getByText("Ce que le cockpit peut encore savoir", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Ce que le cockpit sait répondre", { exact: true })).toBeVisible();
   // The row that carries the consequence an operator actually pays for…
   await expect(
     page.getByText("Preuve qu'un agent traite des demandes", { exact: true }),
