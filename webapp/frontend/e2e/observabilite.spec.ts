@@ -86,9 +86,22 @@ test("an edge citation is reachable by CLICK, not only by hover", async ({ page 
 test("each store says what its silence costs", async ({ page }) => {
   await login(page);
   await page.goto(PAGE);
-  await expect(page.getByText("Ce qu'on ne peut plus savoir", { exact: true })).toBeVisible();
-  // The row that carries the consequence an operator actually pays for.
-  await expect(page.getByText("Preuve de tour (niveau L1)", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Ce que le cockpit peut encore savoir", { exact: true }),
+  ).toBeVisible();
+  // The row that carries the consequence an operator actually pays for…
+  await expect(
+    page.getByText("Preuve qu'un agent traite des demandes", { exact: true }),
+  ).toBeVisible();
+  // …and the sentence that says what its silence COSTS. Naming the capability was what the
+  // block did before, and it is what made an operator ask what the block meant: the title
+  // announced a loss and every row answered with a noun.
+  await expect(page.getByText(/le gate de mise en ligne refuse par défaut/)).toBeVisible();
+  // The badge counts in agreement with itself. « 1 capacités … touchées » shipped, because the
+  // count was interpolated into a sentence written for the plural only.
+  const badge = page.getByText(/capacités? (touchées?|assurées?)/).first();
+  await expect(badge).toBeVisible();
+  await expect(badge).not.toHaveText(/^1 capacités/);
 });
 
 test("the history draws phases and names the scheduler's heartbeat", async ({ page }) => {
@@ -136,6 +149,27 @@ test("the component table filters by verdict and by text", async ({ page }) => {
   await expect(blindFilter.or(unreadable).first()).toBeVisible();
   if ((await blindFilter.count()) > 0) {
     const search = page.getByPlaceholder("Rechercher un composant…");
+    // The placeholder must FIT. It shipped cut at « Rechercher un composa » because a flex item
+    // shrinks below its declared width by default, and no assertion here could see it: a
+    // truncated placeholder still matches its selector. So the witness measures the text
+    // against the box that holds it, rather than asking whether the box exists.
+    const fit = await search.evaluate((element) => {
+      const input = element as HTMLInputElement;
+      const style = getComputedStyle(input);
+      const context = document.createElement("canvas").getContext("2d");
+      if (context === null) return null;
+      context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      return {
+        text: context.measureText(input.placeholder).width,
+        usable:
+          input.clientWidth -
+          Number.parseFloat(style.paddingLeft) -
+          Number.parseFloat(style.paddingRight),
+      };
+    });
+    if (fit !== null) {
+      expect(fit.text).toBeLessThanOrEqual(fit.usable);
+    }
     await search.fill("postgres");
     await expect(page.getByRole("row", { name: /postgres/ }).first()).toBeVisible();
     await search.fill("zzz-nothing");

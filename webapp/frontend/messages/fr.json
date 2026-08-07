@@ -1345,7 +1345,13 @@
       },
       "searchPlaceholder": "Rechercher un composant…",
       "noMatch": "Aucun composant ne correspond au filtre.",
-      "openRow": "Ouvrir le détail de {name}"
+      "openRow": "Ouvrir le détail de {name}",
+      "readSplit": {
+        "ok": "lecture OK",
+        "fail": "lecture en échec",
+        "blind": "lecture aveugle",
+        "skip": "lecture sans objet"
+      }
     },
     "verdict": {
       "observing": "J'observe {ok}/{total} composants de la pile",
@@ -1386,7 +1392,7 @@
       "state": {
         "served": "arrive",
         "lost": "n'arrive plus",
-        "cannot_say": "ne peut pas dire"
+        "cannot_say": "indécidable"
       },
       "profile": {
         "remote": "agents hors du processus"
@@ -1414,13 +1420,13 @@
       "carries": "porte : {list}"
     },
     "consequences": {
-      "title": "Ce qu'on ne peut plus savoir",
-      "what": "Ce que le cockpit cesse de pouvoir répondre quand un composant se tait — le chaînon entre un voyant rouge et sa conséquence.",
-      "how": "La capacité est DÉCLARÉE (la colonne de droite cite le module qui la lit) ; l'état est CALCULÉ depuis la sonde. Un composant qui n'a pas pu être interrogé donne « ne peut pas dire », jamais « perdue » et jamais « assurée ».",
+      "title": "Ce que le cockpit peut encore savoir",
+      "what": "Les questions auxquelles le cockpit sait répondre, et lesquelles un composant muet lui retire — le chaînon entre un voyant rouge et sa conséquence.",
+      "how": "La capacité est DÉCLARÉE (l'infobulle de la ligne cite le module qui la lit) ; l'état est CALCULÉ depuis la sonde. Un composant qui n'a pas pu être interrogé donne « indécidable », jamais « perdue » et jamais « assurée ».",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Lecture impossible",
-      "allServed": "{n} capacités sur {n} assurées",
-      "atRisk": "{n} capacités sur {total} touchées",
+      "allServed": "{n, plural, one {# capacité assurée} other {# capacités assurées}}",
+      "atRisk": "{n, plural, one {# capacité touchée sur {total}} other {# capacités touchées sur {total}}}",
       "gatesAgents": "Peut bloquer un agent",
       "mayBlockAgents": "peut empêcher la mise en ligne d'un agent",
       "because": "à cause de {list}",
@@ -1428,7 +1434,7 @@
       "state": {
         "served": "assurée",
         "lost": "perdue",
-        "cannot_say": "ne peut pas dire"
+        "cannot_say": "indécidable"
       },
       "capability": {
         "turn-evidence": "Preuve qu'un agent traite des demandes",
@@ -1439,8 +1445,17 @@
         "llm-observability": "Suivi des appels au modèle",
         "dashboards": "Tableaux de bord"
       },
-      "readBacked": "lecture vérifiée ({n})",
-      "readBackedTitle": "État adossé à une lecture réelle de l'adaptateur pour : {list}. Le port qui répond est le voisinage ; la lecture est la chose (ADR 0026)."
+      "readBacked": "{n, plural, one {adossé à # lecture réelle} other {adossé à # lectures réelles}}",
+      "readBackedTitle": "État établi par une vraie lecture de l'adaptateur pour : {list}. C'est une force de preuve, pas un état de santé — un port qui répond est le voisinage, la lecture est la chose (ADR 0026).",
+      "cost": {
+        "turn-evidence": "Sans elle : impossible d'affirmer qu'un agent sert des tours, et le gate de mise en ligne refuse par défaut.",
+        "business-events": "Sans eux : plus de comptage métier par agent, ni de ventilation par domaine.",
+        "aggregates": "Sans eux : plus de taux, de quantiles ni d'objectifs de service — les courbes s'arrêtent net.",
+        "ledger": "Sans lui : plus de trace opposable des actes gouvernés, ni d'export de preuve.",
+        "traces": "Sans elles : on sait qu'un échange a eu lieu, jamais ce qu'il contenait.",
+        "llm-observability": "Sans lui : plus de coût ni de latence par appel au modèle — la page Fiabilité-coût perd sa source.",
+        "dashboards": "Sans eux : les tableaux Grafana restent vides ; les chiffres, eux, continuent d'être calculés."
+      }
     },
     "history": {
       "title": "Historique",
@@ -1574,7 +1589,9 @@
       "availabilityLine": "Disponible {ok} · observé {observed} sur la fenêtre",
       "cannotSay": "ne peut pas dire",
       "neverObserved": "Jamais observé sur cette fenêtre.",
-      "hostLocalNote": "Adresse de l'hôte de déploiement — elle n'ouvre que depuis cette machine."
+      "hostLocalNote": "Adresse de l'hôte de déploiement — elle n'ouvre que depuis cette machine.",
+      "read": "Lecture de l'adaptateur",
+      "readDiverges": "diffère du verdict du port"
     }
   },
   "settings": {

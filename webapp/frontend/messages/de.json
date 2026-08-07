@@ -1345,7 +1345,13 @@
       },
       "searchPlaceholder": "Komponente suchen…",
       "noMatch": "Keine Komponente entspricht dem Filter.",
-      "openRow": "Details zu {name} öffnen"
+      "openRow": "Details zu {name} öffnen",
+      "readSplit": {
+        "ok": "Lesung OK",
+        "fail": "Lesung fehlgeschlagen",
+        "blind": "Lesung blind",
+        "skip": "Lesung gegenstandslos"
+      }
     },
     "verdict": {
       "observing": "Ich beobachte {ok}/{total} Stack-Komponenten",
@@ -1386,7 +1392,7 @@
       "state": {
         "served": "kommt an",
         "lost": "kommt nicht an",
-        "cannot_say": "kann nichts sagen"
+        "cannot_say": "unentscheidbar"
       },
       "profile": {
         "remote": "Agenten außerhalb des Prozesses"
@@ -1414,12 +1420,12 @@
       "carries": "trägt: {list}"
     },
     "consequences": {
-      "title": "Was nicht mehr gewusst werden kann",
-      "what": "Was das Cockpit nicht mehr beantworten kann, wenn ein Speicher schweigt — das fehlende Glied zwischen roter Komponente und Folge.",
-      "how": "Die Fähigkeit ist DEKLARIERT (die rechte Spalte nennt das lesende Modul); der Zustand wird aus der Sonde BERECHNET. Eine Komponente, die nicht befragt werden konnte, ergibt „kann nichts sagen“ — nie „verloren“, nie „bedient“.",
+      "title": "Was das Cockpit noch wissen kann",
+      "what": "Die Fragen, die das Cockpit beantworten kann — und welche ihm eine stumme Komponente nimmt. Das Bindeglied zwischen einer roten Leuchte und ihrer Folge.",
+      "how": "Die Fähigkeit ist DEKLARIERT (der Tooltip der Zeile nennt das lesende Modul); der Zustand wird aus der Sonde BERECHNET. Eine Komponente, die nicht befragt werden konnte, ergibt „unentscheidbar“ — nie „verloren“ und nie „gesichert“.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Nicht lesbar",
-      "allServed": "{n} von {n} Fähigkeiten gesichert",
+      "allServed": "{n, plural, one {# Fähigkeit gesichert} other {# Fähigkeiten gesichert}}",
       "atRisk": "{n} von {total} Fähigkeiten betroffen",
       "gatesAgents": "Kann einen Agenten blockieren",
       "mayBlockAgents": "kann die Freigabe eines Agenten verhindern",
@@ -1428,7 +1434,7 @@
       "state": {
         "served": "gesichert",
         "lost": "verloren",
-        "cannot_say": "kann nichts sagen"
+        "cannot_say": "unentscheidbar"
       },
       "capability": {
         "turn-evidence": "Nachweis, dass ein Agent Anfragen bearbeitet",
@@ -1439,8 +1445,17 @@
         "llm-observability": "Beobachtung der Modellaufrufe",
         "dashboards": "Dashboards"
       },
-      "readBacked": "Lesung geprüft ({n})",
-      "readBackedTitle": "Zustand gestützt auf eine echte Adapter-Lesung für: {list}. Ein offener Port ist die Nachbarschaft; die Lesung ist die Sache (ADR 0026)."
+      "readBacked": "{n, plural, one {durch # echte Lesung gestützt} other {durch # echte Lesungen gestützt}}",
+      "readBackedTitle": "Zustand durch eine echte Lesung des Adapters belegt für: {list}. Das ist Beweiskraft, kein Gesundheitszustand — ein antwortender Port ist die Nachbarschaft, die Lesung ist die Sache (ADR 0026).",
+      "cost": {
+        "turn-evidence": "Ohne sie: nicht belegbar, dass ein Agent Turns bedient — das Freigabe-Gate verweigert per Vorgabe.",
+        "business-events": "Ohne sie: keine fachliche Zählung je Agent und keine Aufteilung nach Domäne.",
+        "aggregates": "Ohne sie: keine Raten, Quantile oder Service-Ziele — die Kurven brechen ab.",
+        "ledger": "Ohne ihn: keine belastbare Spur der regierten Handlungen und kein Nachweis-Export.",
+        "traces": "Ohne sie: man weiß, dass ein Austausch stattfand, nie was er enthielt.",
+        "llm-observability": "Ohne sie: keine Kosten und keine Latenz je Modellaufruf — der Seite Zuverlässigkeit-Kosten fehlt die Quelle.",
+        "dashboards": "Ohne sie: die Grafana-Tafeln bleiben leer; die Zahlen werden weiterhin berechnet."
+      }
     },
     "history": {
       "title": "Verlauf",
@@ -1574,7 +1589,9 @@
       "availabilityLine": "Verfügbar {ok} · beobachtet {observed} im Fenster",
       "cannotSay": "keine Aussage",
       "neverObserved": "In diesem Fenster nie beobachtet.",
-      "hostLocalNote": "Adresse des Deployment-Hosts — sie öffnet nur von dieser Maschine aus."
+      "hostLocalNote": "Adresse des Deployment-Hosts — sie öffnet nur von dieser Maschine aus.",
+      "read": "Lesung des Adapters",
+      "readDiverges": "weicht vom Port-Verdikt ab"
     }
   },
   "settings": {

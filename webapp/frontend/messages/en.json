@@ -1345,7 +1345,13 @@
       },
       "searchPlaceholder": "Search a component…",
       "noMatch": "No component matches the filter.",
-      "openRow": "Open details for {name}"
+      "openRow": "Open details for {name}",
+      "readSplit": {
+        "ok": "read ok",
+        "fail": "read failed",
+        "blind": "read blind",
+        "skip": "read n/a"
+      }
     },
     "verdict": {
       "observing": "I observe {ok}/{total} stack components",
@@ -1386,7 +1392,7 @@
       "state": {
         "served": "arrives",
         "lost": "does not arrive",
-        "cannot_say": "cannot say"
+        "cannot_say": "undecidable"
       },
       "profile": {
         "remote": "agents outside the process"
@@ -1414,12 +1420,12 @@
       "carries": "carries: {list}"
     },
     "consequences": {
-      "title": "What can no longer be known",
-      "what": "What the cockpit stops being able to answer when a store goes quiet — the missing link between a red component and its consequence.",
-      "how": "The capability is DECLARED (the right-hand column cites the module that reads the store); the state is COMPUTED from the probe. A component that could not be interrogated yields 'cannot say' — never 'lost', never 'served'.",
+      "title": "What the cockpit can still know",
+      "what": "The questions the cockpit can answer, and which of them a silent component takes away — the link between a red light and its consequence.",
+      "how": "The capability is DECLARED (the row's tooltip cites the module that reads the store); the state is COMPUTED from the probe. A component that could not be interrogated yields 'undecidable' — never 'lost', never 'held'.",
       "source": "GET /observability/components — src/tessera/observability/stack_topology.py",
       "unreadable": "Unreadable",
-      "allServed": "{n} of {n} capabilities held",
+      "allServed": "{n, plural, one {# capability held} other {# capabilities held}}",
       "atRisk": "{n} of {total} capabilities affected",
       "gatesAgents": "Can block an agent",
       "mayBlockAgents": "can stop an agent going live",
@@ -1428,7 +1434,7 @@
       "state": {
         "served": "held",
         "lost": "lost",
-        "cannot_say": "cannot say"
+        "cannot_say": "undecidable"
       },
       "capability": {
         "turn-evidence": "Proof that an agent is handling requests",
@@ -1439,8 +1445,17 @@
         "llm-observability": "Watching the model calls",
         "dashboards": "Dashboards"
       },
-      "readBacked": "read-verified ({n})",
-      "readBackedTitle": "State backed by a real adapter-level read for: {list}. An open port is the neighbourhood; the read is the thing (ADR 0026)."
+      "readBacked": "{n, plural, one {backed by # real read} other {backed by # real reads}}",
+      "readBackedTitle": "State established by a real adapter read for: {list}. That is strength of evidence, not a health state — a port that answers is the neighbourhood, the read is the thing (ADR 0026).",
+      "cost": {
+        "turn-evidence": "Without it: no way to assert that an agent serves turns, and the release gate refuses by default.",
+        "business-events": "Without them: no business counts per agent and no breakdown by domain.",
+        "aggregates": "Without them: no rates, quantiles or service objectives — the curves stop dead.",
+        "ledger": "Without it: no defensible trace of governed acts and no evidence export.",
+        "traces": "Without them: you know an exchange happened, never what it contained.",
+        "llm-observability": "Without it: no cost and no latency per model call — the Reliability-cost page loses its source.",
+        "dashboards": "Without them: the Grafana boards stay empty; the numbers keep being computed."
+      }
     },
     "history": {
       "title": "History",
@@ -1574,7 +1589,9 @@
       "availabilityLine": "Available {ok} · observed {observed} in the window",
       "cannotSay": "cannot say",
       "neverObserved": "Never observed in this window.",
-      "hostLocalNote": "Deployment-host address — it only opens from that machine."
+      "hostLocalNote": "Deployment-host address — it only opens from that machine.",
+      "read": "Adapter read",
+      "readDiverges": "differs from the port verdict"
     }
   },
   "settings": {

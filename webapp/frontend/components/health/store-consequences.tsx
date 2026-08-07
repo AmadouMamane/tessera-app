@@ -11,8 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchComponents } from "@/lib/api/client";
+import type { ConsequenceState } from "@/lib/api/schemas";
 
 const POLL_MS = 15_000;
+
+/** Broken first, undecidable next, held last — an operator triages downward. */
+const STATE_ORDER: Record<ConsequenceState, number> = { lost: 0, cannot_say: 1, served: 2 };
 
 /**
  * What each store carries as a verdict — the chain between this page and the rest of the cockpit.
@@ -50,6 +54,9 @@ export function StoreConsequences() {
 
   const rows = query.data?.consequences ?? [];
   const atRisk = rows.filter((row) => row.state !== "served");
+  // What is broken reads first. The declaration order is the codebase's, not the operator's,
+  // and it buried the only row that needed an answer in sixth position out of seven.
+  const ordered = [...rows].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]);
 
   return (
     <Card>
@@ -77,7 +84,7 @@ export function StoreConsequences() {
           />
         ) : (
           <ul className="flex flex-col gap-1">
-            {rows.map((row) => {
+            {ordered.map((row) => {
               const tone = stateTone(row.state);
               const Icon = row.state === "served" ? null : row.state === "lost" ? Ban : CircleSlash;
               return (
@@ -131,6 +138,13 @@ export function StoreConsequences() {
                       {t("mayBlockAgents")}
                     </span>
                   ) : null}
+                  {/* What the silence COSTS — the sentence ADR 0052 requires and the row did
+                      not carry. « Suivi des appels au modèle — indécidable » names a capability
+                      and leaves the reader to work out what they have stopped being able to
+                      answer; this says it. */}
+                  <span className="w-full text-[0.62rem] leading-snug text-[var(--muted-foreground)]">
+                    {t(`cost.${row.key}`)}
+                  </span>
                 </li>
               );
             })}
