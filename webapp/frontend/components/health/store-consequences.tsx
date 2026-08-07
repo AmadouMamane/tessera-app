@@ -133,8 +133,11 @@ export function StoreConsequences() {
                       {t("readBacked", { n: row.checked_by_read.length })}
                     </span>
                   ) : null}
+                  {/* Inline, not `ml-auto`: pushed to the far edge it wrapped onto a line of its
+                      own and read as a floating fragment, detached from the row it qualifies.
+                      It belongs at the end of the same sentence. */}
                   {row.gates_agents && row.state !== "served" ? (
-                    <span className="ml-auto text-[0.66rem] text-[var(--tessera-fg-warning)]">
+                    <span className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
                       {t("mayBlockAgents")}
                     </span>
                   ) : null}
