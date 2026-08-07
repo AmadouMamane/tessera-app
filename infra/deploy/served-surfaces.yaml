@@ -75,6 +75,21 @@ surfaces:
       The whole Next.js app, compiled to a standalone build at image build time. Nothing under
       it is read from disk at runtime — a page edit is invisible until the image is rebuilt.
 
+  # The browser tests are the one thing under `webapp/frontend/` that cannot reach the stack.
+  # Listed after the block above and matched before it: the classifier takes the LONGEST
+  # matching prefix, so the specific entry wins.
+  - path: webapp/frontend/e2e/
+    medium: absent
+    why: >-
+      Playwright specs. `COPY webapp/frontend/ ./` puts them in the BUILDER stage and the
+      standalone output leaves them behind — verified on the serving container: `/app/e2e` does
+      not exist and `@playwright` is not installed there. Nothing in the image could run them if
+      it wanted to; they drive a browser against the served stack from OUTSIDE it. A spec edit
+      therefore cannot change what is served, and refusing over one is a false alarm.
+      The wasted rebuild is the smaller cost. This witness is only useful while its refusals are
+      believed, and a guard that cries wolf over a test file teaches the operator to skip the
+      refusal that names a stale grader — which is the incident ADR 0051 was written for.
+
   # ── mounted from the working tree ──────────────────────────────────────────────────────────
   - path: eval/reports/
     medium: mounted

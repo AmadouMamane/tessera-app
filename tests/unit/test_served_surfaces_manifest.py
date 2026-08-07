@@ -268,3 +268,44 @@ def test_uncommitted_changes_to_served_paths_are_flagged_not_swallowed() -> None
     )
     assert result.exit_code == EXIT_OK
     assert any("uncommitted" in note for note in result.notes)
+
+
+def test_a_playwright_spec_is_absent_and_does_not_demand_a_rebuild() -> None:
+    """The one thing under `webapp/frontend/` that cannot reach the stack.
+
+    The specs are copied into the BUILDER stage and dropped from the standalone output, and
+    nothing in the image could run them anyway — they drive a browser at the served stack from
+    outside it. Before this entry, editing one refused with STALE and demanded a full rebuild of
+    both images.
+
+    The cost that matters is not the rebuild. This witness is only useful while its refusals are
+    believed, and a guard that cries wolf over a test file trains the operator to skip the
+    refusal that names a stale grader — the incident ADR 0051 exists for.
+    """
+    assert _medium_of("webapp/frontend/e2e/", _surfaces()) == "absent"
+
+    # The REAL manifest, not the fixture the verdict-logic tests use: what is being asserted
+    # here is what the committed declaration does, and a fixture cannot answer that.
+    result = verdict(
+        served_sha="abc12345",
+        head_sha="def67890",
+        changed=["webapp/frontend/e2e/qualite-ia-evaluations.spec.ts"],
+        surfaces=_surfaces(),
+    )
+    assert result.exit_code == EXIT_OK
+
+
+def test_a_page_beside_the_specs_still_demands_one() -> None:
+    """The exclusion is one directory wide, and the longest-prefix rule keeps it that way.
+
+    Written as the twin of the test above because that is the direction this kind of entry
+    fails: an exclusion that quietly swallows its whole parent is how a real page edit would
+    start reporting "no rebuild needed".
+    """
+    result = verdict(
+        served_sha="abc12345",
+        head_sha="def67890",
+        changed=["webapp/frontend/components/surveiller/release-verdict-ribbon.tsx"],
+        surfaces=_surfaces(),
+    )
+    assert result.exit_code == EXIT_STALE
