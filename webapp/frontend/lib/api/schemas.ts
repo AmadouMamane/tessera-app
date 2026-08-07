@@ -6843,6 +6843,40 @@ export const ReleaseControlAgentSchema = z.object({
     floor_ok: z.boolean().optional(),
     floor_block: z.string().nullable().optional(),
   }),
+  /**
+   * The lifecycle decision, WHOLE — whether this agent may go live, and what stops it.
+   *
+   * The row used to carry only the decision's shadow (`state`, `state_tone`): a colour and a
+   * label. So a page could print BLOQUÉ and never attribute it, because the fields that name
+   * the cause lived one endpoint away (`/observability/agent-lifecycle`), one agent at a time.
+   *
+   * `blocked_by` is the machine-readable cause, and its four values are four DIFFERENT pieces
+   * of work: `eval_gate` (a critical case fails), `null_floor` (the model is worse than no
+   * model at all, ADR 0021 Rule 1), `observability_level` (the agent cannot be observed well
+   * enough for what it does), and `observability_level_unreadable` — which is not a fourth
+   * condition but the ABSENCE of an answer about the third: the business-event store did not
+   * respond, so the level was never measured. Reporting that as "level too low" would state a
+   * measurement nobody took (ADR 0026).
+   *
+   * Optional because the field is younger than some deployments, never because it is decorative.
+   */
+  decision: z
+    .object({
+      allowed: z.boolean(),
+      reason: z.string(),
+      has_run: z.boolean(),
+      gate_passed: z.boolean().nullable(),
+      failed_critical: z.array(z.string()).default([]),
+      run_at: z.string(),
+      /** What the agent's observed evidence proves today (L0…L3). */
+      observability_level: z.string().nullable(),
+      /** What this release REQUIRES — `null` when nothing does. Never guessed from the other. */
+      required_level: z.string().nullable(),
+      blocked_by: z.string().nullable(),
+      floor_graded: z.boolean(),
+      floor_regressions: z.array(z.string()).default([]),
+    })
+    .optional(),
 });
 export const ReleaseControlSchema = z.object({
   available: z.boolean(),

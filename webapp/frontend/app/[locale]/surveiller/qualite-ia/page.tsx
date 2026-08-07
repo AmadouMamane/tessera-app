@@ -7,6 +7,7 @@ import { ScorecardView } from "@/components/eval/scorecard-view";
 import { AppShell } from "@/components/layout/app-shell";
 import { ObservabilityDashboard } from "@/components/observability/observability-dashboard";
 import { QualityViewSwitch } from "@/components/surveiller/quality-view-switch";
+import { ReleaseVerdictRibbon } from "@/components/surveiller/release-verdict-ribbon";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
 import { readSignalFocus } from "@/lib/signal-focus";
@@ -46,6 +47,7 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
     const tEval = await getTranslations({ locale, namespace: "eval" });
     return (
       <AppShell title={tEval("title")} description={tEval("description")}>
+        <ReleaseVerdictRibbon scope={readAgentScope(sp)} locale={locale} />
         <QualityViewSwitch active="evaluations" locale={locale} />
         {/* Plain-language way in for a visitor: what the catalogue is, what the floor means,
             why an absolute score is not the grade. The expert detail below stays intact. */}
@@ -80,6 +82,10 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
   // registry; an org-wide one masks the table and says why (its capability, not a guess).
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
+      {/* The release verdict holds ABOVE the switch, so it is the same sentence on both views.
+          Its two halves used to disagree in silence: the per-agent table said PRÊT while the
+          evaluations view said BLOQUÉ, and both were true of different subjects. */}
+      <ReleaseVerdictRibbon scope={scope} locale={locale} />
       <QualityViewSwitch active="signals" locale={locale} />
       {/* The alert leads and the temporal controls follow as one compact reading sequence.
           A shallow background fill on the sticky chrome keeps both rounded edges clean. */}

@@ -3632,6 +3632,22 @@
       "signalsSub": "Objectifs, écarts et fiabilité de l'évaluation — en temps réel",
       "evaluations": "Évaluations avant mise en ligne",
       "evaluationsSub": "Jeu de cas, résultat sans modèle, apport du modèle et comparaisons"
+    },
+    "verdict": {
+      "subject": "verdict par agent, sur son propre jeu d'évaluation",
+      "clear": "{total, plural, one {L'agent peut être mis en ligne} other {Les # agents peuvent être mis en ligne}}",
+      "clearWithPending": "{releasable} des {total} agents peuvent être mis en ligne — {pending, plural, one {# n'a jamais été évalué} other {# n'ont jamais été évalués}}, on ne peut donc rien en dire",
+      "unavailable": "Impossible de dire si un agent peut être mis en ligne : le contrôle de mise en ligne n'a pas répondu",
+      "undecidable": "{count, plural, one {# agent sans décision lisible} other {# agents sans décision lisible}}",
+      "levelShortfall": "{count, plural, one {# agent n'a pas les preuves de fonctionnement exigées} other {# agents n'ont pas les preuves de fonctionnement exigées}} ({reached} atteint, {required} exigé)",
+      "open": "Ouvrir le contrôle de mise en ligne",
+      "cause": {
+        "null_floor": "Mise en ligne refusée : le modèle rend {count, plural, one {l'agent {agents}} other {# agents ({agents})}} MOINS fiable que sans modèle du tout",
+        "eval_gate": "Mise en ligne refusée : {count, plural, one {l'agent {agents} échoue} other {# agents ({agents}) échouent}} sur un cas critique",
+        "observability_level": "Mise en ligne refusée : {count, plural, one {l'agent {agents} ne fournit pas} other {# agents ({agents}) ne fournissent pas}} les preuves de fonctionnement exigées pour ce qu'{count, plural, one {il fait} other {ils font}}",
+        "observability_level_unreadable": "On ne peut pas savoir si {count, plural, one {l'agent {agents} peut} other {# agents ({agents}) peuvent}} être mis en ligne : le niveau de preuve n'a pas pu être lu. Rien n'est mis en ligne sur un niveau non mesuré",
+        "unknown": "Mise en ligne refusée pour {count, plural, one {l'agent {agents}} other {# agents ({agents})}} — ce cockpit ne reconnaît pas le motif renvoyé"
+      }
     }
   },
   "security": {

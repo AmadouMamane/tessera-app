@@ -171,6 +171,11 @@ function secondaryQualityCopy(catalogue: Catalogue): string {
     kpi: quality.kpi,
     charts: quality.charts,
     release: quality.release,
+    // The page-level launch verdict. It is the LOUDEST sentence on this screen — a full-bleed
+    // band above the view switch — so it is the last copy that may fall back on release
+    // engineering vocabulary. Policed here rather than trusted: the guard's whole premise is
+    // that new copy arrives, and copy nobody scans is copy that drifts.
+    verdict: quality.verdict,
     exec: quality.exec,
     signalsTable: quality.signalsTable,
   }).join("\n");

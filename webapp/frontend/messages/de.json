@@ -3632,6 +3632,22 @@
       "signalsSub": "Ziele, Abweichungen und Verlässlichkeit der Bewertung — in Echtzeit",
       "evaluations": "Bewertungen vor der Freigabe",
       "evaluationsSub": "Prüfsatz, Ergebnis ohne Modell, Modellbeitrag und Vergleiche"
+    },
+    "verdict": {
+      "subject": "Urteil je Agent, auf seinem eigenen Bewertungssatz",
+      "clear": "{total, plural, one {Der Agent kann live gehen} other {Die # Agenten koennen live gehen}}",
+      "clearWithPending": "{releasable} von {total} Agenten koennen live gehen — {pending, plural, one {# wurde nie bewertet} other {# wurden nie bewertet}}, darueber laesst sich nichts sagen",
+      "unavailable": "Nicht feststellbar, ob ein Agent live gehen kann: die Freigabekontrolle hat nicht geantwortet",
+      "undecidable": "{count, plural, one {# Agent ohne lesbare Entscheidung} other {# Agenten ohne lesbare Entscheidung}}",
+      "levelShortfall": "{count, plural, one {# Agent erbringt die geforderten Betriebsnachweise nicht} other {# Agenten erbringen die geforderten Betriebsnachweise nicht}} ({reached} erreicht, {required} gefordert)",
+      "open": "Freigabekontrolle oeffnen",
+      "cause": {
+        "null_floor": "Livegang verweigert: das Modell macht {count, plural, one {den Agenten {agents}} other {# Agenten ({agents})}} UNZUVERLAESSIGER als ganz ohne Modell",
+        "eval_gate": "Livegang verweigert: {count, plural, one {der Agent {agents} scheitert} other {# Agenten ({agents}) scheitern}} an einem kritischen Fall",
+        "observability_level": "Livegang verweigert: {count, plural, one {der Agent {agents} liefert} other {# Agenten ({agents}) liefern}} nicht die Betriebsnachweise, die fuer {count, plural, one {seine Aufgabe} other {ihre Aufgaben}} gefordert sind",
+        "observability_level_unreadable": "Nicht feststellbar, ob {count, plural, one {der Agent {agents}} other {# Agenten ({agents})}} live gehen kann: die Nachweisstufe war nicht lesbar. Auf einer ungemessenen Stufe geht nichts live",
+        "unknown": "Livegang verweigert fuer {count, plural, one {den Agenten {agents}} other {# Agenten ({agents})}} — dieses Cockpit kennt den gemeldeten Grund nicht"
+      }
     }
   },
   "security": {

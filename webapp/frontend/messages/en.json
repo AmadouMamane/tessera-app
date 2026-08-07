@@ -3632,6 +3632,22 @@
       "signalsSub": "Targets, gaps, and evaluation reliability — live",
       "evaluations": "Evaluations before launch",
       "evaluationsSub": "Case set, result without a model, model contribution, and comparisons"
+    },
+    "verdict": {
+      "subject": "verdict per agent, on its own evaluation set",
+      "clear": "{total, plural, one {The agent may go live} other {All # agents may go live}}",
+      "clearWithPending": "{releasable} of {total} agents may go live — {pending, plural, one {# has never been evaluated} other {# have never been evaluated}}, so nothing can be said about {pending, plural, one {it} other {them}}",
+      "unavailable": "Cannot say whether any agent may go live: the launch check did not answer",
+      "undecidable": "{count, plural, one {# agent with no readable decision} other {# agents with no readable decision}}",
+      "levelShortfall": "{count, plural, one {# agent does not provide the operating evidence required} other {# agents do not provide the operating evidence required}} ({reached} reached, {required} required)",
+      "open": "Open the launch check",
+      "cause": {
+        "null_floor": "Launch refused: the model makes {count, plural, one {agent {agents}} other {# agents ({agents})}} LESS reliable than no model at all",
+        "eval_gate": "Launch refused: {count, plural, one {agent {agents} fails} other {# agents ({agents}) fail}} a critical case",
+        "observability_level": "Launch refused: {count, plural, one {agent {agents} does} other {# agents ({agents}) do}} not provide the operating evidence required for what {count, plural, one {it does} other {they do}}",
+        "observability_level_unreadable": "Cannot say whether {count, plural, one {agent {agents} may} other {# agents ({agents}) may}} go live: the evidence level could not be read. Nothing goes live on an unmeasured level",
+        "unknown": "Launch refused for {count, plural, one {agent {agents}} other {# agents ({agents})}} — this cockpit does not recognise the reason given"
+      }
     }
   },
   "security": {
