@@ -42,7 +42,15 @@ def _agent_meta(agent_id: str) -> tuple[str, str]:
 
 
 def _agent_release_row(agent_id: str, lang: str = "fr") -> dict[str, object]:
-    """Per-agent release row: policy verdict + lifecycle state + governance history."""
+    """Per-agent release row: policy verdict + lifecycle state + governance history.
+
+    ``decision`` is the lifecycle's :class:`ReleaseDecision`, carried WHOLE. This row used
+    to keep only the decision's shadow (``state``/``state_tone``) and drop the fields that
+    say WHY — ``blocked_by``, the achieved vs required observability level, the floor grade —
+    so the one payload listing every agent could label a block but never attribute it, and
+    the attribution lived one endpoint away (``/observability/agent-lifecycle``), one agent
+    at a time.
+    """
     name, owner = _agent_meta(agent_id)
     rel = agent_release_state(agent_id, lang)
     lifecycle = compute_agent_lifecycle(agent_id, lang)
@@ -56,6 +64,7 @@ def _agent_release_row(agent_id: str, lang: str = "fr") -> dict[str, object]:
         "flow": lifecycle["flow"],
         "history": lifecycle["history"],
         "release": rel.as_dict(),
+        "decision": lifecycle["release"],
     }
 
 

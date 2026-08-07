@@ -6,7 +6,7 @@ import json
 import sys
 from dataclasses import asdict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 
 from tessera.api.routes.observability._common import (
     _CALIBRATION_FILE,
@@ -16,6 +16,7 @@ from tessera.api.routes.observability._common import (
     _bundles_for,
     _load_failure_items,
 )
+from tessera.api.security import require_bearer
 from tessera.observability import (
     contradiction as contradiction_mod,
     failure_clustering as failure_clustering_mod,
@@ -371,3 +372,58 @@ async def observability_contradictions(
         "n_contradictions": len(pairs),
         "pairs": pairs,
     }
+
+
+@router.get("/observability/eval-sweep")
+def observability_eval_sweep() -> dict[str, object]:
+    """The eval SWEEP — the catalogue world, served from its one address (ADR 0051).
+
+    The evaluations view used to read ``eval/reports/sweep/`` through the filesystem (the
+    repo in dev, a bundle baked into the image in production) while every sibling block of
+    the same page read this API — two media, two instants, one screen. The sweep now travels
+    over HTTP with its provenance (``regraded_at``, the grader shas, the blind runs).
+    Aggregates only — the per-case record lives behind the bearer below. Degrades to
+    ``available: false``.
+    """
+    from tessera.observability import eval_sweep as sweep_mod
+
+    try:
+        return {"available": True, **sweep_mod.compute_eval_sweep()}
+    except Exception as exc:  # never break the page
+        sys.stderr.write(f"tessera.observability.eval_sweep: failed: {exc}\n")
+        return {"available": False}
+
+
+@router.get("/eval/sweep-case-result", dependencies=[Depends(require_bearer)])
+def eval_sweep_case_result(run_id: str, case_id: str, language: str) -> dict[str, object]:
+    """The FULL record of one (run, case, language) — the model's real words included.
+
+    Deliberately OUTSIDE the ``/observability/`` prefix: the front's ``/api`` proxy
+    allowlists that prefix as public and attaches the service bearer on the caller's behalf
+    (the F-4 lesson), so a public prefix plus ``require_bearer`` would still hand the
+    model's real responses to an anonymous visitor. Under ``/eval/`` the proxy never
+    forwards; the operator-gated RSC calls this server-to-server with the bearer
+    (ADR 0009: aggregate scores are showcase, weakness maps are operator material).
+    """
+    from tessera.observability import eval_sweep as sweep_mod
+
+    found = sweep_mod.load_case_result(run_id, case_id, language)
+    if found is None:
+        raise HTTPException(status_code=404, detail="unknown run, case or language")
+    return found
+
+
+@router.get("/eval/sweep-run", dependencies=[Depends(require_bearer)])
+def eval_sweep_run(run_id: str) -> dict[str, object]:
+    """The COMPLETE report of one sweep run — every result, responses included.
+
+    Same posture and same reason as ``/eval/sweep-case-result`` above: outside the
+    publicly proxied prefix, behind the service bearer, for the operator-gated blocks
+    (failure synthesis, per-case detail) that need the full weakness map.
+    """
+    from tessera.observability import eval_sweep as sweep_mod
+
+    found = sweep_mod.load_run_document(run_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="unknown run")
+    return found
