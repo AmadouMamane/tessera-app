@@ -114,17 +114,33 @@ _HEADLINE: Final[dict[int, str]] = {0: "clear", 1: "fail", 2: "blind"}
 _READ_WITNESSES: Final = frozenset({"postgres", "clickhouse", "prometheus"})
 
 
-def _read_verdicts(report: PreflightReport) -> dict[str, Verdict]:
-    """Component key → the verdict of its own READ path, where one actually ran.
+def _read_observations(report: PreflightReport) -> dict[str, tuple[Verdict, str]]:
+    """Component key → its own READ path's verdict AND the sentence that earned it.
 
     Preflight supplies three (postgres / clickhouse / prometheus — each check IS the adapter's
     read); Langfuse gets its own, because its socket said OK on 2026-08-06 while this process
     could not complete one authenticated read and the overview page said so — two cockpit
     surfaces contradicting each other about one system.
+
+    The sentence travels with the verdict because of what the operator asked next, on
+    2026-08-07: *"why is langfuse-web the problem when I can see it is OK in the list below?"*
+    A page that carries the read verdict only into the CONSEQUENCES makes the component table
+    and the consequence block disagree in plain sight, and leaves the reader to guess that the
+    two are answering different questions. So the read rides on the component's own row.
     """
-    reads = {check.name: check.verdict for check in report.checks if check.name in _READ_WITNESSES}
-    reads["langfuse-web"] = langfuse_read_health().verdict
+    reads = {
+        check.name: (check.verdict, check.detail)
+        for check in report.checks
+        if check.name in _READ_WITNESSES
+    }
+    health = langfuse_read_health()
+    reads["langfuse-web"] = (health.verdict, health.detail)
     return reads
+
+
+def _read_verdicts(report: PreflightReport) -> dict[str, Verdict]:
+    """Just the verdicts — what the capability merge consumes."""
+    return {key: verdict for key, (verdict, _) in _read_observations(report).items()}
 
 
 def probe_for_scheduler() -> float:
@@ -197,6 +213,10 @@ async def observability_components() -> dict[str, object]:
     #: ``Check.detail`` stays too (the CLI prints it); the surface prefers these, because a
     #: French page rendering "postgres:5432 accepts connections" is showing OUR prose untranslated.
     outcomes = {o.check.name: o for o in observations}
+    # Adapter-level reads join the socket verdicts (they can only degrade, never improve): the
+    # Langfuse leg is a live authenticated round-trip, so it runs off the event loop with the
+    # other probes rather than blocking it for its 3 s timeout.
+    read_obs = await asyncio.to_thread(_read_observations, report)
 
     def entry(check: Check, group: str, *, role: str, asked: str) -> dict[str, object]:
         """One row, with the three facts kept apart instead of two of them sharing a cell.
@@ -214,6 +234,10 @@ async def observability_components() -> dict[str, object]:
           evidence; the surface hides it when it merely echoes the question.
         """
         seen = outcomes.get(check.name) if group == "stack" else None
+        # The SECOND witness on this component, when one exists: not "does the port answer"
+        # but "can the adapter that uses it actually read". Carried on the stack row only —
+        # a precondition IS that read, and repeating it against itself would say nothing.
+        read = read_obs.get(check.name) if group == "stack" else None
         return {
             "name": check.name,
             "group": group,
@@ -221,6 +245,10 @@ async def observability_components() -> dict[str, object]:
             "detail": check.detail,
             "role": role,
             "asked": asked,
+            # Absent (``None``) means NO read witness exists for this component — which is not
+            # the same claim as a read that came back fine, and the surface must not render the
+            # two the same way.
+            "read": ({"verdict": read[0].value, "detail": read[1]} if read is not None else None),
             # What the probe found, as a CODE the surface can say in the reader's language, and
             # the machine's own words kept apart from it. Absent for a precondition: preflight
             # is a CLI witness whose line is read in a terminal, and paraphrasing it here would
@@ -248,10 +276,7 @@ async def observability_components() -> dict[str, object]:
     fail = sum(1 for c in every if c.verdict is Verdict.FAIL)
     blind = sum(1 for c in every if c.verdict is Verdict.BLIND)
     verdicts = {check.name: check.verdict for check in stack}
-    # Adapter-level reads join the socket verdicts (they can only degrade, never improve): the
-    # Langfuse leg is a live authenticated round-trip, so it runs off the event loop with the
-    # other probes rather than blocking it for its 3 s timeout.
-    read_checks = await asyncio.to_thread(_read_verdicts, report)
+    read_checks = {key: verdict for key, (verdict, _) in read_obs.items()}
     states = consequence_states(verdicts, read_checks)
     because = consequence_because(verdicts, read_checks)
     return {

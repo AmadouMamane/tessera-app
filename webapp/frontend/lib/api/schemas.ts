@@ -506,6 +506,25 @@ export const ComponentCheckSchema = z.object({
   raw: z.string().default(""),
   /** Legacy alias of `asked`, kept so an older client renders something rather than nothing. */
   interrogates: z.string(),
+  /**
+   * The SECOND witness on this component: not "does the port answer" but "can the adapter that
+   * uses it actually read". Present only where such a read exists (Postgres, ClickHouse,
+   * Prometheus via their preflight twins; Langfuse via its authenticated `limit=1`).
+   *
+   * `null` means NOBODY performed a read — which is not the claim that a read succeeded, and
+   * the two must not render the same way. This field exists because of a question an operator
+   * asked on 2026-08-07: *"why is langfuse-web the problem when it says OK in the list?"* The
+   * socket verdict and the read verdict were both on the page, in two different blocks, with
+   * nothing saying they answered different questions.
+   */
+  read: z
+    .object({
+      verdict: z.enum(["ok", "fail", "blind", "skip"]),
+      /** The sentence that earned the verdict — 'blind' alone never says WHERE it looked. */
+      detail: z.string(),
+    })
+    .nullable()
+    .default(null),
 });
 /**
  * A capability's standing — the same three-valued alphabet the probe speaks, deliberately.

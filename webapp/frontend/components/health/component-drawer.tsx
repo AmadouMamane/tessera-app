@@ -104,6 +104,28 @@ export function ComponentDrawer({
         ) : null}
       </DrawerSection>
 
+      {/* The second question asked of this component, always shown when it was asked at all.
+          The row above answers "does it answer"; this answers "can the adapter that uses it
+          actually read". They can differ, and when they do, this drawer is where an operator
+          finds out WHY the consequences block blames a component the table shows as green. */}
+      {component.read ? (
+        <DrawerSection label={t("read")}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={verdictTone(component.read.verdict)}>
+              {tc(`state.${component.read.verdict}`)}
+            </Badge>
+            {component.read.verdict !== component.verdict ? (
+              <span className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+                {t("readDiverges")}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1.5 whitespace-pre-wrap break-words font-mono text-[0.7rem] leading-relaxed text-[var(--muted-foreground)]">
+            {component.read.detail || "—"}
+          </p>
+        </DrawerSection>
+      ) : null}
+
       {dependents.length > 0 ? (
         <DrawerSection label={t("dependents")}>
           <ul className="flex flex-col gap-1">

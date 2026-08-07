@@ -418,3 +418,56 @@ def test_history_reports_a_scheduler_that_never_beat_as_never() -> None:
     payload = asyncio.run(components_route.observability_component_history(days=1))
     assert payload["probe"]["state"] == "never"  # type: ignore[index]
     assert payload["probe"]["last_run_at"] is None  # type: ignore[index]
+
+
+def test_the_component_row_carries_its_own_read_verdict() -> None:
+    """The operator's question, 2026-08-07: *"why is langfuse-web the problem — it says OK"*.
+
+    Because two witnesses were answering about it and only one of them reached the table. The
+    row keeps its socket verdict (the container IS up) and now carries the second answer beside
+    it, so the table and the consequences block can no longer look like they disagree.
+    """
+    payload = _serve(
+        PreflightReport(()),
+        stack=(Check("langfuse-web", Verdict.OK, "3000/api/public/health -> HTTP 200"),),
+        langfuse_read=LangfuseReadHealth(Verdict.BLIND, "Connection refused on localhost:3900"),
+    )
+    row = _by_name(payload, "stack")["langfuse-web"]
+    assert row["verdict"] == "ok", "the socket answer is unchanged — it was never wrong"
+    read = row["read"]
+    assert read is not None
+    assert read["verdict"] == "blind"  # type: ignore[index]
+    assert "3900" in str(read["detail"]), (  # type: ignore[index]
+        "the sentence travels too: 'blind' alone does not tell an operator WHERE it looked"
+    )
+
+
+def test_a_component_with_no_read_witness_says_so_rather_than_looking_fine() -> None:
+    """``None`` means nobody performed a read — which is not the claim that a read succeeded.
+
+    Rendering the two the same way is how a surface turns an absence of evidence into evidence
+    (ADR 0026), so the payload keeps them distinguishable and the front is left no choice.
+    """
+    payload = _serve(
+        PreflightReport(()),
+        stack=(
+            Check("grafana", Verdict.OK, "3000/api/health -> HTTP 200"),
+            Check("langfuse-web", Verdict.OK, "3000/api/public/health -> HTTP 200"),
+        ),
+    )
+    assert _by_name(payload, "stack")["grafana"]["read"] is None
+    assert _by_name(payload, "stack")["langfuse-web"]["read"] is not None
+
+
+def test_a_precondition_row_is_the_read_and_does_not_repeat_itself() -> None:
+    """A precondition IS the adapter read; hanging a `read` on it would say nothing twice."""
+    payload = _serve(
+        PreflightReport((Check("clickhouse", Verdict.FAIL, "403 AUTHENTICATION_FAILED"),)),
+        stack=(Check("clickhouse", Verdict.OK, "clickhouse:8123/ping -> HTTP 200"),),
+    )
+    assert _by_name(payload, "precondition")["clickhouse"]["read"] is None
+    stack_read = _by_name(payload, "stack")["clickhouse"]["read"]
+    assert stack_read is not None
+    assert stack_read["verdict"] == "fail", (  # type: ignore[index]
+        "the stack row must carry the preflight twin's verdict — that IS clickhouse's read"
+    )

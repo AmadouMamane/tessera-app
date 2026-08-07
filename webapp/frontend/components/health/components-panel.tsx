@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown, Search, SearchX } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -160,14 +160,19 @@ export function ComponentsPanel() {
                   </button>
                 ))}
               </div>
-              <label className="relative ml-auto flex items-center">
+              {/* `shrink-0` is the fix, not the width: a flex item shrinks below its declared
+                  `w-*` by default, so the chips group squeezed this one until the placeholder
+                  read « Rechercher un composa ». The row already wraps — wrapping to its own
+                  line is the right degradation, being cut in half is not. Sized for the
+                  longest of the three locales (French, 24 characters). */}
+              <label className="relative ml-auto flex shrink-0 items-center">
                 <Search className="pointer-events-none absolute left-2 h-3 w-3 text-[var(--muted-foreground)]" />
                 <input
                   type="search"
                   value={needle}
                   onChange={(event) => setNeedle(event.target.value)}
                   placeholder={t("searchPlaceholder")}
-                  className="h-6.5 w-44 rounded-md border border-[var(--tessera-border)] bg-transparent pl-6.5 pr-2 text-[0.7rem] text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  className="h-6.5 w-56 rounded-md border border-[var(--tessera-border)] bg-transparent pl-6.5 pr-2 text-[0.7rem] text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                 />
               </label>
             </div>
@@ -365,6 +370,24 @@ function ComponentRow({
       </td>
       <td className="px-1.5 py-1">
         <Badge tone={tone}>{t(`state.${component.verdict}`)}</Badge>
+        {/* The component's SECOND witness, surfaced only when the two disagree.
+            « pourquoi langfuse-web est le problème alors qu'il est OK dans la liste ? » —
+            because the socket answered and the adapter's read did not, and until now only the
+            consequences block knew. Shown on divergence alone: a read that agrees adds a badge
+            to nineteen calm rows and hides the one that matters. */}
+        {component.read && component.read.verdict !== component.verdict ? (
+          <span
+            className={`mt-0.5 flex items-center gap-0.5 text-[0.6rem] ${
+              component.read.verdict === "ok"
+                ? "text-[var(--muted-foreground)]"
+                : "text-[var(--tessera-fg-warning)]"
+            }`}
+            title={component.read.detail}
+          >
+            <SearchX className="h-3 w-3 shrink-0" />
+            {t(`readSplit.${component.read.verdict}`)}
+          </span>
+        ) : null}
       </td>
       <td className="truncate px-1.5 py-1 text-[var(--muted-foreground)]" title={component.asked}>
         {asked || "—"}
