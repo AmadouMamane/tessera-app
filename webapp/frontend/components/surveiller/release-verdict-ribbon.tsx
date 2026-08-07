@@ -1,7 +1,6 @@
-import { CheckCircle2, ShieldAlert } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
-import { AlertRibbon } from "@/components/cockpit/alert-ribbon";
+import { ReleaseVerdictBand } from "@/components/surveiller/release-verdict-band";
 import { Link } from "@/i18n/navigation";
 import type { ReleaseControlAgent } from "@/lib/api/schemas";
 import { type AgentDecision, levelShortfalls, summarizeRelease } from "@/lib/release-verdict";
@@ -42,11 +41,11 @@ export async function ReleaseVerdictRibbon({
   // to report.
   if (!control?.available || !control.agents?.length) {
     return (
-      <AlertRibbon
-        variant="slim"
+      <ReleaseVerdictBand
         severity="info"
-        icon={ShieldAlert}
         title={t("verdict.unavailable")}
+        meta={null}
+        action={null}
       />
     );
   }
@@ -74,10 +73,8 @@ export async function ReleaseVerdictRibbon({
         });
 
   return (
-    <AlertRibbon
-      variant="slim"
+    <ReleaseVerdictBand
       severity={undecidable > 0 && verdict.worst === null ? "info" : verdict.severity}
-      icon={verdict.worst === null && undecidable === 0 ? CheckCircle2 : ShieldAlert}
       title={title}
       meta={
         <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
