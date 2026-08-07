@@ -49,24 +49,49 @@ for (const route of LONG_PAGES) {
     const content = page.locator("[data-shell-content]");
     await expect(content).toBeVisible();
 
-    // Scroll the shell's own scroll container — the window does not scroll here.
-    await page.evaluate(() => {
-      const main = document.querySelector("[data-shell-content]")?.parentElement;
-      if (main) main.scrollTop = main.scrollHeight;
-    });
-    // One frame for the scroll to settle before measuring boxes.
-    await page.waitForTimeout(250);
+    // The page keeps GROWING after it first renders — every panel fetches its own data. Scroll
+    // to the bottom too early and the content lengthens underneath the scroll position, which
+    // is what made the first version of this test read −33px on a page whose real clearance is
+    // 48px. So: wait for the scroll height to stop changing, THEN go to the bottom, and only
+    // measure once the browser confirms it is actually there.
+    const scrollHeight = () =>
+      page.evaluate(() => {
+        const main = document.querySelector("[data-shell-content]")?.parentElement;
+        return main ? main.scrollHeight : 0;
+      });
+    let previous = -1;
+    let settled = false;
+    for (let attempt = 0; attempt < 25 && !settled; attempt += 1) {
+      await page.waitForTimeout(400);
+      const now = await scrollHeight();
+      settled = now === previous;
+      previous = now;
+    }
+    expect(settled, "the page must stop growing before its end can be measured").toBe(true);
 
-    const gap = await page.evaluate(() => {
+    const measured = await page.evaluate(async () => {
       const content = document.querySelector("[data-shell-content]");
+      const main = content?.parentElement;
       const footer = document.querySelector("footer");
-      if (content === null || footer === null) return null;
-      return footer.getBoundingClientRect().top - content.getBoundingClientRect().bottom;
+      if (!content || !main || !footer) return null;
+      main.scrollTop = main.scrollHeight;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return {
+        gap: footer.getBoundingClientRect().top - content.getBoundingClientRect().bottom,
+        // How far the scroll still is from the true end. Anything but ~0 means the measurement
+        // was taken somewhere other than the bottom, and the gap below would be a number about
+        // a place nobody is looking at.
+        remaining: main.scrollHeight - main.scrollTop - main.clientHeight,
+      };
     });
 
     // `null` means the shell is not on screen at all (an unauthenticated redirect, say) —
-    // reported as skipped rather than silently passing on a measurement nobody took.
-    expect(gap, "the shell content and its footer must both be present to measure").not.toBeNull();
-    expect(gap ?? 0).toBeGreaterThanOrEqual(MIN_GAP);
+    // reported as a failure rather than silently passing on a measurement nobody took.
+    expect(measured, "the shell, its scroller and its footer must all be present").not.toBeNull();
+    expect(
+      Math.abs(measured?.remaining ?? Number.NaN),
+      "the gap must be measured AT the end of the scroll, nowhere else",
+    ).toBeLessThanOrEqual(2);
+    expect(measured?.gap ?? 0).toBeGreaterThanOrEqual(MIN_GAP);
   });
 }
