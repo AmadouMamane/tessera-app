@@ -83,7 +83,9 @@ test("no score is published as a bare rate — the floor and the contribution tr
   await login(page);
   await page.goto(EVALUATIONS);
 
-  const decomposed = page.getByText(/ABSOLU — CE N'EST PAS LA NOTE/);
+  // Case-INSENSITIVE on purpose: the label is uppercased by CSS and the DOM keeps the
+  // catalogue's lowercase text, so an uppercase selector silently matches nothing.
+  const decomposed = page.getByText(/absolu — ce n'est pas la note/i);
   const honestEmpty = page.getByText(/aucun sweep lisible|Aucun modèle n'a parlé/);
   await expect(decomposed.or(honestEmpty).first()).toBeVisible();
 
