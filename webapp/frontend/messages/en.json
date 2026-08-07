@@ -1491,16 +1491,18 @@
       "cannotSay": "cannot say",
       "blindThroughout": "Observed, but blind throughout: the probe looked and could conclude nothing about the component. 0 % available would say 'it went down', which is not what was found.",
       "neverObservedTitle": "Never observed over this window — no availability can be drawn from it.",
-      "probeActive": "Automatic check every {every} · last one {last}",
+      "probeActive": "Automatic check {every} · last one {last}",
       "probeStale": "Automatic check STOPPED — the last one was {last}",
-      "probeNever": "Automatic check scheduled every {every} — none recorded here yet",
+      "probeNever": "Automatic check scheduled {every} — none recorded here yet",
       "probeOnDemand": "No automatic check: the stack is only looked at when this page is opened",
       "holesFootnote": "Window from {from} to {to}. A blank in the timeline is a hole in the record, never uptime: a phase absorbs an observation only within {continuity}.",
       "showAll": "Show the {n} older changes",
       "showLess": "Collapse",
       "segmentTitle": "{verdict} from {from} to {to} ({duration}, {n} observations)",
       "timelineEmpty": "{component}: nothing observed in this window",
-      "timelineSummary": "{component}: {parts}"
+      "timelineSummary": "{component}: {parts}",
+      "cadenceMinutes": "{n, plural, one {every minute} other {every # minutes}}",
+      "cadenceSeconds": "{n, plural, one {every second} other {every # seconds}}"
     },
     "coverage": {
       "title": "What each agent stamps",

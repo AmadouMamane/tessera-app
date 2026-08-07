@@ -1491,16 +1491,18 @@
       "cannotSay": "kann nichts sagen",
       "blindThroughout": "Beobachtet, aber durchgehend im blinden Fleck: die Sonde hat hingesehen und konnte nichts über die Komponente schließen. 0 % Verfügbarkeit hieße „sie ist ausgefallen“ — das wurde nicht festgestellt.",
       "neverObservedTitle": "In diesem Fenster nie beobachtet — daraus lässt sich keine Verfügbarkeit ableiten.",
-      "probeActive": "Automatische Prüfung alle {every} · letzte {last}",
+      "probeActive": "Automatische Prüfung {every} · letzte {last}",
       "probeStale": "Automatische Prüfung STEHT — die letzte liegt {last} zurück",
-      "probeNever": "Automatische Prüfung alle {every} vorgesehen — hier noch keine erfasst",
+      "probeNever": "Automatische Prüfung {every} vorgesehen — hier noch keine erfasst",
       "probeOnDemand": "Keine automatische Prüfung: der Stack wird nur angesehen, wenn diese Seite geöffnet wird",
       "holesFootnote": "Fenster vom {from} bis {to}. Eine Lücke im Zeitverlauf ist ein Loch in der Erfassung, nie Betriebszeit: eine Phase nimmt eine Beobachtung nur bei höchstens {continuity} Abstand auf.",
       "showAll": "Die {n} älteren Änderungen zeigen",
       "showLess": "Einklappen",
       "segmentTitle": "{verdict} von {from} bis {to} ({duration}, {n} Beobachtungen)",
       "timelineEmpty": "{component}: nichts beobachtet in diesem Fenster",
-      "timelineSummary": "{component}: {parts}"
+      "timelineSummary": "{component}: {parts}",
+      "cadenceMinutes": "{n, plural, one {jede Minute} other {alle # Minuten}}",
+      "cadenceSeconds": "{n, plural, one {jede Sekunde} other {alle # Sekunden}}"
     },
     "coverage": {
       "title": "Was jeder Agent stempelt",

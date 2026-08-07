@@ -191,13 +191,24 @@ function SchedulerLine({ data }: { data: ComponentHistory }) {
     probe.last_run_at === null
       ? null
       : format.relativeTime(new Date(probe.last_run_at), relativeNow());
+  /**
+   * The cadence as a PHRASE, not a duration slotted after "toutes les".
+   *
+   * `humanSeconds(60)` yields "1 min", and « toutes les 1 min » is not French — you say
+   * « chaque minute ». The singular is a grammatical case, so it belongs in the catalogue
+   * (ICU plural), not in a duration formatter that knows nothing about the sentence it lands in.
+   */
+  const cadence = (seconds: number) =>
+    seconds % 60 === 0 && seconds >= 60
+      ? t("cadenceMinutes", { n: Math.round(seconds / 60) })
+      : t("cadenceSeconds", { n: Math.round(seconds) });
   const sentence =
     probe.state === "active" && probe.interval_s !== null && lastSeen !== null
-      ? t("probeActive", { every: humanSeconds(probe.interval_s), last: lastSeen })
+      ? t("probeActive", { every: cadence(probe.interval_s), last: lastSeen })
       : probe.state === "stale" && lastSeen !== null
         ? t("probeStale", { last: lastSeen })
         : probe.interval_s !== null
-          ? t("probeNever", { every: humanSeconds(probe.interval_s) })
+          ? t("probeNever", { every: cadence(probe.interval_s) })
           : t("probeOnDemand");
   return (
     <p className="flex items-center gap-1.5 text-[0.66rem] text-[var(--muted-foreground)]">

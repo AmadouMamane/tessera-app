@@ -1491,16 +1491,18 @@
       "cannotSay": "ne peut pas dire",
       "blindThroughout": "Observé, mais en angle mort tout du long : la sonde a regardé sans rien pouvoir conclure sur le composant. Une disponibilité de 0 % dirait « il est tombé », ce qui n'est pas ce qui a été constaté.",
       "neverObservedTitle": "Jamais observé sur cette fenêtre — aucune disponibilité ne peut en être tirée.",
-      "probeActive": "Vérification automatique toutes les {every} · dernière {last}",
+      "probeActive": "Vérification automatique {every} · dernière {last}",
       "probeStale": "Vérification automatique À L'ARRÊT — la dernière remonte à {last}",
-      "probeNever": "Vérification automatique prévue toutes les {every} — aucune encore enregistrée ici",
+      "probeNever": "Vérification automatique prévue {every} — aucune encore enregistrée ici",
       "probeOnDemand": "Aucune vérification automatique : la pile n'est regardée que lorsqu'on ouvre cette page",
       "holesFootnote": "Fenêtre du {from} au {to}. Un blanc dans la chronologie est un trou du relevé, jamais du temps de bon fonctionnement : une phase n'absorbe une observation qu'à {continuity} d'écart au plus.",
       "showAll": "Voir les {n} changements plus anciens",
       "showLess": "Réduire",
       "segmentTitle": "{verdict} de {from} à {to} ({duration}, {n} observations)",
       "timelineEmpty": "{component} : rien d'observé sur cette fenêtre",
-      "timelineSummary": "{component} : {parts}"
+      "timelineSummary": "{component} : {parts}",
+      "cadenceMinutes": "{n, plural, one {chaque minute} other {toutes les # minutes}}",
+      "cadenceSeconds": "{n, plural, one {chaque seconde} other {toutes les # secondes}}"
     },
     "coverage": {
       "title": "Ce que chaque agent estampille",
