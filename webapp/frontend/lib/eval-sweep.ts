@@ -14,7 +14,8 @@
  *   1. the live repo (`eval/reports/sweep/`, `eval/baselines/`, `eval/failures/`), so a fresh
  *      sweep shows up the moment it is written;
  *   2. the bundled snapshot (`data/eval/`), which is the ONLY source in the standalone image
- *      (no repo root there). `scripts/sync-eval-bundle.mjs` keeps it equal to the live one.
+ *      (no repo root there). Its one author is `scripts/build_eval_bundle.py` (ratchet:
+ *      `tests/unit/test_eval_bundle_is_derived.py`); the `prebuild` hook delegates to it.
  *
  * The catalogue's version is COMPUTED here from the case files, exactly as the runner computes
  * it, and compared with what each run was stamped with. That is what lets the screen say "the

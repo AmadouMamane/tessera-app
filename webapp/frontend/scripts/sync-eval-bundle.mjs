@@ -1,26 +1,23 @@
-// Regenerate the bundled eval fallback (`webapp/frontend/data/eval/`) from the LIVE artefacts
-// at build time.
+// The bundled eval snapshot (`webapp/frontend/data/eval/`) is a DERIVED artefact with ONE
+// author: `scripts/build_eval_bundle.py` at the repo root, held to the repo by the ratchet
+// `tests/unit/test_eval_bundle_is_derived.py`.
 //
-// Why this exists: `lib/eval-sweep.ts` prefers the repository's own files, but the deployed
-// standalone image has no repo root, so it falls back to this bundle. Without a regeneration
-// step the bundle drifts — and it HAD drifted: the committed fallback carried a three-case,
-// zero-token run from 20 June, which the cockpit rendered as "3/3 — 100%".
+// This hook used to be a second author. It assembled the bundle itself, from its own file
+// list, and the two lists drifted the way two originals always do: this one never learned
+// `discrimination.json`, so its prune step deleted the catalogue-power measurement from the
+// bundle on every local `pnpm build` — recreating at build time the exact incident the Python
+// builder exists to prevent (measured 2026-08-05 on the serving container: a tile answering
+// "not measured" over a measurement that had been run).
 //
-// What it bundles, and why all three are needed:
-//   - `eval/reports/sweep/`      the runs. A sweep is N runs on ONE case set; "latest" cannot
-//                                represent one, so the whole sweep travels, not a single file.
-//   - `eval/baselines/null-control.json`  the FLOOR (122/174 with no model at all). Without it
-//                                the image cannot decompose a score, and an undecomposed score
-//                                is the one thing this screen may not print.
-//   - `eval/failures/*.json`     the catalogue, assembled into one array. It carries the prompts,
-//                                the pass criteria and the source citations — the evidence behind
-//                                every verdict, and the reason the bench is not "invented".
-//
-// It is a no-op when the repo is absent (inside the image build, where the committed bundle is
-// used as-is), a no-op when there is no sweep to sync from (a bundle is never deleted because a
-// checkout happens to have no reports), and it never fails the build.
+// So it no longer knows any file name. It finds the one author and runs it:
+//   - no repo root (the Docker image build copies `webapp/frontend/` alone, so there is no
+//     `pyproject.toml` above) → no-op, the committed bundle is used as-is;
+//   - the author unavailable or failing → a loud warning, never a broken build. Freshness is
+//     this hook's job; correctness stays the ratchet's, and a stale-but-committed bundle still
+//     fails the gate that matters.
 
-import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -44,25 +41,6 @@ async function findRepoRoot(start) {
   }
 }
 
-async function exists(path) {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Drop every `.json` under `dir` that the new bundle does not claim. */
-async function pruneStale(dir, keep) {
-  for (const existing of await readdir(dir)) {
-    if (existing.endsWith(".json") && !keep.has(existing)) {
-      await rm(join(dir, existing));
-      log(`dropped stale ${existing}`);
-    }
-  }
-}
-
 async function main() {
   const here = dirname(fileURLToPath(import.meta.url));
   const root = await findRepoRoot(here);
@@ -71,63 +49,21 @@ async function main() {
     return;
   }
 
-  const sweepSrc = join(root, "eval", "reports", "sweep");
-  if (!(await exists(sweepSrc))) {
-    // "Nothing to sync from" is NOT "the bundle is stale". Falling through would delete the
-    // deployed cockpit's only data source.
-    log("no eval/reports/sweep — keeping the committed bundle.");
+  const author = spawnSync("uv", ["run", "python", "scripts/build_eval_bundle.py"], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  if (author.error) {
+    log(
+      `WARNING: could not run scripts/build_eval_bundle.py (${author.error.message}) — keeping the committed bundle; the gate's ratchet still judges it.`,
+    );
     return;
   }
-
-  const dest = join(root, "webapp", "frontend", "data", "eval");
-  const sweepDest = join(dest, "sweep");
-  await mkdir(sweepDest, { recursive: true });
-
-  // 1. The sweep's runs, verbatim. The loader deduplicates the aliases (a run appears as a
-  //    timestamped file, a model-named file and `latest.json`), so no selection happens here.
-  const runs = (await readdir(sweepSrc)).filter((f) => f.endsWith(".json"));
-  for (const file of runs) await copyFile(join(sweepSrc, file), join(sweepDest, file));
-  await pruneStale(sweepDest, new Set(runs));
-
-  // 2. The committed floor. The image reads it, never recomputes it.
-  const floorSrc = join(root, "eval", "baselines", "null-control.json");
-  const bundled = new Set();
-  if (await exists(floorSrc)) {
-    await copyFile(floorSrc, join(dest, "null-control.json"));
-    bundled.add("null-control.json");
-  } else {
-    log("WARNING: no committed null baseline — the image will not be able to decompose a score.");
+  if (author.status !== 0) {
+    log(
+      `WARNING: scripts/build_eval_bundle.py exited ${author.status} — keeping the committed bundle; the gate's ratchet still judges it.`,
+    );
   }
-
-  // 3. The catalogue, assembled. One file rather than 63: the image reads it whole, every time.
-  const casesDir = join(root, "eval", "failures");
-  if (await exists(casesDir)) {
-    const files = (await readdir(casesDir))
-      .filter((f) => f.endsWith(".json") && !f.startsWith("_"))
-      .sort();
-    const cases = [];
-    for (const file of files) {
-      cases.push(JSON.parse(await readFile(join(casesDir, file), "utf-8")));
-    }
-    await writeFile(join(dest, "catalogue.json"), `${JSON.stringify(cases, null, 2)}\n`);
-    bundled.add("catalogue.json");
-    log(`assembled ${cases.length} cases into catalogue.json`);
-
-    // 4. The case SCHEMA. The coverage card reads it to answer a question the catalogue cannot:
-    //    can a case even NAME a capability it covers? (`additionalProperties: false` and no such
-    //    field ⇒ the map is not empty, it is inexpressible.) Bundled so the image can say so too.
-    const schema = join(casesDir, "_schema.json");
-    if (await exists(schema)) {
-      await copyFile(schema, join(dest, "case-schema.json"));
-      bundled.add("case-schema.json");
-    }
-  }
-
-  // The `latest*.json` files the old single-run loader read are dead weight now, and dead weight
-  // that still parses is how a three-week-old run gets published as today's.
-  await pruneStale(dest, bundled);
-
-  log(`refreshed ${runs.length} sweep file(s), the floor and the catalogue.`);
 }
 
 main().catch((err) => {
