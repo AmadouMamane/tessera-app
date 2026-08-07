@@ -132,7 +132,7 @@ export function IntegrationsOverview() {
   };
 
   return (
-    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 text-[var(--tessera-text)]">
       <CommandBar t={t} onExport={onExport} />
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">

@@ -136,7 +136,7 @@ export function SignalCatalogue() {
   };
 
   return (
-    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 text-[var(--tessera-text)]">
       <CommandBar t={t} onExport={onExport} />
 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-9">

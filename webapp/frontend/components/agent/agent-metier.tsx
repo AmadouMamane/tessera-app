@@ -196,7 +196,7 @@ export function AgentMetier() {
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="flex min-w-0 flex-col gap-2.5 text-[var(--tessera-text)]">
       <SignalKpiStrip data={data} signals={data.business_signals} asOf={asOf} />
 
       <CapabilitiesTable

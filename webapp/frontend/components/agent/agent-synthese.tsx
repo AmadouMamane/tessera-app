@@ -97,7 +97,7 @@ export function AgentSynthese() {
   }
 
   return (
-    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 text-[var(--tessera-text)]">
       <AgentRail temporal={temporal} asOf={asOf} agentName={data.context?.name ?? "l'agent"} />
 
       <div className="grid gap-2.5 xl:grid-cols-12">

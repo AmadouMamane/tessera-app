@@ -31,11 +31,12 @@ export function ShellFrame({
       {focus ? null : sidebar}
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {focus ? null : topbar}
-        {/* Asymmetric on purpose: `py-5` gave the END of a long page the same 20px the top
-            gets, and 20px at the end of a scroll reads as the last card sitting ON the footer.
-            The bottom of a scrollable region needs more room than the top, because the top has
-            the topbar above it and the bottom has a fixed bar right under it. */}
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-5 pb-12 sm:px-6">
+        {/* The shell owns the bottom space, for EVERY page. `py-5` gave the end of a long
+            scroll the same 20px the top gets and read as the last card sitting on the footer;
+            48px then read as a hole. 24px is the settled value — and it is homogeneous only
+            because the page roots no longer add their own `pb-*` on top of it (19 of them did,
+            which is what made the same "end of page" measure differently across the cockpit). */}
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-5 pb-6 sm:px-6">
           <div
             data-shell-content
             className={cn(

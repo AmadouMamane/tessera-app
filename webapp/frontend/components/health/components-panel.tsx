@@ -141,24 +141,38 @@ export function ComponentsPanel() {
         ) : rows.length > 0 ? (
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-0.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-muted)]/30 p-0.5">
-                {filters.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setFilter(option)}
-                    className={`rounded-md px-2 py-0.5 text-[0.66rem] transition-colors ${
-                      option === filter
-                        ? "bg-[var(--tessera-surface)] font-medium text-[var(--foreground)] shadow-sm"
-                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    {t(`filter.${option}`)}
-                    <span className="ml-1 tabular-nums text-[var(--muted-foreground)]">
-                      {counts[option]}
-                    </span>
-                  </button>
-                ))}
+              {/* Label and count used to sit side by side in the same size and nearly the same
+                  colour, so four chips read as one run-on string — « Tous 20 OK 20 Pannes 0 ».
+                  The count now wears its own chip: separated, tabular, and tied to the
+                  selection state, which is also what finally makes the ACTIVE filter visible. */}
+              <div className="flex items-center gap-1 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-muted)]/30 p-1">
+                {filters.map((option) => {
+                  const active = option === filter;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setFilter(option)}
+                      aria-pressed={active}
+                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.68rem] transition-colors ${
+                        active
+                          ? "bg-[var(--tessera-surface)] font-medium text-[var(--foreground)] shadow-sm ring-1 ring-inset ring-[var(--tessera-border)]"
+                          : "text-[var(--muted-foreground)] hover:bg-[var(--tessera-muted)]/40 hover:text-[var(--foreground)]"
+                      }`}
+                    >
+                      {t(`filter.${option}`)}
+                      <span
+                        className={`min-w-[1.15rem] rounded px-1 py-px text-center text-[0.62rem] tabular-nums ${
+                          active
+                            ? "bg-[var(--tessera-muted)] text-[var(--foreground)]"
+                            : "bg-[var(--tessera-muted)]/50 text-[var(--muted-foreground)]"
+                        }`}
+                      >
+                        {counts[option]}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
               {/* `shrink-0` is the fix, not the width: a flex item shrinks below its declared
                   `w-*` by default, so the chips group squeezed this one until the placeholder

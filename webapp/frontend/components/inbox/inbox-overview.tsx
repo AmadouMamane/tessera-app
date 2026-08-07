@@ -151,7 +151,7 @@ export function InboxOverview() {
     mutate.mutate({ item_id: id, status: STATUS_TO_BACKEND[NEXT_STATUS[status] ?? "todo"] });
 
   return (
-    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 text-[var(--tessera-text)]">
       <Rail t={t} data={data} />
 
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">

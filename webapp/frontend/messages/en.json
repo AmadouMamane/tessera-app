@@ -1491,11 +1491,11 @@
       "cannotSay": "cannot say",
       "blindThroughout": "Observed, but blind throughout: the probe looked and could conclude nothing about the component. 0 % available would say 'it went down', which is not what was found.",
       "neverObservedTitle": "Never observed over this window — no availability can be drawn from it.",
-      "probeActive": "Scheduled probe: every {every} · last run {last}",
-      "probeStale": "Scheduled probe STOPPED — last beat {last}",
-      "probeNever": "Scheduled probe ({every}): no beat recorded here yet",
-      "probeOnDemand": "On-demand probe only — it runs only when the cockpit is looking",
-      "holesFootnote": "Window from {from} to {to}. A blank in a timeline is a hole in the record, never uptime: a phase only absorbs an observation up to {continuity} apart.",
+      "probeActive": "Automatic check every {every} · last one {last}",
+      "probeStale": "Automatic check STOPPED — the last one was {last}",
+      "probeNever": "Automatic check scheduled every {every} — none recorded here yet",
+      "probeOnDemand": "No automatic check: the stack is only looked at when this page is opened",
+      "holesFootnote": "Window from {from} to {to}. A blank in the timeline is a hole in the record, never uptime: a phase absorbs an observation only within {continuity}.",
       "showAll": "Show the {n} older changes",
       "showLess": "Collapse",
       "segmentTitle": "{verdict} from {from} to {to} ({duration}, {n} observations)",
@@ -1557,8 +1557,8 @@
     },
     "zones": {
       "chain": "The chain and what it carries",
-      "time": "Over time",
-      "detail": "The detail"
+      "time": "What changed over time",
+      "detail": "The detail, component by component"
     },
     "service": {
       "title": "Tessera service",

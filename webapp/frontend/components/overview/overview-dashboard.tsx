@@ -402,7 +402,7 @@ export function OverviewDashboard({
   const sloReady = slo.data && slo.data.n > 0 ? slo.data : undefined;
 
   return (
-    <div className="flex w-full flex-col gap-2.5 pb-6">
+    <div className="flex w-full flex-col gap-2.5">
       {/* The alert and the page-level evidence actions share one opening band on wide
           cockpit screens: the actions no longer reserve an otherwise empty 36px row
           above the alert. On narrower screens they stack without compressing the SLO

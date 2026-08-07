@@ -1480,7 +1480,7 @@
         "ok": "Disponible",
         "observed": "Part observée",
         "detail": "Détail",
-        "timeline": "Frise"
+        "timeline": "Chronologie"
       },
       "state": {
         "ok": "OK",
@@ -1491,11 +1491,11 @@
       "cannotSay": "ne peut pas dire",
       "blindThroughout": "Observé, mais en angle mort tout du long : la sonde a regardé sans rien pouvoir conclure sur le composant. Une disponibilité de 0 % dirait « il est tombé », ce qui n'est pas ce qui a été constaté.",
       "neverObservedTitle": "Jamais observé sur cette fenêtre — aucune disponibilité ne peut en être tirée.",
-      "probeActive": "Sonde planifiée : toutes les {every} · dernier passage {last}",
-      "probeStale": "Sonde planifiée À L'ARRÊT — dernier battement {last}",
-      "probeNever": "Sonde planifiée ({every}) : aucun battement encore enregistré ici",
-      "probeOnDemand": "Sonde à la demande uniquement — elle ne tourne que quand le cockpit regarde",
-      "holesFootnote": "Fenêtre du {from} au {to}. Un blanc dans une frise est un trou du relevé, jamais du temps de bon fonctionnement : une phase n'absorbe une observation qu'à {continuity} d'écart au plus.",
+      "probeActive": "Vérification automatique toutes les {every} · dernière {last}",
+      "probeStale": "Vérification automatique À L'ARRÊT — la dernière remonte à {last}",
+      "probeNever": "Vérification automatique prévue toutes les {every} — aucune encore enregistrée ici",
+      "probeOnDemand": "Aucune vérification automatique : la pile n'est regardée que lorsqu'on ouvre cette page",
+      "holesFootnote": "Fenêtre du {from} au {to}. Un blanc dans la chronologie est un trou du relevé, jamais du temps de bon fonctionnement : une phase n'absorbe une observation qu'à {continuity} d'écart au plus.",
       "showAll": "Voir les {n} changements plus anciens",
       "showLess": "Réduire",
       "segmentTitle": "{verdict} de {from} à {to} ({duration}, {n} observations)",
@@ -1557,8 +1557,8 @@
     },
     "zones": {
       "chain": "La chaîne et ce qu'elle porte",
-      "time": "Dans le temps",
-      "detail": "Le détail"
+      "time": "Ce qui a changé dans le temps",
+      "detail": "Le détail, composant par composant"
     },
     "service": {
       "title": "Service Tessera",

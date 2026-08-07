@@ -174,7 +174,7 @@ export function AgentEvaluations() {
   const activeIdx = Math.max(0, subtabs.indexOf(active));
 
   return (
-    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 text-[var(--tessera-text)]">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           type="button"

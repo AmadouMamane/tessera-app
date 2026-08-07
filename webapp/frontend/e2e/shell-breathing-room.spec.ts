@@ -29,8 +29,16 @@ import { type Page, expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 1672, height: 900 } });
 
-/** Minimum clearance, in CSS pixels, between the end of the content and the footer. */
-const MIN_GAP = 24;
+/**
+ * The clearance band, in CSS pixels, between the end of the content and the footer.
+ *
+ * A MINIMUM alone is not the property. Nineteen page roots carried their own `pb-*` on top of
+ * the shell's, so the same "end of the page" measured differently from one route to the next —
+ * and a floor would have called every one of them fine. The ceiling is what makes this a
+ * HOMOGENEITY assertion: the shell owns this space, and a page that adds its own is caught.
+ */
+const MIN_GAP = 16;
+const MAX_GAP = 40;
 
 async function login(page: Page) {
   await page.goto("/fr/login");
@@ -93,5 +101,9 @@ for (const route of LONG_PAGES) {
       "the gap must be measured AT the end of the scroll, nowhere else",
     ).toBeLessThanOrEqual(2);
     expect(measured?.gap ?? 0).toBeGreaterThanOrEqual(MIN_GAP);
+    expect(
+      measured?.gap ?? 0,
+      "the shell owns the bottom space; a page adding its own makes it inhomogeneous",
+    ).toBeLessThanOrEqual(MAX_GAP);
   });
 }

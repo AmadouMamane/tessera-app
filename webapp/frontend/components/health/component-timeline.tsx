@@ -62,7 +62,11 @@ export function ComponentTimeline({
     <div
       role="img"
       aria-label={summary}
-      className="relative h-2 w-full min-w-[6rem] overflow-hidden rounded-full bg-[var(--tessera-muted)]/50"
+      // The empty track must be VISIBLE. At /50 on a dark card it was indistinguishable from
+      // the background, so a row whose first observation lands mid-window looked like a bar
+      // that "starts in the middle" rather than a window with unwatched time before it — the
+      // reader could not see the hole, which is the one thing this column exists to show.
+      className="relative h-2 w-full min-w-[6rem] overflow-hidden rounded-full bg-[var(--tessera-muted)] ring-1 ring-inset ring-[var(--tessera-border)]"
       title={segments.length === 0 ? summary : undefined}
     >
       {segments.map((segment) => (

@@ -235,7 +235,7 @@ function AgentConnaissancesInner() {
     chips.push({ key: "gr", label: t("grounded"), onRemove: () => setGroundedOnly(false) });
 
   return (
-    <div className="relative flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="relative flex flex-col gap-2.5 text-[var(--tessera-text)]">
       <AgentCrossLinks page="connaissances" />
       <div className="flex flex-wrap items-center justify-end gap-2">
         <GhostLink href={CATALOG_HREF} label={a?.manage ?? ""} />

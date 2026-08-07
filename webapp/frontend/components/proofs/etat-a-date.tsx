@@ -313,7 +313,7 @@ export function EtatADate() {
   }
 
   return (
-    <div className="relative flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="relative flex flex-col gap-2.5 text-[var(--tessera-text)]">
       {/* Banner + page actions share one row (no wasted line). */}
       <div className="flex flex-wrap items-stretch gap-3">
         {data?.meta?.banner ? (

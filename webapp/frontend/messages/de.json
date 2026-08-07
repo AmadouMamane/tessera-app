@@ -1480,7 +1480,7 @@
         "ok": "Verfügbar",
         "observed": "Beobachteter Anteil",
         "detail": "Detail",
-        "timeline": "Zeitleiste"
+        "timeline": "Zeitverlauf"
       },
       "state": {
         "ok": "OK",
@@ -1491,11 +1491,11 @@
       "cannotSay": "kann nichts sagen",
       "blindThroughout": "Beobachtet, aber durchgehend im blinden Fleck: die Sonde hat hingesehen und konnte nichts über die Komponente schließen. 0 % Verfügbarkeit hieße „sie ist ausgefallen“ — das wurde nicht festgestellt.",
       "neverObservedTitle": "In diesem Fenster nie beobachtet — daraus lässt sich keine Verfügbarkeit ableiten.",
-      "probeActive": "Geplante Sonde: alle {every} · letzter Durchlauf {last}",
-      "probeStale": "Geplante Sonde GESTOPPT — letzter Herzschlag {last}",
-      "probeNever": "Geplante Sonde ({every}): noch kein Herzschlag aufgezeichnet",
-      "probeOnDemand": "Sonde nur auf Anfrage — sie läuft nur, wenn das Cockpit hinschaut",
-      "holesFootnote": "Fenster vom {from} bis {to}. Eine Lücke in der Zeitleiste ist ein Loch in der Aufzeichnung, nie Betriebszeit: eine Phase nimmt eine Beobachtung nur bis {continuity} Abstand auf.",
+      "probeActive": "Automatische Prüfung alle {every} · letzte {last}",
+      "probeStale": "Automatische Prüfung STEHT — die letzte liegt {last} zurück",
+      "probeNever": "Automatische Prüfung alle {every} vorgesehen — hier noch keine erfasst",
+      "probeOnDemand": "Keine automatische Prüfung: der Stack wird nur angesehen, wenn diese Seite geöffnet wird",
+      "holesFootnote": "Fenster vom {from} bis {to}. Eine Lücke im Zeitverlauf ist ein Loch in der Erfassung, nie Betriebszeit: eine Phase nimmt eine Beobachtung nur bei höchstens {continuity} Abstand auf.",
       "showAll": "Die {n} älteren Änderungen zeigen",
       "showLess": "Einklappen",
       "segmentTitle": "{verdict} von {from} bis {to} ({duration}, {n} Beobachtungen)",
@@ -1557,8 +1557,8 @@
     },
     "zones": {
       "chain": "Die Kette und was sie trägt",
-      "time": "Im Zeitverlauf",
-      "detail": "Das Detail"
+      "time": "Was sich im Lauf der Zeit geändert hat",
+      "detail": "Das Detail, Komponente für Komponente"
     },
     "service": {
       "title": "Tessera-Dienst",

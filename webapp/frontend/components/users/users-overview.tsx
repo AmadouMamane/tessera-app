@@ -104,7 +104,7 @@ export function UsersOverview() {
     s === "provisioned_on_demand" ? t("status.provisioned") : t(`status.${s}`);
 
   return (
-    <div className="flex flex-col gap-2.5 pb-2 text-[var(--tessera-text)]">
+    <div className="flex flex-col gap-2.5 text-[var(--tessera-text)]">
       <p className="text-sm text-[var(--tessera-text-muted)]">{t("subtitle")}</p>
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">

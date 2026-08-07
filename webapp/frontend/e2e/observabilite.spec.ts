@@ -60,8 +60,8 @@ test("the page is sectioned into the three zones of its question", async ({ page
   await login(page);
   await page.goto(PAGE);
   await expect(page.getByText("La chaîne et ce qu'elle porte", { exact: true })).toBeVisible();
-  await expect(page.getByText("Dans le temps", { exact: true })).toBeVisible();
-  await expect(page.getByText("Le détail", { exact: true })).toBeVisible();
+  await expect(page.getByText("Ce qui a changé dans le temps", { exact: true })).toBeVisible();
+  await expect(page.getByText("Le détail, composant par composant", { exact: true })).toBeVisible();
 });
 
 test("the chain is drawn with its four stages", async ({ page }) => {
@@ -113,12 +113,14 @@ test("the history draws phases and names the scheduler's heartbeat", async ({ pa
   await expect(page.getByText("Historique", { exact: true })).toBeVisible();
   // The scheduler line is derived from the stamp the loop wrote — one of its three states, or
   // the on-demand sentence; a page that cannot say is `Données indisponibles`.
-  const probeLine = page.getByText(/Sonde planifiée|Sonde à la demande/);
+  // « Sonde » was jargon too — the line now says what happens, in words anyone reads.
+  const probeLine = page.getByText(/Vérification automatique/);
   const unreadable = page.getByText("Données indisponibles", { exact: true });
   await expect(probeLine.or(unreadable).first()).toBeVisible();
   // Either the timeline table is there WITH its observed-share column, or the honest empty
   // state. What must never exist is an availability column standing on its own.
-  const timelineColumn = page.getByRole("columnheader", { name: "Frise" });
+  // « Frise » was jargon on a page read by operators; the column is a chronology.
+  const timelineColumn = page.getByRole("columnheader", { name: "Chronologie" });
   const observedColumn = page.getByRole("columnheader", { name: "Observé" });
   const nothingRecorded = page.getByText(/Rien d'enregistré sur cette fenêtre/);
   await expect(timelineColumn.or(nothingRecorded).first()).toBeVisible();
