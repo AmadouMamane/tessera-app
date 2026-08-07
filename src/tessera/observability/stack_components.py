@@ -39,6 +39,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Literal
 
 from tessera.preflight import Check, Verdict
+from tessera.settings import env_setting
 from tessera.urlfetch import UnsupportedSchemeError, urlopen_http
 
 if TYPE_CHECKING:
@@ -48,6 +49,8 @@ __all__ = [
     "STACK_COMPONENTS",
     "StackComponent",
     "StackObservation",
+    "base_url_for",
+    "component_for",
     "is_loopback",
     "probe_stack",
     "probe_stack_observations",
@@ -196,17 +199,77 @@ def _address(component: StackComponent) -> str:
 
     Read from the environment for the same reason every other address in this codebase is: the
     deployed profile injects it, and a hard-coded service name would make this module true only
-    inside one compose file.
+    inside one compose file. Resolved through the project's config seam, so the file an operator
+    is told to configure reaches the probe as well as everything else.
     """
     key = f"TESSERA_STACK_{component.key.upper().replace('-', '_')}"
-    return os.environ.get(key) or component.default_address
+    return env_setting(key, component.default_address)
+
+
+def component_for(key: str) -> StackComponent:
+    """The declared component with this key.
+
+    Args:
+        key: A key from :data:`STACK_COMPONENTS`.
+
+    Returns:
+        The declaration.
+
+    Raises:
+        KeyError: When no component is declared under that key — a reader asking about a
+            component nobody declared is a bug in the reader, never an address to guess.
+    """
+    for component in STACK_COMPONENTS:
+        if component.key == key:
+            return component
+    raise KeyError(key)
+
+
+def base_url_for(key: str, *, env: str = "") -> str:
+    """Where a reader reaches this component — the component's ONE address.
+
+    This exists because readers used to keep their own copy. ``langfuse_obs`` defaulted to
+    ``http://localhost:3900`` — the address that works **on the host**, and refuses inside the
+    container where the cockpit actually runs — while the probe two modules away asked
+    ``langfuse-web:3000`` and got a 200. The page then said, of the same component and in the
+    same breath, *"OK"* in the table and *"blamed"* in the consequences. Both witnesses were
+    honest; they were interrogating two different addresses, and only one of them existed.
+
+    Precedence: the tool's own variable when the caller names one (``LANGFUSE_HOST`` — the name
+    its SDK and its documentation use, so a deployment configures it once), then
+    ``TESSERA_STACK_<KEY>``, then the declared compose address. Every step goes through the same
+    seam ``Settings`` uses, so ``.env.local`` reaches all of them.
+
+    Args:
+        key: A key from :data:`STACK_COMPONENTS`.
+        env: Optional tool-conventional variable to honour first, e.g. ``"LANGFUSE_HOST"``.
+
+    Returns:
+        A base URL with a scheme and no trailing slash.
+
+    Raises:
+        KeyError: When ``key`` names no declared component.
+        ValueError: When the component speaks TCP — it has no base URL, and inventing one
+            would hand a caller a URL that cannot be fetched.
+    """
+    component = component_for(key)
+    if component.kind != "http":
+        msg = f"{key} is a {component.kind} component and has no base URL"
+        raise ValueError(msg)
+    override = env_setting(env, "") if env else ""
+    address = override or f"http://{_address(component)}"
+    if "://" not in address:
+        address = f"http://{address}"
+    return address.rstrip("/")
 
 
 def ui_url(component: StackComponent) -> str:
     """Where a browser opens this component, or ``""`` when it has no UI.
 
     ``TESSERA_STACK_UI_<KEY>`` overrides the declared default, and setting it to an empty value
-    removes the link — a deployment that publishes no ports should promise no doors.
+    removes the link — a deployment that publishes no ports should promise no doors. That last
+    clause is why this reads ``os.environ`` directly rather than through ``env_setting``: here
+    an empty value is a DECISION, not an unfilled placeholder.
     """
     key = f"TESSERA_STACK_UI_{component.key.upper().replace('-', '_')}"
     override = os.environ.get(key)

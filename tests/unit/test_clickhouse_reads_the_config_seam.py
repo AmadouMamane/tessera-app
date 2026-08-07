@@ -11,18 +11,22 @@ worktree BLIND, while the same code in the container saw 500 rows — and a blin
 presents itself as an empty store is precisely the defect commit `e7184679` fixed one layer up.
 The two halves belong together: the code no longer lies about not being able to read, and the
 configuration no longer makes it unable to read for no reason.
+
+**And the fix stayed private, so Langfuse repeated it** (2026-08-07). The resolver now lives in
+`tessera.settings`, once, for every reader; this file still exercises it through the adapter
+that learned it, because that is the caller whose failure is documented above.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from tessera.observability.spine.adapters.clickhouse import (
-    ClickHouseConfig,
-    _dotenv_files,
-    _dotenv_values,
+from tessera.observability.spine.adapters.clickhouse import ClickHouseConfig
+from tessera.settings import (
+    Settings,
+    dotenv_files as _dotenv_files,
+    dotenv_values as _dotenv_values,
 )
-from tessera.settings import Settings
 
 if TYPE_CHECKING:
     from pathlib import Path

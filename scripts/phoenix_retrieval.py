@@ -17,7 +17,7 @@ Run (collector + Phoenix up, after some real /chat turns)::
     PYTHONPATH=.:src .venv/bin/python -m scripts.phoenix_retrieval
 
 Environment:
-    PHOENIX_BASE_URL    Phoenix base URL (default http://localhost:16006).
+    PHOENIX_BASE_URL    Phoenix base URL (default: the declared component address).
     PHOENIX_PROJECT     Phoenix project name (default "default").
     PHOENIX_LOOKBACK_H  Only count spans started within the last N hours
                         (default: all spans in the project).
@@ -35,6 +35,7 @@ import httpx
 
 from tessera.observability.knowledge import _SOURCE_META
 from tessera.observability.semconv import TESSERA_RETRIEVAL_CATEGORIES
+from tessera.observability.stack_components import base_url_for
 from tessera.retrieval import citations
 
 _RETRIEVAL_ATTR = TESSERA_RETRIEVAL_CATEGORIES
@@ -42,7 +43,7 @@ _PAGE = 1000
 
 
 def _base_url() -> str:
-    return os.environ.get("PHOENIX_BASE_URL", "http://localhost:16006").rstrip("/")
+    return base_url_for("phoenix", env="PHOENIX_BASE_URL")
 
 
 def _project() -> str:

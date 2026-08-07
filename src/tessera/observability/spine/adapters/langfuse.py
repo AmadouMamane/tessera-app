@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -24,6 +23,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
+from tessera.observability.stack_components import base_url_for
+from tessera.settings import env_setting
 from tessera.urlfetch import urlopen_http
 
 if TYPE_CHECKING:
@@ -45,12 +46,16 @@ class LangfuseConfig:
         """Resolve from the environment defaults the Traces card already uses today.
 
         In the deployed profile (ADR 0014) these same names resolve from Secret Manager,
-        never the repo — the backend reads them from the environment either way.
+        never the repo — the backend reads them from the environment either way. Absent an
+        injected ``LANGFUSE_HOST`` the address comes from the component's DECLARATION rather
+        than a literal of this module's own: three files kept private copies of
+        ``http://localhost:3900``, and the deployment that forgot to inject the real one got a
+        plausible wrong answer instead of a loud missing one.
         """
         return cls(
-            host=os.environ.get("LANGFUSE_HOST", "http://localhost:3900").rstrip("/"),
-            public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public"),
-            secret_key=os.environ.get("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret"),
+            host=base_url_for("langfuse-web", env="LANGFUSE_HOST"),
+            public_key=env_setting("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public"),
+            secret_key=env_setting("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret"),
         )
 
 

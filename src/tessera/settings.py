@@ -52,6 +52,9 @@ __all__ = [
     "MemorySettings",
     "SecretsSettings",
     "Settings",
+    "dotenv_files",
+    "dotenv_values",
+    "env_setting",
     "get_settings",
 ]
 
@@ -653,3 +656,97 @@ def get_settings() -> Cached:
     environment to ensure subsequent reads reflect the change.
     """
     return Settings()
+
+
+# ---------------------------------------------------------------------------
+# The dotenv seam, for settings that do NOT live on `Settings`
+# ---------------------------------------------------------------------------
+#
+# A handful of addresses and credentials are read by the name their own tool
+# publishes — ``LANGFUSE_HOST``, ``TESSERA_CLICKHOUSE_URL`` — rather than as a
+# ``Settings`` field, because that is the name the vendor's SDK and the compose
+# file already use. Those readers used to call ``os.environ.get`` alone, which
+# made them the only settings in the project blind to ``.env.local`` — the file
+# CLAUDE.md tells an operator to configure. Configuring it changed nothing, and
+# the literal default that took over looked plausible enough to hide the hole
+# for a day (ClickHouse, 2026-08-05, commit ``e7184679``).
+#
+# ClickHouse learned this first and kept the fix private; Langfuse repeated the
+# bug three files away. So the resolver lives HERE, once, next to the
+# declaration it defers to.
+
+
+def dotenv_files() -> tuple[str, ...]:
+    """The dotenv files :class:`Settings` is CURRENTLY configured to read, in precedence order.
+
+    Asked of the live config rather than restated. The subtle half of that choice would
+    otherwise have been a real regression: the test suite's ``conftest`` sets ``env_file`` to
+    ``None`` on purpose, so a run never picks up a developer's ``.env.local``. A private copy
+    of the path list quietly re-opens that hole; deferring inherits the guard for free.
+    """
+    declared = Settings.model_config.get("env_file")
+    if declared is None:
+        return ()
+    if isinstance(declared, str | Path):
+        return (str(declared),)
+    return tuple(str(item) for item in declared)
+
+
+# A quoted dotenv value is at least the pair of quotes itself; a lone `"` is a one-character
+# value, not an empty quoted one, and stripping it would invent a credential nobody wrote.
+_QUOTED_MIN_LEN = 2
+
+
+def dotenv_values() -> dict[str, str]:
+    """``KEY=value`` pairs from the project's dotenv files, best effort.
+
+    Deliberately NOT cached: the cost is two small file reads on paths that already perform an
+    HTTP round-trip, and a cache here would both leak state between tests and go stale the
+    moment an operator edits the file they were told to edit.
+
+    Parsing is intentionally minimal — ``KEY=value``, ``#`` comments, optional surrounding
+    quotes. A value this cannot parse is skipped rather than guessed: a credential read wrong
+    produces a 403 that looks exactly like a missing store, and that confusion is what this
+    whole seam exists to end.
+    """
+    values: dict[str, str] = {}
+    for name in dotenv_files():
+        path = Path(name)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for raw in text.splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.removeprefix("export ").strip()
+            if not key:
+                continue
+            value = value.strip()
+            if len(value) >= _QUOTED_MIN_LEN and value[0] == value[-1] and value[0] in {'"', "'"}:
+                value = value[1:-1]
+            values[key] = value
+    return values
+
+
+def env_setting(name: str, default: str) -> str:
+    """Resolve one non-``Settings`` name: process environment, then dotenv, then the default.
+
+    The same precedence ``Settings`` itself applies, so the two can never disagree about where
+    a value came from. An empty value is treated as absent — an env var set to ``""`` in a
+    compose file is a placeholder somebody forgot to fill, not a deliberate empty address.
+
+    Args:
+        name: The variable to resolve, spelled as its own tool spells it.
+        default: What to use when neither source carries it.
+
+    Returns:
+        The resolved value, or ``default``.
+    """
+    from_env = os.environ.get(name, "").strip()
+    if from_env:
+        return from_env
+    from_file = dotenv_values().get(name, "").strip()
+    return from_file or default

@@ -51,6 +51,12 @@ services:
       TESSERA_POSTGRES__DSN: postgresql://tessera:tessera@postgres:5432/tessera
       TESSERA_CLICKHOUSE_URL: http://clickhouse:8123
       TESSERA_PROMETHEUS_URL: http://prometheus:9090
+      # Langfuse was MISSING from this block until 2026-08-07, and the reader's literal
+      # default (``http://localhost:3900`` — right on a host, refused inside a container)
+      # made the omission look like a working configuration. The reader now falls back to
+      # the DECLARED address, so this line is belt-and-braces; it stays because an address
+      # spelled next to its siblings is how the next omission gets noticed.
+      LANGFUSE_HOST: http://langfuse-web:3000
       TESSERA_OBSERVABILITY__OTEL_COLLECTOR_ENDPOINT: http://otel-collector:4318
       TESSERA_OLLAMA__HOST: http://host.docker.internal:11434
       # The base compose turns metrics OFF; the cutover needs them on (turn-evidence

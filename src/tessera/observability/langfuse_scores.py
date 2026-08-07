@@ -26,6 +26,9 @@ import sys
 import uuid
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
+from tessera.observability.stack_components import base_url_for
+from tessera.settings import env_setting
+
 if TYPE_CHECKING:
     from tessera.observability.eval.gating_scores import GatingScoreRow
 
@@ -108,9 +111,9 @@ def _get_client() -> _ScoreClient | None:
 
         _client = _SdkClient(
             Langfuse(
-                host=os.environ.get("LANGFUSE_HOST", "http://localhost:3900"),
-                public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public"),
-                secret_key=os.environ.get("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret"),
+                host=base_url_for("langfuse-web", env="LANGFUSE_HOST"),
+                public_key=env_setting("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public"),
+                secret_key=env_setting("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret"),
             )
         )
     except Exception as exc:  # missing SDK/creds — mirroring is enrichment, never fatal

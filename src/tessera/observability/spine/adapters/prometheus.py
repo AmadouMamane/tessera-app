@@ -13,13 +13,13 @@ an honest-empty state rather than a fabricated zero.
 from __future__ import annotations
 
 import json
-import os
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import TYPE_CHECKING
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
+from tessera.observability.stack_components import base_url_for
 from tessera.observability.store_spans import store_read
 from tessera.urlfetch import urlopen_http
 
@@ -34,7 +34,7 @@ class PrometheusAdapter:
 
     def __init__(self, base_url: str | None = None, *, timeout_s: float = 0.8) -> None:
         self._base_url = (
-            base_url or os.environ.get("TESSERA_PROMETHEUS_URL", "http://localhost:19090")
+            base_url or base_url_for("prometheus", env="TESSERA_PROMETHEUS_URL")
         ).rstrip("/")
         self._timeout_s = timeout_s
 

@@ -36,10 +36,10 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 from tessera.observability.spine.adapters.base import SpineUnavailableError
+from tessera.settings import dotenv_values
 from tessera.sql import safe_identifier, safe_qualified_identifier
 from tessera.urlfetch import urlopen_http
 
@@ -56,63 +56,9 @@ __all__ = [
 ]
 
 
-def _dotenv_files() -> tuple[str, ...]:
-    """The dotenv files ``Settings`` is CURRENTLY configured to read, in its precedence order.
-
-    Asked of `Settings` rather than restated, for two reasons. One is the lesson of the release
-    column: two places answering the same question diverge, and sharing the definition is the
-    only fix that holds. The other is subtler and would have been a real regression — the test
-    suite's `conftest` sets ``env_file`` to ``None`` on purpose, so a run never picks up a
-    developer's `.env.local`. A private copy of the path list would have quietly re-opened that
-    hole; deferring to the live config means this resolver inherits the guard for free.
-    """
-    from tessera.settings import Settings
-
-    declared = Settings.model_config.get("env_file")
-    if declared is None:
-        return ()
-    if isinstance(declared, str | Path):
-        return (str(declared),)
-    return tuple(str(item) for item in declared)
-
-
-# A quoted dotenv value is at least the pair of quotes itself; a lone `"` is a one-character
-# value, not an empty quoted one, and stripping it would invent a credential nobody wrote.
-_QUOTED_MIN_LEN: Final = 2
-
-
-def _dotenv_values() -> dict[str, str]:
-    """`KEY=value` pairs from the project's dotenv files, best effort.
-
-    Deliberately NOT cached: the cost is two small file reads on a path that already performs an
-    HTTP round-trip, and a cache here would both leak state between tests and go stale the moment
-    an operator edits the file they were told to edit.
-
-    Parsing is intentionally minimal — `KEY=value`, `#` comments, optional surrounding quotes.
-    A value this cannot parse is skipped rather than guessed: a credential read wrong produces a
-    403 that looks exactly like a missing store, and that confusion is what this whole seam is
-    here to end.
-    """
-    values: dict[str, str] = {}
-    for name in _dotenv_files():
-        path = Path(name)
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        for raw in text.splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.removeprefix("export ").strip()
-            if not key:
-                continue
-            value = value.strip()
-            if len(value) >= _QUOTED_MIN_LEN and value[0] == value[-1] and value[0] in {'"', "'"}:
-                value = value[1:-1]
-            values[key] = value
-    return values
+# The seam this adapter learned on 2026-08-05 now lives in `tessera.settings`, once, because
+# Langfuse repeated the same bug three files away while this fix sat here privately. Keeping a
+# lesson inside the module that learned it is how the next module gets to re-learn it.
 
 
 # Mirrors the live ring buffer's bound (``eval.scores._RECENT`` maxlen) so the live read
@@ -194,7 +140,7 @@ class ClickHouseConfig:
         Precedence is process environment first, then `.env.local`, then `.env`, then the
         defaults — the same order ``Settings`` applies, so the two cannot disagree.
         """
-        files = _dotenv_values()
+        files = dotenv_values()
 
         def resolve(name: str, fallback: str) -> str:
             value = os.environ.get(name)

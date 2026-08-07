@@ -22,7 +22,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import os
 import sys
 import urllib.error
 import urllib.request
@@ -30,10 +29,12 @@ import uuid
 from datetime import UTC, datetime
 
 from tessera.memory import transcript
+from tessera.observability.stack_components import base_url_for
+from tessera.settings import env_setting
 
-_HOST = os.environ.get("LANGFUSE_HOST", "http://localhost:3900")
-_PUBLIC = os.environ.get("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public")
-_SECRET = os.environ.get("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret")
+_HOST = base_url_for("langfuse-web", env="LANGFUSE_HOST")
+_PUBLIC = env_setting("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public")
+_SECRET = env_setting("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret")
 _TIMEOUT_S = 8.0
 
 # Trace fields that may carry the conversation id, in preference order — OTel maps

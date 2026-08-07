@@ -11,17 +11,18 @@ As-of-T is honoured via Langfuse's ``toTimestamp`` (only traces at or before T),
 this panel projects like every other block under the rail. Degrades to
 ``available: false`` if the stack is down — never a fabricated number.
 
-Config is read from the environment (the local stack's demo keys are the documented
-fallback, matching ``docker-compose.obs.claude.yml``): ``LANGFUSE_HOST``,
-``LANGFUSE_PUBLIC_KEY``, ``LANGFUSE_SECRET_KEY``, ``LANGFUSE_PROJECT_ID``,
-``GRAFANA_URL``, ``PHOENIX_URL``.
+Config resolves through the project's one seam (``tessera.settings.env_setting``: process
+environment, then ``.env.local``, then ``.env``): ``LANGFUSE_HOST``, ``LANGFUSE_PUBLIC_KEY``,
+``LANGFUSE_SECRET_KEY``, ``LANGFUSE_PROJECT_ID``, ``GRAFANA_URL``, ``PHOENIX_URL``. When a name
+is unset the address falls back to the component's DECLARATION
+(``stack_components.STACK_COMPONENTS``) — never to a literal of its own, which is what let this
+module and the probe disagree about where Langfuse lives (see :func:`_host`).
 """
 
 from __future__ import annotations
 
 import base64
 import json
-import os
 import time
 import urllib.error
 import urllib.parse
@@ -31,7 +32,9 @@ from dataclasses import asdict, dataclass
 from threading import Lock
 from typing import Final
 
+from tessera.observability.stack_components import base_url_for, component_for, ui_url
 from tessera.preflight import Verdict
+from tessera.settings import env_setting
 from tessera.urlfetch import urlopen_http
 
 __all__ = [
@@ -41,12 +44,54 @@ __all__ = [
     "langfuse_read_health",
 ]
 
-_HOST = os.environ.get("LANGFUSE_HOST", "http://localhost:3900")
-_PUBLIC = os.environ.get("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public")
-_SECRET = os.environ.get("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret")
-_PROJECT = os.environ.get("LANGFUSE_PROJECT_ID", "claude-project")
-_GRAFANA = os.environ.get("GRAFANA_URL", "http://localhost:13000")
-_PHOENIX = os.environ.get("PHOENIX_URL", "http://localhost:16006")
+
+def _host() -> str:
+    """Where this module READS Langfuse — the server-side address, never the browser's.
+
+    Was a module-level constant defaulting to the literal ``http://localhost:3900``: the address
+    that works on a developer's host and is refused inside the container, which is where the
+    deployed cockpit runs. Nothing injected ``LANGFUSE_HOST`` there (ClickHouse and Prometheus
+    were injected; Langfuse was forgotten), so every read went to the container's own loopback
+    and came back blind — while the probe, asking the DECLARED address two modules away, got a
+    200. The page then said "OK" and "blamed" about one component in one screen.
+
+    Being a function rather than a constant is half the fix: an address read once at import
+    cannot be corrected without restarting the process, and cannot be exercised by a test.
+    """
+    return base_url_for("langfuse-web", env="LANGFUSE_HOST")
+
+
+def _door() -> str:
+    """Where an OPERATOR'S BROWSER opens Langfuse — the published port, not the service name.
+
+    Deliberately not :func:`_host`. Inside the compose network Langfuse is ``langfuse-web:3000``
+    and that string means nothing to a browser; on the host it is ``127.0.0.1:3900`` and that
+    means nothing inside the network. Two vantage points, two addresses — conflating them is
+    how a dashboard grows links to closed doors (``StackComponent.default_ui``).
+    """
+    return ui_url(component_for("langfuse-web")) or _host()
+
+
+def _public() -> str:
+    return env_setting("LANGFUSE_PUBLIC_KEY", "pk-lf-claude-public")
+
+
+def _secret() -> str:
+    return env_setting("LANGFUSE_SECRET_KEY", "sk-lf-claude-secret")
+
+
+def _project() -> str:
+    return env_setting("LANGFUSE_PROJECT_ID", "claude-project")
+
+
+def _grafana() -> str:
+    """Grafana's door. ``GRAFANA_URL`` still wins — it is what deployments already set."""
+    return env_setting("GRAFANA_URL", "") or ui_url(component_for("grafana"))
+
+
+def _phoenix() -> str:
+    """Phoenix's door. ``PHOENIX_URL`` still wins, for the same reason."""
+    return env_setting("PHOENIX_URL", "") or ui_url(component_for("phoenix"))
 
 
 @dataclass(frozen=True)
@@ -66,7 +111,7 @@ class TracesObservability:
 
 
 def _traces_url() -> str:
-    return f"{_HOST}/project/{_PROJECT}/traces"
+    return f"{_door()}/project/{_project()}/traces"
 
 
 def _empty(at: str | None) -> TracesObservability:
@@ -78,14 +123,14 @@ def _empty(at: str | None) -> TracesObservability:
         top_ops=[],
         recent=[],
         langfuse_url=_traces_url(),
-        grafana_url=_GRAFANA,
-        phoenix_url=_PHOENIX,
+        grafana_url=_grafana(),
+        phoenix_url=_phoenix(),
         as_of=at,
     )
 
 
 def _get_json(url: str, timeout: float) -> dict[str, object]:
-    token = base64.b64encode(f"{_PUBLIC}:{_SECRET}".encode()).decode()
+    token = base64.b64encode(f"{_public()}:{_secret()}".encode()).decode()
     request = urllib.request.Request(url, headers={"Authorization": f"Basic {token}"})  # noqa: S310
     with urlopen_http(request, timeout=timeout) as response:
         payload = json.load(response)
@@ -109,7 +154,7 @@ _read_cache_lock = Lock()
 
 def _read_health_uncached() -> LangfuseReadHealth:
     """One authenticated read against the same API this module's numbers come from."""
-    url = f"{_HOST}/api/public/traces?limit=1"
+    url = f"{_host()}/api/public/traces?limit=1"
     try:
         _get_json(url, timeout=3.0)
     except urllib.error.HTTPError as exc:
@@ -170,7 +215,7 @@ def compute_traces_observability(
         A :class:`TracesObservability` — real figures when Langfuse answers, or an
         honest empty state (``available: false``) when the stack is unreachable.
     """
-    url = f"{_HOST}/api/public/traces?limit={max(1, sample)}&orderBy=timestamp.desc"
+    url = f"{_host()}/api/public/traces?limit={max(1, sample)}&orderBy=timestamp.desc"
     if at:
         url += f"&toTimestamp={urllib.parse.quote(at)}"
     try:
@@ -203,7 +248,7 @@ def compute_traces_observability(
             "name": str(t.get("name") or "?").split("?")[0],
             "timestamp": str(t.get("timestamp", "")),
             "latency_s": t.get("latency") if isinstance(t.get("latency"), int | float) else None,
-            "url": f"{_HOST}/project/{_PROJECT}/traces/{t.get('id', '')}",
+            "url": f"{_door()}/project/{_project()}/traces/{t.get('id', '')}",
         }
         for t in data[: max(1, recent)]
     ]
@@ -215,8 +260,8 @@ def compute_traces_observability(
         top_ops=top_ops,
         recent=recent_rows,
         langfuse_url=_traces_url(),
-        grafana_url=_GRAFANA,
-        phoenix_url=_PHOENIX,
+        grafana_url=_grafana(),
+        phoenix_url=_phoenix(),
         as_of=at,
     )
 
