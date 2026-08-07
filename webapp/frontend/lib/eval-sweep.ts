@@ -1,54 +1,76 @@
 /**
- * Server-only loader for the eval SWEEP — the screen's data model (spec §A1.4).
+ * Server-only loader for the eval SWEEP — now a READER of the API, not of the disk.
  *
- * What it replaces and why. `lib/eval.ts` read a single `latest.json`, and with three models
- * scored on one dataset "latest" means nothing: it cannot represent a sweep. Worse, the file it
- * actually resolved to was a THREE-CASE, ZERO-TOKEN run from 20 June, which the dashboard
- * rendered as "3/3 — 100%". Two failures in one: a run no model ever answered, published as a
- * perfect score, and three weeks of staleness passed off as current.
+ * What changed, and why it is not a refactor. This module used to walk the filesystem: the
+ * repository's own `eval/reports/sweep/` when a `pyproject.toml` sat above the working
+ * directory, and a bundle baked into the image otherwise. Every sibling block of the SAME
+ * page — the SLO ribbon, the signal registry, the per-agent breakdown — read the FastAPI
+ * backend. One screen, two media, and they do not fail alike: `eval/reports` is bind-mounted
+ * into the agent container and moves the instant a file changes, while the bundle freezes at
+ * the commit that built the image. A re-grade that landed moved half the page and left the
+ * other half telling last month's story (ADR 0051's chimera).
  *
- * A SWEEP is N runs on ONE catalogue version. That version is the *référentiel*, and it is a
- * property of the sweep, never a filter the reader chooses (criterion 2).
+ * Two more things followed from the split, and they are the reason this is worth doing:
  *
- * Two sources, tried in order — the same contract `lib/eval.ts` documented:
- *   1. the live repo (`eval/reports/sweep/`, `eval/baselines/`, `eval/failures/`), so a fresh
- *      sweep shows up the moment it is written;
- *   2. the bundled snapshot (`data/eval/`), which is the ONLY source in the standalone image
- *      (no repo root there). Its one author is `scripts/build_eval_bundle.py` (ratchet:
- *      `tests/unit/test_eval_bundle_is_derived.py`); the `prebuild` hook delegates to it.
+ *  - the backend could not SEE the sweep at all (`iter_report_files` reads `local/` and
+ *    `seed/`), so the two views of Qualité IA were not merely two instants — they were two
+ *    disjoint populations of runs, catalogue-wide here and per-agent there;
+ *  - the provenance never crossed the wire. The committed runs were sampled on 12 July and
+ *    re-judged on 5 August, and `ScorecardDocumentSchema` declared neither `regraded_at` nor
+ *    the grader's sha, so zod stripped them in silence and the header could only say "26 days
+ *    ago" — true of the sampling, false of every verdict on screen.
  *
- * The catalogue's version is COMPUTED here from the case files, exactly as the runner computes
- * it, and compared with what each run was stamped with. That is what lets the screen say "the
- * case set moved under this run" instead of quietly showing a verdict scored against cases that
- * no longer exist.
+ * So the sweep has ONE address (`/observability/eval-sweep`), and its provenance is the
+ * payload's point. The catalogue-version arithmetic that used to be mirrored here in
+ * TypeScript is gone with it: it now lives once, on the Python side, pinned by
+ * `tests/unit/test_eval_sweep_api.py` to the stamp the committed reports actually carry.
+ * Two implementations of one hash are two answers waiting to disagree.
+ *
+ * Every read returns `null` on failure so a caller renders an honest empty state — never a
+ * fixture, and never a zero that would read as a measurement.
  */
 import "server-only";
 
-import { createHash } from "node:crypto";
-import { readFile, readdir, stat } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { cache } from "react";
 
 import {
   type CataloguePower,
   CataloguePowerSchema,
   type EvalCase,
-  EvalCaseSchema,
-  NullControlBaselineSchema,
+  EvalSweepPayloadSchema,
   type RunCost,
   type ScorecardDocument,
   ScorecardDocumentSchema,
   type ScorecardSummary,
 } from "@/lib/api/schemas";
-import { type Floor, type RunFacts, caseKey } from "@/lib/eval-score";
+import type { Floor, RunFacts } from "@/lib/eval-score";
+import { backendHeaders, backendUrl } from "@/lib/server/backend";
 
 /** One run of the sweep: its facts and its score inputs, WITHOUT the 174 per-case results. */
 export interface SweepRun extends RunFacts {
-  /** Stable id, used in the URL. Derived from the filename, never from user input. */
+  /** Stable id, used in the URL. Derived from the report's filename, never from user input. */
   id: string;
   summary: ScorecardSummary;
   cost: RunCost | null;
   /** Wall-clock of the run, in ms — the honest half of "quality at what cost". */
   durationMs: number | null;
+  /**
+   * When these verdicts were last JUDGED, as opposed to when the model answered (`runAt`).
+   * A re-grade re-judges recorded responses under moved criteria: it changes the pass rate
+   * without changing `runAt`, so a screen showing only `runAt` cannot say the numbers moved.
+   */
+  regradedAt: string | null;
+  regradeNote: string | null;
+  /** The ruler. Mutually exclusive with {@link graderShaPartial} by construction. */
+  graderSha: string | null;
+  /** A ruler that judged MOST of the run — it travels with {@link graderBlindRuns}. */
+  graderShaPartial: string | null;
+  /**
+   * The `case|language` runs whose verdict was CARRIED, not re-derived — a criterion the
+   * recording cannot answer (max_confidence, must_cite_source). Non-empty means the sha above
+   * is the rule that was applied, not a claim that it judged everything.
+   */
+  graderBlindRuns: string[];
 }
 
 export interface Sweep {
@@ -65,6 +87,8 @@ export interface Sweep {
   /** The committed floor, restricted to nothing — read, never recomputed. */
   floor: Floor | null;
   floorTotals: { total: number; passed: number } | null;
+  /** The ruler the floor itself was measured under — the other half of any comparison. */
+  floorGraderSha: string | null;
   /** The catalogue AS IT STANDS TODAY (63 cases), and the version that follows from it. */
   catalogue: EvalCase[];
   currentCatalogueVersion: string | null;
@@ -78,61 +102,8 @@ export interface Sweep {
    */
   caseSchemaFields: string[];
   newestRunAt: string | null;
-}
-
-interface Sources {
-  sweepDir: string;
-  baselineFile: string;
-  /** What the catalogue MEASURES (`eval/baselines/discrimination.json`) — not how it scored. */
-  powerFile: string;
-  catalogue: { kind: "dir"; path: string } | { kind: "file"; path: string };
-  caseSchemaFile: string;
-}
-
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function findRepoRoot(start: string): Promise<string | null> {
-  let dir = resolve(start);
-  for (;;) {
-    if (await exists(join(dir, "pyproject.toml"))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
-}
-
-async function sources(): Promise<Sources | null> {
-  const root = await findRepoRoot(process.cwd());
-  if (root) {
-    const sweepDir = join(root, "eval", "reports", "sweep");
-    if (await exists(sweepDir)) {
-      return {
-        sweepDir,
-        baselineFile: join(root, "eval", "baselines", "null-control.json"),
-        powerFile: join(root, "eval", "baselines", "discrimination.json"),
-        catalogue: { kind: "dir", path: join(root, "eval", "failures") },
-        caseSchemaFile: join(root, "eval", "failures", "_schema.json"),
-      };
-    }
-  }
-  const bundle = join(process.cwd(), "data", "eval");
-  if (await exists(join(bundle, "sweep"))) {
-    return {
-      sweepDir: join(bundle, "sweep"),
-      baselineFile: join(bundle, "null-control.json"),
-      powerFile: join(bundle, "discrimination.json"),
-      catalogue: { kind: "file", path: join(bundle, "catalogue.json") },
-      caseSchemaFile: join(bundle, "case-schema.json"),
-    };
-  }
-  return null;
+  /** The most recent re-grade across the sweep — the instant its verdicts were last decided. */
+  newestRegradedAt: string | null;
 }
 
 /**
@@ -146,10 +117,9 @@ async function sources(): Promise<Sources | null> {
  *
  * Four states, and `unreadable` is the one that was missing. "Nobody has measured this" and "it
  * was measured and I cannot read the artefact" are **different facts**, and both used to arrive as
- * `not-measured`. A schema change on the Python side — exactly what this lot did — would then have
- * silently reclassified a live measurement as an absent one, and the tile would have said "not
- * measured yet" about a file sitting right there with 174 verdicts in it. It says what it cannot
- * read now.
+ * `not-measured`. A schema change on the Python side would then have silently reclassified a live
+ * measurement as an absent one, and the tile would have said "not measured yet" about a file
+ * sitting right there with 174 verdicts in it. It says what it cannot read now.
  */
 export type CataloguePowerState =
   | { kind: "measured"; power: CataloguePower }
@@ -157,25 +127,109 @@ export type CataloguePowerState =
   | { kind: "unreadable"; reason: string }
   | { kind: "off-referential"; measuredOn: string; current: string };
 
+/**
+ * The one backend read, wrapped in React `cache()`.
+ *
+ * The evaluations view asks for the sweep more than once in a single render tree (the score
+ * cards, the matrix, the power tile), and the key is the URL STRING, so the dedup is exact:
+ * request-scoped, never across renders, so freshness is byte-identical to a plain `no-store`.
+ */
+const fetchSweepPayload = cache(async (url: string) => {
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: backendHeaders({ Accept: "application/json" }),
+    });
+    if (!res.ok) return null;
+    const parsed = EvalSweepPayloadSchema.parse(await res.json());
+    return parsed.available ? parsed : null;
+  } catch {
+    return null;
+  }
+});
+
+type SweepPayload = NonNullable<Awaited<ReturnType<typeof fetchSweepPayload>>>;
+type SweepRunPayload = SweepPayload["runs"][number];
+
+function toRun(run: SweepRunPayload): SweepRun {
+  return {
+    id: run.id,
+    model: run.model,
+    runAt: run.run_at,
+    catalogueVersion: run.catalogue_version,
+    outputTokens: run.output_tokens,
+    verdicts: run.verdicts,
+    summary: run.summary,
+    cost: run.cost,
+    durationMs: run.duration_ms,
+    regradedAt: run.regraded_at,
+    regradeNote: run.regrade_note,
+    graderSha: run.grader_criteria_sha,
+    graderShaPartial: run.grader_criteria_sha_partial,
+    graderBlindRuns: run.grader_blind_runs,
+  };
+}
+
+/** Shape the payload into the screen's model. Pure, so the mapping is testable without a server. */
+export function toSweep(payload: SweepPayload): Sweep {
+  const runs = payload.runs.map(toRun);
+  const regrades = [...runs, ...payload.off_referential.map(toRun)]
+    .map((r) => r.regradedAt)
+    .filter((at): at is string => at !== null)
+    .sort();
+
+  return {
+    catalogueVersion: payload.catalogue_version,
+    runs,
+    offReferential: payload.off_referential.map(toRun),
+    floor: payload.floor
+      ? {
+          catalogueVersion: payload.floor.catalogue_version ?? null,
+          verdicts: payload.floor.verdicts,
+        }
+      : null,
+    floorTotals: payload.floor?.totals ?? null,
+    floorGraderSha: payload.floor?.grader_criteria_sha ?? null,
+    catalogue: payload.catalogue,
+    currentCatalogueVersion: payload.current_catalogue_version,
+    categoryOf: Object.fromEntries(payload.catalogue.map((c) => [c.id, c.category])),
+    caseSchemaFields: payload.case_schema_fields,
+    newestRunAt: payload.newest_run_at,
+    newestRegradedAt: regrades.at(-1) ?? null,
+  };
+}
+
+/** Read the sweep. `null` when the backend cannot answer — never a fabricated empty sweep. */
+export async function loadSweep(): Promise<Sweep | null> {
+  const payload = await fetchSweepPayload(`${backendUrl()}/observability/eval-sweep`);
+  return payload ? toSweep(payload) : null;
+}
+
+/** The catalogue as it stands today, from the same one read. */
+export async function loadCatalogue(): Promise<EvalCase[]> {
+  const payload = await fetchSweepPayload(`${backendUrl()}/observability/eval-sweep`);
+  return payload?.catalogue ?? [];
+}
+
+/**
+ * What the catalogue MEASURES, derived from the SAME payload the sweep came from.
+ *
+ * It used to be a second read of a second artefact; deriving both from one response is what
+ * makes it impossible for the tile and the runs beside it to describe two different instants.
+ */
 export async function loadCataloguePower(
   currentCatalogueVersion: string,
 ): Promise<CataloguePowerState> {
-  const src = await sources();
-  if (!src) return { kind: "not-measured" };
+  const payload = await fetchSweepPayload(`${backendUrl()}/observability/eval-sweep`);
+  if (!payload) return { kind: "not-measured" };
+  if (payload.power_error) return { kind: "unreadable", reason: payload.power_error };
+  if (payload.power === null || payload.power === undefined) return { kind: "not-measured" };
 
-  let raw: unknown;
-  try {
-    raw = JSON.parse(await readFile(src.powerFile, "utf-8"));
-  } catch {
-    // No artefact at all. Nobody has run the measurement — an honest absence.
-    return { kind: "not-measured" };
-  }
-
-  const parsed = CataloguePowerSchema.safeParse(raw);
+  const parsed = CataloguePowerSchema.safeParse(payload.power);
   if (!parsed.success) {
-    // The artefact EXISTS and this code cannot read it. That is a blind spot, not an absence, and
-    // reporting it as "not measured yet" would be a witness describing its own ignorance as a
-    // property of the world.
+    // The artefact EXISTS and this code cannot read it. That is a blind spot, not an absence,
+    // and reporting it as "not measured yet" would be a witness describing its own ignorance
+    // as a property of the world.
     return {
       kind: "unreadable",
       reason: parsed.error.issues
@@ -197,181 +251,30 @@ export async function loadCataloguePower(
 }
 
 /**
- * The catalogue's version — the TypeScript mirror of `eval/runner.py::_catalogue_version`
- * (`{count}-{sha256(sorted ids joined by \n)[:8]}`).
- *
- * It exists so the screen can ask a question no stamp can answer on its own: *is the case set
- * still the one this run was scored against?* Both sides sort ASCII ids, so both sides agree.
- */
-export function catalogueVersionOf(cases: ReadonlyArray<{ id: string }>): string {
-  const ids = cases.map((c) => c.id).sort();
-  const digest = createHash("sha256").update(ids.join("\n")).digest("hex").slice(0, 8);
-  return `${ids.length}-${digest}`;
-}
-
-export async function loadCatalogue(): Promise<EvalCase[]> {
-  const src = await sources();
-  if (!src) return [];
-  try {
-    if (src.catalogue.kind === "file") {
-      const raw = JSON.parse(await readFile(src.catalogue.path, "utf-8"));
-      return EvalCaseSchema.array().parse(raw);
-    }
-    const files = (await readdir(src.catalogue.path))
-      .filter((f) => f.endsWith(".json") && !f.startsWith("_"))
-      .sort();
-    const cases: EvalCase[] = [];
-    for (const file of files) {
-      const raw = JSON.parse(await readFile(join(src.catalogue.path, file), "utf-8"));
-      cases.push(EvalCaseSchema.parse(raw));
-    }
-    return cases;
-  } catch {
-    // A malformed catalogue is honest-empty, never a partial one: the screen would then show
-    // "no case covers this capability" about cases that exist.
-    return [];
-  }
-}
-
-/**
- * The fields a case may declare. Read rather than assumed: whether a case can NAME a capability
- * decides whether the coverage map can be drawn on a real key or only its absence can be stated.
- * Unreadable → an empty list, and the surface says the schema could not be read — never that the
- * field is absent, which is a different claim.
- */
-async function loadCaseSchemaFields(file: string): Promise<string[]> {
-  try {
-    const schema = JSON.parse(await readFile(file, "utf-8"));
-    const properties = schema?.properties;
-    return properties && typeof properties === "object" ? Object.keys(properties) : [];
-  } catch {
-    return [];
-  }
-}
-
-async function loadFloor(
-  file: string,
-): Promise<{ floor: Floor; totals: { total: number; passed: number } } | null> {
-  try {
-    const doc = NullControlBaselineSchema.parse(JSON.parse(await readFile(file, "utf-8")));
-    return {
-      floor: {
-        catalogueVersion: doc.catalogue_version ?? null,
-        verdicts: doc.verdicts,
-      },
-      totals: doc.totals,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function toSweepRun(id: string, doc: ScorecardDocument): SweepRun {
-  const verdicts: Record<string, boolean> = {};
-  let durationMs = 0;
-  let anyDuration = false;
-  for (const r of doc.results) {
-    verdicts[caseKey(r.case_id, r.language)] = r.passed;
-    if (r.duration_ms !== null) {
-      durationMs += r.duration_ms;
-      anyDuration = true;
-    }
-  }
-  return {
-    id,
-    model: doc.model ?? null,
-    runAt: doc.run_at ?? null,
-    catalogueVersion: doc.catalogue_version ?? null,
-    outputTokens: doc.cost?.output_tokens ?? 0,
-    verdicts,
-    summary: doc.summary,
-    cost: doc.cost ?? null,
-    durationMs: anyDuration ? durationMs : null,
-  };
-}
-
-/** Timestamped filenames (`20260712T131902Z.json`) and `latest.json` are aliases of a run. */
-function isAliasFilename(file: string): boolean {
-  const stem = basename(file, ".json");
-  return stem === "latest" || /^\d{8}T\d{6}Z$/.test(stem);
-}
-
-/**
- * Read the sweep.
- *
- * The directory holds each run more than once — a timestamped copy, a model-named copy, and a
- * `latest.json`. They are ALIASES, not runs: counting them would report a three-model sweep as
- * seven. Runs are therefore deduplicated by `run_at`, and the model-named file wins because its
- * name is the only one an operator can read.
- */
-export async function loadSweep(): Promise<Sweep | null> {
-  const src = await sources();
-  if (!src) return null;
-
-  const files = (await readdir(src.sweepDir)).filter((f) => f.endsWith(".json"));
-  const byRunAt = new Map<string, { id: string; doc: ScorecardDocument }>();
-  for (const file of files.sort()) {
-    let doc: ScorecardDocument;
-    try {
-      doc = ScorecardDocumentSchema.parse(
-        JSON.parse(await readFile(join(src.sweepDir, file), "utf-8")),
-      );
-    } catch {
-      continue; // a malformed report is not a run
-    }
-    const key = doc.run_at ?? file;
-    const existing = byRunAt.get(key);
-    if (!existing || (isAliasFilename(existing.id) && !isAliasFilename(file))) {
-      byRunAt.set(key, { id: basename(file, ".json"), doc });
-    }
-  }
-
-  const all = [...byRunAt.values()]
-    .map(({ id, doc }) => toSweepRun(id, doc))
-    .sort((a, b) => (b.runAt ?? "").localeCompare(a.runAt ?? ""));
-
-  // The sweep's référentiel is the newest run's. Everything else in the directory that was
-  // scored elsewhere is held apart rather than averaged in.
-  const catalogueVersion = all[0]?.catalogueVersion ?? null;
-  const runs = all.filter((r) => r.catalogueVersion === catalogueVersion);
-  const offReferential = all.filter((r) => r.catalogueVersion !== catalogueVersion);
-
-  const floorDoc = await loadFloor(src.baselineFile);
-  const catalogue = await loadCatalogue();
-  const caseSchemaFields = await loadCaseSchemaFields(src.caseSchemaFile);
-
-  return {
-    catalogueVersion,
-    runs,
-    offReferential,
-    floor: floorDoc?.floor ?? null,
-    floorTotals: floorDoc?.totals ?? null,
-    catalogue,
-    currentCatalogueVersion: catalogue.length ? catalogueVersionOf(catalogue) : null,
-    categoryOf: Object.fromEntries(catalogue.map((c) => [c.id, c.category])),
-    caseSchemaFields,
-    newestRunAt: all[0]?.runAt ?? null,
-  };
-}
-
-/**
  * The full report of ONE run — the 174 per-case results the detail view needs.
  *
  * `id` arrives from the query string, so it is resolved against the ids the sweep actually
- * holds instead of being joined onto a path. A `?run=../../../etc/passwd` reaches `readFile`
- * otherwise, and a dashboard is not a place to discover that.
+ * holds BEFORE any call is made, and the backend resolves it a second time against the
+ * directory's own stems. A dashboard is not a place to discover a path traversal, and one
+ * check on each side of the wire is the cheap way never to.
+ *
+ * This carries the models' real responses, so it goes to a bearer-gated route that the front's
+ * public `/api` proxy deliberately does not relay (`/eval/…`, not `/observability/…`). The
+ * operator gate itself stays where it was: the calling server component checks the role.
  */
 export async function loadSweepRun(
   id: string | undefined,
   sweep: Sweep,
 ): Promise<ScorecardDocument | null> {
-  const src = await sources();
-  if (!src) return null;
   const known = [...sweep.runs, ...sweep.offReferential].find((r) => r.id === id);
   if (!known) return null;
   try {
-    const raw = await readFile(join(src.sweepDir, `${known.id}.json`), "utf-8");
-    return ScorecardDocumentSchema.parse(JSON.parse(raw));
+    const res = await fetch(
+      `${backendUrl()}/eval/sweep-run?run_id=${encodeURIComponent(known.id)}`,
+      { cache: "no-store", headers: backendHeaders({ Accept: "application/json" }) },
+    );
+    if (!res.ok) return null;
+    return ScorecardDocumentSchema.parse(await res.json());
   } catch {
     return null;
   }

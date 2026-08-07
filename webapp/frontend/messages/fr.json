@@ -968,7 +968,7 @@
       "subtitle": "Les trous de notre propre banc, mesurés depuis des artefacts commités. Aucun ne flatte le projet.",
       "silence": {
         "title": "Des cas qu'une réponse VIDE passerait",
-        "body": "{weak} des {total} cas sont passés par un système qui ne fait rien : leurs critères sont uniquement négatifs (« ne doit pas contenir »). Le garde refuse, l'IBAN n'est pas dans le refus, ✅. C'est la raison du plancher à 70 % — et cela veut dire que, sur ces cas, le silence est indistinguable de la compétence."
+        "body": "{weak} des {total} cas sont passés par un système qui ne fait rien : leurs critères sont uniquement négatifs (« ne doit pas contenir »). Le garde refuse, l'IBAN n'est pas dans le refus, ✅. C'est la raison du plancher à {floorPct} % — et cela veut dire que, sur ces cas, le silence est indistinguable de la compétence."
       },
       "zeroPower": {
         "title": "Des catégories qui ne peuvent noter aucun modèle",
@@ -1077,7 +1077,12 @@
       "empty": {
         "title": "aucun sweep lisible",
         "body": "Ni eval/reports/sweep/ ni le bundle data/eval/ n'ont pu être lus. Rien n'est affiché, plutôt qu'un chiffre par défaut."
-      }
+      },
+      "judgedAt": "re-jugé le {date} sous le barème {sha}",
+      "judgedPartial": "{count, plural, one {# exécution portée, non re-jugée} other {# exécutions portées, non re-jugées}}",
+      "sampledAt": "échantillonné le {date}",
+      "judgedNever": "jugé à l'exécution, jamais re-jugé depuis",
+      "twoInstants": "Deux dates, deux faits : la première est celle où le modèle a répondu, la seconde celle où ces réponses ont été jugées. Un âge qui ne compte que la première parle de l'échantillon, pas des verdicts affichés ici."
     },
     "title": "Score de non-régression",
     "description": "Tessera est confrontée à un catalogue d'échecs publiquement documentés. Les cas qui échouent sont visibles, pas masqués.",
@@ -1191,7 +1196,7 @@
       "corrections": "Holm certifie {holm} runs (c'est lui qui alimente le cliquet — il ne doit jamais compter un faux discriminant) ; Benjamini-Hochberg en certifie {bh} (c'est lui qui alimente le diagnostic). Écart entre les deux : {gap}.",
       "headline": "{measured, plural, =0 {Aucun cas sur # ne mesure vraiment le modèle.} one {# cas sur {total} mesure vraiment le modèle.} other {# cas sur {total} mesurent vraiment le modèle.}}",
       "method": "Dérivé du contrôle nul et de {strongN} + {weakN} passes complètes. Un cas est discriminant s'il sépare les deux modèles (Fisher exact, unilatéral, corrigé sur tout le catalogue) ; inversé si le contrôle nul le passe et que le modèle qui part en production le casse de façon reproductible — il y est pire que le silence.",
-      "warning": "Le contrôle nul — aucun modèle, zéro token — passe déjà 122 des 174 runs. Un cas mort teste la couche déterministe (garde, routeur), pas le modèle : il gonfle le taux de réussite sans rien mesurer du modèle."
+      "warning": "Le contrôle nul — aucun modèle, zéro token — passe déjà {passed} des {total} runs. Un cas mort teste la couche déterministe (garde, routeur), pas le modèle : il gonfle le taux de réussite sans rien mesurer du modèle."
     }
   },
   "health": {

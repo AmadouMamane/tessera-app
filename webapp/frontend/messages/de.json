@@ -968,7 +968,7 @@
       "subtitle": "Die Löcher im eigenen Prüfstand, gemessen an committeten Artefakten. Keines davon schmeichelt dem Projekt.",
       "silence": {
         "title": "Fälle, die eine LEERE Antwort bestehen würde",
-        "body": "{weak} von {total} Fällen werden von einem System bestanden, das nichts tut: ihre Kriterien sind rein negativ („darf nicht enthalten“). Die Guard-Schicht lehnt ab, die IBAN steht nicht in der Ablehnung, ✅. Das ist der Grund für den 70-%-Sockel — und es heißt: bei diesen Fällen ist Schweigen von Kompetenz nicht zu unterscheiden."
+        "body": "{weak} von {total} Fällen werden von einem System bestanden, das nichts tut: ihre Kriterien sind rein negativ („darf nicht enthalten“). Die Guard-Schicht lehnt ab, die IBAN steht nicht in der Ablehnung, ✅. Das ist der Grund für den Sockel von {floorPct} % — und es heißt: bei diesen Fällen ist Schweigen von Kompetenz nicht zu unterscheiden."
       },
       "zeroPower": {
         "title": "Kategorien, die kein Modell benoten können",
@@ -1077,7 +1077,12 @@
       "empty": {
         "title": "kein lesbarer Sweep",
         "body": "Weder eval/reports/sweep/ noch das Bundle data/eval/ waren lesbar. Es wird nichts angezeigt statt einer Vorgabezahl."
-      }
+      },
+      "judgedAt": "am {date} neu bewertet nach Maßstab {sha}",
+      "judgedPartial": "{count, plural, one {# Lauf übernommen, nicht neu bewertet} other {# Läufe übernommen, nicht neu bewertet}}",
+      "sampledAt": "erhoben am {date}",
+      "judgedNever": "bei der Ausführung bewertet, seitdem nicht neu bewertet",
+      "twoInstants": "Zwei Daten, zwei Tatsachen: das erste ist der Zeitpunkt der Antwort des Modells, das zweite der Zeitpunkt ihrer Bewertung. Ein Alter, das nur das erste zählt, spricht über die Stichprobe, nicht über die hier gezeigten Urteile."
     },
     "title": "Regressionsscore",
     "description": "Tessera wird gegen einen Katalog öffentlich dokumentierter Agentenfehler getestet. Durchgefallene Fälle bleiben sichtbar — nichts wird versteckt.",
@@ -1191,7 +1196,7 @@
       "corrections": "Holm zertifiziert {holm} Laeufe (er speist die Ratsche — er darf nie einen falschen Trenner zaehlen); Benjamini-Hochberg zertifiziert {bh} (er speist die Diagnose). Abstand: {gap}.",
       "headline": "{measured, plural, =0 {Kein einziger von # Faellen misst das Modell wirklich.} one {# von {total} Faellen misst das Modell wirklich.} other {# von {total} Faellen messen das Modell wirklich.}}",
       "method": "Abgeleitet aus der Nullkontrolle und {strongN} + {weakN} vollstaendigen Durchlaeufen. Ein Fall trennt, wenn er die beiden Modelle unterscheidet (exakter Fisher-Test, einseitig, ueber den ganzen Katalog korrigiert); invertiert, wenn die Nullkontrolle ihn besteht und das ausgelieferte Modell ihn reproduzierbar bricht — dort ist der Agent schlechter als Schweigen.",
-      "warning": "Die Nullkontrolle — kein Modell, null Token — besteht bereits 122 der 174 Laeufe. Ein toter Fall prueft die deterministische Schicht (Guard, Router), nicht das Modell: er blaeht die Erfolgsquote auf und misst nichts am Modell."
+      "warning": "Die Nullkontrolle — kein Modell, null Token — besteht bereits {passed} der {total} Laeufe. Ein toter Fall prueft die deterministische Schicht (Guard, Router), nicht das Modell: er blaeht die Erfolgsquote auf und misst nichts am Modell."
     }
   },
   "health": {

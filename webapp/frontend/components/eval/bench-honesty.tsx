@@ -32,6 +32,13 @@ export async function BenchHonesty({
 
   const weak = catalogue.filter((c) => passedBySilence(listCriteria(c.pass_criteria)));
   const zeroPower = floor ? zeroPowerCategories(floor, categoryOf) : [];
+  // The floor's height, COUNTED from the verdicts this component already holds. The sentence
+  // below used to say "the 70% floor" in the message catalogue while the committed floor was
+  // re-measured to 124/174 (71.3%) — one half of the sentence interpolated, the other typed.
+  const floorRuns = floor ? Object.values(floor.verdicts) : [];
+  const floorPct = floorRuns.length
+    ? Math.round((floorRuns.filter(Boolean).length / floorRuns.length) * 100)
+    : null;
   const expressible = coverageIsExpressible(caseSchemaFields);
   const schemaUnreadable = caseSchemaFields.length === 0;
 
@@ -48,7 +55,13 @@ export async function BenchHonesty({
         <ul className="flex flex-col gap-3">
           {/* §A1.8 — why the floor reaches 70%: the criteria are mostly negative. */}
           <Finding icon={<EyeOff className="h-4 w-4" />} title={t("bench.silence.title")}>
-            <p>{t("bench.silence.body", { weak: weak.length, total: catalogue.length })}</p>
+            <p>
+              {t("bench.silence.body", {
+                weak: weak.length,
+                total: catalogue.length,
+                floorPct: floorPct ?? "—",
+              })}
+            </p>
             {weak.length > 0 ? (
               <ul className="mt-1.5 flex flex-wrap gap-1">
                 {weak.map((c) => (

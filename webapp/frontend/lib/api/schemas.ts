@@ -817,17 +817,65 @@ export const RunCostSchema = z.object({
 });
 export type RunCost = z.infer<typeof RunCostSchema>;
 
-export const ScorecardDocumentSchema = z.object({
-  run_at: z.string().optional(),
-  lang: z.string().nullable().optional(),
-  model: z.string().nullable().optional(),
-  catalogue_version: z.string().nullable().optional(),
-  summary: ScorecardSummarySchema,
-  results: z.array(ScorecardResultSchema),
-  synthesis: SynthesisSchema.nullable().optional(),
-  cost: RunCostSchema.nullable().optional(),
+/**
+ * WHO judged a run, and WHEN — the provenance the evaluations screen could not see.
+ *
+ * `run_at` says when the model ANSWERED. `regraded_at` says when those answers were last
+ * JUDGED, and the two are weeks apart on the committed sweep: sampled 12 July, re-judged
+ * 5 August. The reports carried both all along; this schema did not declare the second, and
+ * **zod strips what it does not declare, in silence** — so the header could only measure the
+ * sampling and announce "26 days ago" about verdicts computed two days earlier.
+ *
+ * `grader_criteria_sha` and its `_partial` twin are mutually exclusive by construction
+ * (`eval/regrade.py`): the plain sha means one ruler judged everything, the partial one travels
+ * with `grader_blind_runs` — the `case|language` runs whose verdict was CARRIED rather than
+ * re-derived, because the recording cannot answer their criterion (max_confidence,
+ * must_cite_source). Publishing the sha without that list would claim more coverage than was
+ * measured, which is the over-claim direction.
+ */
+export const GraderProvenanceSchema = z.object({
+  regraded_at: z.string().nullable().default(null),
+  regrade_note: z.string().nullable().default(null),
+  grader_criteria_sha: z.string().nullable().default(null),
+  grader_criteria_sha_partial: z.string().nullable().default(null),
+  grader_blind_runs: z.array(z.string()).default([]),
 });
+export type GraderProvenance = z.infer<typeof GraderProvenanceSchema>;
+
+export const ScorecardDocumentSchema = z
+  .object({
+    run_at: z.string().optional(),
+    lang: z.string().nullable().optional(),
+    model: z.string().nullable().optional(),
+    catalogue_version: z.string().nullable().optional(),
+    summary: ScorecardSummarySchema,
+    results: z.array(ScorecardResultSchema),
+    synthesis: SynthesisSchema.nullable().optional(),
+    cost: RunCostSchema.nullable().optional(),
+  })
+  .merge(GraderProvenanceSchema);
 export type ScorecardDocument = z.infer<typeof ScorecardDocumentSchema>;
+
+/** One run of the sweep as `/observability/eval-sweep` serves it. */
+export const SweepRunSchema = z
+  .object({
+    id: z.string(),
+    model: z.string().nullable().default(null),
+    run_at: z.string().nullable().default(null),
+    catalogue_version: z.string().nullable().default(null),
+    summary: ScorecardSummarySchema,
+    cost: RunCostSchema.nullable().default(null),
+    duration_ms: z.number().nullable().default(null),
+    output_tokens: z.number().default(0),
+    /** `{"<case_id>|<language>": passed}` — the harness's own key (`eval/ratchet.py::_key`). */
+    verdicts: z.record(z.string(), z.boolean()),
+  })
+  .merge(GraderProvenanceSchema);
+export type SweepRunPayload = z.infer<typeof SweepRunSchema>;
+
+// `EvalSweepPayloadSchema` composes the floor, the catalogue and the power artefact, so it is
+// declared AFTER them, further down this file — a `const` is not hoisted, and referencing one
+// above its definition throws at import time, not at parse time.
 
 export const RunMetaSchema = z.object({
   filename: z.string(),
@@ -859,6 +907,14 @@ export const NullControlBaselineSchema = z.object({
   model: z.string().nullable().optional(),
   catalogue_version: z.string().nullable().optional(),
   note: z.string().optional(),
+  /**
+   * The ruler the FLOOR was measured under — the other half of any comparison with a run.
+   * `catalogue_version` pins WHICH cases exist and is blind to WHAT they assert, so two
+   * artefacts can share it and still have been judged by different criteria. The baseline has
+   * carried this since the 2026-08-05 re-measure; leaving it undeclared here stripped it, and
+   * a comparison that cannot name its two rulers cannot know it spans one.
+   */
+  grader_criteria_sha: z.string().nullable().optional(),
   totals: z.object({ total: z.number().int(), passed: z.number().int() }),
   /** `{"<case_id>|<language>": passed}` — the harness's own key (`eval/ratchet.py::_key`). */
   verdicts: z.record(z.string(), z.boolean()),
@@ -1004,6 +1060,33 @@ export const EvalCaseSchema = z.object({
   tags: z.array(z.string()).default([]),
 });
 export type EvalCase = z.infer<typeof EvalCaseSchema>;
+
+/**
+ * The sweep, whole, from ONE address (`GET /observability/eval-sweep`).
+ *
+ * `power` is deliberately `unknown` here. The tile that renders it must distinguish "nobody
+ * ran the measurement" from "it was measured and I cannot read the artefact" (ADR 0026), and
+ * a typed parse at this layer would collapse the second into the first before the caller ever
+ * saw it — the tile would then say "not measured yet" about a file holding 174 verdicts. It is
+ * parsed, and its failure NAMED, in `lib/eval-sweep.ts`.
+ *
+ * Declared after the floor, the catalogue and the power schema because it composes them: a
+ * `const` is not hoisted, and a schema referencing one above its definition throws at import.
+ */
+export const EvalSweepPayloadSchema = z.object({
+  available: z.boolean(),
+  catalogue_version: z.string().nullable().default(null),
+  current_catalogue_version: z.string().nullable().default(null),
+  runs: z.array(SweepRunSchema).default([]),
+  off_referential: z.array(SweepRunSchema).default([]),
+  floor: NullControlBaselineSchema.nullable().default(null),
+  power: z.unknown().nullable().default(null),
+  power_error: z.string().nullable().default(null),
+  catalogue: z.array(EvalCaseSchema).default([]),
+  case_schema_fields: z.array(z.string()).default([]),
+  newest_run_at: z.string().nullable().default(null),
+});
+export type EvalSweepPayload = z.infer<typeof EvalSweepPayloadSchema>;
 
 // ---------------------------------------------------------------------------
 // Observability — live online-eval scores (eval-as-telemetry, ADR 0010)

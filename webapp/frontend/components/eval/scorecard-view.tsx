@@ -21,6 +21,7 @@ import {
   caseKey,
   cellState,
   decomposeRun,
+  fmtRunDay,
   isStale,
 } from "@/lib/eval-score";
 import { type Sweep, loadCataloguePower, loadSweep, loadSweepRun } from "@/lib/eval-sweep";
@@ -160,7 +161,7 @@ export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: Sc
     <div className="flex flex-col gap-6 pb-10">
       {tabs}
       <SweepHeader sweep={sweep} locale={locale} />
-      <CataloguePowerCard state={power} locale={locale} />
+      <CataloguePowerCard state={power} floorTotals={sweep.floorTotals} locale={locale} />
 
       {/* Every run of the sweep, decomposed. Three cards, one référentiel, no ranking. */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -243,16 +244,30 @@ export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: Sc
 }
 
 /**
- * The référentiel and the freshness, stated before any number is shown.
+ * The référentiel and the TWO instants, stated before any number is shown.
  *
  * Criterion 4 asks for the freshness and criterion 2 for the référentiel, and both are here for
  * the same reason: a verdict without the case set it was scored against, and without the date it
  * was scored on, is a number an operator cannot act on.
+ *
+ * "The date it was scored on" turned out to be two dates. This header measured one — the age of
+ * `run_at` — and announced "last run 26 days ago" while every verdict below it had been decided
+ * two days earlier, by a re-grade that re-judges recorded responses under moved criteria. It was
+ * not an omission in the rendering: `regraded_at` was in the reports and the front's schema did
+ * not declare it, so zod dropped it before this component could have known. Both instants are
+ * now named, and the ruler that produced the second — partial rulers with the runs they could
+ * not judge, because a sha published without that list claims more coverage than was measured.
  */
 async function SweepHeader({ sweep, locale }: { sweep: Sweep; locale: string }) {
   const t = await getTranslations({ locale, namespace: "eval" });
   const days = ageInDays(sweep.newestRunAt, new Date());
   const stale = isStale(sweep.catalogueVersion, sweep.currentCatalogueVersion);
+
+  // The judged instant belongs to the whole sweep: its runs were re-graded in one pass. The
+  // ruler and the blind list are read off the newest run, which is the one the header describes.
+  const newest = sweep.runs[0];
+  const ruler = newest?.graderSha ?? newest?.graderShaPartial ?? null;
+  const blind = newest?.graderBlindRuns.length ?? 0;
 
   return (
     <Card>
@@ -277,6 +292,29 @@ async function SweepHeader({ sweep, locale }: { sweep: Sweep; locale: string }) 
 
         <p className="text-[var(--muted-foreground)] text-xs leading-relaxed">
           {t("sweep.subtitle")}
+        </p>
+
+        {/* Sampled THEN judged — two facts, never folded into one age. */}
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[var(--muted-foreground)] text-xs leading-relaxed">
+          <span>{t("sweep.sampledAt", { date: fmtRunDay(sweep.newestRunAt) })}</span>
+          <span aria-hidden>·</span>
+          {sweep.newestRegradedAt ? (
+            <>
+              <span className="text-[var(--foreground)]">
+                {t("sweep.judgedAt", {
+                  date: fmtRunDay(sweep.newestRegradedAt),
+                  sha: ruler ?? "—",
+                })}
+              </span>
+              {blind > 0 ? (
+                <span className="text-warning-700 dark:text-warning-200">
+                  ({t("sweep.judgedPartial", { count: blind })})
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span>{t("sweep.judgedNever")}</span>
+          )}
         </p>
 
         {sweep.floorTotals ? (

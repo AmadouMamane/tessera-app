@@ -24,9 +24,16 @@ import type { CataloguePowerState } from "@/lib/eval-sweep";
 
 export async function CataloguePowerCard({
   state,
+  floorTotals,
   locale,
 }: {
   state: CataloguePowerState;
+  /**
+   * The committed floor's own numbers. The warning below used to TYPE them ("already passes 122
+   * of the 174 runs") while the floor was re-measured to 124 — the served page showed both, three
+   * blocks apart. A constant in a message catalogue never moves with the measurement.
+   */
+  floorTotals: { total: number; passed: number } | null;
   locale: string;
 }) {
   const t = await getTranslations({ locale, namespace: "eval" });
@@ -170,7 +177,11 @@ export async function CataloguePowerCard({
           {t("power.method", { strongN: strong_n, weakN: weak_n })}
         </p>
 
-        {measured * 2 < power.total_cases ? <Note tone="warning">{t("power.warning")}</Note> : null}
+        {measured * 2 < power.total_cases && floorTotals ? (
+          <Note tone="warning">
+            {t("power.warning", { passed: floorTotals.passed, total: floorTotals.total })}
+          </Note>
+        ) : null}
       </CardContent>
     </Card>
   );

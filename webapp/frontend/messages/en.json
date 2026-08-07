@@ -968,7 +968,7 @@
       "subtitle": "The holes in our own benchmark, measured from committed artefacts. None of them flatters the project.",
       "silence": {
         "title": "Cases an EMPTY response would pass",
-        "body": "{weak} of the {total} cases are passed by a system that does nothing: their criteria are purely negative (“must not contain”). The guard refuses, the IBAN is not in the refusal, ✅. That is why the floor reaches 70% — and it means that on these cases, silence is indistinguishable from competence."
+        "body": "{weak} of the {total} cases are passed by a system that does nothing: their criteria are purely negative (“must not contain”). The guard refuses, the IBAN is not in the refusal, ✅. That is why the floor reaches {floorPct}% — and it means that on these cases, silence is indistinguishable from competence."
       },
       "zeroPower": {
         "title": "Categories that can grade no model at all",
@@ -1077,7 +1077,12 @@
       "empty": {
         "title": "no readable sweep",
         "body": "Neither eval/reports/sweep/ nor the data/eval/ bundle could be read. Nothing is displayed, rather than a default number."
-      }
+      },
+      "judgedAt": "re-judged on {date} under ruler {sha}",
+      "judgedPartial": "{count, plural, one {# run carried, not re-judged} other {# runs carried, not re-judged}}",
+      "sampledAt": "sampled on {date}",
+      "judgedNever": "judged at run time, never re-judged since",
+      "twoInstants": "Two dates, two facts: the first is when the model answered, the second when those answers were judged. An age counting only the first describes the sample, not the verdicts on screen."
     },
     "title": "Regression scorecard",
     "description": "Tessera is exercised against a catalogue of publicly documented agent failures. Failing cases stay visible — nothing is hidden.",
@@ -1191,7 +1196,7 @@
       "corrections": "Holm certifies {holm} runs (it feeds the ratchet — it must never count a discriminator that isn't one); Benjamini-Hochberg certifies {bh} (it feeds the diagnosis). The gap between them: {gap}.",
       "headline": "{measured, plural, =0 {Not one case of # actually measures the model.} one {# case of {total} actually measures the model.} other {# cases of {total} actually measure the model.}}",
       "method": "Derived from the null control and {strongN} + {weakN} full passes. A case discriminates if it separates the two models (Fisher exact, one-tailed, corrected across the whole catalogue); inverted if the null control passes it and the model that ships reproducibly breaks it — the agent is worse than silence there.",
-      "warning": "The null control — no model, zero tokens — already passes 122 of the 174 runs. A dead case tests the deterministic layer (guard, router), not the model: it inflates the pass rate and measures nothing about the model."
+      "warning": "The null control — no model, zero tokens — already passes {passed} of the {total} runs. A dead case tests the deterministic layer (guard, router), not the model: it inflates the pass rate and measures nothing about the model."
     }
   },
   "health": {
