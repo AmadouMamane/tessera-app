@@ -181,9 +181,9 @@ test("each crossed surface says which population it is reading", async ({ page }
   // naming its population turns an honest difference into a contradiction.
   for (const { tab } of CROSSED) {
     await page.goto(`${EVALUATIONS}&tab=${tab}`);
-    await expect(
-      page.getByText(/séance|archive|jeu de référence|annoté/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/séance|archive|jeu de référence|annoté/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
   }
 });
 
