@@ -209,7 +209,7 @@ const PAGES = [
   // The signal registry, which lives behind its own tab. Reached explicitly because the
   // default tab does not render it — and a probe that silently measures a different table
   // than the one it names is the shape this file has already fallen into twice.
-  "/fr/surveiller/qualite-ia?tab=signals",
+  "/fr/surveiller/qualite-ia?onglet=signals",
   "/fr/surveiller/securite-privacy",
 ] as const;
 

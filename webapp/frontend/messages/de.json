@@ -2313,7 +2313,7 @@
     "tabs": {
       "overview": "Übersicht",
       "signals": "Qualitätssignale",
-      "runs": "Bewertungen & Prüfsätze",
+      "runs": "Verlauf der Ausfuehrungen",
       "failed": "Fehlgeschlagene Fälle",
       "models": "Modellvergleich",
       "judge": "Verlässlichkeit der Bewertung"
@@ -2322,7 +2322,8 @@
       "evidence": "Qualitäts-Evidence-Pack erzeugen",
       "runEval": "Bewertung starten",
       "compareModels": "Modelle vergleichen",
-      "openDataset": "Prüfsatz öffnen"
+      "openDataset": "Prüfsatz öffnen",
+      "runEvalNotWired": "Kein Endpunkt startet eine Bewertung: das Harness ist ein Kommando (scripts/run_eval.py). Diese Schaltflaeche kann ihr Versprechen nicht halten."
     },
     "sec": {
       "etat": "Aktueller Zustand",

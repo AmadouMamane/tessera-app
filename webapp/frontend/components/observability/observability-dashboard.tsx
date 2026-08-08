@@ -32,6 +32,7 @@ import { type ReactNode, useState } from "react";
 
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { TabStrip } from "@/components/cockpit/tab-strip";
+import { EVAL_PATHNAME, evalQuery } from "@/components/eval/eval-route";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
 import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
 import { FailureDistribution } from "@/components/observability/failed-cases";
@@ -79,6 +80,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truncate } from "@/components/ui/truncate";
+import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
   fetchAIAct,
@@ -128,6 +130,7 @@ import type {
   WhatChanged,
 } from "@/lib/api/schemas";
 import { fmtRunDay } from "@/lib/eval-score";
+import { DASHBOARD_TABS, DASHBOARD_TAB_PARAM, type DashboardTab } from "@/lib/quality-tabs";
 import { SIGNAL_FOCUS_PARAM, readSignalFocus, registryIdFor } from "@/lib/signal-focus";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
@@ -163,8 +166,11 @@ interface SignalFunnel {
   breaching: number;
 }
 
-const TAB_DEFS = ["overview", "signals", "runs", "failed", "models", "judge"] as const;
-type TabKey = (typeof TAB_DEFS)[number];
+// The tab list and this strip's query parameter are declared in `lib/quality-tabs.ts`, beside
+// the OTHER strip's — the two used to collide on `?tab=` and the separation is now a fact a
+// test can read without importing this file.
+const TAB_DEFS = DASHBOARD_TABS;
+type TabKey = DashboardTab;
 
 /** A translucent banded section grouping one cockpit zone, matching the
  * Sécurité & privacy page: a labelled band holding real sub-cards. The heading
@@ -218,7 +224,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   const tq = useTranslations("quality");
   const tcd = useTranslations("overview.controlDetail");
   const locale = useLocale();
-  const [tab, setTab] = useUrlBackedView(TAB_DEFS, "overview", "tab");
+  const [tab, setTab] = useUrlBackedView(TAB_DEFS, "overview", DASHBOARD_TAB_PARAM);
   const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
   const [selectedFailed, setSelectedFailed] = useState<FailedRunCase | null>(null);
@@ -698,14 +704,22 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               tablet or a phone this row used to run 190-454px past the card with no
               way to scroll to it — the last two actions were simply unreachable. */}
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => setTab("runs")}
-              className="h-8 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
-            >
-              <Play className="h-3.5 w-3.5" />
-              {tq("cta.runEval")}
-            </Button>
+            {/* It said "Lancer" and it SWITCHED TABS. No endpoint starts an evaluation — the
+                harness is a command (`scripts/run_eval.py`) — so the promise could never be
+                kept, and a primary green button is the loudest place to make one. Disabled
+                with the reason in its title, the way every other unwired action on this page
+                already is; relabelling it "show the runs" would keep a control that competes
+                for the eye with the actions that do work. */}
+            <span title={tq("cta.runEvalNotWired")} className="flex">
+              <Button
+                size="sm"
+                disabled
+                className="h-8 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
+              >
+                <Play className="h-3.5 w-3.5" />
+                {tq("cta.runEval")}
+              </Button>
+            </span>
             <Button
               size="sm"
               variant="outline"
@@ -715,14 +729,20 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               <GitCompareArrows className="h-3.5 w-3.5" />
               {tq("cta.compareModels")}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setTab("runs")}
-              className="h-8 gap-2 text-xs"
-            >
-              <Boxes className="h-3.5 w-3.5" />
-              {tq("cta.openDataset")}
+            {/* It opened the RUNS tab of this dashboard. The case set is not there — it is the
+                versioned artefact on the other view, and this button is the shortest path
+                across the boundary this page keeps blurring. A Link, so it is also a URL an
+                operator can send. */}
+            <Button size="sm" variant="outline" asChild className="h-8 gap-2 text-xs">
+              <Link
+                href={{
+                  pathname: EVAL_PATHNAME,
+                  query: evalQuery({ tab: "cases" }),
+                }}
+              >
+                <Boxes className="h-3.5 w-3.5" />
+                {tq("cta.openDataset")}
+              </Link>
             </Button>
             <Button size="sm" onClick={downloadQualityEvidence} className="h-8 gap-2 text-xs">
               <FileDown className="h-3.5 w-3.5" />

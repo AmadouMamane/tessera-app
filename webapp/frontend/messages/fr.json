@@ -2313,7 +2313,7 @@
     "tabs": {
       "overview": "Vue d'ensemble",
       "signals": "Signaux qualité",
-      "runs": "Évaluations & jeux de cas",
+      "runs": "Historique des exécutions",
       "failed": "Cas échoués",
       "models": "Comparaisons modèles",
       "judge": "Fiabilité de l'évaluation"
@@ -2322,7 +2322,8 @@
       "evidence": "Générer dossier de preuves qualité",
       "runEval": "Lancer évaluation",
       "compareModels": "Comparer modèles",
-      "openDataset": "Ouvrir le jeu de cas"
+      "openDataset": "Ouvrir le jeu de cas",
+      "runEvalNotWired": "Aucun endpoint ne lance une évaluation : le harnais est une commande (scripts/run_eval.py). Ce bouton ne peut pas tenir sa promesse."
     },
     "sec": {
       "etat": "État actuel",

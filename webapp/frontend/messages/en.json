@@ -2313,7 +2313,7 @@
     "tabs": {
       "overview": "Overview",
       "signals": "Quality signals",
-      "runs": "Evaluations & case sets",
+      "runs": "Execution history",
       "failed": "Failed cases",
       "models": "Model comparison",
       "judge": "Evaluation reliability"
@@ -2322,7 +2322,8 @@
       "evidence": "Generate quality evidence pack",
       "runEval": "Start evaluation",
       "compareModels": "Compare models",
-      "openDataset": "Open case set"
+      "openDataset": "Open case set",
+      "runEvalNotWired": "No endpoint starts an evaluation: the harness is a command (scripts/run_eval.py). This button cannot keep its promise."
     },
     "sec": {
       "etat": "Current state",
