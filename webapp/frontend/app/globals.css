@@ -129,6 +129,18 @@
   --tessera-surface: #06182a;
   --tessera-surface-elevated: #082036;
   --tessera-muted: #071b2e;
+  /* The loading block, and the sheen that crosses it.
+   *
+   * These exist because the skeleton used to paint
+   * `linear-gradient(110deg, var(--secondary) 8%, var(--muted) 18%, var(--secondary) 33%)`
+   * — and in BOTH themes `--secondary` and `--muted` resolve to `--tessera-muted`. Three
+   * identical stops: a running animation that moves nothing, over a block the same colour as
+   * the card behind it. 102 skeletons rendered as empty panels, and "still loading" became
+   * indistinguishable from "there is nothing here" — the one distinction this cockpit refuses
+   * to blur anywhere else. It must also hold WITHOUT motion: `prefers-reduced-motion` freezes
+   * the sweep, so the base alone has to read as a block against the card. */
+  --tessera-skeleton: #18334d;
+  --tessera-skeleton-sheen: #26496b;
   --tessera-border: #173249;
   --tessera-border-strong: #21425b;
   /* THE CHROME LINE — a third border role, added 2026-08-01.
@@ -388,6 +400,10 @@
   --tessera-surface: #ffffff;
   --tessera-surface-elevated: #f2f2f2;
   --tessera-muted: #f4f4f4;
+  /* Same pair, the other end: the card is #ffffff here, so the block is a step DOWN and the
+   * sheen a step back up. See the dark block for why these are their own tokens. */
+  --tessera-skeleton: #dadce2;
+  --tessera-skeleton-sheen: #fafbfc;
   --tessera-border: #e0e0e0;
   --tessera-border-strong: #c6c6c6;
   --tessera-chrome-line: #d2d2d2;
