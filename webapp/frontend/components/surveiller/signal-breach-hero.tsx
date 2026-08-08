@@ -53,8 +53,17 @@ export function SignalBreachHero({
   // a table reading "100 %, 1/1 conformes". Both were correct about different weeks, which is
   // the worst way for two numbers to disagree: neither looks wrong.
   const period = useWindowStore((s) => s.period);
+  // The dashboard below asks the SAME question under the key `["slo", asOf, scope, period]`,
+  // and in live mode its `asOf` is `null` and it passes `undefined` down — byte-identical to
+  // this call. The only thing that made them two HTTP requests was the private key `slo-hero`.
+  // Sharing the key merges the observers: one request, one cached answer, and no way for the
+  // ribbon and the gauge to end up quoting two different reads of one endpoint.
+  //
+  // The `null` is deliberate and is what keeps this ribbon LIVE: when the operator scrubs to a
+  // past instant the dashboard's key moves to that instant while this one does not, so the two
+  // separate again exactly when they are meant to mean different things.
   const { data } = useQuery({
-    queryKey: ["slo-hero", scope, period],
+    queryKey: ["slo", null, scope, period],
     queryFn: ({ signal }) => fetchSLO(signal, undefined, scope, period),
     staleTime: 30_000,
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   Boxes,
@@ -208,6 +208,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
+  const queryClient = useQueryClient();
   // Global agent scope (?agent=) — the score-/bundle-/audit-backed quality signals
   // read this agent's own turns; shared-policy probes (firewall, refusal) stay org.
   const searchParams = useSearchParams();
@@ -374,12 +375,11 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     enabled: tab === "overview",
   });
 
-  const aiAct = useQuery({
-    queryKey: ["ai-act", asOf],
-    queryFn: ({ signal }) => fetchAIAct(signal, asOf ?? undefined),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : 30_000,
-  });
+  // The AI-Act read is NOT here as a query. Nothing on this page renders it: its single
+  // consumer is the evidence bundle, i.e. a button most sessions never press — and it polled
+  // every 30 seconds regardless, for the whole time the page stayed open. It is fetched at
+  // click time now (see `downloadQualityEvidence`), which also makes it fresher than a cached
+  // value up to 30 seconds old would have been.
 
   // Calibration is computed server-side (slow, judge over a gold set) and cached,
   // so fetch it once rather than polling.
@@ -591,7 +591,18 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   );
   const sloPct = slo.data && slo.data.n > 0 ? Math.round(slo.data.good_rate * 100) : null;
 
-  function downloadQualityEvidence() {
+  async function downloadQualityEvidence() {
+    // The one read this page does not render. Asked for HERE rather than polled all session:
+    // it costs one request when the button is pressed instead of one every thirty seconds
+    // forever, and a failure leaves `null` — an evidence pack may be short a section, never
+    // wrong about one. Every other field below is already on screen.
+    const aiAct = await queryClient
+      .fetchQuery({
+        queryKey: ["ai-act", asOf],
+        queryFn: ({ signal }) => fetchAIAct(signal, asOf ?? undefined),
+        staleTime: 30_000,
+      })
+      .catch(() => null);
     const bundle = {
       generated_at: new Date().toISOString(),
       page: "quality",
@@ -605,7 +616,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
       calibration: calibration.data ?? null,
       toxicity: toxicity.data ?? null,
       pii_leak: piiLeak.data ?? null,
-      ai_act: aiAct.data ?? null,
+      ai_act: aiAct,
       failure_clusters: failureClusters.data ?? null,
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
