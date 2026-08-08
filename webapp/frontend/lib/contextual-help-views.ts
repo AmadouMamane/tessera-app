@@ -1,3 +1,11 @@
+import { EVAL_TABS } from "@/components/eval/eval-tabs";
+import {
+  DASHBOARD_TABS,
+  DASHBOARD_TAB_PARAM,
+  EVAL_TAB_PARAM,
+  QUALITY_VIEW_PARAM,
+} from "@/lib/quality-tabs";
+
 export interface ContextualHelpView {
   key: string;
   labelKey: string;
@@ -39,13 +47,22 @@ function pageViews(
 export const CONTEXTUAL_HELP_VIEW_GROUPS: Readonly<
   Record<string, readonly ContextualHelpViewGroup[]>
 > = {
+  // The atlas is the one place that claims to list every surface of a page, so it is the one
+  // place where a stale entry is a lie rather than an omission. Both of its quality entries
+  // were stale and neither failed loudly: the monitoring strip's parameter had been renamed to
+  // `onglet` (its two strips used to collide on `?tab=`) while this file still wrote `tab`, so
+  // every atlas link to a dashboard tab silently landed on the overview; and four of the tabs
+  // it listed had moved to the other view. Hence the imports below — the vocabularies are
+  // declared once, and this registry reads them instead of repeating them.
   quality: [
     {
       key: "surfaces",
       titleKey: "pageHelp.viewAtlas.surfaceTitle",
-      param: "vue",
+      param: QUALITY_VIEW_PARAM,
       fallback: "signals",
-      clearedParams: ["tab"],
+      // BOTH strips' parameters: switching view must not carry the other side's tab along,
+      // and `onglet` was invisible here for as long as it existed.
+      clearedParams: [EVAL_TAB_PARAM, DASHBOARD_TAB_PARAM],
       views: [
         { key: "signals", labelKey: "quality.views.signals" },
         { key: "evaluations", labelKey: "quality.views.evaluations" },
@@ -54,10 +71,10 @@ export const CONTEXTUAL_HELP_VIEW_GROUPS: Readonly<
     {
       key: "signals",
       titleKey: "quality.views.signals",
-      param: "tab",
+      param: DASHBOARD_TAB_PARAM,
       fallback: "overview",
       requiredParams: { vue: "signals" },
-      views: ["overview", "signals", "runs", "failed", "models", "judge"].map((key) => ({
+      views: DASHBOARD_TABS.map((key) => ({
         key,
         labelKey: `quality.tabs.${key}`,
       })),
@@ -65,10 +82,10 @@ export const CONTEXTUAL_HELP_VIEW_GROUPS: Readonly<
     {
       key: "evaluations",
       titleKey: "quality.views.evaluations",
-      param: "tab",
+      param: EVAL_TAB_PARAM,
       fallback: "runs",
       requiredParams: { vue: "evaluations" },
-      views: ["cases", "runs", "compare"].map((key) => ({
+      views: EVAL_TABS.map((key) => ({
         key,
         labelKey: `eval.tabs.${key}`,
       })),

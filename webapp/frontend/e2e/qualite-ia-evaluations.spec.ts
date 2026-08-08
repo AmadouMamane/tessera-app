@@ -137,3 +137,81 @@ test("the comparison ranks nothing and shows what the two models disagree on", a
   const locked = page.getByText(/opérateur/);
   await expect(disagreements.or(locked).first()).toBeVisible();
 });
+
+/**
+ * The four surfaces that crossed from the monitoring dashboard.
+ *
+ * They render CLIENT-side, which is exactly why an HTTP check cannot stand in for this one: all
+ * four return 200 with a byte-identical shell, because their content does not exist until the
+ * browser has run React Query. A server that answers is not a panel that draws.
+ */
+const CROSSED = [
+  { tab: "archive", marker: /Runs d'évaluation|Datasets de qualité/ },
+  { tab: "failed", marker: /Récurrents|Exporter sélection/ },
+  { tab: "models", marker: /Comparaison détaillée des modèles/ },
+  { tab: "judge", marker: /Matrice de confusion|Diagnostic de calibration/i },
+] as const;
+
+for (const { tab, marker } of CROSSED) {
+  test(`?tab=${tab} renders on the evaluations view, not on the dashboard`, async ({ page }) => {
+    await login(page);
+    await page.goto(`${EVALUATIONS}&tab=${tab}`);
+
+    await expect(page.getByText(CRASHED)).toHaveCount(0);
+    // The strip RESOLVED this name. `parseTab` falls back to the sweep on anything it does not
+    // know, so an unrecognised tab renders a perfectly healthy WRONG page — same URL, no error,
+    // different screen. Asserting the tab's own link is the current one is what tells the two
+    // apart; counting `aria-current` on the page does not (the sidebar carries one too).
+    await expect(page.locator(`a[href*="tab=${tab}"][aria-current="page"]`)).toHaveCount(1);
+    // A marker only the PANEL can produce — never the tab label, never the population sentence.
+    // The first version of this check looked for "Exécutions passées" and "juge", which the
+    // strip and the sentence above the panel both print: it would have gone green on a panel
+    // that never drew, which is precisely the failure this file was written to catch. The
+    // judge's calibration is computed server-side over a gold set and can take ten seconds on
+    // a cold cache, hence the generous timeout — a slow read is not an absent one.
+    await expect(page.getByText(marker).first()).toBeVisible({ timeout: 30_000 });
+  });
+}
+
+test("each crossed surface says which population it is reading", async ({ page }) => {
+  await login(page);
+
+  // The whole reason the move needed care: the sweep scores llama3.2:3b at 92 % and the archive
+  // at 51.7 %. Both are true of different runs. A tab that shows one of those numbers without
+  // naming its population turns an honest difference into a contradiction.
+  for (const { tab } of CROSSED) {
+    await page.goto(`${EVALUATIONS}&tab=${tab}`);
+    await expect(
+      page.getByText(/séance|archive|jeu de référence|annoté/i).first(),
+    ).toBeVisible({ timeout: 20_000 });
+  }
+});
+
+test("the strip groups its seven tabs by the population each one reads", async ({ page }) => {
+  await login(page);
+  await page.goto(EVALUATIONS);
+
+  for (const caption of [/Une même séance/, /L'archive/, /Le juge/]) {
+    await expect(page.getByText(caption).first()).toBeVisible();
+  }
+});
+
+test("the departed tabs are gone from the monitoring strip, and its links follow them", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto(SIGNALS);
+
+  // Two tabs left, not six. A strip still offering "Cas échoués" here would render an empty
+  // panel: the queries behind it moved.
+  await expect(page.getByRole("tab").or(page.locator("[data-tab-key]"))).not.toHaveCount(6);
+
+  // …and the overview's own drill-down must land on the content, wherever it now lives.
+  const compare = page.getByRole("button", { name: /Comparer les modèles|Comparer/ }).first();
+  if ((await compare.count()) > 0) {
+    await compare.click();
+    await page.waitForURL(/vue=evaluations/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/tab=models/);
+    await expect(page.getByText(CRASHED)).toHaveCount(0);
+  }
+});

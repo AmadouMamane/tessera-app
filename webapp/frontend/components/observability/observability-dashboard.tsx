@@ -15,9 +15,7 @@ import {
   Play,
   Radio,
   Route,
-  Scale,
   ShieldCheck,
-  Siren,
   Stethoscope,
   TrendingUp,
 } from "lucide-react";
@@ -32,17 +30,9 @@ import { type ReactNode, useState } from "react";
 
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { TabStrip } from "@/components/cockpit/tab-strip";
-import { EVAL_PATHNAME, evalQuery } from "@/components/eval/eval-route";
+import { EVAL_PATHNAME, EVAL_VIEW_VALUE, evalQuery } from "@/components/eval/eval-route";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
-import { FailedBoard, FailedRail } from "@/components/observability/failed-board";
 import { FailureDistribution } from "@/components/observability/failed-cases";
-import { JudgeCalibration, JudgeRail } from "@/components/observability/judge-calibration";
-import {
-  DEFAULT_PERIOD,
-  ModelsBoard,
-  type ModelsPeriod,
-  ModelsPeriodRail,
-} from "@/components/observability/models-board";
 import {
   CostQualityScatter,
   EtatActuel,
@@ -57,14 +47,6 @@ import {
   RootCauseDiagnostic,
   RunsPassRateTable,
 } from "@/components/observability/overview-exec";
-import {
-  DatasetsTable,
-  RunContextPanel,
-  RunsCharts,
-  RunsEvalTable,
-  RunsKpis,
-  RunsRail,
-} from "@/components/observability/runs-datasets";
 import {
   SignalHeatmap,
   SignalKpis,
@@ -90,18 +72,13 @@ import {
   fetchConformance,
   fetchContradictions,
   fetchControlSeries,
-  fetchCorpusFreshness,
   fetchCost,
-  fetchEmbeddingSkew,
-  fetchEvalDatasets,
   fetchFailedCases,
-  fetchFailedRuns,
   fetchFailureClusters,
   fetchFailurePredictor,
   fetchFirewallEfficacy,
   fetchFunnel,
   fetchIntent,
-  fetchJudgeConsensus,
   fetchJudgeDrift,
   fetchLocaleFormat,
   fetchLocalization,
@@ -121,16 +98,18 @@ import {
   fetchToxicity,
   fetchWhatChanged,
 } from "@/lib/api/client";
-import type {
-  FailedCasesReport,
-  FailedRunCase,
-  ReleaseStatus,
-  RunRegistry,
-  RunSummary,
-  WhatChanged,
-} from "@/lib/api/schemas";
+import type { FailedCasesReport, ReleaseStatus, RunRegistry, WhatChanged } from "@/lib/api/schemas";
 import { fmtRunDay } from "@/lib/eval-score";
-import { DASHBOARD_TABS, DASHBOARD_TAB_PARAM, type DashboardTab } from "@/lib/quality-tabs";
+import {
+  CROSSED_TARGETS,
+  DASHBOARD_TABS,
+  DASHBOARD_TAB_PARAM,
+  type DashboardTab,
+  EVAL_TAB_PARAM,
+  QUALITY_VIEW_PARAM,
+  type QualityTarget,
+  isDashboardTab,
+} from "@/lib/quality-tabs";
 import { SIGNAL_FOCUS_PARAM, readSignalFocus, registryIdFor } from "@/lib/signal-focus";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
@@ -226,9 +205,6 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   const locale = useLocale();
   const [tab, setTab] = useUrlBackedView(TAB_DEFS, "overview", DASHBOARD_TAB_PARAM);
   const [selectedSignal, setSelectedSignal] = useState<SignalRow | null>(null);
-  const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
-  const [selectedFailed, setSelectedFailed] = useState<FailedRunCase | null>(null);
-  const [modelsPeriod, setModelsPeriod] = useState<ModelsPeriod>(DEFAULT_PERIOD);
   const temporal = useTemporalState();
   const { asOf, historyMode } = temporal;
   const railTimeline = useRailTimeline();
@@ -249,6 +225,36 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
    * org-wide by construction — masks the table and says why. Without this the masked lens
    * would be unreachable, and an unreachable capability is a decoration.
    */
+  /**
+   * Open a drill-down destination, wherever it now lives.
+   *
+   * Four of the six targets the overview and the rails name — the run archive, the failed
+   * cases, the model comparison, the judge — moved to the evaluations view. Their sentences
+   * did not stop being true ("see the failed cases" still names something the operator can
+   * see); only the address changed. So the handler resolves the address instead of every call
+   * site learning about the boundary, and a link to a departed tab lands on the content rather
+   * than on a tab strip that silently falls back to the overview.
+   *
+   * `?agent=` rides along: crossing the boundary must not quietly widen the scope from one
+   * agent back to the whole fleet.
+   */
+  function openTarget(target: QualityTarget) {
+    if (isDashboardTab(target)) {
+      setTab(target);
+      return;
+    }
+    const query = new URLSearchParams({
+      [QUALITY_VIEW_PARAM]: EVAL_VIEW_VALUE,
+      [EVAL_TAB_PARAM]: CROSSED_TARGETS[target],
+    });
+    const rawScope = searchParams.get(AGENT_SCOPE_PARAM);
+    if (rawScope) query.set(AGENT_SCOPE_PARAM, rawScope);
+    // `pathname` rather than `EVAL_PATHNAME`: the crossing is a query change on THIS route, and
+    // the live pathname is the one that already carries the locale segment. The constant does
+    // not, so pushing it would drop a German operator onto the French page.
+    router.push(`${pathname}?${query.toString()}` as NextRoute);
+  }
+
   function focusSignal(row: SignalRow) {
     setSelectedSignal(row);
     const params = new URLSearchParams(searchParams.toString());
@@ -317,59 +323,22 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     enabled: tab === "overview" || tab === "signals",
   });
 
-  // Real failed cases from the run archive (Cas échoués tab) — refresh slowly.
-  const failedRuns = useQuery({
-    queryKey: ["failed-runs"],
-    queryFn: ({ signal }) => fetchFailedRuns(signal),
-    refetchInterval: 60_000,
-    enabled: tab === "failed",
-  });
-
-  // Eval run archive — refreshes slowly; the report files change rarely.
+  // Eval run archive — refreshes slowly; the report files change rarely. The archive's own
+  // tab crossed to the evaluations view, which reads this endpoint under the SAME query key:
+  // React Query then serves one cached answer to both, so the duplication costs no request.
+  // Kept here because the overview's KPI strip, pass-rate table and right rail read it too.
   const runs = useQuery({
     queryKey: ["runs"],
     queryFn: ({ signal }) => fetchRuns(signal),
     refetchInterval: 60_000,
-    enabled: tab === "overview" || tab === "runs" || tab === "models",
+    enabled: tab === "overview",
   });
 
   const modelComparison = useQuery({
     queryKey: ["model-comparison"],
     queryFn: ({ signal }) => fetchModelComparison(signal),
     refetchInterval: 60_000,
-    enabled: tab === "overview" || tab === "runs" || tab === "models",
-  });
-
-  // Real corpus inventory — feeds the KPI strip + pipeline freshness fallback.
-  const corpusFreshness = useQuery({
-    queryKey: ["corpus-freshness"],
-    queryFn: ({ signal }) => fetchCorpusFreshness(signal),
-    refetchInterval: 60_000,
-    enabled: tab === "runs",
-  });
-
-  // Query/corpus embedding lineage is measured from the model active at query
-  // time and the fingerprints persisted at ingestion. Keep it visible beside
-  // corpus freshness: a repaired endpoint with no screen is not observability.
-  const embeddingSkew = useQuery({
-    queryKey: ["embedding-skew"],
-    queryFn: ({ signal }) => fetchEmbeddingSkew(signal),
-    refetchInterval: 60_000,
-    enabled: tab === "runs",
-    meta: {
-      health: {
-        label: tq("dataSources.embeddingCompatibility"),
-        href: "/surveiller/qualite-ia?tab=runs",
-      },
-    },
-  });
-
-  // Themed quality datasets (failure-catalogue themes × runs) — the Runs tab table.
-  const evalDatasets = useQuery({
-    queryKey: ["eval-datasets"],
-    queryFn: ({ signal }) => fetchEvalDatasets(signal),
-    refetchInterval: 60_000,
-    enabled: tab === "runs",
+    enabled: tab === "overview",
   });
 
   const releaseStatus = useQuery({
@@ -425,16 +394,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, undefined, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
-    enabled: tab === "overview" || tab === "models" || tab === "judge",
-  });
-
-  // Grounding-metric drift for the Comparaison des modèles "Drift & stabilité" panel.
-  const groundingDrift = useQuery({
-    queryKey: ["judge-drift", "grounding", asOf, period],
-    queryFn: ({ signal }) => fetchJudgeDrift(signal, asOf ?? undefined, "grounding", period),
-    placeholderData: keepPreviousData,
-    refetchInterval: historyMode ? false : 30_000,
-    enabled: tab === "models",
+    enabled: tab === "overview",
   });
 
   // Forward-looking regression risk for the "Signaux prédictifs" column (image 00).
@@ -453,15 +413,6 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 30_000,
     enabled: tab === "signals",
-  });
-
-  // Multi-judge consensus runs a panel of local judges server-side and is cached;
-  // fetch once (it is slow and stable per process).
-  const judgeConsensus = useQuery({
-    queryKey: ["judge-consensus"],
-    queryFn: ({ signal }) => fetchJudgeConsensus(signal),
-    staleTime: Number.POSITIVE_INFINITY,
-    enabled: tab === "models" || tab === "judge",
   });
 
   const firewall = useQuery({
@@ -723,7 +674,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setTab("models")}
+              onClick={() => openTarget("models")}
               className="h-8 gap-2 text-xs"
             >
               <GitCompareArrows className="h-3.5 w-3.5" />
@@ -769,12 +720,12 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           kappa={calibration.data?.kappa ?? null}
           evaluatedCount={runs.data?.catalogue_cases ?? null}
           loading={scoreSeries.isLoading}
-          onOpen={setTab}
+          onOpen={openTarget}
         />
       ) : null}
 
       <div
-        className={`grid gap-2 ${tab === "signals" || tab === "failed" ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}
+        className={`grid gap-2 ${tab === "signals" ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}
       >
         <div className="flex min-w-0 flex-col gap-2">
           {tab === "overview" && (
@@ -808,17 +759,17 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                     <FailureBars
                       report={failedCases.data}
                       loading={failedCases.isLoading}
-                      onOpen={setTab}
+                      onOpen={openTarget}
                     />
                     <JudgeMini
                       data={calibration.data}
                       loading={calibration.isLoading}
-                      onOpen={setTab}
+                      onOpen={openTarget}
                     />
                     <PriorityCases
                       report={failedCases.data}
                       loading={failedCases.isLoading}
-                      onOpen={setTab}
+                      onOpen={openTarget}
                     />
                   </div>
                   <div className="mt-2">
@@ -857,7 +808,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                   <RecommendedActions
                     regressions={releaseStatus.data?.regressions ?? []}
                     failed={failedCases.data}
-                    onOpen={setTab}
+                    onOpen={openTarget}
                     onEvidence={downloadQualityEvidence}
                   />
                 </Zone>
@@ -881,82 +832,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               </div>
             </div>
           )}
-
-          {tab === "runs" && (
-            <div className="flex flex-col gap-2">
-              {/* KPI strip + [runs · datasets | contexte] + six mini-charts (image 02). */}
-              <RunsKpis
-                registry={runs.data}
-                release={releaseStatus.data}
-                freshness={corpusFreshness.data}
-                datasets={evalDatasets.data}
-                skewQuery={embeddingSkew}
-              />
-              <div>
-                <div className="flex flex-col gap-2">
-                  <RunsEvalTable
-                    registry={runs.data}
-                    selectedId={selectedRun?.run_id ?? null}
-                    onSelect={setSelectedRun}
-                  />
-                  <DatasetsTable report={evalDatasets.data} />
-                </div>
-              </div>
-              <RunsCharts
-                registry={runs.data}
-                models={modelComparison.data}
-                datasets={evalDatasets.data}
-              />
-            </div>
-          )}
-
-          {tab === "failed" && (
-            <FailedBoard
-              report={failedRuns.data}
-              selected={selectedFailed}
-              onSelect={setSelectedFailed}
-            />
-          )}
-
-          {tab === "models" && (
-            <ModelsBoard
-              comparison={modelComparison.data}
-              calibration={calibration.data}
-              release={releaseStatus.data}
-              registry={runs.data}
-              faithDrift={judgeDrift.data}
-              groundingDrift={groundingDrift.data}
-              consensus={judgeConsensus.data}
-              period={modelsPeriod}
-            />
-          )}
-
-          {tab === "judge" && (
-            <JudgeCalibration
-              data={calibration.data}
-              drift={judgeDrift.data}
-              consensus={judgeConsensus.data}
-              loading={calibration.isLoading}
-            />
-          )}
         </div>
 
-        {tab === "signals" ? null : tab === "runs" ? (
-          <RunsRail
-            registry={runs.data}
-            datasets={evalDatasets.data}
-            release={releaseStatus.data}
-          />
-        ) : tab === "failed" ? null : tab === "models" ? (
-          <ModelsPeriodRail registry={runs.data} period={modelsPeriod} onApply={setModelsPeriod} />
-        ) : tab === "judge" ? (
-          <JudgeRail
-            data={calibration.data}
-            drift={judgeDrift.data}
-            release={releaseStatus.data}
-            onEvidence={downloadQualityEvidence}
-          />
-        ) : (
+        {tab === "signals" ? null : (
           <RightRail
             failed={failedCases.data}
             // "Aucun problème" is the most reassuring sentence on this page, and an unread
@@ -966,7 +844,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
             release={releaseStatus.data}
             whatChanged={whatChanged.data}
             runs={runs.data}
-            onOpen={setTab}
+            onOpen={openTarget}
             onEvidence={downloadQualityEvidence}
           />
         )}
@@ -986,39 +864,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
             failed={failedCases.data}
             release={releaseStatus.data}
             whatChanged={whatChanged.data}
-            onOpen={setTab}
-            onEvidence={downloadQualityEvidence}
-          />
-        </DetailDrawer>
-      ) : null}
-
-      {tab === "runs" && selectedRun ? (
-        <DetailDrawer
-          title={selectedRun.run_id}
-          subtitle={`${selectedRun.model} · ${selectedRun.language}`}
-          icon={<Boxes className="h-4 w-4" />}
-          onClose={() => setSelectedRun(null)}
-          width="max-w-[480px]"
-        >
-          <RunContextPanel
-            run={selectedRun}
-            release={releaseStatus.data}
-            onEvidence={downloadQualityEvidence}
-          />
-        </DetailDrawer>
-      ) : null}
-
-      {tab === "failed" && selectedFailed ? (
-        <DetailDrawer
-          title={selectedFailed.id}
-          subtitle={`${selectedFailed.category} · ${selectedFailed.severity}`}
-          icon={<Siren className="h-4 w-4" />}
-          onClose={() => setSelectedFailed(null)}
-          width="max-w-[500px]"
-        >
-          <FailedRail
-            failedCase={selectedFailed}
-            release={releaseStatus.data}
+            onOpen={openTarget}
             onEvidence={downloadQualityEvidence}
           />
         </DetailDrawer>
@@ -1035,7 +881,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           <FaithGroundingScatter
             pairs={metricPairs.data}
             loading={metricPairs.isLoading}
-            onOpen={setTab}
+            onOpen={openTarget}
           />
           <RegressionsByRelease release={releaseStatus.data} loading={releaseStatus.isLoading} />
           <CostQualityScatter data={modelComparison.data} loading={modelComparison.isLoading} />
@@ -1089,10 +935,6 @@ function StatusBar({
 const TAB_META: Record<TabKey, typeof Gauge> = {
   overview: Gauge,
   signals: ListChecks,
-  runs: Boxes,
-  failed: Siren,
-  models: GitCompareArrows,
-  judge: Scale,
 };
 
 function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) => void }) {
@@ -1128,7 +970,8 @@ function RightRail({
   release: ReleaseStatus | undefined;
   whatChanged: WhatChanged | undefined;
   runs: RunRegistry | undefined;
-  onOpen: (tab: TabKey) => void;
+  /** A destination, not a tab: three of the four this rail names now live on the other view. */
+  onOpen: (target: QualityTarget) => void;
   onEvidence: () => void;
 }) {
   const tq = useTranslations("quality");

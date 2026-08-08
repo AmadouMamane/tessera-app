@@ -5,6 +5,23 @@ import { ApiError } from "@/lib/api/client";
 
 import { activeErrorQueries, activeErrorQueryCount, queryFailureKind } from "./query-health-notice";
 
+/**
+ * The destination the embedding-skew read declares when it fails.
+ *
+ * This used to be a made-up literal, and being made up it survived the tab moving: the notice
+ * kept promising `?tab=runs`, a dashboard tab that no longer exists, and this test stayed green
+ * because it was comparing its own invention with itself. The value is now the app's, asserted
+ * below to still be the app's — a health notice whose "go and look" lands on the wrong screen is
+ * worse than no notice, because the operator concludes there is nothing to see.
+ */
+const SKEW_HREF = "/surveiller/qualite-ia?vue=evaluations&tab=archive";
+
+it("uses the href the application actually declares, not one invented here", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync("components/eval/eval-dashboard.tsx", "utf8");
+  expect(source).toContain(`href: "${SKEW_HREF}"`);
+});
+
 describe("activeErrorQueryCount", () => {
   it("counts only failed queries observed by the current screen", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -56,7 +73,7 @@ describe("activeErrorQueryCount", () => {
       meta: {
         health: {
           label: "Compatibilité des embeddings",
-          href: "/surveiller/qualite-ia?tab=runs",
+          href: SKEW_HREF,
         },
       },
     });
@@ -67,7 +84,7 @@ describe("activeErrorQueryCount", () => {
       expect.objectContaining({
         source: "Embedding skew",
         label: "Compatibilité des embeddings",
-        href: "/surveiller/qualite-ia?tab=runs",
+        href: SKEW_HREF,
         kind: "contract",
       }),
     ]);

@@ -8,6 +8,7 @@ import {
   activeHelpView,
   sourceHrefForHelpView,
 } from "@/lib/contextual-help-views";
+import { DASHBOARD_TAB_PARAM, EVAL_TAB_PARAM, QUALITY_VIEW_PARAM } from "@/lib/quality-tabs";
 
 const root = process.cwd();
 
@@ -32,9 +33,30 @@ describe("contextual help view contract", () => {
     const groups = CONTEXTUAL_HELP_VIEW_GROUPS.quality ?? [];
     expect(groups.map((group) => [group.key, group.views.map((view) => view.key)])).toEqual([
       ["surfaces", ["signals", "evaluations"]],
-      ["signals", ["overview", "signals", "runs", "failed", "models", "judge"]],
-      ["evaluations", ["cases", "runs", "compare"]],
+      ["signals", ["overview", "signals"]],
+      ["evaluations", ["cases", "runs", "compare", "archive", "failed", "models", "judge"]],
     ]);
+  });
+
+  /**
+   * The atlas is the page's own map, and a map that names a parameter the page stopped reading
+   * sends every one of its links to the default view without failing.
+   *
+   * That happened: the monitoring strip's parameter was renamed to `onglet` — the two strips
+   * used to collide on `?tab=` — and this registry kept writing `tab`, so its dashboard links
+   * silently landed on the overview for as long as the rename existed. Asserted against the
+   * declared constants rather than the literals, so the next rename cannot leave the map behind.
+   */
+  it("addresses each strip by the parameter that strip actually reads", () => {
+    const [surfaces, signals, evaluations] = CONTEXTUAL_HELP_VIEW_GROUPS.quality ?? [];
+    expect(surfaces?.param).toBe(QUALITY_VIEW_PARAM);
+    expect(signals?.param).toBe(DASHBOARD_TAB_PARAM);
+    expect(evaluations?.param).toBe(EVAL_TAB_PARAM);
+    // Switching view must drop BOTH strips' tabs: carrying `onglet` into the evaluations view
+    // (or `tab` back out of it) is how a link starts meaning two different screens again.
+    expect(surfaces?.clearedParams).toEqual(
+      expect.arrayContaining([EVAL_TAB_PARAM, DASHBOARD_TAB_PARAM]),
+    );
   });
 
   it("recognises the nested evaluation tab from the return URL", () => {

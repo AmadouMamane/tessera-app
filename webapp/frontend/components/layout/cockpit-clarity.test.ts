@@ -138,6 +138,15 @@ function primaryQualityCopy(catalogue: Catalogue): string {
     cta: catalogue.quality.cta,
     views: catalogue.quality.views,
     signalHero: catalogue.signalHero,
+    // The OTHER strip on the same page. Four tabs crossed to it from `quality.tabs`, and the
+    // two namespaces were not policed alike: this one was not policed at all. A migration that
+    // moves copy from a watched namespace to an unwatched one launders it past the guard —
+    // exactly the "witness that cannot see" failure (ADR 0026), and here it would have been
+    // self-inflicted. Adding the destination to the scope is the condition for the move, not a
+    // follow-up: `eval.tabs.runs` was already "Runs" in English, the very word banned two
+    // millimetres away on the neighbouring strip.
+    evalTabs: catalogue.eval.tabs,
+    evalTabGroups: catalogue.eval.tabGroups,
   }).join("\n");
 }
 
@@ -550,9 +559,22 @@ describe("cockpit language stays human at the first reading level", () => {
 
   it("has teeth: restoring SLO and Runs & datasets turns the primary-copy ratchet red", () => {
     const mutant = structuredClone(fr);
-    mutant.quality.tabs.runs = "Runs & datasets";
+    mutant.quality.tabs.signals = "Runs & datasets";
     mutant.signalHero.title = "Signal franchi (SLO)";
     expect(primaryQualityCopy(mutant)).toMatch(OPAQUE_PRIMARY_QUALITY_COPY.fr);
+  });
+
+  // The scope grew to the evaluations strip; a scope nobody proves is a scope that may be
+  // spelled wrong. Mutating a key that exists ONLY there is what separates "the guard reads
+  // eval.tabs" from "the guard reads quality.tabs and the assertion happens to hold".
+  it("has teeth: the evaluations strip is inside the primary-copy scope, not beside it", () => {
+    const mutant = structuredClone(fr);
+    mutant.eval.tabs.archive = "Runs archive";
+    expect(primaryQualityCopy(mutant)).toMatch(OPAQUE_PRIMARY_QUALITY_COPY.fr);
+
+    const grouped = structuredClone(fr);
+    grouped.eval.tabGroups.sweep = "Une release";
+    expect(primaryQualityCopy(grouped)).toMatch(OPAQUE_PRIMARY_QUALITY_COPY.fr);
   });
 
   it("has teeth: restoring triage and MTTR turns the incident-copy ratchet red", () => {

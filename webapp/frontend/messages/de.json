@@ -917,8 +917,12 @@
     },
     "tabs": {
       "cases": "Fallsatz",
-      "runs": "Läufe",
-      "compare": "Vergleich"
+      "runs": "Ergebnisse je Modell",
+      "compare": "Vergleich",
+      "archive": "Frühere Ausführungen",
+      "failed": "Fehlgeschlagene Fälle",
+      "models": "Modelle im Zeitverlauf",
+      "judge": "Verlässlichkeit des Prüfers"
     },
     "compare": {
       "referential": "Referenzstand (verriegelt)",
@@ -1197,6 +1201,17 @@
       "headline": "{measured, plural, =0 {Kein einziger von # Faellen misst das Modell wirklich.} one {# von {total} Faellen misst das Modell wirklich.} other {# von {total} Faellen messen das Modell wirklich.}}",
       "method": "Abgeleitet aus der Nullkontrolle und {strongN} + {weakN} vollstaendigen Durchlaeufen. Ein Fall trennt, wenn er die beiden Modelle unterscheidet (exakter Fisher-Test, einseitig, ueber den ganzen Katalog korrigiert); invertiert, wenn die Nullkontrolle ihn besteht und das ausgelieferte Modell ihn reproduzierbar bricht — dort ist der Agent schlechter als Schweigen.",
       "warning": "Die Nullkontrolle — kein Modell, null Token — besteht bereits {passed} der {total} Laeufe. Ein toter Fall prueft die deterministische Schicht (Guard, Router), nicht das Modell: er blaeht die Erfolgsquote auf und misst nichts am Modell."
+    },
+    "tabGroups": {
+      "sweep": "Eine Sitzung",
+      "archive": "Das Archiv",
+      "judge": "Der Prüfer"
+    },
+    "population": {
+      "archive": "Alle aufgezeichneten Ausführungen, die neueste zuerst — Modelle und Prüfsätze gemischt, über Monate hinweg. Das ist nicht die Sitzung daneben: ein Modell kann hier dutzendfach auftauchen, an verschiedenen Tagen und nach verschiedenen Maßstäben.",
+      "failed": "Jeder nicht erfüllte Fall aus der jüngsten vollständigen Ausführung jedes Paars Modell × Sprache im Archiv — nicht aus der Sitzung.",
+      "models": "Jedes Modell, wie das gesamte Archiv es sah: der Durchschnitt seiner früheren Ausführungen. „Eine Sitzung“ nennt für dieselben Modelle eine andere Zahl, mitunter vierzig Punkte höher, weil beide weder dieselben Fälle noch denselben Tag messen.",
+      "judge": "Die Übereinstimmung zwischen dem automatischen Prüfer und einem von Hand annotierten Referenzsatz. Weder die Sitzung noch das Archiv: gemessen wird hier die Regel, nach der die beiden anderen benotet werden."
     }
   },
   "health": {
@@ -2312,11 +2327,7 @@
     },
     "tabs": {
       "overview": "Übersicht",
-      "signals": "Qualitätssignale",
-      "runs": "Verlauf der Ausfuehrungen",
-      "failed": "Fehlgeschlagene Fälle",
-      "models": "Modellvergleich",
-      "judge": "Verlässlichkeit der Bewertung"
+      "signals": "Qualitätssignale"
     },
     "cta": {
       "evidence": "Qualitäts-Evidence-Pack erzeugen",
@@ -3630,9 +3641,9 @@
     "views": {
       "ariaLabel": "Seitenansichten",
       "signals": "Laufende Überwachung",
-      "signalsSub": "Ziele, Abweichungen und Verlässlichkeit der Bewertung — in Echtzeit",
+      "signalsSub": "Ziele, Signale und Abweichungen aus echten Dialogen — in Echtzeit",
       "evaluations": "Bewertungen vor der Freigabe",
-      "evaluationsSub": "Prüfsatz, Ergebnis ohne Modell, Modellbeitrag und Vergleiche"
+      "evaluationsSub": "Prüfsatz, Ergebnis ohne Modell, Modellbeitrag, Vergleiche, frühere Ausführungen und Verlässlichkeit des Prüfers"
     },
     "verdict": {
       "subject": "Urteil je Agent, auf seinem eigenen Bewertungssatz",
@@ -10433,16 +10444,16 @@
         },
         "signals": {
           "overview": "Führt Ziel, Verlauf, Abdeckung und Warnungen für den ersten Überblick zusammen.",
-          "signals": "Beschreibt jedes Signal, seinen Zustand, Geltungsbereich und seine Quelle.",
-          "runs": "Zeigt die Läufe, die die laufende Messung speisen, und ihren Ausführungsstand.",
-          "failed": "Isoliert fehlgeschlagene Fälle, damit Schwere, Ursache und Nachverfolgung verständlich werden.",
-          "models": "Vergleicht beobachtete Modelle, ohne Modellbeitrag und Prüfsatzeffekt zu vermischen.",
-          "judge": "Misst Stabilität und Abweichungen des Bewertungsmodells, die Scores unsicherer machen."
+          "signals": "Beschreibt jedes Signal, seinen Zustand, Geltungsbereich und seine Quelle."
         },
         "evaluations": {
           "cases": "Beschreibt den versionierten Prüfsatz: Abdeckung, Sprachen, Kategorien und Anforderungen.",
-          "runs": "Zeigt Urteil, Schwellenwerte und die für die Entscheidung maßgeblichen Fälle.",
-          "compare": "Vergleicht zwei Läufe bei gleichem Umfang, damit Abweichungen richtig zugeordnet werden."
+          "runs": "Zeigt das Ergebnis jedes Modells aus einer Sitzung: die Untergrenze ohne Modell, die Schwellen und die entscheidenden Fälle.",
+          "compare": "Vergleicht zwei Läufe bei gleichem Umfang, damit Abweichungen richtig zugeordnet werden.",
+          "archive": "Listet alle aufgezeichneten Ausführungen, Modelle und Prüfsätze gemischt, über Monate hinweg — der Verlauf, nicht die Sitzung daneben.",
+          "failed": "Hebt die fehlgeschlagenen Fälle des Archivs hervor, um Schwere, Ursache und Nachverfolgung zu verstehen.",
+          "models": "Vergleicht Modelle über das gesamte Archiv; die Referenzsitzung nennt eine andere Zahl, für andere Fälle an einem anderen Tag.",
+          "judge": "Misst die Übereinstimmung des Prüfers mit einem handannotierten Satz und die Abweichungen, die jede Lesart der Werte schwächen."
         }
       },
       "security": {

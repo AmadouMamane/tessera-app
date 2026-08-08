@@ -61,9 +61,18 @@ describe("the way in to the evaluations view", () => {
     expect(evalDoor).toMatch(/Jeu de cas/);
     expect(evalDoor).toMatch(/résultat sans modèle/);
     expect(evalDoor).toMatch(/comparaisons/);
+    // The judge's reliability and the run archive crossed to this side; a door that did not
+    // name them would be under-promising exactly what an operator came looking for.
+    expect(evalDoor).toMatch(/exécutions passées/);
+    expect(evalDoor).toMatch(/fiabilité du juge/);
     const signalsDoor = texts.find((t) => /Suivi continu/.test(t)) ?? "";
     expect(signalsDoor).toMatch(/Objectifs/);
-    expect(signalsDoor).toMatch(/fiabilité/);
+    // …and this door may no longer claim it. It said "fiabilité de l'évaluation" while the
+    // tab measuring it sat on the other view — the assertion below is the pair of the one
+    // above, and the two together are what keep the switch from advertising the same content
+    // on both sides.
+    expect(signalsDoor).not.toMatch(/fiabilité/);
+    expect(signalsDoor).toMatch(/temps réel/);
   });
 
   it("marks the active view, so the switch states where the reader IS", async () => {

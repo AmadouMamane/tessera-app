@@ -7,6 +7,7 @@ import { CaseRunDetail } from "@/components/eval/case-run-detail";
 import { CataloguePowerCard } from "@/components/eval/catalogue-power";
 import { CatalogueTab } from "@/components/eval/catalogue-tab";
 import { CompareTab } from "@/components/eval/compare-tab";
+import { EvalDashboard } from "@/components/eval/eval-dashboard";
 import { type EvalTab, EvalTabs } from "@/components/eval/eval-tabs";
 import { FailureSynthesis } from "@/components/eval/failure-synthesis";
 import { RunPicker } from "@/components/eval/run-picker";
@@ -65,9 +66,36 @@ export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: Sc
   const tabs = (
     <EvalTabs
       active={tab}
-      labels={{ cases: t("tabs.cases"), runs: t("tabs.runs"), compare: t("tabs.compare") }}
+      labels={{
+        cases: t("tabs.cases"),
+        runs: t("tabs.runs"),
+        compare: t("tabs.compare"),
+        archive: t("tabs.archive"),
+        failed: t("tabs.failed"),
+        models: t("tabs.models"),
+        judge: t("tabs.judge"),
+      }}
+      groupLabels={{
+        sweep: t("tabGroups.sweep"),
+        archive: t("tabGroups.archive"),
+        judge: t("tabGroups.judge"),
+      }}
     />
   );
+
+  // The four surfaces that came over from the monitoring dashboard. They read the report
+  // archive and the judge's gold set — never a live turn — and they render client-side, so
+  // the sweep this function loaded above is not theirs and is deliberately not passed in.
+  // Only a string crosses the server/client seam: handing a Client Component a function (an
+  // icon, a formatter) is what crashed this page once, invisibly to every static check.
+  if (tab === "archive" || tab === "failed" || tab === "models" || tab === "judge") {
+    return (
+      <div className="flex flex-col gap-6 pb-10">
+        {tabs}
+        <EvalDashboard tab={tab} />
+      </div>
+    );
+  }
 
   if (tab === "cases") {
     return (

@@ -917,8 +917,12 @@
     },
     "tabs": {
       "cases": "Case set",
-      "runs": "Runs",
-      "compare": "Comparison"
+      "runs": "Results by model",
+      "compare": "Comparison",
+      "archive": "Past executions",
+      "failed": "Failed cases",
+      "models": "Models over time",
+      "judge": "Judge reliability"
     },
     "compare": {
       "referential": "Référentiel (locked)",
@@ -1197,6 +1201,17 @@
       "headline": "{measured, plural, =0 {Not one case of # actually measures the model.} one {# case of {total} actually measures the model.} other {# cases of {total} actually measure the model.}}",
       "method": "Derived from the null control and {strongN} + {weakN} full passes. A case discriminates if it separates the two models (Fisher exact, one-tailed, corrected across the whole catalogue); inverted if the null control passes it and the model that ships reproducibly breaks it — the agent is worse than silence there.",
       "warning": "The null control — no model, zero tokens — already passes {passed} of the {total} runs. A dead case tests the deterministic layer (guard, router), not the model: it inflates the pass rate and measures nothing about the model."
+    },
+    "tabGroups": {
+      "sweep": "One sitting",
+      "archive": "The archive",
+      "judge": "The judge"
+    },
+    "population": {
+      "archive": "Every recorded execution, newest first — models and evaluation sets mixed, spanning months. This is not the sitting beside it: one model can appear here dozens of times, on different dates and under different marking rules.",
+      "failed": "Every case not met in the most recent full execution of each model × language pair in the archive — not in the sitting.",
+      "models": "Each model as the whole archive saw it: the average of its past executions. \"One sitting\" gives a different figure for the same models, sometimes forty points higher, because the two measure neither the same cases nor the same date.",
+      "judge": "Agreement between the automatic judge and a hand-labelled reference set. Neither the sitting nor the archive: what is measured here is the rule the other two are marked with."
     }
   },
   "health": {
@@ -2312,11 +2327,7 @@
     },
     "tabs": {
       "overview": "Overview",
-      "signals": "Quality signals",
-      "runs": "Execution history",
-      "failed": "Failed cases",
-      "models": "Model comparison",
-      "judge": "Evaluation reliability"
+      "signals": "Quality signals"
     },
     "cta": {
       "evidence": "Generate quality evidence pack",
@@ -3630,9 +3641,9 @@
     "views": {
       "ariaLabel": "Page views",
       "signals": "Continuous monitoring",
-      "signalsSub": "Targets, gaps, and evaluation reliability — live",
+      "signalsSub": "Targets, signals and gaps observed on real exchanges — live",
       "evaluations": "Evaluations before launch",
-      "evaluationsSub": "Case set, result without a model, model contribution, and comparisons"
+      "evaluationsSub": "Case set, result without a model, model contribution, comparisons, past executions and judge reliability"
     },
     "verdict": {
       "subject": "verdict per agent, on its own evaluation set",
@@ -10419,16 +10430,16 @@
         },
         "signals": {
           "overview": "Brings target, trend, coverage, and alerts together for the first reading.",
-          "signals": "Details each signal, its status, scope, and establishing source.",
-          "runs": "Shows the campaigns feeding continuous measurement and their execution status.",
-          "failed": "Isolates failing cases so their severity, cause, and follow-up can be understood.",
-          "models": "Compares observed models without confusing model contribution with test-set effects.",
-          "judge": "Measures judge stability and disagreements that weaken score interpretation."
+          "signals": "Details each signal, its status, scope, and establishing source."
         },
         "evaluations": {
           "cases": "Describes the versioned case set: coverage, languages, categories, and expected requirements.",
-          "runs": "Presents a campaign verdict, its thresholds, and the cases driving the decision.",
-          "compare": "Compares two campaigns on a constant scope so changes can be attributed correctly."
+          "runs": "Shows each model’s result from one sitting: the floor without a model, the thresholds, and the cases that decide.",
+          "compare": "Compares two campaigns on a constant scope so changes can be attributed correctly.",
+          "archive": "Lists every recorded execution, models and evaluation sets mixed, spanning months — the history, not the sitting beside it.",
+          "failed": "Isolates the archive’s failing cases so their severity, cause and follow-up can be understood.",
+          "models": "Compares models across the whole archive; the reference sitting gives a different figure, for different cases on a different date.",
+          "judge": "Measures the judge’s agreement with a hand-labelled set, and the disagreements that weaken any reading of the scores."
         }
       },
       "security": {
