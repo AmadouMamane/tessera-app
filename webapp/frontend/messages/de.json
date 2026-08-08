@@ -3299,7 +3299,9 @@
         "evidenceDesc": "Vollständige Nachweise für Audit.",
         "evidenceCta": "Pack vorbereiten",
         "notWired": "Nicht angebunden — die Neukalibrierung des Judges folgt in einem eigenen Schritt"
-      }
+      },
+      "notMeasured": "nicht gemessen",
+      "disagreementsUnread": "Die Übereinstimmung Prüfer ↔ Mensch war nicht lesbar; ob es Abweichungen gibt, ist unbekannt."
     },
     "runs": {
       "title": "Runs & Datensätze",

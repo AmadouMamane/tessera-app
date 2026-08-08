@@ -3299,7 +3299,9 @@
         "evidenceDesc": "Preuves complètes à insérer pour audit.",
         "evidenceCta": "Préparer le pack",
         "notWired": "Non câblé — la recalibration du juge arrive dans un lot dédié"
-      }
+      },
+      "notMeasured": "non mesuré",
+      "disagreementsUnread": "L'accord juge ↔ humain n'a pas pu être lu ; on ne sait pas s'il y a des désaccords."
     },
     "runs": {
       "title": "Runs & datasets",

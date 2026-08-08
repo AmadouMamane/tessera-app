@@ -870,33 +870,57 @@ export function JudgeRail({
   const driftDiv = drift?.divergence ?? null;
   const nDisagree = data?.n_disagree ?? 0;
 
-  // Transparent 0-100 composite of the real signals (1−κ, drift, 1−agreement).
+  /**
+   * Transparent 0-100 composite of the real signals (1−κ, drift, 1−agreement) — or NO score.
+   *
+   * It used to fall back to `0`, which then flowed through `risk >= 50 ? BAD : risk >= 25 ?
+   * WARN : GOOD` and printed a green **0/100 · faible** over zero inputs. A reassuring verdict
+   * computed from nothing is the one output this cockpit may never produce: an operator reading
+   * "low calibration risk" during a backend outage is worse off than one reading nothing.
+   *
+   * `null` means the composite has no term. It is not a low risk; it is no measurement.
+   */
   const factors: number[] = [];
   if (kappa != null) factors.push(Math.max(0, 1 - kappa));
   if (driftDiv != null) factors.push(Math.min(1, driftDiv / 0.1));
   if (agreement != null) factors.push(Math.max(0, 1 - agreement));
   const risk = factors.length
     ? Math.round((factors.reduce((s, f) => s + f, 0) / factors.length) * 100)
-    : 0;
-  const riskTone = risk >= 50 ? BAD : risk >= 25 ? WARN : GOOD;
+    : null;
+  const riskTone = risk == null ? MUTED : risk >= 50 ? BAD : risk >= 25 ? WARN : GOOD;
   const riskLevel =
-    risk >= 50 ? tq("judge.riskHigh") : risk >= 25 ? tq("judge.riskMod") : tq("judge.riskLow");
+    risk == null
+      ? tq("judge.notMeasured")
+      : risk >= 50
+        ? tq("judge.riskHigh")
+        : risk >= 25
+          ? tq("judge.riskMod")
+          : tq("judge.riskLow");
 
-  const gates: { label: string; value: string; pass: boolean }[] = [
+  /**
+   * Three gates, and `pass` is a THREE-state answer.
+   *
+   * It was a boolean, and each one defaulted its missing input to `0` before comparing. Two of
+   * them then failed safe by accident (`0 >= 0.8` is false → "à surveiller"); the drift gate
+   * failed OPEN by accident (`0 < 0.1` is true → a green **Pass** beside a value of "—").
+   * Nobody chose either behaviour, which is the tell: a missing input is not a value, so the
+   * comparison must not be reached at all.
+   */
+  const gates: { label: string; value: string; pass: boolean | null }[] = [
     {
       label: tq("judge.gateCalibration"),
       value: kappa == null ? "—" : kappa.toFixed(2),
-      pass: (kappa ?? 0) >= 0.8,
+      pass: kappa == null ? null : kappa >= 0.8,
     },
     {
       label: tq("judge.gateAgreement"),
       value: agreement == null ? "—" : `${Math.round(agreement * 100)}%`,
-      pass: (agreement ?? 0) >= 0.8,
+      pass: agreement == null ? null : agreement >= 0.8,
     },
     {
       label: tq("judge.gateDrift"),
       value: driftDiv == null ? "—" : driftDiv.toFixed(2),
-      pass: (driftDiv ?? 0) < 0.1,
+      pass: driftDiv == null ? null : driftDiv < 0.1,
     },
   ];
 
@@ -945,8 +969,12 @@ export function JudgeRail({
                 <span className="min-w-0 truncate text-[var(--muted-foreground)]">{g.label}</span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="tabular-nums">{g.value}</span>
-                  <Badge tone={g.pass ? "success" : "warning"}>
-                    {g.pass ? tq("judge.pass") : tq("judge.watch")}
+                  <Badge tone={g.pass == null ? "neutral" : g.pass ? "success" : "warning"}>
+                    {g.pass == null
+                      ? tq("judge.notMeasured")
+                      : g.pass
+                        ? tq("judge.pass")
+                        : tq("judge.watch")}
                   </Badge>
                 </span>
               </div>
@@ -964,7 +992,9 @@ export function JudgeRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <div className="flex items-end gap-2">
-              <span className={`text-3xl font-semibold tabular-nums ${riskTone}`}>{risk}</span>
+              <span className={`text-3xl font-semibold tabular-nums ${riskTone}`}>
+                {risk ?? "—"}
+              </span>
               <span className="pb-1 text-xs text-[var(--muted-foreground)]">/100</span>
               <span className={`pb-1 text-xs ${riskTone}`}>· {riskLevel}</span>
             </div>
@@ -987,7 +1017,10 @@ export function JudgeRail({
           <CardContent className="flex flex-col gap-1.5">
             {topCats.length === 0 ? (
               <p className="text-[0.7rem] text-[var(--muted-foreground)]">
-                {tq("judge.noDisagreements")}
+                {/* "No disagreement" is a finding; it may only be stated after looking. An
+                    unread calibration produced the same empty map as a perfectly-agreeing
+                    judge, and printed the reassuring half. */}
+                {data == null ? tq("judge.disagreementsUnread") : tq("judge.noDisagreements")}
               </p>
             ) : (
               topCats.map((c) => (

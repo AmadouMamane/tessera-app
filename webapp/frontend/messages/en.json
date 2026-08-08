@@ -3299,7 +3299,9 @@
         "evidenceDesc": "Full proofs ready for audit.",
         "evidenceCta": "Prepare the pack",
         "notWired": "Not wired — judge recalibration is coming in a dedicated lot"
-      }
+      },
+      "notMeasured": "not measured",
+      "disagreementsUnread": "Judge ↔ human agreement could not be read; whether there are disagreements is unknown."
     },
     "runs": {
       "title": "Runs & datasets",
