@@ -104,6 +104,13 @@ test("the floor is READ, and every surface quotes the same number", async ({ pag
   // must quote THAT number — the page used to serve a measured 124 and a hardcoded 122 three
   // blocks apart, and only a reader comparing them could tell.
   const header = page.getByText(/plancher lu dans la baseline commitée : (\d+)\/(\d+)/);
+  const honestEmpty = page.getByText(/aucun sweep lisible|Aucun modèle n'a parlé/);
+
+  // WAIT before deciding. `count()` does not auto-wait, so the previous version asked "is the
+  // sentence there?" of a page that had not finished rendering, got 0, and SKIPPED — green,
+  // silent, and wrong: the served stack prints "124/174" and this test never once read it.
+  // A skip is a claim that the stack has no committed floor; it may only be made after looking.
+  await expect(header.or(honestEmpty).first()).toBeVisible({ timeout: 30_000 });
   if ((await header.count()) === 0) test.skip(true, "no committed floor on this stack");
 
   const text = (await header.first().textContent()) ?? "";
@@ -207,11 +214,21 @@ test("the departed tabs are gone from the monitoring strip, and its links follow
   await expect(page.getByRole("tab").or(page.locator("[data-tab-key]"))).not.toHaveCount(6);
 
   // …and the overview's own drill-down must land on the content, wherever it now lives.
-  const compare = page.getByRole("button", { name: /Comparer les modèles|Comparer/ }).first();
-  if ((await compare.count()) > 0) {
-    await compare.click();
-    await page.waitForURL(/vue=evaluations/, { timeout: 15_000 });
-    await expect(page).toHaveURL(/tab=models/);
-    await expect(page.getByText(CRASHED)).toHaveCount(0);
-  }
+  //
+  // EXACT, and unguarded, for two reasons this test learned the hard way. `/Comparer/` also
+  // matches "Comparer à Objectif cible" in the temporal rail, which sits earlier in the DOM:
+  // `.first()` clicked a dropdown and waited fifteen seconds for a navigation nobody had asked
+  // for. And the `if (count > 0)` that used to wrap this made a missing button a silent pass —
+  // the one outcome that must never read as green, since a drill-down that disappeared is
+  // exactly the regression this assertion exists to catch.
+  const compare = page.getByRole("button", { name: "Comparer modèles", exact: true });
+  await expect(compare).toHaveCount(1);
+  await compare.click();
+  await page.waitForURL(/vue=evaluations/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/tab=models/);
+  await expect(page.getByText(CRASHED)).toHaveCount(0);
+  // It arrived at the CONTENT, not merely at the URL.
+  await expect(page.getByText(/Comparaison détaillée des modèles/).first()).toBeVisible({
+    timeout: 30_000,
+  });
 });
