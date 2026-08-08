@@ -2929,7 +2929,8 @@
       "refusal": "Refusal rate",
       "failed": "Failed cases",
       "judge": "Evaluation reliability",
-      "conformance": "Conformance"
+      "conformance": "Conformance",
+      "meanTag": "average"
     },
     "empty": {
       "noBackend": "Not wired to a backend yet — no data fabricated."
@@ -9353,11 +9354,11 @@
   },
   "signalHero": {
     "title": "Quality target",
-    "breached": "Target missed · {metric} — {rate} < target {threshold}",
-    "ok": "Target met · {metric} — {rate} ≥ target {threshold}",
+    "breached": "Target missed · {metric} — {rate} of responses at the required level, target {threshold}",
+    "ok": "Target met · {metric} — {rate} of responses at the required level, target {threshold}",
     "burn": "Error rate ×{x} · {bad} of {n} responses below target",
-    "breachedShort": "{metric} — {rate} < target {threshold}",
-    "okShort": "{metric} — {rate} ≥ target {threshold}",
+    "breachedShort": "{metric} — {rate} of responses at the required level, below the {threshold} target",
+    "okShort": "{metric} — {rate} of responses at the required level, {threshold} target met",
     "burnRate": "Error rate ×{x}",
     "burnBad": "{bad} of {n} responses below target",
     "stopPulse": "Acknowledge",

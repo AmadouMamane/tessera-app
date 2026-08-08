@@ -31,6 +31,7 @@ export function MetricKpi({
   onDrill?: () => void;
   drillLabel?: string;
 }) {
+  const tq = useTranslations("quality");
   const buckets = series?.buckets ?? [];
   const n = buckets.length;
   const pts = buckets
@@ -74,8 +75,20 @@ export function MetricKpi({
           onDrill ? "pointer-events-none relative z-20" : ""
         }`}
       >
-        <span className="text-lg font-semibold tabular-nums">
-          {mean != null ? `${Math.round(mean * 100)}%` : "—"}
+        <span className="flex items-baseline gap-1">
+          <span className="text-lg font-semibold tabular-nums">
+            {mean != null ? `${Math.round(mean * 100)}%` : "—"}
+          </span>
+          {/* WHICH statistic this is, on the surface rather than inside the ⓘ.
+              The SLO ribbon two rows above prints "Fidélité — 52,6 %" (the share of responses
+              clearing the bar) while this tile printed "Fidélité 49 %" (the mean of the same 19
+              scores). Two statistics of one sample, one label, four points apart: close enough
+              to read as a defect. An operator comparing two figures does not open tooltips. */}
+          {mean != null ? (
+            <span className="text-[0.6rem] text-[var(--muted-foreground)]">
+              {tq("kpi.meanTag")}
+            </span>
+          ) : null}
         </span>
         {delta != null ? (
           <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">

@@ -2929,7 +2929,8 @@
       "refusal": "Taux de refus",
       "failed": "Cas échoués",
       "judge": "Fiabilité de l'évaluation",
-      "conformance": "Conformité"
+      "conformance": "Conformité",
+      "meanTag": "moyenne"
     },
     "empty": {
       "noBackend": "Pas encore relié à un backend — aucune donnée inventée."
@@ -9353,11 +9354,11 @@
   },
   "signalHero": {
     "title": "Objectif de qualité",
-    "breached": "Objectif non atteint · {metric} — {rate} < objectif {threshold}",
-    "ok": "Objectif atteint · {metric} — {rate} ≥ objectif {threshold}",
+    "breached": "Objectif non atteint · {metric} — {rate} des réponses au niveau exigé, objectif {threshold}",
+    "ok": "Objectif atteint · {metric} — {rate} des réponses au niveau exigé, objectif {threshold}",
     "burn": "Rythme d'erreur ×{x} · {bad} réponses sur {n} sous l'objectif",
-    "breachedShort": "{metric} — {rate} < objectif {threshold}",
-    "okShort": "{metric} — {rate} ≥ objectif {threshold}",
+    "breachedShort": "{metric} — {rate} des réponses au niveau exigé, sous l'objectif de {threshold}",
+    "okShort": "{metric} — {rate} des réponses au niveau exigé, objectif de {threshold} tenu",
     "burnRate": "Rythme d'erreur ×{x}",
     "burnBad": "{bad} réponses sur {n} sous l'objectif",
     "stopPulse": "Marquer comme vu",
