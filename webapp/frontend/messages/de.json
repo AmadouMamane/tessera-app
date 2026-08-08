@@ -960,7 +960,10 @@
       },
       "empty": {
         "title": "Katalog nicht lesbar",
-        "body": "Weder eval/failures/ noch das Bundle data/eval/catalogue.json waren lesbar. Es wird kein Fall angezeigt statt eines Teilkatalogs, der für vollständig gehalten würde."
+        "unreachable": "Der Dienst hat die Anfrage nach dem Fallsatz nicht beantwortet. Es wird kein Fall angezeigt: was der Katalog enthält, ist unbekannt — nur, dass nicht danach gefragt werden konnte.",
+        "refused": "Der Dienst hat die Anfrage nach dem Fallsatz abgelehnt (Code {status}). Es wird kein Fall angezeigt statt eines Teilkatalogs, der für vollständig gehalten würde.",
+        "contract": "Der Dienst hat geantwortet, in einer Form, die diese Version der Ansicht nicht lesen kann. Es wird kein Fall angezeigt statt eines Teilkatalogs, der für vollständig gehalten würde.",
+        "absent": "Der Dienst hat geantwortet: er findet keinen Fall im Referenzsatz. Das ist eine festgestellte Abwesenheit, kein fehlgeschlagener Lesevorgang."
       },
       "weakCriterion": "schwaches Kriterium",
       "weakCriterionWhy": "Eine leere Antwort bestünde diesen Fall: seine Kriterien sind rein negativ.",
@@ -1079,8 +1082,11 @@
       "noRecentRun": "kein aktueller Lauf auf dem geltenden Referenzstand",
       "pickRun": "Im Detail angezeigter Lauf",
       "empty": {
-        "title": "kein lesbarer Sweep",
-        "body": "Weder eval/reports/sweep/ noch das Bundle data/eval/ waren lesbar. Es wird nichts angezeigt statt einer Vorgabezahl."
+        "title": "kein lesbarer Durchlauf",
+        "unreachable": "Der Dienst hat die Anfrage nach dem Durchlauf nicht beantwortet. Es wird nichts angezeigt: ob Ergebnisse vorliegen, ist unbekannt — nur, dass nicht danach gefragt werden konnte.",
+        "refused": "Der Dienst hat die Anfrage nach dem Durchlauf abgelehnt (Code {status}). Es wird nichts angezeigt: eine Ablehnung sagt nichts darüber, ob Ergebnisse vorliegen.",
+        "contract": "Der Dienst hat geantwortet, in einer Form, die diese Version der Ansicht nicht lesen kann. Es wird nichts angezeigt: die Antwort kann durchaus Ergebnisse enthalten, die die Ansicht nicht mehr deuten kann.",
+        "absent": "Der Dienst hat geantwortet: er findet kein verwertbares Durchlaufergebnis. Das ist eine festgestellte Abwesenheit, kein fehlgeschlagener Lesevorgang."
       },
       "judgedAt": "am {date} neu bewertet nach Maßstab {sha}",
       "judgedPartial": "{count, plural, one {# Lauf übernommen, nicht neu bewertet} other {# Läufe übernommen, nicht neu bewertet}}",

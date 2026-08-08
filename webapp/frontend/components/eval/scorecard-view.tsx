@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { currentRole, isAdmin, isOperator, isSuperadmin } from "@/lib/auth/session";
+import { emptyReasonKey, emptyReasonValues } from "@/lib/eval-empty-reason";
 import {
   MIN_CONTRIBUTION_UNCALIBRATED,
   ageInDays,
@@ -25,7 +26,13 @@ import {
   fmtRunDay,
   isStale,
 } from "@/lib/eval-score";
-import { type Sweep, loadCataloguePower, loadSweep, loadSweepRun } from "@/lib/eval-sweep";
+import {
+  type Sweep,
+  loadCataloguePower,
+  loadSweep,
+  loadSweepRun,
+  sweepUnavailableReason,
+} from "@/lib/eval-sweep";
 import { getSynthesisAdminFlag } from "@/lib/server/settings";
 
 interface ScorecardViewProps {
@@ -151,6 +158,10 @@ export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: Sc
   }
 
   if (!sweep || !selected) {
+    // WHY, not just "nothing". Three of the four causes are facts about the read, not about the
+    // evaluation, and the operator's next move differs for each: check the service, read the
+    // status, suspect a contract drift, or accept that no sweep has been recorded.
+    const reason = await sweepUnavailableReason();
     return (
       <div className="flex flex-col gap-6 pb-10">
         {tabs}
@@ -159,7 +170,7 @@ export async function ScorecardView({ locale, tab, run, caseId, lang, a, b }: Sc
             <EmptyState
               icon={<FileSearch />}
               title={t("sweep.empty.title")}
-              description={t("sweep.empty.body")}
+              description={t(`sweep.empty.${emptyReasonKey(reason)}`, emptyReasonValues(reason))}
             />
             <div className="mt-6 rounded-md bg-[var(--muted)]/40 p-4 font-mono text-xs leading-relaxed text-[var(--muted-foreground)]">
               $ uv run python scripts/run_eval.py --report eval/reports/sweep/&lt;model&gt;.json

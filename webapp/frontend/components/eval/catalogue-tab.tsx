@@ -10,7 +10,9 @@ import { Link } from "@/i18n/navigation";
 import type { EvalCase } from "@/lib/api/schemas";
 import { type CasePower, casePower, passedBySilence } from "@/lib/eval-bench";
 import { listCriteria } from "@/lib/eval-criteria";
+import { emptyReasonKey, emptyReasonValues } from "@/lib/eval-empty-reason";
 import type { Floor } from "@/lib/eval-score";
+import { sweepUnavailableReason } from "@/lib/eval-sweep";
 
 /**
  * `Jeu de cas` — the dataset as a versioned ARTEFACT, with no result anywhere on it.
@@ -39,13 +41,16 @@ export async function CatalogueTab({
   const t = await getTranslations({ locale, namespace: "eval" });
 
   if (catalogue.length === 0) {
+    // An empty list has four possible causes and only one of them is about the catalogue.
+    // `null` here means the read succeeded and the reference set really is empty.
+    const reason = await sweepUnavailableReason();
     return (
       <Card>
         <CardContent className="p-6">
           <EmptyState
             icon={<BookOpen />}
             title={t("catalogue.empty.title")}
-            description={t("catalogue.empty.body")}
+            description={t(`catalogue.empty.${emptyReasonKey(reason)}`, emptyReasonValues(reason))}
           />
         </CardContent>
       </Card>

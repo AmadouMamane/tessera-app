@@ -960,7 +960,10 @@
       },
       "empty": {
         "title": "catalogue unreadable",
-        "body": "Neither eval/failures/ nor the data/eval/catalogue.json bundle could be read. No case is shown, rather than a partial catalogue that would read as a complete one."
+        "unreachable": "The service did not answer the request for the case set. No case is shown: we do not know what the catalogue holds, only that we could not ask for it.",
+        "refused": "The service refused the request for the case set (code {status}). No case is shown, rather than a partial catalogue that would read as a complete one.",
+        "contract": "The service answered, in a shape this version of the screen cannot read. No case is shown, rather than a partial catalogue that would read as a complete one.",
+        "absent": "The service answered: it finds no case in the reference set. That is an observed absence, not a failed read."
       },
       "weakCriterion": "weak criterion",
       "weakCriterionWhy": "An empty response would pass this case: its criteria are purely negative.",
@@ -1080,7 +1083,10 @@
       "pickRun": "Run shown in detail",
       "empty": {
         "title": "no readable sweep",
-        "body": "Neither eval/reports/sweep/ nor the data/eval/ bundle could be read. Nothing is displayed, rather than a default number."
+        "unreachable": "The service did not answer the request for the sweep. Nothing is shown: we do not know whether results exist, only that we could not ask for them.",
+        "refused": "The service refused the request for the sweep (code {status}). Nothing is shown: a refusal says nothing about whether results exist.",
+        "contract": "The service answered, in a shape this version of the screen cannot read. Nothing is shown: the answer may well hold results the screen no longer knows how to interpret.",
+        "absent": "The service answered: it finds no usable sweep result. That is an observed absence, not a failed read."
       },
       "judgedAt": "re-judged on {date} under ruler {sha}",
       "judgedPartial": "{count, plural, one {# run carried, not re-judged} other {# runs carried, not re-judged}}",

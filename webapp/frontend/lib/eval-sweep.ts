@@ -128,27 +128,80 @@ export type CataloguePowerState =
   | { kind: "off-referential"; measuredOn: string; current: string };
 
 /**
+ * Why the sweep is not on screen. A BLIND read and a MEASURED absence are different facts.
+ *
+ * Four causes used to collapse into one `null`: the backend could not be reached, it answered
+ * with an error, its payload no longer matched the contract, or it answered perfectly well and
+ * said there is nothing readable under `eval/reports/sweep/`. Only the last is a fact about the
+ * evaluation; the first three are facts about the READ, and an operator who is told "no readable
+ * sweep" goes and looks at a directory that may be full.
+ *
+ * This is the same fault the ClickHouse adapter carried (an empty list asserted "nothing was
+ * emitted" over a failed query), stated once more in ADR 0026's terms: a witness that cannot see
+ * may report a blind spot, never a result.
+ */
+export type SweepUnavailable =
+  /** The request never completed — no backend, DNS, TLS, abort. Nothing was measured. */
+  | { kind: "unreachable"; detail: string }
+  /** The backend answered, and refused. Its status is the operator's first clue. */
+  | { kind: "refused"; status: number }
+  /** It answered, and the payload is not the shape this build expects — the contract drifted. */
+  | { kind: "contract"; detail: string }
+  /** It answered, it was understood, and it says there is nothing to show. A real measurement. */
+  | { kind: "absent" };
+
+type SweepFetch = { ok: true; payload: SweepPayloadShape } | { ok: false; why: SweepUnavailable };
+
+type SweepPayloadShape = ReturnType<typeof EvalSweepPayloadSchema.parse>;
+
+/**
+ * The read itself, UNCACHED and exported — so the four-way classification can be tested.
+ *
+ * It sits outside `cache()` deliberately. React's `cache` memoises per request scope, and a test
+ * driving four different backend behaviours through one memoised function would get the first
+ * answer four times: the classification would look correct while never running. A witness that
+ * cannot vary its input is not testing the branch it names.
+ */
+export async function readSweep(url: string): Promise<SweepFetch> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      cache: "no-store",
+      headers: backendHeaders({ Accept: "application/json" }),
+    });
+  } catch (error) {
+    return { ok: false, why: { kind: "unreachable", detail: String(error) } };
+  }
+  if (!res.ok) return { ok: false, why: { kind: "refused", status: res.status } };
+  try {
+    const parsed = EvalSweepPayloadSchema.parse(await res.json());
+    // `available: false` is the backend's own verdict, reached after looking. Keep it distinct
+    // from the three failures above: it is the only one that says something about the data.
+    return parsed.available
+      ? { ok: true, payload: parsed }
+      : { ok: false, why: { kind: "absent" } };
+  } catch (error) {
+    return { ok: false, why: { kind: "contract", detail: String(error) } };
+  }
+}
+
+/**
  * The one backend read, wrapped in React `cache()`.
  *
  * The evaluations view asks for the sweep more than once in a single render tree (the score
  * cards, the matrix, the power tile), and the key is the URL STRING, so the dedup is exact:
  * request-scoped, never across renders, so freshness is byte-identical to a plain `no-store`.
+ * The empty states ask the SAME cached call for their reason, so naming the cause costs no
+ * second request and cannot describe a different attempt from the one that failed.
  */
-const fetchSweepPayload = cache(async (url: string) => {
-  try {
-    const res = await fetch(url, {
-      cache: "no-store",
-      headers: backendHeaders({ Accept: "application/json" }),
-    });
-    if (!res.ok) return null;
-    const parsed = EvalSweepPayloadSchema.parse(await res.json());
-    return parsed.available ? parsed : null;
-  } catch {
-    return null;
-  }
-});
+const fetchSweep = cache(readSweep);
 
-type SweepPayload = NonNullable<Awaited<ReturnType<typeof fetchSweepPayload>>>;
+const fetchSweepPayload = async (url: string): Promise<SweepPayloadShape | null> => {
+  const result = await fetchSweep(url);
+  return result.ok ? result.payload : null;
+};
+
+type SweepPayload = SweepPayloadShape;
 type SweepRunPayload = SweepPayload["runs"][number];
 
 function toRun(run: SweepRunPayload): SweepRun {
@@ -203,6 +256,19 @@ export function toSweep(payload: SweepPayload): Sweep {
 export async function loadSweep(): Promise<Sweep | null> {
   const payload = await fetchSweepPayload(`${backendUrl()}/observability/eval-sweep`);
   return payload ? toSweep(payload) : null;
+}
+
+/**
+ * WHY there is no sweep, for the screen that has to say so. `null` when there is one.
+ *
+ * Shares `loadSweep`'s cached call, so the reason describes the very attempt that failed rather
+ * than a second, possibly luckier one. Every empty state on this view reads it: the alternative
+ * is one sentence for four causes, which is how the copy came to name a fallback the code had
+ * stopped opening months earlier.
+ */
+export async function sweepUnavailableReason(): Promise<SweepUnavailable | null> {
+  const result = await fetchSweep(`${backendUrl()}/observability/eval-sweep`);
+  return result.ok ? null : result.why;
 }
 
 /** The catalogue as it stands today, from the same one read. */

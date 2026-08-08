@@ -960,7 +960,10 @@
       },
       "empty": {
         "title": "catalogue illisible",
-        "body": "Ni eval/failures/ ni le bundle data/eval/catalogue.json n'ont pu être lus. Aucun cas n'est affiché, plutôt qu'un catalogue partiel qui passerait pour complet."
+        "unreachable": "Le service n'a pas répondu à la demande du jeu de cas. Aucun cas n'est affiché : on ne sait pas ce que contient le catalogue, seulement qu'on n'a pas pu le demander.",
+        "refused": "Le service a refusé la demande du jeu de cas (code {status}). Aucun cas n'est affiché plutôt qu'un catalogue partiel qui passerait pour complet.",
+        "contract": "Le service a répondu, mais dans une forme que cette version de l'écran ne sait pas lire. Aucun cas n'est affiché plutôt qu'un catalogue partiel qui passerait pour complet.",
+        "absent": "Le service a répondu : il ne trouve aucun cas dans le référentiel. C'est une absence constatée, pas une lecture ratée."
       },
       "weakCriterion": "critère faible",
       "weakCriterionWhy": "Une réponse vide passerait ce cas : ses critères sont uniquement négatifs.",
@@ -1079,8 +1082,11 @@
       "noRecentRun": "aucun run récent sur le référentiel courant",
       "pickRun": "Run affiché en détail",
       "empty": {
-        "title": "aucun sweep lisible",
-        "body": "Ni eval/reports/sweep/ ni le bundle data/eval/ n'ont pu être lus. Rien n'est affiché, plutôt qu'un chiffre par défaut."
+        "title": "aucun balayage lisible",
+        "unreachable": "Le service n'a pas répondu à la demande du balayage. Rien n'est affiché : on ne sait pas s'il existe des résultats, seulement qu'on n'a pas pu les demander.",
+        "refused": "Le service a refusé la demande du balayage (code {status}). Rien n'est affiché : le refus ne dit pas s'il existe des résultats.",
+        "contract": "Le service a répondu, mais dans une forme que cette version de l'écran ne sait pas lire. Rien n'est affiché : la réponse peut très bien contenir des résultats que l'écran ne sait plus interpréter.",
+        "absent": "Le service a répondu : il ne trouve aucun résultat de balayage exploitable. C'est une absence constatée, pas une lecture ratée."
       },
       "judgedAt": "re-jugé le {date} sous le barème {sha}",
       "judgedPartial": "{count, plural, one {# exécution portée, non re-jugée} other {# exécutions portées, non re-jugées}}",
