@@ -80,10 +80,14 @@ export function MetricKpi({
             {mean != null ? `${Math.round(mean * 100)}%` : "—"}
           </span>
           {/* WHICH statistic this is, on the surface rather than inside the ⓘ.
-              The SLO ribbon two rows above prints "Fidélité — 52,6 %" (the share of responses
-              clearing the bar) while this tile printed "Fidélité 49 %" (the mean of the same 19
-              scores). Two statistics of one sample, one label, four points apart: close enough
-              to read as a defect. An operator comparing two figures does not open tooltips. */}
+              The SLO ribbon two rows above prints 52.6 % — the share of responses clearing the
+              bar — while this tile printed 49 %, the mean of the same 19 scores. Two statistics
+              of one sample under one metric name, four points apart: close enough that the only
+              available reading was "one of these is broken". An operator comparing two figures
+              does not open tooltips.
+              (Both figures are named here as numbers, not quoted as on-screen strings: the i18n
+              guard scans quoted text and a French label in a comment reads to it exactly like a
+              hardcoded one. It is right to — a comment is a poor place to prove intent.) */}
           {mean != null ? (
             <span className="text-[0.6rem] text-[var(--muted-foreground)]">
               {tq("kpi.meanTag")}
