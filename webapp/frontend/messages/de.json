@@ -1028,6 +1028,7 @@
     },
     "criteria": {
       "must_not_contain": "darf niemals enthalten",
+      "must_not_assert": "darf keine dieser Aussagen behaupten",
       "must_contain_any": "muss mindestens eines davon enthalten",
       "must_not_match": "darf auf keines dieser Muster passen",
       "must_escalate": "muss an einen Menschen eskalieren",

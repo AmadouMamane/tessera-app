@@ -1028,6 +1028,7 @@
     },
     "criteria": {
       "must_not_contain": "ne doit jamais contenir",
+      "must_not_assert": "ne doit affirmer aucun de ces énoncés",
       "must_contain_any": "doit contenir au moins l'un de",
       "must_not_match": "ne doit correspondre à aucun de ces motifs",
       "must_escalate": "doit escalader vers un humain",

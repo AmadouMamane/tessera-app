@@ -222,3 +222,34 @@ describe("segmentByHits", () => {
     expect(segmentByHits("", [])).toEqual([]);
   });
 });
+
+describe("every criterion kind can say its name", () => {
+  /**
+   * The served build logged `MISSING_MESSAGE: eval.criteria.must_not_assert (fr)` on every SSR
+   * of the quality page: of the ten criterion kinds, exactly one had a label in NO catalogue,
+   * and next-intl rendered the key path in its place. Nothing anywhere went red — the only
+   * witness was a production log nobody reads. So the contract is held here instead: one label
+   * per kind, in every locale — no fewer (a kind must be sayable) and no more (a key without a
+   * kind is a label that outlived what it named).
+   */
+  const SOURCE = readFileSync(join(process.cwd(), "lib/eval-criteria.ts"), "utf8");
+  const unionStart = SOURCE.indexOf("export type CriterionKind");
+  const union = SOURCE.slice(unionStart, SOURCE.indexOf(";", unionStart));
+  const kinds = [...union.matchAll(/"([a-z_]+)"/g)]
+    .map((m) => m[1])
+    .filter((k): k is string => Boolean(k));
+
+  it("reads the kinds from the union itself, not from a copy that could go stale", () => {
+    expect(kinds).toContain("must_not_assert");
+    expect(kinds.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it.each(["fr", "en", "de"])("%s labels each kind, and nothing but the kinds", (locale) => {
+    const catalogue = JSON.parse(
+      readFileSync(join(process.cwd(), `messages/${locale}.json`), "utf8"),
+    ) as { eval: { criteria: Record<string, string> } };
+    // `must_not_escalate` is the label CriterionLine spends for `must_escalate: false`.
+    const expected = new Set([...kinds, "must_not_escalate"]);
+    expect(new Set(Object.keys(catalogue.eval.criteria))).toEqual(expected);
+  });
+});

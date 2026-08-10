@@ -1028,6 +1028,7 @@
     },
     "criteria": {
       "must_not_contain": "must never contain",
+      "must_not_assert": "must assert none of these claims",
       "must_contain_any": "must contain at least one of",
       "must_not_match": "must match none of these patterns",
       "must_escalate": "must escalate to a human",
