@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.25.0"]
+requires = ["hatchling>=1.31.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -44,9 +44,9 @@ classifiers = [
 
 dependencies = [
     # Agent orchestration
-    "langgraph>=1.0.10,<2",
-    "langchain-core>=0.3.20,<2",
-    "langchain-google-vertexai>=2.0.10,<5",
+    "langgraph>=1.2.10,<2",
+    "langchain-core>=1.5.3,<2",
+    "langchain-google-vertexai>=3.2.4,<5",
     # HTTP layer
     # Capped BELOW 0.137 on purpose (2026-08-04), and the reason is measured, not
     # stylistic: from 0.137.2 `include_router` stops flattening into `app.routes`
@@ -59,7 +59,7 @@ dependencies = [
     # It costs nothing in security: fastapi has required only `starlette>=0.46.0`,
     # with no upper bound, since well before 0.136 — the old `starlette<1.0` cap
     # was ours alone.
-    "fastapi>=0.115.0,<0.137",
+    "fastapi>=0.141.1,<0.142",
     # starlette >=1.3.1 (2026-08-04). The former `<1.0` cap was there because 1.x
     # moves its TestClient onto `httpx2`, then an unknown quantity. It is not one:
     # same author as httpx (Tom Christie), published under the Pydantic org, and it
@@ -70,38 +70,38 @@ dependencies = [
     # router dispatched `/chat`, which is an auth bypass against
     # `AuthMiddleware._EXEMPT_PATHS`. Fixed on both sides: the version, and
     # `tessera.api.request_path.routed_path`, which reads what the router reads.
-    "starlette>=1.3.1,<2",
-    "uvicorn[standard]>=0.32.0,<0.33",
+    "starlette>=1.4.1,<2",
+    "uvicorn[standard]>=0.52.1,<0.53",
     "httpx>=0.28.1,<1",
-    "python-multipart>=0.0.12,<0.1",
+    "python-multipart>=0.0.32,<0.1",
     # Rate limiting (ADR 0020) — the `limits` library does the windowing/storage;
     # we only add a thin deployment-aware middleware. No hand-rolled limiter.
-    "limits>=3.13,<5",
+    "limits>=5.8.0,<6",
     # Retrieval
-    "psycopg[binary,pool]>=3.2.3,<4",
-    "pgvector>=0.3.6,<0.4",
-    "sqlalchemy>=2.0.36,<3",
-    "alembic>=1.14.0,<2",
+    "psycopg[binary,pool]>=3.3.4,<4",
+    "pgvector>=0.5.0,<0.6",
+    "sqlalchemy>=2.0.51,<3",
+    "alembic>=1.19.0,<2",
     # Local LLM path
-    "ollama>=0.4.1,<0.5",
+    "ollama>=0.6.2,<0.7",
     # Configuration & validation
-    "pydantic>=2.9.0,<3",
-    "pydantic-settings>=2.6.0,<3",
-    "pyyaml>=6.0.2,<7",
-    "jsonschema>=4.23.0,<5",
+    "pydantic>=2.13.4,<3",
+    "pydantic-settings>=2.15.0,<3",
+    "pyyaml>=6.0.3,<7",
+    "jsonschema>=4.26.0,<5",
     # Observability
-    "opentelemetry-api>=1.28.0,<2",
-    "opentelemetry-sdk>=1.28.0,<2",
-    "opentelemetry-instrumentation-fastapi>=0.49b0,<1",
-    "opentelemetry-exporter-gcp-trace>=1.7.0,<2",
-    "structlog>=24.4.0,<25",
-    "prometheus-client>=0.21.0,<0.22",
+    "opentelemetry-api>=1.44.0,<2",
+    "opentelemetry-sdk>=1.44.0,<2",
+    "opentelemetry-instrumentation-fastapi>=0.65b0,<1",
+    "opentelemetry-exporter-gcp-trace>=1.14.0,<2",
+    "structlog>=26.1.0,<27",
+    "prometheus-client>=0.26.0,<0.27",
     # GCP integration
-    "google-cloud-secret-manager>=2.21.1,<3",
-    "google-cloud-logging>=3.11.3,<4",
-    "google-cloud-aiplatform>=1.133.0,<2",
-    "openai>=2.40.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.28.0,<2",
+    "google-cloud-secret-manager>=2.30.0,<3",
+    "google-cloud-logging>=3.16.2,<4",
+    "google-cloud-aiplatform>=1.163.0,<2",
+    "openai>=2.53.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.44.0,<2",
     # Runtime guard — the first-party injection detector, extracted into the
     # separate `limes` package (ADR 0028/0029). Tessera CONSUMES it behind
     # guard/adapter.py; the dependency runs one way only (Tessera -> limes).
@@ -115,16 +115,16 @@ dependencies = [
 [project.optional-dependencies]
 on-prem = [
     # On-premises path: local Llama 3.3 70B via Ollama on Apple Silicon
-    "sentence-transformers>=3.3.0,<4",
-    "torch>=2.5.1,<3 ; platform_machine == 'arm64'",
+    "sentence-transformers>=5.7.0,<6",
+    "torch>=2.13.0,<3 ; platform_machine == 'arm64'",
 ]
 
 # External memory backends (ADR 0007). The native window/summary/persistent
 # tiers need none of these; each adapter lazily imports its engine and fails
 # with a clear message when the matching extra is not installed.
-memory-langmem = ["langmem>=0.0.10,<0.1"]
-memory-mem0 = ["mem0ai>=0.1.0,<0.2"]
-memory-zep = ["zep-python>=2.0.0,<3"]
+memory-langmem = ["langmem>=0.0.30,<0.1"]
+memory-mem0 = ["mem0ai>=2.0.17,<2.1"]
+memory-zep = ["zep-python>=2.0.2,<3"]
 
 [project.urls]
 Homepage = "https://github.com/AmadouMamane/tessera"
@@ -142,41 +142,41 @@ tessera-preflight = "tessera.preflight:main"
 [dependency-groups]
 dev = [
     # Lint, format, type-check
-    "ruff>=0.7.4,<0.8",
-    "mypy>=1.13.0,<2",
-    "pre-commit>=4.0.1,<5",
+    "ruff>=0.16.1,<0.17",
+    "mypy>=2.3.0,<3",
+    "pre-commit>=4.6.1,<5",
 
     # Test
-    "pytest>=9.0.3,<10",
-    "pytest-asyncio>=1.0,<2",
-    "pytest-cov>=6.0.0,<8",
-    "pytest-mock>=3.14.0,<4",
-    "pytest-xdist>=3.6.1,<4",
-    "hypothesis>=6.119.0,<7",
+    "pytest>=9.1.1,<10",
+    "pytest-asyncio>=1.4.0,<2",
+    "pytest-cov>=7.1.0,<8",
+    "pytest-mock>=3.15.1,<4",
+    "pytest-xdist>=3.8.0,<4",
+    "hypothesis>=6.165.2,<7",
     # starlette 1.x's TestClient transport. Test-only on purpose: `uv sync --no-dev`
     # in Dockerfile.agent means it is never in the runtime image.
     "httpx2>=2.9.1,<3",
 
     # Type stubs
-    "types-pyyaml>=6.0.12,<7",
-    "types-jsonschema>=4.23.0,<5",
+    "types-pyyaml>=6.0.12.20260724,<7",
+    "types-jsonschema>=4.26.0.20260518,<5",
 
     # Local dev tooling
-    "ipython>=8.29.0,<9",
-    "rich>=13.9.4,<14",
+    "ipython>=9.16.1,<10",
+    "rich>=15.0.0,<16",
 ]
 
 eval = [
     # Non-regression harness (63 publicly documented agent failures)
     "promptfoo>=0.1.0,<0.2 ; python_version < '4'",
-    "deepeval>=2.0.0,<3",
-    "rapidfuzz>=3.10.1,<4",
+    "deepeval>=4.1.5,<5",
+    "rapidfuzz>=3.14.5,<4",
 ]
 
 docs = [
     "mkdocs>=1.6.1,<2",
-    "mkdocs-material>=9.5.44,<10",
-    "mkdocstrings[python]>=0.27.0,<0.28",
+    "mkdocs-material>=9.7.7,<10",
+    "mkdocstrings[python]>=1.0.6,<1.1",
 ]
 
 # ---------------------------------------------------------------------------
