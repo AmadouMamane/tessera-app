@@ -131,6 +131,10 @@ services:
     # SHA tag Cloud Run runs to pull the SAME bytes instead of building locally (parity mode).
     image: ${TESSERA_FRONTEND_IMAGE:-tessera-frontend:local}
     container_name: tessera-${TESSERA_ENV:-local}-frontend
+    # Every other service declares this; the front was the ONE that didn't — so a host
+    # reboot (2026-08-09) brought back the whole stack except the public-facing piece,
+    # and the domain served 502 for 32 h while the agent underneath ran healthy.
+    restart: unless-stopped
     depends_on:
       agent:
         condition: service_healthy
