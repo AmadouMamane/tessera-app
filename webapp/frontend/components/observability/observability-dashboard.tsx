@@ -624,8 +624,8 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
             <Gauge className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
             <span className="truncate">
               {/* The declared share comes from the catalogue read. When that read FAILED, the
-                  descriptor says so instead of printing "0 déclarés" — a failed read is not an
-                  empty catalogue. Sampled and wired stay: they are facts about this screen. */}
+                  descriptor says so instead of printing a zero declared-count — a failed read
+                  is not an empty catalogue. Sampled and wired stay: facts about this screen. */}
               {coverage.isError && !coverage.data
                 ? tq("rail.signalsFunnelUnread", {
                     sampled: signalFunnel.sampled,
