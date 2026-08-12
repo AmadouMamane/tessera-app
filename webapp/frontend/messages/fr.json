@@ -1072,30 +1072,28 @@
       }
     },
     "sweep": {
-      "title": "Sweep — {count, plural, one {# modèle} other {# modèles}} sur un seul jeu de cas",
-      "subtitle": "Un sweep, c'est N runs sur UNE version de jeu de cas. Avec trois modèles, « le dernier run » ne veut plus rien dire.",
+      "title": "Banc d'essai — {count, plural, one {# modèle} other {# modèles}} sur un même jeu de cas",
+      "subtitle": "Chaque modèle a rejoué la même version du jeu de cas, et toutes les réponses sont jugées sous le même barème : ces scores sont comparables entre eux — et avec rien d'autre. Les exécutions plus récentes, agent par agent, vivent dans l'archive.",
       "referential": "référentiel {version}",
-      "freshness": "{days, plural, =0 {dernier run aujourd'hui} one {dernier run il y a # jour} other {dernier run il y a # jours}}",
-      "freshnessUnknown": "date du dernier run inconnue",
+      "freshness": "{days, plural, =0 {réponses recueillies aujourd'hui} one {réponses recueillies il y a # jour} other {réponses recueillies il y a # jours}}",
+      "freshnessUnknown": "date de recueil inconnue",
       "floorRead": "plancher lu dans la baseline commitée : {passed}/{total} passés sans aucun modèle",
-      "staleCatalogue": "Le jeu de cas a bougé sous ce sweep : il a été noté sur {run}, le catalogue est aujourd'hui en {current}. Ces verdicts portent sur des cas qui ne sont plus ceux d'aujourd'hui.",
-      "offReferential": "{count, plural, one {# run écarté} other {# runs écartés}} — noté sur un autre jeu de cas, donc non comparable.",
-      "noRecentRun": "aucun run récent sur le référentiel courant",
-      "pickRun": "Run affiché en détail",
+      "staleCatalogue": "Le jeu de cas a bougé sous ce banc d'essai : il a été noté sur {run}, le catalogue est aujourd'hui en {current}. Ces verdicts portent sur des cas qui ne sont plus ceux d'aujourd'hui.",
+      "offReferential": "{count, plural, one {# exécution écartée — notée sur un autre jeu de cas, donc non comparable.} other {# exécutions écartées — notées sur un autre jeu de cas, donc non comparables.}}",
+      "pickRun": "Exécution affichée en détail",
       "empty": {
-        "title": "aucun balayage lisible",
-        "unreachable": "Le service n'a pas répondu à la demande du balayage. Rien n'est affiché : on ne sait pas s'il existe des résultats, seulement qu'on n'a pas pu les demander.",
-        "refused": "Le service a refusé la demande du balayage (code {status}). Rien n'est affiché : le refus ne dit pas s'il existe des résultats.",
+        "title": "aucun banc d'essai lisible",
+        "unreachable": "Le service n'a pas répondu à la demande du banc d'essai. Rien n'est affiché : on ne sait pas s'il existe des résultats, seulement qu'on n'a pas pu les demander.",
+        "refused": "Le service a refusé la demande du banc d'essai (code {status}). Rien n'est affiché : le refus ne dit pas s'il existe des résultats.",
         "contract": "Le service a répondu, mais dans une forme que cette version de l'écran ne sait pas lire. Rien n'est affiché : la réponse peut très bien contenir des résultats que l'écran ne sait plus interpréter.",
-        "absent": "Le service a répondu : il ne trouve aucun résultat de balayage exploitable. C'est une absence constatée, pas une lecture ratée."
+        "absent": "Le service a répondu : il ne trouve aucun résultat de banc d'essai exploitable. C'est une absence constatée, pas une lecture ratée."
       },
       "judgedAt": "re-jugé le {date} sous le barème {sha}",
       "judgedPartial": "{count, plural, one {# exécution portée, non re-jugée} other {# exécutions portées, non re-jugées}}",
       "sampledAt": "échantillonné le {date}",
-      "judgedNever": "jugé à l'exécution, jamais re-jugé depuis",
-      "twoInstants": "Deux dates, deux faits : la première est celle où le modèle a répondu, la seconde celle où ces réponses ont été jugées. Un âge qui ne compte que la première parle de l'échantillon, pas des verdicts affichés ici."
+      "judgedNever": "jugé à l'exécution, jamais re-jugé depuis"
     },
-    "title": "Score de non-régression",
+    "title": "Évaluations avant mise en ligne",
     "description": "Tessera est confrontée à un catalogue d'échecs publiquement documentés. Les cas qui échouent sont visibles, pas masqués.",
     "summary": {
       "total": "Cas exécutés",
@@ -1159,7 +1157,8 @@
         "rootCause": "Cause racine",
         "fix": "Correctif recommandé"
       },
-      "noRootCause": "— (lancer une synthèse avec le modèle le plus capable)",
+      "noRootCause": "—",
+      "noRootCauseHint": "Cause racine absente pour {count, plural, one {une famille} other {# familles}} : lancer une synthèse avec le modèle le plus capable pour la remplir.",
       "fixes": {
         "prompt_injection": "Renforcer le filtrage d'entrée du guard et le rappel d'instruction système ; ne jamais exposer le prompt système.",
         "pii_leak": "Durcir la couche PII/outils : masquer PAN/IBAN et refuser l'accès aux données de tiers avant tout appel d'outil.",
@@ -1196,8 +1195,8 @@
       "bucket": {
         "fact": "Fait — observé",
         "factDetail": "{dead} morts (le silence les passe) · {inverted} inversés (le modèle est pire que le silence) · {saturated} saturés · {unreached} jamais atteints. Aucun p, aucune puissance : on ne teste pas un fait.",
-        "certified": "Certifié — Holm",
-        "certifiedDetail": "{discriminating} discriminants · {reversed} inversés au sens statistique (le modèle FAIBLE gagne). L'inférence a survécu à la correction de multiplicité.",
+        "certified": "Certifié — au-delà du hasard",
+        "certifiedDetail": "{discriminating} discriminants · {reversed} inversés au sens statistique (le modèle FAIBLE gagne). L'inférence a survécu à la correction de multiplicité (Holm).",
         "cannotSay": "Ne peut pas dire",
         "cannotSayDetail": "Un écart réel mais inférieur à {mde} points, que ce nombre de passes ne peut pas certifier. Ces cas ne sont PAS morts : ils sont inconnus, et le remède est plus de passes, pas un adjectif plus ferme.",
         "cannotSayNoPower": "Ce protocole n'aurait rien pu certifier, quoi qu'il observe. Aucun de ces cas ne peut être dit mort ou non-discriminant."
@@ -1210,15 +1209,15 @@
       "warning": "Le contrôle nul — aucun modèle, zéro token — passe déjà {passed} des {total} runs. Un cas mort teste la couche déterministe (garde, routeur), pas le modèle : il gonfle le taux de réussite sans rien mesurer du modèle."
     },
     "tabGroups": {
-      "sweep": "Une même séance",
+      "sweep": "Le banc d'essai",
       "archive": "L'archive",
       "judge": "Le juge"
     },
     "population": {
-      "archive": "Toutes les exécutions enregistrées, de la plus récente à la plus ancienne — modèles et jeux d'évaluation mêlés, sur plusieurs mois. Ce n'est pas la séance ci-contre : un même modèle peut figurer ici des dizaines de fois, à des dates et sous des barèmes différents.",
-      "failed": "Chaque cas non tenu dans la dernière exécution complète de chaque couple modèle × langue de l'archive — pas de la séance.",
-      "models": "Chaque modèle vu par l'archive entière : la moyenne de ses exécutions passées. « Une même séance » donne un autre chiffre pour les mêmes modèles, parfois quarante points plus haut, parce que les deux ne mesurent ni les mêmes cas ni la même date.",
-      "judge": "L'accord entre le juge automatique et un jeu de référence annoté à la main. Ni la séance ni l'archive : ce qui est mesuré ici, c'est la règle avec laquelle les deux autres sont notées."
+      "archive": "Toutes les exécutions enregistrées, de la plus récente à la plus ancienne — modèles et jeux d'évaluation mêlés, sur plusieurs mois. Ce n'est pas le banc d'essai ci-contre : un même modèle peut figurer ici des dizaines de fois, à des dates et sous des barèmes différents.",
+      "failed": "Chaque cas non tenu dans la dernière exécution complète de chaque couple modèle × langue de l'archive — pas du banc d'essai.",
+      "models": "Chaque modèle vu par l'archive entière : la moyenne de ses exécutions passées. « Le banc d'essai » donne un autre chiffre pour les mêmes modèles, parfois quarante points plus haut, parce que les deux ne mesurent ni les mêmes cas ni la même date.",
+      "judge": "L'accord entre le juge automatique et un jeu de référence annoté à la main. Ni le banc d'essai ni l'archive : ce qui est mesuré ici, c'est la règle avec laquelle les deux autres sont notées."
     }
   },
   "health": {
@@ -10463,11 +10462,11 @@
         },
         "evaluations": {
           "cases": "Décrit le jeu de cas versionné : couverture, langues, catégories et exigences attendues.",
-          "runs": "Présente le résultat de chaque modèle sur une même séance : le plancher sans modèle, les seuils, et les cas qui décident.",
+          "runs": "Présente le résultat de chaque modèle sur un même banc d'essai : le plancher sans modèle, les seuils, et les cas qui décident.",
           "compare": "Compare deux campagnes à périmètre constant pour attribuer correctement les écarts.",
-          "archive": "Liste toutes les exécutions enregistrées, modèles et jeux d’évaluation mêlés, sur plusieurs mois — l’historique, pas la séance ci-contre.",
+          "archive": "Liste toutes les exécutions enregistrées, modèles et jeux d’évaluation mêlés, sur plusieurs mois — l’historique, pas le banc d'essai ci-contre.",
           "failed": "Isole les cas en échec de l’archive afin de comprendre leur gravité, leur cause et leur suivi.",
-          "models": "Compare les modèles sur l’ensemble de l’archive ; la séance de référence en donne un autre chiffre, pour d’autres cas et à une autre date.",
+          "models": "Compare les modèles sur l’ensemble de l’archive ; le banc d'essai en donne un autre chiffre, pour d’autres cas et à une autre date.",
           "judge": "Mesure l’accord du juge avec un jeu annoté à la main, et les désaccords qui fragilisent l’interprétation des scores."
         }
       },

@@ -1072,30 +1072,28 @@
       }
     },
     "sweep": {
-      "title": "Sweep — {count, plural, one {# model} other {# models}} on a single case set",
-      "subtitle": "A sweep is N runs on ONE version of the case set. With three models, “the latest run” stops meaning anything.",
+      "title": "Bench — {count, plural, one {# model} other {# models}} on one case set",
+      "subtitle": "Every model replayed the same version of the case set, and all answers are judged under the same ruler: these scores compare with each other — and with nothing else. Fresher per-agent executions live in the archive.",
       "referential": "référentiel {version}",
-      "freshness": "{days, plural, =0 {last run today} one {last run # day ago} other {last run # days ago}}",
-      "freshnessUnknown": "date of the last run unknown",
+      "freshness": "{days, plural, =0 {answers collected today} one {answers collected # day ago} other {answers collected # days ago}}",
+      "freshnessUnknown": "collection date unknown",
       "floorRead": "floor read from the committed baseline: {passed}/{total} passed with no model at all",
-      "staleCatalogue": "The case set moved under this sweep: it was scored against {run}, and the catalogue now stands at {current}. These verdicts are about cases that are no longer today's.",
-      "offReferential": "{count, plural, one {# run set aside} other {# runs set aside}} — scored against another case set, so not comparable.",
-      "noRecentRun": "no recent run on the current référentiel",
-      "pickRun": "Run shown in detail",
+      "staleCatalogue": "The case set moved under this bench: it was scored against {run}, and the catalogue now stands at {current}. These verdicts are about cases that are no longer today's.",
+      "offReferential": "{count, plural, one {# execution set aside — scored against another case set, so not comparable.} other {# executions set aside — scored against another case set, so not comparable.}}",
+      "pickRun": "Execution shown in detail",
       "empty": {
-        "title": "no readable sweep",
-        "unreachable": "The service did not answer the request for the sweep. Nothing is shown: we do not know whether results exist, only that we could not ask for them.",
-        "refused": "The service refused the request for the sweep (code {status}). Nothing is shown: a refusal says nothing about whether results exist.",
+        "title": "no readable bench",
+        "unreachable": "The service did not answer the request for the bench. Nothing is shown: we do not know whether results exist, only that we could not ask for them.",
+        "refused": "The service refused the request for the bench (code {status}). Nothing is shown: a refusal says nothing about whether results exist.",
         "contract": "The service answered, in a shape this version of the screen cannot read. Nothing is shown: the answer may well hold results the screen no longer knows how to interpret.",
-        "absent": "The service answered: it finds no usable sweep result. That is an observed absence, not a failed read."
+        "absent": "The service answered: it finds no usable bench result. That is an observed absence, not a failed read."
       },
       "judgedAt": "re-judged on {date} under ruler {sha}",
-      "judgedPartial": "{count, plural, one {# run carried, not re-judged} other {# runs carried, not re-judged}}",
+      "judgedPartial": "{count, plural, one {# execution carried, not re-judged} other {# executions carried, not re-judged}}",
       "sampledAt": "sampled on {date}",
-      "judgedNever": "judged at run time, never re-judged since",
-      "twoInstants": "Two dates, two facts: the first is when the model answered, the second when those answers were judged. An age counting only the first describes the sample, not the verdicts on screen."
+      "judgedNever": "judged at execution time, never re-judged since"
     },
-    "title": "Regression scorecard",
+    "title": "Evaluations before launch",
     "description": "Tessera is exercised against a catalogue of publicly documented agent failures. Failing cases stay visible — nothing is hidden.",
     "summary": {
       "total": "Cases run",
@@ -1159,7 +1157,8 @@
         "rootCause": "Root cause",
         "fix": "Recommended fix"
       },
-      "noRootCause": "— (run a synthesis with the most capable model)",
+      "noRootCause": "—",
+      "noRootCauseHint": "Root cause missing for {count, plural, one {one family} other {# families}}: run a synthesis with the most capable model to fill it in.",
       "fixes": {
         "prompt_injection": "Harden the guard's input filtering and the system-instruction reminder; never expose the system prompt.",
         "pii_leak": "Harden the PII/tools layer: mask PAN/IBAN and refuse access to third-party data before any tool call.",
@@ -1196,8 +1195,8 @@
       "bucket": {
         "fact": "Fact — observed",
         "factDetail": "{dead} dead (silence closes them) · {inverted} inverted (the model is worse than silence) · {saturated} saturated · {unreached} unreached. No p-value, no power: one does not test a fact.",
-        "certified": "Certified — Holm",
-        "certifiedDetail": "{discriminating} discriminating · {reversed} reversed (the WEAK model wins). The inference survived the multiplicity correction.",
+        "certified": "Certified — beyond chance",
+        "certifiedDetail": "{discriminating} discriminating · {reversed} reversed (the WEAK model wins). The inference survived the multiplicity correction (Holm).",
         "cannotSay": "Cannot say",
         "cannotSayDetail": "A real difference below {mde} points, which this many passes cannot certify. These cases are NOT dead: they are unknown, and the remedy is more passes, not a firmer adjective.",
         "cannotSayNoPower": "This design could have certified nothing, whatever it observed. Not one of these cases may be called dead or non-discriminating."
@@ -1210,15 +1209,15 @@
       "warning": "The null control — no model, zero tokens — already passes {passed} of the {total} runs. A dead case tests the deterministic layer (guard, router), not the model: it inflates the pass rate and measures nothing about the model."
     },
     "tabGroups": {
-      "sweep": "One sitting",
+      "sweep": "The bench",
       "archive": "The archive",
       "judge": "The judge"
     },
     "population": {
-      "archive": "Every recorded execution, newest first — models and evaluation sets mixed, spanning months. This is not the sitting beside it: one model can appear here dozens of times, on different dates and under different marking rules.",
-      "failed": "Every case not met in the most recent full execution of each model × language pair in the archive — not in the sitting.",
-      "models": "Each model as the whole archive saw it: the average of its past executions. \"One sitting\" gives a different figure for the same models, sometimes forty points higher, because the two measure neither the same cases nor the same date.",
-      "judge": "Agreement between the automatic judge and a hand-labelled reference set. Neither the sitting nor the archive: what is measured here is the rule the other two are marked with."
+      "archive": "Every recorded execution, newest first — models and evaluation sets mixed, spanning months. This is not the bench beside it: one model can appear here dozens of times, on different dates and under different marking rules.",
+      "failed": "Every case not met in the most recent full execution of each model × language pair in the archive — not on the bench.",
+      "models": "Each model as the whole archive saw it: the average of its past executions. \"The bench\" gives a different figure for the same models, sometimes forty points higher, because the two measure neither the same cases nor the same date.",
+      "judge": "Agreement between the automatic judge and a hand-labelled reference set. Neither the bench nor the archive: what is measured here is the rule the other two are marked with."
     }
   },
   "health": {
@@ -10449,11 +10448,11 @@
         },
         "evaluations": {
           "cases": "Describes the versioned case set: coverage, languages, categories, and expected requirements.",
-          "runs": "Shows each model’s result from one sitting: the floor without a model, the thresholds, and the cases that decide.",
+          "runs": "Shows each model’s result from one bench: the floor without a model, the thresholds, and the cases that decide.",
           "compare": "Compares two campaigns on a constant scope so changes can be attributed correctly.",
-          "archive": "Lists every recorded execution, models and evaluation sets mixed, spanning months — the history, not the sitting beside it.",
+          "archive": "Lists every recorded execution, models and evaluation sets mixed, spanning months — the history, not the bench beside it.",
           "failed": "Isolates the archive’s failing cases so their severity, cause and follow-up can be understood.",
-          "models": "Compares models across the whole archive; the reference sitting gives a different figure, for different cases on a different date.",
+          "models": "Compares models across the whole archive; the bench gives a different figure, for different cases on a different date.",
           "judge": "Measures the judge’s agreement with a hand-labelled set, and the disagreements that weaken any reading of the scores."
         }
       },

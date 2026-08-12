@@ -1072,30 +1072,28 @@
       }
     },
     "sweep": {
-      "title": "Sweep — {count, plural, one {# Modell} other {# Modelle}} auf einem einzigen Fallsatz",
-      "subtitle": "Ein Sweep sind N Läufe auf EINER Version des Fallsatzes. Bei drei Modellen bedeutet „der letzte Lauf“ nichts mehr.",
+      "title": "Prüfstand — {count, plural, one {# Modell} other {# Modelle}} auf demselben Fallsatz",
+      "subtitle": "Jedes Modell hat dieselbe Version des Fallsatzes durchgespielt, und alle Antworten werden nach demselben Maßstab bewertet: diese Werte sind untereinander vergleichbar — und mit nichts anderem. Neuere Ausführungen je Agent liegen im Archiv.",
       "referential": "Referenzstand {version}",
-      "freshness": "{days, plural, =0 {letzter Lauf heute} one {letzter Lauf vor # Tag} other {letzter Lauf vor # Tagen}}",
-      "freshnessUnknown": "Datum des letzten Laufs unbekannt",
+      "freshness": "{days, plural, =0 {Antworten heute erhoben} one {Antworten vor # Tag erhoben} other {Antworten vor # Tagen erhoben}}",
+      "freshnessUnknown": "Erhebungsdatum unbekannt",
       "floorRead": "Sockel aus der committeten Baseline gelesen: {passed}/{total} ohne jedes Modell bestanden",
-      "staleCatalogue": "Der Fallsatz hat sich unter diesem Sweep bewegt: bewertet gegen {run}, der Katalog steht heute auf {current}. Diese Urteile betreffen Fälle, die es so nicht mehr gibt.",
-      "offReferential": "{count, plural, one {# Lauf ausgeschlossen} other {# Läufe ausgeschlossen}} — gegen einen anderen Fallsatz bewertet, also nicht vergleichbar.",
-      "noRecentRun": "kein aktueller Lauf auf dem geltenden Referenzstand",
-      "pickRun": "Im Detail angezeigter Lauf",
+      "staleCatalogue": "Der Fallsatz hat sich unter diesem Prüfstand bewegt: bewertet gegen {run}, der Katalog steht heute auf {current}. Diese Urteile betreffen Fälle, die es so nicht mehr gibt.",
+      "offReferential": "{count, plural, one {# Ausführung ausgeschlossen — gegen einen anderen Fallsatz bewertet, also nicht vergleichbar.} other {# Ausführungen ausgeschlossen — gegen einen anderen Fallsatz bewertet, also nicht vergleichbar.}}",
+      "pickRun": "Im Detail angezeigte Ausführung",
       "empty": {
-        "title": "kein lesbarer Durchlauf",
-        "unreachable": "Der Dienst hat die Anfrage nach dem Durchlauf nicht beantwortet. Es wird nichts angezeigt: ob Ergebnisse vorliegen, ist unbekannt — nur, dass nicht danach gefragt werden konnte.",
-        "refused": "Der Dienst hat die Anfrage nach dem Durchlauf abgelehnt (Code {status}). Es wird nichts angezeigt: eine Ablehnung sagt nichts darüber, ob Ergebnisse vorliegen.",
+        "title": "kein lesbarer Prüfstand",
+        "unreachable": "Der Dienst hat die Anfrage nach dem Prüfstand nicht beantwortet. Es wird nichts angezeigt: ob Ergebnisse vorliegen, ist unbekannt — nur, dass nicht danach gefragt werden konnte.",
+        "refused": "Der Dienst hat die Anfrage nach dem Prüfstand abgelehnt (Code {status}). Es wird nichts angezeigt: eine Ablehnung sagt nichts darüber, ob Ergebnisse vorliegen.",
         "contract": "Der Dienst hat geantwortet, in einer Form, die diese Version der Ansicht nicht lesen kann. Es wird nichts angezeigt: die Antwort kann durchaus Ergebnisse enthalten, die die Ansicht nicht mehr deuten kann.",
-        "absent": "Der Dienst hat geantwortet: er findet kein verwertbares Durchlaufergebnis. Das ist eine festgestellte Abwesenheit, kein fehlgeschlagener Lesevorgang."
+        "absent": "Der Dienst hat geantwortet: er findet kein verwertbares Prüfstand-Ergebnis. Das ist eine festgestellte Abwesenheit, kein fehlgeschlagener Lesevorgang."
       },
       "judgedAt": "am {date} neu bewertet nach Maßstab {sha}",
-      "judgedPartial": "{count, plural, one {# Lauf übernommen, nicht neu bewertet} other {# Läufe übernommen, nicht neu bewertet}}",
+      "judgedPartial": "{count, plural, one {# Ausführung übernommen, nicht neu bewertet} other {# Ausführungen übernommen, nicht neu bewertet}}",
       "sampledAt": "erhoben am {date}",
-      "judgedNever": "bei der Ausführung bewertet, seitdem nicht neu bewertet",
-      "twoInstants": "Zwei Daten, zwei Tatsachen: das erste ist der Zeitpunkt der Antwort des Modells, das zweite der Zeitpunkt ihrer Bewertung. Ein Alter, das nur das erste zählt, spricht über die Stichprobe, nicht über die hier gezeigten Urteile."
+      "judgedNever": "bei der Ausführung bewertet, seitdem nicht neu bewertet"
     },
-    "title": "Regressionsscore",
+    "title": "Bewertungen vor der Freigabe",
     "description": "Tessera wird gegen einen Katalog öffentlich dokumentierter Agentenfehler getestet. Durchgefallene Fälle bleiben sichtbar — nichts wird versteckt.",
     "summary": {
       "total": "Durchgeführt",
@@ -1159,7 +1157,8 @@
         "rootCause": "Grundursache",
         "fix": "Empfohlene Behebung"
       },
-      "noRootCause": "— (Synthese mit dem leistungsstärksten Modell ausführen)",
+      "noRootCause": "—",
+      "noRootCauseHint": "Grundursache fehlt für {count, plural, one {eine Familie} other {# Familien}}: eine Synthese mit dem leistungsstärksten Modell ausführen, um sie zu ergänzen.",
       "fixes": {
         "prompt_injection": "Eingabefilter des Guard und die System-Instruktions-Erinnerung stärken; den System-Prompt nie offenlegen.",
         "pii_leak": "PII-/Tool-Schicht härten: PAN/IBAN maskieren und Zugriff auf Drittdaten vor jedem Tool-Aufruf verweigern.",
@@ -1196,8 +1195,8 @@
       "bucket": {
         "fact": "Tatsache — beobachtet",
         "factDetail": "{dead} tot (Schweigen loest sie) · {inverted} invertiert (das Modell ist schlechter als Schweigen) · {saturated} gesaettigt · {unreached} nie erreicht. Kein p-Wert, keine Teststaerke: eine Tatsache wird nicht getestet.",
-        "certified": "Zertifiziert — Holm",
-        "certifiedDetail": "{discriminating} trennend · {reversed} umgekehrt (das SCHWACHE Modell gewinnt). Die Inferenz hat die Multiplizitaetskorrektur ueberstanden.",
+        "certified": "Zertifiziert — jenseits des Zufalls",
+        "certifiedDetail": "{discriminating} trennend · {reversed} umgekehrt (das SCHWACHE Modell gewinnt). Die Inferenz hat die Multiplizitaetskorrektur ueberstanden (Holm).",
         "cannotSay": "Kann nichts sagen",
         "cannotSayDetail": "Ein realer Unterschied unter {mde} Punkten, den diese Anzahl Durchlaeufe nicht zertifizieren kann. Diese Faelle sind NICHT tot: sie sind unbekannt, und das Mittel sind mehr Durchlaeufe, kein festeres Adjektiv.",
         "cannotSayNoPower": "Dieses Design haette nichts zertifizieren koennen, was immer es beobachtet haette. Keiner dieser Faelle darf tot oder nicht-trennend genannt werden."
@@ -1210,15 +1209,15 @@
       "warning": "Die Nullkontrolle — kein Modell, null Token — besteht bereits {passed} der {total} Laeufe. Ein toter Fall prueft die deterministische Schicht (Guard, Router), nicht das Modell: er blaeht die Erfolgsquote auf und misst nichts am Modell."
     },
     "tabGroups": {
-      "sweep": "Eine Sitzung",
+      "sweep": "Der Prüfstand",
       "archive": "Das Archiv",
       "judge": "Der Prüfer"
     },
     "population": {
-      "archive": "Alle aufgezeichneten Ausführungen, die neueste zuerst — Modelle und Prüfsätze gemischt, über Monate hinweg. Das ist nicht die Sitzung daneben: ein Modell kann hier dutzendfach auftauchen, an verschiedenen Tagen und nach verschiedenen Maßstäben.",
-      "failed": "Jeder nicht erfüllte Fall aus der jüngsten vollständigen Ausführung jedes Paars Modell × Sprache im Archiv — nicht aus der Sitzung.",
-      "models": "Jedes Modell, wie das gesamte Archiv es sah: der Durchschnitt seiner früheren Ausführungen. „Eine Sitzung“ nennt für dieselben Modelle eine andere Zahl, mitunter vierzig Punkte höher, weil beide weder dieselben Fälle noch denselben Tag messen.",
-      "judge": "Die Übereinstimmung zwischen dem automatischen Prüfer und einem von Hand annotierten Referenzsatz. Weder die Sitzung noch das Archiv: gemessen wird hier die Regel, nach der die beiden anderen benotet werden."
+      "archive": "Alle aufgezeichneten Ausführungen, die neueste zuerst — Modelle und Prüfsätze gemischt, über Monate hinweg. Das ist nicht der Prüfstand daneben: ein Modell kann hier dutzendfach auftauchen, an verschiedenen Tagen und nach verschiedenen Maßstäben.",
+      "failed": "Jeder nicht erfüllte Fall aus der jüngsten vollständigen Ausführung jedes Paars Modell × Sprache im Archiv — nicht vom Prüfstand.",
+      "models": "Jedes Modell, wie das gesamte Archiv es sah: der Durchschnitt seiner früheren Ausführungen. „Der Prüfstand“ nennt für dieselben Modelle eine andere Zahl, mitunter vierzig Punkte höher, weil beide weder dieselben Fälle noch denselben Tag messen.",
+      "judge": "Die Übereinstimmung zwischen dem automatischen Prüfer und einem von Hand annotierten Referenzsatz. Weder der Prüfstand noch das Archiv: gemessen wird hier die Regel, nach der die beiden anderen benotet werden."
     }
   },
   "health": {
@@ -10463,11 +10462,11 @@
         },
         "evaluations": {
           "cases": "Beschreibt den versionierten Prüfsatz: Abdeckung, Sprachen, Kategorien und Anforderungen.",
-          "runs": "Zeigt das Ergebnis jedes Modells aus einer Sitzung: die Untergrenze ohne Modell, die Schwellen und die entscheidenden Fälle.",
+          "runs": "Zeigt das Ergebnis jedes Modells auf demselben Prüfstand: die Untergrenze ohne Modell, die Schwellen und die entscheidenden Fälle.",
           "compare": "Vergleicht zwei Läufe bei gleichem Umfang, damit Abweichungen richtig zugeordnet werden.",
-          "archive": "Listet alle aufgezeichneten Ausführungen, Modelle und Prüfsätze gemischt, über Monate hinweg — der Verlauf, nicht die Sitzung daneben.",
+          "archive": "Listet alle aufgezeichneten Ausführungen, Modelle und Prüfsätze gemischt, über Monate hinweg — der Verlauf, nicht der Prüfstand daneben.",
           "failed": "Hebt die fehlgeschlagenen Fälle des Archivs hervor, um Schwere, Ursache und Nachverfolgung zu verstehen.",
-          "models": "Vergleicht Modelle über das gesamte Archiv; die Referenzsitzung nennt eine andere Zahl, für andere Fälle an einem anderen Tag.",
+          "models": "Vergleicht Modelle über das gesamte Archiv; der Prüfstand nennt eine andere Zahl, für andere Fälle an einem anderen Tag.",
           "judge": "Misst die Übereinstimmung des Prüfers mit einem handannotierten Satz und die Abweichungen, die jede Lesart der Werte schwächen."
         }
       },

@@ -203,7 +203,9 @@ test("each crossed surface says which population it is reading", async ({ page }
   // naming its population turns an honest difference into a contradiction.
   for (const { tab } of CROSSED) {
     await page.goto(`${EVALUATIONS}&tab=${tab}`);
-    await expect(page.getByText(/séance|archive|jeu de référence|annoté/i).first()).toBeVisible({
+    await expect(
+      page.getByText(/banc d'essai|archive|jeu de référence|annoté/i).first(),
+    ).toBeVisible({
       timeout: 20_000,
     });
   }
@@ -213,7 +215,7 @@ test("the strip groups its seven tabs by the population each one reads", async (
   await login(page);
   await page.goto(EVALUATIONS);
 
-  for (const caption of [/Une même séance/, /L'archive/, /Le juge/]) {
+  for (const caption of [/Le banc d'essai/, /L'archive/, /Le juge/]) {
     await expect(page.getByText(caption).first()).toBeVisible();
   }
 });

@@ -227,6 +227,15 @@ export async function FailureSynthesis({
                 ))}
               </TableBody>
             </Table>
+            {/* The remedy is said ONCE. It used to be printed in every empty root-cause cell —
+                six identical parentheses in one column read as noise, not as an instruction. */}
+            {rows.some((row) => !row.note.trim()) ? (
+              <p className="mt-2 text-[0.7rem] text-[var(--muted-foreground)]">
+                {t("failureSynthesis.noRootCauseHint", {
+                  count: rows.filter((row) => !row.note.trim()).length,
+                })}
+              </p>
+            ) : null}
           </div>
         )}
       </CardContent>
