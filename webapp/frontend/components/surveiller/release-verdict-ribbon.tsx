@@ -2,12 +2,11 @@ import { getTranslations } from "next-intl/server";
 
 import { ReleaseVerdictBand } from "@/components/surveiller/release-verdict-band";
 import { Link } from "@/i18n/navigation";
-import type { ReleaseControlAgent } from "@/lib/api/schemas";
-import { type AgentDecision, levelShortfalls, summarizeRelease } from "@/lib/release-verdict";
-import { loadReleaseControl } from "@/lib/server/fleet";
+import type { ReleaseControl } from "@/lib/api/schemas";
+import { levelShortfalls, summarizeRelease, toAgentDecision } from "@/lib/release-verdict";
 
 /**
- * The verdict that decides a release, on the page named after it.
+ * The verdict that decides a release, on the view whose question it answers.
  *
  * `/surveiller/qualite-ia` carried every number about quality and not the one sentence an
  * operator opens it for. Worse, its two halves disagreed in silence: the per-agent table said
@@ -15,8 +14,11 @@ import { loadReleaseControl } from "@/lib/server/fleet";
  * they describe different subjects (an agent's own eval set, versus a model on the shared
  * catalogue). Nothing said so, so the page read as self-contradictory.
  *
- * This ribbon sits ABOVE the view switch, so it holds on both views, and it states its subject
- * in its own first words. Three rules it must keep:
+ * This ribbon used to sit above the view switch on BOTH views; the operator read that as the
+ * monitoring view leading with the other view's headline, and they were right — "can this go
+ * live" is the evaluations view's question. The full ribbon now leads that view only, and the
+ * switch's evaluations DOOR carries its one-line summary, so the fact stays visible everywhere
+ * without a foreign banner. Three rules it must keep:
  *
  *  · it names the CAUSE, never just the colour — the four blocking conditions are four
  *    different pieces of work and a banner that conflates them sends the operator nowhere;
@@ -25,16 +27,14 @@ import { loadReleaseControl } from "@/lib/server/fleet";
  *    a passing one (ADR 0026).
  */
 export async function ReleaseVerdictRibbon({
-  scope,
+  control,
   locale,
 }: {
-  scope: string;
+  /** The release-control payload the page loaded — `null` when the backend could not answer. */
+  control: ReleaseControl | null;
   locale: string;
 }) {
-  const [control, t] = await Promise.all([
-    loadReleaseControl(scope, locale),
-    getTranslations({ locale, namespace: "quality" }),
-  ]);
+  const t = await getTranslations({ locale, namespace: "quality" });
 
   // The backend could not answer. That is a blind spot about the WHOLE verdict, and it is said
   // rather than skipped: a page that silently omits its verdict looks like a page with nothing
@@ -50,7 +50,7 @@ export async function ReleaseVerdictRibbon({
     );
   }
 
-  const agents = control.agents.map(toDecision);
+  const agents = control.agents.map(toAgentDecision);
   // A row whose `decision` never arrived cannot be judged. Older payloads (and any producer
   // that predates the field) would otherwise be read as "not evaluated", which is a claim.
   const undecidable = control.agents.filter((a) => a.decision === undefined).length;
@@ -109,20 +109,4 @@ export async function ReleaseVerdictRibbon({
       }
     />
   );
-}
-
-function toDecision(agent: ReleaseControlAgent): AgentDecision {
-  const d = agent.decision;
-  return {
-    agentId: agent.agent_id,
-    name: agent.name,
-    // Without a decision the row is not "allowed" and not "run" — it is unjudgeable, and it is
-    // counted as such by the caller rather than defaulted into either bucket.
-    allowed: d?.allowed ?? false,
-    hasRun: d?.has_run ?? false,
-    blockedBy: d?.blocked_by ?? null,
-    observabilityLevel: d?.observability_level ?? null,
-    requiredLevel: d?.required_level ?? null,
-    floorRegressions: d?.floor_regressions ?? [],
-  };
 }

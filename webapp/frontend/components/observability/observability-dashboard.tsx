@@ -8,11 +8,9 @@ import {
   ChevronRight,
   FileDown,
   Gauge,
-  GitCompareArrows,
   Landmark,
   ListChecks,
   type LucideIcon,
-  Play,
   Radio,
   Route,
   ShieldCheck,
@@ -666,31 +664,11 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
               tablet or a phone this row used to run 190-454px past the card with no
               way to scroll to it — the last two actions were simply unreachable. */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* It said "Lancer" and it SWITCHED TABS. No endpoint starts an evaluation — the
-                harness is a command (`scripts/run_eval.py`) — so the promise could never be
-                kept, and a primary green button is the loudest place to make one. Disabled
-                with the reason in its title, the way every other unwired action on this page
-                already is; relabelling it "show the runs" would keep a control that competes
-                for the eye with the actions that do work. */}
-            <span title={tq("cta.runEvalNotWired")} className="flex">
-              <Button
-                size="sm"
-                disabled
-                className="h-8 gap-2 border border-[#007a55] bg-[#005c42] text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
-              >
-                <Play className="h-3.5 w-3.5" />
-                {tq("cta.runEval")}
-              </Button>
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => openTarget("models")}
-              className="h-8 gap-2 text-xs"
-            >
-              <GitCompareArrows className="h-3.5 w-3.5" />
-              {tq("cta.compareModels")}
-            </Button>
+            {/* Two controls left this row on operator feedback (2026-08-12). The run-eval button
+                was a disabled promise — no endpoint starts an evaluation, the harness is a
+                command (`scripts/run_eval.py`) — and dead chrome earns no place on a toolbar.
+                The model-comparison button answered the OTHER view's question; its content
+                lives behind the evaluations door just above, under its own tab. */}
             {/* It opened the RUNS tab of this dashboard. The case set is not there — it is the
                 versioned artefact on the other view, and this button is the shortest path
                 across the boundary this page keeps blurring. A Link, so it is also a URL an

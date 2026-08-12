@@ -19,6 +19,8 @@
  *    banner that averages severities tells the operator nothing to do.
  */
 
+import type { ReleaseControlAgent } from "@/lib/api/schemas";
+
 /** The decision as `/observability/release-control` serves it, narrowed to what a verdict needs. */
 export interface AgentDecision {
   agentId: string;
@@ -29,6 +31,26 @@ export interface AgentDecision {
   observabilityLevel: string | null;
   requiredLevel: string | null;
   floorRegressions: string[];
+}
+
+/**
+ * One payload row → one decision, shared by every consumer of the verdict (the ribbon on the
+ * evaluations view, the door caption on the switch). Without a `decision` the row is not
+ * "allowed" and not "run" — it is unjudgeable, and it is counted as such by `summarizeRelease`
+ * rather than defaulted into either bucket.
+ */
+export function toAgentDecision(agent: ReleaseControlAgent): AgentDecision {
+  const d = agent.decision;
+  return {
+    agentId: agent.agent_id,
+    name: agent.name,
+    allowed: d?.allowed ?? false,
+    hasRun: d?.has_run ?? false,
+    blockedBy: d?.blocked_by ?? null,
+    observabilityLevel: d?.observability_level ?? null,
+    requiredLevel: d?.required_level ?? null,
+    floorRegressions: d?.floor_regressions ?? [],
+  };
 }
 
 /**

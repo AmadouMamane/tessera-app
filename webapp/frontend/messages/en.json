@@ -2338,10 +2338,7 @@
     },
     "cta": {
       "evidence": "Generate quality evidence pack",
-      "runEval": "Start evaluation",
-      "compareModels": "Compare models",
-      "openDataset": "Open case set",
-      "runEvalNotWired": "No endpoint starts an evaluation: the harness is a command (scripts/run_eval.py). This button cannot keep its promise."
+      "openDataset": "Open case set"
     },
     "sec": {
       "etat": "Current state",
@@ -3653,7 +3650,15 @@
       "signals": "Continuous monitoring",
       "signalsSub": "Targets, signals and gaps observed on real exchanges — live",
       "evaluations": "Evaluations before launch",
-      "evaluationsSub": "Case set, result without a model, model contribution, comparisons, past executions and judge reliability"
+      "evaluationsSub": "Case set, result without a model, model contribution, comparisons, past executions and judge reliability",
+      "enter": "Open",
+      "current": "Current view",
+      "verdict": {
+        "ready": "{releasable}/{total} agents can go live",
+        "blocked": "{count, plural, one {# blocked} other {# blocked}}",
+        "notEvaluated": "{count, plural, one {# never evaluated} other {# never evaluated}}",
+        "unavailable": "go-live verdict unreachable — nothing can be asserted"
+      }
     },
     "verdict": {
       "subject": "verdict per agent, on its own evaluation set",

@@ -48,21 +48,36 @@ test("both views render — neither falls into the error boundary", async ({ pag
   }
 });
 
-test("the launch verdict leads BOTH views, and names its subject", async ({ page }) => {
+test("the launch verdict leads the evaluations view, and names its subject", async ({ page }) => {
   await login(page);
 
-  for (const url of [SIGNALS, EVALUATIONS]) {
-    await page.goto(url);
-    // One of the six sentences the band can hold: cleared, cleared-with-pending, one of the four
-    // causes, or the honest "cannot say". Never a bare colour.
-    const verdict = page.getByText(
-      /peuvent être mis en ligne|peut être mis en ligne|Mise en ligne refusée|On ne peut pas savoir si|Impossible de dire si un agent/,
-    );
-    await expect(verdict.first()).toBeVisible();
-    // It says WHAT it judged. Without this the reader cannot tell it apart from the catalogue
-    // verdicts further down, which is the confusion this ribbon was built to end.
-    await expect(page.getByText(/verdict par agent/).first()).toBeVisible();
-  }
+  // The FULL ribbon lives on the view whose question it answers. It used to lead both views;
+  // the operator read that as the monitoring view opening on the other view's headline.
+  await page.goto(EVALUATIONS);
+  // One of the six sentences the band can hold: cleared, cleared-with-pending, one of the four
+  // causes, or the honest "cannot say". Never a bare colour.
+  const verdict = page.getByText(
+    /peuvent être mis en ligne|peut être mis en ligne|Mise en ligne refusée|On ne peut pas savoir si|Impossible de dire si un agent/,
+  );
+  await expect(verdict.first()).toBeVisible();
+  // It says WHAT it judged. Without this the reader cannot tell it apart from the catalogue
+  // verdicts further down, which is the confusion this ribbon was built to end.
+  await expect(page.getByText(/verdict par agent/).first()).toBeVisible();
+});
+
+test("on the monitoring view the verdict rides the evaluations door — visible, at door size", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto(SIGNALS);
+
+  // The door to the evaluations view carries the one-line verdict (counts, or the honest
+  // "unreachable"), so the per-agent PRÊT column keeps its explainer on this view too.
+  const door = page.getByRole("link", { name: /Évaluations avant mise en ligne/ });
+  await expect(door).toBeVisible();
+  await expect(door).toContainText(
+    /peuvent être mis en ligne|bloqué|jamais évalué|injoignable/,
+  );
 });
 
 test("the header states the two instants: sampled, then judged", async ({ page }) => {
@@ -215,20 +230,20 @@ test("the departed tabs are gone from the monitoring strip, and its links follow
 
   // …and the overview's own drill-down must land on the content, wherever it now lives.
   //
-  // EXACT, and unguarded, for two reasons this test learned the hard way. `/Comparer/` also
-  // matches "Comparer à Objectif cible" in the temporal rail, which sits earlier in the DOM:
-  // `.first()` clicked a dropdown and waited fifteen seconds for a navigation nobody had asked
-  // for. And the `if (count > 0)` that used to wrap this made a missing button a silent pass —
-  // the one outcome that must never read as green, since a drill-down that disappeared is
-  // exactly the regression this assertion exists to catch.
-  const compare = page.getByRole("button", { name: "Comparer modèles", exact: true });
-  await expect(compare).toHaveCount(1);
-  await compare.click();
+  // The toolbar's "Comparer modèles" button used to carry this check; it left the monitoring
+  // view with the rest of the eval-shaped controls (operator feedback, 2026-08-12), so the
+  // surviving cross-boundary control is the case-set link. EXACT, and unguarded: the
+  // `if (count > 0)` that once wrapped this made a missing control a silent pass — the one
+  // outcome that must never read as green, since a drill-down that disappeared is exactly the
+  // regression this assertion exists to catch.
+  const openCases = page.getByRole("link", { name: "Ouvrir le jeu de cas", exact: true });
+  await expect(openCases).toHaveCount(1);
+  await openCases.click();
   await page.waitForURL(/vue=evaluations/, { timeout: 15_000 });
-  await expect(page).toHaveURL(/tab=models/);
+  await expect(page).toHaveURL(/tab=cases/);
   await expect(page.getByText(CRASHED)).toHaveCount(0);
   // It arrived at the CONTENT, not merely at the URL.
-  await expect(page.getByText(/Comparaison détaillée des modèles/).first()).toBeVisible({
+  await expect(page.getByRole("heading", { name: /Le jeu de cas/ })).toBeVisible({
     timeout: 30_000,
   });
 });

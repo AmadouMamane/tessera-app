@@ -2338,10 +2338,7 @@
     },
     "cta": {
       "evidence": "Générer dossier de preuves qualité",
-      "runEval": "Lancer évaluation",
-      "compareModels": "Comparer modèles",
-      "openDataset": "Ouvrir le jeu de cas",
-      "runEvalNotWired": "Aucun endpoint ne lance une évaluation : le harnais est une commande (scripts/run_eval.py). Ce bouton ne peut pas tenir sa promesse."
+      "openDataset": "Ouvrir le jeu de cas"
     },
     "sec": {
       "etat": "État actuel",
@@ -3653,7 +3650,15 @@
       "signals": "Suivi continu",
       "signalsSub": "Objectifs, signaux et écarts observés sur les échanges réels — en temps réel",
       "evaluations": "Évaluations avant mise en ligne",
-      "evaluationsSub": "Jeu de cas, résultat sans modèle, apport du modèle, comparaisons, exécutions passées et fiabilité du juge"
+      "evaluationsSub": "Jeu de cas, résultat sans modèle, apport du modèle, comparaisons, exécutions passées et fiabilité du juge",
+      "enter": "Ouvrir",
+      "current": "Vue ouverte",
+      "verdict": {
+        "ready": "{releasable}/{total} agents peuvent être mis en ligne",
+        "blocked": "{count, plural, one {# bloqué} other {# bloqués}}",
+        "notEvaluated": "{count, plural, one {# jamais évalué} other {# jamais évalués}}",
+        "unavailable": "verdict de mise en ligne injoignable — rien ne peut être affirmé"
+      }
     },
     "verdict": {
       "subject": "verdict par agent, sur son propre jeu d'évaluation",

@@ -10,6 +10,7 @@ import { QualityViewSwitch } from "@/components/surveiller/quality-view-switch";
 import { ReleaseVerdictRibbon } from "@/components/surveiller/release-verdict-ribbon";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
 import { readAgentScope } from "@/lib/agent-scope";
+import { loadReleaseControl } from "@/lib/server/fleet";
 import { readSignalFocus } from "@/lib/signal-focus";
 
 // The evaluations view gates the per-case detail on the session (cookies) per request.
@@ -42,13 +43,20 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
   setRequestLocale(locale);
   const sp = await searchParams;
   const isEvalView = first(sp[EVAL_VIEW_PARAM]) === EVAL_VIEW_VALUE;
+  const scope = readAgentScope(sp);
+  // Loaded ONCE for the page (the loader is request-memoised): the switch prints its one-line
+  // summary on the evaluations door of both views, and the full ribbon reads the same payload.
+  const control = await loadReleaseControl(scope, locale);
 
   if (isEvalView) {
     const tEval = await getTranslations({ locale, namespace: "eval" });
     return (
       <AppShell title={tEval("title")} description={tEval("description")}>
-        <ReleaseVerdictRibbon scope={readAgentScope(sp)} locale={locale} />
-        <QualityViewSwitch active="evaluations" locale={locale} />
+        <QualityViewSwitch active="evaluations" locale={locale} control={control} />
+        {/* The verdict that decides a release LEADS the view whose question it answers. It used
+            to sit above the switch on both views — the monitoring view then opened on the other
+            view's headline (operator feedback, 2026-08-12). */}
+        <ReleaseVerdictRibbon control={control} locale={locale} />
         {/* Plain-language way in for a visitor: what the catalogue is, what the floor means,
             why an absolute score is not the grade. The expert detail below stays intact. */}
         <details className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3">
@@ -75,18 +83,16 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
   }
 
   const t = await getTranslations({ locale, namespace: "quality" });
-  const scope = readAgentScope(sp);
   // The breakdown lens answers the page's question: the breached signal when the SLO hero is in
   // alarm (per-agent culprits, sorted by contribution), the quality lens otherwise — never
   // volume/latency columns under a quality banner. `?signal=` focuses one signal from the
   // registry; an org-wide one masks the table and says why (its capability, not a guess).
   return (
     <AppShell title={t("title")} description={t("subtitle")}>
-      {/* The release verdict holds ABOVE the switch, so it is the same sentence on both views.
-          Its two halves used to disagree in silence: the per-agent table said PRÊT while the
-          evaluations view said BLOQUÉ, and both were true of different subjects. */}
-      <ReleaseVerdictRibbon scope={scope} locale={locale} />
-      <QualityViewSwitch active="signals" locale={locale} />
+      {/* No full verdict ribbon here: "can this go live" is the evaluations view's question,
+          and its one-line summary rides on that view's door just above the content. The
+          per-agent PRÊT column below still gets its explainer — at door size, not banner size. */}
+      <QualityViewSwitch active="signals" locale={locale} control={control} />
       {/* The alert leads and the temporal controls follow as one compact reading sequence.
           A shallow background fill on the sticky chrome keeps both rounded edges clean. */}
       <div>

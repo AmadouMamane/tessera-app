@@ -2338,10 +2338,7 @@
     },
     "cta": {
       "evidence": "Qualitäts-Evidence-Pack erzeugen",
-      "runEval": "Bewertung starten",
-      "compareModels": "Modelle vergleichen",
-      "openDataset": "Prüfsatz öffnen",
-      "runEvalNotWired": "Kein Endpunkt startet eine Bewertung: das Harness ist ein Kommando (scripts/run_eval.py). Diese Schaltflaeche kann ihr Versprechen nicht halten."
+      "openDataset": "Prüfsatz öffnen"
     },
     "sec": {
       "etat": "Aktueller Zustand",
@@ -3653,7 +3650,15 @@
       "signals": "Laufende Überwachung",
       "signalsSub": "Ziele, Signale und Abweichungen aus echten Dialogen — in Echtzeit",
       "evaluations": "Bewertungen vor der Freigabe",
-      "evaluationsSub": "Prüfsatz, Ergebnis ohne Modell, Modellbeitrag, Vergleiche, frühere Ausführungen und Verlässlichkeit des Prüfers"
+      "evaluationsSub": "Prüfsatz, Ergebnis ohne Modell, Modellbeitrag, Vergleiche, frühere Ausführungen und Verlässlichkeit des Prüfers",
+      "enter": "Öffnen",
+      "current": "Aktive Ansicht",
+      "verdict": {
+        "ready": "{releasable}/{total} Agenten können freigeschaltet werden",
+        "blocked": "{count, plural, one {# blockiert} other {# blockiert}}",
+        "notEvaluated": "{count, plural, one {# nie bewertet} other {# nie bewertet}}",
+        "unavailable": "Freigabe-Urteil nicht erreichbar — nichts kann behauptet werden"
+      }
     },
     "verdict": {
       "subject": "Urteil je Agent, auf seinem eigenen Bewertungssatz",
