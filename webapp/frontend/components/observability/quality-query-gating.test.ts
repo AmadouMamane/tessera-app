@@ -52,11 +52,12 @@ describe("quality tab query gating", () => {
       '["signal-status-trend", asOf, period]',
       'enabled: tab === "signals"',
     ],
-    // The two the dashboard KEPT after the migration. They are read by the overview as well as
-    // by the departed tabs, so they exist on both sides — and the half that stayed must be
-    // gated on what still renders it, not on tab names that no longer exist here.
-    ["the run archive", "dashboard", '["runs"]', 'enabled: tab === "overview"'],
-    ["the model comparison", "dashboard", '["model-comparison"]', 'enabled: tab === "overview"'],
+    // The three reads the dashboard keeps ONLY for the signal drill-down rail. Their overview
+    // consumers (KPI tiles, right rail, root-cause diff, release card) left with the E4 purge,
+    // so a fetch on the overview would poll for panels that no longer exist.
+    ["the failed cases", "dashboard", '["failed-cases", locale]', 'enabled: tab === "signals"'],
+    ["the release state", "dashboard", '["release-status"]', 'enabled: tab === "signals"'],
+    ["the change diff", "dashboard", '["what-changed", asOf, scope]', 'enabled: tab === "signals"'],
   ] as const)(
     "loads %s only in the tab that renders it",
     (_name, where, queryKeyPrefix, predicate) => {
@@ -65,15 +66,15 @@ describe("quality tab query gating", () => {
   );
 
   /**
-   * The duplicated pair costs no extra request — but only while both sides agree on the key.
-   *
-   * `runs` and `model-comparison` are fetched by both components. React Query serves one cached
-   * answer to both *because the key is the same string*; drift the key on one side and the page
-   * silently doubles the request without any test noticing a number.
+   * The run archive and the model comparison are the evaluations view's reads now — the last
+   * overview panels that consumed them (pass-rate table, cost×quality scatter, KPI tiles) left
+   * with the E4 purge. A dashboard that fetched them again would poll for nothing; if a future
+   * overview panel truly needs one of them, it must ALSO restore the shared cache key on both
+   * sides, or the page silently doubles the request.
    */
-  it("keeps the duplicated reads on one cache key, so the duplication stays free", () => {
+  it("fetches the run archive and the model comparison from the evaluations view only", () => {
     for (const key of ['queryKey: ["runs"]', 'queryKey: ["model-comparison"]']) {
-      expect(source.dashboard).toContain(key);
+      expect(source.dashboard).not.toContain(key);
       expect(source.evaluations).toContain(key);
     }
   });

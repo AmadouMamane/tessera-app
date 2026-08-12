@@ -111,7 +111,7 @@ export async function QualityViewSwitch({
               ) : null}
             </span>
             {isActive ? (
-              <span className="shrink-0 text-[0.62rem] font-medium uppercase tracking-wide text-[#7c5cf5]">
+              <span className="shrink-0 text-[0.62rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
                 {t("views.current")}
               </span>
             ) : (
@@ -155,5 +155,8 @@ function doorVerdict(
   if (verdict.notEvaluated.length > 0) {
     parts.push(t("views.verdict.notEvaluated", { count: verdict.notEvaluated.length }));
   }
-  return { dot: DOT[verdict.severity] ?? "bg-[var(--tessera-text-muted)]", text: parts.join(" · ") };
+  return {
+    dot: DOT[verdict.severity] ?? "bg-[var(--tessera-text-muted)]",
+    text: parts.join(" · "),
+  };
 }

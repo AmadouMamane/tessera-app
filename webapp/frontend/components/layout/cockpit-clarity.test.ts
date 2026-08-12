@@ -173,7 +173,8 @@ function primaryNavCopy(catalogue: Catalogue): string {
 function secondaryQualityCopy(catalogue: Catalogue): string {
   const { quality } = catalogue;
   return stringValues({
-    reco: quality.reco,
+    // `quality.reco` (the recommended-actions panel) left with the E4 purge of the overview —
+    // a scope that names a surface which no longer exists would crash this guard, not arm it.
     rr: quality.rr,
     statusbar: quality.statusbar,
     rail: quality.rail,

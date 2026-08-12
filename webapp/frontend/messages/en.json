@@ -2341,9 +2341,9 @@
     },
     "sec": {
       "etat": "Current state",
-      "diagnostic": "Root cause",
+      "problems": "Signals in breach",
       "predictive": "Predictive signals",
-      "actions": "Recommended actions"
+      "trends": "Trends"
     },
     "explain": {
       "etat": {
@@ -2351,42 +2351,26 @@
         "how": "Aggregates the faithfulness SLO, the count of off-target signals, and the latest release diff.",
         "source": "Continuous evaluation + release reports."
       },
-      "diagnostic": {
-        "what": "Why quality drifts: failures by type, judge calibration, priority cases, and root cause.",
-        "how": "Documented failure catalogue + clustering of failed cases + version diff."
+      "problems": {
+        "what": "The registry signals currently above their critical or warning bar, worst first.",
+        "how": "Read from the sampled registry rows of the displayed window; clicking a row opens the signal in the registry."
       },
       "predictive": {
         "what": "Early-warning signals of a regression: regression risk, judge drift, failure predictor, intent, and localization.",
         "how": "Risk models over the score series and metric drift."
       },
-      "actions": {
-        "what": "Concrete actions to take, derived from open regressions and real failed cases.",
-        "how": "One recommendation is generated per open regression or case cluster."
+      "trends": {
+        "what": "How the faithfulness score moved over the window, and where answers sit on the faithfulness and grounding axes.",
+        "how": "Series and pairs computed on the real exchanges of the displayed window."
       },
       "scoreGlobal": {
         "what": "The global quality score out of 100: share of answers judged compliant (faithfulness SLO).",
         "how": "Compliant answers ÷ evaluated answers, scaled to 100.",
         "source": "Continuous evaluation log."
       },
-      "nonRegression": {
-        "what": "Non-regression rate: share of cases that did not degrade versus the baseline version.",
-        "how": "Stable-or-improved cases ÷ compared cases.",
-        "source": "Release reports."
-      },
-      "regressionsOpen": {
-        "what": "The number of regressions still open versus the baseline.",
-        "how": "Cases whose score dropped beyond noise and not yet resolved.",
-        "source": "Release reports."
-      },
-      "judgeKappa": {
-        "what": "Agreement (Cohen's kappa) between the LLM judge and the human reference annotations.",
-        "how": "Kappa over a gold set; above 0.6 = substantial agreement.",
-        "source": "Judge calibration (gold set)."
-      },
-      "casEval": {
-        "what": "The number of catalogue cases evaluated in the latest non-regression run.",
-        "how": "Cases executed by the evaluation harness.",
-        "source": "Run archive."
+      "signalsCrit": {
+        "what": "How many registry signals are currently above their critical bar.",
+        "how": "Counted from the rows this page builds — never a constant."
       },
       "faithfulness": {
         "what": "Faithfulness: the answer stays true to the cited sources, without extrapolation.",
@@ -2406,20 +2390,6 @@
       "faithGrounding": {
         "what": "The faithfulness × grounding scatter: each point is a turn; top-right = both faithful and grounded.",
         "how": "Per-turn (faithfulness, grounding) pairs; colour summarises the mean of the two."
-      },
-      "failureDistribution": {
-        "what": "The distribution of failed cases by failure type (injection, PII leak, hallucination…).",
-        "how": "Count of failed cases grouped by category, top 5.",
-        "source": "Documented failure catalogue."
-      },
-      "judgeCalibration": {
-        "what": "How reliable the LLM judge is: agreement with humans, verbosity bias, and sample size.",
-        "how": "Kappa + agreement over a gold set; correlation to answer length.",
-        "source": "Judge calibration (gold set)."
-      },
-      "priorityCases": {
-        "what": "The most severe failed cases to handle first, sorted by severity.",
-        "how": "Failure-catalogue cases ordered critical → low."
       },
       "sigActive": {
         "what": "Number of quality signals instrumented and evaluated live, out of the 200 in the reference catalogue.",
@@ -2848,58 +2818,25 @@
       }
     },
     "seeDetail": "View details",
-    "reco": {
-      "title": "Recommended actions",
-      "curate": "Add failed cases to the regression case set",
-      "freeze": "Pause launches",
-      "playbook": "Open hallucination playbook",
-      "shadow": "Test on copied traffic",
-      "ticket": "Open compliance ticket",
-      "caption": "Sensitive actions require two-person approval",
-      "corpus": "Check documentary sources",
-      "rerun": "Start a targeted evaluation",
-      "catalog": "Update the signal catalog",
-      "block": "Block the current launch",
-      "seeEvidence": "View quality evidence"
-    },
     "rr": {
-      "problems": "Latest problems",
       "seeCases": "See all failed cases",
       "release": "Current version",
       "inProd": "In production",
       "seeReleases": "See versions",
-      "since": "deployed",
-      "quick": "Quick links",
-      "quickRun": "Evaluation in progress",
-      "quickPolicies": "Policies & guardrails",
-      "quickScheduled": "Scheduled evaluations",
-      "quickCatalog": "Signal catalog",
-      "seeLinks": "See all links",
       "activity": "Recent activity",
-      "seeActivity": "See all activity",
       "noActivity": "No recent activity",
-      "problemsUnavailable": "Failed-case list unread — that is not the same as “no problems”.",
-      "noProblems": "No open problem",
-      "actions": "Quick actions",
-      "linkRuns": "View all evaluations",
-      "linkTraces": "View execution details",
-      "linkDataset": "Open active case set",
-      "linkEvidence": "Generate quality evidence pack",
       "blocked": "blocked",
-      "impact": "Impact",
-      "openedAt": "Opened on",
-      "actRun": "Evaluation completed ({n} cases)",
       "actReleaseBlocked": "Version {v} blocked",
       "actReleaseDeployed": "Version {v} launched"
     },
     "statusbar": {
       "realtime": "Data: real-time",
-      "dataset": "Active case set",
       "truthChain": "Truth chain",
       "truthSource": "Source of truth: YAML/Git",
-      "lastUpdate": "Last update",
       "signals": "{n} signals wired",
-      "systemOk": "System OK"
+      "systemOk": "System OK",
+      "systemCrit": "{n, plural, one {# critical signal} other {# critical signals}}",
+      "systemWarn": "{n, plural, one {# signal at risk} other {# signals at risk}}"
     },
     "temporal": {
       "live": "Live",
@@ -2918,7 +2855,8 @@
       "signals": "{n}/200 quality signals",
       "noFailing": "No failing category",
       "live": "live",
-      "signalsFunnel": "{sampled} signals measured out of {wired} wired · {declared} declared in the catalogue for this page"
+      "signalsFunnel": "{sampled} signals measured out of {wired} wired · {declared} declared in the catalogue for this page",
+      "signalsFunnelUnread": "{sampled} sampled of {wired} wired · the catalogue could not be read — the declared share is unknown"
     },
     "kpi": {
       "score": "Quality score",
@@ -3012,26 +2950,12 @@
       "noData": "No data over the period",
       "mean": "Mean",
       "points": "{n} points",
-      "diagnostic": "Root-cause diagnostic (probable)",
-      "noDiag": "No recent change detected.",
-      "whatChangedTitle": "What changed",
       "causes": "Probable causes",
-      "impact": "Impact",
-      "change": "Change",
-      "corpusChanged": "Documentary sources changed",
-      "scoreRegressed": "Confirmed score regression",
       "costQuality": "Evaluation cost and quality",
-      "costAxis": "Cost per evaluation",
-      "qualityAxis": "Quality",
-      "runsBars": "Recent evaluation success",
       "faithGrounding": "Faithfulness vs Grounding (7d)",
       "good": "Good",
       "mid": "Fair",
-      "low": "Poor",
-      "dataset": "Case set",
-      "passTotal": "Passed / Total",
-      "regressionsByRelease": "Failures by version",
-      "noRegressions": "No open regressions"
+      "low": "Poor"
     },
     "failed": {
       "title": "Failed cases",
@@ -3580,31 +3504,16 @@
     "exec": {
       "kpi": {
         "scoreGlobal": "Global quality score",
-        "nonRegression": "Result stability",
-        "regressionsOpen": "Open regressions",
-        "judgeKappa": "Agreement with reviewers",
-        "casEval": "Cases evaluated",
-        "casFailed": "Failed cases"
+        "signalsCrit": "Critical signals"
       },
       "etat": {
-        "title": "Current state",
         "failing": "Failing signals",
         "alert": "At-risk signals",
-        "impact": "Effect on launch",
         "evolution": "Evolution",
-        "low": "Low",
-        "medium": "Moderate",
-        "high": "High",
-        "rising": "Rising",
-        "falling": "Falling",
-        "flat": "Flat",
         "globalQuality": "Global quality",
-        "releaseLabel": "Current version",
         "evolutionVsPrev": "Evolution vs previous period"
       },
-      "topProblems": "Quality signals — top problems",
-      "noProblems": "No open problem.",
-      "priorityCases": "Priority failed cases"
+      "noProblems": "No open problem."
     },
     "pred": {
       "trend": "30-day trend",

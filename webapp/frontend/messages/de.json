@@ -2341,9 +2341,9 @@
     },
     "sec": {
       "etat": "Aktueller Zustand",
-      "diagnostic": "Ursachenanalyse",
+      "problems": "Signale in Alarm",
       "predictive": "Prädiktive Signale",
-      "actions": "Empfohlene Aktionen"
+      "trends": "Verlauf"
     },
     "explain": {
       "etat": {
@@ -2351,42 +2351,26 @@
         "how": "Aggregiert das Treue-SLO, die Zahl der Signale außerhalb des Ziels und den Diff der letzten Release.",
         "source": "Laufende Bewertung + Release-Berichte."
       },
-      "diagnostic": {
-        "what": "Warum die Qualität abweicht: Fehlerverteilung nach Typ, Judge-Kalibrierung, prioritäre Fälle und Grundursache.",
-        "how": "Katalog dokumentierter Fehler + Clustering der fehlgeschlagenen Fälle + Versions-Diff."
+      "problems": {
+        "what": "Die Signale des Registers, die aktuell über ihrer kritischen oder Warnschwelle liegen, das schwerste zuerst.",
+        "how": "Gelesen aus den erfassten Zeilen des Registers im angezeigten Zeitraum; ein Klick öffnet das Signal im Register."
       },
       "predictive": {
         "what": "Frühwarnsignale für eine Regression: Regressionsrisiko, Judge-Drift, Fehlerprädiktor, Absicht und Lokalisierung.",
         "how": "Risikomodelle über die Score-Serien und die Metrik-Drift."
       },
-      "actions": {
-        "what": "Konkrete Maßnahmen, abgeleitet aus offenen Regressionen und realen fehlgeschlagenen Fällen.",
-        "how": "Pro offener Regression oder Fall-Cluster wird eine Empfehlung erzeugt."
+      "trends": {
+        "what": "Wie sich der Treue-Wert im Zeitraum bewegt hat, und wo die Antworten auf den Achsen Treue und Verankerung liegen.",
+        "how": "Reihen und Paare, berechnet auf den echten Dialogen des angezeigten Zeitraums."
       },
       "scoreGlobal": {
         "what": "Der globale Qualitätsscore von 100: Anteil der als konform bewerteten Antworten (Treue-SLO).",
         "how": "Konforme Antworten ÷ bewertete Antworten, auf 100 normiert.",
         "source": "Laufendes Bewertungsprotokoll."
       },
-      "nonRegression": {
-        "what": "Nicht-Regressionsrate: Anteil der Fälle, die sich gegenüber der Referenzversion nicht verschlechtert haben.",
-        "how": "Stabile oder verbesserte Fälle ÷ verglichene Fälle.",
-        "source": "Release-Berichte."
-      },
-      "regressionsOpen": {
-        "what": "Die Zahl der noch offenen Regressionen gegenüber der Referenz.",
-        "how": "Fälle, deren Score über das Rauschen hinaus gefallen und noch nicht behoben ist.",
-        "source": "Release-Berichte."
-      },
-      "judgeKappa": {
-        "what": "Übereinstimmung (Cohens Kappa) zwischen dem LLM-Judge und den menschlichen Referenz-Annotationen.",
-        "how": "Kappa über ein Gold-Set; über 0,6 = substanzielle Übereinstimmung.",
-        "source": "Judge-Kalibrierung (Gold-Set)."
-      },
-      "casEval": {
-        "what": "Die Zahl der im letzten Nicht-Regressions-Run bewerteten Katalogfälle.",
-        "how": "Vom Bewertungs-Harness ausgeführte Fälle.",
-        "source": "Run-Archiv."
+      "signalsCrit": {
+        "what": "Wie viele Signale des Registers aktuell über ihrer kritischen Schwelle liegen.",
+        "how": "Gezählt aus den Zeilen, die diese Seite baut — nie eine Konstante."
       },
       "faithfulness": {
         "what": "Treue: Die Antwort bleibt den zitierten Quellen treu, ohne Extrapolation.",
@@ -2406,20 +2390,6 @@
       "faithGrounding": {
         "what": "Das Streudiagramm Treue × Verankerung: jeder Punkt ist ein Turn; oben rechts = treu und verankert zugleich.",
         "how": "Paare (Treue, Verankerung) pro Turn; die Farbe fasst den Mittelwert beider zusammen."
-      },
-      "failureDistribution": {
-        "what": "Die Verteilung der fehlgeschlagenen Fälle nach Fehlertyp (Injection, PII-Leck, Halluzination…).",
-        "how": "Zählung der fehlgeschlagenen Fälle gruppiert nach Kategorie, Top 5.",
-        "source": "Katalog dokumentierter Fehler."
-      },
-      "judgeCalibration": {
-        "what": "Wie zuverlässig der LLM-Judge ist: Übereinstimmung mit Menschen, Verbositäts-Bias und Stichprobengröße.",
-        "how": "Kappa + Übereinstimmung über ein Gold-Set; Korrelation zur Antwortlänge.",
-        "source": "Judge-Kalibrierung (Gold-Set)."
-      },
-      "priorityCases": {
-        "what": "Die schwerwiegendsten fehlgeschlagenen Fälle, die zuerst zu bearbeiten sind, nach Schweregrad sortiert.",
-        "how": "Fälle aus dem Fehlerkatalog, geordnet kritisch → niedrig."
       },
       "sigActive": {
         "what": "Anzahl der live instrumentierten und ausgewerteten Qualitätssignale, von den 200 des Referenzkatalogs.",
@@ -2848,58 +2818,25 @@
       }
     },
     "seeDetail": "Details anzeigen",
-    "reco": {
-      "title": "Empfohlene Aktionen",
-      "curate": "Fehlerfälle zum Prüfbestand hinzufügen",
-      "freeze": "Freigaben aussetzen",
-      "playbook": "Halluzinations-Verfahren öffnen",
-      "shadow": "Mit kopiertem Verkehr testen",
-      "ticket": "Compliance-Ticket erstellen",
-      "caption": "Sensible Aktionen erfordern eine Freigabe durch zwei Personen",
-      "corpus": "Dokumentquellen prüfen",
-      "rerun": "Gezielte Evaluierung starten",
-      "catalog": "Signalkatalog aktualisieren",
-      "block": "Aktuelle Freigabe sperren",
-      "seeEvidence": "Qualitätsnachweise ansehen"
-    },
     "rr": {
-      "problems": "Letzte Probleme",
       "seeCases": "Alle fehlgeschlagenen Fälle ansehen",
       "release": "Aktuelle Version",
       "inProd": "In Produktion",
       "seeReleases": "Versionen ansehen",
-      "since": "ausgerollt",
-      "quick": "Schnelllinks",
-      "quickRun": "Laufende Bewertung",
-      "quickPolicies": "Regeln & Schutzvorgaben",
-      "quickScheduled": "Geplante Bewertungen",
-      "quickCatalog": "Signalkatalog",
-      "seeLinks": "Alle Links ansehen",
       "activity": "Letzte Aktivitäten",
-      "seeActivity": "Alle Aktivitäten ansehen",
       "noActivity": "Keine aktuelle Aktivität",
-      "problemsUnavailable": "Liste der fehlgeschlagenen Fälle nicht gelesen — das heißt nicht „keine Probleme“.",
-      "noProblems": "Kein offenes Problem",
-      "actions": "Schnellaktionen",
-      "linkRuns": "Alle Bewertungen ansehen",
-      "linkTraces": "Ausführungsdetails ansehen",
-      "linkDataset": "Aktiven Prüfsatz öffnen",
-      "linkEvidence": "Qualitäts-Evidence-Pack erstellen",
       "blocked": "gesperrt",
-      "impact": "Auswirkung",
-      "openedAt": "Geöffnet am",
-      "actRun": "Bewertung abgeschlossen ({n} Fälle)",
       "actReleaseBlocked": "Version {v} gesperrt",
       "actReleaseDeployed": "Version {v} bereitgestellt"
     },
     "statusbar": {
       "realtime": "Daten: Echtzeit",
-      "dataset": "Aktiver Prüfsatz",
       "truthChain": "Wahrheitskette",
       "truthSource": "Wahrheitsquelle: YAML/Git",
-      "lastUpdate": "Letzte Aktualisierung",
       "signals": "{n} angebundene Signale",
-      "systemOk": "System OK"
+      "systemOk": "System OK",
+      "systemCrit": "{n, plural, one {# kritisches Signal} other {# kritische Signale}}",
+      "systemWarn": "{n, plural, one {# Signal in Warnstufe} other {# Signale in Warnstufe}}"
     },
     "temporal": {
       "live": "Live",
@@ -2918,7 +2855,8 @@
       "signals": "{n}/200 Qualitätssignale",
       "noFailing": "Keine fehlerhafte Kategorie",
       "live": "live",
-      "signalsFunnel": "{sampled} gemessene Signale von {wired} angebundenen · {declared} im Katalog für diese Seite deklariert"
+      "signalsFunnel": "{sampled} gemessene Signale von {wired} angebundenen · {declared} im Katalog für diese Seite deklariert",
+      "signalsFunnelUnread": "{sampled} erfasst von {wired} verdrahtet · der Katalog konnte nicht gelesen werden — der deklarierte Anteil ist unbekannt"
     },
     "kpi": {
       "score": "Qualitätsscore",
@@ -3012,26 +2950,12 @@
       "noData": "Keine Daten im Zeitraum",
       "mean": "Mittel",
       "points": "{n} Punkte",
-      "diagnostic": "Ursachen-Diagnose (wahrscheinlich)",
-      "noDiag": "Keine kürzliche Änderung erkannt.",
-      "whatChangedTitle": "Was sich geändert hat",
       "causes": "Wahrscheinliche Ursachen",
-      "impact": "Auswirkung",
-      "change": "Änderung",
-      "corpusChanged": "Dokumentquellen geändert",
-      "scoreRegressed": "Bestätigte Score-Regression",
       "costQuality": "Bewertungskosten und Qualität",
-      "costAxis": "Kosten pro Bewertung",
-      "qualityAxis": "Qualität",
-      "runsBars": "Erfolg der letzten Bewertungen",
       "faithGrounding": "Treue vs Verankerung (7 T)",
       "good": "Gut",
       "mid": "Mittel",
-      "low": "Schlecht",
-      "dataset": "Prüfsatz",
-      "passTotal": "Bestanden / Gesamt",
-      "regressionsByRelease": "Fehler nach Version",
-      "noRegressions": "Keine offenen Regressionen"
+      "low": "Schlecht"
     },
     "failed": {
       "title": "Fehlgeschlagene Fälle",
@@ -3580,31 +3504,16 @@
     "exec": {
       "kpi": {
         "scoreGlobal": "Globaler Qualitätsscore",
-        "nonRegression": "Stabilität der Ergebnisse",
-        "regressionsOpen": "Offene Regressionen",
-        "judgeKappa": "Übereinstimmung mit Prüfern",
-        "casEval": "Bewertete Fälle",
-        "casFailed": "Fehlerfälle"
+        "signalsCrit": "Kritische Signale"
       },
       "etat": {
-        "title": "Aktueller Stand",
         "failing": "Fehlerhafte Signale",
         "alert": "Gefährdete Signale",
-        "impact": "Auswirkung auf die Freigabe",
         "evolution": "Entwicklung",
-        "low": "Gering",
-        "medium": "Mäßig",
-        "high": "Hoch",
-        "rising": "Steigend",
-        "falling": "Fallend",
-        "flat": "Stabil",
         "globalQuality": "Gesamtqualität",
-        "releaseLabel": "Aktuelle Version",
         "evolutionVsPrev": "Entwicklung vs. Vorperiode"
       },
-      "topProblems": "Qualitätssignale — Top-Probleme",
-      "noProblems": "Kein offenes Problem.",
-      "priorityCases": "Priorisierte Fehlerfälle"
+      "noProblems": "Kein offenes Problem."
     },
     "pred": {
       "trend": "Trend 30 Tage",

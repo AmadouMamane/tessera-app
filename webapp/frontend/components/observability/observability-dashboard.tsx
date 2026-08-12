@@ -4,21 +4,18 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import {
   Activity,
   Boxes,
-  CalendarClock,
-  ChevronRight,
   FileDown,
   Gauge,
   Landmark,
   ListChecks,
   type LucideIcon,
   Radio,
-  Route,
   ShieldCheck,
   Stethoscope,
   TrendingUp,
 } from "lucide-react";
-// `Route` is already taken in this module by the lucide ICON of that name — alias Next's
-// typed-route type so the cast below cannot silently mean the icon.
+// Aliased for history: `Route` used to name a lucide icon in this module, and the bare name
+// would read as the icon to anyone who remembers it.
 import type { Route as NextRoute } from "next";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -30,20 +27,12 @@ import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { TabStrip } from "@/components/cockpit/tab-strip";
 import { EVAL_PATHNAME, EVAL_VIEW_VALUE, evalQuery } from "@/components/eval/eval-route";
 import { EvolutionChart } from "@/components/observability/evolution-chart";
-import { FailureDistribution } from "@/components/observability/failed-cases";
 import {
-  CostQualityScatter,
   EtatActuel,
-  FailureBars,
   FaithGroundingScatter,
-  JudgeMini,
   OverviewKpis,
   PredictiveSignals,
-  PriorityCases,
-  RecommendedActions,
-  RegressionsByRelease,
-  RootCauseDiagnostic,
-  RunsPassRateTable,
+  TopProblems,
 } from "@/components/observability/overview-exec";
 import {
   SignalHeatmap,
@@ -56,10 +45,7 @@ import {
 } from "@/components/observability/signals-table";
 import { useRailTimeline, useTemporalState } from "@/components/overview/temporal-rail";
 import { SignalCommandBar } from "@/components/surveiller/signal-command-bar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import {
@@ -81,13 +67,11 @@ import {
   fetchLocaleFormat,
   fetchLocalization,
   fetchMetricPairs,
-  fetchModelComparison,
   fetchPiiLeak,
   fetchRefusal,
   fetchRegressionRisk,
   fetchReleaseStatus,
   fetchRouting,
-  fetchRuns,
   fetchSLO,
   fetchScoreSeries,
   fetchSignalCoverage,
@@ -96,8 +80,6 @@ import {
   fetchToxicity,
   fetchWhatChanged,
 } from "@/lib/api/client";
-import type { FailedCasesReport, ReleaseStatus, RunRegistry, WhatChanged } from "@/lib/api/schemas";
-import { fmtRunDay } from "@/lib/eval-score";
 import {
   CROSSED_TARGETS,
   DASHBOARD_TABS,
@@ -314,36 +296,24 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     enabled: tab === "overview",
   });
 
-  // Documented failure catalogue is static per locale (no polling, no as-of).
+  // Documented failure catalogue is static per locale (no polling, no as-of). Its only reader
+  // left on this dashboard is the signal drill-down rail — the overview panels that consumed it
+  // (failure bars, priority cases, right rail) crossed to the evaluations view with their tabs.
   const failedCases = useQuery({
     queryKey: ["failed-cases", locale],
     queryFn: ({ signal }) => fetchFailedCases(signal, locale),
     staleTime: Number.POSITIVE_INFINITY,
-    enabled: tab === "overview" || tab === "signals",
+    enabled: tab === "signals",
   });
 
-  // Eval run archive — refreshes slowly; the report files change rarely. The archive's own
-  // tab crossed to the evaluations view, which reads this endpoint under the SAME query key:
-  // React Query then serves one cached answer to both, so the duplication costs no request.
-  // Kept here because the overview's KPI strip, pass-rate table and right rail read it too.
-  const runs = useQuery({
-    queryKey: ["runs"],
-    queryFn: ({ signal }) => fetchRuns(signal),
-    refetchInterval: 60_000,
-    enabled: tab === "overview",
-  });
-
-  const modelComparison = useQuery({
-    queryKey: ["model-comparison"],
-    queryFn: ({ signal }) => fetchModelComparison(signal),
-    refetchInterval: 60_000,
-    enabled: tab === "overview",
-  });
-
+  // Release state — read here ONLY for the signal drill-down rail. Every overview surface that
+  // summarised it (KPI tiles, release card, regressions chart, status bar) belonged to the
+  // evaluations view's question and left this dashboard.
   const releaseStatus = useQuery({
     queryKey: ["release-status"],
     queryFn: ({ signal }) => fetchReleaseStatus(signal),
     refetchInterval: 60_000,
+    enabled: tab === "signals",
   });
 
   // Failure clustering embeds the whole corpus and is cached server-side; fetch once.
@@ -450,7 +420,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     queryFn: ({ signal }) => fetchWhatChanged(signal, asOf ?? undefined, scope),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 20_000,
-    enabled: tab === "overview" || tab === "signals",
+    enabled: tab === "signals",
   });
 
   const anomalies = useQuery({
@@ -653,11 +623,19 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           <span className="flex min-w-0 items-center gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
             <Gauge className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
             <span className="truncate">
-              {tq("rail.signalsFunnel", {
-                sampled: signalFunnel.sampled,
-                wired: signalFunnel.wired,
-                declared: signalFunnel.declared,
-              })}
+              {/* The declared share comes from the catalogue read. When that read FAILED, the
+                  descriptor says so instead of printing "0 déclarés" — a failed read is not an
+                  empty catalogue. Sampled and wired stay: they are facts about this screen. */}
+              {coverage.isError && !coverage.data
+                ? tq("rail.signalsFunnelUnread", {
+                    sampled: signalFunnel.sampled,
+                    wired: signalFunnel.wired,
+                  })
+                : tq("rail.signalsFunnel", {
+                    sampled: signalFunnel.sampled,
+                    wired: signalFunnel.wired,
+                    declared: signalFunnel.declared,
+                  })}
             </span>
           </span>
           {/* Wraps below 1024: four buttons plus the descriptor need ~840px, so on a
@@ -697,145 +675,113 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           so the temporal rail stays directly under the SLO alert. */}
       {agentScope ? <div className="-mt-0.5">{agentScope}</div> : null}
 
-      {/* KPI strip (unlabeled, full page width above the zones+rail — image normative) */}
+      {/* KPI strip (unlabeled, full page width above the zones — image normative).
+          Production reads only: the four eval-archive tiles (non-regression, open
+          regressions, judge agreement, evaluated cases) left with their tabs. */}
       {tab === "overview" ? (
         <OverviewKpis
           sloPct={sloPct}
           faithfulness={scoreSeries.data}
           grounding={groundingSeries.data}
           hallucination={hallucinationSeries.data}
-          nonRegression={releaseStatus.data?.non_regression_rate ?? null}
-          nRegressions={releaseStatus.data?.n_regressions ?? null}
-          kappa={calibration.data?.kappa ?? null}
-          evaluatedCount={runs.data?.catalogue_cases ?? null}
+          signalsCrit={signalSummary.total > 0 ? signalSummary.crit : null}
           loading={scoreSeries.isLoading}
           onOpen={openTarget}
         />
       ) : null}
 
-      <div
-        className={`grid gap-2 ${tab === "signals" ? "" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}
-      >
-        <div className="flex min-w-0 flex-col gap-2">
-          {tab === "overview" && (
-            <>
-              {/* Each zone is a translucent band holding real sub-cards (like the
-                  Sécurité & privacy page). Row 1: A | B with B at 3fr so its three
-                  sub-cards get real width; row 2: C | D. */}
-              <div className="grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
-                <Zone
-                  label={tq("sec.etat")}
-                  icon={Gauge}
-                  iconClassName="text-[var(--tessera-fg-info)]"
-                  info={<SectionInfo title={tq("sec.etat")} explainKey="etat" />}
-                >
-                  <EtatActuel
-                    summary={signalSummary}
-                    release={releaseStatus.data}
-                    evolutionDelta={scoreSeries.data?.delta ?? null}
-                    scorePct={sloPct}
-                    series={scoreSeries.data}
-                  />
-                </Zone>
+      <div className="flex min-w-0 flex-col gap-2">
+        {tab === "overview" && (
+          <>
+            {/* Each zone is a translucent band holding real sub-cards (like the
+                Sécurité & privacy page). Row 1: état | signaux en défaut; row 2:
+                avant-coureurs | tendances. Everything here samples PRODUCTION —
+                the eval-archive panels this view used to summarise (failure bars,
+                priority cases, judge κ, root-cause diff, release card, run tables)
+                live on the evaluations view now, behind the door above. */}
+            <div className="grid items-start gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
+              <Zone
+                label={tq("sec.etat")}
+                icon={Gauge}
+                iconClassName="text-[var(--tessera-fg-info)]"
+                info={<SectionInfo title={tq("sec.etat")} explainKey="etat" />}
+              >
+                <EtatActuel
+                  summary={signalSummary}
+                  evolutionDelta={scoreSeries.data?.delta ?? null}
+                  scorePct={sloPct}
+                  series={scoreSeries.data}
+                />
+              </Zone>
 
-                <Zone
-                  label={tq("sec.diagnostic")}
-                  icon={Stethoscope}
-                  iconClassName="text-[var(--tessera-fg-warning)]"
-                  info={<SectionInfo title={tq("sec.diagnostic")} explainKey="diagnostic" />}
-                >
-                  <div className="grid items-start gap-2 xl:grid-cols-3">
-                    <FailureBars
-                      report={failedCases.data}
-                      loading={failedCases.isLoading}
-                      onOpen={openTarget}
-                    />
-                    <JudgeMini
-                      data={calibration.data}
-                      loading={calibration.isLoading}
-                      onOpen={openTarget}
-                    />
-                    <PriorityCases
-                      report={failedCases.data}
-                      loading={failedCases.isLoading}
-                      onOpen={openTarget}
-                    />
-                  </div>
-                  <div className="mt-2">
-                    <RootCauseDiagnostic
-                      whatChanged={whatChanged.data}
-                      regressions={releaseStatus.data?.regressions ?? []}
-                    />
-                  </div>
-                </Zone>
-              </div>
-
-              <div className="grid items-start gap-2 md:grid-cols-2">
-                <Zone
-                  label={tq("sec.predictive")}
-                  icon={TrendingUp}
-                  iconClassName="text-[var(--tessera-fg-accent)]"
-                  info={<SectionInfo title={tq("sec.predictive")} explainKey="predictive" />}
-                >
-                  <PredictiveSignals
-                    series={scoreSeries.data}
-                    risk={regressionRisk.data}
-                    drift={judgeDrift.data}
-                    predictor={failurePredictor.data}
-                    intent={intent.data}
-                    localization={localization.data}
-                    loading={regressionRisk.isLoading}
-                  />
-                </Zone>
-
-                <Zone
-                  label={tq("sec.actions")}
-                  icon={ListChecks}
-                  iconClassName="text-[var(--tessera-fg-success)]"
-                  info={<SectionInfo title={tq("sec.actions")} explainKey="actions" />}
-                >
-                  <RecommendedActions
-                    regressions={releaseStatus.data?.regressions ?? []}
-                    failed={failedCases.data}
-                    onOpen={openTarget}
-                    onEvidence={downloadQualityEvidence}
-                  />
-                </Zone>
-              </div>
-            </>
-          )}
-
-          {tab === "signals" && (
-            <div className="flex flex-col gap-2">
-              {/* KPI strip + registre + analytics row (normative 01). */}
-              <SignalKpis
-                rows={signalRows}
-                trend={signalStatusTrend.data}
-                catalogue={signalFunnel.catalogue}
-              />
-              <SignalsTable rows={signalRows} selectedKey={focusedKey} onSelect={focusSignal} />
-              <div className="grid gap-2 lg:grid-cols-3">
-                <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
-                <ThemeDistribution rows={signalRows} />
-                <SignalHeatmap rows={signalRows} />
-              </div>
+              <Zone
+                label={tq("sec.problems")}
+                icon={Stethoscope}
+                iconClassName="text-[var(--tessera-fg-warning)]"
+                info={<SectionInfo title={tq("sec.problems")} explainKey="problems" />}
+              >
+                <TopProblems
+                  rows={signalRows}
+                  onSelect={(row) => {
+                    setTab("signals");
+                    focusSignal(row);
+                  }}
+                />
+              </Zone>
             </div>
-          )}
-        </div>
 
-        {tab === "signals" ? null : (
-          <RightRail
-            failed={failedCases.data}
-            // "Aucun problème" is the most reassuring sentence on this page, and an unread
-            // list produces it exactly as a clean run does. The rail must be able to tell
-            // them apart; only the query knows which happened.
-            failedUnavailable={failedCases.isError && !failedCases.data}
-            release={releaseStatus.data}
-            whatChanged={whatChanged.data}
-            runs={runs.data}
-            onOpen={openTarget}
-            onEvidence={downloadQualityEvidence}
-          />
+            <div className="grid items-start gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+              <Zone
+                label={tq("sec.predictive")}
+                icon={TrendingUp}
+                iconClassName="text-[var(--tessera-fg-accent)]"
+                info={<SectionInfo title={tq("sec.predictive")} explainKey="predictive" />}
+              >
+                <PredictiveSignals
+                  series={scoreSeries.data}
+                  risk={regressionRisk.data}
+                  drift={judgeDrift.data}
+                  predictor={failurePredictor.data}
+                  intent={intent.data}
+                  localization={localization.data}
+                  loading={regressionRisk.isLoading}
+                />
+              </Zone>
+
+              <Zone
+                label={tq("sec.trends")}
+                icon={Activity}
+                iconClassName="text-[var(--tessera-fg-success)]"
+                info={<SectionInfo title={tq("sec.trends")} explainKey="trends" />}
+              >
+                <div className="grid items-start gap-2 sm:grid-cols-2">
+                  <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+                  <FaithGroundingScatter
+                    pairs={metricPairs.data}
+                    loading={metricPairs.isLoading}
+                    onOpen={openTarget}
+                  />
+                </div>
+              </Zone>
+            </div>
+          </>
+        )}
+
+        {tab === "signals" && (
+          <div className="flex flex-col gap-2">
+            {/* KPI strip + registre + analytics row (normative 01). */}
+            <SignalKpis
+              rows={signalRows}
+              trend={signalStatusTrend.data}
+              catalogue={signalFunnel.catalogue}
+            />
+            <SignalsTable rows={signalRows} selectedKey={focusedKey} onSelect={focusSignal} />
+            <div className="grid gap-2 lg:grid-cols-3">
+              <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+              <ThemeDistribution rows={signalRows} />
+              <SignalHeatmap rows={signalRows} />
+            </div>
+          </div>
         )}
       </div>
 
@@ -859,25 +805,11 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
         </DetailDrawer>
       ) : null}
 
-      {/* Full-width analytics row below the [main · rail] grid (image normative):
-          Pass-rate des runs | Évolution | Répartition | Faith×Grounding | Régressions
-          par release | Coût vs qualité — six charts spanning the whole page width. */}
-      {tab === "overview" ? (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-          <RunsPassRateTable registry={runs.data} loading={runs.isLoading} />
-          <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
-          <FailureDistribution report={failedCases.data} loading={failedCases.isLoading} />
-          <FaithGroundingScatter
-            pairs={metricPairs.data}
-            loading={metricPairs.isLoading}
-            onOpen={openTarget}
-          />
-          <RegressionsByRelease release={releaseStatus.data} loading={releaseStatus.isLoading} />
-          <CostQualityScatter data={modelComparison.data} loading={modelComparison.isLoading} />
-        </div>
-      ) : null}
-
-      <StatusBar release={releaseStatus.data} signalsWired={signalFunnel.wired} />
+      <StatusBar
+        crit={signalSummary.crit}
+        warn={signalSummary.warn}
+        signalsWired={signalFunnel.wired}
+      />
     </div>
   );
 }
@@ -885,26 +817,48 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
 /** Thin status bar that closes the page (image normative). It rides at the end
  * of the content — not `sticky`, which left it floating mid-scroll and masking
  * the rows behind it once the page grew past one viewport. `mt-auto` keeps it at
- * the bottom when the content is short. */
+ * the bottom when the content is short.
+ *
+ * Its right corner is DERIVED, not declared: it used to print a green "Système OK"
+ * as a constant, directly under a ribbon that could be showing six critical
+ * signals — the same screen asserting two opposite things. It also carried the
+ * active case set and its date, which are release facts from the other view. */
 function StatusBar({
-  release,
+  crit,
+  warn,
   signalsWired,
 }: {
-  release: ReleaseStatus | undefined;
+  /** Registry rows above their critical / warning bar — the same counts the tiles show. */
+  crit: number;
+  warn: number;
   /** Rows this page can build — a COUNT, not the constant 42 that used to sit here. */
   signalsWired: number;
 }) {
   const tq = useTranslations("quality");
-  const dataset = release?.current ? `Llama · ${release.current.version}` : "—";
-  const updated = release?.current?.date ?? "—";
   const items = [
     { icon: Radio, label: tq("statusbar.realtime"), tone: "text-[var(--tessera-green)]" },
-    { icon: Boxes, label: `${tq("statusbar.dataset")} : ${dataset}` },
     { icon: ShieldCheck, label: tq("statusbar.truthChain") },
     { icon: Landmark, label: tq("statusbar.truthSource") },
-    { icon: CalendarClock, label: `${tq("statusbar.lastUpdate")} : ${updated}` },
     { icon: ListChecks, label: tq("statusbar.signals", { n: signalsWired }) },
   ];
+  const status =
+    crit > 0
+      ? {
+          text: tq("statusbar.systemCrit", { n: crit }),
+          cls: "text-[var(--tessera-fg-danger)]",
+          dot: "bg-red-500",
+        }
+      : warn > 0
+        ? {
+            text: tq("statusbar.systemWarn", { n: warn }),
+            cls: "text-[var(--tessera-fg-warning)]",
+            dot: "bg-amber-500",
+          }
+        : {
+            text: tq("statusbar.systemOk"),
+            cls: "text-[var(--tessera-green)]",
+            dot: "bg-[var(--tessera-green)]",
+          };
   return (
     <div className="mt-auto -mx-3 flex h-9 items-center gap-4 overflow-hidden border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)]">
       {items.map((it) => (
@@ -913,9 +867,11 @@ function StatusBar({
           <span className="truncate">{it.label}</span>
         </span>
       ))}
-      <span className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[var(--tessera-green)]">
-        <span className="h-2 w-2 rounded-full bg-[var(--tessera-green)]" />
-        {tq("statusbar.systemOk")}
+      <span
+        className={`ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap ${status.cls}`}
+      >
+        <span className={`h-2 w-2 rounded-full ${status.dot}`} />
+        {status.text}
       </span>
     </div>
   );
@@ -939,202 +895,5 @@ function TabBar({ active, onChange }: { active: TabKey; onChange: (tab: TabKey) 
         icon: TAB_META[key],
       }))}
     />
-  );
-}
-
-/** Right rail (image normative): Derniers problèmes · Release actuelle · Actions
- * rapides · Activités récentes — all fed by live data, links into the tabs. */
-function RightRail({
-  failed,
-  failedUnavailable = false,
-  release,
-  whatChanged,
-  runs,
-  onOpen,
-  onEvidence,
-}: {
-  failed: FailedCasesReport | undefined;
-  /** The failed-cases read did not answer — distinct from "it answered, and there are none". */
-  failedUnavailable?: boolean;
-  release: ReleaseStatus | undefined;
-  whatChanged: WhatChanged | undefined;
-  runs: RunRegistry | undefined;
-  /** A destination, not a tab: three of the four this rail names now live on the other view. */
-  onOpen: (target: QualityTarget) => void;
-  onEvidence: () => void;
-}) {
-  const tq = useTranslations("quality");
-  const current = release?.current ?? null;
-  const nReg = release?.n_regressions ?? 0;
-  const blocked = nReg > 0;
-  const impact = nReg === 0 ? "low" : nReg <= 2 ? "medium" : "high";
-  const problems = (failed?.cases ?? []).slice(0, 4);
-  const quick: { label: string; icon: typeof Activity; action: () => void }[] = [
-    { label: tq("rr.linkRuns"), icon: Activity, action: () => onOpen("runs") },
-    { label: tq("rr.linkTraces"), icon: Route, action: () => onOpen("runs") },
-    { label: tq("rr.linkDataset"), icon: Boxes, action: () => onOpen("runs") },
-    { label: tq("rr.linkEvidence"), icon: FileDown, action: onEvidence },
-  ];
-  // Recent activity, derived from real data: the latest run, the release, the diff.
-  const latestRun = [...(runs?.runs ?? [])].sort((a, b) => b.run_at.localeCompare(a.run_at))[0];
-  const activity: { key: string; label: string; detail: string }[] = [];
-  if (latestRun) {
-    activity.push({
-      key: "run",
-      label: tq("rr.actRun", { n: latestRun.total }),
-      detail: fmtRunDay(latestRun.run_at),
-    });
-  }
-  if (current) {
-    activity.push({
-      key: "release",
-      label: tq(blocked ? "rr.actReleaseBlocked" : "rr.actReleaseDeployed", {
-        v: current.version,
-      }),
-      detail: current.date ?? "",
-    });
-  }
-  for (const c of whatChanged?.changes ?? []) {
-    activity.push({
-      key: c.field,
-      label: c.field,
-      detail: `${c.before.slice(0, 8)} → ${c.after.slice(0, 8)}`,
-    });
-  }
-
-  return (
-    <aside className="flex min-w-0 flex-col gap-2">
-      <div className="flex flex-col gap-2">
-        {/* Derniers problèmes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("rr.problems")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            {problems.length === 0 ? (
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {failedUnavailable ? tq("rr.problemsUnavailable") : tq("rr.noProblems")}
-              </p>
-            ) : (
-              problems.map((p) => (
-                <div
-                  key={p.case_id}
-                  className="flex items-start gap-1.5 text-[0.7rem]"
-                  title={`${p.title} · ${p.severity}`}
-                >
-                  <span
-                    className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${
-                      p.severity === "critical"
-                        ? "bg-red-500"
-                        : p.severity === "high"
-                          ? "bg-amber-500"
-                          : "bg-[var(--muted-foreground)]"
-                    }`}
-                  />
-                  <span className="line-clamp-2 min-w-0 flex-1 leading-snug">{p.title}</span>
-                </div>
-              ))
-            )}
-            <RailLink onClick={() => onOpen("failed")}>{tq("rr.seeCases")}</RailLink>
-          </CardContent>
-        </Card>
-
-        {/* Release actuelle */}
-        {current ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{tq("rr.release")}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1 text-[0.7rem]">
-              <div className="flex items-center gap-2">
-                <span className="font-serif text-base font-semibold tabular-nums">
-                  {current.version}
-                </span>
-                <Badge tone={blocked ? "danger" : "success"}>
-                  {blocked ? tq("rr.blocked") : tq("rr.inProd")}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-[var(--muted-foreground)]">{tq("rr.impact")}</span>
-                <span
-                  className={
-                    impact === "high"
-                      ? "text-[var(--tessera-fg-danger)]"
-                      : impact === "medium"
-                        ? "text-[var(--tessera-fg-warning)]"
-                        : "text-[var(--muted-foreground)]"
-                  }
-                >
-                  {tq(`exec.etat.${impact}`)}
-                </span>
-              </div>
-              {current.date ? (
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-[var(--muted-foreground)]">{tq("rr.openedAt")}</span>
-                  <span className="tabular-nums">{current.date}</span>
-                </div>
-              ) : null}
-              <RailLink onClick={() => onOpen("models")}>{tq("rr.seeReleases")}</RailLink>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {/* Actions rapides */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("rr.actions")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-0.5">
-            {quick.map((q) => (
-              <button
-                key={q.label}
-                type="button"
-                onClick={q.action}
-                className="flex items-center gap-2 rounded-md px-1.5 py-0.5 text-left text-[0.7rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
-              >
-                <q.icon className="h-3 w-3 shrink-0" />
-                <span className="truncate">{q.label}</span>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Activités récentes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">{tq("rr.activity")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            {activity.length === 0 ? (
-              <p className="text-xs text-[var(--muted-foreground)]">{tq("rr.noActivity")}</p>
-            ) : (
-              activity.slice(0, 3).map((a) => (
-                <div key={a.key} className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
-                  <Truncate className="min-w-0 flex-1 text-[0.7rem]">{a.label}</Truncate>
-                  <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
-                    {a.detail}
-                  </span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </aside>
-  );
-}
-
-/** Small "see all →" link used at the foot of a right-rail card. */
-function RailLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-1 inline-flex items-center gap-1 text-xs text-[var(--tessera-green)] hover:underline"
-    >
-      {children}
-      <ChevronRight className="h-3 w-3" />
-    </button>
   );
 }

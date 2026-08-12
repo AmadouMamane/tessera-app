@@ -75,9 +75,7 @@ test("on the monitoring view the verdict rides the evaluations door — visible,
   // "unreachable"), so the per-agent PRÊT column keeps its explainer on this view too.
   const door = page.getByRole("link", { name: /Évaluations avant mise en ligne/ });
   await expect(door).toBeVisible();
-  await expect(door).toContainText(
-    /peuvent être mis en ligne|bloqué|jamais évalué|injoignable/,
-  );
+  await expect(door).toContainText(/peuvent être mis en ligne|bloqué|jamais évalué|injoignable/);
 });
 
 test("the header states the two instants: sampled, then judged", async ({ page }) => {
@@ -101,7 +99,7 @@ test("no score is published as a bare rate — the floor and the contribution tr
   // Case-INSENSITIVE on purpose: the label is uppercased by CSS and the DOM keeps the
   // catalogue's lowercase text, so an uppercase selector silently matches nothing.
   const decomposed = page.getByText(/absolu — ce n'est pas la note/i);
-  const honestEmpty = page.getByText(/aucun sweep lisible|Aucun modèle n'a parlé/);
+  const honestEmpty = page.getByText(/aucun banc d'essai lisible|Aucun modèle n'a parlé/);
   await expect(decomposed.or(honestEmpty).first()).toBeVisible();
 
   if ((await decomposed.count()) > 0) {
@@ -119,7 +117,7 @@ test("the floor is READ, and every surface quotes the same number", async ({ pag
   // must quote THAT number — the page used to serve a measured 124 and a hardcoded 122 three
   // blocks apart, and only a reader comparing them could tell.
   const header = page.getByText(/plancher lu dans la baseline commitée : (\d+)\/(\d+)/);
-  const honestEmpty = page.getByText(/aucun sweep lisible|Aucun modèle n'a parlé/);
+  const honestEmpty = page.getByText(/aucun banc d'essai lisible|Aucun modèle n'a parlé/);
 
   // WAIT before deciding. `count()` does not auto-wait, so the previous version asked "is the
   // sentence there?" of a page that had not finished rendering, got 0, and SKIPPED — green,

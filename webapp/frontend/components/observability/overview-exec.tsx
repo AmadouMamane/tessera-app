@@ -1,18 +1,8 @@
 "use client";
 
-import {
-  ArrowUpRight,
-  BookCheck,
-  ChevronRight,
-  Database,
-  ListChecks,
-  ListPlus,
-  Lock,
-  RefreshCw,
-} from "lucide-react";
+import { ArrowUpRight, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { AuthorityLabel } from "@/components/cockpit/authority-label";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { MetricKpi } from "@/components/observability/evolution-chart";
 import type { SignalRow } from "@/components/observability/signals-table";
@@ -21,65 +11,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Truncate } from "@/components/ui/truncate";
 import type {
-  Calibration,
-  FailedCasesReport,
   IntentReport,
   JudgeDrift,
   LocalizationReport,
   MetricPairs,
-  ModelComparison,
   PredictorEvaluation,
-  Regression,
   RegressionRisk,
-  ReleaseStatus,
-  RunRegistry,
   ScoreSeries,
-  WhatChanged,
 } from "@/lib/api/schemas";
 
-/** Overview target tabs that a recommended action can route to. */
+/** Overview drill-down targets. Four of them live on the evaluations view (`CROSSED_TARGETS`). */
 export type OverviewTab = "overview" | "signals" | "runs" | "failed" | "models" | "judge";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
 const MUTED = "text-[var(--muted-foreground)]";
-
-/** A translucent sub-card used inside the zone bands (same shape as the
- * Sécurité & privacy `Panel`): every cockpit zone is a banded section grouping
- * real cards, not flat sections. */
-function SubPanel({
-  title,
-  info,
-  action,
-  children,
-  className,
-}: {
-  title: string;
-  /** Optional ⓘ explainer next to the panel title. */
-  info?: React.ReactNode;
-  /** Optional header-right affordance (e.g. a drill-down link). */
-  action?: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Card className={`flex h-full min-w-0 flex-col ${className ?? ""}`}>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex min-w-0 items-center gap-1 text-[0.78rem] font-medium">
-          <span className="min-w-0 truncate">{title}</span>
-          {info}
-        </CardTitle>
-      </CardHeader>
-      {/* Drill-down sits in the FOOTER, not the header: these zone sub-cards are
-          narrow, and a header-right link squeezes the title to an ellipsis. */}
-      <CardContent className="flex flex-1 flex-col">
-        {children}
-        {action ? <div className="mt-auto pt-2">{action}</div> : null}
-      </CardContent>
-    </Card>
-  );
-}
 
 /** A compact "see → {tab}" drill-down used in a sub-card header/footer. */
 function CardTabLink({
@@ -101,15 +48,6 @@ function CardTabLink({
       <ChevronRight className="h-3 w-3" />
     </button>
   );
-}
-
-/** Compact, overflow-proof case reference for the dense zone-B list
- * (e.g. "01_prompt_injection" → "#01"). Falls back to the first token. */
-function shortCaseRef(caseId: string): string {
-  const numeric = caseId.match(/^\d+/)?.[0];
-  if (numeric) return `#${numeric}`;
-  const token = caseId.split(/[_-]/)[0] ?? caseId;
-  return token.slice(0, 6).toUpperCase();
 }
 
 /** A ⓘ for a quality KPI tile, reading quality.explain.<k>.{what,how,source}. */
@@ -221,16 +159,21 @@ function MiniSpark({ series }: { series: ScoreSeries | undefined }) {
   );
 }
 
-/** The 8-tile headline KPI strip of the Vue d'ensemble (reference image 00). */
+/**
+ * The headline KPI strip of the Vue d'ensemble — production reads only.
+ *
+ * It used to hold eight tiles, four of which (non-regression rate, open regressions, judge
+ * agreement on the gold set, evaluated case count) summarised the EVAL ARCHIVE — the other
+ * view's question, answered louder here than there. Those tiles live on the evaluations view
+ * now; what remains is what this view samples: the SLO, the three judged production series,
+ * and how many registry signals are breaching right now.
+ */
 export function OverviewKpis({
   sloPct,
   faithfulness,
   grounding,
   hallucination,
-  nonRegression,
-  nRegressions,
-  kappa,
-  evaluatedCount,
+  signalsCrit,
   loading,
   onOpen,
 }: {
@@ -238,21 +181,17 @@ export function OverviewKpis({
   faithfulness: ScoreSeries | undefined;
   grounding: ScoreSeries | undefined;
   hallucination: ScoreSeries | undefined;
-  nonRegression: number | null;
-  nRegressions: number | null;
-  kappa: number | null;
-  evaluatedCount: number | null;
+  /** Registry rows above their critical bar — a count of the screen's own rows, never a guess. */
+  signalsCrit: number | null;
   loading: boolean;
   /** Makes each KPI tile drill into its detail tab (↗). */
   onOpen?: (tab: OverviewTab) => void;
 }) {
   const tq = useTranslations("quality");
   const scoreTone = sloPct == null ? MUTED : sloPct >= 80 ? GOOD : sloPct >= 60 ? WARN : BAD;
-  const nonRegTone =
-    nonRegression == null ? MUTED : nonRegression >= 0.9 ? GOOD : nonRegression >= 0.7 ? WARN : BAD;
-  const regTone = nRegressions == null ? MUTED : nRegressions === 0 ? GOOD : WARN;
+  const critTone = signalsCrit == null ? MUTED : signalsCrit === 0 ? GOOD : BAD;
   return (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:grid-cols-8">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-3 2xl:grid-cols-5">
       <ValueKpi
         label={tq("exec.kpi.scoreGlobal")}
         value={sloPct == null ? "—" : `${sloPct}`}
@@ -278,68 +217,41 @@ export function OverviewKpis({
         onDrill={onOpen ? () => onOpen("signals") : undefined}
         drillLabel={tq("seeDetail")}
       />
-      <ValueKpi
-        label={tq("exec.kpi.nonRegression")}
-        value={nonRegression == null ? "—" : `${Math.round(nonRegression * 100)}%`}
-        tone={nonRegTone}
-        info={<KpiInfo title={tq("exec.kpi.nonRegression")} k="nonRegression" />}
-        onDrill={onOpen ? () => onOpen("runs") : undefined}
-        drillLabel={tq("seeDetail")}
-      />
       <MetricKpi
         label={tq("metrics.hallucination")}
         series={hallucination}
         loading={loading}
         info={<KpiInfo title={tq("metrics.hallucination")} k="hallucination" />}
-        onDrill={onOpen ? () => onOpen("failed") : undefined}
+        onDrill={onOpen ? () => onOpen("signals") : undefined}
         drillLabel={tq("seeDetail")}
       />
       <ValueKpi
-        label={tq("exec.kpi.regressionsOpen")}
-        value={nRegressions == null ? "—" : String(nRegressions)}
-        tone={regTone}
-        info={<KpiInfo title={tq("exec.kpi.regressionsOpen")} k="regressionsOpen" />}
-        onDrill={onOpen ? () => onOpen("runs") : undefined}
-        drillLabel={tq("seeDetail")}
-      />
-      <ValueKpi
-        label={tq("exec.kpi.judgeKappa")}
-        value={kappa == null ? "—" : kappa.toFixed(2)}
-        info={<KpiInfo title={tq("exec.kpi.judgeKappa")} k="judgeKappa" />}
-        onDrill={onOpen ? () => onOpen("judge") : undefined}
-        drillLabel={tq("seeDetail")}
-      />
-      <ValueKpi
-        label={tq("exec.kpi.casEval")}
-        value={evaluatedCount == null ? "—" : String(evaluatedCount)}
-        info={<KpiInfo title={tq("exec.kpi.casEval")} k="casEval" />}
-        onDrill={onOpen ? () => onOpen("runs") : undefined}
+        label={tq("exec.kpi.signalsCrit")}
+        value={signalsCrit == null ? "—" : String(signalsCrit)}
+        tone={critTone}
+        info={<KpiInfo title={tq("exec.kpi.signalsCrit")} k="signalsCrit" />}
+        onDrill={onOpen ? () => onOpen("signals") : undefined}
         drillLabel={tq("seeDetail")}
       />
     </div>
   );
 }
 
-/** "A. État actuel" — narrow status column: global score, failing/alert counts,
- * release impact + blocked state, and the period-over-period evolution (image 00). */
+/** "État actuel" — narrow status column: global score, failing/alert counts and the
+ * period-over-period evolution. The release rows it used to carry (impact, version, blocked
+ * badge) belong to the evaluations view and left with the rest of the eval-shaped overview. */
 export function EtatActuel({
   summary,
-  release,
   evolutionDelta,
   scorePct,
   series,
 }: {
   summary: { ok: number; warn: number; crit: number; na: number; total: number };
-  release: ReleaseStatus | undefined;
   evolutionDelta: number | null;
   scorePct: number | null;
   series: ScoreSeries | undefined;
 }) {
   const tq = useTranslations("quality");
-  const nReg = release?.n_regressions ?? null;
-  const impact = nReg == null ? null : nReg === 0 ? "low" : nReg <= 2 ? "medium" : "high";
-  const blocked = (nReg ?? 0) > 0;
-  const current = release?.current ?? null;
   const evoPts = evolutionDelta == null ? null : Math.round(evolutionDelta * 100);
   const evoTone = evoPts == null ? MUTED : evoPts > 0 ? GOOD : evoPts < 0 ? BAD : MUTED;
   const scoreTone = scorePct == null ? MUTED : scorePct >= 80 ? GOOD : scorePct >= 60 ? WARN : BAD;
@@ -374,30 +286,6 @@ export function EtatActuel({
             </span>
           </span>
         </Row>
-        <Row label={tq("exec.etat.impact")}>
-          {impact == null ? (
-            <span className={MUTED}>—</span>
-          ) : (
-            <Badge
-              tone={impact === "high" ? "danger" : impact === "medium" ? "warning" : "success"}
-            >
-              {tq(`exec.etat.${impact}`)}
-            </Badge>
-          )}
-        </Row>
-        <div className="flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-1.5">
-          <span className="text-[var(--muted-foreground)]">{tq("exec.etat.releaseLabel")}</span>
-          {current ? (
-            <span className="flex items-center gap-1.5">
-              <span className="font-mono tabular-nums">{current.version}</span>
-              <Badge tone={blocked ? "danger" : "success"}>
-                {blocked ? tq("rr.blocked") : tq("rr.inProd")}
-              </Badge>
-            </span>
-          ) : (
-            <span className={MUTED}>—</span>
-          )}
-        </div>
         <div className="flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-1.5">
           <div className="flex min-w-0 flex-col">
             <span className="text-[var(--muted-foreground)]">
@@ -438,8 +326,23 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> 
 };
 const RANK: Record<string, number> = { crit: 0, warn: 1, ok: 2, na: 3 };
 
-/** "Signaux qualité — top problèmes": the failing/at-risk signals only (image 00). */
-export function TopProblems({ rows, limit = 6 }: { rows: SignalRow[]; limit?: number }) {
+/**
+ * The failing/at-risk registry signals, worst first — the overview's second read.
+ *
+ * Headerless on purpose: it sits inside a labelled zone band, which already names it. Each row
+ * drills into the registry with the signal focused — a breach the reader cannot open is a
+ * decoration.
+ */
+export function TopProblems({
+  rows,
+  limit = 6,
+  onSelect,
+}: {
+  rows: SignalRow[];
+  limit?: number;
+  /** Focus this signal in the registry (switch tab + `?signal=`). */
+  onSelect?: (row: SignalRow) => void;
+}) {
   const tq = useTranslations("quality");
   const problems = rows
     .filter((r) => r.status === "crit" || r.status === "warn")
@@ -447,10 +350,7 @@ export function TopProblems({ rows, limit = 6 }: { rows: SignalRow[]; limit?: nu
     .slice(0, limit);
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("exec.topProblems")}</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-3">
         {problems.length === 0 ? (
           <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
             {tq("exec.noProblems")}
@@ -468,7 +368,15 @@ export function TopProblems({ rows, limit = 6 }: { rows: SignalRow[]; limit?: nu
               </thead>
               <tbody>
                 {problems.map((r) => (
-                  <tr key={r.key} className="border-b border-[var(--border)]/50">
+                  <tr
+                    key={r.key}
+                    className={`border-b border-[var(--border)]/50 ${
+                      onSelect
+                        ? "cursor-pointer transition-colors hover:bg-[var(--tessera-muted)]/60"
+                        : ""
+                    }`}
+                    onClick={onSelect ? () => onSelect(r) : undefined}
+                  >
                     <td className="py-2 pr-4 font-medium">{r.name}</td>
                     <td className="py-2 pr-4">
                       <Badge tone={STATUS_TONE[r.status] ?? "neutral"}>
@@ -483,348 +391,6 @@ export function TopProblems({ rows, limit = 6 }: { rows: SignalRow[]; limit?: nu
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-const VERDICT_COLOR: Record<string, string> = {
-  best: "var(--tessera-fg-success)",
-  balanced: "var(--tessera-fg-info)",
-  economic: "var(--tessera-fg-success)",
-  avoid: "var(--tessera-fg-danger)",
-};
-
-function rateColor(r: number): string {
-  return r >= 0.8
-    ? "var(--tessera-fg-success)"
-    : r >= 0.5
-      ? "var(--tessera-fg-warning)"
-      : "var(--tessera-fg-danger)";
-}
-
-/** "Diagnostic racine (probable)" — what changed / probable causes / impact (image 00). */
-export function RootCauseDiagnostic({
-  whatChanged,
-  regressions,
-}: {
-  whatChanged: WhatChanged | undefined;
-  regressions: Regression[];
-}) {
-  const tq = useTranslations("quality");
-  const wc = whatChanged;
-  if (!wc?.available) {
-    return (
-      <SubPanel title={tq("charts.diagnostic")}>
-        <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">
-          {tq("charts.noDiag")}
-        </p>
-      </SubPanel>
-    );
-  }
-  const changes = wc.changes ?? [];
-  const docsAdded = wc.docs_added ?? [];
-  const docsRemoved = wc.docs_removed ?? [];
-  const delta = wc.score_delta ?? null;
-  const causes: string[] = [];
-  for (const c of changes) causes.push(`${tq("charts.change")} : ${c.field}`);
-  if (docsAdded.length || docsRemoved.length) {
-    causes.push(`${tq("charts.corpusChanged")} (+${docsAdded.length}/−${docsRemoved.length})`);
-  }
-  if (wc.regressed) causes.push(tq("charts.scoreRegressed"));
-  return (
-    <SubPanel title={tq("charts.diagnostic")}>
-      <div className="flex flex-col gap-2 text-[0.7rem]">
-        <div
-          // One column on a phone, two from 640px. And `min-w-0` on the items:
-          // a grid item defaults to `min-width:auto`, so a card whose content has a
-          // wide min-content (a chart, a long unbreakable label) refuses to shrink
-          // and pushes its column past the viewport — measured at 390px, the two
-          // chart cards sat 324px wide in a 278px column and were clipped.
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 [&>*]:min-w-0"
-        >
-          <section className="min-w-0">
-            <h4 className="mb-1 font-semibold text-[var(--muted-foreground)]">
-              {tq("charts.whatChangedTitle")}
-            </h4>
-            <ul className="flex flex-col gap-0.5">
-              {changes.map((c) => (
-                <li key={c.field} className="truncate font-mono">
-                  {c.field}: {c.before.slice(0, 6)} → {c.after.slice(0, 6)}
-                </li>
-              ))}
-              {docsAdded.length ? (
-                <li className="text-[var(--tessera-fg-success)]">+{docsAdded.length} docs</li>
-              ) : null}
-              {docsRemoved.length ? (
-                <li className="text-[var(--tessera-fg-danger)]">−{docsRemoved.length} docs</li>
-              ) : null}
-            </ul>
-          </section>
-          <section className="min-w-0">
-            <h4 className="mb-1 font-semibold text-[var(--muted-foreground)]">
-              {tq("charts.causes")}
-            </h4>
-            <ul className="flex flex-col gap-0.5 text-[var(--muted-foreground)]">
-              {causes.map((c) => (
-                <li key={c} className="truncate">
-                  • {c}
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--tessera-border)] pt-1.5">
-          <span className="font-semibold text-[var(--muted-foreground)]">
-            {tq("charts.impact")}
-          </span>
-          {delta != null ? (
-            <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">
-              {delta >= 0 ? "+" : ""}
-              {Math.round(delta * 100)} pts
-            </Badge>
-          ) : null}
-          {regressions.map((r) => (
-            <span key={r.model} className="text-[var(--tessera-fg-danger)]">
-              {r.model} {Math.round(r.prev_rate * 100)}→{Math.round(r.last_rate * 100)}%
-            </span>
-          ))}
-        </div>
-      </div>
-    </SubPanel>
-  );
-}
-
-/** "D. Actions recommandées" — six governed actions, each carrying the required
- * role + a link into the relevant tab, plus the evidence-pack link (image 00). */
-export function RecommendedActions({
-  regressions,
-  failed,
-  onOpen,
-  onEvidence,
-}: {
-  regressions: Regression[];
-  failed: FailedCasesReport | undefined;
-  onOpen: (tab: OverviewTab) => void;
-  onEvidence: () => void;
-}) {
-  const tq = useTranslations("quality");
-  const failedTotal = failed?.n ?? null;
-  const actions: {
-    key: string;
-    icon: typeof BookCheck;
-    label: string;
-    role: "operator" | "admin";
-    dual?: boolean;
-    ctx: string | null;
-    target: OverviewTab;
-  }[] = [
-    {
-      key: "playbook",
-      icon: BookCheck,
-      label: tq("reco.playbook"),
-      role: "operator",
-      ctx: null,
-      target: "failed",
-    },
-    {
-      key: "corpus",
-      icon: Database,
-      label: tq("reco.corpus"),
-      role: "operator",
-      ctx: null,
-      target: "signals",
-    },
-    {
-      key: "rerun",
-      icon: RefreshCw,
-      label: tq("reco.rerun"),
-      role: "operator",
-      ctx: null,
-      target: "runs",
-    },
-    {
-      key: "curate",
-      icon: ListPlus,
-      label: tq("reco.curate"),
-      role: "operator",
-      ctx: failedTotal != null ? `${failedTotal}` : null,
-      target: "failed",
-    },
-    {
-      key: "catalog",
-      icon: ListChecks,
-      label: tq("reco.catalog"),
-      role: "admin",
-      ctx: null,
-      target: "signals",
-    },
-    {
-      key: "block",
-      icon: Lock,
-      label: tq("reco.block"),
-      role: "admin",
-      dual: true,
-      ctx: regressions.length > 0 ? `${regressions.length}` : null,
-      target: "models",
-    },
-  ];
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-1 pt-3">
-        {actions.map((a) => (
-          <button
-            key={a.key}
-            type="button"
-            onClick={() => onOpen(a.target)}
-            className="group flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-left text-[0.7rem] transition-colors hover:border-[var(--tessera-border-strong)] hover:bg-[var(--tessera-muted)]"
-          >
-            <a.icon className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
-            <span className="min-w-0 flex-1 truncate">{a.label}</span>
-            {a.ctx ? (
-              <span className="shrink-0 tabular-nums text-[0.6rem] text-[var(--muted-foreground)]">
-                {a.ctx}
-              </span>
-            ) : null}
-            <Badge tone={a.role === "admin" ? "warning" : "success"} className="px-1 text-[0.6rem]">
-              <AuthorityLabel authority={a.role === "admin" ? "Admin+" : "Operator+"} />
-            </Badge>
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={onEvidence}
-          className="mt-0.5 inline-flex items-center gap-1 self-start text-[0.7rem] text-[var(--tessera-green)] hover:underline"
-        >
-          {tq("reco.seeEvidence")}
-          <ChevronRight className="h-3 w-3" />
-        </button>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** "Coût évaluation vs Qualité" scatter from the model comparison (image 00). */
-export function CostQualityScatter({
-  data,
-  loading,
-}: {
-  data: ModelComparison | undefined;
-  loading: boolean;
-}) {
-  const tq = useTranslations("quality");
-  const models = data?.models ?? [];
-  const maxCost = Math.max(0.01, ...models.map((m) => m.est_cost_eur ?? 0));
-  const H = 56;
-  const top = 4;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("charts.costQuality")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading && !data ? (
-          <Skeleton className="h-32 w-full" />
-        ) : (
-          <>
-            <div className="relative h-16 w-full">
-              <svg
-                viewBox={`0 0 100 ${H + top * 2}`}
-                preserveAspectRatio="none"
-                className="h-full w-full"
-                aria-hidden="true"
-              >
-                {[0, 0.5, 1].map((g) => (
-                  <line
-                    key={g}
-                    x1={0}
-                    x2={100}
-                    y1={top + (1 - g) * H}
-                    y2={top + (1 - g) * H}
-                    stroke="var(--tessera-border)"
-                    strokeWidth={0.3}
-                  />
-                ))}
-                {models.map((m) => (
-                  <circle
-                    key={m.model}
-                    cx={2 + ((m.est_cost_eur ?? 0) / maxCost) * 96}
-                    cy={top + (1 - m.pass_rate) * H}
-                    r={1.8}
-                    fill={VERDICT_COLOR[m.verdict] ?? "var(--tessera-text-muted)"}
-                  />
-                ))}
-              </svg>
-            </div>
-            <div className="mt-0.5 flex justify-between text-[0.6rem] text-[var(--muted-foreground)]">
-              <span>↑ {tq("charts.qualityAxis")}</span>
-              <span>{tq("charts.costAxis")} →</span>
-            </div>
-            <ul className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[0.6rem]">
-              {models.map((m) => (
-                <li
-                  key={m.model}
-                  className="flex items-center gap-1 text-[var(--muted-foreground)]"
-                >
-                  <span
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: VERDICT_COLOR[m.verdict] ?? "var(--tessera-text-muted)" }}
-                  />
-                  {m.model}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Pass-rate of the most recent eval runs (real bars; the reference's per-release view). */
-export function RunsBars({
-  registry,
-  loading,
-}: {
-  registry: RunRegistry | undefined;
-  loading: boolean;
-}) {
-  const tq = useTranslations("quality");
-  const runs = [...(registry?.runs ?? [])].slice(0, 12).reverse();
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("charts.runsBars")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading && !registry ? (
-          <Skeleton className="h-40 w-full" />
-        ) : runs.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-            {tq("runs.empty")}
-          </p>
-        ) : (
-          <div className="flex h-40 items-end gap-1">
-            {runs.map((r) => (
-              <div
-                key={r.run_id}
-                className="flex flex-1 flex-col items-center justify-end gap-1"
-                title={`${r.model} · ${Math.round(r.pass_rate * 100)}%`}
-              >
-                <span className="text-[0.55rem] tabular-nums text-[var(--muted-foreground)]">
-                  {Math.round(r.pass_rate * 100)}
-                </span>
-                <div
-                  className="w-full rounded-t"
-                  style={{
-                    height: `${Math.max(2, r.pass_rate * 100)}%`,
-                    background: rateColor(r.pass_rate),
-                  }}
-                />
-              </div>
-            ))}
           </div>
         )}
       </CardContent>
@@ -944,199 +510,6 @@ const CAT_COLORS = [
   "var(--tessera-cat-7)",
   "var(--tessera-cat-8)",
 ];
-const KNOWN_CATEGORIES = [
-  "prompt_injection",
-  "pii_leak",
-  "hallucination",
-  "overconfidence",
-  "regulatory_misstatement",
-  "citation_fabrication",
-  "tool_misuse",
-  "policy_violation",
-  "language_mixing",
-  "escalation_failure",
-];
-const SEV_DOT: Record<string, string> = {
-  critical: "bg-red-500",
-  high: "bg-amber-500",
-  medium: "bg-blue-500",
-  low: "bg-[var(--muted-foreground)]",
-};
-const SEV_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-
-function useCatLabel() {
-  const tq = useTranslations("quality");
-  return (c: string) =>
-    KNOWN_CATEGORIES.includes(c) ? tq(`failed.cat.${c}`) : c.replace(/_/g, " ");
-}
-
-/** "Répartition des échecs" as horizontal bars over the categories (zone B, image 00). */
-export function FailureBars({
-  report,
-  loading,
-  onOpen,
-}: {
-  report: FailedCasesReport | undefined;
-  loading: boolean;
-  onOpen?: (tab: OverviewTab) => void;
-}) {
-  const tq = useTranslations("quality");
-  const catLabel = useCatLabel();
-  const entries = Object.entries(report?.by_category ?? {})
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-  const max = Math.max(1, ...entries.map(([, n]) => n));
-  return (
-    <SubPanel
-      title={tq("failed.distribution")}
-      info={<KpiInfo title={tq("failed.distribution")} k="failureDistribution" />}
-      action={
-        onOpen ? <CardTabLink onOpen={onOpen} tab="failed" label={tq("seeDetail")} /> : undefined
-      }
-    >
-      {loading && !report ? (
-        <Skeleton className="h-32 w-full" />
-      ) : entries.length === 0 ? (
-        <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
-          {tq("failed.empty")}
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-1.5 text-[0.65rem]">
-          {entries.map(([key, n], i) => (
-            <li key={key} className="flex flex-col gap-0.5">
-              <div className="flex items-start justify-between gap-1.5">
-                <span className="min-w-0 leading-tight">{catLabel(key)}</span>
-                <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{n}</span>
-              </div>
-              <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${Math.max(4, (n / max) * 100)}%`,
-                    background: CAT_COLORS[i % CAT_COLORS.length],
-                  }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </SubPanel>
-  );
-}
-
-/** "Calibration du juge" — compact κ + agreement read for zone B (image 00). */
-export function JudgeMini({
-  data,
-  loading,
-  onOpen,
-}: {
-  data: Calibration | undefined;
-  loading: boolean;
-  onOpen?: (tab: OverviewTab) => void;
-}) {
-  const tq = useTranslations("quality");
-  const kappa = data?.kappa ?? null;
-  const tone = kappa == null ? MUTED : kappa >= 0.8 ? GOOD : kappa >= 0.6 ? WARN : BAD;
-  return (
-    <SubPanel
-      title={tq("judge.title")}
-      info={<KpiInfo title={tq("judge.title")} k="judgeCalibration" />}
-      action={
-        onOpen ? <CardTabLink onOpen={onOpen} tab="judge" label={tq("seeDetail")} /> : undefined
-      }
-    >
-      {loading && !data ? (
-        <Skeleton className="h-32 w-full" />
-      ) : !data?.available ? (
-        <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
-          {tq("judge.unavailable")}
-        </p>
-      ) : (
-        <div className="flex flex-col gap-1 text-[0.7rem]">
-          <div className="flex items-baseline gap-1.5">
-            <span className={`font-serif text-xl font-semibold tabular-nums ${tone}`}>
-              {kappa == null ? "—" : kappa.toFixed(2)}
-            </span>
-            <span className="text-[var(--muted-foreground)]">{tq("judge.kappa")}</span>
-          </div>
-          <Row label={tq("judge.agreement")}>
-            <span className="tabular-nums">{Math.round((data.agreement ?? 0) * 100)}%</span>
-          </Row>
-          <Row label={tq("judge.verbosity")}>
-            <span className="tabular-nums">{(data.verbosity_corr ?? 0).toFixed(2)}</span>
-          </Row>
-          <Row label={tq("judge.samples")}>
-            <span className="tabular-nums">{data.n ?? 0}</span>
-          </Row>
-        </div>
-      )}
-    </SubPanel>
-  );
-}
-
-/** "Cas échoués prioritaires" — top failures by severity for zone B (image 00). */
-export function PriorityCases({
-  report,
-  loading,
-  onOpen,
-}: {
-  report: FailedCasesReport | undefined;
-  loading: boolean;
-  onOpen: (tab: OverviewTab) => void;
-}) {
-  const tq = useTranslations("quality");
-  const cases = [...(report?.cases ?? [])]
-    .sort(
-      (a, b) =>
-        (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9) ||
-        a.case_id.localeCompare(b.case_id),
-    )
-    .slice(0, 5);
-  return (
-    <SubPanel
-      title={tq("exec.priorityCases")}
-      info={<KpiInfo title={tq("exec.priorityCases")} k="priorityCases" />}
-    >
-      <div className="flex flex-col gap-1.5">
-        {loading && !report ? (
-          <Skeleton className="h-32 w-full" />
-        ) : cases.length === 0 ? (
-          <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
-            {tq("failed.empty")}
-          </p>
-        ) : (
-          <>
-            {cases.map((c) => (
-              <div
-                key={c.case_id}
-                className="flex items-start gap-1.5 text-[0.65rem]"
-                title={`${c.case_id} · ${c.title}`}
-              >
-                <span
-                  className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${SEV_DOT[c.severity] ?? ""}`}
-                />
-                <span className="mt-px shrink-0 font-mono text-[0.6rem] text-[var(--tessera-green)]">
-                  {shortCaseRef(c.case_id)}
-                </span>
-                <span className="line-clamp-2 min-w-0 flex-1 leading-snug">{c.title}</span>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => onOpen("failed")}
-              className="mt-0.5 inline-flex items-center gap-1 self-start text-[0.65rem] text-[var(--tessera-green)] hover:underline"
-            >
-              {tq("rr.seeCases")}
-              <ChevronRight className="h-3 w-3" />
-            </button>
-          </>
-        )}
-      </div>
-    </SubPanel>
-  );
-}
-
 /** One labelled mini bar (Intents/Langues à risque lists in zone C). */
 function MiniBarRow({
   label,
@@ -1297,118 +670,6 @@ export function PredictiveSignals({
               </div>
             </div>
           </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** "Pass-rate des derniers runs" — compact table for the charts row (image 00). */
-export function RunsPassRateTable({
-  registry,
-  loading,
-}: {
-  registry: RunRegistry | undefined;
-  loading: boolean;
-}) {
-  const tq = useTranslations("quality");
-  const runs = [...(registry?.runs ?? [])]
-    .sort((a, b) => b.run_at.localeCompare(a.run_at))
-    .slice(0, 4);
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("charts.runsBars")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading && !registry ? (
-          <Skeleton className="h-40 w-full" />
-        ) : runs.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-            {tq("runs.empty")}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                  <th className="py-1 pr-3 font-medium">{tq("runs.cols.model")}</th>
-                  <th className="py-1 pr-3 font-medium">{tq("charts.dataset")}</th>
-                  <th className="py-1 pr-3 font-medium">{tq("runs.cols.rate")}</th>
-                  <th className="py-1 font-medium">{tq("charts.passTotal")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((r) => (
-                  <tr key={r.run_id} className="border-b border-[var(--border)]/50">
-                    <td className="py-1 pr-3 font-medium whitespace-nowrap">{r.model}</td>
-                    <td className="py-1 pr-3 font-mono text-[var(--muted-foreground)] whitespace-nowrap">
-                      regression-{r.language}
-                    </td>
-                    <td
-                      className={`py-1 pr-3 font-semibold tabular-nums ${r.pass_rate >= 0.8 ? GOOD : r.pass_rate >= 0.5 ? WARN : BAD}`}
-                    >
-                      {Math.round(r.pass_rate * 100)}%
-                    </td>
-                    <td className="py-1 tabular-nums text-[var(--muted-foreground)]">
-                      {r.passed}/{r.total}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** "Régressions par release" — open run-over-run regressions as bars (image 00). */
-export function RegressionsByRelease({
-  release,
-  loading,
-}: {
-  release: ReleaseStatus | undefined;
-  loading: boolean;
-}) {
-  const tq = useTranslations("quality");
-  const regs = release?.regressions ?? [];
-  const max = Math.max(0.01, ...regs.map((r) => Math.abs(r.delta)));
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{tq("charts.regressionsByRelease")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading && !release ? (
-          <Skeleton className="h-40 w-full" />
-        ) : regs.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--muted-foreground)]">
-            {tq("charts.noRegressions")}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2.5 text-xs">
-            {regs.map((r) => (
-              <li key={r.model} className="flex flex-col gap-1">
-                <div className="flex items-center justify-between gap-2">
-                  <Truncate className="font-medium">{r.model}</Truncate>
-                  <span className="shrink-0 tabular-nums text-[var(--tessera-fg-danger)]">
-                    {Math.round(r.delta * 100)} pts
-                  </span>
-                </div>
-                <div className="h-[4px] w-full overflow-hidden rounded-full bg-[var(--tessera-border)]">
-                  <div
-                    className="h-full rounded-full bg-red-500"
-                    style={{ width: `${Math.max(4, (Math.abs(r.delta) / max) * 100)}%` }}
-                  />
-                </div>
-                <span className="text-[0.65rem] text-[var(--muted-foreground)]">
-                  {Math.round(r.prev_rate * 100)}% → {Math.round(r.last_rate * 100)}%
-                </span>
-              </li>
-            ))}
-          </ul>
         )}
       </CardContent>
     </Card>

@@ -2341,9 +2341,9 @@
     },
     "sec": {
       "etat": "État actuel",
-      "diagnostic": "Diagnostic racine",
+      "problems": "Signaux en défaut",
       "predictive": "Signaux prédictifs",
-      "actions": "Actions recommandées"
+      "trends": "Tendances"
     },
     "explain": {
       "etat": {
@@ -2351,42 +2351,26 @@
         "how": "Agrège le SLO de fidélité, le décompte des signaux hors-cible et le diff de la dernière release.",
         "source": "Évaluation continue + rapports de release."
       },
-      "diagnostic": {
-        "what": "Pourquoi la qualité dérive : répartition des échecs par type, calibration du juge, cas prioritaires et cause racine.",
-        "how": "Catalogue de failles documentées + regroupement des cas échoués + diff de version."
+      "problems": {
+        "what": "Les signaux du registre actuellement au-dessus de leur seuil critique ou d'alerte, du plus grave au moins grave.",
+        "how": "Lus sur les lignes échantillonnées du registre, dans la période affichée ; cliquer une ligne ouvre le signal dans le registre."
       },
       "predictive": {
         "what": "Les signaux avant-coureurs d'une régression : risque de régression, dérive du juge, prédicteur d'échec, intention et localisation.",
         "how": "Modèles de risque appliqués aux séries de scores et à la dérive des métriques."
       },
-      "actions": {
-        "what": "Les actions concrètes à mener, dérivées des régressions ouvertes et des cas échoués réels.",
-        "how": "Une recommandation est générée par régression ouverte ou cluster de cas."
+      "trends": {
+        "what": "L'évolution du score de fidélité sur la période, et la position des réponses sur les deux axes fidélité et ancrage.",
+        "how": "Séries et paires calculées sur les échanges réels de la période affichée."
       },
       "scoreGlobal": {
         "what": "Le score de qualité global sur 100 : part des réponses jugées conformes (SLO de fidélité).",
         "how": "Réponses conformes ÷ réponses évaluées, ramené sur 100.",
         "source": "Journal d'évaluation continue."
       },
-      "nonRegression": {
-        "what": "Le taux de non-régression : part des cas qui ne se sont pas dégradés face à la version de référence.",
-        "how": "Cas stables ou améliorés ÷ cas comparés.",
-        "source": "Rapports de release."
-      },
-      "regressionsOpen": {
-        "what": "Le nombre de régressions encore ouvertes par rapport à la référence.",
-        "how": "Cas dont le score a chuté au-delà du bruit et non encore résolus.",
-        "source": "Rapports de release."
-      },
-      "judgeKappa": {
-        "what": "L'accord (kappa de Cohen) entre le juge LLM et les annotations humaines de référence.",
-        "how": "Kappa calculé sur un jeu doré ; au-delà de 0,6 = accord substantiel.",
-        "source": "Calibration du juge (jeu doré)."
-      },
-      "casEval": {
-        "what": "Le nombre de cas du catalogue évalués lors du dernier run de non-régression.",
-        "how": "Cas exécutés par le harnais d'évaluation.",
-        "source": "Archive des runs."
+      "signalsCrit": {
+        "what": "Le nombre de signaux du registre actuellement au-dessus de leur seuil critique.",
+        "how": "Compté sur les lignes que cette page construit — jamais une constante."
       },
       "faithfulness": {
         "what": "La fidélité : la réponse reste fidèle aux sources citées, sans extrapolation.",
@@ -2406,20 +2390,6 @@
       "faithGrounding": {
         "what": "Le nuage fidélité × ancrage : chaque point est un tour ; en haut à droite = à la fois fidèle et ancré.",
         "how": "Couples (fidélité, ancrage) par tour ; la couleur résume la moyenne des deux."
-      },
-      "failureDistribution": {
-        "what": "La répartition des cas échoués par type de faille (injection, fuite PII, hallucination…).",
-        "how": "Décompte des cas échoués groupés par catégorie, top 5.",
-        "source": "Catalogue de failles documentées."
-      },
-      "judgeCalibration": {
-        "what": "La fiabilité du juge LLM : accord avec l'humain, biais de verbosité et taille d'échantillon.",
-        "how": "Kappa + accord sur un jeu doré ; corrélation à la longueur de réponse.",
-        "source": "Calibration du juge (jeu doré)."
-      },
-      "priorityCases": {
-        "what": "Les cas échoués les plus graves à traiter en premier, triés par sévérité.",
-        "how": "Cas du catalogue de failles ordonnés critique → bas."
       },
       "sigActive": {
         "what": "Nombre de signaux qualité instrumentés et évalués en direct, sur les 200 du catalogue de référence.",
@@ -2848,58 +2818,25 @@
       }
     },
     "seeDetail": "Voir le détail",
-    "reco": {
-      "title": "Actions recommandées",
-      "curate": "Ajouter les cas échoués au jeu de non-régression",
-      "freeze": "Suspendre les mises en ligne",
-      "playbook": "Ouvrir procédure hallucination",
-      "shadow": "Tester sur du trafic copié",
-      "ticket": "Créer ticket conformité",
-      "caption": "Actions sensibles soumises à une double validation",
-      "corpus": "Vérifier les sources documentaires",
-      "rerun": "Relancer une évaluation ciblée",
-      "catalog": "Mettre à jour le catalogue des signaux",
-      "block": "Bloquer la mise en ligne actuelle",
-      "seeEvidence": "Voir preuves qualité"
-    },
     "rr": {
-      "problems": "Derniers problèmes",
       "seeCases": "Voir tous les cas échoués",
       "release": "Version actuelle",
       "inProd": "En production",
       "seeReleases": "Voir les versions",
-      "since": "déployée",
-      "quick": "Liens rapides",
-      "quickRun": "Évaluation en cours",
-      "quickPolicies": "Politiques & garde-fous",
-      "quickScheduled": "Évaluations programmées",
-      "quickCatalog": "Catalogue des signaux",
-      "seeLinks": "Voir tous les liens",
       "activity": "Activités récentes",
-      "seeActivity": "Voir toutes les activités",
       "noActivity": "Aucune activité récente",
-      "problemsUnavailable": "Liste des cas en échec non lue — ce n'est pas « aucun problème ».",
-      "noProblems": "Aucun problème ouvert",
-      "actions": "Actions rapides",
-      "linkRuns": "Voir toutes les évaluations",
-      "linkTraces": "Voir le détail d'exécution",
-      "linkDataset": "Ouvrir le jeu de cas actif",
-      "linkEvidence": "Générer dossier de preuves qualité",
       "blocked": "bloquée",
-      "impact": "Impact",
-      "openedAt": "Ouverte le",
-      "actRun": "Évaluation terminée ({n} cas)",
       "actReleaseBlocked": "Version {v} bloquée",
       "actReleaseDeployed": "Version {v} mise en ligne"
     },
     "statusbar": {
       "realtime": "Données : temps réel",
-      "dataset": "Jeu de cas actif",
       "truthChain": "Chaîne de vérité",
       "truthSource": "Source de vérité : YAML/Git",
-      "lastUpdate": "Dernière mise à jour",
       "signals": "{n} signaux branchés",
-      "systemOk": "Système OK"
+      "systemOk": "Système OK",
+      "systemCrit": "{n, plural, one {# signal critique} other {# signaux critiques}}",
+      "systemWarn": "{n, plural, one {# signal en alerte} other {# signaux en alerte}}"
     },
     "temporal": {
       "live": "Live",
@@ -2918,7 +2855,8 @@
       "signals": "{n}/200 signaux qualité",
       "noFailing": "Aucune catégorie en échec",
       "live": "live",
-      "signalsFunnel": "{sampled} signaux mesurés sur {wired} branchés · {declared} déclarés au catalogue pour cette page"
+      "signalsFunnel": "{sampled} signaux mesurés sur {wired} branchés · {declared} déclarés au catalogue pour cette page",
+      "signalsFunnelUnread": "{sampled} mesurés sur {wired} branchés · le catalogue n'a pas pu être lu — la part déclarée est inconnue"
     },
     "kpi": {
       "score": "Score qualité",
@@ -3012,26 +2950,12 @@
       "noData": "Aucune donnée sur la période",
       "mean": "Moyenne",
       "points": "{n} points",
-      "diagnostic": "Diagnostic racine (probable)",
-      "noDiag": "Aucun changement récent détecté.",
-      "whatChangedTitle": "Qu'est-ce qui a changé",
       "causes": "Causes probables",
-      "impact": "Impact",
-      "change": "Changement",
-      "corpusChanged": "Sources documentaires modifiées",
-      "scoreRegressed": "Régression de score confirmée",
       "costQuality": "Coût de l'évaluation et qualité",
-      "costAxis": "Coût par évaluation",
-      "qualityAxis": "Qualité",
-      "runsBars": "Réussite des dernières évaluations",
       "faithGrounding": "Fidélité vs Ancrage (7 j)",
       "good": "Bon",
       "mid": "Moyen",
-      "low": "Faible",
-      "dataset": "Jeu de cas",
-      "passTotal": "Réussis / Total",
-      "regressionsByRelease": "Échecs par version",
-      "noRegressions": "Aucune régression ouverte"
+      "low": "Faible"
     },
     "failed": {
       "title": "Cas échoués",
@@ -3580,31 +3504,16 @@
     "exec": {
       "kpi": {
         "scoreGlobal": "Score qualité global",
-        "nonRegression": "Stabilité des résultats",
-        "regressionsOpen": "Régressions ouvertes",
-        "judgeKappa": "Accord avec les évaluateurs",
-        "casEval": "Cas évalués",
-        "casFailed": "Cas échoués"
+        "signalsCrit": "Signaux critiques"
       },
       "etat": {
-        "title": "État actuel",
         "failing": "Signaux en échec",
         "alert": "Signaux en alerte",
-        "impact": "Effet sur la mise en ligne",
         "evolution": "Évolution",
-        "low": "Faible",
-        "medium": "Modéré",
-        "high": "Élevé",
-        "rising": "En hausse",
-        "falling": "En baisse",
-        "flat": "Stable",
         "globalQuality": "Qualité globale",
-        "releaseLabel": "Version actuelle",
         "evolutionVsPrev": "Évolution vs période précédente"
       },
-      "topProblems": "Signaux qualité — top problèmes",
-      "noProblems": "Aucun problème ouvert.",
-      "priorityCases": "Cas échoués prioritaires"
+      "noProblems": "Aucun problème ouvert."
     },
     "pred": {
       "trend": "Tendance 30 jours",
